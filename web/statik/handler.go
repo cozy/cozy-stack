@@ -288,10 +288,10 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 	headers.Set("Content-Length", f.Size())
 	headers.Add("Vary", "Accept-Encoding")
 
-	acceptsGZIP := strings.Contains(r.Header.Get("Accept-Encoding"), "gzip")
-	if acceptsGZIP {
-		headers.Set("Content-Encoding", "gzip")
-		headers.Set("Content-Length", f.GzipSize())
+	acceptsBrotli := strings.Contains(r.Header.Get("Accept-Encoding"), "br")
+	if acceptsBrotli {
+		headers.Set("Content-Encoding", "br")
+		headers.Set("Content-Length", f.BrotliSize())
 	} else {
 		headers.Set("Content-Length", f.Size())
 	}
@@ -304,8 +304,8 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 	}
 
 	if r.Method == http.MethodGet {
-		if acceptsGZIP {
-			_, _ = io.Copy(w, f.GzipReader())
+		if acceptsBrotli {
+			_, _ = io.Copy(w, f.BrotliReader())
 		} else {
 			_, _ = io.Copy(w, f.Reader())
 		}

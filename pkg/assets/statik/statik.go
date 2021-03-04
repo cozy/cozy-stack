@@ -17,7 +17,6 @@ package statik
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/pem"
@@ -26,44 +25,37 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 )
 
 var globalAssets sync.Map // {context:path -> *Asset}
 
-// Register registers zip contents data, later used to
+// Register registers brotli contents data, later used to
 // initialize the statik file system.
-func Register(zipData string) {
-	if zipData == "" {
+func Register(brotliData string) {
+	if brotliData == "" {
 		panic("statik/fs: no zip data registered")
 	}
-	if err := unzip([]byte(zipData)); err != nil {
-		panic(fmt.Errorf("statik/fs: error unzipping data: %s", err))
+	if err := uncompress([]byte(brotliData)); err != nil {
+		panic(fmt.Errorf("statik/fs: error uncompressed data: %s", err))
 	}
 }
 
-func unzip(data []byte) (err error) {
+func uncompress(data []byte) error {
 	for {
 		block, rest := pem.Decode(data)
 		if block == nil {
 			break
 		}
-		var zippedData, unzippedData []byte
-		zippedData = block.Bytes
-		var gr *gzip.Reader
-		gr, err = gzip.NewReader(bytes.NewReader(block.Bytes))
-		if err != nil {
-			return
-		}
+		brotliData := block.Bytes
+		br := brotli.NewReader(bytes.NewReader(brotliData))
 		h := sha256.New()
-		r := io.TeeReader(gr, h)
-		unzippedData, err = ioutil.ReadAll(r)
+		r := io.TeeReader(br, h)
+		rawData, err := ioutil.ReadAll(r)
 		if err != nil {
-			return
-		}
-		if err = gr.Close(); err != nil {
-			return
+			return err
 		}
 
 		name := block.Headers["Name"]
@@ -72,11 +64,11 @@ func unzip(data []byte) (err error) {
 			Context: config.DefaultInstanceContext,
 			Shasum:  hex.EncodeToString(h.Sum(nil)),
 		}
-		asset := model.NewAsset(opt, zippedData, unzippedData)
+		asset := model.NewAsset(opt, rawData, brotliData)
 		StoreAsset(asset)
 		data = rest
 	}
-	return
+	return nil
 }
 
 // StoreAsset stores in memory a static asset

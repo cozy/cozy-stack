@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/pem"
@@ -36,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	humanize "github.com/dustin/go-humanize"
 )
 
@@ -305,7 +305,7 @@ func init() {
 		return
 	}
 
-	err = printZipData(f, assets)
+	err = printData(f, assets)
 	if err != nil {
 		return
 	}
@@ -469,19 +469,12 @@ func readCurrentAssets(filename string) (assets []*asset, err error) {
 		if err != nil {
 			return
 		}
-		var gr *gzip.Reader
-		gr, err = gzip.NewReader(bytes.NewReader(block.Bytes))
-		if err != nil {
-			return
-		}
+		br := brotli.NewReader(bytes.NewReader(block.Bytes))
 		var data []byte
 		h := sha256.New()
-		r := io.TeeReader(gr, h)
+		r := io.TeeReader(br, h)
 		data, err = ioutil.ReadAll(r)
 		if err != nil {
-			return
-		}
-		if err = gr.Close(); err != nil {
 			return
 		}
 		name := block.Headers["Name"]
@@ -496,25 +489,20 @@ func readCurrentAssets(filename string) (assets []*asset, err error) {
 	return
 }
 
-// printZipData converts zip binary contents to a string literal.
-func printZipData(dest io.Writer, assets []*asset) error {
+// printData converts contents to a string literal.
+func printData(dest io.Writer, assets []*asset) error {
 	for _, f := range assets {
-		b := new(bytes.Buffer)
-		gw, err := gzip.NewWriterLevel(b, gzip.BestCompression)
-		if err != nil {
+		buf := new(bytes.Buffer)
+		bw := brotli.NewWriterLevel(buf, brotli.BestCompression)
+		if _, err := io.Copy(bw, bytes.NewReader(f.data)); err != nil {
 			return err
 		}
-		_, err = io.Copy(gw, bytes.NewReader(f.data))
-		if err != nil {
+		if err := bw.Close(); err != nil {
 			return err
 		}
-		err = gw.Close()
-		if err != nil {
-			return err
-		}
-		err = pem.Encode(dest, &pem.Block{
+		err := pem.Encode(dest, &pem.Block{
 			Type:  "COZY ASSET",
-			Bytes: b.Bytes(),
+			Bytes: buf.Bytes(),
 			Headers: map[string]string{
 				"Name": f.name,
 				"Size": strconv.FormatInt(f.size, 10),

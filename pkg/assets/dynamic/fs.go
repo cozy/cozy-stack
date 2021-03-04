@@ -111,7 +111,7 @@ func (a *aferoFS) Add(context, name string, asset *model.Asset) error {
 		return err
 	}
 
-	_, err = f.Write(asset.GetUnzippedData())
+	_, err = f.Write(asset.GetData())
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func (s *swiftFS) Add(context, name string, asset *model.Asset) error {
 	}
 
 	// Writing the asset content to Swift
-	_, err = f.Write(asset.GetUnzippedData())
+	_, err = f.Write(asset.GetData())
 	if err != nil {
 		return err
 	}
