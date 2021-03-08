@@ -430,7 +430,7 @@ func copyDesignDoc(c echo.Context) error {
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
-	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 	path := "_design/" + ddoc
