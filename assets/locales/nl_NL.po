@@ -52,6 +52,14 @@ msgstr "Welkom!"
 msgid "Login Welcome name"
 msgstr "%s"
 
+msgid "Login Password best practice"
+msgstr "Aandachtspunten:"
+
+msgid "Login Password tip"
+msgstr ""
+"Voer je wachtwoord alleen in als het adres in je browser overeenkomt met dat"
+" van je Cozy en de adresbalk een slotje toont."
+
 msgid "Login Password help"
 msgstr "Voer je wachtwoord in om toegang te krijgen tot je Cozy"
 
@@ -140,10 +148,18 @@ msgstr ""
 "Je hebt een wachtwoordhint ingesteld. Klik op onderstaande knop om deze per "
 "e-mail te ontvangen."
 
+msgid "Passphrase reset Help hint Cozy Pass"
+msgstr ""
+"Je hebt een wachtwoordhint ingesteld. Klik op onderstaande knop om deze per "
+"e-mail te ontvangen."
+
 msgid "Passphrase reset Submit hint"
 msgstr "Wachtwoordhint versturen"
 
 msgid "Passphrase reset password Title"
+msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
+
+msgid "Passphrase reset password Title Cozy Pass"
 msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
 
 msgid "Passphrase reset Help Warning"
@@ -161,6 +177,11 @@ msgid "Passphrase reset Help 3"
 msgstr "De rest van je je gegevens blijven toegankelijk."
 
 msgid "Passphrase reset Help emptyVault"
+msgstr ""
+"Klik op deze knop om een e-mail te krijgen met een link voor het instellen "
+"van een nieuw wachtwoord."
+
+msgid "Passphrase reset Help emptyVault Cozy Pass"
 msgstr ""
 "Klik op deze knop om een e-mail te krijgen met een link voor het instellen "
 "van een nieuw wachtwoord."
@@ -232,6 +253,15 @@ msgstr "Opslaan"
 
 msgid "Login Forgot password"
 msgstr "Ik ben mijn wachtwoord vergeten"
+
+msgid "Login Confirm Title"
+msgstr "Authenticatie"
+
+msgid "Login Confirm Help"
+msgstr "Beveiligingsmaatregel: bevestig je identiteit"
+
+msgid "Login Confirm Submit"
+msgstr "Bevestigen"
 
 msgid "Authorize Title"
 msgstr "Machtig %s om toegang te krijgen tot je profiel"
@@ -666,6 +696,11 @@ msgstr ""
 "Hieronder vind je de opgevraagde hint zodat je je wachtwoord boven water "
 "kunt halen"
 
+msgid "Mail Hint Intro 2 Cozy Pass"
+msgstr ""
+"Hieronder vind je de opgevraagde hint zodat je je wachtwoord boven water "
+"kunt halen"
+
 msgid "Mail Hint Outro"
 msgstr ""
 "Als laatste redmiddel kun je je wachtwoord opnieuw instellen in de sectie "
@@ -679,6 +714,11 @@ msgid "Mail Reset Passphrase Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
+msgstr ""
+"Je hebt een wachtwoordwijziging aangevraagd. Als dat niet zo is, beantwoord "
+"dan deze e-mail en laat het ons weten."
+
+msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
 msgstr ""
 "Je hebt een wachtwoordwijziging aangevraagd. Als dat niet zo is, beantwoord "
 "dan deze e-mail en laat het ons weten."
