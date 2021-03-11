@@ -33,7 +33,9 @@ func (c *apiCapabilities) Links() *jsonapi.LinksList {
 }
 func (c *apiCapabilities) Fetch(field string) []string { return nil }
 
-func newCapabilities(inst *instance.Instance) *apiCapabilities {
+// NewCapabilities return a document with capabilities that can be marshaled to
+// JSON or JSON-API.
+func NewCapabilities(inst *instance.Instance) jsonapi.Object {
 	// File versioning is enabled for all instances, except for the Swift
 	// layout v1 and v2
 	versioning := true
@@ -62,6 +64,6 @@ func getCapabilities(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	inst := middlewares.GetInstance(c)
-	doc := newCapabilities(inst)
+	doc := NewCapabilities(inst)
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
