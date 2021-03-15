@@ -166,6 +166,8 @@ inject the individual values with:
 -   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
 -   `{{.Tracking}}` will be replaced by a value to indicate if tracking is
     enabled.
+-   `{{.Capabilities}}` will be replaced by JSON with the
+    [capabilities](./settings.md#get-settingscapabilities).
 -   `{{.Flags}}` will be replaced by JSON with the
     [feature flags](./settings.md#feature-flags).
 

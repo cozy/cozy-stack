@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
 )
@@ -342,6 +343,8 @@ func (s serveParams) CozyData() (string, error) {
 			M: map[string]interface{}{},
 		}
 	}
+	capabilities := settings.NewCapabilities(s.instance)
+	capabilities.SetID("")
 	data := map[string]interface{}{
 		"token":     s.Token,
 		"domain":    s.Domain(),
@@ -355,7 +358,8 @@ func (s serveParams) CozyData() (string, error) {
 			"slug":   s.AppSlug(),
 			"icon":   s.IconPath(),
 		},
-		"flags": flags,
+		"flags":        flags,
+		"capabilities": capabilities,
 	}
 	bytes, err := json.Marshal(data)
 
@@ -396,6 +400,16 @@ func (s serveParams) AppNamePrefix() string {
 
 func (s serveParams) IconPath() string {
 	return s.webapp.Icon
+}
+
+func (s serveParams) Capabilities() (string, error) {
+	capabilities := settings.NewCapabilities(s.instance)
+	capabilities.SetID("")
+	bytes, err := json.Marshal(capabilities)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 func (s serveParams) Flags() (string, error) {
