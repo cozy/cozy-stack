@@ -18,6 +18,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.0
+	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.17
 	github.com/gorilla/websocket v1.4.2
@@ -32,6 +33,8 @@ require (
 	github.com/mssola/user_agent v0.5.2
 	github.com/ncw/swift v1.0.53
 	github.com/nightlyone/lockfile v1.0.0
+	github.com/onsi/ginkgo v1.15.0 // indirect
+	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pquerna/otp v1.3.0
