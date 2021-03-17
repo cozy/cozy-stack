@@ -20,7 +20,7 @@ import (
 type ImportOptions struct {
 	SettingsURL string       `json:"url,omitempty"`
 	ManifestURL string       `json:"manifest_url,omitempty"`
-	Vault       bool         `json:"valut,omitempty"`
+	Vault       bool         `json:"vault,omitempty"`
 	MoveFrom    *FromOptions `json:"move_from,omitempty"`
 }
 

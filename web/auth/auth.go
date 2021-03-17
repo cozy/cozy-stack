@@ -475,19 +475,20 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 	if redirect == "" {
 		redirect = c.QueryParam("redirect")
 	}
-	if redirect == "" {
-		// If the Cozy was moved from another address and the owner had a vault,
-		// we will show them instructions about how to import their vault.
-		settings, err := instance.SettingsDocument()
-		if err == nil && settings.M["import_vault"] == true {
-			u := url.URL{
-				Scheme: instance.Scheme(),
-				Host:   instance.ContextualDomain(),
-				Path:   "/move/vault",
-			}
-			return &u, nil
-		}
 
+	// If the Cozy was moved from another address and the owner had a vault,
+	// we will show them instructions about how to import their vault.
+	settings, err := instance.SettingsDocument()
+	if err == nil && settings.M["import_vault"] == true {
+		u := url.URL{
+			Scheme: instance.Scheme(),
+			Host:   instance.ContextualDomain(),
+			Path:   "/move/vault",
+		}
+		return &u, nil
+	}
+
+	if redirect == "" {
 		if defaultRedirect == nil {
 			return defaultRedirect, nil
 		}
