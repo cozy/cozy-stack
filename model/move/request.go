@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -305,7 +306,13 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 		if vault {
 			doc.M["import_vault"] = true
 		}
-		_ = couchdb.UpdateDoc(inst, doc)
+		if err := couchdb.UpdateDoc(inst, doc); err != nil {
+			inst.Logger().
+				WithField("nspace", "move").
+				WithField("moved_from", u.Host).
+				WithField("vault", strconv.FormatBool(vault)).
+				Warnf("Cannot save settings: %s", err)
+		}
 	}
 }
 
