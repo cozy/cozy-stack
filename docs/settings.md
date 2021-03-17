@@ -163,6 +163,11 @@ The user can change its passphrase with this route.
 For users with two-factor authentication activated, a second step on the same
 route is necessary to actually update the passphrase. See below.
 
+A `"force": true` parameter can be added in the JSON to force a passphrase on a
+Cozy where authentication by password is disabled and the vault is empty. It
+allows to use Cozy Pass when the authentication on the Cozy is delegated via
+OIDC.
+
 #### Request
 
 ```http
