@@ -246,7 +246,7 @@ func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
 
 func TestUpdatePassphraseSuccess(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
-		"new_passphrase":     "MyPassphrase",
+		"new_passphrase":     "MyUpdatedPassphrase",
 		"current_passphrase": "MyFirstPassphrase",
 		"iterations":         5000,
 	})
@@ -261,6 +261,35 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, cookies[0].Name, session.CookieName(testInstance))
 	assert.NotEmpty(t, cookies[0].Value)
+}
+
+func TestUpdatePassphraseWithForce(t *testing.T) {
+	args, _ := json.Marshal(&echo.Map{
+		"new_passphrase": "MyPassphrase",
+		"iterations":     5000,
+		"force":          true,
+	})
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+
+	cfg := config.GetConfig().Authentication
+	cfg["test-context"] = map[string]interface{}{
+		"disable_password_authentication": true,
+	}
+	defer delete(cfg, "test-context")
+
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/passphrase?Force=true", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "204 No Content", res.Status)
 }
 
 func TestGetHint(t *testing.T) {

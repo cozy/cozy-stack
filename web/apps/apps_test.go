@@ -493,7 +493,7 @@ func TestMain(m *testing.M) {
 
 	pass := "aephe2Ei"
 	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
-	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass))
+	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass), 0)
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
 	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)

@@ -134,6 +134,7 @@ func updatePassphrase(c echo.Context) error {
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
 	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
+		fmt.Printf("err = %v\n", err)
 		return err
 	}
 
@@ -150,30 +151,41 @@ func updatePassphrase(c echo.Context) error {
 	if err != nil {
 		return jsonapi.BadRequest(err)
 	}
+	newPassphrase := []byte(args.Passphrase)
+	currentPassphrase := []byte(args.Current)
 
 	// If we want to force the update
 	if args.Force {
+		canForce := false
+
+		// CLI can force the passphrase
 		p, err := middlewares.GetPermission(c)
-		if err != nil {
-			return err
+		if err == nil && p.Type == permission.TypeCLI {
+			canForce = true
 		}
 
-		if p.Type == permission.TypeCLI { // We limit the authorization only to CLI
-			err := lifecycle.ForceUpdatePassphrase(inst, []byte(args.Passphrase))
-			if err != nil {
-				return err
+		// On cozy with OIDC and empty vault, the password can be forced to
+		// allow the setup of Cozy Pass
+		if !inst.IsPasswordAuthenticationEnabled() {
+			bitwarden, err := settings.Get(inst)
+			if err == nil && !bitwarden.ExtensionInstalled {
+				canForce = true
 			}
-		} else {
+		}
+
+		if !canForce {
 			err = fmt.Errorf("You must have a CLI audience to force change the password")
 			return jsonapi.BadRequest(err)
+		}
+
+		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, args.Iterations)
+		if err != nil {
+			return err
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
 
 	// Else, we keep going on the standard checks (2FA, current passphrase, ...)
-	newPassphrase := []byte(args.Passphrase)
-	currentPassphrase := []byte(args.Current)
-
 	if inst.HasAuthMode(instance.TwoFactorMail) && len(args.TwoFactorToken) == 0 {
 		if lifecycle.CheckPassphrase(inst, currentPassphrase) == nil {
 			var twoFactorToken []byte
