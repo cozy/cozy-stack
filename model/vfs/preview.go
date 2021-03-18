@@ -64,7 +64,7 @@ func generatePreview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
 		"-[0]",           // Takes the input from stdin
 		"-quality", "82", // A good compromise between file size and quality
 		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
-		"-thumbnail", "720x1280>", // Makes a thumbnail that fits inside the given format
+		"-thumbnail", "1080x1920>", // Makes a thumbnail that fits inside the given format
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
