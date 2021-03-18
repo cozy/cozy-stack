@@ -343,3 +343,52 @@ HTTP/1.1 202 Accepted
 In this case, the stack will accept the uninstall request, then it will clean
 the accounts (locally and remotely), and only after that, the konnector will be
 removed.
+
+## Add a trigger
+
+### POST /konnectors/:slug/trigger
+
+This endpoint creates a @cron trigger for the given konnector. The manifest is
+used to generate the crontab.
+
+#### Query-String
+
+| Parameter | Description                                                                   |
+| --------- | ----------------------------------------------------------------------------- |
+| AccountID | The identifier of the io.cozy.accounts that will be used to run the konnector |
+| ExecNow   | `true` if you want to run a job just after the trigger creation               |
+
+
+#### Request
+
+```http
+POST /konnectors/pajemploi/trigger?AccountID=4eee63e069690139df83543d7eb8149c HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.triggers",
+    "id": "8cfeef1069690139df84543d7eb8149c",
+    "attributes": {
+      "type": "@cron",
+      "arguments": "0 9 3 * * 1",
+      "worker": "konnector",
+      "message": {
+        "account": "4eee63e069690139df83543d7eb8149c",
+        "konnector": "pajemploi"
+      }
+    },
+    "links": {
+      "self": "/jobs/triggers/8cfeef1069690139df84543d7eb8149c"
+    }
+  }
+}
+```

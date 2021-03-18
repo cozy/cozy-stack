@@ -55,6 +55,7 @@ type (
 	apiQueue struct {
 		workerType string
 	}
+	// apiTrigger is the jsonapi representation for a trigger
 	apiTrigger struct {
 		t    *job.TriggerInfos
 		inst *instance.Instance
@@ -98,6 +99,11 @@ func (q apiQueue) Fetch(field string) []string {
 		return []string{q.workerType}
 	}
 	return nil
+}
+
+// NewAPITrigger creates a jsonapi representation of a trigger.
+func NewAPITrigger(infos *job.TriggerInfos, inst *instance.Instance) jsonapi.Object {
+	return apiTrigger{infos, inst}
 }
 
 func (t apiTrigger) ID() string                             { return t.t.TID }

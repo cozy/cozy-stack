@@ -24,6 +24,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -525,6 +527,41 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 	}
 }
 
+func createTrigger(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	slug := c.Param("slug")
+	man, err := app.GetBySlug(inst, slug, consts.KonnectorType)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	var createdByApp string
+	if claims := c.Get("claims"); claims != nil {
+		cl := claims.(permission.Claims)
+		if cl.Subject != "" {
+			createdByApp = cl.Subject
+		}
+	}
+	t, err := man.(*app.KonnManifest).CreateTrigger(inst, c.QueryParam("AccountID"), createdByApp)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	if err = middlewares.Allow(c, permission.POST, t); err != nil {
+		return err
+	}
+	sched := job.System()
+	if err = sched.AddTrigger(t); err != nil {
+		return wrapAppsError(err)
+	}
+
+	if c.QueryParam("ExecNow") == "true" {
+		req := t.Infos().JobRequest()
+		req.Manual = true
+		_, _ = sched.PushJob(inst, req)
+	}
+
+	return jsonapi.Data(c, http.StatusCreated, jobs.NewAPITrigger(t.Infos(), inst), nil)
+}
+
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
@@ -545,6 +582,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.DELETE("/:slug", deleteHandler(consts.KonnectorType))
 	router.GET("/:slug/icon", iconHandler(consts.KonnectorType))
 	router.GET("/:slug/icon/:version", iconHandler(consts.KonnectorType))
+	router.POST("/:slug/trigger", createTrigger)
 }
 
 func wrapAppsError(err error) error {
@@ -566,6 +604,9 @@ func wrapAppsError(err error) error {
 	case app.ErrMissingSource:
 		return jsonapi.BadRequest(err)
 	case app.ErrLinkedAppExists:
+		return jsonapi.BadRequest(err)
+	case limits.ErrRateLimitReached,
+		limits.ErrRateLimitExceeded:
 		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*url.Error); ok {
