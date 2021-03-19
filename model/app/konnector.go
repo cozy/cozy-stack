@@ -2,15 +2,19 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -251,6 +255,89 @@ func (m *KonnManifest) Delete(db prefixer.Prefixer) error {
 		return err
 	}
 	return couchdb.DeleteDoc(db, m)
+}
+
+// CreateTrigger creates a @cron trigger with the parameter from the konnector
+// manifest.
+func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByApp string) (job.Trigger, error) {
+	var md *metadata.CozyMetadata
+	if createdByApp == "" {
+		md = metadata.New()
+	} else {
+		var err error
+		md, err = metadata.NewWithApp(createdByApp, "", job.DocTypeVersionTrigger)
+		if err != nil {
+			return nil, err
+		}
+	}
+	md.DocTypeVersion = "1"
+	data := map[string]interface{}{
+		"account":   accountID,
+		"konnector": m.Slug(),
+	}
+	if m.hasFolderPath() {
+		// XXX in theory, it is an ID, but we just put the yes string and let
+		// the worker change it to the folder ID on the first run.
+		data["folder_to_save"] = "yes"
+	}
+	msg, err := job.NewMessage(data)
+	if err != nil {
+		return nil, err
+	}
+	crontab := m.triggerCrontab()
+	return job.NewCronTrigger(&job.TriggerInfos{
+		Type:       "@cron",
+		WorkerType: "konnector",
+		Domain:     db.DomainName(),
+		Prefix:     db.DBPrefix(),
+		Arguments:  crontab,
+		Message:    msg,
+		Metadata:   md,
+	})
+}
+
+func (m *KonnManifest) triggerCrontab() string {
+	now := time.Now()
+	hours := m.getRandomHour()
+	switch m.Frequency {
+	case "hourly":
+		return fmt.Sprintf("0 %d * * * *", now.Minute())
+	case "daily":
+		return fmt.Sprintf("0 %d %d * * *", now.Minute(), hours)
+	case "monthly":
+		return fmt.Sprintf("0 %d %d %d * *", now.Minute(), hours, now.Day())
+	default: // weekly
+		return fmt.Sprintf("0 %d %d * * %d", now.Minute(), hours, now.Weekday())
+	}
+}
+
+func (m *KonnManifest) getRandomHour() int {
+	min, max := 0, 5 // By default konnectors are run at random hour between 12:00PM and 05:00AM
+	if m.TimeInterval != nil {
+		var interval [2]int
+		if err := json.Unmarshal(*m.TimeInterval, &interval); err != nil {
+			min = interval[0]
+			if interval[1] > min {
+				max = interval[1]
+			}
+		}
+	}
+	return min + rand.Intn(max-min)
+}
+
+func (m *KonnManifest) hasFolderPath() bool {
+	if m.Fields == nil {
+		return false
+	}
+	var fields struct {
+		Advanced struct {
+			FolderPath interface{} `json:"folderPath"`
+		} `json:"advanced_fields"`
+	}
+	if err := json.Unmarshal(*m.Fields, &fields); err != nil {
+		return false
+	}
+	return fields.Advanced.FolderPath != nil
 }
 
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given
