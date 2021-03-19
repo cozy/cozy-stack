@@ -35,8 +35,11 @@ func preview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
 	}
 
 	buf, err := generatePreview(fs, doc)
+	if err != nil {
+		return nil, err
+	}
 	_ = cache.Set(doc.MD5Sum, buf)
-	return buf, err
+	return buf, nil
 }
 
 func generatePreview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
