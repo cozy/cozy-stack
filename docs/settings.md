@@ -166,7 +166,14 @@ route is necessary to actually update the passphrase. See below.
 A `"force": true` parameter can be added in the JSON to force a passphrase on a
 Cozy where authentication by password is disabled and the vault is empty. It
 allows to use Cozy Pass when the authentication on the Cozy is delegated via
-OIDC.
+OIDC. When forcing a password reset, you need to regenerate the 
+
+* public and private keys
+* encryption key
+
+ of the vault and pass them via `key`, `publicKey` and `privateKey`.
+
+See [those password-helpers](https://github.com/cozy/cozy-stack/blob/master/assets/scripts/password-helpers.js#L165-L218) for example on how to regenerate those keys.
 
 #### Request
 

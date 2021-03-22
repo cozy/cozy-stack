@@ -244,12 +244,11 @@ func UpdatePassphrase(
 }
 
 // ForceUpdatePassphrase replace the passphrase without checking the current one
-func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte, iterations int) error {
+func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte, params PassParameters) error {
 	if len(newPassword) == 0 {
 		return instance.ErrMissingPassphrase
 	}
-	params := PassParameters{Pass: newPassword, Iterations: iterations}
-	if iterations == 0 {
+	if params.Iterations == 0 {
 		if err := setDefaultParameters(inst, &params); err != nil {
 			return err
 		}

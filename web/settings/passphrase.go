@@ -146,6 +146,8 @@ func updatePassphrase(c echo.Context) error {
 		TwoFactorToken    []byte `json:"two_factor_token"`
 		Force             bool   `json:"force,omitempty"`
 		Key               string `json:"key"`
+		PublicKey         string `json:"publicKey"`
+		PrivateKey        string `json:"privateKey"`
 	}{}
 	err := c.Bind(&args)
 	if err != nil {
@@ -174,13 +176,23 @@ func updatePassphrase(c echo.Context) error {
 		}
 
 		if !canForce {
-			err = fmt.Errorf("You must have a CLI audience to force change the password")
+			err = fmt.Errorf("Bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
 			return jsonapi.BadRequest(err)
 		}
 
-		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, args.Iterations)
+		params := lifecycle.PassParameters{
+			Pass:       []byte(args.Passphrase),
+			Iterations: args.Iterations,
+			PublicKey:  args.PublicKey,
+			PrivateKey: args.PrivateKey,
+			Key:        args.Key,
+		}
+		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, params)
 		if err != nil {
 			return err
+		}
+		if hasSession {
+			_, _ = auth.SetCookieForNewSession(c, session.LongRun)
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
