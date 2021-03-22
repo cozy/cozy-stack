@@ -183,7 +183,14 @@ func updatePassphrase(c echo.Context) error {
 			return jsonapi.BadRequest(err)
 		}
 
-		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, args.Key, args.PublicKey, args.PrivateKey, args.Iterations)
+		params := lifecycle.PassParameters{
+			Pass: []byte(args.Passphrase),
+			Iterations: args.Iterations,
+			PublicKey: args.PublicKey,
+			PrivateKey: args.PrivateKey,
+			Key: args.Key,
+		}
+		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, params)
 		if err != nil {
 			return err
 		}
