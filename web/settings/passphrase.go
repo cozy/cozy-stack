@@ -170,6 +170,9 @@ func updatePassphrase(c echo.Context) error {
 			bitwarden, err := settings.Get(inst)
 			if err == nil && !bitwarden.ExtensionInstalled {
 				canForce = true
+			} else {
+				err = fmt.Errorf("Bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
+				return jsonapi.BadRequest(err)
 			}
 		}
 
