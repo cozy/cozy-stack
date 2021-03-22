@@ -448,7 +448,7 @@ func deleteDesignDoc(c echo.Context) error {
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
-	if err := middlewares.AllowWholeType(c, permission.DELETE, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 	if c.QueryParam("rev") == "" {
