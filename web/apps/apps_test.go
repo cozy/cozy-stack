@@ -494,7 +494,7 @@ func TestMain(m *testing.M) {
 	pass := "aephe2Ei"
 	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
 	params := lifecycle.PassParameters{
-		Key: "fake-encrypt-key",
+		Key:        "fake-encrypt-key",
 		Iterations: 0,
 	}
 	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass), params)

@@ -172,27 +172,27 @@ func updatePassphrase(c echo.Context) error {
 			bitwarden, err := settings.Get(inst)
 			if err == nil && !bitwarden.ExtensionInstalled {
 				canForce = true
-			} else {
-				err = fmt.Errorf("Bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
-				return jsonapi.BadRequest(err)
 			}
 		}
 
 		if !canForce {
-			err = fmt.Errorf("You must have a CLI audience to force change the password")
+			err = fmt.Errorf("Bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
 			return jsonapi.BadRequest(err)
 		}
 
 		params := lifecycle.PassParameters{
-			Pass: []byte(args.Passphrase),
+			Pass:       []byte(args.Passphrase),
 			Iterations: args.Iterations,
-			PublicKey: args.PublicKey,
+			PublicKey:  args.PublicKey,
 			PrivateKey: args.PrivateKey,
-			Key: args.Key,
+			Key:        args.Key,
 		}
 		err = lifecycle.ForceUpdatePassphrase(inst, newPassphrase, params)
 		if err != nil {
 			return err
+		}
+		if hasSession {
+			_, _ = auth.SetCookieForNewSession(c, session.LongRun)
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
