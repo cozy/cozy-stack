@@ -285,6 +285,8 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 		"-quality", "82", // A good compromise between file size and quality
 		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
 		"-thumbnail", formats[format], // Makes a thumbnail that fits inside the given format
+		"-background", "white", // Use white for the background
+		"-alpha", "remove", // JPEGs don't have an alpha channel
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
