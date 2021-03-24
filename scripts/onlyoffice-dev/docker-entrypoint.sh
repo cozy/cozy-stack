@@ -23,9 +23,16 @@ service rabbitmq-server start
 # Ignore the error on restarting supervisord
 documentserver-generate-allfonts.sh || true
 
-# Start the document server
+# Export some variables for OnlyOffice
 export NODE_ENV=production-linux
 export NODE_CONFIG_DIR=/etc/onlyoffice/documentserver
 export NODE_DISABLE_COLORS=1
+export APPLICATION_NAME=ONLYOFFICE
+
+# Start the file converter
+cd /var/www/onlyoffice/documentserver/server/FileConverter
+./converter &
+
+# Start the document server
 cd /var/www/onlyoffice/documentserver/server/DocService
 ./docservice
