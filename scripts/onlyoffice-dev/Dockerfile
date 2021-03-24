@@ -13,7 +13,7 @@ RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d && \
     apt-get -yq install wget apt-utils apt-transport-https gnupg locales && \
     locale-gen en_US.UTF-8 && \
     echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections && \
-    apt-get -yq install \
+    apt-get -yq install --no-install-recommends \
         adduser \
         bomstrip \
         certbot \
@@ -59,8 +59,9 @@ RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d && \
     apt-get -yq install onlyoffice-documentserver && \
 	service postgresql stop && \
 	service rabbitmq-server stop && \
+	apt-get clean && \
     rm -rf /var/log/onlyoffice && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt
 
 EXPOSE 8000
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
