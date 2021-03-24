@@ -87,6 +87,7 @@ designing new services.
     -   [Workers](workers.md)
 -   `/move` - [Move, export and import an instance](move.md)
 -   `/notes` - [Notes with collaborative edition](notes.md)
+-   `/office` - [Collaborative edition of Office documents](office.md)
 -   `/notifications` - [Notifications](notifications.md)
 -   `/permissions` - [Permissions](permissions.md)
 -   `/public` - [Public](public.md)
