@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/notifications"
+	"github.com/cozy/cozy-stack/web/office"
 	"github.com/cozy/cozy-stack/web/oidc"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/public"
@@ -189,6 +190,7 @@ func SetupRoutes(router *echo.Echo) error {
 		permissions.Routes(router.Group("/permissions", mws...))
 		realtime.Routes(router.Group("/realtime", mws...))
 		notes.Routes(router.Group("/notes", mws...))
+		office.Routes(router.Group("/office", mws...))
 		remote.Routes(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))
 		bitwarden.Routes(router.Group("/bitwarden", mws...))
