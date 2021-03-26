@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/cozy/cozy-stack/model/office"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -21,12 +22,21 @@ func Open(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	// TODO check permission
-	doc := open.GetResult()
+	mode := "edit"
+	if err := middlewares.AllowVFS(c, permission.PUT, open.File); err != nil {
+		mode = "view"
+		if err := middlewares.AllowVFS(c, permission.GET, open.File); err != nil {
+			return err
+		}
+	}
+	doc, err := open.GetResult(mode)
+	if err != nil {
+		return wrapError(err)
+	}
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-// Callback is tha handler for OnlyOffice callback requests.
+// Callback is the handler for OnlyOffice callback requests.
 // Cf https://api.onlyoffice.com/editors/callback
 func Callback(c echo.Context) error {
 	var data map[string]interface{}
@@ -46,6 +56,10 @@ func Routes(router *echo.Group) {
 
 func wrapError(err error) *jsonapi.Error {
 	switch err {
+	case office.ErrInvalidFile:
+		return jsonapi.NotFound(err)
+	case office.ErrInternalServerError:
+		return jsonapi.InternalServerError(err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case sharing.ErrMemberNotFound:

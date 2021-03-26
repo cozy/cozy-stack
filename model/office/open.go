@@ -56,7 +56,7 @@ func (o *apiOfficeURL) Fetch(field string) []string            { return nil }
 // Opener can be used to find the parameters for opening an office document.
 type Opener struct {
 	inst *instance.Instance
-	file *vfs.FileDoc
+	File *vfs.FileDoc
 }
 
 // Open will return an Opener for the given file.
@@ -65,16 +65,18 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO check that the file is an office document
-	return &Opener{inst: inst, file: file}, nil
+	if file.Class != "text" && file.Class != "spreadsheet" && file.Class != "slide" {
+		return nil, ErrInvalidFile
+	}
+	return &Opener{inst: inst, File: file}, nil
 }
 
 // GetResult looks if the file can be opened locally or not, which code can be
 // used in case of a shared note, and other parameters.. and returns the information.
-func (o *Opener) GetResult() jsonapi.Object {
+func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
 	// Create a local result
 	result := &apiOfficeURL{
-		FileID:   o.file.ID(),
+		FileID:   o.File.ID(),
 		Protocol: "https",
 		Instance: o.inst.ContextualDomain(),
 	}
@@ -89,23 +91,51 @@ func (o *Opener) GetResult() jsonapi.Object {
 	}
 
 	// Fill the parameters for the Document Server
+	download, err := o.downloadURL()
+	if err != nil {
+		o.inst.Logger().WithField("nspace", "office").
+			Infof("Cannot build download URL: %s", err)
+		return nil, ErrInternalServerError
+	}
+	name, _ := o.inst.PublicName()
 	result.OO = &onlyOffice{
 		URL: "", // TODO read from config
 	}
-	result.OO.Doc.Filetype = o.file.Mime
-	result.OO.Doc.Key = fmt.Sprintf("%s-%s", o.file.ID(), o.file.Rev())
-	result.OO.Doc.Title = o.file.DocName
-	result.OO.Doc.URL = ""           // TODO
-	result.OO.Doc.Info.Owner = ""    // TODO
-	result.OO.Doc.Info.Uploaded = "" // TODO
-	result.OO.Editor.Callback = o.inst.PageURL("/office/"+o.file.ID()+"/callback", nil)
+	result.OO.Doc.Filetype = o.File.Mime
+	result.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
+	result.OO.Doc.Title = o.File.DocName
+	result.OO.Doc.URL = download
+	result.OO.Doc.Info.Owner = name
+	result.OO.Doc.Info.Uploaded = uploadedDate(o.File)
+	result.OO.Editor.Callback = o.inst.PageURL("/office/"+o.File.ID()+"/callback", nil)
 	result.OO.Editor.Lang = o.inst.Locale
-	result.OO.Editor.Mode = "edit"
+	result.OO.Editor.Mode = mode
 
 	// Enforce DocID and PublicName with local values
-	result.DocID = o.file.ID()
-	if name, err := o.inst.PublicName(); err == nil {
-		result.PublicName = name
+	result.DocID = o.File.ID()
+	result.PublicName = name
+	return result, nil
+}
+
+// downloadURL returns an URL where the Document Server can download the file.
+func (o *Opener) downloadURL() (string, error) {
+	path, err := o.File.Path(o.inst.VFS())
+	if err != nil {
+		return "", err
 	}
-	return result
+	secret, err := vfs.GetStore().AddFile(o.inst, path)
+	if err != nil {
+		return "", err
+	}
+	return o.inst.PageURL("/files/downloads/"+secret+"/"+o.File.DocName, nil), nil
+}
+
+// uploadedDate returns the uploaded date for a file in the date format used by
+// OnlyOffice
+func uploadedDate(f *vfs.FileDoc) string {
+	date := f.CreatedAt
+	if f.CozyMetadata != nil && f.CozyMetadata.UploadedAt != nil {
+		date = *f.CozyMetadata.UploadedAt
+	}
+	return date.Format("2006-01-02 3:04 PM")
 }
