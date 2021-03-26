@@ -1,7 +1,6 @@
 package session
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -134,7 +133,6 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	if timezone != "" {
 		if loc, err := time.LoadLocation(timezone); err == nil {
 			createdAt = createdAt.In(loc)
-			fmt.Printf("createdAt = %v\n", createdAt)
 		}
 	}
 
