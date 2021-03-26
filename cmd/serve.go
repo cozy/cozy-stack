@@ -223,6 +223,9 @@ func init() {
 	flags.String("move-url", "https://move.cozycloud.cc/", "URL for the move wizard")
 	checkNoErr(viper.BindPFlag("move.url", flags.Lookup("move-url")))
 
+	flags.String("onlyoffice-url", "", "URL for the OnlyOffice server")
+	checkNoErr(viper.BindPFlag("office.default.onlyoffice_url", flags.Lookup("onlyoffice-url")))
+
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 

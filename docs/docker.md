@@ -63,7 +63,13 @@ The `cozy/onlyoffice-dev` docker image can be used for local development. Just s
 $ docker run -it --rm --name=oodev --net=host cozy/onlyoffice-dev
 ```
 
-And if you need to rebuild it, you can do that with:
+and run the stack with:
+
+```bash
+$ cozy-stack serve --disable-csp --onlyoffice-url=http://localhost:8000/
+```
+
+If you need to rebuild it, you can do that with:
 
 ```bash
 $ cd scripts/onlyoffice-dev

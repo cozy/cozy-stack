@@ -177,7 +177,7 @@ POST /instances/alice.cozy.tools/fixers/orphan-account HTTP/1.1
 ### GET /instances/contexts
 
 This endpoint returns the list of the contexts, with their name, config,
-registries, and cloudery endpoints.
+registries, office server, and cloudery endpoints.
 
 #### Request
 
@@ -221,6 +221,9 @@ HTTP/1.1 200 OK
     "registries": [
       "https://apps-registry.cozycloud.cc/"
     ],
+    "office": {
+      "onlyoffice_url": "https://documentserver.cozycloud.cc/"
+    },
     "cloudery_endpoint": ""
   }
 ]
@@ -271,6 +274,9 @@ HTTP/1.1 200 OK
   "registries": [
     "https://apps-registry.cozycloud.cc/"
   ],
+  "office": {
+    "onlyoffice_url": "https://documentserver.cozycloud.cc/"
+  },
   "cloudery_endpoint": ""
 }
 ```

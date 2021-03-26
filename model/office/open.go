@@ -74,6 +74,17 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 // GetResult looks if the file can be opened locally or not, which code can be
 // used in case of a shared note, and other parameters.. and returns the information.
 func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
+	var cfg *config.Office
+	configuration := config.GetConfig().Office
+	if c, ok := configuration[o.inst.ContextName]; ok {
+		cfg = &c
+	} else if c, ok := configuration[config.DefaultInstanceContext]; ok {
+		cfg = &c
+	}
+	if cfg == nil || cfg.OnlyOfficeURL == "" {
+		return nil, ErrNoServer
+	}
+
 	// Create a local result
 	result := &apiOfficeURL{
 		FileID:   o.File.ID(),
@@ -97,15 +108,15 @@ func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
-	name, _ := o.inst.PublicName()
+	publicName, _ := o.inst.PublicName()
 	result.OO = &onlyOffice{
-		URL: "", // TODO read from config
+		URL: cfg.OnlyOfficeURL,
 	}
 	result.OO.Doc.Filetype = o.File.Mime
 	result.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
 	result.OO.Doc.Title = o.File.DocName
 	result.OO.Doc.URL = download
-	result.OO.Doc.Info.Owner = name
+	result.OO.Doc.Info.Owner = publicName
 	result.OO.Doc.Info.Uploaded = uploadedDate(o.File)
 	result.OO.Editor.Callback = o.inst.PageURL("/office/"+o.File.ID()+"/callback", nil)
 	result.OO.Editor.Lang = o.inst.Locale
@@ -113,7 +124,7 @@ func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
 
 	// Enforce DocID and PublicName with local values
 	result.DocID = o.File.ID()
-	result.PublicName = name
+	result.PublicName = publicName
 	return result, nil
 }
 

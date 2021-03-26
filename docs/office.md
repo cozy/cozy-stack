@@ -10,7 +10,7 @@ Reference: https://api.onlyoffice.com/editors/open
 
 ![Opening a document with OnlyOffice](diagrams/onlyoffice-open.png)
 
-1. The browser makes a request `GET /office/open` to know the address of the OnlyOffice server
+1. The browser makes a request `GET /office/:id/open` to know the address of the OnlyOffice server
 2. The browser makes several HTTP requests to the Document Server
     1. Fetch the `api.js` script
     2. Open a websocket connection
@@ -34,8 +34,8 @@ In the first case, the response will contain the parameters of the other
 instance. In the second case, the parameters are for the document server of
 OnlyOffice.
 
-If the identifier doesn't give an office document, the response will be a `404
-Page not found`.
+If the identifier doesn't give an office document or if there is no onlyoffice
+server configured, the response will be a `404 Page not found`.
 
 #### Request
 

@@ -56,7 +56,7 @@ func Routes(router *echo.Group) {
 
 func wrapError(err error) *jsonapi.Error {
 	switch err {
-	case office.ErrInvalidFile:
+	case office.ErrNoServer, office.ErrInvalidFile:
 		return jsonapi.NotFound(err)
 	case office.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)

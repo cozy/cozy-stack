@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
@@ -130,6 +131,7 @@ type Config struct {
 
 	Contexts       map[string]interface{}
 	Authentication map[string]interface{}
+	Office         map[string]Office
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]interface{}
 
@@ -213,6 +215,12 @@ type Matomo struct {
 // Move contains the configuration for the move wizard
 type Move struct {
 	URL string
+}
+
+// Office contains the configuration for collaborative edition of office
+// documents
+type Office struct {
+	OnlyOfficeURL string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -513,6 +521,11 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	office, err := makeOffice(v)
+	if err != nil {
+		return err
+	}
+
 	var subdomains SubdomainType
 	if subs := v.GetString("subdomains"); subs != "" {
 		switch subs {
@@ -786,6 +799,7 @@ func UseViper(v *viper.Viper) error {
 		MailPerContext: v.GetStringMap("mail.contexts"),
 		Contexts:       v.GetStringMap("contexts"),
 		Authentication: v.GetStringMap("authentication"),
+		Office:         office,
 		Registries:     regs,
 		Clouderies:     v.GetStringMap("clouderies"),
 
@@ -920,6 +934,31 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 	}
 
 	return regs, nil
+}
+
+func makeOffice(v *viper.Viper) (map[string]Office, error) {
+	office := make(map[string]Office)
+	for k, v := range v.GetStringMap("office") {
+		ctx, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("Bad format in the office section of the configuration file")
+		}
+		url, ok := ctx["onlyoffice_url"].(string)
+		if !ok {
+			return nil, errors.New("Bad format in the office section of the configuration file")
+		}
+		office[k] = Office{
+			OnlyOfficeURL: url,
+		}
+	}
+
+	if url := v.GetString("office.default.onlyoffice_url"); url != "" {
+		office[DefaultInstanceContext] = Office{
+			OnlyOfficeURL: url,
+		}
+	}
+
+	return office, nil
 }
 
 func makeSMS(raw map[string]interface{}) map[string]SMS {
