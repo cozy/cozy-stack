@@ -3,7 +3,7 @@ source 'https://rubygems.org'
 gem "amazing_print"
 gem "faker"
 gem "faye-websocket"
-gem "mimemagic"
+gem "mini_mime"
 gem "minitest"
 gem "pbkdf2-ruby"
 gem "pry"

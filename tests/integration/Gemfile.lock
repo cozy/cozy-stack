@@ -27,7 +27,7 @@ GEM
     mime-types (3.3.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2019.1009)
-    mimemagic (0.3.2)
+    mini_mime (1.0.3)
     minitest (5.11.3)
     netrc (0.11.0)
     pbkdf2-ruby (0.2.1)
@@ -62,7 +62,7 @@ DEPENDENCIES
   amazing_print
   faker
   faye-websocket
-  mimemagic
+  mini_mime
   minitest
   pbkdf2-ruby
   pry

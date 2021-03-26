@@ -6,4 +6,4 @@ at_exit { Helpers.cleanup }
 Helpers.scenario "interactive"
 Helpers.start_mailhog
 
-Pry.start binding, prompt: Pry::SIMPLE_PROMPT, quiet: true
+Pry.start binding, quiet: true

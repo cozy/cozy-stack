@@ -55,7 +55,7 @@ class CozyFile
     opts = opts.dup
     opts[:content] = File.read filename
     opts[:name] ||= "#{Faker::Internet.slug}#{File.extname(filename)}"
-    opts[:mime] ||= MimeMagic.by_path(filename).type
+    opts[:mime] ||= MiniMime.lookup_by_filename(filename).content_type
     opts
   end
 
