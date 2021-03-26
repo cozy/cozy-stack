@@ -1068,6 +1068,45 @@ func TestDeleteDesignDoc(t *testing.T) {
 	assert.Less(t, len(rows), nDesignDocs)
 }
 
+func TestCannotDeleteStackDesignDoc(t *testing.T) {
+	url := ts.URL + "/data/io.cozy.files/_design_docs"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	rows := out["rows"].([]interface{})
+	var indexRev, viewRev string
+	for _, row := range rows {
+		info := row.(map[string]interface{})
+		if info["id"] == "_design/dir-by-path" {
+			value := info["value"].(map[string]interface{})
+			indexRev = value["rev"].(string)
+		}
+		if info["id"] == "_design/by-parent-type-name" {
+			value := info["value"].(map[string]interface{})
+			viewRev = value["rev"].(string)
+		}
+	}
+
+	url = ts.URL + "/data/io.cozy.files/_design/dir-by-path?rev=" + indexRev
+	req, _ = http.NewRequest("DELETE", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	_, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+
+	url = ts.URL + "/data/io.cozy.files/_design/by-parent-type-name?rev=" + viewRev
+	req, _ = http.NewRequest("DELETE", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	_, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
 func TestCopyDesignDoc(t *testing.T) {
 	srcDdoc := "indextocopy"
 	targetID := "_design/indexcopied"

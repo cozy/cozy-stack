@@ -334,3 +334,19 @@ func InitGlobalDB() error {
 	DefineViews(g, GlobalDB, globalViews)
 	return g.Wait()
 }
+
+// CheckDesignDocCanBeDeleted will return false for an index or view used by
+// the stack.
+func CheckDesignDocCanBeDeleted(doctype, name string) bool {
+	for _, index := range Indexes {
+		if doctype == index.Doctype && name == index.Request.DDoc {
+			return false
+		}
+	}
+	for _, view := range Views {
+		if doctype == view.Doctype && name == view.Name {
+			return false
+		}
+	}
+	return true
+}
