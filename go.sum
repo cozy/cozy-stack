@@ -105,8 +105,6 @@ github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0 h1:bQVNaGvnUI7m8J8k3hk
 github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0/go.mod h1:DlX8Rq7OKA0F9I1e0tz6+PCOXkKZ/l6aD+bWxCC6Qfo=
 github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945 h1:EfeD2CzaZclMHyFxSuaA1BTfqVTLaFwqlASiNNil4nE=
 github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945/go.mod h1:rLnjIcybyvs+PoCzi4+GmpOVp0+q+qdcuZKnKUKJoF4=
-github.com/cozy/prosemirror-go v0.4.9 h1:urukelN1w2qBP+mU2pz2jGEdF/hCJ2C0/1VgjSV1FCw=
-github.com/cozy/prosemirror-go v0.4.9/go.mod h1:v15sN6s5qGHCgb1cgVGk2ZZ53lLzefVmFVwX53E3Lb8=
 github.com/cozy/prosemirror-go v0.4.10 h1:qrvh1D46/hioIeBhZVx8HYJXZtNEX2RfVBdSJN76b0E=
 github.com/cozy/prosemirror-go v0.4.10/go.mod h1:v15sN6s5qGHCgb1cgVGk2ZZ53lLzefVmFVwX53E3Lb8=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
@@ -210,10 +208,11 @@ github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.4.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.4 h1:L8R9j+yAqZuZjsqh/z+F1NCffTKKLShY6zXTItVIZ8M=
 github.com/google/go-cmp v0.5.4/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/go-querystring v1.0.0 h1:Xkwi/a1rcvNg1PPYe5vI8GbeBY/jrVuDX5ASuANWTrk=
-github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
+github.com/google/go-querystring v1.1.0 h1:AnCroh3fv4ZBgVIf1Iwtovgjaw/GiKJo8M8yD/fhyJ8=
+github.com/google/go-querystring v1.1.0/go.mod h1:Kcdr2DB4koayq7X8pmAG4sNG59So17icRSOU623lUBU=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/gops v0.3.17 h1:CguOcnDVYG32soOj2YevV8mW9asrIh1lZw3d7Ovty/o=
 github.com/google/gops v0.3.17/go.mod h1:Pfp8hWGIFdV/7rY9/O/U5WgdjYQXf/GiEK4NVuVd2ZE=
