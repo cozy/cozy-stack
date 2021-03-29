@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/model/office"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -22,17 +23,31 @@ func Open(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	mode := "edit"
-	if err := middlewares.AllowVFS(c, permission.PUT, open.File); err != nil {
-		mode = "view"
-		if err := middlewares.AllowVFS(c, permission.GET, open.File); err != nil {
-			return err
-		}
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
 	}
-	doc, err := open.GetResult(mode)
+
+	// If a directory is shared by link and contains a note, the note can be
+	// opened with the same sharecode as the directory. The sharecode is also
+	// used to identify the member that previews a sharing.
+	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
+		code := middlewares.GetRequestToken(c)
+		open.AddShareByLinkCode(code)
+	}
+
+	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
+	if err := open.CheckPermission(pdoc, sharingID); err != nil {
+		return middlewares.ErrForbidden
+	}
+
+	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
+	readOnly := c.QueryParam("ReadOnly") == "true"
+	doc, err := open.GetResult(memberIndex, readOnly)
 	if err != nil {
 		return wrapError(err)
 	}
+
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
@@ -56,7 +71,7 @@ func Routes(router *echo.Group) {
 
 func wrapError(err error) *jsonapi.Error {
 	switch err {
-	case office.ErrNoServer, office.ErrInvalidFile:
+	case office.ErrNoServer, office.ErrInvalidFile, sharing.ErrCannotOpenFile:
 		return jsonapi.NotFound(err)
 	case office.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)

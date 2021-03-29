@@ -3,9 +3,10 @@ package office
 import (
 	"fmt"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
-	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -55,8 +56,7 @@ func (o *apiOfficeURL) Fetch(field string) []string            { return nil }
 
 // Opener can be used to find the parameters for opening an office document.
 type Opener struct {
-	inst *instance.Instance
-	File *vfs.FileDoc
+	*sharing.FileOpener
 }
 
 // Open will return an Opener for the given file.
@@ -65,18 +65,41 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Check that the file is an office document
 	if file.Class != "text" && file.Class != "spreadsheet" && file.Class != "slide" {
 		return nil, ErrInvalidFile
 	}
-	return &Opener{inst: inst, File: file}, nil
+
+	opener, err := sharing.NewFileOpener(inst, file)
+	if err != nil {
+		return nil, err
+	}
+	return &Opener{opener}, nil
 }
 
 // GetResult looks if the file can be opened locally or not, which code can be
 // used in case of a shared note, and other parameters.. and returns the information.
-func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
+func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+	var result *apiOfficeURL
+	var err error
+	if o.ShouldOpenLocally() {
+		result, err = o.openLocalDocument(memberIndex, readOnly)
+	} else {
+		result, err = o.openSharedDocument()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	result.DocID = o.File.ID()
+	return result, nil
+}
+
+func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeURL, error) {
 	var cfg *config.Office
 	configuration := config.GetConfig().Office
-	if c, ok := configuration[o.inst.ContextName]; ok {
+	if c, ok := configuration[o.Inst.ContextName]; ok {
 		cfg = &c
 	} else if c, ok := configuration[config.DefaultInstanceContext]; ok {
 		cfg = &c
@@ -86,59 +109,87 @@ func (o *Opener) GetResult(mode string) (jsonapi.Object, error) {
 	}
 
 	// Create a local result
-	result := &apiOfficeURL{
-		FileID:   o.File.ID(),
-		Protocol: "https",
-		Instance: o.inst.ContextualDomain(),
+	code, err := o.GetSharecode(memberIndex, readOnly)
+	if err != nil {
+		return nil, err
 	}
-	if build.IsDevRelease() {
-		result.Protocol = "http"
-	}
-	switch config.GetConfig().Subdomains {
-	case config.FlatSubdomains:
-		result.Subdomain = "flat"
-	case config.NestedSubdomains:
-		result.Subdomain = "nested"
+	params := o.OpenLocalFile(code)
+	doc := apiOfficeURL{
+		DocID:     params.FileID,
+		Protocol:  params.Protocol,
+		Subdomain: params.Subdomain,
+		Instance:  params.Instance,
+		Sharecode: params.Sharecode,
 	}
 
 	// Fill the parameters for the Document Server
+	mode := "edit"
+	if readOnly {
+		mode = "view"
+	}
 	download, err := o.downloadURL()
 	if err != nil {
-		o.inst.Logger().WithField("nspace", "office").
+		o.Inst.Logger().WithField("nspace", "office").
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
-	publicName, _ := o.inst.PublicName()
-	result.OO = &onlyOffice{
+	publicName, _ := o.Inst.PublicName()
+	doc.PublicName = publicName
+	doc.OO = &onlyOffice{
 		URL: cfg.OnlyOfficeURL,
 	}
-	result.OO.Doc.Filetype = o.File.Mime
-	result.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
-	result.OO.Doc.Title = o.File.DocName
-	result.OO.Doc.URL = download
-	result.OO.Doc.Info.Owner = publicName
-	result.OO.Doc.Info.Uploaded = uploadedDate(o.File)
-	result.OO.Editor.Callback = o.inst.PageURL("/office/"+o.File.ID()+"/callback", nil)
-	result.OO.Editor.Lang = o.inst.Locale
-	result.OO.Editor.Mode = mode
+	doc.OO.Doc.Filetype = o.File.Mime
+	doc.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
+	doc.OO.Doc.Title = o.File.DocName
+	doc.OO.Doc.URL = download
+	doc.OO.Doc.Info.Owner = publicName
+	doc.OO.Doc.Info.Uploaded = uploadedDate(o.File)
+	doc.OO.Editor.Callback = o.Inst.PageURL("/office/"+o.File.ID()+"/callback", nil)
+	doc.OO.Editor.Lang = o.Inst.Locale
+	doc.OO.Editor.Mode = mode
 
-	// Enforce DocID and PublicName with local values
-	result.DocID = o.File.ID()
-	result.PublicName = publicName
-	return result, nil
+	return &doc, nil
+}
+
+func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
+	prepared, err := o.PrepareRequestForSharedFile()
+	if err != nil {
+		return nil, err
+	}
+	if prepared.Opts == nil {
+		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
+	}
+
+	prepared.Opts.Path = "/office/" + prepared.XoredID + "/open"
+	res, err := request.Req(prepared.Opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = sharing.RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
+			prepared.Creds, prepared.Opts, nil)
+	}
+	if err != nil {
+		return nil, sharing.ErrInternalServerError
+	}
+	defer res.Body.Close()
+	var doc apiOfficeURL
+	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
+		return nil, err
+	}
+	publicName, _ := o.Inst.PublicName()
+	doc.PublicName = publicName
+	return &doc, nil
 }
 
 // downloadURL returns an URL where the Document Server can download the file.
 func (o *Opener) downloadURL() (string, error) {
-	path, err := o.File.Path(o.inst.VFS())
+	path, err := o.File.Path(o.Inst.VFS())
 	if err != nil {
 		return "", err
 	}
-	secret, err := vfs.GetStore().AddFile(o.inst, path)
+	secret, err := vfs.GetStore().AddFile(o.Inst, path)
 	if err != nil {
 		return "", err
 	}
-	return o.inst.PageURL("/files/downloads/"+secret+"/"+o.File.DocName, nil), nil
+	return o.Inst.PageURL("/files/downloads/"+secret+"/"+o.File.DocName, nil), nil
 }
 
 // uploadedDate returns the uploaded date for a file in the date format used by
