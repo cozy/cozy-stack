@@ -456,6 +456,11 @@ func deleteDesignDoc(c echo.Context) error {
 			"error": "You must pass a rev param",
 		})
 	}
+	if !couchdb.CheckDesignDocCanBeDeleted(doctype, ddoc) {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"error": "This design doc cannot be deleted",
+		})
+	}
 	return proxy(c, "_design/"+ddoc)
 }
 
