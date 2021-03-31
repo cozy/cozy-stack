@@ -627,17 +627,7 @@ func isPlatformApp(man Manifest, contextName string) bool {
 	if man.AppType() != consts.WebappType {
 		return false
 	}
-	if utils.IsInArray(man.Slug(), []string{
-		"banks",
-		"contacts",
-		"drive",
-		"home",
-		"notes",
-		"passwords",
-		"photos",
-		"settings",
-		"store",
-	}) {
+	if utils.IsInArray(man.Slug(), consts.PlatformApps) {
 		return true
 	}
 
