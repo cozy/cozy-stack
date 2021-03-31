@@ -57,7 +57,8 @@ docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** c
 
 ## Only-Office document server
 
-The `cozy/onlyoffice-dev` docker image can be used for local development. Just start it with:
+The `cozy/onlyoffice-dev` docker image can be used for local development on
+Linux (the `--net=host` option doesn't work on macOS). Just start it with:
 
 ```bash
 $ docker run -it --rm --name=oodev --net=host cozy/onlyoffice-dev
