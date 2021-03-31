@@ -25,8 +25,9 @@ type apiOfficeURL struct {
 }
 
 type onlyOffice struct {
-	URL string `json:"url"`
-	Doc struct {
+	URL  string `json:"url"`
+	Type string `json:"documentType"`
+	Doc  struct {
 		Filetype string `json:"filetype"`
 		Key      string `json:"key"`
 		Title    string `json:"title"`
@@ -136,7 +137,8 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	publicName, _ := o.Inst.PublicName()
 	doc.PublicName = publicName
 	doc.OO = &onlyOffice{
-		URL: cfg.OnlyOfficeURL,
+		URL:  cfg.OnlyOfficeURL,
+		Type: documentType(o.File),
 	}
 	doc.OO.Doc.Filetype = o.File.Mime
 	doc.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
@@ -200,4 +202,17 @@ func uploadedDate(f *vfs.FileDoc) string {
 		date = *f.CozyMetadata.UploadedAt
 	}
 	return date.Format("2006-01-02 3:04 PM")
+}
+
+// documentType returns the document type parameter for Only Office
+// Cf https://api.onlyoffice.com/editors/config/#documentType
+func documentType(f *vfs.FileDoc) string {
+	switch f.Class {
+	case "spreadsheet":
+		return "cell"
+	case "slide":
+		return "slide"
+	default:
+		return "word"
+	}
 }

@@ -88,6 +88,7 @@ Content-Type: application/vnd.api+json
       "public_name": "Bob",
       "onlyoffice": {
         "url": "https://documentserver/",
+        "documentType": "word",
         "document": {
           "filetype": "docx",
           "key": "32e07d806f9b0139c541543d7eb8149c-56a653128a91a5c2291db9735b43fd86",
