@@ -1,7 +1,6 @@
 package office
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -54,11 +53,18 @@ func Open(c echo.Context) error {
 // Callback is the handler for OnlyOffice callback requests.
 // Cf https://api.onlyoffice.com/editors/callback
 func Callback(c echo.Context) error {
-	var data map[string]interface{}
-	if err := c.Bind(&data); err != nil {
-		fmt.Printf("err = %v\n", err)
-	} else {
-		fmt.Printf("data = %#v\n", data)
+	inst := middlewares.GetInstance(c)
+	var params office.CallbackParameters
+	if err := c.Bind(&params); err != nil {
+		inst.Logger().WithField("nspace", "office").
+			Warnf("Cannot bind callback parameters: %s", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
+	}
+
+	if err := office.Callback(inst, params); err != nil {
+		inst.Logger().WithField("nspace", "office").
+			Infof("Error on the callback: %s", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"error": 0})
 }

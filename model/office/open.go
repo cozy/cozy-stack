@@ -68,7 +68,7 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 	}
 
 	// Check that the file is an office document
-	if file.Class != "text" && file.Class != "spreadsheet" && file.Class != "slide" {
+	if !isOfficeDocument(file) {
 		return nil, ErrInvalidFile
 	}
 
@@ -214,5 +214,14 @@ func documentType(f *vfs.FileDoc) string {
 		return "slide"
 	default:
 		return "word"
+	}
+}
+
+func isOfficeDocument(f *vfs.FileDoc) bool {
+	switch f.Class {
+	case "spreadsheet", "slide", "text":
+		return true
+	default:
+		return false
 	}
 }
