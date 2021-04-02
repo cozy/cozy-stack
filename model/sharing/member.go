@@ -274,6 +274,9 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 		return err
 	}
 	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
 	opts := &request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
