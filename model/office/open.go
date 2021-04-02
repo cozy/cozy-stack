@@ -150,7 +150,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	doc.OO.Doc.URL = download
 	doc.OO.Doc.Info.Owner = publicName
 	doc.OO.Doc.Info.Uploaded = uploadedDate(o.File)
-	doc.OO.Editor.Callback = o.Inst.PageURL("/office/"+o.File.ID()+"/callback", nil)
+	doc.OO.Editor.Callback = o.Inst.PageURL("/office/callback", nil)
 	doc.OO.Editor.Lang = o.Inst.Locale
 	doc.OO.Editor.Mode = mode
 

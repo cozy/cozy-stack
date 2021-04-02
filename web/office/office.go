@@ -72,7 +72,7 @@ func Callback(c echo.Context) error {
 // Routes sets the routing for the collaborative edition of office documents.
 func Routes(router *echo.Group) {
 	router.GET("/:id/open", Open)
-	router.POST("/:id/callback", Callback)
+	router.POST("/callback", Callback)
 }
 
 func wrapError(err error) *jsonapi.Error {

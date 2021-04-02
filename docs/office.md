@@ -91,7 +91,7 @@ Content-Type: application/vnd.api+json
         "documentType": "word",
         "document": {
           "filetype": "docx",
-          "key": "32e07d806f9b0139c541543d7eb8149c-56a653128a91a5c2291db9735b43fd86",
+          "key": "7c7ccc2e7137ba774b7e44de",
           "title": "Letter.docx",
           "url": "https://bob.cozy.example/files/downloads/735e6cf69af2db82/Letter.docx?Dl=1",
           "info": {
@@ -108,4 +108,41 @@ Content-Type: application/vnd.api+json
     }
   }
 }
+```
+
+### POST /office/callback
+
+This is the callback handler for OnlyOffice. It is called when the document
+server wants to save the file.
+
+See https://api.onlyoffice.com/editors/callback
+
+#### Request
+
+```http
+POST /office/callback HTTP/1.1
+Host: bob.cozy.example
+Content-Type: application/json
+```
+
+```json
+{
+    "actions": [{"type": 0, "userid": "78e1e841"}],
+    "changesurl": "https://documentserver/url-to-changes.zip",
+    "key": "7c7ccc2e7137ba774b7e44de",
+    "status": 2,
+    "url": "https://documentserver/url-to-edited-document.docx",
+    "users": ["6d5a81d0"]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{ "error": 0 }
 ```
