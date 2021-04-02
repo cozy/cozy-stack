@@ -1,8 +1,6 @@
 package office
 
 import (
-	"fmt"
-
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -134,6 +132,12 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
+	key, err := GetStore().AddDoc(o.Inst, o.File.ID(), o.File.Rev())
+	if err != nil {
+		o.Inst.Logger().WithField("nspace", "office").
+			Infof("Cannot add doc to store: %s", err)
+		return nil, ErrInternalServerError
+	}
 	publicName, _ := o.Inst.PublicName()
 	doc.PublicName = publicName
 	doc.OO = &onlyOffice{
@@ -141,7 +145,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 		Type: documentType(o.File),
 	}
 	doc.OO.Doc.Filetype = o.File.Mime
-	doc.OO.Doc.Key = fmt.Sprintf("%s-%s", o.File.ID(), o.File.Rev())
+	doc.OO.Doc.Key = key
 	doc.OO.Doc.Title = o.File.DocName
 	doc.OO.Doc.URL = download
 	doc.OO.Doc.Info.Owner = publicName

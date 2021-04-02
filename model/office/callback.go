@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -18,6 +17,10 @@ const (
 	// StatusReadyForSaving is used when the file should be saved after being
 	// edited.
 	StatusReadyForSaving = 2
+	// StatusForceSaveRequested is used when the file has been modified and
+	// should be saved, even if the document is still opened and can be edited
+	// by users.
+	StatusForceSaveRequested = 6
 )
 
 // CallbackParameters is a struct for the parameters sent by the document
@@ -35,34 +38,56 @@ var docserverClient = &http.Client{
 
 // Callback will manage the callback from the document server.
 func Callback(inst *instance.Instance, params CallbackParameters) error {
-	parts := strings.SplitN(params.Key, "-", 2)
-	if len(parts) != 2 {
-		return errors.New("Invalid key")
-	}
-	id := parts[0]
-	rev := parts[1]
-
 	switch params.Status {
 	case StatusReadyForSaving:
-		return saveFile(inst, id, rev, params.URL)
+		return finalSaveFile(inst, params.Key, params.URL)
+	case StatusForceSaveRequested:
+		return forceSaveFile(inst, params.Key, params.URL)
 	default:
 		return nil
 	}
 }
 
-func saveFile(inst *instance.Instance, id, rev, downloadURL string) error {
+func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
+	id, rev, err := GetStore().GetDoc(inst, key)
+	if err != nil || id == "" || rev == "" {
+		return errors.New("Invalid key")
+	}
+
+	_, err = saveFile(inst, id, rev, downloadURL)
+	if err == nil {
+		_ = GetStore().RemoveDoc(inst, key)
+	}
+	return err
+}
+
+func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
+	id, rev, err := GetStore().GetDoc(inst, key)
+	if err != nil || id == "" || rev == "" {
+		return errors.New("Invalid key")
+	}
+
+	rev, err = saveFile(inst, id, rev, downloadURL)
+	if err == nil {
+		_ = GetStore().UpdateDoc(inst, key, id, rev)
+	}
+	return err
+}
+
+// saveFile saves the file with content from the given URL and returns the new revision.
+func saveFile(inst *instance.Instance, id, rev, downloadURL string) (string, error) {
 	fs := inst.VFS()
 	file, err := fs.FileByID(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !isOfficeDocument(file) {
-		return ErrInvalidFile
+		return "", ErrInvalidFile
 	}
 
 	res, err := docserverClient.Get(downloadURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() {
 		// Flush the body in case of error to allow reusing the connection with
@@ -89,11 +114,11 @@ func saveFile(inst *instance.Instance, id, rev, downloadURL string) error {
 
 	f, err := fs.CreateFile(newfile, file)
 	if err != nil {
-		return err
+		return "", err
 	}
 	_, err = io.Copy(f, res.Body)
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
-	return err
+	return newfile.Rev(), err
 }
