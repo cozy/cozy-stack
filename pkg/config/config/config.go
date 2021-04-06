@@ -222,6 +222,7 @@ type Move struct {
 type Office struct {
 	OnlyOfficeURL string
 	InboxSecret   string
+	OutboxSecret  string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -949,9 +950,11 @@ func makeOffice(v *viper.Viper) (map[string]Office, error) {
 			return nil, errors.New("Bad format in the office section of the configuration file")
 		}
 		inbox, _ := ctx["onlyoffice_inbox_secret"].(string)
+		outbox, _ := ctx["onlyoffice_outbox_secret"].(string)
 		office[k] = Office{
 			OnlyOfficeURL: url,
 			InboxSecret:   inbox,
+			OutboxSecret:  outbox,
 		}
 	}
 
@@ -959,6 +962,7 @@ func makeOffice(v *viper.Viper) (map[string]Office, error) {
 		office[DefaultInstanceContext] = Office{
 			OnlyOfficeURL: url,
 			InboxSecret:   v.GetString("office.default.onlyoffice_inbox_secret"),
+			OutboxSecret:  v.GetString("office.default.onlyoffice_outbox_secret"),
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/office"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -60,6 +61,8 @@ func Callback(c echo.Context) error {
 			Warnf("Cannot bind callback parameters: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
 	}
+	header := c.Request().Header.Get("Authorization")
+	params.Token = strings.TrimPrefix(header, "Bearer ")
 
 	if err := office.Callback(inst, params); err != nil {
 		inst.Logger().WithField("nspace", "office").

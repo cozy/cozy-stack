@@ -222,7 +222,9 @@ HTTP/1.1 200 OK
       "https://apps-registry.cozycloud.cc/"
     ],
     "office": {
-      "onlyoffice_url": "https://documentserver.cozycloud.cc/"
+      "OnlyOfficeURL": "https://documentserver.cozycloud.cc/",
+      "InboxSecret": "inbox_secret",
+      "OutboxSecret": "outbox_secret"
     },
     "cloudery_endpoint": ""
   }
@@ -275,7 +277,9 @@ HTTP/1.1 200 OK
     "https://apps-registry.cozycloud.cc/"
   ],
   "office": {
-    "onlyoffice_url": "https://documentserver.cozycloud.cc/"
+    "OnlyOfficeURL": "https://documentserver.cozycloud.cc/",
+    "InboxSecret": "inbox_secret",
+    "OutboxSecret": "outbox_secret"
   },
   "cloudery_endpoint": ""
 }

@@ -9,7 +9,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // Status list is described on https://api.onlyoffice.com/editors/callback#status
@@ -30,14 +35,31 @@ type CallbackParameters struct {
 	Key    string `json:"key"`
 	Status int    `json:"status"`
 	URL    string `json:"url"`
+	Token  string `json:"-"` // From the Authorization header
 }
 
 var docserverClient = &http.Client{
 	Timeout: 60 * time.Second,
 }
 
+type callbackClaims struct {
+	Payload struct {
+		Key    string `json:"key"`
+		Status int    `json:"status"`
+		URL    string `json:"url"`
+	} `json:"payload"`
+}
+
+// Valid is part of the jwt.Claims interface
+func (c *callbackClaims) Valid() error { return nil }
+
 // Callback will manage the callback from the document server.
 func Callback(inst *instance.Instance, params CallbackParameters) error {
+	cfg := getConfig(inst.ContextName)
+	if err := checkToken(cfg, params); err != nil {
+		return err
+	}
+
 	switch params.Status {
 	case StatusReadyForSaving:
 		return finalSaveFile(inst, params.Key, params.URL)
@@ -46,6 +68,27 @@ func Callback(inst *instance.Instance, params CallbackParameters) error {
 	default:
 		return nil
 	}
+}
+
+func checkToken(cfg *config.Office, params CallbackParameters) error {
+	if cfg == nil || cfg.OutboxSecret == "" {
+		return nil
+	}
+
+	var claims callbackClaims
+	err := crypto.ParseJWT(params.Token, func(token *jwt.Token) (interface{}, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, permission.ErrInvalidToken
+		}
+		return []byte(cfg.OutboxSecret), nil
+	}, &claims)
+	if err != nil {
+		return permission.ErrInvalidToken
+	}
+	if params.URL != claims.Payload.URL || params.Key != claims.Payload.Key || params.Status != claims.Payload.Status {
+		return permission.ErrInvalidToken
+	}
+	return nil
 }
 
 func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {

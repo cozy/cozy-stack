@@ -67,7 +67,7 @@ $ docker run -it --rm --name=oodev --net=host cozy/onlyoffice-dev
 and run the stack with:
 
 ```bash
-$ cozy-stack serve --disable-csp --onlyoffice-url=http://localhost:8000/ --onlyoffice-inbox-secret=inbox_secret
+$ cozy-stack serve --disable-csp --onlyoffice-url=http://localhost:8000/ --onlyoffice-inbox-secret=inbox_secret --onlyoffice-outbox-secret=outbox_secret
 ```
 
 If you need to rebuild it, you can do that with:

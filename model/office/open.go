@@ -117,13 +117,7 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 }
 
 func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeURL, error) {
-	var cfg *config.Office
-	configuration := config.GetConfig().Office
-	if c, ok := configuration[o.Inst.ContextName]; ok {
-		cfg = &c
-	} else if c, ok := configuration[config.DefaultInstanceContext]; ok {
-		cfg = &c
-	}
+	cfg := getConfig(o.Inst.ContextName)
 	if cfg == nil || cfg.OnlyOfficeURL == "" {
 		return nil, ErrNoServer
 	}
@@ -254,4 +248,14 @@ func isOfficeDocument(f *vfs.FileDoc) bool {
 	default:
 		return false
 	}
+}
+
+func getConfig(contextName string) *config.Office {
+	configuration := config.GetConfig().Office
+	if c, ok := configuration[contextName]; ok {
+		return &c
+	} else if c, ok := configuration[config.DefaultInstanceContext]; ok {
+		return &c
+	}
+	return nil
 }
