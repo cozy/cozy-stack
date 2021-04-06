@@ -46,7 +46,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
-	github.com/ugorji/go/codec v1.2.4
+	github.com/ugorji/go/codec v1.2.5
 	golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
 	golang.org/x/net v0.0.0-20210330075724-22f4162a9025
