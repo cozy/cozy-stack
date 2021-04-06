@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type apiOfficeURL struct {
@@ -23,21 +24,22 @@ type apiOfficeURL struct {
 }
 
 type onlyOffice struct {
-	URL  string `json:"url"`
-	Type string `json:"documentType"`
-	Doc  struct {
-		Filetype string `json:"filetype"`
+	URL   string `json:"url,omitempty"`
+	Token string `json:"token,omitempty"`
+	Type  string `json:"documentType"`
+	Doc   struct {
+		Filetype string `json:"filetype,omitempty"`
 		Key      string `json:"key"`
-		Title    string `json:"title"`
+		Title    string `json:"title,omitempty"`
 		URL      string `json:"url"`
 		Info     struct {
 			Owner    string `json:"owner,omitempty"`
-			Uploaded string `json:"uploaded"`
+			Uploaded string `json:"uploaded,omitempty"`
 		} `json:"info"`
 	} `json:"document"`
 	Editor struct {
 		Callback string `json:"callbackUrl"`
-		Lang     string `json:"lang"`
+		Lang     string `json:"lang,omitempty"`
 		Mode     string `json:"mode"`
 	} `json:"editor"`
 }
@@ -52,6 +54,25 @@ func (o *apiOfficeURL) Relationships() jsonapi.RelationshipMap { return nil }
 func (o *apiOfficeURL) Included() []jsonapi.Object             { return nil }
 func (o *apiOfficeURL) Links() *jsonapi.LinksList              { return nil }
 func (o *apiOfficeURL) Fetch(field string) []string            { return nil }
+
+func (o *apiOfficeURL) sign(cfg *config.Office) (string, error) {
+	if cfg == nil || cfg.InboxSecret == "" {
+		return "", nil
+	}
+
+	claims := *o.OO
+	claims.URL = ""
+	claims.Doc.Filetype = ""
+	claims.Doc.Title = ""
+	claims.Doc.Info.Owner = ""
+	claims.Doc.Info.Uploaded = ""
+	claims.Editor.Lang = ""
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
+	return token.SignedString([]byte(cfg.InboxSecret))
+}
+
+// Valid is a method of the jwt.Claims interface
+func (o *onlyOffice) Valid() error { return nil }
 
 // Opener can be used to find the parameters for opening an office document.
 type Opener struct {
@@ -154,6 +175,11 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	doc.OO.Editor.Lang = o.Inst.Locale
 	doc.OO.Editor.Mode = mode
 
+	token, err := doc.sign(cfg)
+	if err != nil {
+		return nil, err
+	}
+	doc.OO.Token = token
 	return &doc, nil
 }
 

@@ -257,6 +257,7 @@ move:
 office:
   default:
     onlyoffice_url: https://documentserver.cozycloud.cc/
+    onlyoffice_inbox_secret: inbox_secret
 
 # [internal usage] Cloudery configuration
 clouderies:

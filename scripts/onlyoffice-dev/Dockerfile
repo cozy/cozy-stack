@@ -57,6 +57,7 @@ RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0x8320ca65cb2de8e5 && \
     apt-get -y update && \
     apt-get -yq install onlyoffice-documentserver && \
+	cp /usr/bin/local.json /etc/onlyoffice/documentserver/local.json && \
 	service postgresql stop && \
 	service rabbitmq-server stop && \
 	apt-get clean && \
