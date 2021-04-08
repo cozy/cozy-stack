@@ -19,6 +19,16 @@ Reference: https://api.onlyoffice.com/editors/open
 4. The document server asks the file converter to load the document (via RabbitMQ?)
 5. The file converter loads the file content from the stack
 
+### Saving a document with OnlyOffice
+
+Reference: https://api.onlyoffice.com/editors/save
+
+![Saving a document with OnlyOffice](diagrams/onlyoffice-save.png)
+
+1. The browser makes requests to edit the document and close the connection when done
+2. The document server waits a bit after all clients have disconnected, and send a request to the callback URL
+3. The stack downloads the file from the document server and saves it
+
 ## Routes
 
 ### GET /office/:id/open
