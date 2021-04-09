@@ -111,7 +111,7 @@ Content-Type: application/vnd.api+json
           }
         },
         "editor": {
-          "callbackUrl": "https://bob.cozy.example/office/32e07d806f9b0139c541543d7eb8149c/callback",
+          "callbackUrl": "https://bob.cozy.example/office/callback",
           "lang": "en",
           "mode": "edit"
         }

@@ -142,8 +142,11 @@ func saveFile(inst *instance.Instance, id, rev, downloadURL string) (string, err
 	newfile := file.Clone().(*vfs.FileDoc)
 	newfile.MD5Sum = nil // Let the VFS compute the new md5sum
 	newfile.ByteSize = res.ContentLength
+	if newfile.CozyMetadata == nil {
+		newfile.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	}
 	newfile.UpdatedAt = time.Now()
-	newfile.CozyMetadata.UpdatedAt = file.UpdatedAt
+	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
 
 	if file.Rev() != rev {
 		// Conflict: save it in a new file
