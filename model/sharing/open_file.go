@@ -113,6 +113,9 @@ func (o *FileOpener) CheckPermission(pdoc *permission.Permission, sharingID stri
 // ShouldOpenLocally returns true if the file can be opened in the current
 // instance, and false if it is a shared file created on another instance.
 func (o *FileOpener) ShouldOpenLocally() bool {
+	if o.File.CozyMetadata == nil {
+		return true
+	}
 	u, err := url.Parse(o.File.CozyMetadata.CreatedOn)
 	if err != nil {
 		return true

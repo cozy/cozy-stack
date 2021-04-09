@@ -129,7 +129,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	}
 	params := o.OpenLocalFile(code)
 	doc := apiOfficeURL{
-		DocID:     params.FileID,
+		FileID:    params.FileID,
 		Protocol:  params.Protocol,
 		Subdomain: params.Subdomain,
 		Instance:  params.Instance,
