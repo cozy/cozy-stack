@@ -66,8 +66,9 @@ describe "A folder" do
     end
     assert_equal formats, %w[large medium small]
 
-    # Add a note in the folder
+    # Add a note and an office document in the folder
     note = Note.create inst, dir_id: folder.couch_id
+    office_file = Office.create inst, dir_id: folder.couch_id
 
     # Create the sharing
     sharing = Sharing.new
@@ -120,6 +121,19 @@ describe "A folder" do
     assert_equal inst.domain, parameters["instance"]
     refute_nil parameters["sharecode"]
     assert_equal recipient_name, parameters["public_name"]
+
+    # Check that the recipient can open the office document
+    office_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{office_file.name}"
+    office_recipient = CozyFile.find_by_path inst_recipient, office_path
+    parameters = Office.open inst_recipient, office_recipient.couch_id
+    assert_equal office_recipient.couch_id, parameters["id"]
+    assert_equal office_file.couch_id, parameters["document_id"]
+    assert %w[flat nested].include? parameters["subdomain"]
+    assert %w[http https].include? parameters["protocol"]
+    assert_equal inst.domain, parameters["instance"]
+    refute_nil parameters["sharecode"]
+    assert_equal recipient_name, parameters["public_name"]
+    assert_nil parameters["onlyoffice"]
 
     # Create a "one-shot" sharing
     folder = Folder.create inst

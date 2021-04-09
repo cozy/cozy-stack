@@ -112,7 +112,7 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 		return nil, err
 	}
 
-	result.DocID = o.File.ID()
+	result.FileID = o.File.ID()
 	return result, nil
 }
 
@@ -129,7 +129,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	}
 	params := o.OpenLocalFile(code)
 	doc := apiOfficeURL{
-		FileID:    params.FileID,
+		DocID:     params.FileID,
 		Protocol:  params.Protocol,
 		Subdomain: params.Subdomain,
 		Instance:  params.Instance,
@@ -192,7 +192,11 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 		res, err = sharing.RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
 			prepared.Creds, prepared.Opts, nil)
 	}
+	if res.StatusCode == 404 {
+		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
+	}
 	if err != nil {
+		o.Inst.Logger().WithField("nspace", "office").Infof("openSharedDocument error: %s", err)
 		return nil, sharing.ErrInternalServerError
 	}
 	defer res.Body.Close()
@@ -202,6 +206,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 	}
 	publicName, _ := o.Inst.PublicName()
 	doc.PublicName = publicName
+	doc.OO = nil
 	return &doc, nil
 }
 
