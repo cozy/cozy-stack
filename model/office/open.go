@@ -99,7 +99,8 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 }
 
 // GetResult looks if the file can be opened locally or not, which code can be
-// used in case of a shared note, and other parameters.. and returns the information.
+// used in case of a shared office document, and other parameters.. and returns
+// the information.
 func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
 	var result *apiOfficeURL
 	var err error

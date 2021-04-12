@@ -118,7 +118,7 @@ func TestMain(m *testing.M) {
 		"default": {OnlyOfficeURL: ooURL},
 	}
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "notes_test")
+	setup := testutils.NewSetup(m, "office_test")
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 
