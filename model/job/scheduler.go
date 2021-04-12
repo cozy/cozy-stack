@@ -133,6 +133,8 @@ func fromTriggerInfos(infos *TriggerInfos) (Trigger, error) {
 		return NewEventTrigger(infos)
 	case "@webhook":
 		return NewWebhookTrigger(infos)
+	case "@client":
+		return NewClientTrigger(infos)
 	default:
 		return nil, ErrUnknownTrigger
 	}
