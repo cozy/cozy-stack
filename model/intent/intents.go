@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -124,7 +125,7 @@ func GetInstanceWebapps(inst *instance.Instance) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		url.Path = "registry"
+		url.Path = path.Join(url.Path, "registry")
 		url.RawQuery = "filter[type]=webapp"
 
 		req, err := http.NewRequest("GET", url.String(), nil)
