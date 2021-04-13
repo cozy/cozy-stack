@@ -88,3 +88,17 @@ const DefaultLocale = "en"
 
 // SupportedLocales is the list of supported locales tags.
 var SupportedLocales = []string{"en", "fr"}
+
+// PlatformApps is the list of applications that can be updated automatically
+// even if their permissions have changed.
+var PlatformApps = []string{
+	"banks",
+	"contacts",
+	"drive",
+	"home",
+	"notes",
+	"passwords",
+	"photos",
+	"settings",
+	"store",
+}

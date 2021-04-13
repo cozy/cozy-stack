@@ -355,7 +355,7 @@ func wrapError(err error) *jsonapi.Error {
 	switch err {
 	case note.ErrInvalidSchema:
 		return jsonapi.InvalidAttribute("schema", err)
-	case note.ErrInvalidFile:
+	case note.ErrInvalidFile, sharing.ErrCannotOpenFile:
 		return jsonapi.NotFound(err)
 	case note.ErrNoSteps, note.ErrInvalidSteps:
 		return jsonapi.BadRequest(err)

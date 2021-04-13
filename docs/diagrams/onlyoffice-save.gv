@@ -1,0 +1,18 @@
+digraph onlyoffice_save {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F", fontname="lato", fontsize=11];
+	ranksep=0.45; nodesep=0.6;
+
+	browser [label="Browser"]
+	stack [label="Cozy-Stack"]
+
+    subgraph cluster_oo {
+		label="OnlyOffice"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		docserver [label="Document Server", color="#ff6f3d"]
+	}
+
+	browser -> docserver [label="1"]
+	docserver -> stack [label="2"]
+	stack -> docserver [label="3"]
+}

@@ -44,6 +44,7 @@ class Stack
            "--vault-encryptor-key", "#{vault}/key.enc",
            "--vault-decryptor-key", "#{vault}/key.dec",
            "--mail-alert-address", ALERT_ADDR,
+           "--onlyoffice-url", "https://documentserver.example.net",
            "--konnectors-cmd", konnectors_cmd]
     Helpers.spawn cmd.join(" "), log: "stack-#{@port}.log"
     sleep 1

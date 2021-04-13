@@ -45,8 +45,7 @@ docker run -it --rm --name cozy-stack \
 We publish the cozy-app-dev image when we release a new version of the stack.
 See `scripts/release.sh` for details.
 
-
-## Docker run and url name
+## Docker run and url name for cozy-app-dev
 
 A precision for the app name:
 
@@ -55,3 +54,25 @@ docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** c
 ```
 
 ***my-app*** will be the first part of: ***my-app***.cozy.tools:8080
+
+## Only-Office document server
+
+The `cozy/onlyoffice-dev` docker image can be used for local development on
+Linux (the `--net=host` option doesn't work on macOS). Just start it with:
+
+```bash
+$ docker run -it --rm --name=oodev --net=host cozy/onlyoffice-dev
+```
+
+and run the stack with:
+
+```bash
+$ cozy-stack serve --disable-csp --onlyoffice-url=http://localhost:8000/ --onlyoffice-inbox-secret=inbox_secret --onlyoffice-outbox-secret=outbox_secret
+```
+
+If you need to rebuild it, you can do that with:
+
+```bash
+$ cd scripts/onlyoffice-dev
+$ docker build -t "cozy/onlyoffice-dev" .
+```

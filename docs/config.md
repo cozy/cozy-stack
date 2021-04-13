@@ -155,6 +155,41 @@ for example. It is called with the following parameters:
 1. the instance on which the application has been uninstalled
 2. the application name that has been uninstalled.
 
+## OnlyOffice
+
+An integration between Cozy and OnlyOffice has been made. It allows the
+collaborative edition of office documents in the browser. There are some
+pre-requistes. OnlyOffice Docs must be installed on a server ([The community
+edition](https://helpcenter.onlyoffice.com/installation.aspx) is free but
+limited to 20 connections and doesn't have the mobile mode). It can be the
+same server as the stack, but it is tricky as the default port of the stack
+and of the spellchecker of OnlyOffice is 8080 for both. The stack and the
+OnlyOffice components must be able to make HTTP requests to each other.
+And, for security, these requests can be signed via some shared secrets,
+called inbox and outbox secrets in OnlyOffice configuration.
+
+In the `local.json` configuration file of OnlyOffice, we need:
+
+1. `services.CoAuthoring.token.enable.browser`: `true`
+2. `services.CoAuthoring.token.enable.request.inbox`: `true`
+3. `services.CoAuthoring.token.enable.request.outbox`: `true`
+4. `services.CoAuthoring.secret.inbox`: a random secret
+5. `services.CoAuthoring.secret.outbox`: another random secret
+
+In the cozy configuration file, we need to add a section with:
+
+```yaml
+office:
+  default:
+    onlyoffice_url: https://onlyoffice.example.net/
+    onlyoffice_inbox_secret: inbox_secret
+    onlyoffice_outbox_secret: outbox_secret
+```
+
+Don't forget to restart all the services after having made the changes to the
+configuration files. And you should be able to edit office documents in your
+browser via the Drive application.
+
 ## Customizing a context
 
 ### Intro

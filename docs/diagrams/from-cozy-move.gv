@@ -1,4 +1,4 @@
-digraph bitwarden {
+digraph from_cozy_move {
 	graph [splines=true];
 	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
 	edge [color="#32363F"];

@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/notifications"
+	"github.com/cozy/cozy-stack/web/office"
 	"github.com/cozy/cozy-stack/web/oidc"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/public"
@@ -81,6 +82,29 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	}
 
 	if !config.GetConfig().CSPDisabled {
+		// Add CSP exceptions for loading the OnlyOffice editor (script + frame)
+		perContext := config.GetConfig().CSPPerContext
+		scriptSrc := cspScriptSrcAllowList
+		frameSrc := cspFrameSrcAllowList
+		for ctxName, office := range config.GetConfig().Office {
+			oo := office.OnlyOfficeURL
+			if oo == "" {
+				continue
+			}
+			if ctxName == config.DefaultInstanceContext {
+				scriptSrc = oo + " " + scriptSrc
+				frameSrc = oo + " " + frameSrc
+			} else {
+				cfg := perContext[ctxName]
+				if cfg == nil {
+					cfg = make(map[string]string)
+				}
+				cfg["script"] = oo + " " + cfg["script"]
+				cfg["frame"] = oo + " " + cfg["frame"]
+				perContext[ctxName] = cfg
+			}
+		}
+
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:        hstsMaxAge,
 			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
@@ -92,13 +116,13 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 
 			CSPDefaultSrcAllowList: config.GetConfig().CSPAllowList["default"],
 			CSPImgSrcAllowList:     config.GetConfig().CSPAllowList["img"] + " " + cspImgSrcAllowList,
-			CSPScriptSrcAllowList:  config.GetConfig().CSPAllowList["script"] + " " + cspScriptSrcAllowList,
+			CSPScriptSrcAllowList:  config.GetConfig().CSPAllowList["script"] + " " + scriptSrc,
 			CSPConnectSrcAllowList: config.GetConfig().CSPAllowList["connect"] + " " + cspScriptSrcAllowList,
 			CSPStyleSrcAllowList:   config.GetConfig().CSPAllowList["style"],
 			CSPFontSrcAllowList:    config.GetConfig().CSPAllowList["font"],
-			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + cspFrameSrcAllowList,
+			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + frameSrc,
 
-			CSPPerContext: config.GetConfig().CSPPerContext,
+			CSPPerContext: perContext,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}
@@ -189,6 +213,7 @@ func SetupRoutes(router *echo.Echo) error {
 		permissions.Routes(router.Group("/permissions", mws...))
 		realtime.Routes(router.Group("/realtime", mws...))
 		notes.Routes(router.Group("/notes", mws...))
+		office.Routes(router.Group("/office", mws...))
 		remote.Routes(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))
 		bitwarden.Routes(router.Group("/bitwarden", mws...))

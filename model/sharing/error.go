@@ -49,4 +49,6 @@ var (
 	// ErrAlreadyAccepted is used when someone tries to accept twice a sharing
 	// on the same cozy instance
 	ErrAlreadyAccepted = errors.New("Sharing already accepted by this recipient")
+	// ErrCannotOpenFile is used when opening a file fails
+	ErrCannotOpenFile = errors.New("The file cannot be opened")
 )

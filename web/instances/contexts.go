@@ -9,10 +9,11 @@ import (
 )
 
 type contextAPI struct {
-	Config           interface{} `json:"config"`
-	Context          string      `json:"context"`
-	Registries       []string    `json:"registries"`
-	ClouderyEndpoint string      `json:"cloudery_endpoint"`
+	Config           interface{}    `json:"config"`
+	Context          string         `json:"context"`
+	Registries       []string       `json:"registries"`
+	Office           *config.Office `json:"office,omitempty"`
+	ClouderyEndpoint string         `json:"cloudery_endpoint,omitempty"`
 }
 
 func showContext(c echo.Context) error {
@@ -40,19 +41,29 @@ func lsContexts(c echo.Context) error {
 }
 
 func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
-	clouderies := config.GetConfig().Clouderies
-	registries := config.GetConfig().Registries
+	configuration := config.GetConfig()
+	clouderies := configuration.Clouderies
+	registries := configuration.Registries
+	officeConfig := configuration.Office
 
 	// Clouderies
 	var clouderyEndpoint string
 	var cloudery interface{}
 	cloudery, ok := clouderies[contextName]
 	if !ok {
-		cloudery = clouderies["default"]
+		cloudery = clouderies[config.DefaultInstanceContext]
 	}
 	if cloudery != nil {
 		api := cloudery.(map[string]interface{})["api"]
 		clouderyEndpoint = api.(map[string]interface{})["url"].(string)
+	}
+
+	// Office
+	var office *config.Office
+	if o, ok := officeConfig[contextName]; ok {
+		office = &o
+	} else if o, ok := officeConfig[config.DefaultInstanceContext]; ok {
+		office = &o
 	}
 
 	// Registries
@@ -61,7 +72,7 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 
 	// registriesURLs contains context-specific urls and default ones
 	if registryURLs, ok = registries[contextName]; !ok {
-		registryURLs = registries["default"]
+		registryURLs = registries[config.DefaultInstanceContext]
 	}
 	for _, url := range registryURLs {
 		registriesList = append(registriesList, url.String())
@@ -71,6 +82,7 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 		Config:           config.Normalize(cfg),
 		Context:          contextName,
 		Registries:       registriesList,
+		Office:           office,
 		ClouderyEndpoint: clouderyEndpoint,
 	}
 }

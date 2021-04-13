@@ -253,6 +253,13 @@ registries:
 move:
   url: https://move.cozycloud.cc/
 
+# OnlyOffice server for collaborative edition of office documents
+office:
+  default:
+    onlyoffice_url: https://documentserver.cozycloud.cc/
+    onlyoffice_inbox_secret: inbox_secret
+    onlyoffice_outbox_secret: outbox_secret
+
 # [internal usage] Cloudery configuration
 clouderies:
   default:
