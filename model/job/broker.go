@@ -224,11 +224,11 @@ func (j *Job) Ack() error {
 
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
-func (j *Job) Nack(err error) error {
+func (j *Job) Nack(errorMessage string) error {
 	j.Logger().Debugf("nack %s", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Errored
-	j.Error = err.Error()
+	j.Error = errorMessage
 	j.Event = nil
 	j.Payload = nil
 	return j.Update()
