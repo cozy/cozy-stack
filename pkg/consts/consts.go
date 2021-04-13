@@ -97,7 +97,6 @@ var PlatformApps = []string{
 	"drive",
 	"home",
 	"notes",
-	"onlyoffice",
 	"passwords",
 	"photos",
 	"settings",
