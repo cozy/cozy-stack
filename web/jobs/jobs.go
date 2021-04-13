@@ -528,13 +528,18 @@ func patchJob(c echo.Context) error {
 		return middlewares.ErrForbidden
 	}
 
-	req := apiJob{}
+	req := job.Job{}
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
-	switch req.j.State {
+	switch req.State {
 	case job.Errored:
-		err = j.Nack(req.j.Error)
+		err = j.Nack(req.Error)
+		inst.Logger().
+			WithField("job_id", j.ID()).
+			WithField("worker_id", "client").
+			WithField("nspace", "jobs").
+			Errorf("error while performing job: %s", req.Error)
 	case job.Done:
 		err = j.Ack()
 	default:
