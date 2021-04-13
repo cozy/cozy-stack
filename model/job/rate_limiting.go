@@ -28,7 +28,9 @@ func GetCounterTypeFromWorkerType(workerType string) (limits.CounterType, error)
 	case "push":
 		return limits.JobNotificationType, nil
 	case "notes-persist":
-		return limits.JobNotificationType, nil
+		return limits.JobNotesPersistType, nil
+	case "client":
+		return limits.JobClientType, nil
 	default:
 		return -1, errors.New("CounterType was not found")
 	}

@@ -64,6 +64,8 @@ const (
 	SendHintByMail
 	// JobNotesPersistType is used for saving notes to the VFS
 	JobNotesPersistType
+	// JobClientType is used for the jobs associated to a @client trigger
+	JobClientType
 	// ExportType is used for creating an export of the data
 	ExportType
 	// WebhookTriggerType is used for calling a webhook trigger
@@ -176,6 +178,12 @@ var configs = []counterConfig{
 	// JobNotesPersistType
 	{
 		Prefix: "job-notes-persist",
+		Limit:  100,
+		Period: 1 * time.Hour,
+	},
+	// JobClientType
+	{
+		Prefix: "job-client",
 		Limit:  100,
 		Period: 1 * time.Hour,
 	},
