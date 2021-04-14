@@ -24,7 +24,7 @@ Jobs can be queued up via the `/jobs/queue/:worker-type` API, for a direct
 execution. But it can also be convenient to schedule jobs on some conditions,
 and the triggers are the way to do that.
 
-Jobs can be launched by six different types of triggers:
+Jobs can be launched by different types of triggers:
 
 - `@at` to schedule a one-time job executed after at a specific time in the
   future
@@ -32,7 +32,8 @@ Jobs can be launched by six different types of triggers:
 - `@every` to schedule periodic jobs executed at a given fix interval
 - `@cron` to schedule recurring jobs scheduled at specific times
 - `@event` to launch a job after a change on documents in the cozy
-- `@webhook` to launch a job when an HTTP request hit a specific URL.
+- `@webhook` to launch a job when an HTTP request hit a specific URL
+- `@client` when the client controls when the job are launched.
 
 These triggers have specific syntaxes to describe when jobs should be
 scheduled. See below for more informations.
@@ -175,6 +176,13 @@ Example:
 @webhook
 ```
 
+### `@client` syntax
+
+It takes no parameter and can only by used for the `client` worker. The stack
+won't create a job unless a client calls the launch endpoint for this trigger.
+The main goal of this trigger is keep a state, as the aggregation of job
+results.
+
 ## Error Handling
 
 Jobs can fail to execute their task. We have two ways to parameterize such
@@ -225,7 +233,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
       "DevicesLink": "http://me.cozy.tools/#/connectedDevices",
     }
   },
-  "state": "running",      // queued, running, errored
+  "state": "running",      // queued, running, done, errored
   "queued_at": "2016-09-19T12:35:08Z",  // time of the queuing
   "started_at": "2016-09-19T12:35:08Z", // time of first execution
   "error": ""             // error message if any
@@ -450,6 +458,60 @@ its permission to only one worker, like this:
       "verbs": ["GET"],
       "selector": "worker",
       "values": ["sendmail"]
+    }
+  }
+}
+```
+
+### PATCH /jobs/:job-id
+
+This endpoint can be used for a job of the `client` worker (executed by a
+client, not on the server) to update the status.
+
+#### Request
+
+```http
+PATCH /jobs/022368c07dc701396403543d7eb8149c HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.jobs",
+    "id": "022368c07dc701396403543d7eb8149c",
+    "attributes": {
+      "state": "errored",
+      "error": "LOGIN_FAILED"
+    }
+  }
+}
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.jobs",
+    "id": "022368c07dc701396403543d7eb8149c",
+    "attributes": {
+      "domain": "me.cozy.tools",
+      "worker": "sendmail",
+      "options": {},
+      "state": "errored",
+      "error": "LOGIN_FAILED",
+      "queued_at": "2021-04-12T12:34:56Z",
+      "started_at": "2021-04-12T12:34:56Z",
+      "finished_at": "2021-04-12T12:38:59Z"
+    },
+    "links": {
+      "self": "/jobs/022368c07dc701396403543d7eb8149c"
     }
   }
 }
@@ -680,6 +742,10 @@ Accept: application/vnd.api+json
 ### POST /jobs/triggers/:trigger-id/launch
 
 Launch a trigger manually given its ID and return the created job.
+
+**Note:** this endpoint can be used to create a job for a `@client` trigger. In
+that case, the job won't be executed on the server but by the client. And the client
+must call `PATCH /jobs/:job-id` when the job is completed (success or error).
 
 #### Request
 

@@ -194,7 +194,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 			break
 		}
 	}
-	if worker == nil {
+	if worker == nil && req.WorkerType != "client" {
 		return nil, ErrUnknownWorker
 	}
 
@@ -215,7 +215,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	}
 
 	job := NewJob(db, req)
-	if worker.Conf.BeforeHook != nil {
+	if worker != nil && worker.Conf.BeforeHook != nil {
 		ok, err := worker.Conf.BeforeHook(job)
 		if err != nil {
 			return nil, err
@@ -227,6 +227,11 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 
 	if err := job.Create(); err != nil {
 		return nil, err
+	}
+
+	// For client jobs, we don't need to enqueue the job in redis.
+	if worker == nil {
+		return job, nil
 	}
 
 	key := redisPrefix + job.WorkerType

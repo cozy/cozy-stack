@@ -385,6 +385,11 @@ func launchTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	if j.WorkerType == "client" {
+		if err := j.AckConsumed(); err != nil {
+			return wrapJobsError(err)
+		}
+	}
 	return jsonapi.Data(c, http.StatusCreated, apiJob{j}, nil)
 }
 
@@ -507,6 +512,43 @@ func getJob(c echo.Context) error {
 	if err := middlewares.Allow(c, permission.GET, j); err != nil {
 		return err
 	}
+	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
+}
+
+func patchJob(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	j, err := job.Get(inst, c.Param("job-id"))
+	if err != nil {
+		return err
+	}
+	if err := middlewares.Allow(c, permission.PATCH, j); err != nil {
+		return err
+	}
+	if j.WorkerType != "client" {
+		return middlewares.ErrForbidden
+	}
+
+	req := job.Job{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+	switch req.State {
+	case job.Errored:
+		err = j.Nack(req.Error)
+		inst.Logger().
+			WithField("job_id", j.ID()).
+			WithField("worker_id", "client").
+			WithField("nspace", "jobs").
+			Errorf("error while performing job: %s", req.Error)
+	case job.Done:
+		err = j.Ack()
+	default:
+		err = jsonapi.InvalidAttribute("State", errors.New("State must be done or errored"))
+	}
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
 	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
 }
 
@@ -662,6 +704,7 @@ func Routes(router *echo.Group) {
 	router.POST("/clean", cleanJobs)
 	router.DELETE("/purge", purgeJobs)
 	router.GET("/:job-id", getJob)
+	router.PATCH("/:job-id", patchJob)
 }
 
 func wrapJobsError(err error) error {

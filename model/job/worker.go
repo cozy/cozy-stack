@@ -317,7 +317,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			parentCtx.Logger().Errorf("error while performing job: %s",
 				errRun.Error())
 			runResultLabel = metrics.WorkerExecResultErrored
-			errAck = job.Nack(errRun)
+			errAck = job.Nack(errRun.Error())
 		} else {
 			runResultLabel = metrics.WorkerExecResultSuccess
 			errAck = job.Ack()

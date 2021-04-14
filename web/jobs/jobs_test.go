@@ -487,6 +487,119 @@ func TestGetAllJobs(t *testing.T) {
 	}
 }
 
+func TestClientJobs(t *testing.T) {
+	scope := consts.Jobs + " " + consts.Triggers
+	token2, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope, "", time.Now())
+
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &map[string]interface{}{
+				"type":    "@client",
+				"message": "foobar",
+			},
+		},
+	})
+	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+token2)
+	res1, err := http.DefaultClient.Do(req1)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res1.Body.Close()
+	assert.Equal(t, http.StatusCreated, res1.StatusCode)
+
+	var v1 struct {
+		Data struct {
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
+		}
+	}
+	err = json.NewDecoder(res1.Body).Decode(&v1)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v1.Data) || !assert.NotNil(t, v1.Data.Attributes) {
+		return
+	}
+	triggerID := v1.Data.ID
+	assert.Equal(t, consts.Triggers, v1.Data.Type)
+	assert.Equal(t, "@client", v1.Data.Attributes.Type)
+	assert.Equal(t, "client", v1.Data.Attributes.WorkerType)
+
+	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers/"+triggerID+"/launch", nil)
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+token2)
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res2.Body.Close()
+	assert.Equal(t, http.StatusCreated, res2.StatusCode)
+
+	var v2 struct {
+		Data struct {
+			ID         string   `json:"id"`
+			Type       string   `json:"type"`
+			Attributes *job.Job `json:"attributes"`
+		}
+	}
+	err = json.NewDecoder(res2.Body).Decode(&v2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
+		return
+	}
+	jobID := v2.Data.ID
+	assert.Equal(t, consts.Jobs, v2.Data.Type)
+	assert.Equal(t, "client", v2.Data.Attributes.WorkerType)
+	assert.Equal(t, job.Running, v2.Data.Attributes.State)
+	assert.NotEmpty(t, v2.Data.Attributes.QueuedAt)
+	assert.NotEmpty(t, v2.Data.Attributes.StartedAt)
+
+	body3, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &map[string]interface{}{
+				"state": "errored",
+				"error": "LOGIN_FAILED",
+			},
+		},
+	})
+	req3, err := http.NewRequest(http.MethodPatch, ts.URL+"/jobs/"+jobID, bytes.NewReader(body3))
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+token2)
+	res3, err := http.DefaultClient.Do(req3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res3.Body.Close()
+	assert.Equal(t, http.StatusOK, res3.StatusCode)
+
+	var v3 struct {
+		Data struct {
+			ID         string   `json:"id"`
+			Type       string   `json:"type"`
+			Attributes *job.Job `json:"attributes"`
+		}
+	}
+	err = json.NewDecoder(res3.Body).Decode(&v3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v3.Data) || !assert.NotNil(t, v3.Data.Attributes) {
+		return
+	}
+	assert.Equal(t, consts.Jobs, v3.Data.Type)
+	assert.Equal(t, "client", v3.Data.Attributes.WorkerType)
+	assert.Equal(t, job.Errored, v3.Data.Attributes.State)
+	assert.Equal(t, "LOGIN_FAILED", v3.Data.Attributes.Error)
+	assert.NotEmpty(t, v3.Data.Attributes.QueuedAt)
+	assert.NotEmpty(t, v3.Data.Attributes.StartedAt)
+	assert.NotEmpty(t, v3.Data.Attributes.FinishedAt)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()

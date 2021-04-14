@@ -183,7 +183,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 			break
 		}
 	}
-	if worker == nil {
+	if worker == nil && workerType != "client" {
 		return nil, ErrUnknownWorker
 	}
 
@@ -204,7 +204,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	}
 
 	job := NewJob(db, req)
-	if worker.Conf.BeforeHook != nil {
+	if worker != nil && worker.Conf.BeforeHook != nil {
 		ok, err := worker.Conf.BeforeHook(job)
 		if err != nil {
 			return nil, err
@@ -216,6 +216,11 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 
 	if err := job.Create(); err != nil {
 		return nil, err
+	}
+
+	// For client jobs, we don't need to enqueue the job.
+	if workerType == "client" {
+		return job, nil
 	}
 
 	q := b.queues[workerType]
