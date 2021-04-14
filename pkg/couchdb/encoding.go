@@ -34,11 +34,6 @@ func (vr *ViewRequest) Values() (url.Values, error) {
 	if err := maybeSet(v, "key", vr.Key); err != nil {
 		return nil, err
 	}
-	if len(vr.Keys) > 0 {
-		if err := maybeSet(v, "keys", vr.Keys); err != nil {
-			return nil, err
-		}
-	}
 	if err := maybeSet(v, "start_key", vr.StartKey); err != nil {
 		return nil, err
 	}
