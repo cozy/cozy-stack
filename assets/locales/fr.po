@@ -66,8 +66,8 @@ msgstr "Bonne pratique :"
 
 msgid "Login Password tip"
 msgstr ""
-"n’entrez votre mot de passe que si l’adresse ci-dessus correspond bien à "
-"celle de votre Cozy et qu’un cadenas l’accompagne."
+"n’entrez jamais votre mot de passe sans vérifier que l’adresse ci-dessus "
+"correspond bien à celle de votre Cozy."
 
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
