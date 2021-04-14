@@ -92,7 +92,7 @@ class CozyFile
       authorization: "Bearer #{inst.token_for doctype}",
       :"content-type" => mime
     }
-    res = inst.client["/files/#{dir_id}?Type=file&Name=#{name}"].post @content, opts
+    res = inst.client["/files/#{dir_id}?Type=file&Name=#{CGI.escape name}"].post @content, opts
     j = JSON.parse(res.body)["data"]
     @couch_id = j["id"]
     @couch_rev = j["meta"]["rev"]
