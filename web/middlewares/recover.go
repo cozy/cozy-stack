@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"net/http"
 	"runtime"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -44,11 +45,16 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 					default:
 						err = fmt.Errorf("%v", r)
 					}
-					stack := make([]byte, config.StackSize)
-					length := runtime.Stack(stack, false)
-					log := logger.WithDomain(c.Request().Host).WithField("panic", true)
-					log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
-					c.Error(err)
+					// We don't want to log panic with ErrAbortHandler, as it
+					// is just noise (http.Server does that too).
+					// See https://golang.org/pkg/net/http/#ErrAbortHandler
+					if err != http.ErrAbortHandler {
+						stack := make([]byte, config.StackSize)
+						length := runtime.Stack(stack, false)
+						log := logger.WithDomain(c.Request().Host).WithField("panic", true)
+						log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+						c.Error(err)
+					}
 				}
 			}()
 			return next(c)
