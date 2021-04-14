@@ -325,8 +325,9 @@ contexts:
     # Indicates if debug related features should be enabled in front
     # applications.
     debug: false
-    # Redirect to a specific route of cozy-collect after the onboarding
-    onboarded_redirection: collect/#/discovery/?intro
+    # Redirect to a specific route of Cozy-Home after the onboarding
+    # Format: appslug/#/path/to/route
+    onboarded_redirection: home/#/discovery/?intro
     # Redirect to the photos application after login
     default_redirection: drive/#/files
     # This domain will be used as a suggestion for the members of a sharing
