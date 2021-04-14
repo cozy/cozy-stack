@@ -261,8 +261,15 @@ func titleToFilename(inst *instance.Instance, title string, updatedAt time.Time)
 		name = inst.Translate("Notes New note")
 		name += " " + updatedAt.Format(time.RFC3339)
 	}
-	name = strings.ReplaceAll(name, "/", "-")
-	name = strings.ReplaceAll(name, ":", "-")
+	// Create file with a name compatible with Windows/macOS to avoid
+	// synchronization issues with the desktop client
+	r := strings.NewReplacer("/", "-", ":", "-", "<", "-", ">", "-",
+		`"`, "-", "'", "-", "?", "-", "*", "-", "|", "-", "\\", "-")
+	name = r.Replace(name)
+	// Avoid too long filenames for the same reason
+	if len(name) > 240 {
+		name = name[:240]
+	}
 	return name + ".cozy-note"
 }
 
