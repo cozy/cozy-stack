@@ -49,7 +49,7 @@ msgid "Login Password best practice"
 msgstr "Best practice:"
 
 msgid "Login Password tip"
-msgstr "fill your password only if the address in your browser matches the one of your Cozy and comes with a padlock."
+msgstr "never fill your password without checking if the address in your browser matches the one of your Cozy."
 
 msgid "Login Password help"
 msgstr "Enter your password to access your Cozy"
