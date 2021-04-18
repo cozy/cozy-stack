@@ -50,7 +50,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
       - name: Install
         run: |
           git config --global user.email "github@spam.cozycloud.cc"
