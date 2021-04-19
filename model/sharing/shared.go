@@ -403,6 +403,20 @@ func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) erro
 
 // RemoveSharedRefs deletes the references containing the sharingid
 func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
+	// We can have CouchDB conflicts if another instance is synchronizing files
+	// to this instance
+	maxRetries := 5
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = doRemoveSharedRefs(inst, sharingID)
+		if !couchdb.IsConflictError(err) {
+			return err
+		}
+	}
+	return err
+}
+
+func doRemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 	req := &couchdb.ViewRequest{
 		Key:         sharingID,
 		IncludeDocs: true,
