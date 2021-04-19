@@ -434,7 +434,8 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 	}
 	if !sharingDirTrashed && s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
-			return err
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
 		}
 	}
 	s.Active = false
@@ -466,8 +467,8 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 
 func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	if triggerID != "" {
-		sched := job.System()
-		if err := sched.DeleteTrigger(inst, triggerID); err != nil {
+		err := job.System().DeleteTrigger(inst, triggerID)
+		if err != nil && err != job.ErrNotFoundTrigger {
 			return err
 		}
 	}
