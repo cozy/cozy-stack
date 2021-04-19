@@ -154,6 +154,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
 			}
 			h.Set(echo.HeaderXContentTypeOptions, "nosniff")
+			h.Set("Permissions-Policy", "interest-cohort=()")
 			return next(c)
 		}
 	}
