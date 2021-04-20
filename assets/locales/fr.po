@@ -181,16 +181,11 @@ msgstr ""
 msgid "Passphrase reset Help Warning"
 msgstr "Attention !"
 
-msgid "Passphrase reset Help 1"
+msgid "Passphrase reset Help Message"
 msgstr ""
 "Votre mot de passe actuel est l'unique moyen pour accéder aux mots de passe "
-"gardés par votre app « Cozy Pass ». Si vous le réinitialisez, "
-
-msgid "Passphrase reset Help 2"
-msgstr "vous perdrez ces données."
-
-msgid "Passphrase reset Help 3"
-msgstr "Le reste de vos données resteront accessibles."
+"gardés par votre app « Cozy Pass ». Si vous le réinitialisez, **vous perdrez ces données**. "
+"Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -324,16 +319,11 @@ msgstr ""
 msgid "Authorize Policy link"
 msgstr "ici"
 
-msgid "Authorize Give permission start"
-msgstr "En cliquant sur "
-
-msgid "Authorize Give permission keyword"
-msgstr "Autoriser"
-
-msgid "Authorize Give permission end"
+msgid "Authorize Give permission"
 msgstr ""
-", vous autorisez l'application à accéder à vos données, selon ses conditions"
-" de service et sa politique de confidentialité."
+"En cliquant sur **Autoriser**, "
+"vous autorisez l'application à accéder à vos données, selon ses conditions "
+"de service et sa politique de confidentialité."
 
 msgid "Authorize Submit"
 msgstr "Autoriser"

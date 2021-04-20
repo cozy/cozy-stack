@@ -2,6 +2,8 @@ package i18n
 
 import (
 	"fmt"
+	"html/template"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +26,19 @@ func LoadLocale(identifier string, rawPO []byte) {
 func Translator(locale string) func(key string, vars ...interface{}) string {
 	return func(key string, vars ...interface{}) string {
 		return Translate(key, locale, vars...)
+	}
+}
+
+var boldRegexp = regexp.MustCompile(`\*\*(.*)\*\*`)
+
+// TranslatorHTML returns a translation function of the locale specified, which
+// allow simple markup like **bold**.
+func TranslatorHTML(locale string) func(key string, vars ...interface{}) template.HTML {
+	return func(key string, vars ...interface{}) template.HTML {
+		translated := Translate(key, locale, vars...)
+		escaped := template.HTMLEscapeString(translated)
+		replaced := boldRegexp.ReplaceAllString(escaped, "<strong>$1</strong>")
+		return template.HTML(replaced)
 	}
 }
 

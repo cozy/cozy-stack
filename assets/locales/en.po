@@ -148,14 +148,11 @@ msgstr "As a last resort, you can reset your password for Cozy Pass:"
 msgid "Passphrase reset Help Warning"
 msgstr "Warning!"
 
-msgid "Passphrase reset Help 1"
-msgstr "Your current password is the only key to decode your passwords kept in your app \"Cozy Pass\". If you reset it, "
-
-msgid "Passphrase reset Help 2"
-msgstr "you will lose that data."
-
-msgid "Passphrase reset Help 3"
-msgstr "The rest of your data will remain accessible."
+msgid "Passphrase reset Help Message"
+msgstr ""
+"Your current password is the only key to decode your passwords kept in your app \"Cozy Pass\". If you reset it, "
+"**you will lose that data**. "
+"The rest of your data will remain accessible."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr "By clicking this button, you will be sent a link by email to choose a new password."
@@ -279,14 +276,8 @@ msgstr "You can read its policy about the usage it will make of your data "
 msgid "Authorize Policy link"
 msgstr "here"
 
-msgid "Authorize Give permission start"
-msgstr "By electing "
-
-msgid "Authorize Give permission keyword"
-msgstr "Authorize"
-
-msgid "Authorize Give permission end"
-msgstr ", you accept that the application obtains access to your data, and in compliance with the terms of service and the privacy policy."
+msgid "Authorize Give permission"
+msgstr "By electing **Authorize**, you accept that the application obtains access to your data, and in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Submit"
 msgstr "Authorize"
