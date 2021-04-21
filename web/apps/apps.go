@@ -289,10 +289,24 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]account.C
 		}
 		err := t.Infos().Message.Unmarshal(&msg)
 		if err == nil && msg.Slug == slug && msg.Account != "" {
-			acc := &account.Account{}
-			if err := couchdb.GetDoc(instance, consts.Accounts, msg.Account, acc); err == nil {
-				entry := account.CleanEntry{Account: acc, Trigger: t}
-				toDelete = append(toDelete, entry)
+			// XXX we can have several triggers for the same account (e.g. cron + webhook)
+			hasEntry := false
+			for _, entry := range toDelete {
+				if entry.Account.ID() == msg.Account {
+					entry.Triggers = append(entry.Triggers, t)
+					hasEntry = true
+					break
+				}
+			}
+			if !hasEntry {
+				acc := &account.Account{}
+				if err := couchdb.GetDoc(instance, consts.Accounts, msg.Account, acc); err == nil {
+					entry := account.CleanEntry{
+						Account:  acc,
+						Triggers: []job.Trigger{t},
+					}
+					toDelete = append(toDelete, entry)
+				}
 			}
 		}
 	}

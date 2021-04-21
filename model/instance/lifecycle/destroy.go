@@ -111,7 +111,7 @@ func deleteAccounts(inst *instance.Instance) error {
 		}
 		entry := account.CleanEntry{
 			Account:          acc,
-			Trigger:          nil, // We don't care, the triggers will all be deleted a bit later
+			Triggers:         nil, // We don't care, the triggers will all be deleted a bit later
 			ManifestOnDelete: man.OnDeleteAccount != "",
 			Slug:             slug,
 		}
