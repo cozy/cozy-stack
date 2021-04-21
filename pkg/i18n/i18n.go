@@ -23,7 +23,6 @@ func LoadLocale(locale, contextName string, rawPO []byte) {
 	if contextName != "" {
 		identifier = contextName + "/" + locale
 	}
-	fmt.Printf("LoadLocale %s\n", identifier)
 	translations[identifier] = po
 }
 

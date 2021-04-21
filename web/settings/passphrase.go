@@ -134,7 +134,6 @@ func updatePassphrase(c echo.Context) error {
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
 	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
-		fmt.Printf("err = %v\n", err)
 		return err
 	}
 
