@@ -97,6 +97,7 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	h := http.StripPrefix(assetsPrefix, http.FileServer(dir(assetsPath)))
 	middlewares.FuncsMap = template.FuncMap{
 		"t":     fmt.Sprintf,
+		"tHTML": fmt.Sprintf,
 		"split": strings.Split,
 		// XXX We are using assetPath (and not AssetPath) here to avoid caching
 		// the assets via the sum in the URL. But it means that we have no
@@ -123,6 +124,7 @@ func NewRenderer() (AssetRenderer, error) {
 
 	middlewares.FuncsMap = template.FuncMap{
 		"t":        fmt.Sprintf,
+		"tHTML":    fmt.Sprintf,
 		"split":    strings.Split,
 		"asset":    AssetPath,
 		"ext":      fileExtension,
@@ -157,15 +159,24 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	var funcMap template.FuncMap
 	i, ok := middlewares.GetInstanceSafe(c)
 	if ok {
-		funcMap = template.FuncMap{"t": i.Translate}
+		funcMap = template.FuncMap{
+			"t":     i.Translate,
+			"tHTML": i18n.TranslatorHTML(i.Locale, i.ContextName),
+		}
 	} else {
 		lang := GetLanguageFromHeader(c.Request().Header)
-		funcMap = template.FuncMap{"t": i18n.Translator(lang)}
+		funcMap = template.FuncMap{
+			"t":     i18n.Translator(lang, ""),
+			"tHTML": i18n.TranslatorHTML(lang, ""),
+		}
 	}
 	var t *template.Template
 	var err error
 	if m, ok := data.(echo.Map); ok {
 		if context, ok := m["ContextName"].(string); ok {
+			if i != nil {
+				assets.LoadContextualizedLocale(context, i.Locale)
+			}
 			if f, err := assets.Open("/templates/"+name, context); err == nil {
 				b, err := ioutil.ReadAll(f)
 				if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -133,4 +135,22 @@ func Open(name string, context string) (*bytes.Reader, error) {
 		return f.Reader(), nil
 	}
 	return nil, os.ErrNotExist
+}
+
+// LoadContextualizedLocale loads the translations dictionary from dynamic
+// assets for the given locale and context.
+func LoadContextualizedLocale(context, locale string) {
+	name := "/locales/" + locale + ".po"
+	asset, ok := Head(name, context)
+	if !ok || asset.Context != context {
+		return
+	}
+	f, err := Open(name, context)
+	if err != nil {
+		return
+	}
+	buf, err := ioutil.ReadAll(f)
+	if err == nil {
+		i18n.LoadLocale(locale, context, buf)
+	}
 }

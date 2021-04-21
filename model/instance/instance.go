@@ -538,7 +538,7 @@ func GetFromCouch(domain string) (*Instance, error) {
 
 // Translate is used to translate a string to the locale used on this instance
 func (i *Instance) Translate(key string, vars ...interface{}) string {
-	return i18n.Translate(key, i.Locale, vars...)
+	return i18n.Translate(key, i.Locale, i.ContextName, vars...)
 }
 
 // List returns the list of declared instances.

@@ -73,8 +73,9 @@ func (m MailTemplater) Execute(ctx *job.WorkerContext, name, layout, locale stri
 		}
 	}
 
-	subject := i18n.Translate(entry.Key, locale, vars...)
 	context := ctx.Instance.ContextName
+	assets.LoadContextualizedLocale(context, locale)
+	subject := i18n.Translate(entry.Key, locale, context, vars...)
 	if data == nil {
 		data = map[string]interface{}{"Locale": locale}
 	} else {
@@ -108,7 +109,7 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 	if err != nil {
 		return "", err
 	}
-	funcMap := text.FuncMap{"t": i18n.Translator(locale)}
+	funcMap := text.FuncMap{"t": i18n.Translator(locale, context)}
 	t, err := text.New("text").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err
@@ -125,7 +126,7 @@ func buildHTML(name string, layout string, ctx *job.WorkerContext, context, loca
 	if err != nil {
 		return "", err
 	}
-	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+	funcMap := template.FuncMap{"t": i18n.Translator(locale, context)}
 	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err
