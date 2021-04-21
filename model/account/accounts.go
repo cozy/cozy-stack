@@ -131,7 +131,7 @@ func GetTriggers(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID strin
 // CleanEntry is a struct with an account and its associated trigger.
 type CleanEntry struct {
 	Account          *Account
-	Trigger          job.Trigger
+	Triggers         []job.Trigger
 	ManifestOnDelete bool // the manifest of the konnector has a field "on_delete_account"
 	Slug             string
 }
@@ -180,8 +180,8 @@ func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
 			return err
 		}
 	}
-	if entry.Trigger != nil {
-		err := jobsSystem.DeleteTrigger(inst, entry.Trigger.ID())
+	for _, t := range entry.Triggers {
+		err := jobsSystem.DeleteTrigger(inst, t.ID())
 		if err != nil {
 			inst.Logger().WithField("nspace", "accounts").
 				Errorf("Cannot delete the trigger: %v", err)
