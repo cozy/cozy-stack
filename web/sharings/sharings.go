@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -522,6 +523,7 @@ func PostDiscovery(c echo.Context) error {
 		}
 		cozyURL = cozyURL + "." + domain
 	}
+	cozyURL = ClearAppInURL(cozyURL)
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -792,6 +794,31 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 		}
 	}
 	return echo.NewHTTPError(http.StatusForbidden)
+}
+
+// ClearAppInURL will remove the app slug from the URL of a Cozy.
+// Example: https://john-drive.mycozy.cloud/ -> https://john.mycozy.cloud/
+func ClearAppInURL(cozyURL string) string {
+	u, err := url.Parse(cozyURL)
+	if err != nil {
+		return cozyURL
+	}
+	knownDomain := false
+	for _, domain := range consts.KnownFlatDomains {
+		if strings.HasSuffix(u.Host, domain) {
+			knownDomain = true
+			break
+		}
+	}
+	if !knownDomain {
+		return cozyURL
+	}
+	parts := strings.SplitN(u.Host, ".", 2)
+	sub := parts[0]
+	domain := parts[1]
+	parts = strings.SplitN(sub, "-", 2)
+	u.Host = parts[0] + "." + domain
+	return u.String()
 }
 
 // wrapErrors returns a formatted error
