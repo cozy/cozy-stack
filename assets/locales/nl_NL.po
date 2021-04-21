@@ -1,11 +1,11 @@
 # 
 # Translators:
 # Bruno Michel, 2019
-# Heimen Stoffels <vistausss@outlook.com>, 2021
+# Heimen Stoffels <vistausss@fastmail.com>, 2021
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Heimen Stoffels <vistausss@outlook.com>, 2021\n"
+"Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2021\n"
 "Language-Team: Dutch (Netherlands) (https://www.transifex.com/cozy/teams/39753/nl_NL/)\n"
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -165,16 +165,11 @@ msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
 msgid "Passphrase reset Help Warning"
 msgstr "Waarschuwing!"
 
-msgid "Passphrase reset Help 1"
+msgid "Passphrase reset Help Message"
 msgstr ""
 "Je huidige wachtwoord is de enige sleutel van de app 'Cozy Wachtwoorden'. "
-"Als je je wachtwoord opnieuw instelt,"
-
-msgid "Passphrase reset Help 2"
-msgstr "dan gaan die gegevens verloren."
-
-msgid "Passphrase reset Help 3"
-msgstr "De rest van je je gegevens blijven toegankelijk."
+"Als je je wachtwoord opnieuw instelt, **dan gaan die gegevens verloren**. De"
+" rest van je gegevens blijven toegankelijk."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -306,16 +301,11 @@ msgstr ""
 msgid "Authorize Policy link"
 msgstr "hier"
 
-msgid "Authorize Give permission start"
-msgstr "Door te machtigen,"
-
-msgid "Authorize Give permission keyword"
-msgstr "Machtigen"
-
-msgid "Authorize Give permission end"
+msgid "Authorize Give permission"
 msgstr ""
-", ga je akkoord met het feit dat de app toegang heeft tot je gegevens, in "
-"overeenstemming met de algemene voorwaarden en het privacybeleid."
+"Door op **Autoriseren** te klikken, ga je akkoord met het feit dat de app "
+"toegang heeft tot je gegevens, in overeenstemming met de algemene "
+"voorwaarden en het privacybeleid."
 
 msgid "Authorize Submit"
 msgstr "Machtigen"
