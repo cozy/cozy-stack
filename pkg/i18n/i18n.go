@@ -16,16 +16,21 @@ import (
 var translations = make(map[string]*gotext.Po)
 
 // LoadLocale creates the translation object for a locale from the content of a .po file
-func LoadLocale(identifier string, rawPO []byte) {
-	po := &gotext.Po{Language: identifier}
+func LoadLocale(locale, contextName string, rawPO []byte) {
+	po := &gotext.Po{Language: locale}
 	po.Parse(rawPO)
+	identifier := locale
+	if contextName != "" {
+		identifier = contextName + "/" + locale
+	}
+	fmt.Printf("LoadLocale %s\n", identifier)
 	translations[identifier] = po
 }
 
 // Translator returns a translation function of the locale specified
-func Translator(locale string) func(key string, vars ...interface{}) string {
+func Translator(locale, contextName string) func(key string, vars ...interface{}) string {
 	return func(key string, vars ...interface{}) string {
-		return Translate(key, locale, vars...)
+		return Translate(key, locale, contextName, vars...)
 	}
 }
 
@@ -33,9 +38,9 @@ var boldRegexp = regexp.MustCompile(`\*\*(.*)\*\*`)
 
 // TranslatorHTML returns a translation function of the locale specified, which
 // allow simple markup like **bold**.
-func TranslatorHTML(locale string) func(key string, vars ...interface{}) template.HTML {
+func TranslatorHTML(locale, contextName string) func(key string, vars ...interface{}) template.HTML {
 	return func(key string, vars ...interface{}) template.HTML {
-		translated := Translate(key, locale, vars...)
+		translated := Translate(key, locale, contextName, vars...)
 		escaped := template.HTMLEscapeString(translated)
 		replaced := boldRegexp.ReplaceAllString(escaped, "<strong>$1</strong>")
 		return template.HTML(replaced)
@@ -43,10 +48,22 @@ func TranslatorHTML(locale string) func(key string, vars ...interface{}) templat
 }
 
 // Translate translates the given key on the specified locale.
-func Translate(key, locale string, vars ...interface{}) string {
-	if po, ok := translations[locale]; ok {
-		translated := po.Get(key, vars...)
+func Translate(key, locale, contextName string, vars ...interface{}) string {
+	if po, ok := translations[contextName+"/"+locale]; ok {
+		translated := po.Get(key)
 		if translated != key && translated != "" {
+			if len(vars) > 0 {
+				return fmt.Sprintf(translated, vars...)
+			}
+			return translated
+		}
+	}
+	if po, ok := translations[locale]; ok {
+		translated := po.Get(key)
+		if translated != key && translated != "" {
+			if len(vars) > 0 {
+				return fmt.Sprintf(translated, vars...)
+			}
 			return translated
 		}
 	}

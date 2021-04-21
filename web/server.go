@@ -44,7 +44,7 @@ func LoadSupportedLocales() error {
 			if err != nil {
 				return fmt.Errorf("Can't load the po file for %s", locale)
 			}
-			i18n.LoadLocale(locale, po)
+			i18n.LoadLocale(locale, "", po)
 		}
 		return nil
 	}
@@ -58,7 +58,7 @@ func LoadSupportedLocales() error {
 		if err != nil {
 			return err
 		}
-		i18n.LoadLocale(locale, po)
+		i18n.LoadLocale(locale, "", po)
 	}
 	return nil
 }

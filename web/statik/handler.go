@@ -161,19 +161,22 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	if ok {
 		funcMap = template.FuncMap{
 			"t":     i.Translate,
-			"tHTML": i18n.TranslatorHTML(i.Locale),
+			"tHTML": i18n.TranslatorHTML(i.Locale, i.ContextName),
 		}
 	} else {
 		lang := GetLanguageFromHeader(c.Request().Header)
 		funcMap = template.FuncMap{
-			"t":     i18n.Translator(lang),
-			"tHTML": i18n.TranslatorHTML(lang),
+			"t":     i18n.Translator(lang, ""),
+			"tHTML": i18n.TranslatorHTML(lang, ""),
 		}
 	}
 	var t *template.Template
 	var err error
 	if m, ok := data.(echo.Map); ok {
 		if context, ok := m["ContextName"].(string); ok {
+			if i != nil {
+				assets.LoadContextualizedLocale(context, i.Locale)
+			}
 			if f, err := assets.Open("/templates/"+name, context); err == nil {
 				b, err := ioutil.ReadAll(f)
 				if err != nil {
