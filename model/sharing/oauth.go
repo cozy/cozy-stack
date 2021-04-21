@@ -112,24 +112,6 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	return nil
 }
 
-func clearAppInHost(host string) string {
-	knownDomain := false
-	for _, domain := range consts.KnownFlatDomains {
-		if strings.HasSuffix(host, domain) {
-			knownDomain = true
-			break
-		}
-	}
-	if !knownDomain {
-		return host
-	}
-	parts := strings.SplitN(host, ".", 2)
-	sub := parts[0]
-	domain := parts[1]
-	parts = strings.SplitN(sub, "-", 2)
-	return parts[0] + "." + domain
-}
-
 // countFiles returns the number of files that should be uploaded on the
 // initial synchronisation.
 func (s *Sharing) countFiles(inst *instance.Instance) int {
@@ -184,7 +166,6 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	if err != nil || u.Host == "" {
 		return ErrInvalidURL
 	}
-	u.Host = clearAppInHost(u.Host)
 	u.Path = ""
 	u.RawPath = ""
 	u.RawQuery = ""

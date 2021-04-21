@@ -1103,6 +1103,15 @@ func TestRevocationFromRecipient(t *testing.T) {
 	assertLastRecipientIsRevoked(t, s, sharedRefs)
 }
 
+func TestClearAppInURL(t *testing.T) {
+	host := sharings.ClearAppInURL("https://example.mycozy.cloud/")
+	assert.Equal(t, "https://example.mycozy.cloud/", host)
+	host = sharings.ClearAppInURL("https://example-drive.mycozy.cloud/")
+	assert.Equal(t, "https://example.mycozy.cloud/", host)
+	host = sharings.ClearAppInURL("https://my-cozy.example.net/")
+	assert.Equal(t, "https://my-cozy.example.net/", host)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
