@@ -906,6 +906,24 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 ```
 
+### PUT /bitwarden/api/ciphers/:id/delete
+
+This route is used to soft delete a cipher, by adding a `deletedDate`
+attribute on it.
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251/delete HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### PUT /bitwarden/api/ciphers/delete
 
 This route is used to soft delete ciphers in bulk.
@@ -933,24 +951,6 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 ```
 
-### PUT /bitwarden/api/ciphers/:id/delete
-
-This route is used to soft delete a cipher, by adding a `deletedDate`
-attribute on it.
-
-#### Request
-
-```http
-PUT /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251/delete HTTP/1.1
-Host: alice.example.com
-```
-
-#### Response
-
-```http
-HTTP/1.1 204 No Content
-```
-
 ### PUT /bitwarden/api/ciphers/:id/restore
 
 This route is used to restore a soft-deleted cipher, by removing the
@@ -967,6 +967,81 @@ Host: alice.example.com
 
 ```http
 HTTP/1.1 204 No Content
+```
+
+### PUT /bitwarden/api/ciphers/restore
+
+This route is used to restore ciphers in bulk.
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/restore HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "ids": [
+    "4c2869dd-0e1c-499f-b116-a824016df251",
+    "205c22f0-8642-0139-c874-543d7eb8149c"
+  ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Data": [
+    {
+      "Object": "cipher",
+      "Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+      "Type": 1,
+      "Favorite": false,
+      "Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "FolderId": null,
+      "OrganizationId": null,
+      "Notes": null,
+      "Login": {
+        "Uris": [
+          {
+            "Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+            "Match": null
+          }
+        ]
+      },
+      "Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+      "Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+      "Totp": null,
+      "Fields": null,
+      "Attachments": null,
+      "RevisionDate": "2021-04-23T12:58:01Z",
+      "Edit": true,
+      "OrganizationUseTotp": false
+    },
+    {
+      "Object": "cipher",
+      "Id": "205c22f0-8642-0139-c874-543d7eb8149c",
+      "Type": 2,
+      "Favorite": true,
+      "Name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+      "FolderId": null,
+      "OrganizationId": null,
+      "Notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+      "RevisionDate": "2021-04-23T12:58:01Z",
+      "Edit": true,
+      "OrganizationUseTotp": false
+    }
+  ],
+  "Object": "list"
+}
 ```
 
 

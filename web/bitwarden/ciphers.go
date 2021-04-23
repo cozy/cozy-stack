@@ -676,7 +676,7 @@ func BulkDeleteCiphers(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-// BulkSoftDeleteCiphers is the handler for the route to delete ciphers in bulk.
+// BulkSoftDeleteCiphers is the handler for the route to soft delete ciphers in bulk.
 func BulkSoftDeleteCiphers(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
@@ -721,6 +721,65 @@ func BulkSoftDeleteCiphers(c echo.Context) error {
 
 	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
+}
+
+// BulkRestoreCiphers is the handler for the route to restore ciphers in bulk.
+func BulkRestoreCiphers(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req idsRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if len(req.IDs) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "Request missing ids field",
+		})
+	}
+
+	var ciphers []bitwarden.Cipher
+	keys := couchdb.AllDocsRequest{Keys: req.IDs}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	olds := make([]interface{}, len(ciphers))
+	docs := make([]interface{}, len(ciphers))
+	for i := range ciphers {
+		olds[i] = ciphers[i]
+		cipher := ciphers[i].Clone().(*bitwarden.Cipher)
+		cipher.Metadata.ChangeUpdatedAt()
+		cipher.DeletedDate = nil
+		docs[i] = cipher
+	}
+	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	_ = settings.UpdateRevisionDate(inst, setting)
+
+	res := &ciphersList{Object: "list"}
+	for i := range docs {
+		cipher := docs[i].(*bitwarden.Cipher)
+		res.Data = append(res.Data, newCipherResponse(cipher, setting))
+	}
+	return c.JSON(http.StatusOK, res)
 }
 
 type shareCipherRequest struct {

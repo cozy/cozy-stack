@@ -610,6 +610,7 @@ func TestSync(t *testing.T) {
 }
 
 func TestBulkDeleteCiphers(t *testing.T) {
+	// Setup
 	nbCiphersToDelete := 5
 	nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 	assert.NoError(t, err)
@@ -647,6 +648,7 @@ func TestBulkDeleteCiphers(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, nbCiphers+nbCiphersToDelete, nb)
 
+	// Test soft delete in bulk
 	body, _ := json.Marshal(map[string][]string{
 		"ids": ids,
 	})
@@ -670,6 +672,28 @@ func TestBulkDeleteCiphers(t *testing.T) {
 		assert.NotEmpty(t, result["DeletedDate"])
 	}
 
+	// Test restore in bulk
+	buf = bytes.NewBuffer(body)
+	req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/restore", buf)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "list", result["Object"])
+	data := result["Data"].([]interface{})
+	assert.Len(t, data, nbCiphersToDelete)
+
+	for i := range data {
+		item := data[i].(map[string]interface{})
+		assert.Equal(t, ids[i], item["Id"])
+		assert.Empty(t, item["DeletedDate"])
+	}
+
+	// Test delete in bulk
 	buf = bytes.NewBuffer(body)
 	req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers", buf)
 	req.Header.Add("Authorization", "Bearer "+token)

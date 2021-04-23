@@ -501,6 +501,7 @@ func Routes(router *echo.Group) {
 	ciphers.DELETE("", BulkDeleteCiphers)
 	ciphers.POST("/delete", BulkDeleteCiphers)
 	ciphers.PUT("/delete", BulkSoftDeleteCiphers)
+	ciphers.PUT("/restore", BulkRestoreCiphers)
 
 	ciphers.POST("/:id/share", ShareCipher)
 	ciphers.PUT("/:id/share", ShareCipher)
