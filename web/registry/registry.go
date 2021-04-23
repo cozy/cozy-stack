@@ -18,7 +18,15 @@ const (
 	perms
 )
 
-func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl registry.CacheControl) echo.HandlerFunc {
+type clientCacheControl int
+
+const (
+	noClientCache clientCacheControl = iota
+	shortClientCache
+	permanentClientCache
+)
+
+func proxyReq(auth authType, clientCache clientCacheControl, proxyCacheControl registry.CacheControl) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := middlewares.GetInstance(c)
 		switch auth {
@@ -44,8 +52,11 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 			return err
 		}
 		defer proxyResp.Body.Close()
-		if clientPermanentCache {
+		switch clientCache {
+		case permanentClientCache:
 			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
+		case shortClientCache:
+			c.Response().Header().Set("Cache-Control", "max-age=86400")
 		}
 		contentType := proxyResp.Header.Get("content-type")
 		return c.Stream(proxyResp.StatusCode, contentType, proxyResp.Body)
@@ -92,13 +103,13 @@ func Routes(router *echo.Group) {
 	router.GET("", proxyListReq, gzip)
 	router.GET("/", proxyListReq, gzip)
 	router.GET("/maintenance", proxyMaintenanceReq, gzip)
-	router.GET("/:app", proxyReq(perms, false, registry.WithCache))
-	router.GET("/:app/icon", proxyReq(authed, false, registry.NoCache))
-	router.GET("/:app/partnership_icon", proxyReq(authed, false, registry.NoCache))
-	router.GET("/:app/screenshots/*", proxyReq(authed, false, registry.NoCache))
-	router.GET("/:app/:version/icon", proxyReq(authed, true, registry.NoCache))
-	router.GET("/:app/:version/partnership_icon", proxyReq(authed, true, registry.NoCache))
-	router.GET("/:app/:version/screenshots/*", proxyReq(authed, true, registry.NoCache))
-	router.GET("/:app/:version", proxyReq(perms, true, registry.WithCache))
-	router.GET("/:app/:channel/latest", proxyReq(perms, false, registry.WithCache))
+	router.GET("/:app", proxyReq(perms, noClientCache, registry.WithCache))
+	router.GET("/:app/icon", proxyReq(authed, shortClientCache, registry.NoCache))
+	router.GET("/:app/partnership_icon", proxyReq(authed, shortClientCache, registry.NoCache))
+	router.GET("/:app/screenshots/*", proxyReq(authed, shortClientCache, registry.NoCache))
+	router.GET("/:app/:version/icon", proxyReq(authed, permanentClientCache, registry.NoCache))
+	router.GET("/:app/:version/partnership_icon", proxyReq(authed, permanentClientCache, registry.NoCache))
+	router.GET("/:app/:version/screenshots/*", proxyReq(authed, permanentClientCache, registry.NoCache))
+	router.GET("/:app/:version", proxyReq(perms, permanentClientCache, registry.WithCache))
+	router.GET("/:app/:channel/latest", proxyReq(perms, noClientCache, registry.WithCache))
 }
