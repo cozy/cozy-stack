@@ -107,6 +107,7 @@ func (afs *aferoVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 		Indexer:         index,
 		DiskThresholder: afs.DiskThresholder,
 		domain:          afs.domain,
+		prefix:          afs.prefix,
 		fs:              afs.fs,
 		mu:              afs.mu,
 		pth:             afs.pth,
