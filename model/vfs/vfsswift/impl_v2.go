@@ -96,6 +96,7 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 		DiskThresholder: sfs.DiskThresholder,
 		c:               sfs.c,
 		domain:          sfs.domain,
+		prefix:          sfs.prefix,
 		container:       sfs.container,
 		version:         sfs.version,
 		dataContainer:   sfs.dataContainer,
