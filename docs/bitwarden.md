@@ -906,6 +906,33 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### PUT /bitwarden/api/ciphers/delete
+
+This route is used to soft delete ciphers in bulk.
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/delete HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "ids": [
+    "4c2869dd-0e1c-499f-b116-a824016df251",
+    "205c22f0-8642-0139-c874-543d7eb8149c"
+  ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### PUT /bitwarden/api/ciphers/:id/delete
 
 This route is used to soft delete a cipher, by adding a `deletedDate`

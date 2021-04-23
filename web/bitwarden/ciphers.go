@@ -676,6 +676,53 @@ func BulkDeleteCiphers(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// BulkSoftDeleteCiphers is the handler for the route to delete ciphers in bulk.
+func BulkSoftDeleteCiphers(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req idsRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if len(req.IDs) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "Request missing ids field",
+		})
+	}
+
+	var ciphers []bitwarden.Cipher
+	keys := couchdb.AllDocsRequest{Keys: req.IDs}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	olds := make([]interface{}, len(ciphers))
+	docs := make([]interface{}, len(ciphers))
+	for i := range ciphers {
+		olds[i] = ciphers[i]
+		cipher := ciphers[i].Clone().(*bitwarden.Cipher)
+		cipher.Metadata.ChangeUpdatedAt()
+		cipher.DeletedDate = &cipher.Metadata.UpdatedAt
+		docs[i] = cipher
+	}
+	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	_ = settings.UpdateRevisionDate(inst, nil)
+	return c.NoContent(http.StatusOK)
+}
+
 type shareCipherRequest struct {
 	Cipher        cipherRequest `json:"cipher"`
 	CollectionIDs []string      `json:"collectionIds"`

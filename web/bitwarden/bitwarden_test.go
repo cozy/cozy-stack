@@ -651,10 +651,30 @@ func TestBulkDeleteCiphers(t *testing.T) {
 		"ids": ids,
 	})
 	buf := bytes.NewBuffer(body)
-	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers/delete", buf)
+	req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/delete", buf)
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Content-Type", "application/json")
 	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	for _, id := range ids {
+		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
+		req.Header.Add("Authorization", "Bearer "+token)
+		res, err = http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, res.StatusCode)
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result["DeletedDate"])
+	}
+
+	buf = bytes.NewBuffer(body)
+	req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers", buf)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 

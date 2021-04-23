@@ -500,6 +500,7 @@ func Routes(router *echo.Group) {
 	ciphers.PUT("/:id/restore", RestoreCipher)
 	ciphers.DELETE("", BulkDeleteCiphers)
 	ciphers.POST("/delete", BulkDeleteCiphers)
+	ciphers.PUT("/delete", BulkSoftDeleteCiphers)
 
 	ciphers.POST("/:id/share", ShareCipher)
 	ciphers.PUT("/:id/share", ShareCipher)
