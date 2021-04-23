@@ -23,6 +23,10 @@ type loginRequest struct {
 	*bitwarden.LoginData
 }
 
+type idsRequest struct {
+	IDs []string `json:"ids"`
+}
+
 // https://github.com/bitwarden/jslib/blob/master/src/models/request/cipherRequest.ts
 type cipherRequest struct {
 	Type           bitwarden.CipherType `json:"type"`
@@ -627,6 +631,48 @@ func RestoreCipher(c echo.Context) error {
 		})
 	}
 	_ = settings.UpdateRevisionDate(inst, setting)
+	return c.NoContent(http.StatusOK)
+}
+
+// BulkDeleteCiphers is the handler for the route to delete ciphers in bulk.
+func BulkDeleteCiphers(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req idsRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if len(req.IDs) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "Request missing ids field",
+		})
+	}
+
+	var ciphers []bitwarden.Cipher
+	keys := couchdb.AllDocsRequest{Keys: req.IDs}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	docs := make([]couchdb.Doc, len(ciphers))
+	for i := range ciphers {
+		docs[i] = ciphers[i].Clone()
+	}
+	if err := couchdb.BulkDeleteDocs(inst, consts.BitwardenCiphers, docs); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }
 
