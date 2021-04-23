@@ -492,13 +492,19 @@ func Routes(router *echo.Group) {
 	ciphers.GET("/:id", GetCipher)
 	ciphers.POST("/:id", UpdateCipher)
 	ciphers.PUT("/:id", UpdateCipher)
+	ciphers.POST("/import", ImportCiphers)
+
 	ciphers.DELETE("/:id", DeleteCipher)
 	ciphers.POST("/:id/delete", DeleteCipher)
 	ciphers.PUT("/:id/delete", SoftDeleteCipher)
 	ciphers.PUT("/:id/restore", RestoreCipher)
+	ciphers.DELETE("", BulkDeleteCiphers)
+	ciphers.POST("/delete", BulkDeleteCiphers)
+	ciphers.PUT("/delete", BulkSoftDeleteCiphers)
+	ciphers.PUT("/restore", BulkRestoreCiphers)
+
 	ciphers.POST("/:id/share", ShareCipher)
 	ciphers.PUT("/:id/share", ShareCipher)
-	ciphers.POST("/import", ImportCiphers)
 
 	folders := api.Group("/folders")
 	folders.GET("", ListFolders)

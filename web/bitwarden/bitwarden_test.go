@@ -609,6 +609,104 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, "domains", domains["Object"])
 }
 
+func TestBulkDeleteCiphers(t *testing.T) {
+	// Setup
+	nbCiphersToDelete := 5
+	nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+	assert.NoError(t, err)
+
+	var ids []string
+	for i := 0; i < nbCiphersToDelete; i++ {
+		body := `
+{
+	"type": 1,
+	"favorite": false,
+	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"notes": null,
+	"folderId": null,
+	"organizationId": null,
+	"login": {
+		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+		"totp": null
+	}
+}`
+		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Authorization", "Bearer "+token)
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, res.StatusCode)
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		ids = append(ids, result["Id"].(string))
+	}
+
+	nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+	assert.NoError(t, err)
+	assert.Equal(t, nbCiphers+nbCiphersToDelete, nb)
+
+	// Test soft delete in bulk
+	body, _ := json.Marshal(map[string][]string{
+		"ids": ids,
+	})
+	buf := bytes.NewBuffer(body)
+	req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/delete", buf)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	for _, id := range ids {
+		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
+		req.Header.Add("Authorization", "Bearer "+token)
+		res, err = http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, res.StatusCode)
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result["DeletedDate"])
+	}
+
+	// Test restore in bulk
+	buf = bytes.NewBuffer(body)
+	req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/restore", buf)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "list", result["Object"])
+	data := result["Data"].([]interface{})
+	assert.Len(t, data, nbCiphersToDelete)
+
+	for i := range data {
+		item := data[i].(map[string]interface{})
+		assert.Equal(t, ids[i], item["Id"])
+		assert.Empty(t, item["DeletedDate"])
+	}
+
+	// Test delete in bulk
+	buf = bytes.NewBuffer(body)
+	req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers", buf)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	nb, err = couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+	assert.NoError(t, err)
+	assert.Equal(t, nbCiphers, nb)
+}
+
 func TestSharedCipher(t *testing.T) {
 	body := `
 {
