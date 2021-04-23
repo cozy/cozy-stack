@@ -875,7 +875,7 @@ Host: alice.example.com
 #### Response
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 ```
 
 ### DELETE /bitwarden/api/ciphers
@@ -903,7 +903,7 @@ Content-Type: application/json
 #### Response
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 ```
 
 ### PUT /bitwarden/api/ciphers/delete
@@ -930,7 +930,7 @@ Content-Type: application/json
 #### Response
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 ```
 
 ### PUT /bitwarden/api/ciphers/:id/delete
