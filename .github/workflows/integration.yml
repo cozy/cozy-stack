@@ -20,8 +20,9 @@ jobs:
     steps:
       - name: Install CouchDB
         run: |
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 379CE192D401AB61
-          echo "deb https://apache.bintray.com/couchdb-deb $(lsb_release -c -s) main" | sudo tee -a /etc/apt/sources.list
+          curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor | sudo tee /usr/share/keyrings/couchdb-archive-keyring.gpg
+          source /etc/os-release
+          echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${VERSION_CODENAME} main" | sudo tee /etc/apt/sources.list.d/couchdb.list
           sudo apt-get update
           sudo debconf-set-selections <<-EOF
           	couchdb couchdb/mode select standalone
