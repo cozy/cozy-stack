@@ -35,7 +35,7 @@ jobs:
           EOF
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=2.3.1*
       - name: Install Go
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2
         with:
           go-version: '1.16.x'
       - name: Install Ruby
