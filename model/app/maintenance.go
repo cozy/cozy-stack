@@ -45,6 +45,22 @@ func loadMaintenance(slug string) (couchdb.JSONDoc, error) {
 	return doc, nil
 }
 
+// GetMaintenanceOptions will return the maintenance options for the given
+// konnector if it is in maintenance on this stack.
+func GetMaintenanceOptions(slug string) (map[string]interface{}, error) {
+	var doc couchdb.JSONDoc
+	err := couchdb.GetDoc(couchdb.GlobalDB, consts.KonnectorsMaintenance, slug, &doc)
+	if couchdb.IsNotFoundError(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	delete(doc.M, "_id")
+	delete(doc.M, "_rev")
+	return doc.M, nil
+}
+
 // ListMaintenance returns the list of konnectors in maintenance for the stack
 // (not from apps registry).
 func ListMaintenance() ([]interface{}, error) {
