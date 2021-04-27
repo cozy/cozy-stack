@@ -401,6 +401,61 @@ Content-Type: application/json
 ```
 
 
+## Konnectors
+
+### PUT /konnectors/maintenance/:slug
+
+#### Request
+
+```http
+PUT /konnectors/maintenance/ameli HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "flag_short_maintenance": true,
+      "flag_disallow_manual_exec": false,
+      "messages": {
+        "fr": {
+          "long_message": "Bla bla bla",
+          "short_message": "Bla"
+        },
+        "en": {
+          "long_message": "Yadi yadi yada",
+          "short_message": "Yada"
+        }
+      }
+    }
+  }
+}
+```
+
+**Note:** the `flag_infra_maintenance` will always be set to true with this
+endpoint.
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /konnectors/maintenance/:slug
+
+#### Request
+
+```http
+DELETE /konnectors/maintenance/ameli HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Swift
 
 ### GET /swift/layouts

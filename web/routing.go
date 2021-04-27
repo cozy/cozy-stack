@@ -275,6 +275,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	}
 
 	instances.Routes(router.Group("/instances", mws...))
+	apps.AdminRoutes(router.Group("/konnectors", mws...))
 	version.Routes(router.Group("/version", mws...))
 	metrics.Routes(router.Group("/metrics", mws...))
 	realtime.Routes(router.Group("/realtime", mws...))
