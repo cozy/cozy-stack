@@ -1,6 +1,8 @@
 package app
 
 import (
+	"encoding/json"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -41,4 +43,30 @@ func loadMaintenance(slug string) (couchdb.JSONDoc, error) {
 	}
 	doc.Type = consts.KonnectorsMaintenance
 	return doc, nil
+}
+
+// ListMaintenance returns the list of konnectors in maintenance for the stack
+// (not from apps registry).
+func ListMaintenance() ([]interface{}, error) {
+	list := []interface{}{}
+	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
+		var opts map[string]interface{}
+		if err := json.Unmarshal(raw, &opts); err != nil {
+			return err
+		}
+		delete(opts, "_id")
+		delete(opts, "_rev")
+		doc := map[string]interface{}{
+			"slug":                  id,
+			"type":                  "konnector",
+			"maintenance_activated": true,
+			"maintenance_options":   opts,
+		}
+		list = append(list, doc)
+		return nil
+	})
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return nil, err
+	}
+	return list, nil
 }

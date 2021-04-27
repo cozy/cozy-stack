@@ -3,6 +3,7 @@ package registry
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -94,7 +95,14 @@ func proxyMaintenanceReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, list)
+	maintenance, err := app.ListMaintenance()
+	if err != nil {
+		return err
+	}
+	for _, item := range list {
+		maintenance = append(maintenance, item)
+	}
+	return c.JSON(http.StatusOK, maintenance)
 }
 
 // Routes sets the routing for the registry
