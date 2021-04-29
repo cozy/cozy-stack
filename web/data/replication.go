@@ -155,6 +155,7 @@ var allowedChangesParams = map[string]bool{
 	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
 	"_nonce":       true, // Pouchdb sends a request hash to avoid aggressive caching by some browsers
 	"seq_interval": true,
+	"descending":   true,
 }
 
 func changesFeed(c echo.Context) error {
@@ -195,6 +196,7 @@ func changesFeed(c echo.Context) error {
 	}
 
 	includeDocs := paramIsTrue(c, "include_docs")
+	descending := paramIsTrue(c, "descending")
 
 	if err = permission.CheckReadable(doctype); err != nil {
 		return err
@@ -222,6 +224,7 @@ func changesFeed(c echo.Context) error {
 		Limit:       limit,
 		IncludeDocs: includeDocs,
 		SeqInterval: seqInterval,
+		Descending:  descending,
 	})
 
 	if err != nil {
