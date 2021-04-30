@@ -51,7 +51,10 @@ type memRef struct {
 }
 
 func newMemStore() Store {
-	store := &memStore{vals: make(map[string]*memRef)}
+	store := &memStore{
+		vals: make(map[string]*memRef),
+		byID: make(map[string]string),
+	}
 	go store.cleaner()
 	return store
 }
@@ -59,6 +62,7 @@ func newMemStore() Store {
 type memStore struct {
 	mu   sync.Mutex
 	vals map[string]*memRef
+	byID map[string]string // id -> secret
 }
 
 func (s *memStore) cleaner() {
@@ -66,6 +70,7 @@ func (s *memStore) cleaner() {
 		now := time.Now()
 		for k, v := range s.vals {
 			if now.After(v.exp) {
+				delete(s.byID, v.val[0])
 				delete(s.vals, k)
 			}
 		}
@@ -73,9 +78,13 @@ func (s *memStore) cleaner() {
 }
 
 func (s *memStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error) {
-	secret := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	secret, ok := s.byID[id]
+	if !ok {
+		secret = makeSecret()
+		s.byID[id] = secret
+	}
 	key := docKey(db, secret)
 	s.vals[key] = &memRef{
 		val: [2]string{id, rev},
@@ -114,6 +123,9 @@ func (s *memStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := docKey(db, secret)
+	if v, ok := s.vals[key]; ok {
+		delete(s.byID, v.val[0])
+	}
 	delete(s.vals, key)
 	return nil
 }
@@ -123,6 +135,10 @@ type redisStore struct {
 }
 
 func (s *redisStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error) {
+	idKey := docKey(db, id)
+	if secret, err := s.c.Get(idKey).Result(); err == nil {
+		return secret, nil
+	}
 	v, err := json.Marshal([]string{id, rev})
 	if err != nil {
 		return "", err
@@ -132,6 +148,7 @@ func (s *redisStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error
 	if err = s.c.Set(key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
+	_ = s.c.Set(idKey, secret, storeTTL)
 	return secret, nil
 }
 
@@ -164,6 +181,11 @@ func (s *redisStore) UpdateDoc(db prefixer.Prefixer, secret, id, rev string) err
 }
 
 func (s *redisStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
+	id, _, err := s.GetDoc(db, secret)
+	if err != nil {
+		idKey := docKey(db, id)
+		_ = s.c.Del(idKey)
+	}
 	key := docKey(db, secret)
 	return s.c.Del(key).Err()
 }
