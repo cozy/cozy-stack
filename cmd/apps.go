@@ -21,6 +21,9 @@ var flagSafeUpdate bool
 var flagKonnectorAccountID string
 var flagKonnectorsParameters string
 
+var flagKonnectorsShortMaintenance bool
+var flagKonnectorsDisallowManualExec bool
+
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps <command>",
 	Short: "Interact with the applications",
@@ -262,6 +265,53 @@ var runKonnectorsCmd = &cobra.Command{
 
 		fmt.Println(string(json))
 		return nil
+	},
+}
+
+var activateMaintenanceKonnectorsCmd = &cobra.Command{
+	Use:   "maintenance [slug]",
+	Short: `Activate the maintenance for the given konnector`,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) != 1 {
+			return cmd.Help()
+		}
+
+		messages := make(map[string]interface{})
+		for {
+			locale := prompt("Locale (empty to abort):")
+			if locale == "" {
+				break
+			}
+			if len(locale) > 5 {
+				fmt.Printf("Invalid locale name: %q\n", locale)
+				continue
+			}
+			shortMessage := prompt("Short message:")
+			longMessage := prompt("Long message:")
+			messages[locale] = map[string]string{
+				"short_message": shortMessage,
+				"long_message":  longMessage,
+			}
+		}
+		opts := map[string]interface{}{
+			"flag_short_maintenance":    flagKonnectorsShortMaintenance,
+			"flag_disallow_manual_exec": flagKonnectorsDisallowManualExec,
+			"messages":                  messages,
+		}
+		c := newAdminClient()
+		return c.ActivateMaintenance(args[0], opts)
+	},
+}
+
+var deactivateMaintenanceKonnectorsCmd = &cobra.Command{
+	Use:   "deactivate-maintenance [slug]",
+	Short: `Deactivate maintenance for the given konnector`,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) != 1 {
+			return cmd.Help()
+		}
+		c := newAdminClient()
+		return c.DeactivateMaintenance(args[0])
 	},
 }
 
@@ -588,6 +638,9 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
+	activateMaintenanceKonnectorsCmd.PersistentFlags().BoolVar(&flagKonnectorsShortMaintenance, "short", false, "specify a short maintenance")
+	activateMaintenanceKonnectorsCmd.PersistentFlags().BoolVar(&flagKonnectorsDisallowManualExec, "no-manual-exec", false, "specify a maintenance disallowing manual execution")
+
 	triggersCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	triggersCmdGroup.AddCommand(launchTriggerCmd)
 	triggersCmdGroup.AddCommand(listTriggerCmd)
@@ -609,6 +662,8 @@ func init() {
 	konnectorsCmdGroup.AddCommand(updateKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(runKonnectorsCmd)
+	konnectorsCmdGroup.AddCommand(activateMaintenanceKonnectorsCmd)
+	konnectorsCmdGroup.AddCommand(deactivateMaintenanceKonnectorsCmd)
 
 	RootCmd.AddCommand(triggersCmdGroup)
 	RootCmd.AddCommand(webappsCmdGroup)

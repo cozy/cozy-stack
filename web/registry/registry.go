@@ -1,8 +1,10 @@
 package registry
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -37,10 +39,11 @@ func proxyReq(auth authType, clientCache clientCacheControl, proxyCacheControl r
 				}
 			}
 		case perms:
-			// pdoc, err := middlewares.GetPermission(c)
-			// if err != nil || pdoc.Type != permission.TypeWebapp {
-			_, err := middlewares.GetPermission(c)
+			pdoc, err := middlewares.GetPermission(c)
 			if err != nil {
+				return echo.NewHTTPError(http.StatusForbidden)
+			}
+			if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeOauth {
 				return echo.NewHTTPError(http.StatusForbidden)
 			}
 		default:
@@ -80,6 +83,37 @@ func proxyListReq(c echo.Context) error {
 	return c.JSON(http.StatusOK, list)
 }
 
+func proxyAppReq(c echo.Context) error {
+	// router.GET("/:app", proxyReq(perms, noClientCache, registry.WithCache))
+	i := middlewares.GetInstance(c)
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeOauth {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	req := c.Request()
+	proxyResp, err := registry.Proxy(req, i.Registries(), registry.WithCache)
+	if err != nil {
+		return err
+	}
+	defer proxyResp.Body.Close()
+	var doc map[string]interface{}
+	if err := json.NewDecoder(proxyResp.Body).Decode(&doc); err != nil {
+		return err
+	}
+	opts, err := app.GetMaintenanceOptions(c.Param("app"))
+	if err != nil {
+		return err
+	}
+	if opts != nil {
+		doc["maintenance_activated"] = true
+		doc["maintenance_options"] = opts
+	}
+	return c.JSON(http.StatusOK, doc)
+}
+
 func proxyMaintenanceReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	pdoc, err := middlewares.GetPermission(c)
@@ -94,7 +128,14 @@ func proxyMaintenanceReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, list)
+	maintenance, err := app.ListMaintenance()
+	if err != nil {
+		return err
+	}
+	for _, item := range list {
+		maintenance = append(maintenance, item)
+	}
+	return c.JSON(http.StatusOK, maintenance)
 }
 
 // Routes sets the routing for the registry
@@ -103,7 +144,7 @@ func Routes(router *echo.Group) {
 	router.GET("", proxyListReq, gzip)
 	router.GET("/", proxyListReq, gzip)
 	router.GET("/maintenance", proxyMaintenanceReq, gzip)
-	router.GET("/:app", proxyReq(perms, noClientCache, registry.WithCache))
+	router.GET("/:app", proxyAppReq, gzip)
 	router.GET("/:app/icon", proxyReq(authed, shortClientCache, registry.NoCache))
 	router.GET("/:app/partnership_icon", proxyReq(authed, shortClientCache, registry.NoCache))
 	router.GET("/:app/screenshots/*", proxyReq(authed, shortClientCache, registry.NoCache))

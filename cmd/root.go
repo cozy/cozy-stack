@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
@@ -184,4 +186,15 @@ func cozyDomain() string {
 		domain = defaultDevDomain
 	}
 	return domain
+}
+
+func prompt(text string) string {
+	fmt.Fprintf(os.Stderr, "%s ", text)
+	r := bufio.NewReader(os.Stdin)
+	s, err := r.ReadString('\n')
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+	return strings.TrimSuffix(s, "\n")
 }

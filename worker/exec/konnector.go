@@ -119,6 +119,19 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 	var msg KonnectorMessage
 
 	if err := json.Unmarshal(j.Message, &msg); err == nil {
+		doc, err := app.GetMaintenanceOptions(msg.Konnector)
+		if err != nil {
+			j.Logger().Warnf("konnector %q could not get local maintenance status", msg.Konnector)
+		} else if doc != nil {
+			if j.Manual {
+				opts, ok := doc["maintenance_options"].(map[string]interface{})
+				if ok && opts["flag_disallow_manual_exec"] != true {
+					return true, nil
+				}
+			}
+			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
+			return false, nil
+		}
 		inst, err := lifecycle.GetInstance(j.DomainName())
 		if err != nil {
 			return false, err

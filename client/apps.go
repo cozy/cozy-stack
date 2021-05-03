@@ -201,6 +201,32 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	return readAppManifest(res)
 }
 
+// ActivateMaintenance is used to activate the maintenance for a konnector
+func (c *Client) ActivateMaintenance(slug string, opts map[string]interface{}) error {
+	data := map[string]interface{}{"attributes": opts}
+	body, err := writeJSONAPI(data)
+	if err != nil {
+		return err
+	}
+	_, err = c.Req(&request.Options{
+		Method:     "PUT",
+		Path:       "/konnectors/maintenance/" + slug,
+		Body:       body,
+		NoResponse: true,
+	})
+	return err
+}
+
+// DeactivateMaintenance is used to deactivate the maintenance for a konnector
+func (c *Client) DeactivateMaintenance(slug string) error {
+	_, err := c.Req(&request.Options{
+		Method:     "DELETE",
+		Path:       "/konnectors/maintenance/" + slug,
+		NoResponse: true,
+	})
+	return err
+}
+
 func makeAppsPath(appType, path string) string {
 	switch appType {
 	case consts.Apps:

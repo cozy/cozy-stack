@@ -17,6 +17,8 @@ const (
 	Versions = "io.cozy.registry.versions"
 	// KonnectorLogs doc type for konnector last execution logs.
 	KonnectorLogs = "io.cozy.konnectors.logs"
+	// KonnectorsMaintenance doc type for maintenance of konnectors.
+	KonnectorsMaintenance = "io.cozy.konnectors.maintenance"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
 	// Exports doc type for global exports archives
