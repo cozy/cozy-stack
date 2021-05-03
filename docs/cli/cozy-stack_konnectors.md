@@ -37,9 +37,11 @@ cozy-stack konnectors <command> [flags]
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack konnectors deactivate-maintenance](cozy-stack_konnectors_deactivate-maintenance.md)	 - Deactivate maintenance for the given konnector
 * [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install a konnector with the specified slug name
 from the given source URL.
 * [cozy-stack konnectors ls](cozy-stack_konnectors_ls.md)	 - List the installed konnectors.
+* [cozy-stack konnectors maintenance](cozy-stack_konnectors_maintenance.md)	 - Activate the maintenance for the given konnector
 * [cozy-stack konnectors run](cozy-stack_konnectors_run.md)	 - Run a konnector.
 * [cozy-stack konnectors show](cozy-stack_konnectors_show.md)	 - Show the application attributes
 * [cozy-stack konnectors uninstall](cozy-stack_konnectors_uninstall.md)	 - Uninstall the konnector with the specified slug name.

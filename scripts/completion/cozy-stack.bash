@@ -3456,6 +3456,43 @@ _cozy-stack_jobs()
     noun_aliases=()
 }
 
+_cozy-stack_konnectors_deactivate-maintenance()
+{
+    last_command="cozy-stack_konnectors_deactivate-maintenance"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--all-domains")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--domain=")
+    two_word_flags+=("--domain")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--parameters=")
+    two_word_flags+=("--parameters")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_konnectors_install()
 {
     last_command="cozy-stack_konnectors_install"
@@ -3507,6 +3544,45 @@ _cozy-stack_konnectors_ls()
     flags_with_completion=()
     flags_completion=()
 
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--all-domains")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--domain=")
+    two_word_flags+=("--domain")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--parameters=")
+    two_word_flags+=("--parameters")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_konnectors_maintenance()
+{
+    last_command="cozy-stack_konnectors_maintenance"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--no-manual-exec")
+    flags+=("--short")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
@@ -3688,8 +3764,10 @@ _cozy-stack_konnectors()
     command_aliases=()
 
     commands=()
+    commands+=("deactivate-maintenance")
     commands+=("install")
     commands+=("ls")
+    commands+=("maintenance")
     commands+=("run")
     commands+=("show")
     commands+=("uninstall")
