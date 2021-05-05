@@ -905,7 +905,7 @@ This endpoint is used for creating a job (for example executing a konnector
 or a service).
 It requires no permission, but a trigger of type `@webhook` must have been
 created before using this endpoint. Its body must be a JSON that will be
-available to the konnector or to the service through the 
+available to the konnector or to the service through the
 `process.env['COZY_PAYLOAD']` variable.
 
 #### Request

@@ -29,3 +29,8 @@ func (c *ClientTrigger) Unschedule() {}
 func (c *ClientTrigger) Infos() *TriggerInfos {
 	return c.TriggerInfos
 }
+
+// CombineRequest implements the CombineRequest method of the Trigger interface.
+func (c *ClientTrigger) CombineRequest() string {
+	return keepOriginalRequest
+}

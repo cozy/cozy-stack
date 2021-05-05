@@ -32,12 +32,13 @@ class Trigger
   end
 
   module Webhook
-    def self.create(inst, message)
+    def self.create(inst, message, debounce = nil)
       attrs = {
         type: "@webhook",
         worker: "konnector",
         message: message
       }
+      attrs[:debounce] = debounce if debounce
       t = Trigger.create inst, attrs
       t.links["webhook"]
     end

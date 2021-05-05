@@ -88,6 +88,11 @@ func (t *EventTrigger) Infos() *TriggerInfos {
 	return t.TriggerInfos
 }
 
+// CombineRequest implements the CombineRequest method of the Trigger interface.
+func (t *EventTrigger) CombineRequest() string {
+	return suppressPayload
+}
+
 func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 	if e.Doc.DocType() != rule.Type {
 		return false
