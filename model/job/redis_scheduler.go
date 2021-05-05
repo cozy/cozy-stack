@@ -76,6 +76,10 @@ func redisKey(t Trigger) string {
 	return t.DBPrefix() + "/" + t.Infos().TID
 }
 
+func payloadKey(t Trigger) string {
+	return "payload-" + t.DBPrefix() + "/" + t.Infos().TID
+}
+
 func eventsKey(db prefixer.Prefixer) string {
 	return "events-" + db.DBPrefix()
 }
@@ -193,6 +197,39 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 	}
 }
 
+// fire is called when a webhook is fired.
+func (s *redisScheduler) fire(trigger Trigger, request *JobRequest) {
+	infos := trigger.Infos()
+	if infos.Debounce == "" {
+		if _, err := s.broker.PushJob(trigger, request); err != nil {
+			s.log.Warnf("Could not push job trigger by webhook %s %s: %s",
+				infos.Domain, infos.TID, err.Error())
+		}
+		return
+	}
+
+	d, err := time.ParseDuration(infos.Debounce)
+	if err != nil {
+		s.log.Warnf("Trigger %s %s has an invalid debounce: %s",
+			infos.Domain, infos.TID, infos.Debounce)
+	}
+	timestamp := time.Now().Add(d)
+	pipe := s.client.Pipeline()
+	switch trigger.CombineRequest() {
+	case appendPayload:
+		pipe.RPush(payloadKey(trigger), string(request.Payload))
+	case keepOriginalRequest:
+		pipe.SetNX(payloadKey(trigger), string(request.Payload), 30*24*time.Hour)
+	}
+	pipe.ZAddNX(TriggersKey, &redis.Z{
+		Score:  float64(timestamp.UTC().Unix()),
+		Member: redisKey(trigger),
+	})
+	if _, err := pipe.Exec(); err != nil {
+		s.log.Warnf("Cannot fire trigger because of redis error: %s", err)
+	}
+}
+
 // ShutdownScheduler shuts down the the scheduling of triggers
 func (s *redisScheduler) ShutdownScheduler(ctx context.Context) error {
 	if s.closed == nil {
@@ -240,11 +277,28 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			return err
 		}
 		switch t := t.(type) {
-		case *EventTrigger: // Debounced
+		case *EventTrigger, *WebhookTrigger: // Debounced
 			job := t.Infos().JobRequest()
 			job.Debounced = true
 			if err = s.client.ZRem(SchedKey, results[0]).Err(); err != nil {
 				return err
+			}
+			switch t.CombineRequest() {
+			case appendPayload:
+				pipe := s.client.Pipeline()
+				lrange := pipe.LRange(payloadKey(t), 0, -1)
+				pipe.Del(payloadKey(t))
+				if _, err := pipe.Exec(); err == nil {
+					payloads := strings.Join(lrange.Val(), ",")
+					job.Payload = Payload(`{"payloads":[` + payloads + "]}")
+				}
+			case keepOriginalRequest:
+				pipe := s.client.Pipeline()
+				get := pipe.Get(payloadKey(t))
+				pipe.Del(payloadKey(t))
+				if _, err := pipe.Exec(); err == nil {
+					job.Payload = Payload(get.Val())
+				}
 			}
 			if _, err = s.broker.PushJob(t, job); err != nil {
 				return err
@@ -340,7 +394,14 @@ func (s *redisScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, e
 		}
 		return nil, err
 	}
-	return fromTriggerInfos(&infos)
+	t, err := fromTriggerInfos(&infos)
+	if err != nil {
+		return nil, err
+	}
+	if webhook, ok := t.(*WebhookTrigger); ok {
+		webhook.SetCallback(s)
+	}
+	return t, nil
 }
 
 // DeleteTrigger removes the trigger with the specified ID. The trigger is

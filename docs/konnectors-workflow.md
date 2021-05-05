@@ -752,3 +752,10 @@ HTTP/1.1 204 No Content
 
 7. The konnector will fetch the documents from the external service and save
    them in the Cozy.
+
+Note: if the trigger has a debounce, the `COZY_PAYLOAD` will be an object with
+a `payloads` array, like this:
+
+```sh
+COZY_PAYLOAD={"payloads": [{"param_from_http_body": "bar"}]}
+```

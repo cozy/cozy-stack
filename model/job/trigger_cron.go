@@ -82,4 +82,9 @@ func (c *CronTrigger) Infos() *TriggerInfos {
 	return c.TriggerInfos
 }
 
+// CombineRequest implements the CombineRequest method of the Trigger interface.
+func (c *CronTrigger) CombineRequest() string {
+	return keepOriginalRequest
+}
+
 var _ Trigger = &CronTrigger{}

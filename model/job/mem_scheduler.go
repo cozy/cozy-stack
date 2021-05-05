@@ -199,7 +199,7 @@ func (s *memScheduler) schedule(t Trigger) {
 		return
 	}
 	var debounced <-chan time.Time
-	var originalReq *JobRequest
+	var combinedReq *JobRequest
 	var d time.Duration
 	infos := t.Infos()
 	if infos.Debounce != "" {
@@ -219,13 +219,33 @@ func (s *memScheduler) schedule(t Trigger) {
 				s.pushJob(t, req)
 			} else if debounced == nil {
 				debounced = time.After(d)
-				originalReq = req
+				combinedReq = combineRequests(t, req, nil)
+			} else {
+				combinedReq = combineRequests(t, combinedReq, req)
 			}
 		case <-debounced:
-			s.pushJob(t, originalReq)
+			s.pushJob(t, combinedReq)
 			debounced = nil
-			originalReq = nil
+			combinedReq = nil
 		}
+	}
+}
+
+func combineRequests(t Trigger, req1, req2 *JobRequest) *JobRequest {
+	switch t.CombineRequest() {
+	case appendPayload:
+		if req2 == nil {
+			req1.Payload = Payload(`{"payloads":[` + string(req1.Payload) + "]}")
+		} else {
+			was := string(req1.Payload)
+			cut := was[:len(was)-2] // Remove the final ]}
+			req1.Payload = Payload(cut + "," + string(req2.Payload) + "]}")
+		}
+		return req1
+	case suppressPayload:
+		return t.Infos().JobRequest()
+	default: // keepOriginalRequest
+		return req1
 	}
 }
 

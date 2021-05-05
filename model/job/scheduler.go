@@ -17,6 +17,13 @@ import (
 // structure is modified, update this value
 const DocTypeVersionTrigger = "1"
 
+// The different modes for combining job requests when debounced.
+const (
+	keepOriginalRequest = "original"
+	suppressPayload     = "recreate"
+	appendPayload       = "append"
+)
+
 type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
@@ -30,6 +37,7 @@ type (
 		// Unschedule should be used to clean the trigger states and should close
 		// the returns jobs channel.
 		Unschedule()
+		CombineRequest() string
 	}
 
 	// Scheduler interface is used to represent a scheduler that is responsible

@@ -82,4 +82,9 @@ func (a *AtTrigger) Infos() *TriggerInfos {
 	return a.TriggerInfos
 }
 
+// CombineRequest implements the CombineRequest method of the Trigger interface.
+func (a *AtTrigger) CombineRequest() string {
+	return keepOriginalRequest
+}
+
 var _ Trigger = &AtTrigger{}

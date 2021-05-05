@@ -420,20 +420,16 @@ func fireWebhook(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if t.Type() != "@webhook" {
+	webhook, ok := t.(*job.WebhookTrigger)
+	if !ok {
 		return jsonapi.InvalidAttribute("Type", errors.New("Not a webhook"))
 	}
 
-	req := t.Infos().JobRequest()
-	req.Payload, err = ioutil.ReadAll(c.Request().Body)
+	payload, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
 		return wrapJobsError(err)
 	}
-
-	_, err = job.System().PushJob(inst, req)
-	if err != nil {
-		return wrapJobsError(err)
-	}
+	webhook.Fire(payload)
 	return c.NoContent(http.StatusNoContent)
 }
 
