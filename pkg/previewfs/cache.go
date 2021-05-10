@@ -83,7 +83,7 @@ func (s swiftCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
 	headers := objectMeta.ObjectHeaders()
 	headers["X-Delete-After"] = strconv.FormatInt(int64(ttl.Seconds()), 10)
 	f, err := s.c.ObjectCreate(containerName, objectName, true, "", "image/jpg", headers)
-	if err == swift.ContainerNotFound {
+	if err == swift.ObjectNotFound {
 		_ = s.c.ContainerCreate(containerName, nil)
 		f, err = s.c.ObjectCreate(containerName, objectName, true, "", "image/jpg", headers)
 	}
