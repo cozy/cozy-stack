@@ -37,9 +37,14 @@ func (ac *AccessCode) SetID(id string) { ac.Code = id }
 func (ac *AccessCode) SetRev(rev string) { ac.CouchRev = rev }
 
 // CreateAccessCode an access code for the given clientID, persisted in CouchDB
-func CreateAccessCode(i *instance.Instance, clientID, scope string) (*AccessCode, error) {
+func CreateAccessCode(i *instance.Instance, client *Client, scope string) (*AccessCode, error) {
+	if client.Pending {
+		client.Pending = false
+		_ = couchdb.UpdateDoc(i, client)
+	}
+
 	ac := &AccessCode{
-		ClientID: clientID,
+		ClientID: client.ClientID,
 		IssuedAt: crypto.Timestamp(),
 		Scope:    scope,
 	}

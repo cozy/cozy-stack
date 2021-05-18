@@ -1,4 +1,5 @@
 module Helpers
+  SHARED_WITH_ME_EN = "Inbox of sharings".freeze
   SHARED_WITH_ME = "Partages reçus".freeze
 
   @current_dir = File.expand_path "../../tmp", __FILE__

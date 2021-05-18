@@ -60,10 +60,11 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, renderError(c, http.StatusBadRequest, "Error Invalid response type")
 	}
 
-	params.client = new(oauth.Client)
-	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
+	client, err := oauth.FindClient(params.instance, params.clientID)
+	if err != nil {
 		return true, renderError(c, http.StatusBadRequest, "Error No registered client")
 	}
+	params.client = client
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
@@ -129,7 +130,7 @@ func authorizeForm(c echo.Context) error {
 	// for the manager. It does not require any authorization from the user, and
 	// generate a code without asking any permission.
 	if params.scope == oauth.ScopeLogin {
-		access, err := oauth.CreateAccessCode(params.instance, params.clientID, "" /* = scope */)
+		access, err := oauth.CreateAccessCode(params.instance, params.client, "" /* = scope */)
 		if err != nil {
 			return err
 		}
@@ -267,7 +268,7 @@ func authorize(c echo.Context) error {
 		}
 	}
 
-	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
+	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope)
 	if err != nil {
 		return err
 	}
@@ -592,12 +593,11 @@ func moveSuccessURI(c echo.Context) (string, error) {
 		return "", err
 	}
 
-	clientID := c.FormValue("client_id")
-	client := oauth.Client{}
-	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
+	client, err := oauth.FindClient(inst, c.FormValue("client_id"))
+	if err != nil {
 		return "", err
 	}
-	access, err := oauth.CreateAccessCode(inst, clientID, move.MoveScope)
+	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope)
 	if err != nil {
 		return "", err
 	}
