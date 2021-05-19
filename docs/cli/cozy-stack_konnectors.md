@@ -41,6 +41,7 @@ cozy-stack konnectors <command> [flags]
 * [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install a konnector with the specified slug name
 from the given source URL.
 * [cozy-stack konnectors ls](cozy-stack_konnectors_ls.md)	 - List the installed konnectors.
+* [cozy-stack konnectors ls-maintenances](cozy-stack_konnectors_ls-maintenances.md)	 - List the konnectors in maintenance
 * [cozy-stack konnectors maintenance](cozy-stack_konnectors_maintenance.md)	 - Activate the maintenance for the given konnector
 * [cozy-stack konnectors run](cozy-stack_konnectors_run.md)	 - Run a konnector.
 * [cozy-stack konnectors show](cozy-stack_konnectors_show.md)	 - Show the application attributes

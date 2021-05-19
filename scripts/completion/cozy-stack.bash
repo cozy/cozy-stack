@@ -3567,6 +3567,43 @@ _cozy-stack_konnectors_ls()
     noun_aliases=()
 }
 
+_cozy-stack_konnectors_ls-maintenances()
+{
+    last_command="cozy-stack_konnectors_ls-maintenances"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--all-domains")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--domain=")
+    two_word_flags+=("--domain")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--parameters=")
+    two_word_flags+=("--parameters")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_konnectors_maintenance()
 {
     last_command="cozy-stack_konnectors_maintenance"
@@ -3767,6 +3804,7 @@ _cozy-stack_konnectors()
     commands+=("deactivate-maintenance")
     commands+=("install")
     commands+=("ls")
+    commands+=("ls-maintenances")
     commands+=("maintenance")
     commands+=("run")
     commands+=("show")
