@@ -286,6 +286,8 @@ func OpenNoteURL(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
+	readOnly := c.QueryParam("ReadOnly") == "true"
 
 	// If a directory is shared by link and contains a note, the note can be
 	// opened with the same sharecode as the directory. The sharecode is also
@@ -293,6 +295,7 @@ func OpenNoteURL(c echo.Context) error {
 	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
+		readOnly = true
 	}
 
 	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
@@ -300,8 +303,6 @@ func OpenNoteURL(c echo.Context) error {
 		return middlewares.ErrForbidden
 	}
 
-	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
-	readOnly := c.QueryParam("ReadOnly") == "true"
 	doc, err := open.GetResult(memberIndex, readOnly)
 	if err != nil {
 		return wrapError(err)
