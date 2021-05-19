@@ -403,6 +403,50 @@ Content-Type: application/json
 
 ## Konnectors
 
+### GET /konnectors/maintenance
+
+#### Request
+
+```http
+GET /konnectors/maintenance HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "meta": {
+    "count": 1
+  },
+  "data": [
+    {
+      "type": "io.cozy.konnectors.maintenance",
+      "attributes": {
+        "maintenance_activated": true,
+        "maintenance_options": {
+          "flag_disallow_manual_exec": false,
+          "flag_infra_maintenance": true,
+          "flag_short_maintenance": true,
+          "messages": {
+            "fr": {
+              "long_message": "Bla bla bla",
+              "short_message": "Bla"
+            }
+          }
+        },
+        "slug": "ameli",
+        "type": "konnector"
+      }
+    }
+  ]
+}
+```
+
 ### PUT /konnectors/maintenance/:slug
 
 #### Request

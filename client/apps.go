@@ -201,6 +201,22 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	return readAppManifest(res)
 }
 
+// ListMaintenances returns a list of konnectors in maintenance
+func (c *Client) ListMaintenances() ([]interface{}, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   "/konnectors/maintenance",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var list []interface{}
+	if err := readJSONAPI(res.Body, &list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 // ActivateMaintenance is used to activate the maintenance for a konnector
 func (c *Client) ActivateMaintenance(slug string, opts map[string]interface{}) error {
 	data := map[string]interface{}{"attributes": opts}

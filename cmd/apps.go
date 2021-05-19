@@ -268,6 +268,26 @@ var runKonnectorsCmd = &cobra.Command{
 	},
 }
 
+var listMaintenancesCmd = &cobra.Command{
+	Use:   "ls-maintenances",
+	Short: `List the konnectors in maintenance`,
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		c := newAdminClient()
+		list, err := c.ListMaintenances()
+		if err != nil {
+			return err
+		}
+		for _, item := range list {
+			json, err := json.MarshalIndent(item, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(json))
+		}
+		return nil
+	},
+}
+
 var activateMaintenanceKonnectorsCmd = &cobra.Command{
 	Use:   "maintenance [slug]",
 	Short: `Activate the maintenance for the given konnector`,
@@ -662,6 +682,7 @@ func init() {
 	konnectorsCmdGroup.AddCommand(updateKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(runKonnectorsCmd)
+	konnectorsCmdGroup.AddCommand(listMaintenancesCmd)
 	konnectorsCmdGroup.AddCommand(activateMaintenanceKonnectorsCmd)
 	konnectorsCmdGroup.AddCommand(deactivateMaintenanceKonnectorsCmd)
 
