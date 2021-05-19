@@ -65,13 +65,13 @@ describe "Moving a Cozy" do
     Helpers.fsdiff(da, db).must_be_empty
     Helpers.fsdiff(da, dc).must_be_empty
 
-    da = File.join Helpers.current_dir, alices.domain, Helpers::SHARED_WITH_ME, dirb.name
+    da = File.join Helpers.current_dir, alices.domain, Helpers::SHARED_WITH_ME_EN, dirb.name
     db = File.join Helpers.current_dir, bobs.domain, dirb.name
     dc = File.join Helpers.current_dir, charlie.domain, Helpers::SHARED_WITH_ME, dirb.name
     Helpers.fsdiff(da, db).must_be_empty
     Helpers.fsdiff(da, dc).must_be_empty
 
-    da = File.join Helpers.current_dir, alices.domain, Helpers::SHARED_WITH_ME, dirc.name
+    da = File.join Helpers.current_dir, alices.domain, Helpers::SHARED_WITH_ME_EN, dirc.name
     db = File.join Helpers.current_dir, bobs.domain, Helpers::SHARED_WITH_ME, dirc.name
     dc = File.join Helpers.current_dir, charlie.domain, dirc.name
     Helpers.fsdiff(da, db).must_be_empty

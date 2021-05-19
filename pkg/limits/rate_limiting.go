@@ -70,6 +70,8 @@ const (
 	ExportType
 	// WebhookTriggerType is used for calling a webhook trigger
 	WebhookTriggerType
+	// JobCleanClientType is used for cleaning unused OAuth clients
+	JobCleanClientType
 )
 
 type counterConfig struct {
@@ -197,6 +199,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "webhook-trigger",
 		Limit:  30,
+		Period: 1 * time.Hour,
+	},
+	// JobCleanClientType
+	{
+		Prefix: "job-clean-clients",
+		Limit:  100,
 		Period: 1 * time.Hour,
 	},
 }

@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
 )
 
@@ -38,9 +40,15 @@ func createToken(c echo.Context) error {
 		audience = consts.KonnectorAudience
 		validity = consts.KonnectorTokenValidityDuration
 	case consts.AccessTokenAudience, "access-token":
+		if err := checkClient(in, subject); err != nil {
+			return err
+		}
 		audience = consts.AccessTokenAudience
 		validity = consts.AccessTokenValidityDuration
 	case consts.RefreshTokenAudience, "refresh-token":
+		if err := checkClient(in, subject); err != nil {
+			return err
+		}
 		audience = consts.RefreshTokenAudience
 	case consts.CLIAudience:
 		audience = consts.CLIAudience
@@ -59,6 +67,18 @@ func createToken(c echo.Context) error {
 		return err
 	}
 	return c.String(http.StatusOK, token)
+}
+
+func checkClient(inst *instance.Instance, clientID string) error {
+	client, err := oauth.FindClient(inst, clientID)
+	if err != nil {
+		return err
+	}
+	if client.Pending {
+		client.Pending = false
+		_ = couchdb.UpdateDoc(inst, client)
+	}
+	return nil
 }
 
 func registerClient(c echo.Context) error {

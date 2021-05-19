@@ -328,6 +328,15 @@ change would kill the performance for realtime collaboration, so the stack
 writes the note to a cache, and has a trigger with debounce to persist the note
 to the VFS later.
 
+## clean-clients
+
+This internal worker will delete unused OAuth clients. When an OAuth client is
+created, it has the pending flag set to true. When an access code is generated
+for a client, the flag is set to false. If 1 hour after the client has been
+created, the flag is still true, this worker will delete the client. It will
+help to clean unused clients which can be misleading for the user when the list
+of clients in settings is displayed.
+
 ## migrations
 
 The `migrations` worker can be used to migrate a cozy instance. Currently, it

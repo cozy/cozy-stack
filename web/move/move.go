@@ -310,7 +310,8 @@ func getAuthorizeCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
 	}
 
-	access, err := oauth.CreateAccessCode(inst, move.SourceClientID, consts.ExportsRequests)
+	client := &oauth.Client{ClientID: move.SourceClientID}
+	access, err := oauth.CreateAccessCode(inst, client, consts.ExportsRequests)
 	if err != nil {
 		return err
 	}
@@ -365,7 +366,7 @@ func initializeMove(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	access, err := oauth.CreateAccessCode(inst, client.ClientID, move.MoveScope)
+	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope)
 	if err != nil {
 		return err
 	}
