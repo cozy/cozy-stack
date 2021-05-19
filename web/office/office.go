@@ -27,6 +27,8 @@ func Open(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
+	readOnly := c.QueryParam("ReadOnly") == "true"
 
 	// If a directory is shared by link and contains an office document, the
 	// document can be opened with the same sharecode as the directory. The
@@ -34,6 +36,7 @@ func Open(c echo.Context) error {
 	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
+		readOnly = true
 	}
 
 	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
@@ -41,8 +44,6 @@ func Open(c echo.Context) error {
 		return middlewares.ErrForbidden
 	}
 
-	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
-	readOnly := c.QueryParam("ReadOnly") == "true"
 	doc, err := open.GetResult(memberIndex, readOnly)
 	if err != nil {
 		return wrapError(err)
