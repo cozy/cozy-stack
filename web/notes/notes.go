@@ -295,7 +295,6 @@ func OpenNoteURL(c echo.Context) error {
 	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
-		readOnly = true
 	}
 
 	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
