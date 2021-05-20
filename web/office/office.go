@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -36,7 +37,14 @@ func Open(c echo.Context) error {
 	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
-		readOnly = true
+		if !readOnly {
+			readOnly = true
+			for _, perm := range pdoc.Permissions {
+				if perm.Type == consts.Files && !perm.Verbs.ReadOnly() {
+					readOnly = false
+				}
+			}
+		}
 	}
 
 	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
