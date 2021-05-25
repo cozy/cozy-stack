@@ -12,7 +12,7 @@ describe "A webhook trigger" do
     source_url = "file://" + File.expand_path("../konnector", __dir__)
     konnector_name = Faker::Cat.name.downcase
     inst.install_konnector konnector_name, source_url
-    account = Account.create inst, type: konnector_name, name: Faker::DrWho.character
+    account = Account.create inst, type: konnector_name, name: "1_#{Faker::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args
 
@@ -34,7 +34,7 @@ describe "A webhook trigger" do
     assert_equal executed["payload"], body
 
     # With debounce
-    account2 = Account.create inst, type: konnector_name, name: Faker::DrWho.character
+    account2 = Account.create inst, type: konnector_name, name: "2_#{Faker::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account2.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args, "1s"
 
