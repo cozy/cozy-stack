@@ -57,22 +57,20 @@ func DefineViewsAndIndex(inst *instance.Instance) error {
 func createDefaultFilesTree(inst *instance.Instance) error {
 	var errf error
 
-	createDir := func(dir *vfs.DirDoc, err error) (*vfs.DirDoc, error) {
-		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	createDir := func(dir *vfs.DirDoc, err error) {
 		if err != nil {
 			errf = multierror.Append(errf, err)
-			return nil, err
+			return
 		}
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		err = inst.VFS().CreateDir(dir)
 		if err != nil && !os.IsExist(err) {
 			errf = multierror.Append(errf, err)
-			return nil, err
 		}
-		return dir, nil
 	}
 
 	name := inst.Translate("Tree Administrative")
-	_, _ = createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
+	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
 
 	// Check if we create the "Photos" folder and its subfolders. By default, we
 	// are creating it, but some contexts may not want to create them.
@@ -85,13 +83,7 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 
 	if createPhotosFolder {
 		name = inst.Translate("Tree Photos")
-		photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
-		if err == nil {
-			name = inst.Translate("Tree Uploaded from Cozy Photos")
-			_, _ = createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil))
-			name = inst.Translate("Tree Backed up from my mobile")
-			_, _ = createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil))
-		}
+		createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
 	}
 
 	return errf

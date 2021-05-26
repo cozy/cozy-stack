@@ -15,12 +15,6 @@ msgstr "Photos"
 msgid "Tree Notes"
 msgstr "Notes"
 
-msgid "Tree Uploaded from Cozy Photos"
-msgstr "Uploaded from Cozy Photos"
-
-msgid "Tree Backed up from my mobile"
-msgstr "Backed up from my mobile"
-
 msgid "Tree Shared with me"
 msgstr "Inbox of sharings"
 

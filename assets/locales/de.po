@@ -24,12 +24,6 @@ msgstr "Fotos"
 msgid "Tree Notes"
 msgstr "Notizen"
 
-msgid "Tree Uploaded from Cozy Photos"
-msgstr "Hochgeladen von Cozy Fotos"
-
-msgid "Tree Backed up from my mobile"
-msgstr "Gesichert von meinem Handy"
-
 msgid "Tree Shared with me"
 msgstr "Posteingang der Freigaben"
 

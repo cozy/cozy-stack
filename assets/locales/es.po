@@ -19,12 +19,6 @@ msgstr "Fotos"
 msgid "Tree Notes"
 msgstr "Notas"
 
-msgid "Tree Uploaded from Cozy Photos"
-msgstr "Cargado desde Cozy Fotos"
-
-msgid "Tree Backed up from my mobile"
-msgstr "Copiados para respaldarlos desde su celular"
-
 msgid "Tree Shared with me"
 msgstr "Compartido conmigo"
 
