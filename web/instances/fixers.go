@@ -306,7 +306,7 @@ func orphanAccountFixer(c echo.Context) error {
 
 func indexesFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}

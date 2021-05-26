@@ -313,7 +313,7 @@ func (i *Installer) checkSkipPermissions() (bool, error) {
 		return false, nil
 	}
 
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return false, err
 	}
@@ -403,7 +403,7 @@ func (i *Installer) update() error {
 	// to set an AvailableVersion. In this case, the current webapp/konnector
 	// perms will be reapplied and custom ones will be lost if we don't rewrite
 	// them.
-	inst, err := instance.GetFromCouch(i.Domain())
+	inst, err := instance.Get(i.Domain())
 	if err == nil {
 		// Check if perms were added on the old manifest
 		if i.man.AppType() == consts.WebappType {

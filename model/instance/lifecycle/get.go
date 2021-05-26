@@ -12,7 +12,7 @@ func GetInstance(domain string) (*instance.Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	i, err := instance.GetFromCouch(domain)
+	i, err := instance.Get(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -21,13 +21,6 @@ func GetInstance(domain string) (*instance.Instance, error) {
 	// this version update, since the instance document may be updated different
 	// processes at the same time.
 	for {
-		if i == nil {
-			i, err = instance.GetFromCouch(domain)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if i.IndexViewsVersion == couchdb.IndexViewsVersion {
 			break
 		}
@@ -46,7 +39,10 @@ func GetInstance(domain string) (*instance.Instance, error) {
 			return nil, err
 		}
 
-		i = nil
+		i, err = instance.GetFromCouch(domain)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err = i.MakeVFS(); err != nil {

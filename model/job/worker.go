@@ -277,7 +277,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		var inst *instance.Instance
 		if domain != prefixer.GlobalPrefixer.DomainName() {
 			var err error
-			inst, err = instance.GetFromCouch(job.Domain)
+			inst, err = instance.Get(job.Domain)
 			if err != nil {
 				joblog.Errorf("Instance not found for %s: %s", job.Domain, err)
 				continue

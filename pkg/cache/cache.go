@@ -122,6 +122,18 @@ func (c Cache) Set(key string, data []byte, expiration time.Duration) {
 	}
 }
 
+// SetNX stores the data in the cache only if the key doesn't exist yet.
+func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
+	if c.client == nil {
+		c.m.LoadOrStore(key, cacheEntry{
+			payload:   data,
+			expiredAt: time.Now().Add(expiration),
+		})
+	} else {
+		c.client.SetNX(key, data, expiration)
+	}
+}
+
 // GetCompressed works like Get but expect a compressed asset that is
 // uncompressed.
 func (c Cache) GetCompressed(key string) (io.Reader, bool) {
