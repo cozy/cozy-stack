@@ -157,13 +157,12 @@ msgid "Passphrase reset password Title Cozy Pass"
 msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
 
 msgid "Passphrase reset Help Warning"
-msgstr "Waarschuwing!"
+msgstr "Waarschuwing: alle gegevens in je wachtwoordbeheerder gaan verloren"
 
 msgid "Passphrase reset Help Message"
 msgstr ""
-"Je huidige wachtwoord is de enige sleutel van de app 'Cozy Wachtwoorden'. "
-"Als je je wachtwoord opnieuw instelt, **dan gaan die gegevens verloren**. De"
-" rest van je gegevens blijven toegankelijk."
+"als je je wachtwoord opnieuw instelt! Je huidige wachtwoord is de enige "
+"sleutel van de app ‘Cozy Wachtwoorden’."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -327,7 +326,7 @@ msgid "Move delegated auth Help"
 msgstr "Er is een code verstuurd naar het e-mailadres \"%s\"."
 
 msgid "Import Title"
-msgstr "Bezig met importeren..."
+msgstr "Bezig met importeren…"
 
 msgid "Import Description"
 msgstr ""
