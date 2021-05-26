@@ -80,7 +80,7 @@ func getSessionID(cookies []*http.Cookie) string {
 func TestInstanceBlocked(t *testing.T) {
 	// Block the instance
 	testInstance.Blocked = true
-	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = testInstance.Update()
 
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = testInstance.Domain
@@ -101,7 +101,7 @@ func TestInstanceBlocked(t *testing.T) {
 
 	// Unblock the instance
 	testInstance.Blocked = false
-	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = testInstance.Update()
 }
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {

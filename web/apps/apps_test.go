@@ -500,7 +500,7 @@ func TestMain(m *testing.M) {
 	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass), params)
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
-	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = testInstance.Update()
 
 	err = installMiniApp()
 	if err != nil {

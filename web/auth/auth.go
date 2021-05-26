@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -289,7 +288,7 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	}
 	settings.PublicKey = pubKey
 	settings.PrivateKey = privKey
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	if err := inst.Update(); err != nil {
 		inst.Logger().Errorf("Could not update: %s", err.Error())
 	}
 	if err := settings.Save(inst); err != nil {
