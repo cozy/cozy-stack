@@ -28,6 +28,9 @@ func WorkerClean(ctx *job.WorkerContext) error {
 	}
 	client, err := oauth.FindClient(ctx.Instance, msg.ClientID)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 	if client.Pending {
