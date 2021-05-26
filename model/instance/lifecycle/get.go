@@ -38,24 +38,6 @@ func GetInstance(domain string) (*instance.Instance, error) {
 			return nil, err
 		}
 
-		// Copy over the instance object some data that we used to store on the
-		// settings document.
-		if i.TOSSigned == "" || i.UUID == "" || i.ContextName == "" {
-			var settings *couchdb.JSONDoc
-			settings, err = i.SettingsDocument()
-			if err != nil {
-				return nil, err
-			}
-			i.UUID, _ = settings.M["uuid"].(string)
-			i.TOSSigned, _ = settings.M["tos"].(string)
-			i.ContextName, _ = settings.M["context"].(string)
-			// TOS version number were YYYYMMDD dates, before we used a semver-like
-			// version scheme. We consider them to be the versions 1.0.0.
-			if len(i.TOSSigned) == 8 {
-				i.TOSSigned = "1.0.0-" + i.TOSSigned
-			}
-		}
-
 		if err = update(i); err == nil {
 			break
 		}
