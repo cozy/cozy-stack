@@ -140,13 +140,12 @@ msgid "Passphrase reset password Title Cozy Pass"
 msgstr "As a last resort, you can reset your password for Cozy Pass:"
 
 msgid "Passphrase reset Help Warning"
-msgstr "Warning!"
+msgstr "Warning! You will lose that data of your password manager"
 
 msgid "Passphrase reset Help Message"
 msgstr ""
-"Your current password is the only key to decode your passwords kept in your app \"Cozy Pass\". If you reset it, "
-"**you will lose that data**. "
-"The rest of your data will remain accessible."
+"if you reset your password. The rest of your data will remain accessible. "
+"Indeed, your current password is the only key to decode your passwords kept in your app \"Cozy Pass\"."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr "By clicking this button, you will be sent a link by email to choose a new password."
