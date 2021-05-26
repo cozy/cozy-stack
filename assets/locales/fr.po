@@ -5,7 +5,6 @@
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
-# Paul Tran-Van <paul@cozycloud.cc>, 2020
 # JC Pagnon <gooz@cozycloud.cc>, 2021
 # Matthieu AMBRY <matthieu@ambry.eu>, 2021
 # Bruno Michel, 2021
@@ -184,8 +183,8 @@ msgstr "Attention !"
 msgid "Passphrase reset Help Message"
 msgstr ""
 "Votre mot de passe actuel est l'unique moyen pour accéder aux mots de passe "
-"gardés par votre app « Cozy Pass ». Si vous le réinitialisez, **vous perdrez ces données**. "
-"Le reste de vos données resteront accessibles."
+"gardés par votre app « Cozy Pass ». Si vous le réinitialisez, **vous perdrez"
+" ces données**. Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -321,9 +320,8 @@ msgstr "ici"
 
 msgid "Authorize Give permission"
 msgstr ""
-"En cliquant sur **Autoriser**, "
-"vous autorisez l'application à accéder à vos données, selon ses conditions "
-"de service et sa politique de confidentialité."
+"En cliquant sur **Autoriser**, vous autorisez l'application à accéder à vos "
+"données, selon ses conditions de service et sa politique de confidentialité."
 
 msgid "Authorize Submit"
 msgstr "Autoriser"
