@@ -40,7 +40,7 @@ func destroyWithoutHooks(domain string) error {
 		return instance.ErrDeletionAlreadyRequested
 	}
 	inst.Deleting = true
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	if err := inst.Update(); err != nil {
 		return err
 	}
 
@@ -58,7 +58,7 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 	inst.Deleting = false
-	_ = couchdb.UpdateDoc(couchdb.GlobalDB, inst)
+	_ = inst.Update()
 
 	removeTriggers(inst)
 
@@ -72,7 +72,7 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 
-	err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+	err = inst.Delete()
 	if couchdb.IsConflictError(err) {
 		// We may need to try again as CouchDB can return an old version of
 		// this document when we have concurrent updates for indexes/views
@@ -82,7 +82,7 @@ func destroyWithoutHooks(domain string) error {
 		if couchdb.IsNotFoundError(errg) {
 			err = nil
 		} else if inst != nil {
-			err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+			err = inst.Delete()
 		}
 	}
 	return err

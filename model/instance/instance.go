@@ -508,34 +508,6 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 	return i.redirection("onboarded_redirection", consts.HomeSlug)
 }
 
-// GetFromCouch finds an instance in CouchDB from its domain
-func GetFromCouch(domain string) (*Instance, error) {
-	var res couchdb.ViewResponse
-	err := couchdb.ExecView(couchdb.GlobalDB, couchdb.DomainAndAliasesView, &couchdb.ViewRequest{
-		Key:         domain,
-		IncludeDocs: true,
-		Limit:       1,
-	}, &res)
-	if couchdb.IsNoDatabaseError(err) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	if len(res.Rows) == 0 {
-		return nil, ErrNotFound
-	}
-	inst := &Instance{}
-	err = json.Unmarshal(res.Rows[0].Doc, &inst)
-	if err != nil {
-		return nil, err
-	}
-	if err = inst.MakeVFS(); err != nil {
-		return nil, err
-	}
-	return inst, nil
-}
-
 // Translate is used to translate a string to the locale used on this instance
 func (i *Instance) Translate(key string, vars ...interface{}) string {
 	return i18n.Translate(key, i.Locale, i.ContextName, vars...)

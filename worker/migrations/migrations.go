@@ -204,7 +204,7 @@ func migrateToSwiftV3(domain string) error {
 		inst = in
 	}
 	inst.SwiftLayout = 2
-	if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	if err = inst.Update(); err != nil {
 		return err
 	}
 

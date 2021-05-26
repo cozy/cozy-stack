@@ -41,7 +41,7 @@ func patchFeatureFlags(c echo.Context) error {
 			inst.FeatureFlags[k] = v
 		}
 	}
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	if err := inst.Update(); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureFlags)
@@ -66,7 +66,7 @@ func putFeatureSets(c echo.Context) error {
 	}
 	sort.Strings(list)
 	inst.FeatureSets = list
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	if err := inst.Update(); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureSets)

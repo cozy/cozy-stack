@@ -175,7 +175,7 @@ func modifyHandler(c echo.Context) error {
 	// has its settings database.
 	if deleting, err := strconv.ParseBool(c.QueryParam("Deleting")); err == nil {
 		i.Deleting = deleting
-		if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+		if err := i.Update(); err != nil {
 			return wrapError(err)
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
@@ -306,7 +306,7 @@ func setAuthMode(c echo.Context) error {
 
 	if !inst.HasAuthMode(authMode) {
 		inst.AuthMode = authMode
-		if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+		if err = inst.Update(); err != nil {
 			return err
 		}
 	} else {

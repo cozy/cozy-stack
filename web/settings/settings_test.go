@@ -843,7 +843,7 @@ func TestFeatureFlags(t *testing.T) {
 		"json_object":          map[string]interface{}{"foo": "bar"},
 	}
 	testInstance.FeatureSets = []string{"set1", "set2"}
-	err = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	err = testInstance.Update()
 	assert.NoError(t, err)
 	cache := config.GetConfig().CacheStorage
 	cacheKey := fmt.Sprintf("flags:%s:%v", testInstance.ContextName, testInstance.FeatureSets)
