@@ -19,12 +19,6 @@ msgstr "写真"
 msgid "Tree Notes"
 msgstr "メモ"
 
-msgid "Tree Uploaded from Cozy Photos"
-msgstr "Cozy フォトからアップロードしました"
-
-msgid "Tree Backed up from my mobile"
-msgstr "自分のモバイルからバックアップしました"
-
 msgid "Tree Shared with me"
 msgstr "私と共有"
 
