@@ -193,7 +193,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 		res, err = sharing.RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
 			prepared.Creds, prepared.Opts, nil)
 	}
-	if res.StatusCode == 404 {
+	if res != nil && res.StatusCode == 404 {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}
 	if err != nil {
