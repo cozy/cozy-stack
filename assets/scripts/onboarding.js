@@ -8,6 +8,9 @@
   const iterationsInput = d.getElementById('onboarding-password-iterations')
   const registerTokenInput = d.getElementById('register-token')
 
+  const querystring = new URLSearchParams(w.location.search)
+  const redirection = querystring.get('redirection')
+
   let errorPanel
   const renewField = d.getElementById('onboarding-password-field')
   const showError = function (message) {
@@ -59,7 +62,7 @@
         return w.password.makeKeyPair(key.key)
       })
       .then((pair) => {
-        const reqBody =
+        let reqBody =
           'passphrase=' +
           encodeURIComponent(hashed) +
           '&iterations=' +
@@ -74,6 +77,10 @@
           encodeURIComponent(pair.publicKey) +
           '&private_key=' +
           encodeURIComponent(pair.privateKey)
+
+        if (redirection) {
+          reqBody += '&redirection=' + encodeURIComponent(redirection)
+        }
 
         return fetch('/settings/passphrase', {
           method: 'POST',

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -42,10 +43,10 @@ func onboarded(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
 	}
-	return finishOnboarding(c, true)
+	return finishOnboarding(c, "", true)
 }
 
-func finishOnboarding(c echo.Context, acceptHTML bool) error {
+func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error {
 	i := middlewares.GetInstance(c)
 	if !i.OnboardingFinished {
 		t := true
@@ -55,6 +56,20 @@ func finishOnboarding(c echo.Context, acceptHTML bool) error {
 		}
 	}
 	redirect := i.OnboardedRedirection().String()
+	if redirection != "" {
+		splits := strings.SplitN(redirect, "#", 2)
+		parts := strings.SplitN(splits[0], "/", 2)
+		if _, err := app.GetWebappBySlug(i, parts[0]); err == nil {
+			u := i.SubDomain(parts[0])
+			if len(parts) == 2 {
+				u.Path = parts[1]
+			}
+			if len(splits) == 2 {
+				u.Fragment = splits[1]
+			}
+			redirect = u.String()
+		}
+	}
 
 	// Retreiving client
 	// If there is no onboarding client, we keep going
