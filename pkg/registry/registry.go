@@ -180,7 +180,7 @@ func ProxyMaintenance(req *http.Request, registries []*url.URL) ([]json.RawMessa
 
 // ProxyList will proxy the given request to the registries by aggregating the
 // results along the way. It should be used for list endpoints.
-func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error) {
+func ProxyList(req *http.Request, registries []*url.URL) (*AppsPaginated, error) {
 	ref, err := url.Parse(req.RequestURI)
 	if err != nil {
 		return nil, err
@@ -223,27 +223,28 @@ func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error
 	if err := list.FetchAll(); err != nil {
 		return nil, err
 	}
-	return json.Marshal(list.Paginated(sortBy, sortReverse, limit))
+	return list.Paginated(sortBy, sortReverse, limit), nil
 }
-
-type jsonObject map[string]interface{}
 
 type appsList struct {
 	ref        *url.URL
-	list       []jsonObject
+	list       []map[string]interface{}
 	registries []*registryFetchState
 	slugs      map[string][]int
 	limit      int
 }
 
-type pageInfo struct {
+// PageInfo is the metadata for pagination.
+type PageInfo struct {
 	Count      int    `json:"count"`
 	NextCursor string `json:"next_cursor,omitempty"`
 }
 
-type appsPaginated struct {
-	List     []jsonObject `json:"data"`
-	PageInfo pageInfo     `json:"meta"`
+// AppsPaginated is a struct for listing apps manifest from the registry, with
+// pagination.
+type AppsPaginated struct {
+	Apps     []map[string]interface{} `json:"data"`
+	PageInfo PageInfo                 `json:"meta"`
 }
 
 type registryFetchState struct {
@@ -269,7 +270,7 @@ func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) 
 	return &appsList{
 		ref:        ref,
 		limit:      limit,
-		list:       make([]jsonObject, 0),
+		list:       make([]map[string]interface{}, 0),
 		slugs:      make(map[string][]int),
 		registries: regStates,
 	}
@@ -323,12 +324,12 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 			return nil
 		}
 		defer resp.Body.Close()
-		var page appsPaginated
+		var page AppsPaginated
 		if err = json.NewDecoder(resp.Body).Decode(&page); err != nil {
 			return err
 		}
 
-		for i, obj := range page.List {
+		for i, obj := range page.Apps {
 			objCursor := cursor + i
 
 			objInRange := r.cursor >= 0 &&
@@ -353,7 +354,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 
 		nextCursor := page.PageInfo.NextCursor
 		if nextCursor == "" {
-			r.ended = cursor + len(page.List)
+			r.ended = cursor + len(page.Apps)
 			break
 		}
 
@@ -366,7 +367,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 	return nil
 }
 
-func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPaginated {
+func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *AppsPaginated {
 	sortBySlug := sortBy == "slug"
 	sort.Slice(a.list, func(i, j int) bool {
 		vi := a.list[i]
@@ -448,9 +449,9 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 		}
 	}
 
-	return &appsPaginated{
-		List: list,
-		PageInfo: pageInfo{
+	return &AppsPaginated{
+		Apps: list,
+		PageInfo: PageInfo{
 			Count:      len(list),
 			NextCursor: printMutliCursor(cursors),
 		},

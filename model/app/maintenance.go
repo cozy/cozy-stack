@@ -63,8 +63,8 @@ func GetMaintenanceOptions(slug string) (map[string]interface{}, error) {
 
 // ListMaintenance returns the list of konnectors in maintenance for the stack
 // (not from apps registry).
-func ListMaintenance() ([]interface{}, error) {
-	list := []interface{}{}
+func ListMaintenance() ([]map[string]interface{}, error) {
+	list := []map[string]interface{}{}
 	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
 		var opts map[string]interface{}
 		if err := json.Unmarshal(raw, &opts); err != nil {
