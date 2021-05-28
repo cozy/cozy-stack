@@ -491,9 +491,16 @@ func readCurrentAssets(filename string) (assets []*asset, err error) {
 
 // printData converts contents to a string literal.
 func printData(dest io.Writer, assets []*asset) error {
+	quality := brotli.BestCompression
+	if lvl := os.Getenv("BROTLI_LEVEL"); lvl != "" {
+		level, err := strconv.Atoi(lvl)
+		if err == nil {
+			quality = level
+		}
+	}
 	for _, f := range assets {
 		buf := new(bytes.Buffer)
-		bw := brotli.NewWriterLevel(buf, brotli.BestCompression)
+		bw := brotli.NewWriterLevel(buf, quality)
 		if _, err := io.Copy(bw, bytes.NewReader(f.data)); err != nil {
 			return err
 		}
