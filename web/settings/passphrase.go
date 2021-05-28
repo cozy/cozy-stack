@@ -65,13 +65,14 @@ func registerPassphrase(c echo.Context) error {
 	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
 
 	args := struct {
-		Register   string `json:"register_token" form:"register_token"`
-		Passphrase string `json:"passphrase" form:"passphrase"`
-		Hint       string `json:"hint" form:"hint"`
-		Key        string `json:"key" form:"key"`
-		PublicKey  string `json:"public_key" form:"public_key"`
-		PrivateKey string `json:"private_key" form:"private_key"`
-		Iterations int    `json:"iterations" form:"iterations"`
+		Redirection string `json:"redirection" form:"redirection"`
+		Register    string `json:"register_token" form:"register_token"`
+		Passphrase  string `json:"passphrase" form:"passphrase"`
+		Hint        string `json:"hint" form:"hint"`
+		Key         string `json:"key" form:"key"`
+		PublicKey   string `json:"public_key" form:"public_key"`
+		PrivateKey  string `json:"private_key" form:"private_key"`
+		Iterations  int    `json:"iterations" form:"iterations"`
 	}{}
 	if err := c.Bind(&args); err != nil {
 		return err
@@ -123,7 +124,7 @@ func registerPassphrase(c echo.Context) error {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
-	return finishOnboarding(c, acceptHTML)
+	return finishOnboarding(c, args.Redirection, acceptHTML)
 }
 
 func updatePassphrase(c echo.Context) error {

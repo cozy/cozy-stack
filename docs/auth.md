@@ -283,8 +283,11 @@ redirected to his home.
 
 If the instance is already onboarded, the user is redirected to his home.
 
+It is also possible to give a `redirection` parameter to redirect the user to
+another application.
+
 ```http
-GET /auth/passphrase/?registerToken=e0fbe2c5b90cdcdd9b3487b48b480e0b HTTP/1.1
+GET /auth/passphrase/?registerToken=e0fbe2c5b90cdcdd9b3487b48b480e0b&redirection=drive/%23/files HTTP/1.1
 Host: cozy.example.org
 Content-Type: text/html
 ```
