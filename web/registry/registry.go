@@ -80,11 +80,23 @@ func proxyListReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	maintenance, err := app.ListMaintenance()
+	if err != nil {
+		return err
+	}
+	for _, app := range list.Apps {
+		slug, _ := app["slug"].(string)
+		for _, item := range maintenance {
+			if item["slug"] == slug {
+				app["maintenance_activated"] = true
+				app["maintenance_options"] = item["maintenance_options"]
+			}
+		}
+	}
 	return c.JSON(http.StatusOK, list)
 }
 
 func proxyAppReq(c echo.Context) error {
-	// router.GET("/:app", proxyReq(perms, noClientCache, registry.WithCache))
 	i := middlewares.GetInstance(c)
 	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {
@@ -124,7 +136,7 @@ func proxyMaintenanceReq(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	req := c.Request()
-	list, err := registry.ProxyMaintenance(req, i.Registries())
+	apps, err := registry.ProxyMaintenance(req, i.Registries())
 	if err != nil {
 		return err
 	}
@@ -132,10 +144,14 @@ func proxyMaintenanceReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, item := range list {
-		maintenance = append(maintenance, item)
+	list := make([]interface{}, 0, len(apps)+len(maintenance))
+	for _, item := range maintenance {
+		list = append(list, item)
 	}
-	return c.JSON(http.StatusOK, maintenance)
+	for _, item := range apps {
+		list = append(list, item)
+	}
+	return c.JSON(http.StatusOK, list)
 }
 
 // Routes sets the routing for the registry

@@ -37,7 +37,7 @@ func listMaintenance(c echo.Context) error {
 	for i, item := range list {
 		doc := couchdb.JSONDoc{
 			Type: consts.KonnectorsMaintenance,
-			M:    item.(map[string]interface{}),
+			M:    item,
 		}
 		objs[i] = &apiMaintenance{doc}
 	}
