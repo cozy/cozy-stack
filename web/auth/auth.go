@@ -201,7 +201,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
-		"CozyUI":           middlewares.CozyUI(i),
+		"CozyBS":           middlewares.CozyBS(i),
 		"ThemeCSS":         middlewares.ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
