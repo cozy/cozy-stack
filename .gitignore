@@ -6,8 +6,7 @@
 /cozy-stack*
 /debian
 /debug-assets
-/node_modules
-/package-lock.json
+node_modules
 /scripts/cozy-stack*
 /storage
 /tests/integration/tmp
