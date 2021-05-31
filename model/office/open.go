@@ -1,6 +1,8 @@
 package office
 
 import (
+	"net/url"
+
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -41,6 +43,19 @@ type onlyOffice struct {
 		Callback string `json:"callbackUrl"`
 		Lang     string `json:"lang,omitempty"`
 		Mode     string `json:"mode"`
+		Custom   struct {
+			CompactHeader bool `json:"compactHeader"`
+			Customer      struct {
+				Address string `json:"address"`
+				Logo    string `json:"logo"`
+				Mail    string `json:"mail"`
+				Name    string `json:"name"`
+				WWW     string `json:"www"`
+			} `json:"customer"`
+			Feedback  bool `json:"feedback"`
+			ForceSave bool `json:"forcesave"`
+			GoBack    bool `json:"goback"`
+		} `json:"customization"`
 	} `json:"editor"`
 }
 
@@ -67,6 +82,11 @@ func (o *apiOfficeURL) sign(cfg *config.Office) (string, error) {
 	claims.Doc.Info.Owner = ""
 	claims.Doc.Info.Uploaded = ""
 	claims.Editor.Lang = ""
+	claims.Editor.Custom.Customer.Address = ""
+	claims.Editor.Custom.Customer.Logo = ""
+	claims.Editor.Custom.Customer.Mail = ""
+	claims.Editor.Custom.Customer.Name = ""
+	claims.Editor.Custom.Customer.WWW = ""
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
 	return token.SignedString([]byte(cfg.InboxSecret))
 }
@@ -169,6 +189,15 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	doc.OO.Editor.Callback = o.Inst.PageURL("/office/callback", nil)
 	doc.OO.Editor.Lang = o.Inst.Locale
 	doc.OO.Editor.Mode = mode
+	doc.OO.Editor.Custom.CompactHeader = true
+	doc.OO.Editor.Custom.Customer.Address = "158 rue de Verdun 92800 Puteaux"
+	doc.OO.Editor.Custom.Customer.Logo = o.Inst.FromURL(&url.URL{Path: "/assets/icon-192.png"})
+	doc.OO.Editor.Custom.Customer.Mail = "contact@cozycloud.cc"
+	doc.OO.Editor.Custom.Customer.Name = "Cozy Cloud"
+	doc.OO.Editor.Custom.Customer.WWW = "cozy.io"
+	doc.OO.Editor.Custom.Feedback = false
+	doc.OO.Editor.Custom.ForceSave = true
+	doc.OO.Editor.Custom.GoBack = false
 
 	token, err := doc.sign(cfg)
 	if err != nil {
