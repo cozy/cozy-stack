@@ -117,7 +117,7 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 
 // isTrustedDevice checks if a device of an instance is trusted
 func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
-	trustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
+	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
 	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
 }
 

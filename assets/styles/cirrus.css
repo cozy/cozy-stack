@@ -1,0 +1,10 @@
+/* Icons */
+.icon-alert {
+  -webkit-mask-image: url(../icons/alert.svg);
+  mask-image: url(../icons/alert.svg);
+}
+.icon-answer {
+  -webkit-mask: url(../icons/answer.svg) space no-repeat bottom;
+  mask: url(../icons/answer.svg) space no-repeat bottom;
+  width: 0.813rem;
+}

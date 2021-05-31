@@ -4,36 +4,36 @@
   const loginForm = d.getElementById('login-form')
   const passphraseInput = d.getElementById('password')
   const submitButton = d.getElementById('login-submit')
+  const redirectInput = d.getElementById('redirect')
+  const csrfTokenInput = d.getElementById('csrf_token')
+  const stateInput = d.getElementById('state')
+  const clientIdInput = d.getElementById('client_id')
+  const loginField = d.getElementById('login-field')
+  const longRunSessionCheckbox = d.getElementById('long-run-session')
+  const twoFactorTrustedDomainInput = d.getElementById('trusted-device-token')
 
   // Set the trusted device token from the localstorage in the form if it exists
-  let storage = null
   try {
-    storage = w.localStorage
+    const storage = w.localStorage
+    const twoFactorTrustedDeviceToken =
+      storage.getItem('trusted-device-token') || ''
+    twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
   } catch (e) {
     // do nothing
   }
-  const twoFactorTrustedDomainInput = d.getElementById(
-    'two-factor-trusted-device-token'
-  )
-  const twoFactorTrustedDeviceToken =
-    (storage && storage.getItem('two-factor-trusted-device-token')) || ''
-  twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
-  const longRunSessionCheckbox = d.getElementById('long-run-session')
 
   let errorPanel = loginForm.querySelector('.wizard-errors')
-  const loginField = d.getElementById('login-field')
   const showError = function (message) {
-    let error = 'The Cozy server is unavailable. Do you have network?'
-    if (message) {
-      error = '' + message
-    }
-
     if (!errorPanel) {
       errorPanel = d.createElement('p')
       errorPanel.classList.add('wizard-errors', 'u-error')
       loginField.insertBefore(errorPanel, loginField.firstChild)
     }
 
+    let error = 'The Cozy server is unavailable. Do you have network?'
+    if (message) {
+      error = '' + message
+    }
     errorPanel.textContent = error
     submitButton.removeAttribute('disabled')
   }
@@ -43,17 +43,9 @@
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
-    const redirectInput = d.getElementById('redirect')
     const longRunSession =
       longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
     const redirect = redirectInput && redirectInput.value + w.location.hash
-    const csrfTokenInput = d.getElementById('csrf_token')
-    const stateInput = d.getElementById('state')
-    const clientIdInput = d.getElementById('client_id')
-
-    let headers = new Headers()
-    headers.append('Content-Type', 'application/x-www-form-urlencoded')
-    headers.append('Accept', 'application/json')
 
     let passPromise = Promise.resolve(passphrase)
     const salt = loginForm.dataset.salt
@@ -69,8 +61,8 @@
         let reqBody =
           'passphrase=' +
           encodeURIComponent(pass) +
-          '&two-factor-trusted-device-token=' +
-          encodeURIComponent(twoFactorTrustedDeviceToken) +
+          '&trusted-device-token=' +
+          encodeURIComponent(twoFactorTrustedDomainInput.value) +
           '&long-run-session=' +
           encodeURIComponent(longRunSession) +
           '&redirect=' +
@@ -86,6 +78,10 @@
           reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
         }
 
+        // TODO use a JSON body
+        let headers = new Headers()
+        headers.append('Content-Type', 'application/x-www-form-urlencoded')
+        headers.append('Accept', 'application/json')
         return fetch(loginForm.action, {
           method: 'POST',
           headers: headers,
@@ -94,24 +90,20 @@
         })
       })
       .then((response) => {
-        const loginSuccess = response.status < 400
-        response
-          .json()
-          .then((body) => {
-            if (loginSuccess) {
-              submitButton.childNodes[1].innerHTML =
-                '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
-              submitButton.classList.add('c-btn--highlight')
-              if (body.redirect) {
-                w.location = body.redirect
-              }
-            } else {
-              showError(body.error)
-              passphraseInput.classList.add('is-error')
-              passphraseInput.select()
+        return response.json().then((body) => {
+          if (response.status < 400) {
+            submitButton.childNodes[1].innerHTML =
+              '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
+            submitButton.classList.add('c-btn--highlight')
+            if (body.redirect) {
+              w.location = body.redirect
             }
-          })
-          .catch(showError)
+          } else {
+            showError(body.error)
+            passphraseInput.classList.add('is-error')
+            passphraseInput.select()
+          }
+        })
       })
       .catch(showError)
   }

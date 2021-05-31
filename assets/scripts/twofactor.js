@@ -15,7 +15,7 @@
 
   let errorPanel = loginForm && loginForm.querySelector('.wizard-errors')
 
-  const twoFactorTrustedDeviceTokenKey = 'two-factor-trusted-device-token'
+  const twoFactorTrustedDeviceTokenKey = 'trusted-device-token'
   let localStorage = null
   try {
     localStorage = w.localStorage

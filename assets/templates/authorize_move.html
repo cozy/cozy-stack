@@ -59,7 +59,7 @@
             <input id="client_id" type="hidden" name="client_id" value="{{.ClientID}}" />
             <input id="redirect" type="hidden" name="redirect" value="{{.RedirectURI}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input id="two-factor-trusted-device-token" type="hidden" name="two-factor-trusted-device-token" value="" />
+            <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
             <div class="o-field password-form u-m-0">
               <label for="password" class="c-label c-label--block u-mt-1">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
