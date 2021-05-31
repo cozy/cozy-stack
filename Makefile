@@ -21,12 +21,12 @@ instance:
 	@cozy-stack instances add cozy.tools:8080 --passphrase cozy --apps home,store,drive,photos,settings,contacts,notes --email claude@cozy.tools --locale fr --public-name Claude --context-name dev
 
 ## lint: enforce a consistent code style and detect code smells
-lint: bin/golangci-lint
-	@bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -E exportloopref -D unused --max-same-issues 10
+lint: scripts/golangci-lint
+	@scripts/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -E exportloopref -D unused --max-same-issues 10
 .PHONY: lint
 
-bin/golangci-lint: Makefile
-	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.39.0
+scripts/golangci-lint: Makefile
+	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b ./scripts v1.39.0
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
