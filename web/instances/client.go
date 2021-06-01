@@ -101,7 +101,7 @@ func registerClient(c echo.Context) error {
 		OnboardingPermissions: c.QueryParam("OnboardingPermissions"),
 		OnboardingState:       c.QueryParam("OnboardingState"),
 	}
-	if regErr := client.Create(in); regErr != nil {
+	if regErr := client.Create(in, oauth.NotPending); regErr != nil {
 		return c.String(http.StatusBadRequest, regErr.Description)
 	}
 	return c.JSON(http.StatusOK, client)

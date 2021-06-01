@@ -189,7 +189,7 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 		ClientName:   "client-" + c.host,
 		SoftwareID:   "github.com/cozy/cozy-stack/testing/" + c.name,
 	}
-	client.Create(inst)
+	client.Create(inst, oauth.NotPending)
 	token, err := c.inst.MakeJWT(consts.AccessTokenAudience,
 		client.ClientID, scopes, "", time.Now())
 	if err != nil {
