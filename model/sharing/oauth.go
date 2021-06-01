@@ -227,7 +227,7 @@ func CreateOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error
 		SoftwareID:   "github.com/cozy/cozy-stack",
 		ClientURI:    m.Instance + "/",
 	}
-	if err := cli.Create(inst); err != nil {
+	if err := cli.Create(inst, oauth.NotPending); err != nil {
 		return nil, ErrInternalServerError
 	}
 	return &cli, nil

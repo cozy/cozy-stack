@@ -75,7 +75,7 @@ func CreateRequestClient(inst *instance.Instance) (*oauth.Client, error) {
 		ClientName:   "cozy-stack",
 		SoftwareID:   "github.com/cozy/cozy-stack",
 	}
-	if err := client.Create(inst); err != nil {
+	if err := client.Create(inst, oauth.NotPending); err != nil {
 		return nil, errors.New(err.Error)
 	}
 	return client, nil

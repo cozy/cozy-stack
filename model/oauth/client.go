@@ -314,8 +314,28 @@ func (c *Client) CheckSoftwareID(instance *instance.Instance) *ClientRegistratio
 	return nil
 }
 
+// CreateOptions can be used to give options when creating an OAuth client
+type CreateOptions int
+
+const (
+	// NotPending option won't set the pending flag, and will avoid creating a
+	// trigger to check if the client should be cleaned. It is used for
+	// sharings by example, as a token is created just after the client
+	// creation.
+	NotPending CreateOptions = iota + 1
+)
+
+func hasOptions(needle CreateOptions, haystack []CreateOptions) bool {
+	for _, opt := range haystack {
+		if opt == needle {
+			return true
+		}
+	}
+	return false
+}
+
 // Create is a function that sets some fields, and then save it in Couch.
-func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
+func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegistrationError {
 	if err := c.checkMandatoryFields(i); err != nil {
 		return err
 	}
@@ -366,7 +386,9 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		c.ClientName = c.ClientName + "-" + suffix
 	}
 
-	c.Pending = true
+	if !hasOptions(NotPending, opts) {
+		c.Pending = true
+	}
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
@@ -393,9 +415,11 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 
-	if err := setupTrigger(i, c.CouchID); err != nil {
-		i.Logger().WithField("nspace", "oauth").
-			Warnf("Cannot create trigger: %s", err)
+	if !hasOptions(NotPending, opts) {
+		if err := setupTrigger(i, c.CouchID); err != nil {
+			i.Logger().WithField("nspace", "oauth").
+				Warnf("Cannot create trigger: %s", err)
+		}
 	}
 
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{

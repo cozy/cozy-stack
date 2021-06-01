@@ -259,7 +259,7 @@ func getInitialCredentials(c echo.Context) error {
 		ClientKind:   kind,
 		SoftwareID:   softwareID,
 	}
-	if err := client.Create(inst); err != nil {
+	if err := client.Create(inst, oauth.NotPending); err != nil {
 		return c.JSON(err.Code, err)
 	}
 	client.CouchID = client.ClientID

@@ -40,7 +40,9 @@ func (ac *AccessCode) SetRev(rev string) { ac.CouchRev = rev }
 func CreateAccessCode(i *instance.Instance, client *Client, scope string) (*AccessCode, error) {
 	if client.Pending {
 		client.Pending = false
+		client.ClientID = ""
 		_ = couchdb.UpdateDoc(i, client)
+		client.ClientID = client.CouchID
 	}
 
 	ac := &AccessCode{
