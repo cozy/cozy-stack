@@ -159,14 +159,20 @@ class Stack
     `#{cmd.join(" ")}`.chomp.lines
   end
 
-  def grep_dump_file_pather_logs
+  def grep_dumb_file_pather_logs
     logfile = "#{Helpers.current_dir}/stack-#{@port}.log"
-    cmd = ["grep", "DumpFilePather", logfile]
+    cmd = ["grep", "DumbFilePather", logfile]
     puts cmd.join(" ").green
     `#{cmd.join(" ")}`.chomp.lines
   end
 
+  def pending_clients(inst)
+    clients = Helpers.couch.all_docs inst.domain, "io.cozy.oauth.clients"
+    ap clients
+    clients.select { |c| c["pending"] }
+  end
+
   def check(inst)
-    [fsck(inst), check_shared(inst), grep_dump_file_pather_logs].flatten
+    [fsck(inst), check_shared(inst), pending_clients(inst), grep_dumb_file_pather_logs].flatten
   end
 end
