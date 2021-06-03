@@ -22,19 +22,30 @@
     // do nothing
   }
 
-  let errorPanel = loginForm.querySelector('.wizard-errors')
+  let errorPanel = loginField.querySelector('.invalid-tooltip')
   const showError = function (message) {
-    if (!errorPanel) {
-      errorPanel = d.createElement('p')
-      errorPanel.classList.add('wizard-errors', 'u-error')
-      loginField.insertBefore(errorPanel, loginField.firstChild)
-    }
-
     let error = 'The Cozy server is unavailable. Do you have network?'
     if (message) {
       error = '' + message
     }
-    errorPanel.textContent = error
+
+    if (errorPanel) {
+      errorPanel.lastChild.textContent = error
+    } else {
+      errorPanel = d.createElement('div')
+      errorPanel.classList.add('invalid-tooltip', 'mb-1')
+      const arrow = d.createElement('div')
+      arrow.classList.add('tooltip-arrow')
+      errorPanel.appendChild(arrow)
+      const icon = d.createElement('span')
+      icon.classList.add('icon', 'icon-alert', 'bg-danger')
+      errorPanel.appendChild(icon)
+      errorPanel.append(error)
+      loginField.appendChild(errorPanel)
+    }
+
+    passphraseInput.classList.add('is-invalid')
+    passphraseInput.select()
     submitButton.removeAttribute('disabled')
   }
 
@@ -78,7 +89,6 @@
           reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
         }
 
-        // TODO use a JSON body
         let headers = new Headers()
         headers.append('Content-Type', 'application/x-www-form-urlencoded')
         headers.append('Accept', 'application/json')
@@ -92,16 +102,11 @@
       .then((response) => {
         return response.json().then((body) => {
           if (response.status < 400) {
-            submitButton.childNodes[1].innerHTML =
-              '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
-            submitButton.classList.add('c-btn--highlight')
             if (body.redirect) {
               w.location = body.redirect
             }
           } else {
             showError(body.error)
-            passphraseInput.classList.add('is-error')
-            passphraseInput.select()
           }
         })
       })

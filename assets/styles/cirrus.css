@@ -8,3 +8,11 @@
   mask: url(../icons/answer.svg) space no-repeat bottom;
   width: 0.813rem;
 }
+.icon-eye-closed {
+  -webkit-mask-image: url(../icons/eye-closed.svg);
+  mask-image: url(../icons/eye-closed.svg);
+}
+.icon-eye-opened {
+  -webkit-mask-image: url(../icons/eye-opened.svg);
+  mask-image: url(../icons/eye-opened.svg);
+}

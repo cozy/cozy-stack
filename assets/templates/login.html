@@ -35,9 +35,17 @@
           <img src="/public/avatar" alt="" class="avatar my-3 border border-primary border-2 rounded-circle" />
           <h1 class="h4 h2-md mb-0">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
-          <div class="form-floating w-100">
+          <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control" id="password" name="passphrase" autofocus autocomplete="current-password" />
             <label for="password">{{t "Login Password field"}}</label>
+            <button id="password-visibility-button" class="btn btn-outline-info"
+              type="button"
+              name="password-visibility"
+              data-show="{{t "Login Password show"}}"
+              data-hide="{{t "Login Password hide"}}"
+              title="{{t "Login Password show"}}">
+              <span id="password-visibility-icon" class="icon icon-eye-closed"></span>
+            </button>
             {{if .CredentialsError}}
             <div class="invalid-tooltip mb-1">
               <div class="tooltip-arrow"></div>
@@ -58,25 +66,8 @@
           </div>
           {{end}}
 
-          <!--
-          <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
-            type="button"
-            name="password-visibility"
-            data-show="{{t "Login Password show"}}"
-            data-hide="{{t "Login Password hide"}}"
-            title="{{t "Login Password show"}}">
-            <span>
-              <svg width="16" height="16" aria-hidden="true" focusable="false">
-                <use class="u-hide" id="display-icon" xlink:href="#display"></use>
-                <use id="hide-icon" xlink:href="#hide"></use>
-              </svg>
-            </span>
-          </button>
-          -->
-        </div>
-
-        <footer>
-          <button class="btn btn-primary w-100 my-4 mt-md-5" type="button">
+        <footer class="w-100">
+          <button id="login-submit" class="btn btn-primary w-100 my-4 mt-md-5" type="submit">
             {{t "Login Submit"}}
           </button>
           {{if .BottomNavBar}}

@@ -1,34 +1,30 @@
 ;(function (d) {
-  var passwordIsVisible = false
-  var passwordInput = d.getElementById('password')
-  var passwordVisibilityButton = d.getElementById('password-visibility-button')
-  var passwordIconDisplay = d.getElementById('display-icon')
-  var passwordIconHide = d.getElementById('hide-icon')
+  var visible = false
+  var input = d.getElementById('password')
+  var button = d.getElementById('password-visibility-button')
+  var icon = d.getElementById('password-visibility-icon')
 
-  passwordVisibilityButton.addEventListener('click', function (event) {
+  button.addEventListener('click', function (event) {
     event.preventDefault()
-    passwordIsVisible = !passwordIsVisible
-    passwordInput.type = passwordIsVisible ? 'text' : 'password'
-    passwordInput.setAttribute(
-      'autocomplete',
-      passwordIsVisible ? 'off' : 'current-password'
-    )
+    visible = !visible
+    input.type = visible ? 'text' : 'password'
+    input.setAttribute('autocomplete', visible ? 'off' : 'current-password')
 
-    if (passwordIsVisible) {
-      passwordIconDisplay.setAttribute('class', '')
-      passwordIconHide.setAttribute('class', 'u-hide')
+    if (visible) {
+      icon.classList.remove('icon-eye-closed')
+      icon.classList.add('icon-eye-opened')
     } else {
-      passwordIconDisplay.setAttribute('class', 'u-hide')
-      passwordIconHide.setAttribute('class', '')
+      icon.classList.remove('icon-eye-opened')
+      icon.classList.add('icon-eye-closed')
     }
 
-    passwordVisibilityButton.setAttribute(
+    button.setAttribute(
       'title',
-      passwordIsVisible
-        ? passwordVisibilityButton.getAttribute('data-hide')
-        : passwordVisibilityButton.getAttribute('data-show')
+      visible
+        ? button.getAttribute('data-hide')
+        : button.getAttribute('data-show')
     )
 
-    passwordInput.focus()
+    input.focus()
   })
 })(window.document)
