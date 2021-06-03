@@ -472,7 +472,17 @@ func CreateDB(db Database, doctype string) error {
 	if build.IsDevRelease() {
 		query = "?q=1&n=1"
 	}
-	return makeRequest(db, doctype, http.MethodPut, query, nil, nil)
+	if err := makeRequest(db, doctype, http.MethodPut, query, nil, nil); err != nil {
+		return err
+	}
+
+	// We may need to recreate indexes for a database that was deleted manually in CouchDB
+	for _, index := range Indexes {
+		if index.Doctype == doctype {
+			_ = DefineIndex(db, index)
+		}
+	}
+	return nil
 }
 
 // DeleteDB destroy the database for a doctype
