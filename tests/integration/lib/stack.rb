@@ -168,7 +168,6 @@ class Stack
 
   def pending_clients(inst)
     clients = Helpers.couch.all_docs inst.domain, "io.cozy.oauth.clients"
-    ap clients
     clients.select { |c| c["pending"] }
   end
 

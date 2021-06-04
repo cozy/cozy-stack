@@ -347,8 +347,8 @@ func FilterNotSynchronizedDocs(fs VFS, clientID string, changes *couchdb.Changes
 			docID := changes.Results[i].DocID
 			changes.Results[i].Doc = couchdb.JSONDoc{
 				M: map[string]interface{}{
-					"id":       docID,
-					"rev":      rev,
+					"_id":      docID,
+					"_rev":     rev,
 					"_deleted": true,
 				},
 				Type: consts.Files,

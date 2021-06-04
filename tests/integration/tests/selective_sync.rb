@@ -44,10 +44,12 @@ describe "An OAuth client" do
     assert_equal changes["results"].length, 2
     assert_equal changes.dig("results", 0, "id"), folder1.couch_id
     assert changes.dig("results", 0, "deleted")
-    assert_equal changes.dig("results", 0, "doc").keys, %w[_deleted id rev]
+    assert_equal changes.dig("results", 0, "doc").keys, %w[_deleted _id _rev]
+    assert_equal changes.dig("results", 0, "doc", "_id"), folder1.couch_id
+    assert_equal changes.dig("results", 0, "doc", "_deleted"), true
     assert_equal changes.dig("results", 1, "id"), folder2.couch_id
     assert changes.dig("results", 1, "deleted")
-    assert_equal changes.dig("results", 1, "doc").keys, %w[_deleted id rev]
+    assert_equal changes.dig("results", 1, "doc").keys, %w[_deleted _id _rev]
 
     # Make some operations
     child1.rename inst, Faker::Internet.slug
