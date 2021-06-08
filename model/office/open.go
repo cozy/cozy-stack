@@ -159,7 +159,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 
 	// Fill the parameters for the Document Server
 	mode := "edit"
-	if readOnly {
+	if readOnly || o.File.Trashed {
 		mode = "view"
 	}
 	download, err := o.downloadURL()
