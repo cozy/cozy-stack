@@ -12,11 +12,17 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
+type conflictDetector struct {
+	ID     string
+	Rev    string
+	MD5Sum []byte
+}
+
 // Store is an object to store and retrieve document server keys <-> id,rev
 type Store interface {
-	AddDoc(db prefixer.Prefixer, id, rev string) (string, error)
-	GetDoc(db prefixer.Prefixer, secret string) (string, string, error)
-	UpdateDoc(db prefixer.Prefixer, secret, id, rev string) error
+	AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error)
+	GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error)
+	UpdateDoc(db prefixer.Prefixer, secret string, payload conflictDetector) error
 	RemoveDoc(db prefixer.Prefixer, secret string) error
 }
 
@@ -46,7 +52,7 @@ func GetStore() Store {
 }
 
 type memRef struct {
-	val [2]string
+	val conflictDetector
 	exp time.Time
 }
 
@@ -70,50 +76,50 @@ func (s *memStore) cleaner() {
 		now := time.Now()
 		for k, v := range s.vals {
 			if now.After(v.exp) {
-				delete(s.byID, v.val[0])
+				delete(s.byID, v.val.ID)
 				delete(s.vals, k)
 			}
 		}
 	}
 }
 
-func (s *memStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error) {
+func (s *memStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	secret, ok := s.byID[id]
+	secret, ok := s.byID[payload.ID]
 	if !ok {
 		secret = makeSecret()
-		s.byID[id] = secret
+		s.byID[payload.ID] = secret
 	}
 	key := docKey(db, secret)
 	s.vals[key] = &memRef{
-		val: [2]string{id, rev},
+		val: payload,
 		exp: time.Now().Add(storeTTL),
 	}
 	return secret, nil
 }
 
-func (s *memStore) GetDoc(db prefixer.Prefixer, secret string) (string, string, error) {
+func (s *memStore) GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := docKey(db, secret)
 	ref, ok := s.vals[key]
 	if !ok {
-		return "", "", nil
+		return nil, nil
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return "", "", nil
+		return nil, nil
 	}
-	return ref.val[0], ref.val[1], nil
+	return &ref.val, nil
 }
 
-func (s *memStore) UpdateDoc(db prefixer.Prefixer, secret, id, rev string) error {
+func (s *memStore) UpdateDoc(db prefixer.Prefixer, secret string, payload conflictDetector) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := docKey(db, secret)
 	s.vals[key] = &memRef{
-		val: [2]string{id, rev},
+		val: payload,
 		exp: time.Now().Add(storeTTL),
 	}
 	return nil
@@ -124,7 +130,7 @@ func (s *memStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
 	defer s.mu.Unlock()
 	key := docKey(db, secret)
 	if v, ok := s.vals[key]; ok {
-		delete(s.byID, v.val[0])
+		delete(s.byID, v.val.ID)
 	}
 	delete(s.vals, key)
 	return nil
@@ -134,12 +140,12 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error) {
-	idKey := docKey(db, id)
+func (s *redisStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error) {
+	idKey := docKey(db, payload.ID)
 	if secret, err := s.c.Get(idKey).Result(); err == nil {
 		return secret, nil
 	}
-	v, err := json.Marshal([]string{id, rev})
+	v, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
 	}
@@ -152,24 +158,24 @@ func (s *redisStore) AddDoc(db prefixer.Prefixer, id, rev string) (string, error
 	return secret, nil
 }
 
-func (s *redisStore) GetDoc(db prefixer.Prefixer, secret string) (string, string, error) {
+func (s *redisStore) GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error) {
 	key := docKey(db, secret)
 	b, err := s.c.Get(key).Bytes()
 	if err == redis.Nil {
-		return "", "", nil
+		return nil, nil
 	}
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
-	var val []string
-	if err = json.Unmarshal(b, &val); err != nil || len(val) != 2 {
-		return "", "", err
+	var val conflictDetector
+	if err = json.Unmarshal(b, &val); err != nil {
+		return nil, err
 	}
-	return val[0], val[1], nil
+	return &val, nil
 }
 
-func (s *redisStore) UpdateDoc(db prefixer.Prefixer, secret, id, rev string) error {
-	v, err := json.Marshal([]string{id, rev})
+func (s *redisStore) UpdateDoc(db prefixer.Prefixer, secret string, payload conflictDetector) error {
+	v, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -181,9 +187,9 @@ func (s *redisStore) UpdateDoc(db prefixer.Prefixer, secret, id, rev string) err
 }
 
 func (s *redisStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
-	id, _, err := s.GetDoc(db, secret)
-	if err != nil {
-		idKey := docKey(db, id)
+	payload, _ := s.GetDoc(db, secret)
+	if payload != nil {
+		idKey := docKey(db, payload.ID)
 		_ = s.c.Del(idKey)
 	}
 	key := docKey(db, secret)

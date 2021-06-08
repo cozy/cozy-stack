@@ -168,7 +168,8 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
-	key, err := GetStore().AddDoc(o.Inst, o.File.ID(), o.File.Rev())
+	detector := conflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
+	key, err := GetStore().AddDoc(o.Inst, detector)
 	if err != nil {
 		o.Inst.Logger().WithField("nspace", "office").
 			Infof("Cannot add doc to store: %s", err)
