@@ -1,6 +1,7 @@
 package office
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -92,12 +93,12 @@ func checkToken(cfg *config.Office, params CallbackParameters) error {
 }
 
 func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
-	id, rev, err := GetStore().GetDoc(inst, key)
-	if err != nil || id == "" || rev == "" {
+	detector, err := GetStore().GetDoc(inst, key)
+	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
 		return errors.New("Invalid key")
 	}
 
-	_, err = saveFile(inst, id, rev, downloadURL)
+	_, err = saveFile(inst, *detector, downloadURL)
 	if err == nil {
 		_ = GetStore().RemoveDoc(inst, key)
 	}
@@ -105,32 +106,32 @@ func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 }
 
 func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
-	id, rev, err := GetStore().GetDoc(inst, key)
-	if err != nil || id == "" || rev == "" {
+	detector, err := GetStore().GetDoc(inst, key)
+	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
 		return errors.New("Invalid key")
 	}
 
-	rev, err = saveFile(inst, id, rev, downloadURL)
+	updated, err := saveFile(inst, *detector, downloadURL)
 	if err == nil {
-		_ = GetStore().UpdateDoc(inst, key, id, rev)
+		_ = GetStore().UpdateDoc(inst, key, *updated)
 	}
 	return err
 }
 
 // saveFile saves the file with content from the given URL and returns the new revision.
-func saveFile(inst *instance.Instance, id, rev, downloadURL string) (string, error) {
+func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL string) (*conflictDetector, error) {
 	fs := inst.VFS()
-	file, err := fs.FileByID(id)
+	file, err := fs.FileByID(detector.ID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if !isOfficeDocument(file) {
-		return "", ErrInvalidFile
+		return nil, ErrInvalidFile
 	}
 
 	res, err := docserverClient.Get(downloadURL)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer func() {
 		// Flush the body in case of error to allow reusing the connection with
@@ -148,7 +149,10 @@ func saveFile(inst *instance.Instance, id, rev, downloadURL string) (string, err
 	newfile.UpdatedAt = time.Now()
 	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
 
-	if file.Rev() != rev {
+	// If the file was renamed while OO editor was opened, the revision has
+	// been changed, but we still should avoid creating a conflict if the
+	// content is the same (md5sum has not changed).
+	if file.Rev() != detector.Rev && !bytes.Equal(file.MD5Sum, detector.MD5Sum) {
 		// Conflict: save it in a new file
 		file = nil
 		newfile.SetID("")
@@ -160,11 +164,12 @@ func saveFile(inst *instance.Instance, id, rev, downloadURL string) (string, err
 
 	f, err := fs.CreateFile(newfile, file)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	_, err = io.Copy(f, res.Body)
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
-	return newfile.Rev(), err
+	updated := conflictDetector{ID: detector.ID, Rev: newfile.Rev(), MD5Sum: newfile.MD5Sum}
+	return &updated, err
 }
