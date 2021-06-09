@@ -55,11 +55,6 @@ func renderError(c echo.Context, code int, msg string) error {
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if middlewares.IsLoggedIn(c) {
-		redirect := instance.DefaultRedirection()
-		return c.Redirect(http.StatusSeeOther, redirect.String())
-	}
-
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
@@ -72,6 +67,11 @@ func Home(c echo.Context) error {
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))
+	}
+
+	if middlewares.IsLoggedIn(c) {
+		redirect := instance.DefaultRedirection()
+		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
 	var params url.Values
