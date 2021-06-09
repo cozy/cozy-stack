@@ -57,7 +57,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 	}
 	redirect := i.OnboardedRedirection().String()
 	if redirection != "" {
-		splits := strings.SplitN(redirect, "#", 2)
+		splits := strings.SplitN(redirection, "#", 2)
 		parts := strings.SplitN(splits[0], "/", 2)
 		if _, err := app.GetWebappBySlug(i, parts[0]); err == nil {
 			u := i.SubDomain(parts[0])
