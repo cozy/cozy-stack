@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -72,6 +73,24 @@ func Home(c echo.Context) error {
 	if middlewares.IsLoggedIn(c) {
 		redirect := instance.DefaultRedirection()
 		return c.Redirect(http.StatusSeeOther, redirect.String())
+	}
+
+	// Onboarding to a specific app when authentication via OIDC is enabled
+	redirection := c.QueryParam("redirection")
+	if redirection != "" && !instance.IsPasswordAuthenticationEnabled() {
+		splits := strings.SplitN(redirection, "#", 2)
+		parts := strings.SplitN(splits[0], "/", 2)
+		if _, err := app.GetWebappBySlug(instance, parts[0]); err == nil {
+			u := instance.SubDomain(parts[0])
+			if len(parts) == 2 {
+				u.Path = parts[1]
+			}
+			if len(splits) == 2 {
+				u.Fragment = splits[1]
+			}
+			q := url.Values{"redirect": {u.String()}}
+			return c.Redirect(http.StatusSeeOther, instance.PageURL("/oidc/start", q))
+		}
 	}
 
 	var params url.Values
