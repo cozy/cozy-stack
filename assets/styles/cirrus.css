@@ -1,3 +1,13 @@
+/* Buttons */
+.btn .icon {
+  vertical-align: middle;
+}
+.btn-done {
+  background-color: var(--successColorLightest) !important;
+  opacity: 1 !important;
+  transition: none;
+}
+
 /* Icons */
 .icon-alert {
   -webkit-mask-image: url(../icons/alert.svg);
@@ -7,6 +17,10 @@
   -webkit-mask: url(../icons/answer.svg) space no-repeat bottom;
   mask: url(../icons/answer.svg) space no-repeat bottom;
   width: 0.813rem;
+}
+.icon-check {
+  -webkit-mask-image: url(../icons/check.svg);
+  mask-image: url(../icons/check.svg);
 }
 .icon-eye-closed {
   -webkit-mask-image: url(../icons/eye-closed.svg);

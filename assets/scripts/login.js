@@ -102,9 +102,9 @@
       .then((response) => {
         return response.json().then((body) => {
           if (response.status < 400) {
-            if (body.redirect) {
-              w.location = body.redirect
-            }
+            submitButton.innerHTML = '<span class="icon icon-check"></span>'
+            submitButton.classList.add('btn-done')
+            w.location = body.redirect
           } else {
             showError(body.error)
           }

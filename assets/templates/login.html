@@ -10,6 +10,7 @@
     {{.ThemeCSS}}
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css"}}">
     {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
   <body class="theme-inverted">
     <form id="login-form" method="POST" action="/auth/login" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
