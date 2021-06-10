@@ -69,24 +69,19 @@
 
     passPromise
       .then((pass) => {
-        let reqBody =
-          'passphrase=' +
-          encodeURIComponent(pass) +
-          '&trusted-device-token=' +
-          encodeURIComponent(twoFactorTrustedDomainInput.value) +
-          '&long-run-session=' +
-          encodeURIComponent(longRunSession) +
-          '&redirect=' +
-          encodeURIComponent(redirect) +
-          '&csrf_token=' +
-          encodeURIComponent(csrfTokenInput.value)
+        const data = new URLSearchParams()
+        data.append('passphrase', pass)
+        data.append('trusted-device-token', twoFactorTrustedDomainInput.value)
+        data.append('long-run-session', longRunSession)
+        data.append('redirect', redirect)
+        data.append('csrf_token', csrfTokenInput.value)
 
         // For the /auth/authorize/move && /auth/confirm pages
         if (stateInput) {
-          reqBody += '&state=' + encodeURIComponent(stateInput.value)
+          data.append('state', stateInput.value)
         }
         if (clientIdInput) {
-          reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
+          data.append('client_id', clientIdInput.value)
         }
 
         let headers = new Headers()
@@ -95,7 +90,7 @@
         return fetch(loginForm.action, {
           method: 'POST',
           headers: headers,
-          body: reqBody,
+          body: data,
           credentials: 'same-origin',
         })
       })
