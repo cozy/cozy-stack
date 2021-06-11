@@ -201,11 +201,12 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
-		"CozyBS":           middlewares.CozyBS(i),
-		"ThemeCSS":         middlewares.ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
+		"Favicon":          middlewares.Favicon(i),
+		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
+		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 		"Iterations":       iterations,
 		"Salt":             string(i.PassphraseSalt()),
 		"Title":            title,
@@ -214,9 +215,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Redirect":         redirectStr,
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            hasOAuth,
-		"Favicon":          middlewares.Favicon(i),
-		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
-		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 	})
 }
 

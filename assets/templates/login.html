@@ -5,10 +5,10 @@
     <meta http-equiv="refresh" content="3600">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.TemplateTitle}}</title>
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyBS}}
-    {{.ThemeCSS}}
-    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+		<link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+		<link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
@@ -37,7 +37,7 @@
           <h1 class="h4 h2-md mb-0">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
           <div id="login-field" class="input-group form-floating has-validation w-100">
-            <input type="password" class="form-control form-control-lg" id="password" name="passphrase" autofocus autocomplete="current-password" />
+            <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" />
             <label for="password">{{t "Login Password field"}}</label>
             <button id="password-visibility-button" class="btn btn-outline-info"
               type="button"
@@ -60,7 +60,7 @@
           </a>
           {{if not .OAuth}}
           <div class="form-check align-self-start">
-            <input class="form-check-input" type="checkbox" value="" id="long-run-session" name="long-run-session" />
+            <input class="form-check-input" type="checkbox" id="long-run-session" name="long-run-session" />
             <label class="form-check-label" for="long-run-session">
               {{t "Login Long Session"}}
             </label>

@@ -18,6 +18,10 @@
   mask: url(../icons/answer.svg) space no-repeat bottom;
   width: 0.813rem;
 }
+.icon-back {
+  -webkit-mask-image: url(../icons/back.svg);
+  mask-image: url(../icons/back.svg);
+}
 .icon-check {
   -webkit-mask-image: url(../icons/check.svg);
   mask-image: url(../icons/check.svg);

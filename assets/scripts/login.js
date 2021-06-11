@@ -9,15 +9,14 @@
   const stateInput = d.getElementById('state')
   const clientIdInput = d.getElementById('client_id')
   const loginField = d.getElementById('login-field')
-  const longRunSessionCheckbox = d.getElementById('long-run-session')
-  const twoFactorTrustedDomainInput = d.getElementById('trusted-device-token')
+  const longRunCheckbox = d.getElementById('long-run-session')
+  const trustedTokenInput = d.getElementById('trusted-device-token')
 
   // Set the trusted device token from the localstorage in the form if it exists
   try {
     const storage = w.localStorage
-    const twoFactorTrustedDeviceToken =
-      storage.getItem('trusted-device-token') || ''
-    twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
+    const deviceToken = storage.getItem('trusted-device-token') || ''
+    trustedTokenInput.value = deviceToken
   } catch (e) {
     // do nothing
   }
@@ -54,8 +53,7 @@
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
-    const longRunSession =
-      longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
+    const longRun = longRunCheckbox && longRunCheckbox.checked ? '1' : '0'
     const redirect = redirectInput && redirectInput.value + w.location.hash
 
     let passPromise = Promise.resolve(passphrase)
@@ -71,8 +69,8 @@
       .then((pass) => {
         const data = new URLSearchParams()
         data.append('passphrase', pass)
-        data.append('trusted-device-token', twoFactorTrustedDomainInput.value)
-        data.append('long-run-session', longRunSession)
+        data.append('trusted-device-token', trustedTokenInput.value)
+        data.append('long-run-session', longRun)
         data.append('redirect', redirect)
         data.append('csrf_token', csrfTokenInput.value)
 
@@ -84,7 +82,7 @@
           data.append('client_id', clientIdInput.value)
         }
 
-        let headers = new Headers()
+        const headers = new Headers()
         headers.append('Content-Type', 'application/x-www-form-urlencoded')
         headers.append('Accept', 'application/json')
         return fetch(loginForm.action, {
