@@ -21,7 +21,7 @@
 
         <header class="wrapper-top">
           {{if not .BottomNavBar}}
-          <p class="banner small">
+          <p class="banner caption small-md fst-italic">
             <span class="icon icon-answer"></span>
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
@@ -37,7 +37,7 @@
           <h1 class="h4 h2-md mb-0">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
           <div id="login-field" class="input-group form-floating has-validation w-100">
-            <input type="password" class="form-control" id="password" name="passphrase" autofocus autocomplete="current-password" />
+            <input type="password" class="form-control form-control-lg" id="password" name="passphrase" autofocus autocomplete="current-password" />
             <label for="password">{{t "Login Password field"}}</label>
             <button id="password-visibility-button" class="btn btn-outline-info"
               type="button"
@@ -66,13 +66,14 @@
             </label>
           </div>
           {{end}}
+        </div>
 
         <footer class="w-100">
-          <button id="login-submit" class="btn btn-primary w-100 my-4 mt-md-5" type="submit">
+          <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-4 mt-md-5" type="submit">
             {{t "Login Submit"}}
           </button>
           {{if .BottomNavBar}}
-          <p class="banner small fullbleed">
+          <p class="banner caption small-md fst-italic fullbleed">
             <span class="icon icon-answer reverse-y align-bottom"></span>
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
@@ -86,6 +87,5 @@
     <script src="{{asset .Domain "/scripts/password-helpers.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
     <script src="{{asset .Domain "/scripts/login.js"}}"></script>
-    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
   </body>
 </html>
