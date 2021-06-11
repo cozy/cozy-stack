@@ -34,3 +34,20 @@
   -webkit-mask-image: url(../icons/eye-opened.svg);
   mask-image: url(../icons/eye-opened.svg);
 }
+
+/* Others */
+.badge {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 1rem;
+  height: 1rem;
+  left: 3.7rem;
+  top: 2.75rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  box-sizing: initial;
+  border: solid 2px var(--paperBackgroundColor);
+  background-color: var(--primaryColor);
+}
