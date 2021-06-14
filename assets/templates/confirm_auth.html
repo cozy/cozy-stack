@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.TemplateTitle}}</title>
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
@@ -38,8 +38,8 @@
             <img src="/public/avatar" alt="" class="rounded-circle" />
             <div class="badge"><img src="{{asset .Domain "/icons/lock.svg"}}" alt="" /></div>
           </div>
-          <h1 class="h4 h2-md mb-0">{{t "Login Confirm Title"}}</h1>
-          <p class="mb-4 mb-md-5 text-muted">{{t "Login Confirm Help"}}</p>
+          <h1 class="h4 h2-md mb-0 text-center">{{t "Login Confirm Title"}}</h1>
+          <p class="mb-4 mb-md-5 text-muted text-center">{{t "Login Confirm Help"}}</p>
           <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" />
             <label for="password">{{t "Login Password field"}}</label>

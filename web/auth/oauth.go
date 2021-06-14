@@ -446,7 +446,9 @@ func authorizeMoveForm(c echo.Context) error {
 
 	if !inst.IsPasswordAuthenticationEnabled() {
 		if !middlewares.IsLoggedIn(c) {
-			q := url.Values{"redirect": {c.Request().URL.String()}}
+			u := c.Request().URL
+			redirect := inst.PageURL(u.Path, u.Query())
+			q := url.Values{"redirect": {redirect}}
 			return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
 		}
 		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)

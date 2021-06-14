@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.TemplateTitle}}</title>
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
@@ -33,8 +33,8 @@
         </header>
 
         <div class="d-flex flex-column align-items-center">
-          <h1 class="h4 h2-md mb-3">{{t "Login Two factor title"}}</h1>
-          <p class="mb-4 mb-md-5">{{t "Login Two factor help"}}</p>
+          <h1 class="h4 h2-md mb-3 text-center">{{t "Login Two factor title"}}</h1>
+          <p class="mb-4 mb-md-5 text-center">{{t "Login Two factor help"}}</p>
           <div id="two-factor-field" class="form-floating has-validation w-100 mb-3">
             <input type="text" class="form-control form-control-md-lg" id="two-factor-passcode" name="two-factor-passcode" autofocus autocomplete="one-time-code" pattern="[0-9]*" inputmode="numeric" maxlength="6" />
             <label for="two-factor-passcode">{{t "Login Two factor field"}}</label>

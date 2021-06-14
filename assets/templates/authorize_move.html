@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.TemplateTitle}}</title>
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
-		<link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
@@ -36,7 +36,7 @@
 
         <div class="d-flex flex-column align-items-center">
           <img src="/public/avatar" alt="" class="avatar my-3 border border-primary border-2 rounded-circle" />
-          <h1 class="h4 h2-md mb-0">{{.Title}}</h1>
+          <h1 class="h4 h2-md mb-0 text-center">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
           <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" />
