@@ -34,6 +34,9 @@ msgstr "Delen afgebroken"
 msgid "Notes New note"
 msgstr "Nieuwe notitie"
 
+msgid "Back icon label"
+msgstr "Terug naar vorig scherm"
+
 msgid "Login Credentials error"
 msgstr "Het ingevoerde wachtwoord is onjuist. Probeer het opnieuw."
 
@@ -99,7 +102,7 @@ msgid "Login Connect from sharing help"
 msgstr "Voer je wachtwoord in"
 
 msgid "Login Two factor title"
-msgstr "Voer je code in"
+msgstr "Authenticatie in twee stappen"
 
 msgid "Login Two factor error"
 msgstr "De ingevoerde toegangscode is onjuist. Probeer het opnieuw."
@@ -113,7 +116,7 @@ msgid "Login Two factor field"
 msgstr "Code (6 getallen)"
 
 msgid "Login Two factor help"
-msgstr "Er is een code verstuurd naar je e-mailadres"
+msgstr "Voer de code in die is verstuurd naar je e-mailadres"
 
 msgid "Login Two factor device trust field"
 msgstr "Dit apparaat vertrouwen"
@@ -334,7 +337,7 @@ msgstr ""
 "ontvangt een e-mail als het importeren voltooid is."
 
 msgid "Move in progress Title"
-msgstr "Bezig met verplaatsen..."
+msgstr "Bezig met verplaatsen…"
 
 msgid "Move in progress Box"
 msgstr "Van %s naar %s"
@@ -389,15 +392,15 @@ msgid "Move Vault Step 2"
 msgstr "Log uit op de extensie en log weer in met de url van je nieuwe Cozy"
 
 msgid "Move Vault Step 3"
-msgstr "Klik op 'Instellingen' en vervolgens op 'Items importeren'"
+msgstr "Klik op ‘Instellingen’ en vervolgens op ‘Items importeren’"
 
 msgid "Move Vault Step 4"
 msgstr ""
-"Kies als bronformaat 'Bitwarden (json)', klik op 'Bestand kiezen' en kies "
+"Kies als bronformaat ‘Bitwarden (json)’, klik op ‘Bestand kiezen’ en kies "
 "het zojuist geëxporteerde bestand"
 
 msgid "Move Vault Step 5"
-msgstr "Klik op 'Importeren'"
+msgstr "Klik op ‘Importeren’"
 
 msgid "Move Vault Link"
 msgstr "Ik heb mijn wachtwoorden geïmporteerd"
@@ -409,7 +412,7 @@ msgid "Error Title"
 msgstr "Sorry, er is een fout opgetreden."
 
 msgid "Error Internal Server Error Title"
-msgstr "Oeps..."
+msgstr "Oeps…"
 
 msgid "Error Internal Server Error Message"
 msgstr ""
@@ -455,7 +458,7 @@ msgid "Instance Blocked Importing"
 msgstr "Cozy is bezig gegevens te importeren"
 
 msgid "Instance Blocked Moving"
-msgstr "Bezig met verplaatsen..."
+msgstr "Bezig met verplaatsen…"
 
 msgid "Instance Blocked Unknown"
 msgstr "De Cozy is om onbekende reden geblokkeerd"
@@ -534,13 +537,13 @@ msgid "Permissions disk usage"
 msgstr "De gebruikte schijfruimte"
 
 msgid "Permissions worker konnectors"
-msgstr "Bezig met uitvoeren van connector om gegevens te importeren..."
+msgstr "Bezig met draaien van connector om gegevens te importeren…"
 
 msgid "Permissions worker log"
-msgstr "Bezig met opslaan van een bericht in de logbestanden..."
+msgstr "Bezig met opslaan van een bericht in de logbestanden…"
 
 msgid "Permissions worker sendmail"
-msgstr "Bezig met versturen van een e-mail..."
+msgstr "Bezig met versturen van een e-mail…"
 
 msgid "Permissions com.bitwarden.profiles"
 msgstr "Wachtwoordbeheerprofielen"
@@ -687,7 +690,7 @@ msgstr ""
 msgid "Mail Hint Outro"
 msgstr ""
 "Als laatste redmiddel kun je je wachtwoord opnieuw instellen in de sectie "
-"'Wachtwoord vergeten'. Als je dit verzoek niet hebt aangevraagd, neem dan "
+"‘Wachtwoord vergeten’. Als je dit verzoek niet hebt aangevraagd, neem dan "
 "contact met ons op door deze e-mail te beantwoorden."
 
 msgid "Mail Reset Passphrase Subject"
