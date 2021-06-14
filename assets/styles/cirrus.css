@@ -1,0 +1,53 @@
+/* Buttons */
+.btn .icon {
+  vertical-align: middle;
+}
+.btn-done {
+  background-color: var(--successColorLightest) !important;
+  opacity: 1 !important;
+  transition: none;
+}
+
+/* Icons */
+.icon-alert {
+  -webkit-mask-image: url(../icons/alert.svg);
+  mask-image: url(../icons/alert.svg);
+}
+.icon-answer {
+  -webkit-mask: url(../icons/answer.svg) space no-repeat bottom;
+  mask: url(../icons/answer.svg) space no-repeat bottom;
+  width: 0.813rem;
+}
+.icon-back {
+  -webkit-mask-image: url(../icons/back.svg);
+  mask-image: url(../icons/back.svg);
+}
+.icon-check {
+  -webkit-mask-image: url(../icons/check.svg);
+  mask-image: url(../icons/check.svg);
+}
+.icon-eye-closed {
+  -webkit-mask-image: url(../icons/eye-closed.svg);
+  mask-image: url(../icons/eye-closed.svg);
+}
+.icon-eye-opened {
+  -webkit-mask-image: url(../icons/eye-opened.svg);
+  mask-image: url(../icons/eye-opened.svg);
+}
+
+/* Others */
+.badge {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 1rem;
+  height: 1rem;
+  left: 3.7rem;
+  top: 2.75rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  box-sizing: initial;
+  border: solid 2px var(--paperBackgroundColor);
+  background-color: var(--primaryColor);
+}

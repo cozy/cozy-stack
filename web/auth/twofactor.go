@@ -41,12 +41,11 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 	trustedCheckbox := !oauth && trustedDeviceCheckBox
 
 	return c.Render(code, "twofactor.html", echo.Map{
-		"CozyUI":                middlewares.CozyUI(i),
-		"ThemeCSS":              middlewares.ThemeCSS(i),
 		"Domain":                i.ContextualDomain(),
 		"ContextName":           i.ContextName,
 		"Locale":                i.Locale,
 		"Title":                 title,
+		"Favicon":               middlewares.Favicon(i),
 		"CredentialsError":      credsError,
 		"Redirect":              redirect.String(),
 		"Confirm":               c.FormValue("confirm"),
@@ -54,7 +53,6 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 		"ClientID":              c.FormValue("client_id"),
 		"LongRunSession":        longRunSession,
 		"TwoFactorToken":        string(twoFactorToken),
-		"Favicon":               middlewares.Favicon(i),
 		"TrustedDeviceCheckBox": trustedCheckbox,
 	})
 }

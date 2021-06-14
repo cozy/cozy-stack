@@ -16,38 +16,42 @@ run:
 	@go run . serve --mailhog
 .PHONY: run
 
-## instance: create an instance for cozy.tools:8080
+## instance: create an instance for local development
 instance:
 	@cozy-stack instances add cozy.tools:8080 --passphrase cozy --apps home,store,drive,photos,settings,contacts,notes --email claude@cozy.tools --locale fr --public-name Claude --context-name dev
 
 ## lint: enforce a consistent code style and detect code smells
-lint: bin/golangci-lint
-	@bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -E exportloopref -D unused --max-same-issues 10
+lint: scripts/golangci-lint
+	@scripts/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -E exportloopref -D unused --max-same-issues 10
 .PHONY: lint
 
-bin/golangci-lint: Makefile
-	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.39.0
+scripts/golangci-lint: Makefile
+	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b ./scripts v1.39.0
 
 ## jslint: enforce a consistent code style for Js code
-jslint: ./node_modules/.bin/eslint
-	@./node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
+jslint: scripts/node_modules
+	@scripts/node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
 .PHONY: jslint
 
-./node_modules/.bin/eslint: Makefile
-	@npm install prettier@2.1.2 eslint-plugin-prettier@3.1.4 eslint-config-cozy-app@2.0.0
-
-## pretty: make the assets more prettier
-pretty:
-	@if ! [ -x "$$(command -v prettier)" ]; then echo "Install prettier with 'npm install -g prettier'"; exit 1; fi
-	@prettier --write --no-semi --single-quote assets/*/*.js
-	@prettier --write assets/*/*.css
+## pretty: make the assets prettier
+pretty: scripts/node_modules
+	@scripts/node_modules/.bin/prettier --write --no-semi --single-quote assets/*/*.js
+	@scripts/node_modules/.bin/prettier --write assets/*/*.css
 .PHONY: pretty
+
+scripts/node_modules: Makefile scripts/package.json scripts/yarn.lock
+	@cd scripts && yarn
 
 ## assets: package the assets as go code
 assets: web/statik/statik.go
 	@if ! [ -x "$$(command -v statik)" ]; then go get github.com/cozy/cozy-stack/pkg/statik; fi
 	@scripts/build.sh assets
 .PHONY: assets
+
+## assets-fast: package the assets with the fastest level of compression
+assets-fast:
+	@env BROTLI_LEVEL=0 ./scripts/build.sh assets
+.PHONY: assets-fast
 
 ## cli: builds the CLI documentation and shell completions
 cli:
@@ -72,7 +76,7 @@ integration-tests:
 
 ## clean: clean the generated files and directories
 clean:
-	@rm -rf bin
+	@rm -rf bin scripts/node_modules
 	@go clean
 .PHONY: clean
 

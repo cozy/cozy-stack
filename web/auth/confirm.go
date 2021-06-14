@@ -33,8 +33,6 @@ func confirmForm(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "confirm_auth.html", echo.Map{
 		"TemplateTitle":  inst.TemplateTitle(),
-		"CozyUI":         middlewares.CozyUI(inst),
-		"ThemeCSS":       middlewares.ThemeCSS(inst),
 		"Domain":         inst.ContextualDomain(),
 		"ContextName":    inst.ContextName,
 		"Locale":         inst.Locale,

@@ -41,6 +41,9 @@ msgstr "partage annulé"
 msgid "Notes New note"
 msgstr "Nouvelle note"
 
+msgid "Back icon label"
+msgstr "Revenir à l'écran précédent"
+
 msgid "Login Credentials error"
 msgstr ""
 "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
@@ -111,7 +114,7 @@ msgid "Login Connect from sharing help"
 msgstr "Saisissez maintenant votre mot de passe"
 
 msgid "Login Two factor title"
-msgstr "Saisir votre code"
+msgstr "Authentification en 2 étapes"
 
 msgid "Login Two factor error"
 msgstr "Le code que vous avez entré n'est pas correct, merci de réessayer."
@@ -125,7 +128,7 @@ msgid "Login Two factor field"
 msgstr "Code (6 chiffres)"
 
 msgid "Login Two factor help"
-msgstr "Un code vous a été envoyé par email"
+msgstr "Entrer le code de vérification qui vient de vous être envoyé par mail"
 
 msgid "Login Two factor device trust field"
 msgstr "Faire confiance à cet appareil"

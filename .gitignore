@@ -2,15 +2,14 @@
 
 /.assets
 /.cozy
-/bin
 /cozy-stack*
 /debian
 /debug-assets
-/node_modules
-/package-lock.json
+node_modules
 /scripts/cozy-stack*
+/scripts/golangci-lint
 /storage
-/tests/integration/tmp
+tmp
 
 *.log
 *.enc

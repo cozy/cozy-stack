@@ -117,7 +117,7 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 
 // isTrustedDevice checks if a device of an instance is trusted
 func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
-	trustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
+	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
 	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
 }
 
@@ -201,11 +201,12 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
-		"CozyUI":           middlewares.CozyUI(i),
-		"ThemeCSS":         middlewares.ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
+		"Favicon":          middlewares.Favicon(i),
+		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
+		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 		"Iterations":       iterations,
 		"Salt":             string(i.PassphraseSalt()),
 		"Title":            title,
@@ -214,9 +215,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Redirect":         redirectStr,
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            hasOAuth,
-		"Favicon":          middlewares.Favicon(i),
-		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
-		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 	})
 }
 
