@@ -26,7 +26,6 @@ describe "A webhook trigger" do
       done = File.exist? account.log
       break if done
     end
-    ap konnector_name unless done
     assert done
     executed = JSON.parse File.read(account.log)
     assert_equal executed["account"]["_id"], account.couch_id
@@ -50,7 +49,6 @@ describe "A webhook trigger" do
       done = File.exist? account2.log
       break if done
     end
-    ap konnector_name unless done
     assert done
     executed = JSON.parse File.read(account2.log)
     payloads = [{ "part" => 1 }, { "part" => 2 }, { "part" => 3 }, { "part" => 4 }]

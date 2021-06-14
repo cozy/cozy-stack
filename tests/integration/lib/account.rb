@@ -9,7 +9,7 @@ class Account
 
   def initialize(opts = {})
     @couch_id = opts[:id]
-    @name = (opts[:name] || Faker::DrWho.character).gsub(/[^A-Za-z]/, '_')
+    @name = (opts[:name] || Faker::DrWho.character).gsub(/[^A-Za-z0-9]/, '_')
     @log = opts[:log] || "#{Helpers.current_dir}/account_#{@name}.log"
     @aggregator = opts[:aggregator]
     @failure = opts[:failure]
