@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="refresh" content="3600">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
     <title>{{.TemplateTitle}}</title>
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
     <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
@@ -66,6 +67,7 @@
 
       </main>
     </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
     <script src="{{asset .Domain "/scripts/twofactor.js"}}"></script>
   </body>
 </html>
