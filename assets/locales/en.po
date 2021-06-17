@@ -367,7 +367,7 @@ msgid "Move Vault Ignore"
 msgstr "Skip this step"
 
 msgid "Error Title"
-msgstr "Sorry, an error occurred."
+msgstr "Sorry, an unexpected error occurred."
 
 msgid "Error Internal Server Error Title"
 msgstr "Oops…"

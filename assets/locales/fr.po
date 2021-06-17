@@ -433,7 +433,7 @@ msgid "Move Vault Ignore"
 msgstr "Ignorer cette étape"
 
 msgid "Error Title"
-msgstr "Désolé, une erreur est survenue."
+msgstr "Nous avons rencontré une erreur inattendue."
 
 msgid "Error Internal Server Error Title"
 msgstr "Oops…"

@@ -453,16 +453,22 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
 	if inst == nil {
-		inst = &instance.Instance{}
+		inst = &instance.Instance{
+			Domain:      c.Request().Host,
+			ContextName: config.DefaultInstanceContext,
+			Locale:      consts.DefaultLocale,
+		}
 	}
 	return c.Render(code, "error.html", echo.Map{
-		"Title":       inst.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(inst),
-		"ThemeCSS":    middlewares.ThemeCSS(inst),
-		"Domain":      inst.ContextualDomain(),
-		"ContextName": inst.ContextName,
-		"Error":       msg,
-		"Favicon":     middlewares.Favicon(inst),
+		"Domain":       inst.ContextualDomain(),
+		"ContextName":  inst.ContextName,
+		"Locale":       inst.Locale,
+		"Title":        inst.TemplateTitle(),
+		"ThemeCSS":     middlewares.ThemeCSS(inst),
+		"Favicon":      middlewares.Favicon(inst),
+		"Illustration": "/images/generic-error.svg",
+		"Error":        msg,
+		"SupportEmail": "contact@cozycloud.cc",
 	})
 }
 

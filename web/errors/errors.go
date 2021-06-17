@@ -146,17 +146,18 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			}
 		}
 
-		inverted := true
+		inverted := false
 		supportEmail := "contact@cozycloud.cc"
-		var illustration, link, linkURL, button, buttonURL string
+		illustration := "/images/generic-error.svg"
+		var link, linkURL, button, buttonURL string
 
 		switch err {
 		case instance.ErrNotFound:
+			inverted = true
 			illustration = "/images/desert.svg"
 			link = "Error Address forgotten"
 			linkURL = "https://manager.cozycloud.cc/v2/cozy/remind"
 		case app.ErrNotFound:
-			inverted = false
 			illustration = "/images/desert.svg"
 			linkURL = i.DefaultRedirection().String()
 			link = "Error Application not found Action"

@@ -41,12 +41,15 @@ func wantsJSON(c echo.Context) bool {
 func renderError(c echo.Context, code int, msg string) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(code, "error.html", echo.Map{
-		"CozyUI":      middlewares.CozyUI(instance),
-		"ThemeCSS":    middlewares.ThemeCSS(instance),
-		"Domain":      instance.ContextualDomain(),
-		"ContextName": instance.ContextName,
-		"Error":       msg,
-		"Favicon":     middlewares.Favicon(instance),
+		"Domain":       instance.ContextualDomain(),
+		"ContextName":  instance.ContextName,
+		"Locale":       instance.Locale,
+		"Title":        instance.TemplateTitle(),
+		"ThemeCSS":     middlewares.ThemeCSS(instance),
+		"Favicon":      middlewares.Favicon(instance),
+		"Illustration": "/images/generic-error.svg",
+		"Error":        msg,
+		"SupportEmail": "contact@cozycloud.cc",
 	})
 }
 
@@ -55,6 +58,9 @@ func renderError(c echo.Context, code int, msg string) error {
 // Else, it redirects to its home application (or onboarding)
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	if 1 == 1 {
+		return echo.NewHTTPError(404, "blah")
+	}
 
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {

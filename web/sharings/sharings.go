@@ -450,13 +450,15 @@ func GetDiscovery(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Title":       inst.TemplateTitle(),
-			"ThemeCSS":    middlewares.ThemeCSS(inst),
-			"CozyUI":      middlewares.CozyUI(inst),
-			"Domain":      inst.ContextualDomain(),
-			"ContextName": inst.ContextName,
-			"Error":       "Error Invalid sharing",
-			"Favicon":     middlewares.Favicon(inst),
+			"Domain":       inst.ContextualDomain(),
+			"ContextName":  inst.ContextName,
+			"Locale":       inst.Locale,
+			"Title":        inst.TemplateTitle(),
+			"ThemeCSS":     middlewares.ThemeCSS(inst),
+			"Favicon":      middlewares.Favicon(inst),
+			"Illustration": "/images/generic-error.svg",
+			"Error":        "Error Invalid sharing",
+			"SupportEmail": "contact@cozycloud.cc",
 		})
 	}
 
@@ -469,13 +471,15 @@ func GetDiscovery(c echo.Context) error {
 		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Title":       inst.TemplateTitle(),
-				"ThemeCSS":    middlewares.ThemeCSS(inst),
-				"CozyUI":      middlewares.CozyUI(inst),
-				"Domain":      inst.ContextualDomain(),
-				"ContextName": inst.ContextName,
-				"Error":       "Error Invalid sharing",
-				"Favicon":     middlewares.Favicon(inst),
+				"Domain":       inst.ContextualDomain(),
+				"ContextName":  inst.ContextName,
+				"Locale":       inst.Locale,
+				"Title":        inst.TemplateTitle(),
+				"ThemeCSS":     middlewares.ThemeCSS(inst),
+				"Favicon":      middlewares.Favicon(inst),
+				"Illustration": "/images/generic-error.svg",
+				"Error":        "Error Invalid sharing",
+				"SupportEmail": "contact@cozycloud.cc",
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&
