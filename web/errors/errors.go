@@ -156,14 +156,16 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			link = "Error Address forgotten"
 			linkURL = "https://manager.cozycloud.cc/v2/cozy/remind"
 		case app.ErrNotFound:
-			buttonURL = i.DefaultRedirection().String()
-			button = "Error Application not found Action"
+			inverted = false
+			illustration = "/images/desert.svg"
+			linkURL = i.DefaultRedirection().String()
+			link = "Error Application not found Action"
 			if ctxSettings, ok := i.SettingsContext(); ok {
 				if email, ok := ctxSettings["support_address"].(string); ok {
 					supportEmail = email
 				}
 				if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
-					button = ""
+					link = ""
 				}
 			}
 		}

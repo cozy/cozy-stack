@@ -452,14 +452,22 @@ msgstr ""
 "erreur de frappe. Pour le savoir, vérifiez l'adresse de votre Cozy dans "
 "l'e-mail que nous vous avons envoyé au moment de sa création."
 
-msgid "Error Application not found Title"
+msgid "Error Application not installed Title"
 msgstr "Application pas encore disponible"
 
+msgid "Error Application not installed Message"
+msgstr "Cette application n'est pas encore disponible dans votre Cozy."
+
+msgid "Error Application not found Title"
+msgstr "L’application n’existe pas"
+
 msgid "Error Application not found Message"
-msgstr "Nous sommes désolés. Cette application n'est pas encore disponible."
+msgstr ""
+"Nous n’avons trouvé aucune application correspondant à cette adresse dans votre Cozy. "
+"Il s’agit peut-être d’une erreur de frappe."
 
 msgid "Error Application not found Action"
-msgstr "Retourner à votre accueil"
+msgstr "Retourner à l’accueil"
 
 msgid "Error Application not found Button"
 msgstr "Installer cette application"

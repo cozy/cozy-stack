@@ -99,33 +99,40 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 		return app.ErrNotFound
 	}
 
-	var buttonLink, supportEmail string
+	supportEmail := "contact@cozycloud.cc"
+	linkURL := i.DefaultRedirection().String()
+	link := "Error Application not found Action"
 	button := "Error Application not found Button"
 	if ctxSettings, ok := i.SettingsContext(); ok {
 		if email, ok := ctxSettings["support_address"].(string); ok {
 			supportEmail = email
 		}
 		if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
+			link = ""
 			button = ""
 		}
 	}
+	var buttonURL string
 	if button != "" {
-		link := i.SubDomain(consts.StoreSlug)
-		link.Fragment = "/discover/" + slug
-		buttonLink = link.String()
+		u := i.SubDomain(consts.StoreSlug)
+		u.Fragment = "/discover/" + slug
+		buttonURL = u.String()
 	}
 
 	return c.Render(http.StatusNotFound, "error.html", echo.Map{
-		"Title":        instance.DefaultTemplateTitle,
-		"CozyUI":       middlewares.CozyUI(i),
-		"ThemeCSS":     middlewares.ThemeCSS(i),
-		"Favicon":      middlewares.Favicon(i),
 		"Domain":       i.ContextualDomain(),
 		"ContextName":  i.ContextName,
-		"ErrorTitle":   "Error Application not found Title",
-		"Error":        "Error Application not found Message",
+		"Locale":       i.Locale,
+		"Title":        i.TemplateTitle(),
+		"ThemeCSS":     middlewares.ThemeCSS(i),
+		"Favicon":      middlewares.Favicon(i),
+		"Illustration": "/images/desert.svg",
+		"ErrorTitle":   "Error Application not installed Title",
+		"Error":        "Error Application not installed Message",
+		"Link":         link,
+		"LinkURL":      linkURL,
 		"Button":       button,
-		"ButtonLink":   buttonLink,
+		"ButtonURL":    buttonURL,
 		"SupportEmail": supportEmail,
 	})
 }
