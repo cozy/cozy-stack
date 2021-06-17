@@ -981,8 +981,7 @@ function(doc) {
 	out, res, err = doRequest(req, nil)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	executionStats = out["execution_stats"].(interface{})
-	assert.NotEmpty(t, executionStats)
+	assert.NotEmpty(t, out["execution_stats"])
 }
 
 func TestGetDesignDocs(t *testing.T) {
