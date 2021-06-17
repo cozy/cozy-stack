@@ -263,11 +263,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		}
 	}
 
-	tracking := "false"
+	tracking := false
 	settings, err := i.SettingsDocument()
 	if err == nil {
 		if t, ok := settings.M["tracking"].(string); ok {
-			tracking = t
+			tracking = t == "true"
 		}
 	}
 	var subdomainsType string
@@ -330,7 +330,7 @@ func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType str
 type serveParams struct {
 	Token      string
 	SubDomain  string
-	Tracking   string
+	Tracking   bool
 	webapp     *app.WebappManifest
 	instance   *instance.Instance
 	isLoggedIn bool
