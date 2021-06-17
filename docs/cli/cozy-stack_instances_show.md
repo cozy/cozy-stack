@@ -16,7 +16,7 @@ cozy-stack instances show <domain> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances show cozy.tools:8080
+$ cozy-stack instances show cozy.localhost:8080
 ```
 
 ### Options

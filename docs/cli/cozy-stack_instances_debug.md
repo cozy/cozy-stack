@@ -16,13 +16,13 @@ cozy-stack instances debug <true/false> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances debug --domain cozy.tools:8080 true
+$ cozy-stack instances debug --domain cozy.localhost:8080 true
 ```
 
 ### Options
 
 ```
-      --domain string   Specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string   Specify the domain name of the instance (default "cozy.localhost:8080")
   -h, --help            help for debug
       --ttl duration    Specify how long the debug mode will last (default 24h0m0s)
 ```

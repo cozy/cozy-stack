@@ -264,7 +264,7 @@ included in the response, like this:
 			"attributes": {
 				"status": "seen",
 				"name": "Bob",
-				"email": "bob@cozy.tools"
+				"email": "bob@cozy.localhost"
 			}
 		}
 	]

@@ -24,7 +24,7 @@ It can also take a list of settings to update.
 
 If you give a blank value, the setting will be removed.
 `,
-	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John,to_remove:",
+	Example: "$ cozy-stack settings --domain cozy.localhost:8080 context:beta,public_name:John,to_remove:",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
 			errPrintfln("%s", errMissingDomain)

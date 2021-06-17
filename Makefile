@@ -18,7 +18,7 @@ run:
 
 ## instance: create an instance for local development
 instance:
-	@cozy-stack instances add cozy.tools:8080 --passphrase cozy --apps home,store,drive,photos,settings,contacts,notes --email claude@cozy.tools --locale fr --public-name Claude --context-name dev
+	@cozy-stack instances add cozy.localhost:8080 --passphrase cozy --apps home,store,drive,photos,settings,contacts,notes --email claude@cozy.localhost --locale fr --public-name Claude --context-name dev
 
 ## lint: enforce a consistent code style and detect code smells
 lint: scripts/golangci-lint

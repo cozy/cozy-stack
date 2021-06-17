@@ -12,8 +12,8 @@ have to install part of the dependencies yourself or _via_ a Docker image in
 which all dependencies are packed.
 
 This environment will provide a running instance a http server serving both a
-specified directory of your application on `app.cozy.tools:8080` and the
-`cozy-stack` on `cozy.tools:8080` (you can change the hostname and port if you
+specified directory of your application on `app.cozy.localhost:8080` and the
+`cozy-stack` on `cozy.localhost:8080` (you can change the hostname and port if you
 want, see below).
 
 The default passphrase will be "cozy"
@@ -61,7 +61,7 @@ docker pull cozy/cozy-app-dev
 
 If you work behind a corporate proxy, and Docker is configured to inject proxy
 configuration into the containers, you need to ensure that both `localhost` and
-`cozy.tools` are configured not to use the proxy. Following is the minimal
+`cozy.localhost` are configured not to use the proxy. Following is the minimal
 `~/.docker/config.json` configuration that has been shown to work:
 
 ```json
@@ -70,7 +70,7 @@ configuration into the containers, you need to ensure that both `localhost` and
         "default": {
             "httpProxy": "MY_CORPORATE_PROXY",
             "httpsProxy": "MY_CORPORATE_PROXY",
-            "noProxy": "localhost,cozy.tools"
+            "noProxy": "localhost,cozy.localhost"
         }
     }
 }
@@ -113,7 +113,7 @@ $ docker run --rm -it \
 
 A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
 catch emails. You can view the emails sent by the stack in a web interface on
-http://cozy.tools:8025/
+http://cozy.localhost:8025/
 
 You can also expose the couchdb port (listening in the container on 5984) in
 order to access its admin page. For instance add `-p 1234:5984` to access to the

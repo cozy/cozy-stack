@@ -16,7 +16,7 @@ cozy-stack instances set-disk-quota <domain> <disk-quota> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances set-disk-quota cozy.tools:8080 3GB
+$ cozy-stack instances set-disk-quota cozy.localhost:8080 3GB
 ```
 
 ### Options

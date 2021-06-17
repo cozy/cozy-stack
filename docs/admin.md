@@ -44,7 +44,7 @@ Content-Type: application/vnd.api+json
             "type": "instances",
             "id": "3af6ed68a6d9146b3529d2584a001d98",
             "attributes": {
-                "domain": "alice.cozy.tools:8080",
+                "domain": "alice.cozy.localhost:8080",
                 "prefix": "cozy7d3d5947e7f3b0c674d1b8644646348e",
                 "locale": "fr",
                 "context": "dev",
@@ -62,7 +62,7 @@ Content-Type: application/vnd.api+json
             "type": "instances",
             "id": "3af6ed68a6d9146b3529d2584a01d557",
             "attributes": {
-                "domain": "bob.cozy.tools:8080",
+                "domain": "bob.cozy.localhost:8080",
                 "prefix": "cozybf682065ca3c7d64f2dafc6cc12fe702",
                 "locale": "fr",
                 "context": "dev",
@@ -104,9 +104,9 @@ Content-Type: application/json
 ```json
 {
     "instances": [
-        "alice.cozy.tools",
-        "bob.cozy.tools",
-        "zoe.cozy.tools"
+        "alice.cozy.localhost",
+        "bob.cozy.localhost",
+        "zoe.cozy.localhost"
     ]
 }
 ```
@@ -118,7 +118,7 @@ Fixes the 64k (or multiple) content mismatch files of an instance
 #### Request
 
 ```http
-POST /instances/alice.cozy.tools/fixers/content-mismatch HTTP/1.1
+POST /instances/alice.cozy.localhost/fixers/content-mismatch HTTP/1.1
 Content-Type: application/json
 ```
 
@@ -157,7 +157,7 @@ Content-Type: application/json
       "updated_at": "2019-07-30 14:32:29.862882247 +0200 CEST"
     }
   ],
-  "domain": "alice.cozy.tools"
+  "domain": "alice.cozy.localhost"
 }
 ```
 
@@ -168,7 +168,7 @@ Delete the accounts which are not linked to a konnector
 #### Request
 
 ```http
-POST /instances/alice.cozy.tools/fixers/orphan-account HTTP/1.1
+POST /instances/alice.cozy.localhost/fixers/orphan-account HTTP/1.1
 ```
 
 
@@ -215,7 +215,7 @@ HTTP/1.1 200 OK
       "help_link": "https://forum.cozy.io/",
       "noreply_address": "noreply@cozy.beta",
       "noreply_name": "My Cozy Beta",
-      "sharing_domain": "cozy.tools"
+      "sharing_domain": "cozy.localhost"
     },
     "context": "dev",
     "registries": [
@@ -270,7 +270,7 @@ HTTP/1.1 200 OK
     "help_link": "https://forum.cozy.io/",
     "noreply_address": "noreply@cozy.beta",
     "noreply_name": "My Cozy Beta",
-    "sharing_domain": "cozy.tools"
+    "sharing_domain": "cozy.localhost"
   },
   "context": "dev",
   "registries": [
@@ -305,7 +305,7 @@ and each JSON represents an error.
 #### Request
 
 ```http
-GET /instances/alice.cozy.tools/fsck HTTP/1.1
+GET /instances/alice.cozy.localhost/fsck HTTP/1.1
 ```
 
 #### Response
@@ -315,7 +315,7 @@ HTTP/1.1 200 OK
 ```
 
 ```json
-{"type":"index_orphan_tree","dir_doc":{"type":"directory","_id":"34a61c6ceb38075fe971cc6a3263659f","_rev":"2-94ca3acfebf927cb231d125c57f85bd7","name":"Photos","dir_id":"45496c5c442dabecae87de3d73008ec4","created_at":"2020-12-15T18:23:21.498323965+01:00","updated_at":"2020-12-15T18:23:21.498323965+01:00","tags":[],"path":"/Photos","cozyMetadata":{"doctypeVersion":"1","metadataVersion":1,"createdAt":"2020-12-15T18:23:21.498327603+01:00","updatedAt":"2020-12-15T18:23:21.498327603+01:00","createdOn":"http://alice.cozy.tools:8080/"},"size":"0","is_dir":true,"is_orphan":true,"has_cycle":false},"is_file":false,"is_version":false}
+{"type":"index_orphan_tree","dir_doc":{"type":"directory","_id":"34a61c6ceb38075fe971cc6a3263659f","_rev":"2-94ca3acfebf927cb231d125c57f85bd7","name":"Photos","dir_id":"45496c5c442dabecae87de3d73008ec4","created_at":"2020-12-15T18:23:21.498323965+01:00","updated_at":"2020-12-15T18:23:21.498323965+01:00","tags":[],"path":"/Photos","cozyMetadata":{"doctypeVersion":"1","metadataVersion":1,"createdAt":"2020-12-15T18:23:21.498327603+01:00","updatedAt":"2020-12-15T18:23:21.498327603+01:00","createdOn":"http://alice.cozy.localhost:8080/"},"size":"0","is_dir":true,"is_orphan":true,"has_cycle":false},"is_file":false,"is_version":false}
 {"type":"index_missing","file_doc":{"type":"file","name":"Photos","dir_id":"","created_at":"2020-12-15T18:23:21.527308795+01:00","updated_at":"2020-12-15T18:23:21.527308795+01:00","tags":null,"path":"/Photos","size":"4096","mime":"application/octet-stream","class":"files","executable":true,"is_dir":false,"is_orphan":false,"has_cycle":false},"is_file":true,"is_version":false}
 ```
 
@@ -326,7 +326,7 @@ This endpoint will check if no trigger has been installed twice (or more).
 #### Request
 
 ```http
-POST /instances/alice.cozy.tools/checks/triggers HTTP/1.1
+POST /instances/alice.cozy.localhost/checks/triggers HTTP/1.1
 ```
 
 #### Response
@@ -358,7 +358,7 @@ revision tree (no generation smaller for a children than its parent).
 #### Request
 
 ```http
-POST /instances/alice.cozy.tools/checks/shared HTTP/1.1
+POST /instances/alice.cozy.localhost/checks/shared HTTP/1.1
 ```
 
 #### Response
@@ -380,7 +380,7 @@ Content-Type: application/json
 #### Request
 
 ```http
-POST /instances/alice.cozy.tools/checks/sharings HTTP/1.1
+POST /instances/alice.cozy.localhost/checks/sharings HTTP/1.1
 ```
 
 #### Response
@@ -568,7 +568,7 @@ Content-Type: application/json
   "v1": {
     "counter": 1,
     "domains": [
-      "bob.cozy.tools:8081"
+      "bob.cozy.localhost:8081"
     ]
   },
   "v2a": {
@@ -580,17 +580,17 @@ Content-Type: application/json
   "v3a": {
     "counter": 2,
     "domains": [
-      "alice.cozy.tools:8081",
-      "ru.cozy.tools:8081"
+      "alice.cozy.localhost:8081",
+      "ru.cozy.localhost:8081"
     ]
   },
   "v3b": {
     "counter": 4,
     "domains": [
-      "foo.cozy.tools:8081",
-      "bar.cozy.tools:8081",
-      "baz.cozy.tools:8081",
-      "foobar.cozy.tools:8081"
+      "foo.cozy.localhost:8081",
+      "bar.cozy.localhost:8081",
+      "baz.cozy.localhost:8081",
+      "foobar.cozy.localhost:8081"
     ]
   }
 }
@@ -604,7 +604,7 @@ Retrieves a Swift object
 
 ```http
 GET /swift/vfs/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 ```
 
 #### Response
@@ -626,7 +626,7 @@ Put an object in Swift
 
 ```http
 PUT /swift/vfs/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 Content-Type: text/plain
 ```
 
@@ -642,7 +642,7 @@ Removes an object from Swift
 
 ```http
 DELETE /swift/vfs/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 ```
 
 ### GET /swift/vfs
@@ -653,7 +653,7 @@ List Swift objects of an instance
 
 ```http
 GET /swift/vfs HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 ```
 
 #### Response

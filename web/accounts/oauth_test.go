@@ -151,7 +151,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 }
 
 func TestFixedRedirectURIOauthFlow(t *testing.T) {
-	redirectURI := "http://_oauth_callback.cozy.tools/accounts/test-service3/redirect"
+	redirectURI := "http://_oauth_callback.cozy.localhost/accounts/test-service3/redirect"
 	service := makeTestACService(redirectURI)
 	defer service.Close()
 
@@ -238,7 +238,7 @@ func TestMain(m *testing.M) {
 	setup = testutils.NewSetup(m, "oauth-konnectors")
 	ts = setup.GetTestServer("/accounts", Routes)
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
-		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
+		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.localhost", 1),
 	})
 	_ = couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	setup.AddCleanup(func() error {

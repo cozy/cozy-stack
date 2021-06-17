@@ -124,7 +124,7 @@ Example:
 
 ```http
 GET /remote/org.wikidata.search?q=Douglas+Adams HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 ```
 
 It is possible to send some extra informations, to make it easier to understand
@@ -135,7 +135,7 @@ Example:
 
 ```http
 POST /remote/org.example HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 Content-Type: application/json
 ```
 
@@ -160,7 +160,7 @@ Example:
 
 ```http
 GET /remote/assets/bank HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 ```
 
 ## Logs

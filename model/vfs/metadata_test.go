@@ -65,7 +65,7 @@ func TestShortcutMetadataExtractor(t *testing.T) {
 	doc := &FileDoc{
 		Mime: consts.ShortcutMimeType,
 		CozyMetadata: &FilesCozyMetadata{
-			CreatedOn: "http://cozy.tools:8080/",
+			CreatedOn: "http://cozy.localhost:8080/",
 		},
 	}
 	extractor := NewMetaExtractor(doc)
@@ -86,7 +86,7 @@ func TestShortcutMetadataExtractor(t *testing.T) {
 	assert.True(t, ok, "target.cozyMetadata is present")
 	cozy, ok := cm["instance"].(string)
 	assert.True(t, ok, "target.cozyMetadata.instance is present")
-	assert.Equal(t, "cozy.tools:8080", cozy)
+	assert.Equal(t, "cozy.localhost:8080", cozy)
 	app, ok := target["app"]
 	assert.True(t, ok, "target.app is present")
 	assert.Equal(t, "drive", app)

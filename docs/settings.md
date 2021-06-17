@@ -419,7 +419,7 @@ this modal again the next time they will open the Home again).
 
 ```http
 DELETE /settings/instance/moved_from HTTP/1.1
-Host: target.cozy.tools
+Host: target.cozy.localhost
 Cookie: sessionid=xxxxx
 ```
 

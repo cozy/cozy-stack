@@ -304,7 +304,7 @@ Two parameters in the query string can be sent:
 - `redirect` (optional), where the user will be redirected after the confirmation.
 
 ```http
-GET /auth/confirm?state=51814f30-5818-0139-9348-543d7eb8149c&redirect=http://banks.cozy.tools:8080/ HTTP/1.1
+GET /auth/confirm?state=51814f30-5818-0139-9348-543d7eb8149c&redirect=http://banks.cozy.localhost:8080/ HTTP/1.1
 ```
 
 The application can know the user has confirmed their identity by subscribing
@@ -320,7 +320,7 @@ Send the hashed password for confirming the authentication.
 
 ```http
 HTTP/1.1 302 Moved Temporarily
-Location: http://banks.cozy.tools:8080/?state=51814f30-5818-0139-9348-543d7eb8149c&code=543d7eb8149c
+Location: http://banks.cozy.localhost:8080/?state=51814f30-5818-0139-9348-543d7eb8149c&code=543d7eb8149c
 ```
 
 #### Real-time via websockets

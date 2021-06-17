@@ -26,7 +26,7 @@ var featureShowCmd = &cobra.Command{
 	Long: `
 cozy-stack feature show displays the feature flags that are shown by apps.
 `,
-	Example: `$ cozy-stack feature show --domain cozy.tools:8080`,
+	Example: `$ cozy-stack feature show --domain cozy.localhost:8080`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
 			errPrintfln("%s", errMissingDomain)
@@ -84,7 +84,7 @@ It can also take a list of flags to update.
 
 If you give a null value, the flag will be removed.
 `,
-	Example: `$ cozy-stack feature flags --domain cozy.tools:8080 '{"add_this_flag": true, "remove_this_flag": null}'`,
+	Example: `$ cozy-stack feature flags --domain cozy.localhost:8080 '{"add_this_flag": true, "remove_this_flag": null}'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
 			errPrintfln("%s", errMissingDomain)
@@ -126,7 +126,7 @@ list (no merge).
 
 All the sets can be removed by setting an empty list ('').
 `,
-	Example: `$ cozy-stack feature sets --domain cozy.tools:8080 'set1 set2'`,
+	Example: `$ cozy-stack feature sets --domain cozy.localhost:8080 'set1 set2'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
 			errPrintfln("%s", errMissingDomain)

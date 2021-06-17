@@ -12,9 +12,9 @@ class Instance
   def initialize(stack, opts = {})
     @stack = stack
     @name = opts[:name] || Faker::Internet.domain_word
-    @domain = opts[:domain] || "#{@name.downcase}.test.cozy.tools:#{stack.port}"
+    @domain = opts[:domain] || "#{@name.downcase}.test.localhost:#{stack.port}"
     @passphrase = opts[:passphrase] || "cozy"
-    @email = opts[:email] || "#{@name.downcase}+test@cozy.tools"
+    @email = opts[:email] || "#{@name.downcase}+test@localhost"
     @locale = opts[:locale] || "fr"
   end
 

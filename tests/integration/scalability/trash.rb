@@ -1,8 +1,8 @@
 require_relative '../boot'
 
 stack_port = 8080
-domain = 'trash.test.cozy.tools:8080'
-email = 'me@cozy.tools'
+domain = 'trash.test.localhost:8080'
+email = 'me@localhost'
 
 stack = Stack.get stack_port
 inst = Instance.new stack, domain: domain, email: email

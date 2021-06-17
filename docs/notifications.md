@@ -125,7 +125,7 @@ of the message cannot be longer than 160 characters.
 
 ```http
 POST /notifications HTTP/1.1
-Host: alice.cozy.tools
+Host: alice.cozy.localhost
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
