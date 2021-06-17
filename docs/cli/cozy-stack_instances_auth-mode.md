@@ -16,7 +16,7 @@ cozy-stack instances auth-mode [domain] [auth-mode] [flags]
 ### Examples
 
 ```
-$ cozy-stack instances auth-mode cozy.tools:8080 two_factor_mail
+$ cozy-stack instances auth-mode cozy.localhost:8080 two_factor_mail
 ```
 
 ### Options

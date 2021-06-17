@@ -31,7 +31,7 @@ Exports options fields are:
 
 ```http
 POST /move/exports HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -71,7 +71,7 @@ Exports fields are:
 
 ```http
 GET /move/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -121,7 +121,7 @@ URL, before doing the real import.
 
 ```http
 POST /move/imports/precheck HTTP/1.1
-Host: destination.cozy.tools
+Host: destination.cozy.localhost
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -130,7 +130,7 @@ Content-Type: application/vnd.api+json
 {
     "data": {
         "attributes": {
-            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "url": "https://settings.source.cozy.localhost/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         }
     }
 }
@@ -150,7 +150,7 @@ This endpoint can be used to really start an import.
 
 ```http
 POST /move/imports HTTP/1.1
-Host: destination.cozy.tools
+Host: destination.cozy.localhost
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -159,7 +159,7 @@ Content-Type: application/vnd.api+json
 {
     "data": {
         "attributes": {
-            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            "url": "https://settings.source.cozy.localhost/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         }
     }
 }
@@ -169,7 +169,7 @@ Content-Type: application/vnd.api+json
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://destination.cozy.tools/move/importing
+Location: https://destination.cozy.localhost/move/importing
 ```
 
 ### POST /move/importing
@@ -188,7 +188,7 @@ This is a websocket endpoint that can be used to wait for the end of the
 import. The server will send an event when it is done (or errored):
 
 ```
-server> {"redirect": "http://cozy.tools:8080/auth/login"}
+server> {"redirect": "http://cozy.localhost:8080/auth/login"}
 ```
 
 ### GET /move/authorize
@@ -201,7 +201,7 @@ still need a confirmation by mail to start moving the Cozy.
 
 ```http
 GET /move/authorize?state=8d560d60&redirect_uri=https://move.cozycloud.cc/callback/source HTTP/1.1
-Server: source.cozy.tools
+Server: source.cozy.localhost
 ```
 
 #### Response
@@ -219,14 +219,14 @@ This endpoint is used by the settings application to open the move wizard.
 
 ```http
 POST /move/initialize HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 ```
 
 #### Response
 
 ```http
 HTTP/1.1 307 Temporary Redirect
-Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.tools&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA&vault=false
+Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.localhost&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA&vault=false
 ```
 
 ### POST /move/request
@@ -241,7 +241,7 @@ POST /move/request HTTP/1.1
 Content-Type: application/x-www-form-urlencoded
 
 code=834d7eb8149c
-&target_url=https://target.cozy.tools/
+&target_url=https://target.cozy.localhost/
 &target_token=M2EwYjlhZjAtMTc3OC0wMTM5LWYwYWMtNTQzZDdlYjgxNDlj
 &target_client_id=09136b00-1778-0139-f0a7-543d7eb8149c
 &target_client_secret=NDkyZTEzMDA
@@ -267,14 +267,14 @@ its-self during the move and pushs a job for the export.
 
 ```http
 GET /move/go?secret=tNTQzZDdlYjgxNDlj HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 ```
 
 #### Reponse
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://target.cozy.tools/move/importing
+Location: https://target.cozy.localhost/move/importing
 ```
 
 ### POST /move/finalize
@@ -286,7 +286,7 @@ the source Cozy so that it can stop the konnectors and unblock the instance.
 
 ```http
 POST /move/finalize?subdomain=flat HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 ```
 #### Reponse
 
@@ -303,7 +303,7 @@ endpoint for the other instance to unblock it.
 
 ```http
 POST /move/abort HTTP/1.1
-Host: source.cozy.tools
+Host: source.cozy.localhost
 ```
 #### Reponse
 

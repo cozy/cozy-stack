@@ -23,7 +23,7 @@ import (
 // is stored relatively to the cozy-stack binary.
 const DefaultStorageDir = "storage"
 
-const defaultDevDomain = "cozy.tools:8080"
+const defaultDevDomain = "cozy.localhost:8080"
 
 var flagDomain string
 

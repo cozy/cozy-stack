@@ -20,7 +20,7 @@ cozy-stack apps update <slug> [sourceurl] [flags]
       --admin-port int      administration server port (default 6060)
       --all-domains         work on all domains iteratively
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string       specify the domain name of the instance (default "cozy.localhost:8080")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```

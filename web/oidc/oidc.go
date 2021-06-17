@@ -43,7 +43,7 @@ func Start(c echo.Context) error {
 
 // Redirect is the route after the Identity Provider has redirected the user to
 // the stack. The redirection is made to a generic domain, like
-// oauthcallback.cozy.tools and the association with an instance is made via a
+// oauthcallback.cozy.localhost and the association with an instance is made via a
 // call to the UserInfo endpoint. It redirects to the cozy instance to login
 // the user.
 func Redirect(c echo.Context) error {

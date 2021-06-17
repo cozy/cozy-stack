@@ -446,7 +446,7 @@ Content-Type: application/json
       "Id": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
       "Name": "Cozy",
       "Key": "4.HUzVDQVAFc4JOpW3/j/QwZeET0mXOiDW5s/HdpxLZ2GFnGcxOm1FE4XD2p7XTSwORXO/Lo8y0A87UhXKEXzfHZmpJR04pbpUPr4NJbjRKv/cSkNFlvm0rIUw/m0Jkft/gew9v3QfkVSGdSZk5XIimwkTQ5WM+WCStxbQJIKAH+AoEA5q6t9mpNNlTAQvMgqs8u7CJwSjeZ7qbabfEUVX1HIPgxC3BtVUkySRSws/gUNeMwY23kAJJQYT+uuMooZUr7umU6YkEHG2RQZwCCjVHX4czxZRWsVo/xQOYoNr7DjgCf92D7OrJlFmDtQjzSy2BjotN6vn+1SwtHbeDILWaQ==",
-      "BillingEmail": "me@cozy.tools",
+      "BillingEmail": "me@cozy.localhost",
       "Plan": "TeamsAnnually",
       "PlanType": 5,
       "Seats": 2,

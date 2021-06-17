@@ -20,7 +20,7 @@ cozy-stack files <command> [flags]
 ### Options
 
 ```
-      --domain string   specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string   specify the domain name of the instance (default "cozy.localhost:8080")
   -h, --help            help for files
 ```
 

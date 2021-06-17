@@ -19,7 +19,7 @@ cozy-stack konnectors <command> [flags]
 
 ```
       --all-domains         work on all domains iteratively
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string       specify the domain name of the instance (default "cozy.localhost:8080")
   -h, --help                help for konnectors
       --parameters string   override the parameters of the installed konnector
 ```

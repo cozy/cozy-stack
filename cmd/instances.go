@@ -86,7 +86,7 @@ var showInstanceCmd = &cobra.Command{
 cozy-stack instances show allows to show the instance on the cozy for a
 given domain.
 `,
-	Example: "$ cozy-stack instances show cozy.tools:8080",
+	Example: "$ cozy-stack instances show cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -113,7 +113,7 @@ var showDBPrefixInstanceCmd = &cobra.Command{
 cozy-stack instances show allows to show the instance prefix on the cozy for a
 given domain. The prefix is used for databases and VFS prefixing.
 `,
-	Example: "$ cozy-stack instances show-db-prefix cozy.tools:8080",
+	Example: "$ cozy-stack instances show-db-prefix cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -145,7 +145,7 @@ If the COZY_DISABLE_INSTANCES_ADD_RM env variable is set, creating and
 destroying instances will be desactivated and the content of this variable will
 be used as the error message.
 `,
-	Example: "$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
+	Example: "$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
 			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
@@ -283,7 +283,7 @@ settings for a specified domain.
 var updateInstancePassphraseCmd = &cobra.Command{
 	Use:     "set-passphrase <domain> <new-passphrase>",
 	Short:   "Change the passphrase of the instance",
-	Example: "$ cozy-stack instances set-passphrase cozy.tools:8080 myN3wP4ssowrd!",
+	Example: "$ cozy-stack instances set-passphrase cozy.localhost:8080 myN3wP4ssowrd!",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
 			return cmd.Usage()
@@ -334,7 +334,7 @@ var quotaInstanceCmd = &cobra.Command{
 cozy-stack instances set-disk-quota allows to change the disk-quota of the
 instance of the given domain. Set the quota to 0 to remove the quota.
 `,
-	Example: "$ cozy-stack instances set-disk-quota cozy.tools:8080 3GB",
+	Example: "$ cozy-stack instances set-disk-quota cozy.localhost:8080 3GB",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
 			return cmd.Usage()
@@ -364,7 +364,7 @@ var debugInstanceCmd = &cobra.Command{
 cozy-stack instances debug allows to activate or deactivate the debugging of a
 specific domain.
 `,
-	Example: "$ cozy-stack instances debug --domain cozy.tools:8080 true",
+	Example: "$ cozy-stack instances debug --domain cozy.localhost:8080 true",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		action := "enable"
 		domain := flagDomain
@@ -723,7 +723,7 @@ var cliTokenInstanceCmd = &cobra.Command{
 var oauthTokenInstanceCmd = &cobra.Command{
 	Use:     "token-oauth <domain> <clientid> <scopes>",
 	Short:   "Generate a new OAuth access token",
-	Example: "$ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
+	Example: "$ cozy-stack instances token-oauth cozy.localhost:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
 			return cmd.Usage()
@@ -753,7 +753,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 var oauthRefreshTokenInstanceCmd = &cobra.Command{
 	Use:     "refresh-token-oauth <domain> <clientid> <scopes>",
 	Short:   "Generate a new OAuth refresh token",
-	Example: "$ cozy-stack instances refresh-token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
+	Example: "$ cozy-stack instances refresh-token-oauth cozy.localhost:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
 			return cmd.Usage()
@@ -925,7 +925,7 @@ var importCmd = &cobra.Command{
 var showSwiftPrefixInstanceCmd = &cobra.Command{
 	Use:     "show-swift-prefix <domain>",
 	Short:   "Show the instance swift prefix of the specified domain",
-	Example: "$ cozy-stack instances show-swift-prefix cozy.tools:8080",
+	Example: "$ cozy-stack instances show-swift-prefix cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var v map[string]string
 
@@ -1000,7 +1000,7 @@ var instanceAppVersionCmd = &cobra.Command{
 var setAuthModeCmd = &cobra.Command{
 	Use:     "auth-mode [domain] [auth-mode]",
 	Short:   `Set instance auth-mode`,
-	Example: "$ cozy-stack instances auth-mode cozy.tools:8080 two_factor_mail",
+	Example: "$ cozy-stack instances auth-mode cozy.localhost:8080 two_factor_mail",
 	Long: `Change the authentication mode for an instance. Two options are allowed:
 - two_factor_mail
 - basic

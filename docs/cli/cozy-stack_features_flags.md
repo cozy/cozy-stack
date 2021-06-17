@@ -19,7 +19,7 @@ cozy-stack features flags [flags]
 ### Examples
 
 ```
-$ cozy-stack feature flags --domain cozy.tools:8080 '{"add_this_flag": true, "remove_this_flag": null}'
+$ cozy-stack feature flags --domain cozy.localhost:8080 '{"add_this_flag": true, "remove_this_flag": null}'
 ```
 
 ### Options

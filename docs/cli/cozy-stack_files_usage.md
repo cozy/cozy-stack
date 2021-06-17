@@ -19,7 +19,7 @@ cozy-stack files usage [--domain domain] [--trash] [flags]
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string       specify the domain name of the instance (default "cozy.localhost:8080")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```

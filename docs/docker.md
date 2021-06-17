@@ -53,7 +53,7 @@ A precision for the app name:
 docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** cozy/cozy-app-dev
 ```
 
-***my-app*** will be the first part of: ***my-app***.cozy.tools:8080
+***my-app*** will be the first part of: ***my-app***.cozy.localhost:8080
 
 ## Only-Office document server
 

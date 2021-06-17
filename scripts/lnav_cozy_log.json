@@ -21,7 +21,7 @@
       },
       {
         "line":
-          "time=\"2018-04-18T14:26:23+02:00\" level=debug msg=\"request: GET alice-test-cozy-tools-8081%2Fio-cozy-shared/_local/sharing-be7813ea5927dc06a5b044ca47010ffe-1 \" domain=\"alice.test.cozy.tools:8081\""
+          "time=\"2018-04-18T14:26:23+02:00\" level=debug msg=\"request: GET alice-test-cozy.localhost-8081%2Fio-cozy-shared/_local/sharing-be7813ea5927dc06a5b044ca47010ffe-1 \" domain=\"alice.test.cozy.localhost:8081\""
       }
     ],
     "value": {

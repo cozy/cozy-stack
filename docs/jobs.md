@@ -219,7 +219,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
 
 ```js
 {
-  "domain": "me.cozy.tools",
+  "domain": "me.cozy.localhost",
   "worker": "sendmail",    // worker type name
   "options": {
     "priority": 3,         // priority from 1 to 100, higher number is higher priority
@@ -230,7 +230,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
     "mode": "noreply",
     "template_name": "new_registration",
     "template_values": {
-      "DevicesLink": "http://me.cozy.tools/#/connectedDevices",
+      "DevicesLink": "http://me.cozy.localhost/#/connectedDevices",
     }
   },
   "state": "running",      // queued, running, done, errored
@@ -270,7 +270,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.jobs",
     "id": "123123",
     "attributes": {
-      "domain": "me.cozy.tools",
+      "domain": "me.cozy.localhost",
       "worker": "sendmail",
       "options": {
         "priority": 3,
@@ -328,7 +328,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.jobs",
     "id": "123123",
     "attributes": {
-      "domain": "me.cozy.tools",
+      "domain": "me.cozy.localhost",
       "worker": "sendmail",
       "options": {
         "timeout": 60,
@@ -420,7 +420,7 @@ Accept: application/vnd.api+json
   "data": [
     {
       "attributes": {
-        "domain": "cozy.tools:8080",
+        "domain": "cozy.localhost:8080",
         "options": null,
         "queued_at": "2017-09-29T15:32:31.953878568+02:00",
         "started_at": "0001-01-01T00:00:00Z",
@@ -501,7 +501,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.jobs",
     "id": "022368c07dc701396403543d7eb8149c",
     "attributes": {
-      "domain": "me.cozy.tools",
+      "domain": "me.cozy.localhost",
       "worker": "sendmail",
       "options": {},
       "state": "errored",
@@ -762,7 +762,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.jobs",
     "id": "123123",
     "attributes": {
-      "domain": "me.cozy.tools",
+      "domain": "me.cozy.localhost",
       "worker": "sendmail",
       "options": {},
       "state": "running",

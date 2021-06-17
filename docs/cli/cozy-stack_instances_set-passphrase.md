@@ -9,7 +9,7 @@ cozy-stack instances set-passphrase <domain> <new-passphrase> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances set-passphrase cozy.tools:8080 myN3wP4ssowrd!
+$ cozy-stack instances set-passphrase cozy.localhost:8080 myN3wP4ssowrd!
 ```
 
 ### Options

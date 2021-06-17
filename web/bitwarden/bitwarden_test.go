@@ -927,7 +927,7 @@ func TestMain(m *testing.M) {
 		Domain:     "bitwarden.example.net",
 		Passphrase: "cozy",
 		PublicName: "Pierre",
-		Email:      "pierre@cozy.tools",
+		Email:      "pierre@cozy.localhost",
 	})
 
 	ts = setup.GetTestServer("/bitwarden", Routes)

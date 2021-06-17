@@ -20,7 +20,7 @@ cozy-stack features sets [flags]
 ### Examples
 
 ```
-$ cozy-stack feature sets --domain cozy.tools:8080 'set1 set2'
+$ cozy-stack feature sets --domain cozy.localhost:8080 'set1 set2'
 ```
 
 ### Options

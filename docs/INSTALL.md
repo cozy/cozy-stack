@@ -71,20 +71,20 @@ And then create an instance for development:
 make instance
 ```
 
-The cozy-stack server listens on http://cozy.tools:8080/ by default. See
+The cozy-stack server listens on http://cozy.localhost:8080/ by default. See
 `cozy-stack --help` for more informations.
 
-The above command will create an instance on http://cozy.tools:8080/ with the
-passphrase `cozy`. By default this will create a `storage/` entry in your current directory, containing all your instances by their URL. An instance "cozy.tools:8080" will have its stored files in `storage/cozy.tools:8080/`. Installed apps will be found in the `.cozy_apps/` directory of each instance.
+The above command will create an instance on http://cozy.localhost:8080/ with the
+passphrase `cozy`. By default this will create a `storage/` entry in your current directory, containing all your instances by their URL. An instance "cozy.localhost:8080" will have its stored files in `storage/cozy.localhost:8080/`. Installed apps will be found in the `.cozy_apps/` directory of each instance.
 
 Make sure the full stack is up with:
 
 ```bash
-curl -H 'Accept: application/json' 'http://cozy.tools:8080/status/'
+curl -H 'Accept: application/json' 'http://cozy.localhost:8080/status/'
 ```
 
 You can then remove your test instance:
 
 ```bash
-cozy-stack instances rm cozy.tools:8080
+cozy-stack instances rm cozy.localhost:8080
 ```

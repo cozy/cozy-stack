@@ -263,7 +263,7 @@ Its options are:
 
 ```json
 {
-  "manifest_url": "http://cozy.tools:8080/move/exports/QUFBQUFGLVg5b3c0WTJNNU9HRmpPR0V4WlRnd01XVTJZMlU0T0RjeE5UaGpNVEF3TWpKbVplblFfRWZWUVAtRGJXU0lnV2tIZ3NsVHN5dUR6V0ZIdVdSeERLb196X3A0"
+  "manifest_url": "http://cozy.localhost:8080/move/exports/QUFBQUFGLVg5b3c0WTJNNU9HRmpPR0V4WlRnd01XVTJZMlU0T0RjeE5UaGpNVEF3TWpKbVplblFfRWZWUVAtRGJXU0lnV2tIZ3NsVHN5dUR6V0ZIdVdSeERLb196X3A0"
 }
 ```
 

@@ -475,7 +475,7 @@ func TestUploadShortcut(t *testing.T) {
 	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=shortcut.url", f)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, obj := doUploadOrMod(t, req, "application/octet-stream", "Zmko77UB8tJqERoef4MMlg==")
+	res, obj := doUploadOrMod(t, req, "application/octet-stream", "+tHtr9V8+4gcCDxTFAqt3w==")
 	assert.Equal(t, 201, res.StatusCode)
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})

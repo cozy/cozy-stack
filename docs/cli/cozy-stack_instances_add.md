@@ -20,7 +20,7 @@ cozy-stack instances add <domain> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.tools:8080
+$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.localhost:8080
 ```
 
 ### Options

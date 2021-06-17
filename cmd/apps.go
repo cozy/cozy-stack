@@ -56,7 +56,7 @@ var installWebappCmd = &cobra.Command{
 	Short: `Install an application with the specified slug name
 from the given source URL.`,
 	Example: `
-$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable
+$ cozy-stack apps install --domain cozy.localhost:8080 drive registry://drive/stable
 $ cozy-stack apps install banks 'git://github.com/cozy/cozy-banks.git#build'
 $ cozy-stack apps install myapp 'git+ssh://git@gitlab.example.net/team/myapp.git#build'
 `,
@@ -148,10 +148,10 @@ Default channel is stable.
 Default version is latest.
 `,
 	Example: `
-$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable/1.0.1
-$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable
-$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/1.2.0
-$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline
+$ cozy-stack konnectors install --domain cozy.localhost:8080 trainline registry://trainline/stable/1.0.1
+$ cozy-stack konnectors install --domain cozy.localhost:8080 trainline registry://trainline/stable
+$ cozy-stack konnectors install --domain cozy.localhost:8080 trainline registry://trainline/1.2.0
+$ cozy-stack konnectors install --domain cozy.localhost:8080 trainline registry://trainline
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return installApp(cmd, args, consts.Konnectors)
@@ -546,7 +546,7 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 var listTriggerCmd = &cobra.Command{
 	Use:     "ls",
 	Short:   `List triggers`,
-	Example: "$ cozy-stack triggers ls --domain cozy.tools:8080",
+	Example: "$ cozy-stack triggers ls --domain cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
 			errPrintfln("%s", errMissingDomain)
@@ -574,7 +574,7 @@ var listTriggerCmd = &cobra.Command{
 var launchTriggerCmd = &cobra.Command{
 	Use:     "launch [triggerId]",
 	Short:   `Creates a job from a specific trigger`,
-	Example: "$ cozy-stack triggers launch --domain cozy.tools:8080 748f42b65aca8c99ec2492eb660d1891",
+	Example: "$ cozy-stack triggers launch --domain cozy.localhost:8080 748f42b65aca8c99ec2492eb660d1891",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return launchTrigger(cmd, args)
 	},

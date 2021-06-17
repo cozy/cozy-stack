@@ -85,7 +85,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 		// Create and adding a fallbackURI in case of no-supporting custom
 		// protocol cozy<app>://
 		// Basically, it parses the app slug and computes the web app url
-		// Example: cozydrive:// => http://drive.alice.cozy.tools:8080/
+		// Example: cozydrive:// => http://drive.alice.cozy.localhost:8080/
 		r, err := url.Parse(redirectURI)
 		if err != nil {
 			return err

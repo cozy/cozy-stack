@@ -15,7 +15,7 @@ cozy-stack apps install <slug> [sourceurl] [flags]
 
 ```
 
-$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable
+$ cozy-stack apps install --domain cozy.localhost:8080 drive registry://drive/stable
 $ cozy-stack apps install banks 'git://github.com/cozy/cozy-banks.git#build'
 $ cozy-stack apps install myapp 'git+ssh://git@gitlab.example.net/team/myapp.git#build'
 
@@ -35,7 +35,7 @@ $ cozy-stack apps install myapp 'git+ssh://git@gitlab.example.net/team/myapp.git
       --admin-port int      administration server port (default 6060)
       --all-domains         work on all domains iteratively
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
+      --domain string       specify the domain name of the instance (default "cozy.localhost:8080")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```

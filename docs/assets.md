@@ -37,8 +37,8 @@ In development mode, a `/dev` route is available to render a template or a mail
 with given parameter. For example:
 
 ```
-http://cozy.tools:8080/dev/templates/error.html?Error=oops
-http://cozy.tools:8080/dev/mails/two_factor?TwoFactorPasscode=123456
+http://cozy.localhost:8080/dev/templates/error.html?Error=oops
+http://cozy.localhost:8080/dev/mails/two_factor?TwoFactorPasscode=123456
 ```
 
 ## In production

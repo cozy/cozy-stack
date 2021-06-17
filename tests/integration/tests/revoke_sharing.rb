@@ -84,7 +84,7 @@ describe "A sharing" do
     contact_charlie = Contact.create inst_alice, given_name: charlie
     Contact.create inst_bob, given_name: "Alice",
                              family_name: lastname,
-                             email: "alice+test@cozy.tools"
+                             email: "alice+test@localhost"
     Contact.create inst_bob, given_name: "Charlie",
                              family_name: lastname,
                              email: contact_charlie.primary_email
@@ -111,7 +111,7 @@ describe "A sharing" do
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
-    assert_equal "alice+test@cozy.tools", owner["email"]
+    assert_equal "alice+test@localhost", owner["email"]
     assert_equal inst_alice.url, owner["instance"]
     recpt1 = doc["members"][1]
     assert_equal "pending", recpt1["status"]
@@ -218,7 +218,7 @@ describe "A sharing" do
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
     assert_equal "Alice #{lastname}", owner["name"]
-    assert_equal "alice+test@cozy.tools", owner["email"]
+    assert_equal "alice+test@localhost", owner["email"]
     assert_equal inst_alice.url, owner["instance"]
     recpt1 = doc["members"][1]
     assert_equal "ready", recpt1["status"]
@@ -273,7 +273,7 @@ describe "A sharing" do
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
-    assert_equal "alice+test@cozy.tools", owner["email"]
+    assert_equal "alice+test@localhost", owner["email"]
     assert_equal inst_alice.url, owner["instance"]
     assert_nil owner["name"]
     recpt1 = doc["members"][1]

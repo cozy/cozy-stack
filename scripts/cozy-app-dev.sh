@@ -3,7 +3,7 @@
 set -e
 set -m
 
-[ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.tools"
+[ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.localhost"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8080"
 [ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
 [ -z "${COZY_STACK_ADMIN_PORT}" ] && COZY_STACK_ADMIN_PORT="6060"
@@ -35,7 +35,7 @@ usage() {
 	echo -e "    itself. default: \"\$GOPATH/bin\"."
 	echo -e "\n  COZY_STACK_HOST"
 	echo -e "    specify the hostname on which the cozy-stack is launched."
-	echo -e "    default: cozy.tools."
+	echo -e "    default: cozy.localhost."
 	echo -e "\n  COZY_STACK_PORT"
 	echo -e "    specify the port on which the cozy-stack is listening."
 	echo -e "    default: 8080."

@@ -29,7 +29,7 @@ RUN ./scripts/build.sh dev
 FROM debian:stretch-slim
 
 # cozy-stack
-ENV COZY_STACK_HOST=cozy.tools \
+ENV COZY_STACK_HOST=cozy.localhost \
 	COZY_STACK_PORT=8080 \
 	COZY_STACK_PATH=cozy-stack \
 	COUCHDB_SRC_URL=https://dist.apache.org/repos/dist/release/couchdb/source/2.3.1/apache-couchdb-2.3.1.tar.gz \

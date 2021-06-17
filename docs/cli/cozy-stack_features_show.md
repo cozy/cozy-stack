@@ -15,7 +15,7 @@ cozy-stack features show [flags]
 ### Examples
 
 ```
-$ cozy-stack feature show --domain cozy.tools:8080
+$ cozy-stack feature show --domain cozy.localhost:8080
 ```
 
 ### Options

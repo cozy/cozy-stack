@@ -9,7 +9,7 @@ cozy-stack instances show-swift-prefix <domain> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances show-swift-prefix cozy.tools:8080
+$ cozy-stack instances show-swift-prefix cozy.localhost:8080
 ```
 
 ### Options

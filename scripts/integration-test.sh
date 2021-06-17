@@ -14,7 +14,7 @@ sudo npm install -g @bitwarden/cli
 # force the resolution via the /etc/hosts to 127.0.0.1.
 #
 # See https://github.com/eventmachine/eventmachine/blob/v1.2.7/lib/em/resolver.rb
-echo "127.0.0.1 alice.test.cozy.tools bob.test.cozy.tools" | sudo tee -a /etc/hosts
+echo "127.0.0.1 alice.test.localhost bob.test.localhost" | sudo tee -a /etc/hosts
 
 bundle install --jobs=3 --retry=3
 # bundle exec ruby -e 'Dir.glob("tests/*.rb") { |f| load f }'
