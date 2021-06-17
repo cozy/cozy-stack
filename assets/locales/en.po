@@ -393,6 +393,9 @@ msgstr "Go to your home"
 msgid "Error Application not found Button"
 msgstr "Install this application"
 
+msgid "Error Address forgotten"
+msgstr "I have forgotten my address"
+
 msgid "Error Contact us"
 msgstr "A problem, a question ? Contact us at"
 
