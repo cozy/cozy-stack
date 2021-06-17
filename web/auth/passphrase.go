@@ -56,13 +56,13 @@ func passphraseForm(c echo.Context) error {
 
 	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
 		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-			"Title":       inst.TemplateTitle(),
-			"ThemeCSS":    middlewares.ThemeCSS(inst),
-			"Domain":      inst.ContextualDomain(),
-			"ContextName": inst.ContextName,
-			"Locale":      inst.Locale,
-			"Favicon":     middlewares.Favicon(inst),
-			"CozyUI":      middlewares.CozyUI(inst),
+			"Domain":       inst.ContextualDomain(),
+			"ContextName":  inst.ContextName,
+			"Locale":       inst.Locale,
+			"Title":        inst.TemplateTitle(),
+			"ThemeCSS":     middlewares.ThemeCSS(inst),
+			"Favicon":      middlewares.Favicon(inst),
+			"SupportEmail": "contact@cozycloud.cc",
 		})
 	}
 

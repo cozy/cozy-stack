@@ -59,12 +59,13 @@ func Home(c echo.Context) error {
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"ThemeCSS":    middlewares.ThemeCSS(instance),
-				"Domain":      instance.ContextualDomain(),
-				"ContextName": instance.ContextName,
-				"Locale":      instance.Locale,
-				"Favicon":     middlewares.Favicon(instance),
-				"CozyUI":      middlewares.CozyUI(instance),
+				"Domain":       instance.ContextualDomain(),
+				"ContextName":  instance.ContextName,
+				"Locale":       instance.Locale,
+				"Title":        instance.TemplateTitle(),
+				"ThemeCSS":     middlewares.ThemeCSS(instance),
+				"Favicon":      middlewares.Favicon(instance),
+				"SupportEmail": "contact@cozycloud.cc",
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))

@@ -151,14 +151,20 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
 		if !i.OnboardingFinished {
+			supportEmail := "contact@cozycloud.cc"
+			if ctxSettings, ok := i.SettingsContext(); ok {
+				if email, ok := ctxSettings["support_address"].(string); ok {
+					supportEmail = email
+				}
+			}
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"Title":       i.TemplateTitle(),
-				"ThemeCSS":    ThemeCSS(i),
-				"Domain":      i.ContextualDomain(),
-				"ContextName": i.ContextName,
-				"Locale":      i.Locale,
-				"Favicon":     Favicon(i),
-				"CozyUI":      CozyUI(i),
+				"Domain":       i.ContextualDomain(),
+				"ContextName":  i.ContextName,
+				"Locale":       i.Locale,
+				"Title":        i.TemplateTitle(),
+				"ThemeCSS":     ThemeCSS(i),
+				"Favicon":      Favicon(i),
+				"SupportEmail": supportEmail,
 			})
 		}
 		return next(c)
