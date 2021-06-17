@@ -3,7 +3,6 @@ package instances
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -158,7 +157,7 @@ func checkTriggers(c echo.Context) error {
 				"worker":    left.WorkerType,
 				"arguments": left.Arguments,
 				"debounce":  left.Debounce,
-				"message":   fmt.Sprintf("%s", left.Message),
+				"message":   string(left.Message),
 			})
 			break
 		}
@@ -174,7 +173,7 @@ func checkTriggers(c echo.Context) error {
 					"_id":     t.TID,
 					"trigger": t.Type,
 					"worker":  t.WorkerType,
-					"message": fmt.Sprintf("%s", t.Message),
+					"message": string(t.Message),
 				})
 				continue
 			}
@@ -184,7 +183,7 @@ func checkTriggers(c echo.Context) error {
 					"_id":     t.TID,
 					"trigger": t.Type,
 					"worker":  t.WorkerType,
-					"message": fmt.Sprintf("%s", t.Message),
+					"message": string(t.Message),
 				})
 			}
 			if slug, _ := msg["slug"].(string); slug == "" {
@@ -193,7 +192,7 @@ func checkTriggers(c echo.Context) error {
 					"_id":     t.TID,
 					"trigger": t.Type,
 					"worker":  t.WorkerType,
-					"message": fmt.Sprintf("%s", t.Message),
+					"message": string(t.Message),
 				})
 			}
 		}

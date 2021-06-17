@@ -286,10 +286,8 @@ func BulkDeleteDocs(db Database, doctype string, docs []Doc) error {
 		return err
 	}
 	for i, doc := range docs {
-		if d, ok := doc.(Doc); ok {
-			d.SetRev(res[i].Rev)
-			RTEvent(db, realtime.EventDelete, d, nil)
-		}
+		doc.SetRev(res[i].Rev)
+		RTEvent(db, realtime.EventDelete, doc, nil)
 	}
 	return nil
 }
