@@ -297,8 +297,11 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 		return err
 	}
 
-	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
-		return err
+	if len(m.Services) > 0 {
+		if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
+			return err
+		}
+		_ = couchdb.UpdateDoc(db, m)
 	}
 
 	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions(), m.Version())
