@@ -471,10 +471,10 @@ msgid "Error Contact us"
 msgstr "Un problème, une suggestion ? Contactez-nous à"
 
 msgid "Error Contact instance blocked"
-msgstr "Merci de nous contacter à l'adresse"
+msgstr "Contactez-nous, si vous souhaitez en savoir plus, à l'adresse"
 
 msgid "Error Message instance blocked"
-msgstr "Votre Cozy a été bloqué"
+msgstr "Le fonctionnement de votre Cozy a été momentanément interrompu"
 
 msgid "Instance Blocked Login"
 msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"

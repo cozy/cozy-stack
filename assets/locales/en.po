@@ -397,10 +397,10 @@ msgid "Error Address forgotten"
 msgstr "I have forgotten my address"
 
 msgid "Error Contact us"
-msgstr "A problem, a question ? Contact us at"
+msgstr "A problem, a question? Contact us at"
 
 msgid "Error Contact instance blocked"
-msgstr "Please contact us at"
+msgstr "Contact us, if you want to know more, at"
 
 msgid "Error Message instance blocked"
 msgstr "Your Cozy has been blocked"

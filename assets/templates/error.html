@@ -31,7 +31,7 @@
           {{$err := t .Error}}
           {{$arr := split $err "\n"}}
           {{range $i, $p := $arr}}
-            {{if ne $p ""}}<p class="mb-2">{{$p}}</p>{{end}}
+            {{if ne $p ""}}<p class="text-center mb-2">{{$p}}</p>{{end}}
           {{end}}
         </div>
         {{if .Link}}

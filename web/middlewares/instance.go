@@ -81,13 +81,12 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 	// Standard checks
 	if i.BlockingReason == instance.BlockedLoginFailed.Code {
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Title":       i.TemplateTitle(),
 			"Domain":      i.ContextualDomain(),
 			"ContextName": i.ContextName,
 			"Locale":      i.Locale,
-			"ThemeCSS":    ThemeCSS(i),
-			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
+			"Title":       i.TemplateTitle(),
 			"Favicon":     Favicon(i),
+			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
 		})
 	}
 
@@ -126,9 +125,7 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 
 	// Fallback by trying to determine the blocking reason
 	reason := i.BlockingReason
-	if reason == "" {
-		reason = i.Translate(instance.BlockedUnknown.Message)
-	} else if reason == instance.BlockedPaymentFailed.Code {
+	if reason == instance.BlockedPaymentFailed.Code {
 		returnCode = http.StatusPaymentRequired
 		reason = i.Translate(instance.BlockedPaymentFailed.Message)
 	}
@@ -138,13 +135,12 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 		return c.JSON(returnCode, i.Warnings())
 	default:
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Title":       i.TemplateTitle(),
 			"Domain":      i.ContextualDomain(),
 			"ContextName": i.ContextName,
 			"Locale":      i.Locale,
-			"ThemeCSS":    ThemeCSS(i),
-			"Reason":      reason,
+			"Title":       i.TemplateTitle(),
 			"Favicon":     Favicon(i),
+			"Reason":      reason,
 		})
 	}
 }
