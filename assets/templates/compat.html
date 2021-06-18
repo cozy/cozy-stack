@@ -2,49 +2,62 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{t "Compat Title"}}</title>
+    <meta http-equiv="refresh" content="3600">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{t "Compat Title"}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
-    <main role="application">
-      <section class="popup popup--large">
-        <header class="compat-header">
-          <img src="{{asset .Domain "/images/browser-unsupported.svg"}}" alt="">
-          <h1>{{t "Compat Title"}}</h1>
-        </header>
-        <div class="container">
-          <p>{{t "Compat Subtitle"}}</p>
-          <ul class="compat-browsers">
-            <li>
-              <a href="{{t "Compat Browser Chrome Link"}}">
-                <img src="{{asset .Domain "/images/chrome.svg"}}" alt="Google Chrome">
-                <span>Chrome</span>
-              </a>
-            </li>
-            <li>
-              <a href="{{t "Compat Browser Firefox Link"}}">
-                <img src="{{asset .Domain "/images/firefox.svg"}}" alt="Mozilla Firefox">
-                <span>Firefox</span>
-              </a>
-            </li>
-            <li>
-              <a href="{{t "Compat Browser Edge Link"}}">
-                <img src="{{asset .Domain "/images/edge.svg"}}" alt="Microsoft Edge">
-                <span>Edge</span>
-              </a>
-            </li>
-          </ul>
-          <ul class="compat-tips">
-            <li>{{t "Compat Tip 1"}}</li>
-            <li>{{t "Compat Tip 2"}}</li>
-          </ul>
-          <p class="compat-help">{{t "Compat Help"}} <a href='{{t "Compat Guide Link"}}'>{{t "Compat Guide"}}</a></p>
+  <body class="compat">
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-light.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
+      </header>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <img src="{{asset .Domain "/images/browser-unsupported.svg"}}" alt="" class="illustration mb-3" />
+        <h1 class="h4 h2-md mb-3 text-center">{{t "Compat Title"}}</h1>
+        <p class="text-center mb-4 mb-md-5">{{t "Compat Subtitle"}}</p>
+        <div class="d-flex align-items-center border rounded rounded-3 mb-4 mb-md-5 px-3">
+          <a href="{{t "Compat Browser Chrome Link"}}" class="d-flex flex-column align-items-center py-3 px-4 text-decoration-none">
+            <img src="{{asset .Domain "/images/chrome.svg"}}" alt="Google Chrome">
+            <span class="mt-2 caption text-body fw-bold">Chrome</span>
+          </a>
+          <div class="vertical-separator flex-shrink-0" role="separator"></div>
+          <a href="{{t "Compat Browser Firefox Link"}}" class="d-flex flex-column align-items-center py-3 px-4 text-decoration-none">
+            <img src="{{asset .Domain "/images/firefox.svg"}}" alt="Mozilla Firefox">
+            <span class="mt-2 caption text-body fw-bold">Firefox</span>
+          </a>
+          <div class="vertical-separator flex-shrink-0" role="separator"></div>
+          <a href="{{t "Compat Browser Edge Link"}}" class="d-flex flex-column align-items-center py-3 px-4 text-decoration-none">
+            <img src="{{asset .Domain "/images/edge.svg"}}" alt="Microsoft Edge">
+            <span class="mt-2 caption text-body fw-bold">Edge</span>
+          </a>
         </div>
-      </section>
+        <div class="w-100">
+          <div class="d-flex align-items-center">
+            <span class="icon icon-check-circle bg-success mb-3 flex-shrink-0"></span>
+            <p class="small ms-3">{{t "Compat Tip 1"}}</p>
+          </div>
+          <div class="d-flex align-items-center">
+            <span class="icon icon-check-circle bg-success mb-3 flex-shrink-0"></span>
+            <p class="small ms-3">{{t "Compat Tip 2"}}</p>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <p class="text-center mb-3">
+          {{t "Compat Help"}} <a href='{{t "Compat Guide Link"}}'>{{t "Compat Guide"}}</a>
+        </p>
+      </footer>
     </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

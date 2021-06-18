@@ -79,9 +79,10 @@ var rules = []browserRule{
 	// We don't support Firefox before version 52, except on iOS where the
 	// webkit engine is used on the version numbers are not the same.
 	{
-		name:       Firefox,
-		iPhone:     notIphone,
-		minVersion: 52,
+		name:   Firefox,
+		iPhone: notIphone,
+		// minVersion: 52,
+		minVersion: 99,
 	},
 	{
 		name:       Firefox,
@@ -119,6 +120,7 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 						"ContextName": instance.ContextName,
 						"Locale":      instance.Locale,
 						"Favicon":     Favicon(instance),
+						"ThemeCSS":    ThemeCSS(instance),
 					})
 				}
 			}
