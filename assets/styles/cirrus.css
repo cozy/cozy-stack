@@ -18,6 +18,10 @@
   mask: url(../icons/answer.svg) space no-repeat bottom;
   width: 0.813rem;
 }
+.icon-auth {
+  -webkit-mask-image: url(../icons/auth.svg);
+  mask-image: url(../icons/auth.svg);
+}
 .icon-back {
   -webkit-mask-image: url(../icons/back.svg);
   mask-image: url(../icons/back.svg);
@@ -25,6 +29,10 @@
 .icon-check {
   -webkit-mask-image: url(../icons/check.svg);
   mask-image: url(../icons/check.svg);
+}
+.icon-cross {
+  -webkit-mask-image: url(../icons/cross.svg);
+  mask-image: url(../icons/cross.svg);
 }
 .icon-eye-closed {
   -webkit-mask-image: url(../icons/eye-closed.svg);

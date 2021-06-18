@@ -58,9 +58,6 @@ func renderError(c echo.Context, code int, msg string) error {
 // Else, it redirects to its home application (or onboarding)
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if 1 == 1 {
-		return echo.NewHTTPError(404, "blah")
-	}
 
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
