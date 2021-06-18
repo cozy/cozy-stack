@@ -1,29 +1,41 @@
 <!DOCTYPE html>
-<html lang="{{.Locale}}" class="u-h-100">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
+    <meta http-equiv="refresh" content="3600">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body class="u-flex u-h-100">
-    <main role="application" class="u-flex u-flex-column u-flex-items-center u-flex-justify-center">
-      <header class="u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
-        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
-        <h2 class="u-title-h2" class="u-ml-half">Cozy</h2>
+  <body>
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-light.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
       </header>
-      <h1 class="u-maw-6 u-m-1 u-title-h1 u-bxz">{{.Title}}</h1>
-      <p class="u-maw-6 u-m-1 u-text">{{t "Move Link Description"}}</p>
-      <div class="u-maw-6 u-m-1 u-bg-paleGrey u-bdrs-4 u-stack-m u-p-1 u-bxz">
-        <a href="{{.Link}}" class="u-link">{{.Link}}</a>
+
+      <div class="d-flex flex-column align-items-center mb-5">
+        {{if .Illustration}}<img src="{{asset .Domain .Illustration}}" alt="" class="illustration mb-3" />{{end}}
+        <h1 class="h4 h2-md mb-3 text-center">{{.Title}}</h1>
+        <p class="text-center mb-4 mb-md-5">{{t "Move Link Description"}}</p>
+        <div class="alert alert-info mb-4 mb-md-5 w-100 small text-center">
+          <a href="{{.Link}}">{{t .Link}}</a>
+        </div>
+        <p class="text-center">{{t "Move Link More"}}</p>
       </div>
-      <p class="u-maw-6 u-m-1 u-text">{{t "Move Link More"}}</p>
-      <p class="u-maw-6 u-m-1">
-        <a href="{{t "Move Link FAQ URL"}}" class="u-link">{{t "Move Link FAQ Text"}}</a>
-      </p>
+
+      <footer>
+        <p class="text-center mb-4">
+          <a href="{{t "Move Link FAQ URL"}}">{{t "Move Link FAQ Text"}}</a>
+        </p>
+      </footer>
     </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

@@ -319,12 +319,12 @@ func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType str
 	}
 
 	return c.Render(http.StatusGone, "move_link.html", echo.Map{
-		"Title":       i.Translate("Move Link Title", name),
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Favicon":     middlewares.Favicon(i),
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
+		"Locale":      i.Locale,
+		"Title":       i.Translate("Move Link Title", name),
+		"ThemeCSS":    middlewares.ThemeCSS(i),
+		"Favicon":     middlewares.Favicon(i),
 		"Link":        link.String(),
 	})
 }
