@@ -480,7 +480,7 @@ msgid "Error Sharing already accepted"
 msgstr "You should find this sharing on your Cozy."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Go to my Cozy: %s"
+msgstr "Go to my Cozy"
 
 msgid "Two Factor Activation"
 msgstr "Authentication with two-factor is activated"

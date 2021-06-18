@@ -390,16 +390,17 @@ func PutRecipients(c echo.Context) error {
 
 func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL string) error {
 	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-		"Title":       inst.TemplateTitle(),
-		"ThemeCSS":    middlewares.ThemeCSS(inst),
-		"CozyUI":      middlewares.CozyUI(inst),
-		"Domain":      inst.ContextualDomain(),
-		"ContextName": inst.ContextName,
-		"ErrorTitle":  "Error Sharing already accepted Title",
-		"Error":       "Error Sharing already accepted",
-		"Button":      inst.Translate("Error Sharing already accepted Button", cozyURL),
-		"ButtonLink":  cozyURL,
-		"Favicon":     middlewares.Favicon(inst),
+		"Domain":       inst.ContextualDomain(),
+		"ContextName":  inst.ContextName,
+		"Locale":       inst.Locale,
+		"Title":        inst.TemplateTitle(),
+		"ThemeCSS":     middlewares.ThemeCSS(inst),
+		"Favicon":      middlewares.Favicon(inst),
+		"ErrorTitle":   "Error Sharing already accepted Title",
+		"Error":        "Error Sharing already accepted",
+		"Button":       "Error Sharing already accepted Button",
+		"ButtonLink":   cozyURL,
+		"SupportEmail": "contact@cozycloud.cc",
 	})
 }
 

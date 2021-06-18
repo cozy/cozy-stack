@@ -556,7 +556,7 @@ msgid "Error Sharing already accepted"
 msgstr "Vous pourrez retrouver ce partage sur votre Cozy."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Aller sur mon Cozy : %s"
+msgstr "Aller sur mon Cozy"
 
 msgid "Two Factor Activation"
 msgstr "L'authentification en deux étapes est activée"
