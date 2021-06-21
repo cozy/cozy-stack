@@ -409,7 +409,7 @@ msgid "Move Vault Ignore"
 msgstr "Deze stap overslaan"
 
 msgid "Error Title"
-msgstr "Sorry, er is een fout opgetreden."
+msgstr "Er is een onverwachte fout opgetreden."
 
 msgid "Error Internal Server Error Title"
 msgstr "Oeps…"
@@ -427,11 +427,17 @@ msgstr ""
 "Je hebt waarschijnlijk een verkeerd adres ingetoetst. Controleer het adres "
 "van je Cozy, dat na het creëren per e-mail aan je verstuurd is."
 
-msgid "Error Application not found Title"
+msgid "Error Application not installed Title"
 msgstr "App is nog niet beschikbaar"
 
+msgid "Error Application not installed Message"
+msgstr "Deze app is nog niet beschikbaar op je Cozy."
+
+msgid "Error Application not found Title"
+msgstr "Deze app bestaat niet"
+
 msgid "Error Application not found Message"
-msgstr "Sorry, deze app is nog niet beschikbaar op je Cozy."
+msgstr "Er is geen app gevonden die overeenkomt met dit adres. Typfoutje?"
 
 msgid "Error Application not found Action"
 msgstr "Ga naar je startpagina"
@@ -439,11 +445,14 @@ msgstr "Ga naar je startpagina"
 msgid "Error Application not found Button"
 msgstr "Deze app installeren"
 
+msgid "Error Address forgotten"
+msgstr "Ik ben mijn adres vergeten"
+
 msgid "Error Contact us"
 msgstr "Problemen? Vragen? Neem contact met ons op:"
 
 msgid "Error Contact instance blocked"
-msgstr "Neem contact met ons op via"
+msgstr "Als je meer te weten wilt komen, neem dan contact met ons op:"
 
 msgid "Error Message instance blocked"
 msgstr "Je Cozy is geblokkeerd"
@@ -520,7 +529,7 @@ msgid "Error Sharing already accepted"
 msgstr "Je kunt het gedeelde bestand terugvinden op je Cozy."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Ga naar mijn Cozy: %s"
+msgstr "Ga naar mijn Cozy"
 
 msgid "Two Factor Activation"
 msgstr "Authenticatie in twee stappen is ingeschakeld"
