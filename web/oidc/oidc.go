@@ -468,7 +468,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		"Favicon":      middlewares.Favicon(inst),
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,
-		"SupportEmail": "contact@cozycloud.cc",
+		"SupportEmail": inst.SupportEmailAddress(),
 	})
 }
 

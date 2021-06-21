@@ -400,7 +400,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 		"Error":        "Error Sharing already accepted",
 		"Button":       "Error Sharing already accepted Button",
 		"ButtonLink":   cozyURL,
-		"SupportEmail": "contact@cozycloud.cc",
+		"SupportEmail": inst.SupportEmailAddress(),
 	})
 }
 
@@ -459,7 +459,7 @@ func GetDiscovery(c echo.Context) error {
 			"Favicon":      middlewares.Favicon(inst),
 			"Illustration": "/images/generic-error.svg",
 			"Error":        "Error Invalid sharing",
-			"SupportEmail": "contact@cozycloud.cc",
+			"SupportEmail": inst.SupportEmailAddress(),
 		})
 	}
 
@@ -480,7 +480,7 @@ func GetDiscovery(c echo.Context) error {
 				"Favicon":      middlewares.Favicon(inst),
 				"Illustration": "/images/generic-error.svg",
 				"Error":        "Error Invalid sharing",
-				"SupportEmail": "contact@cozycloud.cc",
+				"SupportEmail": inst.SupportEmailAddress(),
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&

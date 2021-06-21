@@ -296,6 +296,17 @@ func (i *Instance) SettingsContext() (map[string]interface{}, bool) {
 	return settings, true
 }
 
+// SupportEmailAddress returns the email address that can be used to contact
+// the support.
+func (i *Instance) SupportEmailAddress() string {
+	if ctxSettings, ok := i.SettingsContext(); ok {
+		if email, ok := ctxSettings["support_address"].(string); ok {
+			return email
+		}
+	}
+	return "contact@cozycloud.cc"
+}
+
 // TemplateTitle returns the specific-context instance template title (if there
 // is one). Otherwise, returns the default one
 func (i *Instance) TemplateTitle() string {

@@ -99,14 +99,10 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 		return app.ErrNotFound
 	}
 
-	supportEmail := "contact@cozycloud.cc"
 	linkURL := i.DefaultRedirection().String()
 	link := "Error Application not found Action"
 	button := "Error Application not found Button"
 	if ctxSettings, ok := i.SettingsContext(); ok {
-		if email, ok := ctxSettings["support_address"].(string); ok {
-			supportEmail = email
-		}
 		if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
 			link = ""
 			button = ""
@@ -133,7 +129,7 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 		"LinkURL":      linkURL,
 		"Button":       button,
 		"ButtonURL":    buttonURL,
-		"SupportEmail": supportEmail,
+		"SupportEmail": i.SupportEmailAddress(),
 	})
 }
 

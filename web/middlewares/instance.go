@@ -81,12 +81,13 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 	// Standard checks
 	if i.BlockingReason == instance.BlockedLoginFailed.Code {
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Domain":      i.ContextualDomain(),
-			"ContextName": i.ContextName,
-			"Locale":      i.Locale,
-			"Title":       i.TemplateTitle(),
-			"Favicon":     Favicon(i),
-			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"Favicon":      Favicon(i),
+			"Reason":       i.Translate(instance.BlockedLoginFailed.Message),
+			"SupportEmail": i.SupportEmailAddress(),
 		})
 	}
 
@@ -135,12 +136,13 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 		return c.JSON(returnCode, i.Warnings())
 	default:
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Domain":      i.ContextualDomain(),
-			"ContextName": i.ContextName,
-			"Locale":      i.Locale,
-			"Title":       i.TemplateTitle(),
-			"Favicon":     Favicon(i),
-			"Reason":      reason,
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"Favicon":      Favicon(i),
+			"Reason":       reason,
+			"SupportEmail": i.SupportEmailAddress(),
 		})
 	}
 }
@@ -151,12 +153,6 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
 		if !i.OnboardingFinished {
-			supportEmail := "contact@cozycloud.cc"
-			if ctxSettings, ok := i.SettingsContext(); ok {
-				if email, ok := ctxSettings["support_address"].(string); ok {
-					supportEmail = email
-				}
-			}
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
 				"Domain":       i.ContextualDomain(),
 				"ContextName":  i.ContextName,
@@ -164,7 +160,7 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 				"Title":        i.TemplateTitle(),
 				"ThemeCSS":     ThemeCSS(i),
 				"Favicon":      Favicon(i),
-				"SupportEmail": supportEmail,
+				"SupportEmail": i.SupportEmailAddress(),
 			})
 		}
 		return next(c)

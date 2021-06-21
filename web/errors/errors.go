@@ -147,7 +147,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 
 		inverted := false
-		supportEmail := "contact@cozycloud.cc"
 		illustration := "/images/generic-error.svg"
 		var link, linkURL, button, buttonURL string
 
@@ -162,9 +161,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			linkURL = i.DefaultRedirection().String()
 			link = "Error Application not found Action"
 			if ctxSettings, ok := i.SettingsContext(); ok {
-				if email, ok := ctxSettings["support_address"].(string); ok {
-					supportEmail = email
-				}
 				if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
 					link = ""
 				}
@@ -184,7 +180,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Error":        value,
 			"Link":         link,
 			"LinkURL":      linkURL,
-			"SupportEmail": supportEmail,
+			"SupportEmail": i.SupportEmailAddress(),
 			"Button":       button,
 			"ButtonURL":    buttonURL,
 		})

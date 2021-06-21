@@ -49,7 +49,7 @@ func renderError(c echo.Context, code int, msg string) error {
 		"Favicon":      middlewares.Favicon(instance),
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,
-		"SupportEmail": "contact@cozycloud.cc",
+		"SupportEmail": instance.SupportEmailAddress(),
 	})
 }
 
@@ -68,7 +68,7 @@ func Home(c echo.Context) error {
 				"Title":        instance.TemplateTitle(),
 				"ThemeCSS":     middlewares.ThemeCSS(instance),
 				"Favicon":      middlewares.Favicon(instance),
-				"SupportEmail": "contact@cozycloud.cc",
+				"SupportEmail": instance.SupportEmailAddress(),
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))

@@ -147,7 +147,7 @@ func createImport(c echo.Context) error {
 			"Favicon":      middlewares.Favicon(inst),
 			"Illustration": "/images/generic-error.svg",
 			"Error":        err.Error(),
-			"SupportEmail": "contact@cozycloud.cc",
+			"SupportEmail": inst.SupportEmailAddress(),
 		})
 	}
 
@@ -405,7 +405,7 @@ func requestMove(c echo.Context) error {
 			"Favicon":      middlewares.Favicon(inst),
 			"Illustration": "/images/generic-error.svg",
 			"Error":        err.Error(),
-			"SupportEmail": "contact@cozycloud.cc",
+			"SupportEmail": inst.SupportEmailAddress(),
 		})
 	}
 
@@ -461,7 +461,7 @@ func startMove(c echo.Context) error {
 			"Favicon":      middlewares.Favicon(inst),
 			"Illustration": "/images/generic-error.svg",
 			"Error":        err.Error(),
-			"SupportEmail": "contact@cozycloud.cc",
+			"SupportEmail": inst.SupportEmailAddress(),
 		})
 	}
 
