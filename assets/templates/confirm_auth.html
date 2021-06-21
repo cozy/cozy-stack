@@ -19,7 +19,7 @@
           <div class="modal-icon">
             <span class="icon icon-auth"></span>
           </div>
-          <div class="modal-body mt-3 mt-md-1 p-md-5">
+          <div class="modal-body mt-4 mt-md-1 p-md-5">
             <form id="login-form" method="POST" action="/auth/confirm" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
               <input id="state" type="hidden" name="state" value="{{.State}}" />
               <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
@@ -38,7 +38,7 @@
               <a href="/auth/passphrase_reset{{if .Redirect}}?redirect={{.Redirect}}{{end}}" class="align-self-start my-3">
                 {{t "Login Forgot password"}}
               </a>
-              <button id="login-submit" class="btn btn-primary w-100 mt-4 mt-md-5" type="submit">
+              <button id="login-submit" class="btn btn-primary btn-md-lg w-100 mt-4 mt-md-5" type="submit">
                 {{t "Login Submit"}}
               </button>
             </form>
