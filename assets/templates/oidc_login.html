@@ -2,7 +2,6 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="3600">
     <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
@@ -13,7 +12,7 @@
   <body>
     <div role="application">
       <main class="wizard">
-        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
+        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
           <div role="region" class="wizard-main" id="login-field">
             <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
               <img class="c-avatar-image" src="{{asset .Domain "/images/default-avatar.png"}}" alt="" />

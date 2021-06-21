@@ -41,12 +41,15 @@ func wantsJSON(c echo.Context) bool {
 func renderError(c echo.Context, code int, msg string) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(code, "error.html", echo.Map{
-		"CozyUI":      middlewares.CozyUI(instance),
-		"ThemeCSS":    middlewares.ThemeCSS(instance),
-		"Domain":      instance.ContextualDomain(),
-		"ContextName": instance.ContextName,
-		"Error":       msg,
-		"Favicon":     middlewares.Favicon(instance),
+		"Domain":       instance.ContextualDomain(),
+		"ContextName":  instance.ContextName,
+		"Locale":       instance.Locale,
+		"Title":        instance.TemplateTitle(),
+		"ThemeCSS":     middlewares.ThemeCSS(instance),
+		"Favicon":      middlewares.Favicon(instance),
+		"Illustration": "/images/generic-error.svg",
+		"Error":        msg,
+		"SupportEmail": instance.SupportEmailAddress(),
 	})
 }
 
@@ -59,12 +62,13 @@ func Home(c echo.Context) error {
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"ThemeCSS":    middlewares.ThemeCSS(instance),
-				"Domain":      instance.ContextualDomain(),
-				"ContextName": instance.ContextName,
-				"Locale":      instance.Locale,
-				"Favicon":     middlewares.Favicon(instance),
-				"CozyUI":      middlewares.CozyUI(instance),
+				"Domain":       instance.ContextualDomain(),
+				"ContextName":  instance.ContextName,
+				"Locale":       instance.Locale,
+				"Title":        instance.TemplateTitle(),
+				"ThemeCSS":     middlewares.ThemeCSS(instance),
+				"Favicon":      middlewares.Favicon(instance),
+				"SupportEmail": instance.SupportEmailAddress(),
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))

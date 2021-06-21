@@ -81,13 +81,13 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 	// Standard checks
 	if i.BlockingReason == instance.BlockedLoginFailed.Code {
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Title":       i.TemplateTitle(),
-			"Domain":      i.ContextualDomain(),
-			"ContextName": i.ContextName,
-			"Locale":      i.Locale,
-			"ThemeCSS":    ThemeCSS(i),
-			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
-			"Favicon":     Favicon(i),
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"Favicon":      Favicon(i),
+			"Reason":       i.Translate(instance.BlockedLoginFailed.Message),
+			"SupportEmail": i.SupportEmailAddress(),
 		})
 	}
 
@@ -126,9 +126,7 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 
 	// Fallback by trying to determine the blocking reason
 	reason := i.BlockingReason
-	if reason == "" {
-		reason = i.Translate(instance.BlockedUnknown.Message)
-	} else if reason == instance.BlockedPaymentFailed.Code {
+	if reason == instance.BlockedPaymentFailed.Code {
 		returnCode = http.StatusPaymentRequired
 		reason = i.Translate(instance.BlockedPaymentFailed.Message)
 	}
@@ -138,13 +136,13 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 		return c.JSON(returnCode, i.Warnings())
 	default:
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
-			"Title":       i.TemplateTitle(),
-			"Domain":      i.ContextualDomain(),
-			"ContextName": i.ContextName,
-			"Locale":      i.Locale,
-			"ThemeCSS":    ThemeCSS(i),
-			"Reason":      reason,
-			"Favicon":     Favicon(i),
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"Favicon":      Favicon(i),
+			"Reason":       reason,
+			"SupportEmail": i.SupportEmailAddress(),
 		})
 	}
 }
@@ -156,13 +154,13 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 		i := GetInstance(c)
 		if !i.OnboardingFinished {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"Title":       i.TemplateTitle(),
-				"ThemeCSS":    ThemeCSS(i),
-				"Domain":      i.ContextualDomain(),
-				"ContextName": i.ContextName,
-				"Locale":      i.Locale,
-				"Favicon":     Favicon(i),
-				"CozyUI":      CozyUI(i),
+				"Domain":       i.ContextualDomain(),
+				"ContextName":  i.ContextName,
+				"Locale":       i.Locale,
+				"Title":        i.TemplateTitle(),
+				"ThemeCSS":     ThemeCSS(i),
+				"Favicon":      Favicon(i),
+				"SupportEmail": i.SupportEmailAddress(),
 			})
 		}
 		return next(c)

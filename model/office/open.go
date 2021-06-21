@@ -193,7 +193,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	doc.OO.Editor.Custom.CompactHeader = true
 	doc.OO.Editor.Custom.Customer.Address = "158 rue de Verdun 92800 Puteaux"
 	doc.OO.Editor.Custom.Customer.Logo = o.Inst.FromURL(&url.URL{Path: "/assets/icon-192.png"})
-	doc.OO.Editor.Custom.Customer.Mail = "contact@cozycloud.cc"
+	doc.OO.Editor.Custom.Customer.Mail = o.Inst.SupportEmailAddress()
 	doc.OO.Editor.Custom.Customer.Name = "Cozy Cloud"
 	doc.OO.Editor.Custom.Customer.WWW = "cozy.io"
 	doc.OO.Editor.Custom.Feedback = false

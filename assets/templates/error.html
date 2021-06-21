@@ -1,40 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
+    <meta http-equiv="refresh" content="3600">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
-    <div role="application">
-      <main class="wizard">
-        <section class="wizard-wrapper">
-          <div role="region" class="wizard-main">
-            <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
-            <div class="o-field">
-              {{$err := t .Error}}
-              {{$arr := split $err "\n"}}
-              {{range $i, $p := $arr}}
-                {{if ne $p ""}}
-                <p>{{$p}}</p>
-                {{end}}
-              {{end}}
-              {{with $email := or .SupportEmail "contact@cozycloud.cc"}}
-              <p class="wizard-notice"><strong>{{t "Error Contact us" }} <a href="mailto:{{$email}}">{{$email}}</a>.</strong></p>
-              {{end}}
-            </div>
-          </div>
-          {{if .Button}}
-          <footer class="wizard-footer u-pb-half">
-            <a class="c-btn c-btn--full wizard-button" href="{{.ButtonLink}}"><span>{{t .Button}}</span></a>
-          </footer>
+  <body{{if .Inverted}} class="theme-inverted"{{end}}>
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          {{if .Inverted}}
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+          {{else}}
+          <img src="{{asset .Domain "/images/logo-light.svg"}}" alt="Cozy Cloud" class="logo" />
           {{end}}
-        </section>
-      </main>
-    </div>
+        </a>
+      </header>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        {{if .Illustration}}<img src="{{asset .Domain .Illustration}}" alt="" class="illustration mb-3" />{{end}}
+        <h1 class="h4 h2-md mb-3 text-center">{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
+        <div class="mb-3 mb-md-4">
+          {{$err := t .Error}}
+          {{$arr := split $err "\n"}}
+          {{range $i, $p := $arr}}
+            {{if ne $p ""}}<p class="text-center mb-2">{{$p}}</p>{{end}}
+          {{end}}
+        </div>
+        {{if .Link}}
+        <a href="{{.LinkURL}}" class="mb-3">{{t .Link}}</a>
+        {{end}}
+      </div>
+
+      <footer>
+        {{if .SupportEmail}}
+        <p class="text-center mb-3">
+          <strong>{{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.</strong>
+        </p>
+        {{end}}
+        {{if .Button}}
+        <a href="{{.ButtonURL}}" class="btn btn-primary mb-3 w-100">{{t .Button}}</a>
+        {{end}}
+      </footer>
+    </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

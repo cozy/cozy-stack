@@ -367,7 +367,7 @@ msgid "Move Vault Ignore"
 msgstr "Skip this step"
 
 msgid "Error Title"
-msgstr "Sorry, an error occurred."
+msgstr "Sorry, an unexpected error occurred."
 
 msgid "Error Internal Server Error Title"
 msgstr "Oops…"
@@ -381,23 +381,34 @@ msgstr "Address of this Cozy does not exist"
 msgid "Error Instance not found Message"
 msgstr "You may have entered a wrong address from a typing mistake. To make sure, please check the address of your Cozy sent to you by e-mail during its creation."
 
-msgid "Error Application not found Title"
+msgid "Error Application not installed Title"
 msgstr "Application not yet available"
 
+msgid "Error Application not installed Message"
+msgstr "This application is not yet available in your Cozy."
+
+msgid "Error Application not found Title"
+msgstr "The application doesn't exist"
+
 msgid "Error Application not found Message"
-msgstr "We are sorry. This application is not yet available in your Cozy."
+msgstr ""
+"We haven't found any application matching this address in your Cozy. "
+"Maybe it is a matter of typing error."
 
 msgid "Error Application not found Action"
-msgstr "Go to your home"
+msgstr "Go to the home"
 
 msgid "Error Application not found Button"
 msgstr "Install this application"
 
+msgid "Error Address forgotten"
+msgstr "I have forgotten my address"
+
 msgid "Error Contact us"
-msgstr "A problem, a question ? Contact us at"
+msgstr "A problem, a question? Contact us at"
 
 msgid "Error Contact instance blocked"
-msgstr "Please contact us at"
+msgstr "Contact us, if you want to know more, at"
 
 msgid "Error Message instance blocked"
 msgstr "Your Cozy has been blocked"
@@ -469,7 +480,7 @@ msgid "Error Sharing already accepted"
 msgstr "You should find this sharing on your Cozy."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Go to my Cozy: %s"
+msgstr "Go to my Cozy"
 
 msgid "Two Factor Activation"
 msgstr "Authentication with two-factor is activated"

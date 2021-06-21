@@ -2,34 +2,35 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
-    <div role="application">
-      <main class="wizard">
-        <div role="region" class="wizard-main">
-          <div class="c-avatar u-mh-auto u-mv-2">
-            <img class="c-avatar-image" src="/public/avatar" alt="" />
-          </div>
-          <div role="region" class="wizard-main">
-            <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">
-              {{t "Onboarding Not activated Title"}}
-            </h1>
-            <div class="o-field">
-              <p>
-                {{t "Onboarding Not activated Check mails"}}
-              </p>
-              <p><strong>{{t "Onboarding Not activated Contact us"}} <a href="mailto:contact@cozycloud.cc">contact@cozycloud.cc</a>.</strong></p>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
+  <body class="theme-inverted">
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
+      </header>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <img src="{{asset .Domain "/images/mail-sent.svg"}}" alt="" class="illustration mb-3" />
+        <h1 class="h4 h2-md mb-3 text-center">{{t "Onboarding Not activated Title"}}</h1>
+        <p class="text-center">{{t "Onboarding Not activated Check mails"}}</p>
+      </div>
+
+      <footer>
+        <p class="text-center mb-3">
+          <strong>{{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.</strong>
+        </p>
+      </footer>
+    </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

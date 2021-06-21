@@ -1,29 +1,31 @@
 <!DOCTYPE html>
 <html lang="{{.Locale}}">
-
-<head>
+  <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
-</head>
-
-<body>
-    <main role="application">
-        <section class="popup">
-            <header class="compat-header">
-                <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
-                <h1>{{t "Error Message instance blocked"}}</h1>
-            </header>
-            <div class="container">
-                <p>{{.Reason}}</p>
-                <p><strong>{{t "Error Contact instance blocked" }} <a href="mailto:contact@cozycloud.cc">contact@cozycloud.cc</a>.</strong></p>
-            </div>
-        </section>
+  </head>
+  <body class="theme-inverted">
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
+      </header>
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <img src="{{asset .Domain "/images/forbidden.svg"}}" alt="" class="illustration mb-3" />
+        <h1 class="h4 h2-md mb-3 text-center">{{t "Error Message instance blocked"}}</h1>
+        {{if .Reason}}<p class="text-center mb-2">{{.Reason}}</p>{{end}}
+        <p class="text-center">{{t "Error Contact instance blocked" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.</p>
+      </div>
+      <footer></footer>
     </main>
-</body>
-
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+  </body>
 </html>

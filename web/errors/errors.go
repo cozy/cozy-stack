@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -141,35 +142,47 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			i = &instance.Instance{
 				Domain:      req.Host,
 				ContextName: config.DefaultInstanceContext,
+				Locale:      consts.DefaultLocale,
 			}
 		}
 
-		var buttonTitle, buttonURL, supportEmail string
-		if ok && err == app.ErrNotFound {
-			buttonURL = i.DefaultRedirection().String()
-			buttonTitle = "Error Application not found Action"
+		inverted := false
+		illustration := "/images/generic-error.svg"
+		var link, linkURL, button, buttonURL string
+
+		switch err {
+		case instance.ErrNotFound:
+			inverted = true
+			illustration = "/images/desert.svg"
+			link = "Error Address forgotten"
+			linkURL = "https://manager.cozycloud.cc/v2/cozy/remind"
+		case app.ErrNotFound:
+			illustration = "/images/desert.svg"
+			linkURL = i.DefaultRedirection().String()
+			link = "Error Application not found Action"
 			if ctxSettings, ok := i.SettingsContext(); ok {
-				if email, ok := ctxSettings["support_address"].(string); ok {
-					supportEmail = email
-				}
 				if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
-					buttonTitle = ""
+					link = ""
 				}
 			}
 		}
 
 		err = c.Render(status, "error.html", echo.Map{
-			"Title":        i.TemplateTitle(),
-			"CozyUI":       middlewares.CozyUI(i),
-			"ThemeCSS":     middlewares.ThemeCSS(i),
 			"Domain":       i.ContextualDomain(),
 			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"ThemeCSS":     middlewares.ThemeCSS(i),
+			"Favicon":      middlewares.Favicon(i),
+			"Inverted":     inverted,
+			"Illustration": illustration,
 			"ErrorTitle":   title,
 			"Error":        value,
-			"Button":       buttonTitle,
-			"ButtonLink":   buttonURL,
-			"Favicon":      middlewares.Favicon(i),
-			"SupportEmail": supportEmail,
+			"Link":         link,
+			"LinkURL":      linkURL,
+			"SupportEmail": i.SupportEmailAddress(),
+			"Button":       button,
+			"ButtonURL":    buttonURL,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
