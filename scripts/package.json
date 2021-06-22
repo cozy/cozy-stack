@@ -7,6 +7,7 @@
   "dependencies": {
     "eslint-config-cozy-app": "2.1.0",
     "eslint-plugin-prettier": "3.4.0",
-    "prettier": "2.3.2"
+    "prettier": "2.3.2",
+    "svgo": "2.3.0"
   }
 }

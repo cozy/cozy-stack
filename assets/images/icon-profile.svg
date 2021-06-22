@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <defs>
-    <path id="a" d="M46,23 C46,35.704 35.702,46 23,46 C10.296,46 0,35.704 0,23 C0,10.3 10.296,0 23,0 C35.702,0 46,10.3 46,23 L46,23 Z"/>
-  </defs>
-  <g fill="none" fill-rule="evenodd" transform="translate(-384 -480)">
-    <g transform="translate(385 481)">
-      <mask id="b" fill="white">
-        <use xlink:href="#a"/>
-      </mask>
-      <use fill="#CEBEF7" xlink:href="#a"/>
-      <path fill="#855CEA" d="M23,27 C17.4771525,27 13,22.2989899 13,16.5 C13,10.7010101 17.4771525,6 23,6 C28.5228475,6 33,10.7010101 33,16.5 C33,22.2989899 28.5228475,27 23,27 Z M23,65 C13.0588745,65 5,56.9411255 5,47 C5,37.0588745 13.0588745,29 23,29 C32.9411255,29 41,37.0588745 41,47 C41,56.9411255 32.9411255,65 23,65 Z" mask="url(#b)"/>
-    </g>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><path id="a" d="M46 23c0 12.704-10.298 23-23 23C10.296 46 0 35.704 0 23 0 10.3 10.296 0 23 0c12.702 0 23 10.3 23 23z"/></defs><g transform="translate(1 1)" fill="none" fill-rule="evenodd"><mask id="b" fill="#fff"><use xlink:href="#a"/></mask><use fill="#CEBEF7" xlink:href="#a"/><path fill="#855CEA" d="M23 27c-5.523 0-10-4.701-10-10.5S17.477 6 23 6s10 4.701 10 10.5S28.523 27 23 27zm0 38c-9.941 0-18-8.059-18-18s8.059-18 18-18 18 8.059 18 18-8.059 18-18 18z" mask="url(#b)"/></g></svg>
