@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -585,7 +586,9 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 			cloned := file.Clone().(*FileDoc)
 			parentPath, ok := dirs[file.DirID]
 			if !ok {
-				return ErrParentDoesNotExist
+				logger.WithDomain(c.db.DomainName()).WithField("nspace", "vfs").
+					Infof("setTrashedForFilesInsideDir: parent not found for %s", file.DocID)
+				return nil
 			}
 			fullpath := path.Join(parentPath, file.DocName)
 			fullpath = strings.TrimPrefix(fullpath, TrashDirName)
