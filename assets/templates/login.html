@@ -61,7 +61,7 @@
           </a>
           {{if not .OAuth}}
           <div class="form-check align-self-start">
-            <input class="form-check-input" type="checkbox" id="long-run-session" name="long-run-session" />
+            <input class="form-check-input" type="checkbox" id="long-run-session" name="long-run-session" checked />
             <label class="form-check-label" for="long-run-session">
               {{t "Login Long Session"}}
             </label>
@@ -74,7 +74,7 @@
             {{t "Login Submit"}}
           </button>
           {{if .BottomNavBar}}
-          <p class="banner caption small-md fst-italic fullbleed">
+          <p class="banner caption mt-n1 mb-0 small-md fst-italic fullbleed">
             <span class="icon icon-answer reverse-y align-bottom"></span>
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}

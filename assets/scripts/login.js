@@ -21,35 +21,9 @@
     // do nothing
   }
 
-  let errorPanel = loginField.querySelector('.invalid-tooltip')
-  const showError = function (message) {
-    let error = 'The Cozy server is unavailable. Do you have network?'
-    if (message) {
-      error = '' + message
-    }
-
-    if (errorPanel) {
-      errorPanel.lastChild.textContent = error
-    } else {
-      errorPanel = d.createElement('div')
-      errorPanel.classList.add('invalid-tooltip', 'mb-1')
-      const arrow = d.createElement('div')
-      arrow.classList.add('tooltip-arrow')
-      errorPanel.appendChild(arrow)
-      const icon = d.createElement('span')
-      icon.classList.add('icon', 'icon-alert', 'bg-danger')
-      errorPanel.appendChild(icon)
-      errorPanel.append(error)
-      loginField.appendChild(errorPanel)
-    }
-
-    passphraseInput.classList.add('is-invalid')
-    passphraseInput.select()
-    submitButton.removeAttribute('disabled')
-  }
-
   const onSubmitPassphrase = function (event) {
     event.preventDefault()
+    passphraseInput.setAttribute('disabled', true)
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
@@ -99,11 +73,11 @@
             submitButton.classList.add('btn-done')
             w.location = body.redirect
           } else {
-            showError(body.error)
+            showError(loginField, body.error)
           }
         })
       })
-      .catch(showError)
+      .catch(err => showError(loginField, err))
   }
 
   loginForm.addEventListener('submit', onSubmitPassphrase)
