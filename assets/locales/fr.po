@@ -332,15 +332,14 @@ msgid "Authorize Linked Title"
 msgstr "Demande de permissions"
 
 msgid "Authorize Linked Webapp"
-msgstr "Une application déclare être :"
+msgstr "Une application déclarée comme :"
 
 msgid "Authorize Linked YourCozy"
-msgstr "Elle demande l'accès à votre Cozy :"
+msgstr "demande l'accès à votre Cozy :"
 
 msgid "Authorize Linked Help"
 msgstr ""
-"En l'autorisant, l'application pourra accéder aux données suivantes de votre"
-" Cozy :"
+"L'application demande à accéder aux données suivantes de votre Cozy :"
 
 msgid "Move delegated auth Title"
 msgstr "Confirmation du déménagement"
@@ -566,6 +565,9 @@ msgstr ""
 "Votre adresse e-mail est maintenant confirmée. La double-authentification a "
 "bien été activée avec succès sur votre Cozy."
 
+msgid "Permissions Wildcard"
+msgstr ", avec les données associées "
+
 msgid "Permissions Read only"
 msgstr ", en lecture seule "
 
@@ -629,6 +631,9 @@ msgstr "Factures"
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"
 
+msgid "Permissions io.cozy.contacts.groups"
+msgstr "Groupes de contacts"
+
 msgid "Permissions io.cozy.files"
 msgstr "Fichiers"
 
@@ -663,13 +668,16 @@ msgid "Permissions io.cozy.jobs"
 msgstr "Tâches à exécuter"
 
 msgid "Permissions io.cozy.triggers"
-msgstr "Planification de tâches à exécuter dans le futur"
+msgstr "Planification de tâches à exécuter"
 
 msgid "Permissions io.cozy.permissions"
 msgstr "Délégation de permissions"
 
 msgid "Permissions io.cozy.oauth.clients"
 msgstr "Appareils connectés"
+
+msgid "Permissions io.cozy.sharings"
+msgstr "Liste de partages"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contrat (Maif)"

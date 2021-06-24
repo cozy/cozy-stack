@@ -41,7 +41,8 @@ pretty: scripts/node_modules
 
 ## svgo: optimize the SVG
 svgo: scripts/node_modules
-	@scripts/node_modules/.bin/svgo -r -f assets/icons -f assets/images
+	@scripts/node_modules/.bin/svgo -r -f assets/icons
+	@scripts/node_modules/.bin/svgo -r -f assets/images
 
 scripts/node_modules: Makefile scripts/package.json scripts/yarn.lock
 	@cd scripts && yarn

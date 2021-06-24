@@ -8,6 +8,7 @@
     themeColor.setAttribute('content', paperColor)
   }
 
+  // Add an helper function to display an error on a form input
   w.showError = (field, message) => {
     let tooltip = field.querySelector('.invalid-tooltip')
     let input = field.querySelector('input')
@@ -36,5 +37,16 @@
     input.removeAttribute('disabled')
     input.classList.add('is-invalid')
     input.select()
+  }
+
+  // Use the browser history for managing cancel links
+  var cancel = w.document.querySelector('a.cancel')
+  if (cancel) {
+    cancel.addEventListener('click', function (event) {
+      if (w.history.length > 1) {
+        event.preventDefault()
+        w.history.back()
+      }
+    })
   }
 })(window, document)

@@ -46,6 +46,136 @@
   -webkit-mask-image: url(../icons/eye-opened.svg);
   mask-image: url(../icons/eye-opened.svg);
 }
+.icon-permissions {
+  -webkit-mask-image: url(../icons/permissions.svg);
+  mask-image: url(../icons/permissions.svg);
+}
+
+/* Permissions list on the OAuth authorize page */
+.authorize-pill {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+}
+.permissions-list {
+  padding: 0;
+  list-style: none;
+}
+.permissions-list li {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.permissions-list li .small {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  padding: 1rem 1rem 1rem 2rem;
+}
+.permissions-list li + li .small {
+  border-top: solid 1px var(--dividerColor);
+}
+.permissions-list li .rounded-circle {
+  flex: 2rem 0 0;
+  height: 2rem;
+  margin-left: 2rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--dividerColor);
+}
+@media (min-width: 768px) {
+  .permissions-list li .rounded-circle {
+    margin-left: 4rem;
+  }
+}
+.permissions-list li .perm {
+  mask-position: center;
+  mask-size: 1rem;
+  mask-repeat: no-repeat;
+}
+.perm {
+  webkit-mask-image: url("../images/icon-fallback.svg");
+  mask-image: url("../images/icon-fallback.svg");
+}
+.perm[class^="com-bitwarden-ciphers"],
+.perm[class^="com-bitwarden-folders"],
+.perm[class^="com-bitwarden-organizations"],
+.perm[class^="com-bitwarden-profiles"] {
+  mask-image: url("../images/icon-permissions.svg");
+}
+.perm[class^="io-cozy-settings"],
+.perm[class^="io-cozy-bank-settings"] {
+  mask-image: url("../images/icon-settings.svg");
+}
+.perm[class^="io-cozy-accounts"],
+.perm[class^="io-cozy-accounts-stats"] {
+  mask-image: url("../images/icon-accounts.svg");
+}
+.perm[class^="io-cozy-apps"],
+.perm[class^="io-cozy-apps-suggestions"] {
+  mask-image: url("../images/icon-apps.svg");
+}
+.perm[class^="io-cozy-bank-accounts"] {
+  mask-image: url("../images/icon-bank-accounts.svg");
+}
+.perm[class^="io-cozy-bank-groups"] {
+  mask-image: url("../images/icon-bank-groups.svg");
+}
+.perm[class^="io-cozy-bank-operations"] {
+  mask-image: url("../images/icon-bank-operations.svg");
+}
+.perm[class^="io-cozy-bank-recipients"] {
+  mask-image: url("../images/icon-contacts.svg");
+}
+.perm[class^="io-cozy-bank-recurrence"] {
+  mask-image: url("../images/icon-bank-recurrence.svg");
+}
+.perm[class^="io-cozy-bills"] {
+  mask-image: url("../images/icon-bill.svg");
+}
+.perm[class^="io-cozy-contacts"] {
+  mask-image: url("../images/icon-contacts.svg");
+}
+.perm[class^="io-cozy-files"] {
+  mask-image: url("../images/icon-files.svg");
+}
+.perm[class^="io-cozy-files-versions"] {
+  mask-image: url("../images/icon-files-versions.svg");
+}
+.perm[class^="io-cozy-certified-carbon_copy"] {
+  mask-image: url("../images/icon-certified.svg");
+}
+.perm[class^="io-cozy-certified-electronic_safe"] {
+  mask-image: url("../images/icon-safe.svg");
+}
+.perm[class^="io-cozy-identities"] {
+  mask-image: url("../images/icon-identities.svg");
+}
+.perm[class^="io-cozy-konnectors"] {
+  mask-image: url("../images/icon-konnectors.svg");
+}
+.perm[class^="io-cozy-notifications"] {
+  mask-image: url("../images/icon-notifications.svg");
+}
+.perm[class^="io-cozy-photos-albums"] {
+  mask-image: url("../images/icon-photos-album.svg");
+}
+.perm[class^="io-cozy-timeseries-geojson"] {
+  mask-image: url("../images/icon-location.svg");
+}
+.perm[class^="io-cozy-jobs"] {
+  mask-image: url("../images/icon-triggers.svg");
+}
+.perm[class^="io-cozy-triggers"] {
+  mask-image: url("../images/icon-triggers.svg");
+}
+.perm[class^="io-cozy-permissions"] {
+  mask-image: url("../images/icon-permissions.svg");
+}
+.perm[class^="io-cozy-oauth-clients"] {
+  mask-image: url("../images/icon-device.svg");
+}
 
 /* Others */
 .compat .vertical-separator {

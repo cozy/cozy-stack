@@ -285,13 +285,13 @@ msgid "Authorize Linked Title"
 msgstr "Permissions request"
 
 msgid "Authorize Linked Webapp"
-msgstr "An application claims to be:"
+msgstr "An application that claims to be:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "It requests access to your Cozy:"
+msgstr "requests access to your Cozy:"
 
 msgid "Authorize Linked Help"
-msgstr "By authorizing, the application will be able to acces to these data in your Cozy:"
+msgstr "The application ask access to these types of data in your Cozy:"
 
 msgid "Move delegated auth Title"
 msgstr "Move confirmation"
@@ -489,6 +489,9 @@ msgid "Confirmation User Content"
 msgstr "Your e-mail is now confirmed. We successfully activated two-factor authentication for your Cozy."
 
 msgid "Permissions Read only"
+msgstr ", and related documents"
+
+msgid "Permissions Read only"
 msgstr ", for read only"
 
 msgid "Permissions disk usage"
@@ -551,6 +554,9 @@ msgstr "Bills"
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"
 
+msgid "Permissions io.cozy.contacts"
+msgstr "Groups of contacts"
+
 msgid "Permissions io.cozy.files"
 msgstr "Files"
 
@@ -592,6 +598,9 @@ msgstr "Delegating permissions"
 
 msgid "Permissions io.cozy.oauth.clients"
 msgstr "Connected devices"
+
+msgid "Permissions io.cozy.sharings"
+msgstr "List of sharings"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contract (Maif)"

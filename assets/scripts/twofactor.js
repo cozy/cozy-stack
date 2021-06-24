@@ -71,11 +71,11 @@
             submitButton.classList.add('btn-done')
             w.location = body.redirect
           } else {
-            showError(twofaField, body.error)
+            w.showError(twofaField, body.error)
           }
         })
       })
-      .catch(err => showError(twofaField, err))
+      .catch((err) => w.showError(twofaField, err))
   }
 
   twofaForm.addEventListener('submit', onSubmitTwoFactorCode)

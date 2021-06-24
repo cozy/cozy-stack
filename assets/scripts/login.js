@@ -73,11 +73,11 @@
             submitButton.classList.add('btn-done')
             w.location = body.redirect
           } else {
-            showError(loginField, body.error)
+            w.showError(loginField, body.error)
           }
         })
       })
-      .catch(err => showError(loginField, err))
+      .catch((err) => w.showError(loginField, err))
   }
 
   loginForm.addEventListener('submit', onSubmitPassphrase)

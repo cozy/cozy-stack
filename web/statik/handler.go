@@ -96,9 +96,11 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	t := template.New("stub")
 	h := http.StripPrefix(assetsPrefix, http.FileServer(dir(assetsPath)))
 	middlewares.FuncsMap = template.FuncMap{
-		"t":     fmt.Sprintf,
-		"tHTML": fmt.Sprintf,
-		"split": strings.Split,
+		"t":         fmt.Sprintf,
+		"tHTML":     fmt.Sprintf,
+		"split":     strings.Split,
+		"replace":   strings.Replace,
+		"hasSuffix": strings.HasSuffix,
 		// XXX We are using assetPath (and not AssetPath) here to avoid caching
 		// the assets via the sum in the URL. But it means that we have no
 		// fallback to the default context.
@@ -123,13 +125,15 @@ func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
 
 	middlewares.FuncsMap = template.FuncMap{
-		"t":        fmt.Sprintf,
-		"tHTML":    fmt.Sprintf,
-		"split":    strings.Split,
-		"asset":    AssetPath,
-		"ext":      fileExtension,
-		"basename": basename,
-		"filetype": filetype,
+		"t":         fmt.Sprintf,
+		"tHTML":     fmt.Sprintf,
+		"split":     strings.Split,
+		"replace":   strings.Replace,
+		"hasSuffix": strings.HasSuffix,
+		"asset":     AssetPath,
+		"ext":       fileExtension,
+		"basename":  basename,
+		"filetype":  filetype,
 	}
 
 	for _, name := range templatesList {

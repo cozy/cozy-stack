@@ -189,15 +189,14 @@ func authorizeForm(c echo.Context) error {
 
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Title":            instance.TemplateTitle(),
-		"CozyUI":           middlewares.CozyUI(instance),
-		"ThemeCSS":         middlewares.ThemeCSS(instance),
 		"Domain":           instance.ContextualDomain(),
+		"ContextName":      instance.ContextName,
+		"Locale":           instance.Locale,
+		"Title":            instance.TemplateTitle(),
+		"Favicon":          middlewares.Favicon(instance),
 		"InstanceSlugName": slugname,
 		"InstanceDomain":   instanceDomain,
-		"ContextName":      instance.ContextName,
 		"ClientDomain":     clientDomain,
-		"Locale":           instance.Locale,
 		"Client":           params.client,
 		"State":            params.state,
 		"RedirectURI":      params.redirectURI,
@@ -207,7 +206,6 @@ func authorizeForm(c echo.Context) error {
 		"CSRF":             c.Get("csrf"),
 		"HasFallback":      hasFallback,
 		"Webapp":           params.webapp,
-		"Favicon":          middlewares.Favicon(instance),
 	})
 }
 
