@@ -90,91 +90,118 @@
   }
 }
 .permissions-list li .perm {
+  -webkit-mask-position: center;
+  -webkit-mask-size: 1rem;
+  -webkit-mask-repeat: no-repeat;
   mask-position: center;
   mask-size: 1rem;
   mask-repeat: no-repeat;
 }
 .perm {
-  webkit-mask-image: url("../images/icon-fallback.svg");
-  mask-image: url("../images/icon-fallback.svg");
+  -webkit-mask-image: url("../icons/doctypes/fallback.svg");
+  mask-image: url("../icons/doctypes/fallback.svg");
 }
 .perm[class^="com-bitwarden-ciphers"],
 .perm[class^="com-bitwarden-folders"],
 .perm[class^="com-bitwarden-organizations"],
-.perm[class^="com-bitwarden-profiles"] {
-  mask-image: url("../images/icon-permissions.svg");
+.perm[class^="com-bitwarden-profiles"],
+.perm[class^="io-cozy-permissions"] {
+  -webkit-mask-image: url("../icons/doctypes/lock.svg");
+  mask-image: url("../icons/doctypes/lock.svg");
 }
 .perm[class^="io-cozy-settings"],
 .perm[class^="io-cozy-bank-settings"] {
-  mask-image: url("../images/icon-settings.svg");
+  -webkit-mask-image: url("../icons/doctypes/cog.svg");
+  mask-image: url("../icons/doctypes/cog.svg");
 }
 .perm[class^="io-cozy-accounts"],
 .perm[class^="io-cozy-accounts-stats"] {
-  mask-image: url("../images/icon-accounts.svg");
+  -webkit-mask-image: url("../icons/doctypes/shield.svg");
+  mask-image: url("../icons/doctypes/shield.svg");
 }
 .perm[class^="io-cozy-apps"],
 .perm[class^="io-cozy-apps-suggestions"] {
-  mask-image: url("../images/icon-apps.svg");
+  -webkit-mask-image: url("../icons/doctypes/grid.svg");
+  mask-image: url("../icons/doctypes/grid.svg");
 }
 .perm[class^="io-cozy-bank-accounts"] {
-  mask-image: url("../images/icon-bank-accounts.svg");
+  -webkit-mask-image: url("../icons/doctypes/wallet.svg");
+  mask-image: url("../icons/doctypes/wallet.svg");
 }
 .perm[class^="io-cozy-bank-groups"] {
-  mask-image: url("../images/icon-bank-groups.svg");
+  -webkit-mask-image: url("../icons/doctypes/banking.svg");
+  mask-image: url("../icons/doctypes/banking.svg");
 }
 .perm[class^="io-cozy-bank-operations"] {
-  mask-image: url("../images/icon-bank-operations.svg");
+  -webkit-mask-image: url("../icons/doctypes/euro.svg");
+  mask-image: url("../icons/doctypes/euro.svg");
 }
+.perm[class^="io-cozy-contacts"],
+.perm[class^="io-cozy-identities"],
 .perm[class^="io-cozy-bank-recipients"] {
-  mask-image: url("../images/icon-contacts.svg");
+  -webkit-mask-image: url("../icons/doctypes/profile.svg");
+  mask-image: url("../icons/doctypes/profile.svg");
+}
+.perm[class^="io-cozy-contacts-groups"] {
+  -webkit-mask-image: url("../icons/doctypes/team.svg");
+  mask-image: url("../icons/doctypes/team.svg");
 }
 .perm[class^="io-cozy-bank-recurrence"] {
-  mask-image: url("../images/icon-bank-recurrence.svg");
+  -webkit-mask-image: url("../icons/doctypes/timer.svg");
+  mask-image: url("../icons/doctypes/timer.svg");
 }
 .perm[class^="io-cozy-bills"] {
-  mask-image: url("../images/icon-bill.svg");
+  -webkit-mask-image: url("../icons/doctypes/bill.svg");
+  mask-image: url("../icons/doctypes/bill.svg");
 }
-.perm[class^="io-cozy-contacts"] {
-  mask-image: url("../images/icon-contacts.svg");
-}
+.perm[class^="cc-cozycloud-sentry"],
 .perm[class^="io-cozy-files"] {
-  mask-image: url("../images/icon-files.svg");
+  -webkit-mask-image: url("../icons/doctypes/file.svg");
+  mask-image: url("../icons/doctypes/file.svg");
 }
 .perm[class^="io-cozy-files-versions"] {
-  mask-image: url("../images/icon-files-versions.svg");
+  -webkit-mask-image: url("../icons/doctypes/history.svg");
+  mask-image: url("../icons/doctypes/history.svg");
 }
 .perm[class^="io-cozy-certified-carbon_copy"] {
+  -webkit-mask-image: url("../images/icon-certified.svg");
   mask-image: url("../images/icon-certified.svg");
 }
 .perm[class^="io-cozy-certified-electronic_safe"] {
+  -webkit-mask-image: url("../images/icon-safe.svg");
   mask-image: url("../images/icon-safe.svg");
 }
-.perm[class^="io-cozy-identities"] {
-  mask-image: url("../images/icon-identities.svg");
-}
 .perm[class^="io-cozy-konnectors"] {
-  mask-image: url("../images/icon-konnectors.svg");
+  -webkit-mask-image: url("../icons/doctypes/sync-cozy.svg");
+  mask-image: url("../icons/doctypes/sync-cozy.svg");
 }
 .perm[class^="io-cozy-notifications"] {
-  mask-image: url("../images/icon-notifications.svg");
+  -webkit-mask-image: url("../icons/doctypes/bell.svg");
+  mask-image: url("../icons/doctypes/bell.svg");
 }
 .perm[class^="io-cozy-photos-albums"] {
-  mask-image: url("../images/icon-photos-album.svg");
+  -webkit-mask-image: url("../icons/doctypes/picture.svg");
+  mask-image: url("../icons/doctypes/picture.svg");
 }
 .perm[class^="io-cozy-timeseries-geojson"] {
-  mask-image: url("../images/icon-location.svg");
+  -webkit-mask-image: url("../icons/doctypes/location.svg");
+  mask-image: url("../icons/doctypes/location.svg");
 }
 .perm[class^="io-cozy-jobs"] {
-  mask-image: url("../images/icon-triggers.svg");
+  -webkit-mask-image: url("../icons/doctypes/email.svg");
+  mask-image: url("../icons/doctypes/email.svg");
 }
 .perm[class^="io-cozy-triggers"] {
-  mask-image: url("../images/icon-triggers.svg");
+  -webkit-mask-image: url("../icons/doctypes/clock.svg");
+  mask-image: url("../icons/doctypes/clock.svg");
 }
-.perm[class^="io-cozy-permissions"] {
-  mask-image: url("../images/icon-permissions.svg");
+.perm[class^="io-cozy-sharings"] {
+  -webkit-mask-image: url("../icons/doctypes/share.svg");
+  mask-image: url("../icons/doctypes/share.svg");
 }
 .perm[class^="io-cozy-oauth-clients"] {
-  mask-image: url("../images/icon-device.svg");
+  -webkit-mask-image: url("../icons/doctypes/devices.svg");
+  mask-image: url("../icons/doctypes/devices.svg");
 }
 
 /* Others */
