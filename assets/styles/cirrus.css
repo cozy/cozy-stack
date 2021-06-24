@@ -46,9 +46,59 @@
   -webkit-mask-image: url(../icons/eye-opened.svg);
   mask-image: url(../icons/eye-opened.svg);
 }
+.icon-import {
+  -webkit-mask-image: url(../icons/import.svg);
+  mask-image: url(../icons/import.svg);
+}
 .icon-permissions {
   -webkit-mask-image: url(../icons/permissions.svg);
   mask-image: url(../icons/permissions.svg);
+}
+
+/* Icons for files on the authorize sharing page */
+.filetype {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+}
+.filetype-other {
+  background-image: url("../images/icon-files.svg");
+}
+.filetype-audio {
+  background-image: url("../images/filetypes/audio.svg");
+}
+.filetype-bin {
+  background-image: url("../images/filetypes/bin.svg");
+}
+.filetype-code {
+  background-image: url("../images/filetypes/code.svg");
+}
+.filetype-files {
+  background-image: url("../images/filetypes/files.svg");
+}
+.filetype-image {
+  background-image: url("../images/filetypes/image.svg");
+}
+.filetype-note {
+  background-image: url("../images/filetypes/note.svg");
+}
+.filetype-pdf {
+  background-image: url("../images/filetypes/pdf.svg");
+}
+.filetype-sheet {
+  background-image: url("../images/filetypes/sheet.svg");
+}
+.filetype-slide {
+  background-image: url("../images/filetypes/slide.svg");
+}
+.filetype-text {
+  background-image: url("../images/filetypes/text.svg");
+}
+.filetype-video {
+  background-image: url("../images/filetypes/video.svg");
+}
+.filetype-zip {
+  background-image: url("../images/filetypes/zip.svg");
 }
 
 /* Permissions list on the OAuth authorize page */
@@ -205,6 +255,9 @@
 }
 
 /* Others */
+.greyed-extension {
+  opacity: 0.6;
+}
 .compat .vertical-separator {
   height: 2rem;
 }

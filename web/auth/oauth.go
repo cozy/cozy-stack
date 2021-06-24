@@ -342,18 +342,16 @@ func authorizeSharingForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
-		"Title":        instance.TemplateTitle(),
-		"CozyUI":       middlewares.CozyUI(instance),
-		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
 		"ContextName":  instance.ContextName,
 		"Locale":       instance.Locale,
+		"Title":        instance.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(instance),
 		"SharerDomain": sharerDomain,
 		"SharerName":   s.Members[0].PrimaryName(),
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
-		"Favicon":      middlewares.Favicon(instance),
 		"HasShortcut":  s.ShortcutID != "",
 		"TargetType":   targetType,
 	})

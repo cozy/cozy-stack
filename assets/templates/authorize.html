@@ -67,7 +67,7 @@
               <ul class="alert alert-info permissions-list mb-4">
                 {{range $index, $perm := .Permissions}}
                 <li>
-                  <span class="rounded-circle"><span class="{{replace $perm.Type "." "-" -1}} icon perm"></span></span>
+                  <span class="rounded-circle"><span class="{{replace $perm.Type "." "-" -1}} icon perm"></span>
                   <span class="small">
                     {{- t $perm.TranslationKey -}}
                     {{- if hasSuffix $perm.Type ".*"}}{{t "Permissions Wildcard"}}{{end -}}

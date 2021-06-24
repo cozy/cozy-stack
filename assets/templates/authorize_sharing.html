@@ -2,86 +2,79 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css" .ContextName}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
-    <form method="POST" action="/auth/authorize/sharing" class="login auth">
-      <main role="application">
-        <section class="with-sticky-footer">
-          <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-          <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
-          <input type="hidden" name="state" value="{{.State}}" />
-          <div role="region" class="u-flex-auto u-ov-auto u-p-1 u-mb-1">
-            <header class="u-ta-center">
-              {{if .HasShortcut}}
-              <img class="logo-avatar" src="{{asset .Domain "/images/icons-32-cloud-sync.svg"}}" alt="" />
-              {{else}}
-              <img class="logo-avatar" src="{{asset .Domain "/images/icons-32-cloud-import.svg"}}" alt="" />
-              {{end}}
-            </header>
-            <h1 class="u-title-h1 u-mt-0 u-mb-2 u-ta-center">
-              {{if .HasShortcut}}
-              {{t "Authorize Sharing Title Synchronize"}}
-              {{else}}
-              {{t "Authorize Sharing Title Add"}}
-              {{end}}
-            </h1>
-            <div class="u-card u-p-1 u-mb-2">
-              <p class="help u-mt-0 u-text">
-                <span class="c-avatar c-avatar--sharing u-mr-half">
-                  <img class="c-avatar-image" src="/sharings/{{.Sharing.SID}}/recipients/0/avatar" alt="" />
-                </span><span><strong>{{.SharerName}} ({{.SharerDomain}})</strong>
-                  {{t "Authorize Sharing Request"}}
-                </span>
-              </p>
-              <ul class="u-elevation-1 u-bdrs-4 u-stack-l u-m-0 u-p-1 u-text perm-list">
+  <body class="modal-open">
+    <div class="modal d-block theme-inverted" tabindex="-1" aria-modal="true" role="dialog">
+      <div class="modal-dialog modal-dialog-centered">
+        <main role="application" class="modal-content">
+          <div class="modal-icon">
+            <span class="icon icon-import"></span>
+          </div>
+          <div class="modal-body mt-4 mt-md-1 p-md-5">
+            <form method="POST" action="/auth/authorize/sharing" class="d-contents">
+              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+              <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
+              <input type="hidden" name="state" value="{{.State}}" />
+
+              <h1 class="h4 h2-md mb-4 text-center">{{t "Authorize Sharing Title Add"}}</h1>
+              <div class="alert alert-info mb-4 px-md-5 py-md-4">
                 {{range $index, $rule := .Sharing.Rules}}
-                {{if $rule.Mime }}
-                <li class="filetype-{{filetype $rule.Mime}}">{{basename $rule.Title}}<span class="u-coolGrey">{{ext $rule.Title}}</span></li>
-                {{else}}
-                <li class="{{$rule.DocType}}">{{$rule.Title}}</li>
+                <div class="card card-elevation shadow rounded-3 authorize-pill w-100 mb-2 px-3 py-2">
+                  {{if $rule.Mime }}
+                  <span class="filetype-{{filetype $rule.Mime}} filetype"></span>
+                  <span class="ms-3">
+                    {{basename $rule.Title}}<span class="greyed-extension">{{ext $rule.Title}}</span>
+                  </span>
+                  {{else}}
+                  <span class="filetype-other filetype"></span>
+                  <span class="ms-3">{{$rule.Title}}</span>
+                  {{end}}
+                </div>
                 {{end}}
-                {{end}}
-              </ul>
-            </div>
-            <div class="u-stack-s">
+                <p class="small mb-0">
+                  {{t "Authorize Sharing Request"}}
+                  <img class="icon bg-transparent" src="/sharings/{{.Sharing.SID}}/recipients/0/avatar" alt="" />
+                  <strong class="fst-italic">{{.SharerName}} ({{.SharerDomain}})</strong>
+                </p>
+              </div>
+
               {{if .HasShortcut}}
               <input type="hidden" name="synchronize" value="true" />
               {{else}}
-              <label class="c-input-checkbox">
-                <input type="checkbox" name="synchronize" checked="checked" />
-                <span class="u-title-h4 u-pl-2">{{t "Authorize Sharing Synchronize label"}}</span>
-              </label>
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="synchronize" name="synchronize" checked />
+                <label class="form-check-label" for="synchronize">
+                  {{t "Authorize Sharing Synchronize label"}}
+                </label>
+              </div>
               {{end}}
-              <p class="{{if not .HasShortcut}}u-pl-2 {{end}}u-text u-fz-small u-mb-0">
+              <p class="{{if not .HasShortcut}}ps-4{{else}}text-center{{end}} caption text-muted mb-2">
                 {{t "Authorize Sharing Description start" .SharerName .TargetType}}
               </p>
-              <p class="{{if not .HasShortcut}}u-pl-2 {{end}}u-text u-fz-small u-mb-0">
+              <p class="{{if not .HasShortcut}}ps-4{{else}}text-center{{end}} caption text-muted mb-4">
                 {{t "Authorize Sharing Description end" .TargetType .SharerName}}
               </p>
-            </div>
-          </div>
-          <footer class="sticky-footer">
-            <div class="controls u-flex u-flex-wrap-reverse">
-              <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" type="cancel" class="u-flex-shrink-1 u-flex-grow-1 u-charcoalGrey c-btn c-btn--secondary">
-                <span><span>{{t "Authorize Sharing Cancel"}}</span></span>
-              </a>
-              <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>
-                {{if .HasShortcut}}
-                {{t "Authorize Sharing Submit Synchronize"}}
-                {{else}}
+              <button type="submit" class="btn btn-primary btn-md-lg w-100">
                 {{t "Authorize Sharing Submit Add"}}
-                {{end}}
-              </span></span></button>
-            </div>
-          </footer>
-        </section>
-      </main>
-    </form>
+              </button>
+
+            </form>
+          </div>
+          <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" class="btn btn-icon position-absolute top-0 end-0" aria-label="Close">
+            <span class="icon icon-cross"></span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="modal-backdrop"></div>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>
