@@ -255,6 +255,9 @@
 }
 
 /* Others */
+.big.illustration {
+  height: 8rem;
+}
 .greyed-extension {
   opacity: 0.6;
 }

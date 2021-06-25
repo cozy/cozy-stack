@@ -1,29 +1,36 @@
 <!DOCTYPE html>
-<html lang="{{.Locale}}" class="u-h-100">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="300">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
- <body class="u-h-100">
-    <main role="application" class="u-h-100 u-bg-dodgerBlue u-flex u-flex-column u-flex-items-center u-flex-justify-center">
-      <header class="u-dn-s u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
-        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
-        <h2 class="u-title-h2 u-white" class="u-ml-half">Cozy</h2>
+  <body class="theme-inverted">
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
       </header>
-      <img src="{{asset .Domain "/images/relocation-animated.svg"}}" alt="" class="u-mah-4" >
-      <h1 class="u-maw-6 u-m-1 u-title-h1 u-white u-bxz">{{.Title}}</h1>
-      <div class="u-pos-relative u-maw-6 u-m-1 u-mt-0 u-p-1 u-text u-fz-small u-white">
-        {{t "Move in progress Box" .Source .Domain }}
-        <div class="u-pos-absolute u-top-0 u-left-0 u-bottom-0 u-right-0 u-bg-white u-bdrs-4 u-o-30"></div>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <img src="{{asset .Domain "/images/relocation-animated.svg"}}" alt="" class="illustration big mb-3" />
+        <h1 class="h4 h2-md mb-3 text-center">{{.Title}}</h1>
+        <div class="alert alert-info mb-3 w-100 small text-center">
+          {{tHTML "Move in progress Box" .Source .Domain }}
+        </div>
+        <p class="text-center text-muted small">{{t "Move in progress Description"}}</p>
       </div>
-      <p class="u-maw-6 u-mh-1 u-mt-0 u-mb-3 u-text u-fz-small u-white u-o-60">{{t "Move in progress Description" }}</p>
+
+      <footer></footer>
     </main>
-    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/import.js"}}"></script>
   </body>
 </html>

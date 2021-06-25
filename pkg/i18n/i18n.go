@@ -33,7 +33,7 @@ func Translator(locale, contextName string) func(key string, vars ...interface{}
 	}
 }
 
-var boldRegexp = regexp.MustCompile(`\*\*(.*)\*\*`)
+var boldRegexp = regexp.MustCompile(`\*\*(.*?)\*\*`)
 
 // TranslatorHTML returns a translation function of the locale specified, which
 // allow simple markup like **bold**.

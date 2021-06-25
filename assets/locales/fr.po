@@ -359,7 +359,7 @@ msgid "Move in progress Title"
 msgstr "Déménagement en cours"
 
 msgid "Move in progress Box"
-msgstr "Depuis %s vers %s"
+msgstr "Depuis **%s** vers **%s**"
 
 msgid "Move in progress Description"
 msgstr ""

@@ -143,7 +143,6 @@ func createImport(c echo.Context) error {
 			"ContextName":  inst.ContextName,
 			"Locale":       inst.Locale,
 			"Title":        inst.TemplateTitle(),
-			"ThemeCSS":     middlewares.ThemeCSS(inst),
 			"Favicon":      middlewares.Favicon(inst),
 			"Illustration": "/images/generic-error.svg",
 			"Error":        err.Error(),
@@ -199,12 +198,11 @@ func waitImportHasFinished(c echo.Context) error {
 		}
 	}
 	return c.Render(http.StatusOK, template, echo.Map{
-		"CozyUI":      middlewares.CozyUI(inst),
-		"ThemeCSS":    middlewares.ThemeCSS(inst),
-		"Favicon":     middlewares.Favicon(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
+		"Locale":      inst.Locale,
 		"Title":       inst.Translate(title),
+		"Favicon":     middlewares.Favicon(inst),
 		"Source":      source,
 	})
 }
