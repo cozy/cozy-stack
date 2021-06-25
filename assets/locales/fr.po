@@ -402,28 +402,28 @@ msgstr "Importer mes mots de passe"
 
 msgid "Move Vault Description"
 msgstr ""
-"Suivez les étapes ci-dessous pour importer les mots de passe que vous venez "
-"d'exporter :"
+"Suivez les étapes suivantes pour importer les mots de passe que vous avez "
+"exportés en début de parcours :"
 
 msgid "Move Vault Step 1"
 msgstr "Ouvrez l'extension Cozy installée sur votre navigateur"
 
 msgid "Move Vault Step 2"
 msgstr ""
-"Déconnectez-vous, puis connectez-vous à l'extension avec l'URL de votre "
+"Déconnectez votre ancien Cozy, puis connectez-vous à l'extension avec votre "
 "nouveau Cozy"
 
 msgid "Move Vault Step 3"
-msgstr "Cliquez sur « Paramètres » en bas puis sur « Importer des éléments »"
+msgstr "Rendez-vous sur « **Paramètres / Importer des éléments** »"
 
 msgid "Move Vault Step 4"
 msgstr ""
-"Sélectionnez le format source « Bitwarden (json) » cliquez sur « choisir un "
-"fichier » et sélectionnez le fichier que vous avez exporté depuis votre "
+"Sélectionnez le format source « **Bitwarden (json)** » cliquez sur « **choisir "
+"un fichier** » et sélectionnez le fichier que vous avez exporté depuis votre "
 "extension au début du déménagement"
 
 msgid "Move Vault Step 5"
-msgstr "Cliquez sur « Importer »"
+msgstr "Cliquez sur « **Importer** »"
 
 msgid "Move Vault Link"
 msgstr "J'ai importé mes mots de passe"

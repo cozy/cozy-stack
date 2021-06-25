@@ -1,34 +1,41 @@
 <!DOCTYPE html>
-<html lang="{{.Locale}}" class="u-h-100">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
   <body>
-    <main role="application" class="u-flex u-flex-column u-flex-items-center u-flex-justify-center">
-      <header class="u-dn-s u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
-        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
-        <h2 class="u-title-h2" class="u-ml-half">Cozy</h2>
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-light.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
       </header>
-      <h1 class="u-maw-6 u-m-1 u-title-h1 u-bxz">{{.Title}}</h1>
-      <h2 class="u-maw-6 u-m-1 u-title-h4 u-mb-half">{{t "Move Vault Description"}}</h2>
-      <ol class="u-maw-6 u-m-1 u-bg-paleGrey u-bdrs-4 u-stack-m u-pv-1 u-pr-1 u-bxz">
-        <li class="u-text">{{t "Move Vault Step 1"}}</li>
-        <li class="u-text">{{t "Move Vault Step 2"}} <strong class="u-fs-italic">{{.Domain}}</strong></li>
-        <li class="u-text">{{t "Move Vault Step 3"}}</li>
-        <li class="u-text">{{t "Move Vault Step 4"}}</li>
-        <li class="u-text">{{t "Move Vault Step 5"}}</li>
-      </ol>
-      <footer class="u-maw-6 u-m-1 u-flex u-flex-wrap-reverse">
-          <a href="{{.Link}}" class="c-btn c-btn--full c-btn--secondary wizard-button u-mt-half">{{t "Move Vault Ignore"}}</a>
-          <a href="{{.Link}}" class="c-btn c-btn--full u-pr-3 wizard-button">{{t "Move Vault Link"}}</a>
+
+      <div class="d-flex flex-column align-items-center mt-5 mb-3 mb-md-5">
+        <h1 class="h4 h2-md mb-3 text-center">{{.Title}}</h1>
+        <p class="text-center mb-4 mb-md-5">{{t "Move Vault Description"}}</p>
+        <ol class="alert alert-info ps-5 py-md-4">
+          <li class="mx-md-3 mb-3">{{t "Move Vault Step 1"}}</li>
+          <li class="mx-md-3 mb-3">{{t "Move Vault Step 2"}} <strong class="u-fs-italic">{{.Domain}}</strong></li>
+          <li class="mx-md-3 mb-3">{{tHTML "Move Vault Step 3"}}</li>
+          <li class="mx-md-3 mb-3">{{tHTML "Move Vault Step 4"}}</li>
+          <li class="mx-md-3">{{tHTML "Move Vault Step 5"}}</li>
+        </ol>
+      </div>
+
+      <footer class="w-100">
+        <a href="{{.Link}}" class="btn btn-primary mb-2 w-100">{{t "Move Vault Link"}}</a>
+        <a href="{{.Link}}" class="btn btn-outline-info mb-2 w-100">{{t "Move Vault Ignore"}}</a>
       </footer>
     </main>
-    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

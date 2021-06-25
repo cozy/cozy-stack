@@ -343,22 +343,22 @@ msgid "Move Vault Title"
 msgstr "Import my passwords"
 
 msgid "Move Vault Description"
-msgstr "Follow the next steps to import the passwords that you have just exported:"
+msgstr "Follow the next steps to import the passwords that you have exported at the start of the move:"
 
 msgid "Move Vault Step 1"
 msgstr "Open the Cozy extension on your browser"
 
 msgid "Move Vault Step 2"
-msgstr "Log out, then log in to the extension with the URL of your new Cozy"
+msgstr "Log out, then log in to the extension with your new Cozy"
 
 msgid "Move Vault Step 3"
-msgstr "Click on \"Settings\" and then \"Import Items\""
+msgstr "Click on \"**Settings / Import Items**\""
 
 msgid "Move Vault Step 4"
-msgstr "Select the source format \"Bitwarden (json)\", click on \"choose file\" and select the file you have just exported from your extension"
+msgstr "Select the source format \"**Bitwarden (json)**\", click on \"**choose file**\" and select the file you have just exported from your extension"
 
 msgid "Move Vault Step 5"
-msgstr "Click on \"Import\""
+msgstr "Click on \"**Import**\""
 
 msgid "Move Vault Link"
 msgstr "I have imported my passwords"

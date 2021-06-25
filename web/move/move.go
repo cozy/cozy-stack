@@ -507,12 +507,11 @@ func importVault(c echo.Context) error {
 	_ = couchdb.UpdateDoc(inst, doc)
 
 	return c.Render(http.StatusOK, "move_vault.html", echo.Map{
-		"CozyUI":      middlewares.CozyUI(inst),
-		"ThemeCSS":    middlewares.ThemeCSS(inst),
-		"Favicon":     middlewares.Favicon(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
+		"Locale":      inst.Locale,
 		"Title":       inst.Translate("Move Vault Title"),
+		"Favicon":     middlewares.Favicon(inst),
 		"Link":        inst.DefaultRedirection(),
 	})
 }
