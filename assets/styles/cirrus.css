@@ -54,6 +54,10 @@
   -webkit-mask-image: url(../icons/permissions.svg);
   mask-image: url(../icons/permissions.svg);
 }
+.icon-right {
+  -webkit-mask-image: url(../icons/arrow-right.svg);
+  mask-image: url(../icons/arrow-right.svg);
+}
 
 /* Icons for files on the authorize sharing page */
 .filetype {
@@ -255,6 +259,12 @@
 }
 
 /* Others */
+button.alert-info:hover {
+  background-color: var(--btn-ghost-hover-color);
+}
+button.card-intent:hover {
+  background-color: var(--errorColorLightest);
+}
 .big.illustration {
   height: 8rem;
 }

@@ -154,51 +154,37 @@ msgstr "Mot de passe oublié"
 
 msgid "Passphrase reset Help hint"
 msgstr ""
-"Vous avez laissé un indice pour retrouver votre mot de passe. Cliquez sur le"
-" bouton ci-dessous pour le recevoir par email."
+"L'indice que vous avez laissé à la création du mot de passe vous sera envoyé par email."
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"Vous avez laissé un indice pour retrouver votre mot de passe Cozy pass. "
-"Cliquez sur le bouton ci-dessous pour le recevoir par email."
+"L'indice que vous avez laissé à la création du mot de passe Cozy pass vous sera envoyé par email."
 
 msgid "Passphrase reset Submit hint"
-msgstr "Recevoir mon indice"
-
-msgid "Passphrase reset password Title"
-msgstr ""
-"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
-" :"
-
-msgid "Passphrase reset password Title Cozy Pass"
-msgstr ""
-"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
-" Cozy Pass :"
-
-msgid "Passphrase reset Help Warning"
-msgstr "Attention ! Vous perdrez toutes les données de votre gestionnaire de mots de passe Cozy Pass"
+msgstr "M'aider à retrouver mon mot de passe"
 
 msgid "Passphrase reset Help Message"
 msgstr ""
-"si vous réinitialisez votre mot de passe. Le reste des données de votre Cozy "
-"resteront accessibles. En effet, votre mot de passe actuel est l'unique moyen "
-"pour accéder aux mots de passe gardés par votre app « Cozy Pass »."
+"Attention ! Votre mot de passe actuel est l’unique moyen "
+"pour accéder aux mots de passe gardés par votre app « Cozy Pass ». "
+"Si vous le réinitialisez, vous perdrez ces données. "
+"Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
-"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
+"Un lien vous sera envoyé par email "
 "pour choisir un nouveau mot de passe."
 
 msgid "Passphrase reset Help emptyVault Cozy Pass"
 msgstr ""
-"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
+"Un lien vous sera envoyé par email "
 "pour choisir un nouveau mot de passe Cozy Pass."
 
 msgid "Passphrase reset Submit"
-msgstr "Réinitialiser mon mot de passe"
+msgstr "Réinitialiser mon mot de passe (dernier recours)"
 
 msgid "Passphrase reset Submit emptyVault"
-msgstr "Changer mon mot de passe"
+msgstr "Réinitialiser mon mot de passe"
 
 msgid "Hint sent Title"
 msgstr "Consultez vos e-mails !"

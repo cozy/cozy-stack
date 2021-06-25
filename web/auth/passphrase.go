@@ -31,14 +31,12 @@ func passphraseResetForm(c echo.Context) error {
 	}
 	passwordAuth := instance.IsPasswordAuthenticationEnabled()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"Title":       instance.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(instance),
-		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,
-		"CSRF":        c.Get("csrf"),
+		"Title":       instance.TemplateTitle(),
 		"Favicon":     middlewares.Favicon(instance),
+		"CSRF":        c.Get("csrf"),
 		"Redirect":    c.QueryParam("redirect"),
 		"HasHint":     hasHint,
 		"HasCiphers":  hasCiphers,
