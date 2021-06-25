@@ -2,30 +2,37 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
-  <body>
-    <div role="application">
-      <main class="wizard">
-        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
-          <div role="region" class="wizard-main" id="login-field">
-            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
-              <img class="c-avatar-image" src="{{asset .Domain "/images/default-avatar.png"}}" alt="" />
-            </div>
-            <h1 class="wizard-title password-form">{{.Title}}</h1>
-            <footer class="wizard-footer u-pb-half-m u-pb-2">
-              <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
-                <span class="password-form">{{t "Login Submit"}}</span>
-              </button>
-            </footer>
-          </div>
-        </form>
+  <body class="theme-inverted">
+    <form id="login-form" method="POST" action="/auth/login" class="d-contents">
+      <main class="wrapper">
+        <header class="wrapper-top">
+          <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+            <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+          </a>
+        </header>
+
+        <div class="d-flex flex-column align-items-center">
+          <img src="{{asset .Domain "/images/default-avatar.png"}}" alt="" class="avatar my-3 border border-primary border-2 rounded-circle" />
+          <h1 class="h4 h2-md mb-0 text-center">{{.Title}}</h1>
+        </div>
+
+        <footer class="w-100">
+          <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-4 mt-md-5" type="submit">
+            {{t "Login Submit"}}
+          </button>
+        </footer>
       </main>
-    </div>
+    </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

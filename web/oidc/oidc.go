@@ -499,13 +499,11 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 		i := &instance.Instance{Locale: "fr", ContextName: contextName}
 		title := i.Translate("Login Welcome")
 		return c.Render(http.StatusOK, "oidc_login.html", echo.Map{
-			"CozyUI":      middlewares.CozyUI(i),
-			"ThemeCSS":    middlewares.ThemeCSS(i),
-			"Favicon":     middlewares.Favicon(i),
 			"Domain":      i.ContextualDomain(),
 			"ContextName": i.ContextName,
 			"Locale":      i.Locale,
 			"Title":       title,
+			"Favicon":     middlewares.Favicon(i),
 		})
 	}
 
