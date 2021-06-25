@@ -104,16 +104,19 @@ func sendHint(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Title":       i.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Domain":      i.ContextualDomain(),
-		"ContextName": i.ContextName,
-		"ErrorTitle":  "Hint sent Title",
-		"Error":       "Hint sent Body",
-		"Button":      "Hint sent Login Button",
-		"ButtonLink":  i.PageURL("/auth/login", u),
-		"Favicon":     middlewares.Favicon(i),
+		"Domain":       i.ContextualDomain(),
+		"ContextName":  i.ContextName,
+		"Locale":       i.Locale,
+		"Title":        i.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(i),
+		"Inverted":     true,
+		"Illustration": "/images/mail-sent.svg",
+		"ErrorTitle":   "Hint sent Title",
+		"Error":        "Hint sent Body",
+		"ErrorDetail":  "Hint sent Detail",
+		"SupportEmail": i.SupportEmailAddress(),
+		"Button":       "Hint sent Login Button",
+		"ButtonLink":   i.PageURL("/auth/login", u),
 	})
 }
 
@@ -135,16 +138,19 @@ func passphraseReset(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Title":       i.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Domain":      i.ContextualDomain(),
-		"ContextName": i.ContextName,
-		"ErrorTitle":  "Passphrase is reset Title",
-		"Error":       "Passphrase is reset Body",
-		"Button":      "Passphrase is reset Login Button",
-		"ButtonLink":  i.PageURL("/auth/login", u),
-		"Favicon":     middlewares.Favicon(i),
+		"Domain":       i.ContextualDomain(),
+		"ContextName":  i.ContextName,
+		"Locale":       i.Locale,
+		"Title":        i.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(i),
+		"Inverted":     true,
+		"Illustration": "/images/mail-sent.svg",
+		"ErrorTitle":   "Passphrase is reset Title",
+		"Error":        "Passphrase is reset Body",
+		"ErrorDetail":  "Passphrase is reset Detail",
+		"SupportEmail": i.SupportEmailAddress(),
+		"Button":       "Passphrase is reset Login Button",
+		"ButtonLink":   i.PageURL("/auth/login", u),
 	})
 }
 

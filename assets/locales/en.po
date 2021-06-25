@@ -184,7 +184,10 @@ msgstr "Finish"
 
 msgid "Hint sent Body"
 msgstr ""
-"We just sent you your password hint by mail. It will help you to remember your Cozy password.\n"
+"We just sent you your password hint by mail. It will help you to remember your Cozy password."
+
+msgid "Hint sent Detail"
+msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Hint sent Login Button"
@@ -192,7 +195,10 @@ msgstr "Return to the login page"
 
 msgid "Passphrase is reset Body"
 msgstr ""
-"We just sent you a (very) special link by mail. Click on it to reset your password.\n"
+"We just sent you a (very) special link by mail. Click on it to reset your password."
+
+msgid "Passphrase is reset Detail"
+msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Passphrase is reset Login Button"

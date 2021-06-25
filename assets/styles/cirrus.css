@@ -50,6 +50,10 @@
   -webkit-mask-image: url(../icons/import.svg);
   mask-image: url(../icons/import.svg);
 }
+.icon-info {
+  -webkit-mask-image: url(../icons/info.svg);
+  mask-image: url(../icons/info.svg);
+}
 .icon-permissions {
   -webkit-mask-image: url(../icons/permissions.svg);
   mask-image: url(../icons/permissions.svg);
@@ -130,13 +134,8 @@
 .permissions-list li + li .small {
   border-top: solid 1px var(--dividerColor);
 }
-.permissions-list li .rounded-circle {
-  flex: 2rem 0 0;
-  height: 2rem;
+.permissions-list li .halo-icon {
   margin-left: 2rem;
-  padding: 0.5rem;
-  border-radius: 50%;
-  background-color: var(--dividerColor);
 }
 @media (min-width: 768px) {
   .permissions-list li .rounded-circle {
@@ -259,6 +258,13 @@
 }
 
 /* Others */
+.halo-icon {
+  flex: 2rem 0 0;
+  height: 2rem;
+  padding: 0.5rem;
+  background-color: var(--dividerColor);
+  border-radius: 50%;
+}
 button.alert-info:hover {
   background-color: var(--btn-ghost-hover-color);
 }

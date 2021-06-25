@@ -219,8 +219,10 @@ msgstr "Terminer"
 
 msgid "Hint sent Body"
 msgstr ""
-"Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver votre mot de passe Cozy.\n"
-"\n"
+"Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver votre mot de passe Cozy."
+
+msgid "Hint sent Detail"
+msgstr ""
 "Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "
 
 msgid "Hint sent Login Button"
@@ -228,7 +230,10 @@ msgstr "Aller à la page de connexion"
 
 msgid "Passphrase is reset Body"
 msgstr ""
-"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce lien pour réinitialiser votre mot de passe.\n"
+"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce lien pour réinitialiser votre mot de passe."
+
+msgid "Passphrase is reset Detail"
+msgstr ""
 "Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver."
 
 msgid "Passphrase is reset Login Button"
