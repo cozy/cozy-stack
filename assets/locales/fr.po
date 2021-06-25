@@ -1039,7 +1039,7 @@ msgid "Notification Sharing Button text"
 msgstr "Voir le partage"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Se connecter à votre Cozy"
+msgstr "Renseignez l'adresse de votre Cozy"
 
 msgid "Sharing Empty name"
 msgstr "Quelqu'un"
@@ -1047,8 +1047,11 @@ msgstr "Quelqu'un"
 msgid "Sharing Empty description"
 msgstr "Surprise !"
 
+msgid "Sharing Discovery Intro"
+msgstr "Votre adresse sera communiquée à %s pour simplifier vos futurs partages"
+
 msgid "Sharing Discovery URL field"
-msgstr "L'adresse de votre Cozy"
+msgstr "Adresse de mon Cozy"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
@@ -1070,10 +1073,7 @@ msgid "Sharing Discover Cozy"
 msgstr "Découvrez Cozy maintenant !"
 
 msgid "Sharing Forgotten URL"
-msgstr "URL oubliée ? Pas de souci."
-
-msgid "Sharing Forgotten URL email"
-msgstr "Vérifiez votre boite e-mail en recherchant \"Cozy\"."
+msgstr "J'ai oublié mon adresse"
 
 msgid "Notifications Disk Quota Subject"
 msgstr "Vous avez atteint 90% de votre espace de stockage."

@@ -942,8 +942,11 @@ msgstr "Someone"
 msgid "Sharing Empty description"
 msgstr "Surprise!"
 
+msgid "Sharing Discovery Intro"
+msgstr "Your address will be sent to %s to simplify the nexts sharings"
+
 msgid "Sharing Discovery URL field"
-msgstr "Your Cozy address"
+msgstr "My Cozy address"
 
 msgid "Sharing URL Discovery error"
 msgstr "The Cozy URL you entered is incorrect, please try again"
@@ -964,10 +967,7 @@ msgid "Sharing Discover Cozy"
 msgstr "Discover Cozy now!"
 
 msgid "Sharing Forgotten URL"
-msgstr "Forgotten the URL? Don't panic."
-
-msgid "Sharing Forgotten URL email"
-msgstr "Search your email inbox for \"Cozy\"."
+msgstr "I have forgotten my address"
 
 msgid "Notifications Disk Quota Subject"
 msgstr "You have currently reached 90% of your space."

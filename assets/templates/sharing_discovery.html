@@ -2,66 +2,64 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
   <body>
-    <div role="application">
-      <main class="wizard">
-        <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="wizard-wrapper">
-          <div role="region" class="wizard-main">
-            {{if .URLError}}
-              <p class="wizard-errors u-error">{{t "Sharing URL Discovery error"}}</p>
-            {{end}}
-            {{if .NotEmailError}}
-              <p class="wizard-errors u-error">{{t "Sharing URL Not email error"}}</p>
-            {{end}}
-            <input type="hidden" name="state" value="{{.State}}" />
-            <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
-            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
-              <img class="c-avatar-image" src="/public/avatar" alt="" />
+    <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="d-contents">
+      <input type="hidden" name="state" value="{{.State}}" />
+      <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
+      <main class="wrapper">
+        <header class="wrapper-top">
+          <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+            <img src="{{asset .Domain "/images/logo-light.svg"}}" alt="Cozy Cloud" class="logo" />
+          </a>
+        </header>
+
+        <div class="d-flex flex-column align-items-center mb-5">
+          <h1 class="h4 h2-md mb-2 text-center">{{t "Sharing Connect to Cozy"}}</h1>
+          <p class="text-center mb-5">{{t "Sharing Discovery Intro" .PublicName}}</p>
+          <div class="input-group form-floating has-validation w-100 mb-3">
+            <input type="text" class="form-control form-control-md-lg {{if or .URLError .NotEmailError}}is-invalid{{end}}" name="slug" autofocus value="{{.RecipientSlug}}" placeholder="claude" inputmode="url" />
+            <select name="domain" class="form-select form-select-end w-min-content flex-grow-0">
+              <option value="{{.RecipientDomain}}">.{{.RecipientDomain}}</option>
+              <option value="">Autre domaine</option>
+            </select>
+            <span class="select-arrow"></span>
+            <label for="slug">{{t "Sharing Discovery URL field"}}</label>
+            {{if or .URLError .NotEmailError}}
+            <div class="invalid-tooltip mb-1">
+              <div class="tooltip-arrow"></div>
+              <span class="icon icon-alert bg-danger"></span>
+              {{if .URLError}}{{t "Sharing URL Discovery error"}}{{end}}
+              {{if .NotEmailError}}{{t "Sharing URL Not email error"}}{{end}}
             </div>
-            <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Sharing Connect to Cozy"}}</h1>
-            <div class="o-field">
-              <label class="c-label c-label--block u-mt-1" for="slug"> {{t "Sharing Discovery URL field"}}</label>
-              <div class="my-cozy-url">
-                <div class="protocol">
-                  <svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                    <defs></defs>
-                    <g id="icon-lock" stroke="none" stroke-width="1" fill-rule="evenodd">
-                      <path d="M2,15.0046024 C2,15.5543453 2.45576096,16 3.00247329,16 L12.9975267,16 C13.5511774,16 14,15.5443356 14,15.0046024 L14,6.99539757 C14,6.44565467 13.5561352,6 13,6 L12,6 L12,4 C12,1.794 10.2053333,0 8,0 C5.794,0 4,1.794 4,4 L4,6 L3,6 C2.44771525,6 2,6.4556644 2,6.99539757 L2,15.0046024 Z M6,4.5 C6,3.1215 6.8968,2 8,2 C9.1028,2 10,3.1215 10,4.5 L10,6 L6,6 L6,4.5 Z M8,8.5 C8.8265,8.5 9.5,9.172 9.5,10 C9.5,10.552 9.1955,11.032 8.75,11.29 L8.75,13.75 C8.75,14.1625 8.4125,14.5 8,14.5 C7.586,14.5 7.25,14.1625 7.25,13.75 L7.25,11.29 C6.803,11.032 6.5,10.552 6.5,10 C6.5,9.172 7.172,8.5 8,8.5 Z" id="Mask"></path>
-                    </g>
-                  </svg>
-                  <span>https://</span>
-                </div>
-                <input type="text" class="field" name="slug" id="slug" value="{{.RecipientSlug}}" placeholder="claude" autofocus="true" />
-                <input type="text" class="domain" name="domain" id="domain" value="{{.RecipientDomain}}" placeholder="{{.PlaceholderDomain}}" />
-              </div>
-            </div>
+            {{end}}
           </div>
-          <footer class="wizard-footer">
-            <button type="submit" class="c-btn c-btn--full wizard-button">
-              <span>{{t "Sharing Discovery Submit"}}</span>
-            </button>
-            <p class="wizard-notice">
-              {{t "Sharing No Cozy"}}
-              <a href="{{t "Sharing Discover Cozy URL"}}">
-                {{t "Sharing Discover Cozy"}}
-              </a>
-            </p>
-            <p class="wizard-notice">
-              {{t "Sharing Forgotten URL"}}
-              <br />
-              {{t "Sharing Forgotten URL email"}}
-            </p>
-          </footer>
-        </form>
+          <div class="align-self-start">
+            <a href="https://manager.cozycloud.cc/v2/cozy/remind">{{t "Sharing Forgotten URL"}}</a>
+          </div>
+        </div>
+
+        <footer class="w-100 d-flex flex-column flex-md-column-reverse">
+          <p class="text-center mb-3">
+            {{t "Sharing No Cozy"}}
+            <a href="{{t "Sharing Discover Cozy URL"}}">
+              {{t "Sharing Discover Cozy"}}
+            </a>
+          </p>
+          <button id="login-submit" class="btn btn-primary btn-md-lg w-100 mb-3" type="submit">
+            {{t "Sharing Discovery Submit"}}
+          </button>
+        </footer>
       </main>
-    </div>
-    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
+    </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>
