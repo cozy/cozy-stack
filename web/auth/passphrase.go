@@ -58,7 +58,6 @@ func passphraseForm(c echo.Context) error {
 			"ContextName":  inst.ContextName,
 			"Locale":       inst.Locale,
 			"Title":        inst.TemplateTitle(),
-			"ThemeCSS":     middlewares.ThemeCSS(inst),
 			"Favicon":      middlewares.Favicon(inst),
 			"SupportEmail": "contact@cozycloud.cc",
 		})
@@ -74,17 +73,16 @@ func passphraseForm(c echo.Context) error {
 		middlewares.AppendCSPRule(c, "img", matomo.URL)
 	}
 
-	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
-		"CozyUI":         middlewares.CozyUI(inst),
-		"Title":          inst.TemplateTitle(),
-		"ThemeCSS":       middlewares.ThemeCSS(inst),
+	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
 		"Domain":         inst.ContextualDomain(),
 		"ContextName":    inst.ContextName,
 		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Action":         "/settings/passphrase",
 		"Iterations":     iterations,
 		"Salt":           string(inst.PassphraseSalt()),
 		"RegisterToken":  registerToken,
-		"Favicon":        middlewares.Favicon(inst),
 		"CryptoPolyfill": cryptoPolyfill,
 		"MatomoURL":      matomo.URL,
 		"MatomoSiteID":   matomo.SiteID,
@@ -182,19 +180,18 @@ func passphraseRenewForm(c echo.Context) error {
 		iterations = crypto.EdgePBKDF2Iterations
 	}
 
-	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
-		"Title":                inst.TemplateTitle(),
-		"CozyUI":               middlewares.CozyUI(inst),
-		"ThemeCSS":             middlewares.ThemeCSS(inst),
-		"Domain":               inst.ContextualDomain(),
-		"ContextName":          inst.ContextName,
-		"Locale":               inst.Locale,
-		"Iterations":           iterations,
-		"Salt":                 string(inst.PassphraseSalt()),
-		"PassphraseResetToken": hex.EncodeToString(token),
-		"CSRF":                 c.Get("csrf"),
-		"Favicon":              middlewares.Favicon(inst),
-		"CryptoPolyfill":       cryptoPolyfill,
+	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Action":         "/auth/passphrase_renew",
+		"Iterations":     iterations,
+		"Salt":           string(inst.PassphraseSalt()),
+		"ResetToken":     hex.EncodeToString(token),
+		"CSRF":           c.Get("csrf"),
+		"CryptoPolyfill": cryptoPolyfill,
 	})
 }
 

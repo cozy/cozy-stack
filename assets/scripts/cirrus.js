@@ -40,13 +40,21 @@
   }
 
   // Use the browser history for managing cancel links
-  var cancel = w.document.querySelector('a.cancel')
+  const cancel = w.document.querySelector('a.cancel')
   if (cancel) {
     cancel.addEventListener('click', function (event) {
       if (w.history.length > 1) {
         event.preventDefault()
         w.history.back()
       }
+    })
+  }
+
+  const expand = w.document.querySelector('a.expand')
+  if (expand) {
+    expand.addEventListener('click', function (event) {
+      event.preventDefault()
+      expand.classList.toggle('expanded')
     })
   }
 })(window, document)
