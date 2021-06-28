@@ -10,13 +10,13 @@
 
     const charsets = [
       // upper
-      { regexp: /[A-Z]/g, size: 26 },
+      { regexp: /\p{Lu}/u, size: 26 },
       // lower
-      { regexp: /[a-z]/g, size: 26 },
+      { regexp: /\p{Ll}/u, size: 26 },
       // digit
-      { regexp: /[0-9]/g, size: 10 },
+      { regexp: /[0-9]/, size: 10 },
       // special
-      { regexp: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g, size: 30 },
+      { regexp: /\p{P}|\p{S}/u, size: 30 },
     ]
 
     const possibleChars = charsets.reduce(function (possibleChars, charset) {
