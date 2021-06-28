@@ -149,7 +149,7 @@ func (r Rule) TranslationKey() string {
 			return "Permissions worker " + r.Values[0]
 		}
 	}
-	return "Permissions " + r.Type
+	return "Permissions " + strings.TrimSuffix(r.Type, ".*")
 }
 
 // Merge merges the rule2 in rule1

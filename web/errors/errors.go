@@ -172,7 +172,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"ContextName":  i.ContextName,
 			"Locale":       i.Locale,
 			"Title":        i.TemplateTitle(),
-			"ThemeCSS":     middlewares.ThemeCSS(i),
 			"Favicon":      middlewares.Favicon(i),
 			"Inverted":     inverted,
 			"Illustration": illustration,

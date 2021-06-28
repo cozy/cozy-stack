@@ -464,7 +464,6 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		"ContextName":  inst.ContextName,
 		"Locale":       inst.Locale,
 		"Title":        inst.TemplateTitle(),
-		"ThemeCSS":     middlewares.ThemeCSS(inst),
 		"Favicon":      middlewares.Favicon(inst),
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,
@@ -499,13 +498,11 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 		i := &instance.Instance{Locale: "fr", ContextName: contextName}
 		title := i.Translate("Login Welcome")
 		return c.Render(http.StatusOK, "oidc_login.html", echo.Map{
-			"CozyUI":      middlewares.CozyUI(i),
-			"ThemeCSS":    middlewares.ThemeCSS(i),
-			"Favicon":     middlewares.Favicon(i),
 			"Domain":      i.ContextualDomain(),
 			"ContextName": i.ContextName,
 			"Locale":      i.Locale,
 			"Title":       title,
+			"Favicon":     middlewares.Favicon(i),
 		})
 	}
 

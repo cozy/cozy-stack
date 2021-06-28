@@ -189,15 +189,14 @@ func authorizeForm(c echo.Context) error {
 
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Title":            instance.TemplateTitle(),
-		"CozyUI":           middlewares.CozyUI(instance),
-		"ThemeCSS":         middlewares.ThemeCSS(instance),
 		"Domain":           instance.ContextualDomain(),
+		"ContextName":      instance.ContextName,
+		"Locale":           instance.Locale,
+		"Title":            instance.TemplateTitle(),
+		"Favicon":          middlewares.Favicon(instance),
 		"InstanceSlugName": slugname,
 		"InstanceDomain":   instanceDomain,
-		"ContextName":      instance.ContextName,
 		"ClientDomain":     clientDomain,
-		"Locale":           instance.Locale,
 		"Client":           params.client,
 		"State":            params.state,
 		"RedirectURI":      params.redirectURI,
@@ -207,7 +206,6 @@ func authorizeForm(c echo.Context) error {
 		"CSRF":             c.Get("csrf"),
 		"HasFallback":      hasFallback,
 		"Webapp":           params.webapp,
-		"Favicon":          middlewares.Favicon(instance),
 	})
 }
 
@@ -344,18 +342,16 @@ func authorizeSharingForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
-		"Title":        instance.TemplateTitle(),
-		"CozyUI":       middlewares.CozyUI(instance),
-		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
 		"ContextName":  instance.ContextName,
 		"Locale":       instance.Locale,
+		"Title":        instance.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(instance),
 		"SharerDomain": sharerDomain,
 		"SharerName":   s.Members[0].PrimaryName(),
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
-		"Favicon":      middlewares.Favicon(instance),
 		"HasShortcut":  s.ShortcutID != "",
 		"TargetType":   targetType,
 	})
@@ -457,8 +453,6 @@ func authorizeMoveForm(c echo.Context) error {
 		}
 		mail, _ := inst.SettingsEMail()
 		return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
-			"CozyUI":           middlewares.CozyUI(inst),
-			"ThemeCSS":         middlewares.ThemeCSS(inst),
 			"Domain":           inst.ContextualDomain(),
 			"ContextName":      inst.ContextName,
 			"Favicon":          middlewares.Favicon(inst),
@@ -489,8 +483,6 @@ func authorizeMoveForm(c echo.Context) error {
 
 	return c.Render(http.StatusOK, "authorize_move.html", echo.Map{
 		"TemplateTitle":  inst.TemplateTitle(),
-		"CozyUI":         middlewares.CozyUI(inst),
-		"ThemeCSS":       middlewares.ThemeCSS(inst),
 		"Domain":         inst.ContextualDomain(),
 		"ContextName":    inst.ContextName,
 		"Locale":         inst.Locale,
@@ -521,8 +513,6 @@ func authorizeMove(c echo.Context) error {
 			errorMessage := inst.Translate(TwoFactorErrorKey)
 			mail, _ := inst.SettingsEMail()
 			return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
-				"CozyUI":           middlewares.CozyUI(inst),
-				"ThemeCSS":         middlewares.ThemeCSS(inst),
 				"Domain":           inst.ContextualDomain(),
 				"ContextName":      inst.ContextName,
 				"Favicon":          middlewares.Favicon(inst),

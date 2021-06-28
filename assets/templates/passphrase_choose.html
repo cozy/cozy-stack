@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.TemplateTitle}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
+  </head>
+  <body class="theme-inverted">
+    <form id="new-pass-form" method="POST" action="{{.Action}}" class="d-contents" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}">
+      <input type="hidden" id="iterations" name="iterations" value="{{.Iterations}}" />
+      {{if .RegisterToken}}
+      <input type="hidden" id="register-token" name="register_token" value={{.RegisterToken}} />
+      {{else}}
+      <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRF}}" />
+      <input type="hidden" id="reset-token" name="passphrase_reset_token" value="{{.ResetToken}}" />
+      {{end}}
+      <main class="wrapper">
+
+        <header class="wrapper-top">
+          <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+            <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+          </a>
+        </header>
+
+        <div class="d-flex flex-column align-items-center">
+          <h1 class="h4 h2-md mb-4 text-center">{{t "Passphrase renew Title"}}</h1>
+          <div id="password-field" class="input-group form-floating has-validation mb-3 w-100">
+            <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="new-password" />
+            <label for="password">{{t "Passphrase renew Field"}}</label>
+            <button id="password-visibility-button" class="btn btn-outline-info"
+              type="button"
+              name="password-visibility"
+              data-show="{{t "Login Password show"}}"
+              data-hide="{{t "Login Password hide"}}"
+              title="{{t "Login Password show"}}">
+              <span id="password-visibility-icon" class="icon icon-eye-closed"></span>
+            </button>
+            <div class="progress">
+              <div id="password-strength" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+          <p id="password-tip" class="text-muted mb-3">{{t "Passphrase renew Help"}}</p>
+
+          <a href="#password-hint" class="expand mb-4 align-self-start text-decoration-none align-items-center">
+            <span class="icon icon-right me-2"></span>
+            {{t "Passphrase Onboarding Show hint form"}}
+          </a>
+          <div id="password-hint" class="collapse">
+            <div id="hint-field" class="input-group form-floating has-validation w-100 mb-3">
+              <input type="text" class="form-control form-control-md-lg" id="hint" name="hint" />
+              <label for="hint">{{t "Passphrase Onboarding Hint Field"}}</label>
+            </div>
+            <p class="text-muted">{{t "Passphrase Onboarding Hint Help"}}</p>
+          </div>
+        </div>
+
+        <footer class="w-100">
+          <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
+            {{t "Passphrase renew Submit"}}
+          </button>
+        </footer>
+
+      </main>
+    </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+    {{if .CryptoPolyfill}}<script src="{{asset .Domain "/js/asmcrypto.js"}}"></script>{{end}}
+    <script src="{{asset .Domain "/scripts/password-helpers.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/password-strength.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/new-password.js"}}"></script>
+    {{if .MatomoURL}}
+    <script src="{{asset .Domain "/js/piwik.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/tracking-onboarding.js"}}" data-matomo-url="{{.MatomoURL}}" data-matomo-site-id="{{.MatomoSiteID}}" data-matomo-app-id="{{.MatomoAppID}}"></script>
+    {{end}}
+  </body>
+</html>

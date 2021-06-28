@@ -15,35 +15,9 @@
 
   const storage = w.localStorage
 
-  let errorPanel = twofaField.querySelector('.invalid-tooltip')
-  const showError = function (message) {
-    let error = 'The Cozy server is unavailable. Do you have network?'
-    if (message) {
-      error = '' + message
-    }
-
-    if (errorPanel) {
-      errorPanel.lastChild.textContent = error
-    } else {
-      errorPanel = d.createElement('div')
-      errorPanel.classList.add('invalid-tooltip', 'mb-1')
-      const arrow = d.createElement('div')
-      arrow.classList.add('tooltip-arrow')
-      errorPanel.appendChild(arrow)
-      const icon = d.createElement('span')
-      icon.classList.add('icon', 'icon-alert', 'bg-danger')
-      errorPanel.appendChild(icon)
-      errorPanel.append(error)
-      twofaField.appendChild(errorPanel)
-    }
-
-    passcodeInput.classList.add('is-invalid')
-    passcodeInput.select()
-    submitButton.removeAttribute('disabled')
-  }
-
   const onSubmitTwoFactorCode = function (event) {
     event.preventDefault()
+    passcodeInput.setAttribute('disabled', true)
     submitButton.setAttribute('disabled', true)
 
     const longRun = longRunCheckbox && longRunCheckbox.checked ? '1' : '0'
@@ -97,11 +71,11 @@
             submitButton.classList.add('btn-done')
             w.location = body.redirect
           } else {
-            showError(body.error)
+            w.showError(twofaField, body.error)
           }
         })
       })
-      .catch(showError)
+      .catch((err) => w.showError(twofaField, err))
   }
 
   twofaForm.addEventListener('submit', onSubmitTwoFactorCode)

@@ -49,7 +49,7 @@ Here are the relevant places:
 - [https://github.com/cozy/cozy-store/blob/master/src/config/permissionsIcons.json](https://github.com/cozy/cozy-store/blob/master/src/config/permissionsIcons.json)
 - [https://github.com/cozy/cozy-store/tree/master/src/assets/icons/permissions](https://github.com/cozy/cozy-store/tree/master/src/assets/icons/permissions)
 - [https://github.com/cozy/cozy-stack/blob/master/assets/locales/en.po](https://github.com/cozy/cozy-stack/blob/master/assets/locales/en.po)
-- [https://github.com/cozy/cozy-stack/blob/master/assets/styles/stack.css](https://github.com/cozy/cozy-stack/blob/master/assets/styles/stack.css)
+- [https://github.com/cozy/cozy-stack/blob/master/assets/styles/cirrus.css](https://github.com/cozy/cozy-stack/blob/master/assets/styles/cirrus.css)
 
 ## Using the doctype in your application
 

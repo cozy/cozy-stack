@@ -2,32 +2,38 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
-    {{.CozyUI}}
-    {{.ThemeCSS}}
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-      <defs>
-        <symbol viewBox="0 0 16 16" id="next">
-          <g stroke-width="1" fill-rule="evenodd">
-            <path d="M3.41421356,7 L14.9931545,7 C15.5492199,7 16,7.44386482 16,8 C16,8.55228475 15.5500512,9 14.9931545,9 L3.41421356,9 L8.70710678,14.2928932 C9.09763107,14.6834175 9.09763107,15.3165825 8.70710678,15.7071068 C8.31658249,16.0976311 7.68341751,16.0976311 7.29289322,15.7071068 L0.292893219,8.70710678 C-0.0976310729,8.31658249 -0.0976310729,7.68341751 0.292893219,7.29289322 L7.29289322,0.292893219 C7.68341751,-0.0976310729 8.31658249,-0.0976310729 8.70710678,0.292893219 C9.09763107,0.683417511 9.09763107,1.31658249 8.70710678,1.70710678 L3.41421356,7 Z" transform="translate(8.000000, 8.000000) scale(-1, 1) translate(-8.000000, -8.000000) "></path>
-          </g>
-        </symbol>
-      </defs>
-    </svg>
-    <div role="application">
-      <main class="wizard">
-        <div class="wizard-wrapper">
-          <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase reset Title"}}</h1>
-          {{if .HasHint}}
-          <form id="send-hint-form" method="POST" action="/auth/hint" class="wizard-main">
-            <div role="region">
-              <input type="hidden" name="redirect" value="{{.Redirect}}" />
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s">
+  <body class="theme-inverted">
+    <main class="wrapper">
+      <header class="wrapper-top d-flex flex-row align-items-center">
+        <a href="/auth/login" class="btn btn-icon" aria-label="{{t "Back icon label"}}">
+          <span class="icon icon-back"></span>
+        </a>
+        <div class="vertical-separator d-sm-none" role="separator"></div>
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
+      </header>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <h1 class="h4 h2-md mb-4 text-center">{{t "Passphrase reset Title"}}</h1>
+        {{if .HasHint}}
+        <form id="send-hint-form" method="POST" action="/auth/hint" class="d-contents">
+          <input type="hidden" name="redirect" value="{{.Redirect}}" />
+          <button type="submit" class="alert alert-info d-flex align-items-center w-100 mb-2">
+            <div class="me-3 flex-grow-1">
+              <p class="text-start mb-2">
+                {{t "Passphrase reset Submit hint"}}
+              </p>
+              <p class="text-start text-muted caption mb-0">
                 {{if .CozyPass}}
                 {{t "Passphrase reset Help hint Cozy Pass"}}
                 {{else}}
@@ -35,31 +41,29 @@
                 {{end}}
               </p>
             </div>
-            <footer claas="wizard-footer u-pb-half">
-              <button id="send-hint-submit" form="send-hint-form" type="submit" class="c-btn c-btn--full wizard-button wizard-next">
-                <span>{{t "Passphrase reset Submit hint"}}</span>
-              </button>
-            </footer>
-          </form>
-          {{end}}
-          <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="wizard-main u-mt-3">
-            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input type="hidden" name="redirect" value="{{.Redirect}}" />
-            <div role="region">
-              {{if .HasCiphers}}
-              <p><strong>
-                {{if .CozyPass}}
-                {{t "Passphrase reset password Title Cozy Pass"}}
+            <span class="icon icon-right shrink-0"></span>
+          </button>
+        </form>
+        {{end}}
+
+        <form method="POST" action="/auth/passphrase_reset" class="d-contents">
+          <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+          <input type="hidden" name="redirect" value="{{.Redirect}}" />
+          <button type="submit" class="alert d-flex align-items-center w-100 {{if .HasCiphers}}card-intent{{else}}alert-info{{end}}">
+            <div class="me-3 flex-grow-1">
+              <p class="text-start text-primary mb-2">
+                {{if .HasCiphers}}
+                {{t "Passphrase reset Submit"}}
                 {{else}}
-                {{t "Passphrase reset password Title"}}
+                {{t "Passphrase reset Submit emptyVault"}}
                 {{end}}
-              </strong></p>
-              <p class="u-mt-1-half-s" id="login-password-tip">
-                <strong class="u-error">{{t "Passphrase reset Help Warning"}}</strong>
-                {{tHTML "Passphrase reset Help Message"}}
+              </p>
+              {{if .HasCiphers}}
+              <p class="text-start text-muted caption mb-2">
+                {{t "Passphrase reset Help Message"}}
               </p>
               {{else}}
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">
+              <p class="text-start text-muted caption mb-0">
                 {{if .CozyPass}}
                 {{t "Passphrase reset Help emptyVault Cozy Pass"}}
                 {{else}}
@@ -67,21 +71,14 @@
                 {{end}}
               </p>
               {{end}}
-              <footer claas="wizard-footer u-pb-half">
-                <button type="submit" class="c-btn {{if .HasCiphers}}c-btn--text u-p-0 u-m-0{{else}}c-btn--full wizard-button wizard-next{{end}}">
-                  <span>
-                    {{if .HasHint}}
-                    {{t "Passphrase reset Submit"}}
-                    {{else}}
-                    {{t "Passphrase reset Submit emptyVault"}}
-                    {{end}}
-                  </span>
-                </button>
-              </footer>
             </div>
-          </form>
-        </div>
-      </main>
-    </div>
+            <span class="icon icon-right flex-shrink-0"></span>
+          </button>
+        </form>
+      </div>
+
+      <footer></footer>
+    </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>

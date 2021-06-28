@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <g fill="none" fill-rule="evenodd" transform="translate(-192 -480)">
-    <g transform="translate(193 481)">
-      <path fill="#FCBFBF" d="M46,23 C46,35.704 35.702,46 23,46 C10.296,46 0,35.704 0,23 C0,10.3 10.296,0 23,0 C35.702,0 46,10.3 46,23 L46,23 Z"/>
-      <polygon fill="#F62C2C" points="20 38 20 26 8 26 33 13"/>
-    </g>
-  </g>
-</svg>

@@ -119,7 +119,6 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 						"ContextName": instance.ContextName,
 						"Locale":      instance.Locale,
 						"Favicon":     Favicon(instance),
-						"ThemeCSS":    ThemeCSS(instance),
 					})
 				}
 			}

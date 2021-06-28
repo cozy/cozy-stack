@@ -125,36 +125,27 @@ msgstr "Forgotten password"
 
 msgid "Passphrase reset Help hint"
 msgstr ""
-"You set a hint to recover your password. "
-"Click on the button below to receive it by email."
+"The hint you have chosen at the creation of your password will be sent to you by email."
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"You set a hint to recover your password for Cozy Pass. "
-"Click on the button below to receive it by email."
+"The hint you have chosen at the creation of your password for Cozy Pass will be sent to you by email."
 
 msgid "Passphrase reset Submit hint"
-msgstr "Send me my hint"
-
-msgid "Passphrase reset password Title"
-msgstr "As a last resort, you can reset your password:"
-
-msgid "Passphrase reset password Title Cozy Pass"
-msgstr "As a last resort, you can reset your password for Cozy Pass:"
-
-msgid "Passphrase reset Help Warning"
-msgstr "Warning! You will lose that data of your password manager"
+msgstr "Help me recover my password"
 
 msgid "Passphrase reset Help Message"
 msgstr ""
-"if you reset your password. The rest of your data will remain accessible. "
-"Indeed, your current password is the only key to decode your passwords kept in your app \"Cozy Pass\"."
+"Warning! Your current password is the only way to decode "
+"the passwords kept in your app \"Cozy Pass\". "
+"If you reset it, you will lose that data. "
+"The rest of your data will remain accessible."
 
 msgid "Passphrase reset Help emptyVault"
-msgstr "By clicking this button, you will be sent a link by email to choose a new password."
+msgstr "A link will be sent to you by email to choose a new password."
 
 msgid "Passphrase reset Help emptyVault Cozy Pass"
-msgstr "By clicking this button, you will be sent a link by email to choose a new password for Cozy Pass."
+msgstr "A link will be sent to you by email to choose a new password for Cozy Pass."
 
 msgid "Passphrase reset Submit"
 msgstr "Reset my password"
@@ -193,7 +184,10 @@ msgstr "Finish"
 
 msgid "Hint sent Body"
 msgstr ""
-"We just sent you your password hint by mail. It will help you to remember your Cozy password.\n"
+"We just sent you your password hint by mail. It will help you to remember your Cozy password."
+
+msgid "Hint sent Detail"
+msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Hint sent Login Button"
@@ -201,7 +195,10 @@ msgstr "Return to the login page"
 
 msgid "Passphrase is reset Body"
 msgstr ""
-"We just sent you a (very) special link by mail. Click on it to reset your password.\n"
+"We just sent you a (very) special link by mail. Click on it to reset your password."
+
+msgid "Passphrase is reset Detail"
+msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Passphrase is reset Login Button"
@@ -244,7 +241,7 @@ msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
 
 msgid "Authorize Sharing Request"
-msgstr "has shared with you:"
+msgstr "Shared by"
 
 msgid "Authorize Sharing Description start"
 msgstr ""
@@ -285,13 +282,13 @@ msgid "Authorize Linked Title"
 msgstr "Permissions request"
 
 msgid "Authorize Linked Webapp"
-msgstr "An application claims to be:"
+msgstr "An application that claims to be:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "It requests access to your Cozy:"
+msgstr "requests access to your Cozy:"
 
 msgid "Authorize Linked Help"
-msgstr "By authorizing, the application will be able to acces to these data in your Cozy:"
+msgstr "The application ask access to these types of data in your Cozy:"
 
 msgid "Move delegated auth Title"
 msgstr "Move confirmation"
@@ -309,7 +306,7 @@ msgid "Move in progress Title"
 msgstr "Moving in progress"
 
 msgid "Move in progress Box"
-msgstr "From %s to %s"
+msgstr "From **%s** to **%s**"
 
 msgid "Move in progress Description"
 msgstr "Moving data can take time. You can close this screen, an email will be sent to you once the move is complete."
@@ -343,22 +340,22 @@ msgid "Move Vault Title"
 msgstr "Import my passwords"
 
 msgid "Move Vault Description"
-msgstr "Follow the next steps to import the passwords that you have just exported:"
+msgstr "Follow the next steps to import the passwords that you have exported at the start of the move:"
 
 msgid "Move Vault Step 1"
 msgstr "Open the Cozy extension on your browser"
 
 msgid "Move Vault Step 2"
-msgstr "Log out, then log in to the extension with the URL of your new Cozy"
+msgstr "Log out, then log in to the extension with your new Cozy"
 
 msgid "Move Vault Step 3"
-msgstr "Click on \"Settings\" and then \"Import Items\""
+msgstr "Click on \"**Settings / Import Items**\""
 
 msgid "Move Vault Step 4"
-msgstr "Select the source format \"Bitwarden (json)\", click on \"choose file\" and select the file you have just exported from your extension"
+msgstr "Select the source format \"**Bitwarden (json)**\", click on \"**choose file**\" and select the file you have just exported from your extension"
 
 msgid "Move Vault Step 5"
-msgstr "Click on \"Import\""
+msgstr "Click on \"**Import**\""
 
 msgid "Move Vault Link"
 msgstr "I have imported my passwords"
@@ -489,6 +486,9 @@ msgid "Confirmation User Content"
 msgstr "Your e-mail is now confirmed. We successfully activated two-factor authentication for your Cozy."
 
 msgid "Permissions Read only"
+msgstr ", and related documents"
+
+msgid "Permissions Read only"
 msgstr ", for read only"
 
 msgid "Permissions disk usage"
@@ -551,6 +551,9 @@ msgstr "Bills"
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"
 
+msgid "Permissions io.cozy.contacts"
+msgstr "Groups of contacts"
+
 msgid "Permissions io.cozy.files"
 msgstr "Files"
 
@@ -592,6 +595,9 @@ msgstr "Delegating permissions"
 
 msgid "Permissions io.cozy.oauth.clients"
 msgstr "Connected devices"
+
+msgid "Permissions io.cozy.sharings"
+msgstr "List of sharings"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contract (Maif)"
@@ -933,8 +939,11 @@ msgstr "Someone"
 msgid "Sharing Empty description"
 msgstr "Surprise!"
 
+msgid "Sharing Discovery Intro"
+msgstr "Your address will be sent to %s to simplify the nexts sharings"
+
 msgid "Sharing Discovery URL field"
-msgstr "Your Cozy address"
+msgstr "My Cozy address"
 
 msgid "Sharing URL Discovery error"
 msgstr "The Cozy URL you entered is incorrect, please try again"
@@ -955,10 +964,7 @@ msgid "Sharing Discover Cozy"
 msgstr "Discover Cozy now!"
 
 msgid "Sharing Forgotten URL"
-msgstr "Forgotten the URL? Don't panic."
-
-msgid "Sharing Forgotten URL email"
-msgstr "Search your email inbox for \"Cozy\"."
+msgstr "I have forgotten my address"
 
 msgid "Notifications Disk Quota Subject"
 msgstr "You have currently reached 90% of your space."

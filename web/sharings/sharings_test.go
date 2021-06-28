@@ -294,7 +294,6 @@ func TestDiscovery(t *testing.T) {
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Connect to your Cozy")
-	assert.Contains(t, string(body), `<input type="text" class="field" name="slug" id="slug"`)
 	assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
 
 	u.RawQuery = ""
@@ -358,7 +357,7 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	if assert.Len(t, matches, 2) {
 		csrfToken = matches[1]
 	}
-	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
+	assert.Contains(t, body, `<span class="filetype-other filetype">`)
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T) {

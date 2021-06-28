@@ -45,7 +45,6 @@ func renderError(c echo.Context, code int, msg string) error {
 		"ContextName":  instance.ContextName,
 		"Locale":       instance.Locale,
 		"Title":        instance.TemplateTitle(),
-		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Favicon":      middlewares.Favicon(instance),
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,
@@ -66,7 +65,6 @@ func Home(c echo.Context) error {
 				"ContextName":  instance.ContextName,
 				"Locale":       instance.Locale,
 				"Title":        instance.TemplateTitle(),
-				"ThemeCSS":     middlewares.ThemeCSS(instance),
 				"Favicon":      middlewares.Favicon(instance),
 				"SupportEmail": instance.SupportEmailAddress(),
 			})

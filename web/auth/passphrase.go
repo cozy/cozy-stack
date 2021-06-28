@@ -31,14 +31,12 @@ func passphraseResetForm(c echo.Context) error {
 	}
 	passwordAuth := instance.IsPasswordAuthenticationEnabled()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"Title":       instance.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(instance),
-		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,
-		"CSRF":        c.Get("csrf"),
+		"Title":       instance.TemplateTitle(),
 		"Favicon":     middlewares.Favicon(instance),
+		"CSRF":        c.Get("csrf"),
 		"Redirect":    c.QueryParam("redirect"),
 		"HasHint":     hasHint,
 		"HasCiphers":  hasCiphers,
@@ -60,7 +58,6 @@ func passphraseForm(c echo.Context) error {
 			"ContextName":  inst.ContextName,
 			"Locale":       inst.Locale,
 			"Title":        inst.TemplateTitle(),
-			"ThemeCSS":     middlewares.ThemeCSS(inst),
 			"Favicon":      middlewares.Favicon(inst),
 			"SupportEmail": "contact@cozycloud.cc",
 		})
@@ -76,17 +73,16 @@ func passphraseForm(c echo.Context) error {
 		middlewares.AppendCSPRule(c, "img", matomo.URL)
 	}
 
-	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
-		"CozyUI":         middlewares.CozyUI(inst),
-		"Title":          inst.TemplateTitle(),
-		"ThemeCSS":       middlewares.ThemeCSS(inst),
+	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
 		"Domain":         inst.ContextualDomain(),
 		"ContextName":    inst.ContextName,
 		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Action":         "/settings/passphrase",
 		"Iterations":     iterations,
 		"Salt":           string(inst.PassphraseSalt()),
 		"RegisterToken":  registerToken,
-		"Favicon":        middlewares.Favicon(inst),
 		"CryptoPolyfill": cryptoPolyfill,
 		"MatomoURL":      matomo.URL,
 		"MatomoSiteID":   matomo.SiteID,
@@ -106,16 +102,19 @@ func sendHint(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Title":       i.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Domain":      i.ContextualDomain(),
-		"ContextName": i.ContextName,
-		"ErrorTitle":  "Hint sent Title",
-		"Error":       "Hint sent Body",
-		"Button":      "Hint sent Login Button",
-		"ButtonLink":  i.PageURL("/auth/login", u),
-		"Favicon":     middlewares.Favicon(i),
+		"Domain":       i.ContextualDomain(),
+		"ContextName":  i.ContextName,
+		"Locale":       i.Locale,
+		"Title":        i.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(i),
+		"Inverted":     true,
+		"Illustration": "/images/mail-sent.svg",
+		"ErrorTitle":   "Hint sent Title",
+		"Error":        "Hint sent Body",
+		"ErrorDetail":  "Hint sent Detail",
+		"SupportEmail": i.SupportEmailAddress(),
+		"Button":       "Hint sent Login Button",
+		"ButtonLink":   i.PageURL("/auth/login", u),
 	})
 }
 
@@ -137,16 +136,19 @@ func passphraseReset(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Title":       i.TemplateTitle(),
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Domain":      i.ContextualDomain(),
-		"ContextName": i.ContextName,
-		"ErrorTitle":  "Passphrase is reset Title",
-		"Error":       "Passphrase is reset Body",
-		"Button":      "Passphrase is reset Login Button",
-		"ButtonLink":  i.PageURL("/auth/login", u),
-		"Favicon":     middlewares.Favicon(i),
+		"Domain":       i.ContextualDomain(),
+		"ContextName":  i.ContextName,
+		"Locale":       i.Locale,
+		"Title":        i.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(i),
+		"Inverted":     true,
+		"Illustration": "/images/mail-sent.svg",
+		"ErrorTitle":   "Passphrase is reset Title",
+		"Error":        "Passphrase is reset Body",
+		"ErrorDetail":  "Passphrase is reset Detail",
+		"SupportEmail": i.SupportEmailAddress(),
+		"Button":       "Passphrase is reset Login Button",
+		"ButtonLink":   i.PageURL("/auth/login", u),
 	})
 }
 
@@ -178,19 +180,18 @@ func passphraseRenewForm(c echo.Context) error {
 		iterations = crypto.EdgePBKDF2Iterations
 	}
 
-	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
-		"Title":                inst.TemplateTitle(),
-		"CozyUI":               middlewares.CozyUI(inst),
-		"ThemeCSS":             middlewares.ThemeCSS(inst),
-		"Domain":               inst.ContextualDomain(),
-		"ContextName":          inst.ContextName,
-		"Locale":               inst.Locale,
-		"Iterations":           iterations,
-		"Salt":                 string(inst.PassphraseSalt()),
-		"PassphraseResetToken": hex.EncodeToString(token),
-		"CSRF":                 c.Get("csrf"),
-		"Favicon":              middlewares.Favicon(inst),
-		"CryptoPolyfill":       cryptoPolyfill,
+	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Action":         "/auth/passphrase_renew",
+		"Iterations":     iterations,
+		"Salt":           string(inst.PassphraseSalt()),
+		"ResetToken":     hex.EncodeToString(token),
+		"CSRF":           c.Get("csrf"),
+		"CryptoPolyfill": cryptoPolyfill,
 	})
 }
 

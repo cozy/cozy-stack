@@ -15,7 +15,7 @@
   <body class="modal-open">
     <div class="modal d-block theme-inverted" tabindex="-1" aria-modal="true" role="dialog">
       <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <main role="application" class="modal-content">
           <div class="modal-icon">
             <span class="icon icon-auth"></span>
           </div>
@@ -25,6 +25,7 @@
               <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
               <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
               <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
+
               <h1 class="h4 h2-md mb-0 text-center">{{t "Login Confirm Title"}}</h1>
               <p class="mb-4 mb-md-5 text-muted text-center">{{t "Login Confirm Help"}}</p>
               <div id="login-field" class="input-group form-floating has-validation w-100">
@@ -41,6 +42,7 @@
               <button id="login-submit" class="btn btn-primary btn-md-lg w-100 mt-4 mt-md-5" type="submit">
                 {{t "Login Submit"}}
               </button>
+
             </form>
           </div>
           <a href="{{or .Redirect "/"}}" class="btn btn-icon position-absolute top-0 end-0" aria-label="Close">

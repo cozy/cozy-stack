@@ -1,33 +1,30 @@
 ;(function (w, d) {
   const form = d.getElementsByTagName('form')[0]
   const passInput = d.getElementById('password')
+  const passTip = d.getElementById('password-tooltip')
   const indicator = d.getElementById('password-strength')
-  const passTip = d.getElementById('password-tip')
-  const submitButton = form.querySelector('button[type=submit]')
 
   passInput.addEventListener(
     'input',
     function () {
       const strength = w.password.getStrength(passInput.value)
-      indicator.value = parseInt(strength.percentage, 10)
-      indicator.setAttribute('class', 'pw-indicator pw-' + strength.label)
-      passInput.classList.remove('is-error')
-      passTip && passTip.classList.remove('u-pomegranate')
-      if (strength.label === 'weak') {
-        submitButton.setAttribute('disabled', '')
-      } else {
-        submitButton.removeAttribute('disabled')
-      }
+      const pct = Math.round(parseInt(strength.percentage, 10) / 4) * 4
+      indicator.setAttribute('aria-valuenow', pct)
+      indicator.setAttribute(
+        'class',
+        `progress-bar w-${pct} pass-${strength.label}`
+      )
+      passInput.classList.remove('is-invalid')
+      passTip && passTip.classList.remove('text-error')
     },
     false
   )
-  passInput.focus()
 
   form.addEventListener('submit', function (event) {
     const strength = w.password.getStrength(passInput.value)
     if (strength.label === 'weak') {
-      passInput.classList.add('is-error')
-      passTip && passTip.classList.add('u-pomegranate')
+      passInput.classList.add('is-invalid')
+      passTip && passTip.classList.add('text-error')
       event.preventDefault()
       event.stopPropagation()
     }
