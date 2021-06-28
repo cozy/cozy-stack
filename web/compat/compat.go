@@ -11,7 +11,6 @@ import (
 func Compat(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "compat.html", echo.Map{
-		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,

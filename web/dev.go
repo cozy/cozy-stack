@@ -90,8 +90,6 @@ func devData(c echo.Context) echo.Map {
 		data["ContextName"] = config.DefaultInstanceContext
 	}
 	if i, err := lifecycle.GetInstance(c.Request().Host); err == nil {
-		data["CozyUI"] = middlewares.CozyUI(i)
-		data["ThemeCSS"] = middlewares.ThemeCSS(i)
 		data["Favicon"] = middlewares.Favicon(i)
 		data["InstanceURL"] = i.PageURL("/", nil)
 	}

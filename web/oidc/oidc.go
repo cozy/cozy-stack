@@ -464,7 +464,6 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		"ContextName":  inst.ContextName,
 		"Locale":       inst.Locale,
 		"Title":        inst.TemplateTitle(),
-		"ThemeCSS":     middlewares.ThemeCSS(inst),
 		"Favicon":      middlewares.Favicon(inst),
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,

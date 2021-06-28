@@ -158,7 +158,6 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 				"ContextName":  i.ContextName,
 				"Locale":       i.Locale,
 				"Title":        i.TemplateTitle(),
-				"ThemeCSS":     ThemeCSS(i),
 				"Favicon":      Favicon(i),
 				"SupportEmail": i.SupportEmailAddress(),
 			})

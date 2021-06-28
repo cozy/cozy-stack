@@ -453,8 +453,6 @@ func authorizeMoveForm(c echo.Context) error {
 		}
 		mail, _ := inst.SettingsEMail()
 		return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
-			"CozyUI":           middlewares.CozyUI(inst),
-			"ThemeCSS":         middlewares.ThemeCSS(inst),
 			"Domain":           inst.ContextualDomain(),
 			"ContextName":      inst.ContextName,
 			"Favicon":          middlewares.Favicon(inst),
@@ -485,8 +483,6 @@ func authorizeMoveForm(c echo.Context) error {
 
 	return c.Render(http.StatusOK, "authorize_move.html", echo.Map{
 		"TemplateTitle":  inst.TemplateTitle(),
-		"CozyUI":         middlewares.CozyUI(inst),
-		"ThemeCSS":       middlewares.ThemeCSS(inst),
 		"Domain":         inst.ContextualDomain(),
 		"ContextName":    inst.ContextName,
 		"Locale":         inst.Locale,
@@ -517,8 +513,6 @@ func authorizeMove(c echo.Context) error {
 			errorMessage := inst.Translate(TwoFactorErrorKey)
 			mail, _ := inst.SettingsEMail()
 			return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
-				"CozyUI":           middlewares.CozyUI(inst),
-				"ThemeCSS":         middlewares.ThemeCSS(inst),
 				"Domain":           inst.ContextualDomain(),
 				"ContextName":      inst.ContextName,
 				"Favicon":          middlewares.Favicon(inst),
