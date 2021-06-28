@@ -76,7 +76,11 @@ func Callback(c echo.Context) error {
 	if err := office.Callback(inst, params); err != nil {
 		inst.Logger().WithField("nspace", "office").
 			Infof("Error on the callback: %s", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		code := http.StatusInternalServerError
+		if httpError, ok := err.(*echo.HTTPError); ok {
+			code = httpError.Code
+		}
+		return c.JSON(code, echo.Map{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"error": 0})
 }
