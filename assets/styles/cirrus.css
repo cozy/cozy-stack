@@ -364,6 +364,7 @@
 /* Others */
 .halo-icon {
   flex: 2rem 0 0;
+  width: 2rem;
   height: 2rem;
   padding: 0.5rem;
   background-color: var(--dividerColor);
