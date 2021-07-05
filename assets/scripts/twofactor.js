@@ -67,6 +67,10 @@
                 body.two_factor_trusted_device_token
               )
             }
+            const tooltip = twofaField.querySelector('.invalid-tooltip')
+            if (tooltip) {
+              tooltip.classList.add('d-none')
+            }
             submitButton.innerHTML = '<span class="icon icon-check"></span>'
             submitButton.classList.add('btn-done')
             w.location = body.redirect
