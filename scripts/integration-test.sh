@@ -2,7 +2,7 @@
 set -ev
 
 cd tests/integration
-sudo npm install -g @bitwarden/cli
+sudo npm install -g @bitwarden/cli@1.16.0
 
 # XXX On GitHub actions, the integration tests were failing where websockets
 # were used. The Ruby library used for websockets is faye and rely on EventMachine.
