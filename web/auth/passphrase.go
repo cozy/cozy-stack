@@ -114,7 +114,7 @@ func sendHint(c echo.Context) error {
 		"ErrorDetail":  "Hint sent Detail",
 		"SupportEmail": i.SupportEmailAddress(),
 		"Button":       "Hint sent Login Button",
-		"ButtonLink":   i.PageURL("/auth/login", u),
+		"ButtonURL":    i.PageURL("/auth/login", u),
 	})
 }
 
@@ -148,7 +148,7 @@ func passphraseReset(c echo.Context) error {
 		"ErrorDetail":  "Passphrase is reset Detail",
 		"SupportEmail": i.SupportEmailAddress(),
 		"Button":       "Passphrase is reset Login Button",
-		"ButtonLink":   i.PageURL("/auth/login", u),
+		"ButtonURL":    i.PageURL("/auth/login", u),
 	})
 }
 

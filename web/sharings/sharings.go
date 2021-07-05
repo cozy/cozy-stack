@@ -398,7 +398,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 		"ErrorTitle":   "Error Sharing already accepted Title",
 		"Error":        "Error Sharing already accepted",
 		"Button":       "Error Sharing already accepted Button",
-		"ButtonLink":   cozyURL,
+		"ButtonURL":    cozyURL,
 		"SupportEmail": inst.SupportEmailAddress(),
 	})
 }
