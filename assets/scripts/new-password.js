@@ -70,6 +70,10 @@
       .then((response) => {
         return response.json().then((body) => {
           if (response.status < 400) {
+            const tooltip = passField.querySelector('.invalid-tooltip')
+            if (tooltip) {
+              tooltip.classList.add('d-none')
+            }
             submit.innerHTML = '<span class="icon icon-check"></span>'
             submit.classList.add('btn-done')
             w.location = body.redirect

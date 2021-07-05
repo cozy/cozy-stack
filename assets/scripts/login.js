@@ -69,6 +69,10 @@
       .then((response) => {
         return response.json().then((body) => {
           if (response.status < 400) {
+            const tooltip = loginField.querySelector('.invalid-tooltip')
+            if (tooltip) {
+              tooltip.classList.add('d-none')
+            }
             submitButton.innerHTML = '<span class="icon icon-check"></span>'
             submitButton.classList.add('btn-done')
             w.location = body.redirect
