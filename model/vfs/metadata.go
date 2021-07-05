@@ -254,51 +254,56 @@ func (e *ExifExtractor) Result() Metadata {
 	} else {
 		m = NewMetadata()
 	}
-	x := <-e.ch
-	switch x := x.(type) {
-	case *exif.Exif:
-		localTZ := false
-		if dt, err := x.DateTime(); err == nil {
-			m["datetime"] = dt
-			localTZ = dt.Location() == time.Local
-		}
-		if flash, err := x.Flash(); err == nil {
-			m["flash"] = flash
-		}
-		if lat, long, err := x.LatLong(); err == nil {
-			if !math.IsNaN(lat) && !math.IsNaN(long) {
-				m["gps"] = map[string]float64{
-					"lat":  lat,
-					"long": long,
-				}
-				if localTZ {
-					if loc := lookupLocation(latlong.LookupZoneName(lat, long)); loc != nil {
-						if t, err := exifDateTimeInLocation(x, loc); err == nil {
-							m["datetime"] = t
+	select {
+	case x := <-e.ch:
+		switch x := x.(type) {
+		case *exif.Exif:
+			localTZ := false
+			if dt, err := x.DateTime(); err == nil {
+				m["datetime"] = dt
+				localTZ = dt.Location() == time.Local
+			}
+			if flash, err := x.Flash(); err == nil {
+				m["flash"] = flash
+			}
+			if lat, long, err := x.LatLong(); err == nil {
+				if !math.IsNaN(lat) && !math.IsNaN(long) {
+					m["gps"] = map[string]float64{
+						"lat":  lat,
+						"long": long,
+					}
+					if localTZ {
+						if loc := lookupLocation(latlong.LookupZoneName(lat, long)); loc != nil {
+							if t, err := exifDateTimeInLocation(x, loc); err == nil {
+								m["datetime"] = t
+							}
 						}
 					}
 				}
 			}
-		}
-		if _, ok := m["width"]; !ok {
-			if xDimension, err := x.Get("PixelXDimension"); err == nil {
-				if width, err := xDimension.Int(0); err == nil {
-					m["width"] = width
+			if _, ok := m["width"]; !ok {
+				if xDimension, err := x.Get("PixelXDimension"); err == nil {
+					if width, err := xDimension.Int(0); err == nil {
+						m["width"] = width
+					}
+				}
+			}
+			if _, ok := m["height"]; !ok {
+				if yDimension, err := x.Get("PixelYDimension"); err == nil {
+					if height, err := yDimension.Int(0); err == nil {
+						m["height"] = height
+					}
+				}
+			}
+			if o, err := x.Get("Orientation"); err == nil {
+				if orientation, err := o.Int(0); err == nil {
+					m["orientation"] = orientation
 				}
 			}
 		}
-		if _, ok := m["height"]; !ok {
-			if yDimension, err := x.Get("PixelYDimension"); err == nil {
-				if height, err := yDimension.Int(0); err == nil {
-					m["height"] = height
-				}
-			}
-		}
-		if o, err := x.Get("Orientation"); err == nil {
-			if orientation, err := o.Int(0); err == nil {
-				m["orientation"] = orientation
-			}
-		}
+	case <-time.After(1 * time.Minute):
+		// Timeout when the exif parser is blocked waiting for more bytes but
+		// there are no more bytes to read.
 	}
 	return m
 }
