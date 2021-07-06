@@ -22,7 +22,7 @@
     const iterations = parseInt(iterationsInput.value, 10)
 
     const tooltips = form.querySelectorAll('.invalid-tooltip')
-    for (tooltip of tooltips) {
+    for (const tooltip of tooltips) {
       tooltip.classList.add('d-none')
     }
 
