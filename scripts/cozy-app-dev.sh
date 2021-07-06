@@ -113,7 +113,7 @@ do_start() {
 		${COZY_KONNECTORS_CMD_OPTION} \
 		--fs-url "file://localhost${vfsdir}" &
 
-	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
+	wait_for "localhost:${COZY_STACK_PORT}/version/" "cozy-stack"
 
 	if [ "${COZY_STACK_PORT}" = "80" ]; then
 		cozy_dev_addr="${COZY_STACK_HOST}"
@@ -171,7 +171,6 @@ do_create_instances() {
 			--email dev@cozy.io \
 			--public-name "Jane Doe" \
 			--passphrase ${COZY_STACK_PASS} \
-			--domain-aliases "localhost:${COZY_STACK_PORT}" \
 			"${cozy_dev_addr}" 2>&1
 	)
 	add_instance_ret="${?}"
