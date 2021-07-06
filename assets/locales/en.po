@@ -165,6 +165,9 @@ msgstr "Choose your password"
 msgid "Passphrase Onboarding Help"
 msgstr "Use at least eight characters with letters, digits and symbols."
 
+msgid "Passphrase Pass Error"
+msgstr "Your password is too short!"
+
 msgid "Passphrase Hint Error"
 msgstr "Your hint must be different from your password!"
 

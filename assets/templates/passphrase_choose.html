@@ -13,7 +13,7 @@
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
   <body class="theme-inverted">
-    <form id="new-pass-form" method="POST" action="{{.Action}}" class="d-contents" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}">
+    <form id="new-pass-form" method="POST" action="{{.Action}}" class="d-contents" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}" data-pass-error="{{t "Passphrase Pass Error"}}">
       <input type="hidden" id="iterations" name="iterations" value="{{.Iterations}}" />
       {{if .RegisterToken}}
       <input type="hidden" id="register-token" name="register_token" value={{.RegisterToken}} />
@@ -31,7 +31,7 @@
 
         <div class="d-flex flex-column align-items-center">
           <h1 class="h4 h2-md mb-4 text-center">{{t "Passphrase renew Title"}}</h1>
-          <div id="password-field" class="input-group form-floating has-validation mb-3 w-100">
+          <div id="password-field" class="input-group form-floating has-validation mb-2 w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="new-password" />
             <label for="password">{{t "Passphrase renew Field"}}</label>
             <button id="password-visibility-button" class="btn btn-outline-info"
@@ -53,7 +53,7 @@
             {{t "Passphrase Onboarding Show hint form"}}
           </a>
           <div id="password-hint" class="collapse">
-            <div id="hint-field" class="input-group form-floating has-validation w-100 mb-3">
+            <div id="hint-field" class="input-group form-floating has-validation w-100 mb-2">
               <input type="text" class="form-control form-control-md-lg" id="hint" name="hint" />
               <label for="hint">{{t "Passphrase Onboarding Hint Field"}}</label>
             </div>

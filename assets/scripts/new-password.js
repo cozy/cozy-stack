@@ -4,7 +4,9 @@
   const form = d.getElementById('new-pass-form')
   const passField = d.getElementById('password-field')
   const passInput = d.getElementById('password')
+  const hintField = d.getElementById('hint-field')
   const hintInput = d.getElementById('hint')
+  const strength = d.getElementById('password-strength')
   const submit = form.querySelector('[type=submit]')
   const iterationsInput = d.getElementById('iterations')
   const registerTokenInput = d.getElementById('register-token')
@@ -13,17 +15,28 @@
 
   form.addEventListener('submit', function (event) {
     event.preventDefault()
-    submit.setAttribute('disabled', true)
 
     const pass = passInput.value
     const hint = hintInput.value
     const salt = form.dataset.salt
     const iterations = parseInt(iterationsInput.value, 10)
 
+    const tooltips = form.querySelectorAll('.invalid-tooltip')
+    for (const tooltip of tooltips) {
+      tooltip.classList.add('d-none')
+    }
+
     if (hint === pass) {
-      w.showError(passField, form.dataset.hintError)
+      w.showError(hintField, form.dataset.hintError)
       return
     }
+
+    if (strength.classList.contains('pass-weak')) {
+      w.showError(passField, form.dataset.passError)
+      return
+    }
+
+    submit.setAttribute('disabled', true)
 
     let hashed, masterKey
     let headers = new Headers()
@@ -70,10 +83,6 @@
       .then((response) => {
         return response.json().then((body) => {
           if (response.status < 400) {
-            const tooltip = passField.querySelector('.invalid-tooltip')
-            if (tooltip) {
-              tooltip.classList.add('d-none')
-            }
             submit.innerHTML = '<span class="icon icon-check"></span>'
             submit.classList.add('btn-done')
             w.location = body.redirect
