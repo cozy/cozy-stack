@@ -19,6 +19,7 @@
     }
 
     if (tooltip) {
+      tooltip.classList.remove('d-none')
       tooltip.lastChild.textContent = error
     } else {
       tooltip = d.createElement('div')

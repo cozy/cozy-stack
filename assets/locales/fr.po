@@ -200,6 +200,9 @@ msgstr ""
 "Utilisez au moins huit caractères avec des lettres, des chiffres et des "
 "symboles."
 
+msgid "Passphrase Pass Error"
+msgstr "Votre mot de passe est trop court !"
+
 msgid "Passphrase Hint Error"
 msgstr "Votre indice doit être différent de votre mot de passe !"
 
