@@ -24,7 +24,6 @@
   const onSubmitPassphrase = function (event) {
     event.preventDefault()
     passphraseInput.setAttribute('disabled', true)
-    submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
     const longRun = longRunCheckbox && longRunCheckbox.checked ? '1' : '0'
