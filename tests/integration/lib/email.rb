@@ -1,12 +1,13 @@
 class Email
   MAILHOG = 'http://localhost:8025/api'
-  attr_reader :subject, :from, :to, :body
+  attr_reader :subject, :from, :to, :body, :parts
 
   def initialize(opts = {})
     @subject = opts[:subject]
     @from = opts[:from]
     @to = opts[:to]
     @body = opts[:body]
+    @parts = opts[:parts] || []
   end
 
   def self.client
@@ -24,8 +25,9 @@ class Email
       subject = item.dig "Content", "Headers", "Subject", 0
       from = item.dig "Content", "Headers", "From", 0
       to = item.dig "Content", "Headers", "From", 0
-      body = item.dig "MIME", "Parts", 0, "Body"
-      Email.new(subject: subject, from: from, to: to, body: body)
+      parts = item.dig "MIME", "Parts"
+      body = parts.dig 0, "Body"
+      Email.new(subject: subject, from: from, to: to, body: body, parts: parts)
     end
   end
 end

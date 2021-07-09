@@ -7,6 +7,16 @@ class Job
     "io.cozy.jobs"
   end
 
+  def self.create(inst, worker, args)
+    opts = {
+      accept: 'application/vnd.api+json',
+      content_type: 'application/vnd.api+json',
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    data = JSON.generate({ data: { attributes: { arguments: args } } })
+    inst.client["/jobs/queue/#{worker}"].post data, opts
+  end
+
   def initialize(opts = {})
     @couch_id = opts["id"]
     @attributes = opts["attributes"]

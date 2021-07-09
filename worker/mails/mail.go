@@ -208,7 +208,7 @@ func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error
 
 	for _, attachment := range opts.Attachments {
 		email.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
-			_, err := w.Write([]byte(attachment.Content))
+			_, err := w.Write(attachment.Content)
 			return err
 		}))
 	}
