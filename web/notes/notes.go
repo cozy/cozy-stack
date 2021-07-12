@@ -5,16 +5,22 @@ package notes
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -337,6 +343,146 @@ func UpdateNoteSchema(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
+// UploadImage is the API handler for POST /notes/:id/images. It uploads an
+// image for the note. It looks like POST /files/:dir-id, but there are some
+// differences:
+// 1. The Content-Type must be an image
+// 2. The parent directory will be the inbox directory for the note (created by
+//    the stack if needed)
+// 3. A reference to the note is added
+// 4. A permission on the note is required
+func UploadImage(c echo.Context) error {
+	// Check permission
+	inst := middlewares.GetInstance(c)
+	note, err := inst.VFS().FileByID(c.Param("id"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.POST, note); err != nil {
+		return err
+	}
+
+	// Find/create the parent directory
+	dir, err := imagesInboxFolder(inst, note)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Create the file document
+	name := c.QueryParam("Name")
+	doc, err := files.FileDocFromReq(c, name, dir.ID())
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	if doc.Class != "image" {
+		return jsonapi.InvalidParameter("Content-Type", errors.New("It must be an image"))
+	}
+	doc.CozyMetadata, _ = files.CozyMetadataFromClaims(c, true)
+	doc.AddReferencedBy(couchdb.DocReference{
+		Type: consts.NotesDocuments,
+		ID:   note.ID(),
+	})
+
+	// Manage the content upload
+	file, err := inst.VFS().CreateFile(doc, nil)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	_, err = io.Copy(file, c.Request().Body)
+	if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+		err = cerr
+	}
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	return jsonapi.Data(c, http.StatusCreated, files.NewFile(doc, inst), nil)
+}
+
+func imagesInboxFolder(inst *instance.Instance, note *vfs.FileDoc) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+
+	// Look if we can find the inbox folder via the references
+	noteRef := []string{consts.NotesDocuments, note.ID()}
+	inbox, err := findDirByReference(inst, noteRef)
+	if err == nil {
+		return inbox, nil
+	}
+
+	// Find or recreate the notes directory
+	notesDirName := inst.Translate("Tree Notes")
+	notesRef := []string{consts.Apps, consts.Apps + "/" + consts.NotesSlug}
+	notesDir, err := findDirByReference(inst, notesRef)
+	if err != nil {
+		notesDir, err = fs.DirByPath("/" + notesDirName)
+		if err != nil {
+			notesDir, err = vfs.NewDirDoc(fs, notesDirName, consts.RootDirID, nil)
+			if err != nil {
+				return nil, err
+			}
+			notesDir.CozyMetadata = vfs.NewCozyMetadata(consts.NotesSlug)
+			notesDir.AddReferencedBy(couchdb.DocReference{
+				Type: notesRef[0],
+				ID:   notesRef[1],
+			})
+			if err := fs.CreateDir(notesDir); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// Find or recreate the images sub-directory
+	imagesDirName := inst.Translate("Tree Notes Images")
+	imagesDir, err := fs.DirByPath("/" + notesDirName + "/" + imagesDirName)
+	if err != nil {
+		imagesDir, err = vfs.NewDirDocWithParent(imagesDirName, notesDir, nil)
+		if err != nil {
+			return nil, err
+		}
+		imagesDir.CozyMetadata = vfs.NewCozyMetadata(consts.NotesSlug)
+		if err := fs.CreateDir(imagesDir); err != nil {
+			return nil, err
+		}
+	}
+
+	// Create the inbox folder
+	dirname := strings.TrimSuffix(note.DocName, filepath.Ext(note.DocName))
+	inbox, err = vfs.NewDirDocWithParent(dirname, imagesDir, nil)
+	if err != nil {
+		return nil, err
+	}
+	inbox.CozyMetadata = vfs.NewCozyMetadata(consts.NotesSlug)
+	inbox.AddReferencedBy(couchdb.DocReference{
+		Type: noteRef[0],
+		ID:   noteRef[1],
+	})
+	if err := fs.CreateDir(inbox); err != nil {
+		return nil, err
+	}
+	return inbox, nil
+}
+
+func findDirByReference(inst *instance.Instance, start []string) (*vfs.DirDoc, error) {
+	end := []string{start[0], start[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    start,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	if err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res); err == nil {
+		for _, row := range res.Rows {
+			dir := &vfs.DirDoc{}
+			if err := couchdb.GetDoc(inst, consts.Files, row.ID, dir); err == nil {
+				if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+					return dir, nil
+				}
+			}
+		}
+	}
+	return nil, errors.New("Not found")
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -349,6 +495,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:id/sync", ForceNoteSync)
 	router.GET("/:id/open", OpenNoteURL)
 	router.PUT("/:id/schema", UpdateNoteSchema)
+	router.POST("/:id/images", UploadImage)
 }
 
 func wrapError(err error) *jsonapi.Error {
