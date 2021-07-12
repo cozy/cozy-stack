@@ -32,7 +32,7 @@ type Address struct {
 // Attachment is for attaching a file to the mail
 type Attachment struct {
 	Filename string `json:"filename"`
-	Content  string `json:"content"`
+	Content  []byte `json:"content"`
 }
 
 // Options should be used as the options of a mail with manually defined

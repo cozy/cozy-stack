@@ -303,6 +303,7 @@ arguments will be given in the `process.env['COZY_FIELDS']` variable.
 
 ```http
 POST /jobs/queue/sendmail HTTP/1.1
+Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
 
