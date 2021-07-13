@@ -13,7 +13,7 @@ install:
 
 ## run: start the cozy-stack for local development
 run:
-	@go run . serve --mailhog
+	@go run . serve --mailhog --fs-url=file://localhost${PWD}/storage
 .PHONY: run
 
 ## instance: create an instance for local development
