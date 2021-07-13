@@ -18,6 +18,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.0
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/go-querystring v1.1.0
 	github.com/google/gops v0.3.19
 	github.com/gorilla/websocket v1.4.2
