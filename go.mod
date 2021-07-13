@@ -30,7 +30,7 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mssola/user_agent v0.5.3
-	github.com/ncw/swift v1.0.53
+	github.com/ncw/swift/v2 v2.0.0
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/onsi/gomega v1.10.5 // indirect
