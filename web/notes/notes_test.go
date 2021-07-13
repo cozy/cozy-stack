@@ -1,4 +1,4 @@
-package notes
+package notes_test
 
 import (
 	"bytes"
@@ -19,7 +19,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/notes"
 	webRealtime "github.com/cozy/cozy-stack/web/realtime"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -690,15 +692,74 @@ func TestNoteRealtime(t *testing.T) {
 	assert.EqualValues(t, file.Metadata["version"], v5)
 }
 
+func TestUploadImage(t *testing.T) {
+	var dirID string
+	for i := 0; i < 3; i++ {
+		u := fmt.Sprintf("/notes/"+noteID+"/images?Name=%d.jpg", i)
+		f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		assert.NoError(t, err)
+		defer f.Close()
+		req, err := http.NewRequest("POST", ts.URL+u, f)
+		assert.NoError(t, err)
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		req.Header.Add("Content-Type", "image/jpeg")
+		req.Header.Add("Content-MD5", "tHWYYuXBBflJ8wXgJ2c2yg==")
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 201, res.StatusCode)
+		defer res.Body.Close()
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		data, _ := result["data"].(map[string]interface{})
+		assert.Equal(t, consts.Files, data["type"])
+		assert.NotEmpty(t, data["id"])
+		assert.NotEmpty(t, data["meta"])
+
+		attrs, _ := data["attributes"].(map[string]interface{})
+		assert.Equal(t, "image", attrs["class"])
+		assert.NotEmpty(t, attrs["cozyMetadata"])
+		if dirID != "" {
+			assert.Equal(t, dirID, attrs["dir_id"])
+		}
+		dirID, _ = attrs["dir_id"].(string)
+		assert.NotEmpty(t, dirID)
+		assert.Equal(t, fmt.Sprintf("%d.jpg", i), attrs["name"])
+		assert.Equal(t, "image/jpeg", attrs["mime"])
+
+		rels, _ := data["relationships"].(map[string]interface{})
+		assert.NotEmpty(t, rels["parent"])
+		refs, _ := rels["referenced_by"].(map[string]interface{})
+		rdata, _ := refs["data"].([]interface{})
+		assert.Len(t, rdata, 1)
+		ref, _ := rdata[0].(map[string]interface{})
+		assert.Equal(t, consts.NotesDocuments, ref["type"])
+		assert.Equal(t, noteID, ref["id"])
+
+		links, _ := data["links"].(map[string]interface{})
+		assert.NotEmpty(t, links["small"])
+		assert.NotEmpty(t, links["medium"])
+		assert.NotEmpty(t, links["large"])
+	}
+
+	dir, err := inst.VFS().DirByID(dirID)
+	assert.NoError(t, err)
+	assert.Equal(t, "/Notes/Images in notes/A title in cache", dir.Fullpath)
+	assert.Len(t, dir.ReferencedBy, 1)
+	assert.Equal(t, noteID, dir.ReferencedBy[0].ID)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "notes_test")
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 
 	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/notes":    Routes,
+		"/notes":    notes.Routes,
 		"/realtime": webRealtime.Routes,
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler

@@ -1140,6 +1140,110 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /notes/:id/images
+
+This route can be used to upload an image for a note. The image will be put in
+the inbox directory for the note and will have a reference to the note.
+
+This route can allow be used to upload images (the content-type is checked) and
+requires a permission on the note.
+
+The filename of the image is given in the query string, via the `Name`
+parameter.
+
+#### Request
+
+```http
+POST /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/images?Name=diagram.jpg HTTP/1.1
+Accept: application/vnd.api+json
+Content-Length: 123456
+Content-MD5: ghCmnrHnki2x9aElj55saA==
+Content-Type: image/jpeg
+Date: Mon, 12 Jul 2021 10:58:00 GMT
+Host: cozy.example.com
+
+<content>
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+Location: https://cozy.example.com/files/b159f370-c51d-0139-b1ef-543d7eb8149c
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "b159f370-c51d-0139-b1ef-543d7eb8149c",
+    "meta": {
+      "rev": "1-588ab661"
+    },
+    "attributes": {
+      "type": "file",
+      "name": "diagram.jpg",
+      "trashed": false,
+      "md5sum": "ghCmnrHnki2x9aElj55saA==",
+      "created_at": "2021-07-12T10:58:00Z",
+      "updated_at": "2021-07-12T10:58:00Z",
+      "tags": [],
+      "metadata": {
+        "datetime": "2021-07-12T10:58:00Z",
+        "height": 1234,
+        "width": 2048
+      },
+      "size": 123456,
+      "executable": false,
+      "class": "image",
+      "mime": "image/jpeg",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2021-07-12T10:58:00Z",
+        "createdByApp": "notes",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2021-07-12T10:58:00Z",
+        "uploadedAt": "2021-07-12T10:58:00Z",
+        "uploadedOn": "https://cozy.example.com/",
+        "uploadedBy": {
+          "slug": "notes"
+        }
+      }
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/234cb980-c51e-0139-b1f0-543d7eb8149c"
+        },
+        "data": {
+          "type": "io.cozy.files",
+          "id": "234cb980-c51e-0139-b1f0-543d7eb8149c"
+        }
+      },
+      "referenced_by": {
+        "links": {
+          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+        },
+        "data": [
+          {
+            "type": "io.cozy.notes.documents",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+          }
+        ]
+      }
+    },
+    "links": {
+      "self": "/files/234cb980-c51e-0139-b1f0-543d7eb8149c",
+      "small": "/files/234cb980-c51e-0139-b1f0-543d7eb8149c/thumbnails/543d7eb8149c128b/small",
+      "medium": "/files/234cb980-c51e-0139-b1f0-543d7eb8149c/thumbnails/543d7eb8149c128b/medium",
+      "large": "/files/234cb980-c51e-0139-b1f0-543d7eb8149c/thumbnails/543d7eb8149c128b/large"
+    }
+  }
+}
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for a document with the

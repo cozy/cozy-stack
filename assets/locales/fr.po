@@ -29,6 +29,9 @@ msgstr "Photos"
 msgid "Tree Notes"
 msgstr "Notes"
 
+msgid "Tree Notes Images"
+msgstr "Images des notes"
+
 msgid "Tree Shared with me"
 msgstr "Partages reçus"
 
