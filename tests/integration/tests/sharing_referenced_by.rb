@@ -107,6 +107,16 @@ describe "A photo" do
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
     assert file_has_album_reference(file_recipient, album.couch_id)
+    assert_equal file.couch_id, file_recipient.cozy_metadata["originalID"]
+
+    # Rename the file
+    file.rename inst, "#{Faker::Internet.slug}-2.jpg"
+    sleep 11
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
+    file_recipient = CozyFile.find_by_path inst_recipient, file_path
+    assert_equal file.name, file_recipient.name
+    assert file_has_album_reference(file_recipient, album.couch_id)
+    assert_equal file.couch_id, file_recipient.cozy_metadata["originalID"]
 
     # Remove the photo from the recipient's album
     album_recipient.remove_photo inst_recipient, file_recipient
@@ -127,6 +137,7 @@ describe "A photo" do
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
     assert file_has_album_reference(file_recipient, album.couch_id)
+    assert_equal file.couch_id, file_recipient.cozy_metadata["originalID"]
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

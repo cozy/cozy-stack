@@ -29,6 +29,8 @@ type FilesCozyMetadata struct {
 	UploadedBy *UploadedByEntry `json:"uploadedBy,omitempty"`
 	// Instance URL where the content has been changed the last time
 	UploadedOn string `json:"uploadedOn,omitempty"`
+	// ID of the file on the instance where it has been created
+	OriginalID string `json:"originalID,omitempty"`
 	// Identifier of the account in io.cozy.accounts (for konnectors)
 	SourceAccount string `json:"sourceAccount,omitempty"`
 	// Identifier unique to the account targeted by the connector (login most of the time)

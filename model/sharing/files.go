@@ -106,6 +106,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 
 // TransformFileToSent transforms an io.cozy.files document before sending it
 // to another cozy instance:
+// - the originalID is added to the cozyMetadata
 // - its identifier is XORed
 // - its dir_id is XORed or removed
 // - the path is removed (directory only)
@@ -117,6 +118,11 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 		delete(doc, "not_synchronized_on")
 	}
 	id := doc["_id"].(string)
+	if meta, ok := doc["cozyMetadata"].(map[string]interface{}); ok {
+		if meta["originalID"] == nil {
+			meta["originalID"] = id
+		}
+	}
 	doc["_id"] = XorID(id, xorKey)
 	dir, ok := doc["dir_id"].(string)
 	if !ok {
@@ -690,6 +696,9 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 		}
 
 		// No upload* for directories
+		if originalID, ok := meta["originalID"].(string); ok {
+			dir.CozyMetadata.OriginalID = originalID
+		}
 		if account, ok := meta["sourceAccount"].(string); ok {
 			dir.CozyMetadata.SourceAccount = account
 		}
@@ -1062,6 +1071,7 @@ func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.Dir
 
 	newdoc.SetID("")
 	newdoc.SetRev("")
+	newdoc.CozyMetadata.OriginalID = ""
 	if err := fs.DissociateDir(olddoc, newdoc); err != nil {
 		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
 		if err := fs.DissociateDir(olddoc, newdoc); err != nil {
@@ -1159,6 +1169,7 @@ func (s *Sharing) dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.Fi
 
 	newdoc.SetID("")
 	newdoc.SetRev("")
+	newdoc.CozyMetadata.OriginalID = ""
 	if err := fs.DissociateFile(olddoc, newdoc); err != nil {
 		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
 		newdoc.ResetFullpath()
@@ -1214,6 +1225,9 @@ func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
 		fcm.CreatedAt = dir.CreatedAt
 		fcm.UpdatedAt = dir.UpdatedAt
 	}
+	if fcm.OriginalID == "" {
+		fcm.OriginalID = dir.DocID
+	}
 	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
 }
@@ -1255,6 +1269,9 @@ func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 		uploadedAt := file.CreatedAt
 		fcm.UploadedAt = &uploadedAt
 		fcm.UploadedOn = instanceURL
+	}
+	if fcm.OriginalID == "" {
+		fcm.OriginalID = file.DocID
 	}
 	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
