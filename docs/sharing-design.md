@@ -407,7 +407,9 @@ The resolution takes 4 steps:
 4. The two files are sent to Alice's Cozy: 5-5bb is accepted just to resolve the
    conflict, and id2 is uploaded as a new file.
 
-### Special case: out and in again
+## Special cases
+
+### Out and in again
 
 Let's look at a special case. Alice shares a folder with Bob and Charlie. It
 contains a directory, with a few files inside it. This directory has been
@@ -445,6 +447,22 @@ moving again the file inside the shared directory, we will be in a bad
 situation, where the replication algorithm can't synchronize the file. For the
 moment, we prefer to advance with this limitation, but we will have to take
 care of it later.
+
+### Notes
+
+A note is a file, and it can contain some images. By contain, we mean that the
+image has a referenced_by on the note, but also the prosemirror tree has an
+image node with the ID of the file. So, for sharing a note, we need two rules:
+one rule for the note based on its ID, and the second rule for the files with
+a referenced_by to the note. With that, the note and its images are replicated
+to the other Cozy instances. While the sharing is active, all the members of
+the sharing will go on the sharer's instance to edit the note (for the
+real-time collaboration). But, if the sharing is stopped, we want the note to
+be still viewable by all the members on their Cozy. The images can be found via
+the referenced_by, but as their IDs have been XORed by the sharing replication,
+we can't use them to know which image to use for a prosemirror image node. So,
+we have added the original ID of the file in the `cozyMetadata`, and it can be
+used to solve our issue on the images of a no-longer shared note.
 
 ## Schema
 
