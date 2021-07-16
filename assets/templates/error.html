@@ -27,7 +27,7 @@
       <div class="d-flex flex-column align-items-center mb-md-3">
         {{if .Illustration}}<img src="{{asset .Domain .Illustration}}" alt="" class="illustration mb-3" />{{end}}
         <h1 class="h4 h2-md mb-3 text-center">{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
-        <div class="mb-3 mb-md-4">
+        <div class="mb-2 mb-md-3">
           {{$err := t .Error}}
           {{$arr := split $err "\n"}}
           {{range $i, $p := $arr}}
@@ -48,7 +48,7 @@
       <footer>
         {{if .SupportEmail}}
         <p class="text-center mb-3">
-          <strong>{{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.</strong>
+          {{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.
         </p>
         {{end}}
         {{if .Button}}
