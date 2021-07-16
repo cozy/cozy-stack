@@ -30,12 +30,12 @@
                 <div class="card card-elevation shadow rounded-3 authorize-pill w-100 mb-2 px-3 py-2">
                   {{if $rule.Mime }}
                   <span class="filetype-{{filetype $rule.Mime}} filetype"></span>
-                  <span class="ms-3">
+                  <span class="ms-3 text-truncate">
                     {{basename $rule.Title}}<span class="greyed-extension">{{ext $rule.Title}}</span>
                   </span>
                   {{else}}
                   <span class="filetype-other filetype"></span>
-                  <span class="ms-3">{{$rule.Title}}</span>
+                  <span class="ms-3 text-truncate">{{$rule.Title}}</span>
                   {{end}}
                 </div>
                 {{end}}
@@ -74,7 +74,7 @@
         </div>
       </div>
     </div>
-    <div class="modal-backdrop"></div>
+    <div class="modal-backdrop show"></div>
     <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
   </body>
 </html>
