@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/profileOrganizationResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
 type organizationResponse struct {
 	ID             string `json:"Id"`
 	Name           string `json:"Name"`
@@ -75,7 +75,7 @@ func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Sett
 	}, nil
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/collectionResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
 type collectionResponse struct {
 	ID             string `json:"Id"`
 	OrganizationID string `json:"OrganizationId"`

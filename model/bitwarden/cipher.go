@@ -38,7 +38,7 @@ const (
 )
 
 // LoginURI is a field for an URI.
-// See https://github.com/bitwarden/jslib/blob/master/src/models/api/loginUriApi.ts
+// See https://github.com/bitwarden/jslib/blob/master/common/src/models/api/loginUriApi.ts
 type LoginURI struct {
 	URI   string      `json:"uri"`
 	Match interface{} `json:"match,omitempty"`
@@ -55,7 +55,7 @@ type LoginData struct {
 
 // Field is used to store some additional fields.
 type Field struct {
-	// See https://github.com/bitwarden/jslib/blob/master/src/enums/fieldType.ts
+	// See https://github.com/bitwarden/jslib/blob/master/common/src/enums/fieldType.ts
 	Type  int    `json:"type"`
 	Name  string `json:"name"`
 	Value string `json:"value"`

@@ -13,7 +13,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/profileResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileResponse.ts
 type profileResponse struct {
 	ID            string                  `json:"Id"`
 	Name          string                  `json:"Name"`
@@ -64,7 +64,7 @@ func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*p
 	return p, nil
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/syncResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/syncResponse.ts
 type syncResponse struct {
 	Profile     *profileResponse      `json:"Profile"`
 	Folders     []*folderResponse     `json:"Folders"`

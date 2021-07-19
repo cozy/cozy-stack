@@ -12,14 +12,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/globalDomainResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/globalDomainResponse.ts
 type globalDomainsReponse struct {
 	Type     int      `json:"Type"`
 	Domains  []string `json:"Domains"`
 	Excluded bool     `json:"Excluded"`
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/domainsResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/domainsResponse.ts
 type domainsResponse struct {
 	EquivalentDomains       [][]string             `json:"EquivalentDomains"`
 	GlobalEquivalentDomains []globalDomainsReponse `json:"GlobalEquivalentDomains"`

@@ -237,7 +237,7 @@ type notificationResponse struct {
 
 type notification []interface{}
 
-// https://github.com/bitwarden/jslib/blob/master/src/enums/notificationType.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/enums/notificationType.ts
 const (
 	hubCipherUpdate = 0
 	hubCipherCreate = 1

@@ -27,7 +27,7 @@ type idsRequest struct {
 	IDs []string `json:"ids"`
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/request/cipherRequest.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/cipherRequest.ts
 type cipherRequest struct {
 	Type           bitwarden.CipherType `json:"type"`
 	Favorite       bool                 `json:"favorite"`
@@ -109,7 +109,7 @@ type fieldResponse struct {
 	Value string `json:"Value"`
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/cipherResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/cipherResponse.ts
 type cipherResponse struct {
 	Object         string                 `json:"Object"`
 	ID             string                 `json:"Id"`

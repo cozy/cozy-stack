@@ -373,7 +373,7 @@ func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
 		"error":             "invalid_grant",
 		"error_description": "Two factor required.",
 		// 1 means email
-		// https://github.com/bitwarden/jslib/blob/master/src/enums/twoFactorProviderType.ts
+		// https://github.com/bitwarden/jslib/blob/master/common/src/enums/twoFactorProviderType.ts
 		"TwoFactorProviders": []int{1},
 		"TwoFactorProviders2": map[string]map[string]string{
 			"1": {"Email": obscured},
