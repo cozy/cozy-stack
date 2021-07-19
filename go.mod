@@ -27,7 +27,7 @@ require (
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/labstack/echo/v4 v4.4.0
-	github.com/leonelquinteros/gotext v1.4.0
+	github.com/leonelquinteros/gotext v1.5.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mssola/user_agent v0.5.3
 	github.com/ncw/swift v1.0.53

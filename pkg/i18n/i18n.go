@@ -17,7 +17,7 @@ var translations = make(map[string]*gotext.Po)
 
 // LoadLocale creates the translation object for a locale from the content of a .po file
 func LoadLocale(locale, contextName string, rawPO []byte) {
-	po := &gotext.Po{Language: locale}
+	po := gotext.NewPo()
 	po.Parse(rawPO)
 	identifier := locale
 	if contextName != "" {
