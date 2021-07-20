@@ -35,7 +35,7 @@ type AcceptOptions struct {
 func AcceptJSON(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		accept := c.Request().Header.Get(echo.HeaderAccept)
-		if strings.Contains(accept, echo.MIMEApplicationJSON) {
+		if accept == "*/*" || strings.Contains(accept, echo.MIMEApplicationJSON) {
 			return next(c)
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
