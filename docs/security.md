@@ -134,6 +134,6 @@ When a security flaw is found, the process is the following:
 -   Make a pull-request to fix (on our private git instance) and test it.
 -   Deploy the fix on cozycloud.cc
 -   Publish a new version, announce it on
-    [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security)
+    [the forum](https://forum.cozy.io/c/english/news/52)
     as a security update and on the mailing-lists.
 -   15 days later, add the details on the forum.
