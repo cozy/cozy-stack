@@ -9,6 +9,7 @@ describe "Sending a mail" do
 
     inst = Instance.create locale: "en"
     bytes = File.read("../fixtures/wet-cozy_20160910__M4Dz.jpg")
+    bytes = bytes.force_encoding(Encoding::BINARY)
     encoded = Base64.encode64(bytes)
     args = {
       mode: "from",
@@ -42,7 +43,7 @@ describe "Sending a mail" do
     assert_equal encoding, "base64"
     ctype = mail.parts.dig(1, "Headers", "Content-Type", 0).split(";")[0]
     assert_equal ctype, "image/jpeg"
-    decoded = Base64.decode64(mail.parts.dig(1, "Body")).force_encoding(Encoding::UTF_8)
+    decoded = Base64.decode64(mail.parts.dig(1, "Body"))
     assert_equal decoded, bytes
 
     inst.remove
