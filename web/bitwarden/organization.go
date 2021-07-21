@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"errors"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -11,54 +12,46 @@ import (
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
 type organizationResponse struct {
-	ID             string `json:"Id"`
-	Name           string `json:"Name"`
-	Key            string `json:"Key"`
-	Email          string `json:"BillingEmail"`
-	Plan           string `json:"Plan"`
-	PlanType       int    `json:"PlanType"`
-	Seats          int    `json:"Seats"`
-	MaxCollections int    `json:"MaxCollections"`
-	MaxStorage     int    `json:"MaxStorageGb"`
-	SelfHost       bool   `json:"SelfHost"`
-	Use2fa         bool   `json:"Use2fa"`
-	UseDirectory   bool   `json:"UseDirectory"`
-	UseEvents      bool   `json:"UseEvents"`
-	UseGroups      bool   `json:"UseGroups"`
-	UseTotp        bool   `json:"UseTotp"`
-	Premium        bool   `json:"UsersGetPremium"`
-	Enabled        bool   `json:"Enabled"`
-	Status         int    `json:"Status"`
-	Type           int    `json:"Type"`
-	Object         string `json:"Object"`
+	ID             string  `json:"Id"`
+	Identifier     *string `json:"Identifier"`
+	Name           string  `json:"Name"`
+	Key            string  `json:"Key"`
+	Email          string  `json:"BillingEmail"`
+	Plan           string  `json:"Plan"`
+	PlanType       int     `json:"PlanType"`
+	Seats          int     `json:"Seats"`
+	MaxCollections int     `json:"MaxCollections"`
+	MaxStorage     int     `json:"MaxStorageGb"`
+	SelfHost       bool    `json:"SelfHost"`
+	Use2fa         bool    `json:"Use2fa"`
+	UseDirectory   bool    `json:"UseDirectory"`
+	UseEvents      bool    `json:"UseEvents"`
+	UseGroups      bool    `json:"UseGroups"`
+	UseTotp        bool    `json:"UseTotp"`
+	UseAPI         bool    `json:"UseApi"`
+	UsePolicies    bool    `json:"UsePolicies"`
+	UseSSO         bool    `json:"UseSSO"`
+	UseResetPass   bool    `json:"UseResetPassword"`
+	HasKeys        bool    `json:"HasPublicAndPrivateKeys"`
+	ResetPass      bool    `json:"ResetPasswordEnrolled"`
+	Premium        bool    `json:"UsersGetPremium"`
+	Enabled        bool    `json:"Enabled"`
+	Status         int     `json:"Status"`
+	Type           int     `json:"Type"`
+	Object         string  `json:"Object"`
 }
 
-func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Settings) (*organizationResponse, error) {
-	if setting == nil || setting.PublicKey == "" {
-		return nil, errors.New("No public key")
-	}
-	orgKey, err := setting.OrganizationKey()
-	if err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Cannot read the organization key: %s", err)
-		return nil, err
-	}
-	key, err := crypto.EncryptWithRSA(setting.PublicKey, orgKey)
-	if err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Cannot encrypt with RSA: %s", err)
-		return nil, err
-	}
-
-	email := inst.PassphraseSalt()
+func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organization) *organizationResponse {
+	m := org.Members[inst.Domain]
 	return &organizationResponse{
-		ID:             setting.OrganizationID,
-		Name:           consts.BitwardenCozyOrganizationName,
-		Key:            key,
-		Email:          string(email),
+		ID:             org.ID(),
+		Identifier:     nil, // Not supported by us
+		Name:           org.Name,
+		Key:            m.Key,
+		Email:          m.Email,
 		Plan:           "TeamsAnnually",
-		PlanType:       5, // TeamsAnnually plan
-		Seats:          2,
+		PlanType:       9,  // TeamsAnnually plan
+		Seats:          10, // The value doesn't matter
 		MaxCollections: 1,
 		MaxStorage:     1,
 		SelfHost:       true,
@@ -67,12 +60,26 @@ func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Sett
 		UseEvents:      false,
 		UseGroups:      false,
 		UseTotp:        true,
+		UseAPI:         false,
+		UsePolicies:    false,
+		UseSSO:         false,
+		UseResetPass:   false,
+		HasKeys:        false, // The public/private keys are used for the Admin Reset Password feature, not implemented by us
+		ResetPass:      false,
 		Premium:        true,
 		Enabled:        true,
-		Status:         2, // Confirmed
+		Status:         int(m.Status),
 		Type:           2, // User
 		Object:         "profileOrganization",
-	}, nil
+	}
+}
+
+func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Settings) (*organizationResponse, error) {
+	org, err := bitwarden.GetCozyOrganization(inst, setting)
+	if err != nil {
+		return nil, err
+	}
+	return newOrganizationResponse(inst, org), nil
 }
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
