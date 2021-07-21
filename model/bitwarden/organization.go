@@ -2,11 +2,13 @@ package bitwarden
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 )
@@ -29,8 +31,9 @@ const (
 // OrgMember is a struct for describing a member of an organization.
 type OrgMember struct {
 	Email  string          `json:"email"` // me@<domain>
-	Status OrgMemberStatus `json:"status"`
 	Key    string          `json:"key,omitempty"`
+	Status OrgMemberStatus `json:"status"`
+	Owner  bool            `json:"owner,omitempty"`
 }
 
 // Organization is used to make collections of ciphers and can be used for
@@ -68,6 +71,46 @@ func (o *Organization) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// FindCollection returns the collection for this organization.
+func (o *Organization) FindCollection(inst *instance.Instance) (*Collection, error) {
+	var colls []*Collection
+	req := &couchdb.FindRequest{
+		UseIndex: "by-organization-id",
+		Selector: mango.Equal("organization_id", o.CouchID),
+		Limit:    1,
+	}
+	err := couchdb.FindDocs(inst, consts.BitwardenCollections, req, &colls)
+	if err != nil {
+		return nil, err
+	}
+	if len(colls) == 0 {
+		err := &couchdb.Error{
+			StatusCode: http.StatusNotFound,
+			Name:       "not_found",
+			Reason:     "No collection was found",
+		}
+		return nil, err
+	}
+	return colls[0], nil
+}
+
+// Delete will delete the organization, its collection, and the ciphers inside
+// it.
+func (o *Organization) Delete(inst *instance.Instance) error {
+	coll, err := o.FindCollection(inst)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return couchdb.DeleteDoc(inst, o)
+		}
+		return err
+	}
+	// TODO find and delete ciphers in the collection
+	if err := couchdb.DeleteDoc(inst, coll); err != nil {
+		return err
+	}
+	return couchdb.DeleteDoc(inst, o)
+}
+
 // GetCozyOrganization returns the organization used to store the credentials
 // for the konnectors running on the Cozy server.
 func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*Organization, error) {
@@ -92,10 +135,11 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		CouchID: setting.OrganizationID,
 		Name:    consts.BitwardenCozyOrganizationName,
 		Members: map[string]OrgMember{
-			inst.Domain: OrgMember{
+			inst.Domain: {
 				Email:  string(email),
 				Key:    key,
 				Status: OrgMemberConfirmed,
+				Owner:  true,
 			},
 		},
 	}

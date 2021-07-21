@@ -1334,6 +1334,30 @@ Content-Type: application/json
 }
 ```
 
+### DELETE /bitwarden/organizations/:id
+
+This route can be used to delete an organization by its owner.
+
+#### Request
+
+```http
+DELETE /bitwarden/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "masterPasswordHash": "r5CFRR+n9NQI8a525FY+0BPR0HGOjVJX0cR1KEMnIOo="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
 ## Icons
 
 ### GET /bitwarden/icons/:domain/icon.png

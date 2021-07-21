@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -33,6 +34,7 @@ func (r *organizationRequest) toOrganizationAndCollection(
 				Email:  string(email),
 				Key:    r.Key,
 				Status: bitwarden.OrgMemberConfirmed,
+				Owner:  true,
 			},
 		},
 	}
@@ -180,4 +182,65 @@ func CreateOrganization(c echo.Context) error {
 
 	res := newOrganizationResponse(inst, orga)
 	return c.JSON(http.StatusOK, res)
+}
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/passwordVerificationRequest.ts
+type passwordVerificationRequest struct {
+	Hash string `json:"masterPasswordHash"`
+}
+
+// DeleteOrganization is the route for deleting an organization by its owner.
+func DeleteOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var verification passwordVerificationRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&verification); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if err := lifecycle.CheckPassphrase(inst, []byte(verification.Hash)); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid password",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	if m := org.Members[inst.Domain]; !m.Owner {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "only the Owner can call this endpoint",
+		})
+	}
+
+	if err := org.Delete(inst); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	_ = settings.UpdateRevisionDate(inst, nil)
+	return c.NoContent(http.StatusOK)
 }

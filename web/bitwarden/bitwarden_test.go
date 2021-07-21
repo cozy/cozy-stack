@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -911,8 +912,22 @@ func TestCreateOrganization(t *testing.T) {
 	assert.Equal(t, true, result["Enabled"])
 	assert.EqualValues(t, 2, result["Status"])
 	assert.EqualValues(t, 2, result["Type"])
-	assert.NotEmpty(t, result["Id"])
+	orgaID, _ = result["Id"].(string)
+	assert.NotEmpty(t, orgaID)
 	assert.NotEmpty(t, result["Key"])
+}
+
+func TestDeleteOrganization(t *testing.T) {
+	email := inst.PassphraseSalt()
+	iter := crypto.DefaultPBKDF2Iterations
+	pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
+	body := fmt.Sprintf(`{"masterPasswordHash": "%s"}`, pass)
+	req, _ := http.NewRequest("DELETE", ts.URL+"/bitwarden/organizations/"+orgaID, bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestChangeSecurityStamp(t *testing.T) {

@@ -522,6 +522,7 @@ func Routes(router *echo.Group) {
 	orgs := router.Group("/organizations")
 	orgs.POST("", CreateOrganization)
 	orgs.GET("/cozy", GetCozy)
+	orgs.DELETE("/:id", DeleteOrganization)
 
 	icons := router.Group("/icons")
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
