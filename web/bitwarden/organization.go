@@ -1,13 +1,9 @@
 package bitwarden
 
 import (
-	"errors"
-
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
@@ -90,21 +86,19 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse, error) {
-	orgKey, err := setting.OrganizationKey()
-	if err != nil || len(orgKey) != 64 {
-		return nil, errors.New("Missing organization key")
+func newCollectionResponse(coll *bitwarden.Collection) *collectionResponse {
+	return &collectionResponse{
+		ID:             coll.ID(),
+		OrganizationID: coll.OrganizationID,
+		Name:           coll.Name,
+		Object:         "collection",
 	}
-	iv := crypto.GenerateRandomBytes(16)
-	payload := []byte(consts.BitwardenCozyCollectionName)
-	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
+}
+
+func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse, error) {
+	coll, err := bitwarden.GetCozyCollection(setting)
 	if err != nil {
 		return nil, err
 	}
-	return &collectionResponse{
-		ID:             setting.CollectionID,
-		OrganizationID: setting.OrganizationID,
-		Name:           name,
-		Object:         "collection",
-	}, nil
+	return newCollectionResponse(coll), nil
 }
