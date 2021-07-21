@@ -1245,7 +1245,7 @@ Host: alice.example.com
 HTTP/1.1 200 OK
 ```
 
-## Cozy Organization
+## Organizations and Collections
 
 ### GET /bitwarden/organizations/cozy
 
@@ -1273,6 +1273,64 @@ Content-Type: application/json
   "organizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
   "collectionId": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
   "organizationKey": "oWeRYokoCMFsAja6lrp3RQ1PYOrex4tgAMECP4nX+a4IXdijbejQscvWqy9bMgLsX0HRc2igqBRMWdsPuFK0PQ=="
+}
+```
+
+### POST /bitwarden/organizations
+
+This route can be used to create an organization, with a collection.
+
+#### Request
+
+```http
+POST /bitwarden/organizations HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Family",
+  "key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+  "collectionName": "Family"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Id": "724db920-cc4b-0139-6ab2-543d7eb8149c",
+  "Name": "Family",
+  "Key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+  "BillingEmail": "me@cozy.localhost",
+  "Plan": "TeamsAnnually",
+  "PlanType": 9,
+  "Seats": 10,
+  "MaxCollections": 1,
+  "MaxStorageGb": 1,
+  "SelfHost": true,
+  "Use2fa": true,
+  "UseDirectory": false,
+  "UseEvents": false,
+  "UseGroups": false,
+  "UseTotp": true,
+  "UseApi": false,
+  "UsePolicies": false,
+  "UseSSO": false,
+  "UseResetPass": false,
+  "HasPublicAndPrivateKeys": false,
+  "ResetPasswordEnrolled": false,
+  "UsersGetPremium": true,
+  "Enabled": true,
+  "Status": 2,
+  "Type": 2,
+  "Object": "profileOrganization"
 }
 ```
 

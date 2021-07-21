@@ -890,6 +890,31 @@ func TestImportCiphers(t *testing.T) {
 	assert.Equal(t, nbFolders+1, nb)
 }
 
+func TestCreateOrganization(t *testing.T) {
+	body := `
+{
+	"name": "Family Organization",
+	"key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+	"collectionName": "Family Collection"
+}`
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/organizations", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "Family Organization", result["Name"])
+	assert.Equal(t, "profileOrganization", result["Object"])
+	assert.Equal(t, true, result["Enabled"])
+	assert.EqualValues(t, 2, result["Status"])
+	assert.EqualValues(t, 2, result["Type"])
+	assert.NotEmpty(t, result["Id"])
+	assert.NotEmpty(t, result["Key"])
+}
+
 func TestChangeSecurityStamp(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations

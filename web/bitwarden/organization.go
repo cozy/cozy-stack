@@ -1,10 +1,50 @@
 package bitwarden
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/labstack/echo/v4"
 )
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/organizationCreateRequest.ts
+type organizationRequest struct {
+	Name           string `json:"name"`
+	Key            string `json:"key"`
+	CollectionName string `json:"collectionName"`
+}
+
+func (r *organizationRequest) toOrganizationAndCollection(
+	inst *instance.Instance,
+) (*bitwarden.Organization, *bitwarden.Collection) {
+	email := inst.PassphraseSalt()
+	o := bitwarden.Organization{
+		Name: r.Name,
+		Members: map[string]bitwarden.OrgMember{
+			inst.Domain: {
+				Email:  string(email),
+				Key:    r.Key,
+				Status: bitwarden.OrgMemberConfirmed,
+			},
+		},
+	}
+	c := bitwarden.Collection{
+		Name: r.CollectionName,
+	}
+	md := metadata.New()
+	md.DocTypeVersion = bitwarden.DocTypeVersion
+	o.Metadata = *md
+	c.Metadata = *md
+	return &o, &c
+}
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
 type organizationResponse struct {
@@ -101,4 +141,43 @@ func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse,
 		return nil, err
 	}
 	return newCollectionResponse(coll), nil
+}
+
+// CreateOrganization is the route used to create an organization (with a
+// collection).
+func CreateOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req organizationRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if req.Name == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "missing name",
+		})
+	}
+
+	orga, coll := req.toOrganizationAndCollection(inst)
+	if err := couchdb.CreateDoc(inst, orga); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	coll.OrganizationID = orga.ID()
+	if err := couchdb.CreateDoc(inst, coll); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	res := newOrganizationResponse(inst, orga)
+	return c.JSON(http.StatusOK, res)
 }

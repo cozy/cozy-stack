@@ -520,6 +520,7 @@ func Routes(router *echo.Group) {
 	hub.POST("/negotiate", NegotiateHub)
 
 	orgs := router.Group("/organizations")
+	orgs.POST("", CreateOrganization)
 	orgs.GET("/cozy", GetCozy)
 
 	icons := router.Group("/icons")
