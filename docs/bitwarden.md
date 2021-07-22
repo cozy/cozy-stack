@@ -1247,7 +1247,7 @@ HTTP/1.1 200 OK
 
 ## Organizations and Collections
 
-### GET /bitwarden/organizations/cozy
+### GET /bitwarden/api/organizations/cozy
 
 This route can be used to get information about the Cozy Organization. It
 requires a permission on the whole `com.bitwarden.organizations` doctype to
@@ -1257,7 +1257,7 @@ this organization (encoded in base64).
 #### Request
 
 ```http
-GET /bitwarden/organizations/cozy HTTP/1.1
+GET /bitwarden/api/organizations/cozy HTTP/1.1
 Host: alice.example.com
 ```
 
@@ -1276,14 +1276,14 @@ Content-Type: application/json
 }
 ```
 
-### POST /bitwarden/organizations
+### POST /bitwarden/api/organizations
 
 This route can be used to create an organization, with a collection.
 
 #### Request
 
 ```http
-POST /bitwarden/organizations HTTP/1.1
+POST /bitwarden/api/organizations HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
 ```
@@ -1334,14 +1334,14 @@ Content-Type: application/json
 }
 ```
 
-### DELETE /bitwarden/organizations/:id
+### DELETE /bitwarden/api/organizations/:id
 
 This route can be used to delete an organization by its owner.
 
 #### Request
 
 ```http
-DELETE /bitwarden/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c HTTP/1.1
+DELETE /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
 ```

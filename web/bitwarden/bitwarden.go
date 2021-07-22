@@ -515,14 +515,14 @@ func Routes(router *echo.Group) {
 	folders.DELETE("/:id", DeleteFolder)
 	folders.POST("/:id/delete", DeleteFolder)
 
-	hub := router.Group("/notifications/hub")
-	hub.GET("", WebsocketHub)
-	hub.POST("/negotiate", NegotiateHub)
-
-	orgs := router.Group("/organizations")
+	orgs := api.Group("/organizations")
 	orgs.POST("", CreateOrganization)
 	orgs.GET("/cozy", GetCozy)
 	orgs.DELETE("/:id", DeleteOrganization)
+
+	hub := router.Group("/notifications/hub")
+	hub.GET("", WebsocketHub)
+	hub.POST("/negotiate", NegotiateHub)
 
 	icons := router.Group("/icons")
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{

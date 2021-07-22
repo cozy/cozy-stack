@@ -95,13 +95,13 @@ func TestConnect(t *testing.T) {
 }
 
 func TestGetCozyOrg(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/cozy", nil)
 	req.Header.Add("Authorization", "Bearer invalid-token")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 401, res.StatusCode)
 
-	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
+	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/cozy", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -898,7 +898,7 @@ func TestCreateOrganization(t *testing.T) {
 	"key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
 	"collectionName": "Family Collection"
 }`
-	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/organizations", bytes.NewBufferString(body))
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/organizations", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
@@ -922,7 +922,7 @@ func TestDeleteOrganization(t *testing.T) {
 	iter := crypto.DefaultPBKDF2Iterations
 	pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
 	body := fmt.Sprintf(`{"masterPasswordHash": "%s"}`, pass)
-	req, _ := http.NewRequest("DELETE", ts.URL+"/bitwarden/organizations/"+orgaID, bytes.NewBufferString(body))
+	req, _ := http.NewRequest("DELETE", ts.URL+"/bitwarden/api/organizations/"+orgaID, bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
