@@ -218,15 +218,16 @@ func GetToken(c echo.Context) error {
 // AccessTokenReponse is the stuct used for serializing to JSON the response
 // for an access token.
 type AccessTokenReponse struct {
-	ClientID   string `json:"client_id,omitempty"`
-	RegToken   string `json:"registration_access_token,omitempty"`
-	Type       string `json:"token_type"`
-	ExpiresIn  int    `json:"expires_in"`
-	Access     string `json:"access_token"`
-	Refresh    string `json:"refresh_token"`
-	Key        string `json:"Key"`
-	Kdf        int    `json:"Kdf"`
-	Iterations int    `json:"KdfIterations"`
+	ClientID   string      `json:"client_id,omitempty"`
+	RegToken   string      `json:"registration_access_token,omitempty"`
+	Type       string      `json:"token_type"`
+	ExpiresIn  int         `json:"expires_in"`
+	Access     string      `json:"access_token"`
+	Refresh    string      `json:"refresh_token"`
+	Key        string      `json:"Key"`
+	PrivateKey interface{} `json:"PrivateKey"`
+	Kdf        int         `json:"Kdf"`
+	Iterations int         `json:"KdfIterations"`
 }
 
 func getInitialCredentials(c echo.Context) error {
@@ -323,6 +324,9 @@ func getInitialCredentials(c echo.Context) error {
 		Key:        key,
 		Kdf:        setting.PassphraseKdf,
 		Iterations: setting.PassphraseKdfIterations,
+	}
+	if setting.PrivateKey != "" {
+		out.PrivateKey = setting.PrivateKey
 	}
 	return c.JSON(http.StatusOK, out)
 }
@@ -427,6 +431,9 @@ func refreshToken(c echo.Context) error {
 		Key:        key,
 		Kdf:        setting.PassphraseKdf,
 		Iterations: setting.PassphraseKdfIterations,
+	}
+	if setting.PrivateKey != "" {
+		out.PrivateKey = setting.PrivateKey
 	}
 	return c.JSON(http.StatusOK, out)
 }
