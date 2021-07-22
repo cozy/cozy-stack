@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -62,6 +63,26 @@ func GetCozyCollection(setting *settings.Settings) (*Collection, error) {
 		coll.Metadata = *setting.Metadata
 	}
 	return &coll, nil
+}
+
+// FindAllCollections returns all the collections, including the Cozy one.
+func FindAllCollections(inst *instance.Instance, setting *settings.Settings) ([]*Collection, error) {
+	var colls []*Collection
+	req := &couchdb.AllDocsRequest{}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenCollections, req, &colls); err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			_ = couchdb.CreateDB(inst, consts.BitwardenCollections)
+		} else {
+			return nil, err
+		}
+	}
+
+	cozy, err := GetCozyCollection(setting)
+	if err != nil {
+		return nil, err
+	}
+	colls = append(colls, cozy)
+	return colls, nil
 }
 
 var _ couchdb.Doc = &Collection{}

@@ -112,14 +112,6 @@ func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organizatio
 	}
 }
 
-func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Settings) (*organizationResponse, error) {
-	org, err := bitwarden.GetCozyOrganization(inst, setting)
-	if err != nil {
-		return nil, err
-	}
-	return newOrganizationResponse(inst, org), nil
-}
-
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
 type collectionResponse struct {
 	ID             string `json:"Id"`
@@ -135,14 +127,6 @@ func newCollectionResponse(coll *bitwarden.Collection) *collectionResponse {
 		Name:           coll.Name,
 		Object:         "collection",
 	}
-}
-
-func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse, error) {
-	coll, err := bitwarden.GetCozyCollection(setting)
-	if err != nil {
-		return nil, err
-	}
-	return newCollectionResponse(coll), nil
 }
 
 // CreateOrganization is the route used to create an organization (with a

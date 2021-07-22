@@ -37,9 +37,13 @@ func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*p
 	}
 	name, _ := doc.M["public_name"].(string)
 	salt := inst.PassphraseSalt()
-	var organizations []*organizationResponse
-	if orga, err := getCozyOrganizationResponse(inst, setting); err == nil {
-		organizations = append(organizations, orga)
+	orgs, err := bitwarden.FindAllOrganizations(inst, setting)
+	if err != nil {
+		return nil, err
+	}
+	organizations := make([]*organizationResponse, len(orgs))
+	for i, org := range orgs {
+		organizations[i] = newOrganizationResponse(inst, org)
 	}
 	p := &profileResponse{
 		ID:            inst.ID(),
@@ -78,6 +82,7 @@ func newSyncResponse(setting *settings.Settings,
 	profile *profileResponse,
 	ciphers []*bitwarden.Cipher,
 	folders []*bitwarden.Folder,
+	collections []*bitwarden.Collection,
 	domains *domainsResponse,
 ) *syncResponse {
 	foldersResponse := make([]*folderResponse, len(folders))
@@ -88,15 +93,15 @@ func newSyncResponse(setting *settings.Settings,
 	for i, c := range ciphers {
 		ciphersResponse[i] = newCipherResponse(c, setting)
 	}
-	var collections []*collectionResponse
-	if coll, err := getCozyCollectionResponse(setting); err == nil {
-		collections = append(collections, coll)
+	collectionsResponse := make([]*collectionResponse, len(collections))
+	for i, c := range collections {
+		collectionsResponse[i] = newCollectionResponse(c)
 	}
 	return &syncResponse{
 		Profile:     profile,
 		Folders:     foldersResponse,
 		Ciphers:     ciphersResponse,
-		Collections: collections,
+		Collections: collectionsResponse,
 		Domains:     domains,
 		Object:      "sync",
 	}
@@ -144,11 +149,18 @@ func Sync(c echo.Context) error {
 		}
 	}
 
+	collections, err := bitwarden.FindAllCollections(inst, setting)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
 	var domains *domainsResponse
 	if c.QueryParam("excludeDomains") == "" {
 		domains = newDomainsResponse(setting)
 	}
 
-	res := newSyncResponse(setting, profile, ciphers, folders, domains)
+	res := newSyncResponse(setting, profile, ciphers, folders, collections, domains)
 	return c.JSON(http.StatusOK, res)
 }

@@ -896,7 +896,7 @@ func TestCreateOrganization(t *testing.T) {
 {
 	"name": "Family Organization",
 	"key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
-	"collectionName": "Family Collection"
+	"collectionName": "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M="
 }`
 	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/organizations", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
@@ -915,6 +915,43 @@ func TestCreateOrganization(t *testing.T) {
 	orgaID, _ = result["Id"].(string)
 	assert.NotEmpty(t, orgaID)
 	assert.NotEmpty(t, result["Key"])
+}
+
+func TestSyncOrganizationAndCollection(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "sync", result["Object"])
+
+	profile := result["Profile"].(map[string]interface{})
+	orgs := profile["Organizations"].([]interface{})
+	for i := range orgs {
+		org := orgs[i].(map[string]interface{})
+		if org["Id"] == orgaID {
+			assert.Equal(t, "Family Organization", org["Name"])
+		} else {
+			assert.Equal(t, "Cozy", org["Name"])
+		}
+		assert.NotEmpty(t, org["Key"])
+		assert.Equal(t, "profileOrganization", org["Object"])
+	}
+	assert.Len(t, orgs, 2)
+
+	colls := result["Collections"].([]interface{})
+	for i := range colls {
+		coll := colls[i].(map[string]interface{})
+		if coll["Id"] != collID {
+			assert.Equal(t, coll["OrganizationId"], orgaID)
+			assert.Equal(t, coll["Name"], "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=")
+		}
+		assert.Equal(t, "collection", coll["Object"])
+	}
+	assert.Len(t, colls, 2)
 }
 
 func TestDeleteOrganization(t *testing.T) {

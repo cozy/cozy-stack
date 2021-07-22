@@ -149,4 +149,24 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 	return &org, nil
 }
 
+// FindAllOrganizations returns all the organizations, including the Cozy one.
+func FindAllOrganizations(inst *instance.Instance, setting *settings.Settings) ([]*Organization, error) {
+	var orgs []*Organization
+	req := &couchdb.AllDocsRequest{}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenOrganizations, req, &orgs); err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			_ = couchdb.CreateDB(inst, consts.BitwardenOrganizations)
+		} else {
+			return nil, err
+		}
+	}
+
+	cozy, err := GetCozyOrganization(inst, setting)
+	if err != nil {
+		return nil, err
+	}
+	orgs = append(orgs, cozy)
+	return orgs, nil
+}
+
 var _ couchdb.Doc = &Organization{}
