@@ -171,6 +171,9 @@ func newCipherResponse(c *bitwarden.Cipher, setting *settings.Settings) *cipherR
 	if c.SharedWithCozy {
 		r.OrganizationID = &setting.OrganizationID
 		r.CollectionIDs = append(r.CollectionIDs, setting.CollectionID)
+	} else if c.CollectionID != "" {
+		r.OrganizationID = &c.OrganizationID
+		r.CollectionIDs = append(r.CollectionIDs, c.CollectionID)
 	}
 
 	if len(c.Fields) > 0 {
@@ -354,21 +357,17 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 	if len(req.CollectionIDs) != 1 {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Bad collection: %v", req.CollectionIDs)
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "generic collectionIds is not supported",
+			"error": "only one collection per organization is supported",
 		})
 	}
 	for _, id := range req.CollectionIDs {
-		if id != setting.CollectionID {
-			inst.Logger().WithField("nspace", "bitwarden").
-				Infof("Bad collection: %s vs %s", id, setting.CollectionID)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "generic collectionIds is not supported",
-			})
+		if id == setting.CollectionID {
+			cipher.SharedWithCozy = true
+		} else {
+			cipher.OrganizationID = req.Cipher.OrganizationID
+			cipher.CollectionID = id
 		}
-		cipher.SharedWithCozy = true
 	}
 
 	if err := couchdb.CreateDoc(inst, cipher); err != nil {
@@ -473,8 +472,13 @@ func UpdateCipher(c echo.Context) error {
 
 	// XXX On an update, the client send the OrganizationId but not the
 	// collectionIds.
-	if req.OrganizationID != "" && old.SharedWithCozy {
-		cipher.SharedWithCozy = true
+	if req.OrganizationID != "" {
+		if old.SharedWithCozy {
+			cipher.SharedWithCozy = true
+		} else {
+			cipher.OrganizationID = req.OrganizationID
+			cipher.CollectionID = old.CollectionID
+		}
 	}
 
 	if old.Metadata != nil {
@@ -782,6 +786,7 @@ func BulkRestoreCiphers(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/cipherShareRequest.ts
 type shareCipherRequest struct {
 	Cipher        cipherRequest `json:"cipher"`
 	CollectionIDs []string      `json:"collectionIds"`
@@ -847,21 +852,19 @@ func ShareCipher(c echo.Context) error {
 	}
 
 	if len(req.CollectionIDs) != 1 {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Bad collection: %v", req.CollectionIDs)
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "generic collectionIds is not supported",
+			"error": "only one collection per organization is supported",
 		})
 	}
 	for _, id := range req.CollectionIDs {
-		if id != setting.CollectionID {
-			inst.Logger().WithField("nspace", "bitwarden").
-				Infof("Bad collection: %s vs %s", id, setting.CollectionID)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "generic collectionIds is not supported",
-			})
+		if id == setting.CollectionID {
+			cipher.SharedWithCozy = true
+			cipher.OrganizationID = ""
+			cipher.CollectionID = ""
+		} else {
+			cipher.OrganizationID = req.Cipher.OrganizationID
+			cipher.CollectionID = id
 		}
-		cipher.SharedWithCozy = true
 	}
 
 	if old.Metadata != nil {

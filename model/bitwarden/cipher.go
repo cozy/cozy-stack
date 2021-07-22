@@ -75,6 +75,7 @@ type Cipher struct {
 	Name           string                 `json:"name"`
 	Notes          string                 `json:"notes,omitempty"`
 	FolderID       string                 `json:"folder_id,omitempty"`
+	OrganizationID string                 `json:"organization_id,omitempty"`
 	CollectionID   string                 `json:"collection_id,omitempty"`
 	Login          *LoginData             `json:"login,omitempty"`
 	Data           *MapData               `json:"data,omitempty"`

@@ -517,8 +517,9 @@ func Routes(router *echo.Group) {
 
 	orgs := api.Group("/organizations")
 	orgs.POST("", CreateOrganization)
-	orgs.GET("/cozy", GetCozy)
 	orgs.DELETE("/:id", DeleteOrganization)
+
+	router.GET("/organizations/cozy", GetCozy)
 
 	hub := router.Group("/notifications/hub")
 	hub.GET("", WebsocketHub)

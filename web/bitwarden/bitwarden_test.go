@@ -95,13 +95,13 @@ func TestConnect(t *testing.T) {
 }
 
 func TestGetCozyOrg(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/cozy", nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
 	req.Header.Add("Authorization", "Bearer invalid-token")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 401, res.StatusCode)
 
-	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/cozy", nil)
+	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)

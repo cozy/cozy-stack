@@ -1247,7 +1247,7 @@ HTTP/1.1 200 OK
 
 ## Organizations and Collections
 
-### GET /bitwarden/api/organizations/cozy
+### GET /bitwarden/organizations/cozy
 
 This route can be used to get information about the Cozy Organization. It
 requires a permission on the whole `com.bitwarden.organizations` doctype to
@@ -1257,7 +1257,7 @@ this organization (encoded in base64).
 #### Request
 
 ```http
-GET /bitwarden/api/organizations/cozy HTTP/1.1
+GET /bitwarden/organizations/cozy HTTP/1.1
 Host: alice.example.com
 ```
 
