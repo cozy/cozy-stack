@@ -71,6 +71,20 @@ func (o *Organization) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// FindCiphers returns the ciphers for this organization.
+func (o *Organization) FindCiphers(inst *instance.Instance) ([]*Cipher, error) {
+	var ciphers []*Cipher
+	req := &couchdb.FindRequest{
+		UseIndex: "by-organization-id",
+		Selector: mango.Equal("organization_id", o.CouchID),
+	}
+	err := couchdb.FindDocs(inst, consts.BitwardenCiphers, req, &ciphers)
+	if err != nil {
+		return nil, err
+	}
+	return ciphers, nil
+}
+
 // FindCollection returns the collection for this organization.
 func (o *Organization) FindCollection(inst *instance.Instance) (*Collection, error) {
 	var colls []*Collection
@@ -104,7 +118,19 @@ func (o *Organization) Delete(inst *instance.Instance) error {
 		}
 		return err
 	}
-	// TODO find and delete ciphers in the collection
+
+	ciphers, err := o.FindCiphers(inst)
+	if err != nil {
+		return err
+	}
+	docs := make([]couchdb.Doc, len(ciphers))
+	for i := range ciphers {
+		docs[i] = ciphers[i].Clone()
+	}
+	if err := couchdb.BulkDeleteDocs(inst, consts.BitwardenCiphers, docs); err != nil {
+		return err
+	}
+
 	if err := couchdb.DeleteDoc(inst, coll); err != nil {
 		return err
 	}
