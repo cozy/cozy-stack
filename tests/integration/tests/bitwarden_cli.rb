@@ -154,7 +154,19 @@ describe "The bitwarden API of the stack" do
       assert_equal item, expected
     end
 
+    # Create an organization and a collection
+    Bitwarden::Organization.create inst, "Family"
     assert_equal bw.sync, "Syncing complete."
+    bw.force_sync # TODO why do we need a forced sync?
+    orgs = bw.organizations
+    assert_equal orgs.length, 2
+    names = orgs.map { |o| o[:name] }.sort
+    assert_equal names, %w[Cozy Family]
+    colls = bw.collections
+    assert_equal colls.length, 2
+    names = colls.map { |c| c[:name] }.sort
+    assert_equal names, ["Cozy Connectors", "Family"]
+
     assert_equal bw.logout, "You have logged out."
     assert_equal bw2.logout, "You have logged out."
 

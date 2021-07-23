@@ -29,8 +29,8 @@ fields. Here are some things you can write about your bug:
 -   What did happen instead?
 -   What is the version of the Cozy Stack?
 
-You can also use the [`cozy-stack bug`](cli/cozy-stack_bug.md) command to open
-the form to report issue prefilled with some useful system informations.
+You can also use the [`cozy-stack tools bug`](cli/cozy-stack_bug.md) command to
+open the form to report issue prefilled with some useful system informations.
 
 ## Pull Requests
 
