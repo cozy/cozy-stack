@@ -164,6 +164,7 @@ func CreateOrganization(c echo.Context) error {
 		})
 	}
 
+	_ = settings.UpdateRevisionDate(inst, nil)
 	res := newOrganizationResponse(inst, orga)
 	return c.JSON(http.StatusOK, res)
 }
