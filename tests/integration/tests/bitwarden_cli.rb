@@ -155,7 +155,7 @@ describe "The bitwarden API of the stack" do
     end
 
     # Create an organization and a collection
-    Bitwarden::Organization.create inst, "Family"
+    org = Bitwarden::Organization.create inst, "Family"
     assert_equal bw.sync, "Syncing complete."
     bw.sync
     orgs = bw.organizations
@@ -166,6 +166,51 @@ describe "The bitwarden API of the stack" do
     assert_equal colls.length, 2
     names = colls.map { |c| c[:name] }.sort
     assert_equal names, ["Cozy Connectors", "Family"]
+
+    coll_id = colls.find { |c| c[:organizationId] == org.id }[:id]
+    item = {
+      type: Bitwarden::Types::CARD,
+      favorite: false,
+      name: "Family card",
+      notes: "for serious stuff",
+      card: bw.template('item.card'),
+      organizationId: org.id,
+      collectionIds: [coll_id]
+    }
+    bw.create_item item, org.id
+
+    # Create a sharing
+    inst_recipient = Instance.create name: "Bob"
+    contact = Contact.create inst, given_name: "Bob"
+    sharing = Sharing.new
+    sharing.rules = Rule.create_from_organization(org.id, "sync")
+    sharing.members << inst << contact
+    inst.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_recipient.accept sharing
+    sleep 2
+
+    # FIXME Do not cheat for confirming the recipient
+    doc = Helpers.couch.get_doc(inst_recipient.domain, Bitwarden::Organization.doctype, org.id)
+    encrypted_key = Bitwarden::Organization.encrypt_key inst_recipient, org.key
+    doc["members"][inst_recipient.domain] = {
+      email: "me@bob.test.localhost",
+      key: encrypted_key,
+      status: 2
+    }
+    Helpers.couch.update_doc inst_recipient.domain, Bitwarden::Organization.doctype, doc
+
+    # Check that Bob can access the shared credentials
+    bw3 = Bitwarden.new inst_recipient
+    bw3.login
+    assert_equal bw3.sync, "Syncing complete."
+    orgs = bw3.organizations
+    assert_equal orgs.length, 2
+    names = orgs.map { |o| o[:name] }.sort
+    assert_equal names, %w[Cozy Family]
+    # TODO collections and ciphers
 
     assert_equal bw.logout, "You have logged out."
     assert_equal bw2.logout, "You have logged out."

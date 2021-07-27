@@ -59,6 +59,23 @@ class Rule
              object: obj
   end
 
+  def self.create_from_organization(org_id, what)
+    r1 = Rule.new doctype: Bitwarden::Organization.doctype,
+                  title: "Organization",
+                  values: [org_id],
+                  add: what,
+                  update: what,
+                  remove: what
+    r2 = Rule.new doctype: Bitwarden::Cipher.doctype,
+                  title: "Ciphers",
+                  values: ["#{Bitwarden::Organization.doctype}/#{org_id}"],
+                  selector: "organization_id",
+                  add: what,
+                  update: what,
+                  remove: what
+    [r1, r2]
+  end
+
   def initialize(opts = {})
     @title = opts[:title] || Faker::Hobbit.thorins_company
     @doctype = opts[:doctype]

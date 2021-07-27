@@ -88,19 +88,20 @@ class Bitwarden
   end
 
   def encode(data)
-    capture "encode", data.to_json, false
+    Base64.encode64(data.to_json).chomp
   end
 
-  def create(object, data)
-    capture "create #{object}", encode(data)
+  def create(object, data, flags = "")
+    capture "create #{flags} #{object}", encode(data)
   end
 
   def create_folder(name)
     create :folder, name: name
   end
 
-  def create_item(data)
-    create :item, data
+  def create_item(data, org_id = nil)
+    flags = "--organizationid #{org_id}" if org_id
+    create :item, data, flags
   end
 
   def edit(object, id, data)
@@ -129,6 +130,12 @@ class Bitwarden
 
   def share(item_id, org_id, coll_id)
     capture "share #{item_id} #{org_id}", encode([coll_id])
+  end
+
+  module Cipher
+    def self.doctype
+      "com.bitwarden.ciphers"
+    end
   end
 
   class Organization
