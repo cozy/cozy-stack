@@ -349,16 +349,29 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 	var sharedWithCozy bool
 	var updatedAt interface{}
 	var date string
+	var orgID, collIDs interface{}
 	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
-		sharedWithCozy, _ = doc.M["sharedWithCozy"].(bool)
+		sharedWithCozy, _ = doc.M["shared_with_cozy"].(bool)
+		orgID, _ = doc.M["organization_id"].(string)
+		if collID, _ = doc.M["collection_id"].(string); collID != "" {
+			collIDs = []string{collID}
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
-		sharedWithCozy, _ = doc.M["sharedWithCozy"].(bool)
+		sharedWithCozy, _ = doc.M["shared_with_cozy"].(bool)
+		orgID, _ = doc.M["organization_id"].(string)
+		if collID, _ = doc.M["collection_id"].(string); collID != "" {
+			collIDs = []string{collID}
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*bitwarden.Cipher); ok {
 		sharedWithCozy = doc.SharedWithCozy
+		orgID = doc.OrganizationID
+		if doc.CollectionID != "" {
+			collIDs = []string{doc.CollectionID}
+		}
 		if doc.Metadata != nil {
 			updatedAt = doc.Metadata.UpdatedAt
 		}
@@ -371,7 +384,6 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 	if updatedAt == nil {
 		updatedAt = time.Now()
 	}
-	var orgID, collIDs interface{}
 	if sharedWithCozy {
 		orgID = setting.OrganizationID
 		collIDs = []string{setting.CollectionID}
