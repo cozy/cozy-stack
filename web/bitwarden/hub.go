@@ -353,7 +353,7 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
 		sharedWithCozy, _ = doc.M["shared_with_cozy"].(bool)
 		orgID, _ = doc.M["organization_id"].(string)
-		if collID, _ = doc.M["collection_id"].(string); collID != "" {
+		if collID, _ := doc.M["collection_id"].(string); collID != "" {
 			collIDs = []string{collID}
 		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
@@ -361,7 +361,7 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
 		sharedWithCozy, _ = doc.M["shared_with_cozy"].(bool)
 		orgID, _ = doc.M["organization_id"].(string)
-		if collID, _ = doc.M["collection_id"].(string); collID != "" {
+		if collID, _ := doc.M["collection_id"].(string); collID != "" {
 			collIDs = []string{collID}
 		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})

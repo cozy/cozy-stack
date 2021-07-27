@@ -41,6 +41,15 @@ func (c *Collection) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// Fetch implements permissions.Fetcher
+func (c *Collection) Fetch(field string) []string {
+	switch field {
+	case "organization_id":
+		return []string{c.OrganizationID}
+	}
+	return nil
+}
+
 // GetCozyCollection returns the collection used to store the credentials for
 // the konnectors running on the Cozy server.
 func GetCozyCollection(setting *settings.Settings) (*Collection, error) {

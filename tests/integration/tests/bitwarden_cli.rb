@@ -190,7 +190,7 @@ describe "The bitwarden API of the stack" do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
-    sleep 2
+    sleep 6
 
     # FIXME Do not cheat for confirming the recipient
     doc = Helpers.couch.get_doc(inst_recipient.domain, Bitwarden::Organization.doctype, org.id)
@@ -210,7 +210,13 @@ describe "The bitwarden API of the stack" do
     assert_equal orgs.length, 2
     names = orgs.map { |o| o[:name] }.sort
     assert_equal names, %w[Cozy Family]
-    # TODO collections and ciphers
+    colls = bw3.collections
+    assert_equal colls.length, 2
+    names = colls.map { |c| c[:name] }.sort
+    assert_equal names, ["Cozy Connectors", "Family"]
+    items = bw3.items
+    assert_equal items.length, 1
+    assert_equal items.first[:name], "Family card"
 
     assert_equal bw.logout, "You have logged out."
     assert_equal bw2.logout, "You have logged out."
