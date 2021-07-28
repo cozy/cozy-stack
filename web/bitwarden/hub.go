@@ -59,7 +59,7 @@ func WebsocketHub(c echo.Context) error {
 		})
 	}
 
-	notifier, err := upgradeWebsocket(c, inst, pdoc.SourceID)
+	notifier, err := upgradeWebsocket(c, inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -70,7 +70,6 @@ func WebsocketHub(c echo.Context) error {
 }
 
 type wsNotifier struct {
-	UserID    string
 	Settings  *settings.Settings
 	WS        *websocket.Conn
 	DS        *realtime.DynamicSubscriber
@@ -95,7 +94,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func upgradeWebsocket(c echo.Context, inst *instance.Instance, userID string) (*wsNotifier, error) {
+func upgradeWebsocket(c echo.Context, inst *instance.Instance) (*wsNotifier, error) {
 	setting, err := settings.Get(inst)
 	if err != nil {
 		return nil, err
@@ -118,7 +117,6 @@ func upgradeWebsocket(c echo.Context, inst *instance.Instance, userID string) (*
 	responses := make(chan []byte)
 	ds := realtime.GetHub().Subscriber(inst)
 	notifier := wsNotifier{
-		UserID:    userID,
 		Settings:  setting,
 		WS:        ws,
 		DS:        ds,
@@ -205,7 +203,7 @@ func writePump(notifier *wsNotifier) error {
 			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return err
 			}
-			notif := buildNotification(e, notifier.UserID, notifier.Settings)
+			notif := buildNotification(e, notifier.Settings)
 			if notif == nil {
 				continue
 			}
@@ -253,11 +251,12 @@ const (
 	hubLogOut = 11
 )
 
-func buildNotification(e *realtime.Event, userID string, setting *settings.Settings) *notification {
+func buildNotification(e *realtime.Event, setting *settings.Settings) *notification {
 	if e == nil || e.Doc == nil {
 		return nil
 	}
 
+	userID := setting.ID()
 	doctype := e.Doc.DocType()
 	t := -1
 	var payload map[string]interface{}
