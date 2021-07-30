@@ -91,6 +91,10 @@ func stepID(noteID string, version int64) string {
 	return fmt.Sprintf("%s/%08d", noteID, version)
 }
 
+func startkey(noteID string) string {
+	return fmt.Sprintf("%s/", noteID)
+}
+
 func endkey(noteID string) string {
 	return fmt.Sprintf("%s/%s", noteID, couchdb.MaxString)
 }

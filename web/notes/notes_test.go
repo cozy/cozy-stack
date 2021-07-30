@@ -690,6 +690,39 @@ func TestNoteRealtime(t *testing.T) {
 	assert.EqualValues(t, file.Metadata["version"], v5)
 }
 
+func TestUploadImage(t *testing.T) {
+	for i := 0; i < 3; i++ {
+		u := fmt.Sprintf("/notes/%s/images?Name=wet.jpg", noteID)
+		f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		assert.NoError(t, err)
+		defer f.Close()
+		req, err := http.NewRequest("POST", ts.URL+u, f)
+		assert.NoError(t, err)
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		req.Header.Add("Content-Type", "image/jpeg")
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 201, res.StatusCode)
+		defer res.Body.Close()
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		data, _ := result["data"].(map[string]interface{})
+		assert.Equal(t, consts.NotesImages, data["type"])
+		assert.NotEmpty(t, data["id"])
+		assert.NotEmpty(t, data["meta"])
+
+		attrs, _ := data["attributes"].(map[string]interface{})
+		if i == 0 {
+			assert.Equal(t, "wet.jpg", attrs["name"])
+		} else {
+			assert.Equal(t, fmt.Sprintf("wet (%d).jpg", i+1), attrs["name"])
+		}
+		assert.NotEmpty(t, attrs["cozyMetadata"])
+		assert.Equal(t, "image/jpeg", attrs["mime"])
+	}
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()

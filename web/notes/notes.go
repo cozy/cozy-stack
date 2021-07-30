@@ -5,9 +5,12 @@ package notes
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/note"
@@ -337,6 +340,65 @@ func UpdateNoteSchema(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
+// UploadImage is the API handler for POST /notes/:id/images. It uploads an
+// image for the note.
+func UploadImage(c echo.Context) error {
+	// Check permission
+	inst := middlewares.GetInstance(c)
+	doc, err := inst.VFS().FileByID(c.Param("id"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.POST, doc); err != nil {
+		return err
+	}
+
+	// Check that the uploaded file is an image
+	contentType := c.Request().Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "image/") {
+		err := errors.New("Only images are accepted")
+		return jsonapi.InvalidParameter("Content-Type", err)
+	}
+
+	// Check the VFS quota
+	quota := inst.DiskQuota()
+	if quota > 0 {
+		size := c.Request().ContentLength
+		if size <= 0 {
+			err := errors.New("The Content-Length header is mandatory")
+			return jsonapi.InvalidParameter("Content-Length", err)
+		}
+		used, err := inst.VFS().FilesUsage()
+		if err != nil {
+			return jsonapi.InternalServerError(errors.New("Cannot check quota"))
+		}
+		if used+size > quota {
+			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrFileTooBig)
+		}
+	}
+
+	// Create the image document
+	name := c.QueryParam("Name")
+	upload, err := note.NewImageUpload(inst, doc, name, contentType)
+	if err != nil {
+		inst.Logger().WithField("nspace", "notes").Infof("Image upload has failed: %s", err)
+		return jsonapi.BadRequest(errors.New("Upload has failed"))
+	}
+
+	// Manage the content upload
+	_, err = io.Copy(upload, c.Request().Body)
+	if cerr := upload.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+		err = cerr
+	}
+	if err != nil {
+		inst.Logger().WithField("nspace", "notes").Infof("Image upload has failed: %s", err)
+		return jsonapi.BadRequest(errors.New("Upload has failed"))
+	}
+
+	image := files.NewNoteImage(upload.Image)
+	return jsonapi.Data(c, http.StatusCreated, image, nil)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -349,6 +411,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:id/sync", ForceNoteSync)
 	router.GET("/:id/open", OpenNoteURL)
 	router.PUT("/:id/schema", UpdateNoteSchema)
+	router.POST("/:id/images", UploadImage)
 }
 
 func wrapError(err error) *jsonapi.Error {

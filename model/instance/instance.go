@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/spf13/afero"
 
 	"github.com/sirupsen/logrus"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -223,6 +225,34 @@ func (i *Instance) MakeVFS() error {
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
 	return err
+}
+
+// ThumbsFS returns the hidden filesystem for storing the thumbnails of the
+// photos/image
+func (i *Instance) ThumbsFS() vfs.Thumbser {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case config.SchemeFile:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
+		return vfsafero.NewThumbsFs(baseFS)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS(i.DomainName() + "-thumbs")
+		return vfsafero.NewThumbsFs(baseFS)
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		switch i.SwiftLayout {
+		case 0:
+			return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
+		case 1:
+			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
+		case 2:
+			return vfsswift.NewThumbsFsV3(config.GetSwiftConnection(), i)
+		default:
+			panic(ErrInvalidSwiftLayout)
+		}
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
 }
 
 // NotesLock returns a mutex for the notes on this instance.

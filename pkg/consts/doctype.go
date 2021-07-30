@@ -119,6 +119,8 @@ const (
 	NotesEvents = "io.cozy.notes.events"
 	// NotesURL doc type is used to return the URL where a note can be edited.
 	NotesURL = "io.cozy.notes.url"
+	// NotesImages doc type used for images used by a note
+	NotesImages = "io.cozy.notes.images"
 	// OfficeURL doc type is used to return the URL where an office document can be edited.
 	OfficeURL = "io.cozy.office.url"
 	// AuthConfirmations doc type used for realtime events when confirming

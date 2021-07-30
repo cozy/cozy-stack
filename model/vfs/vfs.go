@@ -255,6 +255,9 @@ type Thumbser interface {
 	RemoveThumbs(img *FileDoc, formats []string) error
 	ServeThumbContent(w http.ResponseWriter, req *http.Request,
 		img *FileDoc, format string) error
+
+	CreateNoteThumb(id, mime string) (ThumbFiler, error)
+	RemoveNoteThumb(id string) error
 }
 
 // ThumbFiler defines a interface to handle the creation of thumbnails. It is

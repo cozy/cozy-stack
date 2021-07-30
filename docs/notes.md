@@ -1140,12 +1140,76 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /notes/:id/images
+
+This route can be used to upload an image for a note. The note will be
+transformed in a tar archive in the VFS, with the image saved inside it.
+
+This route can only be used to upload images (the content-type is checked) and
+requires a POST permission on the note.
+
+The filename of the image is given in the query string, via the `Name`
+parameter. In case of conflict (another image has the same name), the stack
+will rename this image.
+
+If the image is larger than 768px, it will be shrinked.
+
+#### Request
+
+```http
+POST /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/images?Name=diagram.jpg HTTP/1.1
+Accept: application/vnd.api+json
+Content-Length: 123456
+Content-Type: image/jpeg
+Host: cozy.example.com
+<content>
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.notes.images",
+    "id": "f48d9370-e1ec-0137-8547-543d7eb8149c/e57d2ec0-d281-0139-2bed-543d7eb8149c",
+    "meta": {
+      "rev": "1-588ab661"
+    },
+    "attributes": {
+      "name": "diagram.jpg",
+      "mime": "image/jpeg",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2021-07-12T10:58:00Z",
+        "createdByApp": "notes",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2021-07-12T10:58:00Z",
+        "uploadedAt": "2021-07-12T10:58:00Z",
+        "uploadedOn": "https://cozy.example.com/",
+        "uploadedBy": {
+          "slug": "notes"
+        }
+      }
+    },
+    "links": {
+      "self": "/notes/f48d9370-e1ec-0137-8547-543d7eb8149c/images/e57d2ec0-d281-0139-2bed-543d7eb8149c/543d7eb8149c128b"
+    }
+  }
+}
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for a document with the
 `io.cozy.notes.events` doctype, and the id of a note file. It requires a permission
 on this file, and it will send the events for this notes: changes of the title, the
-steps applied, and the telepointer updates.
+steps applied, the telepointer updates, and images processed.
 
 ### Example
 
@@ -1175,4 +1239,11 @@ server > {"event": "UPDATED",
           "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
                       "type": "io.cozy.notes.events",
                       "doc": {"doctype": "io.cozy.notes.telepointers", "sessionID": "543781490137", "anchor": 7, "head": 12, "type": "textSelection"}}}
+server > {"event": "UPDATED",
+          "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
+                      "type": "io.cozy.notes.events",
+                      "doc": {"doctype": "io.cozy.notes.images",
+                              "id": "e57d2ec0-d281-0139-2bed-543d7eb8149c",
+                              "width": 768,
+                              "height": 768}}}
 ```

@@ -13,6 +13,8 @@ import (
 	"github.com/ncw/swift"
 )
 
+const noteThumbFormat = "note"
+
 var unixEpochZero = time.Time{}
 
 // NewThumbsFsV2 creates a new thumb filesystem base on swift.
@@ -60,7 +62,7 @@ func (t *thumb) Commit() error {
 }
 
 func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
-	name := t.makeName(img, format)
+	name := t.makeName(img.ID(), format)
 	objMeta := swift.Metadata{
 		"file-md5": hex.EncodeToString(img.MD5Sum),
 	}
@@ -85,7 +87,7 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 }
 
 func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
-	name := t.makeName(img, format)
+	name := t.makeName(img.ID(), format)
 	infos, headers, err := t.c.Object(t.container, name)
 	if err == swift.ObjectNotFound {
 		return false, nil
@@ -109,14 +111,14 @@ func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 func (t *thumbsV2) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 	objNames := make([]string, len(formats))
 	for i, format := range formats {
-		objNames[i] = t.makeName(img, format)
+		objNames[i] = t.makeName(img.ID(), format)
 	}
 	_, err := t.c.BulkDelete(t.container, objNames)
 	return err
 }
 
 func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {
-	name := t.makeName(img, format)
+	name := t.makeName(img.ID(), format)
 	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
@@ -128,6 +130,32 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 	return nil
 }
 
-func (t *thumbsV2) makeName(img *vfs.FileDoc, format string) string {
-	return fmt.Sprintf("thumbs/%s-%s", MakeObjectName(img.ID()), format)
+func (t *thumbsV2) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
+	name := t.makeName(id, noteThumbFormat)
+	obj, err := t.c.ObjectCreate(t.container, name, true, "", mime, nil)
+	if err != nil {
+		if _, _, errc := t.c.Container(t.container); errc == swift.ContainerNotFound {
+			if errc = t.c.ContainerCreate(t.container, nil); errc != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+	th := &thumb{
+		WriteCloser: obj,
+		c:           t.c,
+		container:   t.container,
+		name:        name,
+	}
+	return th, nil
+}
+
+func (t *thumbsV2) RemoveNoteThumb(id string) error {
+	objName := t.makeName(id, noteThumbFormat)
+	return t.c.ObjectDelete(t.container, objName)
+}
+
+func (t *thumbsV2) makeName(imgID string, format string) string {
+	return fmt.Sprintf("thumbs/%s-%s", MakeObjectName(imgID), format)
 }
