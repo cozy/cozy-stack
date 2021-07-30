@@ -125,7 +125,8 @@ more informations about the `not_synchronized_on` field.
 ### GET /files/:file-id
 
 Get a directory or a file informations. In the case of a directory, it contains
-the list of files and sub-directories inside it.
+the list of files and sub-directories inside it. For a note, its images are
+included.
 
 Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
 The default limit is 30 entries.

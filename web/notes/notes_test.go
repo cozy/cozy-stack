@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/files"
 	webRealtime "github.com/cozy/cozy-stack/web/realtime"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -772,6 +773,36 @@ func TestGetImage(t *testing.T) {
 	actual, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
+
+	req, err = http.NewRequest("GET", ts.URL+"/files/"+noteID, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	defer res.Body.Close()
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result2)
+	assert.NoError(t, err)
+	included, _ := result2["included"].([]interface{})
+	hasImage := false
+	for i := range included {
+		data, _ := included[i].(map[string]interface{})
+		if data["type"] == consts.FilesVersions {
+			continue
+		}
+		assert.Equal(t, consts.NotesImages, data["type"])
+		assert.NotEmpty(t, data["id"])
+		assert.NotEmpty(t, data["meta"])
+		attrs, _ := data["attributes"].(map[string]interface{})
+		assert.NotEmpty(t, attrs["name"])
+		assert.NotEmpty(t, attrs["cozyMetadata"])
+		assert.Equal(t, "image/jpeg", attrs["mime"])
+		links, _ := data["links"].(map[string]interface{})
+		assert.NotEmpty(t, links["self"])
+		hasImage = true
+	}
+	assert.True(t, hasImage)
 }
 
 func TestMain(m *testing.M) {
@@ -782,6 +813,7 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(consts.Files)
 
 	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
 		"/notes":    Routes,
 		"/realtime": webRealtime.Routes,
 	})
