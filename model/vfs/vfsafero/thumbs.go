@@ -127,6 +127,21 @@ func (t *thumbs) RemoveNoteThumb(id string) error {
 	return nil
 }
 
+func (t *thumbs) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
+	name := t.makeName(id, noteThumbFormat)
+	s, err := t.fs.Stat(name)
+	if err != nil {
+		return err
+	}
+	f, err := t.fs.Open(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	http.ServeContent(w, req, name, s.ModTime(), f)
+	return nil
+}
+
 func (t *thumbs) makeName(imgID string, format string) string {
 	dir := imgID[:4]
 	name := fmt.Sprintf("%s-%s.jpg", imgID, format)

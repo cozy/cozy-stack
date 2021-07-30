@@ -156,6 +156,19 @@ func (t *thumbsV2) RemoveNoteThumb(id string) error {
 	return t.c.ObjectDelete(t.container, objName)
 }
 
+func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
+	name := t.makeName(id, noteThumbFormat)
+	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
+	if err != nil {
+		return wrapSwiftErr(err)
+	}
+	defer f.Close()
+
+	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	http.ServeContent(w, req, name, unixEpochZero, f)
+	return nil
+}
+
 func (t *thumbsV2) makeName(imgID string, format string) string {
 	return fmt.Sprintf("thumbs/%s-%s", MakeObjectName(imgID), format)
 }

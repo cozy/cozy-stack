@@ -720,7 +720,58 @@ func TestUploadImage(t *testing.T) {
 		}
 		assert.NotEmpty(t, attrs["cozyMetadata"])
 		assert.Equal(t, "image/jpeg", attrs["mime"])
+
+		links, _ := data["links"].(map[string]interface{})
+		assert.NotEmpty(t, links["self"])
 	}
+}
+
+func TestGetImage(t *testing.T) {
+	u := fmt.Sprintf("/notes/%s/images?Name=wet-cozy.jpg", noteID)
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+u, f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add("Content-Type", "image/jpeg")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+	defer res.Body.Close()
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, consts.NotesImages, data["type"])
+	assert.NotEmpty(t, data["id"])
+	assert.NotEmpty(t, data["meta"])
+
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.NotEmpty(t, attrs["name"])
+	assert.NotEmpty(t, attrs["cozyMetadata"])
+	assert.Equal(t, "image/jpeg", attrs["mime"])
+
+	links, _ := data["links"].(map[string]interface{})
+	link, _ := links["self"].(string)
+	assert.NotEmpty(t, link)
+
+	req, err = http.NewRequest("GET", ts.URL+link, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	defer res.Body.Close()
+
+	f2, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f2.Close()
+	expected, err := ioutil.ReadAll(f2)
+	assert.NoError(t, err)
+	actual, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
 }
 
 func TestMain(m *testing.M) {

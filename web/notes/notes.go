@@ -395,8 +395,32 @@ func UploadImage(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("Upload has failed"))
 	}
 
-	image := files.NewNoteImage(upload.Image)
+	image := files.NewNoteImage(inst, upload.Image)
 	return jsonapi.Data(c, http.StatusCreated, image, nil)
+}
+
+// GetImage returns the image for a note, possibly resized.
+func GetImage(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	doc, err := inst.VFS().FileByID(c.Param("id"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.POST, doc); err != nil {
+		return err
+	}
+
+	imageID := c.Param("id") + "/" + c.Param("image-id")
+	secret := c.Param("secret")
+	thumbID, err := vfs.GetStore().GetThumb(inst, secret)
+	if err != nil {
+		return wrapError(err)
+	}
+	if imageID != thumbID {
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
+	}
+
+	return inst.ThumbsFS().ServeNoteThumbContent(c.Response(), c.Request(), imageID)
 }
 
 // Routes sets the routing for the collaborative edition of notes.
@@ -412,6 +436,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:id/open", OpenNoteURL)
 	router.PUT("/:id/schema", UpdateNoteSchema)
 	router.POST("/:id/images", UploadImage)
+	router.GET("/:id/images/:image-id/:secret", GetImage)
 }
 
 func wrapError(err error) *jsonapi.Error {
