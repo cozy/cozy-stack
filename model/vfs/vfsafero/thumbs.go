@@ -2,6 +2,7 @@ package vfsafero
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -117,6 +118,11 @@ func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 		newname: newname,
 	}
 	return th, nil
+}
+
+func (t *thumbs) OpenNoteThumb(id string) (io.ReadCloser, error) {
+	name := t.makeName(id, noteThumbFormat)
+	return t.fs.Open(name)
 }
 
 func (t *thumbs) RemoveNoteThumb(id string) error {

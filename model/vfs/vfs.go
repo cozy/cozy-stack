@@ -257,6 +257,7 @@ type Thumbser interface {
 		img *FileDoc, format string) error
 
 	CreateNoteThumb(id, mime string) (ThumbFiler, error)
+	OpenNoteThumb(id string) (io.ReadCloser, error)
 	RemoveNoteThumb(id string) error
 	ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error
 }

@@ -368,6 +368,9 @@ func UploadImage(c echo.Context) error {
 			err := errors.New("The Content-Length header is mandatory")
 			return jsonapi.InvalidParameter("Content-Length", err)
 		}
+		if size > note.MaxImageWeight {
+			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrFileTooBig)
+		}
 		used, err := inst.VFS().FilesUsage()
 		if err != nil {
 			return jsonapi.InternalServerError(errors.New("Cannot check quota"))
@@ -402,12 +405,9 @@ func UploadImage(c echo.Context) error {
 // GetImage returns the image for a note, possibly resized.
 func GetImage(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	doc, err := inst.VFS().FileByID(c.Param("id"))
+	_, err := inst.VFS().FileByID(c.Param("id"))
 	if err != nil {
 		return wrapError(err)
-	}
-	if err := middlewares.AllowVFS(c, permission.POST, doc); err != nil {
-		return err
 	}
 
 	imageID := c.Param("id") + "/" + c.Param("image-id")

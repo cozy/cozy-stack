@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -15,8 +16,11 @@ import (
 )
 
 // MaxWidth is the maximal width of an image for a note. If larger, the image
-// will be shrinked.
+// will be resized.
 const MaxWidth = 768
+
+// MaxImageWeight is the maximal weight (in bytes) for an image.
+const MaxImageWeight = 100 * 1024 * 1024
 
 // Image is a file that will be persisted inside the note archive.
 type Image struct {
@@ -146,6 +150,23 @@ func (u *ImageUpload) Close() error {
 	if err := couchdb.CreateNamedDocWithDB(u.inst, u.Image); err != nil {
 		_ = u.inst.ThumbsFS().RemoveNoteThumb(u.Image.ID())
 		return err
+	}
+
+	// Push a job for the thumbnail worker if the image needs to be resized
+	if u.Image.ToResize {
+		msg, err := job.NewMessage(struct {
+			Verb      string `json:"verb"`
+			NoteImage *Image `json:"noteImage"`
+		}{
+			Verb:      "CREATED",
+			NoteImage: u.Image,
+		})
+		if err == nil {
+			_, _ = job.System().PushJob(u.inst, &job.JobRequest{
+				WorkerType: "thumbnail",
+				Message:    msg,
+			})
+		}
 	}
 
 	return nil

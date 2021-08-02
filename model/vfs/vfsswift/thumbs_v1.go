@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -90,6 +91,18 @@ func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 		name:        name,
 	}
 	return th, nil
+}
+
+func (t *thumbs) OpenNoteThumb(id string) (io.ReadCloser, error) {
+	name := t.makeName(id, noteThumbFormat)
+	obj, _, err := t.c.ObjectOpen(t.container, name, false, nil)
+	if err == swift.ObjectNotFound {
+		return nil, os.ErrNotExist
+	}
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 func (t *thumbs) RemoveNoteThumb(id string) error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -149,6 +150,18 @@ func (t *thumbsV2) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 		name:        name,
 	}
 	return th, nil
+}
+
+func (t *thumbsV2) OpenNoteThumb(id string) (io.ReadCloser, error) {
+	name := t.makeName(id, noteThumbFormat)
+	obj, _, err := t.c.ObjectOpen(t.container, name, false, nil)
+	if err == swift.ObjectNotFound {
+		return nil, os.ErrNotExist
+	}
+	if err != nil {
+		return nil, err
+	}
+	return obj, nil
 }
 
 func (t *thumbsV2) RemoveNoteThumb(id string) error {

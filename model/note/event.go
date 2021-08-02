@@ -1,6 +1,8 @@
 package note
 
 import (
+	"strings"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -94,6 +96,14 @@ func publishSteps(inst *instance.Instance, fileID string, steps []Step) {
 		e.SetID(fileID)
 		e.publish(inst)
 	}
+}
+
+// PublishThumbnail sends information about a resized image.
+func PublishThumbnail(inst *instance.Instance, event Event) {
+	parts := strings.SplitN(event.ID(), "/", 2)
+	event.SetID(parts[0])        // The note ID is the first part of the image ID
+	event["image_id"] = parts[1] // The image ID is the second part
+	event.publish(inst)
 }
 
 var _ jsonapi.Object = &Event{}

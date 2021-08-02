@@ -1246,7 +1246,8 @@ server > {"event": "UPDATED",
           "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
                       "type": "io.cozy.notes.events",
                       "doc": {"doctype": "io.cozy.notes.images",
-                              "id": "e57d2ec0-d281-0139-2bed-543d7eb8149c",
+                              "image_id": "e57d2ec0-d281-0139-2bed-543d7eb8149c",
+                              "mime": "image/jpeg",
                               "width": 768,
                               "height": 768}}}
 ```

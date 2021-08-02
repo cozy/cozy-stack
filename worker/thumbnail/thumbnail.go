@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -21,15 +22,17 @@ import (
 )
 
 type imageEvent struct {
-	Verb   string       `json:"verb"`
-	Doc    vfs.FileDoc  `json:"doc"`
-	OldDoc *vfs.FileDoc `json:"old,omitempty"`
+	Verb      string       `json:"verb"`
+	Doc       vfs.FileDoc  `json:"doc"`
+	OldDoc    *vfs.FileDoc `json:"old,omitempty"`
+	NoteImage *note.Image  `json:"noteImage,omitempty"`
 }
 
 var formats = map[string]string{
 	"small":  "640x480",
 	"medium": "1280x720",
 	"large":  "1920x1080",
+	"note":   "768x",
 }
 
 func init() {
@@ -57,6 +60,9 @@ func Worker(ctx *job.WorkerContext) error {
 	var img imageEvent
 	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
+	}
+	if img.Verb == "CREATED" && img.NoteImage != nil {
+		return resizeNoteImage(ctx, img.NoteImage)
 	}
 	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil
@@ -312,4 +318,58 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
 	return i.ThumbsFS().RemoveThumbs(img, vfs.ThumbnailFormatNames)
+}
+
+func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
+	fs := ctx.Instance.ThumbsFS()
+	in, err := fs.OpenNoteThumb(img.ID())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if errc := in.Close(); errc != nil && err == nil {
+			err = errc
+		}
+	}()
+
+	var env []string
+	{
+		tempDir, err := ioutil.TempDir("", "magick")
+		if err == nil {
+			defer os.RemoveAll(tempDir)
+			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+			env = []string{envTempDir}
+		}
+	}
+
+	var th vfs.ThumbFiler
+	th, err = fs.CreateNoteThumb(img.ID(), "image/jpeg")
+	if err != nil {
+		return err
+	}
+
+	out := th
+	if err = generateThumb(ctx, in, out, img.ID(), "note", env); err != nil {
+		return err
+	}
+
+	if err = th.Commit(); err != nil {
+		return err
+	}
+
+	img.Height = img.Height * note.MaxWidth / img.Width
+	img.Width = note.MaxWidth
+	img.ToResize = false
+	img.Mime = "image/jpeg"
+	_ = couchdb.UpdateDoc(ctx.Instance, img)
+
+	event := note.Event{
+		"width":   img.Width,
+		"height":  img.Height,
+		"mime":    img.Mime,
+		"doctype": consts.NotesImages,
+	}
+	event.SetID(img.ID())
+	note.PublishThumbnail(ctx.Instance, event)
+	return nil
 }
