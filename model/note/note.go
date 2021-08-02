@@ -119,13 +119,17 @@ func (d *Document) Content() (*model.Node, error) {
 }
 
 // Markdown returns a markdown serialization of the content.
-func (d *Document) Markdown() ([]byte, error) {
+func (d *Document) Markdown(inst *instance.Instance) ([]byte, error) {
 	if len(d.markdown) == 0 {
+		images, err := getImages(inst, d.DocID)
+		if err != nil {
+			return nil, err
+		}
 		content, err := d.Content()
 		if err != nil {
 			return nil, err
 		}
-		md := markdownSerializer().Serialize(content)
+		md := markdownSerializer(images).Serialize(content)
 		d.markdown = []byte(md)
 	}
 	return d.markdown, nil
@@ -227,16 +231,12 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	content, err := doc.Markdown()
-	if err != nil {
-		return nil, err
-	}
 	cm := vfs.NewCozyMetadata(inst.PageURL("/", nil))
 
 	fileDoc, err := vfs.NewFileDoc(
 		titleToFilename(inst, doc.Title, cm.UpdatedAt),
 		dirID,
-		int64(len(content)),
+		int64(len(doc.markdown)),
 		nil, // Let the VFS compute the md5sum
 		consts.NoteMimeType,
 		"text",
@@ -347,7 +347,7 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 }
 
 func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fileDoc *vfs.FileDoc, err error) {
-	md, err := doc.Markdown()
+	md, err := doc.Markdown(inst)
 	if err != nil {
 		return nil, err
 	}

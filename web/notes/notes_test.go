@@ -761,7 +761,6 @@ func TestGetImage(t *testing.T) {
 
 	req, err = http.NewRequest("GET", ts.URL+link, nil)
 	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
