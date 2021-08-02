@@ -21,11 +21,14 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
+type imageMessage struct {
+	NoteImage *note.Image `json:"noteImage,omitempty"`
+}
+
 type imageEvent struct {
-	Verb      string       `json:"verb"`
-	Doc       vfs.FileDoc  `json:"doc"`
-	OldDoc    *vfs.FileDoc `json:"old,omitempty"`
-	NoteImage *note.Image  `json:"noteImage,omitempty"`
+	Verb   string       `json:"verb"`
+	Doc    vfs.FileDoc  `json:"doc"`
+	OldDoc *vfs.FileDoc `json:"old,omitempty"`
 }
 
 var formats = map[string]string{
@@ -57,12 +60,14 @@ func init() {
 
 // Worker is a worker that creates thumbnails for photos and images.
 func Worker(ctx *job.WorkerContext) error {
+	var msg imageMessage
+	if err := ctx.UnmarshalMessage(&msg); err == nil && msg.NoteImage != nil {
+		return resizeNoteImage(ctx, msg.NoteImage)
+	}
+
 	var img imageEvent
 	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
-	}
-	if img.Verb == "CREATED" && img.NoteImage != nil {
-		return resizeNoteImage(ctx, img.NoteImage)
 	}
 	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil

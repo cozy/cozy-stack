@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/gofrs/uuid"
 )
 
@@ -154,19 +155,17 @@ func (u *ImageUpload) Close() error {
 
 	// Push a job for the thumbnail worker if the image needs to be resized
 	if u.Image.ToResize {
-		msg, err := job.NewMessage(struct {
-			Verb      string `json:"verb"`
+		evt, _ := job.NewEvent(&realtime.Event{Verb: "CREATED"})
+		msg, _ := job.NewMessage(struct {
 			NoteImage *Image `json:"noteImage"`
 		}{
-			Verb:      "CREATED",
 			NoteImage: u.Image,
 		})
-		if err == nil {
-			_, _ = job.System().PushJob(u.inst, &job.JobRequest{
-				WorkerType: "thumbnail",
-				Message:    msg,
-			})
-		}
+		_, _ = job.System().PushJob(u.inst, &job.JobRequest{
+			WorkerType: "thumbnail",
+			Event:      evt,
+			Message:    msg,
+		})
 	}
 
 	return nil
