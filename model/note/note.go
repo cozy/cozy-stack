@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	persistenceDebouce = "1m"
+	persistenceDebouce = "3m"
 	cacheDuration      = 30 * time.Minute
 	cleanStepsAfter    = 24 * time.Hour
 )
