@@ -721,6 +721,8 @@ func TestUploadImage(t *testing.T) {
 		}
 		assert.NotEmpty(t, attrs["cozyMetadata"])
 		assert.Equal(t, "image/jpeg", attrs["mime"])
+		assert.EqualValues(t, 440, attrs["width"])
+		assert.EqualValues(t, 294, attrs["height"])
 
 		links, _ := data["links"].(map[string]interface{})
 		assert.NotEmpty(t, links["self"])

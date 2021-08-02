@@ -2,6 +2,7 @@ package note
 
 import (
 	"fmt"
+	"io"
 	"path"
 	"strings"
 
@@ -13,12 +14,19 @@ import (
 	"github.com/gofrs/uuid"
 )
 
+// MaxWidth is the maximal width of an image for a note. If larger, the image
+// will be shrinked.
+const MaxWidth = 768
+
 // Image is a file that will be persisted inside the note archive.
 type Image struct {
 	DocID    string                `json:"_id,omitempty"`
 	DocRev   string                `json:"_rev,omitempty"`
 	Name     string                `json:"name"`
 	Mime     string                `json:"mime"`
+	Width    int                   `json:"width,omitempty"`
+	Height   int                   `json:"height,omitempty"`
+	ToResize bool                  `json:"willBeResized,omitempty"`
 	Metadata metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
@@ -48,25 +56,43 @@ type ImageUpload struct {
 	Image *Image
 	note  *vfs.FileDoc
 	inst  *instance.Instance
-	thumb vfs.ThumbFiler
+	meta  *vfs.MetaExtractor // extracts metadata from the content
+	thumb vfs.ThumbFiler     // the VFs where the file will be uploaded
 }
 
 // NewImageUpload can be used to manage uploading a new image for a note.
 func NewImageUpload(inst *instance.Instance, note *vfs.FileDoc, name, mime string) (*ImageUpload, error) {
 	uuidv4, _ := uuid.NewV4()
 	id := note.ID() + "/" + uuidv4.String()
-	img := &Image{DocID: id, Name: name, Mime: mime}
+	md := metadata.New()
+	md.CreatedByApp = consts.NotesSlug
+	img := &Image{DocID: id, Name: name, Mime: mime, Metadata: *md}
 
 	thumb, err := inst.ThumbsFS().CreateNoteThumb(id, mime)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ImageUpload{inst: inst, note: note, thumb: thumb, Image: img}, nil
+	var meta vfs.MetaExtractor
+	switch mime {
+	case "image/heic", "image/heif":
+		meta = vfs.NewExifExtractor(img.Metadata.CreatedAt, false)
+	default:
+		meta = vfs.NewImageExtractor(img.Metadata.CreatedAt)
+	}
+
+	upload := ImageUpload{inst: inst, note: note, meta: &meta, thumb: thumb, Image: img}
+	return &upload, nil
 }
 
 // Write implements the io.Writer interface (used by io.Copy).
 func (u *ImageUpload) Write(p []byte) (int, error) {
+	if u.meta != nil {
+		if _, err := (*u.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+			(*u.meta).Abort(err)
+			u.meta = nil
+		}
+	}
 	return u.thumb.Write(p)
 }
 
@@ -79,7 +105,25 @@ func (u *ImageUpload) Close() error {
 	defer lock.Unlock()
 
 	if err := u.thumb.Commit(); err != nil {
+		if u.meta != nil {
+			(*u.meta).Abort(err)
+		}
 		return err
+	}
+
+	if u.meta != nil {
+		if errc := (*u.meta).Close(); errc == nil {
+			result := (*u.meta).Result()
+			if w, ok := result["width"].(int); ok {
+				u.Image.Width = w
+				if w > MaxWidth {
+					u.Image.ToResize = true
+				}
+			}
+			if h, ok := result["height"].(int); ok {
+				u.Image.Height = h
+			}
+		}
 	}
 
 	// Check the unicity of the filename

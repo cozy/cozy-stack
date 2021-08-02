@@ -1183,6 +1183,9 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "name": "diagram.jpg",
       "mime": "image/jpeg",
+      "width": 1000,
+      "height": 1000,
+      "willBeResized": true,
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
