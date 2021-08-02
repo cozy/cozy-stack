@@ -3,8 +3,11 @@
 package note
 
 import (
+	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -41,9 +44,8 @@ type Document struct {
 	RawContent map[string]interface{} `json:"content"`
 
 	// Use cache for some computed properties
-	schema   *model.Schema
-	content  *model.Node
-	markdown []byte
+	schema  *model.Schema
+	content *model.Node
 }
 
 // ID returns the document qualified identifier
@@ -96,7 +98,6 @@ func (d *Document) Schema() (*model.Schema, error) {
 func (d *Document) SetContent(content *model.Node) {
 	d.RawContent = content.ToJSON()
 	d.content = content
-	d.markdown = nil
 }
 
 // Content returns the prosemirror content for this note.
@@ -119,20 +120,13 @@ func (d *Document) Content() (*model.Node, error) {
 }
 
 // Markdown returns a markdown serialization of the content.
-func (d *Document) Markdown(inst *instance.Instance) ([]byte, error) {
-	if len(d.markdown) == 0 {
-		images, err := getImages(inst, d.DocID)
-		if err != nil {
-			return nil, err
-		}
-		content, err := d.Content()
-		if err != nil {
-			return nil, err
-		}
-		md := markdownSerializer(images).Serialize(content)
-		d.markdown = []byte(md)
+func (d *Document) Markdown(images []*Image) ([]byte, error) {
+	content, err := d.Content()
+	if err != nil {
+		return nil, err
 	}
-	return d.markdown, nil
+	md := markdownSerializer(images).Serialize(content)
+	return []byte(md), nil
 }
 
 // GetDirID returns the ID of the directory where the note will be created.
@@ -236,7 +230,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	fileDoc, err := vfs.NewFileDoc(
 		titleToFilename(inst, doc.Title, cm.UpdatedAt),
 		dirID,
-		int64(len(doc.markdown)),
+		0,
 		nil, // Let the VFS compute the md5sum
 		consts.NoteMimeType,
 		"text",
@@ -347,7 +341,8 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 }
 
 func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fileDoc *vfs.FileDoc, err error) {
-	md, err := doc.Markdown(inst)
+	images, _ := getImages(inst, doc.DocID)
+	md, err := doc.Markdown(images)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +364,12 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			}
 		}
 	}
-	fileDoc.ByteSize = int64(len(md))
+
+	content := md
+	if len(images) > 0 {
+		content, _ = buildArchive(inst, md, images)
+	}
+	fileDoc.ByteSize = int64(len(content))
 
 	fs := inst.VFS()
 	basename := fileDoc.DocName
@@ -393,7 +393,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			clearCache(inst, fileDoc.ID())
 		}
 	}()
-	_, err = file.Write(md)
+	_, err = file.Write(content)
 	return
 }
 
@@ -414,6 +414,56 @@ func forceRename(inst *instance.Instance, old *vfs.FileDoc, file *vfs.FileDoc) (
 		return nil, err
 	}
 	return tmp, nil
+}
+
+func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, error) {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+
+	// Add markdown to the archive
+	hdr := &tar.Header{
+		Name: "index.md",
+		Mode: 0640,
+		Size: int64(len(md)),
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return nil, err
+	}
+	if _, err := tw.Write(md); err != nil {
+		return nil, err
+	}
+
+	// Add images to the archive
+	fs := inst.ThumbsFS()
+	for _, image := range images {
+		th, err := fs.OpenNoteThumb(image.ID())
+		if err != nil {
+			return nil, err
+		}
+		img, err := ioutil.ReadAll(th)
+		if errc := th.Close(); err == nil && errc != nil {
+			err = errc
+		}
+		if err != nil {
+			return nil, err
+		}
+		hdr := &tar.Header{
+			Name: image.Name,
+			Mode: 0640,
+			Size: int64(len(img)),
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			return nil, err
+		}
+		if _, err := tw.Write(img); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // List returns a list of notes sorted by descending updated_at. It uses
