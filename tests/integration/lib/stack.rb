@@ -17,6 +17,12 @@ class Stack
     @stacks[port] ||= Stack.new(port)
   end
 
+  def self.cat_logs
+    @stacks.each do |_port, stack|
+      Helpers.cat "stack-#{stack.port}.log"
+    end
+  end
+
   def initialize(port)
     @port = port
     @admin = port - 2020
@@ -57,10 +63,11 @@ class Stack
            "--admin-port", @admin, "--locale", inst.locale]
     puts cmd.join(" ").green
     return if system(cmd.join(" "))
+
     # Try again if the cozy-stack serve was too slow to listen
     sleep 5
-    Helpers.cat "stack-#{@port}.log"
     return if system(cmd.join(" "))
+
     raise StackError.new
   end
 
