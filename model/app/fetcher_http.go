@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/appfs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -120,11 +121,17 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	if err != nil {
 		return err
 	}
+	start := time.Now()
 	resp, err := httpClient.Do(req)
+	elapsed := time.Since(start)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+	if elapsed.Seconds() >= 10 {
+		log := logger.WithNamespace("fetcher")
+		log.Printf("slow request on %s (%s)", src.String(), elapsed)
+	}
 	if resp.StatusCode != 200 {
 		return ErrSourceNotReachable
 	}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/httpcache"
 	"github.com/labstack/echo/v4"
 )
@@ -486,9 +487,11 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	if cache == NoCache {
 		req.Header.Set("cache-control", "no-cache")
 	}
+	start := time.Now()
 	resp, err = client.Do(req)
 	if err != nil {
 		// Try again for temporary errors
+		start = time.Now()
 		if ne, ok := err.(net.Error); ok && ne.Temporary() {
 			resp, err = client.Do(req)
 		}
@@ -496,11 +499,16 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 			return
 		}
 	}
+	elapsed := time.Since(start)
 	defer func() {
 		if !ok {
 			resp.Body.Close()
 		}
 	}()
+	if elapsed.Seconds() >= 10 {
+		log := logger.WithNamespace("registry")
+		log.Printf("slow request on %s (%s)", u.String(), elapsed)
+	}
 	if resp.StatusCode == 404 {
 		return
 	}

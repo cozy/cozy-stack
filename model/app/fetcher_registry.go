@@ -68,7 +68,6 @@ func getRegistryChannel(src *url.URL) (string, string) {
 	var channel, version string
 	channel = "stable"
 	splittedPath := strings.Split(src.String(), "/")
-	log := logger.WithNamespace("fetcher_registry")
 	switch len(splittedPath) {
 	case 4: // Either channel or version
 		channelOrVersion := splittedPath[3]
@@ -77,6 +76,7 @@ func getRegistryChannel(src *url.URL) (string, string) {
 		versionRegex := "^\\d"
 		matched, err := regexp.MatchString(versionRegex, channelOrVersion)
 		if err != nil {
+			log := logger.WithNamespace("fetcher_registry")
 			log.Errorf("fetcher_registry: Bad format for %s", src.String())
 			return "", ""
 		}
