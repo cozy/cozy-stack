@@ -112,7 +112,7 @@ class Move
     @source.client["/move/request"].post body, opts
   end
 
-  def confirm(timeout = 60)
+  def confirm(timeout = 120)
     timeout.times do
       sleep 1
       received = Email.received kind: "to", query: @source.email
@@ -130,7 +130,7 @@ class Move
     @source.client["/move/go?secret=#{secret}"].get opts
   end
 
-  def wait_done(timeout = 60)
+  def wait_done(timeout = 120)
     timeout.times do
       sleep 1
       received = Email.received kind: "to", query: @target.email
