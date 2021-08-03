@@ -29,6 +29,7 @@ module Helpers
     end
 
     def cat(filename)
+      puts "----- #{filename} -----"
       puts File.read "#{@current_dir}/#{filename}"
     end
 
