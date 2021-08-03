@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/gofrs/uuid"
 )
@@ -195,14 +196,14 @@ func GetImages(inst *instance.Instance, fileID string) ([]*Image, error) {
 }
 
 // getImages is the same as GetSteps, but with the notes lock already acquired
-func getImages(inst *instance.Instance, fileID string) ([]*Image, error) {
+func getImages(db prefixer.Prefixer, fileID string) ([]*Image, error) {
 	var images []*Image
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
 		StartKey: startkey(fileID),
 		EndKey:   endkey(fileID),
 	}
-	if err := couchdb.GetAllDocs(inst, consts.NotesImages, &req, &images); err != nil {
+	if err := couchdb.GetAllDocs(db, consts.NotesImages, &req, &images); err != nil {
 		return nil, err
 	}
 	return images, nil

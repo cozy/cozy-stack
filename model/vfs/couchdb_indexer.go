@@ -178,10 +178,15 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	return couchdb.UpdateDocWithOld(c.db, newdoc, olddoc)
 }
 
+var DeleteNote = func(db prefixer.Prefixer, noteID string) {}
+
 func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
 	// Ensure that fullpath is filled because it's used in realtime/@events
 	if _, err := doc.Path(c); err != nil {
 		return err
+	}
+	if doc.Mime == consts.NoteMimeType {
+		DeleteNote(c.db, doc.DocID)
 	}
 	return couchdb.DeleteDoc(c.db, doc)
 }
@@ -253,6 +258,9 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 			docs = append(docs, cloned)
 			files = append(files, cloned.(*FileDoc))
 			n += file.ByteSize
+			if file.Mime == consts.NoteMimeType {
+				DeleteNote(c.db, file.DocID)
+			}
 		}
 		return err
 	}, 0)
