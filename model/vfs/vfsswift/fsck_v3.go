@@ -63,6 +63,20 @@ func (sfs *swiftVFSV3) checkFiles(
 		return err
 	}
 
+	images := make(map[string]struct{})
+	err = couchdb.ForeachDocs(sfs, consts.NotesImages, func(_ string, data json.RawMessage) error {
+		img := make(map[string]interface{})
+		if erru := json.Unmarshal(data, img); erru != nil {
+			return erru
+		}
+		id, _ := img["_id"].(string)
+		images[id] = struct{}{}
+		return nil
+	})
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+
 	fileIDs := make(map[string]struct{}, len(entries))
 	for _, f := range entries {
 		fileIDs[f.DocID] = struct{}{}
@@ -78,21 +92,23 @@ func (sfs *swiftVFSV3) checkFiles(
 				objName := strings.Split(strings.TrimPrefix(obj.Name, "thumbs/"), "-")[0]
 				fileID := makeDocID(objName)
 				if _, ok := fileIDs[fileID]; !ok {
-					accumulate(&vfs.FsckLog{
-						Type:   vfs.ThumbnailWithNoFile,
-						IsFile: true,
-						FileDoc: &vfs.TreeFile{
-							DirOrFileDoc: vfs.DirOrFileDoc{
-								DirDoc: &vfs.DirDoc{
-									Type:    consts.FileType,
-									DocID:   fileID,
-									DocName: obj.Name,
+					if _, ok := images[fileID]; !ok {
+						accumulate(&vfs.FsckLog{
+							Type:   vfs.ThumbnailWithNoFile,
+							IsFile: true,
+							FileDoc: &vfs.TreeFile{
+								DirOrFileDoc: vfs.DirOrFileDoc{
+									DirDoc: &vfs.DirDoc{
+										Type:    consts.FileType,
+										DocID:   fileID,
+										DocName: obj.Name,
+									},
 								},
 							},
-						},
-					})
-					if failFast {
-						return nil, errFailFast
+						})
+						if failFast {
+							return nil, errFailFast
+						}
 					}
 				}
 				continue
