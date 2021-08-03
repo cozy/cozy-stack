@@ -346,6 +346,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	if err != nil {
 		return nil, err
 	}
+	cleanImages(inst, images)
 
 	if oldDoc == nil {
 		fileDoc, err = newFileDoc(inst, doc)
@@ -366,7 +367,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	}
 
 	content := md
-	if len(images) > 0 {
+	if hasImages(images) {
 		content, _ = buildArchive(inst, md, images)
 	}
 	fileDoc.ByteSize = int64(len(content))
@@ -436,6 +437,9 @@ func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, 
 	// Add images to the archive
 	fs := inst.ThumbsFS()
 	for _, image := range images {
+		if !image.seen {
+			continue
+		}
 		th, err := fs.OpenNoteThumb(image.ID())
 		if err != nil {
 			return nil, err

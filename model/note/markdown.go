@@ -72,6 +72,7 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 			for _, img := range images {
 				if img.DocID == src {
 					alt = img.Name
+					img.seen = true
 				}
 			}
 			state.Write(fmt.Sprintf("![%s](%s)", state.Esc(alt), state.Esc(src)))

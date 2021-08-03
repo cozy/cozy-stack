@@ -32,7 +32,10 @@ type Image struct {
 	Width    int                   `json:"width,omitempty"`
 	Height   int                   `json:"height,omitempty"`
 	ToResize bool                  `json:"willBeResized,omitempty"`
+	ToRemove bool                  `json:"willBeRemoved,omitempty"`
 	Metadata metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+
+	seen bool
 }
 
 // ID returns the image qualified identifier
@@ -203,6 +206,36 @@ func getImages(inst *instance.Instance, fileID string) ([]*Image, error) {
 		return nil, err
 	}
 	return images, nil
+}
+
+// cleanImages will remove images that are no longer used. They are not deleted
+// on the first pass where they have not been seen in markdown to allow
+// features like cut/paste or undo to have a short grace time when the image
+// can be removed from the markdown and reinserted a few seconds later.
+func cleanImages(inst *instance.Instance, images []*Image) {
+	for _, img := range images {
+		if img.ToRemove {
+			if img.seen {
+				img.ToRemove = false
+				_ = couchdb.UpdateDoc(inst, img)
+			} else {
+				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID())
+				_ = couchdb.DeleteDoc(inst, img)
+			}
+		} else if !img.seen {
+			img.ToRemove = true
+			_ = couchdb.UpdateDoc(inst, img)
+		}
+	}
+}
+
+func hasImages(images []*Image) bool {
+	for _, img := range images {
+		if img.seen {
+			return true
+		}
+	}
+	return false
 }
 
 var _ couchdb.Doc = &Image{}

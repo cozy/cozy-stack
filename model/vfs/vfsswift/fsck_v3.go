@@ -66,7 +66,7 @@ func (sfs *swiftVFSV3) checkFiles(
 	images := make(map[string]struct{})
 	err = couchdb.ForeachDocs(sfs, consts.NotesImages, func(_ string, data json.RawMessage) error {
 		img := make(map[string]interface{})
-		if erru := json.Unmarshal(data, img); erru != nil {
+		if erru := json.Unmarshal(data, &img); erru != nil {
 			return erru
 		}
 		id, _ := img["_id"].(string)
