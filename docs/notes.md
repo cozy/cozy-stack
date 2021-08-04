@@ -1152,7 +1152,7 @@ The filename of the image is given in the query string, via the `Name`
 parameter. In case of conflict (another image has the same name), the stack
 will rename this image.
 
-If the image is larger than 768px, it will be shrinked.
+If the image is larger than 768px, a thumbnail will be generated.
 
 #### Request
 
