@@ -440,7 +440,7 @@ func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, 
 		if !image.seen {
 			continue
 		}
-		th, err := fs.OpenNoteThumb(image.ID())
+		th, err := fs.OpenNoteThumb(image.ID(), consts.NoteImageOriginalFormat)
 		if err != nil {
 			return nil, err
 		}

@@ -33,3 +33,10 @@ const (
 	// ElectronicSafeKey is the metadata key for an electronic safe (certified)
 	ElectronicSafeKey = "electronicSafe"
 )
+
+const (
+	// NoteImageOriginalFormat is the format for the original image in a note.
+	NoteImageOriginalFormat = "original"
+	// NoteImageThumbFormat is the format for a resized image in a note.
+	NoteImageThumbFormat = "thumb"
+)

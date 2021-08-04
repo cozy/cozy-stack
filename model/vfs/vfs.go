@@ -256,9 +256,9 @@ type Thumbser interface {
 	ServeThumbContent(w http.ResponseWriter, req *http.Request,
 		img *FileDoc, format string) error
 
-	CreateNoteThumb(id, mime string) (ThumbFiler, error)
-	OpenNoteThumb(id string) (io.ReadCloser, error)
-	RemoveNoteThumb(id string) error
+	CreateNoteThumb(id, mime, format string) (ThumbFiler, error)
+	OpenNoteThumb(id, format string) (io.ReadCloser, error)
+	RemoveNoteThumb(id string, formats []string) error
 	ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error
 }
 

@@ -327,7 +327,7 @@ func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
 
 func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
 	fs := ctx.Instance.ThumbsFS()
-	in, err := fs.OpenNoteThumb(img.ID())
+	in, err := fs.OpenNoteThumb(img.ID(), consts.NoteImageOriginalFormat)
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
 	}
 
 	var th vfs.ThumbFiler
-	th, err = fs.CreateNoteThumb(img.ID(), "image/jpeg")
+	th, err = fs.CreateNoteThumb(img.ID(), "image/jpeg", consts.NoteImageThumbFormat)
 	if err != nil {
 		return err
 	}
@@ -362,16 +362,13 @@ func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
 		return err
 	}
 
-	img.Height = img.Height * note.MaxWidth / img.Width
-	img.Width = note.MaxWidth
 	img.ToResize = false
-	img.Mime = "image/jpeg"
 	_ = couchdb.UpdateDoc(ctx.Instance, img)
 
 	event := note.Event{
-		"width":   img.Width,
-		"height":  img.Height,
-		"mime":    img.Mime,
+		"width":   note.MaxWidth,
+		"height":  img.Height * note.MaxWidth / img.Width,
+		"mime":    "image/jpeg",
 		"doctype": consts.NotesImages,
 	}
 	event.SetID(img.ID())

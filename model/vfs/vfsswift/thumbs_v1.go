@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/ncw/swift"
 )
 
@@ -75,11 +76,11 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img
 	return nil
 }
 
-func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
+func (t *thumbs) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
 	if err := t.c.ContainerCreate(t.container, nil); err != nil {
 		return nil, err
 	}
-	name := t.makeName(id, noteThumbFormat)
+	name := t.makeName(id, format)
 	obj, err := t.c.ObjectCreate(t.container, name, true, "", "", nil)
 	if err != nil {
 		return nil, err
@@ -93,8 +94,8 @@ func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 	return th, nil
 }
 
-func (t *thumbs) OpenNoteThumb(id string) (io.ReadCloser, error) {
-	name := t.makeName(id, noteThumbFormat)
+func (t *thumbs) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
+	name := t.makeName(id, format)
 	obj, _, err := t.c.ObjectOpen(t.container, name, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
@@ -105,16 +106,24 @@ func (t *thumbs) OpenNoteThumb(id string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
-func (t *thumbs) RemoveNoteThumb(id string) error {
-	objName := t.makeName(id, noteThumbFormat)
-	return t.c.ObjectDelete(t.container, objName)
+func (t *thumbs) RemoveNoteThumb(id string, formats []string) error {
+	objNames := make([]string, len(formats))
+	for i, format := range formats {
+		objNames[i] = t.makeName(id, format)
+	}
+	_, err := t.c.BulkDelete(t.container, objNames)
+	return err
 }
 
 func (t *thumbs) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
-	name := t.makeName(id, noteThumbFormat)
+	name := t.makeName(id, consts.NoteImageThumbFormat)
 	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
 	if err != nil {
-		return wrapSwiftErr(err)
+		name = t.makeName(id, consts.NoteImageOriginalFormat)
+		f, o, err = t.c.ObjectOpen(t.container, name, false, nil)
+		if err != nil {
+			return wrapSwiftErr(err)
+		}
 	}
 	defer f.Close()
 

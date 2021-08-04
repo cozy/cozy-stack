@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/ncw/swift"
 )
-
-const noteThumbFormat = "note"
 
 var unixEpochZero = time.Time{}
 
@@ -131,8 +130,8 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 	return nil
 }
 
-func (t *thumbsV2) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
-	name := t.makeName(id, noteThumbFormat)
+func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
+	name := t.makeName(id, format)
 	obj, err := t.c.ObjectCreate(t.container, name, true, "", mime, nil)
 	if err != nil {
 		if _, _, errc := t.c.Container(t.container); errc == swift.ContainerNotFound {
@@ -152,8 +151,8 @@ func (t *thumbsV2) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 	return th, nil
 }
 
-func (t *thumbsV2) OpenNoteThumb(id string) (io.ReadCloser, error) {
-	name := t.makeName(id, noteThumbFormat)
+func (t *thumbsV2) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
+	name := t.makeName(id, format)
 	obj, _, err := t.c.ObjectOpen(t.container, name, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
@@ -164,16 +163,24 @@ func (t *thumbsV2) OpenNoteThumb(id string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
-func (t *thumbsV2) RemoveNoteThumb(id string) error {
-	objName := t.makeName(id, noteThumbFormat)
-	return t.c.ObjectDelete(t.container, objName)
+func (t *thumbsV2) RemoveNoteThumb(id string, formats []string) error {
+	objNames := make([]string, len(formats))
+	for i, format := range formats {
+		objNames[i] = t.makeName(id, format)
+	}
+	_, err := t.c.BulkDelete(t.container, objNames)
+	return err
 }
 
 func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
-	name := t.makeName(id, noteThumbFormat)
+	name := t.makeName(id, consts.NoteImageThumbFormat)
 	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
 	if err != nil {
-		return wrapSwiftErr(err)
+		name = t.makeName(id, consts.NoteImageOriginalFormat)
+		f, o, err = t.c.ObjectOpen(t.container, name, false, nil)
+		if err != nil {
+			return wrapSwiftErr(err)
+		}
 	}
 	defer f.Close()
 

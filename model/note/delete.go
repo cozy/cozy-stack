@@ -16,12 +16,16 @@ func deleteNote(db prefixer.Prefixer, noteID string) {
 	go func() {
 		images, err := getImages(db, noteID)
 		if err == nil {
+			formats := []string{
+				consts.NoteImageOriginalFormat,
+				consts.NoteImageThumbFormat,
+			}
 			for _, img := range images {
 				inst := &instance.Instance{
 					Domain: db.DomainName(),
 					Prefix: db.DBPrefix(),
 				}
-				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID())
+				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID(), formats)
 				_ = couchdb.DeleteDoc(db, img)
 			}
 		}

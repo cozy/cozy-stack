@@ -8,11 +8,10 @@ import (
 	"path"
 
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
 )
-
-const noteThumbFormat = "note"
 
 // NewThumbsFs creates a new thumb filesystem base on a afero.Fs.
 func NewThumbsFs(fs afero.Fs) vfs.Thumbser {
@@ -98,8 +97,8 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
 	return nil
 }
 
-func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
-	newname := t.makeName(id, noteThumbFormat)
+func (t *thumbs) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
+	newname := t.makeName(id, format)
 	dir := path.Dir(newname)
 	if base := dir; base != "." {
 		if err := t.fs.MkdirAll(dir, 0755); err != nil {
@@ -120,24 +119,31 @@ func (t *thumbs) CreateNoteThumb(id, mime string) (vfs.ThumbFiler, error) {
 	return th, nil
 }
 
-func (t *thumbs) OpenNoteThumb(id string) (io.ReadCloser, error) {
-	name := t.makeName(id, noteThumbFormat)
+func (t *thumbs) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
+	name := t.makeName(id, format)
 	return t.fs.Open(name)
 }
 
-func (t *thumbs) RemoveNoteThumb(id string) error {
-	err := t.fs.Remove(t.makeName(id, noteThumbFormat))
-	if err != nil && !os.IsNotExist(err) {
-		return err
+func (t *thumbs) RemoveNoteThumb(id string, formats []string) error {
+	var errm error
+	for _, format := range formats {
+		err := t.fs.Remove(t.makeName(id, format))
+		if err != nil && !os.IsNotExist(err) {
+			errm = multierror.Append(errm, err)
+		}
 	}
-	return nil
+	return errm
 }
 
 func (t *thumbs) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
-	name := t.makeName(id, noteThumbFormat)
+	name := t.makeName(id, consts.NoteImageThumbFormat)
 	s, err := t.fs.Stat(name)
 	if err != nil {
-		return err
+		name = t.makeName(id, consts.NoteImageOriginalFormat)
+		s, err = t.fs.Stat(name)
+		if err != nil {
+			return err
+		}
 	}
 	f, err := t.fs.Open(name)
 	if err != nil {

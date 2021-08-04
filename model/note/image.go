@@ -77,7 +77,7 @@ func NewImageUpload(inst *instance.Instance, note *vfs.FileDoc, name, mime strin
 	md.CreatedByApp = consts.NotesSlug
 	img := &Image{DocID: id, Name: name, Mime: mime, Metadata: *md}
 
-	thumb, err := inst.ThumbsFS().CreateNoteThumb(id, mime)
+	thumb, err := inst.ThumbsFS().CreateNoteThumb(id, mime, consts.NoteImageOriginalFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,8 @@ func (u *ImageUpload) Close() error {
 
 	// Save in CouchDB
 	if err := couchdb.CreateNamedDocWithDB(u.inst, u.Image); err != nil {
-		_ = u.inst.ThumbsFS().RemoveNoteThumb(u.Image.ID())
+		formats := []string{consts.NoteImageOriginalFormat}
+		_ = u.inst.ThumbsFS().RemoveNoteThumb(u.Image.ID(), formats)
 		return err
 	}
 
@@ -214,13 +215,17 @@ func getImages(db prefixer.Prefixer, fileID string) ([]*Image, error) {
 // features like cut/paste or undo to have a short grace time when the image
 // can be removed from the markdown and reinserted a few seconds later.
 func cleanImages(inst *instance.Instance, images []*Image) {
+	formats := []string{
+		consts.NoteImageOriginalFormat,
+		consts.NoteImageThumbFormat,
+	}
 	for _, img := range images {
 		if img.ToRemove {
 			if img.seen {
 				img.ToRemove = false
 				_ = couchdb.UpdateDoc(inst, img)
 			} else {
-				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID())
+				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID(), formats)
 				_ = couchdb.DeleteDoc(inst, img)
 			}
 		} else if !img.seen {
