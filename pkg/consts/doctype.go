@@ -105,8 +105,6 @@ const (
 	BitwardenFolders = "com.bitwarden.folders"
 	// BitwardenOrganizations doc type for Bitwarden organizations
 	BitwardenOrganizations = "com.bitwarden.organizations"
-	// BitwardenCollections doc type for Bitwarden collections
-	BitwardenCollections = "com.bitwarden.collections"
 	// NotesDocuments doc type is used for manipulating the documents that
 	// represents a note before they are persisted to a file.
 	NotesDocuments = "io.cozy.notes.documents"

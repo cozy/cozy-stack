@@ -50,9 +50,6 @@ var Indexes = []*mango.Index{
 	// Used to lookup the bitwarden ciphers
 	mango.IndexOnFields(consts.BitwardenCiphers, "by-folder-id", []string{"folder_id"}),
 	mango.IndexOnFields(consts.BitwardenCiphers, "by-organization-id", []string{"organization_id"}),
-
-	// Used to lookup the collection for a bitwarden organization
-	mango.IndexOnFields(consts.BitwardenCollections, "by-organization-id", []string{"organization_id"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage for files

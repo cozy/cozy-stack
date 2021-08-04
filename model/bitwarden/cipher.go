@@ -130,6 +130,8 @@ func (c *Cipher) Fetch(field string) []string {
 		return []string{strconv.FormatInt(int64(c.Type), 32)}
 	case "name":
 		return []string{c.Name}
+	case "organization_id":
+		return []string{c.OrganizationID}
 	case "collection_id":
 		return []string{c.CollectionID}
 	}

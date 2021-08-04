@@ -2,7 +2,6 @@ package bitwarden
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -36,14 +35,24 @@ type OrgMember struct {
 	Owner  bool            `json:"owner,omitempty"`
 }
 
+// Collection is used to regroup ciphers.
+type Collection struct {
+	DocID string `json:"_id"`
+	Name  string `json:"name"`
+}
+
+// ID returns the collection identifier
+func (c *Collection) ID() string { return c.DocID }
+
 // Organization is used to make collections of ciphers and can be used for
 // sharing them with other users with cryptography mechanisms.
 type Organization struct {
-	CouchID  string                `json:"_id,omitempty"`
-	CouchRev string                `json:"_rev,omitempty"`
-	Name     string                `json:"name"`
-	Members  map[string]OrgMember  `json:"members"` // the keys are the instances domains
-	Metadata metadata.CozyMetadata `json:"cozyMetadata"`
+	CouchID    string                `json:"_id,omitempty"`
+	CouchRev   string                `json:"_rev,omitempty"`
+	Name       string                `json:"name"`
+	Members    map[string]OrgMember  `json:"members"` // the keys are the instances domains
+	Collection Collection            `json:"defaultCollection"`
+	Metadata   metadata.CozyMetadata `json:"cozyMetadata"`
 }
 
 // ID returns the organization identifier
@@ -85,40 +94,8 @@ func (o *Organization) FindCiphers(inst *instance.Instance) ([]*Cipher, error) {
 	return ciphers, nil
 }
 
-// FindCollection returns the collection for this organization.
-func (o *Organization) FindCollection(inst *instance.Instance) (*Collection, error) {
-	var colls []*Collection
-	req := &couchdb.FindRequest{
-		UseIndex: "by-organization-id",
-		Selector: mango.Equal("organization_id", o.CouchID),
-		Limit:    1,
-	}
-	err := couchdb.FindDocs(inst, consts.BitwardenCollections, req, &colls)
-	if err != nil {
-		return nil, err
-	}
-	if len(colls) == 0 {
-		err := &couchdb.Error{
-			StatusCode: http.StatusNotFound,
-			Name:       "not_found",
-			Reason:     "No collection was found",
-		}
-		return nil, err
-	}
-	return colls[0], nil
-}
-
-// Delete will delete the organization, its collection, and the ciphers inside
-// it.
+// Delete will delete the organization and the ciphers inside it.
 func (o *Organization) Delete(inst *instance.Instance) error {
-	coll, err := o.FindCollection(inst)
-	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return couchdb.DeleteDoc(inst, o)
-		}
-		return err
-	}
-
 	ciphers, err := o.FindCiphers(inst)
 	if err != nil {
 		return err
@@ -131,9 +108,6 @@ func (o *Organization) Delete(inst *instance.Instance) error {
 		return err
 	}
 
-	if err := couchdb.DeleteDoc(inst, coll); err != nil {
-		return err
-	}
 	return couchdb.DeleteDoc(inst, o)
 }
 
@@ -156,6 +130,15 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		return nil, err
 	}
 
+	iv := crypto.GenerateRandomBytes(16)
+	payload := []byte(consts.BitwardenCozyCollectionName)
+	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
+	if err != nil {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Infof("Cannot encrypt with AES: %s", err)
+		return nil, err
+	}
+
 	email := inst.PassphraseSalt()
 	org := Organization{
 		CouchID: setting.OrganizationID,
@@ -167,6 +150,10 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 				Status: OrgMemberConfirmed,
 				Owner:  true,
 			},
+		},
+		Collection: Collection{
+			DocID: setting.CollectionID,
+			Name:  name,
 		},
 	}
 	if setting.Metadata != nil {

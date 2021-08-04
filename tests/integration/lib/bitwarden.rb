@@ -138,12 +138,6 @@ class Bitwarden
     end
   end
 
-  module Collection
-    def self.doctype
-      "com.bitwarden.collections"
-    end
-  end
-
   class Organization
     attr_reader :id, :name, :key
 

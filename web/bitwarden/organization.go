@@ -23,11 +23,11 @@ type organizationRequest struct {
 	CollectionName string `json:"collectionName"`
 }
 
-func (r *organizationRequest) toOrganizationAndCollection(
-	inst *instance.Instance,
-) (*bitwarden.Organization, *bitwarden.Collection) {
+func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden.Organization {
 	email := inst.PassphraseSalt()
-	o := bitwarden.Organization{
+	md := metadata.New()
+	md.DocTypeVersion = bitwarden.DocTypeVersion
+	return &bitwarden.Organization{
 		Name: r.Name,
 		Members: map[string]bitwarden.OrgMember{
 			inst.Domain: {
@@ -37,15 +37,11 @@ func (r *organizationRequest) toOrganizationAndCollection(
 				Owner:  true,
 			},
 		},
+		Collection: bitwarden.Collection{
+			Name: r.CollectionName,
+		},
+		Metadata: *md,
 	}
-	c := bitwarden.Collection{
-		Name: r.CollectionName,
-	}
-	md := metadata.New()
-	md.DocTypeVersion = bitwarden.DocTypeVersion
-	o.Metadata = *md
-	c.Metadata = *md
-	return &o, &c
 }
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
@@ -120,10 +116,10 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func newCollectionResponse(coll *bitwarden.Collection) *collectionResponse {
+func newCollectionResponse(coll *bitwarden.Collection, orgID string) *collectionResponse {
 	return &collectionResponse{
 		ID:             coll.ID(),
-		OrganizationID: coll.OrganizationID,
+		OrganizationID: orgID,
 		Name:           coll.Name,
 		Object:         "collection",
 	}
@@ -151,21 +147,22 @@ func CreateOrganization(c echo.Context) error {
 		})
 	}
 
-	orga, coll := req.toOrganizationAndCollection(inst)
-	if err := couchdb.CreateDoc(inst, orga); err != nil {
+	org := req.toOrganization(inst)
+	collID, err := couchdb.UUID(inst)
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
-	coll.OrganizationID = orga.ID()
-	if err := couchdb.CreateDoc(inst, coll); err != nil {
+	org.Collection.DocID = collID
+	if err := couchdb.CreateDoc(inst, org); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
 
 	_ = settings.UpdateRevisionDate(inst, nil)
-	res := newOrganizationResponse(inst, orga)
+	res := newOrganizationResponse(inst, org)
 	return c.JSON(http.StatusOK, res)
 }
 

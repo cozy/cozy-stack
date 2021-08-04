@@ -66,21 +66,14 @@ class Rule
                   add: what,
                   update: what,
                   remove: what
-    r2 = Rule.new doctype: Bitwarden::Collection.doctype,
-                  title: "Collection",
-                  values: [org_id],
-                  selector: "organization_id",
-                  add: what,
-                  update: what,
-                  remove: what
-    r3 = Rule.new doctype: Bitwarden::Cipher.doctype,
+    r2 = Rule.new doctype: Bitwarden::Cipher.doctype,
                   title: "Ciphers",
                   values: [org_id],
                   selector: "organization_id",
                   add: what,
                   update: what,
                   remove: what
-    [r1, r2, r3]
+    [r1, r2]
   end
 
   def initialize(opts = {})

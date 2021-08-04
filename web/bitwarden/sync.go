@@ -82,7 +82,7 @@ func newSyncResponse(setting *settings.Settings,
 	profile *profileResponse,
 	ciphers []*bitwarden.Cipher,
 	folders []*bitwarden.Folder,
-	collections []*bitwarden.Collection,
+	organizations []*bitwarden.Organization,
 	domains *domainsResponse,
 ) *syncResponse {
 	foldersResponse := make([]*folderResponse, len(folders))
@@ -93,9 +93,9 @@ func newSyncResponse(setting *settings.Settings,
 	for i, c := range ciphers {
 		ciphersResponse[i] = newCipherResponse(c, setting)
 	}
-	collectionsResponse := make([]*collectionResponse, len(collections))
-	for i, c := range collections {
-		collectionsResponse[i] = newCollectionResponse(c)
+	collectionsResponse := make([]*collectionResponse, len(organizations))
+	for i, o := range organizations {
+		collectionsResponse[i] = newCollectionResponse(&o.Collection, o.ID())
 	}
 	return &syncResponse{
 		Profile:     profile,
@@ -149,7 +149,7 @@ func Sync(c echo.Context) error {
 		}
 	}
 
-	collections, err := bitwarden.FindAllCollections(inst, setting)
+	organizations, err := bitwarden.FindAllOrganizations(inst, setting)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -161,6 +161,6 @@ func Sync(c echo.Context) error {
 		domains = newDomainsResponse(setting)
 	}
 
-	res := newSyncResponse(setting, profile, ciphers, folders, collections, domains)
+	res := newSyncResponse(setting, profile, ciphers, folders, organizations, domains)
 	return c.JSON(http.StatusOK, res)
 }
