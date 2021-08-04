@@ -166,6 +166,39 @@ func CreateOrganization(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// GetOrganization is the route for getting information about an organization.
+func GetOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	res := newOrganizationResponse(inst, org)
+	return c.JSON(http.StatusOK, res)
+}
+
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/request/passwordVerificationRequest.ts
 type passwordVerificationRequest struct {
 	Hash string `json:"masterPasswordHash"`

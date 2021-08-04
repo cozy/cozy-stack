@@ -918,6 +918,24 @@ func TestCreateOrganization(t *testing.T) {
 	assert.NotEmpty(t, result["Key"])
 }
 
+func TestGetOrganization(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/"+orgaID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "Family Organization", result["Name"])
+	assert.Equal(t, "profileOrganization", result["Object"])
+	assert.Equal(t, true, result["Enabled"])
+	assert.EqualValues(t, 2, result["Status"])
+	assert.EqualValues(t, 2, result["Type"])
+	assert.Equal(t, orgaID, result["Id"])
+	assert.NotEmpty(t, result["Key"])
+}
+
 func TestSyncOrganizationAndCollection(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
