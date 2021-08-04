@@ -889,7 +889,7 @@ msgid "Mail Sharing Request Intro"
 msgstr "Hello,"
 
 msgid "Mail Sharing Request Description"
-msgstr "%s (%s) invites you to %s the %s %s on their personal space, Cozy."
+msgstr "%s (%s) invites you to %s the %s **%s** on their personal space, Cozy."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "access"
@@ -923,6 +923,9 @@ msgstr "A new sharing is available in your Cozy"
 
 msgid "Notification Sharing Description"
 msgstr "%s invites you to %s the %s %s"
+
+msgid "Notification Sharing Type Organization"
+msgstr "folder of passwords"
 
 msgid "Notification Sharing Type Document"
 msgstr "document"
