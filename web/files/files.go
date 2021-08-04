@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -839,7 +838,7 @@ func ThumbnailHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	fs := lifecycle.ThumbsFS(instance)
+	fs := instance.ThumbsFS()
 	format := c.Param("format")
 	err = fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
 	if err != nil {

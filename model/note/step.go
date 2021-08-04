@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/prosemirror-go/transform"
 )
 
@@ -91,6 +92,10 @@ func stepID(noteID string, version int64) string {
 	return fmt.Sprintf("%s/%08d", noteID, version)
 }
 
+func startkey(noteID string) string {
+	return fmt.Sprintf("%s/", noteID)
+}
+
 func endkey(noteID string) string {
 	return fmt.Sprintf("%s/%s", noteID, couchdb.MaxString)
 }
@@ -107,14 +112,14 @@ func GetSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 }
 
 // getSteps is the same as GetSteps, but with the notes lock already acquired
-func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, error) {
+func getSteps(db prefixer.Prefixer, fileID string, version int64) ([]Step, error) {
 	var steps []Step
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
 		StartKey: stepID(fileID, version),
 		EndKey:   endkey(fileID),
 	}
-	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
+	if err := couchdb.GetAllDocs(db, consts.NotesSteps, &req, &steps); err != nil {
 		return nil, err
 	}
 

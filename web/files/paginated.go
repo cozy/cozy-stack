@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -24,9 +25,10 @@ type dir struct {
 }
 
 type file struct {
-	doc      *vfs.FileDoc
-	instance *instance.Instance
-	versions []*vfs.Version
+	doc        *vfs.FileDoc
+	instance   *instance.Instance
+	versions   []*vfs.Version
+	noteImages []jsonapi.Object
 	// fileJSON is used for marshaling to JSON and we keep a reference here to
 	// avoid many allocations.
 	jsonDoc     *fileJSON
@@ -212,7 +214,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
 func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil, &fileJSON{}, false}
+	return &file{doc, i, nil, nil, &fileJSON{}, false}
 }
 
 // FileData returns a jsonapi representation of the given file.
@@ -222,6 +224,15 @@ func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions boo
 	if withVersions {
 		if versions, err := vfs.VersionsFor(instance, doc.ID()); err == nil {
 			f.versions = versions
+		}
+	}
+	if doc.Mime == consts.NoteMimeType {
+		images, err := note.GetImages(instance, doc.ID())
+		if err == nil {
+			for _, image := range images {
+				noteImage := NewNoteImage(instance, image)
+				f.noteImages = append(f.noteImages, noteImage)
+			}
 		}
 	}
 	return jsonapi.Data(c, statusCode, f, links)
@@ -318,6 +329,7 @@ func (f *file) Included() []jsonapi.Object {
 	for _, version := range f.versions {
 		included = append(included, version)
 	}
+	included = append(included, f.noteImages...)
 	return included
 }
 

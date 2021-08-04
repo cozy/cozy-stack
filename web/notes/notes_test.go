@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/files"
 	webRealtime "github.com/cozy/cozy-stack/web/realtime"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -690,6 +691,121 @@ func TestNoteRealtime(t *testing.T) {
 	assert.EqualValues(t, file.Metadata["version"], v5)
 }
 
+func TestUploadImage(t *testing.T) {
+	for i := 0; i < 3; i++ {
+		u := fmt.Sprintf("/notes/%s/images?Name=wet.jpg", noteID)
+		f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		assert.NoError(t, err)
+		defer f.Close()
+		req, err := http.NewRequest("POST", ts.URL+u, f)
+		assert.NoError(t, err)
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		req.Header.Add("Content-Type", "image/jpeg")
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 201, res.StatusCode)
+		defer res.Body.Close()
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		data, _ := result["data"].(map[string]interface{})
+		assert.Equal(t, consts.NotesImages, data["type"])
+		assert.NotEmpty(t, data["id"])
+		assert.NotEmpty(t, data["meta"])
+
+		attrs, _ := data["attributes"].(map[string]interface{})
+		if i == 0 {
+			assert.Equal(t, "wet.jpg", attrs["name"])
+		} else {
+			assert.Equal(t, fmt.Sprintf("wet (%d).jpg", i+1), attrs["name"])
+		}
+		assert.NotEmpty(t, attrs["cozyMetadata"])
+		assert.Equal(t, "image/jpeg", attrs["mime"])
+		assert.EqualValues(t, 440, attrs["width"])
+		assert.EqualValues(t, 294, attrs["height"])
+
+		links, _ := data["links"].(map[string]interface{})
+		assert.NotEmpty(t, links["self"])
+	}
+}
+
+func TestGetImage(t *testing.T) {
+	u := fmt.Sprintf("/notes/%s/images?Name=wet-cozy.jpg", noteID)
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+u, f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add("Content-Type", "image/jpeg")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+	defer res.Body.Close()
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, consts.NotesImages, data["type"])
+	assert.NotEmpty(t, data["id"])
+	assert.NotEmpty(t, data["meta"])
+
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.NotEmpty(t, attrs["name"])
+	assert.NotEmpty(t, attrs["cozyMetadata"])
+	assert.Equal(t, "image/jpeg", attrs["mime"])
+
+	links, _ := data["links"].(map[string]interface{})
+	link, _ := links["self"].(string)
+	assert.NotEmpty(t, link)
+
+	req, err = http.NewRequest("GET", ts.URL+link, nil)
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	defer res.Body.Close()
+
+	f2, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f2.Close()
+	expected, err := ioutil.ReadAll(f2)
+	assert.NoError(t, err)
+	actual, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+
+	req, err = http.NewRequest("GET", ts.URL+"/files/"+noteID, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	defer res.Body.Close()
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result2)
+	assert.NoError(t, err)
+	included, _ := result2["included"].([]interface{})
+	hasImage := false
+	for i := range included {
+		data, _ := included[i].(map[string]interface{})
+		if data["type"] == consts.FilesVersions {
+			continue
+		}
+		assert.Equal(t, consts.NotesImages, data["type"])
+		assert.NotEmpty(t, data["id"])
+		assert.NotEmpty(t, data["meta"])
+		attrs, _ := data["attributes"].(map[string]interface{})
+		assert.NotEmpty(t, attrs["name"])
+		assert.NotEmpty(t, attrs["cozyMetadata"])
+		assert.Equal(t, "image/jpeg", attrs["mime"])
+		links, _ := data["links"].(map[string]interface{})
+		assert.NotEmpty(t, links["self"])
+		hasImage = true
+	}
+	assert.True(t, hasImage)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -698,6 +814,7 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(consts.Files)
 
 	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
 		"/notes":    Routes,
 		"/realtime": webRealtime.Routes,
 	})

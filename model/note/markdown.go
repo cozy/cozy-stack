@@ -1,6 +1,7 @@
 package note
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/cozy/prosemirror-go/model"
 )
 
-func markdownSerializer() *markdown.Serializer {
+func markdownSerializer(images []*Image) *markdown.Serializer {
 	vanilla := markdown.DefaultSerializer
 	nodes := map[string]markdown.NodeSerializerFunc{
 		"paragraph":   vanilla.Nodes["paragraph"],
@@ -61,6 +62,20 @@ func markdownSerializer() *markdown.Serializer {
 					state.Text(txt)
 				}
 			}
+		},
+		"mediaSingle": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderContent(node)
+		},
+		"media": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			var alt string
+			src, _ := node.Attrs["url"].(string)
+			for _, img := range images {
+				if img.DocID == src {
+					alt = img.Name
+					img.seen = true
+				}
+			}
+			state.Write(fmt.Sprintf("![%s](%s)", state.Esc(alt), state.Esc(src)))
 		},
 	}
 	marks := map[string]markdown.MarkSerializerSpec{

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -20,6 +20,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
 )
+
+type imageMessage struct {
+	NoteImage *note.Image `json:"noteImage,omitempty"`
+}
 
 type imageEvent struct {
 	Verb   string       `json:"verb"`
@@ -31,6 +35,7 @@ var formats = map[string]string{
 	"small":  "640x480",
 	"medium": "1280x720",
 	"large":  "1920x1080",
+	"note":   "768x",
 }
 
 func init() {
@@ -55,6 +60,11 @@ func init() {
 
 // Worker is a worker that creates thumbnails for photos and images.
 func Worker(ctx *job.WorkerContext) error {
+	var msg imageMessage
+	if err := ctx.UnmarshalMessage(&msg); err == nil && msg.NoteImage != nil {
+		return resizeNoteImage(ctx, msg.NoteImage)
+	}
+
 	var img imageEvent
 	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
@@ -108,7 +118,7 @@ func WorkerCheck(ctx *job.WorkerContext) error {
 		return err
 	}
 	fs := ctx.Instance.VFS()
-	fsThumb := lifecycle.ThumbsFS(ctx.Instance)
+	fsThumb := ctx.Instance.ThumbsFS()
 	var errm error
 	_ = vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
@@ -192,7 +202,7 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 		return nil
 	}
 
-	fs := lifecycle.ThumbsFS(ctx.Instance)
+	fs := ctx.Instance.ThumbsFS()
 	var in io.Reader
 	in, err := ctx.Instance.VFS().OpenFile(img)
 	if err != nil {
@@ -312,5 +322,56 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
-	return lifecycle.ThumbsFS(i).RemoveThumbs(img, vfs.ThumbnailFormatNames)
+	return i.ThumbsFS().RemoveThumbs(img, vfs.ThumbnailFormatNames)
+}
+
+func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
+	fs := ctx.Instance.ThumbsFS()
+	in, err := fs.OpenNoteThumb(img.ID(), consts.NoteImageOriginalFormat)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if errc := in.Close(); errc != nil && err == nil {
+			err = errc
+		}
+	}()
+
+	var env []string
+	{
+		tempDir, err := ioutil.TempDir("", "magick")
+		if err == nil {
+			defer os.RemoveAll(tempDir)
+			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+			env = []string{envTempDir}
+		}
+	}
+
+	var th vfs.ThumbFiler
+	th, err = fs.CreateNoteThumb(img.ID(), "image/jpeg", consts.NoteImageThumbFormat)
+	if err != nil {
+		return err
+	}
+
+	out := th
+	if err = generateThumb(ctx, in, out, img.ID(), "note", env); err != nil {
+		return err
+	}
+
+	if err = th.Commit(); err != nil {
+		return err
+	}
+
+	img.ToResize = false
+	_ = couchdb.UpdateDoc(ctx.Instance, img)
+
+	event := note.Event{
+		"width":   note.MaxWidth,
+		"height":  img.Height * note.MaxWidth / img.Width,
+		"mime":    "image/jpeg",
+		"doctype": consts.NotesImages,
+	}
+	event.SetID(img.ID())
+	note.PublishThumbnail(ctx.Instance, event)
+	return nil
 }
