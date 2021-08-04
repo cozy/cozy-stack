@@ -516,7 +516,7 @@ msgid "Permissions com.bitwarden.folders"
 msgstr "Password manager folders"
 
 msgid "Permissions com.bitwarden.organizations"
-msgstr "Password manager organizations"
+msgstr "Password shared folders"
 
 msgid "Permissions io.cozy.accounts"
 msgstr "Accounts"

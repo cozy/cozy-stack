@@ -260,11 +260,14 @@
 }
 .perm[class^="com-bitwarden-ciphers"],
 .perm[class^="com-bitwarden-folders"],
-.perm[class^="com-bitwarden-organizations"],
 .perm[class^="com-bitwarden-profiles"],
 .perm[class^="io-cozy-permissions"] {
   -webkit-mask-image: url("../icons/doctypes/lock.svg");
   mask-image: url("../icons/doctypes/lock.svg");
+}
+.perm[class^="com-bitwarden-organizations"] {
+  -webkit-mask-image: url("../icons/doctypes/organization.svg");
+  mask-image: url("../icons/doctypes/organization.svg");
 }
 .perm[class^="cc-cozycloud-dacc"] {
   -webkit-mask-image: url("../icons/doctypes/stats.svg");

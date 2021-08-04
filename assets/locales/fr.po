@@ -587,7 +587,7 @@ msgid "Permissions com.bitwarden.folders"
 msgstr "Dossiers du gestionnaire de mot de passe"
 
 msgid "Permissions com.bitwarden.organizations"
-msgstr "Organisations du gestionnaire de mot de passe"
+msgstr "Dossiers partagés de mot de passe"
 
 msgid "Permissions io.cozy.accounts"
 msgstr "Comptes"
