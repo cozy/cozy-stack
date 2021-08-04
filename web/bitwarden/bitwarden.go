@@ -525,6 +525,7 @@ func Routes(router *echo.Group) {
 	orgs := api.Group("/organizations")
 	orgs.POST("", CreateOrganization)
 	orgs.GET("/:id", GetOrganization)
+	orgs.GET("/:id/collections", GetCollections)
 	orgs.DELETE("/:id", DeleteOrganization)
 
 	router.GET("/organizations/cozy", GetCozy)

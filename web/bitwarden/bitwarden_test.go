@@ -936,6 +936,25 @@ func TestGetOrganization(t *testing.T) {
 	assert.NotEmpty(t, result["Key"])
 }
 
+func TestListCollections(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/"+orgaID+"/collections", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "list", result["Object"])
+	data := result["Data"].([]interface{})
+	assert.Len(t, data, 1)
+	coll := data[0].(map[string]interface{})
+	assert.NotEmpty(t, coll["Id"])
+	assert.Equal(t, "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=", coll["Name"])
+	assert.Equal(t, "collection", coll["Object"])
+	assert.Equal(t, orgaID, coll["OrganizationId"])
+}
+
 func TestSyncOrganizationAndCollection(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
