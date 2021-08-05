@@ -126,6 +126,7 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 	defer f.Close()
 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	w.Header().Set("Content-Type", o["Content-Type"])
 	http.ServeContent(w, req, name, unixEpochZero, f)
 	return nil
 }
@@ -185,6 +186,7 @@ func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Reques
 	defer f.Close()
 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	w.Header().Set("Content-Type", o["Content-Type"])
 	http.ServeContent(w, req, name, unixEpochZero, f)
 	return nil
 }
