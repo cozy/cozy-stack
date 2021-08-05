@@ -100,6 +100,7 @@ describe "The bitwarden API of the stack" do
     bw.create_item login
 
     bw2.sync
+    assert_equal bw.fingerprint, bw2.fingerprint
     items = bw2.items
     assert_equal items.length, 4
     [card, note, identity, login].each do |expected|

@@ -132,6 +132,10 @@ class Bitwarden
     capture "share #{item_id} #{org_id}", encode([coll_id])
   end
 
+  def fingerprint
+    exec "get fingerprint me"
+  end
+
   module Cipher
     def self.doctype
       "com.bitwarden.ciphers"
