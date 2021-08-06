@@ -22,7 +22,7 @@ import (
 )
 
 var httpClient = http.Client{
-	Timeout: 2 * 60 * time.Second,
+	Timeout: 60 * time.Second,
 }
 
 type httpFetcher struct {
@@ -125,6 +125,8 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	resp, err := httpClient.Do(req)
 	elapsed := time.Since(start)
 	if err != nil {
+		log := logger.WithNamespace("fetcher")
+		log.Printf("cannot fetch %s: %s", src.String(), err)
 		return err
 	}
 	defer resp.Body.Close()
