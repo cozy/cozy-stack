@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -357,6 +358,8 @@ func getToken(conf *Config, code string) (string, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
+		// Flush the body, so that the connecion can be reused by keep-alive
+		_, _ = io.Copy(ioutil.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
 		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
@@ -426,6 +429,8 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
+		// Flush the body, so that the connecion can be reused by keep-alive
+		_, _ = io.Copy(ioutil.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
 		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
