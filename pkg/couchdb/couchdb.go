@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -344,6 +345,8 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		return err
 	}
 	if resbody == nil {
+		// Flush the body, so that the connecion can be reused by keep-alive
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
 		return nil
 	}
 

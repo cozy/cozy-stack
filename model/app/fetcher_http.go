@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"hash"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,7 +23,7 @@ import (
 )
 
 var httpClient = http.Client{
-	Timeout: 2 * 60 * time.Second,
+	Timeout: 60 * time.Second,
 }
 
 type httpFetcher struct {
@@ -49,6 +50,8 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	}
 	defer func() {
 		if err != nil {
+			// Flush the body, so that the connecion can be reused by keep-alive
+			_, _ = io.Copy(ioutil.Discard, resp.Body)
 			resp.Body.Close()
 		}
 	}()
@@ -125,6 +128,8 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	resp, err := httpClient.Do(req)
 	elapsed := time.Since(start)
 	if err != nil {
+		log := logger.WithNamespace("fetcher")
+		log.Printf("cannot fetch %s: %s", src.String(), err)
 		return err
 	}
 	defer resp.Body.Close()
