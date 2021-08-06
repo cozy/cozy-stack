@@ -156,6 +156,10 @@ func (t *thumbs) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request,
 
 func (t *thumbs) makeName(imgID string, format string) string {
 	dir := imgID[:4]
-	name := fmt.Sprintf("%s-%s.jpg", imgID, format)
+	ext := ".jpg"
+	if format == consts.NoteImageOriginalFormat {
+		ext = ""
+	}
+	name := fmt.Sprintf("%s-%s%s", imgID, format, ext)
 	return path.Join("/", dir, name)
 }
