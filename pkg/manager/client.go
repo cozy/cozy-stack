@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -33,9 +34,11 @@ type APIClient struct {
 // NewAPIClient builds a new client for the manager API
 func NewAPIClient(baseURL, token string) *APIClient {
 	tokenSource := &tokenSource{token: token}
+	client := oauth2.NewClient(context.Background(), tokenSource)
+	client.Timeout = 15 * time.Second
 	return &APIClient{
 		baseURL: baseURL,
-		client:  oauth2.NewClient(context.Background(), tokenSource),
+		client:  client,
 	}
 }
 
