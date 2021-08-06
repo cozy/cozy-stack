@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -1065,4 +1066,28 @@ func shouldNotifyMember(s *Sharing, i int, except *Member) bool {
 		return false
 	}
 	return m.Instance != ""
+}
+
+// SaveBitwarden adds the sharing member to the bitwarden organization in the
+// sharing rules.
+func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwarden) error {
+	rule := s.FirstBitwardenOrganizationRule()
+	if rule == nil || len(rule.Values) == 0 {
+		return nil
+	}
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, rule.Values[0], org); err != nil {
+		return err
+	}
+	domain := m.Instance
+	if u, err := url.Parse(m.Instance); err == nil {
+		domain = u.Host
+	}
+	org.Members[domain] = bitwarden.OrgMember{
+		UserID:    bw.UserID,
+		PublicKey: bw.PublicKey,
+		Status:    bitwarden.OrgMemberAccepted,
+		Owner:     false,
+	}
+	return couchdb.UpdateDoc(inst, org)
 }

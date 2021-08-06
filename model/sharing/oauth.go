@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -327,6 +328,16 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		PublicName: name,
 		CID:        s.SID,
 	}
+	if s.FirstBitwardenOrganizationRule() != nil {
+		setting, err := settings.Get(inst)
+		if err != nil {
+			return err
+		}
+		ac.Bitwarden = &APIBitwarden{
+			UserID:    inst.ID(),
+			PublicKey: setting.PublicKey,
+		}
+	}
 	data, err := jsonapi.MarshalObject(&ac)
 	if err != nil {
 		return err
@@ -433,6 +444,11 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 					return nil, err
 				}
 				s = s2
+			}
+			if creds.Bitwarden != nil {
+				if err := s.SaveBitwarden(inst, &s.Members[i+1], creds.Bitwarden); err != nil {
+					return nil, err
+				}
 			}
 			go s.Setup(inst, &s.Members[i+1])
 			return &ac, nil

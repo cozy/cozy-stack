@@ -55,8 +55,17 @@ var _ jsonapi.Object = (*APISharing)(nil)
 // sharing.
 type APICredentials struct {
 	*Credentials
-	PublicName string `json:"public_name,omitempty"`
-	CID        string `json:"_id,omitempty"`
+	PublicName string        `json:"public_name,omitempty"`
+	CID        string        `json:"_id,omitempty"`
+	Bitwarden  *APIBitwarden `json:"bitwarden,omitempty"`
+}
+
+// APIBitwarden is used to exchange information when the sharing has a rule for
+// bitwarden organizations. It allows to share documents with end to end
+// encryption.
+type APIBitwarden struct {
+	UserID    string `json:"user_id"`
+	PublicKey string `json:"public_key"`
 }
 
 // ID returns the sharing qualified identifier

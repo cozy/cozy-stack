@@ -29,10 +29,10 @@ const (
 
 // OrgMember is a struct for describing a member of an organization.
 type OrgMember struct {
-	Email  string          `json:"email"` // me@<domain>
-	Key    string          `json:"key,omitempty"`
-	Status OrgMemberStatus `json:"status"`
-	Owner  bool            `json:"owner,omitempty"`
+	UserID    string          `json:"user_id"`
+	PublicKey string          `json:"public_key,omitempty"`
+	Status    OrgMemberStatus `json:"status"`
+	Owner     bool            `json:"owner,omitempty"`
 }
 
 // Collection is used to regroup ciphers.
@@ -139,16 +139,15 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		return nil, err
 	}
 
-	email := inst.PassphraseSalt()
 	org := Organization{
 		CouchID: setting.OrganizationID,
 		Name:    consts.BitwardenCozyOrganizationName,
 		Members: map[string]OrgMember{
 			inst.Domain: {
-				Email:  string(email),
-				Key:    key,
-				Status: OrgMemberConfirmed,
-				Owner:  true,
+				UserID:    inst.ID(),
+				PublicKey: key,
+				Status:    OrgMemberConfirmed,
+				Owner:     true,
 			},
 		},
 		Collection: Collection{

@@ -686,6 +686,10 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+When the sharing has a rule for bitwarden organization, the `attributes` also
+have a `bitwarden` object with `user_id` and `public_key`, to make it possible
+to share documents end to end encrypted.
+
 #### Response
 
 ```http

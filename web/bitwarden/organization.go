@@ -24,17 +24,16 @@ type organizationRequest struct {
 }
 
 func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden.Organization {
-	email := inst.PassphraseSalt()
 	md := metadata.New()
 	md.DocTypeVersion = bitwarden.DocTypeVersion
 	return &bitwarden.Organization{
 		Name: r.Name,
 		Members: map[string]bitwarden.OrgMember{
 			inst.Domain: {
-				Email:  string(email),
-				Key:    r.Key,
-				Status: bitwarden.OrgMemberConfirmed,
-				Owner:  true,
+				UserID:    inst.ID(),
+				PublicKey: r.Key,
+				Status:    bitwarden.OrgMemberConfirmed,
+				Owner:     true,
 			},
 		},
 		Collection: bitwarden.Collection{
@@ -77,12 +76,13 @@ type organizationResponse struct {
 
 func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organization) *organizationResponse {
 	m := org.Members[inst.Domain]
+	email := inst.PassphraseSalt()
 	return &organizationResponse{
 		ID:             org.ID(),
 		Identifier:     nil, // Not supported by us
 		Name:           org.Name,
-		Key:            m.Key,
-		Email:          m.Email,
+		Key:            m.PublicKey,
+		Email:          string(email),
 		Plan:           "TeamsAnnually",
 		PlanType:       9,  // TeamsAnnually plan
 		Seats:          10, // The value doesn't matter
