@@ -23,6 +23,11 @@ const (
 
 var iconClient = &http.Client{
 	Timeout: 10 * time.Second,
+	// As we are connecting to a new host each time, it is better to disable
+	// keep-alive
+	Transport: &http.Transport{
+		DisableKeepAlives: true,
+	},
 }
 
 // Icon is a simple struct with a content-type and the content of an icon.
