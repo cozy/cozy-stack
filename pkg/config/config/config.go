@@ -490,8 +490,9 @@ func UseViper(v *viper.Viper) error {
 		couchURL.Path = "/"
 	}
 	couchClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
-		Timeout:    10 * time.Second,
-		RootCAFile: v.GetString("couchdb.root_ca"),
+		Timeout:             10 * time.Second,
+		MaxIdleConnsPerHost: 20,
+		RootCAFile:          v.GetString("couchdb.root_ca"),
 		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
 			CertificateFile: v.GetString("couchdb.client_cert"),
 			KeyFile:         v.GetString("couchdb.client_key"),
