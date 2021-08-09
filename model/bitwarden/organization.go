@@ -31,6 +31,7 @@ const (
 type OrgMember struct {
 	UserID    string          `json:"user_id"`
 	PublicKey string          `json:"public_key,omitempty"`
+	OrgKey    string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
 	Status    OrgMemberStatus `json:"status"`
 	Owner     bool            `json:"owner,omitempty"`
 }
@@ -144,10 +145,10 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		Name:    consts.BitwardenCozyOrganizationName,
 		Members: map[string]OrgMember{
 			inst.Domain: {
-				UserID:    inst.ID(),
-				PublicKey: key,
-				Status:    OrgMemberConfirmed,
-				Owner:     true,
+				UserID: inst.ID(),
+				OrgKey: key,
+				Status: OrgMemberConfirmed,
+				Owner:  true,
 			},
 		},
 		Collection: Collection{

@@ -30,10 +30,10 @@ func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden
 		Name: r.Name,
 		Members: map[string]bitwarden.OrgMember{
 			inst.Domain: {
-				UserID:    inst.ID(),
-				PublicKey: r.Key,
-				Status:    bitwarden.OrgMemberConfirmed,
-				Owner:     true,
+				UserID: inst.ID(),
+				OrgKey: r.Key,
+				Status: bitwarden.OrgMemberConfirmed,
+				Owner:  true,
 			},
 		},
 		Collection: bitwarden.Collection{
@@ -81,7 +81,7 @@ func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organizatio
 		ID:             org.ID(),
 		Identifier:     nil, // Not supported by us
 		Name:           org.Name,
-		Key:            m.PublicKey,
+		Key:            m.OrgKey,
 		Email:          string(email),
 		Plan:           "TeamsAnnually",
 		PlanType:       9,  // TeamsAnnually plan

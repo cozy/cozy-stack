@@ -196,8 +196,9 @@ describe "The bitwarden API of the stack" do
     # FIXME Do not cheat for confirming the recipient
     doc = Helpers.couch.get_doc(inst_recipient.domain, Bitwarden::Organization.doctype, org.id)
     encrypted_key = Bitwarden::Organization.encrypt_key inst_recipient, org.key
+    user_id = doc["members"][inst_recipient.domain]["user_id"]
     doc["members"][inst_recipient.domain] = {
-      email: "me@bob.test.localhost",
+      user_id: user_id,
       key: encrypted_key,
       status: 2
     }
