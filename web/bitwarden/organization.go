@@ -327,13 +327,14 @@ func newUserDetailsResponse(m *bitwarden.OrgMember) *userDetailsResponse {
 		typ = 0 // Owner
 	}
 	return &userDetailsResponse{
-		ID:     m.UserID,
-		UserID: m.UserID,
-		Type:   typ,
-		Status: m.Status,
-		Name:   m.Name,
-		Email:  m.Email,
-		Object: "organizationUserUserDetails",
+		ID:        m.UserID,
+		UserID:    m.UserID,
+		Type:      typ,
+		Status:    m.Status,
+		AccessAll: true,
+		Name:      m.Name,
+		Email:     m.Email,
+		Object:    "organizationUserUserDetails",
 	}
 }
 
@@ -451,4 +452,44 @@ func ConfirmUser(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusOK)
+}
+
+// GetPublicKey returns the public key of a user.
+func GetPublicKey(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+	// TODO find a user by its ID
+
+	var orgs []*bitwarden.Organization
+	req := &couchdb.AllDocsRequest{}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenOrganizations, req, &orgs); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	for _, org := range orgs {
+		for _, m := range org.Members {
+			if m.UserID == id && m.PublicKey != "" {
+				return c.JSON(http.StatusOK, echo.Map{
+					"UserId":    id,
+					"PublicKey": m.PublicKey,
+				})
+			}
+		}
+	}
+
+	return c.JSON(http.StatusNotFound, echo.Map{
+		"error": "not found",
+	})
 }

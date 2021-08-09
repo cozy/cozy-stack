@@ -192,11 +192,23 @@ describe "The bitwarden API of the stack" do
     sleep 1
     inst_recipient.accept sharing
 
-    # FIXME Do not cheat for confirming the recipient
-    doc = Helpers.couch.get_doc(inst.domain, Bitwarden::Organization.doctype, org.id)
-    user_id = doc["members"][inst_recipient.domain]["user_id"]
-    encrypted_key = Bitwarden::Organization.encrypt_key inst_recipient, org.key
-    Bitwarden::Organization.confirm_user inst, org.id, user_id, encrypted_key
+    # Check the users inside the organization
+    users = Bitwarden::User.list inst, org.id
+    alice_user = users.find { |u| u.status == 2 } # Confirmed
+    assert_equal alice_user.type, 0 # Owner
+    assert_equal alice_user.name, "Alice"
+    assert_equal alice_user.email, inst.email
+    refute_empty alice_user.id
+    bob_user = users.find { |u| u.status == 1 } # Accepted
+    assert_equal bob_user.type, 2 # User
+    assert_equal bob_user.name, contact.fullname
+    assert_equal bob_user.email, contact.primary_email
+    refute_empty bob_user.id
+
+    # Confirm the sharing
+    public_key = bob_user.fetch_public_key(inst)
+    encrypted_key = Bitwarden::Organization.encrypt_key public_key, org.key
+    bob_user.confirm inst, org.id, encrypted_key
     sleep 6
 
     # Check that Bob can access the shared credentials

@@ -532,6 +532,8 @@ func Routes(router *echo.Group) {
 
 	router.GET("/organizations/cozy", GetCozy)
 
+	api.GET("/users/:id/public-key", GetPublicKey)
+
 	hub := router.Group("/notifications/hub")
 	hub.GET("", WebsocketHub)
 	hub.POST("/negotiate", NegotiateHub)

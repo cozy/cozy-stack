@@ -1517,6 +1517,31 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 ```
 
+### GET /users/:id/public-key
+
+This route gives the public key of a user.
+
+#### Request
+
+```http
+GET /bitwarden/api/users/89d99af0db1c0139605b543d7eb8149c/public-key HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "UserId": "89d99af0db1c0139605b543d7eb8149c",
+  "PublicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1LwbnLsT8w2OBPR/zy/zRQNH+jZzD6v4qUGAJg0NfoUkBSgtq9yjor2GgeRtdf8VuNTn1kcNrUIU4f9vE3ppNJgmUss4O29OP9/ATqtC/4ri4UCWTV0DPCF4gRU1SbgTg9O3yC2UYWmrs47SgU0wwT+f5AjfDC7GzhjyX68UYIIIeKSMZasjcy+wIPVAW0hYhcEoK3Coq2O1wVwM+b2fXPIMzn38onUTbMCrkVY+FzGg6NtZbKzPvVZ0iyfQ6BxvttqSViNPOpyz7gryDhgYKokV+kwj5ARDZWL6ml73U2lL7uapk5meNKZf8w7TJGepFiewGLm08VMht6lnIZBuDQIDAQAB"
+}
+```
+
 ## Icons
 
 ### GET /bitwarden/icons/:domain/icon.png
