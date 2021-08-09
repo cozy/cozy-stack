@@ -30,6 +30,8 @@ const (
 // OrgMember is a struct for describing a member of an organization.
 type OrgMember struct {
 	UserID    string          `json:"user_id"`
+	Email     string          `json:"email"`
+	Name      string          `json:"name"`
 	PublicKey string          `json:"public_key,omitempty"`
 	OrgKey    string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
 	Status    OrgMemberStatus `json:"status"`
@@ -140,12 +142,20 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		return nil, err
 	}
 
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return nil, err
+	}
+	email, _ := settings.M["email"].(string)
+	publicName, _ := settings.M["public_name"].(string)
 	org := Organization{
 		CouchID: setting.OrganizationID,
 		Name:    consts.BitwardenCozyOrganizationName,
 		Members: map[string]OrgMember{
 			inst.Domain: {
 				UserID: inst.ID(),
+				Email:  email,
+				Name:   publicName,
 				OrgKey: key,
 				Status: OrgMemberConfirmed,
 				Owner:  true,

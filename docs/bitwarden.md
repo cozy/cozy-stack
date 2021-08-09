@@ -1445,6 +1445,52 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 ```
 
+### GET /bitwarden/api/organizations/:id/users
+
+This route returns the list of users in the given organization.
+
+#### Request
+
+```http
+GET /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c/users HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Data": [
+    {
+      "Object": "organizationUserUserDetails",
+      "Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+      "UserId": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+      "Type": 0,
+      "Status": 2,
+      "AccessAll": true,
+      "Name": "Alice",
+      "Email": "alice@example.com"
+    },
+    {
+      "Object": "organizationUserUserDetails",
+      "Id": "89d99af0db1c0139605b543d7eb8149c",
+      "UserId": "89d99af0db1c0139605b543d7eb8149c",
+      "Type": 2,
+      "Status": 1,
+      "AccessAll": true,
+      "Name": "Bob",
+      "Email": "bob@example.com"
+    }
+  ],
+  "Object": "list"
+}
+```
+
 ### POST /bitwarden/api/organizations/:id/users/:user-id/confirm
 
 This route is used by the owner of an organization to confirm that another user

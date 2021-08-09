@@ -26,11 +26,19 @@ type organizationRequest struct {
 func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden.Organization {
 	md := metadata.New()
 	md.DocTypeVersion = bitwarden.DocTypeVersion
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		settings = &couchdb.JSONDoc{M: map[string]interface{}{}}
+	}
+	email, _ := settings.M["email"].(string)
+	name, _ := settings.M["public_name"].(string)
 	return &bitwarden.Organization{
 		Name: r.Name,
 		Members: map[string]bitwarden.OrgMember{
 			inst.Domain: {
 				UserID: inst.ID(),
+				Email:  email,
+				Name:   name,
 				OrgKey: r.Key,
 				Status: bitwarden.OrgMemberConfirmed,
 				Owner:  true,
@@ -299,6 +307,74 @@ func DeleteOrganization(c echo.Context) error {
 
 	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
+}
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/organizationUserResponse.ts
+type userDetailsResponse struct {
+	ID        string                    `json:"Id"`
+	UserID    string                    `json:"UserId"`
+	Type      int                       `json:"Type"`
+	Status    bitwarden.OrgMemberStatus `json:"Status"`
+	AccessAll bool                      `json:"AccessAll"`
+	Name      string                    `json:"Name"`
+	Email     string                    `json:"Email"`
+	Object    string                    `json:"Object"`
+}
+
+func newUserDetailsResponse(m *bitwarden.OrgMember) *userDetailsResponse {
+	typ := 2 // User
+	if m.Owner {
+		typ = 0 // Owner
+	}
+	return &userDetailsResponse{
+		ID:     m.UserID,
+		UserID: m.UserID,
+		Type:   typ,
+		Status: m.Status,
+		Name:   m.Name,
+		Email:  m.Email,
+		Object: "organizationUserUserDetails",
+	}
+}
+
+type userDetailsList struct {
+	Data   []*userDetailsResponse `json:"Data"`
+	Object string                 `json:"Object"`
+}
+
+// ListOrganizationUser is the route for listing users inside an organization.
+func ListOrganizationUser(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	list := &userDetailsList{Object: "list"}
+	for _, m := range org.Members {
+		list.Data = append(list.Data, newUserDetailsResponse(&m))
+	}
+	return c.JSON(http.StatusOK, list)
 }
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/request/organizationUserConfirmRequest.ts

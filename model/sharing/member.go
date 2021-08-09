@@ -1085,6 +1085,8 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 	}
 	org.Members[domain] = bitwarden.OrgMember{
 		UserID:    bw.UserID,
+		Email:     m.Email,
+		Name:      m.PrimaryName(),
 		PublicKey: bw.PublicKey,
 		Status:    bitwarden.OrgMemberAccepted,
 		Owner:     false,
