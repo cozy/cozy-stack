@@ -149,6 +149,18 @@ class Bitwarden
       "com.bitwarden.organizations"
     end
 
+    def self.confirm_user(inst, org_id, user_id, encrypted_key)
+      opts = {
+        accept: "application/json",
+        content_type: "application/json",
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      data = { key: encrypted_key }
+      body = JSON.generate data
+      path = "/bitwarden/api/organizations/#{org_id}/users/#{user_id}/confirm"
+      inst.client[path].post body, opts
+    end
+
     def self.create(inst, name)
       opts = {
         accept: "application/json",

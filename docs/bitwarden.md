@@ -1445,6 +1445,32 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 ```
 
+### POST /bitwarden/api/organizations/:id/users/:user-id/confirm
+
+This route is used by the owner of an organization to confirm that another user
+can use this sharing. The caller must check the fingerprint of the new member
+and encrypt the organization key with their public key.
+
+#### Request
+
+```http
+POST /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c/users/89d99af0db1c0139605b543d7eb8149c/confirm HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "key": "4.UT/TVY6qmAjNdax2WT9JcA97wSWvEudAlqpjfxrFUieOoGA88MxzbYjpCXajEST/PehD1I7KC93jwthng772extu+lLHSd/Ce+a5Qw8+pRxL7je8QgS8gmP0FhfRLc4bl5hUMTfQcUDiuiiNaDez6E9czOzk9iuVaGpEjK4YAYgQy25m3eGc+DTPv8206NJZ/lr8CpPyhwUHjtDhlOZnDWAf+a28x2EAj1ogZKKJGAUcRENitV8Joa7OGRO6dmxtTTnWOuPDk5DajGgzpIQURNuotVHcpBtCL8HzNAduQ9vtrPKJtyAsHRdjau2SwEnaLZmxAvp7d9VG3t5nDYtgWA=="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
 ## Icons
 
 ### GET /bitwarden/icons/:domain/icon.png

@@ -300,3 +300,79 @@ func DeleteOrganization(c echo.Context) error {
 	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/organizationUserConfirmRequest.ts
+type userConfirmRequest struct {
+	Key string `json:"key"`
+}
+
+// ConfirmUser is the route to confirm a user in an organization. It takes the
+// organization key encrypted with the public key of this user as input.
+func ConfirmUser(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	if m := org.Members[inst.Domain]; !m.Owner {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "only the Owner can call this endpoint",
+		})
+	}
+
+	var confirm userConfirmRequest
+	err := json.NewDecoder(c.Request().Body).Decode(&confirm)
+	if err != nil || confirm.Key == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+
+	userID := c.Param("user-id")
+	found := false
+	for domain, member := range org.Members {
+		if member.UserID != userID {
+			continue
+		}
+		if member.Status != bitwarden.OrgMemberAccepted {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "User in invalid state",
+			})
+		}
+		found = true
+		member.Status = bitwarden.OrgMemberConfirmed
+		member.OrgKey = confirm.Key
+		org.Members[domain] = member
+	}
+	if !found {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "The specified user isn't a member of the organization",
+		})
+	}
+	if err := couchdb.UpdateDoc(inst, org); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
