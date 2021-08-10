@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
@@ -445,6 +446,28 @@ func ConfirmUser(c echo.Context) error {
 			"error": "The specified user isn't a member of the organization",
 		})
 	}
+
+	var contact bitwarden.Contact
+	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, userID, &contact); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	if !contact.Confirmed {
+		contact.Confirmed = true
+		contact.Metadata.UpdatedAt = time.Now()
+		if err := couchdb.UpdateDoc(inst, &contact); err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": err.Error(),
+			})
+		}
+	}
+
 	if err := couchdb.UpdateDoc(inst, org); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -469,27 +492,20 @@ func GetPublicKey(c echo.Context) error {
 			"error": "missing id",
 		})
 	}
-	// TODO find a user by its ID
-
-	var orgs []*bitwarden.Organization
-	req := &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenOrganizations, req, &orgs); err != nil {
+	var contact bitwarden.Contact
+	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, id, &contact); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
-	for _, org := range orgs {
-		for _, m := range org.Members {
-			if m.UserID == id && m.PublicKey != "" {
-				return c.JSON(http.StatusOK, echo.Map{
-					"UserId":    id,
-					"PublicKey": m.PublicKey,
-				})
-			}
-		}
-	}
 
-	return c.JSON(http.StatusNotFound, echo.Map{
-		"error": "not found",
+	return c.JSON(http.StatusOK, echo.Map{
+		"UserId":    id,
+		"PublicKey": contact.PublicKey,
 	})
 }

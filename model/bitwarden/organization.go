@@ -29,13 +29,12 @@ const (
 
 // OrgMember is a struct for describing a member of an organization.
 type OrgMember struct {
-	UserID    string          `json:"user_id"`
-	Email     string          `json:"email"`
-	Name      string          `json:"name"`
-	PublicKey string          `json:"public_key,omitempty"`
-	OrgKey    string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
-	Status    OrgMemberStatus `json:"status"`
-	Owner     bool            `json:"owner,omitempty"`
+	UserID string          `json:"user_id"`
+	Email  string          `json:"email"`
+	Name   string          `json:"name"`
+	OrgKey string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
+	Status OrgMemberStatus `json:"status"`
+	Owner  bool            `json:"owner,omitempty"`
 }
 
 // Collection is used to regroup ciphers.
@@ -70,7 +69,7 @@ func (o *Organization) SetID(id string) { o.CouchID = id }
 // SetRev changes the organization revision
 func (o *Organization) SetRev(rev string) { o.CouchRev = rev }
 
-// DocType returns the cipher document type
+// DocType returns the organization document type
 func (o *Organization) DocType() string { return consts.BitwardenOrganizations }
 
 // Clone implements couchdb.Doc

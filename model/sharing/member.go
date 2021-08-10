@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -1075,6 +1076,22 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 	if rule == nil || len(rule.Values) == 0 {
 		return nil
 	}
+
+	contact := &bitwarden.Contact{}
+	err := couchdb.GetDoc(inst, consts.BitwardenContacts, bw.UserID, contact)
+	if couchdb.IsNotFoundError(err) {
+		md := metadata.New()
+		md.DocTypeVersion = bitwarden.DocTypeVersion
+		contact.UserID = bw.UserID
+		contact.Email = m.Email
+		contact.PublicKey = bw.PublicKey
+		contact.Metadata = *md
+		err = couchdb.CreateNamedDocWithDB(inst, contact)
+	}
+	if err != nil {
+		return err
+	}
+
 	org := &bitwarden.Organization{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, rule.Values[0], org); err != nil {
 		return err
@@ -1084,12 +1101,11 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		domain = u.Host
 	}
 	org.Members[domain] = bitwarden.OrgMember{
-		UserID:    bw.UserID,
-		Email:     m.Email,
-		Name:      m.PrimaryName(),
-		PublicKey: bw.PublicKey,
-		Status:    bitwarden.OrgMemberAccepted,
-		Owner:     false,
+		UserID: bw.UserID,
+		Email:  m.Email,
+		Name:   m.PrimaryName(),
+		Status: bitwarden.OrgMemberAccepted,
+		Owner:  false,
 	}
 	return couchdb.UpdateDoc(inst, org)
 }
