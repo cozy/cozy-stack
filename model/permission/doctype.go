@@ -14,7 +14,13 @@ var readable = true
 var none = false
 
 var blockList = map[string]bool{
-	consts.Instances:        none,
+	// Global databases
+	consts.Instances:             none,
+	consts.AccountTypes:          none,
+	consts.KonnectorsMaintenance: none,
+	consts.RemoteSecrets:         none,
+
+	// Only stack can manipulate them
 	consts.Sessions:         none,
 	consts.Permissions:      none,
 	consts.Intents:          none,
@@ -24,23 +30,38 @@ var blockList = map[string]bool{
 	consts.Sharings:         none,
 	consts.Shared:           none,
 
+	// Synthetic doctypes (API only)
+	consts.CertifiedCarbonCopy:     none,
+	consts.CertifiedElectronicSafe: none,
+	consts.TriggersState:           none,
+	consts.SharingsAnswer:          none,
+	consts.SharingsMoved:           none,
+	consts.Support:                 none,
+	consts.BitwardenProfiles:       none,
+	consts.OfficeURL:               none,
+	consts.NotesURL:                none,
+
 	// Synthetic doctypes (realtime events only)
 	consts.AuthConfirmations:   none,
+	consts.JobEvents:           none,
 	consts.SharingsInitialSync: none,
 	consts.NotesEvents:         none,
+	consts.NotesTelepointers:   none,
 	consts.Thumbnails:          none,
 
-	consts.Jobs:           readable,
-	consts.Triggers:       readable,
-	consts.TriggersState:  readable,
-	consts.Apps:           readable,
-	consts.Konnectors:     readable,
-	consts.Files:          readable,
-	consts.FilesVersions:  readable,
-	consts.Notifications:  readable,
-	consts.RemoteRequests: readable,
-	consts.SessionsLogins: readable,
-	consts.NotesSteps:     readable,
+	// Only stack can write them
+	consts.Jobs:              readable,
+	consts.Triggers:          readable,
+	consts.Apps:              readable,
+	consts.Konnectors:        readable,
+	consts.Files:             readable,
+	consts.FilesVersions:     readable,
+	consts.Notifications:     readable,
+	consts.RemoteRequests:    readable,
+	consts.SessionsLogins:    readable,
+	consts.NotesSteps:        readable,
+	consts.NotesImages:       readable,
+	consts.BitwardenContacts: readable,
 }
 
 // CheckReadable will abort the context and returns false if the doctype
