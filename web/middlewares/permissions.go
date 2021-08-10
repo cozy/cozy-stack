@@ -146,15 +146,6 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		claims.Subject = fullClaims.ClientID
 	}
 
-	// TODO Remove those lines (temporary work-around)
-	// We want to force a refresh for access token from a bitwarden client, so
-	// that the token will have the instance ID in the subject field, to avoid
-	// breaking the bitwarden hub with the new changes.
-	if audience == consts.AccessTokenAudience && fullClaims.ClientID == "" && fullClaims.Name != "" {
-		return nil, permission.ErrInvalidToken
-	}
-	// End of TODO
-
 	c.Set("claims", claims)
 
 	if err != nil {

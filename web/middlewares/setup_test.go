@@ -11,10 +11,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func TestRemoveTheTemporaryWorkaround(t *testing.T) {
-	testutils.TODO(t, "2021-10-05", "Remove the temporary work-around in web/middlewares/permissions.go")
-}
-
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"

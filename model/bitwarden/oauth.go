@@ -71,7 +71,7 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	now := crypto.Timestamp()
 	name, err := i.SettingsPublicName()
-	if err != nil {
+	if err != nil || name == "" {
 		name = "Anonymous"
 	}
 	var stamp string
