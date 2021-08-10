@@ -291,7 +291,7 @@ msgid "Authorize Linked YourCozy"
 msgstr "requests access to your Cozy:"
 
 msgid "Authorize Linked Help"
-msgstr "The application ask access to these types of data in your Cozy:"
+msgstr "The application asks access to these data types in your Cozy:"
 
 msgid "Move delegated auth Title"
 msgstr "Move confirmation"
