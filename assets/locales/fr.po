@@ -697,6 +697,9 @@ msgstr "Déclarations d'assurance (Maif)"
 msgid "Permissions cc.cozycloud.autocategorization"
 msgstr "Fichier d'enrichissement du modèle de catégorisation"
 
+msgid "Permissions cc.cozycloud.dacc"
+msgstr "Statistiques agrégées anonymes"
+
 msgid "Permissions cc.cozycloud.sentry"
 msgstr "Journaux de l'application"
 
