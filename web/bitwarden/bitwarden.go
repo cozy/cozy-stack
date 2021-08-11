@@ -392,7 +392,7 @@ func refreshToken(c echo.Context) error {
 
 	// Check the refresh token
 	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
-	if !ok || claims.Scope != bitwarden.BitwardenScope {
+	if !ok || !bitwarden.IsBitwardenScope(claims.Scope) {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
 		})

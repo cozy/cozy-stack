@@ -20,10 +20,34 @@ var BitwardenScope = strings.Join([]string{
 	consts.BitwardenCiphers,
 	consts.BitwardenFolders,
 	consts.BitwardenOrganizations,
+	consts.BitwardenContacts,
 	consts.Konnectors,
 	consts.AppsSuggestion,
 	consts.Support,
 }, " ")
+
+// oldBitwardenScope is here to help the transition of bitwarden tokens, as the
+// com.bitwarden.contacts doctype has been added to the bitwarden scope.
+var oldBitwardenScope = strings.Join([]string{
+	consts.BitwardenProfiles,
+	consts.BitwardenCiphers,
+	consts.BitwardenFolders,
+	consts.BitwardenOrganizations,
+	consts.Konnectors,
+	consts.AppsSuggestion,
+	consts.Support,
+}, " ")
+
+// IsBitwardenScope returns true if it is the right scope for refreshing a
+// bitwarden token.
+func IsBitwardenScope(scope string) bool {
+	switch scope {
+	case BitwardenScope, oldBitwardenScope:
+		return true
+	default:
+		return false
+	}
+}
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
 // into a client_kind and a software_id (Cozy).
