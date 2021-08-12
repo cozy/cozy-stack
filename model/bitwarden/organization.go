@@ -29,12 +29,13 @@ const (
 
 // OrgMember is a struct for describing a member of an organization.
 type OrgMember struct {
-	UserID string          `json:"user_id"`
-	Email  string          `json:"email"`
-	Name   string          `json:"name"`
-	OrgKey string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
-	Status OrgMemberStatus `json:"status"`
-	Owner  bool            `json:"owner,omitempty"`
+	UserID   string          `json:"user_id"`
+	Email    string          `json:"email"`
+	Name     string          `json:"name"`
+	OrgKey   string          `json:"key,omitempty"` // The organization key encrypted with the public key of the user
+	Status   OrgMemberStatus `json:"status"`
+	Owner    bool            `json:"owner,omitempty"`
+	ReadOnly bool            `json:"read_only,omitempty"`
 }
 
 // Collection is used to regroup ciphers.

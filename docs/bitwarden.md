@@ -510,7 +510,8 @@ Content-Type: application/json
       "Id": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
       "OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
       "Name": "2.PowfE263ZLz7+Jqrpuezqw==|OzuXDsJnQdfa/eMKxsms6Q==|RpEB7qqs26X9dqa+KaxSE5+52TFVs4dAdfU7DCu3QXM=",
-      "Object": "collection"
+      "Object": "collection",
+      "ReadOnly": false
     }
   ],
   "Domains": {

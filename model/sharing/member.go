@@ -1101,11 +1101,12 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		domain = u.Host
 	}
 	org.Members[domain] = bitwarden.OrgMember{
-		UserID: bw.UserID,
-		Email:  m.Email,
-		Name:   m.PrimaryName(),
-		Status: bitwarden.OrgMemberAccepted,
-		Owner:  false,
+		UserID:   bw.UserID,
+		Email:    m.Email,
+		Name:     m.PrimaryName(),
+		Status:   bitwarden.OrgMemberAccepted,
+		Owner:    false,
+		ReadOnly: m.ReadOnly || s.ReadOnlyRules(),
 	}
 	return couchdb.UpdateDoc(inst, org)
 }

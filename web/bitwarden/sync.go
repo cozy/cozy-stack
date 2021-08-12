@@ -70,15 +70,33 @@ func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*p
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/syncResponse.ts
 type syncResponse struct {
-	Profile     *profileResponse      `json:"Profile"`
-	Folders     []*folderResponse     `json:"Folders"`
-	Ciphers     []*cipherResponse     `json:"Ciphers"`
-	Collections []*collectionResponse `json:"Collections"`
-	Domains     *domainsResponse      `json:"Domains"`
-	Object      string                `json:"Object"`
+	Profile     *profileResponse             `json:"Profile"`
+	Folders     []*folderResponse            `json:"Folders"`
+	Ciphers     []*cipherResponse            `json:"Ciphers"`
+	Collections []*collectionDetailsResponse `json:"Collections"`
+	Domains     *domainsResponse             `json:"Domains"`
+	Object      string                       `json:"Object"`
 }
 
-func newSyncResponse(setting *settings.Settings,
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
+type collectionDetailsResponse struct {
+	*collectionResponse
+	ReadOnly bool `json:"ReadOnly"`
+}
+
+func newCollectionDetailsResponse(
+	inst *instance.Instance,
+	org *bitwarden.Organization,
+	coll *bitwarden.Collection,
+) *collectionDetailsResponse {
+	readOnly := org.Members[inst.Domain].ReadOnly
+	collectionResponse := newCollectionResponse(coll, org.ID())
+	return &collectionDetailsResponse{collectionResponse, readOnly}
+}
+
+func newSyncResponse(
+	inst *instance.Instance,
+	setting *settings.Settings,
 	profile *profileResponse,
 	ciphers []*bitwarden.Cipher,
 	folders []*bitwarden.Folder,
@@ -93,9 +111,9 @@ func newSyncResponse(setting *settings.Settings,
 	for i, c := range ciphers {
 		ciphersResponse[i] = newCipherResponse(c, setting)
 	}
-	collectionsResponse := make([]*collectionResponse, len(organizations))
+	collectionsResponse := make([]*collectionDetailsResponse, len(organizations))
 	for i, o := range organizations {
-		collectionsResponse[i] = newCollectionResponse(&o.Collection, o.ID())
+		collectionsResponse[i] = newCollectionDetailsResponse(inst, o, &o.Collection)
 	}
 	return &syncResponse{
 		Profile:     profile,
@@ -161,6 +179,6 @@ func Sync(c echo.Context) error {
 		domains = newDomainsResponse(setting)
 	}
 
-	res := newSyncResponse(setting, profile, ciphers, folders, organizations, domains)
+	res := newSyncResponse(inst, setting, profile, ciphers, folders, organizations, domains)
 	return c.JSON(http.StatusOK, res)
 }
