@@ -57,9 +57,6 @@ func (c *Contact) ToMailAddress() (*mail.Address, error) {
 		}
 	}
 	name := c.PrimaryName()
-	if name == "" {
-		name = email
-	}
 	return &mail.Address{Name: name, Email: email}, nil
 }
 
