@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -618,6 +619,10 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 		if len(okDocs) > 0 {
 			if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
 				return err
+			}
+			for _, doc := range okDocs {
+				d := couchdb.JSONDoc{M: doc, Type: doctype}
+				couchdb.RTEvent(inst, realtime.EventUpdate, &d, nil)
 			}
 			refs = append(refs, newRefs...)
 			refs = append(refs, existingRefs...)
