@@ -239,6 +239,17 @@ describe "The bitwarden API of the stack" do
     assert_equal items.length, 1
     assert_equal items.first[:name], "Updated card"
 
+    # Delete an item
+    bw.delete_item item_id
+
+    # Check that the item is deleted on Bob's instance
+    sleep 6
+    bw3.sync
+    assert_empty bw3.items
+
+    assert_equal bw.logout, "You have logged out."
+    assert_equal bw2.logout, "You have logged out."
+
     inst.remove
   end
 end

@@ -300,6 +300,25 @@ func extractLastRevision(doc couchdb.JSONDoc) string {
 	return rev
 }
 
+func extractRevisionsSlice(doc couchdb.JSONDoc) []string {
+	slice := []string{}
+	subtree := doc.Get("revisions")
+	for {
+		m, ok := subtree.(map[string]interface{})
+		if !ok {
+			break
+		}
+		rev := m["rev"].(string)
+		slice = append(slice, rev)
+		branches, ok := m["branches"].([]interface{})
+		if !ok || len(branches) == 0 {
+			break
+		}
+		subtree = branches[0]
+	}
+	return slice
+}
+
 // changesResponse contains the useful informations from a call to the changes
 // feed in the replicator context
 type changesResponse struct {
@@ -351,8 +370,12 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*chang
 			continue
 		}
 		res.RuleIndexes[r.DocID] = int(idx)
-		if rev := extractLastRevision(r.Doc); rev != "" {
-			res.Changes.Changed[r.DocID] = []string{rev}
+		if strings.HasPrefix(r.DocID, consts.Files+"/") {
+			if rev := extractLastRevision(r.Doc); rev != "" {
+				res.Changes.Changed[r.DocID] = []string{rev}
+			}
+		} else {
+			res.Changes.Changed[r.DocID] = extractRevisionsSlice(r.Doc)
 		}
 	}
 	return &res, nil
@@ -397,8 +420,10 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 			parts[1] = XorID(parts[1], creds.XorKey)
 			key = parts[0] + "/" + parts[1]
 			xored[key] = old
+			leafRevs[key] = revs[len(revs)-1:]
+		} else {
+			leafRevs[key] = revs
 		}
-		leafRevs[key] = revs[len(revs)-1:]
 	}
 	body, err := json.Marshal(leafRevs)
 	if err != nil {
