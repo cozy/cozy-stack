@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -622,10 +623,23 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 			}
 			for _, doc := range okDocs {
 				d := couchdb.JSONDoc{M: doc, Type: doctype}
-				couchdb.RTEvent(inst, realtime.EventUpdate, &d, nil)
+				event := realtime.EventUpdate
+				if doc["_deleted"] != nil {
+					event = realtime.EventDelete
+				}
+				couchdb.RTEvent(inst, event, &d, nil)
 			}
 			refs = append(refs, newRefs...)
 			refs = append(refs, existingRefs...)
+		}
+
+		// XXX the bitwarden clients synchronize the ciphers only if the
+		// revision date from GET /bitwarden/api/accounts/revision-date has
+		// changed. So, we update it here!
+		if doctype == consts.BitwardenCiphers {
+			if setting, err := settings.Get(inst); err == nil {
+				_ = settings.UpdateRevisionDate(inst, setting)
+			}
 		}
 	}
 

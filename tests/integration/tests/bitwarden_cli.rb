@@ -169,7 +169,7 @@ describe "The bitwarden API of the stack" do
     assert_equal names, ["Cozy Connectors", "Family"]
 
     coll_id = colls.find { |c| c[:organizationId] == org.id }[:id]
-    item = {
+    shared_item = {
       type: Bitwarden::Types::CARD,
       favorite: false,
       name: "Family card",
@@ -178,7 +178,7 @@ describe "The bitwarden API of the stack" do
       organizationId: org.id,
       collectionIds: [coll_id]
     }
-    bw.create_item item, org.id
+    bw.create_item shared_item, org.id
 
     # Create a sharing
     inst_recipient = Instance.create name: "Bob"
@@ -226,9 +226,18 @@ describe "The bitwarden API of the stack" do
     items = bw3.items
     assert_equal items.length, 1
     assert_equal items.first[:name], "Family card"
+    item_id = items.first[:id]
 
-    assert_equal bw.logout, "You have logged out."
-    assert_equal bw2.logout, "You have logged out."
+    # Update an item
+    shared_item[:name] = "Updated card"
+    bw.edit_item item_id, shared_item
+
+    # Check that the item is updated on Bob's instance
+    sleep 6
+    bw3.sync
+    items = bw3.items
+    assert_equal items.length, 1
+    assert_equal items.first[:name], "Updated card"
 
     inst.remove
   end
