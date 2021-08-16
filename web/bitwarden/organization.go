@@ -431,13 +431,14 @@ func ConfirmUser(c echo.Context) error {
 		if member.UserID != userID {
 			continue
 		}
-		if member.Status != bitwarden.OrgMemberAccepted {
+		if member.Status == bitwarden.OrgMemberAccepted {
+			member.Status = bitwarden.OrgMemberConfirmed
+		} else if member.Status != bitwarden.OrgMemberInvited {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "User in invalid state",
 			})
 		}
 		found = true
-		member.Status = bitwarden.OrgMemberConfirmed
 		member.OrgKey = confirm.Key
 		org.Members[domain] = member
 	}

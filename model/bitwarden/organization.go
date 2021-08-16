@@ -18,13 +18,13 @@ type OrgMemberStatus int
 const (
 	// OrgMemberInvited is used when the member is invited but has not yet
 	// accepted the invitation.
-	OrgMemberInvited = 0
+	OrgMemberInvited OrgMemberStatus = 0
 	// OrgMemberAccepted is used when the member is accepted but the owner has
 	// not yet confirmed that the fingerprint is OK.
-	OrgMemberAccepted = 1
+	OrgMemberAccepted OrgMemberStatus = 1
 	// OrgMemberConfirmed is used when the member is confirmed, and has access
 	// to the organization key to decrypt/encrypt ciphers.
-	OrgMemberConfirmed = 2
+	OrgMemberConfirmed OrgMemberStatus = 2
 )
 
 // OrgMember is a struct for describing a member of an organization.

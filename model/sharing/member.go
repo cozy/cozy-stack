@@ -1100,11 +1100,17 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 	if u, err := url.Parse(m.Instance); err == nil {
 		domain = u.Host
 	}
+	orgKey := org.Members[domain].OrgKey
+	status := bitwarden.OrgMemberAccepted
+	if orgKey != "" {
+		status = bitwarden.OrgMemberConfirmed
+	}
 	org.Members[domain] = bitwarden.OrgMember{
 		UserID:   bw.UserID,
 		Email:    m.Email,
 		Name:     m.PrimaryName(),
-		Status:   bitwarden.OrgMemberAccepted,
+		OrgKey:   orgKey,
+		Status:   status,
 		Owner:    false,
 		ReadOnly: m.ReadOnly || s.ReadOnlyRules(),
 	}
