@@ -531,6 +531,7 @@ func Routes(router *echo.Group) {
 	orgs.POST("/:id/users/:user-id/confirm", ConfirmUser)
 
 	router.GET("/organizations/cozy", GetCozy)
+	router.DELETE("/contacts/:id", RefuseContact)
 
 	api.GET("/users/:id/public-key", GetPublicKey)
 
