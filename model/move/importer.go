@@ -111,7 +111,8 @@ func (im *importer) importZip(zr *zip.Reader) error {
 		case consts.Sessions:
 			// We don't want to import the sessions from another instance
 			continue
-		case consts.BitwardenCiphers, consts.BitwardenFolders, consts.BitwardenProfiles:
+		case consts.BitwardenCiphers, consts.BitwardenFolders, consts.BitwardenProfiles,
+			consts.BitwardenOrganizations, consts.BitwardenContacts:
 			// Bitwarden documents are encypted E2E, so they cannot be imported
 			// as raw documents
 			continue
@@ -453,6 +454,10 @@ func (im *importer) importSharing(zf *zip.File) error {
 	s, err := im.readSharing(zf)
 	if err != nil {
 		return err
+	}
+	// XXX Do not import sharing for bitwarden stuff
+	if s.FirstBitwardenOrganizationRule() != nil {
+		return nil
 	}
 	s.Initial = false
 	s.NbFiles = 0
