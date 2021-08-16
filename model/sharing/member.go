@@ -1110,3 +1110,40 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 	}
 	return couchdb.UpdateDoc(inst, org)
 }
+
+// RemoveBitwardenMember removes a sharing member from the bitwarden
+// organization. It is called when the owner revokes a member, or when the
+// owner is notified that a member has left the sharing.
+func (s *Sharing) RemoveBitwardenMember(inst *instance.Instance, m *Member, orgID string) error {
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, orgID, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	domain := m.Instance
+	if u, err := url.Parse(m.Instance); err == nil {
+		domain = u.Host
+	}
+	delete(org.Members, domain)
+	return couchdb.UpdateDoc(inst, org)
+}
+
+// RemoveAllBitwardenMembers removes all the members from the bitwarden
+// organization (except the owner of the sharing).
+func (s *Sharing) RemoveAllBitwardenMembers(inst *instance.Instance, orgID string) error {
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, orgID, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	for domain := range org.Members {
+		if domain != inst.Domain {
+			delete(org.Members, domain)
+		}
+	}
+	return couchdb.UpdateDoc(inst, org)
+}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -380,6 +381,11 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 			return err
 		}
 	}
+	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+		if err := s.RemoveAllBitwardenMembers(inst, rule.Values[0]); err != nil {
+			return err
+		}
+	}
 	s.Active = false
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
@@ -409,8 +415,14 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if err := s.RevokeMember(inst, index); err != nil {
 		return err
 	}
-	if err := s.ClearLastSequenceNumbers(inst, &s.Members[index]); err != nil {
+	m := &s.Members[index]
+	if err := s.ClearLastSequenceNumbers(inst, m); err != nil {
 		return err
+	}
+	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+		if err := s.RemoveBitwardenMember(inst, m, rule.Values[0]); err != nil {
+			return err
+		}
 	}
 	return s.NoMoreRecipient(inst)
 }
@@ -436,6 +448,11 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 		if err := s.RemoveSharingDir(inst); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
+		}
+	}
+	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+		if err := s.RemoveBitwardenOrganization(inst, rule.Values[0]); err != nil {
+			return err
 		}
 	}
 	s.Active = false
@@ -475,6 +492,20 @@ func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	return nil
 }
 
+// RemoveBitwardenOrganization remove the shared bitwarden organization and the
+// ciphers inside it. It is called on the recipient instance when the sharing
+// is revoked for them.
+func (s *Sharing) RemoveBitwardenOrganization(inst *instance.Instance, orgID string) error {
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, orgID, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	return org.Delete(inst)
+}
+
 // RevokeByNotification is called on the recipient side, after a revocation
 // performed by the sharer
 func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
@@ -495,6 +526,11 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	}
 	if s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
+			return err
+		}
+	}
+	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+		if err := s.RemoveBitwardenOrganization(inst, rule.Values[0]); err != nil {
 			return err
 		}
 	}
@@ -523,6 +559,11 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 	}
 	if err := s.ClearLastSequenceNumbers(inst, m); err != nil {
 		return err
+	}
+	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+		if err := s.RemoveBitwardenMember(inst, m, rule.Values[0]); err != nil {
+			return err
+		}
 	}
 	m.Status = MemberStatusRevoked
 	*c = Credentials{}
