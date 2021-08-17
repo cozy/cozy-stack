@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
 )
 
@@ -66,6 +67,8 @@ func createToken(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	logger.WithDomain(domain).WithField("nspace", "admin").
+		Infof("%s token created from admin API at %s", audience, issuedAt)
 	return c.String(http.StatusOK, token)
 }
 

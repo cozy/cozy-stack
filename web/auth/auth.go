@@ -244,7 +244,7 @@ func loginForm(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
+			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), "JWT", true); err != nil {
 				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 			}
 			if redirect == nil {
@@ -257,7 +257,7 @@ func loginForm(c echo.Context) error {
 }
 
 // newSession generates a new session, and puts a cookie for it
-func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool) error {
+func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool, logMessage string) error {
 	sessionID, err := SetCookieForNewSession(c, longRunSession)
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 		}
 	}
 
-	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), logMessage, true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
@@ -385,7 +385,7 @@ func login(c echo.Context) error {
 	// Successful authentication
 	// User is now logged-in, generate a new session
 	if sessionID == "" {
-		err := newSession(c, inst, redirect, longRunSession)
+		err := newSession(c, inst, redirect, longRunSession, "password")
 		if err != nil {
 			return err
 		}

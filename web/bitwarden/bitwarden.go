@@ -312,6 +312,16 @@ func getInitialCredentials(c echo.Context) error {
 		}
 	}
 
+	var ip string
+	if forwardedFor := c.Request().Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
+	}
+	inst.Logger().WithField("nspace", "bitwarden").
+		Infof("New bitwarden client from %s at %s", ip, time.Now())
+
 	// Send the response
 	out := AccessTokenReponse{
 		ClientID:   client.ClientID,
