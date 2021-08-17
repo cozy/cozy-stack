@@ -107,7 +107,8 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	if s.OlderThan(SessionMaxAge) {
 		err := couchdb.DeleteDoc(i, s)
 		if err != nil {
-			i.Logger().Warn("[session] Failed to delete expired session:", err)
+			i.Logger().WithField("nspace", "sessions").
+				Warnf("Failed to delete expired session: %s", err)
 		}
 		return nil, ErrExpired
 	}
@@ -184,7 +185,8 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 	err := couchdb.DeleteDoc(i, s)
 	if err != nil {
-		i.Logger().Error("[session] Failed to delete session:", err)
+		i.Logger().WithField("nspace", "sessions").
+			Errorf("Failed to delete session: %s", err)
 	}
 	return &http.Cookie{
 		Name:   CookieName(i),

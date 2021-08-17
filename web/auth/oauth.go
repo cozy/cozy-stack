@@ -270,6 +270,16 @@ func authorize(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	var ip string
+	if forwardedFor := c.Request().Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
+	}
+	instance.Logger().WithField("nspace", "oauth").
+		Infof("Access code created from %s at %s with scope %s", ip, time.Now(), access.Scope)
+
 	// We should be sending "code" only, but for compatibility reason, we keep
 	// the access_code parameter that we used to send in our first impl.
 	q.Set("access_code", access.Code)

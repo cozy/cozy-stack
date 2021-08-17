@@ -144,7 +144,7 @@ func Login(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), "OIDC", true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	if redirect == "" {

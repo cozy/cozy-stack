@@ -120,7 +120,7 @@ func registerPassphrase(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), false); err != nil {
+	if err := session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), "registration", false); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 

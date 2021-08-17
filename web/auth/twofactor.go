@@ -130,7 +130,7 @@ func twoFactor(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := newSession(c, inst, redirect, longRunSession); err != nil {
+	if err := newSession(c, inst, redirect, longRunSession, "2FA"); err != nil {
 		return err
 	}
 

@@ -114,7 +114,9 @@ func lookupIP(ip, locale string) (city, subdivision, country, timezone string) {
 
 // StoreNewLoginEntry creates a new login entry in the database associated with
 // the given instance.
-func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *http.Request, notifEnabled bool) error {
+func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
+	req *http.Request, logMessage string, notifEnabled bool,
+) error {
 	var ip string
 	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
@@ -130,6 +132,8 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	os := ua.OS()
 
 	createdAt := time.Now()
+	i.Logger().WithField("nspace", "sessions").
+		Infof("New connection from %s at %s (%s)", ip, createdAt, logMessage)
 	if timezone != "" {
 		if loc, err := time.LoadLocation(timezone); err == nil {
 			createdAt = createdAt.In(loc)
