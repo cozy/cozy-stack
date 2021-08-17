@@ -71,7 +71,7 @@ describe "A file or folder" do
     code = sharing.read_write inst_bob, 2
     assert_equal 204, code
     sleep 1
-    name1c = "#{Faker::DrWho.specie}.txt"
+    name1c = "#{Faker::DrWho.specie.gsub '/', '-'}.txt"
     file1_charlie.rename inst_charlie, name1c
     sleep 12
     file1 = CozyFile.find inst_alice, file1.couch_id
