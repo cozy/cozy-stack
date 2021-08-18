@@ -443,9 +443,10 @@ the user.
 
 **B. Register each Stack** with a redirect_uri on the main stack domain, if we
 go this way, the register_uri below moves from
-`bob.cozy.rocks/accounts/redirect` to `oauthcallback.cozy.rocks/redirect` and the
-domain will be prepended to the state. This is feasible at cozy scale, but
-requires more knowledge and work for self-hosters.
+`bob.cozy.rocks/accounts/service/redirect` to
+`oauthcallback.cozy.rocks/accounts/service/redirect` and the domain will be
+prepended to the state. This is feasible at cozy scale, but requires more
+knowledge and work for self-hosters.
 
 #### Example: Google
 
@@ -520,7 +521,8 @@ https://oauthcallback.cozy.rocks/accounts/service-name/redirect?
 C. The Stack does Server side this request:
 
 ```http
-POST https://api.service.example/oauth/access_token HTTP/1.1
+POST /oauth/access_token HTTP/1.1
+Host: api.service.example
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=authorization_code&
@@ -585,9 +587,7 @@ See server-flow for state rules.
 B. Service lets the user login, allows or denies the scope, then redirects to
 
 ```http
-https://bob-home.cozy.rocks/?
-access_token=ACCESS_TOKEN&
-state=1234zyx
+https://bob-home.cozy.rocks/?access_token=ACCESS_TOKEN&state=1234zyx
 ```
 
 C. The Cozy app adds the token to the `io.cozy.accounts` and save it before
@@ -600,7 +600,8 @@ account id. The konnector can then fetch the account and use its `access_token`
 to performs a request to fetch data:
 
 ```http
-POST https://api.service.com/resource HTTP/1.1
+POST /resource HTTP/1.1
+Host: api.service.example
 Authorization: Bearer ACCESS_TOKEN
 ```
 
@@ -623,7 +624,8 @@ konnector can requires the stack to refresh an account token with an HTTP
 request.
 
 ```http
-POST https://bob.cozy.rocks/accounts/:accountID/refresh HTTP/1.1
+POST /accounts/:accountType/:accountID/refresh HTTP/1.1
+Host: bob.cozy.rocks
 ```
 
 ### Konnectors Marketplace Requirements
@@ -660,7 +662,32 @@ type with the following parameter:
 
 - `grant_mode`, with `bi_webauth` as the value (or `bi_webauth+secret` if there is also a secret)
 - `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
-- `client_id`, with the client ID given by Budget Insight.
+- `client_id`, with the client ID given by Budget Insight
+- `auth_endpoint`, with `https://{domain}.biapi.pro/2.0/webauth` (with the correct `domain`)
+- `reconnect_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/reconnect` (idem).
+
+#### Reconnect
+
+The [reconnection webview](https://docs.budget-insight.com/guides/handle-scas-connection-states#use-our-reconnection-webview)
+can be called with this route:
+
+```http
+GET /accounts/:accountType/:accountID/reconnect?code={code}&connection_id={id}&slug={slug}&state={state} HTTP/1.1
+Host: jane.cozy.example
+```
+
+```http
+HTTP/1.1 303 See Other
+Location: https://domain.biapi.pro/2.0/auth/webview/reconnect
+    ?client_id={client_id}
+    &code={code}
+    &connection_id={id}
+    &redirect_uri=https://oauthcallback.cozy.example/accounts/{accountType}/redirect
+    &state={stackState}
+```
+
+At the end of flow, the user will be redirected to
+`https://jane-{slug}.cozy.example/?state={state}`.
 
 ## Webhook triggers
 

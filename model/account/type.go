@@ -68,6 +68,7 @@ type AccountType struct {
 	ClientID              string            `json:"client_id,omitempty"`
 	ClientSecret          string            `json:"client_secret,omitempty"`
 	AuthEndpoint          string            `json:"auth_endpoint,omitempty"`
+	ReconnectEndpoint     string            `json:"reconnect_endpoint,omitempty"`
 	TokenEndpoint         string            `json:"token_endpoint,omitempty"`
 	TokenAuthMode         string            `json:"token_mode,omitempty"`
 	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
@@ -369,6 +370,30 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	return nil
+}
+
+// MakeReconnectURL returns the url at which the user can be redirected for a
+// BI webauth reconnect flow.
+func (at *AccountType) MakeReconnectURL(i *instance.Instance, state string, params url.Values) (string, error) {
+	switch at.GrantMode {
+	case BIWebauth, BIWebauthAndSecret:
+		// OK
+	default:
+		return "", errors.New("Wrong account type")
+	}
+
+	u, err := url.Parse(at.ReconnectEndpoint)
+	if err != nil {
+		return "", err
+	}
+	vv := u.Query()
+	vv.Add("client_id", at.ClientID)
+	vv.Add("code", params.Get("code"))
+	vv.Add("connection_id", params.Get("connection_id"))
+	vv.Add("redirect_uri", at.RedirectURI(i))
+	vv.Add("state", state)
+	u.RawQuery = vv.Encode()
+	return u.String(), nil
 }
 
 // TypeInfo returns the AccountType document for a given id
