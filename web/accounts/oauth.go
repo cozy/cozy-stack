@@ -62,7 +62,9 @@ func redirectToApp(c echo.Context, acc *account.Account, clientState, slug strin
 	}
 	u := instance.SubDomain(slug)
 	vv := &url.Values{}
-	vv.Add("account", acc.ID())
+	if acc != nil {
+		vv.Add("account", acc.ID())
+	}
 	if clientState != "" {
 		vv.Add("state", clientState)
 	}
@@ -118,6 +120,13 @@ func redirect(c echo.Context) error {
 			return err
 		}
 
+		clientState = state.ClientState
+		slug = state.Slug
+
+		if state.ReconnectFlow {
+			return redirectToApp(c, nil, clientState, slug)
+		}
+
 		if accountType.TokenEndpoint == "" {
 			params := c.QueryParams()
 			params.Del("state")
@@ -135,9 +144,6 @@ func redirect(c echo.Context) error {
 				return err
 			}
 		}
-
-		clientState = state.ClientState
-		slug = state.Slug
 	}
 
 	if err := couchdb.CreateDoc(i, acc); err != nil {
@@ -181,6 +187,44 @@ func refresh(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiAccount{&acc}, nil)
 }
 
+// reconnect can used to reconnect a user from BI
+func reconnect(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	accountid := c.Param("accountid")
+
+	var acc account.Account
+	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &acc); err != nil {
+		return err
+	}
+
+	if err := middlewares.Allow(c, permission.GET, &acc); err != nil {
+		return err
+	}
+
+	accountType, err := account.TypeInfo(acc.AccountType, instance.ContextName)
+	if err != nil {
+		return err
+	}
+
+	state, err := getStorage().Add(&stateHolder{
+		InstanceDomain: instance.Domain,
+		AccountType:    accountType.ServiceID(),
+		ClientState:    c.QueryParam("state"),
+		Slug:           c.QueryParam("slug"),
+		ReconnectFlow:  true,
+	})
+	if err != nil {
+		return err
+	}
+
+	url, err := accountType.MakeReconnectURL(instance, state, c.QueryParams())
+	if err != nil {
+		return err
+	}
+
+	return c.Redirect(http.StatusSeeOther, url)
+}
+
 // Routes setups routing for cozy-as-oauth-client routes
 // Careful, the normal middlewares NeedInstance and LoadSession are not applied
 // to this group in web/routing
@@ -188,4 +232,5 @@ func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance)
 	router.GET("/:accountType/redirect", redirect)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
+	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance)
 }
