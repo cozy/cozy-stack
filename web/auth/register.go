@@ -29,10 +29,7 @@ func registerClient(c echo.Context) error {
 	// ("login" scope), except via the CLI.
 	if client.AllowLoginScope {
 		perm, err := middlewares.GetPermission(c)
-		if err != nil {
-			return err
-		}
-		if perm.Type != permission.TypeCLI {
+		if err != nil || perm.Type != permission.TypeCLI {
 			return echo.NewHTTPError(http.StatusUnauthorized,
 				"Not authorized to create client with given parameters")
 		}
