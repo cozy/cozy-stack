@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -18,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -1065,4 +1067,89 @@ func shouldNotifyMember(s *Sharing, i int, except *Member) bool {
 		return false
 	}
 	return m.Instance != ""
+}
+
+// SaveBitwarden adds the sharing member to the bitwarden organization in the
+// sharing rules.
+func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwarden) error {
+	rule := s.FirstBitwardenOrganizationRule()
+	if rule == nil || len(rule.Values) == 0 {
+		return nil
+	}
+
+	contact := &bitwarden.Contact{}
+	err := couchdb.GetDoc(inst, consts.BitwardenContacts, bw.UserID, contact)
+	if couchdb.IsNotFoundError(err) {
+		md := metadata.New()
+		md.DocTypeVersion = bitwarden.DocTypeVersion
+		contact.UserID = bw.UserID
+		contact.Email = m.Email
+		contact.PublicKey = bw.PublicKey
+		contact.Metadata = *md
+		err = couchdb.CreateNamedDocWithDB(inst, contact)
+	}
+	if err != nil {
+		return err
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, rule.Values[0], org); err != nil {
+		return err
+	}
+	domain := m.Instance
+	if u, err := url.Parse(m.Instance); err == nil {
+		domain = u.Host
+	}
+	orgKey := org.Members[domain].OrgKey
+	status := bitwarden.OrgMemberAccepted
+	if orgKey != "" {
+		status = bitwarden.OrgMemberConfirmed
+	}
+	org.Members[domain] = bitwarden.OrgMember{
+		UserID:   bw.UserID,
+		Email:    m.Email,
+		Name:     m.PrimaryName(),
+		OrgKey:   orgKey,
+		Status:   status,
+		Owner:    false,
+		ReadOnly: m.ReadOnly || s.ReadOnlyRules(),
+	}
+	return couchdb.UpdateDoc(inst, org)
+}
+
+// RemoveBitwardenMember removes a sharing member from the bitwarden
+// organization. It is called when the owner revokes a member, or when the
+// owner is notified that a member has left the sharing.
+func (s *Sharing) RemoveBitwardenMember(inst *instance.Instance, m *Member, orgID string) error {
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, orgID, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	domain := m.Instance
+	if u, err := url.Parse(m.Instance); err == nil {
+		domain = u.Host
+	}
+	delete(org.Members, domain)
+	return couchdb.UpdateDoc(inst, org)
+}
+
+// RemoveAllBitwardenMembers removes all the members from the bitwarden
+// organization (except the owner of the sharing).
+func (s *Sharing) RemoveAllBitwardenMembers(inst *instance.Instance, orgID string) error {
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, orgID, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	for domain := range org.Members {
+		if domain != inst.Domain {
+			delete(org.Members, domain)
+		}
+	}
+	return couchdb.UpdateDoc(inst, org)
 }

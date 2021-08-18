@@ -509,7 +509,7 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 			resp.Body.Close()
 		}
 	}()
-	if elapsed.Seconds() >= 10 {
+	if elapsed.Seconds() >= 3 {
 		log := logger.WithNamespace("registry")
 		log.Printf("slow request on %s (%s)", u.String(), elapsed)
 	}

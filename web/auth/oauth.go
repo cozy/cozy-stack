@@ -336,6 +336,7 @@ func authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
+	hasShortcut := s.ShortcutID != ""
 	var sharerDomain, targetType string
 	sharerURL, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
@@ -343,7 +344,14 @@ func authorizeSharingForm(c echo.Context) error {
 	} else {
 		sharerDomain = sharerURL.Host
 	}
-	if s.Rules[0].DocType != consts.Files {
+	if s.Rules[0].DocType == consts.BitwardenOrganizations {
+		targetType = instance.Translate("Notification Sharing Type Organization")
+		hasShortcut = true
+		s.Rules[0].Mime = "organization"
+		if len(s.Rules) == 2 && s.Rules[1].DocType == consts.BitwardenCiphers {
+			s.Rules = s.Rules[:1]
+		}
+	} else if s.Rules[0].DocType != consts.Files {
 		targetType = instance.Translate("Notification Sharing Type Document")
 	} else if s.Rules[0].Mime == "" {
 		targetType = instance.Translate("Notification Sharing Type Directory")
@@ -362,7 +370,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
-		"HasShortcut":  s.ShortcutID != "",
+		"HasShortcut":  hasShortcut,
 		"TargetType":   targetType,
 	})
 }

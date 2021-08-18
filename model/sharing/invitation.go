@@ -190,6 +190,9 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 func getDocumentType(inst *instance.Instance, s *Sharing) string {
 	rule := s.FirstFilesRule()
 	if rule == nil {
+		if len(s.Rules) > 0 && s.Rules[0].DocType == consts.BitwardenOrganizations {
+			return inst.Translate("Notification Sharing Type Organization")
+		}
 		return inst.Translate("Notification Sharing Type Document")
 	}
 	_, err := inst.VFS().FileByID(rule.Values[0])

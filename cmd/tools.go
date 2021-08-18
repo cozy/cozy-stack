@@ -2,6 +2,11 @@ package cmd
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha1"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/url"
@@ -12,6 +17,62 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/spf13/cobra"
 )
+
+var toolsCmdGroup = &cobra.Command{
+	Use:   "tools <command>",
+	Short: "Regroup some tools for debugging and tests",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Usage()
+	},
+}
+
+var encryptRSACmd = &cobra.Command{
+	Use:   "encrypt-with-rsa <key> <payload",
+	Short: "encrypt a payload in RSA",
+	Long: `
+This command is used by integration tests to encrypt bitwarden organization
+keys. It takes the public or private key of the user and the payload (= the
+organization key) as inputs (both encoded in base64), and print on stdout the
+encrypted data (encoded as base64 too).
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Usage()
+		}
+		encryptKey, err := base64.StdEncoding.DecodeString(args[0])
+		if err != nil {
+			return err
+		}
+		payload, err := base64.StdEncoding.DecodeString(args[1])
+		if err != nil {
+			return err
+		}
+		pub, err := getEncryptKey(encryptKey)
+		if err != nil {
+			return err
+		}
+		hash := sha1.New()
+		rng := rand.Reader
+		encrypted, err := rsa.EncryptOAEP(hash, rng, pub, payload, nil)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("4.%s", base64.StdEncoding.EncodeToString(encrypted))
+		return nil
+	},
+}
+
+func getEncryptKey(key []byte) (*rsa.PublicKey, error) {
+	pubKey, err := x509.ParsePKIXPublicKey(key)
+	if err == nil {
+		return pubKey.(*rsa.PublicKey), nil
+	}
+	privateKey, err := x509.ParsePKCS8PrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return &privateKey.(*rsa.PrivateKey).PublicKey, nil
+}
 
 const bugHeader = `Please answer these questions before submitting your issue. Thanks!
 
@@ -78,7 +139,9 @@ The report includes useful system information.
 }
 
 func init() {
-	RootCmd.AddCommand(bugCmd)
+	toolsCmdGroup.AddCommand(encryptRSACmd)
+	toolsCmdGroup.AddCommand(bugCmd)
+	RootCmd.AddCommand(toolsCmdGroup)
 }
 
 func printOSDetails(w io.Writer) {

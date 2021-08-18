@@ -141,3 +141,5 @@ func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
 	ds.addTopic(h.local, "")
 	return ds
 }
+
+var _ Doc = (*JSONDoc)(nil)

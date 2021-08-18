@@ -1,64 +1,100 @@
 package bitwarden
 
 import (
-	"errors"
+	"encoding/json"
+	"net/http"
+	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/labstack/echo/v4"
 )
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/profileOrganizationResponse.ts
-type organizationResponse struct {
-	ID             string `json:"Id"`
-	Name           string `json:"Name"`
-	Key            string `json:"Key"`
-	Email          string `json:"BillingEmail"`
-	Plan           string `json:"Plan"`
-	PlanType       int    `json:"PlanType"`
-	Seats          int    `json:"Seats"`
-	MaxCollections int    `json:"MaxCollections"`
-	MaxStorage     int    `json:"MaxStorageGb"`
-	SelfHost       bool   `json:"SelfHost"`
-	Use2fa         bool   `json:"Use2fa"`
-	UseDirectory   bool   `json:"UseDirectory"`
-	UseEvents      bool   `json:"UseEvents"`
-	UseGroups      bool   `json:"UseGroups"`
-	UseTotp        bool   `json:"UseTotp"`
-	Premium        bool   `json:"UsersGetPremium"`
-	Enabled        bool   `json:"Enabled"`
-	Status         int    `json:"Status"`
-	Type           int    `json:"Type"`
-	Object         string `json:"Object"`
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/organizationCreateRequest.ts
+type organizationRequest struct {
+	Name           string `json:"name"`
+	Key            string `json:"key"`
+	CollectionName string `json:"collectionName"`
 }
 
-func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Settings) (*organizationResponse, error) {
-	if setting == nil || setting.PublicKey == "" {
-		return nil, errors.New("No public key")
-	}
-	orgKey, err := setting.OrganizationKey()
+func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden.Organization {
+	md := metadata.New()
+	md.DocTypeVersion = bitwarden.DocTypeVersion
+	settings, err := inst.SettingsDocument()
 	if err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Cannot read the organization key: %s", err)
-		return nil, err
+		settings = &couchdb.JSONDoc{M: map[string]interface{}{}}
 	}
-	key, err := crypto.EncryptWithRSA(setting.PublicKey, orgKey)
-	if err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Cannot encrypt with RSA: %s", err)
-		return nil, err
+	email, _ := settings.M["email"].(string)
+	name, _ := settings.M["public_name"].(string)
+	return &bitwarden.Organization{
+		Name: r.Name,
+		Members: map[string]bitwarden.OrgMember{
+			inst.Domain: {
+				UserID: inst.ID(),
+				Email:  email,
+				Name:   name,
+				OrgKey: r.Key,
+				Status: bitwarden.OrgMemberConfirmed,
+				Owner:  true,
+			},
+		},
+		Collection: bitwarden.Collection{
+			Name: r.CollectionName,
+		},
+		Metadata: *md,
 	}
+}
 
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/profileOrganizationResponse.ts
+type organizationResponse struct {
+	ID             string  `json:"Id"`
+	Identifier     *string `json:"Identifier"`
+	Name           string  `json:"Name"`
+	Key            string  `json:"Key"`
+	Email          string  `json:"BillingEmail"`
+	Plan           string  `json:"Plan"`
+	PlanType       int     `json:"PlanType"`
+	Seats          int     `json:"Seats"`
+	MaxCollections int     `json:"MaxCollections"`
+	MaxStorage     int     `json:"MaxStorageGb"`
+	SelfHost       bool    `json:"SelfHost"`
+	Use2fa         bool    `json:"Use2fa"`
+	UseDirectory   bool    `json:"UseDirectory"`
+	UseEvents      bool    `json:"UseEvents"`
+	UseGroups      bool    `json:"UseGroups"`
+	UseTotp        bool    `json:"UseTotp"`
+	UseAPI         bool    `json:"UseApi"`
+	UsePolicies    bool    `json:"UsePolicies"`
+	UseSSO         bool    `json:"UseSSO"`
+	UseResetPass   bool    `json:"UseResetPassword"`
+	HasKeys        bool    `json:"HasPublicAndPrivateKeys"`
+	ResetPass      bool    `json:"ResetPasswordEnrolled"`
+	Premium        bool    `json:"UsersGetPremium"`
+	Enabled        bool    `json:"Enabled"`
+	Status         int     `json:"Status"`
+	Type           int     `json:"Type"`
+	Object         string  `json:"Object"`
+}
+
+func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organization) *organizationResponse {
+	m := org.Members[inst.Domain]
 	email := inst.PassphraseSalt()
 	return &organizationResponse{
-		ID:             setting.OrganizationID,
-		Name:           consts.BitwardenCozyOrganizationName,
-		Key:            key,
+		ID:             org.ID(),
+		Identifier:     nil, // Not supported by us
+		Name:           org.Name,
+		Key:            m.OrgKey,
 		Email:          string(email),
 		Plan:           "TeamsAnnually",
-		PlanType:       5, // TeamsAnnually plan
-		Seats:          2,
+		PlanType:       9,  // TeamsAnnually plan
+		Seats:          10, // The value doesn't matter
 		MaxCollections: 1,
 		MaxStorage:     1,
 		SelfHost:       true,
@@ -67,15 +103,21 @@ func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Sett
 		UseEvents:      false,
 		UseGroups:      false,
 		UseTotp:        true,
+		UseAPI:         false,
+		UsePolicies:    false,
+		UseSSO:         false,
+		UseResetPass:   false,
+		HasKeys:        false, // The public/private keys are used for the Admin Reset Password feature, not implemented by us
+		ResetPass:      false,
 		Premium:        true,
 		Enabled:        true,
-		Status:         2, // Confirmed
+		Status:         int(m.Status),
 		Type:           2, // User
 		Object:         "profileOrganization",
-	}, nil
+	}
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/collectionResponse.ts
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
 type collectionResponse struct {
 	ID             string `json:"Id"`
 	OrganizationID string `json:"OrganizationId"`
@@ -83,21 +125,388 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse, error) {
-	orgKey, err := setting.OrganizationKey()
-	if err != nil || len(orgKey) != 64 {
-		return nil, errors.New("Missing organization key")
-	}
-	iv := crypto.GenerateRandomBytes(16)
-	payload := []byte(consts.BitwardenCozyCollectionName)
-	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
-	if err != nil {
-		return nil, err
-	}
+func newCollectionResponse(coll *bitwarden.Collection, orgID string) *collectionResponse {
 	return &collectionResponse{
-		ID:             setting.CollectionID,
-		OrganizationID: setting.OrganizationID,
-		Name:           name,
+		ID:             coll.ID(),
+		OrganizationID: orgID,
+		Name:           coll.Name,
 		Object:         "collection",
-	}, nil
+	}
+}
+
+// CreateOrganization is the route used to create an organization (with a
+// collection).
+func CreateOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req organizationRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if req.Name == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "missing name",
+		})
+	}
+
+	org := req.toOrganization(inst)
+	collID, err := couchdb.UUID(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	org.Collection.DocID = collID
+	if err := couchdb.CreateDoc(inst, org); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	_ = settings.UpdateRevisionDate(inst, nil)
+	res := newOrganizationResponse(inst, org)
+	return c.JSON(http.StatusOK, res)
+}
+
+// GetOrganization is the route for getting information about an organization.
+func GetOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	res := newOrganizationResponse(inst, org)
+	return c.JSON(http.StatusOK, res)
+}
+
+type collectionsList struct {
+	Data   []*collectionResponse `json:"Data"`
+	Object string                `json:"Object"`
+}
+
+// GetCollections is the route for getting information about the collections
+// inside an organization.
+func GetCollections(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	coll := newCollectionResponse(&org.Collection, org.ID())
+	res := &collectionsList{Object: "list"}
+	res.Data = []*collectionResponse{coll}
+	return c.JSON(http.StatusOK, res)
+}
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/passwordVerificationRequest.ts
+type passwordVerificationRequest struct {
+	Hash string `json:"masterPasswordHash"`
+}
+
+// DeleteOrganization is the route for deleting an organization by its owner.
+func DeleteOrganization(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var verification passwordVerificationRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&verification); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if err := lifecycle.CheckPassphrase(inst, []byte(verification.Hash)); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid password",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	if m := org.Members[inst.Domain]; !m.Owner {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "only the Owner can call this endpoint",
+		})
+	}
+
+	if err := org.Delete(inst); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	_ = settings.UpdateRevisionDate(inst, nil)
+	return c.NoContent(http.StatusOK)
+}
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/organizationUserResponse.ts
+type userDetailsResponse struct {
+	ID        string                    `json:"Id"`
+	UserID    string                    `json:"UserId"`
+	Type      int                       `json:"Type"`
+	Status    bitwarden.OrgMemberStatus `json:"Status"`
+	AccessAll bool                      `json:"AccessAll"`
+	Name      string                    `json:"Name"`
+	Email     string                    `json:"Email"`
+	Object    string                    `json:"Object"`
+}
+
+func newUserDetailsResponse(m *bitwarden.OrgMember) *userDetailsResponse {
+	typ := 2 // User
+	if m.Owner {
+		typ = 0 // Owner
+	}
+	return &userDetailsResponse{
+		ID:        m.UserID,
+		UserID:    m.UserID,
+		Type:      typ,
+		Status:    m.Status,
+		AccessAll: true,
+		Name:      m.Name,
+		Email:     m.Email,
+		Object:    "organizationUserUserDetails",
+	}
+}
+
+type userDetailsList struct {
+	Data   []*userDetailsResponse `json:"Data"`
+	Object string                 `json:"Object"`
+}
+
+// ListOrganizationUser is the route for listing users inside an organization.
+func ListOrganizationUser(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	list := &userDetailsList{Object: "list"}
+	for _, m := range org.Members {
+		list.Data = append(list.Data, newUserDetailsResponse(&m))
+	}
+	return c.JSON(http.StatusOK, list)
+}
+
+// https://github.com/bitwarden/jslib/blob/master/common/src/models/request/organizationUserConfirmRequest.ts
+type userConfirmRequest struct {
+	Key string `json:"key"`
+}
+
+// ConfirmUser is the route to confirm a user in an organization. It takes the
+// organization key encrypted with the public key of this user as input.
+func ConfirmUser(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, id, org); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	if m := org.Members[inst.Domain]; !m.Owner {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "only the Owner can call this endpoint",
+		})
+	}
+
+	var confirm userConfirmRequest
+	err := json.NewDecoder(c.Request().Body).Decode(&confirm)
+	if err != nil || confirm.Key == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+
+	userID := c.Param("user-id")
+	found := false
+	for domain, member := range org.Members {
+		if member.UserID != userID {
+			continue
+		}
+		if member.Status == bitwarden.OrgMemberAccepted {
+			member.Status = bitwarden.OrgMemberConfirmed
+		} else if member.Status != bitwarden.OrgMemberInvited {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "User in invalid state",
+			})
+		}
+		found = true
+		member.OrgKey = confirm.Key
+		org.Members[domain] = member
+	}
+	if !found {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "The specified user isn't a member of the organization",
+		})
+	}
+
+	var contact bitwarden.Contact
+	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, userID, &contact); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	if !contact.Confirmed {
+		contact.Confirmed = true
+		contact.Metadata.UpdatedAt = time.Now()
+		if err := couchdb.UpdateDoc(inst, &contact); err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": err.Error(),
+			})
+		}
+	}
+
+	if err := couchdb.UpdateDoc(inst, org); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+// GetPublicKey returns the public key of a user.
+func GetPublicKey(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+	var contact bitwarden.Contact
+	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, id, &contact); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"UserId":    id,
+		"PublicKey": contact.PublicKey,
+	})
 }

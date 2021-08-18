@@ -327,7 +327,7 @@ func TestCallChangesFeed(t *testing.T) {
 	assert.NotEmpty(t, feed.Seq)
 	assert.Equal(t, 3, RevGeneration(feed.Seq))
 	changes := &feed.Changes
-	assert.Equal(t, []string{"2-ccc"}, changes.Changed[ref1.SID])
+	assert.Equal(t, []string{"1-aaa", "2-ccc"}, changes.Changed[ref1.SID])
 	assert.Equal(t, []string{"3-bbb"}, changes.Changed[ref2.SID])
 	expected := map[string]int{
 		foobars + "/" + id1: 0,
@@ -348,7 +348,7 @@ func TestCallChangesFeed(t *testing.T) {
 	assert.NotEmpty(t, feed3.Seq)
 	assert.Equal(t, 4, RevGeneration(feed3.Seq))
 	changes = &feed3.Changes
-	assert.Equal(t, []string{"3-ddd"}, changes.Changed[ref1.SID])
+	assert.Equal(t, []string{"1-aaa", "2-ccc", "3-ddd"}, changes.Changed[ref1.SID])
 	assert.NotContains(t, changes.Changed, ref2.SID)
 }
 

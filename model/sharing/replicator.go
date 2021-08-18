@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -298,6 +300,25 @@ func extractLastRevision(doc couchdb.JSONDoc) string {
 	return rev
 }
 
+func extractRevisionsSlice(doc couchdb.JSONDoc) []string {
+	slice := []string{}
+	subtree := doc.Get("revisions")
+	for {
+		m, ok := subtree.(map[string]interface{})
+		if !ok {
+			break
+		}
+		rev := m["rev"].(string)
+		slice = append(slice, rev)
+		branches, ok := m["branches"].([]interface{})
+		if !ok || len(branches) == 0 {
+			break
+		}
+		subtree = branches[0]
+	}
+	return slice
+}
+
 // changesResponse contains the useful informations from a call to the changes
 // feed in the replicator context
 type changesResponse struct {
@@ -349,8 +370,12 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*chang
 			continue
 		}
 		res.RuleIndexes[r.DocID] = int(idx)
-		if rev := extractLastRevision(r.Doc); rev != "" {
-			res.Changes.Changed[r.DocID] = []string{rev}
+		if strings.HasPrefix(r.DocID, consts.Files+"/") {
+			if rev := extractLastRevision(r.Doc); rev != "" {
+				res.Changes.Changed[r.DocID] = []string{rev}
+			}
+		} else {
+			res.Changes.Changed[r.DocID] = extractRevisionsSlice(r.Doc)
 		}
 	}
 	return &res, nil
@@ -395,8 +420,10 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 			parts[1] = XorID(parts[1], creds.XorKey)
 			key = parts[0] + "/" + parts[1]
 			xored[key] = old
+			leafRevs[key] = revs[len(revs)-1:]
+		} else {
+			leafRevs[key] = revs
 		}
-		leafRevs[key] = revs[len(revs)-1:]
 	}
 	body, err := json.Marshal(leafRevs)
 	if err != nil {
@@ -619,8 +646,25 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 			if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
 				return err
 			}
+			for _, doc := range okDocs {
+				d := couchdb.JSONDoc{M: doc, Type: doctype}
+				event := realtime.EventUpdate
+				if doc["_deleted"] != nil {
+					event = realtime.EventDelete
+				}
+				couchdb.RTEvent(inst, event, &d, nil)
+			}
 			refs = append(refs, newRefs...)
 			refs = append(refs, existingRefs...)
+		}
+
+		// XXX the bitwarden clients synchronize the ciphers only if the
+		// revision date from GET /bitwarden/api/accounts/revision-date has
+		// changed. So, we update it here!
+		if doctype == consts.BitwardenCiphers {
+			if setting, err := settings.Get(inst); err == nil {
+				_ = settings.UpdateRevisionDate(inst, setting)
+			}
 		}
 	}
 

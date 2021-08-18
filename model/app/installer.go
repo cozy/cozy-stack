@@ -292,12 +292,14 @@ func (i *Installer) install() error {
 	return hooks.Execute("install-app", args, func() error {
 		newManifest, err := i.ReadManifest(Installing)
 		if err != nil {
+			i.log.Debugf("Could not read manifest")
 			return err
 		}
 		i.man = newManifest
 		i.sendRealtimeEvent()
 		i.notifyChannel()
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
+			i.log.Debugf("Could not fetch tarball")
 			return err
 		}
 		i.man.SetState(i.endState)

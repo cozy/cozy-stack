@@ -59,7 +59,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		return
 	}
 	inst.Logger().WithField("nspace", "sharing").
-		Debugf("Setup for member %#v on %#v", m, inst)
+		Debugf("Setup for member %#v on %s", m, inst.Domain)
 
 	defer func() {
 		if r := recover(); r != nil {

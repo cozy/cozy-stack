@@ -20,10 +20,34 @@ var BitwardenScope = strings.Join([]string{
 	consts.BitwardenCiphers,
 	consts.BitwardenFolders,
 	consts.BitwardenOrganizations,
+	consts.BitwardenContacts,
 	consts.Konnectors,
 	consts.AppsSuggestion,
 	consts.Support,
 }, " ")
+
+// oldBitwardenScope is here to help the transition of bitwarden tokens, as the
+// com.bitwarden.contacts doctype has been added to the bitwarden scope.
+var oldBitwardenScope = strings.Join([]string{
+	consts.BitwardenProfiles,
+	consts.BitwardenCiphers,
+	consts.BitwardenFolders,
+	consts.BitwardenOrganizations,
+	consts.Konnectors,
+	consts.AppsSuggestion,
+	consts.Support,
+}, " ")
+
+// IsBitwardenScope returns true if it is the right scope for refreshing a
+// bitwarden token.
+func IsBitwardenScope(scope string) bool {
+	switch scope {
+	case BitwardenScope, oldBitwardenScope:
+		return true
+	default:
+		return false
+	}
+}
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
 // into a client_kind and a software_id (Cozy).
@@ -65,28 +89,20 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 	return "unknown", "github.com/bitwarden"
 }
 
-type bitwardenClaims struct {
-	permission.Claims
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Verified bool   `json:"email_verified"`
-	Premium  bool   `json:"premium"`
-}
-
 // CreateAccessJWT returns a new JSON Web Token that can be used with Bitwarden
 // apps. It is an access token, with some additional custom fields.
-// See https://github.com/bitwarden/jslib/blob/67b2b5318556f2d21bf4f2d117af8228b9f9549c/src/services/token.service.ts
+// See https://github.com/bitwarden/jslib/blob/master/common/src/services/token.service.ts
 func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	now := crypto.Timestamp()
 	name, err := i.SettingsPublicName()
-	if err != nil {
+	if err != nil || name == "" {
 		name = "Anonymous"
 	}
 	var stamp string
 	if settings, err := settings.Get(i); err == nil {
 		stamp = settings.SecurityStamp
 	}
-	token, err := crypto.NewJWT(i.OAuthSecret, bitwardenClaims{
+	token, err := crypto.NewJWT(i.OAuthSecret, permission.BitwardenClaims{
 		Claims: permission.Claims{
 			StandardClaims: jwt.StandardClaims{
 				Audience:  consts.AccessTokenAudience,
@@ -94,11 +110,12 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 				NotBefore: now - 60,
 				IssuedAt:  now,
 				ExpiresAt: now + int64(consts.AccessTokenValidityDuration.Seconds()),
-				Subject:   c.CouchID,
+				Subject:   i.ID(),
 			},
 			SStamp: stamp,
 			Scope:  BitwardenScope,
 		},
+		ClientID: c.CouchID,
 		Name:     name,
 		Email:    string(i.PassphraseSalt()),
 		Verified: false,

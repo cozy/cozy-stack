@@ -106,7 +106,8 @@ Content-Type: application/json
   "expires_in": 3600,
   "token_type": "Bearer",
   "refresh_token": "28fb1911ef6db24025ce1bae5aa940e117eb09dfe609b425b69bff73d73c03bf",
-  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ="
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+  "PrivateKey": null
 }
 ```
 
@@ -430,90 +431,95 @@ Content-Type: application/json
 
 ```json
 {
-	"Profile": {
-		"Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
-		"Name": "Alice",
-		"Email": "me@alice.example.com",
-		"EmailVerified": false,
-		"Premium": false,
-		"MasterPasswordHint": null,
-		"Culture": "en-US",
-		"TwoFactorEnabled": false,
-		"Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
-		"PrivateKey": null,
-		"SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
-		"Organizations": [{
-      "Id": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
-      "Name": "Cozy",
-      "Key": "4.HUzVDQVAFc4JOpW3/j/QwZeET0mXOiDW5s/HdpxLZ2GFnGcxOm1FE4XD2p7XTSwORXO/Lo8y0A87UhXKEXzfHZmpJR04pbpUPr4NJbjRKv/cSkNFlvm0rIUw/m0Jkft/gew9v3QfkVSGdSZk5XIimwkTQ5WM+WCStxbQJIKAH+AoEA5q6t9mpNNlTAQvMgqs8u7CJwSjeZ7qbabfEUVX1HIPgxC3BtVUkySRSws/gUNeMwY23kAJJQYT+uuMooZUr7umU6YkEHG2RQZwCCjVHX4czxZRWsVo/xQOYoNr7DjgCf92D7OrJlFmDtQjzSy2BjotN6vn+1SwtHbeDILWaQ==",
-      "BillingEmail": "me@cozy.localhost",
-      "Plan": "TeamsAnnually",
-      "PlanType": 5,
-      "Seats": 2,
-      "MaxCollections": 1,
-      "MaxStorageGb": 1,
-      "SelfHost": true,
-      "Use2fa": true,
-      "UseDirectory": false,
-      "UseEvents": false,
-      "UseGroups": false,
-      "UseTotp": true,
-      "UsersGetPremium": true,
-      "Enabled": true,
-      "Status": 2,
-      "Type": 2,
-      "Object": "profileOrganization"
-    }],
-		"Object": "profile"
-	},
-	"Folders": [
-		{
-			"Id": "14220912-d002-471d-a364-a82a010cb8f2",
-			"Name": "2.tqb+y2z4ChCYHj4romVwGQ==|E8+D7aR5CNnd+jF7fdb9ow==|wELCxyy341G2F+w8bTb87PAUi6sdXeIFTFb4N8tk3E0=",
-			"RevisionDate": "2017-11-13T16:20:56.5633333",
-			"Object": "folder"
-		}
-	],
-	"Ciphers": [
-		{
-			"FolderId": null,
-			"Favorite": false,
-			"Edit": true,
-			"Id": "0f01a66f-7802-42bc-9647-a82600f11e10",
-			"OrganizationId": null,
-			"Type":1,
-			"Login":{
-				"Uris": [
-					{
-						"Uri": "2.6DmdNKlm3a+9k/5DFg+pTg==|7q1Arwz/ZfKEx+fksV3yo0HMQdypHJvyiix6hzgF3gY=|7lSXqjfq5rD3/3ofNZVpgv1ags696B2XXJryiGjDZvk=",
-						"Match": null
-					}
-				],
-				"Username": "2.4Dwitdv4Br85MABzhMJ4hg==|0BJtHtXbfZWwQXbFcBn0aA==|LM4VC+qNpezmub1f4l1TMLDb9g/Q+sIis2vDbU32ZGA=",
-				"Password":"2.OOlWRBGib6G8WRvBOziKzQ==|Had/obAdd2/6y4qzM1Kc/A==|LtHXwZc5PkiReFhkzvEHIL01NrsWGvintQbmqwxoXSI=",
-				"Totp":null
-			},
-			"Name": "2.zAgCKbTvGowtaRn1er5WGA==|oVaVLIjfBQoRr5EvHTwfhQ==|lHSTUO5Rgfkjl3J/zGJVRfL8Ab5XrepmyMv9iZL5JBE=",
-			"Notes": "2.NLkXMHtgR8u9azASR4XPOQ==|6/9QPcnoeQJDKBZTjcBAjVYJ7U/ArTch0hUSHZns6v8=|p55cl9FQK/Hef+7yzM7Cfe0w07q5hZI9tTbxupZepyM=",
-			"Fields": null,
-			"Attachments": null,
-			"OrganizationUseTotp": false,
-			"RevisionDate": "2017-11-09T14:37:52.9033333",
-			"Object":"cipher"
-		}
-	],
-  "Collections": [{
-    "Id": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
-    "OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
-    "Name": "2.PowfE263ZLz7+Jqrpuezqw==|OzuXDsJnQdfa/eMKxsms6Q==|RpEB7qqs26X9dqa+KaxSE5+52TFVs4dAdfU7DCu3QXM=",
-    "Object": "collection"
-  }],
-	"Domains": {
-		"EquivalentDomains": null,
-		"GlobalEquivalentDomains": null,
-		"Object": "domains"
-	},
-	"Object": "sync"
+  "Profile": {
+    "Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+    "Name": "Alice",
+    "Email": "me@alice.example.com",
+    "EmailVerified": false,
+    "Premium": false,
+    "MasterPasswordHint": null,
+    "Culture": "en-US",
+    "TwoFactorEnabled": false,
+    "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+    "PrivateKey": null,
+    "SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
+    "Organizations": [
+      {
+        "Id": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+        "Name": "Cozy",
+        "Key": "4.HUzVDQVAFc4JOpW3/j/QwZeET0mXOiDW5s/HdpxLZ2GFnGcxOm1FE4XD2p7XTSwORXO/Lo8y0A87UhXKEXzfHZmpJR04pbpUPr4NJbjRKv/cSkNFlvm0rIUw/m0Jkft/gew9v3QfkVSGdSZk5XIimwkTQ5WM+WCStxbQJIKAH+AoEA5q6t9mpNNlTAQvMgqs8u7CJwSjeZ7qbabfEUVX1HIPgxC3BtVUkySRSws/gUNeMwY23kAJJQYT+uuMooZUr7umU6YkEHG2RQZwCCjVHX4czxZRWsVo/xQOYoNr7DjgCf92D7OrJlFmDtQjzSy2BjotN6vn+1SwtHbeDILWaQ==",
+        "BillingEmail": "me@cozy.localhost",
+        "Plan": "TeamsAnnually",
+        "PlanType": 5,
+        "Seats": 2,
+        "MaxCollections": 1,
+        "MaxStorageGb": 1,
+        "SelfHost": true,
+        "Use2fa": true,
+        "UseDirectory": false,
+        "UseEvents": false,
+        "UseGroups": false,
+        "UseTotp": true,
+        "UsersGetPremium": true,
+        "Enabled": true,
+        "Status": 2,
+        "Type": 2,
+        "Object": "profileOrganization"
+      }
+    ],
+    "Object": "profile"
+  },
+  "Folders": [
+    {
+      "Id": "14220912-d002-471d-a364-a82a010cb8f2",
+      "Name": "2.tqb+y2z4ChCYHj4romVwGQ==|E8+D7aR5CNnd+jF7fdb9ow==|wELCxyy341G2F+w8bTb87PAUi6sdXeIFTFb4N8tk3E0=",
+      "RevisionDate": "2017-11-13T16:20:56.5633333",
+      "Object": "folder"
+    }
+  ],
+  "Ciphers": [
+    {
+      "FolderId": null,
+      "Favorite": false,
+      "Edit": true,
+      "Id": "0f01a66f-7802-42bc-9647-a82600f11e10",
+      "OrganizationId": null,
+      "Type": 1,
+      "Login": {
+        "Uris": [
+          {
+            "Uri": "2.6DmdNKlm3a+9k/5DFg+pTg==|7q1Arwz/ZfKEx+fksV3yo0HMQdypHJvyiix6hzgF3gY=|7lSXqjfq5rD3/3ofNZVpgv1ags696B2XXJryiGjDZvk=",
+            "Match": null
+          }
+        ],
+        "Username": "2.4Dwitdv4Br85MABzhMJ4hg==|0BJtHtXbfZWwQXbFcBn0aA==|LM4VC+qNpezmub1f4l1TMLDb9g/Q+sIis2vDbU32ZGA=",
+        "Password": "2.OOlWRBGib6G8WRvBOziKzQ==|Had/obAdd2/6y4qzM1Kc/A==|LtHXwZc5PkiReFhkzvEHIL01NrsWGvintQbmqwxoXSI=",
+        "Totp": null
+      },
+      "Name": "2.zAgCKbTvGowtaRn1er5WGA==|oVaVLIjfBQoRr5EvHTwfhQ==|lHSTUO5Rgfkjl3J/zGJVRfL8Ab5XrepmyMv9iZL5JBE=",
+      "Notes": "2.NLkXMHtgR8u9azASR4XPOQ==|6/9QPcnoeQJDKBZTjcBAjVYJ7U/ArTch0hUSHZns6v8=|p55cl9FQK/Hef+7yzM7Cfe0w07q5hZI9tTbxupZepyM=",
+      "Fields": null,
+      "Attachments": null,
+      "OrganizationUseTotp": false,
+      "RevisionDate": "2017-11-09T14:37:52.9033333",
+      "Object": "cipher"
+    }
+  ],
+  "Collections": [
+    {
+      "Id": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
+      "OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+      "Name": "2.PowfE263ZLz7+Jqrpuezqw==|OzuXDsJnQdfa/eMKxsms6Q==|RpEB7qqs26X9dqa+KaxSE5+52TFVs4dAdfU7DCu3QXM=",
+      "Object": "collection",
+      "ReadOnly": false
+    }
+  ],
+  "Domains": {
+    "EquivalentDomains": null,
+    "GlobalEquivalentDomains": null,
+    "Object": "domains"
+  },
+  "Object": "sync"
 }
 ```
 
@@ -1245,7 +1251,7 @@ Host: alice.example.com
 HTTP/1.1 200 OK
 ```
 
-## Cozy Organization
+## Organizations and Collections
 
 ### GET /bitwarden/organizations/cozy
 
@@ -1274,6 +1280,285 @@ Content-Type: application/json
   "collectionId": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
   "organizationKey": "oWeRYokoCMFsAja6lrp3RQ1PYOrex4tgAMECP4nX+a4IXdijbejQscvWqy9bMgLsX0HRc2igqBRMWdsPuFK0PQ=="
 }
+```
+
+### POST /bitwarden/api/organizations
+
+This route can be used to create an organization, with a collection.
+
+#### Request
+
+```http
+POST /bitwarden/api/organizations HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Family",
+  "key": "4.bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+  "collectionName": "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Id": "724db920-cc4b-0139-6ab2-543d7eb8149c",
+  "Name": "Family",
+  "Key": "4.bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+  "BillingEmail": "me@cozy.localhost",
+  "Plan": "TeamsAnnually",
+  "PlanType": 9,
+  "Seats": 10,
+  "MaxCollections": 1,
+  "MaxStorageGb": 1,
+  "SelfHost": true,
+  "Use2fa": true,
+  "UseDirectory": false,
+  "UseEvents": false,
+  "UseGroups": false,
+  "UseTotp": true,
+  "UseApi": false,
+  "UsePolicies": false,
+  "UseSSO": false,
+  "UseResetPass": false,
+  "HasPublicAndPrivateKeys": false,
+  "ResetPasswordEnrolled": false,
+  "UsersGetPremium": true,
+  "Enabled": true,
+  "Status": 2,
+  "Type": 2,
+  "Object": "profileOrganization"
+}
+```
+
+### GET /bitwarden/api/organizations/:id
+
+This route can be used to fetch information about an organization.
+
+#### Request
+
+```http
+GET /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Id": "724db920-cc4b-0139-6ab2-543d7eb8149c",
+  "Name": "Family",
+  "Key": "4.bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+  "BillingEmail": "me@cozy.localhost",
+  "Plan": "TeamsAnnually",
+  "PlanType": 9,
+  "Seats": 10,
+  "MaxCollections": 1,
+  "MaxStorageGb": 1,
+  "SelfHost": true,
+  "Use2fa": true,
+  "UseDirectory": false,
+  "UseEvents": false,
+  "UseGroups": false,
+  "UseTotp": true,
+  "UseApi": false,
+  "UsePolicies": false,
+  "UseSSO": false,
+  "UseResetPass": false,
+  "HasPublicAndPrivateKeys": false,
+  "ResetPasswordEnrolled": false,
+  "UsersGetPremium": true,
+  "Enabled": true,
+  "Status": 2,
+  "Type": 2,
+  "Object": "profileOrganization"
+}
+```
+
+### GET /bitwarden/api/organizations/:id/collections
+
+This route can be used to fetch information about the collections inside an
+organization.
+
+#### Request
+
+```http
+GET /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c/collections HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Data": [
+    {
+      "Id": "62080a40-d75d-0139-21f1-543d7eb8149c",
+      "OrganizationId": "724db920-cc4b-0139-6ab2-543d7eb8149c",
+      "Name": "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=",
+      "Object": "collection"
+    }
+  ],
+  "Object": "list"
+}
+```
+
+### DELETE /bitwarden/api/organizations/:id
+
+This route can be used to delete an organization by its owner.
+
+#### Request
+
+```http
+DELETE /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "masterPasswordHash": "r5CFRR+n9NQI8a525FY+0BPR0HGOjVJX0cR1KEMnIOo="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+### GET /bitwarden/api/organizations/:id/users
+
+This route returns the list of users in the given organization.
+
+#### Request
+
+```http
+GET /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c/users HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Data": [
+    {
+      "Object": "organizationUserUserDetails",
+      "Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+      "UserId": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+      "Type": 0,
+      "Status": 2,
+      "AccessAll": true,
+      "Name": "Alice",
+      "Email": "alice@example.com"
+    },
+    {
+      "Object": "organizationUserUserDetails",
+      "Id": "89d99af0db1c0139605b543d7eb8149c",
+      "UserId": "89d99af0db1c0139605b543d7eb8149c",
+      "Type": 2,
+      "Status": 1,
+      "AccessAll": true,
+      "Name": "Bob",
+      "Email": "bob@example.com"
+    }
+  ],
+  "Object": "list"
+}
+```
+
+### POST /bitwarden/api/organizations/:id/users/:user-id/confirm
+
+This route is used by the owner of an organization to confirm that another user
+can use this sharing. The caller must check the fingerprint of the new member
+and encrypt the organization key with their public key.
+
+#### Request
+
+```http
+POST /bitwarden/api/organizations/724db920-cc4b-0139-6ab2-543d7eb8149c/users/89d99af0db1c0139605b543d7eb8149c/confirm HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "key": "4.UT/TVY6qmAjNdax2WT9JcA97wSWvEudAlqpjfxrFUieOoGA88MxzbYjpCXajEST/PehD1I7KC93jwthng772extu+lLHSd/Ce+a5Qw8+pRxL7je8QgS8gmP0FhfRLc4bl5hUMTfQcUDiuiiNaDez6E9czOzk9iuVaGpEjK4YAYgQy25m3eGc+DTPv8206NJZ/lr8CpPyhwUHjtDhlOZnDWAf+a28x2EAj1ogZKKJGAUcRENitV8Joa7OGRO6dmxtTTnWOuPDk5DajGgzpIQURNuotVHcpBtCL8HzNAduQ9vtrPKJtyAsHRdjau2SwEnaLZmxAvp7d9VG3t5nDYtgWA=="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+### GET /bitwarden/api/users/:id/public-key
+
+This route gives the public key of a user.
+
+#### Request
+
+```http
+GET /bitwarden/api/users/89d99af0db1c0139605b543d7eb8149c/public-key HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "UserId": "89d99af0db1c0139605b543d7eb8149c",
+  "PublicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1LwbnLsT8w2OBPR/zy/zRQNH+jZzD6v4qUGAJg0NfoUkBSgtq9yjor2GgeRtdf8VuNTn1kcNrUIU4f9vE3ppNJgmUss4O29OP9/ATqtC/4ri4UCWTV0DPCF4gRU1SbgTg9O3yC2UYWmrs47SgU0wwT+f5AjfDC7GzhjyX68UYIIIeKSMZasjcy+wIPVAW0hYhcEoK3Coq2O1wVwM+b2fXPIMzn38onUTbMCrkVY+FzGg6NtZbKzPvVZ0iyfQ6BxvttqSViNPOpyz7gryDhgYKokV+kwj5ARDZWL6ml73U2lL7uapk5meNKZf8w7TJGepFiewGLm08VMht6lnIZBuDQIDAQAB"
+}
+```
+
+### DELETE /bitwarden/contacts/:id
+
+This route can be used to refuse to give access to a user to shared ciphers.
+The contact will be deleted, and they will be revoked from all sharings.
+
+#### Request
+
+```http
+GET /bitwarden/contacts/89d99af0db1c0139605b543d7eb8149c HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No-Content
 ```
 
 ## Icons

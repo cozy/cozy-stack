@@ -13,10 +13,6 @@ const (
 	AppsSuggestion = "io.cozy.apps.suggestions"
 	// Konnectors doc type for konnector application manifests
 	Konnectors = "io.cozy.konnectors"
-	// Versions doc type for apps versions from the registries
-	Versions = "io.cozy.registry.versions"
-	// KonnectorLogs doc type for konnector last execution logs.
-	KonnectorLogs = "io.cozy.konnectors.logs"
 	// KonnectorsMaintenance doc type for maintenance of konnectors.
 	KonnectorsMaintenance = "io.cozy.konnectors.maintenance"
 	// Archives doc type for zip archives with files and directories
@@ -103,9 +99,11 @@ const (
 	BitwardenCiphers = "com.bitwarden.ciphers"
 	// BitwardenFolders doc type for Bitwarden folders
 	BitwardenFolders = "com.bitwarden.folders"
-	// BitwardenOrganizations doc type for Bitwarden organizations (and
-	// collections inside them)
+	// BitwardenOrganizations doc type for Bitwarden organizations
 	BitwardenOrganizations = "com.bitwarden.organizations"
+	// BitwardenContacts doc type for Bitwarden users that can be added to
+	// an organization
+	BitwardenContacts = "com.bitwarden.contacts"
 	// NotesDocuments doc type is used for manipulating the documents that
 	// represents a note before they are persisted to a file.
 	NotesDocuments = "io.cozy.notes.documents"

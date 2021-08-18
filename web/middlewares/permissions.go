@@ -118,7 +118,8 @@ var shortCodeRegexp = regexp.MustCompile(`^(\d{6}|(\w|\d){12})\.?$`)
 
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
 func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permission.Permission, error) {
-	var claims permission.Claims
+	var fullClaims permission.BitwardenClaims
+	var audience string
 	var err error
 
 	if shortCodeRegexp.MatchString(token) { // token is a shortcode
@@ -135,8 +136,15 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	}
 
 	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
-		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
-	}, &claims)
+		audience = token.Claims.(*permission.BitwardenClaims).Claims.Audience
+		return instance.PickKey(audience)
+	}, &fullClaims)
+
+	// XXX: bitwarden clients have the OAuth client ID in client_id, not subject
+	claims := fullClaims.Claims
+	if audience == consts.AccessTokenAudience && fullClaims.ClientID != "" && claims.Subject == instance.ID() {
+		claims.Subject = fullClaims.ClientID
+	}
 
 	c.Set("claims", claims)
 

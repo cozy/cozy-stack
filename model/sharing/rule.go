@@ -197,7 +197,18 @@ func (r Rule) TriggerArgs() string {
 	return args
 }
 
-// FirstFilesRule returns the first not-local rules for the files doctype
+// FirstFilesRule returns the first not-local rules for the
+// com.bitwarden.organizations doctype.
+func (s *Sharing) FirstBitwardenOrganizationRule() *Rule {
+	for i, rule := range s.Rules {
+		if !rule.Local && rule.DocType == consts.BitwardenOrganizations {
+			return &s.Rules[i]
+		}
+	}
+	return nil
+}
+
+// FirstFilesRule returns the first not-local rules for the files doctype.
 func (s *Sharing) FirstFilesRule() *Rule {
 	for i, rule := range s.Rules {
 		if !rule.Local && rule.DocType == consts.Files {

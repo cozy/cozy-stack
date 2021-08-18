@@ -126,7 +126,10 @@ func buildHTML(name string, layout string, ctx *job.WorkerContext, context, loca
 	if err != nil {
 		return "", err
 	}
-	funcMap := template.FuncMap{"t": i18n.Translator(locale, context)}
+	funcMap := template.FuncMap{
+		"t":     i18n.Translator(locale, context),
+		"tHTML": i18n.TranslatorHTML(locale, context),
+	}
 	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err

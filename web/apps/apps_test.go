@@ -530,7 +530,7 @@ func TestMain(m *testing.M) {
 	req.Host = testInstance.Domain
 	_, _ = client.Do(req)
 
-	_, token = setup.GetTestClient(consts.Apps + " io.cozy.registry.webapps " + consts.Versions)
+	_, token = setup.GetTestClient(consts.Apps + " io.cozy.registry.webapps")
 
 	os.Exit(setup.Run())
 }

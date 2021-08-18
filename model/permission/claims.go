@@ -54,3 +54,19 @@ func (claims *Claims) Expired() bool {
 	validUntil := claims.IssuedAtUTC().Add(validityDuration)
 	return validUntil.Before(time.Now().UTC())
 }
+
+// BitwardenClaims are used for bitwarden clients. The bitwarden protocol
+// expects some additional fields. Also, the subject must be the UserID, and
+// the usual subject for Cozy OAuth clients are the id of the OAuth client
+// which is not suitable here (the UserID must be the same for all bitwarden
+// clients, as it is used to compute the user fingerprint). So, the client ID
+// is saved in an additional field, client_id, and we are doing some tricks
+// to make the stack accepts those JWT.
+type BitwardenClaims struct {
+	Claims
+	ClientID string `json:"client_id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Verified bool   `json:"email_verified"`
+	Premium  bool   `json:"premium"`
+}

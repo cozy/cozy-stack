@@ -587,7 +587,7 @@ msgid "Permissions com.bitwarden.folders"
 msgstr "Dossiers du gestionnaire de mot de passe"
 
 msgid "Permissions com.bitwarden.organizations"
-msgstr "Organisations du gestionnaire de mot de passe"
+msgstr "Dossiers partagés de mot de passe"
 
 msgid "Permissions io.cozy.accounts"
 msgstr "Comptes"
@@ -986,7 +986,7 @@ msgid "Mail Sharing Request Intro"
 msgstr "Bonjour,"
 
 msgid "Mail Sharing Request Description"
-msgstr "%s (%s) vous invite à %s le %s %s sur son espace personnel, Cozy."
+msgstr "%s (%s) vous invite à %s le %s **%s** sur son espace personnel, Cozy."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "consulter"
@@ -1022,6 +1022,9 @@ msgstr "Vous avez un nouveau partage disponible dans votre Cozy"
 
 msgid "Notification Sharing Description"
 msgstr "%s vous invite à %s le %s %s"
+
+msgid "Notification Sharing Type Organization"
+msgstr "dossier partagé de mots de passe"
 
 msgid "Notification Sharing Type Document"
 msgstr "document"

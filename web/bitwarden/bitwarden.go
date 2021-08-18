@@ -218,15 +218,16 @@ func GetToken(c echo.Context) error {
 // AccessTokenReponse is the stuct used for serializing to JSON the response
 // for an access token.
 type AccessTokenReponse struct {
-	ClientID   string `json:"client_id,omitempty"`
-	RegToken   string `json:"registration_access_token,omitempty"`
-	Type       string `json:"token_type"`
-	ExpiresIn  int    `json:"expires_in"`
-	Access     string `json:"access_token"`
-	Refresh    string `json:"refresh_token"`
-	Key        string `json:"Key"`
-	Kdf        int    `json:"Kdf"`
-	Iterations int    `json:"KdfIterations"`
+	ClientID   string      `json:"client_id,omitempty"`
+	RegToken   string      `json:"registration_access_token,omitempty"`
+	Type       string      `json:"token_type"`
+	ExpiresIn  int         `json:"expires_in"`
+	Access     string      `json:"access_token"`
+	Refresh    string      `json:"refresh_token"`
+	Key        string      `json:"Key"`
+	PrivateKey interface{} `json:"PrivateKey"`
+	Kdf        int         `json:"Kdf"`
+	Iterations int         `json:"KdfIterations"`
 }
 
 func getInitialCredentials(c echo.Context) error {
@@ -334,6 +335,9 @@ func getInitialCredentials(c echo.Context) error {
 		Kdf:        setting.PassphraseKdf,
 		Iterations: setting.PassphraseKdfIterations,
 	}
+	if setting.PrivateKey != "" {
+		out.PrivateKey = setting.PrivateKey
+	}
 	return c.JSON(http.StatusOK, out)
 }
 
@@ -383,7 +387,7 @@ func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
 		"error":             "invalid_grant",
 		"error_description": "Two factor required.",
 		// 1 means email
-		// https://github.com/bitwarden/jslib/blob/master/src/enums/twoFactorProviderType.ts
+		// https://github.com/bitwarden/jslib/blob/master/common/src/enums/twoFactorProviderType.ts
 		"TwoFactorProviders": []int{1},
 		"TwoFactorProviders2": map[string]map[string]string{
 			"1": {"Email": obscured},
@@ -398,7 +402,7 @@ func refreshToken(c echo.Context) error {
 
 	// Check the refresh token
 	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
-	if !ok || claims.Scope != bitwarden.BitwardenScope {
+	if !ok || !bitwarden.IsBitwardenScope(claims.Scope) {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
 		})
@@ -437,6 +441,9 @@ func refreshToken(c echo.Context) error {
 		Key:        key,
 		Kdf:        setting.PassphraseKdf,
 		Iterations: setting.PassphraseKdfIterations,
+	}
+	if setting.PrivateKey != "" {
+		out.PrivateKey = setting.PrivateKey
 	}
 	return c.JSON(http.StatusOK, out)
 }
@@ -525,12 +532,22 @@ func Routes(router *echo.Group) {
 	folders.DELETE("/:id", DeleteFolder)
 	folders.POST("/:id/delete", DeleteFolder)
 
+	orgs := api.Group("/organizations")
+	orgs.POST("", CreateOrganization)
+	orgs.GET("/:id", GetOrganization)
+	orgs.GET("/:id/collections", GetCollections)
+	orgs.DELETE("/:id", DeleteOrganization)
+	orgs.GET("/:id/users", ListOrganizationUser)
+	orgs.POST("/:id/users/:user-id/confirm", ConfirmUser)
+
+	router.GET("/organizations/cozy", GetCozy)
+	router.DELETE("/contacts/:id", RefuseContact)
+
+	api.GET("/users/:id/public-key", GetPublicKey)
+
 	hub := router.Group("/notifications/hub")
 	hub.GET("", WebsocketHub)
 	hub.POST("/negotiate", NegotiateHub)
-
-	orgs := router.Group("/organizations")
-	orgs.GET("/cozy", GetCozy)
 
 	icons := router.Group("/icons")
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{

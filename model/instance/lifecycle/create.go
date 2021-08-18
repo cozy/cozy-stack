@@ -201,6 +201,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Jobs) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Permissions) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Sharings) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.BitwardenCiphers) })
 		g.Go(func() error {
 			var errg error
 			if errg = couchdb.CreateNamedDocWithDB(i, settings); errg != nil {

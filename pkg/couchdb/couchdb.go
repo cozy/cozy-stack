@@ -1126,3 +1126,5 @@ type NormalDocsResponse struct {
 	Bookmark       string            `json:"bookmark"`
 	ExecutionStats *ExecutionStats   `json:"execution_stats,omitempty"`
 }
+
+var _ realtime.Doc = (*JSONDoc)(nil)
