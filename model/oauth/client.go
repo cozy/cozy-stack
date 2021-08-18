@@ -302,6 +302,13 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 func (c *Client) CheckSoftwareID(instance *instance.Instance) *ClientRegistrationError {
 	if strings.HasPrefix(c.SoftwareID, "registry://") {
 		appSlug := strings.TrimPrefix(c.SoftwareID, "registry://")
+		if appSlug == consts.StoreSlug || appSlug == consts.SettingsSlug {
+			return &ClientRegistrationError{
+				Code:        http.StatusBadRequest,
+				Error:       "unapproved_software_id",
+				Description: "Link with store/settings is forbidden",
+			}
+		}
 		_, err := registry.GetApplication(appSlug, instance.Registries())
 		if err != nil {
 			return &ClientRegistrationError{
@@ -491,6 +498,11 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
+	c.AllowLoginScope = old.AllowLoginScope
+	c.OnboardingSecret = ""
+	c.OnboardingApp = ""
+	c.OnboardingPermissions = ""
+	c.OnboardingState = ""
 	if c.NotificationPlatform == "" {
 		c.NotificationPlatform = old.NotificationPlatform
 	}
