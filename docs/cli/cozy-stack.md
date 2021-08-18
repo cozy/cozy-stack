@@ -28,7 +28,6 @@ cozy-stack <command> [flags]
 
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
 * [cozy-stack assets](cozy-stack_assets.md)	 - Show and manage dynamic assets
-* [cozy-stack bug](cozy-stack_bug.md)	 - start a bug report
 * [cozy-stack check](cozy-stack_check.md)	 - A set of tools to check that instances are in the expected state.
 * [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
@@ -43,6 +42,7 @@ cozy-stack <command> [flags]
 * [cozy-stack settings](cozy-stack_settings.md)	 - Display and update settings
 * [cozy-stack status](cozy-stack_status.md)	 - Check if the HTTP server is running
 * [cozy-stack swift](cozy-stack_swift.md)	 - Interact directly with OpenStack Swift object storage
+* [cozy-stack tools](cozy-stack_tools.md)	 - Regroup some tools for debugging and tests
 * [cozy-stack triggers](cozy-stack_triggers.md)	 - Interact with the triggers
 * [cozy-stack version](cozy-stack_version.md)	 - Print the version number
 

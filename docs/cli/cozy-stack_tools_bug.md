@@ -1,4 +1,4 @@
-## cozy-stack bug
+## cozy-stack tools bug
 
 start a bug report
 
@@ -10,7 +10,7 @@ The report includes useful system information.
 	
 
 ```
-cozy-stack bug [flags]
+cozy-stack tools bug [flags]
 ```
 
 ### Options
@@ -31,5 +31,5 @@ cozy-stack bug [flags]
 
 ### SEE ALSO
 
-* [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack tools](cozy-stack_tools.md)	 - Regroup some tools for debugging and tests
 

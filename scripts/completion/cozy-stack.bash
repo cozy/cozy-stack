@@ -737,38 +737,6 @@ _cozy-stack_assets()
     noun_aliases=()
 }
 
-_cozy-stack_bug()
-{
-    last_command="cozy-stack_bug"
-
-    command_aliases=()
-
-    commands=()
-
-    flags=()
-    two_word_flags=()
-    local_nonpersistent_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--admin-host=")
-    two_word_flags+=("--admin-host")
-    flags+=("--admin-port=")
-    two_word_flags+=("--admin-port")
-    flags+=("--config=")
-    two_word_flags+=("--config")
-    two_word_flags+=("-c")
-    flags+=("--host=")
-    two_word_flags+=("--host")
-    flags+=("--port=")
-    two_word_flags+=("--port")
-    two_word_flags+=("-p")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-    noun_aliases=()
-}
-
 _cozy-stack_check_fs()
 {
     last_command="cozy-stack_check_fs"
@@ -4240,6 +4208,104 @@ _cozy-stack_swift()
     noun_aliases=()
 }
 
+_cozy-stack_tools_bug()
+{
+    last_command="cozy-stack_tools_bug"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_tools_encrypt-with-rsa()
+{
+    last_command="cozy-stack_tools_encrypt-with-rsa"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_tools()
+{
+    last_command="cozy-stack_tools"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("bug")
+    commands+=("encrypt-with-rsa")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_triggers_launch()
 {
     last_command="cozy-stack_triggers_launch"
@@ -4420,7 +4486,6 @@ _cozy-stack_root_command()
     commands=()
     commands+=("apps")
     commands+=("assets")
-    commands+=("bug")
     commands+=("check")
     commands+=("completion")
     commands+=("config")
@@ -4448,6 +4513,7 @@ _cozy-stack_root_command()
     commands+=("settings")
     commands+=("status")
     commands+=("swift")
+    commands+=("tools")
     commands+=("triggers")
     commands+=("version")
 
@@ -4477,7 +4543,7 @@ _cozy-stack_root_command()
 
 __start_cozy-stack()
 {
-    local cur prev words cword
+    local cur prev words cword split
     declare -A flaghash 2>/dev/null || :
     declare -A aliashash 2>/dev/null || :
     if declare -F _init_completion >/dev/null 2>&1; then
@@ -4493,11 +4559,13 @@ __start_cozy-stack()
     local flags_with_completion=()
     local flags_completion=()
     local commands=("cozy-stack")
+    local command_aliases=()
     local must_have_one_flag=()
     local must_have_one_noun=()
     local has_completion_function
     local last_command
     local nouns=()
+    local noun_aliases=()
 
     __cozy-stack_handle_word
 }
