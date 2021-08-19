@@ -649,7 +649,7 @@ func GetAvatar(c echo.Context) error {
 	// Use the public avatar from the member's instance
 	res, err := http.Get(m.Instance + "/public/avatar?fallback=404")
 	if err != nil {
-		return err
+		return localAvatar(c, m)
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound && c.QueryParam("fallback") != "404" {
