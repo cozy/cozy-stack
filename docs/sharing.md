@@ -710,6 +710,41 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/:sharing-id/public-key
+
+This route can be used by a sharing member to send their new public key after
+they have chosen their password for the first time (delegated authentication).
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/public-key HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+Authorization: Bearer ...
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.answer",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "bitwarden": {
+        "user_id": "0dc76ad9b1cf3a979b916b3155001830",
+        "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1wboB9QutvRKGswphAre6xi4boYxSw4IjXqXDTV297Cq/MB2cBklj+sMmRQNTkU266HFSTGp3jDVcegAsHMpVVlTKZnWW+gSP2+vSyGs9NUvG8JfLday1iuOntHJQkfYiZ7+BfBYFtx6iWRnbnegickyoS7PWibLP5lmEzZnFtrGcRT8urSfN61qlOVD1u+eqtif5tabdU6eyNWUMLCQYgtaGb1nNht/xDgbpBc3b2XbEF0tBJRFR5571EH1h//Ae7IT+pYuBZB9BoPAHj4fhQm3++oNjemUJbaVi0dM4KNfQ89z1lBBCh5lxAGPlpOjapN0qGPgSov8B9U+qXlmzQIDAQAB"
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### POST /sharings/:sharing-id/recipients
 
 This route allows the sharer to add new recipients to a sharing. It can also be

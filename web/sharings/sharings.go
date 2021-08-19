@@ -230,6 +230,31 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+// ReceivePublicKey is used to receive the public key of a sharing member. It can
+// be used when the member has delegated authentication, and didn't have a
+// password when they accepted the sharing: this route is called when the user
+// choose a password a bit later in cozy pass web.
+func ReceivePublicKey(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	member, err := requestMember(c, s)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var creds sharing.APICredentials
+	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil || creds.Bitwarden == nil {
+		return jsonapi.BadJSON()
+	}
+	if err := s.SaveBitwarden(inst, member, creds.Bitwarden); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // ChangeCozyAddress is called when a Cozy has been moved to a new address.
 func ChangeCozyAddress(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -697,6 +722,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)                    // On the recipient
 	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                                     // On the recipient
 	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions)                 // On the sharer
+	router.POST("/:sharing-id/public-key", ReceivePublicKey)
 
 	// Delegated routes for open sharing
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
