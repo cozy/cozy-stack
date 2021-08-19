@@ -320,7 +320,7 @@ func getInitialCredentials(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	inst.Logger().WithField("nspace", "bitwarden").
+	inst.Logger().WithField("nspace", "loginaudit").
 		Infof("New bitwarden client from %s at %s", ip, time.Now())
 
 	// Send the response
