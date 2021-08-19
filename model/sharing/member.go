@@ -1077,19 +1077,31 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		return nil
 	}
 
-	contact := &bitwarden.Contact{}
-	err := couchdb.GetDoc(inst, consts.BitwardenContacts, bw.UserID, contact)
-	if couchdb.IsNotFoundError(err) {
-		md := metadata.New()
-		md.DocTypeVersion = bitwarden.DocTypeVersion
-		contact.UserID = bw.UserID
-		contact.Email = m.Email
-		contact.PublicKey = bw.PublicKey
-		contact.Metadata = *md
-		err = couchdb.CreateNamedDocWithDB(inst, contact)
-	}
-	if err != nil {
-		return err
+	if bw.PublicKey != "" {
+		contact := &bitwarden.Contact{}
+		err := couchdb.GetDoc(inst, consts.BitwardenContacts, bw.UserID, contact)
+		if couchdb.IsNotFoundError(err) {
+			md := metadata.New()
+			md.DocTypeVersion = bitwarden.DocTypeVersion
+			contact.UserID = bw.UserID
+			contact.Email = m.Email
+			contact.PublicKey = bw.PublicKey
+			contact.Metadata = *md
+			err = couchdb.CreateNamedDocWithDB(inst, contact)
+		}
+		if err != nil {
+			return err
+		}
+		// The public key can have been changed if the member has reset their password
+		if contact.PublicKey != bw.PublicKey {
+			contact.UserID = bw.UserID
+			contact.PublicKey = bw.PublicKey
+			contact.Confirmed = false
+			contact.Metadata.UpdatedAt = time.Now()
+			if err := couchdb.UpdateDoc(inst, contact); err != nil {
+				return err
+			}
+		}
 	}
 
 	org := &bitwarden.Organization{}
@@ -1101,7 +1113,10 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		domain = u.Host
 	}
 	orgKey := org.Members[domain].OrgKey
-	status := bitwarden.OrgMemberAccepted
+	status := bitwarden.OrgMemberInvited
+	if bw.PublicKey != "" {
+		status = bitwarden.OrgMemberAccepted
+	}
 	if orgKey != "" {
 		status = bitwarden.OrgMemberConfirmed
 	}

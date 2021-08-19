@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -191,6 +192,9 @@ func updatePassphrase(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		go func() {
+			_ = sharing.SendPublicKey(inst, params.PublicKey)
+		}()
 		if hasSession {
 			_, _ = auth.SetCookieForNewSession(c, session.LongRun)
 		}
