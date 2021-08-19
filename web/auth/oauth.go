@@ -277,7 +277,7 @@ func authorize(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	instance.Logger().WithField("nspace", "oauth").
+	instance.Logger().WithField("nspace", "loginaudit").
 		Infof("Access code created from %s at %s with scope %s", ip, time.Now(), access.Scope)
 
 	// We should be sending "code" only, but for compatibility reason, we keep
