@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -1269,12 +1268,8 @@ func TestLogoutNoToken(t *testing.T) {
 }
 
 func TestLogoutSuccess(t *testing.T) {
-	a := app.WebappManifest{
-		DocID:   consts.Apps + "/home",
-		DocSlug: "home",
-	}
-	token := testInstance.BuildAppToken(a.Slug(), getSessionID(jar.Cookies(nil)))
-	_, err := permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{}, "1.0.0")
+	token := testInstance.BuildAppToken("home", getSessionID(jar.Cookies(nil)))
+	_, err := permission.CreateWebappSet(testInstance, "home", permission.Set{}, "1.0.0")
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -1333,12 +1328,8 @@ func TestLogoutOthers(t *testing.T) {
 	cookies2 := res2.Cookies()
 	assert.Len(t, cookies2, 2)
 
-	a := app.WebappManifest{
-		DocID:   consts.Apps + "/home",
-		DocSlug: "home",
-	}
-	token := testInstance.BuildAppToken(a.Slug(), getSessionID(cookies1))
-	_, err = permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{}, "1.0.0")
+	token := testInstance.BuildAppToken("home", getSessionID(cookies1))
+	_, err = permission.CreateWebappSet(testInstance, "home", permission.Set{}, "1.0.0")
 	assert.NoError(t, err)
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)

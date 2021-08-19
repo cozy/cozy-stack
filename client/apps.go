@@ -45,6 +45,7 @@ type AppManifest struct {
 		Messages     *json.RawMessage `json:"messages,omitempty"`
 		OAuth        *json.RawMessage `json:"oauth,omitempty"`
 		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
+		ClientSide   bool             `json:"clientSide,omitempty"`
 
 		Slug        string `json:"slug"`
 		State       string `json:"state"`

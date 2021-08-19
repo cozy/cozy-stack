@@ -407,12 +407,11 @@ func appVersion(c echo.Context) error {
 	version := c.Param("version")
 
 	var instancesAppVersion []string
-	var doc app.WebappManifest
 
 	for _, instance := range instances {
-		err := couchdb.GetDoc(instance, consts.Apps, consts.Apps+"/"+appSlug, &doc)
+		app, err := app.GetBySlug(instance, appSlug, consts.WebappType)
 		if err == nil {
-			if doc.Version() == version {
+			if app.Version() == version {
 				instancesAppVersion = append(instancesAppVersion, instance.Domain)
 			}
 		}

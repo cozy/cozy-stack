@@ -124,31 +124,35 @@ func TestMain(m *testing.M) {
 	})
 	_, token = setup.GetTestClient(consts.Settings)
 
-	webapp := &app.WebappManifest{
-		DocID:          consts.Apps + "/app",
-		DocSlug:        "app",
-		DocPermissions: permission.Set{},
+	webapp := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":  consts.Apps + "/app",
+			"slug": "app",
+		},
 	}
 	err := couchdb.CreateNamedDoc(ins, webapp)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appPerms, err = permission.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions(), "1.0.0")
+	appPerms, err = permission.CreateWebappSet(ins, "app", permission.Set{}, "1.0.0")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appToken = ins.BuildAppToken(webapp.Slug(), "")
-	files := &app.WebappManifest{
-		DocID:          consts.Apps + "/files",
-		DocSlug:        "files",
-		DocPermissions: permission.Set{},
-		Intents: []app.Intent{
-			{
-				Action: "PICK",
-				Types:  []string{"io.cozy.files", "image/gif"},
-				Href:   "/pick",
+	appToken = ins.BuildAppToken("app", "")
+	files := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":  consts.Apps + "/files",
+			"slug": "files",
+			"intents": []app.Intent{
+				{
+					Action: "PICK",
+					Types:  []string{"io.cozy.files", "image/gif"},
+					Href:   "/pick",
+				},
 			},
 		},
 	}
@@ -156,11 +160,11 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if _, err := permission.CreateWebappSet(ins, files.Slug(), files.Permissions(), "1.0.0"); err != nil {
+	if _, err := permission.CreateWebappSet(ins, "files", permission.Set{}, "1.0.0"); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	filesToken = ins.BuildAppToken(files.Slug(), "")
+	filesToken = ins.BuildAppToken("files", "")
 
 	ts = setup.GetTestServer("/intents", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler

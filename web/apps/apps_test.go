@@ -46,7 +46,6 @@ const slug = "mini"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
-var manifest *apps.WebappManifest
 
 var jar http.CookieJar
 var client *http.Client
@@ -71,35 +70,38 @@ func createFile(dir, filename, content string) error {
 }
 
 func installMiniApp() error {
-	manifest = &apps.WebappManifest{
-		DocID:     consts.Apps + "/" + slug,
-		Name:      "Mini",
-		Icon:      "icon.svg",
-		DocSlug:   slug,
-		DocSource: "git://github.com/cozy/mini.git",
-		DocState:  apps.Ready,
-		Intents: []apps.Intent{
-			{
-				Action: "PICK",
-				Types:  []string{"io.cozy.foos"},
-				Href:   "/foo",
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":    consts.Apps + "/" + slug,
+			"name":   "Mini",
+			"icon":   "icon.svg",
+			"slug":   slug,
+			"source": "git://github.com/cozy/mini.git",
+			"state":  apps.Ready,
+			"intents": []apps.Intent{
+				{
+					Action: "PICK",
+					Types:  []string{"io.cozy.foos"},
+					Href:   "/foo",
+				},
 			},
-		},
-		Routes: apps.Routes{
-			"/foo": apps.Route{
-				Folder: "/",
-				Index:  "index.html",
-				Public: false,
-			},
-			"/bar": apps.Route{
-				Folder: "/bar",
-				Index:  "index.html",
-				Public: false,
-			},
-			"/public": apps.Route{
-				Folder: "/public",
-				Index:  "index.html",
-				Public: true,
+			"routes": apps.Routes{
+				"/foo": apps.Route{
+					Folder: "/",
+					Index:  "index.html",
+					Public: false,
+				},
+				"/bar": apps.Route{
+					Folder: "/bar",
+					Index:  "index.html",
+					Public: false,
+				},
+				"/public": apps.Route{
+					Folder: "/public",
+					Index:  "index.html",
+					Public: true,
+				},
 			},
 		},
 	}

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -1262,16 +1261,19 @@ func generateAppToken(inst *instance.Instance, slug, doctype string) string {
 	if err != nil {
 		return ""
 	}
-	manifest := &app.WebappManifest{
-		DocID:          consts.Apps + "/" + slug,
-		DocSlug:        slug,
-		DocPermissions: rules,
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":         consts.Apps + "/" + slug,
+			"slug":        slug,
+			"permissions": rules,
+		},
 	}
 	err = couchdb.CreateNamedDocWithDB(inst, manifest)
 	if err != nil {
 		return ""
 	}
-	return inst.BuildAppToken(manifest.Slug(), "")
+	return inst.BuildAppToken(slug, "")
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

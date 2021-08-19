@@ -70,27 +70,30 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 
 	if appSlug := oauth.GetLinkedAppSlug(params.client.SoftwareID); appSlug != "" {
-		var webappManifest app.WebappManifest
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
 		if err != nil {
 			return true, renderError(c, http.StatusBadRequest, "Cannot find application on instance registries")
 		}
 
-		err = json.Unmarshal(webapp.Manifest, &webappManifest)
+		var manifest struct {
+			Slug        string         `json:"slug"`
+			Name        string         `json:"name"`
+			Permissions permission.Set `json:"permissions"`
+		}
+		err = json.Unmarshal(webapp.Manifest, &manifest)
 		if err != nil {
 			return true, renderError(c, http.StatusBadRequest, "Cannot decode application manifest")
 		}
 
-		perms := webappManifest.Permissions()
-		params.scope, err = perms.MarshalScopeString()
+		params.scope, err = manifest.Permissions.MarshalScopeString()
 		if err != nil {
 			return true, renderError(c, http.StatusBadRequest, "Cannot marshal scope permissions")
 		}
 
 		params.webapp = &webappParams{
-			Slug: webappManifest.Slug(),
-			Name: webappManifest.Name,
+			Slug: manifest.Slug,
+			Name: manifest.Name,
 		}
 	}
 

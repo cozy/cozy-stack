@@ -217,7 +217,7 @@ func orphanAccountFixer(c echo.Context) error {
 		return err
 	}
 
-	var konnectors []*app.KonnManifest
+	var konnectors []*couchdb.JSONDoc
 	err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func orphanAccountFixer(c echo.Context) error {
 		}
 		found := false
 		for _, konn := range konnectors {
-			if konn.Slug() == acc.AccountType {
+			if konn.M["slug"] == acc.AccountType {
 				found = true
 				break
 			}
