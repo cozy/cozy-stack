@@ -251,5 +251,6 @@ describe "The bitwarden API of the stack" do
     assert_equal bw2.logout, "You have logged out."
 
     inst.remove
+    inst_recipient.remove
   end
 end

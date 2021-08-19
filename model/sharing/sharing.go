@@ -3,6 +3,8 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -873,6 +876,68 @@ func CountNewShortcuts(inst *instance.Instance) (int, error) {
 		}
 		bookmark = res.Bookmark
 	}
+}
+
+// SendPublicKey can be used to send the public key after it has been
+// created/changed to the sharing owners.
+func SendPublicKey(inst *instance.Instance, publicKey string) error {
+	sharings, err := GetSharingsByDocType(inst, consts.BitwardenOrganizations)
+	if err != nil {
+		return err
+	}
+	var errm error
+	for _, s := range sharings {
+		if s.Owner || !s.Active || s.Credentials == nil {
+			continue
+		}
+		if err := s.sendPublicKeyToOwner(inst, publicKey); err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
+}
+
+func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	ac := APICredentials{
+		Bitwarden: &APIBitwarden{
+			UserID:    inst.ID(),
+			PublicKey: publicKey,
+		},
+	}
+	data, err := jsonapi.MarshalObject(&ac)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
+	if err != nil {
+		return err
+	}
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/public-key",
+		Headers: request.Headers{
+			"Content-Type":  "application/vnd.api+json",
+			"Authorization": "Bearer " + s.Credentials[0].AccessToken.AccessToken,
+		},
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, err, s, &s.Members[0], &s.Credentials[0], opts, body)
+	}
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(ioutil.Discard, res.Body)
+	res.Body.Close()
+	return nil
 }
 
 // CheckSharings will scan all the io.cozy.sharings documents and check their
