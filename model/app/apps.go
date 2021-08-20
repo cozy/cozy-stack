@@ -78,9 +78,14 @@ type Manifest interface {
 	LastUpdate() time.Time
 	Terms() Terms
 
+	Name() string
+	Icon() string
+	Notifications() Notifications
+
 	SetError(err error)
 	Error() error
 
+	SetSlug(slug string)
 	SetSource(src *url.URL)
 	SetState(state State)
 	SetVersion(version string)

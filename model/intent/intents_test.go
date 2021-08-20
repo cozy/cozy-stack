@@ -28,32 +28,38 @@ func TestGenerateHref(t *testing.T) {
 }
 
 func TestFillServices(t *testing.T) {
-	files := &app.WebappManifest{
-		DocID:   consts.Apps + "/files",
-		DocSlug: "files",
-		Intents: []app.Intent{
-			{
-				Action: "PICK",
-				Types:  []string{"io.cozy.files", "image/gif"},
-				Href:   "/pick",
+	files := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":  consts.Apps + "/files",
+			"slug": "files",
+			"intents": []app.Intent{
+				{
+					Action: "PICK",
+					Types:  []string{"io.cozy.files", "image/gif"},
+					Href:   "/pick",
+				},
 			},
 		},
 	}
 	err := couchdb.CreateNamedDoc(ins, files)
 	assert.NoError(t, err)
-	photos := &app.WebappManifest{
-		DocID:   consts.Apps + "/photos",
-		DocSlug: "photos",
-		Intents: []app.Intent{
-			{
-				Action: "PICK",
-				Types:  []string{"image/*"},
-				Href:   "/picker",
-			},
-			{
-				Action: "VIEW",
-				Types:  []string{"io.cozy.files"},
-				Href:   "/viewer",
+	photos := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":  consts.Apps + "/photos",
+			"slug": "photos",
+			"intents": []app.Intent{
+				{
+					Action: "PICK",
+					Types:  []string{"image/*"},
+					Href:   "/picker",
+				},
+				{
+					Action: "VIEW",
+					Types:  []string{"io.cozy.files"},
+					Href:   "/viewer",
+				},
 			},
 		},
 	}

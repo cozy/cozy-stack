@@ -71,10 +71,11 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 
 	var service *app.Service
 	var ok bool
+	services := man.Services()
 	if name != "" {
-		service, ok = man.Services[name]
+		service, ok = services[name]
 	} else {
-		for _, s := range man.Services {
+		for _, s := range services {
 			if s.File == opts.File {
 				service, ok = s, true
 				break

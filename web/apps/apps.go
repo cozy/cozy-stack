@@ -50,7 +50,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 	switch a := man.Manifest.(type) {
 	case (*app.WebappManifest):
 		route = "/apps/"
-		if a.Icon != "" {
+		if a.Icon() != "" {
 			links.Icon = "/apps/" + a.Slug() + "/icon/" + a.Version()
 		}
 		if (a.State() == app.Ready || a.State() == app.Installed) &&
@@ -59,7 +59,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 		}
 	case (*app.KonnManifest):
 		route = "/konnectors/"
-		if a.Icon != "" {
+		if a.Icon() != "" {
 			links.Icon = "/konnectors/" + a.Slug() + "/icon/" + a.Version()
 		}
 		links.Perms = "/permissions/konnectors/" + a.Slug()
@@ -115,13 +115,11 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		var overridenParameters *json.RawMessage
+		var overridenParameters map[string]interface{}
 		if p := c.QueryParam("Parameters"); p != "" {
-			var v json.RawMessage
-			if err := json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &overridenParameters); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
-			overridenParameters = &v
 		}
 
 		var w http.ResponseWriter
@@ -170,13 +168,11 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		var overridenParameters *json.RawMessage
+		var overridenParameters map[string]interface{}
 		if p := c.QueryParam("Parameters"); p != "" {
-			var v json.RawMessage
-			if err := json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &overridenParameters); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
-			overridenParameters = &v
 		}
 
 		var w http.ResponseWriter
@@ -333,7 +329,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 
 		slug := man.Slug()
 		for i := range toDelete {
-			toDelete[i].ManifestOnDelete = man.OnDeleteAccount != ""
+			toDelete[i].ManifestOnDelete = man.OnDeleteAccount() != ""
 			toDelete[i].Slug = slug
 		}
 
@@ -528,10 +524,10 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		var filepath string
 		switch appType {
 		case consts.WebappType:
-			filepath = path.Join("/", a.(*app.WebappManifest).Icon)
+			filepath = path.Join("/", a.(*app.WebappManifest).Icon())
 			fs = app.AppsFileServer(instance)
 		case consts.KonnectorType:
-			filepath = path.Join("/", a.(*app.KonnManifest).Icon)
+			filepath = path.Join("/", a.(*app.KonnManifest).Icon())
 			fs = app.KonnectorsFileServer(instance)
 		}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -46,7 +47,7 @@ type Installer struct {
 	db       prefixer.Prefixer
 	endState State
 
-	overridenParameters *json.RawMessage
+	overridenParameters map[string]interface{}
 	permissionsAcked    bool
 
 	man     Manifest
@@ -73,7 +74,7 @@ type InstallerOptions struct {
 	// Used to override the "Parameters" field of konnectors during installation.
 	// This modification is useful to allow the parameterization of a konnector
 	// at its installation as we do not have yet a registry up and running.
-	OverridenParameters *json.RawMessage
+	OverridenParameters map[string]interface{}
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -203,15 +204,24 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 		switch opts.Type {
 		case consts.WebappType:
 			man = &WebappManifest{
-				DocID:   consts.Apps + "/" + slug,
-				DocSlug: slug,
+				doc: &couchdb.JSONDoc{
+					Type: consts.Apps,
+					M: map[string]interface{}{
+						"_id": consts.Apps + "/" + slug,
+					},
+				},
 			}
 		case consts.KonnectorType:
 			man = &KonnManifest{
-				DocID:   consts.Konnectors + "/" + slug,
-				DocSlug: slug,
+				doc: &couchdb.JSONDoc{
+					Type: consts.Konnectors,
+					M: map[string]interface{}{
+						"_id": consts.Konnectors + "/" + slug,
+					},
+				},
 			}
 		}
+		man.SetSlug(slug)
 	} else {
 		man, err = GetBySlug(db, slug, opts.Type)
 		if err != nil {
@@ -436,7 +446,7 @@ func (i *Installer) update() error {
 		i.man.SetState(i.endState)
 	} else {
 		if i.man.AppType() == consts.WebappType {
-			i.man.(*WebappManifest).oldServices = i.man.(*WebappManifest).Services
+			i.man.(*WebappManifest).oldServices = i.man.(*WebappManifest).val.Services
 		}
 		i.man.SetSource(i.src)
 		if availableVersion != "" {
@@ -510,7 +520,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 		i.src.Scheme != "registry")
 	if shouldOverrideParameters {
 		if m, ok := newManifest.(*KonnManifest); ok {
-			m.Parameters = i.overridenParameters
+			m.val.Parameters = i.overridenParameters
 		}
 	}
 

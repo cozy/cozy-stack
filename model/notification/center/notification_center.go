@@ -98,10 +98,11 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 			if err != nil {
 				return err
 			}
-			if m.Notifications == nil {
+			notifications := m.Notifications()
+			if notifications == nil {
 				return ErrNoCategory
 			}
-			p, ok = m.Notifications[n.Category]
+			p, ok = notifications[n.Category]
 		} else if c.Notifications != nil {
 			p, ok = c.Notifications[n.Category]
 		}
@@ -115,11 +116,12 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		if err != nil {
 			return err
 		}
-		if m.Notifications == nil {
+		notifications := m.Notifications()
+		if notifications == nil {
 			return ErrNoCategory
 		}
 		var ok bool
-		p, ok = m.Notifications[n.Category]
+		p, ok = notifications[n.Category]
 		if !ok {
 			return ErrCategoryNotFound
 		}
@@ -131,11 +133,12 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		if err != nil {
 			return err
 		}
-		if m.Notifications == nil {
+		notifications := m.Notifications()
+		if notifications == nil {
 			return ErrNoCategory
 		}
 		var ok bool
-		p, ok = m.Notifications[n.Category]
+		p, ok = notifications[n.Category]
 		if !ok {
 			return ErrCategoryNotFound
 		}

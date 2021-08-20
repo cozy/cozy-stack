@@ -269,7 +269,7 @@ func (im *importer) importAccount(zf *zip.File) error {
 		im.installApp(consts.Konnectors + "/" + slug)
 		man, err = app.GetKonnectorBySlug(im.inst, slug)
 	}
-	if err != nil || man.OnDeleteAccount != "" {
+	if err != nil || man.OnDeleteAccount() != "" {
 		im.servicesInError[slug] = true
 		return nil
 	}

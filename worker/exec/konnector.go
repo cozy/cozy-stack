@@ -257,7 +257,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	if w.msg.AccountDeleted {
 		// make sure we are not executing a path outside of the konnector's
 		// directory
-		fileExecPath := path.Join("/", path.Clean(w.man.OnDeleteAccount))
+		fileExecPath := path.Join("/", path.Clean(w.man.OnDeleteAccount()))
 		fileExecPath = fileExecPath[1:]
 		if fileExecPath == "" {
 			return "", cleanDir, job.ErrAbort
@@ -478,16 +478,18 @@ func (w *konnectorWorker) Slug() string {
 }
 
 func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
-	var parameters interface{} = w.man.Parameters
+	parameters := w.man.Parameters()
 
 	accountTypes, err := account.FindAccountTypesBySlug(w.slug, i.ContextName)
 	if err == nil && len(accountTypes) == 1 && accountTypes[0].HasSecretGrant() {
 		secret := accountTypes[0].Secret
-		if w.man.Parameters == nil {
+		if parameters == nil {
 			parameters = map[string]interface{}{"secret": secret}
 		} else {
-			var params map[string]interface{}
-			_ = json.Unmarshal(*w.man.Parameters, &params)
+			params := map[string]interface{}{}
+			for k, v := range parameters {
+				params[k] = v
+			}
 			params["secret"] = secret
 			parameters = params
 		}
@@ -498,7 +500,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 		return
 	}
 
-	language := w.man.Language
+	language := w.man.Language()
 	if language == "" {
 		language = "node"
 	}

@@ -4,10 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -31,16 +29,12 @@ func TestSubdomain(t *testing.T) {
 }
 
 func TestBuildAppToken(t *testing.T) {
-	manifest := &app.WebappManifest{
-		DocID:   consts.Apps + "/my-app",
-		DocSlug: "my-app",
-	}
 	inst := &instance.Instance{
 		Domain:     "test-ctx-token.example.com",
 		SessSecret: crypto.GenerateRandomBytes(64),
 	}
 
-	tokenString := inst.BuildAppToken(manifest.Slug(), "sessionid")
+	tokenString := inst.BuildAppToken("my-app", "sessionid")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		assert.True(t, ok, "The signing method should be HMAC")
