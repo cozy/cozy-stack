@@ -69,6 +69,11 @@ type Terms struct {
 	Version string `json:"version"`
 }
 
+// Locales is used for the translations of the application name.
+type Locales map[string]struct {
+	Name string `json:"name"`
+}
+
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
@@ -99,6 +104,7 @@ type WebappManifest struct {
 		Intents       []Intent       `json:"intents"`
 		Routes        Routes         `json:"routes"`
 		Services      Services       `json:"services"`
+		Locales       Locales        `json:"locales"`
 		Notifications Notifications  `json:"notifications"`
 	}
 
@@ -222,17 +228,11 @@ func (m *WebappManifest) Fetch(field string) []string {
 
 // NameLocalized returns the name of the app in the given locale
 func (m *WebappManifest) NameLocalized(locale string) string {
-	// TODO localized name
-	// if m.Locales != nil && locale != "" {
-	// 	var locales map[string]struct {
-	// 		Name string `json:"name"`
-	// 	}
-	// 	if err := json.Unmarshal(*m.Locales, &locales); err == nil {
-	// 		if v, ok := locales[locale]; ok && v.Name != "" {
-	// 			return v.Name
-	// 		}
-	// 	}
-	// }
+	if m.val.Locales != nil && locale != "" {
+		if v, ok := m.val.Locales[locale]; ok && v.Name != "" {
+			return v.Name
+		}
+	}
 	return m.val.Name
 }
 
@@ -247,6 +247,7 @@ func (m *WebappManifest) MarshalJSON() ([]byte, error) {
 	} else {
 		m.doc.M["available_version"] = m.val.AvailableVersion
 	}
+	m.doc.M["checksum"] = m.val.Checksum
 	m.doc.M["created_at"] = m.val.CreatedAt
 	m.doc.M["updated_at"] = m.val.UpdatedAt
 	if m.val.Err == "" {
@@ -254,6 +255,8 @@ func (m *WebappManifest) MarshalJSON() ([]byte, error) {
 	} else {
 		m.doc.M["error"] = m.val.Err
 	}
+	// XXX: keep the weird UnmarshalJSON of permission.Set
+	m.doc.M["permissions"] = m.val.Permissions
 	return json.Marshal(m.doc)
 }
 

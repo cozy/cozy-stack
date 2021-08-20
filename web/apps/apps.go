@@ -115,13 +115,11 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		var overridenParameters *json.RawMessage
+		var overridenParameters map[string]interface{}
 		if p := c.QueryParam("Parameters"); p != "" {
-			var v json.RawMessage
-			if err := json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &overridenParameters); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
-			overridenParameters = &v
 		}
 
 		var w http.ResponseWriter
@@ -170,13 +168,11 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		var overridenParameters *json.RawMessage
+		var overridenParameters map[string]interface{}
 		if p := c.QueryParam("Parameters"); p != "" {
-			var v json.RawMessage
-			if err := json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &overridenParameters); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
-			overridenParameters = &v
 		}
 
 		var w http.ResponseWriter

@@ -181,6 +181,7 @@ func (m *KonnManifest) MarshalJSON() ([]byte, error) {
 	} else {
 		m.doc.M["available_version"] = m.val.AvailableVersion
 	}
+	m.doc.M["checksum"] = m.val.Checksum
 	if m.val.Parameters == nil {
 		delete(m.doc.M, "parameters")
 	} else {
@@ -193,6 +194,8 @@ func (m *KonnManifest) MarshalJSON() ([]byte, error) {
 	} else {
 		m.doc.M["error"] = m.val.Err
 	}
+	// XXX: keep the weird UnmarshalJSON of permission.Set
+	m.doc.M["permissions"] = m.val.Permissions
 	return json.Marshal(m.doc)
 }
 

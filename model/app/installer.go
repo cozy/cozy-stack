@@ -47,7 +47,7 @@ type Installer struct {
 	db       prefixer.Prefixer
 	endState State
 
-	overridenParameters *json.RawMessage
+	overridenParameters map[string]interface{}
 	permissionsAcked    bool
 
 	man     Manifest
@@ -74,7 +74,7 @@ type InstallerOptions struct {
 	// Used to override the "Parameters" field of konnectors during installation.
 	// This modification is useful to allow the parameterization of a konnector
 	// at its installation as we do not have yet a registry up and running.
-	OverridenParameters *json.RawMessage
+	OverridenParameters map[string]interface{}
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -520,9 +520,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 		i.src.Scheme != "registry")
 	if shouldOverrideParameters {
 		if m, ok := newManifest.(*KonnManifest); ok {
-			// TODO Parameters
-			m.val.Parameters["TODO"] = true
-			// m.Parameters = i.overridenParameters
+			m.val.Parameters = i.overridenParameters
 		}
 	}
 
