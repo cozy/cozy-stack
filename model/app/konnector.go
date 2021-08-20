@@ -21,66 +21,40 @@ import (
 // KonnManifest contains all the informations associated with an installed
 // konnector.
 type KonnManifest struct {
-	DocID  string `json:"_id,omitempty"`
-	DocRev string `json:"_rev,omitempty"`
-
-	Name       string `json:"name"`
-	NamePrefix string `json:"name_prefix,omitempty"`
-	Editor     string `json:"editor"`
-	Icon       string `json:"icon"`
-
-	Type        string           `json:"type,omitempty"`
-	License     string           `json:"license,omitempty"`
-	Language    string           `json:"language,omitempty"`
-	VendorLink  *json.RawMessage `json:"vendor_link"`
-	Locales     *json.RawMessage `json:"locales,omitempty"`
-	Langs       *json.RawMessage `json:"langs,omitempty"`
-	Platforms   *json.RawMessage `json:"platforms,omitempty"`
-	Categories  *json.RawMessage `json:"categories,omitempty"`
-	Developer   *json.RawMessage `json:"developer,omitempty"`
-	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
-	Tags        *json.RawMessage `json:"tags,omitempty"`
-	Partnership *json.RawMessage `json:"partnership,omitempty"`
-
-	Frequency    string           `json:"frequency,omitempty"`
-	DataTypes    *json.RawMessage `json:"data_types,omitempty"`
-	Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
-	Fields       *json.RawMessage `json:"fields,omitempty"`
-	Folders      *json.RawMessage `json:"folders,omitempty"`
-	Messages     *json.RawMessage `json:"messages,omitempty"`
-	OAuth        *json.RawMessage `json:"oauth,omitempty"`
-	TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
-
-	Aggregator *json.RawMessage `json:"aggregator,omitempty"`
-
-	Parameters    *json.RawMessage `json:"parameters,omitempty"`
-	Notifications Notifications    `json:"notifications"`
-
-	// OnDeleteAccount can be used to specify a file path which will be executed
-	// when an account associated with the konnector is deleted.
-	OnDeleteAccount string `json:"on_delete_account,omitempty"`
-
-	DocSlug             string         `json:"slug"`
-	DocState            State          `json:"state"`
-	DocSource           string         `json:"source"`
-	DocVersion          string         `json:"version"`
-	DocChecksum         string         `json:"checksum"`
-	DocPermissions      permission.Set `json:"permissions"`
-	DocAvailableVersion string         `json:"available_version,omitempty"`
-	DocTerms            Terms          `json:"terms,omitempty"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	Err string `json:"error,omitempty"`
+	doc *couchdb.JSONDoc
 	err error
+
+	val struct {
+		// Fields that can be read and updated
+		Slug             string                 `json:"slug"`
+		Source           string                 `json:"source"`
+		State            State                  `json:"state"`
+		Version          string                 `json:"version"`
+		AvailableVersion string                 `json:"available_version"`
+		Checksum         string                 `json:"checksum"`
+		Parameters       map[string]interface{} `json:"parameters"`
+		CreatedAt        time.Time              `json:"created_at"`
+		UpdatedAt        time.Time              `json:"updated_at"`
+		Err              string                 `json:"error"`
+
+		// Just readers
+		Name            string `json:"name"`
+		Icon            string `json:"icon"`
+		Language        string `json:"language"`
+		OnDeleteAccount string `json:"on_delete_account"`
+
+		// Fields with complex types
+		Permissions   permission.Set `json:"permissions"`
+		Terms         Terms          `json:"terms"`
+		Notifications Notifications  `json:"notifications"`
+	}
 }
 
 // ID is part of the Manifest interface
-func (m *KonnManifest) ID() string { return m.DocID }
+func (m *KonnManifest) ID() string { return m.doc.ID() }
 
 // Rev is part of the Manifest interface
-func (m *KonnManifest) Rev() string { return m.DocRev }
+func (m *KonnManifest) Rev() string { return m.doc.Rev() }
 
 // DocType is part of the Manifest interface
 func (m *KonnManifest) DocType() string { return consts.Konnectors }
@@ -88,95 +62,68 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 // Clone is part of the Manifest interface
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
-
-	cloned.DocPermissions = make(permission.Set, len(m.DocPermissions))
-	copy(cloned.DocPermissions, m.DocPermissions)
-
-	cloned.Locales = cloneRawMessage(m.Locales)
-	cloned.Langs = cloneRawMessage(m.Langs)
-	cloned.Platforms = cloneRawMessage(m.Platforms)
-	cloned.Categories = cloneRawMessage(m.Categories)
-	cloned.Developer = cloneRawMessage(m.Developer)
-	cloned.Screenshots = cloneRawMessage(m.Screenshots)
-	cloned.Tags = cloneRawMessage(m.Tags)
-	cloned.Partnership = cloneRawMessage(m.Partnership)
-	cloned.Parameters = cloneRawMessage(m.Parameters)
-
-	cloned.DataTypes = cloneRawMessage(m.DataTypes)
-	cloned.Doctypes = cloneRawMessage(m.Doctypes)
-	cloned.Fields = cloneRawMessage(m.Fields)
-	cloned.Folders = cloneRawMessage(m.Folders)
-	cloned.Messages = cloneRawMessage(m.Messages)
-	cloned.OAuth = cloneRawMessage(m.OAuth)
-	cloned.TimeInterval = cloneRawMessage(m.TimeInterval)
-
-	cloned.Aggregator = cloneRawMessage(m.Aggregator)
-
-	cloned.Notifications = make(Notifications, len(m.Notifications))
-	for k, v := range m.Notifications {
-		props := (&v).Clone()
-		cloned.Notifications[k] = *props
-	}
+	cloned.doc = m.doc.Clone().(*couchdb.JSONDoc)
 	return &cloned
 }
 
 // SetID is part of the Manifest interface
-func (m *KonnManifest) SetID(id string) { m.DocID = id }
+func (m *KonnManifest) SetID(id string) { m.doc.SetID(id) }
 
 // SetRev is part of the Manifest interface
-func (m *KonnManifest) SetRev(rev string) { m.DocRev = rev }
+func (m *KonnManifest) SetRev(rev string) { m.doc.SetRev(rev) }
+
+// SetSlug is part of the Manifest interface
+func (m *KonnManifest) SetSlug(slug string) { m.val.Slug = slug }
 
 // SetSource is part of the Manifest interface
-func (m *KonnManifest) SetSource(src *url.URL) { m.DocSource = src.String() }
+func (m *KonnManifest) SetSource(src *url.URL) { m.val.Source = src.String() }
 
 // Source is part of the Manifest interface
-func (m *KonnManifest) Source() string { return m.DocSource }
+func (m *KonnManifest) Source() string { return m.val.Source }
 
 // Version is part of the Manifest interface
-func (m *KonnManifest) Version() string { return m.DocVersion }
+func (m *KonnManifest) Version() string { return m.val.Version }
 
 // AvailableVersion is part of the Manifest interface
-func (m *KonnManifest) AvailableVersion() string { return m.DocAvailableVersion }
+func (m *KonnManifest) AvailableVersion() string { return m.val.AvailableVersion }
 
 // Checksum is part of the Manifest interface
-func (m *KonnManifest) Checksum() string { return m.DocChecksum }
+func (m *KonnManifest) Checksum() string { return m.val.Checksum }
 
 // Slug is part of the Manifest interface
-func (m *KonnManifest) Slug() string { return m.DocSlug }
+func (m *KonnManifest) Slug() string { return m.val.Slug }
 
 // State is part of the Manifest interface
-func (m *KonnManifest) State() State { return m.DocState }
+func (m *KonnManifest) State() State { return m.val.State }
 
 // LastUpdate is part of the Manifest interface
-func (m *KonnManifest) LastUpdate() time.Time { return m.UpdatedAt }
+func (m *KonnManifest) LastUpdate() time.Time { return m.val.UpdatedAt }
 
 // SetState is part of the Manifest interface
-func (m *KonnManifest) SetState(state State) { m.DocState = state }
+func (m *KonnManifest) SetState(state State) { m.val.State = state }
 
 // SetVersion is part of the Manifest interface
-func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
+func (m *KonnManifest) SetVersion(version string) { m.val.Version = version }
 
 // SetAvailableVersion is part of the Manifest interface
-func (m *KonnManifest) SetAvailableVersion(version string) { m.DocAvailableVersion = version }
+func (m *KonnManifest) SetAvailableVersion(version string) { m.val.AvailableVersion = version }
 
 // SetChecksum is part of the Manifest interface
-func (m *KonnManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
+func (m *KonnManifest) SetChecksum(shasum string) { m.val.Checksum = shasum }
 
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() consts.AppType { return consts.KonnectorType }
 
 // Terms is part of the Manifest interface
-func (m *KonnManifest) Terms() Terms { return m.DocTerms }
+func (m *KonnManifest) Terms() Terms { return m.val.Terms }
 
 // Permissions is part of the Manifest interface
-func (m *KonnManifest) Permissions() permission.Set {
-	return m.DocPermissions
-}
+func (m *KonnManifest) Permissions() permission.Set { return m.val.Permissions }
 
 // SetError is part of the Manifest interface
 func (m *KonnManifest) SetError(err error) {
 	m.SetState(Errored)
-	m.Err = err.Error()
+	m.val.Err = err.Error()
 	m.err = err
 }
 
@@ -187,9 +134,74 @@ func (m *KonnManifest) Error() error { return m.err }
 func (m *KonnManifest) Fetch(field string) []string {
 	switch field {
 	case "slug":
-		return []string{m.DocSlug}
+		return []string{m.val.Slug}
 	case "state":
-		return []string{string(m.DocState)}
+		return []string{string(m.val.State)}
+	}
+	return nil
+}
+
+// Notifications returns the notifications properties for this konnector.
+func (m *KonnManifest) Notifications() Notifications {
+	return m.val.Notifications
+}
+
+// Parameters returns the parameters for executing the konnector.
+func (m *KonnManifest) Parameters() map[string]interface{} {
+	return m.val.Parameters
+}
+
+// Name returns the konnector name.
+func (m *KonnManifest) Name() string { return m.val.Name }
+
+// Icon returns the konnector icon path.
+func (m *KonnManifest) Icon() string { return m.val.Icon }
+
+// Language returns the programming language used for executing the konnector
+// (only "node" for the moment).
+func (m *KonnManifest) Language() string { return m.val.Language }
+
+// OnDeleteAccount can be used to specify a file path which will be executed
+// when an account associated with the konnector is deleted.
+func (m *KonnManifest) OnDeleteAccount() string { return m.val.OnDeleteAccount }
+
+// VendorLink returns the vendor link.
+func (m *KonnManifest) VendorLink() interface{} {
+	return m.doc.M["vendor_link"]
+}
+
+func (m *KonnManifest) MarshalJSON() ([]byte, error) {
+	m.doc.Type = consts.Konnectors
+	m.doc.M["slug"] = m.val.Slug
+	m.doc.M["source"] = m.val.Source
+	m.doc.M["state"] = m.val.State
+	m.doc.M["version"] = m.val.Version
+	if m.val.AvailableVersion == "" {
+		delete(m.doc.M, "available_version")
+	} else {
+		m.doc.M["available_version"] = m.val.AvailableVersion
+	}
+	if m.val.Parameters == nil {
+		delete(m.doc.M, "parameters")
+	} else {
+		m.doc.M["parameters"] = m.val.Parameters
+	}
+	m.doc.M["created_at"] = m.val.CreatedAt
+	m.doc.M["updated_at"] = m.val.UpdatedAt
+	if m.val.Err == "" {
+		delete(m.doc.M, "error")
+	} else {
+		m.doc.M["error"] = m.val.Err
+	}
+	return json.Marshal(m.doc)
+}
+
+func (m *KonnManifest) UnmarshalJSON(j []byte) error {
+	if err := json.Unmarshal(j, &m.doc); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(j, &m.val); err != nil {
+		return err
 	}
 	return nil
 }
@@ -204,11 +216,11 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manife
 	newManifest.SetID(consts.Konnectors + "/" + slug)
 	newManifest.SetRev(m.Rev())
 	newManifest.SetState(m.State())
-	newManifest.CreatedAt = m.CreatedAt
-	newManifest.DocSlug = slug
-	newManifest.DocSource = sourceURL
-	if newManifest.Parameters == nil {
-		newManifest.Parameters = m.Parameters
+	newManifest.val.CreatedAt = m.val.CreatedAt
+	newManifest.val.Slug = slug
+	newManifest.val.Source = sourceURL
+	if newManifest.val.Parameters == nil {
+		newManifest.val.Parameters = m.val.Parameters
 	}
 
 	return &newManifest, nil
@@ -216,9 +228,9 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manife
 
 // Create is part of the Manifest interface
 func (m *KonnManifest) Create(db prefixer.Prefixer) error {
-	m.DocID = consts.Konnectors + "/" + m.DocSlug
-	m.CreatedAt = time.Now()
-	m.UpdatedAt = time.Now()
+	m.SetID(consts.Konnectors + "/" + m.Slug())
+	m.val.CreatedAt = time.Now()
+	m.val.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
@@ -229,7 +241,7 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 
 // Update is part of the Manifest interface
 func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permission.Set) error {
-	m.UpdatedAt = time.Now()
+	m.val.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err
@@ -299,7 +311,8 @@ func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByA
 func (m *KonnManifest) triggerCrontab() string {
 	now := time.Now()
 	hours := m.getRandomHour()
-	switch m.Frequency {
+	freq, _ := m.doc.M["frequency"].(string)
+	switch freq {
 	case "hourly":
 		return fmt.Sprintf("0 %d * * * *", now.Minute())
 	case "daily":
@@ -313,31 +326,26 @@ func (m *KonnManifest) triggerCrontab() string {
 
 func (m *KonnManifest) getRandomHour() int {
 	min, max := 0, 5 // By default konnectors are run at random hour between 12:00PM and 05:00AM
-	if m.TimeInterval != nil {
-		var interval [2]int
-		if err := json.Unmarshal(*m.TimeInterval, &interval); err != nil {
-			min = interval[0]
-			if interval[1] > min {
-				max = interval[1]
-			}
+	interval, ok := m.doc.M["time_interval"].([]int)
+	if ok && len(interval) == 2 {
+		min = interval[0]
+		if interval[1] > min {
+			max = interval[1]
 		}
 	}
 	return min + rand.Intn(max-min)
 }
 
 func (m *KonnManifest) hasFolderPath() bool {
-	if m.Fields == nil {
+	fields, ok := m.doc.M["fields"].(map[string]interface{})
+	if !ok {
 		return false
 	}
-	var fields struct {
-		Advanced struct {
-			FolderPath interface{} `json:"folderPath"`
-		} `json:"advanced_fields"`
-	}
-	if err := json.Unmarshal(*m.Fields, &fields); err != nil {
+	advanced, ok := fields["advanced_fields"].(map[string]interface{})
+	if !ok {
 		return false
 	}
-	return fields.Advanced.FolderPath != nil
+	return advanced["folderPath"] != nil
 }
 
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given
@@ -346,15 +354,15 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
-	man := &KonnManifest{}
-	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, man)
+	doc := &KonnManifest{}
+	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, doc)
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	return man, nil
+	return doc, nil
 }
 
 // GetKonnectorBySlugAndUpdate fetch the KonnManifest and perform an update of

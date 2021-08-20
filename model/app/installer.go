@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -208,9 +209,14 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 			}
 		case consts.KonnectorType:
 			man = &KonnManifest{
-				DocID:   consts.Konnectors + "/" + slug,
-				DocSlug: slug,
+				doc: &couchdb.JSONDoc{
+					Type: consts.Konnectors,
+					M: map[string]interface{}{
+						"_id": consts.Konnectors + "/" + slug,
+					},
+				},
 			}
+			man.SetSlug(slug)
 		}
 	} else {
 		man, err = GetBySlug(db, slug, opts.Type)
@@ -510,7 +516,9 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 		i.src.Scheme != "registry")
 	if shouldOverrideParameters {
 		if m, ok := newManifest.(*KonnManifest); ok {
-			m.Parameters = i.overridenParameters
+			// TODO Parameters
+			m.val.Parameters["TODO"] = true
+			// m.Parameters = i.overridenParameters
 		}
 	}
 

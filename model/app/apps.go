@@ -81,6 +81,7 @@ type Manifest interface {
 	SetError(err error)
 	Error() error
 
+	SetSlug(slug string)
 	SetSource(src *url.URL)
 	SetState(state State)
 	SetVersion(version string)

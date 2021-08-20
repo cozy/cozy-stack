@@ -59,7 +59,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 		}
 	case (*app.KonnManifest):
 		route = "/konnectors/"
-		if a.Icon != "" {
+		if a.Icon() != "" {
 			links.Icon = "/konnectors/" + a.Slug() + "/icon/" + a.Version()
 		}
 		links.Perms = "/permissions/konnectors/" + a.Slug()
@@ -333,7 +333,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 
 		slug := man.Slug()
 		for i := range toDelete {
-			toDelete[i].ManifestOnDelete = man.OnDeleteAccount != ""
+			toDelete[i].ManifestOnDelete = man.OnDeleteAccount() != ""
 			toDelete[i].Slug = slug
 		}
 
@@ -531,7 +531,7 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 			filepath = path.Join("/", a.(*app.WebappManifest).Icon)
 			fs = app.AppsFileServer(instance)
 		case consts.KonnectorType:
-			filepath = path.Join("/", a.(*app.KonnManifest).Icon)
+			filepath = path.Join("/", a.(*app.KonnManifest).Icon())
 			fs = app.KonnectorsFileServer(instance)
 		}
 

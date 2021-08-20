@@ -202,6 +202,9 @@ func (m *WebappManifest) State() State { return m.DocState }
 // LastUpdate is part of the Manifest interface
 func (m *WebappManifest) LastUpdate() time.Time { return m.UpdatedAt }
 
+// SetSlug is part of the Manifest interface
+func (m *WebappManifest) SetSlug(slug string) { m.DocSlug = slug }
+
 // SetState is part of the Manifest interface
 func (m *WebappManifest) SetState(state State) { m.DocState = state }
 

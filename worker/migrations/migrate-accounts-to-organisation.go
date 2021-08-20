@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -61,7 +60,7 @@ func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSON
 	uris := []bitwarden.LoginURI{u}
 
 	ivName := crypto.GenerateRandomBytes(16)
-	encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(manifest.Name), ivName)
+	encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(manifest.Name()), ivName)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +129,9 @@ func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSON
 }
 
 func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
-	var link string
-	if manifest.VendorLink == nil {
+	link, ok := manifest.VendorLink().(string)
+	if !ok {
 		return "", nil
-	}
-	if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
-		return "", err
 	}
 	link = strings.Trim(link, "'")
 	return link, nil
