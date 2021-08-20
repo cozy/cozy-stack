@@ -63,7 +63,7 @@ type Intent struct {
 	Href   string   `json:"href"`
 }
 
-// Terms of an application/konnector
+// Terms of an application/webapp
 type Terms struct {
 	URL     string `json:"url"`
 	Version string `json:"version"`
@@ -72,62 +72,47 @@ type Terms struct {
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
-	DocID  string `json:"_id,omitempty"`
-	DocRev string `json:"_rev,omitempty"`
+	doc *couchdb.JSONDoc
+	err error
 
-	Name       string `json:"name"`
-	NamePrefix string `json:"name_prefix,omitempty"`
-	Editor     string `json:"editor"`
-	Icon       string `json:"icon"`
+	val struct {
+		// Fields that can be read and updated
+		Slug             string    `json:"slug"`
+		Source           string    `json:"source"`
+		State            State     `json:"state"`
+		Version          string    `json:"version"`
+		AvailableVersion string    `json:"available_version"`
+		Checksum         string    `json:"checksum"`
+		CreatedAt        time.Time `json:"created_at"`
+		UpdatedAt        time.Time `json:"updated_at"`
+		Err              string    `json:"error"`
 
-	Type        string           `json:"type,omitempty"`
-	License     string           `json:"license,omitempty"`
-	Language    string           `json:"language,omitempty"`
-	Category    string           `json:"category,omitempty"`
-	VendorLink  *json.RawMessage `json:"vendor_link"`
-	Locales     *json.RawMessage `json:"locales,omitempty"`
-	Langs       *json.RawMessage `json:"langs,omitempty"`
-	Platforms   *json.RawMessage `json:"platforms,omitempty"`
-	Categories  *json.RawMessage `json:"categories,omitempty"`
-	Developer   *json.RawMessage `json:"developer,omitempty"`
-	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
-	Tags        *json.RawMessage `json:"tags,omitempty"`
-	Partnership *json.RawMessage `json:"partnership,omitempty"`
+		// Just readers
+		Name       string `json:"name"`
+		NamePrefix string `json:"name_prefix"`
+		Icon       string `json:"icon"`
+		Editor     string `json:"editor"`
 
-	DocSlug             string         `json:"slug"`
-	DocState            State          `json:"state"`
-	DocSource           string         `json:"source"`
-	DocChecksum         string         `json:"checksum"`
-	DocVersion          string         `json:"version"`
-	DocPermissions      permission.Set `json:"permissions"`
-	DocAvailableVersion string         `json:"available_version,omitempty"`
-	DocTerms            Terms          `json:"terms,omitempty"`
-
-	Intents       []Intent      `json:"intents"`
-	Routes        Routes        `json:"routes"`
-	Services      Services      `json:"services"`
-	Notifications Notifications `json:"notifications"`
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+		// Fields with complex types
+		Permissions   permission.Set `json:"permissions"`
+		Terms         Terms          `json:"terms"`
+		Intents       []Intent       `json:"intents"`
+		Routes        Routes         `json:"routes"`
+		Services      Services       `json:"services"`
+		Notifications Notifications  `json:"notifications"`
+	}
 
 	FromAppsDir bool        `json:"-"` // Used in development
 	Instance    SubDomainer `json:"-"` // Used for JSON-API links
 
 	oldServices Services // Used to diff against when updating the app
-
-	Err string `json:"error,omitempty"`
-	err error
-
-	// NOTE: Do not forget to propagate changes made to this structure to the
-	// structure AppManifest in client/apps.go.
 }
 
 // ID is part of the Manifest interface
-func (m *WebappManifest) ID() string { return m.DocID }
+func (m *WebappManifest) ID() string { return m.doc.ID() }
 
 // Rev is part of the Manifest interface
-func (m *WebappManifest) Rev() string { return m.DocRev }
+func (m *WebappManifest) Rev() string { return m.doc.Rev() }
 
 // DocType is part of the Manifest interface
 func (m *WebappManifest) DocType() string { return consts.Apps }
@@ -135,103 +120,89 @@ func (m *WebappManifest) DocType() string { return consts.Apps }
 // Clone implements couchdb.Doc
 func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned := *m
-
-	cloned.Routes = make(Routes, len(m.Routes))
-	for k, v := range m.Routes {
-		cloned.Routes[k] = v
-	}
-
-	cloned.Services = make(Services, len(m.Services))
-	for k, v := range m.Services {
-		tmp := *v
-		cloned.Services[k] = &tmp
-	}
-
-	cloned.Notifications = make(Notifications, len(m.Notifications))
-	for k, v := range m.Notifications {
-		props := (&v).Clone()
-		cloned.Notifications[k] = *props
-	}
-
-	cloned.VendorLink = cloneRawMessage(m.VendorLink)
-	cloned.Locales = cloneRawMessage(m.Locales)
-	cloned.Langs = cloneRawMessage(m.Langs)
-	cloned.Platforms = cloneRawMessage(m.Platforms)
-	cloned.Categories = cloneRawMessage(m.Categories)
-	cloned.Developer = cloneRawMessage(m.Developer)
-	cloned.Screenshots = cloneRawMessage(m.Screenshots)
-	cloned.Tags = cloneRawMessage(m.Tags)
-	cloned.Partnership = cloneRawMessage(m.Partnership)
-
-	cloned.Intents = make([]Intent, len(m.Intents))
-	copy(cloned.Intents, m.Intents)
-
-	cloned.DocPermissions = make(permission.Set, len(m.DocPermissions))
-	copy(cloned.DocPermissions, m.DocPermissions)
-
+	cloned.doc = m.doc.Clone().(*couchdb.JSONDoc)
 	return &cloned
 }
 
 // SetID is part of the Manifest interface
-func (m *WebappManifest) SetID(id string) { m.DocID = id }
+func (m *WebappManifest) SetID(id string) { m.doc.SetID(id) }
 
 // SetRev is part of the Manifest interface
-func (m *WebappManifest) SetRev(rev string) { m.DocRev = rev }
+func (m *WebappManifest) SetRev(rev string) { m.doc.SetRev(rev) }
 
 // SetSource is part of the Manifest interface
-func (m *WebappManifest) SetSource(src *url.URL) { m.DocSource = src.String() }
+func (m *WebappManifest) SetSource(src *url.URL) { m.val.Source = src.String() }
 
 // Source is part of the Manifest interface
-func (m *WebappManifest) Source() string { return m.DocSource }
+func (m *WebappManifest) Source() string { return m.val.Source }
 
 // Version is part of the Manifest interface
-func (m *WebappManifest) Version() string { return m.DocVersion }
+func (m *WebappManifest) Version() string { return m.val.Version }
 
 // AvailableVersion is part of the Manifest interface
-func (m *WebappManifest) AvailableVersion() string { return m.DocAvailableVersion }
+func (m *WebappManifest) AvailableVersion() string { return m.val.AvailableVersion }
 
 // Checksum is part of the Manifest interface
-func (m *WebappManifest) Checksum() string { return m.DocChecksum }
+func (m *WebappManifest) Checksum() string { return m.val.Checksum }
 
 // Slug is part of the Manifest interface
-func (m *WebappManifest) Slug() string { return m.DocSlug }
+func (m *WebappManifest) Slug() string { return m.val.Slug }
 
 // State is part of the Manifest interface
-func (m *WebappManifest) State() State { return m.DocState }
+func (m *WebappManifest) State() State { return m.val.State }
 
 // LastUpdate is part of the Manifest interface
-func (m *WebappManifest) LastUpdate() time.Time { return m.UpdatedAt }
+func (m *WebappManifest) LastUpdate() time.Time { return m.val.UpdatedAt }
 
 // SetSlug is part of the Manifest interface
-func (m *WebappManifest) SetSlug(slug string) { m.DocSlug = slug }
+func (m *WebappManifest) SetSlug(slug string) { m.val.Slug = slug }
 
 // SetState is part of the Manifest interface
-func (m *WebappManifest) SetState(state State) { m.DocState = state }
+func (m *WebappManifest) SetState(state State) { m.val.State = state }
 
 // SetVersion is part of the Manifest interface
-func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
+func (m *WebappManifest) SetVersion(version string) { m.val.Version = version }
 
 // SetAvailableVersion is part of the Manifest interface
-func (m *WebappManifest) SetAvailableVersion(version string) { m.DocAvailableVersion = version }
+func (m *WebappManifest) SetAvailableVersion(version string) { m.val.AvailableVersion = version }
 
 // SetChecksum is part of the Manifest interface
-func (m *WebappManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
+func (m *WebappManifest) SetChecksum(shasum string) { m.val.Checksum = shasum }
 
 // AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() consts.AppType { return consts.WebappType }
 
 // Terms is part of the Manifest interface
-func (m *WebappManifest) Terms() Terms { return m.DocTerms }
+func (m *WebappManifest) Terms() Terms { return m.val.Terms }
 
 // Permissions is part of the Manifest interface
-func (m *WebappManifest) Permissions() permission.Set {
-	return m.DocPermissions
+func (m *WebappManifest) Permissions() permission.Set { return m.val.Permissions }
+
+// Name returns the webapp name.
+func (m *WebappManifest) Name() string { return m.val.Name }
+
+// Icon returns the webapp icon path.
+func (m *WebappManifest) Icon() string { return m.val.Icon }
+
+// Editor returns the webapp editor.
+func (m *WebappManifest) Editor() string { return m.val.Editor }
+
+// NamePrefix returns the webapp name prefix.
+func (m *WebappManifest) NamePrefix() string { return m.val.NamePrefix }
+
+// Notifications returns the notifications properties for this webapp.
+func (m *WebappManifest) Notifications() Notifications {
+	return m.val.Notifications
+}
+
+func (m *WebappManifest) Services() Services {
+	return m.val.Services
 }
 
 // SetError is part of the Manifest interface
 func (m *WebappManifest) SetError(err error) {
 	m.SetState(Errored)
-	m.Err = err.Error()
+	m.val.Err = err.Error()
 	m.err = err
 }
 
@@ -242,26 +213,58 @@ func (m *WebappManifest) Error() error { return m.err }
 func (m *WebappManifest) Fetch(field string) []string {
 	switch field {
 	case "slug":
-		return []string{m.DocSlug}
+		return []string{m.val.Slug}
 	case "state":
-		return []string{string(m.DocState)}
+		return []string{string(m.val.State)}
 	}
 	return nil
 }
 
 // NameLocalized returns the name of the app in the given locale
 func (m *WebappManifest) NameLocalized(locale string) string {
-	if m.Locales != nil && locale != "" {
-		var locales map[string]struct {
-			Name string `json:"name"`
-		}
-		if err := json.Unmarshal(*m.Locales, &locales); err == nil {
-			if v, ok := locales[locale]; ok && v.Name != "" {
-				return v.Name
-			}
-		}
+	// TODO localized name
+	// if m.Locales != nil && locale != "" {
+	// 	var locales map[string]struct {
+	// 		Name string `json:"name"`
+	// 	}
+	// 	if err := json.Unmarshal(*m.Locales, &locales); err == nil {
+	// 		if v, ok := locales[locale]; ok && v.Name != "" {
+	// 			return v.Name
+	// 		}
+	// 	}
+	// }
+	return m.val.Name
+}
+
+func (m *WebappManifest) MarshalJSON() ([]byte, error) {
+	m.doc.Type = consts.Apps
+	m.doc.M["slug"] = m.val.Slug
+	m.doc.M["source"] = m.val.Source
+	m.doc.M["state"] = m.val.State
+	m.doc.M["version"] = m.val.Version
+	if m.val.AvailableVersion == "" {
+		delete(m.doc.M, "available_version")
+	} else {
+		m.doc.M["available_version"] = m.val.AvailableVersion
 	}
-	return m.Name
+	m.doc.M["created_at"] = m.val.CreatedAt
+	m.doc.M["updated_at"] = m.val.UpdatedAt
+	if m.val.Err == "" {
+		delete(m.doc.M, "error")
+	} else {
+		m.doc.M["error"] = m.val.Err
+	}
+	return json.Marshal(m.doc)
+}
+
+func (m *WebappManifest) UnmarshalJSON(j []byte) error {
+	if err := json.Unmarshal(j, &m.doc); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(j, &m.val); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ReadManifest is part of the Manifest interface
@@ -274,14 +277,14 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Mani
 	newManifest.SetID(consts.Apps + "/" + slug)
 	newManifest.SetRev(m.Rev())
 	newManifest.SetState(m.State())
-	newManifest.CreatedAt = m.CreatedAt
+	newManifest.val.CreatedAt = m.val.CreatedAt
+	newManifest.val.Slug = slug
+	newManifest.val.Source = sourceURL
 	newManifest.Instance = m.Instance
-	newManifest.DocSlug = slug
-	newManifest.DocSource = sourceURL
-	newManifest.oldServices = m.Services
-	if newManifest.Routes == nil {
-		newManifest.Routes = make(Routes)
-		newManifest.Routes["/"] = Route{
+	newManifest.oldServices = m.val.Services
+	if newManifest.val.Routes == nil {
+		newManifest.val.Routes = make(Routes)
+		newManifest.val.Routes["/"] = Route{
 			Folder: "/",
 			Index:  "index.html",
 			Public: false,
@@ -293,15 +296,15 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Mani
 
 // Create is part of the Manifest interface
 func (m *WebappManifest) Create(db prefixer.Prefixer) error {
-	m.DocID = consts.Apps + "/" + m.DocSlug
-	m.CreatedAt = time.Now()
-	m.UpdatedAt = time.Now()
+	m.SetID(consts.Apps + "/" + m.val.Slug)
+	m.val.CreatedAt = time.Now()
+	m.val.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
 
-	if len(m.Services) > 0 {
-		if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
+	if len(m.val.Services) > 0 {
+		if err := diffServices(db, m.Slug(), nil, m.val.Services); err != nil {
 			return err
 		}
 		_ = couchdb.UpdateDoc(db, m)
@@ -313,10 +316,10 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permission.Set) error {
-	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
+	if err := diffServices(db, m.Slug(), m.oldServices, m.val.Services); err != nil {
 		return err
 	}
-	m.UpdatedAt = time.Now()
+	m.val.UpdatedAt = time.Now()
 	if err := couchdb.UpdateDoc(db, m); err != nil {
 		return err
 	}
@@ -338,7 +341,7 @@ func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permission.Set)
 
 // Delete is part of the Manifest interface
 func (m *WebappManifest) Delete(db prefixer.Prefixer) error {
-	err := diffServices(db, m.Slug(), m.Services, nil)
+	err := diffServices(db, m.Slug(), m.val.Services, nil)
 	if err != nil {
 		return err
 	}
@@ -451,7 +454,7 @@ func (m *WebappManifest) FindRoute(vpath string) (Route, string) {
 	var best Route
 	rest := ""
 	specificity := 0
-	for key, ctx := range m.Routes {
+	for key, ctx := range m.val.Routes {
 		var keys []string
 		if key == "/" {
 			keys = []string{""}
@@ -474,7 +477,7 @@ func (m *WebappManifest) FindRoute(vpath string) (Route, string) {
 
 // FindIntent returns an intent for the given action and type if the manifest has one
 func (m *WebappManifest) FindIntent(action, typ string) *Intent {
-	for _, intent := range m.Intents {
+	for _, intent := range m.val.Intents {
 		if !strings.EqualFold(action, intent.Action) {
 			continue
 		}
@@ -540,7 +543,7 @@ func loadManifestFromDir(slug string) (*WebappManifest, error) {
 	}
 	app = man.(*WebappManifest)
 	app.FromAppsDir = true
-	app.DocState = Ready
+	app.val.State = Ready
 	return app, nil
 }
 
@@ -613,15 +616,6 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 	}
 
 	return docs, nextID, nil
-}
-
-func cloneRawMessage(m *json.RawMessage) *json.RawMessage {
-	if m != nil {
-		v := make(json.RawMessage, len(*m))
-		copy(v, *m)
-		return &v
-	}
-	return nil
 }
 
 var _ Manifest = &WebappManifest{}

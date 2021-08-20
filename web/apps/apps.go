@@ -50,7 +50,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 	switch a := man.Manifest.(type) {
 	case (*app.WebappManifest):
 		route = "/apps/"
-		if a.Icon != "" {
+		if a.Icon() != "" {
 			links.Icon = "/apps/" + a.Slug() + "/icon/" + a.Version()
 		}
 		if (a.State() == app.Ready || a.State() == app.Installed) &&
@@ -528,7 +528,7 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		var filepath string
 		switch appType {
 		case consts.WebappType:
-			filepath = path.Join("/", a.(*app.WebappManifest).Icon)
+			filepath = path.Join("/", a.(*app.WebappManifest).Icon())
 			fs = app.AppsFileServer(instance)
 		case consts.KonnectorType:
 			filepath = path.Join("/", a.(*app.KonnManifest).Icon())

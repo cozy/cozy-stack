@@ -78,6 +78,10 @@ type Manifest interface {
 	LastUpdate() time.Time
 	Terms() Terms
 
+	Name() string
+	Icon() string
+	Notifications() Notifications
+
 	SetError(err error)
 	Error() error
 

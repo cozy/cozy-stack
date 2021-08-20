@@ -306,8 +306,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	version1 := man.Version()
 
 	manWebapp := man.(*app.WebappManifest)
-	if assert.NotNil(t, manWebapp.Services["service1"]) {
-		service1 := manWebapp.Services["service1"]
+	if assert.NotNil(t, manWebapp.Services()["service1"]) {
+		service1 := manWebapp.Services()["service1"]
 		assert.Equal(t, "/services/service1.js", service1.File)
 		assert.Equal(t, "@cron 0 0 0 * * *", service1.TriggerOptions)
 		assert.Equal(t, "node", service1.Type)
@@ -364,7 +364,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 	manWebapp = man.(*app.WebappManifest)
-	assert.Nil(t, manWebapp.Services["service1"])
+	assert.Nil(t, manWebapp.Services()["service1"])
 }
 
 func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {

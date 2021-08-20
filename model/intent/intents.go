@@ -218,7 +218,7 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 	for _, manif := range lastVersions {
 		if intent := manif.FindIntent(in.Action, in.Type); intent != nil {
 			availableApp := AvailableApp{
-				Name: manif.Name,
+				Name: manif.Name(),
 				Slug: manif.Slug(),
 			}
 			in.AvailableApps = append(in.AvailableApps, availableApp)

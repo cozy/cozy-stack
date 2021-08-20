@@ -394,15 +394,15 @@ func (s serveParams) AppName() string {
 }
 
 func (s serveParams) AppEditor() string {
-	return s.webapp.Editor
+	return s.webapp.Editor()
 }
 
 func (s serveParams) AppNamePrefix() string {
-	return s.webapp.NamePrefix
+	return s.webapp.NamePrefix()
 }
 
 func (s serveParams) IconPath() string {
-	return s.webapp.Icon
+	return s.webapp.Icon()
 }
 
 func (s serveParams) Capabilities() (string, error) {

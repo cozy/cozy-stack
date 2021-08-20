@@ -204,8 +204,12 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 		switch opts.Type {
 		case consts.WebappType:
 			man = &WebappManifest{
-				DocID:   consts.Apps + "/" + slug,
-				DocSlug: slug,
+				doc: &couchdb.JSONDoc{
+					Type: consts.Apps,
+					M: map[string]interface{}{
+						"_id": consts.Apps + "/" + slug,
+					},
+				},
 			}
 		case consts.KonnectorType:
 			man = &KonnManifest{
@@ -216,8 +220,8 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 					},
 				},
 			}
-			man.SetSlug(slug)
 		}
+		man.SetSlug(slug)
 	} else {
 		man, err = GetBySlug(db, slug, opts.Type)
 		if err != nil {
@@ -442,7 +446,7 @@ func (i *Installer) update() error {
 		i.man.SetState(i.endState)
 	} else {
 		if i.man.AppType() == consts.WebappType {
-			i.man.(*WebappManifest).oldServices = i.man.(*WebappManifest).Services
+			i.man.(*WebappManifest).oldServices = i.man.(*WebappManifest).val.Services
 		}
 		i.man.SetSource(i.src)
 		if availableVersion != "" {

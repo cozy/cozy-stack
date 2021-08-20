@@ -8,13 +8,13 @@ import (
 
 func TestFindRoute(t *testing.T) {
 	manifest := &WebappManifest{}
-	manifest.Routes = make(Routes)
-	manifest.Routes["/foo"] = Route{Folder: "/foo", Index: "index.html"}
-	manifest.Routes["/foo/bar"] = Route{Folder: "/bar", Index: "index.html"}
-	manifest.Routes["/foo/qux"] = Route{Folder: "/qux", Index: "index.html"}
-	manifest.Routes["/public"] = Route{Folder: "/public", Index: "public.html", Public: true}
-	manifest.Routes["/admin"] = Route{Folder: "/admin", Index: "admin.html"}
-	manifest.Routes["/admin/special"] = Route{Folder: "/special", Index: "admin.html"}
+	manifest.val.Routes = make(Routes)
+	manifest.val.Routes["/foo"] = Route{Folder: "/foo", Index: "index.html"}
+	manifest.val.Routes["/foo/bar"] = Route{Folder: "/bar", Index: "index.html"}
+	manifest.val.Routes["/foo/qux"] = Route{Folder: "/qux", Index: "index.html"}
+	manifest.val.Routes["/public"] = Route{Folder: "/public", Index: "public.html", Public: true}
+	manifest.val.Routes["/admin"] = Route{Folder: "/admin", Index: "admin.html"}
+	manifest.val.Routes["/admin/special"] = Route{Folder: "/special", Index: "admin.html"}
 
 	ctx, rest := manifest.FindRoute("/admin")
 	assert.Equal(t, "/admin", ctx.Folder)
@@ -62,8 +62,8 @@ func TestFindRoute(t *testing.T) {
 
 func TestNoRegression217(t *testing.T) {
 	var man WebappManifest
-	man.Routes = make(Routes)
-	man.Routes["/"] = Route{
+	man.val.Routes = make(Routes)
+	man.val.Routes["/"] = Route{
 		Folder: "/",
 		Index:  "index.html",
 		Public: false,
@@ -79,7 +79,7 @@ func TestFindIntent(t *testing.T) {
 	found := man.FindIntent("PICK", "io.cozy.files")
 	assert.Nil(t, found)
 
-	man.Intents = []Intent{
+	man.val.Intents = []Intent{
 		{
 			Action: "PICK",
 			Types:  []string{"io.cozy.contacts", "io.cozy.calendars"},
@@ -117,7 +117,7 @@ func TestFindIntent(t *testing.T) {
 	assert.NotNil(t, found)
 	assert.Equal(t, "EDIT", found.Action)
 
-	man.Intents = []Intent{
+	man.val.Intents = []Intent{
 		{
 			Action: "PICK",
 			Href:   "/pick",
