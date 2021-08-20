@@ -13,7 +13,7 @@ require (
 	github.com/cozy/prosemirror-go v0.4.11
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
-	github.com/go-redis/redis/v7 v7.4.0
+	github.com/go-redis/redis/v7 v7.4.1
 	github.com/gofrs/uuid v3.4.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
