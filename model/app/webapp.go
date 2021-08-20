@@ -539,7 +539,9 @@ func loadManifestFromDir(slug string) (*WebappManifest, error) {
 		}
 		return nil, err
 	}
-	app := &WebappManifest{}
+	app := &WebappManifest{
+		doc: &couchdb.JSONDoc{},
+	}
 	man, err := app.ReadManifest(manFile, slug, "file://localhost"+dir)
 	if err != nil {
 		return nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
