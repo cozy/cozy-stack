@@ -11,6 +11,7 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.4.11
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis/v7 v7.4.1
@@ -26,7 +27,7 @@ require (
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
-	github.com/labstack/echo/v4 v4.4.0
+	github.com/labstack/echo/v4 v4.5.0
 	github.com/leonelquinteros/gotext v1.5.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mssola/user_agent v0.5.3
