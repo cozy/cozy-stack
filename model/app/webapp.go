@@ -127,6 +127,8 @@ func (m *WebappManifest) DocType() string { return consts.Apps }
 func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned := *m
 	cloned.doc = m.doc.Clone().(*couchdb.JSONDoc)
+	cloned.val.Permissions = make(permission.Set, len(m.val.Permissions))
+	copy(cloned.val.Permissions, m.val.Permissions)
 	return &cloned
 }
 
@@ -256,7 +258,11 @@ func (m *WebappManifest) MarshalJSON() ([]byte, error) {
 		m.doc.M["error"] = m.val.Err
 	}
 	// XXX: keep the weird UnmarshalJSON of permission.Set
-	m.doc.M["permissions"] = m.val.Permissions
+	perms, err := m.val.Permissions.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	m.doc.M["permissions"] = json.RawMessage(perms)
 	return json.Marshal(m.doc)
 }
 
