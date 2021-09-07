@@ -1,11 +1,12 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
 
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 var swiftConn *swift.Connection
@@ -84,7 +85,7 @@ func InitSwiftConnection(fs Fs) error {
 		Timeout:        timeout,
 	}
 
-	if err = swiftConn.Authenticate(); err != nil {
+	if err = swiftConn.Authenticate(context.Background()); err != nil {
 		log.Errorf("Authentication failed with the OpenStack Swift server on %s",
 			swiftConn.AuthUrl)
 		return err

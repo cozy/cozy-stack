@@ -1,6 +1,7 @@
 package move
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
 
@@ -88,17 +89,19 @@ func newSwiftArchiver() Archiver {
 	return &switfArchiver{
 		c:         config.GetSwiftConnection(),
 		container: "exports",
+		ctx:       context.Background(),
 	}
 }
 
 type switfArchiver struct {
 	c         *swift.Connection
 	container string
+	ctx       context.Context
 }
 
 func (a *switfArchiver) init() error {
-	if _, _, err := a.c.Container(a.container); err == swift.ContainerNotFound {
-		if err = a.c.ContainerCreate(a.container, nil); err != nil {
+	if _, _, err := a.c.Container(a.ctx, a.container); err == swift.ContainerNotFound {
+		if err = a.c.ContainerCreate(a.ctx, a.container, nil); err != nil {
 			return err
 		}
 	}
@@ -110,7 +113,7 @@ func (a *switfArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDo
 		return nil, err
 	}
 	objectName := exportDoc.Domain + "/" + exportDoc.ID()
-	f, _, err := a.c.ObjectOpen(a.container, objectName, false, nil)
+	f, _, err := a.c.ObjectOpen(a.ctx, a.container, objectName, false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +130,7 @@ func (a *switfArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, err
 	}
 	headers := objectMeta.ObjectHeaders()
 	headers["X-Delete-At"] = strconv.FormatInt(exportDoc.ExpiresAt.Unix(), 10)
-	return a.c.ObjectCreate(a.container, objectName, true, "",
+	return a.c.ObjectCreate(a.ctx, a.container, objectName, true, "",
 		"application/tar+gzip", headers)
 }
 
@@ -140,7 +143,7 @@ func (a *switfArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
 		objectNames = append(objectNames, e.Domain+"/"+e.ID())
 	}
 	if len(objectNames) > 0 {
-		_, err := a.c.BulkDelete(a.container, objectNames)
+		_, err := a.c.BulkDelete(a.ctx, a.container, objectNames)
 		return err
 	}
 	return nil

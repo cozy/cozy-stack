@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ncw/swift/swifttest"
+	"github.com/ncw/swift/v2/swifttest"
 )
 
 func main() {

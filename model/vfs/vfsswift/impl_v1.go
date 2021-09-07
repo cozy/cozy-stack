@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -17,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,6 +41,7 @@ type swiftVFS struct {
 	version       string
 	dataContainer string
 	mu            lock.ErrorRWLocker
+	ctx           context.Context
 	log           *logrus.Entry
 }
 
@@ -57,6 +59,7 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		version:       swiftV1ContainerPrefix + db.DBPrefix() + versionSuffix,
 		dataContainer: swiftV1DataContainerPrefix + db.DomainName(),
 		mu:            mu,
+		ctx:           context.Background(),
 		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
 }
@@ -104,7 +107,7 @@ func (sfs *swiftVFS) InitFs() error {
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
+	if err := sfs.c.VersionContainerCreate(sfs.ctx, sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
 			sfs.log.Errorf("Could not create container %s: %s",
 				sfs.container, err.Error())
@@ -112,7 +115,7 @@ func (sfs *swiftVFS) InitFs() error {
 		}
 		sfs.log.Errorf("Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
-		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
+		if err = sfs.c.ContainerDelete(sfs.ctx, sfs.version); err != nil {
 			return err
 		}
 	}
@@ -124,33 +127,33 @@ func (sfs *swiftVFS) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
 	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
 		sfs.container, sfs.version, sfs.dataContainer)
-	err := sfs.c.ContainerUpdate(sfs.container, containerMeta)
+	err := sfs.c.ContainerUpdate(sfs.ctx, sfs.container, containerMeta)
 	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err)
 	}
-	err = sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
+	err = sfs.c.ContainerUpdate(sfs.ctx, sfs.dataContainer, containerMeta)
 	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.dataContainer, err)
 	}
-	err = sfs.c.ContainerUpdate(sfs.version, containerMeta)
+	err = sfs.c.ContainerUpdate(sfs.ctx, sfs.version, containerMeta)
 	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.version, err)
 	}
-	if err = sfs.c.VersionDisable(sfs.container); err != nil {
+	if err = sfs.c.VersionDisable(sfs.ctx, sfs.container); err != nil {
 		sfs.log.Errorf("Could not disable versioning on container %q: %s",
 			sfs.container, err)
 	}
 	var errm error
-	if err = DeleteContainer(sfs.c, sfs.version); err != nil {
+	if err = DeleteContainer(sfs.ctx, sfs.c, sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = DeleteContainer(sfs.c, sfs.container); err != nil {
+	if err = DeleteContainer(sfs.ctx, sfs.c, sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = DeleteContainer(sfs.c, sfs.dataContainer); err != nil {
+	if err = DeleteContainer(sfs.ctx, sfs.c, sfs.dataContainer); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm
@@ -169,7 +172,9 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 		return os.ErrExist
 	}
 	objName := doc.DirID + "/" + doc.DocName
-	f, err := sfs.c.ObjectCreate(sfs.container,
+	f, err := sfs.c.ObjectCreate(
+		sfs.ctx,
+		sfs.container,
 		objName,
 		true,
 		"",
@@ -269,6 +274,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
+		sfs.ctx,
 		sfs.container,
 		objName,
 		true,
@@ -364,7 +370,7 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	err = sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName)
+	err = sfs.c.ObjectDelete(sfs.ctx, sfs.container, doc.DirID+"/"+doc.DocName)
 	if err != nil && err != swift.ObjectNotFound {
 		return 0, err
 	}
@@ -379,7 +385,7 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 		sfs.log.Errorf("Could not delete version of %s: %s",
 			objName, err.Error())
 	}
-	err = sfs.c.ObjectDelete(sfs.container, objName)
+	err = sfs.c.ObjectDelete(sfs.ctx, sfs.container, objName)
 	if err != nil && err != swift.ObjectNotFound {
 		return err
 	}
@@ -387,7 +393,7 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 }
 
 func (sfs *swiftVFS) destroyFileVersions(objName string) error {
-	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
+	versionObjNames, err := sfs.c.VersionObjectList(sfs.ctx, sfs.version, objName)
 	// could happened if the versionning could not be enabled, in which case we
 	// do not propagate the error.
 	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
@@ -397,7 +403,7 @@ func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 		return err
 	}
 	if len(versionObjNames) > 0 {
-		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
+		_, err = sfs.c.BulkDelete(sfs.ctx, sfs.version, versionObjNames)
 		return err
 	}
 	return nil
@@ -412,7 +418,7 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
+	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -436,16 +442,16 @@ func (sfs *swiftVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 		"created-at":     src.CreatedAt.Format(time.RFC3339),
 		"dissociated-of": src.ID(),
 	}.ObjectHeaders()
-	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+	if _, err := sfs.c.ObjectCopy(sfs.ctx, sfs.container, srcName, sfs.container, dstName, headers); err != nil {
 		return err
 	}
 	if err := sfs.Indexer.CreateFileDoc(dst); err != nil {
-		_ = sfs.c.ObjectDelete(sfs.container, dstName)
+		_ = sfs.c.ObjectDelete(sfs.ctx, sfs.container, dstName)
 		return err
 	}
 
 	// Remove the source
-	return sfs.c.ObjectDelete(sfs.container, srcName)
+	return sfs.c.ObjectDelete(sfs.ctx, sfs.container, srcName)
 }
 
 func (sfs *swiftVFS) DissociateDir(src, dst *vfs.DirDoc) error {
@@ -498,7 +504,7 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 		if exists {
 			return os.ErrExist
 		}
-		err = sfs.c.ObjectMove(
+		err = sfs.c.ObjectMove(sfs.ctx,
 			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
@@ -528,7 +534,7 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 		if exists {
 			return os.ErrExist
 		}
-		err = sfs.c.ObjectMove(
+		err = sfs.c.ObjectMove(sfs.ctx,
 			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
@@ -660,7 +666,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		} else {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
-			_ = f.fs.c.ObjectDelete(f.fs.container, f.name)
+			_ = f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, f.name)
 
 			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
@@ -778,7 +784,7 @@ func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (f *swiftFileOpen) Seek(offset int64, whence int) (int64, error) {
-	n, err := f.f.Seek(offset, whence)
+	n, err := f.f.Seek(context.Background(), offset, whence)
 	if err != nil {
 		l := logger.WithNamespace("vfsswift-v1")
 		l.Warnf("Can't seek: %s", err)

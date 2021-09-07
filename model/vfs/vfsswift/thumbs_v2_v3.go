@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 var unixEpochZero = time.Time{}
@@ -22,7 +23,11 @@ var unixEpochZero = time.Time{}
 // This version stores the thumbnails in the same container as the main data
 // container.
 func NewThumbsFsV2(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
-	return &thumbsV2{c: c, container: swiftV2ContainerPrefixData + db.DBPrefix()}
+	return &thumbsV2{
+		c:         c,
+		container: swiftV2ContainerPrefixData + db.DBPrefix(),
+		ctx:       context.Background(),
+	}
 }
 
 // NewThumbsFsV3 creates a new thumb filesystem base on swift.
@@ -30,12 +35,17 @@ func NewThumbsFsV2(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
 // This version stores the thumbnails in the same container as the main data
 // container.
 func NewThumbsFsV3(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
-	return &thumbsV2{c: c, container: swiftV3ContainerPrefix + db.DBPrefix()}
+	return &thumbsV2{
+		c:         c,
+		container: swiftV3ContainerPrefix + db.DBPrefix(),
+		ctx:       context.Background(),
+	}
 }
 
 type thumbsV2 struct {
 	c         *swift.Connection
 	container string
+	ctx       context.Context
 }
 
 type thumb struct {
@@ -47,7 +57,7 @@ type thumb struct {
 
 func (t *thumb) Abort() error {
 	errc := t.WriteCloser.Close()
-	errd := t.c.ObjectDelete(t.container, t.name)
+	errd := t.c.ObjectDelete(context.Background(), t.container, t.name)
 	if errc != nil {
 		return errc
 	}
@@ -66,11 +76,10 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 	objMeta := swift.Metadata{
 		"file-md5": hex.EncodeToString(img.MD5Sum),
 	}
-	obj, err := t.c.ObjectCreate(t.container, name, true, "", img.Mime,
-		objMeta.ObjectHeaders())
+	obj, err := t.c.ObjectCreate(t.ctx, t.container, name, true, "", img.Mime, objMeta.ObjectHeaders())
 	if err != nil {
-		if _, _, errc := t.c.Container(t.container); errc == swift.ContainerNotFound {
-			if errc = t.c.ContainerCreate(t.container, nil); errc != nil {
+		if _, _, errc := t.c.Container(t.ctx, t.container); errc == swift.ContainerNotFound {
+			if errc = t.c.ContainerCreate(t.ctx, t.container, nil); errc != nil {
 				return nil, err
 			}
 		} else {
@@ -88,7 +97,7 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 
 func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img.ID(), format)
-	infos, headers, err := t.c.Object(t.container, name)
+	infos, headers, err := t.c.Object(t.ctx, t.container, name)
 	if err == swift.ObjectNotFound {
 		return false, nil
 	}
@@ -113,13 +122,13 @@ func (t *thumbsV2) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 	for i, format := range formats {
 		objNames[i] = t.makeName(img.ID(), format)
 	}
-	_, err := t.c.BulkDelete(t.container, objNames)
+	_, err := t.c.BulkDelete(t.ctx, t.container, objNames)
 	return err
 }
 
 func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {
 	name := t.makeName(img.ID(), format)
-	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
+	f, o, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
 	}
@@ -127,16 +136,16 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
 	w.Header().Set("Content-Type", o["Content-Type"])
-	http.ServeContent(w, req, name, unixEpochZero, f)
+	http.ServeContent(w, req, name, unixEpochZero, &backgroundSeeker{f})
 	return nil
 }
 
 func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
 	name := t.makeName(id, format)
-	obj, err := t.c.ObjectCreate(t.container, name, true, "", mime, nil)
+	obj, err := t.c.ObjectCreate(t.ctx, t.container, name, true, "", mime, nil)
 	if err != nil {
-		if _, _, errc := t.c.Container(t.container); errc == swift.ContainerNotFound {
-			if errc = t.c.ContainerCreate(t.container, nil); errc != nil {
+		if _, _, errc := t.c.Container(t.ctx, t.container); errc == swift.ContainerNotFound {
+			if errc = t.c.ContainerCreate(t.ctx, t.container, nil); errc != nil {
 				return nil, err
 			}
 		} else {
@@ -154,7 +163,7 @@ func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, err
 
 func (t *thumbsV2) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	name := t.makeName(id, format)
-	obj, _, err := t.c.ObjectOpen(t.container, name, false, nil)
+	obj, _, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -169,16 +178,16 @@ func (t *thumbsV2) RemoveNoteThumb(id string, formats []string) error {
 	for i, format := range formats {
 		objNames[i] = t.makeName(id, format)
 	}
-	_, err := t.c.BulkDelete(t.container, objNames)
+	_, err := t.c.BulkDelete(t.ctx, t.container, objNames)
 	return err
 }
 
 func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
 	name := t.makeName(id, consts.NoteImageThumbFormat)
-	f, o, err := t.c.ObjectOpen(t.container, name, false, nil)
+	f, o, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if err != nil {
 		name = t.makeName(id, consts.NoteImageOriginalFormat)
-		f, o, err = t.c.ObjectOpen(t.container, name, false, nil)
+		f, o, err = t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 		if err != nil {
 			return wrapSwiftErr(err)
 		}
@@ -187,7 +196,7 @@ func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Reques
 
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
 	w.Header().Set("Content-Type", o["Content-Type"])
-	http.ServeContent(w, req, name, unixEpochZero, f)
+	http.ServeContent(w, req, name, unixEpochZero, &backgroundSeeker{f})
 	return nil
 }
 

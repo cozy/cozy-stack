@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"io"
 	"io/ioutil"
@@ -17,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,6 +30,7 @@ type swiftVFSV3 struct {
 	prefix    string
 	container string
 	mu        lock.ErrorRWLocker
+	ctx       context.Context
 	log       *logrus.Entry
 }
 
@@ -54,6 +56,7 @@ func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 		prefix:    db.DBPrefix(),
 		container: swiftV3ContainerPrefix + db.DBPrefix(),
 		mu:        mu,
+		ctx:       context.Background(),
 		log:       logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
 }
@@ -123,7 +126,7 @@ func (sfs *swiftVFSV3) InitFs() error {
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-	if err := sfs.c.ContainerCreate(sfs.container, nil); err != nil {
+	if err := sfs.c.ContainerCreate(sfs.ctx, sfs.container, nil); err != nil {
 		sfs.log.Errorf("Could not create container %q: %s",
 			sfs.container, err.Error())
 		return err
@@ -135,12 +138,12 @@ func (sfs *swiftVFSV3) InitFs() error {
 func (sfs *swiftVFSV3) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
 	sfs.log.Infof("Marking container %q as to-be-deleted", sfs.container)
-	err := sfs.c.ContainerUpdate(sfs.container, containerMeta)
+	err := sfs.c.ContainerUpdate(sfs.ctx, sfs.container, containerMeta)
 	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err)
 	}
-	return DeleteContainer(sfs.c, sfs.container)
+	return DeleteContainer(sfs.ctx, sfs.c, sfs.container)
 }
 
 func (sfs *swiftVFSV3) CreateDir(doc *vfs.DirDoc) error {
@@ -225,7 +228,7 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	newdoc.InternalID = NewInternalID()
 	objName := MakeObjectNameV3(newdoc.DocID, newdoc.InternalID)
 	hash := hex.EncodeToString(newdoc.MD5Sum)
-	f, err := sfs.c.ObjectCreate(sfs.container, objName, true, hash, newdoc.Mime, nil)
+	f, err := sfs.c.ObjectCreate(sfs.ctx, sfs.container, objName, true, hash, newdoc.Mime, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +278,11 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 		"created-at":     src.CreatedAt.Format(time.RFC3339),
 		"dissociated-of": src.ID(),
 	}.ObjectHeaders()
-	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+	if _, err := sfs.c.ObjectCopy(sfs.ctx, sfs.container, srcName, sfs.container, dstName, headers); err != nil {
 		return err
 	}
 	if err := sfs.Indexer.CreateNamedFileDoc(dst); err != nil {
-		_ = sfs.c.ObjectDelete(sfs.container, dstName)
+		_ = sfs.c.ObjectDelete(sfs.ctx, sfs.container, dstName)
 		return err
 	}
 
@@ -378,12 +381,12 @@ func (sfs *swiftVFSV3) destroyFileLocked(doc *vfs.FileDoc) error {
 			sfs.log.Warnf("DestroyFile failed on BatchDeleteVersions: %s", err)
 		}
 	}
-	_, errb := sfs.c.BulkDelete(sfs.container, objNames)
+	_, errb := sfs.c.BulkDelete(sfs.ctx, sfs.container, objNames)
 	if errb == swift.Forbidden {
 		sfs.log.Warnf("DestroyFile failed on BulkDelete: %s", err)
 		errb = nil
 		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
+			if errd := sfs.c.ObjectDelete(sfs.ctx, sfs.container, objName); err == nil && errd != nil {
 				sfs.log.Infof("DestroyFile failed on ObjectDelete: %s", errd)
 				err = errd
 			}
@@ -426,7 +429,7 @@ func (sfs *swiftVFSV3) EnsureErased(journal vfs.TrashJournal) error {
 		sfs.log.Warnf("EnsureErased failed on BatchDeleteVersions: %s", err)
 		errm = multierror.Append(errm, err)
 	}
-	if err := deleteContainerFiles(sfs.c, sfs.container, objNames); err != nil {
+	if err := deleteContainerFiles(sfs.ctx, sfs.c, sfs.container, objNames); err != nil {
 		sfs.log.Warnf("EnsureErased failed on deleteContainerFiles: %s", err)
 		errm = multierror.Append(errm, err)
 	}
@@ -440,7 +443,7 @@ func (sfs *swiftVFSV3) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	}
 	defer sfs.mu.RUnlock()
 	objName := MakeObjectNameV3(doc.DocID, doc.InternalID)
-	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
+	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -460,7 +463,7 @@ func (sfs *swiftVFSV3) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (
 		internalID = parts[1]
 	}
 	objName := MakeObjectNameV3(doc.DocID, internalID)
-	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
+	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -494,7 +497,7 @@ func (sfs *swiftVFSV3) ImportFileVersion(version *vfs.Version, content io.ReadCl
 	objName := MakeObjectNameV3(parts[0], parts[1])
 
 	hash := hex.EncodeToString(version.MD5Sum)
-	f, err := sfs.c.ObjectCreate(sfs.container, objName, true, hash, "application/octet-stream", nil)
+	f, err := sfs.c.ObjectCreate(sfs.ctx, sfs.container, objName, true, hash, "application/octet-stream", nil)
 	if err != nil {
 		return err
 	}
@@ -704,7 +707,7 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	defer func() {
 		if err != nil {
 			// remove the temporary file if an error occurred
-			_ = f.fs.c.ObjectDelete(f.fs.container, f.name)
+			_ = f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, f.name)
 			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
 			_, isCouchErr := couchdb.IsCouchError(err)
@@ -824,7 +827,7 @@ func (f *swiftFileCreationV3) Close() (err error) {
 				internalID = parts[1]
 			}
 			objName := MakeObjectNameV3(newdoc.DocID, internalID)
-			_ = f.fs.c.ObjectDelete(f.fs.container, objName)
+			_ = f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, objName)
 		}
 		for _, old := range toClean {
 			_ = cleanOldVersion(f.fs, newdoc.DocID, old)
@@ -855,7 +858,7 @@ func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) error {
 		internalID = parts[1]
 	}
 	objName := MakeObjectNameV3(fileID, internalID)
-	return sfs.c.ObjectDelete(sfs.container, objName)
+	return sfs.c.ObjectDelete(sfs.ctx, sfs.container, objName)
 }
 
 func (sfs *swiftVFSV3) ClearOldVersions() error {
@@ -880,7 +883,7 @@ func (sfs *swiftVFSV3) ClearOldVersions() error {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	return deleteContainerFiles(sfs.c, sfs.container, objNames)
+	return deleteContainerFiles(sfs.ctx, sfs.c, sfs.container, objNames)
 }
 
 type swiftFileOpenV3 struct {
@@ -904,7 +907,7 @@ func (f *swiftFileOpenV3) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (f *swiftFileOpenV3) Seek(offset int64, whence int) (int64, error) {
-	n, err := f.f.Seek(offset, whence)
+	n, err := f.f.Seek(context.Background(), offset, whence)
 	if err != nil {
 		logger.WithNamespace("vfsswift-v3").Warnf("Can't seek: %s", err)
 	}

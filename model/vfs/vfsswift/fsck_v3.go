@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"path"
@@ -10,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) error {
@@ -82,8 +83,8 @@ func (sfs *swiftVFSV3) checkFiles(
 		fileIDs[f.DocID] = struct{}{}
 	}
 
-	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		objs, err := sfs.c.Objects(sfs.container, opts)
+	err = sfs.c.ObjectsWalk(sfs.ctx, sfs.container, nil, func(ctx context.Context, opts *swift.ObjectsOpts) (interface{}, error) {
+		objs, err := sfs.c.Objects(sfs.ctx, sfs.container, opts)
 		if err != nil {
 			return nil, err
 		}

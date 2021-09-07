@@ -34,7 +34,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 type docPatch struct {

@@ -1,6 +1,7 @@
 package appfs
 
 import (
+	"context"
 	"io"
 	"os"
 	"path"
@@ -13,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
 
@@ -33,6 +34,7 @@ type swiftCopier struct {
 	container   string
 	started     bool
 	objectNames []string
+	ctx         context.Context
 }
 
 type aferoCopier struct {
@@ -47,6 +49,7 @@ func NewSwiftCopier(conn *swift.Connection, appsType consts.AppType) Copier {
 	return &swiftCopier{
 		c:         conn,
 		container: containerName(appsType),
+		ctx:       context.Background(),
 	}
 }
 
@@ -55,15 +58,15 @@ func (f *swiftCopier) Start(slug, version, shasum string) (bool, error) {
 	if shasum != "" {
 		f.appObj += "-" + shasum
 	}
-	_, _, err := f.c.Object(f.container, f.appObj)
+	_, _, err := f.c.Object(f.ctx, f.container, f.appObj)
 	if err == nil {
 		return true, nil
 	}
 	if err != swift.ObjectNotFound {
 		return false, err
 	}
-	if _, _, err = f.c.Container(f.container); err == swift.ContainerNotFound {
-		if err = f.c.ContainerCreate(f.container, nil); err != nil {
+	if _, _, err = f.c.Container(f.ctx, f.container); err == swift.ContainerNotFound {
+		if err = f.c.ContainerCreate(f.ctx, f.container, nil); err != nil {
 			return false, err
 		}
 	}
@@ -90,7 +93,7 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 	}
 
 	f.objectNames = append(f.objectNames, objName)
-	file, err := f.c.ObjectCreate(f.container, objName, true, "",
+	file, err := f.c.ObjectCreate(f.ctx, f.container, objName, true, "",
 		contentType, objMeta.ObjectHeaders())
 	if err != nil {
 		return err
@@ -110,32 +113,32 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 }
 
 func (f *swiftCopier) Abort() error {
-	_, err := f.c.BulkDelete(f.container, f.objectNames)
+	_, err := f.c.BulkDelete(f.ctx, f.container, f.objectNames)
 	return err
 }
 
 func (f *swiftCopier) Commit() (err error) {
 	defer func() {
-		_, errc := f.c.BulkDelete(f.container, f.objectNames)
+		_, errc := f.c.BulkDelete(f.ctx, f.container, f.objectNames)
 		if errc != nil {
 			logger.WithNamespace("appfs").Errorf("Cannot BulkDelete after commit: %s", errc)
 		}
 	}()
 	// We check if the appObj has not been created concurrently by another
 	// copier.
-	_, _, err = f.c.Object(f.container, f.appObj)
+	_, _, err = f.c.Object(f.ctx, f.container, f.appObj)
 	if err == nil {
 		return nil
 	}
 	for _, srcObjectName := range f.objectNames {
 		dstObjectName := path.Join(f.appObj, strings.TrimPrefix(srcObjectName, f.tmpObj))
-		_, err = f.c.ObjectCopy(f.container, srcObjectName, f.container, dstObjectName, nil)
+		_, err = f.c.ObjectCopy(f.ctx, f.container, srcObjectName, f.container, dstObjectName, nil)
 		if err != nil {
 			logger.WithNamespace("appfs").Errorf("Cannot copy file: %s", err)
 			return err
 		}
 	}
-	return f.c.ObjectPutString(f.container, f.appObj, "", "text/plain")
+	return f.c.ObjectPutString(f.ctx, f.container, f.appObj, "", "text/plain")
 }
 
 // NewAferoCopier defines a copier using an afero.Fs filesystem to store the
