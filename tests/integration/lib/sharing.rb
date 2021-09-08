@@ -2,6 +2,38 @@ class Sharing
   attr_accessor :couch_id, :couch_rev, :rules, :members
   attr_reader :description, :app_slug
 
+  def self.make_xor_key
+    random = Random.new.bytes(8)
+    res = []
+    random.each_byte do |c|
+      res << (c & 0xf)
+      res << (c >> 4)
+    end
+    res
+  end
+
+  def self.xor_id(id, key)
+    l = key.length
+    buf = id.bytes.to_a
+    buf.each_with_index do |c, i|
+      if 48 <= c && c <= 57
+        c = (c - 48) ^ key[i%l].ord
+      elsif 97 <= c && c <= 102
+        c = (c -  87) ^ key[i%l].ord
+      elsif 65 <= c && c <= 70
+        c = (c - 55) ^ key[i%l].ord
+      else
+        next
+      end
+      if c < 10
+        buf[i] = c + 48
+      else
+        buf[i] = (c - 10) + 97
+      end
+    end
+    buf.pack('c*')
+  end
+
   def self.get_sharing_info(inst, sharing_id, doctype)
     opts = {
       accept: "application/vnd.api+json",

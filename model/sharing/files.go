@@ -108,6 +108,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // to another cozy instance:
 // - its identifier is XORed
 // - its dir_id is XORed or removed
+// - the referenced_by are XORed or removed
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
@@ -133,7 +134,8 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 					v := r["type"].(string) + "/" + r["id"].(string)
 					for _, val := range rule.Values {
 						if val == v {
-							kept = append(kept, ref)
+							r["id"] = XorID(r["id"].(string), xorKey)
+							kept = append(kept, r)
 							break
 						}
 					}

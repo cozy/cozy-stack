@@ -414,7 +414,7 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	// "doctype/docid" -> [leaf revisions]
 	leafRevs := make(Changed, len(changes.Changed))
 	for key, revs := range changes.Changed {
-		if strings.HasPrefix(key, consts.Files+"/") {
+		if len(creds.XorKey) > 0 {
 			old := key
 			parts := strings.SplitN(key, "/", 2)
 			parts[1] = XorID(parts[1], creds.XorKey)
@@ -559,21 +559,35 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, ch
 // http://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
-func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Credentials, docs *DocsByDoctype, ruleIndexes map[string]int) error {
+func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Credentials, docsByDoctype *DocsByDoctype, ruleIndexes map[string]int) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
 	}
-	if files, ok := (*docs)[consts.Files]; ok {
-		s.SortFilesToSent(files)
-		for i, file := range files {
-			fileID := file["_id"].(string)
-			s.TransformFileToSent(file, creds.XorKey, ruleIndexes[fileID])
-			files[i] = file
+	for doctype, docs := range *docsByDoctype {
+		switch doctype {
+		case consts.Files:
+			s.SortFilesToSent(docs)
+			for i, file := range docs {
+				fileID := file["_id"].(string)
+				s.TransformFileToSent(file, creds.XorKey, ruleIndexes[fileID])
+				docs[i] = file
+			}
+		case consts.BitwardenCiphers:
+			for i, doc := range docs {
+				s.transformCipherToSent(doc, creds.XorKey)
+				docs[i] = doc
+			}
+		default:
+			for i, doc := range docs {
+				id := doc["_id"].(string)
+				doc["_id"] = XorID(id, creds.XorKey)
+				docs[i] = doc
+			}
 		}
-		(*docs)[consts.Files] = files
+		(*docsByDoctype)[doctype] = docs
 	}
-	body, err := json.Marshal(docs)
+	body, err := json.Marshal(docsByDoctype)
 	if err != nil {
 		return err
 	}
@@ -779,4 +793,12 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 	}
 
 	return filtered, frefs, nil
+}
+
+func (s *Sharing) transformCipherToSent(doc map[string]interface{}, xorKey []byte) {
+	id := doc["_id"].(string)
+	doc["_id"] = XorID(id, xorKey)
+	if orgID, ok := doc["organization_id"].(string); ok {
+		doc["organization_id"] = XorID(orgID, xorKey)
+	}
 }

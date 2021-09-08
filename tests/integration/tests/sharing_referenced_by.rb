@@ -95,18 +95,25 @@ describe "A photo" do
     sharing.members << inst << contact
     inst.register sharing
 
+    # Manually set the xor_key
+    doc = Helpers.couch.get_doc inst.domain, Sharing.doctype, sharing.couch_id
+    key = Sharing.make_xor_key
+    doc["credentials"][0]["xor_key"] = key
+    Helpers.couch.update_doc inst.domain, Sharing.doctype, doc
+
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
     sleep 2
 
     # Check the recipient has the shared album and photo
-    album_recipient = Album.find inst_recipient, album.couch_id
+    xored_id = Sharing.xor_id album.couch_id, key
+    album_recipient = Album.find inst_recipient, xored_id
     assert_equal album.name, album_recipient.name
     file_path = "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
-    assert file_has_album_reference(file_recipient, album.couch_id)
+    assert file_has_album_reference(file_recipient, xored_id)
 
     # Remove the photo from the recipient's album
     album_recipient.remove_photo inst_recipient, file_recipient
@@ -126,7 +133,7 @@ describe "A photo" do
     file_path = "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
-    assert file_has_album_reference(file_recipient, album.couch_id)
+    assert file_has_album_reference(file_recipient, xored_id)
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []
