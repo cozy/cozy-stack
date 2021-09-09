@@ -315,8 +315,9 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	if evt.Verb == "DELETED" || isTrashed(evt.Doc) {
-		// Ignore the first revision for new file (trashed=true)
-		if evt.Doc.Type == consts.Files && ref.Rev() == "" {
+		// Do not create a shared doc for a deleted document: it's useless and
+		// it can have some side effects!
+		if ref.Rev() == "" {
 			return nil
 		}
 		ref.Infos[msg.SharingID] = SharedInfo{

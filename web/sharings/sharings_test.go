@@ -103,7 +103,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	rule := rules[0].(map[string]interface{})
 	assert.Equal(t, rule["title"], "test one")
 	assert.Equal(t, rule["doctype"], iocozytests)
-	assert.Equal(t, rule["values"], []interface{}{"foobar"})
+	assert.Equal(t, rule["values"], []interface{}{"000000"})
 }
 
 func assertInvitationMailWasSent(t *testing.T) string {
@@ -153,7 +153,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 					echo.Map{
 						"title":   "test one",
 						"doctype": iocozytests,
-						"values":  []string{"foobar"},
+						"values":  []string{"000000"},
 						"add":     "sync",
 					},
 				},
@@ -241,7 +241,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	rule := s.Rules[0]
 	assert.Equal(t, rule.Title, "test one")
 	assert.Equal(t, rule.DocType, iocozytests)
-	assert.Equal(t, rule.Values, []string{"foobar"})
+	assert.NotEmpty(t, rule.Values)
 }
 
 func assertSharingInfoRequestIsCorrect(t *testing.T, body io.Reader, s1, s2 string) {
@@ -785,13 +785,13 @@ func TestCheckPermissions(t *testing.T) {
 					echo.Map{
 						"title":   "test one",
 						"doctype": iocozytests,
-						"values":  []string{"foobar"},
+						"values":  []string{"000000"},
 						"add":     "sync",
 					},
 					echo.Map{
 						"title":   "test two",
 						"doctype": consts.Contacts,
-						"values":  []string{"foobar"},
+						"values":  []string{"000000"},
 						"add":     "sync",
 					},
 				},

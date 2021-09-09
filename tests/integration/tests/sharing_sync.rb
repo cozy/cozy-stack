@@ -4,38 +4,6 @@ require 'faye/websocket'
 require 'eventmachine'
 require 'pry-rescue/minitest' unless ENV['CI']
 
-def make_xor_key
-  random = Random.new.bytes(8)
-  res = []
-  random.each_byte do |c|
-    res << (c & 0xf)
-    res << (c >> 4)
-  end
-  res
-end
-
-def xor_id(id, key)
-  l = key.length
-  buf = id.bytes.to_a
-  buf.each_with_index do |c, i|
-    if 48 <= c && c <= 57
-      c = (c - 48) ^ key[i%l].ord
-    elsif 97 <= c && c <= 102
-      c = (c -  87) ^ key[i%l].ord
-    elsif 65 <= c && c <= 70
-      c = (c - 55) ^ key[i%l].ord
-    else
-      next
-    end
-    if c < 10
-      buf[i] = c + 48
-    else
-      buf[i] = (c - 10) + 97
-    end
-  end
-  buf.pack('c*')
-end
-
 describe "A folder" do
   it "can be shared to a recipient in sync mode" do
     Helpers.scenario "sync_folder"
@@ -67,7 +35,7 @@ describe "A folder" do
 
     # Manually set the xor_key
     doc = Helpers.couch.get_doc inst.domain, Sharing.doctype, sharing.couch_id
-    key = make_xor_key
+    key = Sharing.make_xor_key
     doc["credentials"][0]["xor_key"] = key
     Helpers.couch.update_doc inst.domain, Sharing.doctype, doc
 
@@ -196,7 +164,7 @@ describe "A folder" do
       created_at: "2018-05-11T12:18:37.558389182+02:00",
       updated_at: "2018-05-11T12:18:37.558389182+02:00"
     }
-    id = xor_id(child2.couch_id, key)
+    id = Sharing.xor_id(child2.couch_id, key)
     Helpers.couch.create_named_doc inst_recipient.domain, Folder.doctype, id, doc
 
     # Make an update

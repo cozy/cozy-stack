@@ -236,6 +236,28 @@ able to prevent CouchDB conflicts for `io.cozy.files` documents and enforce
 [reconciliation](#conflict-resolution) when possible. We also detail what is
 done when [no reconciliation](#conflict-with-no-reconciliation) can be made.
 
+### Id transformations
+
+Initially, we were using the CouchDB protocol revision as described above, but
+we have introduced a transformation of the identifiers for io.cozy.files, and
+later, we have generalized this transformation for all doctypes. It means that
+Alice and Bob have the same shared documents, but not with the same
+identifiers. The identifiers are transformed with a XOR, using a key exchanged
+when the recipient accepts the sharing.
+
+In practice, it is useful when someone is revoked from a sharing, and accepts
+later the sharing again. It allows to avoid reusing the same identifiers for
+documents exchanged on the first sharing and on the second sharing, which can
+create some weird situations. For example, a cipher is shared between Alice and
+Bob when its revision is 3-aaa. Later, when the sharing is revoked, the
+document will be deleted on Bob's instance (the ciphers are deleted on
+recipients when a sharing is revoked), which creates a revision 4-bbb. If Alice
+invites Bob again, and Bob accepts, the replication will sent the document from
+Alice's instance to Bob's instance with revision 3-aaa. CouchDB will say OK,
+but the revision 4-bbb will still be seen as a successor of 3-aaa, and for
+CouchDB, the document will still be deleted. Using different IDs for the first
+and second sharing fixes this issue.
+
 ## Files and folders
 
 ### Why are they special?

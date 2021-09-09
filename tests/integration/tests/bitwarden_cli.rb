@@ -226,10 +226,10 @@ describe "The bitwarden API of the stack" do
     items = bw3.items
     assert_equal items.length, 1
     assert_equal items.first[:name], "Family card"
-    item_id = items.first[:id]
 
     # Update an item
     shared_item[:name] = "Updated card"
+    item_id = bw.items.find { |i| i[:name] == "Family card" }[:id]
     bw.edit_item item_id, shared_item
 
     # Check that the item is updated on Bob's instance
