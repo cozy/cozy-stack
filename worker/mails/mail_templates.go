@@ -33,6 +33,7 @@ func initMailTemplates() {
 		"alert_account":                subjectEntry{"Mail Alert Account Subject", nil},
 		"support_request":              subjectEntry{"Mail Support Confirmation Subject", nil},
 		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},
+		"sharing_to_confirm":           subjectEntry{"Mail Sharing Member To Confirm Subject", []string{"SharerPublicName"}},
 		"notifications_sharing":        subjectEntry{"Notification Sharing Subject", nil},
 		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 	}

@@ -1,0 +1,6 @@
+{{t "Mail Sharing Member To Confirm Subject"}}
+
+{{t "Mail Sharing Member To Confirm Intro" .PublicName}}
+{{t "Mail Sharing Member To Confirm Description" .MemberName}}
+
+{{.Link}}

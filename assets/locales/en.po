@@ -900,6 +900,20 @@ msgstr "update"
 msgid "Mail Sharing Request Button text"
 msgstr "Access to this %s"
 
+msgid "Mail Sharing Member To Confirm Subject"
+msgstr "Confirmation required to finalize the sharing of your passwords"
+
+msgid "Mail Sharing Member To Confirm Intro"
+msgstr "Hello %s,"
+
+msgid "Mail Sharing Member To Confirm Description"
+msgstr ""
+"%s has accepted your sharing of passwords. "
+"In order to finalize this sharing, you must check the identity of their Cozy."
+
+msgid "Mail Sharing Member To Confirm Button"
+msgstr "Check identity"
+
 msgid "Mail Alert Account Subject"
 msgstr "Instance deletion failed on cleaning accounts"
 

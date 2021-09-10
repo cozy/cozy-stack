@@ -997,6 +997,20 @@ msgstr "modifier"
 msgid "Mail Sharing Request Button text"
 msgstr "Accéder au %s"
 
+msgid "Mail Sharing Member To Confirm Subject"
+msgstr "Vérification demandée pour finaliser le partage de vos mot de passe"
+
+msgid "Mail Sharing Member To Confirm Intro"
+msgstr "Bonjour %s,"
+
+msgid "Mail Sharing Member To Confirm Description"
+msgstr ""
+"%s a accepté votre partage de mot de passe. "
+"Afin de finaliser ce partage, vous devez vérifier l'identité de son Cozy."
+
+msgid "Mail Sharing Member To Confirm Button"
+msgstr "Vérifier l'identité"
+
 msgid "Mail Alert Account Subject"
 msgstr ""
 "Le nettoyage des comptes a échoué lors de la suppression de l'instance"
