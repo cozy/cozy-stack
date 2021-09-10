@@ -912,7 +912,7 @@ func TestCreateOrganization(t *testing.T) {
 	assert.Equal(t, "profileOrganization", result["Object"])
 	assert.Equal(t, true, result["Enabled"])
 	assert.EqualValues(t, 2, result["Status"])
-	assert.EqualValues(t, 2, result["Type"])
+	assert.EqualValues(t, 0, result["Type"])
 	orgaID, _ = result["Id"].(string)
 	assert.NotEmpty(t, orgaID)
 	assert.NotEmpty(t, result["Key"])
@@ -931,7 +931,7 @@ func TestGetOrganization(t *testing.T) {
 	assert.Equal(t, "profileOrganization", result["Object"])
 	assert.Equal(t, true, result["Enabled"])
 	assert.EqualValues(t, 2, result["Status"])
-	assert.EqualValues(t, 2, result["Type"])
+	assert.EqualValues(t, 0, result["Type"])
 	assert.Equal(t, orgaID, result["Id"])
 	assert.NotEmpty(t, result["Key"])
 }

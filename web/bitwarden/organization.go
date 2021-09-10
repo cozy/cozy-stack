@@ -85,6 +85,10 @@ type organizationResponse struct {
 
 func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organization) *organizationResponse {
 	m := org.Members[inst.Domain]
+	typ := 2 // User
+	if m.Owner {
+		typ = 0 // Owner
+	}
 	email := inst.PassphraseSalt()
 	return &organizationResponse{
 		ID:             org.ID(),
@@ -112,7 +116,7 @@ func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organizatio
 		Premium:        true,
 		Enabled:        true,
 		Status:         int(m.Status),
-		Type:           2, // User
+		Type:           typ,
 		Object:         "profileOrganization",
 	}
 }
