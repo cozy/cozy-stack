@@ -14,11 +14,13 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -1129,7 +1131,35 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		Owner:    false,
 		ReadOnly: m.ReadOnly || s.ReadOnlyRules(),
 	}
-	return couchdb.UpdateDoc(inst, org)
+	if err := couchdb.UpdateDoc(inst, org); err != nil {
+		return err
+	}
+	if status == bitwarden.OrgMemberAccepted {
+		return s.sendContactConfirmationMail(inst, m)
+	}
+	return nil
+}
+
+func (s *Sharing) sendContactConfirmationMail(inst *instance.Instance, m *Member) error {
+	publicName, _ := inst.PublicName()
+	link := inst.SubDomain(s.AppSlug)
+	msg, err := job.NewMessage(&mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "sharing_to_confirm",
+		TemplateValues: map[string]interface{}{
+			"PublicName": publicName,
+			"MemberName": m.PrimaryName(),
+			"Link":       link.String(),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }
 
 // RemoveBitwardenMember removes a sharing member from the bitwarden
