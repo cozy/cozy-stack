@@ -239,8 +239,9 @@ describe "The bitwarden API of the stack" do
     assert_equal items.length, 1
     assert_equal items.first[:name], "Updated card"
 
-    # Delete an item
-    bw.delete_item item_id
+    # Move an item out of the organization
+    Bitwarden::Cipher.update inst, item_id, items.first
+    bw.sync
 
     # Check that the item is deleted on Bob's instance
     sleep 6
@@ -256,7 +257,7 @@ describe "The bitwarden API of the stack" do
       organizationId: org.id,
       collectionIds: [coll_id]
     }
-    bw.create_item shared_item, org.id
+    bw.create_item new_item, org.id
     sleep 6
     Bitwarden::Organization.delete inst, org.id
 

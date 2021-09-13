@@ -133,10 +133,41 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 // isNoLongerShared returns true for a document/file/folder that has matched a
 // rule of a sharing, but no longer does.
 func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
-	if msg.DocType != consts.Files {
+	switch msg.DocType {
+	case consts.Files:
+		return isFileNoLongerShared(inst, msg, evt)
+	case consts.BitwardenCiphers:
+		return isCipherNoLongerShared(inst, msg, evt)
+	default:
 		return false, nil
 	}
+}
 
+func isCipherNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
+	if evt.OldDoc == nil {
+		return false, nil
+	}
+	oldOrg := evt.OldDoc.Get("organization_id")
+	newOrg := evt.Doc.Get("organization_id")
+	if oldOrg != newOrg {
+		s, err := FindSharing(inst, msg.SharingID)
+		if err != nil {
+			return false, err
+		}
+		rule := s.Rules[msg.RuleIndex]
+		if rule.Selector == "organization_id" {
+			for _, val := range rule.Values {
+				if val == newOrg {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func isFileNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
 	// Optim: if dir_id and referenced_by have not changed, the file can't have
 	// been removed from the sharing. Same if it has no old doc.
 	if evt.OldDoc == nil {
