@@ -337,11 +337,13 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	needToUpdateFiles := false
 	removed := false
 	wasRemoved := true
+	ruleIndex := msg.RuleIndex
 	if rule, ok := ref.Infos[msg.SharingID]; ok {
 		wasRemoved = rule.Removed
+		ruleIndex = ref.Infos[msg.SharingID].Rule
 	}
 	ref.Infos[msg.SharingID] = SharedInfo{
-		Rule:    ref.Infos[msg.SharingID].Rule,
+		Rule:    ruleIndex,
 		Binary:  evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
 		Removed: false,
 	}
@@ -353,7 +355,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			return nil
 		}
 		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule:    ref.Infos[msg.SharingID].Rule,
+			Rule:    ruleIndex,
 			Removed: true,
 			Binary:  false,
 		}
@@ -371,7 +373,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				return nil
 			}
 			ref.Infos[msg.SharingID] = SharedInfo{
-				Rule:    ref.Infos[msg.SharingID].Rule,
+				Rule:    ruleIndex,
 				Removed: true,
 				Binary:  false,
 			}
@@ -406,8 +408,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	// For a directory, we have to update the Removed flag for the files inside
 	// it, as we won't have any events for them.
 	if needToUpdateFiles {
-		ruleIdx := ref.Infos[msg.SharingID].Rule
-		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
+		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIndex, removed)
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Warnf("Error on updateRemovedForFiles for %v: %s", evt, err)
