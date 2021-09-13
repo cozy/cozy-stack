@@ -325,7 +325,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	rev := evt.Doc.Rev()
-	if _, ok := ref.Infos[msg.SharingID]; ok {
+	// XXX this optimization only works for files
+	if _, ok := ref.Infos[msg.SharingID]; ok && msg.DocType == consts.Files {
 		if sub, _ := ref.Revisions.Find(rev); sub != nil {
 			return nil
 		}
