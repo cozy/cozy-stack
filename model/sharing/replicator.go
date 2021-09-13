@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -158,6 +159,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 
 	feed, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
+		if err == errRevokeSharing {
+			if s.Owner {
+				return false, s.Revoke(inst)
+			} else {
+				return false, s.RevokeRecipientBySelf(inst, false)
+			}
+		}
 		return false, err
 	}
 	if feed.Seq == lastSeq {
@@ -332,6 +340,12 @@ type changesResponse struct {
 	Pending bool
 }
 
+// errRevokeSharing is a sentinel value that can be returned by callChangesFeed.
+// It means that a document fetched from the changes that has been removed, and
+// the sharing rule for it has the revoke action. So, the caller should check
+// for this error, and it is the case, it should revoke the sharing.
+var errRevokeSharing = errors.New("Sharing must be revoked")
+
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/stable/api/database/changes.html
 func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
@@ -362,14 +376,18 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*chang
 		if !ok {
 			continue
 		}
-		if _, ok = info["removed"]; ok {
-			res.Changes.Removed[r.DocID] = struct{}{}
-		}
 		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
 		}
 		res.RuleIndexes[r.DocID] = int(idx)
+		if _, ok = info["removed"]; ok {
+			rule := s.Rules[int(idx)]
+			if rule.Remove == ActionRuleRevoke {
+				return nil, errRevokeSharing
+			}
+			res.Changes.Removed[r.DocID] = struct{}{}
+		}
 		if strings.HasPrefix(r.DocID, consts.Files+"/") {
 			if rev := extractLastRevision(r.Doc); rev != "" {
 				res.Changes.Changed[r.DocID] = []string{rev}

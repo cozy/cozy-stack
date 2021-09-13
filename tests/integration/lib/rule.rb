@@ -65,7 +65,7 @@ class Rule
                   values: [org_id],
                   add: what,
                   update: what,
-                  remove: what
+                  remove: "revoke"
     r2 = Rule.new doctype: Bitwarden::Cipher.doctype,
                   title: "Ciphers",
                   values: [org_id],

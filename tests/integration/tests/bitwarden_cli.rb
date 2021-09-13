@@ -247,6 +247,30 @@ describe "The bitwarden API of the stack" do
     bw3.sync
     assert_empty bw3.items
 
+    # Delete an organization
+    new_item = {
+      type: Bitwarden::Types::CARD,
+      name: "In the organization",
+      notes: "check that it will be deleted when the sharing is revoked",
+      card: bw.template('item.card'),
+      organizationId: org.id,
+      collectionIds: [coll_id]
+    }
+    bw.create_item shared_item, org.id
+    sleep 6
+    Bitwarden::Organization.delete inst, org.id
+
+    # Check that the sharing has been revoked
+    sleep 6
+    bw.sync
+    names = bw.organizations.map { |o| o[:name] }.sort
+    assert_equal names, %w[Cozy]
+    doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
+    assert_nil doc["active"]
+    bw3.sync
+    assert_empty bw3.items
+    assert_empty Helpers.couch.all_docs(inst_recipient.domain, Bitwarden::Organization.doctype)
+
     assert_equal bw.logout, "You have logged out."
     assert_equal bw2.logout, "You have logged out."
 

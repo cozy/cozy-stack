@@ -33,6 +33,17 @@ class Bitwarden
       Organization.new(id: body["Id"], name: body["Name"], key: org_key)
     end
 
+    def self.delete(inst, org_id)
+      body = JSON.generate({ masterPasswordHash: inst.hashed_passphrase })
+      opts = {
+        accept: "application/json",
+        content_type: "application/json",
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      url = "http://#{inst.domain}/bitwarden/api/organizations/#{org_id}"
+      RestClient::Request.execute method: :delete, url: url, payload: body, headers: opts
+    end
+
     def self.generate_key
       Random.bytes 64
     end
