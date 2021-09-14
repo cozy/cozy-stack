@@ -55,7 +55,7 @@ func RefuseContact(c echo.Context) error {
 			continue
 		}
 		for i, m := range s.Members {
-			if i != 0 && m.Email == email {
+			if i != 0 && m.Email == email && m.Status == sharing.MemberStatusReady {
 				if err := s.RevokeRecipient(inst, i); err != nil {
 					errm = multierror.Append(errm, err)
 				}
