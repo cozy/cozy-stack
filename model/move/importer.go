@@ -230,7 +230,12 @@ func (im *importer) flush() error {
 
 	olds := make([]interface{}, len(im.docs))
 	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
-		return err
+		// XXX CouchDB can be overloaded sometimes when importing lots of documents.
+		// Let's wait a bit and retry...
+		time.Sleep(1 * time.Minute)
+		if err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
+			return err
+		}
 	}
 
 	im.doctype = ""
