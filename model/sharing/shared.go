@@ -133,10 +133,41 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 // isNoLongerShared returns true for a document/file/folder that has matched a
 // rule of a sharing, but no longer does.
 func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
-	if msg.DocType != consts.Files {
+	switch msg.DocType {
+	case consts.Files:
+		return isFileNoLongerShared(inst, msg, evt)
+	case consts.BitwardenCiphers:
+		return isCipherNoLongerShared(inst, msg, evt)
+	default:
 		return false, nil
 	}
+}
 
+func isCipherNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
+	if evt.OldDoc == nil {
+		return false, nil
+	}
+	oldOrg := evt.OldDoc.Get("organization_id")
+	newOrg := evt.Doc.Get("organization_id")
+	if oldOrg != newOrg {
+		s, err := FindSharing(inst, msg.SharingID)
+		if err != nil {
+			return false, err
+		}
+		rule := s.Rules[msg.RuleIndex]
+		if rule.Selector == "organization_id" {
+			for _, val := range rule.Values {
+				if val == newOrg {
+					return false, nil
+				}
+			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func isFileNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
 	// Optim: if dir_id and referenced_by have not changed, the file can't have
 	// been removed from the sharing. Same if it has no old doc.
 	if evt.OldDoc == nil {
@@ -294,7 +325,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	rev := evt.Doc.Rev()
-	if _, ok := ref.Infos[msg.SharingID]; ok {
+	// XXX this optimization only works for files
+	if _, ok := ref.Infos[msg.SharingID]; ok && msg.DocType == consts.Files {
 		if sub, _ := ref.Revisions.Find(rev); sub != nil {
 			return nil
 		}
@@ -305,11 +337,13 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	needToUpdateFiles := false
 	removed := false
 	wasRemoved := true
+	ruleIndex := msg.RuleIndex
 	if rule, ok := ref.Infos[msg.SharingID]; ok {
 		wasRemoved = rule.Removed
+		ruleIndex = ref.Infos[msg.SharingID].Rule
 	}
 	ref.Infos[msg.SharingID] = SharedInfo{
-		Rule:    ref.Infos[msg.SharingID].Rule,
+		Rule:    ruleIndex,
 		Binary:  evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
 		Removed: false,
 	}
@@ -321,7 +355,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			return nil
 		}
 		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule:    ref.Infos[msg.SharingID].Rule,
+			Rule:    ruleIndex,
 			Removed: true,
 			Binary:  false,
 		}
@@ -339,7 +373,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				return nil
 			}
 			ref.Infos[msg.SharingID] = SharedInfo{
-				Rule:    ref.Infos[msg.SharingID].Rule,
+				Rule:    ruleIndex,
 				Removed: true,
 				Binary:  false,
 			}
@@ -374,8 +408,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	// For a directory, we have to update the Removed flag for the files inside
 	// it, as we won't have any events for them.
 	if needToUpdateFiles {
-		ruleIdx := ref.Infos[msg.SharingID].Rule
-		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
+		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIndex, removed)
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Warnf("Error on updateRemovedForFiles for %v: %s", evt, err)

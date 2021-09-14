@@ -186,7 +186,7 @@ func TestTriggersArgs(t *testing.T) {
 		Update:  "push",
 		Remove:  "revoke",
 	}
-	expected = "io.cozy.test.foos:CREATED,UPDATED:foo"
+	expected = "io.cozy.test.foos:CREATED,UPDATED,DELETED:foo"
 	assert.Equal(t, expected, r.TriggerArgs())
 
 	r.Local = true
