@@ -672,3 +672,29 @@ Content-Type: application/json
   "rev": "1-1aa097a2eef904db9b1842342e6c6f50"
 }
 ```
+
+## Delete a database
+
+### Request
+
+```http
+DELETE /data/:type/ HTTP/1.1
+```
+
+```http
+DELETE /data/io.cozy.events/ HTTP/1.1
+```
+
+### Response OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "ok": true,
+  "deleted": true
+}
+```
