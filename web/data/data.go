@@ -286,6 +286,26 @@ func DeleteDoc(c echo.Context) error {
 	})
 }
 
+// DeleteDatabase deletes the doctype's database.
+func DeleteDatabase(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Get("doctype").(string)
+
+	if err := permission.CheckWritable(doctype); err != nil {
+		return err
+	}
+	if err := middlewares.AllowWholeType(c, permission.DELETE, doctype); err != nil {
+		return err
+	}
+	if err := couchdb.DeleteDB(instance, doctype); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"ok":      true,
+		"deleted": true,
+	})
+}
+
 func defineIndex(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
@@ -525,4 +545,6 @@ func Routes(router *echo.Group) {
 	group.GET("/_design_docs", getDesignDocs)
 	group.POST("/_design/:designdocid/copy", copyDesignDoc)
 	group.DELETE("/_design/:designdocid", deleteDesignDoc)
+
+	group.DELETE("/", DeleteDatabase)
 }
