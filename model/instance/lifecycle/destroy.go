@@ -106,6 +106,24 @@ func deleteAccounts(inst *instance.Instance) error {
 			continue
 		}
 		man, err := app.GetKonnectorBySlug(inst, slug)
+		if err == app.ErrNotFound {
+			copier := app.Copier(consts.KonnectorType, inst)
+			installer, erri := app.NewInstaller(inst, copier,
+				&app.InstallerOptions{
+					Operation:  app.Install,
+					Type:       consts.KonnectorType,
+					SourceURL:  "registry://" + slug + "/stable",
+					Slug:       slug,
+					Registries: inst.Registries(),
+				},
+			)
+			if erri == nil {
+				if appManifest, erri := installer.RunSync(); erri == nil {
+					man = appManifest.(*app.KonnManifest)
+					err = nil
+				}
+			}
+		}
 		if err != nil {
 			return err
 		}
