@@ -116,7 +116,7 @@ class Move
     timeout.times do
       sleep 1
       received = Email.received kind: "to", query: @source.email
-      received.reject! { |e| e.subject =~ /(New connection|Nouvelle connexion)/ }
+      received.reject! { |e| e.subject =~ /(New.connection|Nouvelle.connexion)/ }
       return confirm_mail received.first if received.any?
     end
     raise "Confirmation mail for moving was not received after #{timeout} seconds"
@@ -124,7 +124,7 @@ class Move
 
   def confirm_mail(mail)
     scanned = mail.body.scan(/secret=3D(\w+)/)
-    raise "No secret in #{mail.body}" if scanned.empty?
+    raise "No secret in #{mail.subject} - #{mail.body}" if scanned.empty?
     secret = scanned.last.last
     opts = { cookies: { cozysessid: @source.open_session } }
     @source.client["/move/go?secret=#{secret}"].get opts
