@@ -287,9 +287,9 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]account.C
 		if err == nil && msg.Slug == slug && msg.Account != "" {
 			// XXX we can have several triggers for the same account (e.g. cron + webhook)
 			hasEntry := false
-			for _, entry := range toDelete {
+			for i, entry := range toDelete {
 				if entry.Account.ID() == msg.Account {
-					entry.Triggers = append(entry.Triggers, t)
+					toDelete[i].Triggers = append(entry.Triggers, t)
 					hasEntry = true
 					break
 				}
