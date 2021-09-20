@@ -8,6 +8,6 @@
     "eslint-config-cozy-app": "2.1.1",
     "eslint-plugin-prettier": "3.4.1",
     "prettier": "2.4.0",
-    "svgo": "2.5.0"
+    "svgo": "2.6.1"
   }
 }
