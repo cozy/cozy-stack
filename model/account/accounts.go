@@ -23,6 +23,7 @@ type Account struct {
 	AccountType       string                 `json:"account_type"`
 	DefaultFolderPath string                 `json:"defaultFolderPath,omitempty"`
 	FolderPath        string                 `json:"folderPath,omitempty"` // Legacy
+	Token             string                 `json:"token,omitempty"`      // Used by bi-aggregator
 	Basic             *BasicInfo             `json:"auth,omitempty"`
 	Oauth             *OauthInfo             `json:"oauth,omitempty"`
 	Extras            map[string]interface{} `json:"oauth_callback_results,omitempty"`
