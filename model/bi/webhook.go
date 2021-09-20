@@ -32,7 +32,7 @@ func FireWebhook(inst *instance.Instance, token string, payload map[string]inter
 	if err != nil {
 		return err
 	}
-	if connID == "" {
+	if connID == 0 {
 		return errors.New("no connection.id")
 	}
 
@@ -45,8 +45,10 @@ func FireWebhook(inst *instance.Instance, token string, payload map[string]inter
 		return err
 	}
 
-	// TODO look if we really need to fire the trigger, or just update the lastUpdate
-	return fireTrigger(inst, trigger, account, payload)
+	if mustExecuteKonnector(inst, trigger, payload) {
+		return fireTrigger(inst, trigger, account, payload)
+	}
+	return copyLastUpdate(inst, account, payload)
 }
 
 func checkToken(accounts []*account.Account, token string) error {
@@ -61,19 +63,19 @@ func checkToken(accounts []*account.Account, token string) error {
 	return errors.New("no bi-aggregator account found")
 }
 
-func extractPayloadConnID(payload map[string]interface{}) (string, error) {
+func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 	conn, ok := payload["connection"].(map[string]interface{})
 	if !ok {
-		return "", errors.New("connection not found")
+		return 0, errors.New("connection not found")
 	}
-	connID, ok := conn["id"].(string)
+	connID, ok := conn["id"].(float64)
 	if !ok {
-		return "", errors.New("id_user not found")
+		return 0, errors.New("id_user not found")
 	}
-	return connID, nil
+	return int(connID), nil
 }
 
-func findAccount(accounts []*account.Account, connID string) (*account.Account, error) {
+func findAccount(accounts []*account.Account, connID int) (*account.Account, error) {
 	for _, account := range accounts {
 		id := extractAccountConnID(account.Data)
 		if id == connID {
@@ -83,17 +85,20 @@ func findAccount(accounts []*account.Account, connID string) (*account.Account, 
 	return nil, errors.New("no account found with this id_user")
 }
 
-func extractAccountConnID(data map[string]interface{}) string {
+func extractAccountConnID(data map[string]interface{}) int {
+	if data == nil {
+		return 0
+	}
 	auth, ok := data["auth"].(map[string]interface{})
 	if !ok {
-		return ""
+		return 0
 	}
 	bi, ok := auth["bi"].(map[string]interface{})
 	if !ok {
-		return ""
+		return 0
 	}
-	connID, _ := bi["connId"].(string)
-	return connID
+	connID, _ := bi["connId"].(float64)
+	return int(connID)
 }
 
 func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, error) {
@@ -108,11 +113,69 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 	return triggers[0], nil
 }
 
+func mustExecuteKonnector(
+	inst *instance.Instance,
+	trigger job.Trigger,
+	payload map[string]interface{},
+) bool {
+	return payloadHasAccounts(payload) || lastExecNotSuccessful(inst, trigger)
+}
+
+func payloadHasAccounts(payload map[string]interface{}) bool {
+	conn, ok := payload["connection"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	accounts, ok := conn["accounts"].([]interface{})
+	if !ok {
+		return false
+	}
+	return len(accounts) > 0
+}
+
+func lastExecNotSuccessful(inst *instance.Instance, trigger job.Trigger) bool {
+	lastJobs, err := job.GetJobs(inst, trigger.ID(), 1)
+	if err != nil || len(lastJobs) == 0 {
+		return true
+	}
+	return lastJobs[0].State != job.Done
+}
+
 func fireTrigger(
 	inst *instance.Instance,
 	trigger job.Trigger,
 	account *account.Account,
 	payload map[string]interface{},
 ) error {
-	return nil
+	req := trigger.Infos().JobRequest()
+	_, err := job.System().PushJob(inst, req)
+	return err
+}
+
+func copyLastUpdate(
+	inst *instance.Instance,
+	account *account.Account,
+	payload map[string]interface{},
+) error {
+	conn, ok := payload["connection"].(map[string]interface{})
+	if !ok {
+		return errors.New("no connection")
+	}
+	lastUpdate, ok := conn["last_update"].(string)
+	if !ok {
+		return errors.New("no connection.last_update")
+	}
+	if account.Data == nil {
+		return errors.New("no data in account")
+	}
+	auth, ok := account.Data["auth"].(map[string]interface{})
+	if !ok {
+		return errors.New("no data.auth in account")
+	}
+	bi, ok := auth["bi"].(map[string]interface{})
+	if !ok {
+		return errors.New("no data.auth.bi in account")
+	}
+	bi["lastUpdate"] = lastUpdate
+	return couchdb.UpdateDoc(inst, account)
 }
