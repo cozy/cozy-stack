@@ -27,6 +27,7 @@ type Account struct {
 	Oauth             *OauthInfo             `json:"oauth,omitempty"`
 	Extras            map[string]interface{} `json:"oauth_callback_results,omitempty"`
 	Relationships     map[string]interface{} `json:"relationships,omitempty"`
+	Data              map[string]interface{} `json:"data,omitempty"`
 	Metadata          *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 	// When an account is deleted, the stack cleans the triggers and calls its
 	// konnector to clean the account remotely (when available). It is done via
@@ -103,7 +104,7 @@ func (ac *Account) Fetch(field string) []string {
 }
 
 // GetTriggers returns the list of triggers associated with the given
-// accountID. In particular, the the stack will need to remove them when the
+// accountID. In particular, the stack will need to remove them when the
 // account is deleted.
 func GetTriggers(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID string) ([]job.Trigger, error) {
 	triggers, err := jobsSystem.GetAllTriggers(db)

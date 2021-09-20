@@ -928,6 +928,14 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### POST /jobs/webhooks/bi
+
+This endpoint is used to create jobs for banking konnectors. It requires a
+payload with the format defined by [Budget
+Insight](https://docs.budget-insight.com/guides/webhooks) and an
+`Authorization` header with a Bearer token, where a trigger and an account can
+be found on this instance matching their data.
+
 ## Worker pool
 
 The consuming side of the job queue is handled by a worker pool.

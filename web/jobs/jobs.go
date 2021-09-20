@@ -11,6 +11,7 @@ import (
 
 	"github.com/justincampbell/bigduration"
 
+	"github.com/cozy/cozy-stack/model/bi"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -142,6 +143,8 @@ func (t apiTriggerState) Links() *jsonapi.LinksList {
 func (t apiTriggerState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.s)
 }
+
+const bearerAuthScheme = "Bearer "
 
 func getQueue(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -406,6 +409,30 @@ func deleteTrigger(c echo.Context) error {
 	}
 	if err := sched.DeleteTrigger(instance, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func fireBIWebhook(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.WebhookTriggerType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	header := c.Request().Header.Get(echo.HeaderAuthorization)
+	if !strings.HasPrefix(header, bearerAuthScheme) {
+		return middlewares.ErrForbidden
+	}
+	token := strings.TrimPrefix(header, bearerAuthScheme)
+
+	var payload map[string]interface{}
+	if err := c.Bind(&payload); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if err := bi.FireWebhook(inst, token, payload); err != nil {
+		return jsonapi.BadRequest(err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -696,6 +723,7 @@ func Routes(router *echo.Group) {
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
+	router.POST("/webhooks/bi", fireBIWebhook)
 	router.POST("/webhooks/:trigger-id", fireWebhook)
 
 	router.POST("/clean", cleanJobs)
