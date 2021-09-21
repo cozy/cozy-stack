@@ -936,6 +936,12 @@ Insight](https://docs.budget-insight.com/guides/webhooks) and an
 `Authorization` header with a Bearer token, where a trigger and an account can
 be found on this instance matching their data.
 
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Worker pool
 
 The consuming side of the job queue is handled by a worker pool.
