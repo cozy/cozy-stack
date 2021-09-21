@@ -51,6 +51,7 @@ type Options struct {
 	OnboardingFinished *bool
 	Blocked            *bool
 	BlockingReason     string
+	FromCloudery       bool // Do not call the cloudery when the changes come from it
 }
 
 func (opts *Options) trace(name string, do func()) {

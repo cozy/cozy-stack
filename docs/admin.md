@@ -83,6 +83,54 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### PATCH /instances/:domain
+
+This route can be used to change an instance (email, locale, disk quota, ToS,
+etc.)
+
+**Note** a special parameter `FromCloudery=true` in the query string can be
+used to tell the stack to not call the cloudery if the email or public name has
+changed, since the change is already coming from the cloudery.
+
+#### Request
+
+```http
+PATCH /instances/john.mycozy.cloud?Email=john@example.com&FromCloudery=true HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+```json
+{
+  "data": {
+    "type": "instances",
+    "id": "0dc76ad9b1cf3a979b916b3155001830",
+    "attributes": {
+      "domain": "john.mycozy.cloud",
+      "prefix": "cozy1a4e1aabf424a194d7daf946d7b1337d",
+      "locale": "fr",
+      "context": "cozy",
+      "onboarding_finished": true,
+      "indexes_version": 31,
+      "passphrase_hash": "c2NyeXB0JDMyNzY4JDgkMSQyYjMzMTU1YTY5OTdjYzM2ZjQyYjk1MWM0MWU4ZWVkYSRlODA4NTY2ODQ5OTdkOWNmNzc1ZGEzMjdlYWMwOTgyNTMwMTM3NTJjYTMxMTdhYTIyYTIxODI0NzBmODhjYjdl",
+      "session_secret": "eyG2l+G1xO38WyD1GfqYkgSU/T4rnti+JzOwj6haHpM8PSMvzkGu/CSH0mpXUuuCNVbjEXc+hRwGMJ8lTKqs+w==",
+      "oauth_secret": "tnr6V8jDK27CDVpzNiOOAJZs+5wrvGyNyJxIc/BJ6O87i2eJX4LCzblDFyDbVv/B7qV7HA9/Fc+Agon2gHQg8x0E0zzfGizbFeWt+KPk7UrZNd4sZJ81oWNNd9BrJ2+eKXDmZeYBI0AwUSykyr7iOIpB5jXaIvfOQvH7EYwtKLg=",
+      "cli_secret": "dcLa1VqcoI4eNE7nBrFzhJ9w6rRLlAMESl3PAEqr+IDE29OeN3uyhzLhxPlk0b9rkc0yvozQc/AFttZxyqH/DDYa6rrJyrf91gddtwSfka1pJVss+/DiFaghyWJzEbffBs78X3swA2gSJNu0eGDKdFVY7q8iLT4JpfXy+GPzdLk="
+    },
+    "meta": {
+      "rev": "1-1c4efe4196191469a65b2a3e0898db61"
+    },
+    "links": {
+      "self": "/instances/0dc76ad9b1cf3a979b916b3155001830"
+    }
+  }
+}
+```
+
 
 ### GET /instances/with-app-version/:slug/:version
 

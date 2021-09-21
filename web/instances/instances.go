@@ -166,6 +166,9 @@ func modifyHandler(c echo.Context) error {
 	if blocked, err := strconv.ParseBool(c.QueryParam("Blocked")); err == nil {
 		opts.Blocked = &blocked
 	}
+	if from, err := strconv.ParseBool(c.QueryParam("FromCloudery")); err == nil {
+		opts.FromCloudery = from
+	}
 	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)

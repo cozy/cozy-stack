@@ -189,7 +189,9 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 	}
 
-	managerUpdateSettings(i, clouderyChanges)
+	if !opts.FromCloudery {
+		managerUpdateSettings(i, clouderyChanges)
+	}
 
 	return nil
 }
@@ -204,7 +206,7 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 		return
 	}
 
-	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
+	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, changes); err != nil {
 		inst.Logger().Errorf("Error during cloudery settings update %s", err)
 	}
