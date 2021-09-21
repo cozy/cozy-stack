@@ -95,6 +95,7 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 	if slug == "onboarding" {
 		return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 	}
+	i.Logger().WithField("nspace", "apps").Infof("App not found: %s", slug)
 	if _, err := registry.GetApplication(slug, i.Registries()); err != nil {
 		return app.ErrNotFound
 	}
