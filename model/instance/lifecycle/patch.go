@@ -189,7 +189,9 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 	}
 
-	managerUpdateSettings(i, clouderyChanges)
+	if !opts.FromCloudery {
+		managerUpdateSettings(i, clouderyChanges)
+	}
 
 	return nil
 }
