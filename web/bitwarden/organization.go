@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -471,6 +472,9 @@ func ConfirmUser(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Unknown Cozy URL for this user",
 			})
+		}
+		if u, err := url.Parse(domain); err == nil {
+			domain = u.Host
 		}
 		org.Members[domain] = bitwarden.OrgMember{
 			UserID:   bwContact.UserID,
