@@ -68,9 +68,9 @@ func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string) error {
 	header := &zip.FileHeader{
 		Name:     filePath,
 		Method:   zip.Deflate,
-		Modified: file.UpdatedAt,
+		Modified: *file.UpdatedAt,
 	}
-	if file.Executable {
+	if *file.Executable {
 		header.SetMode(0750)
 	} else {
 		header.SetMode(0640)

@@ -146,8 +146,9 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	if newfile.CozyMetadata == nil {
 		newfile.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	}
-	newfile.UpdatedAt = time.Now()
-	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
+	updatedAt := time.Now()
+	newfile.UpdatedAt = &updatedAt
+	newfile.CozyMetadata.UpdatedAt = *newfile.UpdatedAt
 
 	// If the file was renamed while OO editor was opened, the revision has
 	// been changed, but we still should avoid creating a conflict if the

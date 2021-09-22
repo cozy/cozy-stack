@@ -94,7 +94,6 @@ func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (r
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	defer res.Body.Close()
 
 	err = extractJSONRes(res, &v)
@@ -947,6 +946,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.NotEqual(t, attrs2["executable"], attrs1["executable"])
 	assert.Equal(t, attrs2["class"], "audio")
 	assert.Equal(t, attrs2["mime"], "audio/mp3")
+
 	assert.Equal(t, attrs2["executable"], false)
 
 	buf, err = readFile(storage, "/willbemodified")

@@ -118,6 +118,7 @@ func objectToFileDocV2(container string, object swift.Object) *vfs.TreeFile {
 	md5sum, _ := hex.DecodeString(object.Hash)
 	name := "unknown"
 	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	executable := false
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
@@ -125,14 +126,14 @@ func objectToFileDocV2(container string, object swift.Object) *vfs.TreeFile {
 				DocID:     makeDocID(object.Name),
 				DocName:   name,
 				DirID:     "",
-				CreatedAt: object.LastModified,
-				UpdatedAt: object.LastModified,
+				CreatedAt: &object.LastModified,
+				UpdatedAt: &object.LastModified,
 				Fullpath:  path.Join(vfs.OrphansDirName, name),
 			},
 			ByteSize:   object.Bytes,
 			Mime:       mime,
 			Class:      class,
-			Executable: false,
+			Executable: &executable,
 			MD5Sum:     md5sum,
 		},
 	}

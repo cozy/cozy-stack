@@ -279,7 +279,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	objMeta := swift.Metadata{
 		"creation-name": newdoc.Name(),
 		"created-at":    newdoc.CreatedAt.Format(time.RFC3339),
-		"exec":          strconv.FormatBool(newdoc.Executable),
+		"exec":          strconv.FormatBool(*newdoc.Executable),
 	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(

@@ -11,7 +11,8 @@ import (
 )
 
 func TestImageMetadataExtractor(t *testing.T) {
-	doc := &FileDoc{Mime: "image/png"}
+	now := time.Now()
+	doc := &FileDoc{Mime: "image/png", CreatedAt: &now}
 	extractor := NewMetaExtractor(doc)
 	assert.NotNil(t, extractor)
 	f, err := os.Open("../../assets/icon-192.png")
@@ -34,7 +35,8 @@ func TestImageMetadataExtractor(t *testing.T) {
 }
 
 func TestExifMetadataExtractor(t *testing.T) {
-	doc := &FileDoc{Mime: "image/jpeg"}
+	now := time.Now()
+	doc := &FileDoc{Mime: "image/jpeg", CreatedAt: &now}
 	extractor := NewMetaExtractor(doc)
 	assert.NotNil(t, extractor)
 	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
@@ -62,11 +64,13 @@ func TestExifMetadataExtractor(t *testing.T) {
 }
 
 func TestShortcutMetadataExtractor(t *testing.T) {
+	now := time.Now()
 	doc := &FileDoc{
 		Mime: consts.ShortcutMimeType,
 		CozyMetadata: &FilesCozyMetadata{
 			CreatedOn: "http://cozy.localhost:8080/",
 		},
+		CreatedAt: &now,
 	}
 	extractor := NewMetaExtractor(doc)
 	assert.NotNil(t, extractor)

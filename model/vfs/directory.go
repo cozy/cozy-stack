@@ -23,14 +23,14 @@ type DirDoc struct {
 	// Directory revision
 	DocRev string `json:"_rev,omitempty"`
 	// Directory name
-	DocName string `json:"name"`
+	DocName string `json:"name,omitempty"`
 	// Parent directory identifier
-	DirID       string `json:"dir_id"`
+	DirID       string `json:"dir_id,omitempty"`
 	RestorePath string `json:"restore_path,omitempty"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Tags      []string  `json:"tags"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	Tags      []string   `json:"tags,omitempty"`
 
 	// Directory path on VFS.
 	// Fullpath should always be present. It is marked "omitempty" because
@@ -55,8 +55,18 @@ func (d *DirDoc) DocType() string { return consts.Files }
 // Clone implements couchdb.Doc
 func (d *DirDoc) Clone() couchdb.Doc {
 	cloned := *d
-	cloned.Tags = make([]string, len(d.Tags))
-	copy(cloned.Tags, d.Tags)
+	if d.Tags != nil {
+		cloned.Tags = make([]string, len(d.Tags))
+		copy(cloned.Tags, d.Tags)
+	}
+	if d.CreatedAt != nil {
+		createdAt := *d.CreatedAt
+		cloned.CreatedAt = &createdAt
+	}
+	if d.UpdatedAt != nil {
+		updatedAt := *d.UpdatedAt
+		cloned.UpdatedAt = &updatedAt
+	}
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(d.ReferencedBy))
 	copy(cloned.ReferencedBy, d.ReferencedBy)
 	cloned.NotSynchronizedOn = make([]couchdb.DocReference, len(d.NotSynchronizedOn))
@@ -97,7 +107,7 @@ func (d *DirDoc) Size() int64 { return 0 }
 func (d *DirDoc) Mode() os.FileMode { return 0755 }
 
 // ModTime returns the modification time
-func (d *DirDoc) ModTime() time.Time { return d.UpdatedAt }
+func (d *DirDoc) ModTime() time.Time { return *d.UpdatedAt }
 
 // IsDir returns the abbreviation for Mode().IsDir()
 func (d *DirDoc) IsDir() bool { return true }
@@ -205,8 +215,8 @@ func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, err
 		DocName: name,
 		DirID:   dirID,
 
-		CreatedAt: createDate,
-		UpdatedAt: createDate,
+		CreatedAt: &createDate,
+		UpdatedAt: &createDate,
 		Tags:      uniqueTags(tags),
 		Fullpath:  fullpath,
 	}, nil
@@ -221,13 +231,13 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	}
 
 	var err error
-	cdate := olddoc.CreatedAt
+	cdate := *olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:        &olddoc.DocName,
 		DirID:       &olddoc.DirID,
 		RestorePath: &olddoc.RestorePath,
 		Tags:        &olddoc.Tags,
-		UpdatedAt:   &olddoc.UpdatedAt,
+		UpdatedAt:   olddoc.UpdatedAt,
 	}, patch, cdate)
 
 	if err != nil {
@@ -248,8 +258,8 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
-	newdoc.CreatedAt = cdate
-	newdoc.UpdatedAt = *patch.UpdatedAt
+	newdoc.CreatedAt = &cdate
+	newdoc.UpdatedAt = patch.UpdatedAt
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.NotSynchronizedOn = olddoc.NotSynchronizedOn
 	newdoc.CozyMetadata = olddoc.CozyMetadata

@@ -359,12 +359,13 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	assert.NoError(t, sch.StartScheduler(bro))
 
+	now := time.Now()
 	dir := &vfs.DirDoc{
 		Type:      "directory",
 		DocName:   "foo",
 		DirID:     consts.RootDirID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: &now,
+		UpdatedAt: &now,
 		Fullpath:  "/foo",
 	}
 	err = testInstance.VFS().CreateDirDoc(dir)
@@ -393,8 +394,8 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 			DocRev:    "1-" + utils.RandomString(10),
 			DocName:   "bar",
 			DirID:     dir.DocID,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			CreatedAt: &now,
+			UpdatedAt: &now,
 			Fullpath:  "/foo/bar",
 		}, nil)
 
@@ -409,8 +410,8 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 		DocRev:    "1-" + utils.RandomString(10),
 		DocName:   "baz",
 		DirID:     barID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: &now,
+		UpdatedAt: &now,
 		ByteSize:  42,
 		Mime:      "application/json",
 		Class:     "application",
@@ -435,7 +436,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 		DocName:   "quux",
 		DirID:     consts.RootDirID,
 		CreatedAt: baz.CreatedAt,
-		UpdatedAt: time.Now(),
+		UpdatedAt: &now,
 		ByteSize:  42,
 		Mime:      "application/json",
 		Class:     "application",

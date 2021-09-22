@@ -34,8 +34,8 @@ func (c *couchdbIndexer) InitIndex() error {
 		DocID:     consts.RootDirID,
 		Fullpath:  "/",
 		DirID:     "",
-		CreatedAt: createDate,
-		UpdatedAt: createDate,
+		CreatedAt: &createDate,
+		UpdatedAt: &createDate,
 	})
 	if err != nil {
 		return err
@@ -47,8 +47,8 @@ func (c *couchdbIndexer) InitIndex() error {
 		DocID:     consts.TrashDirID,
 		Fullpath:  TrashDirName,
 		DirID:     consts.RootDirID,
-		CreatedAt: createDate,
-		UpdatedAt: createDate,
+		CreatedAt: &createDate,
+		UpdatedAt: &createDate,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
@@ -138,9 +138,9 @@ func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 	// created_at of the file. By valid, we mean that we filter out photos
 	// taken on camera were the clock was never configured (e.g. 1970-01-01).
 	if date, ok := doc.Metadata["datetime"].(time.Time); ok && date.Year() > 1990 {
-		doc.CreatedAt = date
+		doc.CreatedAt = &date
 		if doc.UpdatedAt.Before(date) {
-			doc.UpdatedAt = date
+			doc.UpdatedAt = &date
 		}
 	}
 	return nil

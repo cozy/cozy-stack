@@ -24,21 +24,21 @@ type FileDoc struct {
 	// File revision
 	DocRev string `json:"_rev,omitempty"`
 	// File name
-	DocName string `json:"name"`
+	DocName string `json:"name,omitempty"`
 	// Parent directory identifier
 	DirID       string `json:"dir_id,omitempty"`
 	RestorePath string `json:"restore_path,omitempty"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 
 	ByteSize   int64    `json:"size,string"` // Serialized in JSON as a string, because JS has some issues with big numbers
-	MD5Sum     []byte   `json:"md5sum"`
-	Mime       string   `json:"mime"`
-	Class      string   `json:"class"`
-	Executable bool     `json:"executable"`
+	MD5Sum     []byte   `json:"md5sum,omitempty"`
+	Mime       string   `json:"mime,omitempty"`
+	Class      string   `json:"class,omitempty"`
+	Executable *bool    `json:"executable,omitempty"`
 	Trashed    bool     `json:"trashed"`
-	Tags       []string `json:"tags"`
+	Tags       []string `json:"tags,omitempty"`
 
 	Metadata     Metadata               `json:"metadata,omitempty"`
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
@@ -70,10 +70,26 @@ func (f *FileDoc) DocType() string { return consts.Files }
 // Clone implements couchdb.Doc
 func (f *FileDoc) Clone() couchdb.Doc {
 	cloned := *f
-	cloned.MD5Sum = make([]byte, len(f.MD5Sum))
-	copy(cloned.MD5Sum, f.MD5Sum)
-	cloned.Tags = make([]string, len(f.Tags))
-	copy(cloned.Tags, f.Tags)
+	if f.MD5Sum != nil {
+		cloned.MD5Sum = make([]byte, len(f.MD5Sum))
+		copy(cloned.MD5Sum, f.MD5Sum)
+	}
+	if f.Tags != nil {
+		cloned.Tags = make([]string, len(f.Tags))
+		copy(cloned.Tags, f.Tags)
+	}
+	if f.CreatedAt != nil {
+		createdAt := *f.CreatedAt
+		cloned.CreatedAt = &createdAt
+	}
+	if f.UpdatedAt != nil {
+		updatedAt := *f.UpdatedAt
+		cloned.UpdatedAt = &updatedAt
+	}
+	if f.Executable != nil {
+		executable := *f.Executable
+		cloned.Executable = &executable
+	}
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(f.ReferencedBy))
 	copy(cloned.ReferencedBy, f.ReferencedBy)
 	cloned.Metadata = make(Metadata, len(f.Metadata))
@@ -123,10 +139,10 @@ func (f *FileDoc) Name() string { return f.DocName }
 func (f *FileDoc) Size() int64 { return f.ByteSize }
 
 // Mode returns the file mode bits
-func (f *FileDoc) Mode() os.FileMode { return getFileMode(f.Executable) }
+func (f *FileDoc) Mode() os.FileMode { return getFileMode(*f.Executable) }
 
 // ModTime returns the modification time
-func (f *FileDoc) ModTime() time.Time { return f.UpdatedAt }
+func (f *FileDoc) ModTime() time.Time { return *f.UpdatedAt }
 
 // IsDir returns the abbreviation for Mode().IsDir()
 func (f *FileDoc) IsDir() bool { return false }
@@ -190,13 +206,13 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 		DocName: name,
 		DirID:   dirID,
 
-		CreatedAt:  cdate,
-		UpdatedAt:  cdate,
+		CreatedAt:  &cdate,
+		UpdatedAt:  &cdate,
 		ByteSize:   size,
 		MD5Sum:     md5Sum,
 		Mime:       mime,
 		Class:      class,
-		Executable: executable,
+		Executable: &executable,
 		Trashed:    trashed,
 		Tags:       tags,
 	}
@@ -240,7 +256,7 @@ func ServeFileContent(fs VFS, doc *FileDoc, version *Version, filename, disposit
 	}
 	defer content.Close()
 
-	http.ServeContent(w, req, filename, doc.UpdatedAt, content)
+	http.ServeContent(w, req, filename, *doc.UpdatedAt, content)
 	return nil
 }
 
@@ -260,9 +276,9 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 		DirID:       &olddoc.DirID,
 		RestorePath: &olddoc.RestorePath,
 		Tags:        &olddoc.Tags,
-		UpdatedAt:   &olddoc.UpdatedAt,
-		Executable:  &olddoc.Executable,
-	}, patch, cdate)
+		UpdatedAt:   olddoc.UpdatedAt,
+		Executable:  olddoc.Executable,
+	}, patch, *cdate)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +306,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 		olddoc.MD5Sum,
 		mime,
 		class,
-		cdate,
+		*cdate,
 		*patch.Executable,
 		trashed,
 		*patch.Tags,
@@ -300,7 +316,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
-	newdoc.UpdatedAt = *patch.UpdatedAt
+	newdoc.UpdatedAt = patch.UpdatedAt
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.CozyMetadata = olddoc.CozyMetadata

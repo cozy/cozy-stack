@@ -136,7 +136,7 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			header := &zip.FileHeader{
 				Name:     a.Name + "/" + name,
 				Method:   zip.Deflate,
-				Modified: file.UpdatedAt,
+				Modified: *file.UpdatedAt,
 			}
 			ze, err := zw.CreateHeader(header)
 			if err != nil {

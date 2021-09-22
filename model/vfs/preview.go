@@ -18,13 +18,13 @@ func ServePDFPreview(w http.ResponseWriter, req *http.Request, fs VFS, doc *File
 	name := fmt.Sprintf("%s-preview.jpg", doc.ID())
 	modtime := doc.UpdatedAt
 	if doc.CozyMetadata != nil && doc.CozyMetadata.UploadedAt != nil {
-		modtime = *doc.CozyMetadata.UploadedAt
+		modtime = doc.CozyMetadata.UploadedAt
 	}
 	buf, err := preview(fs, doc)
 	if err != nil {
 		return err
 	}
-	http.ServeContent(w, req, name, modtime, bytes.NewReader(buf.Bytes()))
+	http.ServeContent(w, req, name, *modtime, bytes.NewReader(buf.Bytes()))
 	return nil
 }
 

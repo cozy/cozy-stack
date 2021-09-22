@@ -88,12 +88,12 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 
 	if created := c.QueryParam("CreatedAt"); created != "" {
 		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
-			doc.CreatedAt = at
+			doc.CreatedAt = &at
 		}
 	}
 	if updated := c.QueryParam("UpdatedAt"); updated != "" {
 		if at, err3 := time.Parse(time.RFC3339, updated); err3 == nil {
-			doc.UpdatedAt = at
+			doc.UpdatedAt = &at
 		}
 	}
 	doc.CozyMetadata, _ = CozyMetadataFromClaims(c, true)
@@ -153,19 +153,19 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 	}
 	if date := c.Request().Header.Get("Date"); date != "" {
 		if t, err2 := time.Parse(time.RFC1123, date); err2 == nil {
-			doc.CreatedAt = t
-			doc.UpdatedAt = t
+			doc.CreatedAt = &t
+			doc.UpdatedAt = &t
 		}
 	}
 	if created := c.QueryParam("CreatedAt"); created != "" {
 		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
-			doc.CreatedAt = at
+			doc.CreatedAt = &at
 		}
 	}
 
 	if updated := c.QueryParam("UpdatedAt"); updated != "" {
 		if at, err3 := time.Parse(time.RFC3339, updated); err3 == nil {
-			doc.UpdatedAt = at
+			doc.UpdatedAt = &at
 		}
 	}
 
@@ -207,7 +207,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	if updated := c.QueryParam("UpdatedAt"); updated != "" {
 		if at, err2 := time.Parse(time.RFC3339, updated); err2 == nil {
-			newdoc.UpdatedAt = at
+			newdoc.UpdatedAt = &at
 		}
 	}
 
@@ -248,7 +248,6 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		}
 		err = FileData(c, http.StatusOK, newdoc, true, nil)
 	}()
-
 	_, err = io.Copy(file, c.Request().Body)
 	return
 }
@@ -1624,7 +1623,7 @@ func instanceURL(c echo.Context) string {
 func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
 	fcm, _ := CozyMetadataFromClaims(c, false)
 	if dir.CozyMetadata == nil {
-		fcm.CreatedAt = dir.CreatedAt
+		fcm.CreatedAt = *dir.CreatedAt
 		fcm.CreatedByApp = ""
 		fcm.CreatedByAppVersion = ""
 		dir.CozyMetadata = fcm
@@ -1640,11 +1639,11 @@ func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields b
 	var oldSourceAccount, oldSourceIdentifier string
 	fcm, slug := CozyMetadataFromClaims(c, setUploadFields)
 	if file.CozyMetadata == nil {
-		fcm.CreatedAt = file.CreatedAt
+		fcm.CreatedAt = *file.CreatedAt
 		fcm.CreatedByApp = ""
 		fcm.CreatedByAppVersion = ""
 		uploadedAt := file.CreatedAt
-		fcm.UploadedAt = &uploadedAt
+		fcm.UploadedAt = uploadedAt
 		file.CozyMetadata = fcm
 	} else {
 		oldSourceAccount = file.CozyMetadata.SourceAccount

@@ -634,12 +634,12 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	}
 	if created, ok := target["created_at"].(string); ok {
 		if at, err := time.Parse(time.RFC3339Nano, created); err == nil {
-			dir.CreatedAt = at
+			dir.CreatedAt = &at
 		}
 	}
 	if updated, ok := target["updated_at"].(string); ok {
 		if at, err := time.Parse(time.RFC3339Nano, updated); err == nil {
-			dir.UpdatedAt = at
+			dir.UpdatedAt = &at
 		}
 	}
 
@@ -1213,8 +1213,8 @@ func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
 	fcm := dir.CozyMetadata
 	if fcm == nil {
 		fcm = vfs.NewCozyMetadata(instanceURL)
-		fcm.CreatedAt = dir.CreatedAt
-		fcm.UpdatedAt = dir.UpdatedAt
+		fcm.CreatedAt = *dir.CreatedAt
+		fcm.UpdatedAt = *dir.UpdatedAt
 	}
 	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
@@ -1252,10 +1252,10 @@ func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 	fcm := file.CozyMetadata
 	if fcm == nil {
 		fcm = vfs.NewCozyMetadata(instanceURL)
-		fcm.CreatedAt = file.CreatedAt
-		fcm.UpdatedAt = file.UpdatedAt
+		fcm.CreatedAt = *file.CreatedAt
+		fcm.UpdatedAt = *file.UpdatedAt
 		uploadedAt := file.CreatedAt
-		fcm.UploadedAt = &uploadedAt
+		fcm.UploadedAt = uploadedAt
 		fcm.UploadedOn = instanceURL
 	}
 	doc.M["cozyMetadata"] = fcm.ToJSONDoc()

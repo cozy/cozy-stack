@@ -89,7 +89,7 @@ func NewVersion(file *FileDoc) *Version {
 	}
 	v := &Version{
 		DocID:        file.ID() + "/" + id,
-		UpdatedAt:    file.UpdatedAt,
+		UpdatedAt:    *file.UpdatedAt,
 		ByteSize:     file.ByteSize,
 		MD5Sum:       file.MD5Sum,
 		Tags:         file.Tags,
@@ -101,9 +101,9 @@ func NewVersion(file *FileDoc) *Version {
 	v.CozyMetadata.UploadedOn = instanceURL
 	at := file.UpdatedAt
 	if file.CozyMetadata != nil && file.CozyMetadata.UploadedAt != nil {
-		at = *file.CozyMetadata.UploadedAt
+		at = file.CozyMetadata.UploadedAt
 	}
-	v.CozyMetadata.UploadedAt = &at
+	v.CozyMetadata.UploadedAt = at
 	if file.CozyMetadata != nil && file.CozyMetadata.UploadedBy != nil {
 		by := *file.CozyMetadata.UploadedBy
 		v.CozyMetadata.UploadedBy = &by
@@ -114,14 +114,14 @@ func NewVersion(file *FileDoc) *Version {
 // SetMetaFromVersion takes the metadata from the version and copies them to
 // the file document.
 func SetMetaFromVersion(file *FileDoc, version *Version) {
-	file.UpdatedAt = version.UpdatedAt
+	file.UpdatedAt = &version.UpdatedAt
 	file.ByteSize = version.ByteSize
 	file.MD5Sum = version.MD5Sum
 	file.Tags = version.Tags
 	file.Metadata = version.Metadata
 	if file.CozyMetadata == nil {
 		file.CozyMetadata = NewCozyMetadata("")
-		file.CozyMetadata.CreatedAt = file.CreatedAt
+		file.CozyMetadata.CreatedAt = *file.CreatedAt
 	}
 	file.CozyMetadata.UploadedOn = version.CozyMetadata.UploadedOn
 	at := *version.CozyMetadata.UploadedAt

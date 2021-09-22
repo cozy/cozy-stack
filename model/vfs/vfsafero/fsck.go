@@ -200,14 +200,15 @@ func (afs *aferoVFS) checkFiles(
 }
 
 func fileInfosToDirDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
+	created_at := fileinfo.ModTime()
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
 				Type:      consts.DirType,
 				DocName:   fileinfo.Name(),
 				DirID:     "",
-				CreatedAt: fileinfo.ModTime(),
-				UpdatedAt: fileinfo.ModTime(),
+				CreatedAt: &created_at,
+				UpdatedAt: &created_at,
 				Fullpath:  fullpath,
 			},
 		},
@@ -218,20 +219,22 @@ func fileInfosToFileDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
 	trashed := strings.HasPrefix(fullpath, vfs.TrashDirName)
 	contentType, md5sum, _ := extractContentTypeAndMD5(fullpath)
 	mime, class := vfs.ExtractMimeAndClass(contentType)
+	created_at := fileinfo.ModTime()
+	executable := int(fileinfo.Mode()|0111) > 0
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
 				Type:      consts.FileType,
 				DocName:   fileinfo.Name(),
 				DirID:     "",
-				CreatedAt: fileinfo.ModTime(),
-				UpdatedAt: fileinfo.ModTime(),
+				CreatedAt: &created_at,
+				UpdatedAt: &created_at,
 				Fullpath:  fullpath,
 			},
 			ByteSize:   fileinfo.Size(),
 			Mime:       mime,
 			Class:      class,
-			Executable: int(fileinfo.Mode()|0111) > 0,
+			Executable: &executable,
 			MD5Sum:     md5sum,
 			Trashed:    trashed,
 		},

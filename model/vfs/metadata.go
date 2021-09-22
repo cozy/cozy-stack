@@ -91,11 +91,11 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 	var e MetaExtractor
 	switch doc.Mime {
 	case "image/jpeg":
-		e = NewExifExtractor(doc.CreatedAt, true)
+		e = NewExifExtractor(*doc.CreatedAt, true)
 	case "image/heic", "image/heif":
-		e = NewExifExtractor(doc.CreatedAt, false)
+		e = NewExifExtractor(*doc.CreatedAt, false)
 	case "image/png", "image/gif":
-		e = NewImageExtractor(doc.CreatedAt)
+		e = NewImageExtractor(*doc.CreatedAt)
 	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
 		e = NewAudioExtractor()
 	case consts.ShortcutMimeType:

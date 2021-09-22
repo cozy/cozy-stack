@@ -161,7 +161,7 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 		metaHeader := &zip.FileHeader{
 			Name:     path.Join(ExportDataDir, consts.Files, file.DocID+".json"),
 			Method:   zip.Deflate,
-			Modified: file.UpdatedAt,
+			Modified: *file.UpdatedAt,
 		}
 		metaHeader.SetMode(0640)
 		metaWriter, err := zw.CreateHeader(metaHeader)
@@ -193,9 +193,9 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 		fileHeader := &zip.FileHeader{
 			Name:     path.Join(ExportFilesDir, fullpath),
 			Method:   zip.Deflate,
-			Modified: file.UpdatedAt,
+			Modified: *file.UpdatedAt,
 		}
-		if file.Executable {
+		if *file.Executable {
 			fileHeader.SetMode(0750)
 		} else {
 			fileHeader.SetMode(0640)

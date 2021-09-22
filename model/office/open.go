@@ -259,7 +259,7 @@ func (o *Opener) downloadURL() (string, error) {
 func uploadedDate(f *vfs.FileDoc) string {
 	date := f.CreatedAt
 	if f.CozyMetadata != nil && f.CozyMetadata.UploadedAt != nil {
-		date = *f.CozyMetadata.UploadedAt
+		date = f.CozyMetadata.UploadedAt
 	}
 	return date.Format("2006-01-02 3:04 PM")
 }
