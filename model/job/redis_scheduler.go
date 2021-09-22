@@ -16,7 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
 
@@ -57,6 +57,7 @@ return t`
 type redisScheduler struct {
 	broker  Broker
 	client  redis.UniversalClient
+	ctx     context.Context
 	closed  chan struct{}
 	stopped chan struct{}
 	log     *logrus.Entry
@@ -67,6 +68,7 @@ type redisScheduler struct {
 func NewRedisScheduler(client redis.UniversalClient) Scheduler {
 	return &redisScheduler{
 		client:  client,
+		ctx:     context.Background(),
 		log:     logger.WithNamespace("scheduler-redis"),
 		stopped: make(chan struct{}),
 	}
@@ -136,7 +138,7 @@ func (s *redisScheduler) startEventDispatcher() {
 func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 	for event := range eventsCh {
 		key := eventsKey(event)
-		m, err := s.client.HGetAll(key).Result()
+		m, err := s.client.HGetAll(s.ctx, key).Result()
 		if err != nil {
 			s.log.Errorf("Could not fetch redis set %s: %s",
 				key, err.Error())
@@ -170,7 +172,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				var d time.Duration
 				if d, err = time.ParseDuration(et.Infos().Debounce); err == nil {
 					timestamp := time.Now().Add(d)
-					s.client.ZAddNX(TriggersKey, &redis.Z{
+					s.client.ZAddNX(s.ctx, TriggersKey, &redis.Z{
 						Score:  float64(timestamp.UTC().Unix()),
 						Member: redisKey(t),
 					})
@@ -217,15 +219,15 @@ func (s *redisScheduler) fire(trigger Trigger, request *JobRequest) {
 	pipe := s.client.Pipeline()
 	switch trigger.CombineRequest() {
 	case appendPayload:
-		pipe.RPush(payloadKey(trigger), string(request.Payload))
+		pipe.RPush(s.ctx, payloadKey(trigger), string(request.Payload))
 	case keepOriginalRequest:
-		pipe.SetNX(payloadKey(trigger), string(request.Payload), 30*24*time.Hour)
+		pipe.SetNX(s.ctx, payloadKey(trigger), string(request.Payload), 30*24*time.Hour)
 	}
-	pipe.ZAddNX(TriggersKey, &redis.Z{
+	pipe.ZAddNX(s.ctx, TriggersKey, &redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(trigger),
 	})
-	if _, err := pipe.Exec(); err != nil {
+	if _, err := pipe.Exec(s.ctx); err != nil {
 		s.log.Warnf("Cannot fire trigger because of redis error: %s", err)
 	}
 }
@@ -251,7 +253,7 @@ func (s *redisScheduler) ShutdownScheduler(ctx context.Context) error {
 func (s *redisScheduler) PollScheduler(now int64) error {
 	keys := []string{strconv.FormatInt(now, 10)}
 	for {
-		res, err := s.client.Eval(luaPoll, keys).Result()
+		res, err := s.client.Eval(s.ctx, luaPoll, keys).Result()
 		if err != nil || res == nil {
 			return err
 		}
@@ -264,7 +266,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		}
 		parts := strings.SplitN(results[0].(string), "/", 2)
 		if len(parts) != 2 {
-			s.client.ZRem(SchedKey, results[0])
+			s.client.ZRem(s.ctx, SchedKey, results[0])
 			return fmt.Errorf("Invalid key %s", res)
 		}
 
@@ -272,7 +274,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		t, err := s.GetTrigger(prefixer.NewPrefixer("", prefix), parts[1])
 		if err != nil {
 			if err == ErrNotFoundTrigger || err == ErrMalformedTrigger {
-				s.client.ZRem(SchedKey, results[0])
+				s.client.ZRem(s.ctx, SchedKey, results[0])
 			}
 			return err
 		}
@@ -280,23 +282,23 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		case *EventTrigger, *WebhookTrigger: // Debounced
 			job := t.Infos().JobRequest()
 			job.Debounced = true
-			if err = s.client.ZRem(SchedKey, results[0]).Err(); err != nil {
+			if err = s.client.ZRem(s.ctx, SchedKey, results[0]).Err(); err != nil {
 				return err
 			}
 			switch t.CombineRequest() {
 			case appendPayload:
 				pipe := s.client.Pipeline()
-				lrange := pipe.LRange(payloadKey(t), 0, -1)
-				pipe.Del(payloadKey(t))
-				if _, err := pipe.Exec(); err == nil {
+				lrange := pipe.LRange(s.ctx, payloadKey(t), 0, -1)
+				pipe.Del(s.ctx, payloadKey(t))
+				if _, err := pipe.Exec(s.ctx); err == nil {
 					payloads := strings.Join(lrange.Val(), ",")
 					job.Payload = Payload(`{"payloads":[` + payloads + "]}")
 				}
 			case keepOriginalRequest:
 				pipe := s.client.Pipeline()
-				get := pipe.Get(payloadKey(t))
-				pipe.Del(payloadKey(t))
-				if _, err := pipe.Exec(); err == nil {
+				get := pipe.Get(s.ctx, payloadKey(t))
+				pipe.Del(s.ctx, payloadKey(t))
+				if _, err := pipe.Exec(s.ctx); err == nil {
 					job.Payload = Payload(get.Val())
 				}
 			}
@@ -307,7 +309,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			job := t.Infos().JobRequest()
 			if _, err = s.broker.PushJob(t, job); err != nil {
 				if limits.IsLimitReachedOrExceeded(err) {
-					s.client.ZRem(SchedKey, results[0])
+					s.client.ZRem(s.ctx, SchedKey, results[0])
 				}
 				return err
 			}
@@ -320,7 +322,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 				// Remove the cron trigger from redis if it is invalid, as it
 				// may block other cron triggers
 				if err == ErrUnknownWorker || limits.IsLimitReachedOrExceeded(err) {
-					s.client.ZRem(SchedKey, results[0])
+					s.client.ZRem(s.ctx, SchedKey, results[0])
 					continue
 				}
 				return err
@@ -355,7 +357,7 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	switch t := t.(type) {
 	case *EventTrigger:
 		hKey := eventsKey(t)
-		return s.client.HSet(hKey, t.ID(), t.Infos().Arguments).Err()
+		return s.client.HSet(s.ctx, hKey, t.ID(), t.Infos().Arguments).Err()
 	case *AtTrigger:
 		timestamp = t.at
 	case *CronTrigger:
@@ -370,18 +372,18 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		return errors.New("Not implemented yet")
 	}
 	pipe := s.client.Pipeline()
-	err := pipe.ZAdd(TriggersKey, &redis.Z{
+	err := pipe.ZAdd(s.ctx, TriggersKey, &redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t),
 	}).Err()
 	if err != nil {
 		return err
 	}
-	err = pipe.ZRem(SchedKey, redisKey(t)).Err()
+	err = pipe.ZRem(s.ctx, SchedKey, redisKey(t)).Err()
 	if err != nil {
 		return err
 	}
-	_, err = pipe.Exec()
+	_, err = pipe.Exec(s.ctx)
 	return err
 }
 
@@ -420,13 +422,13 @@ func (s *redisScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, argum
 	}
 	timestamp := updated.NextExecution(time.Now())
 	pipe := s.client.Pipeline()
-	pipe.ZRem(TriggersKey, redisKey(updated))
-	pipe.ZRem(SchedKey, redisKey(updated))
-	pipe.ZAdd(TriggersKey, &redis.Z{
+	pipe.ZRem(s.ctx, TriggersKey, redisKey(updated))
+	pipe.ZRem(s.ctx, SchedKey, redisKey(updated))
+	pipe.ZAdd(s.ctx, TriggersKey, &redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(updated),
 	})
-	_, err = pipe.Exec()
+	_, err = pipe.Exec(s.ctx)
 	return err
 }
 
@@ -446,12 +448,12 @@ func (s *redisScheduler) deleteTrigger(t Trigger) error {
 	}
 	switch t.(type) {
 	case *EventTrigger:
-		return s.client.HDel(eventsKey(t), t.ID()).Err()
+		return s.client.HDel(s.ctx, eventsKey(t), t.ID()).Err()
 	case *AtTrigger, *CronTrigger:
 		pipe := s.client.Pipeline()
-		pipe.ZRem(TriggersKey, redisKey(t))
-		pipe.ZRem(SchedKey, redisKey(t))
-		_, err := pipe.Exec()
+		pipe.ZRem(s.ctx, TriggersKey, redisKey(t))
+		pipe.ZRem(s.ctx, SchedKey, redisKey(t))
+		_, err := pipe.Exec(s.ctx)
 		return err
 	}
 	return nil
@@ -489,7 +491,7 @@ func (s *redisScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
 func (s *redisScheduler) HasEventTrigger(trigger Trigger) bool {
 	infos := trigger.Infos()
 	key := eventsKey(trigger)
-	m, err := s.client.HGetAll(key).Result()
+	m, err := s.client.HGetAll(s.ctx, key).Result()
 	if err != nil {
 		s.log.Errorf("Could not fetch redis set %s: %s", key, err)
 		return false
@@ -514,7 +516,7 @@ func (s *redisScheduler) HasEventTrigger(trigger Trigger) bool {
 // CleanRedis removes clean redis by removing the two sets holding the triggers
 // states.
 func (s *redisScheduler) CleanRedis() error {
-	return s.client.Del(TriggersKey, SchedKey).Err()
+	return s.client.Del(s.ctx, TriggersKey, SchedKey).Err()
 }
 
 // RebuildRedis puts all the triggers in redis (idempotent)

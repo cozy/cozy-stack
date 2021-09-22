@@ -1,6 +1,7 @@
 package limits
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"sync"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // CounterType os an enum for the type of counters used by rate-limiting.
@@ -285,12 +286,13 @@ func (c *memCounter) Reset(key string) error {
 
 type redisCounter struct {
 	Client redis.UniversalClient
+	ctx    context.Context
 }
 
 // NewRedisCounter returns a counter that can be mutualized between several
 // cozy-stack processes by using redis.
 func NewRedisCounter(client redis.UniversalClient) Counter {
-	return &redisCounter{client}
+	return &redisCounter{client, context.Background()}
 }
 
 // incrWithTTL is a lua script for redis to increment a counter and sets a TTL
@@ -305,7 +307,7 @@ return n
 
 func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
 	ttl := strconv.FormatInt(int64(timeLimit/time.Second), 10)
-	count, err := r.Client.Eval(incrWithTTL, []string{key, ttl}).Result()
+	count, err := r.Client.Eval(r.ctx, incrWithTTL, []string{key, ttl}).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -313,7 +315,7 @@ func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, er
 }
 
 func (r *redisCounter) Reset(key string) error {
-	_, err := r.Client.Del(key).Result()
+	_, err := r.Client.Del(r.ctx, key).Result()
 	return err
 }
 

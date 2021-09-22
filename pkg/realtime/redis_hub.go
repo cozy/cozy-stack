@@ -1,26 +1,29 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	redis "github.com/go-redis/redis/v7"
+	redis "github.com/go-redis/redis/v8"
 )
 
 const eventsRedisKey = "realtime:events"
 
 type redisHub struct {
 	c     redis.UniversalClient
+	ctx   context.Context
 	mem   *memHub
 	local *topic
 }
 
 func newRedisHub(c redis.UniversalClient) *redisHub {
+	ctx := context.Background()
 	local := newTopic("*")
 	mem := newMemHub()
-	hub := &redisHub{c, mem, local}
+	hub := &redisHub{c, ctx, mem, local}
 	go hub.start()
 	return hub
 }
@@ -90,7 +93,7 @@ func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *redisHub) start() {
-	sub := h.c.Subscribe(eventsRedisKey)
+	sub := h.c.Subscribe(h.ctx, eventsRedisKey)
 	log := logger.WithNamespace("realtime-redis")
 	for msg := range sub.Channel() {
 		je := jsonEvent{}
@@ -129,7 +132,7 @@ func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 		log.Warnf("Error on publish: %s", err)
 		return
 	}
-	h.c.Publish(eventsRedisKey, e.Doc.DocType()+","+string(buf))
+	h.c.Publish(h.ctx, eventsRedisKey, e.Doc.DocType()+","+string(buf))
 }
 
 func (h *redisHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -27,7 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
 )
 
@@ -831,8 +832,17 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	w := logger.WithNamespace("go-redis").Writer()
-	redis.SetLogger(stdlog.New(w, "", 0))
+	l := stdlog.New(w, "", 0)
+	redis.SetLogger(&contextPrint{l})
 	return nil
+}
+
+type contextPrint struct {
+	l *stdlog.Logger
+}
+
+func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
+	c.l.Printf(format, args...)
 }
 
 // MakeVault initializes the global vault.

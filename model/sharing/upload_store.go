@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"sync"
@@ -9,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // A UploadStore is essentially an object to store files metadata by key
@@ -38,7 +39,8 @@ func getStore() UploadStore {
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
-		globalStore = &redisStore{cli}
+		ctx := context.Background()
+		globalStore = &redisStore{cli, ctx}
 	}
 	return globalStore
 }
@@ -96,11 +98,12 @@ func (s *memStore) Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string
 }
 
 type redisStore struct {
-	c redis.UniversalClient
+	c   redis.UniversalClient
+	ctx context.Context
 }
 
 func (s *redisStore) Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error) {
-	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
+	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -120,7 +123,7 @@ func (s *redisStore) Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (stri
 		return "", err
 	}
 	key := makeSecret()
-	if err = s.c.Set(db.DBPrefix()+":"+key, v, uploadStoreTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, db.DBPrefix()+":"+key, v, uploadStoreTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
