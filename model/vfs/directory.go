@@ -23,14 +23,14 @@ type DirDoc struct {
 	// Directory revision
 	DocRev string `json:"_rev,omitempty"`
 	// Directory name
-	DocName string `json:"name"`
+	DocName string `json:"name,omitempty"`
 	// Parent directory identifier
-	DirID       string `json:"dir_id"`
+	DirID       string `json:"dir_id,omitempty"`
 	RestorePath string `json:"restore_path,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Tags      []string  `json:"tags"`
+	Tags      []string  `json:"tags,omitempty"`
 
 	// Directory path on VFS.
 	// Fullpath should always be present. It is marked "omitempty" because

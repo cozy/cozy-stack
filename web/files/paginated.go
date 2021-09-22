@@ -3,6 +3,7 @@ package files
 // Links is used to generate a JSON-API link for the directory (part of
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
@@ -362,4 +363,72 @@ func (f *file) Links() *jsonapi.LinksList {
 func (f *file) IncludePath(fp vfs.FilePather) {
 	_, err := f.doc.Path(fp)
 	f.includePath = err == nil
+}
+
+// findDir is used for the result of mango requests, where only some fields can
+// have been requested
+type findDir struct {
+	*vfs.DirDoc
+	// We may want to hide some fields from the JSON response if the fields has
+	// not been requested to CouchDB, as they are blank
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+func (d *findDir) Relationships() jsonapi.RelationshipMap { return nil }
+func (d *findDir) Included() []jsonapi.Object             { return nil }
+func (d *findDir) Links() *jsonapi.LinksList              { return nil }
+
+func newFindDir(doc *vfs.DirDoc, fields []string) *findDir {
+	dir := &findDir{doc, nil, nil}
+	if hasField(fields, "created_at") {
+		dir.CreatedAt = &doc.CreatedAt
+	}
+	if hasField(fields, "updated_at") {
+		dir.UpdatedAt = &doc.UpdatedAt
+	}
+	return dir
+}
+
+// findFile is used for the result of mango requests, where only some fields can
+// have been requested
+type findFile struct {
+	*vfs.FileDoc
+	file *file
+	// We may want to hide some fields from the JSON response if the fields has
+	// not been requested to CouchDB, as they are blank
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	Executable *bool      `json:"executable,omitempty"`
+	// Hide the internal_vfs_id and referenced_by
+	InternalID   *interface{} `json:"internal_vfs_id,omitempty"`
+	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
+}
+
+func (f *findFile) Relationships() jsonapi.RelationshipMap { return f.file.Relationships() }
+func (f *findFile) Included() []jsonapi.Object             { return f.file.Included() }
+func (f *findFile) Links() *jsonapi.LinksList              { return f.file.Links() }
+
+func newFindFile(doc *vfs.FileDoc, fields []string, i *instance.Instance) *findFile {
+	f := NewFile(doc, i)
+	ff := &findFile{doc, f, nil, nil, nil, nil, nil}
+	if hasField(fields, "created_at") {
+		ff.CreatedAt = &doc.CreatedAt
+	}
+	if hasField(fields, "updated_at") {
+		ff.UpdatedAt = &doc.UpdatedAt
+	}
+	if hasField(fields, "executable") {
+		ff.Executable = &doc.Executable
+	}
+	return ff
+}
+
+func hasField(fields []string, field string) bool {
+	for _, f := range fields {
+		if f == field {
+			return true
+		}
+	}
+	return false
 }

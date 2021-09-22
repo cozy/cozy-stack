@@ -1245,8 +1245,14 @@ func FindFilesMango(c echo.Context) error {
 		return err
 	}
 
-	// drop the fields, they can cause issues if not properly manipulated
-	delete(findRequest, "fields")
+	if reqFields, ok := findRequest["fields"].([]interface{}); ok {
+		// Those fields are necessary for the JSON-API response
+		fields := []string{"_id", "_rev", "type", "class", "size", "trashed"}
+		for _, v := range reqFields {
+			fields = append(fields, v.(string))
+		}
+		findRequest["fields"] = fields
+	}
 
 	limit, hasLimit := findRequest["limit"].(float64)
 	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
@@ -1268,7 +1274,6 @@ func FindFilesMango(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
 	var total int
 	if len(results) >= int(limit) {
 		total = math.MaxInt32 - 1 // we dont know the actual number
@@ -1284,12 +1289,21 @@ func FindFilesMango(c echo.Context) error {
 	}
 
 	out := make([]jsonapi.Object, len(results))
+	fields, ok := findRequest["fields"].([]string)
 	for i, dof := range results {
 		d, f := dof.Refine()
 		if d != nil {
-			out[i] = newDir(d)
+			if ok {
+				out[i] = newFindDir(d, fields)
+			} else {
+				out[i] = newDir(d)
+			}
 		} else {
-			out[i] = NewFile(f, instance)
+			if ok {
+				out[i] = newFindFile(f, fields, instance)
+			} else {
+				out[i] = NewFile(f, instance)
+			}
 		}
 	}
 
