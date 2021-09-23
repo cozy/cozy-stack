@@ -50,11 +50,11 @@ import (
 
 const (
 	// cspScriptSrcAllowList is an allowlist for default allowed domains in CSP.
-	cspScriptSrcAllowList = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc https://sentry.cozycloud.cc"
+	cspScriptSrcAllowList = "https://matomo.cozycloud.cc https://sentry.cozycloud.cc https://errors.cozycloud.cc https://api.pwnedpasswords.com"
 
 	// cspImgSrcAllowList is an allowlist of images domains that are allowed in
 	// CSP.
-	cspImgSrcAllowList = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc " +
+	cspImgSrcAllowList = "https://matomo.cozycloud.cc " +
 		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
 		"https://*.tiles.mapbox.com https://api.mapbox.com"
 
