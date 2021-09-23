@@ -640,6 +640,7 @@ func TestUploadWithSourceAccount(t *testing.T) {
 	assert.Equal(t, account, fcm["sourceAccount"])
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
 }
+
 func TestModifyMetadataByPath(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=file-move-me-by-path", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
@@ -2386,6 +2387,10 @@ func TestFind(t *testing.T) {
 	_, err := couchdb.DefineIndexRaw(testInstance, "io.cozy.files", &defIndex)
 	assert.NoError(t, err)
 
+	defIndex2 := M{"index": M{"fields": S{"type"}}}
+	_, err = couchdb.DefineIndexRaw(testInstance, "io.cozy.files", &defIndex2)
+	assert.NoError(t, err)
+
 	query := strings.NewReader(`{
 		"selector": {
 			"_id": {
@@ -2399,7 +2404,6 @@ func TestFind(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-
 	var obj map[string]interface{}
 	err = extractJSONRes(res, &obj)
 	assert.NoError(t, err)
@@ -2433,6 +2437,65 @@ func TestFind(t *testing.T) {
 	assert.Equal(t, len(data), 1)
 	assert.NotNil(t, meta)
 	assert.NotEmpty(t, meta["execution_stats"])
+
+	query3 := strings.NewReader(`{
+		"selector": {
+			"_id": {
+				"$gt": null
+			}
+		},
+		"fields": ["dir_id", "name", "name"],
+		"limit": 1
+	}`)
+	req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query3)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	resData := obj["data"].([]interface{})
+	dataFields := resData[0].(map[string]interface{})
+	attrs := dataFields["attributes"].(map[string]interface{})
+	assert.NotEmpty(t, attrs["name"].(string))
+	assert.NotEmpty(t, attrs["dir_id"].(string))
+	assert.NotEmpty(t, attrs["type"].(string))
+	assert.Nil(t, attrs["path"])
+	assert.Nil(t, attrs["created_at"])
+	assert.Nil(t, attrs["updated_at"])
+	assert.Nil(t, attrs["tags"])
+
+	query4 := strings.NewReader(`{
+		"selector": {
+			"type": "file"
+		},
+		"fields": ["name"],
+		"limit": 1
+	}`)
+	req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query4)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	resData = obj["data"].([]interface{})
+	if assert.Len(t, resData, 1) {
+		dataFields = resData[0].(map[string]interface{})
+		attrs = dataFields["attributes"].(map[string]interface{})
+		assert.NotEmpty(t, attrs["name"].(string))
+		assert.NotEmpty(t, attrs["type"].(string))
+		assert.NotEmpty(t, attrs["size"].(string))
+		assert.False(t, attrs["trashed"].(bool))
+		assert.Nil(t, attrs["created_at"])
+		assert.Nil(t, attrs["updated_at"])
+		assert.Nil(t, attrs["tags"])
+		assert.Nil(t, attrs["executable"])
+		assert.Nil(t, attrs["dir_id"])
+		assert.Nil(t, attrs["path"])
+	}
 }
 
 func TestMain(m *testing.M) {
