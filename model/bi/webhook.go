@@ -2,6 +2,7 @@ package bi
 
 import (
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -148,7 +149,18 @@ func fireTrigger(
 	payload map[string]interface{},
 ) error {
 	req := trigger.Infos().JobRequest()
-	_, err := job.System().PushJob(inst, req)
+	var msg map[string]interface{}
+	if err := json.Unmarshal(req.Message, &msg); err == nil {
+		msg["bi_webhook"] = true
+		if updated, err := json.Marshal(msg); err == nil {
+			req.Message = updated
+		}
+	}
+	j, err := job.System().PushJob(inst, req)
+	if err == nil {
+		inst.Logger().WithField("nspace", "webhook").
+			Debugf("Push job %s (account: %s - trigger: %s)", j.ID(), account.ID(), trigger.ID())
+	}
 	return err
 }
 
@@ -177,5 +189,10 @@ func copyLastUpdate(
 		return errors.New("no data.auth.bi in account")
 	}
 	bi["lastUpdate"] = lastUpdate
-	return couchdb.UpdateDoc(inst, account)
+	err := couchdb.UpdateDoc(inst, account)
+	if err == nil {
+		inst.Logger().WithField("nspace", "webhook").
+			Debugf("Set lastUpdate to %s (account :%s)", lastUpdate, account.ID())
+	}
+	return err
 }
