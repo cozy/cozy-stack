@@ -71,7 +71,7 @@ func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 	}
 	connID, ok := conn["id"].(float64)
 	if !ok {
-		return 0, errors.New("id_user not found")
+		return 0, errors.New("connection.id not found")
 	}
 	return int(connID), nil
 }
