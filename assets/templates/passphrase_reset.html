@@ -24,7 +24,7 @@
       </header>
 
       <div class="d-flex flex-column align-items-center mb-md-3">
-        <h1 class="h4 h2-md mb-4 text-center">{{t "Passphrase reset Title"}}</h1>
+        <h1 class="h4 h2-md mb-4 mb-md-5 text-center">{{t "Passphrase reset Title"}}</h1>
         {{if .HasHint}}
         <form id="send-hint-form" method="POST" action="/auth/hint" class="d-contents">
           <input type="hidden" name="redirect" value="{{.Redirect}}" />
