@@ -3,10 +3,12 @@ package bitwarden
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -430,6 +432,18 @@ func ConfirmUser(c echo.Context) error {
 	}
 
 	userID := c.Param("user-id")
+	var bwContact bitwarden.Contact
+	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, userID, &bwContact); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
 	found := false
 	for domain, member := range org.Members {
 		if member.UserID != userID {
@@ -447,26 +461,36 @@ func ConfirmUser(c echo.Context) error {
 		org.Members[domain] = member
 	}
 	if !found {
-		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "The specified user isn't a member of the organization",
-		})
-	}
-
-	var contact bitwarden.Contact
-	if err := couchdb.GetDoc(inst, consts.BitwardenContacts, userID, &contact); err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return c.JSON(http.StatusNotFound, echo.Map{
-				"error": "not found",
+		card, err := contact.FindByEmail(inst, bwContact.Email)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": err.Error(),
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err.Error(),
-		})
+		domain := card.PrimaryCozyURL()
+		if domain == "" {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Unknown Cozy URL for this user",
+			})
+		}
+		if u, err := url.Parse(domain); err == nil {
+			domain = u.Host
+		}
+		org.Members[domain] = bitwarden.OrgMember{
+			UserID:   bwContact.UserID,
+			Email:    bwContact.Email,
+			Name:     card.PrimaryName(),
+			OrgKey:   confirm.Key,
+			Status:   bitwarden.OrgMemberInvited,
+			Owner:    false,
+			ReadOnly: true, // it will be overwritten when the user accepts the sharing
+		}
 	}
-	if !contact.Confirmed {
-		contact.Confirmed = true
-		contact.Metadata.UpdatedAt = time.Now()
-		if err := couchdb.UpdateDoc(inst, &contact); err != nil {
+
+	if !bwContact.Confirmed {
+		bwContact.Confirmed = true
+		bwContact.Metadata.UpdatedAt = time.Now()
+		if err := couchdb.UpdateDoc(inst, &bwContact); err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": err.Error(),
 			})
