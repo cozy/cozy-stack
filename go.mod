@@ -24,7 +24,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/h2non/filetype v1.1.1
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
+	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/labstack/echo/v4 v4.5.0
