@@ -35,9 +35,10 @@ const (
 
 // Triggers keep record of which triggers are active
 type Triggers struct {
-	TrackID     string `json:"track_id,omitempty"`
-	ReplicateID string `json:"replicate_id,omitempty"`
-	UploadID    string `json:"upload_id,omitempty"`
+	TrackID     string   `json:"track_id,omitempty"` // Legacy
+	TrackIDs    []string `json:"track_ids,omitempty"`
+	ReplicateID string   `json:"replicate_id,omitempty"`
+	UploadID    string   `json:"upload_id,omitempty"`
 }
 
 // Sharing contains all the information about a sharing.
@@ -474,6 +475,11 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 	if err := removeSharingTrigger(inst, s.Triggers.TrackID); err != nil {
 		return err
+	}
+	for _, id := range s.Triggers.TrackIDs {
+		if err := removeSharingTrigger(inst, id); err != nil {
+			return err
+		}
 	}
 	if err := removeSharingTrigger(inst, s.Triggers.ReplicateID); err != nil {
 		return err
@@ -967,13 +973,13 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 
 		// Check triggers
 		if s.Active && accepted {
-			if s.Triggers.TrackID == "" {
+			if s.Triggers.TrackID == "" && len(s.Triggers.TrackIDs) == 0 {
 				checks = append(checks, map[string]interface{}{
 					"id":      s.SID,
 					"type":    "missing_trigger_on_active_sharing",
 					"trigger": "track",
 				})
-			} else {
+			} else if s.Triggers.TrackID != "" {
 				err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.TrackID, nil)
 				if couchdb.IsNotFoundError(err) {
 					checks = append(checks, map[string]interface{}{
@@ -982,6 +988,18 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 						"trigger":    "track",
 						"trigger_id": s.Triggers.TrackID,
 					})
+				}
+			} else {
+				for _, id := range s.Triggers.TrackIDs {
+					err := couchdb.GetDoc(inst, consts.Triggers, id, nil)
+					if couchdb.IsNotFoundError(err) {
+						checks = append(checks, map[string]interface{}{
+							"id":         s.SID,
+							"type":       "missing_trigger_on_active_sharing",
+							"trigger":    "track",
+							"trigger_id": id,
+						})
+					}
 				}
 			}
 
@@ -1025,12 +1043,16 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 				}
 			}
 		} else {
-			if s.Triggers.TrackID != "" {
+			if s.Triggers.TrackID != "" || len(s.Triggers.TrackIDs) > 0 {
+				id := s.Triggers.TrackID
+				if id == "" {
+					id = s.Triggers.TrackIDs[0]
+				}
 				checks = append(checks, map[string]interface{}{
 					"id":         s.SID,
 					"type":       "trigger_on_inactive_sharing",
 					"trigger":    "track",
-					"trigger_id": s.Triggers.TrackID,
+					"trigger_id": id,
 				})
 			}
 			if s.Triggers.ReplicateID != "" {
@@ -1038,7 +1060,7 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 					"id":         s.SID,
 					"type":       "trigger_on_inactive_sharing",
 					"trigger":    "replicate",
-					"trigger_id": s.Triggers.TrackID,
+					"trigger_id": s.Triggers.ReplicateID,
 				})
 			}
 			if s.Triggers.UploadID != "" {
@@ -1046,7 +1068,7 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 					"id":         s.SID,
 					"type":       "trigger_on_inactive_sharing",
 					"trigger":    "upload",
-					"trigger_id": s.Triggers.TrackID,
+					"trigger_id": s.Triggers.UploadID,
 				})
 			}
 		}
