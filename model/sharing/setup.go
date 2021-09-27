@@ -137,7 +137,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 // AddTrackTriggers creates the share-track triggers for each rule of the
 // sharing that will update the io.cozy.shared database.
 func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
-	if s.Triggers.TrackID != "" {
+	if len(s.Triggers.TrackIDs) > 0 || s.Triggers.TrackID != "" {
 		return nil
 	}
 	sched := job.System()
@@ -162,7 +162,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 		if err = sched.AddTrigger(t); err != nil {
 			return err
 		}
-		s.Triggers.TrackID = t.ID()
+		s.Triggers.TrackIDs = append(s.Triggers.TrackIDs, t.ID())
 	}
 	return couchdb.UpdateDoc(inst, s)
 }

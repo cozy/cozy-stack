@@ -934,6 +934,7 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "", sRevoke.Triggers.TrackID)
+	assert.Empty(t, sRevoke.Triggers.TrackIDs)
 	assert.Equal(t, "", sRevoke.Triggers.ReplicateID)
 	assert.Equal(t, "", sRevoke.Triggers.UploadID)
 	assert.Equal(t, false, sRevoke.Active)
@@ -952,7 +953,7 @@ func assertOneRecipientIsRevoked(t *testing.T, s *sharing.Sharing) {
 
 	assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[1].Status)
 	assert.Equal(t, sharing.MemberStatusReady, sRevoked.Members[2].Status)
-	assert.NotEmpty(t, sRevoked.Triggers.TrackID)
+	assert.NotEmpty(t, sRevoked.Triggers.TrackIDs)
 	assert.NotEmpty(t, sRevoked.Triggers.ReplicateID)
 	assert.True(t, sRevoked.Active)
 }
@@ -964,7 +965,7 @@ func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*shar
 
 	assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[1].Status)
 	assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[2].Status)
-	assert.Empty(t, sRevoked.Triggers.TrackID)
+	assert.Empty(t, sRevoked.Triggers.TrackIDs)
 	assert.Empty(t, sRevoked.Triggers.ReplicateID)
 	assert.False(t, sRevoked.Active)
 

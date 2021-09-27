@@ -25,7 +25,7 @@ def assert_no_oauth_client(inst, client_id)
 end
 
 def triggers_ids(sharing)
-  track_id = sharing.dig "triggers", "track_id"
+  track_id = sharing.dig "triggers", "track_ids", 0
   replicate_id = sharing.dig "triggers", "replicate_id"
   upload_id = sharing.dig "triggers", "upload_id"
   [track_id, replicate_id, upload_id]
