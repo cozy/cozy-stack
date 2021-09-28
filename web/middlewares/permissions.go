@@ -417,20 +417,24 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 	return nil
 }
 
-// AllowForApp checks that the permissions is valid and comes from an
-// application. If valid, the application's slug is returned.
-func AllowForApp(c echo.Context, v permission.Verb, o permission.Fetcher) (slug string, err error) {
+// AllowForKonnector checks that the permissions is valid and comes from the
+// konnector with the given slug.
+func AllowForKonnector(c echo.Context, slug string) error {
+	if slug == "" {
+		return ErrForbidden
+	}
 	pdoc, err := GetPermission(c)
 	if err != nil {
-		return "", err
+		return err
 	}
-	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeKonnector {
-		return "", ErrForbidden
+	if pdoc.Type != permission.TypeKonnector {
+		return ErrForbidden
 	}
-	if !pdoc.Permissions.Allow(v, o) {
-		return "", ErrForbidden
+	permSlug := strings.TrimPrefix(pdoc.SourceID, consts.Konnectors+"/")
+	if permSlug != slug {
+		return ErrForbidden
 	}
-	return pdoc.SourceID, nil
+	return nil
 }
 
 // GetSourceID returns the sourceID of the permissions associated with the

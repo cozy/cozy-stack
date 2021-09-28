@@ -655,7 +655,8 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `GET`.
+`io.cozy.triggers` for the verb `GET`. A konnector can also call this endpoint
+for one of its triggers (no permission required).
 
 ### GET /jobs/triggers/:trigger-id/state
 
@@ -701,12 +702,8 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `GET`.
-
-Also, for konnector trigger, any application sharing the same doctype
-permissions as the konnector launched by the trigger will be granted the
-permissions to fetch its state, even without permissions on the
-`io.cozy.triggers` doctype.
+`io.cozy.triggers` for the verb `GET`. A konnector can also call this endpoint
+for one of its triggers (no permission required).
 
 ### GET /jobs/triggers/:trigger-id/jobs
 
@@ -790,7 +787,8 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `PATCH`.
+`io.cozy.triggers` for the verb `PATCH`. A konnector can also call this
+endpoint for one of its triggers (no permission required).
 
 ### POST /jobs/triggers/:trigger-id/launch
 
@@ -835,37 +833,6 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `POST`.
 
-### DELETE /jobs/purge
-
-This endpoint allows to purge old jobs of an instance.
-Some parameters can be given to this route:
-
-* `duration` is the duration of jobs to keep. This is a human-readable string
-  (integer+suffix).
-  For example:
-  - "3W" will keep jobs up to 3 weeks
-  - "2M" will keep jobs up to 2 months
-* `workers` is a comma-separated list of workers to apply the purge job.
-
-#### Request
-
-```http
-DELETE /jobs/purge HTTP/1.1
-Accept: application/json
-```
-
-#### Response
-
-```json
-{
-  "deleted": 42
-}
-```
-#### Permissions
-
-To use this endpoint, an application needs a permission on the type
-`io.cozy.jobs` for the verb `DELETE`.
-
 ### DELETE /jobs/triggers/:trigger-id
 
 Delete a trigger given its ID.
@@ -880,12 +847,8 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `DELETE`.
-
-Also, for konnector trigger, any application sharing the same doctype
-permissions as the konnector launched by the trigger will be granted the
-permissions to delete the trigger, even without permissions on the
-`io.cozy.triggers` doctype.
+`io.cozy.triggers` for the verb `DELETE`. A konnector can also call this
+endpoint for one of its triggers (no permission required).
 
 ### GET /jobs/triggers
 
@@ -993,6 +956,37 @@ be found on this instance matching their data.
 ```http
 HTTP/1.1 204 No Content
 ```
+
+### DELETE /jobs/purge
+
+This endpoint allows to purge old jobs of an instance.
+Some parameters can be given to this route:
+
+* `duration` is the duration of jobs to keep. This is a human-readable string
+  (integer+suffix).
+  For example:
+  - "3W" will keep jobs up to 3 weeks
+  - "2M" will keep jobs up to 2 months
+* `workers` is a comma-separated list of workers to apply the purge job.
+
+#### Request
+
+```http
+DELETE /jobs/purge HTTP/1.1
+Accept: application/json
+```
+
+#### Response
+
+```json
+{
+  "deleted": 42
+}
+```
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.jobs` for the verb `DELETE`.
 
 ## Worker pool
 
