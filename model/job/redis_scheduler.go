@@ -404,6 +404,32 @@ func (s *redisScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, e
 	return t, nil
 }
 
+// UpdateCron will change the frequency of execution for the given trigger.
+func (s *redisScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error {
+	if trigger.Type() != "@cron" {
+		return ErrNotCronTrigger
+	}
+	infos := trigger.Infos()
+	infos.Arguments = arguments
+	updated, err := NewCronTrigger(infos)
+	if err != nil {
+		return err
+	}
+	if err := couchdb.UpdateDoc(db, infos); err != nil {
+		return err
+	}
+	timestamp := updated.NextExecution(time.Now())
+	pipe := s.client.Pipeline()
+	pipe.ZRem(TriggersKey, redisKey(updated))
+	pipe.ZRem(SchedKey, redisKey(updated))
+	pipe.ZAdd(TriggersKey, &redis.Z{
+		Score:  float64(timestamp.UTC().Unix()),
+		Member: redisKey(updated),
+	})
+	_, err = pipe.Exec()
+	return err
+}
+
 // DeleteTrigger removes the trigger with the specified ID. The trigger is
 // unscheduled and remove from the storage.
 func (s *redisScheduler) DeleteTrigger(db prefixer.Prefixer, id string) error {

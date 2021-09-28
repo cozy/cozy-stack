@@ -740,6 +740,58 @@ Accept: application/vnd.api+json
 }
 ```
 
+### PATCH /jobs/triggers/:trigger-id
+
+This route can be used to change the frequency of execution of a `@cron`
+trigger.
+
+#### Request
+
+```http
+PATCH /jobs/triggers/123123 HTTP/1.1
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "type": "@cron",
+      "arguments": "0 0 0 * * 0"
+    }
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "data": {
+    "type": "io.cozy.triggers",
+    "id": "123123",
+    "attributes": {
+      "type": "@cron",
+      "arguments": "0 0 0 * * 0",
+      "worker": "sendmail",
+      "options": {
+        "timeout": 60,
+        "max_exec_count": 3
+      }
+    },
+    "links": {
+      "self": "/jobs/triggers/123123"
+    }
+  }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `PATCH`.
+
 ### POST /jobs/triggers/:trigger-id/launch
 
 Launch a trigger manually given its ID and return the created job.

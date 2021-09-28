@@ -48,6 +48,7 @@ type (
 		PollScheduler(now int64) error
 		AddTrigger(trigger Trigger) error
 		GetTrigger(db prefixer.Prefixer, id string) (Trigger, error)
+		UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error
 		DeleteTrigger(db prefixer.Prefixer, id string) error
 		GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
 		HasEventTrigger(trigger Trigger) bool

@@ -374,6 +374,31 @@ func getTriggerJobs(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func patchTrigger(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sched := job.System()
+	t, err := sched.GetTrigger(inst, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err := middlewares.Allow(c, permission.PATCH, t); err != nil {
+		return err
+	}
+
+	req := apiTriggerRequest{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+	if req.Arguments == "" {
+		return jsonapi.BadRequest(errors.New("Only arguments can be patched"))
+	}
+
+	if err := sched.UpdateCron(inst, t, req.Arguments); err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{t.Infos(), inst}, nil)
+}
+
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	t, err := job.System().GetTrigger(instance, c.Param("trigger-id"))
@@ -720,6 +745,7 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.GET("/triggers/:trigger-id/state", getTriggerState)
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
+	router.PATCH("/triggers/:trigger-id", patchTrigger)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
@@ -738,7 +764,8 @@ func wrapJobsError(err error) error {
 		job.ErrNotFoundJob,
 		job.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
-	case job.ErrUnknownTrigger:
+	case job.ErrUnknownTrigger,
+		job.ErrNotCronTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
 	case limits.ErrRateLimitReached,
 		limits.ErrRateLimitExceeded:
