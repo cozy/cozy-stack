@@ -280,6 +280,7 @@ Start the konnector through nsjail, passing as ENV variables:
     - `COZY_LOCALE`:       the locale of the user (eg. "en" etc.)
     - `COZY_TIME_LIMIT`:   how much time the konnector can run before being killed
     - `COZY_JOB_ID`:       id of the job
+    - `COZY_TRIGGER_ID`:   id of the trigger that has created the job
     - `COZY_JOB_MANUAL_EXECUTION`: whether the job was started manually (in Home) or automatically (via a cron trigger or event)
 
 The konnector process can send events trough its stdout (newline separated JSON

@@ -185,6 +185,9 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		"COZY_COUCH_DOC=" + string(marshaled),
 		"COZY_PAYLOAD=" + string(payload),
 	}
+	if triggerID, ok := ctx.TriggerID(); ok {
+		env = append(env, "COZY_TRIGGER_ID="+triggerID)
+	}
 	return
 }
 
