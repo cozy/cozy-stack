@@ -149,6 +149,25 @@ func (s *memScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, err
 	return t, nil
 }
 
+// UpdateCron will change the frequency of execution for the given trigger.
+func (s *memScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if trigger.Type() != "@cron" {
+		return ErrNotCronTrigger
+	}
+	infos := trigger.Infos()
+	infos.Arguments = arguments
+	updated, err := NewCronTrigger(infos)
+	if err != nil {
+		return err
+	}
+	trigger.Unschedule()
+	s.ts[updated.DBPrefix()+"/"+infos.TID] = updated
+	go s.schedule(updated)
+	return couchdb.UpdateDoc(db, infos)
+}
+
 // DeleteTrigger removes the trigger with the specified ID. The trigger is unscheduled
 // and remove from the storage.
 func (s *memScheduler) DeleteTrigger(db prefixer.Prefixer, id string) error {

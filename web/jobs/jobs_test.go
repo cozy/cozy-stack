@@ -281,6 +281,102 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res5.StatusCode)
 }
 
+func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &map[string]interface{}{
+				"type":      "@cron",
+				"arguments": "0 0 0 * * 0",
+				"worker":    "print",
+				"message":   "foo",
+			},
+		},
+	})
+	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+token)
+	res1, err := http.DefaultClient.Do(req1)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res1.Body.Close()
+	assert.Equal(t, http.StatusCreated, res1.StatusCode)
+
+	var v struct {
+		Data struct {
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
+		}
+	}
+	err = json.NewDecoder(res1.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
+		return
+	}
+	triggerID := v.Data.ID
+	assert.Equal(t, consts.Triggers, v.Data.Type)
+	assert.Equal(t, "@cron", v.Data.Attributes.Type)
+	assert.Equal(t, "0 0 0 * * 0", v.Data.Attributes.Arguments)
+	assert.Equal(t, "print", v.Data.Attributes.WorkerType)
+
+	body, _ = json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"arguments": "0 0 0 * * 1",
+			},
+		},
+	})
+	req2, err := http.NewRequest(http.MethodPatch, ts.URL+"/jobs/triggers/"+triggerID, bytes.NewReader(body))
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+
+	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	res3, err := http.DefaultClient.Do(req3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res3.StatusCode)
+
+	var v2 struct {
+		Data struct {
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
+		}
+	}
+	err = json.NewDecoder(res3.Body).Decode(&v2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
+		return
+	}
+	assert.Equal(t, triggerID, v2.Data.ID)
+	assert.Equal(t, consts.Triggers, v2.Data.Type)
+	assert.Equal(t, "@cron", v2.Data.Attributes.Type)
+	assert.Equal(t, "0 0 0 * * 1", v2.Data.Attributes.Arguments)
+	assert.Equal(t, "print", v2.Data.Attributes.WorkerType)
+
+	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req4.Header.Add("Authorization", "Bearer "+token)
+	res4, err := http.DefaultClient.Do(req4)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
+}
+
 func TestAddTriggerWithMetadata(t *testing.T) {
 	at := time.Now().Add(1100 * time.Millisecond).Format(time.RFC3339)
 	body, _ := json.Marshal(&jsonapiReq{

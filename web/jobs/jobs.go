@@ -310,15 +310,17 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	infos := t.Infos()
 	if err = middlewares.Allow(c, permission.GET, t); err != nil {
-		return err
+		if !allowKonnectorForItsOwnTrigger(c, infos) {
+			return err
+		}
 	}
-	tInfos := t.Infos()
-	tInfos.CurrentState, err = job.GetTriggerState(t, t.ID())
+	infos.CurrentState, err = job.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, apiTrigger{tInfos, instance}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{infos, instance}, nil)
 }
 
 func getTriggerState(c echo.Context) error {
@@ -328,15 +330,18 @@ func getTriggerState(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	infos := t.Infos()
 	if err = middlewares.Allow(c, permission.GET, t); err != nil {
-		return err
+		if !allowKonnectorForItsOwnTrigger(c, infos) {
+			return err
+		}
 	}
 
 	state, err := job.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: t.Infos(), s: state}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: infos, s: state}, nil)
 }
 
 func getTriggerJobs(c echo.Context) error {
@@ -374,6 +379,34 @@ func getTriggerJobs(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func patchTrigger(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sched := job.System()
+	t, err := sched.GetTrigger(inst, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	infos := t.Infos()
+	if err := middlewares.Allow(c, permission.PATCH, t); err != nil {
+		if !allowKonnectorForItsOwnTrigger(c, infos) {
+			return err
+		}
+	}
+
+	req := apiTriggerRequest{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+	if req.Arguments == "" {
+		return jsonapi.BadRequest(errors.New("Only arguments can be patched"))
+	}
+
+	if err := sched.UpdateCron(inst, t, req.Arguments); err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{infos, inst}, nil)
+}
+
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	t, err := job.System().GetTrigger(instance, c.Param("trigger-id"))
@@ -404,8 +437,11 @@ func deleteTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	infos := t.Infos()
 	if err := middlewares.Allow(c, permission.DELETE, t); err != nil {
-		return err
+		if !allowKonnectorForItsOwnTrigger(c, infos) {
+			return err
+		}
 	}
 	if err := sched.DeleteTrigger(instance, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
@@ -720,6 +756,7 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.GET("/triggers/:trigger-id/state", getTriggerState)
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
+	router.PATCH("/triggers/:trigger-id", patchTrigger)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
@@ -738,7 +775,8 @@ func wrapJobsError(err error) error {
 		job.ErrNotFoundJob,
 		job.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
-	case job.ErrUnknownTrigger:
+	case job.ErrUnknownTrigger,
+		job.ErrNotCronTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
 	case limits.ErrRateLimitReached,
 		limits.ErrRateLimitExceeded:
@@ -761,4 +799,20 @@ func checkReservedWorker(worker string) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil
+}
+
+func allowKonnectorForItsOwnTrigger(c echo.Context, infos *job.TriggerInfos) bool {
+	if infos.WorkerType != "konnector" {
+		return false
+	}
+	var msg map[string]interface{}
+	if errb := json.Unmarshal(infos.Message, &msg); errb != nil {
+		return false
+	}
+	slug, _ := msg["konnector"].(string)
+	if slug == "" {
+		return false
+	}
+	err := middlewares.AllowForKonnector(c, slug)
+	return err == nil
 }

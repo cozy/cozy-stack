@@ -530,6 +530,9 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 		"COZY_JOB_ID=" + ctx.ID(),
 		"COZY_JOB_MANUAL_EXECUTION=" + strconv.FormatBool(ctx.Manual()),
 	}
+	if triggerID, ok := ctx.TriggerID(); ok {
+		env = append(env, "COZY_TRIGGER_ID="+triggerID)
+	}
 	return
 }
 
