@@ -141,6 +141,7 @@ nsjail \
   -E "COZY_JOB_ID=${COZY_JOB_ID}" \
   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
   -E "COZY_TIME_LIMIT=${COZY_TIME_LIMIT}" \
+  -E "COZY_TRIGGER_ID=${COZY_TRIGGER_ID}" \
   -R "${rundir}:/usr/src/konnector/" \
   -R /lib \
   -R /lib64 \
