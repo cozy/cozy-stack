@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"io"
 	"net/http"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/idna"
@@ -77,6 +79,13 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.HandlerFunc) error {
 	returnCode := http.StatusServiceUnavailable
 	contentType := AcceptedContentType(c)
+
+	if c.Request().URL.Path == "/robots.txt" {
+		if f, ok := assets.Get("/robots.txt", i.ContextName); ok {
+			_, err := io.Copy(c.Response(), f.Reader())
+			return err
+		}
+	}
 
 	// Standard checks
 	if i.BlockingReason == instance.BlockedLoginFailed.Code {

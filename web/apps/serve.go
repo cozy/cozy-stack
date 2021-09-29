@@ -180,7 +180,13 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	filepath := path.Join("/", route.Folder, file)
 	isRobotsTxt := filepath == "/robots.txt"
 
-	if !route.Public && !isLoggedIn && !isRobotsTxt {
+	if !route.Public && !isLoggedIn {
+		if isRobotsTxt {
+			if f, ok := assets.Get("/robots.txt", i.ContextName); ok {
+				_, err := io.Copy(c.Response(), f.Reader())
+				return err
+			}
+		}
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
