@@ -85,12 +85,20 @@ func synchronized(c echo.Context) error {
 		return permission.ErrInvalidToken
 	}
 
-	var claims permission.Claims
+	var fullClaims permission.BitwardenClaims
+	var audience string
 	err := crypto.ParseJWT(tok, func(token *jwt.Token) (interface{}, error) {
-		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
-	}, &claims)
+		audience = token.Claims.(*permission.BitwardenClaims).Claims.Audience
+		return instance.PickKey(audience)
+	}, &fullClaims)
 	if err != nil {
 		return permission.ErrInvalidToken
+	}
+
+	// XXX: bitwarden clients have the OAuth client ID in client_id, not subject
+	claims := fullClaims.Claims
+	if audience == consts.AccessTokenAudience && fullClaims.ClientID != "" && claims.Subject == instance.ID() {
+		claims.Subject = fullClaims.ClientID
 	}
 
 	// check if the claim is valid
