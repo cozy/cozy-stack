@@ -57,6 +57,7 @@ type KonnectorMessage struct {
 	Account        string `json:"account"`        // Account is the identifier of the account
 	Konnector      string `json:"konnector"`      // Konnector is the slug of the konnector
 	FolderToSave   string `json:"folder_to_save"` // FolderToSave is the identifier of the folder
+	BIWebhook      bool   `json:"bi_webhook,omitempty"`
 	AccountDeleted bool   `json:"account_deleted,omitempty"`
 
 	// Data contains the original value of the message, even fields that are not
@@ -599,6 +600,9 @@ func (w *konnectorWorker) Commit(ctx *job.WorkerContext, errjob error) error {
 	log := w.Logger(ctx)
 	if w.msg != nil {
 		log = log.WithField("account_id", w.msg.Account)
+		if w.msg.BIWebhook {
+			log = log.WithField("bi_webhook", w.msg.BIWebhook)
+		}
 	}
 	if w.man != nil {
 		log = log.WithField("version", w.man.Version())
