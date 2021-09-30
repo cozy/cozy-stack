@@ -791,6 +791,13 @@ func (f *swiftFileCreationV3) Close() (err error) {
 		}
 	}
 
+	var newpath string
+	newpath, err = f.fs.Indexer.FilePath(newdoc)
+	if err != nil {
+		return err
+	}
+	newdoc.Trashed = strings.HasPrefix(newpath, vfs.TrashDirName+"/")
+
 	var v *vfs.Version
 	if olddoc != nil {
 		v = vfs.NewVersion(olddoc)
