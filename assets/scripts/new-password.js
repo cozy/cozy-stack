@@ -13,6 +13,9 @@
   const resetTokenInput = d.getElementById('reset-token')
   const csrfTokenInput = d.getElementById('csrf_token')
 
+  const querystring = new URLSearchParams(w.location.search)
+  const redirection = querystring.get('redirection')
+
   form.addEventListener('submit', function (event) {
     event.preventDefault()
 
@@ -71,6 +74,9 @@
         }
         if (csrfTokenInput) {
           data.append('csrf_token', csrfTokenInput.value)
+        }
+        if (redirection) {
+          data.append('redirection', redirection)
         }
 
         return fetch(form.action, {
