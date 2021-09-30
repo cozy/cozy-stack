@@ -147,6 +147,10 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
 			return false, nil
 		}
+
+		if msg.BIWebhook {
+			return true, nil
+		}
 	}
 
 	if j.Manual || j.TriggerID == "" {
