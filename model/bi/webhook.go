@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -83,7 +84,7 @@ func findAccount(accounts []*account.Account, connID int) (*account.Account, err
 			return account, nil
 		}
 	}
-	return nil, errors.New("no account found with this id_user")
+	return nil, fmt.Errorf("no account found with the connection id %d", connID)
 }
 
 func extractAccountConnID(data map[string]interface{}) int {
@@ -178,15 +179,15 @@ func copyLastUpdate(
 		return errors.New("no connection.last_update")
 	}
 	if account.Data == nil {
-		return errors.New("no data in account")
+		return fmt.Errorf("no data in account %s", account.ID())
 	}
 	auth, ok := account.Data["auth"].(map[string]interface{})
 	if !ok {
-		return errors.New("no data.auth in account")
+		return fmt.Errorf("no data.auth in account %s", account.ID())
 	}
 	bi, ok := auth["bi"].(map[string]interface{})
 	if !ok {
-		return errors.New("no data.auth.bi in account")
+		return fmt.Errorf("no data.auth.bi in account %s", account.ID())
 	}
 	bi["lastUpdate"] = lastUpdate
 	err := couchdb.UpdateDoc(inst, account)
