@@ -174,8 +174,8 @@ var configs = []counterConfig{
 	// SendHintByMail
 	{
 		Prefix: "send-hint",
-		Limit:  5,
-		Period: 24 * time.Hour,
+		Limit:  2,
+		Period: 1 * time.Hour,
 	},
 	// JobNotesPersistType
 	{
