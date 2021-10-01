@@ -3,7 +3,10 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -47,7 +50,12 @@ func listClients(c echo.Context) error {
 		return err
 	}
 
-	clients, err := oauth.GetAll(instance, false)
+	bookmark := c.QueryParam("page[cursor]")
+	limit, err := strconv.ParseInt(c.QueryParam("page[limit]"), 10, 64)
+	if err != nil || limit < 0 || limit > consts.MaxItemsPerPageForMango {
+		limit = 100
+	}
+	clients, bookmark, err := oauth.GetAll(instance, int(limit), bookmark)
 	if err != nil {
 		return err
 	}
@@ -56,7 +64,17 @@ func listClients(c echo.Context) error {
 	for i, d := range clients {
 		objs[i] = jsonapi.Object(&apiOauthClient{d})
 	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+
+	links := &jsonapi.LinksList{}
+	if bookmark != "" && len(objs) == int(limit) {
+		v := url.Values{}
+		v.Set("page[cursor]", bookmark)
+		if limit != 100 {
+			v.Set("page[limit]", fmt.Sprintf("%d", limit))
+		}
+		links.Next = "/settings/clients?" + v.Encode()
+	}
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
 func revokeClient(c echo.Context) error {
