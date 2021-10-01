@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -139,20 +140,22 @@ func (c *Client) TransformIDAndRev() {
 	c.CouchRev = ""
 }
 
-// GetAll loads all the clients from the database, with the option to hide the
-// client secret
-func GetAll(i *instance.Instance, withSecrets bool) ([]*Client, error) {
-	var clients []*Client
-	req := &couchdb.AllDocsRequest{Limit: 100}
-	if err := couchdb.GetAllDocs(i, consts.OAuthClients, req, &clients); err != nil {
-		return nil, err
+// GetAll loads all the clients from the database, without the secret
+func GetAll(inst *instance.Instance, limit int, bookmark string) ([]*Client, string, error) {
+	res, err := couchdb.NormalDocs(inst, consts.OAuthClients, 0, limit, bookmark, false)
+	if err != nil {
+		return nil, "", err
 	}
-	if !withSecrets {
-		for _, client := range clients {
-			client.ClientSecret = ""
+	clients := make([]*Client, len(res.Rows))
+	for i, row := range res.Rows {
+		var client Client
+		if err := json.Unmarshal(row, &client); err != nil {
+			return nil, "", err
 		}
+		client.ClientSecret = ""
+		clients[i] = &client
 	}
-	return clients, nil
+	return clients, res.Bookmark, nil
 }
 
 // GetNotifiables loads al the clients from the database containing a non-empty
