@@ -80,6 +80,7 @@ type getPermsFunc func(db prefixer.Prefixer, id string) (*permission.Permission,
 func displayPermissions(c echo.Context) error {
 	doc, err := middlewares.GetPermission(c)
 	if err != nil {
+		fmt.Printf("1. err = %s\n", err)
 		return err
 	}
 

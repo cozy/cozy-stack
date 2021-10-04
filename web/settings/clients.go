@@ -13,11 +13,9 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type apiOauthClient struct{ *oauth.Client }
@@ -103,31 +101,9 @@ func synchronized(c echo.Context) error {
 		return permission.ErrInvalidToken
 	}
 
-	var fullClaims permission.BitwardenClaims
-	var audience string
-	err := crypto.ParseJWT(tok, func(token *jwt.Token) (interface{}, error) {
-		audience = token.Claims.(*permission.BitwardenClaims).Claims.Audience
-		return instance.PickKey(audience)
-	}, &fullClaims)
+	claims, err := middlewares.ExtractClaims(c, instance, tok)
 	if err != nil {
-		return permission.ErrInvalidToken
-	}
-
-	// XXX: bitwarden clients have the OAuth client ID in client_id, not subject
-	claims := fullClaims.Claims
-	if audience == consts.AccessTokenAudience && fullClaims.ClientID != "" && claims.Subject == instance.ID() {
-		claims.Subject = fullClaims.ClientID
-	}
-
-	// check if the claim is valid
-	if claims.Issuer != instance.Domain {
-		return permission.ErrInvalidToken
-	}
-	if claims.Expired() {
-		return permission.ErrExpiredToken
-	}
-	if claims.Audience != consts.AccessTokenAudience {
-		return permission.ErrInvalidToken
+		return err
 	}
 
 	client, err := oauth.FindClient(instance, claims.Subject)

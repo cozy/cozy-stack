@@ -273,6 +273,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Invalid JWT token`, string(body))
+	assert.Equal(t, `Bearer error="invalid_token"`, res.Header.Get("WWW-Authenticate"))
 }
 
 func TestGetPermissionsForExpiredToken(t *testing.T) {
@@ -288,6 +289,7 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Expired token`, string(body))
+	assert.Equal(t, `Bearer error="invalid_token" error_description="The access token expired"`, res.Header.Get("WWW-Authenticate"))
 }
 
 func TestBadPermissionsBearer(t *testing.T) {

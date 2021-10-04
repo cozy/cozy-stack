@@ -116,26 +116,12 @@ func GetForOauth(instance *instance.Instance, claims *permission.Claims, c inter
 
 var shortCodeRegexp = regexp.MustCompile(`^(\d{6}|(\w|\d){12})\.?$`)
 
-// ParseJWT parses a JSON Web Token, and returns the associated permissions.
-func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permission.Permission, error) {
+// ExtractClaims parse a JWT, and extracts its claims (if valid).
+func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*permission.Claims, error) {
 	var fullClaims permission.BitwardenClaims
 	var audience string
-	var err error
 
-	if shortCodeRegexp.MatchString(token) { // token is a shortcode
-		// XXX in theory, the shortcode is exactly 12 characters. But
-		// somethimes, when people shares a public link with this token, they
-		// can put a "." just after the link to finish their sentence, and this
-		// "." can be added to the token. So, it's better to accept a shortcode
-		// with a final ".", and clean it.
-		token = strings.TrimSuffix(token, ".")
-		token, err = permission.GetTokenFromShortcode(instance, token)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		audience = token.Claims.(*permission.BitwardenClaims).Claims.Audience
 		return instance.PickKey(audience)
 	}, &fullClaims)
@@ -149,15 +135,19 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	c.Set("claims", claims)
 
 	if err != nil {
+		c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	// check if the claim is valid
 	if claims.Issuer != instance.Domain {
+		c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	if claims.Expired() {
+		c.Response().Header().Set("WWW-Authenticate",
+			`Bearer error="invalid_token" error_description="The access token expired"`)
 		return nil, permission.ErrExpiredToken
 	}
 
@@ -166,6 +156,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	if claims.SessionID != "" {
 		s, ok := GetSession(c)
 		if !ok || s.ID() != claims.SessionID {
+			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 	}
@@ -175,8 +166,33 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	if claims.SStamp != "" {
 		settings, err := settings.Get(instance)
 		if err != nil || claims.SStamp != settings.SecurityStamp {
+			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
+	}
+
+	return &claims, nil
+}
+
+// ParseJWT parses a JSON Web Token, and returns the associated permissions.
+func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permission.Permission, error) {
+	if shortCodeRegexp.MatchString(token) { // token is a shortcode
+		var err error
+		// XXX in theory, the shortcode is exactly 12 characters. But
+		// somethimes, when people shares a public link with this token, they
+		// can put a "." just after the link to finish their sentence, and this
+		// "." can be added to the token. So, it's better to accept a shortcode
+		// with a final ".", and clean it.
+		token = strings.TrimSuffix(token, ".")
+		token, err = permission.GetTokenFromShortcode(instance, token)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	claims, err := ExtractClaims(c, instance, token)
+	if err != nil {
+		return nil, err
 	}
 
 	switch claims.Audience {
@@ -185,18 +201,19 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			return nil, err
 		}
 		// An OAuth2 token is only valid if the client has not been revoked
-		c, err := oauth.FindClient(instance, claims.Subject)
+		client, err := oauth.FindClient(instance, claims.Subject)
 		if err != nil {
 			if couchdb.IsInternalServerError(err) {
 				return nil, err
 			}
+			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
-		return GetForOauth(instance, &claims, c)
+		return GetForOauth(instance, claims, client)
 
 	case consts.CLIAudience:
 		// do not check client existence
-		return permission.GetForCLI(&claims)
+		return permission.GetForCLI(claims)
 
 	case consts.AppAudience:
 		pdoc, err := permission.GetForWebapp(instance, claims.Subject)
