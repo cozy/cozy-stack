@@ -9,16 +9,16 @@ import (
 var (
 	// ErrInvalidToken is used when the token is invalid (the signature is not
 	// correct, the domain is not the good one, etc.)
-	ErrInvalidToken = echo.NewHTTPError(http.StatusBadRequest,
+	ErrInvalidToken = echo.NewHTTPError(http.StatusUnauthorized,
 		"Invalid JWT token")
 
 	// ErrInvalidAudience is used when the audience is not expected
-	ErrInvalidAudience = echo.NewHTTPError(http.StatusBadRequest,
+	ErrInvalidAudience = echo.NewHTTPError(http.StatusUnauthorized,
 		"Invalid audience for JWT token")
 
 	// ErrExpiredToken is used when the token has expired and the client should
 	// refresh it
-	ErrExpiredToken = echo.NewHTTPError(http.StatusBadRequest,
+	ErrExpiredToken = echo.NewHTTPError(http.StatusUnauthorized,
 		"Expired token")
 
 	// ErrBadScope is used when the given scope is malformed

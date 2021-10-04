@@ -269,7 +269,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+tok)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 400, res.StatusCode)
+	assert.Equal(t, 401, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Invalid JWT token`, string(body))
@@ -284,7 +284,7 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+tok)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 400, res.StatusCode)
+	assert.Equal(t, 401, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Expired token`, string(body))
@@ -298,7 +298,7 @@ func TestBadPermissionsBearer(t *testing.T) {
 		return
 	}
 	defer res.Body.Close()
-	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+	assert.Equal(t, 401, res.StatusCode)
 }
 
 func TestCreateSubPermission(t *testing.T) {
@@ -663,7 +663,7 @@ func TestGetPermissionsWithBadShortCode(t *testing.T) {
 	req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req1.Header.Add("Authorization", "Bearer "+"foobar")
 	res1, _ := http.DefaultClient.Do(req1)
-	assert.Equal(t, res1.StatusCode, http.StatusBadRequest)
+	assert.Equal(t, 401, res1.StatusCode)
 }
 
 func TestGetTokenFromShortCode(t *testing.T) {

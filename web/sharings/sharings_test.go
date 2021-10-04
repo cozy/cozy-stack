@@ -768,7 +768,7 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	badRequestContent, err := ioutil.ReadAll(res2.Body)
 	assert.NoError(t, err)
 	defer res2.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
+	assert.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 	assert.Contains(t, string(badRequestContent), "Invalid JWT")
 }
 
