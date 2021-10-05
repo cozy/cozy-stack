@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -178,20 +179,6 @@ func TestWrongID(t *testing.T) {
 	}
 	if assert.Contains(t, out, "reason") {
 		assert.Equal(t, "missing", out["reason"], "should give a reason")
-	}
-}
-
-func TestWrongHost(t *testing.T) {
-	t.Skip("unskip me when we stop falling back to Host = dev")
-	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
-	out, res, err := doRequest(req, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	if assert.Contains(t, out, "error") {
-		assert.Equal(t, "not_found", out["error"], "should give a json name")
-	}
-	if assert.Contains(t, out, "reason") {
-		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
 	}
 }
 
@@ -738,12 +725,22 @@ func TestGetChanges(t *testing.T) {
 }
 
 func TestPostChanges(t *testing.T) {
-	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"
-	req, _ := http.NewRequest("POST", url, nil)
+	assert.NoError(t, couchdb.ResetDB(testInstance, Type))
+
+	// creates 3 docs
+	doc1 := getDocForTest()
+	_ = getDocForTest()
+	doc2 := getDocForTest()
+
+	payload := fmt.Sprintf(`{"doc_ids": ["%s", "%s"]}`, doc1.ID(), doc2.ID())
+
+	url := ts.URL + "/data/" + Type + "/_changes?include_docs=true&filter=_doc_ids"
+	req, _ := http.NewRequest("POST", url, bytes.NewReader([]byte(payload)))
 	req.Header.Add("Authorization", "Bearer "+token)
-	_, res, err := doRequest(req, nil)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	out, res, err := doRequest(req, nil)
+	assert.Equal(t, 200, res.StatusCode, "should get a 200")
 	assert.NoError(t, err)
+	assert.Len(t, out["results"].([]interface{}), 2)
 }
 
 func TestWrongFeedChanges(t *testing.T) {

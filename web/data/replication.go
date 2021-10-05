@@ -164,6 +164,9 @@ func changesFeed(c echo.Context) error {
 
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {
+		if key == "filter" && c.Request().Method == http.MethodPost {
+			continue
+		}
 		if !allowedChangesParams[key] {
 			return jsonapi.Errorf(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
 		}
@@ -175,6 +178,11 @@ func changesFeed(c echo.Context) error {
 	}
 
 	feedStyle, err := couchdb.ValidChangesStyle(c.QueryParam("style"))
+	if err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	filter, err := couchdb.StaticChangesFilter(c.QueryParam("filter"))
 	if err != nil {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
@@ -216,17 +224,24 @@ func changesFeed(c echo.Context) error {
 		defer mu.Unlock()
 	}
 
-	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
+	couchReq := &couchdb.ChangesRequest{
 		DocType:     doctype,
 		Feed:        feed,
 		Style:       feedStyle,
+		Filter:      filter,
 		Since:       c.QueryParam("since"),
 		Limit:       limit,
 		IncludeDocs: includeDocs,
 		SeqInterval: seqInterval,
 		Descending:  descending,
-	})
+	}
 
+	var results *couchdb.ChangesResponse
+	if filter == "" {
+		results, err = couchdb.GetChanges(instance, couchReq)
+	} else {
+		results, err = couchdb.PostChanges(instance, couchReq, c.Request().Body)
+	}
 	if err != nil {
 		return err
 	}
@@ -277,7 +292,7 @@ func replicationRoutes(group *echo.Group) {
 	// Routes used only for replication
 	group.GET("/", dbStatus)
 	group.GET("/_changes", changesFeed)
-	// POST=GET see http://docs.couchdb.org/en/stable/api/database/changes.html#post--db-_changes)
+	// POST=GET+filter see http://docs.couchdb.org/en/stable/api/database/changes.html#post--db-_changes)
 	group.POST("/_changes", changesFeed)
 
 	group.POST("/_ensure_full_commit", fullCommit)
