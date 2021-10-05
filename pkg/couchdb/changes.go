@@ -1,8 +1,10 @@
 package couchdb
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/google/go-querystring/query"
@@ -45,6 +47,17 @@ func ValidChangesStyle(style string) (ChangesFeedStyle, error) {
 	}
 	err := fmt.Errorf("Unsuported style value '%s'", style)
 	return ChangesStyleMainOnly, err
+}
+
+// StaticChangesFilter checks that the filter is static (ie doesn't depend of a
+// design doc)
+func StaticChangesFilter(filter string) (string, error) {
+	switch filter {
+	case "", "_doc_ids", "_selector", "_design":
+		return filter, nil
+	default:
+		return "", fmt.Errorf("Unsuported filter value '%s'", filter)
+	}
 }
 
 // A ChangesRequest are all parameters than can be passed to a changes feed
@@ -126,7 +139,7 @@ type Change struct {
 	} `json:"changes"`
 }
 
-// GetChanges returns a list of change in couchdb
+// GetChanges returns a list of changes in couchdb
 func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
 	if req.DocType == "" {
 		return nil, errors.New("Empty doctype in GetChanges")
@@ -140,6 +153,35 @@ func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
 	var response ChangesResponse
 	url := "_changes?" + v.Encode()
 	err = makeRequest(db, req.DocType, http.MethodGet, url, nil, &response)
+
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+// PostChanges returns a list of changes in couchdb
+func PostChanges(db Database, req *ChangesRequest, body io.ReadCloser) (*ChangesResponse, error) {
+	var payload json.RawMessage
+	if err := json.NewDecoder(body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if err := body.Close(); err != nil {
+		return nil, err
+	}
+
+	if req.DocType == "" {
+		return nil, errors.New("Empty doctype in GetChanges")
+	}
+
+	v, err := query.Values(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var response ChangesResponse
+	url := "_changes?" + v.Encode()
+	err = makeRequest(db, req.DocType, http.MethodPost, url, payload, &response)
 
 	if err != nil {
 		return nil, err
