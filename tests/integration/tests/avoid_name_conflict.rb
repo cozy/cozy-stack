@@ -2,8 +2,8 @@ require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
-describe "A file or folder" do
-  it "can be shared in read-only mode" do
+describe "A directory" do
+  it "can be be renamed in a shared folder without creating a conflict" do
     Helpers.scenario "read_only"
     Helpers.start_mailhog
 
