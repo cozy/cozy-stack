@@ -3,18 +3,18 @@ package crypto
 import (
 	"testing"
 
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type Claims struct {
-	jwt.StandardClaims
+	StandardClaims
 	Foo string `json:"foo"`
 }
 
 func TestNewJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
-	tokenString, err := NewJWT(secret, jwt.StandardClaims{
+	tokenString, err := NewJWT(secret, StandardClaims{
 		Audience: "test",
 		Issuer:   "example.org",
 		IssuedAt: Timestamp(),
@@ -40,7 +40,7 @@ func TestNewJWT(t *testing.T) {
 func TestParseJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, Claims{
-		jwt.StandardClaims{
+		StandardClaims{
 			Audience: "test",
 			Issuer:   "example.org",
 			IssuedAt: Timestamp(),
@@ -64,7 +64,7 @@ func TestParseJWT(t *testing.T) {
 func TestParseInvalidJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, Claims{
-		jwt.StandardClaims{
+		StandardClaims{
 			Audience: "test",
 			Issuer:   "example.org",
 			IssuedAt: Timestamp(),

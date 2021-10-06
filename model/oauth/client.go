@@ -21,7 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/registry"
 
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 const (
@@ -432,7 +432,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		}
 	}
 
-	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
+	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, crypto.StandardClaims{
 		Audience: consts.RegistrationTokenAudience,
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),
@@ -564,7 +564,7 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),

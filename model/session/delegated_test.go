@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
-
 	"github.com/cozy/cozy-stack/model/instance"
 
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,10 +14,10 @@ var delegatedInst *instance.Instance
 
 func TestGoodCheckDelegatedJWT(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalClaims{
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "sruti",
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Name:  "external.notmycozy.net",
 		Email: "sruti@external.notmycozy.net",
@@ -32,10 +31,10 @@ func TestGoodCheckDelegatedJWT(t *testing.T) {
 
 func TestBadExpiredCheckDelegatedJWT(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalClaims{
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "sruti",
-			IssuedAt:  time.Now().Add(-2 * time.Hour).Unix(),
-			ExpiresAt: time.Now().Add(-1 * time.Hour).Unix(),
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 		},
 		Name:  "external.notmycozy.net",
 		Email: "sruti@external.notmycozy.net",
@@ -50,10 +49,10 @@ func TestBadExpiredCheckDelegatedJWT(t *testing.T) {
 
 func TestBadIssuerCheckDelegatedJWT(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalClaims{
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "sruti",
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Name:  "evil.notmycozy.net",
 		Email: "sruti@external.notmycozy.net",

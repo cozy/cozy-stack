@@ -19,9 +19,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var inst *instance.Instance

@@ -26,7 +26,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var ts *httptest.Server
@@ -764,7 +763,7 @@ func TestGetForOauth(t *testing.T) {
 	oauthClient.Create(testInstance)
 
 	parent, err := middlewares.GetForOauth(testInstance, &permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
@@ -782,7 +781,7 @@ func TestListPermission(t *testing.T) {
 	ev3, _ := createTestEvent(testInstance)
 
 	parent, _ := middlewares.GetForOauth(testInstance, &permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),

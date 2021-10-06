@@ -17,8 +17,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	jwt "github.com/golang-jwt/jwt/v4"
 	multierror "github.com/hashicorp/go-multierror"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const (

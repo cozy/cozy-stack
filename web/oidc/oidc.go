@@ -28,8 +28,8 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // Start is the route to start the OpenID Connect dance.
