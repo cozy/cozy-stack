@@ -4,7 +4,7 @@
 
 ```sh
 apt install ruby ruby-dev
-gem install bundle
+gem install bundler
 cd cozy-stack
 go install
 cd tests/integration
