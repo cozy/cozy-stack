@@ -9,6 +9,7 @@ cd cozy-stack
 go install
 cd tests/integration
 bundle install
+npm install -g @bitwarden/cli@1.16.0
 ```
 
 Optional: install `MailHog`
