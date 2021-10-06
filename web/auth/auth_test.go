@@ -1256,6 +1256,18 @@ func TestRefreshTokenSuccess(t *testing.T) {
 	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
 }
 
+func TestAppRedirectionOnLogin(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect=drive/%23/foobar", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://drive.cozy.example.net#/foobar",
+			res.Header.Get("Location"))
+	}
+}
+
 func TestLogoutNoToken(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain

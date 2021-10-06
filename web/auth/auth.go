@@ -514,6 +514,9 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 	}
 
 	u, err := url.Parse(redirect)
+	if err != nil || u.Scheme == "" {
+		u, err = AppRedirection(instance, redirect)
+	}
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusBadRequest,
 			"bad url: could not parse")
@@ -540,6 +543,22 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 	// see: oauthsecurity.com/#provider-in-the-middle
 	// see: 7.4.2 OAuth2 in Action
 	u.Fragment = "="
+	return u, nil
+}
+
+func AppRedirection(inst *instance.Instance, redirect string) (*url.URL, error) {
+	splits := strings.SplitN(redirect, "#", 2)
+	parts := strings.SplitN(splits[0], "/", 2)
+	if _, err := app.GetWebappBySlug(inst, parts[0]); err != nil {
+		return nil, err
+	}
+	u := inst.SubDomain(parts[0])
+	if len(parts) == 2 {
+		u.Path = parts[1]
+	}
+	if len(splits) == 2 {
+		u.Fragment = splits[1]
+	}
 	return u, nil
 }
 
