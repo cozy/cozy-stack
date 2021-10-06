@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -57,16 +57,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 	}
 	redirect := i.OnboardedRedirection().String()
 	if redirection != "" {
-		splits := strings.SplitN(redirection, "#", 2)
-		parts := strings.SplitN(splits[0], "/", 2)
-		if _, err := app.GetWebappBySlug(i, parts[0]); err == nil {
-			u := i.SubDomain(parts[0])
-			if len(parts) == 2 {
-				u.Path = parts[1]
-			}
-			if len(splits) == 2 {
-				u.Fragment = splits[1]
-			}
+		if u, err := auth.AppRedirection(i, redirection); err == nil {
 			redirect = u.String()
 		}
 	}

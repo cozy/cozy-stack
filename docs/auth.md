@@ -119,7 +119,9 @@ made to this endpoint.
 
 The `redirect` parameter is passed inside the body. If it is missing, the
 redirection will be made against the default target: the home application of
-this cozy instance.
+this cozy instance. The redirect can be a full URL (like
+`http://cozy-drive.example.org/#/folder`), or just a slug+path+hash (like
+`drive/#/folder`).
 
 ```http
 POST /auth/login HTTP/1.1
