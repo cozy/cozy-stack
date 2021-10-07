@@ -21,6 +21,7 @@ var flagSafeUpdate bool
 var flagKonnectorAccountID string
 var flagKonnectorsParameters string
 
+var flagKonnectorContext string
 var flagKonnectorsShortMaintenance bool
 var flagKonnectorsDisallowManualExec bool
 
@@ -273,7 +274,7 @@ var listMaintenancesCmd = &cobra.Command{
 	Short: `List the konnectors in maintenance`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := newAdminClient()
-		list, err := c.ListMaintenances()
+		list, err := c.ListMaintenances(flagKonnectorContext)
 		if err != nil {
 			return err
 		}
@@ -658,6 +659,7 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
+	listMaintenancesCmd.PersistentFlags().StringVar(&flagKonnectorContext, "context", "", "include konnectors in maintenance for apps registry of this context")
 	activateMaintenanceKonnectorsCmd.PersistentFlags().BoolVar(&flagKonnectorsShortMaintenance, "short", false, "specify a short maintenance")
 	activateMaintenanceKonnectorsCmd.PersistentFlags().BoolVar(&flagKonnectorsDisallowManualExec, "no-manual-exec", false, "specify a maintenance disallowing manual execution")
 

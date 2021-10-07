@@ -203,10 +203,15 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 }
 
 // ListMaintenances returns a list of konnectors in maintenance
-func (c *Client) ListMaintenances() ([]interface{}, error) {
+func (c *Client) ListMaintenances(context string) ([]interface{}, error) {
+	queries := url.Values{}
+	if context != "" {
+		queries.Add("Context", context)
+	}
 	res, err := c.Req(&request.Options{
-		Method: "GET",
-		Path:   "/konnectors/maintenance",
+		Method:  "GET",
+		Path:    "/konnectors/maintenance",
+		Queries: queries,
 	})
 	if err != nil {
 		return nil, err

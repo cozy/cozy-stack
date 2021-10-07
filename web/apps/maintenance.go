@@ -1,12 +1,15 @@
 package apps
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/labstack/echo/v4"
 )
 
@@ -35,12 +38,34 @@ func listMaintenance(c echo.Context) error {
 	}
 	objs := make([]jsonapi.Object, len(list))
 	for i, item := range list {
+		item["level"] = "stack"
 		doc := couchdb.JSONDoc{
 			Type: consts.KonnectorsMaintenance,
 			M:    item,
 		}
 		objs[i] = &apiMaintenance{doc}
 	}
+
+	if ctx := c.QueryParam("Context"); ctx != "" {
+		contexts := config.GetConfig().Registries
+		registries, ok := contexts[ctx]
+		if !ok {
+			registries = contexts[config.DefaultInstanceContext]
+		}
+		apps, err := registry.ProxyMaintenance(registries)
+		if err != nil {
+			return err
+		}
+		for _, app := range apps {
+			var doc couchdb.JSONDoc
+			if err := json.Unmarshal(app, &doc); err != nil {
+				return err
+			}
+			doc.M["level"] = "registry"
+			objs = append(objs, &apiMaintenance{doc})
+		}
+	}
+
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
