@@ -459,6 +459,9 @@ Content-Type: application/json
 GET /konnectors/maintenance HTTP/1.1
 ```
 
+A parameter `Context` can be given on the query string to also includes the
+konnectors that are in maintenance on the apps registry.
+
 #### Response
 
 ```http
@@ -475,6 +478,7 @@ Content-Type: application/json
     {
       "type": "io.cozy.konnectors.maintenance",
       "attributes": {
+        "level": "stack",
         "maintenance_activated": true,
         "maintenance_options": {
           "flag_disallow_manual_exec": false,
@@ -494,6 +498,8 @@ Content-Type: application/json
   ]
 }
 ```
+
+**Note:** `level` can be `stack` or `registry`.
 
 ### PUT /konnectors/maintenance/:slug
 
