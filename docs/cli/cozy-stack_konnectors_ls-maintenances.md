@@ -9,7 +9,8 @@ cozy-stack konnectors ls-maintenances [flags]
 ### Options
 
 ```
-  -h, --help   help for ls-maintenances
+      --context string   include konnectors in maintenance for apps registry of this context
+  -h, --help             help for ls-maintenances
 ```
 
 ### Options inherited from parent commands

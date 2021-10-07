@@ -3549,6 +3549,8 @@ _cozy-stack_konnectors_ls-maintenances()
     flags_with_completion=()
     flags_completion=()
 
+    flags+=("--context=")
+    two_word_flags+=("--context")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
