@@ -49,6 +49,7 @@ authentication:
       userinfo_instance_suffix: .mycozy.cloud
       allow_custom_instance: false
       allow_oauth_token: false
+      id_token_jwk_url: https://identity-prodiver/path/to/jwk
 ```
 
 Let's see what it means:
@@ -89,7 +90,10 @@ With the example config, if the UserInfo response contains `"cozy_number":
 When `allow_custom_instance` is set to true, the stack will look at the `sub`
 field in the UserInfo response, and checks that it matches the `oidc_id` set
 on this instance (and the `userinfo_instance_*` and `login_domain` fields are
-ignored).
+ignored). If `id_token_jwk_url` is set, the client can send the ID token from
+the provider instead of the access token. This token will be checked with the
+key fetched from this URL, and the `sub` field of it must match the `oidc_id`
+set in the instance.
 
 ### Routes
 
@@ -147,6 +151,9 @@ Location: https://name00001-home.mycozy.cloud/
 If the `allow_oauth_token` option is enabled, it's possible to use an
 access_token instead of code on this URL.
 
+If the `id_token_jwk_url` option is enabled, it's possible to use an
+id_token instead.
+
 #### POST /oidc/access_token
 
 This additional route can be used by an OAuth client (like a mobile app) when
@@ -183,3 +190,6 @@ Content-Type: application/json
   "scope": "io.cozy.files io.cozy.photos.albums"
 }
 ```
+
+If `id_token_jwk_url` option is set, the client can send an `id_token` instead
+of an `oidc_token` in the payload.
