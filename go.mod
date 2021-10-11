@@ -7,6 +7,7 @@ require (
 	github.com/andybalholm/brotli v1.0.3
 	github.com/appleboy/go-fcm v0.1.5
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cozy/goexif2 v0.0.0-20200819113101-00e1cc8cc9d3
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
@@ -33,8 +34,7 @@ require (
 	github.com/mssola/user_agent v0.5.3
 	github.com/ncw/swift v1.0.53
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/onsi/ginkgo v1.15.0 // indirect
-	github.com/onsi/gomega v1.10.5 // indirect
+	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pquerna/otp v1.3.0
 	github.com/prometheus/client_golang v1.11.0
