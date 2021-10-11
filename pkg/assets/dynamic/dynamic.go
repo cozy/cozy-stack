@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 // ErrDynAssetNotFound is the error returned when a dynamic asset cannot be

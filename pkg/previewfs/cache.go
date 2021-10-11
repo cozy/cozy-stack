@@ -2,6 +2,7 @@ package previewfs
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
 
@@ -35,7 +36,8 @@ func SystemCache() Cache {
 		return aferoCache{fs}
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		conn := config.GetSwiftConnection()
-		return swiftCache{conn}
+		ctx := context.Background()
+		return swiftCache{conn, ctx}
 	default:
 		panic(fmt.Errorf("previewfs: unknown storage provider %s", fsURL.Scheme))
 	}
@@ -66,11 +68,12 @@ func (a aferoCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
 }
 
 type swiftCache struct {
-	c *swift.Connection
+	c   *swift.Connection
+	ctx context.Context
 }
 
 func (s swiftCache) Get(md5sum []byte) (*bytes.Buffer, error) {
-	f, _, err := s.c.ObjectOpen(containerName, filename(md5sum), false, nil)
+	f, _, err := s.c.ObjectOpen(s.ctx, containerName, filename(md5sum), false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -82,14 +85,14 @@ func (s swiftCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
 	objectMeta := swift.Metadata{"created-at": time.Now().Format(time.RFC3339)}
 	headers := objectMeta.ObjectHeaders()
 	headers["X-Delete-After"] = strconv.FormatInt(int64(ttl.Seconds()), 10)
-	f, err := s.c.ObjectCreate(containerName, objectName, true, "", "image/jpg", headers)
+	f, err := s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
 	if err != nil {
 		return err
 	}
 	err = writeClose(f, buffer)
 	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
-		_ = s.c.ContainerCreate(containerName, nil)
-		f, err = s.c.ObjectCreate(containerName, objectName, true, "", "image/jpg", headers)
+		_ = s.c.ContainerCreate(s.ctx, containerName, nil)
+		f, err = s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
 		if err == nil {
 			err = writeClose(f, buffer)
 		}

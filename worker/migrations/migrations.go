@@ -22,7 +22,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 const (
@@ -178,28 +178,29 @@ func migrateToSwiftV3(domain string) error {
 	}
 	defer mutex.Unlock()
 
+	ctx := context.Background()
 	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
-	if _, _, err = c.Container(dstContainer); err != swift.ContainerNotFound {
+	if _, _, err = c.Container(ctx, dstContainer); err != swift.ContainerNotFound {
 		log.Errorf("Destination container %s already exists or something went wrong. Migration canceled.", dstContainer)
 		return errors.New("Destination container busy")
 	}
-	if err = c.ContainerCreate(dstContainer, nil); err != nil {
+	if err = c.ContainerCreate(ctx, dstContainer, nil); err != nil {
 		return err
 	}
 	defer func() {
 		if err != nil {
-			if err := vfsswift.DeleteContainer(c, dstContainer); err != nil {
+			if err := vfsswift.DeleteContainer(ctx, c, dstContainer); err != nil {
 				log.Errorf("Failed to delete v3 container %s: %s", dstContainer, err)
 			}
 		}
 	}()
 
-	if err = copyTheFilesToSwiftV3(inst, c, root, srcContainer, dstContainer); err != nil {
+	if err = copyTheFilesToSwiftV3(inst, ctx, c, root, srcContainer, dstContainer); err != nil {
 		return err
 	}
 
 	meta := &swift.Metadata{"cozy-migrated-from": migratedFrom}
-	_ = c.ContainerUpdate(dstContainer, meta.ContainerHeaders())
+	_ = c.ContainerUpdate(ctx, dstContainer, meta.ContainerHeaders())
 	if in, err := instance.GetFromCouch(domain); err == nil {
 		inst = in
 	}
@@ -219,7 +220,7 @@ func migrateToSwiftV3(domain string) error {
 	return nil
 }
 
-func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
+func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
 	log := logger.WithDomain(inst.Domain).
 		WithField("nspace", "migration")
 	sem := semaphore.NewWeighted(maxSimultaneousCalls)
@@ -255,7 +256,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 		g.Go(func() error {
 			defer sem.Release(1)
 			err := utils.RetryWithExpBackoff(3, 200*time.Millisecond, func() error {
-				_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
+				_, err := c.ObjectCopy(ctx, src, srcName, dst, dstName, nil)
 				return err
 			})
 			if err != nil {
@@ -274,17 +275,17 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 			}
 			g.Go(func() error {
 				defer sem.Release(1)
-				_, err := c.ObjectCopy(thumbsContainer, srcSmall, dst, dstSmall, nil)
+				_, err := c.ObjectCopy(ctx, thumbsContainer, srcSmall, dst, dstSmall, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail small from %s %s to %s %s: %s",
 						thumbsContainer, srcSmall, dst, dstSmall, err)
 				}
-				_, err = c.ObjectCopy(thumbsContainer, srcMedium, dst, dstMedium, nil)
+				_, err = c.ObjectCopy(ctx, thumbsContainer, srcMedium, dst, dstMedium, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail medium from %s %s to %s %s: %s",
 						thumbsContainer, srcMedium, dst, dstMedium, err)
 				}
-				_, err = c.ObjectCopy(thumbsContainer, srcLarge, dst, dstLarge, nil)
+				_, err = c.ObjectCopy(ctx, thumbsContainer, srcLarge, dst, dstLarge, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail large from %s %s to %s %s: %s",
 						thumbsContainer, srcLarge, dst, dstLarge, err)

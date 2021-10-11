@@ -25,7 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/ncw/swift/swifttest"
+	"github.com/ncw/swift/v2/swifttest"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
 )

@@ -1,6 +1,7 @@
 package dynamic
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/ncw/swift/swifttest"
+	"github.com/ncw/swift/v2/swifttest"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -112,7 +113,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Could not init swift connection")
 	}
-	err = config.GetSwiftConnection().ContainerCreate(DynamicAssetsContainerName, nil)
+	ctx := context.Background()
+	err = config.GetSwiftConnection().ContainerCreate(ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
 		panic("Could not create dynamic container")
 	}

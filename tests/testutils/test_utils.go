@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,7 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo/v4"
-	"github.com/ncw/swift/swifttest"
+	"github.com/ncw/swift/v2/swifttest"
 	"github.com/spf13/viper"
 )
 
@@ -114,7 +115,8 @@ func (c *TestSetup) SetupSwiftTest() error {
 	if err != nil {
 		c.CleanupAndDie("Could not init swift connection.", err)
 	}
-	err = config.GetSwiftConnection().ContainerCreate(dynamic.DynamicAssetsContainerName, nil)
+	ctx := context.Background()
+	err = config.GetSwiftConnection().ContainerCreate(ctx, dynamic.DynamicAssetsContainerName, nil)
 	if err != nil {
 		c.CleanupAndDie("Could not create dynamic container.", err)
 	}

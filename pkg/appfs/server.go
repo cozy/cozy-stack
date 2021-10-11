@@ -3,6 +3,7 @@ package appfs
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
 
@@ -34,6 +35,7 @@ type FileServer interface {
 type swiftServer struct {
 	c         *swift.Connection
 	container string
+	ctx       context.Context
 }
 
 type aferoServer struct {
@@ -98,12 +100,13 @@ func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileSer
 	return &swiftServer{
 		c:         conn,
 		container: containerName(appsType),
+		ctx:       context.Background(),
 	}
 }
 
 func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
 	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
+	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
 	if err != nil {
 		return nil, wrapSwiftErr(err)
 	}
@@ -119,7 +122,7 @@ func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 
 func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
 	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
+	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
 	}
@@ -184,7 +187,7 @@ func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string 
 
 func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) {
 	prefix := s.makeObjectName(slug, version, shasum, "") + "/"
-	names, err := s.c.ObjectNamesAll(s.container, &swift.ObjectsOpts{
+	names, err := s.c.ObjectNamesAll(s.ctx, s.container, &swift.ObjectsOpts{
 		Prefix: prefix,
 	})
 	if err != nil {

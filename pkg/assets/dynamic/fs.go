@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
 
@@ -36,6 +37,7 @@ type assetsFS interface {
 
 type swiftFS struct {
 	swiftConn *swift.Connection
+	ctx       context.Context
 }
 
 type aferoFS struct {
@@ -87,8 +89,9 @@ func newOsFS() (*aferoFS, error) {
 }
 
 func newswiftFS() (*swiftFS, error) {
-	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection()}
-	err := swiftFS.swiftConn.ContainerCreate(DynamicAssetsContainerName, nil)
+	ctx := context.Background()
+	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
+	err := swiftFS.swiftConn.ContainerCreate(ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +183,7 @@ func (a *aferoFS) List() (map[string][]*model.Asset, error) {
 func (s *swiftFS) Add(context, name string, asset *model.Asset) error {
 	objectName := path.Join(asset.Context, asset.Name)
 	swiftConn := s.swiftConn
-	f, err := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
+	f, err := swiftConn.ObjectCreate(s.ctx, DynamicAssetsContainerName, objectName, true, "", "", nil)
 	if err != nil {
 		return err
 	}
@@ -197,7 +200,7 @@ func (s *swiftFS) Get(context, name string) ([]byte, error) {
 	objectName := path.Join(context, name)
 	assetContent := new(bytes.Buffer)
 
-	_, err := s.swiftConn.ObjectGet(DynamicAssetsContainerName, objectName, assetContent, true, nil)
+	_, err := s.swiftConn.ObjectGet(s.ctx, DynamicAssetsContainerName, objectName, assetContent, true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -208,13 +211,13 @@ func (s *swiftFS) Get(context, name string) ([]byte, error) {
 func (s *swiftFS) Remove(context, name string) error {
 	objectName := path.Join(context, name)
 
-	return s.swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
+	return s.swiftConn.ObjectDelete(s.ctx, DynamicAssetsContainerName, objectName)
 }
 
 func (s *swiftFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
-	objNames, err := s.swiftConn.ObjectNamesAll(DynamicAssetsContainerName, nil)
+	objNames, err := s.swiftConn.ObjectNamesAll(s.ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +242,9 @@ func (s *swiftFS) CheckStatus() (time.Duration, error) {
 	before := time.Now()
 	var err error
 	if config.GetConfig().Fs.CanQueryInfo {
-		_, err = s.swiftConn.QueryInfo()
+		_, err = s.swiftConn.QueryInfo(s.ctx)
 	} else {
-		_, _, err = s.swiftConn.Container(DynamicAssetsContainerName)
+		_, _, err = s.swiftConn.Container(s.ctx, DynamicAssetsContainerName)
 	}
 	if err != nil {
 		return 0, err

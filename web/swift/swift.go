@@ -2,6 +2,7 @@ package swift
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 // ListLayouts returns the number of instances for each Swift layouts.
@@ -107,7 +108,8 @@ func GetObject(c echo.Context) error {
 
 	buf := new(bytes.Buffer)
 	sc := config.GetSwiftConnection()
-	_, err = sc.ObjectGet(swiftContainer(i), unescaped, buf, false, nil)
+	ctx := c.Request().Context()
+	_, err = sc.ObjectGet(ctx, swiftContainer(i), unescaped, buf, false, nil)
 	if err != nil {
 		return err
 	}
@@ -127,7 +129,8 @@ func PutObject(c echo.Context) error {
 	}
 
 	sc := config.GetSwiftConnection()
-	f, err := sc.ObjectCreate(swiftContainer(i), unescaped, true, "", contentType, nil)
+	ctx := c.Request().Context()
+	f, err := sc.ObjectCreate(ctx, swiftContainer(i), unescaped, true, "", contentType, nil)
 	if err != nil {
 		return err
 	}
@@ -151,7 +154,8 @@ func DeleteObject(c echo.Context) error {
 	}
 
 	sc := config.GetSwiftConnection()
-	err = sc.ObjectDelete(swiftContainer(i), unescaped)
+	ctx := c.Request().Context()
+	err = sc.ObjectDelete(ctx, swiftContainer(i), unescaped)
 	if err != nil {
 		return err
 	}
@@ -166,8 +170,9 @@ func ListObjects(c echo.Context) error {
 
 	outNames := []string{}
 
-	err := sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		names, err := sc.ObjectNames(container, opts)
+	ctx := c.Request().Context()
+	err := sc.ObjectsWalk(ctx, container, nil, func(ctx context.Context, opts *swift.ObjectsOpts) (interface{}, error) {
+		names, err := sc.ObjectNames(ctx, container, opts)
 		if err == nil {
 			outNames = append(outNames, names...)
 		}

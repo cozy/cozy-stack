@@ -1,12 +1,13 @@
 package vfsswift
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/ncw/swift/v2"
 )
 
 // maxNbFilesToDelete is the maximal number of files that we will try to delete
@@ -21,20 +22,20 @@ var errFailFast = errors.New("fail fast")
 
 // DeleteContainer removes all the files inside the given container, and then
 // deletes it.
-func DeleteContainer(c *swift.Connection, container string) error {
-	_, _, err := c.Container(container)
+func DeleteContainer(ctx context.Context, c *swift.Connection, container string) error {
+	_, _, err := c.Container(ctx, container)
 	if err == swift.ContainerNotFound {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	objectNames, err := c.ObjectNamesAll(container, nil)
+	objectNames, err := c.ObjectNamesAll(ctx, container, nil)
 	if err != nil {
 		return err
 	}
 	if len(objectNames) > 0 {
-		if err = deleteContainerFiles(c, container, objectNames); err != nil {
+		if err = deleteContainerFiles(ctx, c, container, objectNames); err != nil {
 			return err
 		}
 	}
@@ -46,7 +47,7 @@ func DeleteContainer(c *swift.Connection, container string) error {
 	// registered for this container. We will try several times to delete the
 	// container to work-around this limitation.
 	return utils.RetryWithExpBackoff(5, 2*time.Second, func() error {
-		err = c.ContainerDelete(container)
+		err = c.ContainerDelete(ctx, container)
 		if err == swift.ContainerNotFound {
 			return nil
 		}
@@ -54,7 +55,7 @@ func DeleteContainer(c *swift.Connection, container string) error {
 	})
 }
 
-func deleteContainerFiles(c *swift.Connection, container string, objectNames []string) error {
+func deleteContainerFiles(ctx context.Context, c *swift.Connection, container string, objectNames []string) error {
 	nb := 1 + (len(objectNames)-1)/maxNbFilesToDelete
 	ch := make(chan error)
 
@@ -74,7 +75,7 @@ func deleteContainerFiles(c *swift.Connection, container string, objectNames []s
 		objectToDelete := objectNames[begin:end]
 		go func() {
 			k := <-tokens
-			_, err := c.BulkDelete(container, objectToDelete)
+			_, err := c.BulkDelete(ctx, container, objectToDelete)
 			ch <- err
 			tokens <- k
 		}()
