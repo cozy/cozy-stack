@@ -1,13 +1,14 @@
 package logger
 
 import (
+	"context"
 	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,8 +64,9 @@ func Init(opt Options) error {
 		formatter.TimestampFormat = time.RFC3339Nano
 	}
 	if cli := opt.Redis; cli != nil {
-		go subscribeLoggersDebug(cli)
-		go loadDebug(cli)
+		ctx := context.Background()
+		go subscribeLoggersDebug(ctx, cli)
+		go loadDebug(ctx, cli)
 	}
 	opts = opt
 	return nil
@@ -87,7 +89,8 @@ func Clone(in *logrus.Logger) *logrus.Logger {
 // AddDebugDomain adds the specified domain to the debug list.
 func AddDebugDomain(domain string, ttl time.Duration) error {
 	if cli := opts.Redis; cli != nil {
-		return publishDebug(cli, debugRedisAddChannel, domain, ttl)
+		ctx := context.Background()
+		return publishDebug(ctx, cli, debugRedisAddChannel, domain, ttl)
 	}
 	addDebugDomain(domain, ttl)
 	return nil
@@ -96,7 +99,8 @@ func AddDebugDomain(domain string, ttl time.Duration) error {
 // RemoveDebugDomain removes the specified domain from the debug list.
 func RemoveDebugDomain(domain string) error {
 	if cli := opts.Redis; cli != nil {
-		return publishDebug(cli, debugRedisRmvChannel, domain, 0)
+		ctx := context.Background()
+		return publishDebug(ctx, cli, debugRedisRmvChannel, domain, 0)
 	}
 	removeDebugDomain(domain)
 	return nil
@@ -147,8 +151,8 @@ func removeDebugDomain(domain string) {
 	delete(loggers, domain)
 }
 
-func subscribeLoggersDebug(cli redis.UniversalClient) {
-	sub := cli.Subscribe(debugRedisAddChannel, debugRedisRmvChannel)
+func subscribeLoggersDebug(ctx context.Context, cli redis.UniversalClient) {
+	sub := cli.Subscribe(ctx, debugRedisAddChannel, debugRedisRmvChannel)
 	for msg := range sub.Channel() {
 		parts := strings.Split(msg.Payload, "/")
 		domain := parts[0]
@@ -165,13 +169,13 @@ func subscribeLoggersDebug(cli redis.UniversalClient) {
 	}
 }
 
-func loadDebug(cli redis.UniversalClient) {
-	keys, err := cli.Keys(debugRedisPrefix + "*").Result()
+func loadDebug(ctx context.Context, cli redis.UniversalClient) {
+	keys, err := cli.Keys(ctx, debugRedisPrefix+"*").Result()
 	if err != nil {
 		return
 	}
 	for _, key := range keys {
-		ttl, err := cli.TTL(key).Result()
+		ttl, err := cli.TTL(ctx, key).Result()
 		if err != nil {
 			continue
 		}
@@ -180,16 +184,16 @@ func loadDebug(cli redis.UniversalClient) {
 	}
 }
 
-func publishDebug(cli redis.UniversalClient, channel, domain string, ttl time.Duration) error {
-	err := cli.Publish(channel, domain+"/"+ttl.String()).Err()
+func publishDebug(ctx context.Context, cli redis.UniversalClient, channel, domain string, ttl time.Duration) error {
+	err := cli.Publish(ctx, channel, domain+"/"+ttl.String()).Err()
 	if err != nil {
 		return err
 	}
 	key := debugRedisPrefix + domain
 	if channel == debugRedisAddChannel {
-		err = cli.Set(key, 0, ttl).Err()
+		err = cli.Set(ctx, key, 0, ttl).Err()
 	} else {
-		err = cli.Del(key).Err()
+		err = cli.Del(ctx, key).Err()
 	}
 	return err
 }

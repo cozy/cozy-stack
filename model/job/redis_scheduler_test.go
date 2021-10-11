@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -200,7 +200,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+	err := client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
@@ -234,7 +234,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 func TestRedisPollFromSchedKey(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+	err := client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
@@ -261,7 +261,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	ts := now.UTC().Unix()
 	key := testInstance.DBPrefix() + "/" + tat.ID()
-	err = client.ZAdd(jobs.SchedKey, &redis.Z{
+	err = client.ZAdd(context.Background(), jobs.SchedKey, &redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,
 	}).Err()
@@ -283,7 +283,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 func TestRedisTriggerEvent(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+	err := client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
@@ -350,7 +350,7 @@ func (d fakeFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
 func TestRedisTriggerEventForDirectories(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+	err := client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
@@ -460,7 +460,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+	err := client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
@@ -520,7 +520,7 @@ func TestMain(m *testing.M) {
 		cfg.Jobs.RedisConfig = was
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		return client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
+		return client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	})
 
 	os.Exit(setup.Run())

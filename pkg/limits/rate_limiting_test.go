@@ -1,10 +1,11 @@
 package limits
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,7 @@ func TestLoginRateExceededMem(t *testing.T) {
 func TestLoginRateNotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	client.Del("auth:" + testInstance.DomainName())
+	client.Del(context.Background(), "auth:"+testInstance.DomainName())
 	globalCounter = NewRedisCounter(client)
 	assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 }
@@ -38,7 +39,7 @@ func TestLoginRateExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	globalCounter = NewRedisCounter(client)
-	client.Del("auth:" + testInstance.DomainName())
+	client.Del(context.Background(), "auth:"+testInstance.DomainName())
 	for i := 1; i <= 1000; i++ {
 		assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 	}
@@ -62,7 +63,7 @@ func Test2FAGenerationExceededMem(t *testing.T) {
 func Test2FAGenerationNotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	client.Del("two-factor-generation:" + testInstance.DomainName())
+	client.Del(context.Background(), "two-factor-generation:"+testInstance.DomainName())
 	globalCounter = NewRedisCounter(client)
 	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 }
@@ -71,7 +72,7 @@ func Test2FAGenerationExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	globalCounter = NewRedisCounter(client)
-	client.Del("two-factor-generation:" + testInstance.DomainName())
+	client.Del(context.Background(), "two-factor-generation:"+testInstance.DomainName())
 	for i := 1; i <= 20; i++ {
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 	}
@@ -95,7 +96,7 @@ func Test2FARateExceededMem(t *testing.T) {
 func Test2FANotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	client.Del("two-factor:" + testInstance.DomainName())
+	client.Del(context.Background(), "two-factor:"+testInstance.DomainName())
 	globalCounter = NewRedisCounter(client)
 	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 }
@@ -104,7 +105,7 @@ func Test2FAExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	globalCounter = NewRedisCounter(client)
-	client.Del("two-factor:" + testInstance.DomainName())
+	client.Del(context.Background(), "two-factor:"+testInstance.DomainName())
 	for i := 1; i <= 10; i++ {
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 	}

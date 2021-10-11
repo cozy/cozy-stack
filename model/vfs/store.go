@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"sync"
@@ -9,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // Store is essentially a place to store transient objects between two HTTP
@@ -263,16 +264,18 @@ func (s *memStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, err
 }
 
 type redisStore struct {
-	c redis.UniversalClient
+	c   redis.UniversalClient
+	ctx context.Context
 }
 
 func newRedisStore(cli redis.UniversalClient) Store {
-	return &redisStore{cli}
+	ctx := context.Background()
+	return &redisStore{cli, ctx}
 }
 
 func (s *redisStore) AddFile(db prefixer.Prefixer, filePath string) (string, error) {
 	key := makeSecret()
-	if err := s.c.Set(db.DBPrefix()+":"+key, filePath, storeTTL).Err(); err != nil {
+	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, filePath, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -280,7 +283,7 @@ func (s *redisStore) AddFile(db prefixer.Prefixer, filePath string) (string, err
 
 func (s *redisStore) AddThumb(db prefixer.Prefixer, fileID string) (string, error) {
 	key := makeSecret()
-	if err := s.c.Set(db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
+	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -288,7 +291,7 @@ func (s *redisStore) AddThumb(db prefixer.Prefixer, fileID string) (string, erro
 
 func (s *redisStore) AddPreview(db prefixer.Prefixer, fileID string) (string, error) {
 	key := makeSecret()
-	if err := s.c.Set(db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
+	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -296,7 +299,7 @@ func (s *redisStore) AddPreview(db prefixer.Prefixer, fileID string) (string, er
 
 func (s *redisStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
 	key := makeSecret()
-	if err := s.c.Set(db.DBPrefix()+":"+key, versionID, storeTTL).Err(); err != nil {
+	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, versionID, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -308,7 +311,7 @@ func (s *redisStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string,
 		return "", err
 	}
 	key := makeSecret()
-	if err = s.c.Set(db.DBPrefix()+":"+key, v, storeTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, db.DBPrefix()+":"+key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -320,14 +323,14 @@ func (s *redisStore) AddMetadata(db prefixer.Prefixer, metadata *Metadata) (stri
 		return "", err
 	}
 	key := makeSecret()
-	if err = s.c.Set(db.DBPrefix()+":"+key, v, storeTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, db.DBPrefix()+":"+key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
 }
 
 func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken
 	}
@@ -338,7 +341,7 @@ func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 }
 
 func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken
 	}
@@ -349,7 +352,7 @@ func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) 
 }
 
 func (s *redisStore) GetPreview(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken
 	}
@@ -360,7 +363,7 @@ func (s *redisStore) GetPreview(db prefixer.Prefixer, key string) (string, error
 }
 
 func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken
 	}
@@ -371,7 +374,7 @@ func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error
 }
 
 func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
-	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
+	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
 	if err == redis.Nil {
 		return nil, ErrWrongToken
 	}
@@ -386,7 +389,7 @@ func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, err
 }
 
 func (s *redisStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error) {
-	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
+	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
 	if err == redis.Nil {
 		return nil, ErrWrongToken
 	}

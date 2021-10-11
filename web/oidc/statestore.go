@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"sync"
@@ -9,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 const stateTTL = 15 * time.Minute
@@ -61,12 +62,13 @@ func (store memStateStorage) Find(id string) *stateHolder {
 }
 
 type subRedisInterface interface {
-	Get(key string) *redis.StringCmd
-	Set(key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
 }
 
 type redisStateStorage struct {
-	cl subRedisInterface
+	cl  subRedisInterface
+	ctx context.Context
 }
 
 func (store *redisStateStorage) Add(s *stateHolder) error {
@@ -74,11 +76,11 @@ func (store *redisStateStorage) Add(s *stateHolder) error {
 	if err != nil {
 		return err
 	}
-	return store.cl.Set(s.id, serialized, stateTTL).Err()
+	return store.cl.Set(store.ctx, s.id, serialized, stateTTL).Err()
 }
 
 func (store *redisStateStorage) Find(id string) *stateHolder {
-	serialized, err := store.cl.Get(id).Bytes()
+	serialized, err := store.cl.Get(store.ctx, id).Bytes()
 	if err != nil {
 		return nil
 	}
@@ -105,7 +107,8 @@ func getStorage() stateStorage {
 	if cli == nil {
 		globalStorage = &memStateStorage{}
 	} else {
-		globalStorage = &redisStateStorage{cl: cli}
+		ctx := context.Background()
+		globalStorage = &redisStateStorage{cl: cli, ctx: ctx}
 	}
 	return globalStorage
 }

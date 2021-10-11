@@ -99,7 +99,8 @@ func PushLoginRegistration(db prefixer.Prefixer, login *LoginEntry, clientID str
 		if err != nil {
 			return err
 		}
-		return cli.HSet(redisRegistationKey, entry.Key(), b).Err()
+		ctx := context.Background()
+		return cli.HSet(ctx, redisRegistationKey, entry.Key(), b).Err()
 	}
 
 	registrationsMapLock.Lock()
@@ -116,7 +117,8 @@ func RemoveLoginRegistration(domain, clientID string) error {
 	var entryPtr *registrationEntry
 	key := domain + "|" + clientID
 	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
-		b, err := cli.HGet(redisRegistationKey, key).Result()
+		ctx := context.Background()
+		b, err := cli.HGet(ctx, redisRegistationKey, key).Result()
 		if err != nil {
 			return err
 		}
@@ -124,7 +126,7 @@ func RemoveLoginRegistration(domain, clientID string) error {
 		if err = json.Unmarshal([]byte(b), &entry); err != nil {
 			return err
 		}
-		if err = cli.HDel(redisRegistationKey, key).Err(); err != nil {
+		if err = cli.HDel(ctx, redisRegistationKey, key).Err(); err != nil {
 			return err
 		}
 		entryPtr = &entry
@@ -148,8 +150,9 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 
 	now := time.Now()
 	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
+		ctx := context.Background()
 		var vals map[string]string
-		vals, err = cli.HGetAll(redisRegistationKey).Result()
+		vals, err = cli.HGetAll(ctx, redisRegistationKey).Result()
 		if err != nil {
 			return
 		}
@@ -174,7 +177,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 		}
 
 		if len(deletedKeys) > 0 {
-			err = cli.HDel(redisRegistationKey, deletedKeys...).Err()
+			err = cli.HDel(ctx, redisRegistationKey, deletedKeys...).Err()
 		}
 	} else {
 		registrationsMapLock.Lock()

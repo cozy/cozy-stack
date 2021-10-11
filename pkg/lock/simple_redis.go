@@ -1,6 +1,7 @@
 package lock
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"strconv"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,8 +18,8 @@ const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.c
 const luaRelease = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`
 
 type subRedisInterface interface {
-	SetNX(key string, value interface{}, expiration time.Duration) *redis.BoolCmd
-	Eval(script string, keys []string, args ...interface{}) *redis.Cmd
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
 }
 
 const (
@@ -48,6 +49,7 @@ var (
 
 type redisLock struct {
 	client subRedisInterface
+	ctx    context.Context
 	mu     sync.Mutex
 	key    string
 	token  string
@@ -65,7 +67,7 @@ func (rl *redisLock) extends() (bool, error) {
 
 	// we already have a lock, attempts to extends it
 	ttl := strconv.FormatInt(int64(LockTimeout/time.Millisecond), 10)
-	ok, err := rl.client.Eval(luaRefresh, []string{rl.key}, rl.token, ttl).Result()
+	ok, err := rl.client.Eval(rl.ctx, luaRefresh, []string{rl.key}, rl.token, ttl).Result()
 	if err != nil {
 		return false, err // most probably redis connectivity error
 	}
@@ -80,7 +82,7 @@ func (rl *redisLock) extends() (bool, error) {
 
 func (rl *redisLock) obtains(writing bool, token string) (bool, error) {
 	// Try to obtain a lock
-	ok, err := rl.client.SetNX(rl.key, token, LockTimeout).Result()
+	ok, err := rl.client.SetNX(rl.ctx, rl.key, token, LockTimeout).Result()
 	if err != nil {
 		return false, err // most probably redis connectivity error
 	}
@@ -165,7 +167,7 @@ func (rl *redisLock) unlock(writing bool) {
 		return
 	}
 
-	_, err := rl.client.Eval(luaRelease, []string{rl.key}, rl.token).Result()
+	_, err := rl.client.Eval(rl.ctx, luaRelease, []string{rl.key}, rl.token).Result()
 	if err != nil {
 		rl.log.Warnf("Failed to unlock: %s", err.Error())
 	}
@@ -194,6 +196,7 @@ var redislocksMu sync.Mutex
 func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 	return &redisLock{
 		client: c,
+		ctx:    context.Background(),
 		key:    basicLockNS + ns,
 		log:    logger.WithDomain(ns).WithField("nspace", "redis-lock"),
 		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),

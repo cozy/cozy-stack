@@ -14,7 +14,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
-	github.com/go-redis/redis/v7 v7.4.1
+	github.com/go-redis/redis/v8 v8.11.3
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
@@ -33,8 +33,6 @@ require (
 	github.com/mssola/user_agent v0.5.3
 	github.com/ncw/swift v1.0.53
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/onsi/ginkgo v1.15.0 // indirect
-	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pquerna/otp v1.3.0
 	github.com/prometheus/client_golang v1.11.0

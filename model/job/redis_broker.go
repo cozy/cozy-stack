@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
@@ -25,6 +25,7 @@ const (
 
 type redisBroker struct {
 	client         redis.UniversalClient
+	ctx            context.Context
 	workers        []*Worker
 	workersRunning []*Worker
 	workersTypes   []string
@@ -37,6 +38,7 @@ type redisBroker struct {
 func NewRedisBroker(client redis.UniversalClient) Broker {
 	return &redisBroker{
 		client: client,
+		ctx:    context.Background(),
 		closed: make(chan struct{}),
 	}
 }
@@ -150,7 +152,7 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 		if rng.Intn(3) == 0 {
 			keyP1, keyP0 = keyP0, keyP1
 		}
-		results, err := b.client.BRPop(redisBRPopTimeout, keyP0, keyP1).Result()
+		results, err := b.client.BRPop(b.ctx, redisBRPopTimeout, keyP0, keyP1).Result()
 		if err != nil || len(results) < 2 {
 			time.Sleep(100 * time.Millisecond)
 			continue
@@ -243,7 +245,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 		key += redisHighPrioritySuffix
 	}
 
-	if err := b.client.LPush(key, val).Err(); err != nil {
+	if err := b.client.LPush(b.ctx, key, val).Err(); err != nil {
 		return nil, err
 	}
 
@@ -254,11 +256,11 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 // specified worker type.
 func (b *redisBroker) WorkerQueueLen(workerType string) (int, error) {
 	key := redisPrefix + workerType
-	l1, err := b.client.LLen(key).Result()
+	l1, err := b.client.LLen(b.ctx, key).Result()
 	if err != nil {
 		return 0, err
 	}
-	l2, err := b.client.LLen(key + redisHighPrioritySuffix).Result()
+	l2, err := b.client.LLen(b.ctx, key+redisHighPrioritySuffix).Result()
 	if err != nil {
 		return 0, err
 	}

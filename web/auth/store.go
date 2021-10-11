@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/hex"
 	"sync"
 	"time"
@@ -8,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // Store is essentially an object to store and retrieve confirmation codes
@@ -37,7 +38,8 @@ func GetStore() Store {
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
-		globalStore = &redisStore{cli}
+		ctx := context.Background()
+		globalStore = &redisStore{cli, ctx}
 	}
 	return globalStore
 }
@@ -89,13 +91,14 @@ func (s *memStore) GetCode(db prefixer.Prefixer, code string) (bool, error) {
 }
 
 type redisStore struct {
-	c redis.UniversalClient
+	c   redis.UniversalClient
+	ctx context.Context
 }
 
 func (s *redisStore) AddCode(db prefixer.Prefixer) (string, error) {
 	code := makeSecret()
 	key := confirmKey(db, code)
-	if err := s.c.Set(key, "1", storeTTL).Err(); err != nil {
+	if err := s.c.Set(s.ctx, key, "1", storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return code, nil
@@ -103,7 +106,7 @@ func (s *redisStore) AddCode(db prefixer.Prefixer) (string, error) {
 
 func (s *redisStore) GetCode(db prefixer.Prefixer, code string) (bool, error) {
 	key := confirmKey(db, code)
-	n, err := s.c.Exists(key).Result()
+	n, err := s.c.Exists(s.ctx, key).Result()
 	if err == redis.Nil || n == 0 {
 		return false, nil
 	}

@@ -1,6 +1,7 @@
 package office
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"sync"
@@ -9,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 type conflictDetector struct {
@@ -46,7 +47,8 @@ func GetStore() Store {
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
-		globalStore = &redisStore{cli}
+		ctx := context.Background()
+		globalStore = &redisStore{cli, ctx}
 	}
 	return globalStore
 }
@@ -137,12 +139,13 @@ func (s *memStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
 }
 
 type redisStore struct {
-	c redis.UniversalClient
+	c   redis.UniversalClient
+	ctx context.Context
 }
 
 func (s *redisStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error) {
 	idKey := docKey(db, payload.ID)
-	if secret, err := s.c.Get(idKey).Result(); err == nil {
+	if secret, err := s.c.Get(s.ctx, idKey).Result(); err == nil {
 		return secret, nil
 	}
 	v, err := json.Marshal(payload)
@@ -151,16 +154,16 @@ func (s *redisStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (str
 	}
 	secret := makeSecret()
 	key := docKey(db, secret)
-	if err = s.c.Set(key, v, storeTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
-	_ = s.c.Set(idKey, secret, storeTTL)
+	_ = s.c.Set(s.ctx, idKey, secret, storeTTL)
 	return secret, nil
 }
 
 func (s *redisStore) GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error) {
 	key := docKey(db, secret)
-	b, err := s.c.Get(key).Bytes()
+	b, err := s.c.Get(s.ctx, key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -180,7 +183,7 @@ func (s *redisStore) UpdateDoc(db prefixer.Prefixer, secret string, payload conf
 		return err
 	}
 	key := docKey(db, secret)
-	if err = s.c.Set(key, v, storeTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, key, v, storeTTL).Err(); err != nil {
 		return err
 	}
 	return nil
@@ -190,10 +193,10 @@ func (s *redisStore) RemoveDoc(db prefixer.Prefixer, secret string) error {
 	payload, _ := s.GetDoc(db, secret)
 	if payload != nil {
 		idKey := docKey(db, payload.ID)
-		_ = s.c.Del(idKey)
+		_ = s.c.Del(s.ctx, idKey)
 	}
 	key := docKey(db, secret)
-	return s.c.Del(key).Err()
+	return s.c.Del(s.ctx, key).Err()
 }
 
 func docKey(db prefixer.Prefixer, suffix string) string {

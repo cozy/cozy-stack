@@ -1,6 +1,7 @@
 package move
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"sync"
@@ -9,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 // Store is essentially an object to store and retrieve move requests
@@ -41,7 +42,8 @@ func GetStore() Store {
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
-		globalStore = &redisStore{cli}
+		ctx := context.Background()
+		globalStore = &redisStore{cli, ctx}
 	}
 	return globalStore
 }
@@ -135,12 +137,13 @@ func (s *memStore) AllowDeleteAccounts(db prefixer.Prefixer) bool {
 }
 
 type redisStore struct {
-	c redis.UniversalClient
+	c   redis.UniversalClient
+	ctx context.Context
 }
 
 func (s *redisStore) GetRequest(db prefixer.Prefixer, secret string) (*Request, error) {
 	key := requestKey(db, secret)
-	b, err := s.c.Get(key).Bytes()
+	b, err := s.c.Get(s.ctx, key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -161,7 +164,7 @@ func (s *redisStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, er
 	}
 	secret := makeSecret()
 	key := requestKey(db, secret)
-	if err = s.c.Set(key, v, storeTTL).Err(); err != nil {
+	if err = s.c.Set(s.ctx, key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
 	return secret, nil
@@ -169,17 +172,17 @@ func (s *redisStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, er
 
 func (s *redisStore) SetAllowDeleteAccounts(db prefixer.Prefixer) error {
 	key := deleteAccountsKey(db)
-	return s.c.Set(key, true, storeTTL).Err()
+	return s.c.Set(s.ctx, key, true, storeTTL).Err()
 }
 
 func (s *redisStore) ClearAllowDeleteAccounts(db prefixer.Prefixer) error {
 	key := deleteAccountsKey(db)
-	return s.c.Del(key).Err()
+	return s.c.Del(s.ctx, key).Err()
 }
 
 func (s *redisStore) AllowDeleteAccounts(db prefixer.Prefixer) bool {
 	key := deleteAccountsKey(db)
-	r, err := s.c.Exists(key).Result()
+	r, err := s.c.Exists(s.ctx, key).Result()
 	if err != nil {
 		return false
 	}

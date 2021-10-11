@@ -3,12 +3,13 @@ package cache
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"io"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/go-redis/redis/v8"
 )
 
 type cacheEntry struct {
@@ -22,15 +23,17 @@ type cacheEntry struct {
 type Cache struct {
 	client redis.UniversalClient
 	m      *sync.Map
+	ctx    context.Context
 }
 
 // New returns a new Cache from a potentially nil redis client.
 func New(client redis.UniversalClient) Cache {
+	ctx := context.Background()
 	if client != nil {
-		return Cache{client, nil}
+		return Cache{client, nil, ctx}
 	}
 	m := sync.Map{}
-	return Cache{nil, &m}
+	return Cache{nil, &m, ctx}
 }
 
 // CheckStatus checks that the cache is ready, or returns an error.
@@ -39,7 +42,7 @@ func (c Cache) CheckStatus() (time.Duration, error) {
 		return 0, nil
 	}
 	before := time.Now()
-	if err := c.client.Ping().Err(); err != nil {
+	if err := c.client.Ping(c.ctx).Err(); err != nil {
 		return 0, err
 	}
 	return time.Since(before), nil
@@ -57,7 +60,7 @@ func (c Cache) Get(key string) ([]byte, bool) {
 			c.Clear(key)
 		}
 	} else {
-		cmd := c.client.Get(key)
+		cmd := c.client.Get(c.ctx, key)
 		if b, err := cmd.Bytes(); err == nil {
 			return b, true
 		}
@@ -73,7 +76,7 @@ func (c Cache) MultiGet(keys []string) [][]byte {
 			results[i], _ = c.Get(key)
 		}
 	} else {
-		cmd := c.client.MGet(keys...)
+		cmd := c.client.MGet(c.ctx, keys...)
 		for i, val := range cmd.Val() {
 			if buf, ok := val.(string); ok {
 				results[i] = []byte(buf)
@@ -87,7 +90,7 @@ func (c Cache) MultiGet(keys []string) [][]byte {
 // Note: it can be slow and should be used carefully.
 func (c Cache) Keys(prefix string) []string {
 	if c.client != nil {
-		cmd := c.client.Keys(prefix + "*")
+		cmd := c.client.Keys(c.ctx, prefix+"*")
 		return cmd.Val()
 	}
 	results := make([]string, 0)
@@ -106,7 +109,7 @@ func (c Cache) Clear(key string) {
 	if c.client == nil {
 		c.m.Delete(key)
 	} else {
-		c.client.Del(key)
+		c.client.Del(c.ctx, key)
 	}
 }
 
@@ -118,7 +121,7 @@ func (c Cache) Set(key string, data []byte, expiration time.Duration) {
 			expiredAt: time.Now().Add(expiration),
 		})
 	} else {
-		c.client.Set(key, data, expiration)
+		c.client.Set(c.ctx, key, data, expiration)
 	}
 }
 
@@ -130,7 +133,7 @@ func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
 			expiredAt: time.Now().Add(expiration),
 		})
 	} else {
-		c.client.SetNX(key, data, expiration)
+		c.client.SetNX(c.ctx, key, data, expiration)
 	}
 }
 
@@ -165,6 +168,6 @@ func (c Cache) RefreshTTL(key string, expiration time.Duration) {
 			c.m.Store(key, entry)
 		}
 	} else {
-		c.client.Expire(key, expiration)
+		c.client.Expire(c.ctx, key, expiration)
 	}
 }
