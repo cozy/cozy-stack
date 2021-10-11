@@ -185,7 +185,7 @@ func ListObjects(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// Routes sets the routing for the status service
+// Routes sets the routing for the swift service
 func Routes(router *echo.Group) {
 	router.GET("/layouts", ListLayouts, checkSwift)
 	router.GET("/vfs/:object", GetObject, checkSwift, middlewares.NeedInstance)

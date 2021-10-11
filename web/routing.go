@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/notifications"
+	"github.com/cozy/cozy-stack/web/oauth"
 	"github.com/cozy/cozy-stack/web/office"
 	"github.com/cozy/cozy-stack/web/oidc"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -278,6 +279,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	apps.AdminRoutes(router.Group("/konnectors", mws...))
 	version.Routes(router.Group("/version", mws...))
 	metrics.Routes(router.Group("/metrics", mws...))
+	oauth.Routes(router.Group("/oauth", mws...))
 	realtime.Routes(router.Group("/realtime", mws...))
 	swift.Routes(router.Group("/swift", mws...))
 

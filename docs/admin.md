@@ -554,6 +554,31 @@ DELETE /konnectors/maintenance/ameli HTTP/1.1
 HTTP/1.1 204 No Content
 ```
 
+## OAuth clients
+
+### DELETE /oauth/:domain/clients
+
+Delete all the OAuth clients for the given instance. It can be limited to a
+specific kind of clients (`desktop`, `mobile`, `sharing`, etc.) by using the
+`Kind` parameter of the query-string. It returns the number of clients that
+have been deleted.
+
+#### Request
+
+```http
+DELETE /oauth/cozy.example/clients HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+```json
+{"count": 42}
+```
+
 ## Swift
 
 ### GET /swift/layouts
