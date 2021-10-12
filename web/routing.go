@@ -116,6 +116,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPStyleSrc:       []middlewares.CSPSource{middlewares.CSPUnsafeInline},
 			CSPFontSrc:        []middlewares.CSPSource{middlewares.CSPSrcData},
 			CSPImgSrc:         []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
+			CSPObjectSrc:      []middlewares.CSPSource{middlewares.CSPSrcNone},
 			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
 
