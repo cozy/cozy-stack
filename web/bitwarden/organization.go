@@ -124,19 +124,28 @@ func newOrganizationResponse(inst *instance.Instance, org *bitwarden.Organizatio
 }
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
+// We deviate from the Bitwarden's protocol by adding ReadOnly field
+// On Bitwarden's protocol this field is present only on collectionDetailsResponse
+// but we merged both structs in a single one
+// Bitwarden app uses this struct only for exporting ciphers, so they don't need ReadOnly member
+// Cozy app uses this struct for realtime syncing and so it needs to have the ReadOnly state
 type collectionResponse struct {
 	ID             string `json:"Id"`
 	OrganizationID string `json:"OrganizationId"`
 	Name           string `json:"Name"`
 	Object         string `json:"Object"`
+	ReadOnly       bool   `json:"ReadOnly"`
 }
 
-func newCollectionResponse(coll *bitwarden.Collection, orgID string) *collectionResponse {
+func newCollectionResponse(inst *instance.Instance, org *bitwarden.Organization, coll *bitwarden.Collection) *collectionResponse {
+	m := org.Members[inst.Domain]
+
 	return &collectionResponse{
 		ID:             coll.ID(),
-		OrganizationID: orgID,
+		OrganizationID: org.ID(),
 		Name:           coll.Name,
 		Object:         "collection",
+		ReadOnly:       m.ReadOnly,
 	}
 }
 
@@ -249,7 +258,7 @@ func GetCollections(c echo.Context) error {
 		})
 	}
 
-	coll := newCollectionResponse(&org.Collection, org.ID())
+	coll := newCollectionResponse(inst, org, &org.Collection)
 	res := &collectionsList{Object: "list"}
 	res.Data = []*collectionResponse{coll}
 	return c.JSON(http.StatusOK, res)
