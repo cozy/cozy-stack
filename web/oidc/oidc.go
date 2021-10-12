@@ -214,6 +214,14 @@ func AccessToken(c echo.Context) error {
 		})
 	}
 
+	// Remove the pending flag on the OAuth client (if needed)
+	if client.Pending {
+		client.Pending = false
+		client.ClientID = ""
+		_ = couchdb.UpdateDoc(inst, client)
+		client.ClientID = client.CouchID
+	}
+
 	// Generate the access/refresh tokens
 	accessToken, err := client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
 	if err != nil {
