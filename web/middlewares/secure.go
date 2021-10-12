@@ -104,7 +104,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	conf.CSPMediaSrc, conf.CSPMediaSrcAllowList =
 		validCSPList(conf.CSPMediaSrc, conf.CSPDefaultSrc, conf.CSPMediaSrcAllowList)
 	conf.CSPObjectSrc, conf.CSPObjectSrcAllowList =
-		validCSPList(conf.CSPObjectSrc, conf.CSPDefaultSrc, conf.CSPObjectSrcAllowList)
+		validCSPList(conf.CSPObjectSrc, nil, conf.CSPObjectSrcAllowList)
 	conf.CSPStyleSrc, conf.CSPStyleSrcAllowList =
 		validCSPList(conf.CSPStyleSrc, conf.CSPDefaultSrc, conf.CSPStyleSrcAllowList)
 	conf.CSPWorkerSrc, conf.CSPWorkerSrcAllowList =
