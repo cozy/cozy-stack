@@ -4,6 +4,7 @@ package web
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -91,6 +92,9 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			oo := office.OnlyOfficeURL
 			if oo == "" {
 				continue
+			}
+			if !strings.HasSuffix(oo, "/") {
+				oo += "/"
 			}
 			if ctxName == config.DefaultInstanceContext {
 				scriptSrc = oo + " " + scriptSrc
