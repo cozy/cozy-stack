@@ -953,6 +953,7 @@ func TestListCollections(t *testing.T) {
 	assert.Equal(t, "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=", coll["Name"])
 	assert.Equal(t, "collection", coll["Object"])
 	assert.Equal(t, orgaID, coll["OrganizationId"])
+	assert.Equal(t, false, coll["ReadOnly"])
 }
 
 func TestSyncOrganizationAndCollection(t *testing.T) {

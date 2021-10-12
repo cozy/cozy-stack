@@ -70,28 +70,12 @@ func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*p
 
 // https://github.com/bitwarden/jslib/blob/master/common/src/models/response/syncResponse.ts
 type syncResponse struct {
-	Profile     *profileResponse             `json:"Profile"`
-	Folders     []*folderResponse            `json:"Folders"`
-	Ciphers     []*cipherResponse            `json:"Ciphers"`
-	Collections []*collectionDetailsResponse `json:"Collections"`
-	Domains     *domainsResponse             `json:"Domains"`
-	Object      string                       `json:"Object"`
-}
-
-// https://github.com/bitwarden/jslib/blob/master/common/src/models/response/collectionResponse.ts
-type collectionDetailsResponse struct {
-	*collectionResponse
-	ReadOnly bool `json:"ReadOnly"`
-}
-
-func newCollectionDetailsResponse(
-	inst *instance.Instance,
-	org *bitwarden.Organization,
-	coll *bitwarden.Collection,
-) *collectionDetailsResponse {
-	readOnly := org.Members[inst.Domain].ReadOnly
-	collectionResponse := newCollectionResponse(coll, org.ID())
-	return &collectionDetailsResponse{collectionResponse, readOnly}
+	Profile     *profileResponse      `json:"Profile"`
+	Folders     []*folderResponse     `json:"Folders"`
+	Ciphers     []*cipherResponse     `json:"Ciphers"`
+	Collections []*collectionResponse `json:"Collections"`
+	Domains     *domainsResponse      `json:"Domains"`
+	Object      string                `json:"Object"`
 }
 
 func newSyncResponse(
@@ -111,9 +95,9 @@ func newSyncResponse(
 	for i, c := range ciphers {
 		ciphersResponse[i] = newCipherResponse(c, setting)
 	}
-	collectionsResponse := make([]*collectionDetailsResponse, len(organizations))
+	collectionsResponse := make([]*collectionResponse, len(organizations))
 	for i, o := range organizations {
-		collectionsResponse[i] = newCollectionDetailsResponse(inst, o, &o.Collection)
+		collectionsResponse[i] = newCollectionResponse(inst, o, &o.Collection)
 	}
 	return &syncResponse{
 		Profile:     profile,
