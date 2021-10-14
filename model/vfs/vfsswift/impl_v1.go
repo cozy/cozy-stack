@@ -86,6 +86,7 @@ func (sfs *swiftVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 		container:       sfs.container,
 		version:         sfs.version,
 		mu:              sfs.mu,
+		ctx:             context.Background(),
 		log:             sfs.log,
 	}
 }
