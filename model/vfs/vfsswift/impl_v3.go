@@ -110,6 +110,7 @@ func (sfs *swiftVFSV3) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 		prefix:          sfs.prefix,
 		container:       sfs.container,
 		mu:              sfs.mu,
+		ctx:             context.Background(),
 		log:             sfs.log,
 	}
 }
