@@ -65,6 +65,7 @@ func getAccount(c echo.Context) error {
 
 func updateAccount(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	docid := c.Get("docid").(string)
 
 	var doc couchdb.JSONDoc
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc); err != nil {
@@ -78,12 +79,12 @@ func updateAccount(c echo.Context) error {
 			"You must either provide an _id and _rev in document (update) or neither (create with fixed id).")
 	}
 
-	if doc.ID() != "" && doc.ID() != c.Get("docid").(string) {
+	if doc.ID() != "" && doc.ID() != docid {
 		return jsonapi.NewError(http.StatusBadRequest, "document _id doesnt match url")
 	}
 
 	if doc.ID() == "" {
-		doc.SetID(c.Get("docid").(string))
+		doc.SetID(docid)
 		return createNamedDoc(c, doc)
 	}
 

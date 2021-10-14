@@ -44,7 +44,7 @@ func ListReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	defer lockVFS(instance)()
 
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	id := getDocID(c)
 	include := c.QueryParam("include")
 	includeDocs := include == "files"
@@ -159,7 +159,7 @@ func ListReferencesHandler(c echo.Context) error {
 func AddReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	id := getDocID(c)
 
 	references, err := jsonapi.BindRelations(c.Request())
@@ -217,7 +217,7 @@ func AddReferencesHandler(c echo.Context) error {
 func RemoveReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	id := getDocID(c)
 
 	references, err := jsonapi.BindRelations(c.Request())
