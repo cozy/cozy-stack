@@ -27,7 +27,6 @@ func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 		if doctype == "" {
 			return jsonapi.Errorf(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
-		c.Set("doctype", doctype)
 
 		docidraw := c.Param("docid")
 		docid, err := url.QueryUnescape(docidraw)
@@ -70,7 +69,7 @@ func allDoctypes(c echo.Context) error {
 // GetDoc get a doc by its type and id
 func getDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	docid := c.Get("docid").(string)
 
 	// Accounts are handled specifically to remove the auth fields
@@ -107,7 +106,7 @@ func getDoc(c echo.Context) error {
 
 // CreateDoc create doc from the json passed as body
 func createDoc(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	instance := middlewares.GetInstance(c)
 
 	// Accounts are handled specifically to remove the auth fields
@@ -168,6 +167,7 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 func UpdateDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Param("doctype")
+	docid := c.Get("docid").(string)
 
 	// Accounts are handled specifically to remove the auth fields
 	if doctype == consts.Accounts {
@@ -190,12 +190,12 @@ func UpdateDoc(c echo.Context) error {
 			"You must either provide an _id and _rev in document (update) or neither (create with fixed id).")
 	}
 
-	if doc.ID() != "" && doc.ID() != c.Get("docid").(string) {
+	if doc.ID() != "" && doc.ID() != docid {
 		return jsonapi.Errorf(http.StatusBadRequest, "document _id doesnt match url")
 	}
 
 	if doc.ID() == "" {
-		doc.SetID(c.Get("docid").(string))
+		doc.SetID(docid)
 		return createNamedDoc(c, doc)
 	}
 
@@ -238,7 +238,7 @@ func UpdateDoc(c echo.Context) error {
 // DeleteDoc deletes the provided document from its database.
 func DeleteDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	docid := c.Get("docid").(string)
 	revHeader := c.Request().Header.Get("If-Match")
 	revQuery := c.QueryParam("rev")
@@ -289,7 +289,7 @@ func DeleteDoc(c echo.Context) error {
 // DeleteDatabase deletes the doctype's database.
 func DeleteDatabase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := permission.CheckWritable(doctype); err != nil {
 		return err
@@ -308,7 +308,7 @@ func DeleteDatabase(c echo.Context) error {
 
 func defineIndex(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	var definitionRequest map[string]interface{}
 	if err := json.NewDecoder(c.Request().Body).Decode(&definitionRequest); err != nil {
@@ -333,7 +333,7 @@ func defineIndex(c echo.Context) error {
 
 func findDocuments(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	var findRequest map[string]interface{}
 	if err := json.NewDecoder(c.Request().Body).Decode(&findRequest); err != nil {
@@ -374,7 +374,7 @@ func findDocuments(c echo.Context) error {
 }
 
 func allDocs(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -386,7 +386,7 @@ func allDocs(c echo.Context) error {
 
 func normalDocs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}

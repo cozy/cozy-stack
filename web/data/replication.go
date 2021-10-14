@@ -17,7 +17,7 @@ import (
 )
 
 func proxy(c echo.Context, path string) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	instance := middlewares.GetInstance(c)
 	p := couchdb.Proxy(instance, doctype, path)
 	logger := instance.Logger().WithField("nspace", "data-proxy").Writer()
@@ -28,8 +28,8 @@ func proxy(c echo.Context, path string) error {
 }
 
 func getLocalDoc(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
-	docid := c.Param("docid")
+	doctype := c.Param("doctype")
+	docid := c.Get("docid").(string)
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
@@ -43,8 +43,8 @@ func getLocalDoc(c echo.Context) error {
 }
 
 func setLocalDoc(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
-	docid := c.Param("docid")
+	doctype := c.Param("doctype")
+	docid := c.Get("docid").(string)
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
@@ -58,7 +58,7 @@ func setLocalDoc(c echo.Context) error {
 }
 
 func bulkGet(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
@@ -72,7 +72,7 @@ func bulkGet(c echo.Context) error {
 }
 
 func bulkDocs(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return err
@@ -104,7 +104,7 @@ func bulkDocs(c echo.Context) error {
 }
 
 func createDB(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return err
@@ -118,7 +118,7 @@ func createDB(c echo.Context) error {
 }
 
 func fullCommit(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
@@ -132,7 +132,7 @@ func fullCommit(c echo.Context) error {
 }
 
 func revsDiff(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
@@ -160,7 +160,7 @@ var allowedChangesParams = map[string]bool{
 
 func changesFeed(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {
@@ -268,7 +268,7 @@ func getOAuthClient(c echo.Context) (*oauth.Client, bool) {
 
 func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
