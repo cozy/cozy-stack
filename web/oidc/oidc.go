@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
@@ -8,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -25,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // Start is the route to start the OpenID Connect dance.
@@ -95,22 +100,29 @@ func Login(c echo.Context) error {
 	}
 	redirect := c.QueryParam("redirect")
 	confirm := c.QueryParam("confirm_state")
+	idToken := c.QueryParam("id_token")
 
-	var token string
-	if conf.AllowOAuthToken {
-		token = c.QueryParam("access_token")
-	}
-	if token == "" {
-		code := c.QueryParam("code")
-		token, err = getToken(conf, code)
-		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
-			return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+	if idToken != "" && conf.IDTokenKeyURL != "" {
+		if err := checkIDToken(conf, inst, idToken); err != nil {
+			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
-	}
+	} else {
+		var token string
+		if conf.AllowOAuthToken {
+			token = c.QueryParam("access_token")
+		}
+		if token == "" {
+			code := c.QueryParam("code")
+			token, err = getToken(conf, code)
+			if err != nil {
+				logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+				return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+			}
+		}
 
-	if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
-		return renderError(c, inst, http.StatusBadRequest, err.Error())
+		if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
+			return renderError(c, inst, http.StatusBadRequest, err.Error())
+		}
 	}
 
 	// Check 2FA if enabled
@@ -169,13 +181,19 @@ func AccessToken(c echo.Context) error {
 		ClientSecret string `json:"client_secret"`
 		Scope        string `json:"scope"`
 		OIDCToken    string `json:"oidc_token"`
+		IDToken      string `json:"id_token"`
 	}
 	if err = c.Bind(&reqBody); err != nil {
 		return err
 	}
 
 	// Check the token from the remote URL.
-	if err := checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken); err != nil {
+	if reqBody.IDToken != "" {
+		err = checkIDToken(conf, inst, reqBody.IDToken)
+	} else {
+		err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
+	}
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
 		})
@@ -255,6 +273,7 @@ type Config struct {
 	UserInfoField       string
 	UserInfoPrefix      string
 	UserInfoSuffix      string
+	IDTokenKeyURL       string
 }
 
 func getConfig(context string) (*Config, error) {
@@ -268,6 +287,7 @@ func getConfig(context string) (*Config, error) {
 	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
 	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
 	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
+	idTokenKeyURL, _ := oidc["id_token_jwk_url"].(string)
 
 	// Mandatory fields
 	clientID, ok := oidc["client_id"].(string)
@@ -316,6 +336,7 @@ func getConfig(context string) (*Config, error) {
 		UserInfoField:       userInfoField,
 		UserInfoPrefix:      userInfoPrefix,
 		UserInfoSuffix:      userInfoSuffix,
+		IDTokenKeyURL:       idTokenKeyURL,
 	}
 	return config, nil
 }
@@ -462,6 +483,134 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 	domain = strings.ToLower(domain)              // The domain is case insensitive
 	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
 	return domain, nil
+}
+
+func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
+	keys, err := getKeys(conf.IDTokenKeyURL)
+	if err != nil {
+		return err
+	}
+
+	token, err := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
+		return chooseKey(keys, token)
+	})
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
+		return errors.New("invalid token")
+	}
+	if !token.Valid {
+		logger.WithNamespace("oidc").Errorf("Invalid token: %#v", token)
+		return errors.New("invalid token")
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
+		inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
+		return errors.New("the cozy was not found")
+	}
+
+	return nil
+}
+
+type jwKey struct {
+	Alg  string `json:"alg"`
+	Type string `json:"kty"`
+	ID   string `json:"kid"`
+	Use  string `json:"use"`
+	E    string `json:"e"`
+	N    string `json:"n"`
+}
+
+const cacheTTL = 24 * time.Hour
+
+var keysClient = &http.Client{
+	Timeout: 10 * time.Second,
+	Transport: &http.Transport{
+		DisableKeepAlives: true,
+	},
+}
+
+func getKeys(keyURL string) ([]*jwKey, error) {
+	cache := config.GetConfig().CacheStorage
+	cacheKey := "oidc-jwk:" + keyURL
+
+	data, ok := cache.Get(cacheKey)
+	if !ok {
+		var err error
+		data, err = getKeysFromHTTP(keyURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var keys struct {
+		Keys []*jwKey `json:"keys"`
+	}
+	if err := json.Unmarshal(data, &keys); err != nil {
+		return nil, err
+	}
+	if !ok {
+		cache.Set(cacheKey, data, cacheTTL)
+	}
+	return keys.Keys, nil
+}
+
+func getKeysFromHTTP(keyURL string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, keyURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	res, err := keysClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		logger.WithNamespace("oidc").Warnf("getKeys cannot fetch jwk: %d", res.StatusCode)
+		return nil, errors.New("cannot fetch jwk")
+	}
+	return ioutil.ReadAll(res.Body)
+}
+
+func chooseKey(keys []*jwKey, token *jwt.Token) (interface{}, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+	}
+
+	var key *jwKey
+	for _, k := range keys {
+		if k.Use != "sig" || k.Type != "RSA" {
+			continue
+		}
+		if k.ID == token.Header["kid"] {
+			return loadKey(k)
+		}
+		key = k
+	}
+	if key == nil {
+		return nil, errors.New("Key not found")
+	}
+	return loadKey(key)
+}
+
+func loadKey(raw *jwKey) (interface{}, error) {
+	var n, e big.Int
+	nn, err := base64.RawURLEncoding.DecodeString(raw.N)
+	if err != nil {
+		return nil, err
+	}
+	n.SetBytes(nn)
+	ee, err := base64.RawURLEncoding.DecodeString(raw.E)
+	if err != nil {
+		return nil, err
+	}
+	e.SetBytes(ee)
+
+	var key rsa.PublicKey
+	key.N = &n
+	key.E = int(e.Int64())
+	return &key, nil
 }
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
