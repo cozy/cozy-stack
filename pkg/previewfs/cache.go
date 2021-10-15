@@ -21,10 +21,12 @@ const (
 	ttl           = 30 * 24 * time.Hour
 )
 
-// Cache is a interface for persisting previews of PDF for later reuse.
+// Cache is a interface for persisting icons & previews of PDF for later reuse.
 type Cache interface {
-	Get(md5sum []byte) (*bytes.Buffer, error)
-	Set(md5sum []byte, buffer *bytes.Buffer) error
+	GetIcon(md5sum []byte) (*bytes.Buffer, error)
+	SetIcon(md5sum []byte, buffer *bytes.Buffer) error
+	GetPreview(md5sum []byte) (*bytes.Buffer, error)
+	SetPreview(md5sum []byte, buffer *bytes.Buffer) error
 }
 
 // SystemCache returns the global cache, using the configuration file.
@@ -47,20 +49,40 @@ type aferoCache struct {
 	fs afero.Fs
 }
 
-func (a aferoCache) Get(md5sum []byte) (*bytes.Buffer, error) {
-	f, err := a.fs.Open(filename(md5sum))
+func (a aferoCache) GetIcon(md5sum []byte) (*bytes.Buffer, error) {
+	f, err := a.fs.Open(iconFilename(md5sum))
 	if err != nil {
 		return nil, err
 	}
 	return readClose(f)
 }
 
-func (a aferoCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
+func (a aferoCache) SetIcon(md5sum []byte, buffer *bytes.Buffer) error {
 	exists, err := afero.DirExists(a.fs, "/")
 	if err != nil || !exists {
 		_ = a.fs.MkdirAll("/", 0700)
 	}
-	f, err := a.fs.OpenFile(filename(md5sum), os.O_CREATE|os.O_WRONLY, 0600)
+	f, err := a.fs.OpenFile(iconFilename(md5sum), os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	return writeClose(f, buffer)
+}
+
+func (a aferoCache) GetPreview(md5sum []byte) (*bytes.Buffer, error) {
+	f, err := a.fs.Open(previewFilename(md5sum))
+	if err != nil {
+		return nil, err
+	}
+	return readClose(f)
+}
+
+func (a aferoCache) SetPreview(md5sum []byte, buffer *bytes.Buffer) error {
+	exists, err := afero.DirExists(a.fs, "/")
+	if err != nil || !exists {
+		_ = a.fs.MkdirAll("/", 0700)
+	}
+	f, err := a.fs.OpenFile(previewFilename(md5sum), os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
@@ -72,16 +94,16 @@ type swiftCache struct {
 	ctx context.Context
 }
 
-func (s swiftCache) Get(md5sum []byte) (*bytes.Buffer, error) {
-	f, _, err := s.c.ObjectOpen(s.ctx, containerName, filename(md5sum), false, nil)
+func (s swiftCache) GetIcon(md5sum []byte) (*bytes.Buffer, error) {
+	f, _, err := s.c.ObjectOpen(s.ctx, containerName, iconFilename(md5sum), false, nil)
 	if err != nil {
 		return nil, err
 	}
 	return readClose(f)
 }
 
-func (s swiftCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
-	objectName := filename(md5sum)
+func (s swiftCache) SetIcon(md5sum []byte, buffer *bytes.Buffer) error {
+	objectName := iconFilename(md5sum)
 	objectMeta := swift.Metadata{"created-at": time.Now().Format(time.RFC3339)}
 	headers := objectMeta.ObjectHeaders()
 	headers["X-Delete-After"] = strconv.FormatInt(int64(ttl.Seconds()), 10)
@@ -100,7 +122,39 @@ func (s swiftCache) Set(md5sum []byte, buffer *bytes.Buffer) error {
 	return err
 }
 
-func filename(md5sum []byte) string {
+func (s swiftCache) GetPreview(md5sum []byte) (*bytes.Buffer, error) {
+	f, _, err := s.c.ObjectOpen(s.ctx, containerName, previewFilename(md5sum), false, nil)
+	if err != nil {
+		return nil, err
+	}
+	return readClose(f)
+}
+
+func (s swiftCache) SetPreview(md5sum []byte, buffer *bytes.Buffer) error {
+	objectName := previewFilename(md5sum)
+	objectMeta := swift.Metadata{"created-at": time.Now().Format(time.RFC3339)}
+	headers := objectMeta.ObjectHeaders()
+	headers["X-Delete-After"] = strconv.FormatInt(int64(ttl.Seconds()), 10)
+	f, err := s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
+	if err != nil {
+		return err
+	}
+	err = writeClose(f, buffer)
+	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+		_ = s.c.ContainerCreate(s.ctx, containerName, nil)
+		f, err = s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
+		if err == nil {
+			err = writeClose(f, buffer)
+		}
+	}
+	return err
+}
+
+func iconFilename(md5sum []byte) string {
+	return "icon-" + hex.EncodeToString(md5sum) + ".jpg"
+}
+
+func previewFilename(md5sum []byte) string {
 	return hex.EncodeToString(md5sum) + ".jpg"
 }
 

@@ -756,6 +756,10 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
+### GET /files/:file-id/icon/:secret
+
+Get an image that shows the first page of a PDF in a small resolution (96x96).
+
 ### GET /files/:file-id/preview/:secret
 
 Get an image that shows the first page of a PDF (at most 720x1280).
@@ -864,6 +868,7 @@ Content-Type: application/vnd.api+json
     },
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "icon": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/icon/543d7eb8",
       "preview": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/preview/77e117e0"
     }
   }
