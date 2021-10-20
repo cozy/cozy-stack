@@ -86,11 +86,13 @@ func parseLinkedAppScope(scope string) (*linkedAppScope, error) {
 }
 
 // GetForOauth create a non-persisted permissions doc from a oauth token scopes
-func GetForOauth(instance *instance.Instance, claims *permission.Claims, c interface{}) (*permission.Permission, error) {
+func GetForOauth(instance *instance.Instance, claims *permission.Claims, client *oauth.Client) (*permission.Permission, error) {
 	var set permission.Set
 	linkedAppScope, err := parseLinkedAppScope(claims.Scope)
 
-	if err == nil && linkedAppScope != nil {
+	if client.Flagship {
+		set = permission.MaximalSet()
+	} else if err == nil && linkedAppScope != nil {
 		// Translate to a real scope
 		at := consts.NewAppType(linkedAppScope.Doctype)
 		manifest, err := app.GetBySlug(instance, linkedAppScope.Slug, at)
@@ -109,7 +111,7 @@ func GetForOauth(instance *instance.Instance, claims *permission.Claims, c inter
 		Type:        permission.TypeOauth,
 		Permissions: set,
 		SourceID:    claims.Subject,
-		Client:      c,
+		Client:      client,
 	}
 	return pdoc, nil
 }
@@ -356,6 +358,9 @@ func AllowVFS(c echo.Context, v permission.Verb, o vfs.Fetcher) error {
 	if err != nil {
 		return err
 	}
+	if pdoc.Permissions.IsMaximal() {
+		return nil
+	}
 	err = vfs.Allows(instance.VFS(), pdoc.Permissions, v, o)
 	if err != nil {
 		return ErrForbidden
@@ -385,6 +390,10 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
+	}
+
+	if pdoc.Permissions.IsMaximal() {
+		return nil
 	}
 
 	var docType string
@@ -452,16 +461,6 @@ func AllowForKonnector(c echo.Context, slug string) error {
 		return ErrForbidden
 	}
 	return nil
-}
-
-// GetSourceID returns the sourceID of the permissions associated with the
-// given context.
-func GetSourceID(c echo.Context) (slug string, err error) {
-	pdoc, err := GetPermission(c)
-	if err != nil {
-		return "", err
-	}
-	return pdoc.SourceID, nil
 }
 
 // AllowLogout checks if the current permission allows logging out.

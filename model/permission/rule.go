@@ -9,7 +9,6 @@ import (
 )
 
 const ruleSep = " "
-
 const valueSep = ","
 const partSep = ":"
 

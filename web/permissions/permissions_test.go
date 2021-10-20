@@ -770,7 +770,7 @@ func TestGetForOauth(t *testing.T) {
 			Subject:  clientID,
 		},
 		Scope: "@io.cozy.apps/settings",
-	}, oauthClient)
+	}, &oauthClient)
 	assert.NoError(t, err)
 	assert.True(t, parent.Permissions.HasSameRules(manifest.Permissions()))
 }

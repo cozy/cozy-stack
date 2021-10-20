@@ -19,12 +19,14 @@ func TestCheckDoctypeName(t *testing.T) {
 	assert.Error(t, CheckDoctypeName("io.cozy.files.", false))
 	assert.Error(t, CheckDoctypeName("io.cozy.files.*", false))
 	assert.Error(t, CheckDoctypeName("io..cozy..files", false))
+	assert.Error(t, CheckDoctypeName("*", false))
 
 	assert.NoError(t, CheckDoctypeName("io.cozy.files", true))
 	assert.NoError(t, CheckDoctypeName("io.cozy.banks.*", true))
 	assert.NoError(t, CheckDoctypeName("io.cozy.files.*", true))
 	assert.Error(t, CheckDoctypeName("io.cozy.*", true))
 	assert.Error(t, CheckDoctypeName("com.bitwarden.*", true))
+	assert.Error(t, CheckDoctypeName("*", true))
 }
 
 func TestVerbToString(t *testing.T) {
@@ -230,6 +232,9 @@ func TestStringToSet(t *testing.T) {
 	_, err := UnmarshalRuleString("")
 	assert.Error(t, err)
 
+	_, err = UnmarshalRuleString("*")
+	assert.Error(t, err)
+
 	_, err = UnmarshalRuleString("type:verb:selec:value:wtf")
 	assert.Error(t, err)
 
@@ -271,6 +276,12 @@ func TestAllowWildcard(t *testing.T) {
 	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files.bank"}))
 	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.banks"}))
 	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.bankrupts"}))
+}
+
+func TestAllowMaximal(t *testing.T) {
+	s := Set{Rule{Type: "*"}}
+	assert.True(t, s.Allow(GET, &validable{doctype: "io.cozy.files"}))
+	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.files.versions"}))
 }
 
 func TestAllowVerbs(t *testing.T) {
@@ -388,6 +399,14 @@ func TestCreateShareSetBlocklist(t *testing.T) {
 	e, ok := err.(*echo.HTTPError)
 	assert.True(t, ok)
 	assert.Equal(t, "reserved doctype io.cozy.notifications unwritable", e.Message)
+
+	s = Set{Rule{Type: "*"}}
+	subdoc = Permission{
+		Permissions: s,
+	}
+	parent = &Permission{Type: TypeWebapp, Permissions: s}
+	_, err = CreateShareSet(nil, parent, "", nil, nil, subdoc, nil)
+	assert.Error(t, err)
 }
 
 func assertEqualJSON(t *testing.T, value []byte, expected string) {

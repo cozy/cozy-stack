@@ -107,12 +107,14 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		}
 	}
 
+	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "" {
 		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
 	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
 		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
+	// TODO check params.scope == "*" if allowed
 
 	return false, nil
 }
