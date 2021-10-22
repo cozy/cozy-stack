@@ -79,6 +79,13 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
 
+	if params.scope == "*" {
+		if !params.client.Flagship {
+			return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
+		}
+		return false, nil
+	}
+
 	if appSlug := oauth.GetLinkedAppSlug(params.client.SoftwareID); appSlug != "" {
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
@@ -114,7 +121,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
 		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
-	// TODO check params.scope == "*" if allowed
 
 	return false, nil
 }
@@ -171,7 +177,10 @@ func authorizeForm(c echo.Context) error {
 
 	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
-		return renderError(c, http.StatusBadRequest, "Error Invalid scope")
+		if !params.client.Flagship || params.scope != "*" {
+			return renderError(c, http.StatusBadRequest, "Error Invalid scope")
+		}
+		permissions = permission.MaximalSet()
 	}
 	readOnly := true
 	for _, p := range permissions {
