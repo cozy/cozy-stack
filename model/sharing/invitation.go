@@ -26,6 +26,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 		return ErrInvalidSharing
 	}
 	sharer, desc := s.getSharerAndDescription(inst)
+	canSendShortcut := s.Rules[0].DocType != consts.BitwardenOrganizations
 
 	g, _ := errgroup.WithContext(context.Background())
 	for i := range s.Members {
@@ -36,7 +37,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 		state := s.Credentials[i-1].State
 		g.Go(func() error {
 			link := m.InvitationLink(inst, s, state, perms)
-			if m.Instance != "" {
+			if m.Instance != "" && canSendShortcut {
 				if err := m.SendShortcut(inst, s, link); err == nil {
 					m.Status = MemberStatusPendingInvitation
 					return nil
