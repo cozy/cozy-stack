@@ -31,7 +31,7 @@ require (
 	github.com/leonelquinteros/gotext v1.5.0
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/mssola/user_agent v0.5.3
-	github.com/ncw/swift/v2 v2.0.0
+	github.com/ncw/swift/v2 v2.0.1
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pquerna/otp v1.3.0
