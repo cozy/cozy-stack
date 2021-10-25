@@ -15,7 +15,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis/v8 v8.11.3
-	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/gofrs/uuid v4.1.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.0
