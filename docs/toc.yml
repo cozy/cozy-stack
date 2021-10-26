@@ -6,6 +6,7 @@
   - "Security": ./security.md
   - "Manpages of the command-line tool": ./cli/cozy-stack.md
 - How-to guides for developpers:
+  - "Using the HTTP API": ./http-api.md
   - "Develop a client-side app": ./client-app-dev.md
   - "Running and building Docker images": ./docker.md
   - "Adding a new doctype": ./doctype.md

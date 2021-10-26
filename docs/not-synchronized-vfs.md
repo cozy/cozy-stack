@@ -168,7 +168,7 @@ Content-Type: application/vnd.api+json
 
 Returns all the directory ids that are not synchronized on the given device.
 
-Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
+Contents is paginated following [jsonapi conventions](http-api.md#pagination).
 The default limit is 100 entries. The maximal number of entries per page is
 1000.
 

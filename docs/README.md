@@ -35,6 +35,7 @@ Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new) for 
 
 ### For developers
 
+-   [Using the HTTP API of cozy-stack](http-api.md)
 -   [Develop a client-side app](client-app-dev.md)
 -   [Running and building Docker images](docker.md)
 -   [Adding a new doctype](doctype.md)

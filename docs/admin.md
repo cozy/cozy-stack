@@ -20,7 +20,7 @@ The default port for the admin endpoints is `6060`. If you want to customize the
 
 Returns the list of all instances. By default, there is no pagination, but it
 is possible to add a `page[limit]` parameter in the query-string to paginate (
-cf [JSON-API pagination](./jsonapi.md#pagination)). A `page[skip]` parameter in
+cf [JSON-API pagination](./http-api.md#pagination)). A `page[skip]` parameter in
 the query-string is also supported, but CouchDB may be slow on requests with a
 skip on large collections.
 
