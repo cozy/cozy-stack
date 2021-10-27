@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -1285,14 +1284,25 @@ func FindFilesMango(c echo.Context) error {
 	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
+	if pageLimit := c.QueryParam("page[limit]"); pageLimit != "" {
+		if limitInt, err := strconv.Atoi(pageLimit); err == nil {
+			limit = float64(limitInt)
+		}
+	}
 	findRequest["limit"] = limit
 
-	skip := 0
-	if skipF64, ok := findRequest["skip"].(float64); ok {
-		skip = int(skipF64)
+	if pageSkip := c.QueryParam("page[skip]"); pageSkip != "" {
+		if skip, err := strconv.Atoi(pageSkip); err == nil {
+			findRequest["skip"] = skip
+		}
 	}
 
+	// XXX page[cursor] should be prefered to cursor, but we still accept
+	// cursor to keep compatibility with the past
 	if bookmark := c.QueryParam("cursor"); bookmark != "" {
+		findRequest["bookmark"] = bookmark
+	}
+	if bookmark := c.QueryParam("page[cursor]"); bookmark != "" {
 		findRequest["bookmark"] = bookmark
 	}
 
@@ -1301,17 +1311,11 @@ func FindFilesMango(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	var total int
-	if len(results) >= int(limit) {
-		total = math.MaxInt32 - 1 // we dont know the actual number
-	} else {
-		total = skip + len(results) // let the client know its done.
-	}
 
 	// XXX: in theory, we should avoid pagination link for POST requests, but
 	// it is here and used, so let's keep it for compatibility.
 	var links jsonapi.LinksList
-	if resp.Bookmark != "" {
+	if resp.Bookmark != "" && len(results) > 0 {
 		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
 	}
 
@@ -1339,7 +1343,7 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links, resp.ExecutionStats)
+	return jsonapi.DataListWithTotal(c, http.StatusOK, len(results), out, &links, resp.ExecutionStats)
 }
 
 func fsckHandler(c echo.Context) error {

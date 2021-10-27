@@ -2433,15 +2433,37 @@ func TestFind(t *testing.T) {
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-
 	err = extractJSONRes(res, &obj)
 	assert.NoError(t, err)
-
 	data = obj["data"].([]interface{})
 	meta = obj["meta"].(map[string]interface{})
 	assert.Equal(t, len(data), 1)
+	id1 := data[0].(map[string]interface{})["id"]
 	assert.NotNil(t, meta)
 	assert.NotEmpty(t, meta["execution_stats"])
+	links := obj["links"].(map[string]interface{})
+	next := links["next"].(string)
+
+	query2 = strings.NewReader(`{
+		"selector": {
+			"_id": {
+				"$gt": null
+			}
+		},
+		"limit": 1,
+		"execution_stats": true
+	}`)
+	req, _ = http.NewRequest("POST", ts.URL+next, query2)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	data = obj["data"].([]interface{})
+	assert.Equal(t, len(data), 1)
+	id2 := data[0].(map[string]interface{})["id"]
+	assert.NotEqual(t, id1, id2)
 
 	query3 := strings.NewReader(`{
 		"selector": {
