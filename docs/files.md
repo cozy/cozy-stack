@@ -336,6 +336,7 @@ Content-Type: application/json
         "executable": false,
         "trashed": false,
         "tags": [],
+        "path": "/Pictures/nicepic1.jpg",
         "metadata": {
           "datetime": "2020-02-13T16:35:47.568155477+01:00",
           "extractor_version": 2,
@@ -380,6 +381,7 @@ Content-Type: application/json
         "executable": false,
         "trashed": false,
         "tags": [],
+        "path": "/Pictures/nicepic2.jpg",
         "metadata": {
           "datetime": "2020-02-13T16:35:47.845049743+01:00",
           "extractor_version": 2,

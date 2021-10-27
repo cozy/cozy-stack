@@ -2393,9 +2393,7 @@ func TestFind(t *testing.T) {
 
 	query := strings.NewReader(`{
 		"selector": {
-			"_id": {
-				"$gt": null
-			}
+			"type": "file"
 		},
 		"limit": 1
 	}`)
@@ -2410,7 +2408,14 @@ func TestFind(t *testing.T) {
 
 	data := obj["data"].([]interface{})
 	meta := obj["meta"].(map[string]interface{})
-	assert.Equal(t, len(data), 1)
+	if assert.Len(t, data, 1) {
+		doc := data[0].(map[string]interface{})
+		attrs := doc["attributes"].(map[string]interface{})
+		assert.NotEmpty(t, attrs["name"])
+		assert.NotEmpty(t, attrs["type"])
+		assert.NotEmpty(t, attrs["size"])
+		assert.NotEmpty(t, attrs["path"])
+	}
 	assert.NotNil(t, meta)
 	assert.Nil(t, meta["execution_stats"])
 

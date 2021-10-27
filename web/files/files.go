@@ -1266,11 +1266,17 @@ func FindFilesMango(c echo.Context) error {
 		return err
 	}
 
+	includePath := true
 	if reqFields, ok := findRequest["fields"].([]interface{}); ok {
+		includePath = false
 		// Those fields are necessary for the JSON-API response
 		fields := []string{"_id", "_rev", "type", "class", "size", "trashed"}
 		for _, v := range reqFields {
-			fields = append(fields, v.(string))
+			v := v.(string)
+			if v == "path" {
+				includePath = true
+			}
+			fields = append(fields, v)
 		}
 		findRequest["fields"] = fields
 	}
@@ -1309,6 +1315,7 @@ func FindFilesMango(c echo.Context) error {
 		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
 	}
 
+	fp := vfs.NewFilePatherWithCache(instance.VFS())
 	out := make([]jsonapi.Object, len(results))
 	fields, ok := findRequest["fields"].([]string)
 	for i, dof := range results {
@@ -1323,7 +1330,11 @@ func FindFilesMango(c echo.Context) error {
 			if ok {
 				out[i] = newFindFile(f, fields, instance)
 			} else {
-				out[i] = NewFile(f, instance)
+				file := NewFile(f, instance)
+				if includePath {
+					file.IncludePath(fp)
+				}
+				out[i] = file
 			}
 		}
 	}
