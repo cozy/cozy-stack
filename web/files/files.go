@@ -1315,7 +1315,7 @@ func FindFilesMango(c echo.Context) error {
 	// XXX: in theory, we should avoid pagination link for POST requests, but
 	// it is here and used, so let's keep it for compatibility.
 	var links jsonapi.LinksList
-	if resp.Bookmark != "" && len(results) > 0 {
+	if resp.Bookmark != "" && len(results) >= int(limit) {
 		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
 	}
 
