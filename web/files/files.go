@@ -1297,7 +1297,7 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	// XXX page[cursor] should be prefered to cursor, but we still accept
+	// XXX page[cursor] should be preferred to cursor, but we still accept
 	// cursor to keep compatibility with the past
 	if bookmark := c.QueryParam("cursor"); bookmark != "" {
 		findRequest["bookmark"] = bookmark
