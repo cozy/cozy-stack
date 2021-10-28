@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -1266,11 +1265,17 @@ func FindFilesMango(c echo.Context) error {
 		return err
 	}
 
+	includePath := true
 	if reqFields, ok := findRequest["fields"].([]interface{}); ok {
+		includePath = false
 		// Those fields are necessary for the JSON-API response
 		fields := []string{"_id", "_rev", "type", "class", "size", "trashed"}
 		for _, v := range reqFields {
-			fields = append(fields, v.(string))
+			v := v.(string)
+			if v == "path" {
+				includePath = true
+			}
+			fields = append(fields, v)
 		}
 		findRequest["fields"] = fields
 	}
@@ -1279,14 +1284,25 @@ func FindFilesMango(c echo.Context) error {
 	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
+	if pageLimit := c.QueryParam("page[limit]"); pageLimit != "" {
+		if limitInt, err := strconv.Atoi(pageLimit); err == nil {
+			limit = float64(limitInt)
+		}
+	}
 	findRequest["limit"] = limit
 
-	skip := 0
-	if skipF64, ok := findRequest["skip"].(float64); ok {
-		skip = int(skipF64)
+	if pageSkip := c.QueryParam("page[skip]"); pageSkip != "" {
+		if skip, err := strconv.Atoi(pageSkip); err == nil {
+			findRequest["skip"] = skip
+		}
 	}
 
+	// XXX page[cursor] should be preferred to cursor, but we still accept
+	// cursor to keep compatibility with the past
 	if bookmark := c.QueryParam("cursor"); bookmark != "" {
+		findRequest["bookmark"] = bookmark
+	}
+	if bookmark := c.QueryParam("page[cursor]"); bookmark != "" {
 		findRequest["bookmark"] = bookmark
 	}
 
@@ -1295,20 +1311,15 @@ func FindFilesMango(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	var total int
-	if len(results) >= int(limit) {
-		total = math.MaxInt32 - 1 // we dont know the actual number
-	} else {
-		total = skip + len(results) // let the client know its done.
-	}
 
 	// XXX: in theory, we should avoid pagination link for POST requests, but
 	// it is here and used, so let's keep it for compatibility.
 	var links jsonapi.LinksList
-	if resp.Bookmark != "" {
+	if resp.Bookmark != "" && len(results) >= int(limit) {
 		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
 	}
 
+	fp := vfs.NewFilePatherWithCache(instance.VFS())
 	out := make([]jsonapi.Object, len(results))
 	fields, ok := findRequest["fields"].([]string)
 	for i, dof := range results {
@@ -1323,12 +1334,16 @@ func FindFilesMango(c echo.Context) error {
 			if ok {
 				out[i] = newFindFile(f, fields, instance)
 			} else {
-				out[i] = NewFile(f, instance)
+				file := NewFile(f, instance)
+				if includePath {
+					file.IncludePath(fp)
+				}
+				out[i] = file
 			}
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links, resp.ExecutionStats)
+	return jsonapi.DataListWithTotal(c, http.StatusOK, len(results), out, &links, resp.ExecutionStats)
 }
 
 func fsckHandler(c echo.Context) error {

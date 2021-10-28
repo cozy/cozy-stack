@@ -283,10 +283,14 @@ Content-Type: application/vnd.api+json
 
 Find allows to find documents using a mango selector. You can read more about mango selectors [here](http://docs.couchdb.org/en/stable/api/database/find.html#selector-syntax).
 
-Note that it returns a [bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook) in the `links`, useful to paginate.
+Note that it returns a
+[bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
+in the `links`, useful to paginate (following the [JSON-API
+pagination](./jsonapi.md#pagination)). On the last page, there won't be a
+`links.next`. The `count` in the response is the number of documents for the
+current page.
 
 It is possible to pass a `execution_stats` parameter to get some information about the query execution. See [here](https://docs.couchdb.org/en/stable/api/database/find.html#execution-statistics) for more details.
-
 
 ### Request
 
@@ -336,6 +340,7 @@ Content-Type: application/json
         "executable": false,
         "trashed": false,
         "tags": [],
+        "path": "/Pictures/nicepic1.jpg",
         "metadata": {
           "datetime": "2020-02-13T16:35:47.568155477+01:00",
           "extractor_version": 2,
@@ -380,6 +385,7 @@ Content-Type: application/json
         "executable": false,
         "trashed": false,
         "tags": [],
+        "path": "/Pictures/nicepic2.jpg",
         "metadata": {
           "datetime": "2020-02-13T16:35:47.845049743+01:00",
           "extractor_version": 2,
@@ -413,7 +419,7 @@ Content-Type: application/json
     "next": "/files/_find?page[cursor]=g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGlgaGJiD9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA694ZyA"
   },
   "meta": {
-    "count": 2147483646,
+    "count": 2,
     "execution_stats": {
       "total_docs_examined": 11,
       "results_returned": 2,
