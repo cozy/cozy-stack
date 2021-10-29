@@ -478,3 +478,12 @@ func HasWebAppToken(c echo.Context) bool {
 	}
 	return pdoc.Type == permission.TypeWebapp
 }
+
+// GetOAuthClient returns the OAuth client used for making the HTTP request.
+func GetOAuthClient(c echo.Context) (*oauth.Client, bool) {
+	perm, err := GetPermission(c)
+	if err != nil || perm.Type != permission.TypeOauth || perm.Client == nil {
+		return nil, false
+	}
+	return perm.Client.(*oauth.Client), true
+}

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -247,7 +246,7 @@ func changesFeed(c echo.Context) error {
 	}
 
 	if doctype == consts.Files {
-		if client, ok := getOAuthClient(c); ok {
+		if client, ok := middlewares.GetOAuthClient(c); ok {
 			err = vfs.FilterNotSynchronizedDocs(instance.VFS(), client.ID(), results)
 			if err != nil {
 				return err
@@ -256,14 +255,6 @@ func changesFeed(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, results)
-}
-
-func getOAuthClient(c echo.Context) (*oauth.Client, bool) {
-	perm, err := middlewares.GetPermission(c)
-	if err != nil || perm.Type != permission.TypeOauth || perm.Client == nil {
-		return nil, false
-	}
-	return perm.Client.(*oauth.Client), true
 }
 
 func dbStatus(c echo.Context) error {

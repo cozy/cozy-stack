@@ -4,6 +4,7 @@
 package files
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -1346,6 +1348,178 @@ func FindFilesMango(c echo.Context) error {
 	return jsonapi.DataListWithTotal(c, http.StatusOK, len(results), out, &links, resp.ExecutionStats)
 }
 
+var allowedChangesParams = map[string]bool{
+	// supported by CouchDB
+	"since":        true,
+	"limit":        true,
+	"include_docs": true,
+
+	// custom
+	"include_file_path": false,
+	"skip_deleted":      false,
+	"skip_trashed":      false,
+}
+
+// ChangesFeed is the handler for GET /files/_changes. It is similar to the
+// changes feed of CouchDB with some additional options, like skip_trashed.
+func ChangesFeed(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	// Drop a clear error for parameters not supported by stack
+	filter := &changesFilter{}
+	for key := range c.QueryParams() {
+		if byCouch, ok := allowedChangesParams[key]; !ok {
+			return jsonapi.Errorf(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
+		} else if !byCouch {
+			filter.Add(key)
+		}
+	}
+
+	limitString := c.QueryParam("limit")
+	limit := 0
+	if limitString != "" {
+		var err error
+		if limit, err = strconv.Atoi(limitString); err != nil {
+			return jsonapi.Errorf(http.StatusBadRequest, "Invalid limit value '%s': %s", limitString, err.Error())
+		}
+		if limit > 10000 {
+			limit = 10000
+		}
+	}
+
+	includeDocs := c.QueryParam("include_docs") == "true"
+	if !includeDocs && (filter.IncludePath || filter.SkipTrashed) {
+		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
+	}
+
+	// Use the VFS lock for the files to avoid sending the changed feed while
+	// the VFS is moving a directory.
+	mu := lock.ReadWrite(inst, "vfs")
+	if err := mu.Lock(); err != nil {
+		return err
+	}
+
+	couchReq := &couchdb.ChangesRequest{
+		DocType:     consts.Files,
+		Since:       c.QueryParam("since"),
+		Limit:       limit,
+		IncludeDocs: includeDocs,
+		Filter:      "_selector",
+	}
+	results, err := couchdb.PostChanges(inst, couchReq, filter)
+	mu.Unlock()
+	if err != nil {
+		return err
+	}
+
+	if client, ok := middlewares.GetOAuthClient(c); ok {
+		err = vfs.FilterNotSynchronizedDocs(inst.VFS(), client.ID(), results)
+		if err != nil {
+			return err
+		}
+	}
+
+	filter.Reject(results)
+	filter.AddPathIfAsked(inst, results)
+
+	return c.JSON(http.StatusOK, results)
+}
+
+type changesFilter struct {
+	IncludePath bool
+	SkipDeleted bool
+	SkipTrashed bool
+	reader      io.Reader
+}
+
+func (filter *changesFilter) Add(key string) {
+	switch key {
+	case "include_file_path":
+		filter.IncludePath = true
+	case "skip_deleted":
+		filter.SkipDeleted = true
+	case "skip_trashed":
+		filter.SkipTrashed = true
+	}
+}
+
+func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
+	if !filter.SkipDeleted && !filter.SkipTrashed {
+		return
+	}
+
+	changes := results.Results[:0]
+	for _, change := range results.Results {
+		if filter.SkipDeleted && change.Deleted {
+			continue
+		}
+		if filter.SkipTrashed {
+			if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
+				continue
+			}
+			if change.Doc.M["type"] == "directory" {
+				path, _ := change.Doc.M["path"].(string)
+				if path == vfs.TrashDirName {
+					continue
+				}
+				if strings.HasPrefix(path, vfs.TrashDirName+"/") {
+					continue
+				}
+			}
+		}
+		changes = append(changes, change)
+	}
+	results.Results = changes
+}
+
+func (filter *changesFilter) AddPathIfAsked(inst *instance.Instance, results *couchdb.ChangesResponse) {
+	if !filter.IncludePath {
+		return
+	}
+
+	fp := vfs.NewFilePatherWithCache(inst.VFS())
+	for _, result := range results.Results {
+		if result.Doc.M != nil && result.Doc.M["type"] == "file" {
+			dirID, _ := result.Doc.M["dir_id"].(string)
+			name, _ := result.Doc.M["name"].(string)
+			doc := &vfs.FileDoc{DirID: dirID, DocName: name}
+			if pth, err := fp.FilePath(doc); err == nil {
+				result.Doc.M["path"] = pth
+			}
+		}
+	}
+}
+
+func (filter *changesFilter) Body() []byte {
+	selector := map[string]interface{}{
+		"_id": map[string]interface{}{
+			"$not": map[string]interface{}{
+				"$regex": "^_design/",
+			},
+		},
+	}
+	payload := map[string]interface{}{
+		"selector": selector,
+	}
+	body, _ := json.Marshal(payload)
+	return body
+}
+
+func (filter *changesFilter) Read(p []byte) (int, error) {
+	if filter.reader == nil {
+		filter.reader = bytes.NewReader(filter.Body())
+	}
+	return filter.reader.Read(p)
+}
+
+func (filter *changesFilter) Close() error {
+	filter.reader = nil
+	return nil
+}
+
 func fsckHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	cacheStorage := config.GetConfig().CacheStorage
@@ -1402,6 +1576,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/versions", ClearOldVersions)
 
 	router.POST("/_find", FindFilesMango)
+	router.GET("/_changes", ChangesFeed)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
 
