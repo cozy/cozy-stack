@@ -362,8 +362,7 @@ Note that it returns a
 [bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
 in the `links`, useful to paginate (following the [JSON-API
 pagination](./jsonapi.md#pagination)). On the last page, there won't be a
-`links.next`. The `count` in the response is the number of documents for the
-current page.
+`links.next`.
 
 It is possible to pass a `execution_stats` parameter to get some information about the query execution. See [here](https://docs.couchdb.org/en/stable/api/database/find.html#execution-statistics) for more details.
 

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -1293,9 +1294,14 @@ func FindFilesMango(c echo.Context) error {
 	}
 	findRequest["limit"] = limit
 
+	skip := 0
+	if skipF64, ok := findRequest["skip"].(float64); ok {
+		skip = int(skipF64)
+	}
 	if pageSkip := c.QueryParam("page[skip]"); pageSkip != "" {
-		if skip, err := strconv.Atoi(pageSkip); err == nil {
-			findRequest["skip"] = skip
+		if skipInt, err := strconv.Atoi(pageSkip); err == nil {
+			findRequest["skip"] = skipInt
+			skip = skipInt
 		}
 	}
 
@@ -1319,6 +1325,13 @@ func FindFilesMango(c echo.Context) error {
 	var links jsonapi.LinksList
 	if resp.Bookmark != "" && len(results) >= int(limit) {
 		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
+	}
+
+	var total int
+	if len(results) >= int(limit) {
+		total = math.MaxInt32 - 1 // we dont know the actual number
+	} else {
+		total = skip + len(results) // let the client know its done.
 	}
 
 	fp := vfs.NewFilePatherWithCache(instance.VFS())
@@ -1345,7 +1358,7 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, len(results), out, &links, resp.ExecutionStats)
+	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links, resp.ExecutionStats)
 }
 
 var allowedChangesParams = map[string]bool{
