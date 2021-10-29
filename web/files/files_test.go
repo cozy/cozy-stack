@@ -248,6 +248,123 @@ func download(t *testing.T, path, byteRange string) (res *http.Response, body []
 	return
 }
 
+func TestChanges(t *testing.T) {
+	_, foo := createDir(t, "/files/?Name=foo&Type=directory")
+	fooID := foo["data"].(map[string]interface{})["id"].(string)
+	_, bar := createDir(t, "/files/"+fooID+"?Name=bar&Type=directory")
+	barID := bar["data"].(map[string]interface{})["id"].(string)
+	_, _ = upload(t, "/files/"+barID+"?Type=file&Name=baz", "text/plain", "baz", "")
+
+	_, qux := createDir(t, "/files/?Name=qux&Type=directory")
+	quxID := qux["data"].(map[string]interface{})["id"].(string)
+	_, _ = trash(t, "/files/"+quxID)
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+"/files/trash", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	_, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&include_file_path=true", nil)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	var obj map[string]interface{}
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, obj["last_seq"])
+	assert.NotNil(t, obj["pending"])
+	results := obj["results"].([]interface{})
+	hasDeleted := false
+	hasTrashed := false
+	for _, result := range results {
+		result, _ := result.(map[string]interface{})
+		assert.NotEmpty(t, result["id"])
+		if result["deleted"] == true {
+			hasDeleted = true
+		} else {
+			doc, _ := result["doc"].(map[string]interface{})
+			assert.NotEmpty(t, doc["type"])
+			assert.NotEmpty(t, doc["path"])
+			if doc["path"] == "/.cozy_trash" {
+				hasTrashed = true
+			}
+		}
+	}
+	assert.True(t, hasDeleted)
+	assert.True(t, hasTrashed)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&fields=type,name,dir_id", nil)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, obj["last_seq"])
+	assert.NotNil(t, obj["pending"])
+	results = obj["results"].([]interface{})
+	for _, result := range results {
+		result, _ := result.(map[string]interface{})
+		assert.NotEmpty(t, result["id"])
+		if result["deleted"] != true && result["id"] != "io.cozy.files.root-dir" {
+			doc, _ := result["doc"].(map[string]interface{})
+			assert.NotEmpty(t, doc["type"])
+			assert.NotEmpty(t, doc["name"])
+			assert.NotEmpty(t, doc["dir_id"])
+			assert.Empty(t, doc["path"])
+			assert.Empty(t, doc["metadata"])
+			assert.Empty(t, doc["created_at"])
+		}
+	}
+
+	_, _ = trash(t, "/files/"+barID)
+	req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&skip_deleted=true&skip_trashed=true", nil)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, obj["last_seq"])
+	assert.NotNil(t, obj["pending"])
+	results = obj["results"].([]interface{})
+	hasDeleted = false
+	hasTrashed = false
+	for _, result := range results {
+		result, _ := result.(map[string]interface{})
+		assert.NotEmpty(t, result["id"])
+		if result["deleted"] == true {
+			hasDeleted = true
+		} else {
+			doc, _ := result["doc"].(map[string]interface{})
+			assert.NotEmpty(t, doc["type"])
+			assert.NotEmpty(t, doc["path"])
+			if doc["path"] == "/.cozy_trash" {
+				hasTrashed = true
+			}
+			if doc["type"] == "directory" && strings.HasPrefix(doc["path"].(string), "/.cozy_trash") {
+				hasTrashed = true
+			}
+			if doc["type"] == "file" && doc["trashed"] == true {
+				hasTrashed = true
+			}
+		}
+	}
+	assert.False(t, hasDeleted)
+	assert.False(t, hasTrashed)
+
+	_, _ = trash(t, "/files/"+fooID)
+	req, err = http.NewRequest(http.MethodDelete, ts.URL+"/files/trash", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	_, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+}
+
 func TestCreateDirWithNoType(t *testing.T) {
 	res, _ := createDir(t, "/files/")
 	assert.Equal(t, 422, res.StatusCode)
