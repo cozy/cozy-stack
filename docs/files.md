@@ -279,6 +279,81 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET `/files/_changes`
+
+This endpoint is similar to the changes feed of CouchDB for io.cozy.files.
+There are a few specificities:
+
+- it is wrapped in the VFS lock to avoid seeing inconsistent results
+- it automatically skips design docs
+- if the requests is coming from an OAuth client, it excludes the files and directories that are in a not synchronized folder
+- it only supports the options `since`, `limit`, and `include_docs` of CouchDB
+- it has an option `fields` to only include those fields in the results
+- it has an option `include_file_path` to add the `path` for files
+- it has two options `skip_deleted` and `skip_trashed` to not send to the client the deleted/trashed files and directories.
+
+### Request
+
+```http
+GET /files/_changes?include_docs=true&fields=type,name,dir_id&skip_deleted=true&limit=3 HTTP/1.1
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "last_seq": "13-g1AAAABHeJzLYWBgYMxgTmHgzcvPy09JdcjLz8gvLskBCjMlMuSxMPwHgqwM5kTeXKAQe5Jpmrl5ojG68iwA2MMV1A",
+  "pending": 24,
+  "results": [
+    {
+      "id": "io.cozy.files.root-dir",
+      "seq": "11-g1AAAABHeJzLYWBgYMxgTmHgzcvPy09JdcjLz8gvLskBCjMlMuSxMPwHgqwM5kTuXKAQe5Jpmrl5ojG68iwA2IcV0g",
+      "doc": {
+        "type": "directory"
+      },
+      "changes": [
+        {
+          "rev": "1-077f26acac6f0a5e1022f109e8d1dfc4"
+        }
+      ]
+    },
+    {
+      "id": "io.cozy.files.trash-dir",
+      "seq": "12-g1AAAABHeJzLYWBgYMxgTmHgzcvPy09JdcjLz8gvLskBCjMlMuSxMPwHgqwM5kSeXKAQe5Jpmrl5ojG68iwA2KUV0w",
+      "doc": {
+        "dir_id": "io.cozy.files.root-dir",
+        "name": ".cozy_trash",
+        "type": "directory"
+      },
+      "changes": [
+        {
+          "rev": "1-de9c11dbc386b5f91adbe2aee4a3e754"
+        }
+      ]
+    },
+    {
+      "id": "d30b0dd6e0e8fefdac2a94cb2c00249f",
+      "seq": "13-g1AAAABHeJzLYWBgYMxgTmHgzcvPy09JdcjLz8gvLskBCjMlMuSxMPwHgqwM5kTeXKAQe5Jpmrl5ojG68iwA2MMV1A",
+      "doc": {
+        "dir_id": "io.cozy.files.root-dir",
+        "name": "Administratif",
+        "type": "directory"
+      },
+      "changes": [
+        {
+          "rev": "1-24f2828e8dbe64135913072a4c92d846"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### POST `/files/_find`
 
 Find allows to find documents using a mango selector. You can read more about mango selectors [here](http://docs.couchdb.org/en/stable/api/database/find.html#selector-syntax).
