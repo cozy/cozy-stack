@@ -1355,6 +1355,7 @@ var allowedChangesParams = map[string]bool{
 	"include_docs": true,
 
 	// custom
+	"fields":            false,
 	"include_file_path": false,
 	"skip_deleted":      false,
 	"skip_trashed":      false,
@@ -1374,7 +1375,7 @@ func ChangesFeed(c echo.Context) error {
 		if byCouch, ok := allowedChangesParams[key]; !ok {
 			return jsonapi.Errorf(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
 		} else if !byCouch {
-			filter.Add(key)
+			filter.Add(key, c.QueryParam(key))
 		}
 	}
 
@@ -1429,14 +1430,17 @@ func ChangesFeed(c echo.Context) error {
 }
 
 type changesFilter struct {
+	Fields      []string
 	IncludePath bool
 	SkipDeleted bool
 	SkipTrashed bool
 	reader      io.Reader
 }
 
-func (filter *changesFilter) Add(key string) {
+func (filter *changesFilter) Add(key, value string) {
 	switch key {
+	case "fields":
+		filter.Fields = strings.Split(value, ",")
 	case "include_file_path":
 		filter.IncludePath = true
 	case "skip_deleted":
@@ -1504,6 +1508,25 @@ func (filter *changesFilter) Body() []byte {
 	payload := map[string]interface{}{
 		"selector": selector,
 	}
+
+	// Cf https://github.com/apache/couchdb/discussions/3774#discussioncomment-1416510
+	if len(filter.Fields) > 0 {
+		if filter.IncludePath || filter.SkipTrashed {
+			for _, mandatory := range []string{"type", "name", "dir_id"} {
+				found := false
+				for _, f := range filter.Fields {
+					if f == mandatory {
+						found = true
+					}
+				}
+				if !found {
+					filter.Fields = append(filter.Fields, mandatory)
+				}
+			}
+		}
+		payload["fields"] = filter.Fields
+	}
+
 	body, _ := json.Marshal(payload)
 	return body
 }

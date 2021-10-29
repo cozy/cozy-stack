@@ -295,6 +295,31 @@ func TestChanges(t *testing.T) {
 	assert.True(t, hasDeleted)
 	assert.True(t, hasTrashed)
 
+	req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&fields=type,name,dir_id", nil)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, obj["last_seq"])
+	assert.NotNil(t, obj["pending"])
+	results = obj["results"].([]interface{})
+	for _, result := range results {
+		result, _ := result.(map[string]interface{})
+		assert.NotEmpty(t, result["id"])
+		if result["deleted"] != true && result["id"] != "io.cozy.files.root-dir" {
+			doc, _ := result["doc"].(map[string]interface{})
+			assert.NotEmpty(t, doc["type"])
+			assert.NotEmpty(t, doc["name"])
+			assert.NotEmpty(t, doc["dir_id"])
+			assert.Empty(t, doc["path"])
+			assert.Empty(t, doc["metadata"])
+			assert.Empty(t, doc["created_at"])
+		}
+	}
+
 	_, _ = trash(t, "/files/"+barID)
 	req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&skip_deleted=true&skip_trashed=true", nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
