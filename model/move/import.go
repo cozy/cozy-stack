@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 // ImportOptions contains the options for launching the import worker.
@@ -163,9 +164,12 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 		return nil, err
 	}
 	for _, cursor := range doc.PartsCursors {
-		if err = im.importPart(cursor); err != nil {
-			return nil, err
+		if erri := im.importPart(cursor); erri != nil {
+			err = multierror.Append(err, erri)
 		}
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	var inError []string
