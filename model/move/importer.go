@@ -177,7 +177,7 @@ func (im *importer) importZip(zr *zip.Reader) error {
 		}
 
 		// Normal documents
-		if doctype != im.doctype || len(im.docs) >= 200 {
+		if doctype != im.doctype || len(im.docs) >= 100 {
 			if err := im.flush(); err != nil {
 				errm = multierror.Append(errm, err)
 				im.docs = nil
@@ -232,11 +232,13 @@ func (im *importer) flush() error {
 	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
 		// XXX CouchDB can be overloaded sometimes when importing lots of documents.
 		// Let's wait a bit and retry...
-		time.Sleep(1 * time.Minute)
+		time.Sleep(10 * time.Minute)
 		if err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
 			return err
 		}
 	}
+	// XXX Not too fast, CouchDB can be easily overloaded...
+	time.Sleep(100 * time.Millisecond)
 
 	im.doctype = ""
 	im.docs = nil
