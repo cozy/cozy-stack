@@ -301,6 +301,12 @@ asynchronously. The behavior is not the same for all the VFS:
   the file versions are deleted in CouchDB via the job, and the files and their
   versions are deleted in Swift via the job.
 
+## clean-old-trashed worker
+
+This worker is used to automatically delete files and directories that are in
+the trash for too long. The threshold for deletion is configurable per context
+in the config file, via the `fs.auto_clean_trashed_after` parameter.
+
 ## share workers
 
 The stack have 3 workers to power the sharings (internal usage only):
