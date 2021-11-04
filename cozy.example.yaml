@@ -127,6 +127,7 @@ jobs:
   #   - "share-track":       idem
   #   - "share-upload":      idem
   #   - "thumbnail":         creatings and deleting thumbnails for images
+  #   - "thumbnailck":       generate missing thumbnails for all images
   #   - "trash-files":       async deletion of files in the trash
   #   - "clean-old-trashed": deletion of old files and directories after some time
   #   - "unzip":             unzipping tarball
