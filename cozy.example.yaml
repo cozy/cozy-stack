@@ -71,8 +71,8 @@ fs:
   # default_layout: 2 # 1 for layout v2 and 2 for layout v3
 
   # auto_clean_trashed_after:
-  #   context_a: 30d
-  #   context_b: 3m
+  #   context_a: 30D
+  #   context_b: 3M
 
   # versioning:
   #   max_number_of_versions_to_keep: 20

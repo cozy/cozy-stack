@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -487,26 +488,32 @@ func (s *redisScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
 	return v, nil
 }
 
-// HasEventTrigger returns true if the given @event trigger already exists.
-func (s *redisScheduler) HasEventTrigger(trigger Trigger) bool {
-	infos := trigger.Infos()
-	key := eventsKey(trigger)
-	m, err := s.client.HGetAll(s.ctx, key).Result()
+// HasEventTrigger returns true if the given trigger already exists. Only the
+// type (@event, @cron...), worker, and arguments (if not empty) are looked at.
+func (s *redisScheduler) HasTrigger(db prefixer.Prefixer, infos TriggerInfos) bool {
+	var candidates []*TriggerInfos
+	limit := 1000
+	if infos.Arguments == "" {
+		limit = 1
+	}
+	req := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-type",
+		Selector: mango.And(
+			mango.Equal("worker", infos.WorkerType),
+			mango.Equal("type", infos.Type),
+		),
+		Limit: limit,
+	}
+	err := couchdb.FindDocs(db, consts.Triggers, req, &candidates)
 	if err != nil {
-		s.log.Errorf("Could not fetch redis set %s: %s", key, err)
+		s.log.Errorf("Could not fetch triggers: %s", err)
 		return false
 	}
-	for triggerID, args := range m {
-		if args != infos.Arguments {
-			continue
-		}
-		t, err := s.GetTrigger(trigger, triggerID)
-		if err != nil {
-			s.log.Warnf("Could not fetch @event trigger %s %s: %s",
-				trigger.DomainName(), triggerID, err.Error())
-			continue
-		}
-		if t.Infos().WorkerType == infos.WorkerType {
+	if infos.Arguments == "" && len(candidates) > 0 {
+		return true
+	}
+	for _, candidate := range candidates {
+		if infos.Arguments == candidate.Arguments {
 			return true
 		}
 	}

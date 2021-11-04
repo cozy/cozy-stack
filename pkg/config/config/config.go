@@ -746,7 +746,7 @@ func UseViper(v *viper.Viper) error {
 			Transport:             fsClient.Transport,
 			DefaultLayout:         defaultLayout,
 			CanQueryInfo:          v.GetBool("fs.can_query_info"),
-			AutoCleanTrashedAfter: v.GetStringMapString("auto_clean_trashed_after"),
+			AutoCleanTrashedAfter: v.GetStringMapString("fs.auto_clean_trashed_after"),
 			Versioning: FsVersioning{
 				MaxNumberToKeep:            v.GetInt("fs.versioning.max_number_of_versions_to_keep"),
 				MinDelayBetweenTwoVersions: v.GetDuration("fs.versioning.min_delay_between_two_versions"),

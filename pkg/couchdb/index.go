@@ -35,6 +35,9 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(consts.Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),
 	mango.IndexOnFields(consts.Jobs, "by-queued-at", []string{"queued_at"}),
 
+	// Used to lookup a trigger to see if it exists or must be created
+	mango.IndexOnFields(consts.Triggers, "by-worker-and-type", []string{"worker", "type"}),
+
 	// Used to lookup oauth clients by name
 	mango.IndexOnFields(consts.OAuthClients, "by-client-name", []string{"client_name"}),
 	mango.IndexOnFields(consts.OAuthClients, "by-notification-platform", []string{"notification_platform"}),

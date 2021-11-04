@@ -59,7 +59,7 @@ func WorkerTrashFiles(ctx *job.WorkerContext) error {
 func WorkerCleanOldTrashed(ctx *job.WorkerContext) error {
 	cfg := config.GetConfig().Fs.AutoCleanTrashedAfter
 	after, ok := cfg[ctx.Instance.ContextName]
-	if !ok {
+	if !ok || after == "" {
 		return nil
 	}
 	delay, err := bigduration.ParseDuration(after)
