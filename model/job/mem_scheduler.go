@@ -196,15 +196,19 @@ func (s *memScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error) {
 	return v, nil
 }
 
-// HasEventTrigger returns true if the given @event trigger already exists.
-func (s *memScheduler) HasEventTrigger(trigger Trigger) bool {
-	infos := trigger.Infos()
-	for _, t := range s.ts {
+// HasEventTrigger returns true if the given trigger already exists. Only the
+// type (@event, @cron...), worker, and arguments (if not empty) are looked at.
+func (s *memScheduler) HasTrigger(db prefixer.Prefixer, infos TriggerInfos) bool {
+	prefix := db.DBPrefix() + "/"
+	for n, t := range s.ts {
+		if !strings.HasPrefix(n, prefix) {
+			continue
+		}
 		i := t.Infos()
-		if t.Type() == "@event" &&
-			i.WorkerType == infos.WorkerType &&
-			i.Arguments == infos.Arguments {
-			return true
+		if infos.Type == i.Type && infos.WorkerType == i.WorkerType {
+			if infos.Arguments == "" || infos.Arguments == i.Arguments {
+				return true
+			}
 		}
 	}
 	return false

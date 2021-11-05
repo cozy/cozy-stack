@@ -70,6 +70,10 @@ fs:
   # can_query_info: true
   # default_layout: 2 # 1 for layout v2 and 2 for layout v3
 
+  # auto_clean_trashed_after:
+  #   context_a: 30D
+  #   context_b: 3M
+
   # versioning:
   #   max_number_of_versions_to_keep: 20
   #   min_delay_between_two_versions: 15m
@@ -109,23 +113,26 @@ jobs:
   #
   # List of available workers:
   #
-  #   - "clean-clients":   delete unused OAuth clients
-  #   - "export":          exporting data from a cozy instance
-  #   - "import":          importing data into a cozy instance
-  #   - "konnector":       launching konnectors
-  #   - "migrations":      transforming a VFS with Swift to layout v3
-  #   - "notes-persist":   saving notes to the VFS
-  #   - "push":            sending push notifications
-  #   - "sms":             sending SMS notifications
-  #   - "sendmail":        sending mails
-  #   - "service":         launching services
-  #   - "share-replicate": for cozy to cozy sharing
-  #   - "share-track":     idem
-  #   - "share-upload":    idem
-  #   - "thumbnail":       creatings and deleting thumbnails for images
-  #   - "unzip":           unzipping tarball
-  #   - "updates":         run updates for installed applications (deprecated)
-  #   - "zip":             creating a zip tarball
+  #   - "clean-clients":     delete unused OAuth clients
+  #   - "export":            exporting data from a cozy instance
+  #   - "import":            importing data into a cozy instance
+  #   - "konnector":         launching konnectors
+  #   - "service":           launching services
+  #   - "migrations":        transforming a VFS with Swift to layout v3
+  #   - "notes-save":        saving notes to the VFS
+  #   - "push":              sending push notifications
+  #   - "sms":               sending SMS notifications
+  #   - "sendmail":          sending mails
+  #   - "share-replicate":   for cozy to cozy sharing
+  #   - "share-track":       idem
+  #   - "share-upload":      idem
+  #   - "thumbnail":         creatings and deleting thumbnails for images
+  #   - "thumbnailck":       generate missing thumbnails for all images
+  #   - "trash-files":       async deletion of files in the trash
+  #   - "clean-old-trashed": deletion of old files and directories after some time
+  #   - "unzip":             unzipping tarball
+  #   - "updates":           run updates for installed applications (deprecated)
+  #   - "zip":               creating a zip tarball
   #
   # When no configuration is given for a worker, a default configuration is
   # used. When a false boolean value is given, the worker is deactivated.

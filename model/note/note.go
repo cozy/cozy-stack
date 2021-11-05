@@ -324,18 +324,20 @@ type DebounceMessage struct {
 
 func setupTrigger(inst *instance.Instance, fileID string) error {
 	sched := job.System()
-	msg := &DebounceMessage{NoteID: fileID}
-	t, err := job.NewTrigger(inst, job.TriggerInfos{
+	infos := job.TriggerInfos{
 		Type:       "@event",
 		WorkerType: "notes-save",
 		Arguments:  fmt.Sprintf("%s:UPDATED:%s", consts.NotesEvents, fileID),
 		Debounce:   persistenceDebouce,
-	}, msg)
+	}
+	if sched.HasTrigger(inst, infos) {
+		return nil
+	}
+
+	msg := &DebounceMessage{NoteID: fileID}
+	t, err := job.NewTrigger(inst, infos, msg)
 	if err != nil {
 		return err
-	}
-	if sched.HasEventTrigger(t) {
-		return nil
 	}
 	return sched.AddTrigger(t)
 }

@@ -1124,6 +1124,8 @@ func TrashHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	ensureCleanOldTrashedTrigger(instance)
+
 	if dir != nil {
 		updateDirCozyMetadata(c, dir)
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
@@ -1876,6 +1878,38 @@ func pushTrashJob(inst *instance.Instance) func(vfs.TrashJournal) error {
 			Message:    msg,
 		})
 		return err
+	}
+}
+
+func ensureCleanOldTrashedTrigger(inst *instance.Instance) {
+	// 1. Check if we need a trigger for clean-old-trashed worker
+	cfg := config.GetConfig().Fs.AutoCleanTrashedAfter
+	after, ok := cfg[inst.ContextName]
+	if !ok || after == "" {
+		return
+	}
+
+	// 2. Check if the trigger already exists
+	sched := job.System()
+	infos := job.TriggerInfos{
+		Type:       "@cron",
+		WorkerType: "clean-old-trashed",
+	}
+	if sched.HasTrigger(inst, infos) {
+		return
+	}
+
+	// 3. Create the trigger
+	now := time.Now()
+	hours := (now.Hour() + 12) % 24
+	infos.Arguments = fmt.Sprintf("0 %d %d * * *", now.Minute(), hours)
+	trigger, err := job.NewTrigger(inst, infos, nil)
+	if err != nil {
+		inst.Logger().Errorf("Cannot create clean-old-trashed trigger: %s", err)
+		return
+	}
+	if err = sched.AddTrigger(trigger); err != nil {
+		inst.Logger().Errorf("Cannot create clean-old-trashed trigger: %s", err)
 	}
 }
 

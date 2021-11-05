@@ -51,7 +51,7 @@ type (
 		UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error
 		DeleteTrigger(db prefixer.Prefixer, id string) error
 		GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
-		HasEventTrigger(trigger Trigger) bool
+		HasTrigger(db prefixer.Prefixer, infos TriggerInfos) bool
 		CleanRedis() error
 		RebuildRedis(db prefixer.Prefixer) error
 	}
