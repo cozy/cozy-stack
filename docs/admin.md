@@ -225,7 +225,7 @@ POST /instances/alice.cozy.localhost/fixers/orphan-account HTTP/1.1
 ### GET /instances/contexts
 
 This endpoint returns the list of the contexts, with their name, config,
-registries, office server, and cloudery endpoints.
+registries, office server, cloudery endpoints, and OIDC data.
 
 #### Request
 
@@ -270,11 +270,23 @@ HTTP/1.1 200 OK
       "https://apps-registry.cozycloud.cc/"
     ],
     "office": {
-      "OnlyOfficeURL": "https://documentserver.cozycloud.cc/",
-      "InboxSecret": "inbox_secret",
-      "OutboxSecret": "outbox_secret"
+      "OnlyOfficeURL": "https://documentserver.cozycloud.cc/"
     },
-    "cloudery_endpoint": ""
+    "cloudery_endpoint": "",
+    "oidc": {
+      "allow_oauth_token": false,
+      "authorize_url": "https://identity-prodiver/path/to/authorize",
+      "client_id": "aClientID",
+      "id_token_jwk_url": "https://identity-prodiver/path/to/jwk",
+      "login_domain": "login.mycozy.cloud",
+      "redirect_uri": "https://oauthcallback.mycozy.cloud/oidc/redirect",
+      "scope": "openid profile",
+      "token_url": "https://identity-prodiver/path/to/token",
+      "userinfo_instance_field": "cozy_number",
+      "userinfo_instance_prefix": "name",
+      "userinfo_instance_suffix": ".mycozy.cloud",
+      "userinfo_url": "https://identity-prodiver/path/to/userinfo"
+    }
   }
 ]
 ```

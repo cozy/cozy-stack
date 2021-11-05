@@ -12,8 +12,13 @@ type contextAPI struct {
 	Config           interface{}    `json:"config"`
 	Context          string         `json:"context"`
 	Registries       []string       `json:"registries"`
-	Office           *config.Office `json:"office,omitempty"`
+	Office           *contextOffice `json:"office,omitempty"`
 	ClouderyEndpoint string         `json:"cloudery_endpoint,omitempty"`
+	OIDC             interface{}    `json:"oidc,omitempty"`
+}
+
+type contextOffice struct {
+	OnlyOfficeURL string
 }
 
 func showContext(c echo.Context) error {
@@ -59,11 +64,11 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 	}
 
 	// Office
-	var office *config.Office
+	var office *contextOffice
 	if o, ok := officeConfig[contextName]; ok {
-		office = &o
+		office = &contextOffice{OnlyOfficeURL: o.OnlyOfficeURL}
 	} else if o, ok := officeConfig[config.DefaultInstanceContext]; ok {
-		office = &o
+		office = &contextOffice{OnlyOfficeURL: o.OnlyOfficeURL}
 	}
 
 	// Registries
@@ -78,11 +83,23 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 		registriesList = append(registriesList, url.String())
 	}
 
+	// OIDC
+	var oidc map[string]interface{}
+	if full, ok := config.GetOIDC(contextName); ok {
+		oidc = make(map[string]interface{})
+		for k, v := range full {
+			if k != "client_secret" {
+				oidc[k] = v
+			}
+		}
+	}
+
 	return contextAPI{
 		Config:           config.Normalize(cfg),
 		Context:          contextName,
 		Registries:       registriesList,
 		Office:           office,
 		ClouderyEndpoint: clouderyEndpoint,
+		OIDC:             oidc,
 	}
 }
