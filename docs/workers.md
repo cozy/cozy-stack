@@ -22,10 +22,30 @@ The `konnector` worker is used to execute JS code that collects files and data
 from external providers, and put them in the Cozy. Its execution is detailed on
 [the Konnector Worker specs](https://docs.cozy.io/en/cozy-stack/konnectors-workflow/#konnector-worker-specs).
 
+### Job arguments
+
+To execute a konnector through a job, the expected `arguments` are the following:
+```
+"arguments": {
+    "konnector": <konnector_slug>,
+    "account": <account_id>
+}
+```
+
 ## service worker
 
 The `service` worker is used to process background jobs, generally to compute
 non-realtime user data.
+
+### Job arguments
+
+To execute a service through a job, the expected `arguments` are the following:
+```
+"arguments": {
+    "name": <service_name>,
+    "slug": <application_slug>
+}
+```
 
 ## push worker
 
