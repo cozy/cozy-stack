@@ -175,7 +175,7 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 func GetAll(inst *instance.Instance) ([]*Session, error) {
 	var sessions []*Session
 	req := couchdb.AllDocsRequest{
-		Limit: 100000,
+		Limit: 50000,
 	}
 	if err := couchdb.GetAllDocs(inst, consts.Sessions, &req, &sessions); err != nil {
 		return nil, err
