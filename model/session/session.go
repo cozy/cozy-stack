@@ -174,13 +174,29 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 // GetAll returns all the active sessions
 func GetAll(inst *instance.Instance) ([]*Session, error) {
 	var sessions []*Session
-	if err := couchdb.GetAllDocs(inst, consts.Sessions, nil, &sessions); err != nil {
+	req := couchdb.AllDocsRequest{
+		Limit: 100000,
+	}
+	if err := couchdb.GetAllDocs(inst, consts.Sessions, &req, &sessions); err != nil {
 		return nil, err
 	}
+	var expired []couchdb.Doc
+	kept := sessions[:0]
 	for _, sess := range sessions {
 		sess.instance = inst
+		if sess.OlderThan(SessionMaxAge) {
+			expired = append(expired, sess)
+		} else {
+			kept = append(kept, sess)
+		}
 	}
-	return sessions, nil
+	if len(expired) > 0 {
+		if err := couchdb.BulkDeleteDocs(inst, consts.Sessions, expired); err != nil {
+			inst.Logger().WithField("nspace", "sessions").
+				Infof("Error while deleting expired sessions: %s", err)
+		}
+	}
+	return kept, nil
 }
 
 // Delete is a function to delete the session in couchdb,
