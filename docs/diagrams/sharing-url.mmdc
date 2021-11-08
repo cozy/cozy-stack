@@ -1,0 +1,32 @@
+graph TD
+	%% https://mermaid-js.github.io/mermaid-live-editor/
+    Start[Is logged-in on this instance?] -->|Yes| ShowPage
+	Start -->|No| IsShareLink
+	ShowPage[Show the page]
+	IsShareLink[Is it a link to an anonymous sharing?] -->|Yes| ShowShareLink
+	IsShareLink -->|No| IsRelocatable
+	ShowShareLink[Show the page]
+	IsRelocatable[Does the app manifest contain the transformation to apply for this link?]
+	IsRelocatable -->|Yes| HasSession
+	IsRelocatable -->|No| ShowLogin
+	ShowLogin[Show the login page]
+	HasSession[Is there at least one session cookie for this stack level domain?]
+	HasSession -->|Yes| IsShared
+	HasSession -->|No| ShowLogin
+	IsShared[Is the document shared?] -->|Yes| IsAccepted
+	IsShared -->|No| When
+	When[When?] -->|Present| ShowLogin
+	When -->|Future| AskSharing
+	AskSharing[Show a page where the user can send a request to the owner to share this document]
+	IsAccepted[Does the user has accepted to synchronize the documents to their Cozy?]
+	IsAccepted -->|Yes| HasApp
+	IsAccepted -->|No| ShowInbox[Redirect to the sharings inbox on the target Cozy]
+	HasApp[Is the web app installed on the target Cozy?]
+	HasApp -->|Yes| HasBeenSent
+	HasApp -->|No| Store[Redirect to a page for installing the app]
+	HasBeenSent[Is the document present of the target Cozy?]
+	HasBeenSent -->|Yes| Redirect
+	HasBeenSent -->|No| WhyMissing[Why the document is missing?]
+	Redirect[Redirect to the document on the target Cozy]
+	WhyMissing -->|Disk quota| Quota[Redirect to storage page of settings]
+	WhyMissing -->|Other| ShowError[Show an error page]
