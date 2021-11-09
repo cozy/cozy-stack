@@ -22,7 +22,14 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		"rule":        vanilla.Nodes["horizontal_rule"],
 		"hardBreak":   vanilla.Nodes["hard_break"],
 		"image":       vanilla.Nodes["image"],
-		"codeBlock":   vanilla.Nodes["code_block"],
+		"codeBlock": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			lang, _ := node.Attrs["language"].(string)
+			state.Write("```" + lang + "\n")
+			state.Text(node.TextContent(), false)
+			state.EnsureNewLine()
+			state.Write("```")
+			state.CloseBlock(node)
+		},
 		"panel": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			if typ, ok := node.Attrs["panelType"].(string); ok {
 				state.Write(":" + typ + ": ")
@@ -52,14 +59,22 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		},
 		"status": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			if txt, ok := node.Attrs["text"].(string); ok {
+				state.Write("[")
 				state.Text(txt)
+				state.Write("]")
+				color, _ := node.Attrs["color"]
+				id, _ := node.Attrs["localId"]
+				state.Text(fmt.Sprintf("{.status color=%s localId=%s}", color, id))
 			}
 		},
 		"date": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			if ts, ok := node.Attrs["timestamp"].(string); ok {
 				if seconds, err := strconv.ParseInt(ts, 10, 64); err == nil {
 					txt := time.Unix(seconds/1000, 0).Format("2006-01-02")
+					state.Write("[")
 					state.Text(txt)
+					state.Write("]")
+					state.Text(fmt.Sprintf("{.date ts=%s}", ts))
 				}
 			}
 		},
@@ -87,6 +102,21 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		"indentation": {Open: "    ", Close: "", ExpelEnclosingWhitespace: true},
 		"alignement":  {Open: "", Close: "", ExpelEnclosingWhitespace: true},
 		"breakout":    {Open: "", Close: "", ExpelEnclosingWhitespace: true},
+		"underline":   {Open: "[", Close: "]{.underlined}", ExpelEnclosingWhitespace: true},
+		"subsup": {
+			Open: "[",
+			Close: func(state *markdown.SerializerState, mark *model.Mark, parent *model.Node, index int) string {
+				typ, _ := mark.Attrs["type"].(string)
+				return fmt.Sprintf("]{.%s}", typ)
+			},
+		},
+		"textColor": {
+			Open: "[",
+			Close: func(state *markdown.SerializerState, mark *model.Mark, parent *model.Node, index int) string {
+				color, _ := mark.Attrs["color"].(string)
+				return fmt.Sprintf("]{color=%s}", color)
+			},
+		},
 	}
 	return markdown.NewSerializer(nodes, marks)
 }
