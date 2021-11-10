@@ -1,12 +1,14 @@
 package note
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
+	"github.com/yuin/goldmark/ast"
 )
 
 func markdownSerializer(images []*Image) *markdown.Serializer {
@@ -62,8 +64,8 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 				state.Write("[")
 				state.Text(txt)
 				state.Write("]")
-				color, _ := node.Attrs["color"]
-				id, _ := node.Attrs["localId"]
+				color, _ := node.Attrs["color"].(string)
+				id, _ := node.Attrs["localId"].(string)
 				state.Text(fmt.Sprintf("{.status color=%s localId=%s}", color, id))
 			}
 		},
@@ -119,4 +121,19 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		},
 	}
 	return markdown.NewSerializer(nodes, marks)
+}
+
+func fromMarkdownAST(tree ast.Node) (*model.Node, error) {
+	var node *model.Node
+	err := ast.Walk(tree, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		fmt.Printf("n = %#v (%v)\n", n, entering)
+		return ast.WalkContinue, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if node == nil {
+		return nil, errors.New("Cannot build prosemirror content")
+	}
+	return node, nil
 }

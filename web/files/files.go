@@ -15,12 +15,14 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -80,6 +82,7 @@ func CreationHandler(c echo.Context) error {
 }
 
 func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
+	inst := middlewares.GetInstance(c)
 	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
 	doc, err := FileDocFromReq(c, name, dirID)
@@ -104,12 +107,21 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 		return nil, err
 	}
 
+	if filepath.Ext(doc.DocName) == ".cozy-note" {
+		err := note.ImportFile(inst, doc, nil, c.Request().Body)
+		if err != nil {
+			inst.Logger().WithField("nspace", "files").
+				Infof("Cannot import note: %s", err)
+			return nil, WrapVfsError(err)
+		}
+		return NewFile(doc, inst), nil
+	}
+
 	file, err := fs.CreateFile(doc, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	inst := middlewares.GetInstance(c)
 	n, err := io.Copy(file, c.Request().Body)
 	if err != nil {
 		inst.Logger().WithField("nspace", "files").
@@ -228,6 +240,16 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	err = checkPerm(c, permission.PUT, nil, newdoc)
 	if err != nil {
 		return err
+	}
+
+	if filepath.Ext(newdoc.DocName) == ".cozy-note" {
+		err := note.ImportFile(instance, newdoc, olddoc, c.Request().Body)
+		if err != nil {
+			instance.Logger().WithField("nspace", "files").
+				Infof("Cannot import note: %s", err)
+			return WrapVfsError(err)
+		}
+		return FileData(c, http.StatusOK, newdoc, true, nil)
 	}
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
