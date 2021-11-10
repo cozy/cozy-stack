@@ -79,13 +79,12 @@ func CreationHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
+func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
-	var doc *vfs.FileDoc
-	doc, err = FileDocFromReq(c, name, dirID)
+	doc, err := FileDocFromReq(c, name, dirID)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if created := c.QueryParam("CreatedAt"); created != "" {
@@ -102,31 +101,29 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 
 	err = checkPerm(c, "POST", nil, doc)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	file, err := fs.CreateFile(doc, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	instance := middlewares.GetInstance(c)
-	defer func() {
-		if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
-			err = cerr
-			instance.Logger().WithField("nspace", "files").
-				Warnf("Error on uploading file (close): %s", err)
-		}
-	}()
-
+	inst := middlewares.GetInstance(c)
 	n, err := io.Copy(file, c.Request().Body)
 	if err != nil {
-		instance.Logger().WithField("nspace", "files").
+		inst.Logger().WithField("nspace", "files").
 			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, doc.ByteSize)
-		return
 	}
-	f = NewFile(doc, instance)
-	return
+	if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+		err = cerr
+		inst.Logger().WithField("nspace", "files").
+			Warnf("Error on uploading file (close): %s", err)
+	}
+	if err != nil {
+		return nil, wrapVfsError(err)
+	}
+	return NewFile(doc, inst), nil
 }
 
 func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
@@ -187,22 +184,20 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
 // to overwrite the content of a file given its identifier.
-func OverwriteFileContentHandler(c echo.Context) (err error) {
+func OverwriteFileContentHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	var olddoc *vfs.FileDoc
-	var newdoc *vfs.FileDoc
 
 	fileID := c.Param("file-id")
 	if fileID == "" {
 		fileID = c.Param("docid") // Used by sharings.updateDocument
 	}
 
-	olddoc, err = instance.VFS().FileByID(fileID)
+	olddoc, err := instance.VFS().FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
 
-	newdoc, err = FileDocFromReq(c, olddoc.DocName, olddoc.DirID)
+	newdoc, err := FileDocFromReq(c, olddoc.DocName, olddoc.DirID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -215,7 +210,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
-	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
+	if err := CheckIfMatch(c, olddoc.Rev()); err != nil {
 		return WrapVfsError(err)
 	}
 
@@ -226,33 +221,27 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	err = checkPerm(c, permission.PUT, nil, olddoc)
 	if err != nil {
-		return
+		return err
 	}
 
 	newdoc.SetID(olddoc.ID()) // The ID can be useful to check permissions
 	err = checkPerm(c, permission.PUT, nil, newdoc)
 	if err != nil {
-		return
+		return err
 	}
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-		if err != nil {
-			err = WrapVfsError(err)
-			return
-		}
-		err = FileData(c, http.StatusOK, newdoc, true, nil)
-	}()
-
 	_, err = io.Copy(file, c.Request().Body)
-	return
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return FileData(c, http.StatusOK, newdoc, true, nil)
 }
 
 // UploadMetadataHandler accepts a metadata objet and persist it, so that it
