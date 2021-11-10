@@ -43,6 +43,8 @@ scheduled. See below for more informations.
 The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the
 future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
 
+:warning: Be aware that the `@at` trigger is removed from the doctype after it has created the associated job.
+
 Examples
 
 ```
@@ -894,7 +896,7 @@ Accept: application/vnd.api+json
       "debounce": "",
       "domain": "xxx.mycozy.cloud",
       "message": {
-        "konnector": "slug", 
+        "konnector": "slug",
         "account": "XXX"
       },
       "options": null,
