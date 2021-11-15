@@ -1,7 +1,6 @@
 package note
 
 import (
-	"errors"
 	"io"
 	"io/ioutil"
 	"strconv"
@@ -9,11 +8,8 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/prosemirror-go/model"
-	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/text"
 )
 
 // MaxMarkdownSize is the maximal size of a markdown that can be parsed.
@@ -71,31 +67,11 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	parser := parser.NewParser(
 		parser.WithBlockParsers(parser.DefaultBlockParsers()...),
 		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
 		parser.WithParagraphTransformers(parser.DefaultParagraphTransformers()...),
 	)
-	tree := parser.Parse(text.NewReader(buf))
-
-	ctx := &mapperContext{source: buf, schema: schema}
-	err = ast.Walk(tree, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
-		if fn, ok := markdownNodeMapper[node.Kind()]; ok {
-			if err := fn(ctx, node, entering); err != nil {
-				return ast.WalkStop, err
-			}
-		} else {
-			logger.WithNamespace("notes").
-				Warnf("Unknown node kind: %s\n", node.Kind())
-		}
-		return ast.WalkContinue, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if ctx.root == nil {
-		return nil, errors.New("Cannot build prosemirror content")
-	}
-	return ctx.root, nil
+	funcs := markdownNodeMapper()
+	return ParseMarkdown(parser, funcs, buf, schema)
 }

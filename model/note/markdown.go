@@ -1,7 +1,6 @@
 package note
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -123,85 +122,22 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 	return markdown.NewSerializer(nodes, marks)
 }
 
-type mapperContext struct {
-	source []byte
-	schema *model.Schema
-	root   *model.Node
-	stack  [][]*model.Node
-}
-
-func (ctx *mapperContext) Extend() {
-	ctx.stack = append(ctx.stack, []*model.Node{})
-}
-
-func (ctx *mapperContext) Push(node *model.Node) {
-	if len(ctx.stack) == 0 {
-		panic(errors.New("Empty stack for push"))
+func markdownNodeMapper() NodeMapper {
+	vanilla := DefaultNodeMapper
+	return NodeMapper{
+		ast.KindDocument:  vanilla[ast.KindDocument],
+		ast.KindParagraph: vanilla[ast.KindParagraph],
+		ast.KindHeading:   vanilla[ast.KindHeading],
+		ast.KindText:      vanilla[ast.KindText],
+		// ast.KindEmphasis: func(state *markdownParseState, node ast.Node, entering bool) error {
+		// 	if entering {
+		// 		node := node.(*ast.Text)
+		// 		content := node.Segment.Value(state.source)
+		// 		mark := model.Mark{}
+		// 		emphasis := state.schema.Text(string(content)).Mark([]*model.Mark{mark})
+		// 		state.Push(emphasis)
+		// 	}
+		// 	return nil
+		// },
 	}
-	last := len(ctx.stack) - 1
-	ctx.stack[last] = append(ctx.stack[last], node)
-}
-
-func (ctx *mapperContext) Pop() []*model.Node {
-	if len(ctx.stack) == 0 {
-		return nil
-	}
-	last := ctx.stack[len(ctx.stack)-1]
-	ctx.stack = ctx.stack[:len(ctx.stack)-1]
-	return last
-}
-
-type mapperFn func(ctx *mapperContext, node ast.Node, entering bool) error
-
-var markdownNodeMapper = map[ast.NodeKind]mapperFn{
-	ast.KindDocument: func(ctx *mapperContext, node ast.Node, entering bool) error {
-		if entering {
-			ctx.stack = [][]*model.Node{
-				{},
-			}
-		} else {
-			root, err := ctx.schema.Node(ctx.schema.Spec.TopNode, nil, ctx.Pop())
-			if err != nil {
-				return err
-			}
-			ctx.root = root
-			ctx.stack = nil
-		}
-		return nil
-	},
-	ast.KindHeading: func(ctx *mapperContext, node ast.Node, entering bool) error {
-		if entering {
-			ctx.Extend()
-		} else {
-			level := node.(*ast.Heading).Level
-			attrs := map[string]interface{}{"level": level}
-			heading, err := ctx.schema.Node("heading", attrs, ctx.Pop())
-			if err != nil {
-				return err
-			}
-			ctx.Push(heading)
-		}
-		return nil
-	},
-	ast.KindParagraph: func(ctx *mapperContext, node ast.Node, entering bool) error {
-		if entering {
-			ctx.Extend()
-		} else {
-			paragraph, err := ctx.schema.Node("paragraph", nil, ctx.Pop())
-			if err != nil {
-				return err
-			}
-			ctx.Push(paragraph)
-		}
-		return nil
-	},
-	ast.KindText: func(ctx *mapperContext, node ast.Node, entering bool) error {
-		if entering {
-			segment := node.(*ast.Text).Segment
-			content := segment.Value(ctx.source)
-			text := ctx.schema.Text(string(content))
-			ctx.Push(text)
-		}
-		return nil
-	},
 }
