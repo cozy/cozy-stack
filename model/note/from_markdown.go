@@ -81,7 +81,7 @@ func (state *MarkdownParseState) OpenMark(mark *model.Mark) {
 }
 
 // CloseMark removes the given mark from the set of active marks.
-func (state *MarkdownParseState) RemoveMark(mark *model.Mark) {
+func (state *MarkdownParseState) CloseMark(mark *model.Mark) {
 	state.Marks = mark.RemoveFromSet(state.Marks)
 }
 
@@ -152,10 +152,28 @@ func GenericBlockHandler(nodeType string) NodeMapperFunc {
 	}
 }
 
+func GenericMarkHandler(markType string) NodeMapperFunc {
+	return func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		typ, err := state.Schema.MarkType(markType)
+		if err != nil {
+			return err
+		}
+		var attrs map[string]interface{}
+		mark := typ.Create(attrs)
+		if entering {
+			state.OpenMark(mark)
+		} else {
+			state.CloseMark(mark)
+		}
+		return nil
+	}
+}
+
 // DefaultNodeMapper is a parser parsing unextended
 // [CommonMark](http://commonmark.org/), without inline HTML, and producing a
 // document in the basic schema.
 var DefaultNodeMapper = NodeMapper{
+	// Blocks
 	ast.KindDocument: func(state *MarkdownParseState, node ast.Node, entering bool) error {
 		if entering {
 			typ, err := state.Schema.NodeType(state.Schema.Spec.TopNode)
@@ -190,11 +208,59 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
+
+	// Inlines
 	ast.KindText: func(state *MarkdownParseState, node ast.Node, entering bool) error {
 		if entering {
 			segment := node.(*ast.Text).Segment
 			content := segment.Value(state.Source)
 			state.AddText(string(content))
+		}
+		return nil
+	},
+	ast.KindString: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		if entering {
+			content := node.(*ast.String).Value
+			state.AddText(string(content))
+		}
+		return nil
+	},
+	ast.KindLink: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		typ, err := state.Schema.MarkType("link")
+		if err != nil {
+			return err
+		}
+		n := node.(*ast.Link)
+		attrs := map[string]interface{}{
+			"href":  string(n.Destination),
+			"title": string(n.Title),
+		}
+		mark := typ.Create(attrs)
+		if entering {
+			state.OpenMark(mark)
+		} else {
+			state.CloseMark(mark)
+		}
+		return nil
+	},
+	ast.KindCodeSpan: GenericMarkHandler("code"),
+	ast.KindEmphasis: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		var typ *model.MarkType
+		var err error
+		if node.(*ast.Emphasis).Level == 2 {
+			typ, err = state.Schema.MarkType("strong")
+		} else {
+			typ, err = state.Schema.MarkType("em")
+		}
+		if err != nil {
+			return err
+		}
+		var attrs map[string]interface{}
+		mark := typ.Create(attrs)
+		if entering {
+			state.OpenMark(mark)
+		} else {
+			state.CloseMark(mark)
 		}
 		return nil
 	},

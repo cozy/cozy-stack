@@ -125,19 +125,15 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 func markdownNodeMapper() NodeMapper {
 	vanilla := DefaultNodeMapper
 	return NodeMapper{
+		// Blocks
 		ast.KindDocument:  vanilla[ast.KindDocument],
 		ast.KindParagraph: vanilla[ast.KindParagraph],
 		ast.KindHeading:   vanilla[ast.KindHeading],
-		ast.KindText:      vanilla[ast.KindText],
-		// ast.KindEmphasis: func(state *markdownParseState, node ast.Node, entering bool) error {
-		// 	if entering {
-		// 		node := node.(*ast.Text)
-		// 		content := node.Segment.Value(state.source)
-		// 		mark := model.Mark{}
-		// 		emphasis := state.schema.Text(string(content)).Mark([]*model.Mark{mark})
-		// 		state.Push(emphasis)
-		// 	}
-		// 	return nil
-		// },
+		// Inlines
+		ast.KindText:     vanilla[ast.KindText],
+		ast.KindString:   vanilla[ast.KindString],
+		ast.KindLink:     vanilla[ast.KindLink],
+		ast.KindCodeSpan: vanilla[ast.KindCodeSpan],
+		ast.KindEmphasis: vanilla[ast.KindEmphasis],
 	}
 }
