@@ -88,7 +88,7 @@ func (state *MarkdownParseState) CloseMark(mark *model.Mark) {
 // AddNode adds a node at the current position.
 func (state *MarkdownParseState) AddNode(typ *model.NodeType, attrs map[string]interface{}, content interface{}) (*model.Node, error) {
 	node, err := typ.CreateAndFill(attrs, content, state.Marks)
-	if err != nil {
+	if node == nil {
 		return nil, err
 	}
 	state.Push(node)
@@ -208,6 +208,26 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
+	ast.KindList: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		nodeType := "bulletList"
+		if node.(*ast.List).IsOrdered() {
+			nodeType = "orderedList"
+		}
+		if entering {
+			typ, err := state.Schema.NodeType(nodeType)
+			if err != nil {
+				return err
+			}
+			state.OpenNode(typ, nil)
+		} else {
+			if _, err := state.CloseNode(); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
+	ast.KindListItem:  GenericBlockHandler("listItem"),
+	ast.KindTextBlock: GenericBlockHandler("paragraph"),
 
 	// Inlines
 	ast.KindText: func(state *MarkdownParseState, node ast.Node, entering bool) error {

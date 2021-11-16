@@ -129,6 +129,10 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindDocument:  vanilla[ast.KindDocument],
 		ast.KindParagraph: vanilla[ast.KindParagraph],
 		ast.KindHeading:   vanilla[ast.KindHeading],
+		ast.KindList:      vanilla[ast.KindList],
+		ast.KindListItem:  vanilla[ast.KindListItem],
+		ast.KindTextBlock: vanilla[ast.KindTextBlock],
+
 		// Inlines
 		ast.KindText:     vanilla[ast.KindText],
 		ast.KindString:   vanilla[ast.KindString],
