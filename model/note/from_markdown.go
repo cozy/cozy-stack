@@ -3,6 +3,7 @@ package note
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/ast"
@@ -169,6 +170,18 @@ func GenericMarkHandler(markType string) NodeMapperFunc {
 	}
 }
 
+func WithoutTrailingNewline(node ast.Node, source []byte) string {
+	var lines []string
+	segments := node.Lines()
+	for i := 0; i < segments.Len(); i++ {
+		segment := segments.At(i)
+		line := segment.Value(source)
+		lines = append(lines, string(line))
+	}
+	str := strings.Join(lines, "")
+	return strings.TrimSuffix(str, "\n")
+}
+
 // DefaultNodeMapper is a parser parsing unextended
 // [CommonMark](http://commonmark.org/), without inline HTML, and producing a
 // document in the basic schema.
@@ -226,8 +239,45 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
-	ast.KindListItem:  GenericBlockHandler("listItem"),
-	ast.KindTextBlock: GenericBlockHandler("paragraph"),
+	ast.KindListItem:   GenericBlockHandler("listItem"),
+	ast.KindTextBlock:  GenericBlockHandler("paragraph"),
+	ast.KindBlockquote: GenericBlockHandler("blockquote"),
+	ast.KindCodeBlock: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		if entering {
+			node := node.(*ast.CodeBlock)
+			typ, err := state.Schema.NodeType("codeBlock")
+			if err != nil {
+				return err
+			}
+			state.OpenNode(typ, nil)
+			state.AddText(WithoutTrailingNewline(node, state.Source))
+		} else {
+			if _, err := state.CloseNode(); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
+	ast.KindFencedCodeBlock: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		if entering {
+			node := node.(*ast.FencedCodeBlock)
+			typ, err := state.Schema.NodeType("codeBlock")
+			if err != nil {
+				return err
+			}
+			lang := node.Language(state.Source)
+			attrs := map[string]interface{}{
+				"language": string(lang),
+			}
+			state.OpenNode(typ, attrs)
+			state.AddText(WithoutTrailingNewline(node, state.Source))
+		} else {
+			if _, err := state.CloseNode(); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
 
 	// Inlines
 	ast.KindText: func(state *MarkdownParseState, node ast.Node, entering bool) error {
