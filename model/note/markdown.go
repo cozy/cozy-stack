@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/note/custom"
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/ast"
@@ -116,7 +117,7 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 			Open: "[",
 			Close: func(state *markdown.SerializerState, mark *model.Mark, parent *model.Node, index int) string {
 				color, _ := mark.Attrs["color"].(string)
-				return fmt.Sprintf("]{color=%s}", color)
+				return fmt.Sprintf("]{.color rgb=%s}", color)
 			},
 		},
 	}
@@ -137,6 +138,23 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindCodeBlock:       vanilla[ast.KindCodeBlock],
 		ast.KindFencedCodeBlock: vanilla[ast.KindFencedCodeBlock],
 		ast.KindThematicBreak:   vanilla[ast.KindThematicBreak],
+		custom.KindPanel: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				typ, err := state.Schema.NodeType("panel")
+				if err != nil {
+					return err
+				}
+				attrs := map[string]interface{}{
+					"panelType": node.(*custom.Panel).PanelType,
+				}
+				state.OpenNode(typ, attrs)
+			} else {
+				if _, err := state.CloseNode(); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 
 		// Inlines
 		ast.KindText:                   vanilla[ast.KindText],

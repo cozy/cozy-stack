@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note/custom"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/extension"
@@ -79,7 +80,8 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 			util.Prioritized(parser.NewATXHeadingParser(), 600),
 			util.Prioritized(parser.NewFencedCodeBlockParser(), 700),
 			util.Prioritized(parser.NewBlockquoteParser(), 800),
-			util.Prioritized(parser.NewParagraphParser(), 900),
+			util.Prioritized(custom.NewPanelParser(), 900),
+			util.Prioritized(parser.NewParagraphParser(), 1000),
 		),
 		parser.WithInlineParsers(
 			util.Prioritized(parser.NewCodeSpanParser(), 100),
