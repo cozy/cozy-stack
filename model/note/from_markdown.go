@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/ast"
+	extensionast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 )
@@ -278,6 +279,7 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
+	ast.KindThematicBreak: GenericBlockHandler("rule"),
 
 	// Inlines
 	ast.KindText: func(state *MarkdownParseState, node ast.Node, entering bool) error {
@@ -292,6 +294,23 @@ var DefaultNodeMapper = NodeMapper{
 		if entering {
 			content := node.(*ast.String).Value
 			state.AddText(string(content))
+		}
+		return nil
+	},
+	ast.KindAutoLink: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		typ, err := state.Schema.MarkType("link")
+		if err != nil {
+			return err
+		}
+		n := node.(*ast.AutoLink)
+		url := string(n.URL(state.Source))
+		attrs := map[string]interface{}{"href": url}
+		mark := typ.Create(attrs)
+		if entering {
+			state.OpenMark(mark)
+			state.AddText(url)
+		} else {
+			state.CloseMark(mark)
 		}
 		return nil
 	},
@@ -334,4 +353,5 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
+	extensionast.KindStrikethrough: GenericMarkHandler("strike"),
 }

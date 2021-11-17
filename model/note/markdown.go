@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/ast"
+	extensionast "github.com/yuin/goldmark/extension/ast"
 )
 
 func markdownSerializer(images []*Image) *markdown.Serializer {
@@ -135,12 +136,15 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindBlockquote:      vanilla[ast.KindBlockquote],
 		ast.KindCodeBlock:       vanilla[ast.KindCodeBlock],
 		ast.KindFencedCodeBlock: vanilla[ast.KindFencedCodeBlock],
+		ast.KindThematicBreak:   vanilla[ast.KindThematicBreak],
 
 		// Inlines
-		ast.KindText:     vanilla[ast.KindText],
-		ast.KindString:   vanilla[ast.KindString],
-		ast.KindLink:     vanilla[ast.KindLink],
-		ast.KindCodeSpan: vanilla[ast.KindCodeSpan],
-		ast.KindEmphasis: vanilla[ast.KindEmphasis],
+		ast.KindText:                   vanilla[ast.KindText],
+		ast.KindString:                 vanilla[ast.KindString],
+		ast.KindAutoLink:               vanilla[ast.KindAutoLink],
+		ast.KindLink:                   vanilla[ast.KindLink],
+		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],
+		ast.KindEmphasis:               vanilla[ast.KindEmphasis],
+		extensionast.KindStrikethrough: vanilla[extensionast.KindStrikethrough],
 	}
 }
