@@ -84,6 +84,7 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 			util.Prioritized(parser.NewParagraphParser(), 1000),
 		),
 		parser.WithInlineParsers(
+			util.Prioritized(custom.NewSpanParser(), 50),
 			util.Prioritized(parser.NewCodeSpanParser(), 100),
 			util.Prioritized(parser.NewLinkParser(), 200),
 			util.Prioritized(parser.NewAutoLinkParser(), 300),

@@ -164,5 +164,39 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],
 		ast.KindEmphasis:               vanilla[ast.KindEmphasis],
 		extensionast.KindStrikethrough: vanilla[extensionast.KindStrikethrough],
+		custom.KindSpan: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+			var markType string
+			var attrs map[string]interface{}
+			if class, ok := node.AttributeString("class"); ok {
+				switch class {
+				case "underlined":
+					markType = "underline"
+				case "sub":
+					markType = "subsup"
+					attrs = map[string]interface{}{"type": "sub"}
+				case "sup":
+					markType = "subsup"
+					attrs = map[string]interface{}{"type": "sup"}
+				}
+			}
+			if markType == "" {
+				if entering {
+					state.AddText(node.(*custom.Span).Value)
+				}
+				return nil
+			}
+			typ, err := state.Schema.MarkType(markType)
+			if err != nil {
+				return err
+			}
+			mark := typ.Create(attrs)
+			if entering {
+				state.OpenMark(mark)
+				state.AddText(node.(*custom.Span).Value)
+			} else {
+				state.CloseMark(mark)
+			}
+			return nil
+		},
 	}
 }
