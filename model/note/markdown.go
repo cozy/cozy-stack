@@ -40,24 +40,24 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 			state.RenderContent(node)
 		},
 		"table": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("`````table\n")
+			state.Write("________________________________________{.table}\n\n")
 			state.RenderContent(node)
 			state.EnsureNewLine()
-			state.Write("`````")
+			state.Write("________________________________________{.tableEnd}\n")
 			state.CloseBlock(node)
 		},
 		"tableRow": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("|=======================================================================\n")
+			state.Write("________________________________________{.tableRow}\n\n")
 			state.RenderContent(node)
 			state.EnsureNewLine()
 			state.CloseBlock(node)
 		},
 		"tableHeader": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("|")
+			state.Write("____________________{.tableHeader}\n\n")
 			state.RenderContent(node)
 		},
 		"tableCell": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("|")
+			state.Write("____________________{.tableCell}\n\n")
 			state.RenderContent(node)
 		},
 		"status": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
@@ -124,6 +124,11 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 	return markdown.NewSerializer(nodes, marks)
 }
 
+func isTableCell(item *StackItem) bool {
+	name := item.Type.Name
+	return name == "tableHeader" || name == "tableCell"
+}
+
 func markdownNodeMapper() NodeMapper {
 	vanilla := DefaultNodeMapper
 	return NodeMapper{
@@ -153,6 +158,59 @@ func markdownNodeMapper() NodeMapper {
 					return err
 				}
 			}
+			return nil
+		},
+		custom.KindTable: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+			tableType, ok := node.AttributeString("class")
+			if entering || !ok {
+				return nil
+			}
+
+			switch tableType {
+			case "table":
+				// Nothing to do
+			case "tableEnd":
+				if isTableCell(state.Top()) {
+					if _, err := state.CloseNode(); err != nil { // Cell
+						return err
+					}
+					if _, err := state.CloseNode(); err != nil { // Row
+						return err
+					}
+				}
+				if _, err := state.CloseNode(); err != nil { // Table
+					return err
+				}
+				return nil
+			case "tableRow":
+				if isTableCell(state.Top()) {
+					if _, err := state.CloseNode(); err != nil { // Cell
+						return err
+					}
+					if _, err := state.CloseNode(); err != nil { // Row
+						return err
+					}
+				}
+			case "tableHeader":
+				if isTableCell(state.Top()) {
+					if _, err := state.CloseNode(); err != nil {
+						return err
+					}
+				}
+			case "tableCell":
+				if isTableCell(state.Top()) {
+					if _, err := state.CloseNode(); err != nil {
+						return err
+					}
+				}
+			default:
+				return nil
+			}
+			typ, err := state.Schema.NodeType(tableType.(string))
+			if err != nil {
+				return err
+			}
+			state.OpenNode(typ, nil)
 			return nil
 		},
 

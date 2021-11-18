@@ -72,6 +72,7 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 	}
 	parser := parser.NewParser(
 		parser.WithBlockParsers(
+			util.Prioritized(custom.NewTableParser(), 50),
 			util.Prioritized(parser.NewSetextHeadingParser(), 100),
 			util.Prioritized(parser.NewThematicBreakParser(), 200),
 			util.Prioritized(parser.NewListParser(), 300),
