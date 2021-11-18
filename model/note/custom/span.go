@@ -57,14 +57,14 @@ func (s *spanParser) Parse(parent ast.Node, block text.Reader, pc parser.Context
 			if line[pos] != '{' {
 				return nil
 			}
-			// build text segment
-			value := "foo"
-			span := NewSpan(value)
 			block.Advance(pos)
+			span := NewSpan(string(line[1 : pos-1]))
 			if attrs, ok := parser.ParseAttributes(block); ok {
 				for _, attr := range attrs {
 					if value, ok := attr.Value.([]byte); ok {
 						span.SetAttribute(attr.Name, string(value))
+					} else {
+						span.SetAttribute(attr.Name, attr.Value)
 					}
 				}
 			}
