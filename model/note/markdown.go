@@ -9,7 +9,10 @@ import (
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
 	extensionast "github.com/yuin/goldmark/extension/ast"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/util"
 )
 
 func markdownSerializer(images []*Image) *markdown.Serializer {
@@ -292,4 +295,33 @@ func markdownNodeMapper() NodeMapper {
 			return nil
 		},
 	}
+}
+
+func markdownParser() parser.Parser {
+	return parser.NewParser(
+		parser.WithBlockParsers(
+			util.Prioritized(custom.NewTableParser(), 50),
+			util.Prioritized(parser.NewSetextHeadingParser(), 100),
+			util.Prioritized(parser.NewThematicBreakParser(), 200),
+			util.Prioritized(parser.NewListParser(), 300),
+			util.Prioritized(parser.NewListItemParser(), 400),
+			util.Prioritized(parser.NewCodeBlockParser(), 500),
+			util.Prioritized(parser.NewATXHeadingParser(), 600),
+			util.Prioritized(parser.NewFencedCodeBlockParser(), 700),
+			util.Prioritized(parser.NewBlockquoteParser(), 800),
+			util.Prioritized(custom.NewPanelParser(), 900),
+			util.Prioritized(parser.NewParagraphParser(), 1000),
+		),
+		parser.WithInlineParsers(
+			util.Prioritized(custom.NewSpanParser(), 50),
+			util.Prioritized(parser.NewCodeSpanParser(), 100),
+			util.Prioritized(parser.NewLinkParser(), 200),
+			util.Prioritized(parser.NewAutoLinkParser(), 300),
+			util.Prioritized(parser.NewEmphasisParser(), 400),
+			util.Prioritized(extension.NewStrikethroughParser(), 500),
+		),
+		parser.WithParagraphTransformers(
+			util.Prioritized(parser.LinkReferenceParagraphTransformer, 100),
+		),
+	)
 }

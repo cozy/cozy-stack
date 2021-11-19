@@ -1,8 +1,6 @@
 package custom
 
 import (
-	"fmt"
-
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
@@ -82,7 +80,6 @@ func (b *tableParser) Open(parent ast.Node, reader text.Reader, pc parser.Contex
 			}
 		}
 	}
-	fmt.Printf("NewTable\n")
 	return node, parser.HasChildren
 }
 

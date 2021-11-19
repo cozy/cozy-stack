@@ -28,7 +28,7 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 				logger.
 					WithDomain("admin").
 					WithField("nspace", "trace").
-					Printf("Check basic auth: %v", elapsed)
+					Infof("Check basic auth: %v", elapsed)
 			}()
 		}
 

@@ -7,12 +7,8 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/note/custom"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/prosemirror-go/model"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/util"
 )
 
 // MaxMarkdownSize is the maximal size of a markdown that can be parsed.
@@ -70,32 +66,7 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	parser := parser.NewParser(
-		parser.WithBlockParsers(
-			util.Prioritized(custom.NewTableParser(), 50),
-			util.Prioritized(parser.NewSetextHeadingParser(), 100),
-			util.Prioritized(parser.NewThematicBreakParser(), 200),
-			util.Prioritized(parser.NewListParser(), 300),
-			util.Prioritized(parser.NewListItemParser(), 400),
-			util.Prioritized(parser.NewCodeBlockParser(), 500),
-			util.Prioritized(parser.NewATXHeadingParser(), 600),
-			util.Prioritized(parser.NewFencedCodeBlockParser(), 700),
-			util.Prioritized(parser.NewBlockquoteParser(), 800),
-			util.Prioritized(custom.NewPanelParser(), 900),
-			util.Prioritized(parser.NewParagraphParser(), 1000),
-		),
-		parser.WithInlineParsers(
-			util.Prioritized(custom.NewSpanParser(), 50),
-			util.Prioritized(parser.NewCodeSpanParser(), 100),
-			util.Prioritized(parser.NewLinkParser(), 200),
-			util.Prioritized(parser.NewAutoLinkParser(), 300),
-			util.Prioritized(parser.NewEmphasisParser(), 400),
-			util.Prioritized(extension.NewStrikethroughParser(), 500),
-		),
-		parser.WithParagraphTransformers(
-			util.Prioritized(parser.LinkReferenceParagraphTransformer, 100),
-		),
-	)
+	parser := markdownParser()
 	funcs := markdownNodeMapper()
 	return ParseMarkdown(parser, funcs, buf, schema)
 }

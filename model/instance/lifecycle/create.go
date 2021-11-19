@@ -62,7 +62,7 @@ func (opts *Options) trace(name string, do func()) {
 			logger.
 				WithDomain("admin").
 				WithField("nspace", "trace").
-				Printf("%s: %v", name, elapsed)
+				Infof("%s: %v", name, elapsed)
 		}()
 	}
 	do()
