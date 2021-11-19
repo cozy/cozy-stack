@@ -332,6 +332,25 @@ var DefaultNodeMapper = NodeMapper{
 		}
 		return nil
 	},
+	ast.KindImage: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		if entering {
+			typ, err := state.Schema.NodeType("image")
+			if err != nil {
+				return err
+			}
+			n := node.(*ast.Image)
+			attrs := map[string]interface{}{
+				"src": string(n.Destination),
+				"alt": string(n.Title),
+			}
+			state.OpenNode(typ, attrs)
+		} else {
+			if _, err := state.CloseNode(); err != nil {
+				return err
+			}
+		}
+		return nil
+	},
 	ast.KindCodeSpan: GenericMarkHandler("code"),
 	ast.KindEmphasis: func(state *MarkdownParseState, node ast.Node, entering bool) error {
 		var typ *model.MarkType

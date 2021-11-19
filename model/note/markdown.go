@@ -96,7 +96,7 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 					img.seen = true
 				}
 			}
-			state.Write(fmt.Sprintf("![%s](%s)", state.Esc(alt), state.Esc(src)))
+			state.Write(fmt.Sprintf("![%s](%s)\n", state.Esc(alt), state.Esc(src)))
 		},
 	}
 	marks := map[string]markdown.MarkSerializerSpec{
@@ -218,10 +218,40 @@ func markdownNodeMapper() NodeMapper {
 		},
 
 		// Inlines
-		ast.KindText:                   vanilla[ast.KindText],
-		ast.KindString:                 vanilla[ast.KindString],
-		ast.KindAutoLink:               vanilla[ast.KindAutoLink],
-		ast.KindLink:                   vanilla[ast.KindLink],
+		ast.KindText:     vanilla[ast.KindText],
+		ast.KindString:   vanilla[ast.KindString],
+		ast.KindAutoLink: vanilla[ast.KindAutoLink],
+		ast.KindLink:     vanilla[ast.KindLink],
+		ast.KindImage: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				// TODO drop the paragraph instead of closing it?
+				if _, err := state.CloseNode(); err != nil { // paragraph
+					return err
+				}
+				typeMS, err := state.Schema.NodeType("mediaSingle")
+				if err != nil {
+					return err
+				}
+				state.OpenNode(typeMS, map[string]interface{}{"layout": "center"})
+				typ, err := state.Schema.NodeType("media")
+				if err != nil {
+					return err
+				}
+				n := node.(*ast.Image)
+				attrs := map[string]interface{}{
+					"url":  string(n.Destination),
+					"alt":  string(n.Title),
+					"type": "external",
+				}
+				state.OpenNode(typ, attrs)
+			} else {
+				if _, err := state.CloseNode(); err != nil { // media
+					return err
+				}
+				// mediaSingle will be closed when leaving the paragraph
+			}
+			return nil
+		},
 		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],
 		ast.KindEmphasis:               vanilla[ast.KindEmphasis],
 		extensionast.KindStrikethrough: vanilla[extensionast.KindStrikethrough],
