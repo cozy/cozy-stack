@@ -563,6 +563,12 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	return man, done, man.Error()
 }
 
+// ManifestChannel returns the channel that can be listened to get updates
+// about the installer run.
+func (i *Installer) ManifestChannel() chan Manifest {
+	return i.manc
+}
+
 // DoLazyUpdate tries to update an application before using it
 func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())

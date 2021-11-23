@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
@@ -374,24 +375,31 @@ func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bo
 		return jsonapi.Data(c, http.StatusAccepted, &apiApp{man}, nil)
 	}
 
+	manc := inst.ManifestChannel()
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 	for {
-		man, done, err := inst.Poll()
-		if err != nil {
-			var b []byte
-			if b, err = json.Marshal(err.Error()); err == nil {
-				writeStream(w, "error", string(b))
+		select {
+		case man := <-manc:
+			if err := man.Error(); err != nil {
+				var b []byte
+				if b, err = json.Marshal(err.Error()); err == nil {
+					writeStream(w, "error", string(b))
+				}
+				return nil
 			}
-			break
-		}
-		buf := new(bytes.Buffer)
-		if err := jsonapi.WriteData(buf, &apiApp{man}, nil); err == nil {
-			writeStream(w, "state", strings.TrimSuffix(buf.String(), "\n"))
-		}
-		if done {
-			break
+			buf := new(bytes.Buffer)
+			if err := jsonapi.WriteData(buf, &apiApp{man}, nil); err == nil {
+				writeStream(w, "state", strings.TrimSuffix(buf.String(), "\n"))
+			}
+			if s := man.State(); s == app.Ready || s == app.Installed || s == app.Errored {
+				return nil
+			}
+
+		case <-ticker.C:
+			_, _ = w.Write([]byte(": still working\r\n"))
 		}
 	}
-	return nil
 }
 
 func writeStream(w http.ResponseWriter, event string, b string) {
