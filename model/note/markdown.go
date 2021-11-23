@@ -224,32 +224,39 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindLink:     vanilla[ast.KindLink],
 		ast.KindImage: func(state *MarkdownParseState, node ast.Node, entering bool) error {
 			if entering {
-				// TODO drop the paragraph instead of closing it?
-				if _, err := state.CloseNode(); err != nil { // paragraph
-					return err
-				}
-				typeMS, err := state.Schema.NodeType("mediaSingle")
-				if err != nil {
-					return err
-				}
-				state.OpenNode(typeMS, map[string]interface{}{"layout": "center"})
-				typ, err := state.Schema.NodeType("media")
-				if err != nil {
-					return err
-				}
-				n := node.(*ast.Image)
-				attrs := map[string]interface{}{
-					"url":  string(n.Destination),
-					"alt":  string(n.Title),
-					"type": "external",
-				}
-				state.OpenNode(typ, attrs)
-			} else {
-				if _, err := state.CloseNode(); err != nil { // media
-					return err
-				}
-				// mediaSingle will be closed when leaving the paragraph
+				return nil
 			}
+			paragraph := state.Pop()
+			var text string
+			for _, n := range paragraph.Content {
+				if n.Text != nil {
+					text += *n.Text
+				}
+			}
+			typeMS, err := state.Schema.NodeType("mediaSingle")
+			if err != nil {
+				return err
+			}
+			state.OpenNode(typeMS, map[string]interface{}{"layout": "center"})
+			typ, err := state.Schema.NodeType("media")
+			if err != nil {
+				return err
+			}
+			n := node.(*ast.Image)
+			attrs := map[string]interface{}{
+				"url":  string(n.Destination),
+				"alt":  text,
+				"id":   "",
+				"type": "external",
+			}
+			state.OpenNode(typ, attrs)
+			if _, err := state.CloseNode(); err != nil { // media
+				return err
+			}
+			if _, err := state.CloseNode(); err != nil { // mediaSingle
+				return err
+			}
+			state.OpenNode(paragraph.Type, paragraph.Attrs)
 			return nil
 		},
 		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],

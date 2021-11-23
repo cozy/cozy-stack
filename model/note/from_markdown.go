@@ -340,8 +340,8 @@ var DefaultNodeMapper = NodeMapper{
 			}
 			n := node.(*ast.Image)
 			attrs := map[string]interface{}{
-				"src": string(n.Destination),
-				"alt": string(n.Title),
+				"src":   string(n.Destination),
+				"title": string(n.Title),
 			}
 			state.OpenNode(typ, attrs)
 		} else {

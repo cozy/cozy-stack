@@ -5,11 +5,14 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/gofrs/uuid"
 )
@@ -29,8 +32,8 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 	if newdoc.ID() == "" {
 		uuidv4, _ := uuid.NewV4()
 		newdoc.SetID(uuidv4.String())
-
 	}
+	images, _ := getImages(inst, newdoc.ID())
 
 	fs := inst.VFS()
 	file, err := fs.CreateFile(newdoc, olddoc)
@@ -55,6 +58,11 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 	if olddoc != nil {
 		purgeAllSteps(inst, olddoc.DocID)
 	}
+	for _, img := range images {
+		img.seen = false
+		img.ToRemove = true
+	}
+	cleanImages(inst, images)
 	return nil
 }
 
@@ -73,6 +81,13 @@ func importReader(inst *instance.Instance, doc *vfs.FileDoc, reader io.Reader, s
 
 	var content *model.Node
 	var err error
+	var images []*Image
+	defer func() {
+		if err == nil && images != nil {
+			fixURLForProsemirrorImages(content, images)
+		}
+	}()
+
 	tr := tar.NewReader(io.MultiReader(buf, reader))
 	for {
 		header, errh := tr.Next()
@@ -88,7 +103,8 @@ func importReader(inst *instance.Instance, doc *vfs.FileDoc, reader io.Reader, s
 				return nil, err
 			}
 		} else {
-			contentType := "image/jpeg" // FIXME
+			ext := path.Ext(header.Name)
+			contentType := filetype.ByExtension(ext)
 			upload, erru := NewImageUpload(inst, doc, header.Name, contentType)
 			if erru != nil {
 				err = erru
@@ -99,11 +115,27 @@ func importReader(inst *instance.Instance, doc *vfs.FileDoc, reader io.Reader, s
 				}
 				if errc != nil {
 					err = errc
+				} else {
+					images = append(images, upload.Image)
 				}
 			}
-			// TODO fix URL in prosemirror nodes
 		}
 	}
+}
+
+func fixURLForProsemirrorImages(node *model.Node, images []*Image) {
+	if node.Type.Name == "media" {
+		name, _ := node.Attrs["alt"].(string)
+		for _, img := range images {
+			if img.originalName == name {
+				node.Attrs["url"] = img.DocID
+			}
+		}
+	}
+
+	node.ForEach(func(child *model.Node, _ int, _ int) {
+		fixURLForProsemirrorImages(child, images)
+	})
 }
 
 func fillMetadata(newdoc, olddoc *vfs.FileDoc, schemaSpecs map[string]interface{}, content *model.Node) {
@@ -114,6 +146,8 @@ func fillMetadata(newdoc, olddoc *vfs.FileDoc, schemaSpecs map[string]interface{
 		version = n * 1000
 	}
 
+	newdoc.Mime = consts.NoteMimeType
+	newdoc.Class = "text"
 	newdoc.Metadata = vfs.Metadata{
 		"title":   strings.TrimSuffix(newdoc.DocName, ".cozy-note"),
 		"content": content.ToJSON(),

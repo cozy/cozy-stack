@@ -36,7 +36,8 @@ type Image struct {
 	ToRemove bool                  `json:"willBeRemoved,omitempty"`
 	Metadata metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 
-	seen bool
+	seen         bool
+	originalName string
 }
 
 // ID returns the image qualified identifier
@@ -75,7 +76,7 @@ func NewImageUpload(inst *instance.Instance, note *vfs.FileDoc, name, mime strin
 	id := note.ID() + "/" + uuidv4.String()
 	md := metadata.New()
 	md.CreatedByApp = consts.NotesSlug
-	img := &Image{DocID: id, Name: name, Mime: mime, Metadata: *md}
+	img := &Image{DocID: id, Name: name, Mime: mime, Metadata: *md, originalName: name}
 
 	thumb, err := inst.ThumbsFS().CreateNoteThumb(id, mime, consts.NoteImageOriginalFormat)
 	if err != nil {
