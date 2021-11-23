@@ -603,7 +603,7 @@ func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, regi
 	if man.AvailableVersion() != "" && v.Version == man.AvailableVersion() {
 		return man
 	}
-	if channel == "stable" && !isMoreRecent(man.Version(), v.Version) {
+	if channel == "stable" && !IsMoreRecent(man.Version(), v.Version) {
 		return man
 	}
 	inst, err := NewInstaller(in, copier, &InstallerOptions{
@@ -622,8 +622,8 @@ func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, regi
 	return newman
 }
 
-// isMoreRecent returns true if b is greater than a
-func isMoreRecent(a, b string) bool {
+// IsMoreRecent returns true if b is greater than a
+func IsMoreRecent(a, b string) bool {
 	vA, err := semver.NewVersion(a)
 	if err != nil {
 		return true
