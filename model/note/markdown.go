@@ -56,7 +56,16 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 			state.RenderContent(node)
 		},
 		"table": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("________________________________________{.table}\n\n")
+			var attrs string
+			if node.Attrs["layout"] == "wide" {
+				attrs += ` layout="wide"`
+			} else if node.Attrs["layout"] == "full-width" {
+				attrs += ` layout="full-width"`
+			}
+			if node.Attrs["isNumberColumnEnabled"] == true {
+				attrs += " number=true"
+			}
+			state.Write("________________________________________{.table" + attrs + "}\n\n")
 			state.RenderContent(node)
 			state.EnsureNewLine()
 			state.Write("________________________________________{.tableEnd}\n")
@@ -69,11 +78,13 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 			state.CloseBlock(node)
 		},
 		"tableHeader": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("____________________{.tableHeader}\n\n")
+			attrs := cellMarkup(node)
+			state.Write("____________________{.tableHeader" + attrs + "}\n\n")
 			state.RenderContent(node)
 		},
 		"tableCell": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
-			state.Write("____________________{.tableCell}\n\n")
+			attrs := cellMarkup(node)
+			state.Write("____________________{.tableCell" + attrs + "}\n\n")
 			state.RenderContent(node)
 		},
 		"status": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
@@ -139,9 +150,43 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 	return markdown.NewSerializer(nodes, marks)
 }
 
+func cellMarkup(node *model.Node) string {
+	var attrs string
+	if color, ok := node.Attrs["background"].(string); ok && color[0] == '#' {
+		attrs += fmt.Sprintf(` background="%s"`, color)
+	}
+	if span, ok := node.Attrs["rowspan"].(float64); ok && span > 1 {
+		attrs += fmt.Sprintf(" rowspan=%d", int(span))
+	}
+	if span, ok := node.Attrs["colspan"].(float64); ok && span > 1 {
+		attrs += fmt.Sprintf(" colspan=%d", int(span))
+	}
+	return attrs
+}
+
 func isTableCell(item *StackItem) bool {
 	name := item.Type.Name
 	return name == "tableHeader" || name == "tableCell"
+}
+
+func cellAttributes(node ast.Node) map[string]interface{} {
+	background, ok := node.AttributeString("background")
+	if !ok {
+		background = nil
+	}
+	colspan, ok := node.AttributeString("colspan")
+	if !ok {
+		colspan = 1
+	}
+	rowspan, ok := node.AttributeString("rowspan")
+	if !ok {
+		rowspan = 1
+	}
+	return map[string]interface{}{
+		"background": background,
+		"colspan":    colspan,
+		"rowspan":    rowspan,
+	}
 }
 
 func markdownNodeMapper() NodeMapper {
@@ -181,9 +226,22 @@ func markdownNodeMapper() NodeMapper {
 				return nil
 			}
 
+			var attrs map[string]interface{}
 			switch tableType {
 			case "table":
-				// Nothing to do
+				number, ok := node.AttributeString("number")
+				if !ok {
+					number = false
+				}
+				layout, ok := node.AttributeString("layout")
+				if !ok {
+					layout = "default"
+				}
+				attrs = map[string]interface{}{
+					"__autosize":            false,
+					"isNumberColumnEnabled": number,
+					"layout":                layout,
+				}
 			case "tableEnd":
 				if isTableCell(state.Top()) {
 					if _, err := state.CloseNode(); err != nil { // Cell
@@ -212,12 +270,14 @@ func markdownNodeMapper() NodeMapper {
 						return err
 					}
 				}
+				attrs = cellAttributes(node)
 			case "tableCell":
 				if isTableCell(state.Top()) {
 					if _, err := state.CloseNode(); err != nil {
 						return err
 					}
 				}
+				attrs = cellAttributes(node)
 			default:
 				return nil
 			}
@@ -225,7 +285,7 @@ func markdownNodeMapper() NodeMapper {
 			if err != nil {
 				return err
 			}
-			state.OpenNode(typ, nil)
+			state.OpenNode(typ, attrs)
 			return nil
 		},
 
