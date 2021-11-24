@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
+	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/gofrs/uuid"
 )
@@ -163,7 +164,7 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 	}
 	parser := markdownParser()
 	funcs := markdownNodeMapper()
-	return ParseMarkdown(parser, funcs, buf, schema)
+	return markdown.ParseMarkdown(parser, funcs, buf, schema)
 }
 
 func isTar(buf []byte) bool {

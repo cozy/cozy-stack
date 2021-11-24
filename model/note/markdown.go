@@ -164,7 +164,7 @@ func cellMarkup(node *model.Node) string {
 	return attrs
 }
 
-func isTableCell(item *StackItem) bool {
+func isTableCell(item *markdown.StackItem) bool {
 	name := item.Type.Name
 	return name == "tableHeader" || name == "tableCell"
 }
@@ -189,9 +189,9 @@ func cellAttributes(node ast.Node) map[string]interface{} {
 	}
 }
 
-func markdownNodeMapper() NodeMapper {
-	vanilla := DefaultNodeMapper
-	return NodeMapper{
+func markdownNodeMapper() markdown.NodeMapper {
+	vanilla := markdown.DefaultNodeMapper
+	return markdown.NodeMapper{
 		// Blocks
 		ast.KindDocument:        vanilla[ast.KindDocument],
 		ast.KindParagraph:       vanilla[ast.KindParagraph],
@@ -203,7 +203,7 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindCodeBlock:       vanilla[ast.KindCodeBlock],
 		ast.KindFencedCodeBlock: vanilla[ast.KindFencedCodeBlock],
 		ast.KindThematicBreak:   vanilla[ast.KindThematicBreak],
-		custom.KindPanel: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		custom.KindPanel: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			if entering {
 				typ, err := state.Schema.NodeType("panel")
 				if err != nil {
@@ -220,7 +220,7 @@ func markdownNodeMapper() NodeMapper {
 			}
 			return nil
 		},
-		custom.KindTable: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		custom.KindTable: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			tableType, ok := node.AttributeString("class")
 			if entering || !ok {
 				return nil
@@ -294,7 +294,7 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindString:   vanilla[ast.KindString],
 		ast.KindAutoLink: vanilla[ast.KindAutoLink],
 		ast.KindLink:     vanilla[ast.KindLink],
-		ast.KindImage: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		ast.KindImage: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			if entering {
 				return nil
 			}
@@ -334,7 +334,7 @@ func markdownNodeMapper() NodeMapper {
 		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],
 		ast.KindEmphasis:               vanilla[ast.KindEmphasis],
 		extensionast.KindStrikethrough: vanilla[extensionast.KindStrikethrough],
-		custom.KindSpan: func(state *MarkdownParseState, node ast.Node, entering bool) error {
+		custom.KindSpan: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			text := node.(*custom.Span).Value
 
 			var markType, nodeType string
