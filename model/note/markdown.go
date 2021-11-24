@@ -18,7 +18,20 @@ import (
 func markdownSerializer(images []*Image) *markdown.Serializer {
 	vanilla := markdown.DefaultSerializer
 	nodes := map[string]markdown.NodeSerializerFunc{
-		"paragraph":   vanilla.Nodes["paragraph"],
+		"paragraph": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			for _, mark := range node.Marks {
+				if mark.Type.Name == "alignment" {
+					switch mark.Attrs["align"] {
+					case "center":
+						state.Write("[^]{.center}")
+					case "end":
+						state.Write("[^]{.right}")
+					}
+				}
+			}
+			state.RenderInline(node)
+			state.CloseBlock(node)
+		},
 		"text":        vanilla.Nodes["text"],
 		"bulletList":  vanilla.Nodes["bullet_list"],
 		"orderedList": vanilla.Nodes["ordered_list"],
@@ -106,7 +119,6 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		"code":        vanilla.Marks["code"],
 		"strike":      {Open: "~~", Close: "~~", ExpelEnclosingWhitespace: true},
 		"indentation": {Open: "    ", Close: "", ExpelEnclosingWhitespace: true},
-		"alignement":  {Open: "", Close: "", ExpelEnclosingWhitespace: true},
 		"breakout":    {Open: "", Close: "", ExpelEnclosingWhitespace: true},
 		"underline":   {Open: "[", Close: "]{.underlined}", ExpelEnclosingWhitespace: true},
 		"subsup": {
@@ -296,6 +308,22 @@ func markdownNodeMapper() NodeMapper {
 					nodeType = "date"
 					ts, _ := node.AttributeString("ts")
 					attrs = map[string]interface{}{"timestamp": ts}
+				case "center", "right":
+					if !entering {
+						return nil
+					}
+					align := "center"
+					if class == "right" {
+						align = "end"
+					}
+					attrs = map[string]interface{}{"align": align}
+					typ, err := state.Schema.MarkType("alignment")
+					if err != nil {
+						return err
+					}
+					mark := typ.Create(attrs)
+					state.AddParentMark(mark)
+					return nil
 				}
 			}
 

@@ -22,11 +22,12 @@ func maybeMerge(a, b *model.Node) *model.Node {
 // MarkdownParseState is an object used to track the context of a running
 // parse.
 type MarkdownParseState struct {
-	Source []byte
-	Schema *model.Schema
-	Root   *model.Node
-	Stack  []*StackItem
-	Marks  []*model.Mark
+	Source      []byte
+	Schema      *model.Schema
+	Root        *model.Node
+	Stack       []*StackItem
+	Marks       []*model.Mark
+	ParentMarks []*model.Mark
 }
 
 type StackItem struct {
@@ -87,6 +88,10 @@ func (state *MarkdownParseState) CloseMark(mark *model.Mark) {
 	state.Marks = mark.RemoveFromSet(state.Marks)
 }
 
+func (state *MarkdownParseState) AddParentMark(mark *model.Mark) {
+	state.ParentMarks = mark.AddToSet(state.ParentMarks)
+}
+
 // AddNode adds a node at the current position.
 func (state *MarkdownParseState) AddNode(typ *model.NodeType, attrs map[string]interface{}, content interface{}) (*model.Node, error) {
 	node, err := typ.CreateAndFill(attrs, content, state.Marks)
@@ -105,7 +110,11 @@ func (state *MarkdownParseState) OpenNode(typ *model.NodeType, attrs map[string]
 
 // CloseNode closes and returns the node that is currently on top of the stack.
 func (state *MarkdownParseState) CloseNode() (*model.Node, error) {
-	if len(state.Marks) > 0 {
+	if len(state.ParentMarks) > 0 {
+		state.Marks = state.ParentMarks
+		state.ParentMarks = model.NoMarks
+		defer func() { state.Marks = model.NoMarks }()
+	} else if len(state.Marks) > 0 {
 		state.Marks = model.NoMarks
 	}
 	info := state.Pop()
