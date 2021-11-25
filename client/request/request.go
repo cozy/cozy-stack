@@ -174,9 +174,11 @@ func Req(opts *Options) (*http.Response, error) {
 	return res, nil
 }
 
-func parseError(opts *Options, res *http.Response) (err error) {
-	defer checkClose(res.Body, &err)
+func parseError(opts *Options, res *http.Response) error {
 	b, err := ioutil.ReadAll(res.Body)
+	if cerr := res.Body.Close(); err == nil && cerr != nil {
+		err = cerr
+	}
 	if err != nil {
 		return &Error{
 			Status: http.StatusText(res.StatusCode),
@@ -257,9 +259,12 @@ func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
 }
 
 // ReadJSON reads the content of the specified ReadCloser and closes it.
-func ReadJSON(r io.ReadCloser, data interface{}) (err error) {
-	defer checkClose(r, &err)
-	return json.NewDecoder(r).Decode(&data)
+func ReadJSON(r io.ReadCloser, data interface{}) error {
+	err := json.NewDecoder(r).Decode(&data)
+	if cerr := r.Close(); err == nil && cerr != nil {
+		err = cerr
+	}
+	return err
 }
 
 // WriteJSON returns an io.Reader from which a JSON encoded data can be read.
@@ -269,11 +274,4 @@ func WriteJSON(data interface{}) (io.Reader, error) {
 		return nil, err
 	}
 	return bytes.NewReader(buf), nil
-}
-
-func checkClose(c io.Closer, err *error) {
-	cerr := c.Close()
-	if *err == nil && cerr != nil {
-		*err = cerr
-	}
 }
