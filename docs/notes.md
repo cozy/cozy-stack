@@ -4,7 +4,19 @@
 
 The cozy-notes application can be used to take notes, and collaborate on them.
 The note is persisted as a file in the VFS, but it also has specific routes to
-enable the collaborative edition in real-time.
+enable the collaborative edition in real-time. The content of the file is a
+markdown export of the notes, except if the note has images, and it is a tar
+with the markdown as `index.md` and the images in that case. The markdown
+format is mostly compatible with CommonMark, but there are a few changes:
+
+- we are using the [consistent attribute syntax](https://talk.commonmark.org/t/consistent-attribute-syntax/272) for some markups like colors and underline
+- the tables are not saved like in [GFM](https://github.github.com/gfm/#tables-extension-) because we can have merged cells and several paragraphs inside a cell
+- misc.
+
+The downloaded files can be reuploaded to the Cozy, and if the `.cozy-note`
+extension is kept, the stack will try to recreate the Prosemirror tree, making
+possible to use the uploaded file as a note in Cozy-Notes with realtime
+collaboration.
 
 ## Routes
 
