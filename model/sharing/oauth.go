@@ -527,13 +527,10 @@ func RefreshToken(
 		opts.Body = bytes.NewReader(body)
 	}
 	res, err := request.Req(opts)
-	if err != nil {
-		if res != nil && res.StatusCode/100 == 5 {
-			return nil, ErrInternalServerError
-		}
-		return nil, err
+	if res != nil && res.StatusCode/100 == 5 {
+		return nil, ErrInternalServerError
 	}
-	return res, nil
+	return res, err
 }
 
 func tryUpdateMemberInstance(reqErr *request.Error, m *Member, opts *request.Options) {
