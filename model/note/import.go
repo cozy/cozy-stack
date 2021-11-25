@@ -69,11 +69,17 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 
 func importReader(inst *instance.Instance, doc *vfs.FileDoc, reader io.Reader, schema *model.Schema) (*model.Node, error) {
 	buf := &bytes.Buffer{}
+	var hasImages bool
 	if _, err := io.CopyN(buf, reader, 512); err != nil {
-		return nil, err
+		if err != io.EOF {
+			return nil, err
+		}
+		hasImages = false
+	} else {
+		hasImages = isTar(buf.Bytes())
 	}
 
-	if !isTar(buf.Bytes()) {
+	if !hasImages {
 		if _, err := buf.ReadFrom(reader); err != nil {
 			return nil, err
 		}
@@ -168,6 +174,9 @@ func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
 }
 
 func isTar(buf []byte) bool {
+	if len(buf) < 263 {
+		return false
+	}
 	// https://en.wikipedia.org/wiki/Tar_(computing)#UStar_format
 	return buf[257] == 'u' && buf[258] == 's' && buf[259] == 't' &&
 		buf[260] == 'a' && buf[261] == 'r' && buf[262] == 0
