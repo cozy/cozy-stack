@@ -336,7 +336,7 @@ func (im *importer) importTriggers() error {
 			errm = multierror.Append(errm, err)
 			continue
 		}
-		if err = job.System().AddTrigger(t); err != nil {
+		if err = job.System().AddTrigger(t); err != nil && !couchdb.IsConflictError(err) {
 			errm = multierror.Append(errm, err)
 		}
 	}
