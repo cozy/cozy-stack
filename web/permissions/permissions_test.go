@@ -524,9 +524,8 @@ func TestRevokeByAnotherApp(t *testing.T) {
 		Registries: testInstance.Registries(),
 	})
 	assert.NoError(t, err)
-	manifest, err := installer.RunSync()
+	_, err = installer.RunSync()
 	if !assert.NoError(t, err) {
-		fmt.Printf("manifest = %#v\n", manifest)
 		return
 	}
 

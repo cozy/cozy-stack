@@ -10,7 +10,7 @@ require (
 	github.com/cozy/goexif2 v0.0.0-20200819113101-00e1cc8cc9d3
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
-	github.com/cozy/prosemirror-go v0.4.12
+	github.com/cozy/prosemirror-go v0.5.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
@@ -44,6 +44,7 @@ require (
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/ugorji/go/codec v1.2.6
+	github.com/yuin/goldmark v1.4.4
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309

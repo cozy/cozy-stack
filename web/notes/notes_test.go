@@ -806,6 +806,51 @@ func TestGetImage(t *testing.T) {
 	assert.True(t, hasImage)
 }
 
+func TestImportNotes(t *testing.T) {
+	buf := strings.NewReader(`
+# Title
+
+Text with **bold** and [underlined]{.underlined}.
+`)
+	path := "/files/io.cozy.files.root-dir?Type=file&Name=An%20imported%20note.cozy-note"
+	req, err := http.NewRequest("POST", ts.URL+path, buf)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add("Content-Type", "text/plain")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data["type"])
+	assert.Contains(t, data, "id")
+	fileID := data["id"].(string)
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "file", attrs["type"])
+	assert.Equal(t, "An imported note.cozy-note", attrs["name"])
+	assert.Equal(t, "text/vnd.cozy.note+markdown", attrs["mime"])
+	meta, _ := attrs["metadata"].(map[string]interface{})
+	assert.Equal(t, "An imported note", meta["title"])
+	assert.NotNil(t, meta["schema"])
+	assert.NotNil(t, meta["content"])
+
+	req, _ = http.NewRequest("GET", ts.URL+"/notes/"+fileID+"/open", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var doc map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&doc)
+	assert.NoError(t, err)
+	data, _ = doc["data"].(map[string]interface{})
+	assert.Equal(t, fileID, data["id"])
+	attrs, _ = data["attributes"].(map[string]interface{})
+	assert.Equal(t, inst.Domain, attrs["instance"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()

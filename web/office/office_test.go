@@ -123,7 +123,6 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(consts.Files)
 
 	if err := createFile(); err != nil {
-		fmt.Printf("Could not create office doc: %s\n", err)
 		os.Exit(1)
 	}
 
