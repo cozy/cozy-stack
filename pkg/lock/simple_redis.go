@@ -32,7 +32,7 @@ const (
 	// LockTimeout is the expiration of a redis lock
 	// if any operation is longer than this, it should
 	// refresh the lock
-	LockTimeout = 15 * time.Second
+	LockTimeout = 20 * time.Second
 
 	// WaitTimeout maximum time to wait before returning control to caller.
 	WaitTimeout = 1 * time.Minute
