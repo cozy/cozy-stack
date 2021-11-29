@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 type apiOfficeURL struct {

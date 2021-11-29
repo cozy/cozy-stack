@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 // Status list is described on https://api.onlyoffice.com/editors/callback#status

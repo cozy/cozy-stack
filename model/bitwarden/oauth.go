@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
@@ -104,7 +103,7 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.BitwardenClaims{
 		Claims: permission.Claims{
-			StandardClaims: jwt.StandardClaims{
+			StandardClaims: crypto.StandardClaims{
 				Audience:  consts.AccessTokenAudience,
 				Issuer:    i.Domain,
 				NotBefore: now - 60,
@@ -136,7 +135,7 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 		stamp = settings.SecurityStamp
 	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: consts.RefreshTokenAudience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),

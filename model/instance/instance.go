@@ -25,7 +25,6 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/sirupsen/logrus"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // DefaultTemplateTitle represents the default template title. It could be
@@ -621,7 +620,7 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 		return "", err
 	}
 	return crypto.NewJWT(secret, permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
 			IssuedAt: issuedAt.Unix(),

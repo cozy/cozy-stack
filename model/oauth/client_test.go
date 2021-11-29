@@ -9,8 +9,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var testInstance *instance.Instance

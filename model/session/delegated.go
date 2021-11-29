@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -14,7 +14,7 @@ import (
 
 // ExternalClaims is the format for JWT for authentication from external sources
 type ExternalClaims struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 	Name  string `json:"name"`
 	Code  string `json:"code"`
 	Email string `json:"email,omitempty"`
@@ -49,7 +49,7 @@ func CheckDelegatedJWT(instance *instance.Instance, token string) error {
 		return err
 	}
 
-	if claims.StandardClaims.ExpiresAt < time.Now().Unix() {
+	if claims.RegisteredClaims.ExpiresAt != nil && claims.RegisteredClaims.ExpiresAt.Before(time.Now()) {
 		return errors.New("Token has expired")
 	}
 

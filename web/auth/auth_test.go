@@ -35,9 +35,9 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const domain = "cozy.example.net"
@@ -295,10 +295,10 @@ func TestLoginWithRedirect(t *testing.T) {
 
 func TestDelegatedJWTLoginWithRedirect(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, session.ExternalClaims{
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   "sruti",
-			IssuedAt:  time.Now().Unix(),
-			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Name:  domain,
 		Email: "sruti@external.notmycozy.net",
@@ -1216,7 +1216,7 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
 	claims := permission.Claims{
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: crypto.StandardClaims{
 			Audience: consts.RefreshTokenAudience,
 			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),

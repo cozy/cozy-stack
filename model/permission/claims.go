@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
 type Claims struct {
-	jwt.StandardClaims
+	crypto.StandardClaims
 	Scope     string `json:"scope,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
 	SStamp    string `json:"stamp,omitempty"`
