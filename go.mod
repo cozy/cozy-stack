@@ -22,7 +22,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/gops v0.3.22
 	github.com/gorilla/websocket v1.4.2
-	github.com/h2non/filetype v1.1.1
+	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 	github.com/jonas-p/go-shp v0.1.1 // indirect
