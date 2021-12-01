@@ -23,14 +23,16 @@ echo_wrn() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [install] [dev] [assets] [debug-assets] [clean]"
+	echo -e "Usage: ${1} <release [target] | install | dev | assets | debug-assets | clean>"
 	echo -e "\nCommands:\n"
-	echo -e "  release       builds a release of the current working-tree"
-	echo -e "  install       builds a release and install it the GOPATH"
-	echo -e "  dev           builds a dev version"
-	echo -e "  assets        move and download all the required assets (see: ./assets/externals)"
-	echo -e "  debug-assets  create a debug-assets/ directory with all the assets"
-	echo -e "  clean         remove all generated files from the working-tree"
+	echo -e "  release [target]  Builds a release of the current working-tree."
+	echo -e "                    if specified, target is the path for generated binary"
+	echo -e "  install           Builds a release and install it the GOPATH"
+	echo -e "  dev               Builds a dev version"
+	echo -e "  assets            Move and download all the required assets"
+	echo -e "                    (see: ./assets/externals)"
+	echo -e "  debug-assets      Create a debug-assets/ directory with all the assets"
+	echo -e "  clean             Remove all generated files from the working-tree"
 
 	echo -e "\nEnvironment variables:"
 	echo -e "\n  COZY_ENV"
@@ -61,7 +63,7 @@ usage() {
 # "cozy-stack-${VERSION_STRING}.sha256".
 do_release() {
 	#do_assets
-	do_build
+	do_build "$@"
 
 	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
 	printf "%s\t" "${BINARY}"
@@ -212,7 +214,8 @@ check_env() {
 
 case "${1}" in
 	release)
-		do_release
+		shift
+		do_release "$@"
 		;;
 
 	install)
