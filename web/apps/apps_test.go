@@ -35,6 +35,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,7 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
 
-var jar http.CookieJar
+var jar *testutils.CookieJar
 var client *http.Client
 
 func compress(content string) []byte {
@@ -280,6 +281,58 @@ func TestFaviconWithContext(t *testing.T) {
 	assert.Contains(t, string(body), expected)
 	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/favicon.ico", context))
 	assert.NotContains(t, string(body), "/assets/favicon.ico")
+}
+
+func TestSessionCode(t *testing.T) {
+	// Create the OAuth client for the flagship app
+	flagship := oauth.Client{
+		RedirectURIs: []string{"cozy://flagship"},
+		ClientName:   "flagship-app",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+		Flagship:     true,
+	}
+	assert.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+	// Create a maximal permission for it
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		flagship.ClientID, "*", "", time.Now())
+	assert.NoError(t, err)
+
+	// Create the sesssion code
+	req, err := http.NewRequest("POST", ts.URL+"/auth/session_code", nil)
+	assert.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+	var payload map[string]string
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&payload))
+	code := payload["session_code"]
+	assert.NotEmpty(t, code)
+
+	// Load a non-public page
+	assert.NoError(t, jar.Reset())
+	webview := &http.Client{Jar: jar}
+	req, err = http.NewRequest("GET", ts.URL+"/foo/?session_code="+code, nil)
+	assert.NoError(t, err)
+	req.Host = slug + "." + testInstance.Domain
+	res, err = webview.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "this is index.html")
+
+	// Try again and check that the session code cannot be reused
+	assert.NoError(t, jar.Reset())
+	webview = &http.Client{Jar: jar, CheckRedirect: noRedirect}
+	req, err = http.NewRequest("GET", ts.URL+"/foo/?session_code="+code, nil)
+	assert.NoError(t, err)
+	req.Host = slug + "." + testInstance.Domain
+	res, err = webview.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	assert.Contains(t, res.Header.Get("location"), "/auth/login")
 }
 
 func TestServeAppsWithJWTNotLogged(t *testing.T) {
@@ -517,6 +570,7 @@ func TestMain(m *testing.M) {
 			c.SetCookie(cookie)
 			return c.HTML(http.StatusOK, "OK")
 		})
+		r.POST("/auth/session_code", auth.CreateSessionCode)
 		router, err := web.CreateSubdomainProxy(r, webApps.Serve)
 		if err != nil {
 			setup.CleanupAndDie("Cant start subdoman proxy", err)

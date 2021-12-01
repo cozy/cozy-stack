@@ -17,12 +17,14 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/registry"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -176,7 +178,25 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		file = route.Index
 	}
 
-	session, isLoggedIn := middlewares.GetSession(c)
+	sess, isLoggedIn := middlewares.GetSession(c)
+	if code := c.QueryParam("session_code"); code != "" {
+		// XXX we should always clear the session code to avoid it being
+		// reused, even if the user is already logged in and we don't want to
+		// create a new session
+		if checked := i.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+			sessionID, err := auth.SetCookieForNewSession(c, false)
+			req := c.Request()
+			if err == nil {
+				if err = session.StoreNewLoginEntry(i, sessionID, "", req, "session_code", false); err != nil {
+					i.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				}
+			}
+			redirect := req.URL
+			redirect.RawQuery = ""
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
+	}
+
 	filepath := path.Join("/", route.Folder, file)
 	isRobotsTxt := filepath == "/robots.txt"
 
@@ -261,7 +281,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 
 	var token string
 	if isLoggedIn {
-		token = i.BuildAppToken(webapp.Slug(), session.ID())
+		token = i.BuildAppToken(webapp.Slug(), sess.ID())
 	} else {
 		token = c.QueryParam("sharecode")
 		doc, err := i.SettingsDocument()

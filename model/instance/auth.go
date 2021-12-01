@@ -18,6 +18,7 @@ import (
 const (
 	RegisterTokenLen      = 16
 	PasswordResetTokenLen = 16
+	SessionCodeLen        = 32
 	SessionSecretLen      = 64
 	OauthSecretLen        = 128
 )
@@ -183,4 +184,22 @@ func (i *Instance) ValidateMailConfirmationCode(passcode string) bool {
 		return false
 	}
 	return true
+}
+
+// CreateSessionCode returns a session_code that can be used to open a webview
+// inside the flagship app and create the session.
+func (i *Instance) CreateSessionCode() (string, error) {
+	code := crypto.GenerateRandomString(SessionCodeLen)
+	store := GetStore()
+	if err := store.SaveSessionCode(i, code); err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
+// CheckAndClearSessionCode will return true if the session code is valid. The
+// session code can only be used once, so it will be cleared after calling this
+// function.
+func (i *Instance) CheckAndClearSessionCode(code string) bool {
+	return GetStore().CheckAndClearSessionCode(i, code)
 }
