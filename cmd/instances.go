@@ -18,6 +18,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	humanize "github.com/dustin/go-humanize"
@@ -193,8 +194,13 @@ be used as the error message.
 		}
 
 		fmt.Printf("Instance created with success for domain %s\n", in.Attrs.Domain)
+		myProtocol := "https"
+		if build.IsDevRelease() {
+			myProtocol = "http"
+		}
 		if in.Attrs.RegisterToken != nil {
 			fmt.Printf("Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
+			fmt.Printf("Define your password by visiting %s://%s/?registerToken=%s", myProtocol, in.Attrs.Domain, hex.EncodeToString(in.Attrs.RegisterToken))
 		}
 		if len(flagApps) == 0 {
 			return nil
