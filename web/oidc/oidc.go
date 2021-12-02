@@ -429,7 +429,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		sub, ok := params["sub"].(string)
 		if !ok || sub == "" || sub != inst.OIDCID {
 			inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
-			return errors.New("the cozy was not found")
+			return errors.New("Error The authentication has failed")
 		}
 		return nil
 	}
@@ -440,7 +440,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	}
 	if domain != inst.Domain {
 		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return errors.New("the cozy was not found")
+		return errors.New("Error The authentication has failed")
 	}
 	return nil
 }
@@ -477,7 +477,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 func extractDomain(conf *Config, params map[string]interface{}) (string, error) {
 	domain, ok := params[conf.UserInfoField].(string)
 	if !ok {
-		return "", errors.New("the cozy was not found")
+		return "", errors.New("Error The authentication has failed")
 	}
 	domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
 	domain = strings.ToLower(domain)              // The domain is case insensitive
@@ -506,7 +506,7 @@ func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
 	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
 		inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
-		return errors.New("the cozy was not found")
+		return errors.New("Error The authentication has failed")
 	}
 
 	return nil
