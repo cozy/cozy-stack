@@ -118,11 +118,13 @@ func jobHookErrorCheckerKonnector(err error) bool {
 // errors.
 func beforeHookKonnector(j *job.Job) (bool, error) {
 	var msg KonnectorMessage
+	var slug string
 
 	if err := json.Unmarshal(j.Message, &msg); err == nil {
-		doc, err := app.GetMaintenanceOptions(msg.Konnector)
+		slug = msg.Konnector
+		doc, err := app.GetMaintenanceOptions(slug)
 		if err != nil {
-			j.Logger().Warnf("konnector %q could not get local maintenance status", msg.Konnector)
+			j.Logger().Warnf("konnector %q could not get local maintenance status", slug)
 		} else if doc != nil {
 			if j.Manual {
 				opts, ok := doc["maintenance_options"].(map[string]interface{})
@@ -130,21 +132,21 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 					return true, nil
 				}
 			}
-			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
+			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
 			return false, nil
 		}
 		inst, err := lifecycle.GetInstance(j.DomainName())
 		if err != nil {
 			return false, err
 		}
-		app, err := registry.GetApplication(msg.Konnector, inst.Registries())
+		app, err := registry.GetApplication(slug, inst.Registries())
 		if err != nil {
-			j.Logger().Warnf("konnector %q could not get application to fetch maintenance status", msg.Konnector)
+			j.Logger().Warnf("konnector %q could not get application to fetch maintenance status", slug)
 		} else if app.MaintenanceActivated {
 			if j.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
 				return true, nil
 			}
-			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
+			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
 			return false, nil
 		}
 
@@ -164,6 +166,10 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 	if state.Status == job.Errored {
 		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
 			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
+			j.Logger().
+				WithField("job_id", j.ID()).
+				WithField("slug", slug).
+				Infof("Konnector ignore: %s", state.LastError)
 			return false, nil
 		}
 	}
