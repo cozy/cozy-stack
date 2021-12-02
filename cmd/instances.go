@@ -200,7 +200,7 @@ be used as the error message.
 		}
 		if in.Attrs.RegisterToken != nil {
 			fmt.Printf("Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
-			fmt.Printf("Define your password by visiting %s://%s/?registerToken=%s", myProtocol, in.Attrs.Domain, hex.EncodeToString(in.Attrs.RegisterToken))
+			fmt.Printf("Define your password by visiting %s://%s/?registerToken=%s\n", myProtocol, in.Attrs.Domain, hex.EncodeToString(in.Attrs.RegisterToken))
 		}
 		if len(flagApps) == 0 {
 			return nil
