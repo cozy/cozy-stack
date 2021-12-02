@@ -56,6 +56,7 @@ func DefineViewsAndIndex(inst *instance.Instance) error {
 
 func createDefaultFilesTree(inst *instance.Instance) error {
 	var errf error
+	fs := inst.VFS()
 
 	createDir := func(dir *vfs.DirDoc, err error) {
 		if err != nil {
@@ -63,26 +64,50 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 			return
 		}
 		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
-		err = inst.VFS().CreateDir(dir)
+		err = fs.CreateDir(dir)
 		if err != nil && !os.IsExist(err) {
 			errf = multierror.Append(errf, err)
 		}
 	}
 
-	name := inst.Translate("Tree Administrative")
-	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
-
-	// Check if we create the "Photos" folder and its subfolders. By default, we
-	// are creating it, but some contexts may not want to create them.
+	// Check if we create the "Administrative" and "Photos" folders. By
+	// default, we are creating it, but some contexts may not want to create them.
+	createAdministrativeFolder := true
 	createPhotosFolder := true
 	if ctxSettings, ok := inst.SettingsContext(); ok {
+		if administrativeFolderParam, ok := ctxSettings["init_administrative_folder"]; ok {
+			createAdministrativeFolder = administrativeFolderParam.(bool)
+		}
 		if photosFolderParam, ok := ctxSettings["init_photos_folder"]; ok {
 			createPhotosFolder = photosFolderParam.(bool)
 		}
 	}
 
+	administrativeReference := couchdb.DocReference{
+		ID:   "io.cozy.apps/administrative",
+		Type: consts.Apps,
+	}
+	if createAdministrativeFolder {
+		name := inst.Translate("Tree Administrative")
+		administrativeFolder, err := vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
+		if err == nil {
+			administrativeFolder.AddReferencedBy(administrativeReference)
+		}
+		createDir(administrativeFolder, err)
+	} else {
+		root, err := fs.DirByID(consts.RootDirID)
+		if err != nil {
+			return err
+		}
+		olddoc := root.Clone().(*vfs.DirDoc)
+		root.AddReferencedBy(administrativeReference)
+		if err := fs.UpdateDirDoc(olddoc, root); err != nil {
+			errf = multierror.Append(errf, err)
+		}
+	}
+
 	if createPhotosFolder {
-		name = inst.Translate("Tree Photos")
+		name := inst.Translate("Tree Photos")
 		createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
 	}
 

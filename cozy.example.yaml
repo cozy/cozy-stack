@@ -360,6 +360,9 @@ contexts:
     # Tells if the photo folder should be created or not during the instance
     # creation
     init_photos_folder: true
+    # Tells if the administrative folder should be created or not during the
+    # instance creation
+    init_administrative_folder: true
     # Allows to override the default template "Cozy" title by your own title
     templates_title: "My Personal Cloud"
     # Use a different noreply mail for this context
