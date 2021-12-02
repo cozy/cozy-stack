@@ -128,7 +128,7 @@ Get a directory or a file informations. In the case of a directory, it contains
 the list of files and sub-directories inside it. For a note, its images are
 included.
 
-Contents is paginated following [jsonapi conventions](http-api.md#pagination).
+Contents is paginated following [jsonapi conventions](./http-api.md#pagination).
 The default limit is 30 entries.
 
 #### Request
@@ -361,7 +361,7 @@ Find allows to find documents using a mango selector. You can read more about ma
 Note that it returns a
 [bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
 in the `links`, useful to paginate (following the [JSON-API
-pagination](./jsonapi.md#pagination)). On the last page, there won't be a
+pagination](./http-api.md#pagination)). On the last page, there won't be a
 `links.next`.
 
 It is possible to pass a `execution_stats` parameter to get some information about the query execution. See [here](https://docs.couchdb.org/en/stable/api/database/find.html#execution-statistics) for more details.
@@ -536,7 +536,7 @@ The `updated_at` field will be the first value in this list:
 - the `Date` HTTP header
 - the current time from the server.
 
-/!\ If the `updated_at` filed is older than the `created_at` one, 
+/!\ If the `updated_at` field is older than the `created_at` one,
 then the `updated_at` will be set with the value of the `created_at`.
 
 #### Query-String
