@@ -38,6 +38,7 @@
   - "/move - Move, export and import an instance": ./move.md
   - "/notes - Notes for collaborative edition": ./notes.md
   - "/notifications - Notifications": ./notifications.md
+  - "/office - Collaborative edition of Office documents": ./office.md
   - "/public - Public": ./public.md
   - "/permissions - Permissions": ./permissions.md
   - "/realtime - Realtime": ./realtime.md
