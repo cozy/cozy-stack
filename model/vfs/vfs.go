@@ -816,7 +816,7 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 }
 
 func checkFileName(str string) error {
-	if str == "" || strings.ContainsAny(str, ForbiddenFilenameChars) {
+	if str == "" || str == "." || str == ".." || strings.ContainsAny(str, ForbiddenFilenameChars) {
 		return ErrIllegalFilename
 	}
 	return nil
