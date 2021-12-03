@@ -358,10 +358,10 @@ contexts:
     # permission to install and update applications.
     allow_install_via_a_permission: true
     # Tells if the photo folder should be created or not during the instance
-    # creation
+    # creation (default: true)
     init_photos_folder: true
     # Tells if the administrative folder should be created or not during the
-    # instance creation
+    # instance creation (default: true)
     init_administrative_folder: true
     # Allows to override the default template "Cozy" title by your own title
     templates_title: "My Personal Cloud"
