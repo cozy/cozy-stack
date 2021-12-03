@@ -13,7 +13,7 @@ install:
 
 ## run: start the cozy-stack for local development
 run:
-	@go run . serve --mailhog --fs-url=file://localhost${PWD}/storage
+	@go run . serve --mailhog --fs-url=file://localhost${PWD}/storage --konnectors-cmd ./scripts/konnector-node-run.sh
 .PHONY: run
 
 ## instance: create an instance for local development

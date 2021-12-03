@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	multierror "github.com/hashicorp/go-multierror"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 
@@ -37,6 +39,7 @@ const (
 
 	accountsToOrganization = "accounts-to-organization"
 	notesMimeType          = "notes-mime-type"
+	unwantedFolders        = "remove-unwanted-folders"
 )
 
 // maxSimultaneousCalls is the maximal number of simultaneous calls to Swift
@@ -77,6 +80,8 @@ func worker(ctx *job.WorkerContext) error {
 		return migrateAccountsToOrganization(ctx.Instance.Domain)
 	case notesMimeType:
 		return migrateNotesMimeType(ctx.Instance.Domain)
+	case unwantedFolders:
+		return removeUnwantedFolders(ctx.Instance.Domain)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -99,6 +104,83 @@ func commit(ctx *job.WorkerContext, err error) error {
 		log.Errorf("Migration %s error: %s", migrationType, err)
 	}
 	return err
+}
+
+func pushTrashJob(fs vfs.VFS) func(vfs.TrashJournal) error {
+	return func(journal vfs.TrashJournal) error {
+		return fs.EnsureErased(journal)
+	}
+}
+
+func removeUnwantedFolders(domain string) error {
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return err
+	}
+	fs := inst.VFS()
+
+	var errf error
+	removeDir := func(dir *vfs.DirDoc, err error) {
+		if err == os.ErrNotExist {
+			return
+		} else if err != nil {
+			errf = multierror.Append(errf, err)
+			return
+		}
+
+		n, err := fs.DirLength(dir)
+		if err != nil {
+			errf = multierror.Append(errf, err)
+			return
+		}
+		if n > 0 {
+			return
+		}
+		push := pushTrashJob(fs)
+		if err = fs.DestroyDirAndContent(dir, push); err != nil {
+			errf = multierror.Append(errf, err)
+		}
+	}
+
+	keepAdministrativeFolder := true
+	keepPhotosFolder := true
+	if ctxSettings, ok := inst.SettingsContext(); ok {
+		if administrativeFolderParam, ok := ctxSettings["init_administrative_folder"]; ok {
+			keepAdministrativeFolder = administrativeFolderParam.(bool)
+		}
+		if photosFolderParam, ok := ctxSettings["init_photos_folder"]; ok {
+			keepPhotosFolder = photosFolderParam.(bool)
+		}
+	}
+
+	if !keepPhotosFolder {
+		name := inst.Translate("Tree Photos")
+		removeDir(fs.DirByPath("/" + name))
+	}
+
+	if !keepAdministrativeFolder {
+		name := inst.Translate("Tree Administrative")
+		folder, err := fs.DirByPath("/" + name)
+		removeDir(folder, err)
+
+		root, err := fs.DirByID(consts.RootDirID)
+		if err != nil {
+			return err
+		}
+		olddoc := root.Clone().(*vfs.DirDoc)
+		was := len(root.ReferencedBy)
+		root.AddReferencedBy(couchdb.DocReference{
+			ID:   "io.cozy.apps/administrative",
+			Type: consts.Apps,
+		})
+		if len(root.ReferencedBy) != was {
+			if err := fs.UpdateDirDoc(olddoc, root); err != nil {
+				errf = multierror.Append(errf, err)
+			}
+		}
+	}
+
+	return errf
 }
 
 func migrateNotesMimeType(domain string) error {
