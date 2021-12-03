@@ -3,11 +3,13 @@
 package jsonapi
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
@@ -60,9 +62,12 @@ func WriteData(w io.Writer, o Object, links *LinksList) error {
 // single object as data
 func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 	resp := c.Response()
-	resp.Header().Set("Content-Type", ContentType)
+	w := compressedWriter(c.Request(), resp)
+	defer func() {
+		_ = w.Close()
+	}()
 	resp.WriteHeader(statusCode)
-	return WriteData(resp, o, links)
+	return WriteData(w, o, links)
 }
 
 // DataList can be called to send an multiple-value answer with a
@@ -95,9 +100,35 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 	}
 
 	resp := c.Response()
-	resp.Header().Set("Content-Type", ContentType)
+	w := compressedWriter(c.Request(), resp)
+	defer func() {
+		_ = w.Close()
+	}()
 	resp.WriteHeader(statusCode)
-	return json.NewEncoder(resp).Encode(doc)
+	return json.NewEncoder(w).Encode(doc)
+}
+
+func compressedWriter(req *http.Request, resp *echo.Response) io.WriteCloser {
+	headers := resp.Header()
+	headers.Set("Content-Type", ContentType)
+	headers.Set("Vary", "Accept-Encoding")
+	if !acceptGzipEncoding(req) {
+		return &nopCloser{resp}
+	}
+	headers.Set("Content-Encoding", "gzip")
+	return gzip.NewWriter(resp)
+}
+
+// nopCloser adds a Close method to a io.Writer (io.NopCloser does that for
+// io.Reader).
+type nopCloser struct {
+	io.Writer
+}
+
+func (nopCloser) Close() error { return nil }
+
+func acceptGzipEncoding(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
 }
 
 // DataRelations can be called to send a Relations page,
