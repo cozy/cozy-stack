@@ -19,12 +19,12 @@ func TestDebugDomain(t *testing.T) {
 	assert.NoError(t, err)
 
 	log := WithDomain("foo.bar")
-	assert.Equal(t, logrus.DebugLevel, log.Logger.Level)
+	assert.Equal(t, logrus.DebugLevel, log.entry.Logger.Level)
 
 	err = RemoveDebugDomain("foo.bar")
 	assert.NoError(t, err)
 	log = WithDomain("foo.bar")
-	assert.Equal(t, logrus.InfoLevel, log.Logger.Level)
+	assert.Equal(t, logrus.InfoLevel, log.entry.Logger.Level)
 }
 
 func TestDebugDomainWithRedis(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDebugDomainWithRedis(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	log := WithDomain("foo.bar.redis")
-	assert.Equal(t, logrus.DebugLevel, log.Logger.Level)
+	assert.Equal(t, logrus.DebugLevel, log.entry.Logger.Level)
 
 	err = RemoveDebugDomain("foo.bar.redis")
 	assert.NoError(t, err)
@@ -54,5 +54,5 @@ func TestDebugDomainWithRedis(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	log = WithDomain("foo.bar.redis")
-	assert.Equal(t, logrus.InfoLevel, log.Logger.Level)
+	assert.Equal(t, logrus.InfoLevel, log.entry.Logger.Level)
 }

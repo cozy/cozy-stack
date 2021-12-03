@@ -208,7 +208,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 			joblog.WithFields(logrus.Fields{
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),
-			}).Warn(err)
+			}).Warn(err.Error())
 			return nil, err
 		}
 		if limits.IsLimitReachedOrExceeded(err) {

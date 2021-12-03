@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -156,36 +157,47 @@ func (e *Entry) AddHook(hook logrus.Hook) {
 	e.entry.Logger = cloned
 }
 
-func (e *Entry) Debug(args ...interface{}) {
-	e.entry.Debug(args...)
+// maxLineWidth limits the number of characters of a line of log to avoid issue
+// with syslog.
+const maxLineWidth = 2000
+
+func (e *Entry) Log(level logrus.Level, msg string) {
+	if len(msg) > maxLineWidth {
+		msg = msg[:maxLineWidth-12] + " [TRUNCATED]"
+	}
+	e.entry.Log(level, msg)
 }
 
-func (e *Entry) Info(args ...interface{}) {
-	e.entry.Info(args...)
+func (e *Entry) Debug(msg string) {
+	e.Log(logrus.DebugLevel, msg)
 }
 
-func (e *Entry) Warn(args ...interface{}) {
-	e.entry.Warn(args...)
+func (e *Entry) Info(msg string) {
+	e.Log(logrus.InfoLevel, msg)
 }
 
-func (e *Entry) Error(args ...interface{}) {
-	e.entry.Error(args...)
+func (e *Entry) Warn(msg string) {
+	e.Log(logrus.WarnLevel, msg)
+}
+
+func (e *Entry) Error(msg string) {
+	e.Log(logrus.ErrorLevel, msg)
 }
 
 func (e *Entry) Debugf(format string, args ...interface{}) {
-	e.entry.Debugf(format, args...)
+	e.Debug(fmt.Sprintf(format, args...))
 }
 
 func (e *Entry) Infof(format string, args ...interface{}) {
-	e.entry.Infof(format, args...)
+	e.Info(fmt.Sprintf(format, args...))
 }
 
 func (e *Entry) Warnf(format string, args ...interface{}) {
-	e.entry.Warnf(format, args...)
+	e.Warn(fmt.Sprintf(format, args...))
 }
 
 func (e *Entry) Errorf(format string, args ...interface{}) {
-	e.entry.Errorf(format, args...)
+	e.Error(fmt.Sprintf(format, args...))
 }
 
 func (e *Entry) Writer() *io.PipeWriter {

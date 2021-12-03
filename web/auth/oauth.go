@@ -559,7 +559,7 @@ func authorizeMove(c echo.Context) error {
 		err := limits.CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithNamespace("auth").Warn(err)
+				inst.Logger().WithNamespace("auth").Warn(err.Error())
 			}
 		}
 		return c.JSON(http.StatusUnauthorized, echo.Map{

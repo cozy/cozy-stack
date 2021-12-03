@@ -89,7 +89,7 @@ func worker(ctx *job.WorkerContext) (err error) {
 	log := worker.Logger(ctx)
 	defer func() {
 		if stderrBuf.Len() > 0 {
-			log.Error("Stderr: ", stderrBuf.String())
+			log.Errorf("Stderr: %s", stderrBuf.String())
 		}
 	}()
 
@@ -122,7 +122,7 @@ func worker(ctx *job.WorkerContext) (err error) {
 	go func() {
 		for scanOut.Scan() {
 			if errOut := worker.ScanOutput(ctx, ctx.Instance, scanOut.Bytes()); errOut != nil {
-				log.Debug(errOut)
+				log.Debug(errOut.Error())
 			}
 		}
 		if errs := scanOut.Err(); errs != nil {

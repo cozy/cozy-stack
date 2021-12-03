@@ -288,7 +288,7 @@ func orphanAccountFixer(c echo.Context) error {
 				log.Errorf("Cannot push a job for account deletion: %v", err)
 			}
 			if err = j.WaitUntilDone(inst); err != nil {
-				log.Error(err)
+				log.Error(err.Error())
 			}
 		}
 		opts.Operation = app.Delete

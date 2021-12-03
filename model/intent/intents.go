@@ -207,7 +207,7 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 	for range endSlugs {
 		select {
 		case err := <-errorsChan:
-			inst.Logger().WithNamespace("intents").Error(err)
+			inst.Logger().WithNamespace("intents").Error(err.Error())
 		case version := <-versionsChan:
 			lastVersions[version.Slug()] = version
 		}

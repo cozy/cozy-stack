@@ -176,8 +176,8 @@ func removeTriggers(inst *instance.Instance) {
 	if err == nil {
 		for _, t := range triggers {
 			if err = sched.DeleteTrigger(inst, t.Infos().TID); err != nil {
-				logger.WithDomain(inst.Domain).Error(
-					"Failed to remove trigger: ", err)
+				logger.WithDomain(inst.Domain).Errorf(
+					"Failed to remove trigger: %s", err)
 			}
 		}
 	}

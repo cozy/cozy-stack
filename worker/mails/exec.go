@@ -36,7 +36,7 @@ func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {
 
 	out, err := cmd.Output()
 	if stderrBuf.Len() > 0 {
-		log.Error("Stderr: ", stderrBuf.String())
+		log.Errorf("Stderr: %s", stderrBuf.String())
 	}
 	if err != nil {
 		log.Errorf("Run: %s", err)
