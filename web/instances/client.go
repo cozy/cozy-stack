@@ -67,7 +67,7 @@ func createToken(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	logger.WithDomain(domain).WithField("nspace", "loginaudit").
+	logger.WithDomain(domain).WithNamespace("loginaudit").
 		Infof("%s token created from admin API at %s", audience, issuedAt)
 	return c.String(http.StatusOK, token)
 }

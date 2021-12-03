@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"strings"
 	"sync"
@@ -72,20 +73,6 @@ func Init(opt Options) error {
 	return nil
 }
 
-// Clone clones a logrus.Logger struct.
-func Clone(in *logrus.Logger) *logrus.Logger {
-	out := &logrus.Logger{
-		Out:       in.Out,
-		Hooks:     make(logrus.LevelHooks),
-		Formatter: in.Formatter,
-		Level:     in.Level,
-	}
-	for k, v := range in.Hooks {
-		out.Hooks[k] = v
-	}
-	return out
-}
-
 // AddDebugDomain adds the specified domain to the debug list.
 func AddDebugDomain(domain string, ttl time.Duration) error {
 	if cli := opts.Redis; cli != nil {
@@ -106,23 +93,103 @@ func RemoveDebugDomain(domain string) error {
 	return nil
 }
 
-// WithNamespace returns a logger with the specified nspace field.
-func WithNamespace(nspace string) *logrus.Entry {
-	return logrus.WithField("nspace", nspace)
+// Entry is the struct on which we can call the Debug, Info, Warn, Error
+// methods with the structured data accumulated.
+type Entry struct {
+	entry *logrus.Entry
 }
 
 // WithDomain returns a logger with the specified domain field.
-func WithDomain(domain string) *logrus.Entry {
+func WithDomain(domain string) *Entry {
 	loggersMu.RLock()
 	entry, ok := loggers[domain]
 	loggersMu.RUnlock()
 	if ok {
 		if !entry.Expired() {
-			return entry.log.WithField("domain", domain)
+			e := entry.log.WithField("domain", domain)
+			return &Entry{e}
 		}
 		removeDebugDomain(domain)
 	}
-	return logrus.WithField("domain", domain)
+	e := logrus.WithField("domain", domain)
+	return &Entry{e}
+}
+
+// WithNamespace returns a logger with the specified nspace field.
+func WithNamespace(nspace string) *Entry {
+	entry := logrus.WithField("nspace", nspace)
+	return &Entry{entry}
+}
+
+// WithNamespace adds a namespace (nspace field).
+func (e *Entry) WithNamespace(nspace string) *Entry {
+	return e.WithField("nspace", nspace)
+}
+
+// WithField adds a single field to the Entry.
+func (e *Entry) WithField(key string, value interface{}) *Entry {
+	entry := e.entry.WithField(key, value)
+	return &Entry{entry}
+}
+
+// WithFields adds a map of fields to the Entry.
+func (e *Entry) WithFields(fields logrus.Fields) *Entry {
+	entry := e.entry.WithFields(fields)
+	return &Entry{entry}
+}
+
+// Clone clones a logger entry.
+func (e *Entry) AddHook(hook logrus.Hook) {
+	// We need to clone the underlying logger in order to add a specific hook
+	// only on this logger.
+	in := e.entry.Logger
+	cloned := &logrus.Logger{
+		Out:       in.Out,
+		Hooks:     make(logrus.LevelHooks, len(in.Hooks)),
+		Formatter: in.Formatter,
+		Level:     in.Level,
+	}
+	for k, v := range in.Hooks {
+		cloned.Hooks[k] = v
+	}
+	cloned.AddHook(hook)
+	e.entry.Logger = cloned
+}
+
+func (e *Entry) Debug(args ...interface{}) {
+	e.entry.Debug(args...)
+}
+
+func (e *Entry) Info(args ...interface{}) {
+	e.entry.Info(args...)
+}
+
+func (e *Entry) Warn(args ...interface{}) {
+	e.entry.Warn(args...)
+}
+
+func (e *Entry) Error(args ...interface{}) {
+	e.entry.Error(args...)
+}
+
+func (e *Entry) Debugf(format string, args ...interface{}) {
+	e.entry.Debugf(format, args...)
+}
+
+func (e *Entry) Infof(format string, args ...interface{}) {
+	e.entry.Infof(format, args...)
+}
+
+func (e *Entry) Warnf(format string, args ...interface{}) {
+	e.entry.Warnf(format, args...)
+}
+
+func (e *Entry) Errorf(format string, args ...interface{}) {
+	e.entry.Errorf(format, args...)
+}
+
+func (e *Entry) Writer() *io.PipeWriter {
+	return e.entry.Writer()
 }
 
 func addDebugDomain(domain string, ttl time.Duration) {
@@ -212,6 +279,6 @@ func DebugExpiration(domain string) *time.Time {
 }
 
 // IsDebug returns whether or not the debug mode is activated.
-func IsDebug(logger *logrus.Entry) bool {
-	return logger.Logger.Level == logrus.DebugLevel
+func (e *Entry) IsDebug() bool {
+	return e.entry.Logger.Level == logrus.DebugLevel
 }

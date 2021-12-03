@@ -323,7 +323,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := instance.Logger().WithField("panic", true).WithField("nspace", "konnectors")
+				log := instance.Logger().WithField("panic", true).WithNamespace("konnectors")
 				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()
@@ -334,7 +334,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 			toDelete[i].Slug = slug
 		}
 
-		log := instance.Logger().WithField("nspace", "konnectors")
+		log := instance.Logger().WithNamespace("konnectors")
 		if err := account.CleanAndWait(instance, toDelete); err != nil {
 			log.Errorf("Cannot clean accounts: %v", err)
 			return

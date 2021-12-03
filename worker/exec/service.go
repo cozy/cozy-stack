@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/spf13/afero"
 )
 
@@ -191,7 +191,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 	return
 }
 
-func (w *serviceWorker) Logger(ctx *job.WorkerContext) *logrus.Entry {
+func (w *serviceWorker) Logger(ctx *job.WorkerContext) *logger.Entry {
 	log := ctx.Logger().WithField("slug", w.Slug())
 	if w.name != "" {
 		log = log.WithField("name", w.name)

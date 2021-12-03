@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 )
 
 // TriggersKey is the the key of the sorted set in redis used for triggers
@@ -61,7 +60,7 @@ type redisScheduler struct {
 	ctx     context.Context
 	closed  chan struct{}
 	stopped chan struct{}
-	log     *logrus.Entry
+	log     *logger.Entry
 }
 
 // NewRedisScheduler creates a new scheduler that use redis to synchronize with

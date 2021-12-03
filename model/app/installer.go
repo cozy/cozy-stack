@@ -56,7 +56,7 @@ type Installer struct {
 	context string
 
 	manc chan Manifest
-	log  *logrus.Entry
+	log  *logger.Entry
 }
 
 // InstallerOptions provides the slug name of the application along with the

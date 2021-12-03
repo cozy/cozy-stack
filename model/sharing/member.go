@@ -432,7 +432,7 @@ func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
 		return
 	}
 	if err := c.AddCozyURL(inst, cozyURL); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on saving contact: %s", err)
 	}
 }
@@ -851,7 +851,7 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, index int) error {
 	// No need to contact the revoked member if the sharing is not ready
 	if m.Status == MemberStatusReady {
 		if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on revocation notification: %s", err)
 		}
 
@@ -894,7 +894,7 @@ func (s *Sharing) RevokeOwner(inst *instance.Instance) error {
 	c := &s.Credentials[0]
 
 	if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on revocation notification: %s", err)
 	}
 	if err := DeleteOAuthClient(inst, m, c); err != nil {
@@ -969,7 +969,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			}
 			stack := make([]byte, 4<<10) // 4 KB
 			length := runtime.Stack(stack, false)
-			log := inst.Logger().WithField("panic", true).WithField("nspace", "sharing")
+			log := inst.Logger().WithField("panic", true).WithNamespace("sharing")
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
@@ -1003,7 +1003,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 	}
 	body, err := json.Marshal(members)
 	if err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Can't serialize the updated members list for %s: %s", s.SID, err)
 		return
 	}
@@ -1014,7 +1014,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 		}
 		u, err := url.Parse(m.Instance)
 		if m.Instance == "" || err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Infof("Invalid instance URL %s: %s", m.Instance, err)
 			continue
 		}
@@ -1046,7 +1046,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Debugf("Can't notify %#v about the updated members list: %s", m, err)
 			continue
 		}

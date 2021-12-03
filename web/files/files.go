@@ -110,7 +110,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	if filepath.Ext(doc.DocName) == ".cozy-note" {
 		err := note.ImportFile(inst, doc, nil, c.Request().Body)
 		if err != nil {
-			inst.Logger().WithField("nspace", "files").
+			inst.Logger().WithNamespace("files").
 				Infof("Cannot import note: %s", err)
 			return nil, WrapVfsError(err)
 		}
@@ -124,12 +124,12 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 
 	n, err := io.Copy(file, c.Request().Body)
 	if err != nil {
-		inst.Logger().WithField("nspace", "files").
+		inst.Logger().WithNamespace("files").
 			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, doc.ByteSize)
 	}
 	if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 		err = cerr
-		inst.Logger().WithField("nspace", "files").
+		inst.Logger().WithNamespace("files").
 			Warnf("Error on uploading file (close): %s", err)
 	}
 	if err != nil {
@@ -245,7 +245,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	if filepath.Ext(newdoc.DocName) == ".cozy-note" {
 		err := note.ImportFile(instance, newdoc, olddoc, c.Request().Body)
 		if err != nil {
-			instance.Logger().WithField("nspace", "files").
+			instance.Logger().WithNamespace("files").
 				Infof("Cannot import note: %s", err)
 			return WrapVfsError(err)
 		}

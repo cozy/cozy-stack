@@ -159,7 +159,7 @@ func fireTrigger(
 	}
 	j, err := job.System().PushJob(inst, req)
 	if err == nil {
-		inst.Logger().WithField("nspace", "webhook").
+		inst.Logger().WithNamespace("webhook").
 			Debugf("Push job %s (account: %s - trigger: %s)", j.ID(), account.ID(), trigger.ID())
 	}
 	return err
@@ -192,7 +192,7 @@ func copyLastUpdate(
 	bi["lastUpdate"] = lastUpdate
 	err := couchdb.UpdateDoc(inst, account)
 	if err == nil {
-		inst.Logger().WithField("nspace", "webhook").
+		inst.Logger().WithNamespace("webhook").
 			Debugf("Set lastUpdate to %s (account :%s)", lastUpdate, account.ID())
 	}
 	return err

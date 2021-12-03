@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	"github.com/sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/spf13/afero"
 )
 
@@ -38,10 +38,10 @@ var (
 
 type gitFetcher struct {
 	manFilename string
-	log         *logrus.Entry
+	log         *logger.Entry
 }
 
-func newGitFetcher(manFilename string, log *logrus.Entry) *gitFetcher {
+func newGitFetcher(manFilename string, log *logger.Entry) *gitFetcher {
 	return &gitFetcher{
 		manFilename: manFilename,
 		log:         log,

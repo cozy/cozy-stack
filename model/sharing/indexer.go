@@ -9,9 +9,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/sirupsen/logrus"
 )
 
 type bulkRevs struct {
@@ -24,7 +24,7 @@ type sharingIndexer struct {
 	indexer  vfs.Indexer
 	bulkRevs *bulkRevs
 	shared   *SharedRef
-	log      *logrus.Entry
+	log      *logger.Entry
 }
 
 // newSharingIndexer creates an Indexer for the special purpose of the sharing.
@@ -36,7 +36,7 @@ func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs, shared *Shar
 		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 		shared:   shared,
-		log:      inst.Logger().WithField("nspace", "sharing-indexer"),
+		log:      inst.Logger().WithNamespace("sharing-indexer"),
 	}
 }
 

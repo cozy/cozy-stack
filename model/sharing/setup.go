@@ -18,7 +18,7 @@ import (
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
 // receive the shared documents.
 func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
-	inst.Logger().WithField("nspace", "sharing").
+	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup receiver on %#v", inst)
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
@@ -58,7 +58,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	if !inst.OnboardingFinished {
 		return
 	}
-	inst.Logger().WithField("nspace", "sharing").
+	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup for member %#v on %s", m, inst.Domain)
 
 	defer func() {
@@ -72,7 +72,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			}
 			stack := make([]byte, 4<<10) // 4 KB
 			length := runtime.Stack(stack, false)
-			log := inst.Logger().WithField("panic", true).WithField("nspace", "sharing")
+			log := inst.Logger().WithField("panic", true).WithNamespace("sharing")
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
@@ -84,18 +84,18 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	defer mu.Unlock()
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 	}
 	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
 		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
 		}
 	}
 
 	if err := s.AddTrackTriggers(inst); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on setup of track triggers (%s): %s", s.SID, err)
 	}
 	if s.Triggers.ReplicateID == "" {
@@ -106,11 +106,11 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}
 	if err := s.AddReplicateTrigger(inst); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
 	if pending, err := s.ReplicateTo(inst, m, true); err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
 		s.retryWorker(inst, "share-replicate", 0)
 	} else {
@@ -121,11 +121,11 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			return
 		}
 		if err := s.AddUploadTrigger(inst); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
 		}
 		if err := s.InitialUpload(inst, m); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on initial upload (%s): %s", s.SID, err)
 			s.retryWorker(inst, "share-upload", 0)
 		}
@@ -186,7 +186,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		Arguments:  args,
 		Debounce:   "5s",
 	}, msg)
-	inst.Logger().WithField("nspace", "sharing").Debugf("Create trigger %#v", t)
+	inst.Logger().WithNamespace("sharing").Debugf("Create trigger %#v", t)
 	if err != nil {
 		return err
 	}
@@ -364,7 +364,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		Arguments:  args,
 		Debounce:   "10s",
 	}, msg)
-	inst.Logger().WithField("nspace", "sharing").Debugf("Create trigger %#v", t)
+	inst.Logger().WithNamespace("sharing").Debugf("Create trigger %#v", t)
 	if err != nil {
 		return err
 	}

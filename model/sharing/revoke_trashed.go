@@ -36,7 +36,7 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 		err = s.RevokeRecipientBySelf(inst, SharingDirAlreadyTrashed)
 	}
 	if err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Errorf("revokeTrashed failed for sharing %s: %s", sharingID, err)
 	}
 }

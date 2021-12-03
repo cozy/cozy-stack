@@ -82,14 +82,14 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 
 // pushJob adds a new job to continue on the pending documents in the changes feed
 func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
-	inst.Logger().WithField("nspace", "replicator").
+	inst.Logger().WithNamespace("replicator").
 		Debugf("Push a new job for worker %s for sharing %s", worker, s.SID)
 	msg, err := job.NewMessage(&ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    0,
 	})
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Warnf("Error on push job to %s: %s", worker, err)
 		return
 	}
@@ -98,7 +98,7 @@ func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 		Message:    msg,
 	})
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Warnf("Error on push job to %s: %s", worker, err)
 		return
 	}
@@ -106,12 +106,12 @@ func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 
 // retryWorker will add a job to retry a failed replication or upload
 func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int) {
-	inst.Logger().WithField("nspace", "replicator").
+	inst.Logger().WithNamespace("replicator").
 		Debugf("Retry worker %s for sharing %s", worker, s.SID)
 	backoff := InitialBackoffPeriod << uint(errors*2)
 	errors++
 	if errors == MaxRetries {
-		inst.Logger().WithField("nspace", "replicator").Warnf("Max retries reached")
+		inst.Logger().WithNamespace("replicator").Warnf("Max retries reached")
 		return
 	}
 	msg, err := job.NewMessage(&ReplicateMsg{
@@ -119,7 +119,7 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 		Errors:    errors,
 	})
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
@@ -129,12 +129,12 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 		Arguments:  backoff.String(),
 	}, msg)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
 	if err = job.System().AddTrigger(t); err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Warnf("Error on retry to %s: %s", worker, err)
 	}
 }
@@ -155,7 +155,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if err != nil {
 		return false, err
 	}
-	inst.Logger().WithField("nspace", "replicator").Debugf("lastSeq = %s", lastSeq)
+	inst.Logger().WithNamespace("replicator").Debugf("lastSeq = %s", lastSeq)
 
 	feed, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
@@ -171,7 +171,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if feed.Seq == lastSeq {
 		return false, nil
 	}
-	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", feed.Changes)
+	inst.Logger().WithNamespace("replicator").Debugf("changes = %#v", feed.Changes)
 
 	changes := &feed.Changes
 	if len(changes.Changed) > 0 {
@@ -184,13 +184,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 				return false, err
 			}
 		}
-		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v", missings)
+		inst.Logger().WithNamespace("replicator").Debugf("missings = %#v", missings)
 
 		docs, errb := s.getMissingDocs(inst, missings, changes)
 		if errb != nil {
 			return false, errb
 		}
-		inst.Logger().WithField("nspace", "replicator").Debugf("docs = %#v", docs)
+		inst.Logger().WithNamespace("replicator").Debugf("docs = %#v", docs)
 
 		err = s.sendBulkDocs(inst, m, creds, docs, feed.RuleIndexes)
 		if err != nil {
@@ -489,7 +489,7 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Missings, error) {
-	inst.Logger().WithField("nspace", "replicator").
+	inst.Logger().WithNamespace("replicator").
 		Debugf("ComputeRevsDiff %#v", changed)
 	ids := make([]string, 0, len(changed))
 	for id := range changed {
@@ -647,7 +647,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithNamespace("replicator").
 			Debugf("Apply bulk docs %s: %#v", doctype, docs)
 		if doctype == consts.Files {
 			err := s.ApplyBulkFiles(inst, docs)

@@ -11,10 +11,10 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 )
 
 var defaultTimeout = 300 * time.Second
@@ -53,7 +53,7 @@ type execWorker interface {
 	PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
 	ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
-	Logger(ctx *job.WorkerContext) *logrus.Entry
+	Logger(ctx *job.WorkerContext) *logger.Entry
 	Commit(ctx *job.WorkerContext, errjob error) error
 }
 

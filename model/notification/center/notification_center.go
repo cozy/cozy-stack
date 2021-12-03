@@ -166,7 +166,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 		// we do not bother sending or creating a new notification.
 		if last != nil {
 			if last.State == n.State {
-				inst.Logger().WithField("nspace", "notifications").
+				inst.Logger().WithNamespace("notifications").
 					Debugf("Notification %v was not sent (collapsed by same state %s)", p, n.State)
 				return nil
 			}
@@ -207,7 +207,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 	}
 
 	var errm error
-	log := inst.Logger().WithField("nspace", "notifications")
+	log := inst.Logger().WithNamespace("notifications")
 	for _, channel := range preferredChannels {
 		switch channel {
 		case "mobile":

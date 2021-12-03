@@ -14,8 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -62,7 +62,7 @@ func sendSMS(ctx *job.WorkerContext, msg *center.SMS) error {
 	return errors.New("Unknown provider for sending SMS")
 }
 
-func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logrus.Entry) error {
+func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logger.Entry) error {
 	payload, err := json.Marshal(map[string]interface{}{
 		"content":  msg.Message,
 		"receiver": []interface{}{number},

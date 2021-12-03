@@ -95,7 +95,7 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 	if slug == "onboarding" {
 		return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 	}
-	i.Logger().WithField("nspace", "apps").Infof("App not found: %s", slug)
+	i.Logger().WithNamespace("apps").Infof("App not found: %s", slug)
 	if _, err := registry.GetApplication(slug, i.Registries()); err != nil {
 		return app.ErrNotFound
 	}
@@ -255,7 +255,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
-		i.Logger().WithField("nspace", "apps").Warnf("%s cannot be parsed as a template: %s", file, err)
+		i.Logger().WithNamespace("apps").Warnf("%s cannot be parsed as a template: %s", file, err)
 		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
 	}
 

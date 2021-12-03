@@ -182,7 +182,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				logger.
 					WithDomain(ds.DomainName()).
-					WithField("nspace", "realtime").
+					WithNamespace("realtime").
 					Debugf("Error: %s", err)
 			}
 			break
@@ -230,7 +230,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		if err != nil {
 			logger.
 				WithDomain(ds.DomainName()).
-				WithField("nspace", "realtime").
+				WithNamespace("realtime").
 				Warnf("Error: %s", err)
 		}
 	}

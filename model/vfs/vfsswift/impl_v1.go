@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift/v2"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -42,7 +41,7 @@ type swiftVFS struct {
 	dataContainer string
 	mu            lock.ErrorRWLocker
 	ctx           context.Context
-	log           *logrus.Entry
+	log           *logger.Entry
 }
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
@@ -60,7 +59,7 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		dataContainer: swiftV1DataContainerPrefix + db.DomainName(),
 		mu:            mu,
 		ctx:           context.Background(),
-		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
+		log:           logger.WithDomain(db.DomainName()).WithNamespace("vfsswift"),
 	}, nil
 }
 

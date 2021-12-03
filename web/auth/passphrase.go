@@ -237,7 +237,7 @@ func passphraseRenew(c echo.Context) error {
 		})
 	}
 	if err := bitwarden.DeleteUnrecoverableCiphers(inst); err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
+		inst.Logger().WithNamespace("bitwarden").
 			Warnf("Error on ciphers deletion after password reset: %s", err)
 	}
 

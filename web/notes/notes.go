@@ -384,7 +384,7 @@ func UploadImage(c echo.Context) error {
 	name := c.QueryParam("Name")
 	upload, err := note.NewImageUpload(inst, doc, name, contentType)
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").Infof("Image upload has failed: %s", err)
+		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
 		return jsonapi.BadRequest(errors.New("Upload has failed"))
 	}
 
@@ -394,7 +394,7 @@ func UploadImage(c echo.Context) error {
 		err = cerr
 	}
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").Infof("Image upload has failed: %s", err)
+		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
 		return jsonapi.BadRequest(errors.New("Upload has failed"))
 	}
 

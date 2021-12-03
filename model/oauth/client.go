@@ -427,7 +427,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 
 	if !hasOptions(NotPending, opts) {
 		if err := setupTrigger(i, c.CouchID); err != nil {
-			i.Logger().WithField("nspace", "oauth").
+			i.Logger().WithNamespace("oauth").
 				Warnf("Cannot create trigger: %s", err)
 		}
 	}
@@ -439,7 +439,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		Subject:  c.CouchID,
 	})
 	if err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to create the registration access token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
@@ -573,7 +573,7 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 		Scope: scope,
 	})
 	if err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to create the %s token: %s", audience, err)
 	}
 	return token, err
@@ -588,23 +588,23 @@ func validToken(i *instance.Instance, audience, token string) (permission.Claims
 		return i.OAuthSecret, nil
 	}
 	if err := crypto.ParseJWT(token, keyFunc, &claims); err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
 	if claims.Expired() {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to verify the %s token: expired", audience)
 		return claims, false
 	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
 	if claims.Audience != audience {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Unexpected audience for %s token: %s", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
 	}
@@ -621,12 +621,12 @@ func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permiss
 	}
 	settings, err := settings.Get(i)
 	if err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Error while getting bitwarden settings: %s", err)
 		return claims, false
 	}
 	if claims.SStamp != settings.SecurityStamp {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Expected %s security stamp for %s token, but was: %s",
 				settings.SecurityStamp, claims.Subject, claims.SStamp)
 		return claims, false
@@ -643,7 +643,7 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		return claims, valid
 	}
 	if claims.Subject != c.CouchID {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
 		return claims, false
 	}

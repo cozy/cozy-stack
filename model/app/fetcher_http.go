@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/sirupsen/logrus"
 )
 
 var httpClient = http.Client{
@@ -29,10 +28,10 @@ var httpClient = http.Client{
 type httpFetcher struct {
 	manFilename string
 	prefix      string
-	log         *logrus.Entry
+	log         *logger.Entry
 }
 
-func newHTTPFetcher(manFilename string, log *logrus.Entry) *httpFetcher {
+func newHTTPFetcher(manFilename string, log *logger.Entry) *httpFetcher {
 	return &httpFetcher{
 		manFilename: manFilename,
 		log:         log,
@@ -129,13 +128,13 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	elapsed := time.Since(start)
 	if err != nil {
 		log := logger.WithNamespace("fetcher")
-		log.Printf("cannot fetch %s: %s", src.String(), err)
+		log.Infof("cannot fetch %s: %s", src.String(), err)
 		return err
 	}
 	defer resp.Body.Close()
 	if elapsed.Seconds() >= 10 {
 		log := logger.WithNamespace("fetcher")
-		log.Printf("slow request on %s (%s)", src.String(), elapsed)
+		log.Infof("slow request on %s (%s)", src.String(), elapsed)
 	}
 	if resp.StatusCode != 200 {
 		return ErrSourceNotReachable

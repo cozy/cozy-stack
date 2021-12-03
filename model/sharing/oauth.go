@@ -184,7 +184,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 		return ErrInvalidSharing
 	}
 	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
-		inst.Logger().WithField("nspace", "sharing").Warnf("Error on sharing request: %s", err)
+		inst.Logger().WithNamespace("sharing").Warnf("Error on sharing request: %s", err)
 		if err == ErrAlreadyAccepted {
 			return err
 		}
@@ -322,7 +322,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	}
 	name, err := inst.PublicName()
 	if err != nil {
-		inst.Logger().WithField("nspace", "sharing").
+		inst.Logger().WithNamespace("sharing").
 			Infof("No name for instance %v", inst)
 	}
 	ac := APICredentials{

@@ -37,7 +37,7 @@ func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
-		inst.Logger().WithField("nspace", "oidc").Infof("Start error: %s", err)
+		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
@@ -428,7 +428,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	if conf.AllowCustomInstance {
 		sub, ok := params["sub"].(string)
 		if !ok || sub == "" || sub != inst.OIDCID {
-			inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
+			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
 			return errors.New("Error The authentication has failed")
 		}
 		return nil
@@ -505,7 +505,7 @@ func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
 
 	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
-		inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
+		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
 		return errors.New("Error The authentication has failed")
 	}
 

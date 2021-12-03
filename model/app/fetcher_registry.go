@@ -12,16 +12,15 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/sirupsen/logrus"
 )
 
 type registryFetcher struct {
-	log        *logrus.Entry
+	log        *logger.Entry
 	registries []*url.URL
 	version    *registry.Version
 }
 
-func newRegistryFetcher(registries []*url.URL, log *logrus.Entry) Fetcher {
+func newRegistryFetcher(registries []*url.URL, log *logger.Entry) Fetcher {
 	return &registryFetcher{log: log, registries: registries}
 }
 

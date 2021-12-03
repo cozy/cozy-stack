@@ -554,7 +554,7 @@ func UseViper(v *viper.Viper) error {
 		redisPoolSize := v.GetInt("redis.pool_size")
 		if redisPoolSize < 25 {
 			if redisPoolSize != 0 {
-				log.Warningf("Redis pool size set smaller than 25. Using default value.")
+				log.Warnf("Redis pool size set smaller than 25. Using default value.")
 			}
 			redisPoolSize = max(25, 10*runtime.NumCPU())
 		}

@@ -278,7 +278,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: %s", err)
 		return
@@ -287,7 +287,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: %s", err)
 		return
@@ -295,7 +295,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	defer res.Body.Close()
 	if res.StatusCode != 204 {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: code=%d", res.StatusCode)
 	}
@@ -308,7 +308,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 		}
 		if err := couchdb.UpdateDoc(inst, doc); err != nil {
 			inst.Logger().
-				WithField("nspace", "move").
+				WithNamespace("move").
 				WithField("moved_from", u.Host).
 				WithField("vault", strconv.FormatBool(vault)).
 				Warnf("Cannot save settings: %s", err)
@@ -392,7 +392,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot abort: %s", err)
 		return
@@ -401,7 +401,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot abort: %s", err)
 		return
@@ -409,7 +409,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 	defer res.Body.Close()
 	if res.StatusCode != 204 {
 		inst.Logger().
-			WithField("nspace", "move").
+			WithNamespace("move").
 			WithField("url", otherURL).
 			Warnf("Cannot abort: code=%d", res.StatusCode)
 	}

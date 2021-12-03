@@ -450,7 +450,7 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 	}
 	if !sharingDirTrashed && s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
 		}
 	}

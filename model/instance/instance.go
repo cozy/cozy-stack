@@ -23,8 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/spf13/afero"
-
-	"github.com/sirupsen/logrus"
 )
 
 // DefaultTemplateTitle represents the default template title. It could be
@@ -183,7 +181,7 @@ func (i *Instance) SlugAndDomain() (string, string) {
 }
 
 // Logger returns the logger associated with the instance
-func (i *Instance) Logger() *logrus.Entry {
+func (i *Instance) Logger() *logger.Entry {
 	return logger.WithDomain(i.Domain)
 }
 

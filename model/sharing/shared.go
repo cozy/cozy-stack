@@ -390,7 +390,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	} else {
 		if evt.OldDoc == nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Updating an io.cozy.shared with no previous revision: %v %v", evt, ref)
 			ref.Revisions.Add(rev)
 		} else {
@@ -410,7 +410,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	if needToUpdateFiles {
 		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIndex, removed)
 		if err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on updateRemovedForFiles for %v: %s", evt, err)
 		}
 	}

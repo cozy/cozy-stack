@@ -238,7 +238,7 @@ func loginForm(c echo.Context) error {
 	if token := c.QueryParam("jwt"); token != "" {
 		err := session.CheckDelegatedJWT(instance, token)
 		if err != nil {
-			instance.Logger().Warningf("Delegated token check failed: %s", err)
+			instance.Logger().Warnf("Delegated token check failed: %s", err)
 		} else {
 			sessionID, err := SetCookieForNewSession(c, false)
 			if err != nil {
@@ -371,7 +371,7 @@ func login(c echo.Context) error {
 		err := limits.CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithField("nspace", "auth").Warning(err)
+				inst.Logger().WithNamespace("auth").Warn(err)
 			}
 		}
 		if wantsJSON(c) {

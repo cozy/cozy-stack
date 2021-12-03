@@ -121,7 +121,7 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 		Premium:  false,
 	})
 	if err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to create the bitwarden access token: %s", err)
 	}
 	return token, err
@@ -145,7 +145,7 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 		Scope:  BitwardenScope,
 	})
 	if err != nil {
-		i.Logger().WithField("nspace", "oauth").
+		i.Logger().WithNamespace("oauth").
 			Errorf("Failed to create the bitwarden refresh token: %s", err)
 	}
 	return token, err

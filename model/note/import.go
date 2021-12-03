@@ -49,7 +49,7 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 		fillMetadata(newdoc, olddoc, schemaSpecs, content)
 	} else {
 		_, _ = io.Copy(ioutil.Discard, reader)
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot import notes: %s", err)
 	}
 	if err := file.Close(); err != nil {
