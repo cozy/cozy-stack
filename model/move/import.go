@@ -36,13 +36,13 @@ type FromOptions struct {
 func CheckImport(inst *instance.Instance, settingsURL string) error {
 	manifestURL, err := transformSettingsURLToManifestURL(settingsURL)
 	if err != nil {
-		inst.Logger().WithField("nspace", "move").
+		inst.Logger().WithNamespace("move").
 			Debugf("Invalid settings URL %s: %s", settingsURL, err)
 		return ErrExportNotFound
 	}
 	manifest, err := fetchManifest(manifestURL)
 	if err != nil {
-		inst.Logger().WithField("nspace", "move").
+		inst.Logger().WithNamespace("move").
 			Warnf("Cannot fetch manifest: %s", err)
 		return ErrExportNotFound
 	}

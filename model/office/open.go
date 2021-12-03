@@ -164,14 +164,14 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	}
 	download, err := o.downloadURL()
 	if err != nil {
-		o.Inst.Logger().WithField("nspace", "office").
+		o.Inst.Logger().WithNamespace("office").
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
 	detector := conflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
 	key, err := GetStore().AddDoc(o.Inst, detector)
 	if err != nil {
-		o.Inst.Logger().WithField("nspace", "office").
+		o.Inst.Logger().WithNamespace("office").
 			Infof("Cannot add doc to store: %s", err)
 		return nil, ErrInternalServerError
 	}
@@ -227,7 +227,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 		return o.openLocalDocument(prepared.MemberIndex, prepared.ReadOnly)
 	}
 	if err != nil {
-		o.Inst.Logger().WithField("nspace", "office").Infof("openSharedDocument error: %s", err)
+		o.Inst.Logger().WithNamespace("office").Infof("openSharedDocument error: %s", err)
 		return nil, sharing.ErrInternalServerError
 	}
 	defer res.Body.Close()

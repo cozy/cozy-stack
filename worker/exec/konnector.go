@@ -22,10 +22,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -345,7 +345,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 	if err != nil {
 		dir, err = fs.DirByPath(folderPath)
 		if err != nil {
-			log := inst.Logger().WithField("nspace", "konnector")
+			log := inst.Logger().WithNamespace("konnector")
 			log.Warnf("Can't create the default folder %s: %s", folderPath, err)
 			return err
 		}
@@ -547,7 +547,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	return
 }
 
-func (w *konnectorWorker) Logger(ctx *job.WorkerContext) *logrus.Entry {
+func (w *konnectorWorker) Logger(ctx *job.WorkerContext) *logger.Entry {
 	return ctx.Logger().WithField("slug", w.slug)
 }
 

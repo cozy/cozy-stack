@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift/v2"
-	"github.com/sirupsen/logrus"
 )
 
 type swiftVFSV3 struct {
@@ -31,7 +30,7 @@ type swiftVFSV3 struct {
 	container string
 	mu        lock.ErrorRWLocker
 	ctx       context.Context
-	log       *logrus.Entry
+	log       *logger.Entry
 }
 
 const swiftV3ContainerPrefix = "cozy-v3-"
@@ -57,7 +56,7 @@ func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 		container: swiftV3ContainerPrefix + db.DBPrefix(),
 		mu:        mu,
 		ctx:       context.Background(),
-		log:       logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
+		log:       logger.WithDomain(db.DomainName()).WithNamespace("vfsswift"),
 	}, nil
 }
 

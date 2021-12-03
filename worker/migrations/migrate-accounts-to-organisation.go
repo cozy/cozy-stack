@@ -12,9 +12,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/data"
-	"github.com/sirupsen/logrus"
 
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -34,8 +34,8 @@ func isAdditionalField(fieldName string) bool {
 // Builds a cipher from an io.cozy.account
 //
 // A raw JSONDoc is used to be able to access auth.fields
-func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSONDoc, url string, logger *logrus.Entry) (*bitwarden.Cipher, error) {
-	logger.Infof("Building ciphers...")
+func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSONDoc, url string, log *logger.Entry) (*bitwarden.Cipher, error) {
+	log.Infof("Building ciphers...")
 
 	auth, _ := account.M["auth"].(map[string]interface{})
 
@@ -137,8 +137,8 @@ func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
 	return link, nil
 }
 
-func updateSettings(inst *instance.Instance, attempt int, logger *logrus.Entry) error {
-	logger.Infof("Updating bitwarden settings after migration...")
+func updateSettings(inst *instance.Instance, attempt int, log *logger.Entry) error {
+	log.Infof("Updating bitwarden settings after migration...")
 	// Reload the setting in case the revision changed
 	setting, err := settings.Get(inst)
 	if err != nil {
@@ -149,7 +149,7 @@ func updateSettings(inst *instance.Instance, attempt int, logger *logrus.Entry) 
 	err = settings.UpdateRevisionDate(inst, setting)
 	if err != nil {
 		if couchdb.IsConflictError(err) && attempt < 2 {
-			return updateSettings(inst, attempt+1, logger)
+			return updateSettings(inst, attempt+1, log)
 		}
 	}
 	return nil
@@ -187,7 +187,7 @@ func migrateAccountsToOrganization(domain string) error {
 		return err
 	}
 	defer mu.Unlock()
-	log := inst.Logger().WithField("nspace", "migration")
+	log := inst.Logger().WithNamespace("migration")
 
 	setting, err := settings.Get(inst)
 	if err != nil {
@@ -230,7 +230,7 @@ func migrateAccountsToOrganization(domain string) error {
 
 		manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
 		if err != nil {
-			log.Warningf("Could not get manifest for %s", msg.Slug)
+			log.Warnf("Could not get manifest for %s", msg.Slug)
 			continue
 		}
 
@@ -241,7 +241,7 @@ func migrateAccountsToOrganization(domain string) error {
 		}
 
 		if link == "" {
-			log.Warningf("No vendor_link in manifest for %s", msg.Slug)
+			log.Warnf("No vendor_link in manifest for %s", msg.Slug)
 			continue
 		}
 

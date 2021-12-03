@@ -119,7 +119,7 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 				var dir vfs.DirDoc
 				if err := couchdb.GetDoc(e, consts.Files, value, &dir); err != nil {
 					logger.WithDomain(e.Domain).
-						WithField("nspace", "event-trigger").
+						WithNamespace("event-trigger").
 						Debugf("Cannot find io.cozy.files %s for trigger rule: %s", value, err)
 					continue
 				}
@@ -178,7 +178,7 @@ type DumpFilePather struct{}
 
 // FilePath only returns an error saying to not call this method
 func (d DumpFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
-	logger.WithNamespace("event-trigger").Warning("FilePath method of DumpFilePather has been called")
+	logger.WithNamespace("event-trigger").Warn("FilePath method of DumpFilePather has been called")
 	return "", errors.New("DumpFilePather FilePath should not have been called")
 }
 

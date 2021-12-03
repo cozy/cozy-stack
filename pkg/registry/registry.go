@@ -511,7 +511,7 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	}()
 	if elapsed.Seconds() >= 3 {
 		log := logger.WithNamespace("registry")
-		log.Printf("slow request on %s (%s)", u.String(), elapsed)
+		log.Infof("slow request on %s (%s)", u.String(), elapsed)
 	}
 	if resp.StatusCode == 404 {
 		return

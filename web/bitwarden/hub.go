@@ -138,28 +138,28 @@ func readPump(notifier *wsNotifier) {
 	}
 	if err := ws.ReadJSON(&msg); err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-			logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+			logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 				Infof("Read error: %s", err)
 		}
 		return
 	}
 	if msg.Protocol != "messagepack" || msg.Version != 1 {
-		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 			Infof("Unexpected message: %v", msg)
 		return
 	}
 	if err := ds.Watch(consts.Settings, consts.BitwardenSettingsID); err != nil {
-		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 			Infof("Subscribe error: %s", err)
 		return
 	}
 	if err := ds.Subscribe(consts.BitwardenFolders); err != nil {
-		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 			Infof("Subscribe error: %s", err)
 		return
 	}
 	if err := ds.Subscribe(consts.BitwardenCiphers); err != nil {
-		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 			Infof("Subscribe error: %s", err)
 		return
 	}
@@ -170,7 +170,7 @@ func readPump(notifier *wsNotifier) {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 					Infof("Read error: %s", err)
 			}
 			return
@@ -197,7 +197,7 @@ func writePump(notifier *wsNotifier) error {
 				return err
 			}
 			if err := ws.WriteMessage(websocket.BinaryMessage, r); err != nil {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 					Infof("Write error: %s", err)
 				return nil
 			}
@@ -211,7 +211,7 @@ func writePump(notifier *wsNotifier) error {
 			}
 			serialized, err := serializeNotification(handle, *notif)
 			if err != nil {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 					Infof("Serialize error: %s", err)
 				continue
 			}

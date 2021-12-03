@@ -363,7 +363,7 @@ func CheckPassphrase(inst *instance.Instance, pass []byte) error {
 
 	inst.PassphraseHash = newHash
 	if err = update(inst); err != nil {
-		inst.Logger().Error("Failed to update hash in db", err)
+		inst.Logger().Errorf("Failed to update hash in db: %s", err)
 	}
 	return nil
 }

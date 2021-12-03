@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -89,7 +88,7 @@ type (
 		context.Context
 		Instance *instance.Instance
 		job      *Job
-		log      *logrus.Entry
+		log      *logger.Entry
 		id       string
 		cookie   interface{}
 		noRetry  bool
@@ -118,15 +117,11 @@ func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *Worke
 	log := logger.WithDomain(job.Domain).
 		WithField("job_id", job.ID()).
 		WithField("worker_id", workerID).
-		WithField("nspace", "jobs")
+		WithNamespace("jobs")
 
 	if job.ForwardLogs {
-		// we need to clone the underlying logger in order to add a specific hook
-		// only on this logger.
-		loggerClone := logger.Clone(log.Logger)
-		loggerClone.AddHook(realtime.LogHook(job, realtime.GetHub(),
-			consts.Jobs, job.ID()))
-		log.Logger = loggerClone
+		hook := realtime.LogHook(job, realtime.GetHub(), consts.Jobs, job.ID())
+		log.AddHook(hook)
 	}
 
 	return &WorkerContext{
@@ -180,7 +175,7 @@ func (c *WorkerContext) ID() string {
 }
 
 // Logger return the logger associated with the worker context.
-func (c *WorkerContext) Logger() *logrus.Entry {
+func (c *WorkerContext) Logger() *logger.Entry {
 	return c.log
 }
 

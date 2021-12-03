@@ -47,7 +47,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 				return ErrInvitationNotSent
 			}
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
+				inst.Logger().WithNamespace("sharing").
 					Errorf("Can't send email for %#v: %s", m.Email, err)
 				return ErrInvitationNotSent
 			}
@@ -84,7 +84,7 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 				return ErrInvitationNotSent
 			}
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
+				inst.Logger().WithNamespace("sharing").
 					Errorf("Can't send email for %#v: %s", m.Email, err)
 				return ErrInvitationNotSent
 			}

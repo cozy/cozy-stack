@@ -166,7 +166,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	totals := 0
 	for err := range errc {
 		if err != nil {
-			ctx.Logger().WithFields(err.toFields()).Error()
+			ctx.Logger().WithFields(err.toFields()).Error("")
 			errors++
 		}
 		totals++
@@ -218,7 +218,7 @@ func UpdateInstance(ctx *job.WorkerContext, inst *instance.Instance, opts *Optio
 	totals := 0
 	for err := range errc {
 		if err != nil {
-			ctx.Logger().WithFields(err.toFields()).Error()
+			ctx.Logger().WithFields(err.toFields()).Error("")
 			errors++
 		}
 		totals++

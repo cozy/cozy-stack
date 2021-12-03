@@ -594,7 +594,7 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 			cloned := file.Clone().(*FileDoc)
 			parentPath, ok := dirs[file.DirID]
 			if !ok {
-				logger.WithDomain(c.db.DomainName()).WithField("nspace", "vfs").
+				logger.WithDomain(c.db.DomainName()).WithNamespace("vfs").
 					Infof("setTrashedForFilesInsideDir: parent not found for %s", file.DocID)
 				return nil
 			}

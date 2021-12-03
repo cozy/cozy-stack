@@ -19,7 +19,7 @@ func proxy(c echo.Context, path string) error {
 	doctype := c.Param("doctype")
 	instance := middlewares.GetInstance(c)
 	p := couchdb.Proxy(instance, doctype, path)
-	logger := instance.Logger().WithField("nspace", "data-proxy").Writer()
+	logger := instance.Logger().WithNamespace("data-proxy").Writer()
 	defer logger.Close()
 	p.ErrorLog = log.New(logger, "", 0)
 	p.ServeHTTP(c.Response(), c.Request())

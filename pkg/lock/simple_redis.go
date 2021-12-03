@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 )
 
 const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`
@@ -56,7 +55,7 @@ type redisLock struct {
 	// readers is the number of readers when the lock is acquired for reading
 	// or 0 when it is unlocked, or -1 when it is locked for writing.
 	readers int
-	log     *logrus.Entry
+	log     *logger.Entry
 	rng     *rand.Rand
 }
 
@@ -198,7 +197,7 @@ func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 		client: c,
 		ctx:    context.Background(),
 		key:    basicLockNS + ns,
-		log:    logger.WithDomain(ns).WithField("nspace", "redis-lock"),
+		log:    logger.WithDomain(ns).WithNamespace("redis-lock"),
 		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }

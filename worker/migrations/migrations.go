@@ -68,7 +68,7 @@ func worker(ctx *job.WorkerContext) error {
 		return err
 	}
 
-	logger.WithDomain(ctx.Instance.Domain).WithField("nspace", "migration").
+	logger.WithDomain(ctx.Instance.Domain).WithNamespace("migration").
 		Infof("Start the migration %s", msg.Type)
 
 	switch msg.Type {
@@ -97,7 +97,7 @@ func commit(ctx *job.WorkerContext, err error) error {
 		migrationType = msg.Type
 	}
 
-	log := logger.WithDomain(ctx.Instance.Domain).WithField("nspace", "migration")
+	log := logger.WithDomain(ctx.Instance.Domain).WithNamespace("migration")
 	if err == nil {
 		log.Infof("Migration %s success", migrationType)
 	} else {
@@ -188,7 +188,7 @@ func migrateNotesMimeType(domain string) error {
 	if err != nil {
 		return err
 	}
-	log := inst.Logger().WithField("nspace", "migration")
+	log := inst.Logger().WithNamespace("migration")
 
 	var docs []*vfs.FileDoc
 	req := &couchdb.FindRequest{
@@ -223,7 +223,7 @@ func migrateToSwiftV3(domain string) error {
 	if err != nil {
 		return err
 	}
-	log := inst.Logger().WithField("nspace", "migration")
+	log := inst.Logger().WithNamespace("migration")
 
 	var srcContainer, migratedFrom string
 	switch inst.SwiftLayout {
@@ -304,7 +304,7 @@ func migrateToSwiftV3(domain string) error {
 
 func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
 	log := logger.WithDomain(inst.Domain).
-		WithField("nspace", "migration")
+		WithNamespace("migration")
 	sem := semaphore.NewWeighted(maxSimultaneousCalls)
 	g, ctx := errgroup.WithContext(context.Background())
 	fs := inst.VFS()
@@ -342,7 +342,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swif
 				return err
 			})
 			if err != nil {
-				log.Warningf("Cannot copy file from %s %s to %s %s: %s",
+				log.Warnf("Cannot copy file from %s %s to %s %s: %s",
 					src, srcName, dst, dstName, err)
 			}
 			return err

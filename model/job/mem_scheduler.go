@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/sirupsen/logrus"
 )
 
 // memScheduler is a centralized scheduler of many triggers. It starts all of
@@ -24,7 +23,7 @@ type memScheduler struct {
 
 	ts  map[string]Trigger
 	mu  sync.RWMutex
-	log *logrus.Entry
+	log *logger.Entry
 }
 
 // NewMemScheduler creates a new in-memory scheduler that will load all

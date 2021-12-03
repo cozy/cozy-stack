@@ -156,7 +156,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 			go func() {
 				inst := i.Clone().(*instance.Instance)
 				if err := AskReupload(inst); err != nil {
-					inst.Logger().WithField("nspace", "lifecycle").
+					inst.Logger().WithNamespace("lifecycle").
 						Warnf("sharing.AskReupload failed with %s", err)
 				}
 			}()

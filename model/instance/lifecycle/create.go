@@ -61,7 +61,7 @@ func (opts *Options) trace(name string, do func()) {
 			elapsed := time.Since(t)
 			logger.
 				WithDomain("admin").
-				WithField("nspace", "trace").
+				WithNamespace("trace").
 				Infof("%s: %v", name, elapsed)
 		}()
 	}

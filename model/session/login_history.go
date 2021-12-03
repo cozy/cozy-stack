@@ -132,7 +132,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 	os := ua.OS()
 
 	createdAt := time.Now()
-	i.Logger().WithField("nspace", "loginaudit").
+	i.Logger().WithNamespace("loginaudit").
 		Infof("New connection from %s at %s (%s)", ip, createdAt, logMessage)
 	if timezone != "" {
 		if loc, err := time.LoadLocation(timezone); err == nil {

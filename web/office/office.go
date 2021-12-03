@@ -66,7 +66,7 @@ func Callback(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	var params office.CallbackParameters
 	if err := c.Bind(&params); err != nil {
-		inst.Logger().WithField("nspace", "office").
+		inst.Logger().WithNamespace("office").
 			Warnf("Cannot bind callback parameters: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
 	}
@@ -74,7 +74,7 @@ func Callback(c echo.Context) error {
 	params.Token = strings.TrimPrefix(header, "Bearer ")
 
 	if err := office.Callback(inst, params); err != nil {
-		inst.Logger().WithField("nspace", "office").
+		inst.Logger().WithNamespace("office").
 			Infof("Error on the callback: %s", err)
 		code := http.StatusInternalServerError
 		if httpError, ok := err.(*echo.HTTPError); ok {

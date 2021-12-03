@@ -139,7 +139,7 @@ func RegisterCustomExternals(opts []model.AssetOption, maxTryCount int) error {
 func registerCustomExternal(opt model.AssetOption) error {
 	if opt.Context == "" {
 		logger.WithNamespace("custom assets").
-			Warningf("Could not load asset %s with empty context", opt.URL)
+			Warnf("Could not load asset %s with empty context", opt.URL)
 		return nil
 	}
 

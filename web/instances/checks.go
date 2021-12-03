@@ -60,7 +60,7 @@ func fsckHandler(c echo.Context) (err error) {
 			log.VersionDoc.Metadata = nil
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
-			i.Logger().WithField("nspace", "fsck").
+			i.Logger().WithNamespace("fsck").
 				Warnf("Cannot encode to JSON: %s (%v)", errenc, log)
 		}
 		if f, ok := w.(http.Flusher); ok {
@@ -73,7 +73,7 @@ func fsckHandler(c echo.Context) (err error) {
 			log = map[string]string{"type": "no_database", "error": err.Error()}
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
-			i.Logger().WithField("nspace", "fsck").
+			i.Logger().WithNamespace("fsck").
 				Warnf("Cannot encode to JSON: %s (%v)", errenc, log)
 		}
 		if f, ok := w.(http.Flusher); ok {

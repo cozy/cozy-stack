@@ -107,10 +107,10 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	if s.OlderThan(SessionMaxAge) {
 		err := couchdb.DeleteDoc(i, s)
 		if err != nil {
-			i.Logger().WithField("nspace", "loginaudit").
+			i.Logger().WithNamespace("loginaudit").
 				Warnf("Failed to delete expired session: %s", err)
 		} else {
-			i.Logger().WithField("nspace", "loginaudit").
+			i.Logger().WithNamespace("loginaudit").
 				Infof("Expired session deleted: %s", s.DocID)
 		}
 		return nil, ErrExpired
@@ -192,7 +192,7 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 	}
 	if len(expired) > 0 {
 		if err := couchdb.BulkDeleteDocs(inst, consts.Sessions, expired); err != nil {
-			inst.Logger().WithField("nspace", "sessions").
+			inst.Logger().WithNamespace("sessions").
 				Infof("Error while deleting expired sessions: %s", err)
 		}
 	}
@@ -204,10 +204,10 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 	err := couchdb.DeleteDoc(i, s)
 	if err != nil {
-		i.Logger().WithField("nspace", "loginaudit").
+		i.Logger().WithNamespace("loginaudit").
 			Errorf("Failed to delete session: %s", err)
 	} else {
-		i.Logger().WithField("nspace", "loginaudit").
+		i.Logger().WithNamespace("loginaudit").
 			Infof("Session deleted: %s", s.DocID)
 	}
 	return &http.Cookie{

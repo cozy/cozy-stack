@@ -598,7 +598,7 @@ func patchJob(c echo.Context) error {
 		inst.Logger().
 			WithField("job_id", j.ID()).
 			WithField("worker_id", "client").
-			WithField("nspace", "jobs").
+			WithNamespace("jobs").
 			Errorf("error while performing job: %s", req.Error)
 	case job.Done:
 		err = j.Ack()

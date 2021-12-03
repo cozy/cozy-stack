@@ -113,7 +113,7 @@ func UpdateProfile(c echo.Context) error {
 // SetKeyPair is the handler for setting the key pair: public and private keys.
 func SetKeyPair(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithField("nspace", "bitwarden")
+	log := inst.Logger().WithNamespace("bitwarden")
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid token",
@@ -232,7 +232,7 @@ type AccessTokenReponse struct {
 
 func getInitialCredentials(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithField("nspace", "bitwarden")
+	log := inst.Logger().WithNamespace("bitwarden")
 	pass := []byte(c.FormValue("password"))
 
 	// Authentication
@@ -294,7 +294,7 @@ func getInitialCredentials(c echo.Context) error {
 	if _, err := setting.OrganizationKey(); err == settings.ErrMissingOrgKey {
 		// The organization key should exist at this moment as it is created at the
 		// instance creation or at the login-hashed migration.
-		log.Warningf("Organization key does not exist")
+		log.Warnf("Organization key does not exist")
 		err := setting.EnsureCozyOrganization(inst)
 		if err != nil {
 			return err
@@ -320,7 +320,7 @@ func getInitialCredentials(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	inst.Logger().WithField("nspace", "loginaudit").
+	inst.Logger().WithNamespace("loginaudit").
 		Infof("New bitwarden client from %s at %s", ip, time.Now())
 
 	// Send the response

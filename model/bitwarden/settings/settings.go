@@ -164,7 +164,7 @@ func UpdateRevisionDate(inst *instance.Instance, settings *Settings) error {
 		err = settings.Save(inst)
 	}
 	if err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
+		inst.Logger().WithNamespace("bitwarden").
 			Infof("Cannot update revision date: %s", err)
 	}
 	return err

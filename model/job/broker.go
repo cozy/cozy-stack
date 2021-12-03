@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -198,8 +197,8 @@ func (jr *JobRequest) Fetch(field string) []string {
 }
 
 // Logger returns a logger associated with the job domain
-func (j *Job) Logger() *logrus.Entry {
-	return logger.WithDomain(j.Domain).WithField("nspace", "jobs")
+func (j *Job) Logger() *logger.Entry {
+	return logger.WithDomain(j.Domain).WithNamespace("jobs")
 }
 
 // AckConsumed sets the job infos state to Running an sends the new job infos

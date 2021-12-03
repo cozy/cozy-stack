@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/labstack/echo/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrorHandler is the default error handler of our APIs.
@@ -50,10 +49,10 @@ func ErrorHandler(err error, c echo.Context) {
 	}
 
 	if build.IsDevRelease() {
-		var log *logrus.Entry
+		var log *logger.Entry
 		inst, ok := middlewares.GetInstanceSafe(c)
 		if ok {
-			log = inst.Logger().WithField("nspace", "http")
+			log = inst.Logger().WithNamespace("http")
 		} else {
 			log = logger.WithNamespace("http")
 		}
@@ -84,10 +83,10 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
 	if build.IsDevRelease() {
-		var log *logrus.Entry
+		var log *logger.Entry
 		inst, ok := middlewares.GetInstanceSafe(c)
 		if ok {
-			log = inst.Logger().WithField("nspace", "http")
+			log = inst.Logger().WithNamespace("http")
 		} else {
 			log = logger.WithNamespace("http")
 		}

@@ -173,14 +173,14 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 	schema, err := doc.Schema()
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Infof("Cannot instantiate the schema: %s", err)
 		return ErrInvalidSchema
 	}
 
 	content, err := doc.Content()
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Infof("Cannot instantiate the document: %s", err)
 		return ErrInvalidFile
 	}
@@ -189,13 +189,13 @@ func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 	for i, s := range steps {
 		step, err := transform.StepFromJSON(schema, s)
 		if err != nil {
-			inst.Logger().WithField("nspace", "notes").
+			inst.Logger().WithNamespace("notes").
 				Infof("Cannot instantiate a step: %s", err)
 			return ErrInvalidSteps
 		}
 		result := step.Apply(content)
 		if result.Failed != "" {
-			inst.Logger().WithField("nspace", "notes").
+			inst.Logger().WithNamespace("notes").
 				Infof("Cannot apply a step: %s (version=%d)", result.Failed, doc.Version)
 			return ErrCannotApply
 		}
@@ -227,7 +227,7 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
 		if !couchdb.IsNoDatabaseError(err) {
-			inst.Logger().WithField("nspace", "notes").
+			inst.Logger().WithNamespace("notes").
 				Warnf("Cannot purge old steps for file %s: %s", fileID, err)
 		}
 		return
@@ -248,7 +248,7 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 		return
 	}
 	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot purge old steps for file %s: %s", fileID, err)
 	}
 }
@@ -265,7 +265,7 @@ func purgeAllSteps(inst *instance.Instance, fileID string) {
 	})
 	if err != nil {
 		if !couchdb.IsNoDatabaseError(err) {
-			inst.Logger().WithField("nspace", "notes").
+			inst.Logger().WithNamespace("notes").
 				Warnf("Cannot purge all steps for file %s: %s", fileID, err)
 		}
 		return
@@ -275,7 +275,7 @@ func purgeAllSteps(inst *instance.Instance, fileID string) {
 	}
 
 	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot purge all steps for file %s: %s", fileID, err)
 	}
 }

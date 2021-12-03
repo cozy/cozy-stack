@@ -67,7 +67,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		inst.Logger().WithField("nspace", "upload").Infof("errm=%s\n", errm)
+		inst.Logger().WithNamespace("upload").Infof("errm=%s\n", errm)
 	} else if len(members) > 0 {
 		s.pushJob(inst, "share-upload")
 	}
@@ -139,7 +139,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 	if err != nil {
 		return false, err
 	}
-	inst.Logger().WithField("nspace", "upload").Debugf("lastSeq = %s", lastSeq)
+	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
 
 	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
 	if err != nil {
@@ -221,7 +221,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
-	inst.Logger().WithField("nspace", "upload").Debugf("going to upload %#v", file)
+	inst.Logger().WithNamespace("upload").Debugf("going to upload %#v", file)
 
 	// Do not try to send a trashed file, the trash status will be synchronized
 	// via the CouchDB replication protocol
@@ -341,7 +341,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // SyncFile tries to synchronize a file with just the metadata. If it can't,
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
+	inst.Logger().WithNamespace("upload").Debugf("SyncFile %#v", target)
 
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
@@ -404,7 +404,7 @@ func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
-			inst.Logger().WithField("nspace", "upload").
+			inst.Logger().WithNamespace("upload").
 				Debugf("Conflict for parent on sync file: %s", err)
 			return err
 		}
@@ -461,7 +461,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		err = fs.UpdateFileDoc(olddoc, newdoc)
 	}
 	if err != nil {
-		inst.Logger().WithField("nspace", "upload").
+		inst.Logger().WithNamespace("upload").
 			Debugf("Cannot update file: %s", err)
 		return err
 	}
@@ -473,7 +473,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
 	defer body.Close()
 	target, err := getStore().Get(inst, key)
-	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
+	inst.Logger().WithNamespace("upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	if err != nil {
 		return err
 	}
@@ -489,7 +489,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil && err != os.ErrNotExist {
-		inst.Logger().WithField("nspace", "upload").
+		inst.Logger().WithNamespace("upload").
 			Warnf("Upload has failed: %s", err)
 		return err
 	}
@@ -502,7 +502,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 // UploadNewFile is used to receive a new file.
 func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
-	inst.Logger().WithField("nspace", "upload").Debugf("UploadNewFile")
+	inst.Logger().WithNamespace("upload").Debugf("UploadNewFile")
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
 	}
@@ -526,7 +526,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 			parent, err = s.recreateParent(inst, target.DirID)
 		}
 		if err != nil {
-			inst.Logger().WithField("nspace", "upload").
+			inst.Logger().WithNamespace("upload").
 				Infof("Conflict for parent on file upload: %s", err)
 		}
 	} else if target.DocID == rule.Values[0] {
@@ -597,7 +597,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		file, err = fs.CreateFile(newdoc, nil)
 	}
 	if err != nil {
-		inst.Logger().WithField("nspace", "upload").
+		inst.Logger().WithNamespace("upload").
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
@@ -631,7 +631,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 
 	if count >= s.NbFiles {
 		if err = s.EndInitial(inst); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
+			inst.Logger().WithNamespace("sharing").
 				Errorf("Can't save sharing %v: %s", s, err)
 		}
 		return
@@ -658,7 +658,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 // the file (which is not what we want), a conflict of name+dir_id, the higher
 // revision wins and it should be the good one in our case.
 func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
-	inst.Logger().WithField("nspace", "upload").Debugf("UploadExistingFile")
+	inst.Logger().WithNamespace("upload").Debugf("UploadExistingFile")
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
@@ -751,7 +751,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 // uploaded file version goes to a new file.
 func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
 	rev := target.Rev()
-	inst.Logger().WithField("nspace", "upload").Debugf("uploadLostConflict %s", rev)
+	inst.Logger().WithNamespace("upload").Debugf("uploadLostConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -772,7 +772,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	if err != nil {
 		return err
 	}
-	inst.Logger().WithField("nspace", "upload").Debugf("1. loser = %#v", newdoc)
+	inst.Logger().WithNamespace("upload").Debugf("1. loser = %#v", newdoc)
 	return copyFileContent(inst, file, body)
 }
 
@@ -780,7 +780,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 // existing file is copied to a new file to let the upload succeed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
 	rev := src.Rev()
-	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict %s", rev)
+	inst.Logger().WithNamespace("upload").Debugf("uploadWonConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -802,7 +802,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	if err != nil {
 		return err
 	}
-	inst.Logger().WithField("nspace", "upload").Debugf("2. loser = %#v", dst)
+	inst.Logger().WithNamespace("upload").Debugf("2. loser = %#v", dst)
 	return copyFileContent(inst, file, content)
 }
 
@@ -812,7 +812,7 @@ func copyFileContent(inst *instance.Instance, file vfs.File, body io.ReadCloser)
 	_, err := io.Copy(file, body)
 	if cerr := file.Close(); cerr != nil && err == nil {
 		err = cerr
-		inst.Logger().WithField("nspace", "upload").
+		inst.Logger().WithNamespace("upload").
 			Infof("Cannot close file descriptor: %s", err)
 	}
 	return err

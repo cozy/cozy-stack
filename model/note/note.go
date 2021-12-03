@@ -199,7 +199,7 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
 	schema, err := doc.Schema()
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Infof("Cannot instantiate the schema: %s", err)
 		return nil, ErrInvalidSchema
 	}
@@ -207,13 +207,13 @@ func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error)
 	// Create an empty document that matches the schema constraints.
 	typ, err := schema.NodeType(schema.Spec.TopNode)
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Infof("The schema is invalid: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	node, err := typ.CreateAndFill()
 	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
+		inst.Logger().WithNamespace("notes").
 			Infof("The topNode cannot be created: %s", err)
 		return nil, ErrInvalidSchema
 	}
@@ -737,7 +737,7 @@ func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := inst.Logger().WithField("panic", true).WithField("nspace", "note")
+				log := inst.Logger().WithField("panic", true).WithNamespace("note")
 				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()

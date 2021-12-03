@@ -59,7 +59,7 @@ func newDatabase(prefix string) prefixer.Prefixer {
 // RTEvent published a realtime event for a couchDB change
 func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 	if err := runHooks(db, verb, doc, oldDoc); err != nil {
-		logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb").
+		logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 	docClone := doc.Clone()
@@ -285,7 +285,7 @@ func handleResponseError(db Database, resp *http.Response) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
-	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
+	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		err = newIOReadError(err)
@@ -311,11 +311,11 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 			return err
 		}
 	}
-	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
+	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
-	logDebug := doctype != accountDocType && logger.IsDebug(log)
+	logDebug := doctype != accountDocType && log.IsDebug()
 
 	if logDebug {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
@@ -337,7 +337,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 	defer resp.Body.Close()
 
 	if elapsed.Seconds() >= 10 {
-		log.Printf("slow request on %s %s (%s)", method, path, elapsed)
+		log.Infof("slow request on %s %s (%s)", method, path, elapsed)
 	}
 
 	err = handleResponseError(db, resp)
@@ -751,7 +751,7 @@ func DefineViews(g *errgroup.Group, db Database, views []*View) {
 				if err != nil && !IsFileExists(err) {
 					if err != nil {
 						logger.WithDomain(db.DomainName()).
-							Printf("Cannot create view %s %s: cannot create DB - %s",
+							Infof("Cannot create view %s %s: cannot create DB - %s",
 								db.DBPrefix(), v.Doctype, err)
 					}
 					return err
@@ -764,7 +764,7 @@ func DefineViews(g *errgroup.Group, db Database, views []*View) {
 				if err != nil {
 					if err != nil {
 						logger.WithDomain(db.DomainName()).
-							Printf("Cannot create view %s %s: conflict - %s",
+							Infof("Cannot create view %s %s: conflict - %s",
 								db.DBPrefix(), v.Doctype, err)
 					}
 					return err
@@ -778,7 +778,7 @@ func DefineViews(g *errgroup.Group, db Database, views []*View) {
 			}
 			if err != nil {
 				logger.WithDomain(db.DomainName()).
-					Printf("Cannot create view %s %s: %s", db.DBPrefix(), v.Doctype, err)
+					Infof("Cannot create view %s %s: %s", db.DBPrefix(), v.Doctype, err)
 			}
 			return err
 		})
@@ -827,7 +827,7 @@ func ExecView(db Database, view *View, req *ViewRequest, results interface{}) er
 		if IsInternalServerError(err) {
 			logger.
 				WithDomain(db.DomainName()).
-				WithField("nspace", "couchdb").
+				WithNamespace("couchdb").
 				WithField("critical", "true").
 				Errorf("500 on requesting view: %s", err)
 		}
@@ -841,7 +841,7 @@ func DefineIndex(db Database, index *mango.Index) error {
 	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
 	if err != nil {
 		logger.WithDomain(db.DomainName()).
-			Printf("Cannot create index %s %s: %s", db.DBPrefix(), index.Doctype, err)
+			Infof("Cannot create index %s %s: %s", db.DBPrefix(), index.Doctype, err)
 	}
 	return err
 }
