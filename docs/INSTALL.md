@@ -48,12 +48,16 @@ make
 
 This will fetch the sources and build a binary in `$GOPATH/bin/cozy-stack`.
 
-Don't forget to add your `$GOPATH/bin` to your `$PATH` in your `*rc` file so
+Don't forget to add your `$GOPATH/bin` to your `$PATH` at the end of your `*rc` file so
 that you can execute the binary without entering its full path.
 
 ```
 export PATH="$(go env GOPATH)/bin:$PATH"
 ```
+
+Troubleshooting?
+
+Check if you don't have an alias "go" configurated in your `*rc` file.
 
 ### Add an instance for testing
 
