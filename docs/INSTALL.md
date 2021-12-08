@@ -19,9 +19,11 @@ Image Magick is required.
 ## Install for self-hosting
 
 We have started to write documentation on how to install cozy on your own
-server. We have [a guide for
-debian](https://docs.cozy.io/en/tutorials/selfhost-debian/). Don't hesitate to
-report issues with it. It will help us improve it.
+server. We have [guides for
+self hosting](https://docs.cozy.io/en/tutorials/selfhosting/), either on
+Debian with precompiled binary packages of from sources on Ubuntu.
+Don't hesitate to [report issues](https://github.com/cozy/cozy.github.io/issues/new) with them.
+It will help us improve documentation.
 
 ## Install for development / local tests
 
