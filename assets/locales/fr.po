@@ -751,6 +751,11 @@ msgstr ""
 "Vous avez demandé à changer votre mot de passe Coyz Pass. Si ce n'est pas le"
 " cas, contactez-nous en réponse à ce mail."
 
+msgid "Mail Reset Passphrase Warning Cozy Pass"
+msgstr ""
+"Attention ! Votre mot de passe actuel est l'unique moyen pour accéder aux mots de passe gardés par votre application Cozy Pass. "
+"Si vous le réinitialisez, vous perdrez ces données. Le reste de vos données resteront accessibles."
+
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Cliquez sur ce bouton pour le changer en toute sécurité."
 

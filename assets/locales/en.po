@@ -677,6 +677,11 @@ msgstr ""
 "You asked to change your password for Cozy Pass. "
 "If you didn't initiate this request, please contact us by replying directly to this email."
 
+msgid "Mail Reset Passphrase Warning Cozy Pass"
+msgstr ""
+"Warning! Your current password is the only way to decode the passwords kept in your app Cozy Pass. "
+"If you reset it, you will lose that data. The rest of your data will remain accessible."
+
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Click on the this button to safely change it."
 
