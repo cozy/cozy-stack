@@ -54,7 +54,7 @@ func (s *spanParser) Parse(parent ast.Node, block text.Reader, pc parser.Context
 	for pos := 1; pos < len(line); pos++ {
 		if line[pos] == ']' {
 			pos++
-			if line[pos] != '{' {
+			if pos >= len(line) || line[pos] != '{' {
 				return nil
 			}
 			block.Advance(pos)
