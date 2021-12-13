@@ -290,7 +290,23 @@ func markdownNodeMapper() markdown.NodeMapper {
 		},
 
 		// Inlines
-		ast.KindText:     vanilla[ast.KindText],
+		ast.KindText: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				n := node.(*ast.Text)
+				content := n.Segment.Value(state.Source)
+				state.AddText(string(content))
+				if n.HardLineBreak() {
+					typ, err := state.Schema.NodeType("hardBreak")
+					if err != nil {
+						return err
+					}
+					if _, err := state.AddNode(typ, nil, nil); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		},
 		ast.KindString:   vanilla[ast.KindString],
 		ast.KindAutoLink: vanilla[ast.KindAutoLink],
 		ast.KindLink:     vanilla[ast.KindLink],
