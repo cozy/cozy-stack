@@ -842,7 +842,7 @@ Get an image that shows the first page of a PDF in a small resolution (96x96).
 
 ### GET /files/:file-id/preview/:secret
 
-Get an image that shows the first page of a PDF (at most 720x1280).
+Get an image that shows the first page of a PDF (at most 1080x1920).
 
 ### GET /files/:file-id/thumbnails/:secret/:format
 
