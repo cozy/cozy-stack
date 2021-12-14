@@ -303,6 +303,12 @@ func (o *FileOpener) PrepareRequestForSharedFile() (*PreparedRequest, error) {
 			if i == 0 {
 				continue // Skip the owner
 			}
+			// XXX Skip the not-ready members, as an instance can be listed
+			// several times in members; with different email addresses and
+			// status.
+			if m.Status != MemberStatusReady {
+				continue
+			}
 			if m.Instance == domain || m.Instance+"/" == domain {
 				prepared.Creds = &s.Credentials[i-1]
 				prepared.Creator = &s.Members[i]
