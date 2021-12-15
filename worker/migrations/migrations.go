@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -128,12 +129,22 @@ func removeUnwantedFolders(domain string) error {
 			return
 		}
 
-		n, err := fs.DirLength(dir)
+		hasFiles := false
+		err = vfs.WalkByID(fs, dir.ID(), func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+			if err != nil {
+				return err
+			}
+			if file != nil {
+				hasFiles = true
+			}
+			return nil
+		})
 		if err != nil {
 			errf = multierror.Append(errf, err)
 			return
 		}
-		if n > 0 {
+		if hasFiles {
+			// This is a guard to avoiding deleting files by mistake.
 			return
 		}
 		push := pushTrashJob(fs)
@@ -155,12 +166,17 @@ func removeUnwantedFolders(domain string) error {
 
 	if !keepPhotosFolder {
 		name := inst.Translate("Tree Photos")
-		removeDir(fs.DirByPath("/" + name))
+		folder, err := fs.DirByPath("/" + name)
+		removeDir(folder, err)
 	}
 
 	if !keepAdministrativeFolder {
 		name := inst.Translate("Tree Administrative")
 		folder, err := fs.DirByPath("/" + name)
+		if err != nil {
+			name = i18n.Translate("Tree Administrative", consts.DefaultLocale, inst.ContextName)
+			folder, err = fs.DirByPath("/" + name)
+		}
 		removeDir(folder, err)
 
 		root, err := fs.DirByID(consts.RootDirID)
