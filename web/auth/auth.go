@@ -599,6 +599,7 @@ func Routes(router *echo.Group) {
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
 	router.DELETE("/register/:client-id", deleteClient)
+	router.POST("/clients/:client-id/challenge", postChallenge, checkRegistrationToken)
 
 	// OAuth flow
 	authorizeGroup := router.Group("/authorize", noCSRF)

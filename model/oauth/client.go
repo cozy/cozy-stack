@@ -40,6 +40,10 @@ const DocTypeVersion = "1"
 // ClientSecretLen is the number of random bytes used for generating the client secret
 const ClientSecretLen = 24
 
+// ChallengeLen is the number of random bytes used for generating a nonce for
+// certifying an android/iOS app.
+const ChallengeLen = 24
+
 // ScopeLogin is the special scope used by the manager or any other client
 // for login/authentication purposes.
 const ScopeLogin = "login"
@@ -552,6 +556,16 @@ func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 	return nil
+}
+
+func (c *Client) CreateChallenge(inst *instance.Instance) (string, error) {
+	nonce := crypto.GenerateRandomString(ChallengeLen)
+	store := GetStore()
+	if err := store.SaveChallenge(inst, c.ID(), nonce); err != nil {
+		return "", err
+	}
+	inst.Logger().Debugf("OAuth client %s has requested a challenge: %s", c.ID(), nonce)
+	return nonce, nil
 }
 
 // AcceptRedirectURI returns true if the given URI matches the registered

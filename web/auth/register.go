@@ -85,6 +85,20 @@ func deleteClient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func postChallenge(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.OAuthClientType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+	client := c.Get("client").(*oauth.Client)
+	nonce, err := client.CreateChallenge(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return c.JSON(http.StatusCreated, echo.Map{"nonce": nonce})
+}
+
 func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)

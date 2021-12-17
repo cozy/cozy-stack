@@ -572,6 +572,31 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
+### POST /auth/clients/:client-id/challenge
+
+This route can be used to start the process for certifying that an app is
+really what it tells to be by using the android/iOS APIs (SafetyNet). It
+returns a nonce that must be used in the certificate.
+
+The client must send its registration access token to use this endpoint.
+
+```http
+POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/challenge
+Host: cozy.example.org
+Authorization: Bearer J9l-ZhwP...
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+  "nonce": "MmE3OTM1ZDItNWY0ZC0xMWVjLTg3NT"
+}
+```
+
 ### GET /auth/authorize
 
 When an OAuth2 client wants to get access to the data of the cozy owner, it
