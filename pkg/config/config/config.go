@@ -119,6 +119,7 @@ type Config struct {
 	Matomo         Matomo
 	Move           Move
 	Notifications  Notifications
+	Flagship       Flagship
 	Logger         logger.Options
 
 	Lock                RedisConfig
@@ -244,6 +245,11 @@ type Notifications struct {
 	HuaweiSendMessagesURL string
 
 	Contexts map[string]SMS
+}
+
+// Flagship contains the configuration for the flagship app.
+type Flagship struct {
+	APKPackageNames []string
 }
 
 // SMS contains the configuration to send notifications by SMS.
@@ -787,6 +793,9 @@ func UseViper(v *viper.Viper) error {
 			HuaweiSendMessagesURL: v.GetString("notifications.huawei_send_message"),
 
 			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
+		},
+		Flagship: Flagship{
+			APKPackageNames: v.GetStringSlice("flagship.apk_package_names"),
 		},
 		Lock:                lockRedis,
 		SessionStorage:      sessionsRedis,

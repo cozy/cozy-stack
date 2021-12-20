@@ -569,7 +569,6 @@ Authorization: Bearer J9l-ZhwP...
 
 ```http
 HTTP/1.1 204 No Content
-Content-Type: application/json
 ```
 
 ### POST /auth/clients/:client-id/challenge
@@ -581,7 +580,7 @@ returns a nonce that must be used in the certificate.
 The client must send its registration access token to use this endpoint.
 
 ```http
-POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/challenge
+POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/challenge HTTP/1.1
 Host: cozy.example.org
 Authorization: Bearer J9l-ZhwP...
 ```
@@ -595,6 +594,29 @@ Content-Type: application/json
 {
   "nonce": "MmE3OTM1ZDItNWY0ZC0xMWVjLTg3NT"
 }
+```
+
+### POST /auth/clients/:client-id/attestation
+
+This route can be used to finish the process for certifying that an app is
+really what it tells to be by using the android/iOS APIs (SafetyNet). The
+client can send its attestation.
+
+```http
+POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/attestation HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/json
+```
+
+```json
+{
+  "platform": "android",
+  "attestation": "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+}
+```
+
+```http
+HTTP/1.1 204 No Content
 ```
 
 ### GET /auth/authorize

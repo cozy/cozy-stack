@@ -187,6 +187,9 @@ func init() {
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))
 
+	flags.StringSlice("flagship-apk-package-names", []string{"io.cozy.drive.mobile", "io.cozy.flagship.mobile"}, "Package name for the flagship app on android")
+	checkNoErr(viper.BindPFlag("flagship.apk_package_names", flags.Lookup("flagship-apk-package-names")))
+
 	flags.String("hooks", ".", "define the directory used for hook scripts")
 	checkNoErr(viper.BindPFlag("hooks", flags.Lookup("hooks")))
 

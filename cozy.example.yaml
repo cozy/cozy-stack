@@ -307,6 +307,11 @@ notifications:
       url: https://sms.cozy.beta/api/send
       token: {{.Env.COZY_BETA_SMS_TOKEN}}
 
+flagship:
+  apk_package_names:
+    - io.cozy.drive.mobile
+    - io.cozy.flagship.mobile
+
 # Allowed domains for the CSP policy used in hosted web applications
 csp_allowlist:
   # script: https://allowed1.domain.com/ https://allowed2.domain.com/
