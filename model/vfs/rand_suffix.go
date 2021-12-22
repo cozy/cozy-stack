@@ -60,10 +60,18 @@ func tryOrUseSuffix(name, format string, do func(suffix string) error) error {
 	return err
 }
 
-func stripSuffix(name, suffix string) string {
-	loc := strings.LastIndex(name, suffix)
+func stripConflictSuffix(name string) string {
+	loc := strings.LastIndex(name, "(")
 	if loc == -1 {
 		return name
+	}
+	for i := loc; i < len(name); i++ {
+		switch name[i] {
+		case '(', ')', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			// OK
+		default:
+			return name
+		}
 	}
 	return name[:loc]
 }

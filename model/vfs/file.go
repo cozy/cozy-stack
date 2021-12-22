@@ -358,10 +358,10 @@ func RestoreFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		return nil, err
 	}
 
-	name := stripSuffix(olddoc.DocName, conflictSuffix)
+	name := stripConflictSuffix(olddoc.DocName)
 
 	var newdoc *FileDoc
-	err = tryOrUseSuffix(name, "%s (%s)", func(name string) error {
+	err = tryOrUseSuffix(name, conflictFormat, func(name string) error {
 		newdoc = olddoc.Clone().(*FileDoc)
 		newdoc.DirID = restoreDir.DocID
 		newdoc.RestorePath = ""

@@ -41,10 +41,7 @@ const (
 	VersionsDirName = "/.cozy_versions"
 )
 
-const (
-	conflictSuffix = " (__cozy__: "
-	conflictFormat = "%s (__cozy__: %s)"
-)
+const conflictFormat = "%s (%s)"
 
 // MaxDepth is the maximum amount of recursion allowed for the recursive walk
 // process.
