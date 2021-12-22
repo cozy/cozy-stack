@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -1208,9 +1209,10 @@ func RestoreTrashFileHandler(c echo.Context) error {
 
 // ClearTrashHandler handles DELETE request to clear the trash
 func ClearTrashHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 
-	trash, err := instance.VFS().DirByID(consts.TrashDirID)
+	fs := inst.VFS()
+	trash, err := fs.DirByID(consts.TrashDirID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1220,9 +1222,29 @@ func ClearTrashHandler(c echo.Context) error {
 		return err
 	}
 
-	err = instance.VFS().DestroyDirContent(trash, pushTrashJob(instance))
+	files, _ := fs.FilesUsage()
+	versions, _ := fs.VersionsUsage()
+	quota := fs.DiskQuota()
+	freeSpace := quota - files - versions
+	inTrash, _ := fs.TrashUsage()
+
+	err = fs.DestroyDirContent(trash, pushTrashJob(inst))
 	if err != nil {
 		return WrapVfsError(err)
+	}
+
+	// As a rule of thumb if the freed space (= inTrash) was more than the free
+	// space, we want to ping other instances with common sharing to tell them
+	// to try reuploading files that have may have been blocked because of the
+	// quota.
+	if inTrash > freeSpace {
+		go func() {
+			i := inst.Clone().(*instance.Instance)
+			if err := sharing.AskReupload(i); err != nil {
+				i.Logger().WithNamespace("files").
+					Warnf("sharing.AskReupload failed with %s", err)
+			}
+		}()
 	}
 
 	return c.NoContent(204)
