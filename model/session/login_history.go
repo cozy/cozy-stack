@@ -126,10 +126,13 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 	}
 
 	city, subdivision, country, timezone := lookupIP(ip, i.Locale)
-	ua := user_agent.New(req.UserAgent())
-
-	browser, _ := ua.Browser()
+	rawUserAgent := req.UserAgent()
+	ua := user_agent.New(rawUserAgent)
 	os := ua.OS()
+	browser, _ := ua.Browser()
+	if strings.Contains(rawUserAgent, "CozyDrive") {
+		browser = "CozyDrive"
+	}
 
 	createdAt := time.Now()
 	i.Logger().WithNamespace("loginaudit").
