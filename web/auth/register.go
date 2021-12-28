@@ -113,7 +113,7 @@ func postAttestation(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
-	if err := client.Attest(inst, data["platform"], data["attestation"]); err != nil {
+	if err := client.Attest(inst, data["platform"], data["attestation"], data["challenge"]); err != nil {
 		inst.Logger().Infof("Cannot attest %s client: %s", client.ID(), err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),

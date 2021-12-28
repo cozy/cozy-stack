@@ -611,9 +611,12 @@ Content-Type: application/json
 ```json
 {
   "platform": "android",
+  "challenge": "MmE3OTM1ZDItNWY0ZC0xMWVjLTg3NT",
   "attestation": "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 }
 ```
+
+Note: the `platform` parameter can be `"android"` or `"ios"`.
 
 ```http
 HTTP/1.1 204 No Content
