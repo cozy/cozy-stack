@@ -570,14 +570,23 @@ func (c *Client) CreateChallenge(inst *instance.Instance) (string, error) {
 	return nonce, nil
 }
 
+// AttestationRequest is what an OAuth client can send to attest that it is the
+// flagship app.
+type AttestationRequest struct {
+	Platform    string `json:"platform"`
+	Challenge   string `json:"challenge"`
+	Attestation string `json:"attestation"`
+	KeyID       []byte `json:"keyId"`
+}
+
 // Attest can be used to check an attestation for certifying the app.
-func (c *Client) Attest(inst *instance.Instance, platform, attestation, challenge string) error {
+func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
 	var err error
-	switch platform {
+	switch req.Platform {
 	case "android":
-		err = c.checkAndroidAttestation(inst, attestation, challenge)
+		err = c.checkAndroidAttestation(inst, req)
 	case "ios":
-		err = c.checkAppleAttestation(inst, attestation, challenge)
+		err = c.checkAppleAttestation(inst, req)
 	default:
 		err = errors.New("invalid platform")
 	}

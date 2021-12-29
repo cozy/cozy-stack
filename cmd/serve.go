@@ -190,6 +190,9 @@ func init() {
 	flags.StringSlice("flagship-apk-package-names", []string{"io.cozy.drive.mobile", "io.cozy.flagship.mobile"}, "Package name for the flagship app on android")
 	checkNoErr(viper.BindPFlag("flagship.apk_package_names", flags.Lookup("flagship-apk-package-names")))
 
+	flags.StringSlice("flagship-apple-app-ids", []string{"3AKXFMV43J.io.cozy.drive.mobile", "3AKXFMV43J.io.cozy.flagship.mobile"}, "App ID of the flagship app on iOS")
+	checkNoErr(viper.BindPFlag("flagship.apple_app_ids", flags.Lookup("flagship-apple-app-ids")))
+
 	flags.String("hooks", ".", "define the directory used for hook scripts")
 	checkNoErr(viper.BindPFlag("hooks", flags.Lookup("hooks")))
 

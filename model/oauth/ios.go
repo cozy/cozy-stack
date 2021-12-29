@@ -2,6 +2,8 @@ package oauth
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -11,6 +13,8 @@ import (
 	"fmt"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/ugorji/go/codec"
 )
 
@@ -65,29 +69,29 @@ const (
 
 // checkAppleAttestation will check an attestation made by the DeviceCheck API.
 // Cf https://developer.apple.com/documentation/devicecheck/validating_apps_that_connect_to_your_server#3576643
-func (c *Client) checkAppleAttestation(inst *instance.Instance, attestation, challenge string) error {
+func (c *Client) checkAppleAttestation(inst *instance.Instance, req AttestationRequest) error {
 	store := GetStore()
-	if ok := store.CheckAndClearChallenge(inst, c.ID(), challenge); !ok {
+	if ok := store.CheckAndClearChallenge(inst, c.ID(), req.Challenge); !ok {
 		return errors.New("invalid challenge")
 	}
 
-	obj, err := parseAppleAttestation(attestation)
+	obj, err := parseAppleAttestation(req.Attestation)
 	if err != nil {
 		return fmt.Errorf("cannot parse attestation: %s", err)
 	}
 	inst.Logger().Debugf("checkAppleAttestation claims = %#v", obj)
 
-	if err := obj.checkCertificate(challenge); err != nil {
+	if err := obj.checkCertificate(req.Challenge, req.KeyID); err != nil {
 		return err
 	}
-	if err := obj.checkAttestationData(); err != nil {
+	if err := obj.checkAttestationData(req.KeyID); err != nil {
 		return err
 	}
 	return nil
 }
 
 func parseAppleAttestation(attestation string) (*appleAttestationObject, error) {
-	raw, err := base64.URLEncoding.DecodeString(attestation)
+	raw, err := base64.StdEncoding.DecodeString(attestation)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding base64: %s", err)
 	}
@@ -111,6 +115,8 @@ func parseAppleAttestation(attestation string) (*appleAttestationObject, error) 
 	return &obj, nil
 }
 
+// parseAuthData parse webauthn Attestation object.
+// Cf https://www.w3.org/TR/webauthn/#sctn-attestation
 func parseAuthData(raw []byte) (authenticatorData, error) {
 	var data authenticatorData
 	if len(raw) < 37 {
@@ -131,49 +137,20 @@ func parseAuthData(raw []byte) (authenticatorData, error) {
 	if len(raw) < int(55+idLength) {
 		return data, errors.New("raw AuthData is too short")
 	}
+	data.AttestedData.CredentialID = raw[55 : 55+idLength]
 	return data, nil
 }
 
-func (obj *appleAttestationObject) checkCertificate(challenge string) error {
+func (obj *appleAttestationObject) checkCertificate(challenge string, keyID []byte) error {
 	// 1. Verify that the x5c array contains the intermediate and leaf
 	// certificates for App Attest, starting from the credential certificate
 	// stored in the first data buffer in the array (credcert). Verify the
 	// validity of the certificates using Apple’s root certificate.
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(APPLE_APP_ATTEST_ROOT_CERT))
-	if !ok {
-		return errors.New("error adding root certificate to pool")
+	credCert, opts, err := obj.setupAppleCertificates()
+	if err != nil {
+		return err
 	}
-
-	x5c, ok := obj.AttStatement["x5c"].([]interface{})
-	if !ok || len(x5c) == 0 {
-		return errors.New("missing certification")
-	}
-
-	certs := make([]*x509.Certificate, 0, len(x5c))
-	for _, raw := range x5c {
-		rawBytes, ok := raw.([]byte)
-		if !ok {
-			return errors.New("missing certification")
-		}
-		cert, err := x509.ParseCertificate(rawBytes)
-		if err != nil {
-			return fmt.Errorf("error parsing cert: %s", err)
-		}
-		certs = append(certs, cert)
-	}
-	intermediates := x509.NewCertPool()
-	for _, cert := range certs {
-		intermediates.AddCert(cert)
-	}
-
-	opts := x509.VerifyOptions{
-		Roots:         roots,
-		Intermediates: intermediates,
-	}
-
-	credCert := certs[0]
-	if _, err := credCert.Verify(opts); err != nil {
+	if _, err := credCert.Verify(*opts); err != nil {
 		return err
 	}
 
@@ -190,6 +167,66 @@ func (obj *appleAttestationObject) checkCertificate(challenge string) error {
 	// 1.2.840.113635.100.8.2, which is a DER-encoded ASN.1 sequence. Decode
 	// the sequence and extract the single octet string that it contains.
 	// Verify that the string equals nonce.
+	extracted, err := extractNonceFromCertificate(credCert)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(nonce[:], extracted) {
+		return errors.New("invalid nonce")
+	}
+
+	// 5. Create the SHA256 hash of the public key in credCert, and verify that
+	// it matches the key identifier from your app.
+	pub, ok := credCert.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("invalid algorithm for credCert")
+	}
+	pubKey := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+	pubKeyHash := sha256.Sum256(pubKey)
+	if !bytes.Equal(pubKeyHash[:], keyID) {
+		return errors.New("invalid keyId")
+	}
+	return nil
+}
+
+func (obj *appleAttestationObject) setupAppleCertificates() (*x509.Certificate, *x509.VerifyOptions, error) {
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM([]byte(APPLE_APP_ATTEST_ROOT_CERT))
+	if !ok {
+		return nil, nil, errors.New("error adding root certificate to pool")
+	}
+
+	x5c, ok := obj.AttStatement["x5c"].([]interface{})
+	if !ok || len(x5c) == 0 {
+		return nil, nil, errors.New("missing certification")
+	}
+
+	certs := make([]*x509.Certificate, 0, len(x5c))
+	for _, raw := range x5c {
+		rawBytes, ok := raw.([]byte)
+		if !ok {
+			return nil, nil, errors.New("missing certification")
+		}
+		cert, err := x509.ParseCertificate(rawBytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error parsing cert: %s", err)
+		}
+		certs = append(certs, cert)
+	}
+	intermediates := x509.NewCertPool()
+	for _, cert := range certs {
+		intermediates.AddCert(cert)
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		Intermediates: intermediates,
+	}
+	credCert := certs[0]
+	return credCert, &opts, nil
+}
+
+func extractNonceFromCertificate(credCert *x509.Certificate) ([]byte, error) {
 	credCertOID := asn1.ObjectIdentifier{1, 2, 840, 113635, 100, 8, 2}
 	var credCertId []byte
 	for _, extension := range credCert.Extensions {
@@ -198,44 +235,59 @@ func (obj *appleAttestationObject) checkCertificate(challenge string) error {
 		}
 	}
 	if len(credCertId) == 0 {
-		return errors.New("missing credCert extension")
+		return nil, errors.New("missing credCert extension")
 	}
 	var values []asn1.RawValue
 	_, err := asn1.Unmarshal(credCertId, &values)
 	if err != nil || len(values) == 0 {
-		return errors.New("missing credCert value")
+		return nil, errors.New("missing credCert value")
 	}
 	var value asn1.RawValue
 	if _, err = asn1.Unmarshal(values[0].Bytes, &value); err != nil {
-		return errors.New("missing credCert value")
+		return nil, errors.New("missing credCert value")
 	}
-	if !bytes.Equal(nonce[:], value.Bytes) {
-		return errors.New("invalid nonce")
-	}
-
-	// 5. Create the SHA256 hash of the public key in credCert, and verify that
-	// it matches the key identifier from your app.
-	// TODO
-	return nil
+	return value.Bytes, nil
 }
 
-func (obj *appleAttestationObject) checkAttestationData() error {
+func (obj *appleAttestationObject) checkAttestationData(keyID []byte) error {
 	// 6. Compute the SHA256 hash of your app’s App ID, and verify that this is
 	// the same as the authenticator data’s RP ID hash.
-	// TODO
+	if err := checkAppID(obj.AuthData.RPIDHash); err != nil {
+		return err
+	}
 
 	// 7. Verify that the authenticator data’s counter field equals 0.
-	// TODO
+	if obj.AuthData.Counter != 0 {
+		return errors.New("invalid counter")
+	}
 
 	// 8. Verify that the authenticator data’s aaguid field is either
 	// appattestdevelop if operating in the development environment, or
 	// appattest followed by seven 0x00 bytes if operating in the production
 	// environment.
-	// TODO
+	aaguid := [16]byte{'a', 'p', 'p', 'a', 't', 't', 'e', 's', 't', 0, 0, 0, 0, 0, 0, 0}
+	if build.IsDevRelease() {
+		copy(aaguid[:], "appattestdevelop")
+	}
+	if !bytes.Equal(obj.AuthData.AttestedData.AAGUID, aaguid[:]) {
+		return errors.New("invalid aaguid")
+	}
 
 	// 9. Verify that the authenticator data’s credentialId field is the same
 	// as the key identifier.
-	// TODO
-
+	if !bytes.Equal(obj.AuthData.AttestedData.CredentialID, keyID) {
+		return errors.New("invalid credentialId")
+	}
 	return nil
+}
+
+func checkAppID(hash []byte) error {
+	appIDs := config.GetConfig().Flagship.AppleAppIDs
+	for _, appID := range appIDs {
+		appIDHash := sha256.Sum256([]byte(appID))
+		if bytes.Equal(hash, appIDHash[:]) {
+			return nil
+		}
+	}
+	return errors.New("invalid RP ID hash")
 }

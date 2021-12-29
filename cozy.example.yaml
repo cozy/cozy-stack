@@ -311,6 +311,9 @@ flagship:
   apk_package_names:
     - io.cozy.drive.mobile
     - io.cozy.flagship.mobile
+  apple_app_ids:
+    - 3AKXFMV43J.io.cozy.drive.mobile
+    - 3AKXFMV43J.io.cozy.flagship.mobile
 
 # Allowed domains for the CSP policy used in hosted web applications
 csp_allowlist:

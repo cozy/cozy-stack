@@ -250,6 +250,7 @@ type Notifications struct {
 // Flagship contains the configuration for the flagship app.
 type Flagship struct {
 	APKPackageNames []string
+	AppleAppIDs     []string
 }
 
 // SMS contains the configuration to send notifications by SMS.
@@ -796,6 +797,7 @@ func UseViper(v *viper.Viper) error {
 		},
 		Flagship: Flagship{
 			APKPackageNames: v.GetStringSlice("flagship.apk_package_names"),
+			AppleAppIDs:     v.GetStringSlice("flagship.apple_app_ids"),
 		},
 		Lock:                lockRedis,
 		SessionStorage:      sessionsRedis,

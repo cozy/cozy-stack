@@ -616,7 +616,8 @@ Content-Type: application/json
 }
 ```
 
-Note: the `platform` parameter can be `"android"` or `"ios"`.
+Note: the `platform` parameter can be `"android"` or `"ios"`. For `ios`, a
+`"keyId"` parameter is also required.
 
 ```http
 HTTP/1.1 204 No Content

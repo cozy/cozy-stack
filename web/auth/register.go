@@ -107,13 +107,13 @@ func postAttestation(c echo.Context) error {
 			"error": "Client not found",
 		})
 	}
-	var data map[string]string
+	var data oauth.AttestationRequest
 	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
 		})
 	}
-	if err := client.Attest(inst, data["platform"], data["attestation"], data["challenge"]); err != nil {
+	if err := client.Attest(inst, data); err != nil {
 		inst.Logger().Infof("Cannot attest %s client: %s", client.ID(), err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),

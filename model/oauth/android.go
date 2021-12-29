@@ -14,13 +14,13 @@ import (
 
 // checkAndroidAttestation will check an attestation made by the SafetyNet API.
 // Cf https://developer.android.com/training/safetynet/attestation#use-response-server
-func (c *Client) checkAndroidAttestation(inst *instance.Instance, attestation, challenge string) error {
+func (c *Client) checkAndroidAttestation(inst *instance.Instance, req AttestationRequest) error {
 	store := GetStore()
-	if ok := store.CheckAndClearChallenge(inst, c.ID(), challenge); !ok {
+	if ok := store.CheckAndClearChallenge(inst, c.ID(), req.Challenge); !ok {
 		return errors.New("invalid challenge")
 	}
 
-	token, err := jwt.Parse(attestation, androidKeyFunc)
+	token, err := jwt.Parse(req.Attestation, androidKeyFunc)
 	if err != nil {
 		return fmt.Errorf("cannot parse attestation: %s", err)
 	}
@@ -34,7 +34,7 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, attestation, c
 	if !ok || len(nonce) == 0 {
 		return errors.New("missing nonce")
 	}
-	if challenge != nonce {
+	if req.Challenge != nonce {
 		return errors.New("invalid nonce")
 	}
 
