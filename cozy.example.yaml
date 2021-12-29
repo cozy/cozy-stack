@@ -311,6 +311,8 @@ flagship:
   apk_package_names:
     - io.cozy.drive.mobile
     - io.cozy.flagship.mobile
+  apk_certificate_digests:
+    - 'xNnH7T1BSDh6erMzNysfakBVLLacbSbOMxVk8jEPgdU='
   apple_app_ids:
     - 3AKXFMV43J.io.cozy.drive.mobile
     - 3AKXFMV43J.io.cozy.flagship.mobile

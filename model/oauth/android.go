@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	jwt "github.com/golang-jwt/jwt/v4"
 )
 
@@ -38,6 +39,16 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, req Attestatio
 		return errors.New("invalid nonce")
 	}
 
+	if err := checkPackageName(claims); err != nil {
+		return err
+	}
+	if err := checkCertificateDigest(claims); err != nil {
+		return err
+	}
+	return nil
+}
+
+func checkPackageName(claims jwt.MapClaims) error {
 	packageName, ok := claims["apkPackageName"].(string)
 	if !ok || len(packageName) == 0 {
 		return errors.New("missing apkPackageName")
@@ -49,6 +60,22 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, req Attestatio
 		}
 	}
 	return fmt.Errorf("%s is not the package name of the flagship app", packageName)
+}
+
+func checkCertificateDigest(claims jwt.MapClaims) error {
+	certDigest, ok := claims["apkCertificateDigestSha256"].(string)
+	if !ok || len(certDigest) == 0 {
+		return errors.New("missing apkCertificateDigestSha256")
+	}
+	digests := config.GetConfig().Flagship.APKCertificateDigests
+	for _, digest := range digests {
+		if digest == certDigest {
+			return nil
+		}
+	}
+	logger.WithNamespace("oauth").
+		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest)
+	return errors.New("invalid certificate digest")
 }
 
 func androidKeyFunc(token *jwt.Token) (interface{}, error) {
