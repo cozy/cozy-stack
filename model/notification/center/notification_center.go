@@ -217,6 +217,9 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 				if err == nil {
 					return nil
 				}
+				if err.Error() == "No device with push notification" {
+                    return nil
+                }
 				log.Errorf("Error while sending push %#v: %v. Error: %v", p, n.State, err)
 				errm = multierror.Append(errm, err)
 			}
