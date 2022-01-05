@@ -240,6 +240,9 @@ type Notifications struct {
 	IOSKeyID               string
 	IOSTeamID              string
 
+	HuaweiGetTokenURL     string
+	HuaweiSendMessagesURL string
+
 	Contexts map[string]SMS
 }
 
@@ -779,6 +782,9 @@ func UseViper(v *viper.Viper) error {
 			IOSCertificatePassword: v.GetString("notifications.ios_certificate_password"),
 			IOSKeyID:               v.GetString("notifications.ios_key_id"),
 			IOSTeamID:              v.GetString("notifications.ios_team_id"),
+
+			HuaweiGetTokenURL:     v.GetString("notifications.huawei_get_token"),
+			HuaweiSendMessagesURL: v.GetString("notifications.huawei_send_message"),
 
 			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
 		},

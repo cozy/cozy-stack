@@ -296,6 +296,10 @@ notifications:
   # ios_key_id: my_key_id_if_any
   # ios_team_id: my_team_id_if_any
 
+  # Huawei notifications
+  # huawei_get_token: http://localhost:3001/api/notification-token/huawei
+  # huawei_send_message: https://push-api.cloud.huawei.com/v1/<your_appid>/messages:send
+
   # Configure the SMS per context
   contexts:
     beta:
