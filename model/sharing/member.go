@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -503,6 +505,12 @@ func (s *Sharing) FindMemberByCode(perms *permission.Permission, sharecode strin
 	}
 	for i, m := range s.Members {
 		if m.Instance == emailOrInstance {
+			return &s.Members[i], nil
+		}
+	}
+	if strings.HasPrefix(emailOrInstance, "index:") {
+		i, err := strconv.Atoi(strings.TrimPrefix(emailOrInstance, "index:"))
+		if err == nil && i > 0 && i < len(s.Members) {
 			return &s.Members[i], nil
 		}
 	}
@@ -1026,6 +1034,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			perms, err := permission.GetForSharePreview(inst, s.SID)
 			if err == nil {
 				token = perms.Codes[m.Email]
+			}
+			if token == "" {
+				continue
 			}
 		}
 		opts := &request.Options{
