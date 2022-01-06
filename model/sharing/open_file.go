@@ -160,21 +160,21 @@ func (o *FileOpener) GetSharecode(memberIndex int, readOnly bool) (string, error
 		}
 	} else {
 		// Trust the owner
-		if memberIndex < 0 && memberIndex >= len(s.Members) {
+		if memberIndex < 0 || memberIndex >= len(s.Members) {
 			return "", ErrMemberNotFound
 		}
 		member = &s.Members[memberIndex]
 	}
 
 	if readOnly {
-		return o.getPreviewCode(member)
+		return o.getPreviewCode(member, memberIndex)
 	}
-	return o.getInteractCode(member)
+	return o.getInteractCode(member, memberIndex)
 }
 
 // getPreviewCode returns a sharecode that can be used for reading the file. It
 // uses a share-preview token.
-func (o *FileOpener) getPreviewCode(member *Member) (string, error) {
+func (o *FileOpener) getPreviewCode(member *Member, memberIndex int) (string, error) {
 	preview, err := permission.GetForSharePreview(o.Inst, o.Sharing.ID())
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -185,13 +185,20 @@ func (o *FileOpener) getPreviewCode(member *Member) (string, error) {
 		}
 	}
 
+	indexKey := keyFromMemberIndex(memberIndex)
 	for key, code := range preview.ShortCodes {
-		if key == member.Instance || key == member.Email {
+		if key == "" {
+			continue
+		}
+		if key == member.Instance || key == member.Email || key == indexKey {
 			return code, nil
 		}
 	}
 	for key, code := range preview.Codes {
-		if key == member.Instance || key == member.Email {
+		if key == "" {
+			continue
+		}
+		if key == member.Instance || key == member.Email || key == indexKey {
 			return code, nil
 		}
 	}
@@ -201,7 +208,7 @@ func (o *FileOpener) getPreviewCode(member *Member) (string, error) {
 
 // getInteractCode returns a sharecode that can be use for reading and writing
 // the file. It uses a share-interact token.
-func (o *FileOpener) getInteractCode(member *Member) (string, error) {
+func (o *FileOpener) getInteractCode(member *Member, memberIndex int) (string, error) {
 	interact, err := permission.GetForShareInteract(o.Inst, o.Sharing.ID())
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -220,8 +227,12 @@ func (o *FileOpener) getInteractCode(member *Member) (string, error) {
 	}
 
 	// If we already have a code for this member, let's use it
+	indexKey := keyFromMemberIndex(memberIndex)
 	for key, code := range interact.Codes {
-		if key == member.Instance || key == member.Email {
+		if key == "" {
+			continue
+		}
+		if key == member.Instance || key == member.Email || key == indexKey {
 			if needUpdate {
 				if err := couchdb.UpdateDoc(o.Inst, interact); err != nil {
 					return "", err
@@ -235,6 +246,9 @@ func (o *FileOpener) getInteractCode(member *Member) (string, error) {
 	key := member.Email
 	if key == "" {
 		key = member.Instance
+	}
+	if key == "" {
+		key = indexKey
 	}
 	code, err := o.Inst.CreateShareCode(key)
 	if err != nil {

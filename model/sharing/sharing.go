@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -194,6 +195,9 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (*permission
 		if key == "" {
 			key = m.Instance
 		}
+		if key == "" {
+			key = keyFromMemberIndex(i)
+		}
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
@@ -250,6 +254,10 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (*permission
 		return nil, err
 	}
 	return doc, nil
+}
+
+func keyFromMemberIndex(index int) string {
+	return fmt.Sprintf("index:%d", index)
 }
 
 // CreateInteractPermissions creates the permissions doc for reading and
