@@ -312,7 +312,7 @@ func getAuthorizeCode(c echo.Context) error {
 	}
 
 	client := &oauth.Client{ClientID: move.SourceClientID}
-	access, err := oauth.CreateAccessCode(inst, client, consts.ExportsRequests)
+	access, err := oauth.CreateAccessCode(inst, client, consts.ExportsRequests, "")
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func initializeMove(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope)
+	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope, "")
 	if err != nil {
 		return err
 	}
