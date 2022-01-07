@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,14 +38,16 @@ type webappParams struct {
 }
 
 type authorizeParams struct {
-	instance    *instance.Instance
-	state       string
-	clientID    string
-	redirectURI string
-	scope       string
-	resType     string
-	client      *oauth.Client
-	webapp      *webappParams
+	instance        *instance.Instance
+	state           string
+	clientID        string
+	redirectURI     string
+	scope           string
+	resType         string
+	challenge       string
+	challengeMethod string
+	client          *oauth.Client
+	webapp          *webappParams
 }
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
@@ -58,6 +62,12 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 	if params.resType != "code" {
 		return true, renderError(c, http.StatusBadRequest, "Error Invalid response type")
+	}
+	if params.challenge != "" && params.challengeMethod != "S256" {
+		return true, renderError(c, http.StatusBadRequest, "Error Invalid challenge code method")
+	}
+	if params.challengeMethod == "S256" && params.challenge == "" {
+		return true, renderError(c, http.StatusBadRequest, "Error No challenge code")
 	}
 
 	client, err := oauth.FindClient(params.instance, params.clientID)
@@ -110,12 +120,14 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 func authorizeForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
-		instance:    instance,
-		state:       c.QueryParam("state"),
-		clientID:    c.QueryParam("client_id"),
-		redirectURI: c.QueryParam("redirect_uri"),
-		scope:       c.QueryParam("scope"),
-		resType:     c.QueryParam("response_type"),
+		instance:        instance,
+		state:           c.QueryParam("state"),
+		clientID:        c.QueryParam("client_id"),
+		redirectURI:     c.QueryParam("redirect_uri"),
+		scope:           c.QueryParam("scope"),
+		resType:         c.QueryParam("response_type"),
+		challenge:       c.QueryParam("code_challenge"),
+		challengeMethod: c.QueryParam("code_challenge_method"),
 	}
 
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
@@ -133,7 +145,7 @@ func authorizeForm(c echo.Context) error {
 	// for the manager. It does not require any authorization from the user, and
 	// generate a code without asking any permission.
 	if params.scope == oauth.ScopeLogin {
-		access, err := oauth.CreateAccessCode(params.instance, params.client, "" /* = scope */)
+		access, err := oauth.CreateAccessCode(params.instance, params.client, "" /* = scope */, "" /* = challenge */)
 		if err != nil {
 			return err
 		}
@@ -204,6 +216,8 @@ func authorizeForm(c echo.Context) error {
 		"State":            params.state,
 		"RedirectURI":      params.redirectURI,
 		"Scope":            params.scope,
+		"Challenge":        params.challenge,
+		"ChallengeMethod":  params.challengeMethod,
 		"Permissions":      permissions,
 		"ReadOnly":         readOnly,
 		"CSRF":             c.Get("csrf"),
@@ -215,12 +229,14 @@ func authorizeForm(c echo.Context) error {
 func authorize(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
-		instance:    instance,
-		state:       c.FormValue("state"),
-		clientID:    c.FormValue("client_id"),
-		redirectURI: c.FormValue("redirect_uri"),
-		scope:       c.FormValue("scope"),
-		resType:     c.FormValue("response_type"),
+		instance:        instance,
+		state:           c.FormValue("state"),
+		clientID:        c.FormValue("client_id"),
+		redirectURI:     c.FormValue("redirect_uri"),
+		scope:           c.FormValue("scope"),
+		resType:         c.FormValue("response_type"),
+		challenge:       c.FormValue("challenge_code"),
+		challengeMethod: c.FormValue("challenge_code_method"),
 	}
 
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
@@ -269,7 +285,7 @@ func authorize(c echo.Context) error {
 		}
 	}
 
-	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope)
+	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope, params.challenge)
 	if err != nil {
 		return err
 	}
@@ -610,7 +626,7 @@ func moveSuccessURI(c echo.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope)
+	access, err := oauth.CreateAccessCode(inst, client, move.MoveScope, "")
 	if err != nil {
 		return "", err
 	}
@@ -659,6 +675,7 @@ func accessToken(c echo.Context) error {
 	grant := c.FormValue("grant_type")
 	clientID := c.FormValue("client_id")
 	clientSecret := c.FormValue("client_secret")
+	verifier := c.FormValue("code_verifier")
 	instance := middlewares.GetInstance(c)
 
 	if grant == "" {
@@ -715,6 +732,15 @@ func accessToken(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
+		}
+		if accessCode.Challenge != "" {
+			sum := sha256.Sum256([]byte(verifier))
+			challenge := base64.RawURLEncoding.EncodeToString(sum[:])
+			if challenge != accessCode.Challenge {
+				return c.JSON(http.StatusBadRequest, echo.Map{
+					"error": "invalid code_verifier",
+				})
+			}
 		}
 		out.Scope = accessCode.Scope
 		out.Refresh, err = client.CreateJWT(instance, consts.RefreshTokenAudience, out.Scope)

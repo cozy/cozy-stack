@@ -598,6 +598,26 @@ Host: cozy.example.org
 **Note** we warn the user that he is about to share his data with an application
 which only the callback URI is guaranteed.
 
+#### PKCE extension
+
+To improve security, the client can use the [PKCE for OAuth
+2](https://oauth.net/2/pkce/). In that case, two additional parameters must be
+send to `GET /auth/authorize`:
+
+- `code_challenge`: the client creates a `code_verifier`, and then derive the
+  `code_challenge` from it.
+- `code_challenge_method`: it must be `S256` (the only supported method).
+
+As a reminder, the relation between `code_verifier` and `code_challenge` is the
+following:
+
+```
+code_challenge = BASE64URL-ENCODE(SHA256(code_verifier))
+```
+
+And, the `code_verifier` parameter must be sent to `POST /auth/access_token`
+(see below).
+
 ### POST /auth/authorize
 
 When the user accepts, her browser send a request to this endpoint:

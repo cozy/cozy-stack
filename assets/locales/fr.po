@@ -525,6 +525,12 @@ msgstr "Le type de réponse est invalide"
 msgid "Error Invalid scope"
 msgstr "Le paramètre scope est invalide"
 
+msgid "Error Invalid challenge code method"
+msgstr "Le paramètre challenge_code_method est invalide"
+
+msgid "Error No challenge code"
+msgstr "Le paramètre challenge_code doit être fourni en présence du paramètre challenge_code_method"
+
 msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
 

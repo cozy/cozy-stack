@@ -38,6 +38,7 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const domain = "cozy.example.net"
@@ -1254,6 +1255,81 @@ func TestRefreshTokenSuccess(t *testing.T) {
 	assert.Equal(t, "files:read", response["scope"])
 	assert.Equal(t, "", response["refresh_token"])
 	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
+}
+
+func TestOAuthWithPKCE(t *testing.T) {
+	/* Values taken from https://datatracker.ietf.org/doc/html/rfc7636#appendix-B */
+	challenge := "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+	verifier := "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+
+	/* 1. GET /auth/authorize */
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID+"&challenge_code_method=S256&challenge_code="+challenge, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	require.Equal(t, res.StatusCode, 200)
+	body, _ := ioutil.ReadAll(res.Body)
+	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(string(body))
+	require.Len(t, matches, 2)
+	csrfToken = matches[1]
+
+	/* 2. POST /auth/authorize */
+	res, err = postForm("/auth/authorize", &url.Values{
+		"state":                 {"123456"},
+		"client_id":             {clientID},
+		"redirect_uri":          {"https://example.org/oauth/callback"},
+		"scope":                 {"files:read"},
+		"csrf_token":            {csrfToken},
+		"response_type":         {"code"},
+		"challenge_code":        {challenge},
+		"challenge_code_method": {"S256"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	require.Equal(t, "302 Found", res.Status)
+	var results []oauth.AccessCode
+	allReq := &couchdb.AllDocsRequest{}
+	err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, allReq, &results)
+	assert.NoError(t, err)
+	var code string
+	for _, result := range results {
+		if result.Challenge != "" {
+			code = result.Code
+		}
+	}
+	require.NotEmpty(t, code)
+
+	/* 3. POST /auth/access_token without code_verifier must fail */
+	res, err = postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid code_verifier")
+
+	/* 4. POST /auth/access_token with code_verifier should succeed */
+	res, err = postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {code},
+		"code_verifier": {verifier},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	require.Equal(t, res.StatusCode, 200)
+	var response map[string]string
+	err = json.NewDecoder(res.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Equal(t, "bearer", response["token_type"])
+	assert.Equal(t, "files:read", response["scope"])
+	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
+	assertValidToken(t, response["refresh_token"], "refresh", clientID, "files:read")
 }
 
 func TestAppRedirectionOnLogin(t *testing.T) {

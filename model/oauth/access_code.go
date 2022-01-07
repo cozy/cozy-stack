@@ -11,11 +11,12 @@ import (
 // CouchDB, not just sent as a JSON Web Token, because it can be used only
 // once (no replay attacks).
 type AccessCode struct {
-	Code     string `json:"_id,omitempty"`
-	CouchRev string `json:"_rev,omitempty"`
-	ClientID string `json:"client_id"`
-	IssuedAt int64  `json:"issued_at"`
-	Scope    string `json:"scope"`
+	Code      string `json:"_id,omitempty"`
+	CouchRev  string `json:"_rev,omitempty"`
+	ClientID  string `json:"client_id"`
+	IssuedAt  int64  `json:"issued_at"`
+	Scope     string `json:"scope"`
+	Challenge string `json:"challenge_code,omitempty"`
 }
 
 // ID returns the access code qualified identifier
@@ -37,7 +38,7 @@ func (ac *AccessCode) SetID(id string) { ac.Code = id }
 func (ac *AccessCode) SetRev(rev string) { ac.CouchRev = rev }
 
 // CreateAccessCode an access code for the given clientID, persisted in CouchDB
-func CreateAccessCode(i *instance.Instance, client *Client, scope string) (*AccessCode, error) {
+func CreateAccessCode(i *instance.Instance, client *Client, scope, challenge string) (*AccessCode, error) {
 	if client.Pending {
 		client.Pending = false
 		client.ClientID = ""
@@ -46,9 +47,10 @@ func CreateAccessCode(i *instance.Instance, client *Client, scope string) (*Acce
 	}
 
 	ac := &AccessCode{
-		ClientID: client.ClientID,
-		IssuedAt: crypto.Timestamp(),
-		Scope:    scope,
+		ClientID:  client.ClientID,
+		IssuedAt:  crypto.Timestamp(),
+		Scope:     scope,
+		Challenge: challenge,
 	}
 	if err := couchdb.CreateDoc(i, ac); err != nil {
 		return nil, err
