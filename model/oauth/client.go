@@ -88,6 +88,8 @@ type Client struct {
 	// XXX omitempty does not work for time.Time, thus the interface{} type
 	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
 
+	Flagship bool `json:"flagship,omitempty"`
+
 	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
 	OnboardingApp         string `json:"onboarding_app,omitempty"`
 	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`

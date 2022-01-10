@@ -497,6 +497,9 @@ msgstr "Authentication with two-factor is activated"
 msgid "Confirmation User Content"
 msgstr "Your e-mail is now confirmed. We successfully activated two-factor authentication for your Cozy."
 
+msgid "Permissions Maximal"
+msgstr "All the data"
+
 msgid "Permissions Read only"
 msgstr ", and related documents"
 

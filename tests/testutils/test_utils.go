@@ -269,10 +269,20 @@ func (j *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	j.Jar.SetCookies(j.URL, cookies)
 }
 
+// Reset clears all the cookie
+func (j *CookieJar) Reset() error {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return err
+	}
+	j.Jar = jar
+	return nil
+}
+
 // GetCookieJar returns a cookie jar valable for test
 // the jar discard the url passed to Cookies and SetCookies and always use
 // the setup instance URL instead.
-func (c *TestSetup) GetCookieJar() http.CookieJar {
+func (c *TestSetup) GetCookieJar() *CookieJar {
 	instance := c.GetTestInstance()
 	instanceURL, err := url.Parse("https://" + instance.Domain + "/auth")
 	if err != nil {

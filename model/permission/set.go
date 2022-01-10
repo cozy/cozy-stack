@@ -148,6 +148,10 @@ func (s Set) Some(predicate func(Rule) bool) bool {
 // RuleInSubset returns true if any document allowed by the rule
 // is allowed by the set.
 func (s *Set) RuleInSubset(r2 Rule) bool {
+	if s.IsMaximal() {
+		return true
+	}
+
 	for _, r := range *s {
 		if !MatchType(r, r2.Type) {
 			continue
@@ -176,6 +180,12 @@ func (s *Set) RuleInSubset(r2 Rule) bool {
 // IsSubSetOf returns true if any document allowed by the set
 // would have been allowed by parent.
 func (s *Set) IsSubSetOf(parent Set) bool {
+	if s.IsMaximal() {
+		return false
+	}
+	if parent.IsMaximal() {
+		return true
+	}
 	for _, r := range *s {
 		if !parent.RuleInSubset(r) {
 			return false
@@ -275,4 +285,20 @@ func Diff(set1, set2 Set) (Set, error) {
 		}
 	}
 	return newSet, nil
+}
+
+// IsMaximal returns true if the permission is valid for everything. Only the
+// flagship app should have it, as it is really powerful.
+func (s *Set) IsMaximal() bool {
+	return s.Some(func(r Rule) bool {
+		return isMaximal(r.Type)
+	})
+}
+
+// MaximalSet returns the maximal permission, for the flagship app. It gives
+// access to every endpoint.
+func MaximalSet() Set {
+	return Set{
+		Rule{Type: allDocTypes},
+	}
 }

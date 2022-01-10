@@ -45,7 +45,7 @@ func matchVerb(r Rule, v Verb) bool {
 
 // MatchType returns true if the rule type matches the given doctype
 func MatchType(r Rule, doctype string) bool {
-	if r.Type == doctype {
+	if r.Type == doctype || isMaximal(r.Type) {
 		return true
 	}
 	if !isWildcard(r.Type) {

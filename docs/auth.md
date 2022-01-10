@@ -780,6 +780,38 @@ Content-Type: application/json
 }
 ```
 
+### POST /auth/session_code
+
+This endpoint can only be used by the flagship application. It will create a
+session code: this code can be added to the URL of a cozy application (in the
+query string, as `sessioncode`) to create a session. The flagship can create
+this code, and then use it in a webview to avoid the reauthentication of the
+user.
+
+#### Request
+
+```http
+POST /auth/session_code HTTP/1.1
+Host: cozy.example.org
+Accept: application/json
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+    "session_code": "HzEFM3JREpIB6532fQc1FP2t4YJKt3gI"
+}
+```
+
+The flagship will then be able to open a webview for
+`https://cozy-home.example.org/?session_code=HzEFM3JREpIB6532fQc1FP2t4YJKt3gI`.
+
 ### FAQ
 
 > What format is used for tokens?

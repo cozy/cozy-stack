@@ -140,7 +140,12 @@ func CheckDoctypeName(doctype string, authorizeWildcard bool) error {
 	return nil
 }
 
+const allDocTypes = "*"
 const wildcardSuffix = ".*"
+
+func isMaximal(doctype string) bool {
+	return doctype == allDocTypes
+}
 
 func isWildcard(doctype string) bool {
 	return strings.HasSuffix(doctype, wildcardSuffix)

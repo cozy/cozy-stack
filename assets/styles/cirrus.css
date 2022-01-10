@@ -238,13 +238,14 @@
   display: flex;
   align-items: center;
   flex-grow: 1;
-  padding: 1rem 1rem 1rem 2rem;
+  padding: 1rem 1rem 1rem 0;
 }
 .permissions-list li + li .small {
   border-top: solid 1px var(--dividerColor);
 }
 .permissions-list li .halo-icon {
-  margin-left: 2rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
 }
 @media (min-width: 768px) {
   .permissions-list li .rounded-circle {
@@ -262,6 +263,10 @@
 .perm {
   -webkit-mask-image: url("../icons/doctypes/fallback.svg");
   mask-image: url("../icons/doctypes/fallback.svg");
+}
+.perm[class^="\* "] {
+  -webkit-mask-image: url("../icons/doctypes/cozy-smile.svg");
+  mask-image: url("../icons/doctypes/cozy-smile.svg");
 }
 .perm[class^="com-bitwarden-ciphers"],
 .perm[class^="com-bitwarden-folders"],
@@ -379,8 +384,11 @@
   width: 2rem;
   height: 2rem;
   padding: 0.5rem;
-  background-color: var(--dividerColor);
+  background-color: var(--primaryColor);
   border-radius: 50%;
+}
+.halo-icon .icon {
+  background-color: var(--primaryTextContrastColor);
 }
 button.alert-info:hover {
   background-color: var(--btn-ghost-hover-color);

@@ -9,7 +9,6 @@ import (
 )
 
 const ruleSep = " "
-
 const valueSep = ","
 const partSep = ":"
 
@@ -140,6 +139,8 @@ func (r Rule) ValuesChanged(old, current Fetcher) bool {
 // description of this rule
 func (r Rule) TranslationKey() string {
 	switch r.Type {
+	case allDocTypes:
+		return "Permissions Maximal"
 	case consts.Settings:
 		if r.Verbs.ReadOnly() && len(r.Values) == 1 && r.Values[0] == consts.DiskUsageID {
 			return "Permissions disk usage"

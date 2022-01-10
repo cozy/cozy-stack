@@ -568,6 +568,9 @@ msgstr ""
 "Votre adresse e-mail est maintenant confirmée. La double-authentification a "
 "bien été activée avec succès sur votre Cozy."
 
+msgid "Permissions Maximal"
+msgstr "Toutes les données"
+
 msgid "Permissions Wildcard"
 msgstr ", avec les données associées "
 
