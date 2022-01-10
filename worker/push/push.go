@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification/center"
+	"github.com/cozy/cozy-stack/model/notification/huawei"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -31,8 +32,9 @@ import (
 )
 
 var (
-	fcmClient *fcm.Client
-	iosClient *apns.Client
+	fcmClient    *fcm.Client
+	iosClient    *apns.Client
+	huaweiClient *huawei.Client
 )
 
 func init() {
@@ -99,6 +101,14 @@ func Init() (err error) {
 			iosClient = iosClient.Production()
 		}
 	}
+
+	if conf.HuaweiSendMessagesURL != "" {
+		huaweiClient, err = huawei.NewClient(conf)
+		if err != nil {
+			return err
+		}
+	}
+
 	return
 }
 
@@ -146,6 +156,8 @@ func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) erro
 		return pushToFirebase(ctx, c, msg)
 	case oauth.PlatformAPNS:
 		return pushToAPNS(ctx, c, msg)
+	case oauth.PlatformHuawei:
+		return pushToHuawei(ctx, c, msg)
 	default:
 		return fmt.Errorf("notifications: unknown platform %q", c.NotificationPlatform)
 	}
@@ -198,7 +210,6 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		},
 	}
 
-	ctx.Logger().Infof("Built notification for FCM: %#v", notification)
 	if msg.Collapsible {
 		notification.CollapseKey = hex.EncodeToString(hashedSource)
 	}
@@ -276,6 +287,30 @@ func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage
 		return fmt.Errorf("failed to push apns notification: %d %s", res.StatusCode, res.Reason)
 	}
 	return nil
+}
+
+func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+	if huaweiClient == nil {
+		ctx.Logger().Warn("Could not send Huawei notification: not configured")
+		return nil
+	}
+
+	notification := &huawei.Notification{
+		Message: huawei.NotificationMessage{
+			Notification: huawei.NotificationStructure{
+				Title: msg.Title,
+				Body:  msg.Message,
+			},
+			Token: []string{c.NotificationDeviceToken},
+		},
+	}
+
+	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
+	err := huaweiClient.PushWithContext(ctx, notification)
+	if err != nil {
+		ctx.Logger().Warnf("Error during huawei send: %s", err)
+	}
+	return err
 }
 
 func hashSource(source string) []byte {

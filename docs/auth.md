@@ -380,10 +380,11 @@ It can also send the optional fields:
 -   `software_version`, a version identifier string for the client software.
 -   `notification_platform`, to activate notifications on the associated device,
     this field specify the platform used to send notifications:
-    -   `"android"`: for Android devices with notifications via Firebase Cloud
-        Messaging
-    -   `"ios"`: for iOS devices with notifications via Firebase Cloud
-        Messaging or APNS/2
+    - `"android"`: for Android devices with notifications via Firebase Cloud
+      Messaging
+    - `"ios"`: for iOS devices with notifications via Firebase Cloud
+      Messaging or APNS/2
+    - `"huawei"`: for huawei devices with Push Kit
 -   `notification_device_token`, the token used to identify the mobile device
     for notifications.
 

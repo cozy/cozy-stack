@@ -29,6 +29,8 @@ const (
 	PlatformFirebase = "firebase"
 	// PlatformAPNS platform using APNS/2
 	PlatformAPNS = "apns"
+	// PlatformHuawei platform using Huawei Push Kit
+	PlatformHuawei = "huawei"
 )
 
 // DocTypeVersion represents the doctype version. Each time this document
@@ -290,7 +292,7 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 	}
 	c.NotificationPlatform = strings.ToLower(c.NotificationPlatform)
 	switch c.NotificationPlatform {
-	case "", PlatformFirebase, PlatformAPNS:
+	case "", PlatformFirebase, PlatformAPNS, PlatformHuawei:
 	case "ios", "android": // retro-compatibility
 	default:
 		return &ClientRegistrationError{
