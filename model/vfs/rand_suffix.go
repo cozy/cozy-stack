@@ -62,7 +62,7 @@ func tryOrUseSuffix(name, format string, do func(suffix string) error) error {
 
 func stripConflictSuffix(name string) string {
 	loc := strings.LastIndex(name, "(")
-	if loc == -1 {
+	if loc <= 0 {
 		return name
 	}
 	for i := loc; i < len(name); i++ {
@@ -73,5 +73,5 @@ func stripConflictSuffix(name string) string {
 			return name
 		}
 	}
-	return name[:loc]
+	return name[:loc-1]
 }
