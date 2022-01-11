@@ -63,13 +63,13 @@ func checkPackageName(claims jwt.MapClaims) error {
 }
 
 func checkCertificateDigest(claims jwt.MapClaims) error {
-	certDigest, ok := claims["apkCertificateDigestSha256"].(string)
+	certDigest, ok := claims["apkCertificateDigestSha256"].([]interface{})
 	if !ok || len(certDigest) == 0 {
 		return errors.New("missing apkCertificateDigestSha256")
 	}
 	digests := config.GetConfig().Flagship.APKCertificateDigests
 	for _, digest := range digests {
-		if digest == certDigest {
+		if digest == certDigest[0] {
 			return nil
 		}
 	}
