@@ -115,6 +115,13 @@ func redirect(c echo.Context) error {
 			}
 		}
 
+		// https://developers.google.com/identity/protocols/oauth2/web-server?hl=en#handlingresponse
+		if c.QueryParam("error") == "access_denied" {
+			u := i.SubDomain(consts.StoreSlug)
+			u.Fragment = "/discover/" + accountTypeID
+			return c.Redirect(http.StatusSeeOther, u.String())
+		}
+
 		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
 		if err != nil {
 			return err
