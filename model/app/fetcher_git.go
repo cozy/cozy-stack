@@ -179,6 +179,12 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	src, branch = getRemoteURL(src)
 	srcStr := src.String()
 
+	// GitHub doesn't accept git ls-remote with unencrypted git protocol.
+	// Cf https://github.blog/2021-09-01-improving-git-protocol-security-github/
+	if isGithub(src) && src.Scheme == "git" {
+		srcStr = strings.Replace(srcStr, "git", "https", 1)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
 	defer cancel()
 
