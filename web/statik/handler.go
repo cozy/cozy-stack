@@ -300,8 +300,6 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 	headers := w.Header()
 	headers.Set("Content-Type", f.Mime)
 	headers.Set("Content-Length", f.Size())
-	// Remove vary: origin, as we want to mutualize caching between the apps
-	headers.Del("Vary")
 	headers.Add("Vary", "Accept-Encoding")
 
 	acceptsBrotli := strings.Contains(r.Header.Get("Accept-Encoding"), "br")
