@@ -388,15 +388,18 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 		fileDoc.DocName = fmt.Sprintf("%s (%d).cozy-note", filename, i)
 		fileDoc.ResetFullpath()
 	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-		if err == nil {
-			clearCache(inst, fileDoc.ID())
-		}
-	}()
 	_, err = file.Write(content)
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	if err == nil {
+		// XXX Write to the cache, not just clean it, to avoid the stack
+		// fetching the rename but not the new content/metadata on next step
+		// apply, as CouchDB is not strongly consistent.
+		if doc, _ := fromMetadata(fileDoc); doc != nil {
+			_ = saveToCache(inst, doc)
+		}
+	}
 	return
 }
 
@@ -614,11 +617,6 @@ func getFromCache(inst *instance.Instance, noteID string) *Document {
 		return nil
 	}
 	return &doc
-}
-
-func clearCache(inst *instance.Instance, noteID string) {
-	cache := config.GetConfig().CacheStorage
-	cache.Clear(cacheKey(inst, noteID))
 }
 
 func cacheKey(inst *instance.Instance, noteID string) string {
