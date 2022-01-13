@@ -46,7 +46,7 @@ example), you can use the --appdir flag like this:
       --disable-csp                                Disable the Content Security Policy (only available for development)
       --doctypes string                            path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string                       URL for the download secret storage, redis or in-memory
-      --flagship-apk-certificate-digests strings   SHA-256 hash (base64 encoded) of the flagship app's signing certificate on android (default [xNnH7T1BSDh6erMzNysfakBVLLacbSbOMxVk8jEPgdU=])
+      --flagship-apk-certificate-digests strings   SHA-256 hash (base64 encoded) of the flagship app's signing certificate on android (default [u2eUUnfB4Y7k7eqQL7u2jiYDJeVBwZoSV3PZSs8pttc=])
       --flagship-apk-package-names strings         Package name for the flagship app on android (default [io.cozy.drive.mobile,io.cozy.flagship.mobile])
       --flagship-apple-app-ids strings             App ID of the flagship app on iOS (default [3AKXFMV43J.io.cozy.drive.mobile,3AKXFMV43J.io.cozy.flagship.mobile])
       --fs-default-layout int                      Default layout for Swift (2 for layout v3) (default -1)
