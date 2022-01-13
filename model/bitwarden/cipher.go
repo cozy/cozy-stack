@@ -150,6 +150,7 @@ func FindCiphersInFolder(inst *instance.Instance, folderID string) ([]*Cipher, e
 	req := &couchdb.FindRequest{
 		UseIndex: "by-folder-id",
 		Selector: mango.Equal("folder_id", folderID),
+		Limit:    1000,
 	}
 	err := couchdb.FindDocs(inst, consts.BitwardenCiphers, req, &ciphers)
 	if err != nil {

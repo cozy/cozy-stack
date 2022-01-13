@@ -573,6 +573,7 @@ func destroyApp(db prefixer.Prefixer, permType, docType, slug string) error {
 			mango.Equal("source_id", docType+"/"+slug),
 			mango.Equal("type", permType),
 		),
+		Limit: 1000,
 	}, &res)
 	if err != nil {
 		return err

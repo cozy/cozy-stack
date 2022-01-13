@@ -89,6 +89,7 @@ func (o *Organization) FindCiphers(inst *instance.Instance) ([]*Cipher, error) {
 	req := &couchdb.FindRequest{
 		UseIndex: "by-organization-id",
 		Selector: mango.Equal("organization_id", o.CouchID),
+		Limit:    1000,
 	}
 	err := couchdb.FindDocs(inst, consts.BitwardenCiphers, req, &ciphers)
 	if err != nil {

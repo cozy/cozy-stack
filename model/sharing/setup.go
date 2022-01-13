@@ -292,6 +292,7 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 				req := &couchdb.FindRequest{
 					UseIndex: name,
 					Selector: mango.Equal(rule.Selector, val),
+					Limit:    10000,
 				}
 				if err := couchdb.FindDocs(inst, rule.DocType, req, &results); err != nil {
 					return nil, err

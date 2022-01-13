@@ -418,6 +418,7 @@ func FindAccountTypesBySlug(slug, contextName string) ([]*AccountType, error) {
 	req := &couchdb.FindRequest{
 		UseIndex: "by-slug",
 		Selector: mango.Equal("slug", slug),
+		Limit:    100,
 	}
 	err := couchdb.FindDocs(couchdb.GlobalSecretsDB, consts.AccountTypes, req, &docs)
 	if err != nil {

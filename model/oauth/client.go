@@ -167,7 +167,7 @@ func GetAll(inst *instance.Instance, limit int, bookmark string) ([]*Client, str
 	return clients, res.Bookmark, nil
 }
 
-// GetNotifiables loads al the clients from the database containing a non-empty
+// GetNotifiables loads all the clients from the database containing a non-empty
 // `notification_plaform` field.
 func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 	var clients []*Client
@@ -177,6 +177,7 @@ func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 			mango.Exists("notification_platform"),
 			mango.Exists("notification_device_token"),
 		),
+		Limit: 100,
 	}
 	err := couchdb.FindDocs(i, consts.OAuthClients, req, &clients)
 	if err != nil {
@@ -366,6 +367,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	req := &couchdb.FindRequest{
 		UseIndex: "by-client-name",
 		Selector: mango.StartWith("client_name", c.ClientName),
+		Limit:    1000,
 	}
 	err := couchdb.FindDocs(i, consts.OAuthClients, req, &results)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
