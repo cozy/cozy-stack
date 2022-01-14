@@ -44,6 +44,7 @@ filename for this file: `manifest.webapp`.
 | notifications     | a map of notifications needed by the app (see [here](notifications.md) for more details) |
 | services          | a map of the services associated with the app (see below for more details)               |
 | routes            | a map of routes for the app (see below for more details)                                 |
+| mobile            | information about app's mobile version (see below for more details)                      |
 
 ### Routes
 
@@ -179,6 +180,28 @@ Here is an example:
             }
         }
     }
+}
+```
+
+### Mobile
+
+Application may exist on mobile platforms. When it is the case, manifest can
+contain informations about the mobile apps.
+
+On a mobile device and on a native context, this attribute can be used to open the
+native mobile app from any another Cozy app.
+
+Following attributes should be set:
+- `schema`: the app's scheme that can be used to open it
+- `id_playstore`: the app's ID on the Google PlayStore
+- `id_appstore`: the app's ID on the Apple AppStore
+
+Example of `mobile` attribute for Cozy Pass:
+```json
+"mobile": {
+  "schema": "cozypass://",
+  "id_playstore": "io.cozy.pass",
+  "id_appstore": "cozy-pass/id1502262449"
 }
 ```
 
