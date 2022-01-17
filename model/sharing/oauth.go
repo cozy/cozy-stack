@@ -483,7 +483,7 @@ func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, params
 		if i == 0 {
 			continue
 		}
-		if s.Members[i] == *m {
+		if sameMember(s.Members[i], *m) {
 			s.Credentials[i-1].AccessToken.AccessToken = params.AccessToken
 			s.Credentials[i-1].AccessToken.RefreshToken = params.RefreshToken
 		}

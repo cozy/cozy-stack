@@ -473,10 +473,13 @@ care of it later.
 ### Description of a sharing
 
 -   An identifier (the same for all members of the sharing)
+-   A list of `groups`, with an ID, a name and the instance URL where it has
+    been added
 -   A list of `members`. The first one is the owner. For each member, we have
     the URL of the cozy, a contact name, a public name, an email, a status, a
-    read-only flag, and some credentials to authorize the transfer of data
-    between the owner and the recipients. The status can be:
+    read-only flag, a list of groups, a only-groups flag and some credentials
+    to authorize the transfer of data between the owner and the recipients. The
+    status can be:
     -   `owner` for the member that has created the sharing
     -   `mail-not-sent` for a member that has been added, but its invitation
         has not yet been sent (often, this status is used only for a few

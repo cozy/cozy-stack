@@ -54,9 +54,15 @@ no intent parameter).
 
 #### POST /sharings/
 
-Create a new sharing. The sharing rules and recipients must be specified. The
-`description`, `preview_path`, and `open_sharing` fields are optional. The
-`app_slug` field is optional and is the slug of the web app by default.
+Create a new sharing. The sharing rules and recipients (contacts or groups)
+must be specified. The `description`, `preview_path`, and `open_sharing` fields
+are optional. The `app_slug` field is optional and is the slug of the web app
+by default.
+
+When a group is added as recipient, it means that all of its members are added,
+and the stack will watch the group to add/remove members when they are
+added/removed of the group. If someone is in two groups, one in read-write, and
+one in read-only, they will have a read-write access.
 
 [See the doc on io.cozy.sharings for in-depth explanation of all attributes](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.sharings/).
 
@@ -95,6 +101,10 @@ Content-Type: application/vnd.api+json
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts"
+          },
+          {
+            "id": "2344f24077af11ec8fd9bf4b6898c4ac",
+            "type": "io.cozy.contacts.groups"
           }
         ]
       }
@@ -125,6 +135,13 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "groups": [
+        {
+          "id": "2344f24077af11ec8fd9bf4b6898c4ac",
+          "name": "friends",
+          "on": "https://alice.example.net/"
+        }
+      ],
       "members": [
         {
           "status": "owner",
@@ -135,7 +152,15 @@ Content-Type: application/vnd.api+json
         {
           "status": "mail-not-sent",
           "name": "Bob",
-          "email": "bob@example.net"
+          "email": "bob@example.net",
+          "groups": []
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Emma",
+          "email": "emma@example.net",
+          "only_groups": true,
+          "groups": ["friends"]
         }
       ],
       "rules": [
@@ -336,6 +361,7 @@ Content-Type: application/vnd.api+json
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
       "initial_number_of_files_to_sync": 42,
+      "groups": [],
       "members": [
         {
           "status": "owner",
@@ -346,7 +372,8 @@ Content-Type: application/vnd.api+json
         {
           "status": "ready",
           "name": "Bob",
-          "email": "bob@example.net"
+          "email": "bob@example.net",
+          "groups": []
         }
       ],
       "rules": [
@@ -442,6 +469,7 @@ Content-Type: application/vnd.api+json
         "owner": true,
         "created_at": "2018-01-04T12:35:08Z",
         "updated_at": "2018-01-04T13:45:43Z",
+        "groups": [],
         "members": [
           {
             "status": "owner",
@@ -452,7 +480,8 @@ Content-Type: application/vnd.api+json
           {
             "status": "ready",
             "name": "Bob",
-            "email": "bob@example.net"
+            "email": "bob@example.net",
+            "groups": []
           }
         ],
         "rules": [
@@ -497,6 +526,7 @@ Content-Type: application/vnd.api+json
         "owner": true,
         "created_at": "2018-02-04T12:35:08Z",
         "updated_at": "2018-02-04T13:45:43Z",
+        "groups": [],
         "members": [
           {
             "status": "owner",
@@ -507,7 +537,8 @@ Content-Type: application/vnd.api+json
           {
             "status": "ready",
             "name": "Bob",
-            "email": "bob@example.net"
+            "email": "bob@example.net",
+            "groups": []
           }
         ],
         "rules": [
@@ -576,6 +607,7 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "groups": [],
       "members": [
         {
           "status": "owner",
@@ -586,7 +618,8 @@ Content-Type: application/vnd.api+json
         {
           "status": "mail-not-sent",
           "email": "bob@example.net",
-          "instance": "bob.example.net"
+          "instance": "bob.example.net",
+          "groups": []
         }
       ],
       "rules": [
@@ -626,6 +659,7 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "groups": [],
       "members": [
         {
           "status": "owner",
@@ -637,7 +671,8 @@ Content-Type: application/vnd.api+json
           "status": "mail-not-sent",
           "name": "Bob",
           "email": "bob@example.net",
-          "instance": "bob.example.net"
+          "instance": "bob.example.net",
+          "groups": []
         }
       ],
       "rules": [
@@ -808,6 +843,7 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "groups": [],
       "members": [
         {
           "status": "owner",
@@ -819,17 +855,20 @@ Content-Type: application/vnd.api+json
           "status": "ready",
           "name": "Bob",
           "public_name": "Bob",
-          "email": "bob@example.net"
+          "email": "bob@example.net",
+          "groups": []
         },
         {
           "status": "pending",
           "name": "Charlie",
-          "email": "charlie@example.net"
+          "email": "charlie@example.net",
+          "groups": []
         },
         {
           "status": "pending",
           "name": "Dave",
           "email": "dave@example.net",
+          "groups": [],
           "read_only": true
         }
       ],
@@ -913,10 +952,11 @@ Content-Type: application/json
 
 ### PUT /sharings/:sharing-id/recipients
 
-This internal route is used to update the list of members, their states, emails
-and names, on the recipients cozy. The token used for this route can be the
-access token for a sharing where synchronization is active, or the sharecode
-for a member who has only a shortcut to the sharing on their Cozy instance.
+This internal route is used to update the list of members, their states,
+emails, names, and groups, on the recipients cozy. The token used for this
+route can be the access token for a sharing where synchronization is active, or
+the sharecode for a member who has only a shortcut to the sharing on their Cozy
+instance.
 
 #### Request
 
@@ -939,18 +979,21 @@ Content-Type: application/vnd.api+json
       "status": "ready",
       "name": "Bob",
       "public_name": "Bob",
-      "email": "bob@example.net"
+      "email": "bob@example.net",
+      "groups": []
     },
     {
       "status": "ready",
       "name": "Charlie",
       "public_name": "Charlie",
-      "email": "charlie@example.net"
+      "email": "charlie@example.net",
+      "groups": []
     },
     {
       "status": "pending",
       "name": "Dave",
       "email": "dave@example.net",
+      "groups": [],
       "read_only": true
     }
   ]

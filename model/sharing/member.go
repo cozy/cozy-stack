@@ -59,12 +59,14 @@ func maxNumberOfMembers(inst *instance.Instance) int {
 
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
-	Status     string `json:"status"`
-	Name       string `json:"name,omitempty"`
-	PublicName string `json:"public_name,omitempty"`
-	Email      string `json:"email,omitempty"`
-	Instance   string `json:"instance,omitempty"`
-	ReadOnly   bool   `json:"read_only,omitempty"`
+	Status     string   `json:"status"`
+	Name       string   `json:"name,omitempty"`
+	PublicName string   `json:"public_name,omitempty"`
+	Email      string   `json:"email,omitempty"`
+	Instance   string   `json:"instance,omitempty"`
+	ReadOnly   bool     `json:"read_only,omitempty"`
+	OnlyGroups bool     `json:"only_groups,omitempty"`
+	Groups     []string `json:"groups"`
 }
 
 // PrimaryName returns the main name of this member
@@ -539,16 +541,29 @@ func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) 
 func (s *Sharing) FindCredentials(m *Member) *Credentials {
 	if s.Owner {
 		for i, member := range s.Members {
-			if i > 0 && *m == member {
+			if i > 0 && sameMember(*m, member) {
 				return &s.Credentials[i-1]
 			}
 		}
 	} else {
-		if *m == s.Members[0] {
+		if sameMember(*m, s.Members[0]) {
 			return &s.Credentials[0]
 		}
 	}
 	return nil
+}
+
+func sameMember(a, b Member) bool {
+	if a.Name != b.Name {
+		return false
+	}
+	if a.PublicName != b.PublicName {
+		return false
+	}
+	if a.Email != b.Email {
+		return false
+	}
+	return a.Instance == b.Instance
 }
 
 // Refresh will refresh the access token, and persist the new access token in

@@ -66,6 +66,7 @@ type Sharing struct {
 
 	// Members[0] is the owner, Members[1...] are the recipients
 	Members []Member `json:"members"`
+	Groups  []Group  `json:"groups"`
 
 	// On the owner, credentials[i] is associated to members[i+1]
 	// On a recipient, there is only credentials[0] (for the owner)
