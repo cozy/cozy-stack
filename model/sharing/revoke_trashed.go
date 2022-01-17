@@ -30,13 +30,14 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 		Domain: db.DomainName(),
 	}
 
+	log := inst.Logger().WithNamespace("sharing")
+	log.Infof("revokeTrashed called for sharing %s", sharingID)
 	if s.Owner {
 		err = s.Revoke(inst)
 	} else {
 		err = s.RevokeRecipientBySelf(inst, SharingDirAlreadyTrashed)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Errorf("revokeTrashed failed for sharing %s: %s", sharingID, err)
+		log.Errorf("revokeTrashed failed for sharing %s: %s", sharingID, err)
 	}
 }

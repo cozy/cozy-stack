@@ -731,7 +731,10 @@ func (c *couchdbIndexer) checkTrashedFileIsShared(doc *FileDoc) {
 
 // RevokeSharingFunc does nothing. It will will be overridden from the sharing
 // package.
-var RevokeSharingFunc = func(db prefixer.Prefixer, sharingID string) {}
+var RevokeSharingFunc = func(db prefixer.Prefixer, sharingID string) {
+	logger.WithNamespace("vfs").WithField("critical", "true").
+		Errorf("RevokeSharingFunc called without having been overridden!")
+}
 
 // revokeSharing is called when the main file/dir of a sharing is trashed, in
 // order to revoke the sharing.
