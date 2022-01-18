@@ -65,7 +65,7 @@ type Member struct {
 	Email      string   `json:"email,omitempty"`
 	Instance   string   `json:"instance,omitempty"`
 	ReadOnly   bool     `json:"read_only,omitempty"`
-	OnlyGroups bool     `json:"only_groups,omitempty"`
+	GroupsOnly bool     `json:"groups_only,omitempty"`
 	Groups     []string `json:"groups"`
 }
 
@@ -140,11 +140,12 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		name = c.PrimaryName()
 	}
 	m := Member{
-		Status:   MemberStatusMailNotSent,
-		Name:     name,
-		Email:    email,
-		Instance: cozyURL,
-		ReadOnly: readOnly,
+		Status:     MemberStatusMailNotSent,
+		Name:       name,
+		Email:      email,
+		Instance:   cozyURL,
+		ReadOnly:   readOnly,
+		GroupsOnly: false,
 	}
 	_, err = s.addMember(inst, m)
 	return err
@@ -153,9 +154,6 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	idx := -1
 	for i, member := range s.Members {
-		if i == 0 {
-			continue // Skip the owner
-		}
 		var found bool
 		if m.Email == "" {
 			found = m.Instance == member.Instance
@@ -165,14 +163,29 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 		if !found {
 			continue
 		}
+		if i == 0 {
+			return "", nil
+		}
 		if member.Status == MemberStatusReady {
 			return "", nil
 		}
 		idx = i
+		if s.Members[i].Name == "" {
+			s.Members[i].Name = m.Name
+		}
+		if m.Instance != "" {
+			s.Members[i].Instance = m.Instance
+		}
+		readOnly := false
+		if s.Members[i].ReadOnly || s.Members[i].Status == MemberStatusRevoked {
+			readOnly = m.ReadOnly
+		}
+		s.Members[i].ReadOnly = readOnly
+		if s.Members[i].GroupsOnly || s.Members[i].Status == MemberStatusRevoked {
+			s.Members[i].GroupsOnly = m.GroupsOnly
+		}
+		s.Members[i].Groups = append(s.Members[i].Groups, m.Groups...)
 		s.Members[i].Status = m.Status
-		s.Members[i].Name = m.Name
-		s.Members[i].Instance = m.Instance
-		s.Members[i].ReadOnly = m.ReadOnly
 		break
 	}
 	if idx < 1 {

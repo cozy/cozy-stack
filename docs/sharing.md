@@ -159,7 +159,7 @@ Content-Type: application/vnd.api+json
           "status": "mail-not-sent",
           "name": "Emma",
           "email": "emma@example.net",
-          "only_groups": true,
+          "groups_only": true,
           "groups": ["friends"]
         }
       ],

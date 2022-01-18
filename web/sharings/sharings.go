@@ -46,10 +46,21 @@ func CreateSharing(c echo.Context) error {
 	if rel, ok := obj.GetRelationship("recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id, false); err != nil {
-						return err
-					}
+				id, ok := ref.(map[string]interface{})["id"].(string)
+				if !ok {
+					continue
+				}
+				typ, ok := ref.(map[string]interface{})["type"].(string)
+				if !ok {
+					continue
+				}
+				if typ == consts.ContactsGroups {
+					err = s.AddGroup(inst, id, false)
+				} else {
+					err = s.AddContact(inst, id, false)
+				}
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -58,10 +69,21 @@ func CreateSharing(c echo.Context) error {
 	if rel, ok := obj.GetRelationship("read_only_recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id, true); err != nil {
-						return err
-					}
+				id, ok := ref.(map[string]interface{})["id"].(string)
+				if !ok {
+					continue
+				}
+				typ, ok := ref.(map[string]interface{})["type"].(string)
+				if !ok {
+					continue
+				}
+				if typ == consts.ContactsGroups {
+					err = s.AddGroup(inst, id, true)
+				} else {
+					err = s.AddContact(inst, id, true)
+				}
+				if err != nil {
+					return err
 				}
 			}
 		}
