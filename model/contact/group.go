@@ -1,11 +1,10 @@
 package contact
 
 import (
-	"errors"
-
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -25,7 +24,16 @@ func (g *Group) Name() string {
 
 // ListContacts returns the list of contacts in this group.
 func (g *Group) ListContacts(inst *instance.Instance) ([]*Contact, error) {
-	return nil, errors.New("not yet implemented") // TODO
+	var docs []*Contact
+	req := &couchdb.FindRequest{
+		Selector: mango.ElemMatch("relationships.groups.data", mango.And(
+			mango.Equal("_type", consts.ContactsGroups),
+			mango.Equal("_id", g.ID()),
+		)),
+		Limit: 100,
+	}
+	err := couchdb.FindDocsUnoptimized(inst, consts.Contacts, req, &docs)
+	return docs, err
 }
 
 // FindGroup returns the group stored in database from a given ID

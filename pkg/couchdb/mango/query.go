@@ -32,6 +32,11 @@ const lte ValueOperator = "$lte"
 // exists ($exists) checks that the field exists (or is missing)
 const exists ValueOperator = "$exists"
 
+// elemMatch ($elemMatch) matches and returns all documents that contain an
+// array field with at least one element that matches all the specified query
+// criteria.
+const elemMatch ValueOperator = "$elemMatch"
+
 // LogicOperator is an operator between two filters
 type LogicOperator string
 
@@ -100,7 +105,7 @@ type logicFilter struct {
 // ---> {"field": {"$lt":6, "$gt":3}
 // but it doesnt improve performances.
 func (lf logicFilter) ToMango() Map {
-	// special case, $not has an arity of one
+	// special case, $not and $elemMatch have an arity of one
 	if lf.op == not {
 		return makeMap(string(lf.op), lf.filters[0].ToMango())
 	}
@@ -134,6 +139,9 @@ func Nor(filters ...Filter) Filter { return logicFilter{nor, filters} }
 
 // Not returns a filter inversing another filter
 func Not(filter Filter) Filter { return logicFilter{not, []Filter{filter}} }
+
+// Not returns a filter inversing another filter
+func ElemMatch(field string, filter Filter) Filter { return &valueFilter{field, elemMatch, filter} }
 
 // Exists returns a filter that check that the document has this field
 func Exists(field string) Filter { return &valueFilter{field, exists, true} }
