@@ -345,7 +345,7 @@ Send the code from the URL to check that the user has really confirmed their
 identity (and not just typed the URL them-self).
 
 ```http
-POST /auth/confirm/543d7eb8149c HTTP/1.1
+GET /auth/confirm/543d7eb8149c HTTP/1.1
 ```
 
 The response will be a 204 No Content if the code is valid (and a 401 else).
