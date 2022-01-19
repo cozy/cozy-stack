@@ -125,7 +125,7 @@ _cozy-stack()
         _arguments '*:filename:'"$filteringCmd"
     elif [ $((directive & shellCompDirectiveFilterDirs)) -ne 0 ]; then
         # File completion for directories only
-        local subDir
+        local subdir
         subdir="${completions[1]}"
         if [ -n "$subdir" ]; then
             __cozy-stack_debug "Listing directories in $subdir"
@@ -173,5 +173,5 @@ _cozy-stack()
 
 # don't run the completion function when being source-ed or eval-ed
 if [ "$funcstack[1]" = "_cozy-stack" ]; then
-	_cozy-stack
+    _cozy-stack
 fi

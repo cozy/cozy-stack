@@ -17,6 +17,7 @@ cozy-stack instances modify <domain> [flags]
 
 ```
       --blocked                     Block the instance
+      --blocking-reason string      Code that explains why the instance is blocked (PAYMENT_FAILED, LOGIN_FAILED, etc.)
       --context-name string         New context name
       --deleting --deleting=false   Set (or remove) the deleting flag (ex: --deleting=false)
       --disk-quota string           Specify a new disk quota

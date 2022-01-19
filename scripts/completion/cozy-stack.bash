@@ -2,7 +2,7 @@
 
 __cozy-stack_debug()
 {
-    if [[ -n ${BASH_COMP_DEBUG_FILE} ]]; then
+    if [[ -n ${BASH_COMP_DEBUG_FILE:-} ]]; then
         echo "$*" >> "${BASH_COMP_DEBUG_FILE}"
     fi
 }
@@ -112,7 +112,7 @@ __cozy-stack_handle_go_custom_completion()
         $filteringCmd
     elif [ $((directive & shellCompDirectiveFilterDirs)) -ne 0 ]; then
         # File completion for directories only
-        local subDir
+        local subdir
         # Use printf to strip any trailing newline
         subdir=$(printf "%s" "${out[0]}")
         if [ -n "$subdir" ]; then
@@ -165,13 +165,19 @@ __cozy-stack_handle_reply()
                     PREFIX=""
                     cur="${cur#*=}"
                     ${flags_completion[${index}]}
-                    if [ -n "${ZSH_VERSION}" ]; then
+                    if [ -n "${ZSH_VERSION:-}" ]; then
                         # zsh completion needs --flag= prefix
                         eval "COMPREPLY=( \"\${COMPREPLY[@]/#/${flag}=}\" )"
                     fi
                 fi
             fi
-            return 0;
+
+            if [[ -z "${flag_parsing_disabled}" ]]; then
+                # If flag parsing is enabled, we have completed the flags and can return.
+                # If flag parsing is disabled, we may not know all (or any) of the flags, so we fallthrough
+                # to possibly call handle_go_custom_completion.
+                return 0;
+            fi
             ;;
     esac
 
@@ -210,13 +216,13 @@ __cozy-stack_handle_reply()
     fi
 
     if [[ ${#COMPREPLY[@]} -eq 0 ]]; then
-		if declare -F __cozy-stack_custom_func >/dev/null; then
-			# try command name qualified custom func
-			__cozy-stack_custom_func
-		else
-			# otherwise fall back to unqualified for compatibility
-			declare -F __custom_func >/dev/null && __custom_func
-		fi
+        if declare -F __cozy-stack_custom_func >/dev/null; then
+            # try command name qualified custom func
+            __cozy-stack_custom_func
+        else
+            # otherwise fall back to unqualified for compatibility
+            declare -F __custom_func >/dev/null && __custom_func
+        fi
     fi
 
     # available in bash-completion >= 2, not always present on macOS
@@ -250,7 +256,7 @@ __cozy-stack_handle_flag()
 
     # if a command required a flag, and we found it, unset must_have_one_flag()
     local flagname=${words[c]}
-    local flagvalue
+    local flagvalue=""
     # if the word contained an =
     if [[ ${words[c]} == *"="* ]]; then
         flagvalue=${flagname#*=} # take in as flagvalue after the =
@@ -269,7 +275,7 @@ __cozy-stack_handle_flag()
 
     # keep flag value with flagname as flaghash
     # flaghash variable is an associative array which is only supported in bash > 3.
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         if [ -n "${flagvalue}" ] ; then
             flaghash[${flagname}]=${flagvalue}
         elif [ -n "${words[ $((c+1)) ]}" ] ; then
@@ -281,7 +287,7 @@ __cozy-stack_handle_flag()
 
     # skip the argument to a two word flag
     if [[ ${words[c]} != *"="* ]] && __cozy-stack_contains_word "${words[c]}" "${two_word_flags[@]}"; then
-			  __cozy-stack_debug "${FUNCNAME[0]}: found a flag ${words[c]}, skip the next argument"
+        __cozy-stack_debug "${FUNCNAME[0]}: found a flag ${words[c]}, skip the next argument"
         c=$((c+1))
         # if we are looking for a flags value, don't show commands
         if [[ $c -eq $cword ]]; then
@@ -341,7 +347,7 @@ __cozy-stack_handle_word()
         __cozy-stack_handle_command
     elif __cozy-stack_contains_word "${words[c]}" "${command_aliases[@]}"; then
         # aliashash variable is an associative array which is only supported in bash > 3.
-        if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
             words[c]=${aliashash[${words[c]}]}
             __cozy-stack_handle_command
         else
@@ -541,12 +547,12 @@ _cozy-stack_apps()
     commands+=("ls")
     commands+=("show")
     commands+=("uninstall")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("rm")
         aliashash["rm"]="uninstall"
     fi
     commands+=("update")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("upgrade")
         aliashash["upgrade"]="update"
     fi
@@ -698,17 +704,17 @@ _cozy-stack_assets()
 
     commands=()
     commands+=("add")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("insert")
         aliashash["insert"]="add"
     fi
     commands+=("ls")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("list")
         aliashash["list"]="ls"
     fi
     commands+=("rm")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("remove")
         aliashash["remove"]="rm"
     fi
@@ -1322,13 +1328,13 @@ _cozy-stack_config()
 
     commands=()
     commands+=("decrypt-creds")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("decrypt-credentials")
         aliashash["decrypt-credentials"]="decrypt-creds"
     fi
     commands+=("decrypt-data")
     commands+=("encrypt-creds")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("encrypt-credentials")
         aliashash["encrypt-credentials"]="encrypt-creds"
     fi
@@ -1337,12 +1343,12 @@ _cozy-stack_config()
     commands+=("insert-asset")
     commands+=("ls-assets")
     commands+=("ls-contexts")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("list-contexts")
         aliashash["list-contexts"]="ls-contexts"
     fi
     commands+=("passwd")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("pass")
         aliashash["pass"]="passwd"
         command_aliases+=("passphrase")
@@ -1699,12 +1705,12 @@ _cozy-stack_features()
     commands+=("config")
     commands+=("defaults")
     commands+=("flags")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("flag")
         aliashash["flag"]="flags"
     fi
     commands+=("ratio")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("context")
         aliashash["context"]="ratio"
     fi
@@ -2746,6 +2752,10 @@ _cozy-stack_instances_modify()
 
     flags+=("--blocked")
     local_nonpersistent_flags+=("--blocked")
+    flags+=("--blocking-reason=")
+    two_word_flags+=("--blocking-reason")
+    local_nonpersistent_flags+=("--blocking-reason")
+    local_nonpersistent_flags+=("--blocking-reason=")
     flags+=("--context-name=")
     two_word_flags+=("--context-name")
     local_nonpersistent_flags+=("--context-name")
@@ -3230,7 +3240,7 @@ _cozy-stack_instances()
 
     commands=()
     commands+=("add")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("create")
         aliashash["create"]="add"
     fi
@@ -3239,7 +3249,7 @@ _cozy-stack_instances()
     commands+=("count")
     commands+=("debug")
     commands+=("destroy")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("delete")
         aliashash["delete"]="destroy"
         command_aliases+=("remove")
@@ -3252,7 +3262,7 @@ _cozy-stack_instances()
     commands+=("fsck")
     commands+=("import")
     commands+=("ls")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("list")
         aliashash["list"]="ls"
     fi
@@ -3269,7 +3279,7 @@ _cozy-stack_instances()
     commands+=("token-konnector")
     commands+=("token-oauth")
     commands+=("update")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("updates")
         aliashash["updates"]="update"
     fi
@@ -3391,7 +3401,7 @@ _cozy-stack_jobs()
     commands=()
     commands+=("purge-old-jobs")
     commands+=("run")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("launch")
         aliashash["launch"]="run"
         command_aliases+=("push")
@@ -3779,12 +3789,12 @@ _cozy-stack_konnectors()
     commands+=("run")
     commands+=("show")
     commands+=("uninstall")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("rm")
         aliashash["rm"]="uninstall"
     fi
     commands+=("update")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("upgrade")
         aliashash["upgrade"]="update"
     fi
@@ -4171,23 +4181,23 @@ _cozy-stack_swift()
 
     commands=()
     commands+=("get")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("download")
         aliashash["download"]="get"
     fi
     commands+=("ls")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("list")
         aliashash["list"]="ls"
     fi
     commands+=("ls-layouts")
     commands+=("put")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("upload")
         aliashash["upload"]="put"
     fi
     commands+=("rm")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("delete")
         aliashash["delete"]="rm"
     fi
@@ -4499,19 +4509,19 @@ _cozy-stack_root_command()
     commands+=("config")
     commands+=("doc")
     commands+=("features")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("feature")
         aliashash["feature"]="features"
     fi
     commands+=("files")
     commands+=("fix")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("fixer")
         aliashash["fixer"]="fix"
     fi
     commands+=("help")
     commands+=("instances")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("instance")
         aliashash["instance"]="instances"
     fi
@@ -4561,6 +4571,7 @@ __start_cozy-stack()
     fi
 
     local c=0
+    local flag_parsing_disabled=
     local flags=()
     local two_word_flags=()
     local local_nonpersistent_flags=()
@@ -4570,8 +4581,8 @@ __start_cozy-stack()
     local command_aliases=()
     local must_have_one_flag=()
     local must_have_one_noun=()
-    local has_completion_function
-    local last_command
+    local has_completion_function=""
+    local last_command=""
     local nouns=()
     local noun_aliases=()
 
