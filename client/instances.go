@@ -56,6 +56,7 @@ type InstanceOptions struct {
 	Email              string
 	PublicName         string
 	Settings           string
+	BlockingReason     string
 	SwiftLayout        int
 	DiskQuota          int64
 	Apps               []string
@@ -226,6 +227,7 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	}
 	if opts.Blocked != nil {
 		q.Add("Blocked", strconv.FormatBool(*opts.Blocked))
+		q.Add("BlockingReason", opts.BlockingReason)
 	}
 	if opts.Deleting != nil {
 		q.Add("Deleting", strconv.FormatBool(*opts.Deleting))

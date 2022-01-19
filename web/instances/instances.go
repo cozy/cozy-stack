@@ -133,17 +133,18 @@ func showHandler(c echo.Context) error {
 func modifyHandler(c echo.Context) error {
 	domain := c.Param("domain")
 	opts := &lifecycle.Options{
-		Domain:      domain,
-		Locale:      c.QueryParam("Locale"),
-		UUID:        c.QueryParam("UUID"),
-		OIDCID:      c.QueryParam("OIDCID"),
-		TOSSigned:   c.QueryParam("TOSSigned"),
-		TOSLatest:   c.QueryParam("TOSLatest"),
-		Timezone:    c.QueryParam("Timezone"),
-		ContextName: c.QueryParam("ContextName"),
-		Email:       c.QueryParam("Email"),
-		PublicName:  c.QueryParam("PublicName"),
-		Settings:    c.QueryParam("Settings"),
+		Domain:         domain,
+		Locale:         c.QueryParam("Locale"),
+		UUID:           c.QueryParam("UUID"),
+		OIDCID:         c.QueryParam("OIDCID"),
+		TOSSigned:      c.QueryParam("TOSSigned"),
+		TOSLatest:      c.QueryParam("TOSLatest"),
+		Timezone:       c.QueryParam("Timezone"),
+		ContextName:    c.QueryParam("ContextName"),
+		Email:          c.QueryParam("Email"),
+		PublicName:     c.QueryParam("PublicName"),
+		Settings:       c.QueryParam("Settings"),
+		BlockingReason: c.QueryParam("BlockingReason"),
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
