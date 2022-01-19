@@ -35,6 +35,7 @@ var flagSettings string
 var flagDiskQuota string
 var flagApps []string
 var flagBlocked bool
+var flagBlockingReason string
 var flagDeleting bool
 var flagDev bool
 var flagTrace bool
@@ -248,19 +249,20 @@ settings for a specified domain.
 		domain := args[0]
 		c := newAdminClient()
 		opts := &client.InstanceOptions{
-			Domain:        domain,
-			DomainAliases: flagDomainAliases,
-			Locale:        flagLocale,
-			UUID:          flagUUID,
-			OIDCID:        flagOIDCID,
-			TOSSigned:     flagTOS,
-			TOSLatest:     flagTOSLatest,
-			Timezone:      flagTimezone,
-			ContextName:   flagContextName,
-			Email:         flagEmail,
-			PublicName:    flagPublicName,
-			Settings:      flagSettings,
-			DiskQuota:     diskQuota,
+			Domain:         domain,
+			DomainAliases:  flagDomainAliases,
+			Locale:         flagLocale,
+			UUID:           flagUUID,
+			OIDCID:         flagOIDCID,
+			TOSSigned:      flagTOS,
+			TOSLatest:      flagTOSLatest,
+			Timezone:       flagTimezone,
+			ContextName:    flagContextName,
+			Email:          flagEmail,
+			PublicName:     flagPublicName,
+			Settings:       flagSettings,
+			BlockingReason: flagBlockingReason,
+			DiskQuota:      diskQuota,
 		}
 		if flag := cmd.Flag("blocked"); flag.Changed {
 			opts.Blocked = &flagBlocked
@@ -1107,6 +1109,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "New public name")
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
+	modifyInstanceCmd.Flags().StringVar(&flagBlockingReason, "blocking-reason", "", "Code that explains why the instance is blocked (PAYMENT_FAILED, LOGIN_FAILED, etc.)")
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagDeleting, "deleting", false, "Set (or remove) the deleting flag (ex: `--deleting=false`)")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")

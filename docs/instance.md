@@ -83,7 +83,7 @@ anymore and has to wait to be unblocked.
 $ cozy-stack instances modify <domain> --blocked
 ```
 
-A `blocking_reason` can be added for specific cases and to inform a user the
+A `--blocking-reason` can be added for specific cases and to inform a user the
 reason of the blocking.
 
 Several pre-included reasons are included, but you can define your owns if needed. These reasons are:
