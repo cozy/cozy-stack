@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -100,7 +101,10 @@ func ConfirmSuccess(c echo.Context, inst *instance.Instance, state string) error
 	}
 	realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
 
-	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
+	redirect, err := checkRedirectToManager(c)
+	if err != nil {
+		redirect, err = checkRedirectParam(c, inst.DefaultRedirection())
+	}
 	if err != nil {
 		return err
 	}
@@ -120,6 +124,34 @@ func ConfirmSuccess(c echo.Context, inst *instance.Instance, state string) error
 		})
 	}
 	return c.Redirect(http.StatusSeeOther, redirect.String())
+}
+
+func checkRedirectToManager(c echo.Context) (*url.URL, error) {
+	inst := middlewares.GetInstance(c)
+
+	config, ok := inst.SettingsContext()
+	if !ok {
+		return nil, errors.New("no manager_url")
+	}
+	managerURL, ok := config["manager_url"].(string)
+	if !ok {
+		return nil, errors.New("no manager_url")
+	}
+	manager, err := url.Parse(managerURL)
+	if err != nil {
+		return nil, errors.New("invalid manager_url")
+	}
+
+	redirect := c.FormValue("redirect")
+	u, err := url.Parse(redirect)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+
+	if u.Scheme != manager.Scheme || u.Host != manager.Host {
+		return nil, errors.New("not a redirection to the manager")
+	}
+	return u, nil
 }
 
 func confirmCode(c echo.Context) error {
