@@ -66,7 +66,7 @@ type Member struct {
 	Instance   string   `json:"instance,omitempty"`
 	ReadOnly   bool     `json:"read_only,omitempty"`
 	GroupsOnly bool     `json:"groups_only,omitempty"`
-	Groups     []string `json:"groups"`
+	Groups     []string `json:"groups,omitempty"`
 }
 
 // PrimaryName returns the main name of this member
@@ -435,6 +435,8 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].PublicName = m.PublicName
 		s.Members[i].Status = m.Status
 		s.Members[i].ReadOnly = m.ReadOnly
+		s.Members[i].GroupsOnly = m.GroupsOnly
+		s.Members[i].Groups = m.Groups
 	}
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -1036,6 +1038,8 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			PublicName: m.PublicName,
 			Email:      m.Email,
 			ReadOnly:   m.ReadOnly,
+			GroupsOnly: m.GroupsOnly,
+			Groups:     m.Groups,
 			// Instance and name are private
 		}
 	}

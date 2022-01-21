@@ -320,6 +320,11 @@ For a member, we can have the following fields:
   cozy as a public name (it is used for sending emails for example)
 - an email addresse (`email`)
 - an instance URL (`instance`)
+- a list of groups the user belongs to (`groups`)
+- a `groups_only` flag if the user has not been invited as a contact, only via
+  groups
+- a `read_only` flag if the user is not allowed to create/update/delete
+  documents, just read them
 - and a status (`status`).
 
 **Notes:**
