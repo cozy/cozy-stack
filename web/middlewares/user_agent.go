@@ -106,6 +106,16 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 		iPhone := ua.Platform() == "iPhone"
 		acceptHeader := c.Request().Header.Get(echo.HeaderAccept)
 
+		// XXX Chromium emulator for iphone XS/XR/12 Pro has a weird
+		// User-Agent, with Safari 10.0 even if those phones have Safari 12 at
+		// least. So, let's change the Safari version to 13.0 in this case.
+		if browser == Safari && rawVersion == "10.0" {
+			_, engineVersion := ua.Engine()
+			if major, ok := getMajorVersion(engineVersion); ok && major >= 600 {
+				rawVersion = "13.0"
+			}
+		}
+
 		if strings.Contains(acceptHeader, echo.MIMETextHTML) {
 			for _, rule := range rules {
 				if rule.canApply(browser, iPhone) {
