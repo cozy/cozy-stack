@@ -25,8 +25,7 @@ func TestDiffSameSets(t *testing.T) {
 		},
 	}
 
-	d, err := Diff(set1, set2)
-	assert.NoError(t, err)
+	d := Diff(set1, set2)
 	assert.True(t, set1.HasSameRules(d))
 }
 
@@ -49,8 +48,7 @@ func TestDiffNotSameSets(t *testing.T) {
 		},
 	}
 
-	d, err := Diff(set1, set2)
-	assert.NoError(t, err)
+	d := Diff(set1, set2)
 	assert.False(t, set1.HasSameRules(d))
 
 	expectedSet := Set{
@@ -96,8 +94,7 @@ func TestDiffMultipleRules(t *testing.T) {
 		},
 	}
 
-	d, err := Diff(set1, set2)
-	assert.NoError(t, err)
+	d := Diff(set1, set2)
 	assert.False(t, set1.HasSameRules(d))
 
 	expectedSet := Set{
@@ -141,8 +138,7 @@ func TestDiffNotSameSetsNewRule(t *testing.T) {
 		},
 	}
 
-	d, err := Diff(set1, set2)
-	assert.NoError(t, err)
+	d := Diff(set1, set2)
 	assert.False(t, set1.HasSameRules(d))
 
 	expectedSet := Set{
