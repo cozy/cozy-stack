@@ -379,8 +379,25 @@ func (i *Installer) update() error {
 	if makeUpdate && !isPlatformApp(oldManifest, i.context) {
 		oldPermissions := oldManifest.Permissions()
 		newPermissions := newManifest.Permissions()
-		samePermissions := newPermissions != nil && oldPermissions != nil &&
-			newPermissions.HasSameRules(oldPermissions)
+		samePermissions := false
+
+		if newPermissions != nil && oldPermissions != nil {
+			samePermissions = newPermissions.HasSameRules(oldPermissions)
+
+			// XXX the stack can auto-update konnectors if only a permission of
+			// carbon copy or electronic safe is added, without asking
+			// permission from the user.
+			if !samePermissions && oldManifest.AppType() == consts.KonnectorType {
+				diff := permission.Diff(oldPermissions, newPermissions)
+				for _, rule := range diff {
+					if rule.Type == consts.CertifiedCarbonCopy ||
+						rule.Type == consts.CertifiedElectronicSafe {
+						oldPermissions = append(oldPermissions, rule)
+						samePermissions = newPermissions.HasSameRules(oldPermissions)
+					}
+				}
+			}
+		}
 
 		if !samePermissions && !i.permissionsAcked {
 			// Check if we are going to skip the permissions
@@ -429,10 +446,7 @@ func (i *Installer) update() error {
 	}
 
 	if alteredPerms != nil {
-		extraPerms, err = permission.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
-		if err != nil {
-			return err
-		}
+		extraPerms = permission.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
 	}
 
 	if makeUpdate {

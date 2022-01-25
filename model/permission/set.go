@@ -228,10 +228,10 @@ func (s Set) HasSameRules(other Set) bool {
 //
 // We are ignoring removed values/verbs between rule 1 and rule 2.
 // - At the moment, it onlys show the added values, verbs and rules
-func Diff(set1, set2 Set) (Set, error) {
+func Diff(set1, set2 Set) Set {
 	// If sets are the same, do not compute
 	if set1.HasSameRules(set2) {
-		return set1, nil
+		return set1
 	}
 
 	newSet := Set{}
@@ -284,7 +284,7 @@ func Diff(set1, set2 Set) (Set, error) {
 			}
 		}
 	}
-	return newSet, nil
+	return newSet
 }
 
 // IsMaximal returns true if the permission is valid for everything. Only the
