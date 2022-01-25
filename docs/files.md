@@ -279,6 +279,38 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /files/:file-id/size
+
+This endpoint returns the size taken by the files in a directory, including
+those in subdirectories.
+
+#### Request
+
+```http
+GET /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/size HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.sizes",
+    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
+    "attributes": {
+      "size": "1234567890"
+    },
+    "meta": {}
+  }
+}
+```
+
 ### GET `/files/_changes`
 
 This endpoint is similar to the changes feed of CouchDB for io.cozy.files.

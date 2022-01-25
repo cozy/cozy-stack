@@ -2642,6 +2642,62 @@ func TestFind(t *testing.T) {
 	}
 }
 
+func TestDirSize(t *testing.T) {
+	_, dirdata := createDir(t, "/files/?Type=directory&Name=dirsizeparent")
+	dirdata, ok := dirdata["data"].(map[string]interface{})
+	assert.True(t, ok)
+	parentID, ok := dirdata["id"].(string)
+	assert.True(t, ok)
+
+	_, dirdata = createDir(t, "/files/"+parentID+"?Type=directory&Name=dirsizesub")
+	dirdata, ok = dirdata["data"].(map[string]interface{})
+	assert.True(t, ok)
+	subID, ok := dirdata["id"].(string)
+	assert.True(t, ok)
+
+	_, dirdata = createDir(t, "/files/"+subID+"?Type=directory&Name=dirsizesubsub")
+	dirdata, ok = dirdata["data"].(map[string]interface{})
+	assert.True(t, ok)
+	subsubID, ok := dirdata["id"].(string)
+	assert.True(t, ok)
+
+	nb := 10
+	body := "foo"
+	for i := 0; i < nb; i++ {
+		name := "file" + strconv.Itoa(i)
+		upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+		upload(t, "/files/"+subID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+		upload(t, "/files/"+subsubID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	}
+
+	var result struct {
+		Data struct {
+			Type       string
+			ID         string
+			Attributes struct {
+				Size string
+			}
+		}
+	}
+	err := getJSON(t, "/files/"+subsubID+"/size", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, consts.DirSizes, result.Data.Type)
+	assert.Equal(t, subsubID, result.Data.ID)
+	assert.Equal(t, "30", result.Data.Attributes.Size)
+
+	err = getJSON(t, "/files/"+subID+"/size", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, consts.DirSizes, result.Data.Type)
+	assert.Equal(t, subID, result.Data.ID)
+	assert.Equal(t, "60", result.Data.Attributes.Size)
+
+	err = getJSON(t, "/files/"+parentID+"/size", &result)
+	assert.NoError(t, err)
+	assert.Equal(t, consts.DirSizes, result.Data.Type)
+	assert.Equal(t, parentID, result.Data.ID)
+	assert.Equal(t, "90", result.Data.Attributes.Size)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()

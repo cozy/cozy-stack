@@ -677,11 +677,53 @@ func GetChildrenHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	if err := checkPerm(c, permission.GET, dir, file); err != nil {
+		return err
+	}
+
 	if file != nil {
 		return jsonapi.Errorf(http.StatusBadRequest, "cant read children of file %v", fileID)
 	}
 
 	return dirDataList(c, http.StatusOK, dir)
+}
+
+type apiDiskSize struct {
+	DocID string `json:"id,omitempty"`
+	Size  int64  `json:"size,string"`
+}
+
+func (d *apiDiskSize) ID() string                             { return d.DocID }
+func (d *apiDiskSize) Rev() string                            { return "" }
+func (d *apiDiskSize) DocType() string                        { return consts.DirSizes }
+func (d *apiDiskSize) Clone() couchdb.Doc                     { return d }
+func (d *apiDiskSize) SetID(id string)                        { d.DocID = id }
+func (d *apiDiskSize) SetRev(_ string)                        {}
+func (d *apiDiskSize) Relationships() jsonapi.RelationshipMap { return nil }
+func (d *apiDiskSize) Included() []jsonapi.Object             { return nil }
+func (d *apiDiskSize) Links() *jsonapi.LinksList              { return nil }
+
+// GetDirSize returns the size of a directory (the sum of the size of the files
+// in this directory, including those in subdirectories).
+func GetDirSize(c echo.Context) error {
+	fs := middlewares.GetInstance(c).VFS()
+	fileID := c.Param("file-id")
+
+	dir, err := fs.DirByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if err := checkPerm(c, permission.GET, dir, nil); err != nil {
+		return err
+	}
+
+	size, err := fs.DirSize(dir)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	result := apiDiskSize{DocID: fileID, Size: size}
+	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
 // ReadMetadataFromPathHandler handles all GET requests on
@@ -1654,6 +1696,7 @@ func Routes(router *echo.Group) {
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)
 	router.GET("/:file-id/relationships/contents", GetChildrenHandler)
+	router.GET("/:file-id/size", GetDirSize)
 
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
