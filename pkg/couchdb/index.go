@@ -10,7 +10,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 32
+const IndexViewsVersion int = 33
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -64,7 +64,7 @@ var DiskUsageView = &View{
 	Map: `
 function(doc) {
   if (doc.type === 'file') {
-    emit(doc._id, +doc.size);
+    emit(doc.dir_id, +doc.size);
   }
 }
 `,

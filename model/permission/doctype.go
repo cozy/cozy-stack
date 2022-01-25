@@ -33,6 +33,7 @@ var blockList = map[string]bool{
 	// Synthetic doctypes (API only)
 	consts.CertifiedCarbonCopy:     none,
 	consts.CertifiedElectronicSafe: none,
+	consts.DirSizes:                none,
 	consts.TriggersState:           none,
 	consts.SharingsAnswer:          none,
 	consts.SharingsMoved:           none,

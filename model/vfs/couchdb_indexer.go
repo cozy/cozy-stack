@@ -82,7 +82,7 @@ func (c *couchdbIndexer) FilesUsage() (int64, error) {
 	if len(doc.Rows) == 0 {
 		return 0, nil
 	}
-	// Reduce of _count should give us a number value
+	// Reduce of _sum should give us a number value
 	used, ok := doc.Rows[0].Value.(float64)
 	if !ok {
 		return 0, ErrWrongCouchdbState
@@ -104,7 +104,7 @@ func (c *couchdbIndexer) VersionsUsage() (int64, error) {
 	if len(doc.Rows) == 0 {
 		return 0, nil
 	}
-	// Reduce of _count should give us a number value
+	// Reduce of _sum should give us a number value
 	used, ok := doc.Rows[0].Value.(float64)
 	if !ok {
 		return 0, ErrWrongCouchdbState
@@ -144,6 +144,63 @@ func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 		}
 	}
 	return nil
+}
+
+func (c *couchdbIndexer) DirSize(doc *DirDoc) (int64, error) {
+	start := doc.Fullpath + "/"
+	stop := doc.Fullpath + "0" // 0 is the next ascii character after /
+	if doc.DocID == consts.RootDirID {
+		start = "/"
+		stop = "0"
+	}
+
+	// Find the subdirectories
+	sel := mango.And(
+		mango.Gt("path", start),
+		mango.Lt("path", stop),
+		mango.Equal("type", consts.DirType),
+	)
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-by-path",
+		Selector: sel,
+		Fields:   []string{"_id"},
+		Limit:    10000,
+	}
+	var children []couchdb.JSONDoc
+	err := couchdb.FindDocs(c.db, consts.Files, req, &children)
+	if err != nil {
+		return 0, err
+	}
+	keys := make([]interface{}, len(children)+1)
+	keys[0] = doc.DocID
+	for i, child := range children {
+		keys[i+1] = child.ID()
+	}
+
+	// Get the size for the directory and each of its sub-directory, and sum them
+	var resp couchdb.ViewResponse
+	err = couchdb.ExecView(c.db, couchdb.DiskUsageView, &couchdb.ViewRequest{
+		Keys:   keys,
+		Group:  true,
+		Reduce: true,
+	}, &resp)
+	if err != nil {
+		return 0, err
+	}
+	if len(resp.Rows) == 0 {
+		return 0, nil
+	}
+
+	// Reduce of _sum should give us a number value
+	var size int64
+	for _, row := range resp.Rows {
+		value, ok := row.Value.(float64)
+		if !ok {
+			return 0, ErrWrongCouchdbState
+		}
+		size += int64(value)
+	}
+	return size, nil
 }
 
 func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {

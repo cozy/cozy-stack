@@ -42,6 +42,9 @@ const (
 	// CertifiedElectronicSafe is a synthetic doctype, used for given
 	// permission to add the electronicSafe metadata on files
 	CertifiedElectronicSafe = "io.cozy.certified.electronic_safe"
+	// DirSizes is a synthetic doctype, used for giving the size of a
+	// directory.
+	DirSizes = "io.cozy.files.sizes"
 	// PhotosAlbums doc type for photos albums
 	PhotosAlbums = "io.cozy.photos.albums"
 	// Intents doc type for intents persisted in couchdb

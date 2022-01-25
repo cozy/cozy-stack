@@ -142,6 +142,10 @@ func (s *sharingIndexer) TrashUsage() (int64, error) {
 	return s.indexer.TrashUsage()
 }
 
+func (s *sharingIndexer) DirSize(doc *vfs.DirDoc) (int64, error) {
+	return s.indexer.DirSize(doc)
+}
+
 func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 	s.log.Errorf("Unexpected call to CreateFileDoc")
 	return ErrInternalServerError
