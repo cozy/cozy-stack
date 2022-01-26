@@ -392,8 +392,10 @@ func (i *Installer) update() error {
 				for _, rule := range diff {
 					if rule.Type == consts.CertifiedCarbonCopy ||
 						rule.Type == consts.CertifiedElectronicSafe {
-						oldPermissions = append(oldPermissions, rule)
-						samePermissions = newPermissions.HasSameRules(oldPermissions)
+						if !oldPermissions.RuleInSubset(rule) {
+							oldPermissions = append(oldPermissions, rule)
+							samePermissions = newPermissions.HasSameRules(oldPermissions)
+						}
 					}
 				}
 			}
