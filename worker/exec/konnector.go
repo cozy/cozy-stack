@@ -337,7 +337,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		folderPath = acc.FolderPath
 	}
 	if folderPath == "" {
-		folderPath = computeFolderPath(inst, w.slug, acc)
+		folderPath = computeFolderPath(inst, w.man.Name(), acc)
 	}
 
 	// 5. Try to recreate the folder
