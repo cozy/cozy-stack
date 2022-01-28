@@ -100,13 +100,10 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 		"split":     strings.Split,
 		"replace":   strings.Replace,
 		"hasSuffix": strings.HasSuffix,
-		// XXX We are using assetPath (and not AssetPath) here to avoid caching
-		// the assets via the sum in the URL. But it means that we have no
-		// fallback to the default context.
-		"asset":    assetPath,
-		"ext":      fileExtension,
-		"basename": basename,
-		"filetype": filetype,
+		"asset":     basicAssetPath,
+		"ext":       fileExtension,
+		"basename":  basename,
+		"filetype":  filetype,
 	}
 
 	var err error
@@ -222,6 +219,20 @@ func AssetPath(domain, name string, context ...string) string {
 		if !f.IsCustom {
 			context = nil
 		}
+	}
+	return assetPath(domain, name, context...)
+}
+
+// basicAssetPath is used with DirRenderer to skip the sum in URL, and avoid
+// caching the assets.
+func basicAssetPath(domain, name string, context ...string) string {
+	ctx := config.DefaultInstanceContext
+	if len(context) > 0 && context[0] != "" {
+		ctx = context[0]
+	}
+	f, ok := assets.Head(name, ctx)
+	if ok && !f.IsCustom {
+		context = nil
 	}
 	return assetPath(domain, name, context...)
 }
