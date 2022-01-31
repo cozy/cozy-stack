@@ -167,7 +167,7 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
 			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
 			j.Logger().
-				WithField("job_id", j.ID()).
+				WithField("account_id", msg.Account).
 				WithField("slug", slug).
 				Infof("Konnector ignore: %s", state.LastError)
 			return false, nil
