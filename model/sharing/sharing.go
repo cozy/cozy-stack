@@ -454,7 +454,8 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 		return err
 	}
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
-		return err
+		inst.Logger().WithNamespace("sharing").
+			Warnf("RevokeRecipientBySelf failed to remove shared refs (%s)': %s", s.ID(), err)
 	}
 	if !sharingDirTrashed && s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
