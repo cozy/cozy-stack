@@ -910,6 +910,7 @@ func (s *Sharing) RevokeOwner(inst *instance.Instance) error {
 	}
 	m.Status = MemberStatusRevoked
 	s.Credentials = nil
+	s.Active = false
 	return couchdb.UpdateDoc(inst, s)
 }
 
