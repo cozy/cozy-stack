@@ -111,7 +111,7 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 func compressedWriter(req *http.Request, resp *echo.Response) io.WriteCloser {
 	headers := resp.Header()
 	headers.Set("Content-Type", ContentType)
-	headers.Set("Vary", "Accept-Encoding")
+	headers.Add("Vary", "Accept-Encoding")
 	if !acceptGzipEncoding(req) {
 		return &nopCloser{resp}
 	}
