@@ -73,6 +73,9 @@ const (
 	WebhookTriggerType
 	// JobCleanClientType is used for cleaning unused OAuth clients
 	JobCleanClientType
+	// ConfirmFlagshipType is used when the user is asked to manually certify
+	// that an OAuth client is the flagship app.
+	ConfirmFlagshipType
 )
 
 type counterConfig struct {
@@ -206,6 +209,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "job-clean-clients",
 		Limit:  100,
+		Period: 1 * time.Hour,
+	},
+	// ConfirmFlagshipType
+	{
+		Prefix: "confirm-flagship",
+		Limit:  10,
 		Period: 1 * time.Hour,
 	},
 }

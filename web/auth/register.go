@@ -123,12 +123,18 @@ func postAttestation(c echo.Context) error {
 }
 
 func confirmFlagship(c echo.Context) error {
-	// TODO rate limiting
 	inst := middlewares.GetInstance(c)
 	client, err := oauth.FindClient(inst, c.Param("client-id"))
 	if err != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{
 			"error": "Client not found",
+		})
+	}
+
+	err = limits.CheckRateLimit(inst, limits.ConfirmFlagshipType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": inst.Translate("Confirm Flagship Invalid code"),
 		})
 	}
 

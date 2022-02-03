@@ -348,6 +348,11 @@ func renderConfirmFlagship(c echo.Context, clientID string) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
+	err := limits.CheckRateLimit(inst, limits.ConfirmFlagshipType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return renderError(c, http.StatusTooManyRequests, err.Error())
+	}
+
 	token, err := oauth.SendConfirmFlagshipCode(inst, clientID)
 	if err != nil {
 		return renderError(c, http.StatusInternalServerError, err.Error())
