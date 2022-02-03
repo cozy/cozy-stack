@@ -122,6 +122,35 @@ func postAttestation(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func confirmFlagship(c echo.Context) error {
+	// TODO rate limiting
+	inst := middlewares.GetInstance(c)
+	client, err := oauth.FindClient(inst, c.Param("client-id"))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "Client not found",
+		})
+	}
+
+	clientID := c.Param("client-id")
+	code := c.FormValue("code")
+	token := []byte(c.FormValue("token"))
+	if ok := oauth.CheckFlagshipCode(inst, clientID, token, code); !ok {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": inst.Translate("Confirm Flagship Invalid code"),
+		})
+	}
+
+	oldClient := client.Clone().(*oauth.Client)
+	client.Flagship = true
+	if err := client.Update(inst, oldClient); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error,
+		})
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)

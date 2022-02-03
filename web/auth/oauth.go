@@ -80,6 +80,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
 
+	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "*" {
 		instance := middlewares.GetInstance(c)
 		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
@@ -89,6 +90,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		}
 		if !skipCertification && !params.client.Flagship {
 			return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
+			return true, renderConfirmFlagship(c, params.clientID)
 		}
 		return false, nil
 	}
@@ -121,7 +123,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		}
 	}
 
-	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "" {
 		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
@@ -336,6 +337,35 @@ func authorize(c echo.Context) error {
 		return c.JSON(http.StatusOK, echo.Map{"deeplink": location})
 	}
 	return c.Redirect(http.StatusFound, location)
+}
+
+func renderConfirmFlagship(c echo.Context, clientID string) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	token, err := oauth.SendConfirmFlagshipCode(inst, clientID)
+	if err != nil {
+		return renderError(c, http.StatusInternalServerError, err.Error())
+	}
+
+	email, _ := inst.SettingsEMail()
+	return c.Render(http.StatusOK, "confirm_flagship.html", echo.Map{
+		"Domain":       inst.ContextualDomain(),
+		"ContextName":  inst.ContextName,
+		"Locale":       inst.Locale,
+		"Title":        inst.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(inst),
+		"Email":        email,
+		"SupportEmail": inst.SupportEmailAddress(),
+		"Token":        string(token),
+		"ClientID":     clientID,
+		"CSRF":         c.Get("csrf"),
+	})
 }
 
 type authorizeSharingParams struct {

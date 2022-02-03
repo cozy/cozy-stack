@@ -623,6 +623,23 @@ Note: the `platform` parameter can be `"android"` or `"ios"`. For `ios`, a
 HTTP/1.1 204 No Content
 ```
 
+### POST /auth/clients/:client-id/flagship
+
+This route can be used to send a 6-digits code to manually certify a client as
+belonging to the flagship app.
+
+```http
+POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/flagship HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/x-www-form-urlencoded
+
+code=123456&token=123123123123123
+```
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### GET /auth/authorize
 
 When an OAuth2 client wants to get access to the data of the cozy owner, it

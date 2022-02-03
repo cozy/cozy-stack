@@ -1,0 +1,12 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Confirm Flagship Greeting" .PublicName}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Confirm Flagship Intro"}}
+</mj-text>
+<mj-text mj-class="title-h2 content-medium" align="center">
+	{{.Code}}
+</mj-text>
+{{end}}

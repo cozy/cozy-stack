@@ -1,0 +1,5 @@
+{{t "Mail Confirm Flagship Greeting" .PublicName}}
+
+{{t "Mail Confirm Flagship Intro"}}
+
+{{.Code}}

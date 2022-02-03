@@ -601,6 +601,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/register/:client-id", deleteClient)
 	router.POST("/clients/:client-id/challenge", postChallenge, checkRegistrationToken)
 	router.POST("/clients/:client-id/attestation", postAttestation)
+	router.POST("/clients/:client-id/flagship", confirmFlagship)
 
 	// OAuth flow
 	authorizeGroup := router.Group("/authorize", noCSRF)

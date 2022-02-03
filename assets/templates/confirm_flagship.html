@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="3600">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.TemplateTitle}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
+  </head>
+  <body class="theme-inverted">
+    <form id="confirm-flagship-form" method="POST" action="/auth/clients/{{.ClientID}}/flagship" class="d-contents">
+      <input id="confirm-token" type="hidden" name="confirm-token" value="{{.Token}}" />
+      <main class="wrapper">
+        <div class="d-flex flex-column align-items-center">
+          <h1 class="h4 h2-md mb-3 text-center">{{t "Authorize Confirm Flagship title"}}</h1>
+          <p class="mb-4 mb-md-5 text-center">
+            {{t "Authorize Confirm Flagship help" .Email}} -
+            <a href="{{t "Authorize Confirm Flagship more link"}}">{{t "Authorize Confirm Flagship more text"}}</a>.
+          </p>
+          <div id="code-field" class="form-floating has-validation w-100 mb-3">
+            <input type="text" class="form-control form-control-md-lg" id="code-input" name="code" autofocus autocomplete="one-time-code" pattern="[0-9]*" inputmode="numeric" maxlength="6" />
+            <label for="code-input">{{t "Authorize Confirm Flagship field"}}</label>
+          </div>
+        </div>
+        <footer class="w-100">
+          <p class="text-center mb-3">
+            {{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.
+          </p>
+          <button id="confirm-flagship-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
+            {{t "Authorize Confirm Flagship Confirm"}}
+          </button>
+        </footer>
+      </main>
+    </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/confirm-flagship.js"}}"></script>
+  </body>
+</html>
