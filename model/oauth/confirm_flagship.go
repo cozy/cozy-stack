@@ -30,7 +30,7 @@ var totpOptions = totp.ValidateOpts{
 // SendConfirmFlagshipCode sends by mail a code to the owner of the instance.
 // It returns the generated token which can be used to check the code.
 func SendConfirmFlagshipCode(inst *instance.Instance, clientID string) ([]byte, error) {
-	token, code, err := generateConfirmCode(inst, clientID)
+	token, code, err := GenerateConfirmCode(inst, clientID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,9 @@ func CheckFlagshipCode(inst *instance.Instance, clientID string, token []byte, c
 	return ok && err == nil
 }
 
-func generateConfirmCode(inst *instance.Instance, clientID string) ([]byte, string, error) {
+// GenerateConfirmCode generate a 6-digits code and the token to check it. They
+// can be used to manually confirm that an OAuth client is the flagship app.
+func GenerateConfirmCode(inst *instance.Instance, clientID string) ([]byte, string, error) {
 	salt := crypto.GenerateRandomBytes(sha256.Size)
 	token, err := crypto.EncodeAuthMessage(macConfig, inst.SessionSecret(), salt, nil)
 	if err != nil {

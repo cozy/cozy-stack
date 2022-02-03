@@ -89,7 +89,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			skipCertification = cfg["skip_certification"] == true
 		}
 		if !skipCertification && !params.client.Flagship {
-			return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 			return true, renderConfirmFlagship(c, params.clientID)
 		}
 		return false, nil
@@ -369,7 +368,6 @@ func renderConfirmFlagship(c echo.Context, clientID string) error {
 		"SupportEmail": inst.SupportEmailAddress(),
 		"Token":        string(token),
 		"ClientID":     clientID,
-		"CSRF":         c.Get("csrf"),
 	})
 }
 

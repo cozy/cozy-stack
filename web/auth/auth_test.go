@@ -778,7 +778,6 @@ func TestAuthorizeFormClientMobileApp(t *testing.T) {
 	var oauthClient oauth.Client
 
 	u := "https://example.org/oauth/callback"
-
 	oauthClient.RedirectURIs = []string{u}
 	oauthClient.ClientName = "cozy-test-2"
 	oauthClient.SoftwareID = "registry://drive"
@@ -791,6 +790,20 @@ func TestAuthorizeFormClientMobileApp(t *testing.T) {
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(content), "io.cozy.files")
 	defer res.Body.Close()
+}
+
+func TestAuthorizeFormFlagshipApp(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=*&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.NotContains(t, string(body), "would like permission to access your Cozy")
+	assert.Contains(t, string(body), "The origin of this application is not certified.")
 }
 
 func TestAuthorizeWhenNotLoggedIn(t *testing.T) {
@@ -1330,6 +1343,22 @@ func TestOAuthWithPKCE(t *testing.T) {
 	assert.Equal(t, "files:read", response["scope"])
 	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
 	assertValidToken(t, response["refresh_token"], "refresh", clientID, "files:read")
+}
+
+func TestConfirmFlagship(t *testing.T) {
+	token, code, err := oauth.GenerateConfirmCode(testInstance, clientID)
+	require.NoError(t, err)
+
+	res, err := postForm("/auth/clients/"+clientID+"/flagship", &url.Values{
+		"code":  {code},
+		"token": {string(token)},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	client, err := oauth.FindClient(testInstance, clientID)
+	require.NoError(t, err)
+	assert.True(t, client.Flagship)
 }
 
 func TestAppRedirectionOnLogin(t *testing.T) {
