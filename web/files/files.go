@@ -937,6 +937,7 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 		return nil
 	}
 	res.Header().Set("Etag", etag)
+	res.WriteHeader(http.StatusNotFound)
 	_, err := io.Copy(res, f.Reader())
 	return err
 }
