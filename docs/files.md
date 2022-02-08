@@ -875,9 +875,13 @@ GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 
 Get an image that shows the first page of a PDF in a small resolution (96x96).
 
+**Note:** this route is deprecated, you should use thumbnails instead.
+
 ### GET /files/:file-id/preview/:secret
 
 Get an image that shows the first page of a PDF (at most 1080x1920).
+
+**Note:** this route is deprecated, you should use thumbnails instead.
 
 ### GET /files/:file-id/thumbnails/:secret/:format
 

@@ -2702,6 +2702,10 @@ func TestDirSize(t *testing.T) {
 	assert.Equal(t, "90", result.Data.Attributes.Size)
 }
 
+func TestDeprecatePreviewAndIcon(t *testing.T) {
+	testutils.TODO(t, "2022-09-01", "Remove the deprecated preview and icon for PDF files")
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
