@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 )
 
 // NotifySharings will notify other instances with a common sharing that this
@@ -104,9 +105,9 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/self/moved",
 		Headers: request.Headers{
-			"Accept":        "application/vnd.api+json",
-			"Content-Type":  "application/vnd.api+json",
-			"Authorization": "Bearer " + token,
+			echo.HeaderAccept:        jsonapi.ContentType,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + token,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: sharing.ParseRequestError,

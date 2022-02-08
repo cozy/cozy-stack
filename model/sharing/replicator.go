@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -453,9 +454,9 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/_revs_diff",
 		Headers: request.Headers{
-			"Accept":        "application/json",
-			"Content-Type":  "application/json",
-			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   echo.MIMEApplicationJSON,
+			echo.HeaderAuthorization: "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -615,9 +616,9 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/_bulk_docs",
 		Headers: request.Headers{
-			"Accept":        "application/json",
-			"Content-Type":  "application/json",
-			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   echo.MIMEApplicationJSON,
+			echo.HeaderAuthorization: "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,

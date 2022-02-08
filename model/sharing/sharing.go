@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -836,8 +837,8 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/preview-url",
 		Headers: request.Headers{
-			"Accept":       "application/json",
-			"Content-Type": "application/json",
+			echo.HeaderAccept:      echo.MIMEApplicationJSON,
+			echo.HeaderContentType: echo.MIMEApplicationJSON,
 		},
 		Body: bytes.NewReader(body),
 	})
@@ -937,8 +938,8 @@ func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/public-key",
 		Headers: request.Headers{
-			"Content-Type":  "application/vnd.api+json",
-			"Authorization": "Bearer " + s.Credentials[0].AccessToken.AccessToken,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + s.Credentials[0].AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,

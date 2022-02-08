@@ -70,7 +70,7 @@ func Callback(c echo.Context) error {
 			Warnf("Cannot bind callback parameters: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
 	}
-	header := c.Request().Header.Get("Authorization")
+	header := c.Request().Header.Get(echo.HeaderAuthorization)
 	params.Token = strings.TrimPrefix(header, "Bearer ")
 
 	if err := office.Callback(inst, params); err != nil {

@@ -172,7 +172,8 @@ func doGetAll(t *testing.T, path string, auth bool) []byte {
 
 func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Equal(t, 200, res.StatusCode)
-	assert.Equal(t, contentType, res.Header.Get("Content-Type"))
+	actual := strings.ToLower(res.Header.Get("Content-Type"))
+	assert.Equal(t, contentType, actual)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), content)
 }

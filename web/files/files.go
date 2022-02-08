@@ -1015,7 +1015,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	}
 
 	// if accept header is application/zip, send the archive immediately
-	if c.Request().Header.Get("Accept") == "application/zip" {
+	if c.Request().Header.Get(echo.HeaderAccept) == "application/zip" {
 		return archive.Serve(instance.VFS(), c.Response())
 	}
 
@@ -1818,7 +1818,7 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 	}
 
 	var mime, class string
-	contentType := header.Get("Content-Type")
+	contentType := header.Get(echo.HeaderContentType)
 	if contentType == "" {
 		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
 	} else {
@@ -1829,7 +1829,7 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 		}
 		// Some browsers may use Mime-Type sniffing and they may sent an
 		// inaccurate Content-Type.
-		if contentType == "application/octet-stream" {
+		if contentType == echo.MIMEOctetStream {
 			switch ext {
 			case ".heif":
 				contentType = "image/heif"

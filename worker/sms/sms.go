@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/labstack/echo/v4"
 )
 
 func init() {
@@ -74,9 +75,9 @@ func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logger.Ent
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+cfg.Token)
+	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+cfg.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

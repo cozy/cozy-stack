@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	jwt "github.com/golang-jwt/jwt/v4"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -225,7 +226,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
-	r.Header.Add("Authorization", "Bearer "+req.TargetCreds.Token)
+	r.Header.Add(echo.HeaderAuthorization, "Bearer "+req.TargetCreds.Token)
 	_, err = http.DefaultClient.Do(r)
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
@@ -283,7 +284,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 			Warnf("Cannot finalize: %s", err)
 		return
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().
@@ -397,7 +398,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 			Warnf("Cannot abort: %s", err)
 		return
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().

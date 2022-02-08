@@ -128,7 +128,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	accept := req.Header.Get("Accept")
+	accept := req.Header.Get(echo.HeaderAccept)
 	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
 	acceptJSON := strings.Contains(accept, echo.MIMEApplicationJSON)
 	if req.Method == http.MethodHead {

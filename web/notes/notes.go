@@ -354,10 +354,10 @@ func UploadImage(c echo.Context) error {
 	}
 
 	// Check that the uploaded file is an image
-	contentType := c.Request().Header.Get("Content-Type")
+	contentType := c.Request().Header.Get(echo.HeaderContentType)
 	if !strings.HasPrefix(contentType, "image/") {
 		err := errors.New("Only images are accepted")
-		return jsonapi.InvalidParameter("Content-Type", err)
+		return jsonapi.InvalidParameter(echo.HeaderContentType, err)
 	}
 
 	// Check the VFS quota
@@ -366,7 +366,7 @@ func UploadImage(c echo.Context) error {
 		size := c.Request().ContentLength
 		if size <= 0 {
 			err := errors.New("The Content-Length header is mandatory")
-			return jsonapi.InvalidParameter("Content-Length", err)
+			return jsonapi.InvalidParameter(echo.HeaderContentLength, err)
 		}
 		if size > note.MaxImageWeight {
 			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrFileTooBig)

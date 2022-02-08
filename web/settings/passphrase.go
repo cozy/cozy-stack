@@ -62,7 +62,7 @@ func getPassphraseParameters(c echo.Context) error {
 func registerPassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	accept := c.Request().Header.Get("Accept")
+	accept := c.Request().Header.Get(echo.HeaderAccept)
 	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
 
 	args := struct {

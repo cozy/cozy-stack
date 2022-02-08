@@ -14,6 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/labstack/echo/v4"
 )
 
 // FileOpener can be used to find the parameters for opening a file (shared or
@@ -367,8 +369,8 @@ func (o *FileOpener) PrepareRequestForSharedFile() (*PreparedRequest, error) {
 			"ReadOnly":    {strconv.FormatBool(prepared.ReadOnly)},
 		},
 		Headers: request.Headers{
-			"Accept":        "application/vnd.api+json",
-			"Authorization": "Bearer " + prepared.Creds.AccessToken.AccessToken,
+			echo.HeaderAccept:        jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + prepared.Creds.AccessToken.AccessToken,
 		},
 		ParseError: ParseRequestError,
 	}

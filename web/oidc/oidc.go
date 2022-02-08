@@ -377,9 +377,9 @@ func getToken(conf *Config, code string) (string, error) {
 		return "", err
 	}
 	auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
-	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Accept", "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
+	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 
 	res, err := oidcClient.Do(req)
 	if err != nil {
@@ -450,7 +450,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, errors.New("invalid configuration")
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := oidcClient.Do(req)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)

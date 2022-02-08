@@ -142,7 +142,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func checkClientToken(c echo.Context, client *oauth.Client) error {
-	header := c.Request().Header.Get("Authorization")
+	header := c.Request().Header.Get(echo.HeaderAuthorization)
 	if !strings.HasPrefix(header, "Bearer ") {
 		return errors.New("invalid_token")
 	}

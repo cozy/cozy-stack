@@ -114,14 +114,14 @@ func GetObject(c echo.Context) error {
 		return err
 	}
 
-	return c.Blob(http.StatusOK, "application/octet-stream", buf.Bytes())
+	return c.Blob(http.StatusOK, echo.MIMEOctetStream, buf.Bytes())
 }
 
 // PutObject puts an object into Swift
 func PutObject(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 
-	contentType := c.Request().Header.Get("Content-Type")
+	contentType := c.Request().Header.Get(echo.HeaderContentType)
 	objectName := c.Param("object")
 	unescaped, err := url.PathUnescape(objectName)
 	if err != nil {

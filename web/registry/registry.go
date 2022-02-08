@@ -61,7 +61,7 @@ func proxyReq(auth authType, clientCache clientCacheControl, proxyCacheControl r
 		case shortClientCache:
 			c.Response().Header().Set("Cache-Control", "max-age=86400")
 		}
-		contentType := proxyResp.Header.Get("content-type")
+		contentType := proxyResp.Header.Get(echo.HeaderContentType)
 		return c.Stream(proxyResp.StatusCode, contentType, proxyResp.Body)
 	}
 }

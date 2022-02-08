@@ -19,6 +19,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
 )
@@ -143,14 +144,14 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	contentEncoding := o["content-encoding"]
 	if contentEncoding == "br" {
 		if acceptBrotliEncoding(req) {
-			w.Header().Set("Content-Encoding", "br")
+			w.Header().Set(echo.HeaderContentEncoding, "br")
 		} else {
 			contentLength = o["original-content-length"]
 			r = brotli.NewReader(f)
 		}
 	} else if contentEncoding == "gzip" {
 		if acceptGzipEncoding(req) {
-			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set(echo.HeaderContentEncoding, "gzip")
 		} else {
 			contentLength = o["original-content-length"]
 			var gr *gzip.Reader
@@ -306,7 +307,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		// Nothing to do
 	case gzipped:
 		if acceptGzipEncoding(req) {
-			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set(echo.HeaderContentEncoding, "gzip")
 		} else {
 			var gr *gzip.Reader
 			var b []byte
@@ -324,7 +325,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		}
 	case brotlied:
 		if acceptBrotliEncoding(req) {
-			w.Header().Set("Content-Encoding", "br")
+			w.Header().Set(echo.HeaderContentEncoding, "br")
 		} else {
 			var b []byte
 			br := brotli.NewReader(content)
@@ -372,11 +373,11 @@ func defaultMakePath(slug, version, shasum, file string) string {
 }
 
 func acceptBrotliEncoding(req *http.Request) bool {
-	return strings.Contains(req.Header.Get("Accept-Encoding"), "br")
+	return strings.Contains(req.Header.Get(echo.HeaderAcceptEncoding), "br")
 }
 
 func acceptGzipEncoding(req *http.Request) bool {
-	return strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
+	return strings.Contains(req.Header.Get(echo.HeaderAcceptEncoding), "gzip")
 }
 
 func containerName(appsType consts.AppType) string {

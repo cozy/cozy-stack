@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"golang.org/x/oauth2"
 )
 
@@ -49,7 +50,7 @@ func (c *APIClient) Do(method, url string, body io.Reader) (*http.Response, erro
 		return nil, err
 	}
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	}
 	return c.client.Do(req)
 }

@@ -391,7 +391,7 @@ func (remote *Remote) ProxyTo(ins *instance.Instance, rw http.ResponseWriter, in
 	}
 	defer res.Body.Close()
 
-	ctype, _, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
+	ctype, _, err := mime.ParseMediaType(res.Header.Get(echo.HeaderContentType))
 	if err != nil {
 		log.Infof("request %s has an invalid content-type", remote.URL.String())
 		return ErrInvalidContentType
@@ -463,16 +463,16 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 }
 
 var doNotCopyHeaders = []string{
-	"Set-Cookie",
-	"Access-Control-Allow-Origin",
-	"Access-Control-Allow-Methods",
-	"Access-Control-Allow-Credentials",
-	"Access-Control-Allow-Headers",
-	"Access-Control-Expose-Headers",
-	"Access-Control-Max-Age",
-	"Content-Security-Policy",
-	"Strict-Transport-Security",
-	"X-Frame-Options",
+	echo.HeaderSetCookie,
+	echo.HeaderAccessControlAllowOrigin,
+	echo.HeaderAccessControlAllowMethods,
+	echo.HeaderAccessControlAllowCredentials,
+	echo.HeaderAccessControlAllowHeaders,
+	echo.HeaderAccessControlMaxAge,
+	echo.HeaderContentSecurityPolicy,
+	echo.HeaderContentSecurityPolicyReportOnly,
+	echo.HeaderStrictTransportSecurity,
+	echo.HeaderXFrameOptions,
 }
 
 func copyHeader(dst, src http.Header) {

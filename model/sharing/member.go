@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -289,9 +290,9 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/delegated",
 		Headers: request.Headers{
-			"Accept":        "application/json",
-			"Content-Type":  "application/vnd.api+json",
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -378,9 +379,9 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/discovery",
 		Headers: request.Headers{
-			"Accept":        "application/json",
-			"Content-Type":  "application/x-www-form-urlencoded",
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   echo.MIMEApplicationForm,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -635,9 +636,9 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
 		Headers: request.Headers{
-			"Accept":        "application/vnd.api+json",
-			"Content-Type":  "application/vnd.api+json",
-			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
+			echo.HeaderAccept:        jsonapi.ContentType,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -671,7 +672,7 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 		Domain: u.Host,
 		Path:   fmt.Sprintf("/sharings/%s/recipients/%d/readonly", s.SID, index),
 		Headers: request.Headers{
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		ParseError: ParseRequestError,
 	}
@@ -777,9 +778,9 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
 		Headers: request.Headers{
-			"Accept":        "application/vnd.api+json",
-			"Content-Type":  "application/vnd.api+json",
-			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
+			echo.HeaderAccept:        jsonapi.ContentType,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -833,7 +834,7 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		Domain: u.Host,
 		Path:   fmt.Sprintf("/sharings/%s/recipients/%d/readonly", s.SID, index),
 		Headers: request.Headers{
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		ParseError: ParseRequestError,
 	}
@@ -938,7 +939,7 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		Domain: u.Host,
 		Path:   path,
 		Headers: request.Headers{
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 		ParseError: ParseRequestError,
 	}
@@ -1046,9 +1047,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			Domain: u.Host,
 			Path:   "/sharings/" + s.SID + "/recipients",
 			Headers: request.Headers{
-				"Accept":        "application/vnd.api+json",
-				"Content-Type":  "application/vnd.api+json",
-				"Authorization": "Bearer " + token,
+				echo.HeaderAccept:        jsonapi.ContentType,
+				echo.HeaderContentType:   jsonapi.ContentType,
+				echo.HeaderAuthorization: "Bearer " + token,
 			},
 			Body:       bytes.NewReader(body),
 			ParseError: ParseRequestError,

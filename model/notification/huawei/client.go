@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/labstack/echo/v4"
 )
 
 // Client can be used to send notifications via the Huawei Push Kit APIs.
@@ -80,7 +81,7 @@ func (c *Client) PushWithContext(ctx context.Context, notification *Notification
 	if err != nil {
 		return fmt.Errorf("cannot make request: %s", err)
 	}
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("cannot send notification: %s", err)

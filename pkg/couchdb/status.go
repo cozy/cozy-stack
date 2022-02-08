@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/labstack/echo/v4"
 )
 
 // CheckStatus checks that the stack can talk to CouchDB, and returns an error
@@ -16,7 +17,7 @@ func CheckStatus() (time.Duration, error) {
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Add("Accept", "application/json")
+	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 	auth := config.GetConfig().CouchDB.Auth
 	if auth != nil {
 		if p, ok := auth.Password(); ok {

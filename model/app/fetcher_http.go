@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/labstack/echo/v4"
 )
 
 var httpClient = http.Client{
@@ -60,7 +61,7 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 
 	var reader io.Reader = resp.Body
 
-	contentType := resp.Header.Get("Content-Type")
+	contentType := resp.Header.Get(echo.HeaderContentType)
 	switch contentType {
 	case
 		"application/gzip",
@@ -148,7 +149,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 		reader = io.TeeReader(reader, h)
 	}
 
-	contentType := resp.Header.Get("Content-Type")
+	contentType := resp.Header.Get(echo.HeaderContentType)
 	switch contentType {
 	case
 		"application/gzip",

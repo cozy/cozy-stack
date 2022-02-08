@@ -137,18 +137,18 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	c.Set("claims", claims)
 
 	if err != nil {
-		c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	// check if the claim is valid
 	if claims.Issuer != instance.Domain {
-		c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	if claims.Expired() {
-		c.Response().Header().Set("WWW-Authenticate",
+		c.Response().Header().Set(echo.HeaderWWWAuthenticate,
 			`Bearer error="invalid_token" error_description="The access token expired"`)
 		return nil, permission.ErrExpiredToken
 	}
@@ -158,7 +158,7 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SessionID != "" {
 		s, ok := GetSession(c)
 		if !ok || s.ID() != claims.SessionID {
-			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 	}
@@ -168,7 +168,7 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SStamp != "" {
 		settings, err := settings.Get(instance)
 		if err != nil || claims.SStamp != settings.SecurityStamp {
-			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 	}
@@ -208,7 +208,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			if couchdb.IsInternalServerError(err) {
 				return nil, err
 			}
-			c.Response().Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 		return GetForOauth(instance, claims, client)
