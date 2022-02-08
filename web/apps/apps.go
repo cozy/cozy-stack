@@ -124,10 +124,10 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 		}
 
 		var w http.ResponseWriter
-		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
+		isEventStream := c.Request().Header.Get(echo.HeaderAccept) == typeTextEventStream
 		if isEventStream {
 			w = c.Response().Writer
-			w.Header().Set("Content-Type", typeTextEventStream)
+			w.Header().Set(echo.HeaderContentType, typeTextEventStream)
 			w.WriteHeader(200)
 		}
 
@@ -177,10 +177,10 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 		}
 
 		var w http.ResponseWriter
-		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
+		isEventStream := c.Request().Header.Get(echo.HeaderAccept) == typeTextEventStream
 		if isEventStream {
 			w = c.Response().Writer
-			w.Header().Set("Content-Type", typeTextEventStream)
+			w.Header().Set(echo.HeaderContentType, typeTextEventStream)
 			w.WriteHeader(200)
 		}
 

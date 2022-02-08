@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/net/html"
 )
 
@@ -110,8 +111,8 @@ func getPage(domain string) (io.ReadCloser, error) {
 		res.Body.Close()
 		return nil, errors.New("Not status OK")
 	}
-	ct := strings.ToLower(res.Header.Get("Content-Type"))
-	if !strings.Contains(ct, "text/html") {
+	ct := strings.ToLower(res.Header.Get(echo.HeaderContentType))
+	if !strings.Contains(ct, echo.MIMETextHTML) {
 		res.Body.Close()
 		return nil, errors.New("Not html")
 	}
@@ -254,7 +255,7 @@ func downloadIcon(u string) (*Icon, error) {
 		return nil, errors.New("Max size exceeded")
 	}
 	ico := Icon{
-		Mime: res.Header.Get("Content-Type"),
+		Mime: res.Header.Get(echo.HeaderContentType),
 		Body: b,
 	}
 	if strings.Split(ico.Mime, "/")[0] != "image" {

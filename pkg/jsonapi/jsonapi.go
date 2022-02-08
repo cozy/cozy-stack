@@ -110,12 +110,12 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 func compressedWriter(req *http.Request, resp *echo.Response) io.WriteCloser {
 	headers := resp.Header()
-	headers.Set("Content-Type", ContentType)
-	headers.Add("Vary", "Accept-Encoding")
+	headers.Set(echo.HeaderContentType, ContentType)
+	headers.Add(echo.HeaderVary, echo.HeaderAcceptEncoding)
 	if !acceptGzipEncoding(req) {
 		return &nopCloser{resp}
 	}
-	headers.Set("Content-Encoding", "gzip")
+	headers.Set(echo.HeaderContentEncoding, "gzip")
 	return gzip.NewWriter(resp)
 }
 
@@ -128,7 +128,7 @@ type nopCloser struct {
 func (nopCloser) Close() error { return nil }
 
 func acceptGzipEncoding(req *http.Request) bool {
-	return strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
+	return strings.Contains(req.Header.Get(echo.HeaderAcceptEncoding), "gzip")
 }
 
 // DataRelations can be called to send a Relations page,
@@ -158,7 +158,7 @@ func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, 
 	}
 
 	resp := c.Response()
-	resp.Header().Set("Content-Type", ContentType)
+	resp.Header().Set(echo.HeaderContentType, ContentType)
 	resp.WriteHeader(statusCode)
 	return json.NewEncoder(resp).Encode(doc)
 }
@@ -170,7 +170,7 @@ func DataError(c echo.Context, err *Error) error {
 		Errors: ErrorList{err},
 	}
 	resp := c.Response()
-	resp.Header().Set("Content-Type", ContentType)
+	resp.Header().Set(echo.HeaderContentType, ContentType)
 	resp.WriteHeader(err.Status)
 	return json.NewEncoder(resp).Encode(doc)
 }
@@ -185,7 +185,7 @@ func DataErrorList(c echo.Context, errs ...*Error) error {
 		panic("jsonapi.DataErrorList called with empty list.")
 	}
 	resp := c.Response()
-	resp.Header().Set("Content-Type", ContentType)
+	resp.Header().Set(echo.HeaderContentType, ContentType)
 	resp.WriteHeader(errs[0].Status)
 	return json.NewEncoder(resp).Encode(doc)
 }

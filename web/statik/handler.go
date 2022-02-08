@@ -309,17 +309,17 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 	}
 
 	headers := w.Header()
-	headers.Set("Content-Type", f.Mime)
-	headers.Set("Content-Length", f.Size())
-	headers.Set("Vary", "Origin")
-	headers.Add("Vary", "Accept-Encoding")
+	headers.Set(echo.HeaderContentType, f.Mime)
+	headers.Set(echo.HeaderContentLength, f.Size())
+	headers.Set(echo.HeaderVary, echo.HeaderOrigin)
+	headers.Add(echo.HeaderVary, echo.HeaderAcceptEncoding)
 
-	acceptsBrotli := strings.Contains(r.Header.Get("Accept-Encoding"), "br")
+	acceptsBrotli := strings.Contains(r.Header.Get(echo.HeaderAcceptEncoding), "br")
 	if acceptsBrotli {
-		headers.Set("Content-Encoding", "br")
-		headers.Set("Content-Length", f.BrotliSize())
+		headers.Set(echo.HeaderContentEncoding, "br")
+		headers.Set(echo.HeaderContentLength, f.BrotliSize())
 	} else {
-		headers.Set("Content-Length", f.Size())
+		headers.Set(echo.HeaderContentLength, f.Size())
 	}
 
 	if checkETag {

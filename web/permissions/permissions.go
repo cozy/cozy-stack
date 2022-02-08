@@ -294,7 +294,7 @@ func listPermissions(c echo.Context) error {
 		Data: (*json.RawMessage)(&data),
 	}
 	resp := c.Response()
-	resp.Header().Set("Content-Type", jsonapi.ContentType)
+	resp.Header().Set(echo.HeaderContentType, jsonapi.ContentType)
 	resp.WriteHeader(http.StatusOK)
 	return json.NewEncoder(resp).Encode(doc)
 }

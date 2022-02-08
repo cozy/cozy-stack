@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/labstack/echo/v4"
 )
 
 var accountsClient = &http.Client{
@@ -238,13 +239,13 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 			return nil, err
 		}
 
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Add("Accept", "application/json")
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
+		req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 	}
 
 	if at.TokenAuthMode == BasicTokenAuthMode {
 		auth := []byte(at.ClientID + ":" + at.ClientSecret)
-		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
+		req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
 	}
 
 	res, err := accountsClient.Do(req)

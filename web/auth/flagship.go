@@ -29,7 +29,7 @@ func CreateSessionCode(c echo.Context) error {
 
 	req := c.Request()
 	var ip string
-	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 	}
 	if ip == "" {

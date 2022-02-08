@@ -314,7 +314,7 @@ func getInitialCredentials(c echo.Context) error {
 	}
 
 	var ip string
-	if forwardedFor := c.Request().Header.Get("X-Forwarded-For"); forwardedFor != "" {
+	if forwardedFor := c.Request().Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 	}
 	if ip == "" {

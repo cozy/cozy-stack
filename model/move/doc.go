@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -173,8 +174,8 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add("Authorization", "Bearer "+to.Token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+to.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err

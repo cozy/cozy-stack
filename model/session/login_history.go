@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 	maxminddb "github.com/oschwald/maxminddb-golang"
 )
@@ -118,7 +119,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 	req *http.Request, logMessage string, notifEnabled bool,
 ) error {
 	var ip string
-	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 	}
 	if ip == "" {

@@ -301,7 +301,7 @@ func authorize(c echo.Context) error {
 		return err
 	}
 	var ip string
-	if forwardedFor := c.Request().Header.Get("X-Forwarded-For"); forwardedFor != "" {
+	if forwardedFor := c.Request().Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 	}
 	if ip == "" {
@@ -319,7 +319,7 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 	location := u.String() + "#"
 
-	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
+	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
 	if wantsJSON {
 		return c.JSON(http.StatusOK, echo.Map{"deeplink": location})
 	}

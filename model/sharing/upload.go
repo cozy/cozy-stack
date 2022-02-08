@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 )
 
 // UploadMsg is used for jobs on the share-upload worker.
@@ -113,7 +114,7 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 		Domain: u.Host,
 		Path:   fmt.Sprintf("/sharings/%s/initial", s.SID),
 		Headers: request.Headers{
-			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
 		},
 	}
 	res, err := request.Req(opts)
@@ -251,9 +252,9 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		Path:    "/sharings/" + s.SID + "/io.cozy.files/" + xoredFileID + "/metadata",
 		Queries: url.Values{"from": {inst.ContextualDomain()}},
 		Headers: request.Headers{
-			"Accept":        "application/json",
-			"Content-Type":  "application/json",
-			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   echo.MIMEApplicationJSON,
+			echo.HeaderAuthorization: "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
@@ -297,8 +298,8 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		Path:    "/sharings/" + s.SID + "/io.cozy.files/" + resBody.Key,
 		Queries: url.Values{"from": {inst.ContextualDomain()}},
 		Headers: request.Headers{
-			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
-			"Content-Type":  fileDoc.Mime,
+			echo.HeaderContentType:   fileDoc.Mime,
+			echo.HeaderAuthorization: "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body:   content,
 		Client: http.DefaultClient,

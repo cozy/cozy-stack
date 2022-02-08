@@ -96,12 +96,12 @@ func exportDataHandler(c echo.Context) error {
 	middlewares.AppendCSPRule(c, "frame-ancestors", from)
 
 	w := c.Response()
-	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set(echo.HeaderContentType, "application/zip")
 	filename := "My Cozy.zip"
 	if len(exportDoc.PartsCursors) > 0 {
 		filename = fmt.Sprintf("My Cozy - part%03d.zip", cursor.Number)
 	}
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	w.Header().Set(echo.HeaderContentDisposition, fmt.Sprintf("attachment; filename=%s", filename))
 	w.WriteHeader(http.StatusOK)
 
 	archiver := move.SystemArchiver()

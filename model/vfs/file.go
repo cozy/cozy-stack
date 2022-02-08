@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/labstack/echo/v4"
 )
 
 // FileDoc is a struct containing all the informations about a file.
@@ -218,9 +219,9 @@ func ServeFileContent(fs VFS, doc *FileDoc, version *Version, filename, disposit
 		filename = doc.DocName
 	}
 	header := w.Header()
-	header.Set("Content-Type", doc.Mime)
+	header.Set(echo.HeaderContentType, doc.Mime)
 	if disposition != "" {
-		header.Set("Content-Disposition", ContentDisposition(disposition, filename))
+		header.Set(echo.HeaderContentDisposition, ContentDisposition(disposition, filename))
 	}
 
 	if header.Get("Range") == "" {

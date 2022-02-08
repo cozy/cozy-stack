@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/labstack/echo/v4"
 )
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
@@ -102,8 +103,8 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID,
 		Headers: request.Headers{
-			"Accept":       "application/vnd.api+json",
-			"Content-Type": "application/vnd.api+json",
+			echo.HeaderAccept:      jsonapi.ContentType,
+			echo.HeaderContentType: jsonapi.ContentType,
 		},
 		Queries: u.Query(),
 		Body:    bytes.NewReader(body),
@@ -358,8 +359,8 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/answer",
 		Headers: request.Headers{
-			"Accept":       "application/vnd.api+json",
-			"Content-Type": "application/vnd.api+json",
+			echo.HeaderAccept:      jsonapi.ContentType,
+			echo.HeaderContentType: jsonapi.ContentType,
 		},
 		Body: bytes.NewReader(body),
 	})
@@ -623,8 +624,8 @@ func TryTokenForMovedSharing(i *instance.Instance, c *oauth.Client, token string
 	if err != nil {
 		return "", claims, false
 	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Accept", "application/json")
+	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
+	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil || res.StatusCode != http.StatusOK {
 		return "", claims, false

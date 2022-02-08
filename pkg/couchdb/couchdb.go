@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -265,9 +266,9 @@ func buildCouchRequest(db Database, doctype, method, path string, reqjson []byte
 	if err != nil {
 		return nil, newRequestError(err)
 	}
-	req.Header.Add("Accept", "application/json")
+	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 	if len(reqjson) > 0 {
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	}
 	for k, v := range headers {
 		req.Header.Add(k, v)

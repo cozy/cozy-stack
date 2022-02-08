@@ -572,7 +572,7 @@ func PostDiscovery(c echo.Context) error {
 		}
 		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
-			if c.Request().Header.Get("Accept") == "application/json" {
+			if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 				return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 			}
 			if err == sharing.ErrAlreadyAccepted {
@@ -589,7 +589,7 @@ func PostDiscovery(c echo.Context) error {
 		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
 			if err == sharing.ErrInvalidURL {
-				if c.Request().Header.Get("Accept") == "application/json" {
+				if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 					return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 				}
 				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, &sharing.Member{})
@@ -598,7 +598,7 @@ func PostDiscovery(c echo.Context) error {
 		}
 	}
 
-	if c.Request().Header.Get("Accept") == "application/json" {
+	if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 		m := echo.Map{"redirect": redirectURL}
 		if email != "" {
 			m["email"] = email
@@ -680,7 +680,7 @@ func GetAvatar(c echo.Context) error {
 	if res.StatusCode == http.StatusNotFound && c.QueryParam("fallback") != "404" {
 		return localAvatar(c, m)
 	}
-	return c.Stream(res.StatusCode, res.Header.Get("Content-Type"), res.Body)
+	return c.Stream(res.StatusCode, res.Header.Get(echo.HeaderContentType), res.Body)
 }
 
 func localAvatar(c echo.Context, m sharing.Member) error {

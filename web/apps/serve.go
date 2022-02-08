@@ -309,7 +309,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	}
 
 	res := c.Response()
-	res.Header().Set("Content-Type", "text/html; charset=utf-8")
+	res.Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
 	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, serveParams{

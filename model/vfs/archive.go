@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/labstack/echo/v4"
 )
 
 // ZipMime is the content-type for zip archives
@@ -108,8 +109,9 @@ func (a *Archive) GetEntries(fs VFS) ([]ArchiveEntry, error) {
 // Serve creates on the fly the zip archive and streams in a http response
 func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 	header := w.Header()
-	header.Set("Content-Type", ZipMime)
-	header.Set("Content-Disposition", ContentDisposition("attachment", a.Name+".zip"))
+	header.Set(echo.HeaderContentType, ZipMime)
+	header.Set(echo.HeaderContentDisposition,
+		ContentDisposition("attachment", a.Name+".zip"))
 
 	zw := zip.NewWriter(w)
 	defer zw.Close()

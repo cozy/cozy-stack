@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/labstack/echo/v4"
 )
 
 var managerHTTPClient = &http.Client{Timeout: 30 * time.Second}
@@ -298,17 +299,17 @@ func doManagerRequest(method string, url string, form url.Values, originalReq *h
 		return nil, err
 	}
 	if form != nil {
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	}
 	if originalReq != nil {
 		var ip string
-		if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
 			ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 		}
 		if ip == "" {
 			ip = req.RemoteAddr
 		}
-		req.Header.Set("X-Forwarded-For", ip)
+		req.Header.Set(echo.HeaderXForwardedFor, ip)
 	}
 	return managerHTTPClient.Do(req)
 }
