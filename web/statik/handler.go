@@ -311,6 +311,7 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 	headers := w.Header()
 	headers.Set("Content-Type", f.Mime)
 	headers.Set("Content-Length", f.Size())
+	headers.Set("Vary", "Origin")
 	headers.Add("Vary", "Accept-Encoding")
 
 	acceptsBrotli := strings.Contains(r.Header.Get("Accept-Encoding"), "br")
