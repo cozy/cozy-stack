@@ -459,6 +459,7 @@ Content-Type: application/json
       },
       "links": {
         "self": "/files/e8c1561846c730428180a5f6c6107914",
+        "tiny": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/tiny",
         "small": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/small",
         "medium": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/medium",
         "large": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/large"
@@ -504,6 +505,7 @@ Content-Type: application/json
       },
       "links": {
         "self": "/files/e8c1561846c730428180a5f6c6109007",
+        "tiny": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/tiny",
         "small": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/small",
         "medium": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/medium",
         "large": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/large"
@@ -706,6 +708,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     },
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "tiny": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/tiny",
       "small": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
       "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
       "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
@@ -878,8 +881,8 @@ Get an image that shows the first page of a PDF (at most 1080x1920).
 
 ### GET /files/:file-id/thumbnails/:secret/:format
 
-Get a thumbnail of a file (for an image only). `:format` can be `small`
-(640x480), `medium` (1280x720), or `large` (1920x1080).
+Get a thumbnail of a file (for an image only). `:format` can be `tiny` (96x96)
+`small` (640x480), `medium` (1280x720), or `large` (1920x1080).
 
 ### PUT /files/:file-id
 
@@ -1599,4 +1602,8 @@ server > {"event": "CREATED",
           "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
                       "type": "io.cozy.files.thumbnails",
                       "doc": {"format": "small"}}}
+server > {"event": "CREATED",
+          "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+                      "type": "io.cozy.files.thumbnails",
+                      "doc": {"format": "tiny"}}}
 ```

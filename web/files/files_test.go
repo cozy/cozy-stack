@@ -2422,6 +2422,7 @@ func TestThumbnail(t *testing.T) {
 	large := links["large"].(string)
 	medium := links["medium"].(string)
 	small := links["small"].(string)
+	tiny := links["tiny"].(string)
 
 	res2, _ := download(t, large, "")
 	assert.Equal(t, 200, res2.StatusCode)
@@ -2432,6 +2433,9 @@ func TestThumbnail(t *testing.T) {
 	res4, _ := download(t, small, "")
 	assert.Equal(t, 200, res4.StatusCode)
 	assert.True(t, strings.HasPrefix(res4.Header.Get("Content-Type"), "image/jpeg"))
+	res5, _ := download(t, tiny, "")
+	assert.Equal(t, 200, res5.StatusCode)
+	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "image/jpeg"))
 }
 
 func TestGetFileByPublicLink(t *testing.T) {

@@ -32,6 +32,7 @@ type imageEvent struct {
 }
 
 var formats = map[string]string{
+	"tiny":   "96x96",
 	"small":  "640x480",
 	"medium": "1280x720",
 	"large":  "1920x1080",
@@ -228,7 +229,11 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 	if err != nil {
 		return err
 	}
-	_, err = recGenerateThumb(ctx, in, fs, img, "small", env, true)
+	in, err = recGenerateThumb(ctx, in, fs, img, "small", env, false)
+	if err != nil {
+		return err
+	}
+	_, err = recGenerateThumb(ctx, in, fs, img, "tiny", env, true)
 	return err
 }
 
