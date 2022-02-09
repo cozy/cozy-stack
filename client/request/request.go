@@ -235,6 +235,11 @@ func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
 			ev = nil
 			continue
 		}
+		if bytes.HasPrefix(bs, []byte(":")) {
+			// A colon as the first character of a line is in essence a comment,
+			// and is ignored.
+			continue
+		}
 		spl := bytes.SplitN(bs, []byte(": "), 2)
 		if len(spl) != 2 {
 			err = ErrSSEParse
