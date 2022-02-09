@@ -399,6 +399,9 @@ func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bo
 		case <-ticker.C:
 			_, _ = w.Write([]byte(": still working\r\n"))
 		}
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
 	}
 }
 
