@@ -95,7 +95,7 @@ func checkToken(cfg *config.Office, params CallbackParameters) error {
 func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("Invalid key")
+		return errors.New("invalid key")
 	}
 
 	_, err = saveFile(inst, *detector, downloadURL)
@@ -108,7 +108,7 @@ func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("Invalid key")
+		return errors.New("invalid key")
 	}
 
 	updated, err := saveFile(inst, *detector, downloadURL)
@@ -148,6 +148,7 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	}
 	newfile.UpdatedAt = time.Now()
 	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
+	newfile.CozyMetadata.UploadedAt = &newfile.UpdatedAt
 
 	// If the file was renamed while OO editor was opened, the revision has
 	// been changed, but we still should avoid creating a conflict if the
@@ -170,6 +171,6 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
-	updated := conflictDetector{ID: detector.ID, Rev: newfile.Rev(), MD5Sum: newfile.MD5Sum}
+	updated := conflictDetector{ID: newfile.ID(), Rev: newfile.Rev(), MD5Sum: newfile.MD5Sum}
 	return &updated, err
 }
