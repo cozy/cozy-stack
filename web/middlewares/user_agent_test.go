@@ -27,7 +27,7 @@ func TestUserAgent(t *testing.T) {
 
 	req, _ := http.NewRequest(echo.GET, "http://cozy.local", nil)
 	req.Header.Set(echo.HeaderAccept, "text/html")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:63.0) Gecko/20100101 Firefox/63.0") // Firefox
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:96.0) Gecko/20100101 Firefox/96.0") // Firefox
 
 	ins = &instance.Instance{Domain: "cozy.local", Locale: "en"}
 
@@ -44,17 +44,17 @@ func TestUserAgent(t *testing.T) {
 	err2 := h2(c)
 	assert.NoError(t, err2, nil)
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/16.14931") // Edge 16
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/17.14931") // Edge 17
 	h3 := CheckUserAgent(echo.NotFoundHandler)
 	err3 := h3(c)
 	assert.NoError(t, err3, nil)
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/17.14931") // Edge 17
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.81 Safari/537.36 Edg/97.0.1072.69") // Edge 97
 	h4 := CheckUserAgent(echo.NotFoundHandler)
 	err4 := h4(c)
 	assert.Error(t, err4, nil)
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/24.1  Mobile/15E148 Safari/605.1.15") // Firefox for iOS
+	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/97.0 Mobile/15E148 Safari/605.1.15") // Firefox for iOS
 	h5 := CheckUserAgent(echo.NotFoundHandler)
 	err5 := h5(c)
 	assert.Error(t, err5, nil)
