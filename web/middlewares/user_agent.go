@@ -69,24 +69,35 @@ var rules = []browserRule{
 		iPhone:     iPhoneOrNotIPhone,
 		minVersion: maxInt,
 	},
-	// We don't support Edge before version 17, because some webapps (like Drive)
-	// needs URLSearchParams.
+	// We don't support Edge before version 79, because we need support for
+	// unicode property escape of regexps.
 	{
 		name:       Edge,
 		iPhone:     iPhoneOrNotIPhone,
-		minVersion: 17,
+		minVersion: 79,
 	},
-	// We don't support Firefox before version 52, except on iOS where the
+	// Idem for Chrome and Chromium before version 64.
+	{
+		name:       Chrome,
+		iPhone:     iPhoneOrNotIPhone,
+		minVersion: 64,
+	},
+	{
+		name:       Chromium,
+		iPhone:     iPhoneOrNotIPhone,
+		minVersion: 64,
+	},
+	// We don't support Firefox before version 78, except on iOS where the
 	// webkit engine is used on the version numbers are not the same.
 	{
 		name:       Firefox,
 		iPhone:     notIphone,
-		minVersion: 52,
+		minVersion: 78,
 	},
 	{
 		name:       Firefox,
 		iPhone:     onlyIphone,
-		minVersion: 7, // Firefox Focus has a lower version number than Firefox for iOS
+		minVersion: 34, // Firefox Focus has a lower version number than Firefox for iOS
 	},
 	// We don't support Safari before version 11, as window.crypto is not
 	// available.
