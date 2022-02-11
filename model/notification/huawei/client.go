@@ -54,14 +54,37 @@ type Notification struct {
 }
 
 type NotificationMessage struct {
-	Data         string                `json:"data"`
+	Android AndroidStructure `json:"android"`
+	Token   []string         `json:"token"`
+}
+
+type AndroidStructure struct {
 	Notification NotificationStructure `json:"notification"`
-	Token        []string              `json:"token"`
 }
 
 type NotificationStructure struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	Title       string         `json:"title"`
+	Body        string         `json:"body"`
+	ClickAction ClickStructure `json:"click_action"`
+}
+
+type ClickStructure struct {
+	Type int `json:"type"`
+}
+
+func NewNotification(title, body, token string) *Notification {
+	return &Notification{
+		Message: NotificationMessage{
+			Android: AndroidStructure{
+				Notification: NotificationStructure{
+					Title:       title,
+					Body:        body,
+					ClickAction: ClickStructure{Type: 3},
+				},
+			},
+			Token: []string{token},
+		},
+	}
 }
 
 // PushWithContext send the notification to Push Kit.

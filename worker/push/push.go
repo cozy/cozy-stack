@@ -295,16 +295,7 @@ func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessa
 		return nil
 	}
 
-	notification := &huawei.Notification{
-		Message: huawei.NotificationMessage{
-			Notification: huawei.NotificationStructure{
-				Title: msg.Title,
-				Body:  msg.Message,
-			},
-			Token: []string{c.NotificationDeviceToken},
-		},
-	}
-
+	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken)
 	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
 	err := huaweiClient.PushWithContext(ctx, notification)
 	if err != nil {
