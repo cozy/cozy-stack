@@ -2,6 +2,7 @@ package thumbnail
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,8 +22,11 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-type imageMessage struct {
+type ImageMessage struct {
 	NoteImage *note.Image `json:"noteImage,omitempty"`
+	// -- or --
+	File   *vfs.FileDoc `json:"file,omitempty"`
+	Format string       `json:"format,omitempty"`
 }
 
 type imageEvent struct {
@@ -61,9 +65,19 @@ func init() {
 
 // Worker is a worker that creates thumbnails for photos and images.
 func Worker(ctx *job.WorkerContext) error {
-	var msg imageMessage
-	if err := ctx.UnmarshalMessage(&msg); err == nil && msg.NoteImage != nil {
+	var msg ImageMessage
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+
+	if msg.NoteImage != nil {
 		return resizeNoteImage(ctx, msg.NoteImage)
+	}
+	if msg.File != nil {
+		if _, ok := formats[msg.Format]; !ok {
+			return errors.New("invalid format")
+		}
+		return generateSingleThumbnail(ctx, msg.File, msg.Format)
 	}
 
 	var img imageEvent
@@ -90,7 +104,7 @@ func Worker(ctx *job.WorkerContext) error {
 	case "DELETED":
 		return removeThumbnails(ctx.Instance, &img.Doc)
 	}
-	return fmt.Errorf("Unknown type %s for image event", img.Verb)
+	return fmt.Errorf("unknown type %s for event", img.Verb)
 }
 
 func sameImg(doc, old *vfs.FileDoc) bool {
@@ -192,14 +206,34 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 	return &meta, nil
 }
 
-func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
-	// Do not try to generate thumbnails for images that weight more than 100MB
-	// (or 5MB for PSDs)
-	var limit int64 = 100 * 1024 * 1024
-	if img.Mime == "image/vnd.adobe.photoshop" {
-		limit = 5 * 1024 * 1024
+func generateSingleThumbnail(ctx *job.WorkerContext, img *vfs.FileDoc, format string) error {
+	if ok := checkByteSize(img); !ok {
+		return nil
 	}
-	if img.ByteSize > limit {
+
+	fs := ctx.Instance.ThumbsFS()
+	var in io.Reader
+	in, err := ctx.Instance.VFS().OpenFile(img)
+	if err != nil {
+		return err
+	}
+
+	var env []string
+	{
+		var tempDir string
+		tempDir, err = ioutil.TempDir("", "magick")
+		if err == nil {
+			defer os.RemoveAll(tempDir)
+			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+			env = []string{envTempDir}
+		}
+	}
+	_, err = recGenerateThumb(ctx, in, fs, img, format, env, true)
+	return err
+}
+
+func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
+	if ok := checkByteSize(img); !ok {
 		return nil
 	}
 
@@ -235,6 +269,16 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 	}
 	_, err = recGenerateThumb(ctx, in, fs, img, "tiny", env, true)
 	return err
+}
+
+func checkByteSize(img *vfs.FileDoc) bool {
+	// Do not try to generate thumbnails for images that weight more than 100MB
+	// (or 5MB for PSDs)
+	var limit int64 = 100 * 1024 * 1024
+	if img.Mime == "image/vnd.adobe.photoshop" {
+		limit = 5 * 1024 * 1024
+	}
+	return img.ByteSize < limit
 }
 
 func recGenerateThumb(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
@@ -291,13 +335,17 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 	if convertCmd == "" {
 		convertCmd = "convert"
 	}
+	quality := "82" // A good compromise between file size and quality
+	if format == "tiny" {
+		quality = "99" // At small resolution, we want a very good quality
+	}
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
-		"-[0]",           // Takes the input from stdin
-		"-auto-orient",   // Rotate image according to the EXIF metadata
-		"-strip",         // Strip the EXIF metadata
-		"-quality", "82", // A good compromise between file size and quality
+		"-[0]",         // Takes the input from stdin
+		"-auto-orient", // Rotate image according to the EXIF metadata
+		"-strip",       // Strip the EXIF metadata
+		"-quality", quality,
 		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
 		"-thumbnail", formats[format], // Makes a thumbnail that fits inside the given format
 		"-background", "white", // Use white for the background

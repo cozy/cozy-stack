@@ -88,6 +88,9 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
 	if err != nil {
 		return err
 	}
+	if s.Size() == 0 {
+		return os.ErrInvalid
+	}
 	f, err := t.fs.Open(name)
 	if err != nil {
 		return err

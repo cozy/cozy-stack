@@ -988,7 +988,11 @@ Content-Type: application/vnd.api+json
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
       "icon": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/icon/543d7eb8",
-      "preview": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/preview/77e117e0"
+      "preview": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/preview/77e117e0",
+      "tiny": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/93fd0a5d96b22e9d/tiny",
+      "small": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/93fd0a5d96b22e9d/small",
+      "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/93fd0a5d96b22e9d/medium",
+      "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/93fd0a5d96b22e9d/large"
     }
   }
 }

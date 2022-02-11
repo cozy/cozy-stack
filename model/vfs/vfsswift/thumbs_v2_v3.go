@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
 )
 
@@ -134,8 +135,13 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 	}
 	defer f.Close()
 
+	ctype := o["Content-Type"]
+	if ctype == echo.MIMEOctetStream {
+		return os.ErrInvalid
+	}
+
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
-	w.Header().Set("Content-Type", o["Content-Type"])
+	w.Header().Set("Content-Type", ctype)
 	http.ServeContent(w, req, name, unixEpochZero, &backgroundSeeker{f})
 	return nil
 }
