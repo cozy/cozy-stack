@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -90,7 +91,15 @@ func GetForOauth(instance *instance.Instance, claims *permission.Claims, client 
 	var set permission.Set
 	linkedAppScope, err := parseLinkedAppScope(claims.Scope)
 
-	if client.Flagship {
+	if claims.Scope == "*" {
+		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		skipCertification := false
+		if cfg, ok := cfg.(map[string]interface{}); ok {
+			skipCertification = cfg["skip_certification"] == true
+		}
+		if !skipCertification && !client.Flagship {
+			return nil, permission.ErrInvalidToken
+		}
 		set = permission.MaximalSet()
 	} else if err == nil && linkedAppScope != nil {
 		// Translate to a real scope
