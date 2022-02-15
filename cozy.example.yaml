@@ -308,6 +308,9 @@ notifications:
       token: {{.Env.COZY_BETA_SMS_TOKEN}}
 
 flagship:
+  contexts:
+    cozy_beta:
+      skip_certification: true
   apk_package_names:
     - io.cozy.drive.mobile
     - io.cozy.flagship.mobile

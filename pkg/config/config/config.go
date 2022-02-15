@@ -249,6 +249,7 @@ type Notifications struct {
 
 // Flagship contains the configuration for the flagship app.
 type Flagship struct {
+	Contexts              map[string]interface{}
 	APKPackageNames       []string
 	APKCertificateDigests []string
 	AppleAppIDs           []string
@@ -797,6 +798,7 @@ func UseViper(v *viper.Viper) error {
 			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
 		},
 		Flagship: Flagship{
+			Contexts:              v.GetStringMap("flagship.contexts"),
 			APKPackageNames:       v.GetStringSlice("flagship.apk_package_names"),
 			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),

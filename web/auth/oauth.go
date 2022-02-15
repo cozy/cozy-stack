@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -80,7 +81,13 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 
 	if params.scope == "*" {
-		if !params.client.Flagship {
+		instance := middlewares.GetInstance(c)
+		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		skipCertification := false
+		if cfg, ok := cfg.(map[string]interface{}); ok {
+			skipCertification = cfg["skip_certification"] == true
+		}
+		if !skipCertification && !params.client.Flagship {
 			return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 		}
 		return false, nil
@@ -177,7 +184,12 @@ func authorizeForm(c echo.Context) error {
 
 	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
-		if !params.client.Flagship || params.scope != "*" {
+		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		skipCertification := false
+		if cfg, ok := cfg.(map[string]interface{}); ok {
+			skipCertification = cfg["skip_certification"] == true
+		}
+		if params.scope != "*" || (!skipCertification && !params.client.Flagship) {
 			return renderError(c, http.StatusBadRequest, "Error Invalid scope")
 		}
 		permissions = permission.MaximalSet()
