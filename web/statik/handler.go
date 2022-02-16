@@ -35,6 +35,7 @@ var (
 		"authorize_sharing.html",
 		"compat.html",
 		"confirm_auth.html",
+		"confirm_flagship.html",
 		"error.html",
 		"import.html",
 		"instance_blocked.html",

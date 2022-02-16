@@ -341,7 +341,7 @@ func (i *Instance) TemplateTitle() string {
 	if !ok {
 		return DefaultTemplateTitle
 	}
-	if title, ok := ctxSettings["templates_title"].(string); ok {
+	if title, ok := ctxSettings["templates_title"].(string); ok && title != "" {
 		return title
 	}
 	return DefaultTemplateTitle

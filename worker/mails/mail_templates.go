@@ -30,6 +30,7 @@ func initMailTemplates() {
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
 		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{templateTitleVar}},
+		"confirm_flagship":             subjectEntry{"Mail Confirm Flagship Subject", nil},
 		"alert_account":                subjectEntry{"Mail Alert Account Subject", nil},
 		"support_request":              subjectEntry{"Mail Support Confirmation Subject", nil},
 		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},

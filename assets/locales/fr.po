@@ -335,6 +335,41 @@ msgid "Authorize Linked Help"
 msgstr ""
 "L'application demande à accéder aux données suivantes de votre Cozy :"
 
+msgid "Authorize Confirm Flagship title"
+msgstr "Application non certifiée"
+
+msgid "Authorize Confirm Flagship help"
+msgstr ""
+"La provenance de cette application n'est pas certifiée. "
+"Un code à 6 chiffres vous a été evoyé par email à l’adresse : %s "
+"Saisissez le code pour confirmer votre volonté d’utiliser l’application"
+
+msgid "Authorize Confirm Flagship more link"
+msgstr "https://support.cozy.io/"
+
+msgid "Authorize Confirm Flagship more text"
+msgstr "en savoir plus"
+
+msgid "Authorize Confirm Flagship field"
+msgstr "Code de confirmation"
+
+msgid "Authorize Confirm Flagship Confirm"
+msgstr "Confirmer"
+
+msgid "Confirm Flagship Invalid code"
+msgstr "Code invalide"
+
+msgid "Mail Confirm Flagship Subject"
+msgstr "Code de confirmation"
+
+msgid "Mail Confirm Flagship Greeting"
+msgstr "Bonjour %s,"
+
+msgid "Mail Confirm Flagship Intro"
+msgstr ""
+"Pour confirmer votre volonté d'utiliser l'application Cozy, "
+"copiez le code suivant et entrez-le dans l'application :"
+
 msgid "Move delegated auth Title"
 msgstr "Confirmation du déménagement"
 
