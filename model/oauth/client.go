@@ -596,6 +596,11 @@ func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
 		return err
 	}
 
+	return c.SetFlagship(inst)
+}
+
+// SetFlagship updates the client in CouchDB with flagship set to true.
+func (c *Client) SetFlagship(inst *instance.Instance) error {
 	c.Flagship = true
 	c.ClientID = ""
 	if c.Metadata == nil {
