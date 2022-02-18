@@ -83,7 +83,11 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "*" {
 		instance := middlewares.GetInstance(c)
-		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		context := instance.ContextName
+		if context == "" {
+			context = config.DefaultInstanceContext
+		}
+		cfg := config.GetConfig().Flagship.Contexts[context]
 		skipCertification := false
 		if cfg, ok := cfg.(map[string]interface{}); ok {
 			skipCertification = cfg["skip_certification"] == true
@@ -184,7 +188,11 @@ func authorizeForm(c echo.Context) error {
 
 	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
-		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		context := instance.ContextName
+		if context == "" {
+			context = config.DefaultInstanceContext
+		}
+		cfg := config.GetConfig().Flagship.Contexts[context]
 		skipCertification := false
 		if cfg, ok := cfg.(map[string]interface{}); ok {
 			skipCertification = cfg["skip_certification"] == true

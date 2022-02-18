@@ -92,7 +92,11 @@ func GetForOauth(instance *instance.Instance, claims *permission.Claims, client 
 	linkedAppScope, err := parseLinkedAppScope(claims.Scope)
 
 	if claims.Scope == "*" {
-		cfg := config.GetConfig().Flagship.Contexts[instance.ContextName]
+		context := instance.ContextName
+		if context == "" {
+			context = config.DefaultInstanceContext
+		}
+		cfg := config.GetConfig().Flagship.Contexts[context]
 		skipCertification := false
 		if cfg, ok := cfg.(map[string]interface{}); ok {
 			skipCertification = cfg["skip_certification"] == true
