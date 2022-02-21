@@ -86,7 +86,13 @@ func TestConnect(t *testing.T) {
 	assert.NotNil(t, result["KdfIterations"])
 
 	assert.NotZero(t, len(testLogger.Entries))
-	assert.Equal(t, "Organization key does not exist", testLogger.Entries[0].Message)
+	orgKeyDoesNotExist := false
+	for _, entry := range testLogger.Entries {
+		if entry.Message == "Organization key does not exist" {
+			orgKeyDoesNotExist = true
+		}
+	}
+	assert.True(t, orgKeyDoesNotExist)
 
 	setting, err = settings.Get(inst)
 	assert.NoError(t, err)
