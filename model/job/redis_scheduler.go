@@ -167,6 +167,11 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 					event.Domain, triggerID, err.Error())
 				continue
 			}
+			if t.Infos().WorkerType == "thumbnail" {
+				// Remove the legacy @event trigger for thumbnail, it is now hardcoded
+				_ = s.deleteTrigger(t)
+				continue
+			}
 			et := t.(*EventTrigger)
 			if et.Infos().Debounce != "" {
 				var d time.Duration

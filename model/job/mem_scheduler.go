@@ -86,6 +86,13 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 			if err := json.Unmarshal(data, &t); err != nil {
 				return err
 			}
+
+			// Remove the legacy @event trigger for thumbnail, it is now hardcoded
+			if t.WorkerType == "thumbnail" {
+				_ = couchdb.DeleteDoc(db, t)
+				return nil
+			}
+
 			ts = append(ts, t)
 			return nil
 		})
