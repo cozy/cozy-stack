@@ -116,8 +116,7 @@ func registerPassphrase(c echo.Context) error {
 		}
 	}
 
-	longRunSession := true
-	sessionID, err := auth.SetCookieForNewSession(c, longRunSession)
+	sessionID, err := auth.SetCookieForNewSession(c, session.LongRun)
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func registerPassphrase(c echo.Context) error {
 
 func updatePassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	session, hasSession := middlewares.GetSession(c)
+	currentSession, hasSession := middlewares.GetSession(c)
 
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
@@ -196,7 +195,7 @@ func updatePassphrase(c echo.Context) error {
 			_ = sharing.SendPublicKey(inst, params.PublicKey)
 		}()
 		if hasSession {
-			_, _ = auth.SetCookieForNewSession(c, session.LongRun)
+			_, _ = auth.SetCookieForNewSession(c, currentSession.Duration())
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
@@ -236,11 +235,11 @@ func updatePassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	longRunSession := true
+	duration := session.LongRun
 	if hasSession {
-		longRunSession = session.LongRun
+		duration = currentSession.Duration()
 	}
-	if _, err = auth.SetCookieForNewSession(c, longRunSession); err != nil {
+	if _, err = auth.SetCookieForNewSession(c, duration); err != nil {
 		return err
 	}
 

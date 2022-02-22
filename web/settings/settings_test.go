@@ -941,7 +941,7 @@ func TestMain(m *testing.M) {
 func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := c.Get("instance").(*instance.Instance)
-		sess, _ := session.New(instance, true)
+		sess, _ := session.New(instance, session.LongRun)
 		c.Set("session", sess)
 		return next(c)
 	}

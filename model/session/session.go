@@ -40,6 +40,7 @@ type Session struct {
 	CreatedAt time.Time `json:"created_at"`
 	LastSeen  time.Time `json:"last_seen"`
 	LongRun   bool      `json:"long_run"`
+	ShortRun  bool      `json:"short_run"`
 }
 
 // DocType implements couchdb.Doc
@@ -70,19 +71,44 @@ func (s *Session) Clone() couchdb.Doc {
 // ensure Session implements couchdb.Doc
 var _ couchdb.Doc = (*Session)(nil)
 
+// Duration is a type for the cookie expiration.
+type Duration int
+
+const (
+	// ShortRun is used for session that will last only 5 minutes. It is
+	// typically used for OAuth dance.
+	ShortRun Duration = iota
+	// NormalRun is used for a session that will expired when the browser is
+	// closed.
+	NormalRun
+	// LongRun is used to try to keep the session opened as long as possible.
+	LongRun
+)
+
+// Duration returns the session duration for the its cookie.
+func (s *Session) Duration() Duration {
+	if s.LongRun {
+		return LongRun
+	} else if s.ShortRun {
+		return ShortRun
+	}
+	return NormalRun
+}
+
 // OlderThan checks if a session last seen is older than t from now
 func (s *Session) OlderThan(t time.Duration) bool {
 	return time.Now().After(s.LastSeen.Add(t))
 }
 
 // New creates a session in couchdb for the given instance
-func New(i *instance.Instance, longRun bool) (*Session, error) {
+func New(i *instance.Instance, duration Duration) (*Session, error) {
 	now := time.Now()
 	s := &Session{
 		instance:  i,
 		LastSeen:  now,
 		CreatedAt: now,
-		LongRun:   longRun,
+		ShortRun:  duration == ShortRun,
+		LongRun:   duration == LongRun,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
@@ -230,6 +256,8 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	maxAge := 0
 	if s.LongRun {
 		maxAge = 10 * 365 * 24 * 3600 // 10 years
+	} else if s.ShortRun {
+		maxAge = 5 * 60 // 5 minutes
 	}
 
 	return &http.Cookie{

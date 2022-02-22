@@ -919,3 +919,28 @@ func GetLinkedApp(instance *instance.Instance, softwareID string) (*app.WebappMa
 	}
 	return &webappManifest, nil
 }
+
+func hasRedirectToAuthorize(inst *instance.Instance, redirect *url.URL) bool {
+	if !inst.HasDomain(redirect.Host) {
+		return false
+	}
+	if redirect.Path != "/auth/authorize" {
+		return false
+	}
+
+	redirectQuery := redirect.Query()
+	scopes := redirectQuery["scope"]
+	for _, scope := range scopes {
+		if scope == oauth.ScopeLogin {
+			return false
+		}
+	}
+	return true
+}
+
+func hasRedirectToAuthorizeSharing(inst *instance.Instance, redirect *url.URL) bool {
+	if !inst.HasDomain(redirect.Host) {
+		return false
+	}
+	return redirect.Path == "/auth/authorize/sharing"
+}

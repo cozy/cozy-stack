@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -103,9 +102,9 @@ func Home(c echo.Context) error {
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
-func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error) {
+func SetCookieForNewSession(c echo.Context, duration session.Duration) (string, error) {
 	instance := middlewares.GetInstance(c)
-	session, err := session.New(instance, longRunSession)
+	session, err := session.New(instance, duration)
 	if err != nil {
 		return "", err
 	}
@@ -166,15 +165,8 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	var hasOAuth, hasSharing bool
 	if redirect != nil {
 		redirectStr = redirect.String()
-		redirectQuery := redirect.Query()
-		var clientScope string
-		if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
-			clientScope = clientScopes[0]
-		}
-		if i.HasDomain(redirect.Host) {
-			hasOAuth = redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
-			hasSharing = redirect.Path == "/auth/authorize/sharing"
-		}
+		hasOAuth = hasRedirectToAuthorize(i, redirect)
+		hasSharing = hasRedirectToAuthorizeSharing(i, redirect)
 	}
 
 	var title, help string
@@ -240,7 +232,7 @@ func loginForm(c echo.Context) error {
 		if err != nil {
 			instance.Logger().Warnf("Delegated token check failed: %s", err)
 		} else {
-			sessionID, err := SetCookieForNewSession(c, false)
+			sessionID, err := SetCookieForNewSession(c, session.NormalRun)
 			if err != nil {
 				return err
 			}
@@ -257,22 +249,21 @@ func loginForm(c echo.Context) error {
 }
 
 // newSession generates a new session, and puts a cookie for it
-func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool, logMessage string) error {
-	sessionID, err := SetCookieForNewSession(c, longRunSession)
-	if err != nil {
-		return err
-	}
-
+func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, duration session.Duration, logMessage string) error {
 	var clientID string
-	if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
+	if hasRedirectToAuthorize(inst, redirect) {
 		// NOTE: the login scope is used by external clients for authentication.
 		// Typically, these clients are used for internal purposes, like
 		// authenticating to an external system via the cozy. For these clients
 		// we do not push a "client" notification, we only store a new login
 		// history.
-		if redirect.Query().Get("scope") != oauth.ScopeLogin {
-			clientID = redirect.Query().Get("client_id")
-		}
+		clientID = redirect.Query().Get("client_id")
+		duration = session.ShortRun
+	}
+
+	sessionID, err := SetCookieForNewSession(c, duration)
+	if err != nil {
+		return err
 	}
 
 	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), logMessage, true); err != nil {
@@ -385,7 +376,11 @@ func login(c echo.Context) error {
 	// Successful authentication
 	// User is now logged-in, generate a new session
 	if sessionID == "" {
-		err := newSession(c, inst, redirect, longRunSession, "password")
+		duration := session.NormalRun
+		if longRunSession {
+			duration = session.LongRun
+		}
+		err := newSession(c, inst, redirect, duration, "password")
 		if err != nil {
 			return err
 		}

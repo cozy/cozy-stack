@@ -152,7 +152,7 @@ func Login(c echo.Context) error {
 		return auth.ConfirmSuccess(c, inst, confirm)
 	}
 
-	sessionID, err := auth.SetCookieForNewSession(c, false)
+	sessionID, err := auth.SetCookieForNewSession(c, session.NormalRun)
 	if err != nil {
 		return err
 	}

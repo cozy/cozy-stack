@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -23,11 +23,6 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 	if err != nil {
 		return err
 	}
-	redirectQuery := redirect.Query()
-	var clientScope string
-	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
-		clientScope = clientScopes[0]
-	}
 
 	trustedDeviceCheckBox := true
 	trustedDeviceCheckBoxParam := c.QueryParam("trusted_device_checkbox")
@@ -37,7 +32,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 		}
 	}
 
-	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
+	oauth := hasRedirectToAuthorize(i, redirect)
 	trustedCheckbox := !oauth && trustedDeviceCheckBox
 
 	return c.Render(code, "twofactor.html", echo.Map{
@@ -130,7 +125,13 @@ func twoFactor(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := newSession(c, inst, redirect, longRunSession, "2FA"); err != nil {
+	duration := session.NormalRun
+	if longRunSession {
+		duration = session.LongRun
+	} else if hasRedirectToAuthorize(inst, redirect) {
+		duration = session.ShortRun
+	}
+	if err := newSession(c, inst, redirect, duration, "2FA"); err != nil {
 		return err
 	}
 
