@@ -224,7 +224,6 @@ Example and description of the attributes of a `io.cozy.jobs`:
   "domain": "me.cozy.localhost",
   "worker": "sendmail",    // worker type name
   "options": {
-    "priority": 3,         // priority from 1 to 100, higher number is higher priority
     "timeout": 60,         // timeout value in seconds
     "max_exec_count": 3,   // maximum number of time the job should be executed (including retries)
   },
@@ -247,7 +246,6 @@ are replicated in the `io.cozy.jobs` attributes:
 
 ```js
 {
-  "priority": 3,         // priority from 1 to 100
   "timeout": 60,         // timeout value in seconds
   "max_exec_count": 3,   // maximum number of retry
 }
@@ -275,7 +273,6 @@ Accept: application/vnd.api+json
       "domain": "me.cozy.localhost",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
