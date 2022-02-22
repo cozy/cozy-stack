@@ -175,10 +175,10 @@ Example:
 
 These APIs can be used to add elements to the registry.
 
-### POST /registry/:app
+### POST /registry
 
-This route adds or modify an application to the registry. The content of the
-request should be a json object of an application.
+This route register or modify an application to the registry.
+The content of the request should be a json object of an application.
 
 #### Status codes
 
@@ -190,7 +190,7 @@ request should be a json object of an application.
 #### Request
 
 ```http
-POST /registry/drive HTTP/1.1
+POST /registry HTTP/1.1
 Authorization: Token AbCdE
 ```
 
@@ -209,10 +209,10 @@ Authorization: Token AbCdE
 }
 ```
 
-### POST /registry/:app/:version or POST /registry/:app/versions
+### POST /registry/:app
 
-This route adds a version of an application to the registry to the specified
-channel (stable, beta or dev).
+This route adds a version of an already registered application to the
+registry to the specified channel (stable, beta or dev).
 
 The content of the manifest file extracted from the application data is used to
 fill the fields of the version. Before adding the application version to the
@@ -248,7 +248,7 @@ Fields of the object sent to this request:
 Request to add a stable release:
 
 ```http
-POST /registry/drive/3.1.2 HTTP/1.1
+POST /registry/drive HTTP/1.1
 Authorization: Token AbCdE
 ```
 
@@ -263,7 +263,7 @@ Authorization: Token AbCdE
 Request to add a development release:
 
 ```http
-POST /registry/drive/3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
+POST /registry/drive HTTP/1.1
 Authorization: Token AbCdE
 ```
 
@@ -278,7 +278,7 @@ Authorization: Token AbCdE
 Request to add a version with optional parameters:
 
 ```http
-POST /registry/drive/3.1.2 HTTP/1.1
+POST /registry/drive HTTP/1.1
 Authorization: Token AbCdE
 ```
 
