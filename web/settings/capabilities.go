@@ -61,7 +61,7 @@ func getCapabilities(c echo.Context) error {
 	// Any request with a token can ask for the capabilities (no permissions
 	// are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return err
 	}
 	inst := middlewares.GetInstance(c)
 	doc := NewCapabilities(inst)
