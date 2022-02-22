@@ -310,6 +310,7 @@ Accept: application/vnd.api+json
 {
   "data": {
     "attributes": {
+      "manual": false,
       "options": {
         "timeout": 60,
         "max_exec_count": 3

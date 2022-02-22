@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -29,6 +30,7 @@ var token string
 
 type jobRequest struct {
 	Arguments interface{} `json:"arguments"`
+	Manual    bool        `json:"manual,omitempty"`
 }
 
 type jsonapiReq struct {
@@ -63,10 +65,40 @@ func TestCreateJob(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	assert.Equal(t, 202, res.StatusCode)
+	defer res.Body.Close()
+	var resbody map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&resbody)
+	require.NoError(t, err)
+	data, _ := resbody["data"].(map[string]interface{})
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "print", attrs["worker"])
+	assert.NotEqual(t, true, attrs["manual_execution"])
+}
+
+func TestCreateManualJob(t *testing.T) {
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &jobRequest{
+				Arguments: "foobar",
+				Manual:    true,
+			},
+		},
+	})
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/print", bytes.NewReader(body))
+	req.Header.Add("Authorization", "Bearer "+token)
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, 202, res.StatusCode)
+	var resbody map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&resbody)
+	require.NoError(t, err)
+	data, _ := resbody["data"].(map[string]interface{})
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "print", attrs["worker"])
+	assert.Equal(t, true, attrs["manual_execution"])
 }
 
 func TestCreateJobForReservedWorker(t *testing.T) {

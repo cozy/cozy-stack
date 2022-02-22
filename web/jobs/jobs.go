@@ -48,6 +48,7 @@ type (
 	}
 	apiJobRequest struct {
 		Arguments   json.RawMessage `json:"arguments"`
+		Manual      bool            `json:"manual"`
 		ForwardLogs bool            `json:"forward_logs"`
 		Options     *job.JobOptions `json:"options"`
 	}
@@ -179,6 +180,7 @@ func pushJob(c echo.Context) error {
 	jr := &job.JobRequest{
 		WorkerType:  c.Param("worker-type"),
 		Options:     req.Options,
+		Manual:      req.Manual,
 		ForwardLogs: req.ForwardLogs,
 		Message:     job.Message(req.Arguments),
 	}
