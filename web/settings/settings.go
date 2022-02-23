@@ -86,6 +86,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/passphrase", getPassphraseParameters)
 	router.POST("/passphrase", registerPassphrase)
+	router.POST("/passphrase/flagship", registerPassphraseFlagship)
 	router.PUT("/passphrase", updatePassphrase)
 	router.GET("/hint", getHint)
 	router.PUT("/hint", updateHint)

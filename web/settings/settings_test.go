@@ -25,13 +25,13 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
-var ts *httptest.Server
-var tsB *httptest.Server
-var testInstance *instance.Instance
+var ts, tsB, tsC *httptest.Server
+var testInstance, testInstanceFlagship *instance.Instance
 var instanceRev string
 var token string
 var oauthClientID string
@@ -227,6 +227,44 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, cookies[0].Name, session.CookieName(testInstance))
 	assert.NotEmpty(t, cookies[0].Value)
+}
+
+func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
+	oauthClient := &oauth.Client{
+		RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
+		ClientName:      "Cozy-desktop on my-new-laptop",
+		ClientKind:      "desktop",
+		ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
+		LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+		PolicyURI:       "https://cozy.io/policy",
+		SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
+		SoftwareVersion: "0.16.0",
+	}
+	require.Nil(t, oauthClient.Create(testInstanceFlagship))
+	client, err := oauth.FindClient(testInstanceFlagship, oauthClient.ClientID)
+	require.NoError(t, err)
+	require.NoError(t, client.SetFlagship(testInstanceFlagship))
+
+	args, _ := json.Marshal(&echo.Map{
+		"passphrase":     "MyFirstPassphrase",
+		"iterations":     5000,
+		"register_token": hex.EncodeToString(testInstanceFlagship.RegisterToken),
+		"key":            "xxx-key-xxx",
+		"public_key":     "xxx-public-key-xxx",
+		"private_key":    "xxx-private-key-xxx",
+		"client_id":      client.CouchID,
+		"client_secret":  client.ClientSecret,
+	})
+	res, err := http.Post(tsC.URL+"/settings/passphrase/flagship", "application/json", bytes.NewReader(args))
+	require.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+	var resbody map[string]interface{}
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&resbody))
+	assert.NotNil(t, resbody["access_token"])
+	assert.NotNil(t, resbody["refresh_token"])
+	assert.Equal(t, "*", resbody["scope"])
+	assert.Equal(t, "bearer", resbody["token_type"])
 }
 
 func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
@@ -932,6 +970,16 @@ func TestMain(m *testing.M) {
 		},
 	})
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	setupFlagship := testutils.NewSetup(m, "settings_flagship_test")
+	testInstanceFlagship = setupFlagship.GetTestInstance(&lifecycle.Options{
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice2@example.com",
+		ContextName: "test-context",
+	})
+	tsC = setupFlagship.GetTestServer("/settings", Routes)
+	tsC.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	os.Exit(setup.Run())
 }

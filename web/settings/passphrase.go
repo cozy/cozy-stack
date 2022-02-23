@@ -3,6 +3,7 @@
 package settings
 
 import (
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,9 +13,11 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -59,22 +62,29 @@ func getPassphraseParameters(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &params, nil)
 }
 
+type passphraseRegistrationParameters struct {
+	Redirection string `json:"redirection" form:"redirection"`
+	Register    string `json:"register_token" form:"register_token"`
+	Passphrase  string `json:"passphrase" form:"passphrase"`
+	Hint        string `json:"hint" form:"hint"`
+	Key         string `json:"key" form:"key"`
+	PublicKey   string `json:"public_key" form:"public_key"`
+	PrivateKey  string `json:"private_key" form:"private_key"`
+	Iterations  int    `json:"iterations" form:"iterations"`
+
+	// For flagship app
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Code         string `json:"code"`
+}
+
 func registerPassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	accept := c.Request().Header.Get(echo.HeaderAccept)
 	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
 
-	args := struct {
-		Redirection string `json:"redirection" form:"redirection"`
-		Register    string `json:"register_token" form:"register_token"`
-		Passphrase  string `json:"passphrase" form:"passphrase"`
-		Hint        string `json:"hint" form:"hint"`
-		Key         string `json:"key" form:"key"`
-		PublicKey   string `json:"public_key" form:"public_key"`
-		PrivateKey  string `json:"private_key" form:"private_key"`
-		Iterations  int    `json:"iterations" form:"iterations"`
-	}{}
+	var args passphraseRegistrationParameters
 	if err := c.Bind(&args); err != nil {
 		return err
 	}
@@ -125,6 +135,101 @@ func registerPassphrase(c echo.Context) error {
 	}
 
 	return finishOnboarding(c, args.Redirection, acceptHTML)
+}
+
+func registerPassphraseFlagship(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	var args passphraseRegistrationParameters
+	if err := c.Bind(&args); err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	registerToken, err := hex.DecodeString(args.Register)
+	if err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
+		err := errors.New("The KdfIterations number is too low")
+		return jsonapi.InvalidParameter("KdfIterations", err)
+	}
+	if args.Iterations > crypto.MaxPBKDF2Iterations {
+		err := errors.New("The KdfIterations number is too high")
+		return jsonapi.InvalidParameter("KdfIterations", err)
+	}
+
+	client, err := oauth.FindClient(inst, args.ClientID)
+	if err != nil {
+		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
+			return err
+		}
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+	if subtle.ConstantTimeCompare([]byte(args.ClientSecret), []byte(client.ClientSecret)) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid client_secret",
+		})
+	}
+	if !client.Flagship {
+		context := inst.ContextName
+		if context == "" {
+			context = config.DefaultInstanceContext
+		}
+		cfg := config.GetConfig().Flagship.Contexts[context]
+		skipCertification := false
+		if cfg, ok := cfg.(map[string]interface{}); ok {
+			skipCertification = cfg["skip_certification"] == true
+		}
+		if !skipCertification {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "The app has not been certified as flagship",
+			})
+		}
+	}
+
+	passphrase := []byte(args.Passphrase)
+	err = lifecycle.RegisterPassphrase(inst, registerToken, lifecycle.PassParameters{
+		Pass:       passphrase,
+		Iterations: args.Iterations,
+		Key:        args.Key,
+		PublicKey:  args.PublicKey,
+		PrivateKey: args.PrivateKey,
+	})
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if args.Hint != "" {
+		setting, err := settings.Get(inst)
+		if err != nil {
+			return err
+		}
+		setting.PassphraseHint = args.Hint
+		if err := setting.Save(inst); err != nil {
+			return err
+		}
+	}
+
+	out := auth.AccessTokenReponse{
+		Type:  "bearer",
+		Scope: "*",
+	}
+	out.Refresh, err = client.CreateJWT(inst, consts.RefreshTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate refresh token",
+		})
+	}
+	out.Access, err = client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+	return c.JSON(http.StatusOK, out)
 }
 
 func updatePassphrase(c echo.Context) error {
