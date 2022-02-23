@@ -22,7 +22,6 @@
   - " /oidc - Delegated authentication": ./delegated-auth.md
   - "/apps - Applications Management": ./apps.md
   - " /apps - Apps registry": ./registry.md
-  - " /apps - Konnectors": ./konnectors.md
   - "/bitwarden - Bitwarden": ./bitwarden.md
   - "/contacts - Contacts": ./contacts.md
   - "/data - Data System": ./data-system.md
@@ -35,6 +34,7 @@
   - "/intents - Intents": ./intents.md
   - "/jobs - Jobs": ./jobs.md
   - " /jobs - Workers": ./workers.md
+  - "/konnectors - Konnectors": ./konnectors.md
   - "/move - Move, export and import an instance": ./move.md
   - "/notes - Notes for collaborative edition": ./notes.md
   - "/notifications - Notifications": ./notifications.md
