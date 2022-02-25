@@ -82,6 +82,9 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 
 	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "*" {
+		if params.challenge == "" {
+			return true, renderError(c, http.StatusBadRequest, "Error No challenge code")
+		}
 		instance := middlewares.GetInstance(c)
 		context := instance.ContextName
 		if context == "" {

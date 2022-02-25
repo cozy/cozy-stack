@@ -794,7 +794,7 @@ func TestAuthorizeFormClientMobileApp(t *testing.T) {
 
 func TestAuthorizeFormFlagshipApp(t *testing.T) {
 	u := url.QueryEscape("https://example.org/oauth/callback")
-	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=*&redirect_uri="+u+"&client_id="+clientID, nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=*&redirect_uri="+u+"&client_id="+clientID+"&code_challenge=w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI&code_challenge_method=S256", nil)
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
