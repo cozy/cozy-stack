@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -173,24 +174,9 @@ func registerPassphraseFlagship(c echo.Context) error {
 			"error": "invalid client_secret",
 		})
 	}
-	if !client.Flagship {
-		context := inst.ContextName
-		if context == "" {
-			context = config.DefaultInstanceContext
-		}
-		cfg := config.GetConfig().Flagship.Contexts[context]
-		skipCertification := false
-		if cfg, ok := cfg.(map[string]interface{}); ok {
-			skipCertification = cfg["skip_certification"] == true
-		}
-		if !skipCertification {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "The app has not been certified as flagship",
-			})
-		}
-	}
 
 	passphrase := []byte(args.Passphrase)
+	inst.OnboardingFinished = true
 	err = lifecycle.RegisterPassphrase(inst, registerToken, lifecycle.PassParameters{
 		Pass:       passphrase,
 		Iterations: args.Iterations,
@@ -213,6 +199,22 @@ func registerPassphraseFlagship(c echo.Context) error {
 		}
 	}
 
+	if !client.Flagship {
+		context := inst.ContextName
+		if context == "" {
+			context = config.DefaultInstanceContext
+		}
+		cfg := config.GetConfig().Flagship.Contexts[context]
+		skipCertification := false
+		if cfg, ok := cfg.(map[string]interface{}); ok {
+			skipCertification = cfg["skip_certification"] == true
+		}
+		if !skipCertification {
+			_ = client.SetCreatedAtOnboarding(inst)
+			return createSessionCode(c, inst)
+		}
+	}
+
 	out := auth.AccessTokenReponse{
 		Type:  "bearer",
 		Scope: "*",
@@ -230,6 +232,30 @@ func registerPassphraseFlagship(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+func createSessionCode(c echo.Context, inst *instance.Instance) error {
+	code, err := inst.CreateSessionCode()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	req := c.Request()
+	var ip string
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(req.RemoteAddr, ":")[0]
+	}
+	inst.Logger().WithField("nspace", "loginaudit").
+		Infof("New session_code created from %s at %s (onboarding)", ip, time.Now())
+
+	return c.JSON(http.StatusAccepted, echo.Map{
+		"session_code": code,
+	})
 }
 
 func updatePassphrase(c echo.Context) error {

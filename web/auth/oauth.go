@@ -156,7 +156,25 @@ func authorizeForm(c echo.Context) error {
 		return err
 	}
 
-	if !middlewares.IsLoggedIn(c) {
+	isLoggedIn := middlewares.IsLoggedIn(c)
+	if code := c.QueryParam("session_code"); code != "" {
+		// XXX we should always clear the session code to avoid it being
+		// reused, even if the user is already logged in and we don't want to
+		// create a new session
+		if checked := instance.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
+			req := c.Request()
+			if err == nil {
+				if err = session.StoreNewLoginEntry(instance, sessionID, "", req, "session_code", false); err != nil {
+					instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				}
+			}
+			redirect := req.URL
+			redirect.RawQuery = ""
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
+	}
+	if !isLoggedIn {
 		u := instance.PageURL("/auth/login", url.Values{
 			"redirect": {instance.FromURL(c.Request().URL)},
 		})
@@ -212,6 +230,15 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 	params.client.ClientID = params.client.CouchID
+
+	if params.client.CreatedAtOnboarding {
+		u, err := url.ParseRequestURI(params.redirectURI)
+		if err != nil {
+			return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
+		}
+		q := u.Query()
+		return createAccessCode(c, params, u, q)
+	}
 
 	var clientDomain string
 	clientURL, err := url.Parse(params.client.ClientURI)
@@ -285,12 +312,7 @@ func authorize(c echo.Context) error {
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 	}
-
 	q := u.Query()
-	q.Set("state", params.state)
-	if params.client.OnboardingSecret != "" {
-		q.Set("cozy_url", instance.Domain)
-	}
 
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
@@ -319,6 +341,15 @@ func authorize(c echo.Context) error {
 		}
 	}
 
+	return createAccessCode(c, params, u, q)
+}
+
+func createAccessCode(c echo.Context, params authorizeParams, u *url.URL, q url.Values) error {
+	q.Set("state", params.state)
+	if params.client.OnboardingSecret != "" {
+		q.Set("cozy_url", params.instance.Domain)
+	}
+
 	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope, params.challenge)
 	if err != nil {
 		return err
@@ -330,7 +361,7 @@ func authorize(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	instance.Logger().WithNamespace("loginaudit").
+	params.instance.Logger().WithNamespace("loginaudit").
 		Infof("Access code created from %s at %s with scope %s", ip, time.Now(), access.Scope)
 
 	// We should be sending "code" only, but for compatibility reason, we keep

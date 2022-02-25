@@ -200,6 +200,27 @@ Content-Type: application/json
 }
 ```
 
+**Note:** if the OAuth client has not been certified as the flagship app,
+this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "ZmY4ODI3NGMtOTY1Yy0xMWVjLThkMDgtMmI5M2"
+}
+```
+
+
+The `session_code` can be put in the query string while opening the OAuth
+authorize page. It will be used to open the session, and let the user type the
+6-digits code they have received by mail to confirm that they want to use this
+app as the flagship app.
+
+
 ### PUT /settings/passphrase (without two-factor authentication)
 
 The user can change its passphrase with this route.
