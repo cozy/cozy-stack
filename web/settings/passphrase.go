@@ -151,7 +151,7 @@ func registerPassphraseFlagship(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
+	if args.Iterations < crypto.MinPBKDF2Iterations {
 		err := errors.New("The KdfIterations number is too low")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
