@@ -1,5 +1,6 @@
 class Instance
-  attr_reader :stack, :name, :domain, :passphrase, :email, :locale
+  attr_reader :stack, :name, :domain, :email, :locale
+  attr_accessor :passphrase
 
   def self.create(opts = {})
     stack = Stack.get opts.delete(:port)
@@ -13,7 +14,7 @@ class Instance
     @stack = stack
     @name = opts[:name] || Faker::Internet.domain_word
     @domain = opts[:domain] || "#{@name.downcase}.test.localhost:#{stack.port}"
-    @passphrase = opts[:passphrase] || "cozy"
+    @passphrase = opts[:passphrase] || "cozy" unless opts[:onboarded] == false
     @email = opts[:email] || "#{@name.downcase}+test@localhost"
     @locale = opts[:locale] || "fr"
   end
@@ -133,5 +134,11 @@ class Instance
       p.key_length = 256 / 8
     end.bin_string
     Base64.strict_encode64 hashed
+  end
+
+  def register_token
+    doc = Couch.new.instances.detect { |i| i["domain"] == @domain }
+    token = Base64.decode64 doc["register_token"]
+    Digest.hexencode token
   end
 end

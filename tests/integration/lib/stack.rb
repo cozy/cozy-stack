@@ -58,9 +58,10 @@ class Stack
 
   def create_instance(inst)
     cmd = ["cozy-stack", "instances", "add", inst.domain,
-           "--passphrase", inst.passphrase, "--public-name", inst.name,
-           "--email", inst.email, "--settings", "context:test",
-           "--admin-port", @admin, "--locale", inst.locale]
+           "--public-name", inst.name, "--email", inst.email,
+           "--settings", "context:test", "--locale", inst.locale,
+           "--admin-port", @admin]
+    cmd << "--passphrase" << inst.passphrase if inst.passphrase
     puts cmd.join(" ").green
     return if system(cmd.join(" "))
 

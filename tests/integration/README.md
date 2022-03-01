@@ -79,6 +79,16 @@ $ export COZY_SWIFTTEST=1
 $ bundle exec ruby tests/sharing_push_folder.rb
 ```
 
+## REST Client
+
+The Ruby library used for making HTTP requests is [REST
+Client](https://github.com/rest-client/rest-client). It can be told to log
+requests by setting an environment variable:
+
+```sh
+$ export RESTCLIENT_LOG=stdout
+```
+
 ## Logs
 
 The log files for the stack are kept inside the `tmp/` directory. You can use
