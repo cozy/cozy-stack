@@ -850,18 +850,37 @@ Content-Type: application/json
 
 ### POST /auth/session_code
 
-This endpoint can only be used by the flagship application. It will create a
+This endpoint can be used by the flagship application in order to create a
 session code: this code can be added to the URL of a cozy application (in the
 query string, as `sessioncode`) to create a session. The flagship can create
-this code, and then use it in a webview to avoid the reauthentication of the
-user.
+this code with its access token, and then use it in a webview to avoid the
+reauthentication of the user. It can also create the code with the hashed
+passphrase (and 2FA if needed) to create a session for the authorize page.
 
-#### Request
+#### Request (access token variant)
 
 ```http
 POST /auth/session_code HTTP/1.1
 Host: cozy.example.org
 Accept: application/json
+Authorization: Bearer eyJpc3Mi...
+```
+
+#### Request (passphrase variant)
+
+```http
+POST /auth/session_code HTTP/1.1
+Host: cozy.example.org
+Accept: application/json
+Content-Type: application/json
+```
+
+```json
+{
+  "passphrase": "hashed",
+  "two_factor_token": "123123123123",
+  "two_factor_passcode": "678678"
+}
 ```
 
 #### Response

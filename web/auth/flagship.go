@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -15,14 +17,25 @@ import (
 // CreateSessionCode is the handler for creating a session code by the flagship
 // app.
 func CreateSessionCode(c echo.Context) error {
-	pdoc, err := middlewares.GetPermission(c)
-	if err != nil || !pdoc.Permissions.IsMaximal() {
+	inst := middlewares.GetInstance(c)
+	switch canCreateSessionCode(c, inst) {
+	case allowedToCreateSessionCode:
+		// OK
+	case need2FAToCreateSessionCode:
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error":            "two factor needed",
+			"two_factor_token": string(twoFactorToken),
+		})
+	default:
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "Not authorized",
 		})
 	}
 
-	inst := middlewares.GetInstance(c)
 	code, err := inst.CreateSessionCode()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -44,6 +57,43 @@ func CreateSessionCode(c echo.Context) error {
 	return c.JSON(http.StatusCreated, echo.Map{
 		"session_code": code,
 	})
+}
+
+type sessionCodeParameters struct {
+	Passphrase     string `json:"passphrase"`
+	TwoFactorToken string `json:"two_factor_token"`
+	TwoFactorCode  string `json:"two_factor_passcode"`
+}
+
+type canCreateSessionCodeResult int
+
+const (
+	allowedToCreateSessionCode canCreateSessionCodeResult = iota
+	cannotCreateSessionCode
+	need2FAToCreateSessionCode
+)
+
+func canCreateSessionCode(c echo.Context, inst *instance.Instance) canCreateSessionCodeResult {
+	pdoc, err := middlewares.GetPermission(c)
+	if err == nil && pdoc.Permissions.IsMaximal() {
+		return allowedToCreateSessionCode
+	}
+
+	var args sessionCodeParameters
+	if err := c.Bind(&args); err != nil {
+		return cannotCreateSessionCode
+	}
+	if err := lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)); err != nil {
+		return cannotCreateSessionCode
+	}
+
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		token := []byte(args.TwoFactorToken)
+		if ok := inst.ValidateTwoFactorPasscode(token, args.TwoFactorCode); !ok {
+			return need2FAToCreateSessionCode
+		}
+	}
+	return allowedToCreateSessionCode
 }
 
 func postChallenge(c echo.Context) error {
