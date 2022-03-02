@@ -22,6 +22,17 @@ describe "Onboarding a Cozy" do
     # Check that the passphrase has been correctly set
     inst.open_session
 
+    # Check that the flagship app can create session code
+    client2 = OAuth::Client.create inst
+    session_code = client2.create_session_code inst
+    refute_nil session_code
+
+    # Same with 2FA enabled
+    inst.setup_2fa
+    session_code = client2.create_session_code inst
+    refute_nil session_code
+    client2.destroy inst
+
     assert_equal inst.check, []
     inst.remove
   end

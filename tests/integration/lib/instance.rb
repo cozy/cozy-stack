@@ -43,6 +43,26 @@ class Instance
     @stack.run_job self, type, args
   end
 
+  def setup_2fa
+    @stack.setup_2fa self
+  end
+
+  def get_two_factor_code_from_mail(timeout = 30)
+    timeout.times do
+      sleep 1
+      received = Email.received kind: "to", query: email
+      received.select! { |e| e.subject =~ /One-time connection code/ }
+      return extract_two_factor_code received.first if received.any?
+    end
+    raise "Mail with two-factor code was not received after #{timeout} seconds"
+  end
+
+  def extract_two_factor_code(mail)
+    scanned = mail.body.scan(/: (\d{6})/)
+    raise "No code in #{mail.subject} - #{mail.body}" if scanned.empty?
+    scanned.last.last
+  end
+
   def client
     @client ||= RestClient::Resource.new url
   end

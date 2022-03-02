@@ -117,5 +117,29 @@ module OAuth
       res = inst.client["/permissions/self"].get opts
       JSON.parse(res.body)
     end
+
+    def create_session_code(inst)
+      body = { passphrase: inst.hashed_passphrase }
+      opts = { accept: :json, content_type: :json }
+      begin
+        res = inst.client["/auth/session_code"].post body.to_json, opts
+      rescue RestClient::Exception => e
+        token = JSON.parse(e.response.body)["two_factor_token"]
+        code = inst.get_two_factor_code_from_mail
+        body = {
+          passphrase: inst.hashed_passphrase,
+          two_factor_token: token,
+          two_factor_passcode: code
+        }
+        res = inst.client["/auth/session_code"].post body.to_json, opts
+      end
+      body = JSON.parse(res.body)
+      body["session_code"]
+    end
+
+    def destroy(inst)
+      opts = { authorization: "Bearer #{@registration_token}" }
+      inst.client["/auth/register/#{@client_id}"].delete opts
+    end
   end
 end

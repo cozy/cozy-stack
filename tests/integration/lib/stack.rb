@@ -126,6 +126,14 @@ class Stack
     Job.new JSON.parse(out)
   end
 
+  def setup_2fa(inst)
+    cmd = ["cozy-stack", "instance", "auth-mode",
+           inst.domain, "two_factor_mail",
+           "--port", @port, "--admin-port", @admin]
+    puts cmd.join(" ").green
+    system cmd.join(" ")
+  end
+
   def token_for(inst, doctypes)
     key = inst.domain + "/" + doctypes.join(" ")
     @tokens[key] ||= generate_token_for(inst, doctypes)
