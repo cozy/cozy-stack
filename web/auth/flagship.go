@@ -26,7 +26,7 @@ func CreateSessionCode(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusUnauthorized, echo.Map{
+		return c.JSON(http.StatusForbidden, echo.Map{
 			"error":            "two factor needed",
 			"two_factor_token": string(twoFactorToken),
 		})
