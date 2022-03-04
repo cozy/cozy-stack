@@ -37,9 +37,9 @@ type imageEvent struct {
 
 var formats = map[string]string{
 	"tiny":   "96x96",
-	"small":  "640x480",
-	"medium": "1280x720",
-	"large":  "1920x1080",
+	"small":  "640x480>",
+	"medium": "1280x720>",
+	"large":  "1920x1080>",
 	"note":   "768x",
 }
 
