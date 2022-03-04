@@ -14,6 +14,7 @@ sudo npm install -g @bitwarden/cli@1.16.0
 # force the resolution via the /etc/hosts to 127.0.0.1.
 #
 # See https://github.com/eventmachine/eventmachine/blob/v1.2.7/lib/em/resolver.rb
+# See https://github.com/eventmachine/eventmachine/issues/861
 echo "127.0.0.1 alice.test.localhost bob.test.localhost" | sudo tee -a /etc/hosts
 
 bundle install --jobs=3 --retry=3
