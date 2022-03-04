@@ -64,6 +64,9 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	defer s.mu.Unlock()
 	s.broker = b
 
+	s.thumb = NewThumbnailTrigger(s.broker)
+	go s.thumb.Schedule()
+
 	// XXX The memory scheduler loads the triggers from CouchDB when the stack
 	// is started. This can cause some stability issues when running
 	// integration tests in parallel. To avoid that, an env variable
@@ -116,9 +119,6 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 		s.ts[t.DBPrefix()+"/"+infos.TID] = t
 		go s.schedule(t)
 	}
-
-	s.thumb = NewThumbnailTrigger(s.broker)
-	go s.thumb.Schedule()
 
 	return nil
 }
