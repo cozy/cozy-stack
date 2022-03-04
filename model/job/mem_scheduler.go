@@ -21,9 +21,10 @@ import (
 type memScheduler struct {
 	broker Broker
 
-	ts  map[string]Trigger
-	mu  sync.RWMutex
-	log *logger.Entry
+	ts    map[string]Trigger
+	thumb *ThumbnailTrigger
+	mu    sync.RWMutex
+	log   *logger.Entry
 }
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
@@ -116,6 +117,9 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 		go s.schedule(t)
 	}
 
+	s.thumb = NewThumbnailTrigger(s.broker)
+	go s.thumb.Schedule()
+
 	return nil
 }
 
@@ -127,6 +131,7 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 	for _, t := range s.ts {
 		t.Unschedule()
 	}
+	s.thumb.Unschedule()
 	fmt.Println("ok.")
 	return nil
 }
