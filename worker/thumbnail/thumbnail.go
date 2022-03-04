@@ -255,17 +255,19 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 		}
 	}
 
-	in, err = recGenerateThumb(ctx, in, fs, img, "large", env, false)
-	if err != nil {
-		return err
-	}
-	in, err = recGenerateThumb(ctx, in, fs, img, "medium", env, false)
-	if err != nil {
-		return err
-	}
-	in, err = recGenerateThumb(ctx, in, fs, img, "small", env, false)
-	if err != nil {
-		return err
+	if img.Class == "image" {
+		in, err = recGenerateThumb(ctx, in, fs, img, "large", env, false)
+		if err != nil {
+			return err
+		}
+		in, err = recGenerateThumb(ctx, in, fs, img, "medium", env, false)
+		if err != nil {
+			return err
+		}
+		in, err = recGenerateThumb(ctx, in, fs, img, "small", env, false)
+		if err != nil {
+			return err
+		}
 	}
 	_, err = recGenerateThumb(ctx, in, fs, img, "tiny", env, true)
 	return err
