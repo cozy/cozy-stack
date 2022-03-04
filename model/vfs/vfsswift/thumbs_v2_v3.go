@@ -57,8 +57,11 @@ type thumb struct {
 }
 
 func (t *thumb) Abort() error {
+	ctx := context.Background()
 	errc := t.WriteCloser.Close()
-	errd := t.c.ObjectDelete(context.Background(), t.container, t.name)
+	errd := t.c.ObjectDelete(ctx, t.container, t.name)
+	// Create an empty file that indicates that the thumbnail generation has failed
+	_ = t.c.ObjectPutString(ctx, t.container, t.name, "", echo.MIMEOctetStream)
 	if errc != nil {
 		return errc
 	}
