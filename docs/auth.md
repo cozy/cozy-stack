@@ -852,7 +852,7 @@ Content-Type: application/json
 
 This endpoint can be used by the flagship application in order to create a
 session code: this code can be added to the URL of a cozy application (in the
-query string, as `sessioncode`) to create a session. The flagship can create
+query string, as `session_code`) to create a session. The flagship can create
 this code with its access token, and then use it in a webview to avoid the
 reauthentication of the user. It can also create the code with the hashed
 passphrase (and 2FA if needed) to create a session for the authorize page.
