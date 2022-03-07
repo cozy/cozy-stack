@@ -47,7 +47,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7
 	github.com/yuin/goldmark v1.4.7
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
-	golang.org/x/image v0.0.0-20211028202545-6944b10bf410
+	golang.org/x/image v0.0.0-20220302094943-723b81ca9867
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
