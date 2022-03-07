@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+  </head>
+  <body>
+    <form id="oidc-twofactor-form" method="POST" action="/oidc/twofactor">
+      <input id="access-token" type="hidden" name="access-token" value="{{.AccessToken}}" />
+      <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
+      <input id="confirm" type="hidden" name="confirm" value="{{.Confirm}}" />
+      <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
+    </form>
+    <script src="{{asset .Domain "/scripts/oidc-twofactor.js"}}"></script>
+  </body>
+</html>
