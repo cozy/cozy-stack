@@ -47,7 +47,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=${{ matrix.couchdb-version }}*
           echo "COZY_COUCHDB_URL=http://admin:password@localhost:5984/" >> $GITHUB_ENV
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
