@@ -154,6 +154,30 @@ access_token instead of code on this URL.
 If the `id_token_jwk_url` option is enabled, it's possible to use an
 id_token instead.
 
+#### POST /oidc/twofactor
+
+If the instance is protected with two-factor authentication, the login
+route will render an HTML page with JavaScript to check if the user has trusted
+the device. And the JavaScript submit a form to this route. If the trusted
+device token is set, a session will be created. Else, a mail with a code is
+sent, and the user is redirected to a page where they can type the two-factor
+code.
+
+```http
+POST /oidc/twofactor HTTP/1.1
+Host: name00001.mycozy.cloud
+Content-Type: application/x-www-form-urlencoded
+
+trusted-device-token=xxx&access-token=yyy&redirect=&confirm=
+```
+
+```http
+HTTP/1.1 303 See Other
+Set-Cookie: ...
+Location: https://name00001-home.mycozy.cloud/
+```
+
+
 #### POST /oidc/access_token
 
 This additional route can be used by an OAuth client (like a mobile app) when

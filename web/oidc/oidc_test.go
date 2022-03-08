@@ -1,11 +1,13 @@
 package oidc
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -139,14 +141,35 @@ func TestLoginWith2FA(t *testing.T) {
 	values.Add("token", "foo")
 	v := values.Encode()
 	reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
-	reqLogin.Host = testInstance.Domain
 	assert.NoError(t, err)
-
+	reqLogin.Host = testInstance.Domain
 	resLogin, err := c.Do(reqLogin)
 	assert.NoError(t, err)
-	assert.Equal(t, 303, resLogin.StatusCode)
+	assert.Equal(t, 200, resLogin.StatusCode)
+	content, err := ioutil.ReadAll(resLogin.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(content), `<form id="oidc-twofactor-form"`)
+	re := regexp.MustCompile(`name="access-token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(string(content))
+	assert.Len(t, matches, 2)
+	accessToken := matches[1]
 
-	locationLogin := resLogin.Header["Location"][0]
+	// Check that the user is redirected to the 2FA page
+	values = url.Values{
+		"access-token":         {accessToken},
+		"trusted-device-token": {""},
+		"redirect":             {""},
+		"confirm":              {""},
+	}
+	body := bytes.NewReader([]byte(values.Encode()))
+	req2FA, err := http.NewRequest(http.MethodPost, ts.URL+"/oidc/twofactor", body)
+	assert.NoError(t, err)
+	req2FA.Host = testInstance.Domain
+	res2FA, err := c.Do(req2FA)
+	assert.NoError(t, err)
+	assert.Equal(t, 303, res2FA.StatusCode)
+
+	locationLogin := res2FA.Header["Location"][0]
 	redirected, err = url.Parse(locationLogin)
 	assert.NoError(t, err)
 	assert.Equal(t, "/auth/twofactor", redirected.Path)

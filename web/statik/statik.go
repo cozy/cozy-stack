@@ -38003,6 +38003,16 @@ UK46C68pb36tHbcZ4DSn3ibAfVVcSZyCznfxLzlVzT28qVD1YHBNUyxpkXrdwu1j
 PSSzKbJX1E20yuVNm3uSQxEZxRuIWiZIS6I/+QpNom+dIo7evT30+mco8AA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
+Name: /scripts/oidc-twofactor.js
+Size: 457
+
+G8gBAIzUVjEkZybqnjSUnVDq5t+oc0sTuhmNRsh1SCpoMkGYunn+E1BnYwyKo8Ix
+6UXDyLJ5/fWvuCtbg6H5ifPffRDGJ5j5vIXVG4gaf9mymF47+XJct2xmKkhMVxzS
+EqsQt36UpufYXQ8pk1Ewxuv2qkEAIUEQQBW9OnYOZt1UBKIVJGMvGGSA2YDd/cDr
+oKY6FTAKGHGhZz0BIL7s9NEE8OD36Xny3gsq6myLfMFAH0kmTQW/BLLD1ZBevz1J
+aeRWYgI=
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
 Name: /scripts/password-helpers.js
 Size: 7344
 
@@ -38518,6 +38528,16 @@ BL/IhPxIsfbbpjhFzKyRHa71CxVjSJcALFTTOREPVCGaAw7ZA+hspwAAUYpbzOM4
 +iHumolfIQAkp4SicRtDmAGOjWAdg39pE2ojTCVNOQLSaaHBQJCVNuTQVtm9z/CK
 ogfXCIOAA+ytNeUEbpsK4PliQuhvy1RibKh6oDk+ueR1KXdKsmhKozri6DX4LGTZ
 HMRly05CD1Z5v39AghbCho2MN5IcUYBgxLe9sBkcbW2CLg==
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
+Name: /templates/oidc_twofactor.html
+Size: 639
+
+G34CAIzUUc3m2d6231niV8frNF40XjXqCBVEiQEyeBMwQN87NhwntFvZeXSuh6mb
+Ph7iIQgaWolZhTlZgza5wFDGcDHkxKrBYWz4nfS/R4UEXPxCcjV9R0erdK4SLyhX
+Hk3CbYayBPCFYM9TxhDRktTRilEhQ1E6rBlrVJShL3cEcaAXwfXGKSIzrHN/o4ol
+VpsoICsqdTcqULu2NxJTUybq0dQZdZDsZ61nR8bsXxsGOC5YQEEsbFnSnzw3un+j
+shgiMQ==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /templates/passphrase_choose.html

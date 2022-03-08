@@ -120,32 +120,61 @@ func Login(c echo.Context) error {
 			}
 		}
 
+		// Check 2FA if enabled, and if yes, render an HTML page to check if
+		// the browser has a trusted device token in its local storage.
+		if inst.HasAuthMode(instance.TwoFactorMail) {
+			return c.Render(http.StatusOK, "oidc_twofactor.html", echo.Map{
+				"Domain":      inst.ContextualDomain(),
+				"AccessToken": token,
+				"Redirect":    redirect,
+				"Confirm":     confirm,
+			})
+		}
+
 		if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
 			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
 	}
 
-	// Check 2FA if enabled
-	if inst.HasAuthMode(instance.TwoFactorMail) {
-		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
-		if err != nil {
-			return err
-		}
-		v := url.Values{}
-		// We can not cleanly check the trusted_device option for external
-		// login. Therefore, we do not provide the checkbox
-		v.Add("trusted_device_checkbox", "false")
-		v.Add("two_factor_token", string(twoFactorToken))
-		if redirect != "" {
-			v.Add("redirect", redirect)
-		}
-		if confirm != "" {
-			v.Add("confirm", "true")
-			v.Add("state", confirm)
-		}
-		return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+	return createSessionAndRedirect(c, inst, redirect, confirm)
+}
+
+func TwoFactor(c echo.Context) error {
+	accessToken := c.FormValue("access-token")
+	redirect := c.FormValue("redirect")
+	confirm := c.FormValue("confirm")
+	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
+
+	inst := middlewares.GetInstance(c)
+	conf, err := getConfig(inst.ContextName)
+	if err != nil {
+		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
+	}
+	if err := checkDomainFromUserInfo(conf, inst, accessToken); err != nil {
+		return renderError(c, inst, http.StatusBadRequest, err.Error())
 	}
 
+	if inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken) {
+		return createSessionAndRedirect(c, inst, redirect, confirm)
+	}
+
+	twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+	if err != nil {
+		return err
+	}
+	v := url.Values{}
+	v.Add("two_factor_token", string(twoFactorToken))
+	if redirect != "" {
+		v.Add("redirect", redirect)
+	}
+	if confirm != "" {
+		v.Add("confirm", "true")
+		v.Add("state", confirm)
+	}
+	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+}
+
+func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect, confirm string) error {
 	// The OIDC danse has been made to confirm the identity of the user, not
 	// for creating a new session.
 	if confirm != "" {
@@ -640,6 +669,7 @@ func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
+	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
 }
 
