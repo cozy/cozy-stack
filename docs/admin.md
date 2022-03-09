@@ -761,7 +761,8 @@ Content-Type: application/json
     "67a88b22520680b1fae840/9a8a0/18d02/iYbkfuCDEMaVoIXg",
     "thumbs/67a88b22520680b1fae840/9a8a0/17264-large",
     "thumbs/67a88b22520680b1fae840/9a8a0/17264-medium",
-    "thumbs/67a88b22520680b1fae840/9a8a0/17264-small"
+    "thumbs/67a88b22520680b1fae840/9a8a0/17264-small",
+    "thumbs/67a88b22520680b1fae840/9a8a0/17264-tiny"
   ]
 }
 ```

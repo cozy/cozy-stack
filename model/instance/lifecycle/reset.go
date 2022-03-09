@@ -70,9 +70,6 @@ func Reset(inst *instance.Instance) error {
 	if err = inst.VFS().InitFs(); err != nil {
 		return err
 	}
-	if err = addTriggers(inst); err != nil {
-		return err
-	}
 
 	for _, app := range []string{"home", "store", "settings"} {
 		if err = installApp(inst, app); err != nil {

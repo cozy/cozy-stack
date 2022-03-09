@@ -30,6 +30,10 @@ type thumb struct {
 }
 
 func (t *thumb) Abort() error {
+	// Create an empty file that indicates that the thumbnail generation has failed
+	if f, err := t.fs.Create(t.newname); err == nil {
+		_ = f.Close()
+	}
 	return t.fs.Remove(t.tmpname)
 }
 
@@ -87,6 +91,9 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
 	s, err := t.fs.Stat(name)
 	if err != nil {
 		return err
+	}
+	if s.Size() == 0 {
+		return os.ErrInvalid
 	}
 	f, err := t.fs.Open(name)
 	if err != nil {

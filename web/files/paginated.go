@@ -345,8 +345,9 @@ func (f *file) MarshalJSON() ([]byte, error) {
 
 func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
-	if f.doc.Class == "image" {
+	if f.doc.Class == "image" || f.doc.Class == "pdf" {
 		if secret, err := vfs.GetStore().AddThumb(f.instance, f.doc.DocID); err == nil {
+			links.Tiny = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/tiny"
 			links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
 			links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
 			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"

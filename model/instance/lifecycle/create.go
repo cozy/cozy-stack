@@ -11,14 +11,12 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -237,13 +235,6 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 
-	opts.trace("add triggers", func() {
-		err = addTriggers(i)
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	opts.trace("install apps", func() {
 		done := make(chan struct{})
 		for _, app := range opts.Apps {
@@ -339,32 +330,4 @@ func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, er
 	}
 
 	return settings, nil
-}
-
-func addTriggers(i *instance.Instance) error {
-	sched := job.System()
-	for _, trigger := range Triggers(i) {
-		t, err := job.NewTrigger(i, trigger, nil)
-		if err != nil {
-			return err
-		}
-		if err = sched.AddTrigger(t); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Triggers returns the list of the triggers to add when an instance is created
-func Triggers(db prefixer.Prefixer) []job.TriggerInfos {
-	// Create/update/remove thumbnails when an image is created/updated/removed
-	return []job.TriggerInfos{
-		{
-			Domain:     db.DomainName(),
-			Prefix:     db.DBPrefix(),
-			Type:       "@event",
-			WorkerType: "thumbnail",
-			Arguments:  "io.cozy.files:CREATED,UPDATED,DELETED:image:class",
-		},
-	}
 }

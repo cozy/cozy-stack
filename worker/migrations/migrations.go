@@ -366,14 +366,19 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swif
 
 		// Copy the thumbnails
 		if f.Class == "image" {
-			srcSmall, srcMedium, srcLarge := getThumbsSrcNames(inst, f)
-			dstSmall, dstMedium, dstLarge := getThumbsDstNames(inst, f)
+			srcTiny, srcSmall, srcMedium, srcLarge := getThumbsSrcNames(inst, f)
+			dstTiny, dstSmall, dstMedium, dstLarge := getThumbsDstNames(inst, f)
 			if err := sem.Acquire(ctx, 1); err != nil {
 				return err
 			}
 			g.Go(func() error {
 				defer sem.Release(1)
 				_, err := c.ObjectCopy(ctx, thumbsContainer, srcSmall, dst, dstSmall, nil)
+				if err != nil {
+					log.Infof("Cannot copy thumbnail tiny from %s %s to %s %s: %s",
+						thumbsContainer, srcTiny, dst, dstTiny, err)
+				}
+				_, err = c.ObjectCopy(ctx, thumbsContainer, srcSmall, dst, dstSmall, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail small from %s %s to %s %s: %s",
 						thumbsContainer, srcSmall, dst, dstSmall, err)
@@ -423,26 +428,29 @@ func getDstName(inst *instance.Instance, f *vfs.FileDoc) string {
 	return vfsswift.MakeObjectNameV3(f.DocID, f.InternalID)
 }
 
-func getThumbsSrcNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string) {
-	var small, medium, large string
+func getThumbsSrcNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string, string) {
+	var tiny, small, medium, large string
 	switch inst.SwiftLayout {
 	case 0: // layout v1
+		tiny = fmt.Sprintf("thumbs/%s-tiny", f.DocID)
 		small = fmt.Sprintf("thumbs/%s-small", f.DocID)
 		medium = fmt.Sprintf("thumbs/%s-medium", f.DocID)
 		large = fmt.Sprintf("thumbs/%s-large", f.DocID)
 	case 1: // layout v2
 		obj := vfsswift.MakeObjectName(f.DocID)
+		tiny = fmt.Sprintf("thumbs/%s-tiny", obj)
 		small = fmt.Sprintf("thumbs/%s-small", obj)
 		medium = fmt.Sprintf("thumbs/%s-medium", obj)
 		large = fmt.Sprintf("thumbs/%s-large", obj)
 	}
-	return small, medium, large
+	return tiny, small, medium, large
 }
 
-func getThumbsDstNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string) {
+func getThumbsDstNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string, string) {
 	obj := vfsswift.MakeObjectName(f.DocID)
+	tiny := fmt.Sprintf("thumbs/%s-tiny", obj)
 	small := fmt.Sprintf("thumbs/%s-small", obj)
 	medium := fmt.Sprintf("thumbs/%s-medium", obj)
 	large := fmt.Sprintf("thumbs/%s-large", obj)
-	return small, medium, large
+	return tiny, small, medium, large
 }

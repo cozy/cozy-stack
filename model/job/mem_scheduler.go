@@ -21,9 +21,10 @@ import (
 type memScheduler struct {
 	broker Broker
 
-	ts  map[string]Trigger
-	mu  sync.RWMutex
-	log *logger.Entry
+	ts    map[string]Trigger
+	thumb *ThumbnailTrigger
+	mu    sync.RWMutex
+	log   *logger.Entry
 }
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
@@ -63,6 +64,9 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	defer s.mu.Unlock()
 	s.broker = b
 
+	s.thumb = NewThumbnailTrigger(s.broker)
+	go s.thumb.Schedule()
+
 	// XXX The memory scheduler loads the triggers from CouchDB when the stack
 	// is started. This can cause some stability issues when running
 	// integration tests in parallel. To avoid that, an env variable
@@ -86,6 +90,13 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 			if err := json.Unmarshal(data, &t); err != nil {
 				return err
 			}
+
+			// Remove the legacy @event trigger for thumbnail, it is now hardcoded
+			if t.WorkerType == "thumbnail" {
+				_ = couchdb.DeleteDoc(db, t)
+				return nil
+			}
+
 			ts = append(ts, t)
 			return nil
 		})
@@ -120,6 +131,7 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 	for _, t := range s.ts {
 		t.Unschedule()
 	}
+	s.thumb.Unschedule()
 	fmt.Println("ok.")
 	return nil
 }

@@ -506,8 +506,7 @@ func TestGetAllJobs(t *testing.T) {
 		return
 	}
 
-	// The instance already has a trigger for thumbnails
-	assert.Len(t, v.Data, 1)
+	assert.Len(t, v.Data, 0)
 
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
@@ -544,17 +543,11 @@ func TestGetAllJobs(t *testing.T) {
 		return
 	}
 
-	if assert.Len(t, v.Data, 2) {
-		var index int
-		if v.Data[1].Attributes.Type == "@in" {
-			index = 1
-		} else {
-			index = 0
-		}
-		assert.Equal(t, consts.Triggers, v.Data[index].Type)
-		assert.Equal(t, "@in", v.Data[index].Attributes.Type)
-		assert.Equal(t, "10s", v.Data[index].Attributes.Arguments)
-		assert.Equal(t, "print", v.Data[index].Attributes.WorkerType)
+	if assert.Len(t, v.Data, 1) {
+		assert.Equal(t, consts.Triggers, v.Data[0].Type)
+		assert.Equal(t, "@in", v.Data[0].Attributes.Type)
+		assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
+		assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
 	}
 
 	req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=print", nil)

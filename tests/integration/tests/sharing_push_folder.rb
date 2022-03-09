@@ -47,7 +47,7 @@ describe "A folder" do
       ws.on :message do |event|
         msg = JSON.parse(event.data)
         formats << msg.dig("payload", "doc", "format")
-        ws.close if formats.size == 3
+        ws.close if formats.size == 4
       end
 
       ws.on :close do
@@ -64,7 +64,7 @@ describe "A folder" do
         file = CozyFile.create inst, opts
       end
     end
-    assert_equal formats, %w[large medium small]
+    assert_equal formats, %w[large medium small tiny]
 
     # Add a note and an office document in the folder
     note = Note.create inst, dir_id: folder.couch_id

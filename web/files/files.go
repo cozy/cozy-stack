@@ -38,6 +38,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
 )
@@ -919,6 +920,16 @@ func ThumbnailHandler(c echo.Context) error {
 	format := c.Param("format")
 	err = fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
 	if err != nil {
+		if err != os.ErrInvalid {
+			msg, _ := job.NewMessage(thumbnail.ImageMessage{
+				File:   doc,
+				Format: format,
+			})
+			_, _ = job.System().PushJob(instance, &job.JobRequest{
+				WorkerType: "thumbnail",
+				Message:    msg,
+			})
+		}
 		return serveThumbnailPlaceholder(c.Response(), c.Request(), doc, format)
 	}
 	return nil
@@ -937,6 +948,7 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 		return nil
 	}
 	res.Header().Set("Etag", etag)
+	res.WriteHeader(http.StatusNotFound)
 	_, err := io.Copy(res, f.Reader())
 	return err
 }
