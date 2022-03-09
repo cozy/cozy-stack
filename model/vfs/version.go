@@ -160,19 +160,39 @@ func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 // - the tagged versions are kept
 // - two versions must not be too close in time
 // - there is a maximal number of versions.
-func FindVersionsToClean(db prefixer.Prefixer, fileID string, candidate *Version) (bool, []*Version, error) {
+func FindVersionsToClean(db prefixer.Contexter, fileID string, candidate *Version) (bool, []*Version, error) {
 	olds, err := VersionsFor(db, fileID)
 	if err != nil {
 		return false, nil, err
 	}
-	cfg := config.GetConfig()
-	maxNumber := cfg.Fs.Versioning.MaxNumberToKeep
-	minDelay := cfg.Fs.Versioning.MinDelayBetweenTwoVersions
+	maxNumber, minDelay := getVersioningConfig(db.GetContextName())
 	cleanCandidate, toClean := detectVersionsToClean(candidate, olds, maxNumber, minDelay)
 	return cleanCandidate, toClean, nil
 }
 
+func getVersioningConfig(contextName string) (int, time.Duration) {
+	cfg := config.GetConfig()
+	maxNumber := cfg.Fs.Versioning.MaxNumberToKeep
+	minDelay := cfg.Fs.Versioning.MinDelayBetweenTwoVersions
+
+	context, _ := cfg.Fs.Contexts[contextName].(map[string]interface{})
+	if number, ok := context["max_number_of_versions_to_keep"].(int); ok {
+		maxNumber = number
+	}
+	if delay, ok := context["min_delay_between_two_versions"].(string); ok {
+		if min, err := time.ParseDuration(delay); err == nil {
+			minDelay = min
+		}
+	}
+
+	return maxNumber, minDelay
+}
+
 func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, minDelay time.Duration) (bool, []*Version) {
+	if maxNumber == 0 {
+		return true, olds
+	}
+
 	if len(olds) == 0 {
 		return false, nil
 	}

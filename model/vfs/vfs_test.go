@@ -24,7 +24,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
@@ -713,13 +712,23 @@ func TestMain(m *testing.M) {
 	os.Exit(res1 + res2 + res3 + res4)
 }
 
+type contexter struct {
+	domain  string
+	prefix  string
+	context string
+}
+
+func (c *contexter) DomainName() string     { return c.domain }
+func (c *contexter) DBPrefix() string       { return c.prefix }
+func (c *contexter) GetContextName() string { return c.context }
+
 func makeAferoFS() (vfs.VFS, func(), error) {
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		return nil, nil, errors.New("could not create temporary directory")
 	}
 
-	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
+	db := &contexter{"io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	mutex = lock.ReadWrite(db, "vfs-afero-test")
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
@@ -752,7 +761,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 }
 
 func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
-	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
+	db := &contexter{"io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {

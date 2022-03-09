@@ -32,11 +32,12 @@ type aferoVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 
-	domain string
-	prefix string
-	fs     afero.Fs
-	mu     lock.ErrorRWLocker
-	pth    string
+	domain  string
+	prefix  string
+	context string
+	fs      afero.Fs
+	mu      lock.ErrorRWLocker
+	pth     string
 
 	// whether or not the localfilesystem requires an initialisation of its root
 	// directory
@@ -57,7 +58,7 @@ func GetMemFS(key string) afero.Fs {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, pathSegment string) (vfs.VFS, error) {
+func New(db prefixer.Contexter, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, pathSegment string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -79,11 +80,12 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		domain: db.DomainName(),
-		prefix: db.DBPrefix(),
-		fs:     fs,
-		mu:     mu,
-		pth:    pth,
+		domain:  db.DomainName(),
+		prefix:  db.DBPrefix(),
+		context: db.GetContextName(),
+		fs:      fs,
+		mu:      mu,
+		pth:     pth,
 		// for now, only the file:// scheme needs a specific initialisation of its
 		// root directory.
 		osFS: fsURL.Scheme == "file",
@@ -96,6 +98,10 @@ func (afs *aferoVFS) DomainName() string {
 
 func (afs *aferoVFS) DBPrefix() string {
 	return afs.prefix
+}
+
+func (afs *aferoVFS) GetContextName() string {
+	return afs.context
 }
 
 func (afs *aferoVFS) GetIndexer() vfs.Indexer {

@@ -78,6 +78,11 @@ fs:
   #   max_number_of_versions_to_keep: 20
   #   min_delay_between_two_versions: 15m
 
+  # contexts:
+  #   cozy_beta:
+  #     max_number_of_versions_to_keep: 10
+  #     min_delay_between_two_versions: 1h
+
 # couchdb parameters
 couchdb:
   # CouchDB URL - flags: --couchdb-url

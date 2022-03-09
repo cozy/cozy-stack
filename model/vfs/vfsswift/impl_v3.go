@@ -27,6 +27,7 @@ type swiftVFSV3 struct {
 	c         *swift.Connection
 	domain    string
 	prefix    string
+	context   string
 	container string
 	mu        lock.ErrorRWLocker
 	ctx       context.Context
@@ -45,7 +46,7 @@ const swiftV3ContainerPrefix = "cozy-v3-"
 // in the name), and it is poor in features (for example, we want to swap an
 // old version with the current version without having to download/upload
 // contents, and it is not supported).
-func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+func NewV3(db prefixer.Contexter, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV3{
 		Indexer:         index,
 		DiskThresholder: disk,
@@ -53,6 +54,7 @@ func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 		c:         config.GetSwiftConnection(),
 		domain:    db.DomainName(),
 		prefix:    db.DBPrefix(),
+		context:   db.GetContextName(),
 		container: swiftV3ContainerPrefix + db.DBPrefix(),
 		mu:        mu,
 		ctx:       context.Background(),
@@ -94,6 +96,10 @@ func (sfs *swiftVFSV3) DBPrefix() string {
 
 func (sfs *swiftVFSV3) DomainName() string {
 	return sfs.domain
+}
+
+func (sfs *swiftVFSV3) GetContextName() string {
+	return sfs.context
 }
 
 func (sfs *swiftVFSV3) GetIndexer() vfs.Indexer {
