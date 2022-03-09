@@ -93,7 +93,8 @@ type Client struct {
 	// XXX omitempty does not work for time.Time, thus the interface{} type
 	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
 
-	Flagship bool `json:"flagship,omitempty"`
+	Flagship            bool `json:"flagship,omitempty"`
+	CreatedAtOnboarding bool `json:"created_at_onboarding,omitempty"`
 
 	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
 	OnboardingApp         string `json:"onboarding_app,omitempty"`
@@ -602,6 +603,21 @@ func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
 // SetFlagship updates the client in CouchDB with flagship set to true.
 func (c *Client) SetFlagship(inst *instance.Instance) error {
 	c.Flagship = true
+	c.ClientID = ""
+	if c.Metadata == nil {
+		md := metadata.New()
+		md.DocTypeVersion = DocTypeVersion
+		c.Metadata = md
+	} else {
+		c.Metadata.ChangeUpdatedAt()
+	}
+	return couchdb.UpdateDoc(inst, c)
+}
+
+// SetCreatedAtOnboarding updates the client in CouchDB with
+// created_at_onboarding set to true.
+func (c *Client) SetCreatedAtOnboarding(inst *instance.Instance) error {
+	c.CreatedAtOnboarding = true
 	c.ClientID = ""
 	if c.Metadata == nil {
 		md := metadata.New()

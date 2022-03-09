@@ -58,9 +58,10 @@ class Stack
 
   def create_instance(inst)
     cmd = ["cozy-stack", "instances", "add", inst.domain,
-           "--passphrase", inst.passphrase, "--public-name", inst.name,
-           "--email", inst.email, "--settings", "context:test",
-           "--admin-port", @admin, "--locale", inst.locale]
+           "--public-name", inst.name, "--email", inst.email,
+           "--settings", "context:test", "--locale", inst.locale,
+           "--admin-port", @admin]
+    cmd << "--passphrase" << inst.passphrase if inst.passphrase
     puts cmd.join(" ").green
     return if system(cmd.join(" "))
 
@@ -123,6 +124,14 @@ class Stack
     puts cmd.join(" ").green
     out = `#{cmd.join(" ")}`.chomp
     Job.new JSON.parse(out)
+  end
+
+  def setup_2fa(inst)
+    cmd = ["cozy-stack", "instance", "auth-mode",
+           inst.domain, "two_factor_mail",
+           "--port", @port, "--admin-port", @admin]
+    puts cmd.join(" ").green
+    system cmd.join(" ")
   end
 
   def token_for(inst, doctypes)

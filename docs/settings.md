@@ -113,7 +113,7 @@ passphrase=4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791&
 key=0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=&
 public_key=MIIBIjANBgkqhkiG9w...AQAB&
 private_key=2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=&
-iterations=10000
+iterations=100000
 ```
 
 #### Response
@@ -145,7 +145,7 @@ Content-Type: application/json
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
     "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
     "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
-    "iterations": 10000
+    "iterations": 100000
 }
 ```
 
@@ -155,6 +155,71 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
 ```
+
+### POST /settings/passphrase/flagship
+
+This endpoint is similar to `POST /settings/passphrase`, but it allows the
+flagship app to also obtain OAuth access and register tokens without having to
+make the OAuth dance (which can be awkward for the user).
+
+#### Request
+
+```http
+POST /settings/passphrase/flagship HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+    "register_token": "37cddf40d7724988860fa0e03efd30fe",
+    "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "hint": "a hint to help me remember my passphrase",
+    "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+    "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
+    "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
+    "iterations": 100000,
+    "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+    "client_secret": "eyJpc3Mi[...omitted for brevity...]"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg",
+  "token_type": "bearer",
+  "refresh_token": "YTUwMjcyYjgtOTNmNi0xMWVjLWE4YTQtZWJhMzlmMTAwMWJiCg",
+  "scope": "*"
+}
+```
+
+**Note:** if the OAuth client has not been certified as the flagship app,
+this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "ZmY4ODI3NGMtOTY1Yy0xMWVjLThkMDgtMmI5M2"
+}
+```
+
+
+The `session_code` can be put in the query string while opening the OAuth
+authorize page. It will be used to open the session, and let the user type the
+6-digits code they have received by mail to confirm that they want to use this
+app as the flagship app.
+
 
 ### PUT /settings/passphrase (without two-factor authentication)
 

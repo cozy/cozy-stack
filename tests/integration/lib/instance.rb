@@ -1,5 +1,6 @@
 class Instance
-  attr_reader :stack, :name, :domain, :passphrase, :email, :locale
+  attr_reader :stack, :name, :domain, :email, :locale
+  attr_accessor :passphrase
 
   def self.create(opts = {})
     stack = Stack.get opts.delete(:port)
@@ -13,7 +14,7 @@ class Instance
     @stack = stack
     @name = opts[:name] || Faker::Internet.domain_word
     @domain = opts[:domain] || "#{@name.downcase}.test.localhost:#{stack.port}"
-    @passphrase = opts[:passphrase] || "cozy"
+    @passphrase = opts[:passphrase] || "cozy" unless opts[:onboarded] == false
     @email = opts[:email] || "#{@name.downcase}+test@localhost"
     @locale = opts[:locale] || "fr"
   end
@@ -40,6 +41,26 @@ class Instance
 
   def run_job(type, args)
     @stack.run_job self, type, args
+  end
+
+  def setup_2fa
+    @stack.setup_2fa self
+  end
+
+  def get_two_factor_code_from_mail(timeout = 30)
+    timeout.times do
+      sleep 1
+      received = Email.received kind: "to", query: email
+      received.select! { |e| e.subject =~ /One-time connection code/ }
+      return extract_two_factor_code received.first if received.any?
+    end
+    raise "Mail with two-factor code was not received after #{timeout} seconds"
+  end
+
+  def extract_two_factor_code(mail)
+    scanned = mail.body.scan(/: (\d{6})/)
+    raise "No code in #{mail.subject} - #{mail.body}" if scanned.empty?
+    scanned.last.last
   end
 
   def client
@@ -133,5 +154,11 @@ class Instance
       p.key_length = 256 / 8
     end.bin_string
     Base64.strict_encode64 hashed
+  end
+
+  def register_token
+    doc = Couch.new.instances.detect { |i| i["domain"] == @domain }
+    token = Base64.decode64 doc["register_token"]
+    Digest.hexencode token
   end
 end

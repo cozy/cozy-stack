@@ -82,6 +82,9 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 
 	params.scope = strings.TrimSpace(params.scope)
 	if params.scope == "*" {
+		if params.challenge == "" {
+			return true, renderError(c, http.StatusBadRequest, "Error No challenge code")
+		}
 		instance := middlewares.GetInstance(c)
 		context := instance.ContextName
 		if context == "" {
@@ -210,6 +213,15 @@ func authorizeForm(c echo.Context) error {
 	}
 	params.client.ClientID = params.client.CouchID
 
+	if params.client.CreatedAtOnboarding {
+		u, err := url.ParseRequestURI(params.redirectURI)
+		if err != nil {
+			return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
+		}
+		q := u.Query()
+		return createAccessCode(c, params, u, q)
+	}
+
 	var clientDomain string
 	clientURL, err := url.Parse(params.client.ClientURI)
 	if err != nil {
@@ -282,12 +294,7 @@ func authorize(c echo.Context) error {
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 	}
-
 	q := u.Query()
-	q.Set("state", params.state)
-	if params.client.OnboardingSecret != "" {
-		q.Set("cozy_url", instance.Domain)
-	}
 
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
@@ -316,6 +323,15 @@ func authorize(c echo.Context) error {
 		}
 	}
 
+	return createAccessCode(c, params, u, q)
+}
+
+func createAccessCode(c echo.Context, params authorizeParams, u *url.URL, q url.Values) error {
+	q.Set("state", params.state)
+	if params.client.OnboardingSecret != "" {
+		q.Set("cozy_url", params.instance.Domain)
+	}
+
 	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope, params.challenge)
 	if err != nil {
 		return err
@@ -327,7 +343,7 @@ func authorize(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	instance.Logger().WithNamespace("loginaudit").
+	params.instance.Logger().WithNamespace("loginaudit").
 		Infof("Access code created from %s at %s with scope %s", ip, time.Now(), access.Scope)
 
 	// We should be sending "code" only, but for compatibility reason, we keep
@@ -348,7 +364,28 @@ func authorize(c echo.Context) error {
 
 func renderConfirmFlagship(c echo.Context, clientID string) error {
 	inst := middlewares.GetInstance(c)
-	if !middlewares.IsLoggedIn(c) {
+	isLoggedIn := middlewares.IsLoggedIn(c)
+
+	if code := c.QueryParam("session_code"); code != "" {
+		// XXX we should always clear the session code to avoid it being
+		// reused, even if the user is already logged in and we don't want to
+		// create a new session
+		if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
+			req := c.Request()
+			if err == nil {
+				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				}
+			}
+			redirect := req.URL
+			q := redirect.Query()
+			q.Del("session_code")
+			redirect.RawQuery = q.Encode()
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
+	}
+	if !isLoggedIn {
 		u := inst.PageURL("/auth/login", url.Values{
 			"redirect": {inst.FromURL(c.Request().URL)},
 		})
@@ -918,4 +955,29 @@ func GetLinkedApp(instance *instance.Instance, softwareID string) (*app.WebappMa
 		return nil, err
 	}
 	return &webappManifest, nil
+}
+
+func hasRedirectToAuthorize(inst *instance.Instance, redirect *url.URL) bool {
+	if !inst.HasDomain(redirect.Host) {
+		return false
+	}
+	if redirect.Path != "/auth/authorize" {
+		return false
+	}
+
+	redirectQuery := redirect.Query()
+	scopes := redirectQuery["scope"]
+	for _, scope := range scopes {
+		if scope == oauth.ScopeLogin {
+			return false
+		}
+	}
+	return true
+}
+
+func hasRedirectToAuthorizeSharing(inst *instance.Instance, redirect *url.URL) bool {
+	if !inst.HasDomain(redirect.Host) {
+		return false
+	}
+	return redirect.Path == "/auth/authorize/sharing"
 }

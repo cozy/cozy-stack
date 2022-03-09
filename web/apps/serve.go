@@ -184,7 +184,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		// reused, even if the user is already logged in and we don't want to
 		// create a new session
 		if checked := i.CheckAndClearSessionCode(code); checked && !isLoggedIn {
-			sessionID, err := auth.SetCookieForNewSession(c, false)
+			sessionID, err := auth.SetCookieForNewSession(c, session.NormalRun)
 			req := c.Request()
 			if err == nil {
 				if err = session.StoreNewLoginEntry(i, sessionID, "", req, "session_code", false); err != nil {
