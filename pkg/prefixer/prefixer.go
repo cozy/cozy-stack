@@ -7,6 +7,13 @@ type Prefixer interface {
 	DomainName() string
 }
 
+// Contexter interface describes a prefixer that can also give the context for
+// the targeted instance.
+type Contexter interface {
+	Prefixer
+	GetContextName() string
+}
+
 type prefixer struct {
 	domain string
 	prefix string

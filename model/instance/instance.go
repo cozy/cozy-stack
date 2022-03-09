@@ -159,6 +159,11 @@ func (i *Instance) DomainName() string {
 	return i.Domain
 }
 
+// GetContextName returns the name of the context.
+func (i *Instance) GetContextName() string {
+	return i.ContextName
+}
+
 // SessionSecret returns the session secret.
 func (i *Instance) SessionSecret() []byte {
 	// The prefix is here to invalidate all the sessions that were created on

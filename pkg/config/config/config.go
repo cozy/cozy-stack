@@ -175,6 +175,7 @@ type Fs struct {
 	CanQueryInfo          bool
 	AutoCleanTrashedAfter map[string]string
 	Versioning            FsVersioning
+	Contexts              map[string]interface{}
 }
 
 // FsVersioning contains the configuration for the versioning of files
@@ -763,6 +764,7 @@ func UseViper(v *viper.Viper) error {
 				MaxNumberToKeep:            v.GetInt("fs.versioning.max_number_of_versions_to_keep"),
 				MinDelayBetweenTwoVersions: v.GetDuration("fs.versioning.min_delay_between_two_versions"),
 			},
+			Contexts: v.GetStringMap("fs.contexts"),
 		},
 		CouchDB: CouchDB{
 			Auth:   couchAuth,
