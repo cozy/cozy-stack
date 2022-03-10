@@ -430,6 +430,50 @@ func CopyVersionHandler(c echo.Context) error {
 		return err
 	}
 
+	// Manage the special cases of carbonCopy & electronicSafe
+	if len(meta) > 0 {
+		if _, ok := meta[consts.CarbonCopyKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedCarbonCopy); err != nil {
+				delete(meta, consts.CarbonCopyKey)
+			}
+		}
+		if _, ok := meta[consts.ElectronicSafeKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedElectronicSafe); err != nil {
+				delete(meta, consts.ElectronicSafeKey)
+			}
+		}
+	}
+	keepCarbonCopy := true
+	keepElectronicSafe := true
+	for key := range meta {
+		switch key {
+		case consts.CarbonCopyKey:
+			keepCarbonCopy = false
+		case consts.ElectronicSafeKey:
+			keepElectronicSafe = false
+		case "qualification":
+			//
+		default:
+			keepCarbonCopy = false
+			keepElectronicSafe = false
+		}
+	}
+	if value, ok := olddoc.Metadata[consts.CarbonCopyKey]; ok && keepCarbonCopy {
+		meta[consts.CarbonCopyKey] = value
+	}
+	if value, ok := olddoc.Metadata[consts.ElectronicSafeKey]; ok && keepElectronicSafe {
+		meta[consts.ElectronicSafeKey] = value
+	}
+
+	// For notes, preserve the prosemirror metadata
+	if olddoc.Mime == consts.NoteMimeType {
+		for _, name := range []string{"title", "content", "schema", "version"} {
+			if meta[name] == nil {
+				meta[name] = olddoc.Metadata[name]
+			}
+		}
+	}
+
 	newdoc := olddoc.Clone().(*vfs.FileDoc)
 	newdoc.Metadata = meta
 	newdoc.Tags = utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)

@@ -1649,6 +1649,134 @@ func TestCopyVersion(t *testing.T) {
 	assert.Equal(t, "qux", tags[0])
 }
 
+func TestCopyVersionWithCertified(t *testing.T) {
+	buf := strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "carbonCopy": true,
+            "electronicSafe": true
+        }
+    }
+}`)
+	req1, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
+	req1.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res1, err := http.DefaultClient.Do(req1)
+	assert.NoError(t, err)
+	defer res1.Body.Close()
+	assert.Equal(t, 201, res1.StatusCode)
+	var obj1 map[string]interface{}
+	err = extractJSONRes(res1, &obj1)
+	assert.NoError(t, err)
+	data1 := obj1["data"].(map[string]interface{})
+	secret := data1["id"].(string)
+
+	content := "certified carbonCopy and electronicSafe must be kept if only the qualification change"
+	u := "/files/?Type=file&Name=copy-version-with-certified&MetadataID=" + secret
+	res2, body2 := upload(t, u, "text/plain", content, "")
+	assert.Equal(t, 201, res2.StatusCode)
+	data2 := body2["data"].(map[string]interface{})
+	fileID := data2["id"].(string)
+	attrs2 := data2["attributes"].(map[string]interface{})
+	meta2 := attrs2["metadata"].(map[string]interface{})
+	assert.NotNil(t, meta2["carbonCopy"])
+	assert.NotNil(t, meta2["electronicSafe"])
+
+	buf = strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+			"qualification": { "purpose": "attestation" }
+        }
+    }
+}`)
+	req3, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
+	req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res3, err := http.DefaultClient.Do(req3)
+	assert.NoError(t, err)
+	defer res3.Body.Close()
+	assert.Equal(t, 200, res3.StatusCode)
+	var obj3 map[string]interface{}
+	err = extractJSONRes(res3, &obj3)
+	assert.NoError(t, err)
+	data3 := obj3["data"].(map[string]interface{})
+	attrs3 := data3["attributes"].(map[string]interface{})
+	meta3 := attrs3["metadata"].(map[string]interface{})
+	assert.NotNil(t, meta3["qualification"])
+	assert.NotNil(t, meta3["carbonCopy"])
+	assert.NotNil(t, meta3["electronicSafe"])
+
+	buf = strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "label": "bar"
+        }
+    }
+}`)
+	req4, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
+	req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res4, err := http.DefaultClient.Do(req4)
+	assert.NoError(t, err)
+	defer res4.Body.Close()
+	assert.Equal(t, 200, res4.StatusCode)
+	var obj4 map[string]interface{}
+	err = extractJSONRes(res4, &obj4)
+	assert.NoError(t, err)
+	data4 := obj4["data"].(map[string]interface{})
+	attrs4 := data4["attributes"].(map[string]interface{})
+	meta4 := attrs4["metadata"].(map[string]interface{})
+	assert.NotNil(t, meta4["label"])
+	assert.Nil(t, meta4["qualification"])
+	assert.Nil(t, meta4["carbonCopy"])
+	assert.Nil(t, meta4["electronicSafe"])
+}
+
+func TestCopyVersionWorksForNotes(t *testing.T) {
+	content := "# Title\n\n* foo\n* bar\n"
+	u := "/files/?Type=file&Name=test.cozy-note"
+	res, body := upload(t, u, consts.NoteMimeType, content, "")
+	assert.Equal(t, 201, res.StatusCode)
+	data := body["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+	attrs := data["attributes"].(map[string]interface{})
+	meta := attrs["metadata"].(map[string]interface{})
+	assert.NotNil(t, meta["title"])
+	assert.NotNil(t, meta["content"])
+	assert.NotNil(t, meta["schema"])
+	assert.NotNil(t, meta["version"])
+
+	buf := strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+			"qualification": { "purpose": "attestation" }
+        }
+    }
+}`)
+	req2, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	assert.Equal(t, 200, res2.StatusCode)
+	var obj2 map[string]interface{}
+	err = extractJSONRes(res2, &obj2)
+	assert.NoError(t, err)
+	data2 := obj2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	meta2 := attrs2["metadata"].(map[string]interface{})
+	assert.NotNil(t, meta2["qualification"])
+	assert.Equal(t, meta["title"], meta2["title"])
+	assert.Equal(t, meta["content"], meta2["content"])
+	assert.Equal(t, meta["schema"], meta2["schema"])
+	assert.Equal(t, meta["version"], meta2["version"])
+}
+
 func TestArchiveNoFiles(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {
@@ -2725,7 +2853,7 @@ func TestMain(m *testing.M) {
 	}
 
 	testInstance = setup.GetTestInstance()
-	client, tok := setup.GetTestClient(consts.Files)
+	client, tok := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
 	clientID = client.ClientID
 	token = tok
 	ts = setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
