@@ -16,7 +16,7 @@ type AccessCode struct {
 	ClientID  string `json:"client_id"`
 	IssuedAt  int64  `json:"issued_at"`
 	Scope     string `json:"scope"`
-	Challenge string `json:"challenge_code,omitempty"`
+	Challenge string `json:"code_challenge,omitempty"`
 }
 
 // ID returns the access code qualified identifier

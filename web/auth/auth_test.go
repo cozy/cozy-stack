@@ -1277,7 +1277,7 @@ func TestOAuthWithPKCE(t *testing.T) {
 
 	/* 1. GET /auth/authorize */
 	u := url.QueryEscape("https://example.org/oauth/callback")
-	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID+"&challenge_code_method=S256&challenge_code="+challenge, nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID+"&code_challenge_method=S256&code_challenge="+challenge, nil)
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
@@ -1297,8 +1297,8 @@ func TestOAuthWithPKCE(t *testing.T) {
 		"scope":                 {"files:read"},
 		"csrf_token":            {csrfToken},
 		"response_type":         {"code"},
-		"challenge_code":        {challenge},
-		"challenge_code_method": {"S256"},
+		"code_challenge":        {challenge},
+		"code_challenge_method": {"S256"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()

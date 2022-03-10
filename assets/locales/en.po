@@ -500,7 +500,7 @@ msgid "Error Invalid challenge code method"
 msgstr "Invalid challenge code method"
 
 msgid "Error No challenge code"
-msgstr "The challenge_code parameter must be given when challenge_code_method is present"
+msgstr "The code_challenge parameter must be given when code_challenge_method is present"
 
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
