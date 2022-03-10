@@ -278,8 +278,8 @@ func authorize(c echo.Context) error {
 		redirectURI:     c.FormValue("redirect_uri"),
 		scope:           c.FormValue("scope"),
 		resType:         c.FormValue("response_type"),
-		challenge:       c.FormValue("challenge_code"),
-		challengeMethod: c.FormValue("challenge_code_method"),
+		challenge:       c.FormValue("code_challenge"),
+		challengeMethod: c.FormValue("code_challenge_method"),
 	}
 
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {

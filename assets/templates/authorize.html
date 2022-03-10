@@ -26,8 +26,8 @@
               <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
               <input type="hidden" name="scope" value="{{.Scope}}" />
               <input type="hidden" name="response_type" value="code" />
-              <input type="hidden" name="challenge_code" value="{{.Challenge}}" />
-              <input type="hidden" name="challenge_code_method" value="{{.ChallengeMethod}}" />
+              <input type="hidden" name="code_challenge" value="{{.Challenge}}" />
+              <input type="hidden" name="code_challenge_method" value="{{.ChallengeMethod}}" />
 
               {{if .Webapp}}
               <h1 class="h4 h2-md mb-4 text-center">{{t "Authorize Linked Title"}}</h1>
