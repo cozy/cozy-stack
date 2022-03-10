@@ -112,7 +112,10 @@ func SendMail(ctx *job.WorkerContext) error {
 	if opts.TemplateName != "" && opts.Locale == "" {
 		opts.Locale = ctx.Instance.Locale
 	}
-	return sendMail(ctx, &opts, ctx.Instance.Domain)
+	if err = sendMail(ctx, &opts, ctx.Instance.Domain); err != nil {
+		ctx.Logger().Warnf("sendmail has failed: %s", err)
+	}
+	return err
 }
 
 func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
