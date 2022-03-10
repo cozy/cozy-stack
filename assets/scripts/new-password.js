@@ -41,7 +41,7 @@
 
     submit.setAttribute('disabled', true)
 
-    let hashed, masterKey
+    let hashed, protectedKey
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
@@ -53,7 +53,7 @@
         return w.password.makeEncKey(result.masterKey)
       })
       .then((key) => {
-        masterKey = key.cipherString
+        protectedKey = key.cipherString
         return w.password.makeKeyPair(key.key)
       })
       .then((pair) => {
@@ -63,7 +63,7 @@
           data.append('hint', hint)
         }
         data.append('iterations', '' + iterations)
-        data.append('key', masterKey)
+        data.append('key', protectedKey)
         data.append('public_key', pair.publicKey)
         data.append('private_key', pair.privateKey)
         if (registerTokenInput) {
