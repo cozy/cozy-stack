@@ -152,11 +152,32 @@ func authorizeForm(c echo.Context) error {
 		challengeMethod: c.QueryParam("code_challenge_method"),
 	}
 
+	isLoggedIn := middlewares.IsLoggedIn(c)
+	if code := c.QueryParam("session_code"); code != "" {
+		// XXX we should always clear the session code to avoid it being
+		// reused, even if the user is already logged in and we don't want to
+		// create a new session
+		if checked := instance.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
+			req := c.Request()
+			if err == nil {
+				if err = session.StoreNewLoginEntry(instance, sessionID, "", req, "session_code", false); err != nil {
+					instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				}
+			}
+			redirect := req.URL
+			q := redirect.Query()
+			q.Del("session_code")
+			redirect.RawQuery = q.Encode()
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
+	}
+
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
 	}
 
-	if !middlewares.IsLoggedIn(c) {
+	if !isLoggedIn {
 		u := instance.PageURL("/auth/login", url.Values{
 			"redirect": {instance.FromURL(c.Request().URL)},
 		})
@@ -364,28 +385,8 @@ func createAccessCode(c echo.Context, params authorizeParams, u *url.URL, q url.
 
 func renderConfirmFlagship(c echo.Context, clientID string) error {
 	inst := middlewares.GetInstance(c)
-	isLoggedIn := middlewares.IsLoggedIn(c)
 
-	if code := c.QueryParam("session_code"); code != "" {
-		// XXX we should always clear the session code to avoid it being
-		// reused, even if the user is already logged in and we don't want to
-		// create a new session
-		if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
-			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
-			req := c.Request()
-			if err == nil {
-				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
-					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
-				}
-			}
-			redirect := req.URL
-			q := redirect.Query()
-			q.Del("session_code")
-			redirect.RawQuery = q.Encode()
-			return c.Redirect(http.StatusSeeOther, redirect.String())
-		}
-	}
-	if !isLoggedIn {
+	if !middlewares.IsLoggedIn(c) {
 		u := inst.PageURL("/auth/login", url.Values{
 			"redirect": {inst.FromURL(c.Request().URL)},
 		})
