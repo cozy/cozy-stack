@@ -28,6 +28,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
+	_ "github.com/cozy/cozy-stack/web/statik"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
 
@@ -2539,7 +2540,7 @@ func TestDestroyFile(t *testing.T) {
 	assert.True(t, len(v.Data) == 0)
 }
 
-func TestThumbnail(t *testing.T) {
+func TestThumbnailImages(t *testing.T) {
 	res1, _ := httpGet(ts.URL + "/files/" + imgID)
 	assert.Equal(t, 200, res1.StatusCode)
 	var obj map[string]interface{}
@@ -2564,6 +2565,66 @@ func TestThumbnail(t *testing.T) {
 	res5, _ := download(t, tiny, "")
 	assert.Equal(t, 200, res5.StatusCode)
 	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "image/jpeg"))
+}
+
+func TestThumbnailPDFs(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	f, err := os.Open("../../tests/fixtures/dev-desktop.pdf")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=dev-desktop.pdf", f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, obj := doUploadOrMod(t, req, "application/pdf", "")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	pdfID := data["id"].(string)
+
+	res2, _ := httpGet(ts.URL + "/files/" + pdfID)
+	assert.Equal(t, 200, res2.StatusCode)
+	var obj2 map[string]interface{}
+	err = extractJSONRes(res2, &obj2)
+	assert.NoError(t, err)
+	data2 := obj2["data"].(map[string]interface{})
+	links := data2["links"].(map[string]interface{})
+	large := links["large"].(string)
+	medium := links["medium"].(string)
+	small := links["small"].(string)
+	tiny := links["tiny"].(string)
+
+	// Large, medium, and small are not generated automatically
+	res3, _ := download(t, large, "")
+	assert.Equal(t, 404, res3.StatusCode)
+	assert.Equal(t, res3.Header.Get("Content-Type"), "image/png")
+	res4, _ := download(t, medium, "")
+	assert.Equal(t, 404, res4.StatusCode)
+	assert.Equal(t, res4.Header.Get("Content-Type"), "image/png")
+	res5, _ := download(t, small, "")
+	assert.Equal(t, 404, res5.StatusCode)
+	assert.Equal(t, res5.Header.Get("Content-Type"), "image/png")
+
+	// Wait for tiny thumbnail generation
+	time.Sleep(1 * time.Second)
+
+	res6, _ := download(t, tiny, "")
+	assert.Equal(t, 200, res6.StatusCode)
+	assert.Equal(t, res6.Header.Get("Content-Type"), "image/jpeg")
+
+	// Wait for other thumbnails generation
+	time.Sleep(2 * time.Second)
+
+	res7, _ := download(t, large, "")
+	assert.Equal(t, 200, res7.StatusCode)
+	assert.Equal(t, res7.Header.Get("Content-Type"), "image/jpeg")
+	res8, _ := download(t, medium, "")
+	assert.Equal(t, 200, res8.StatusCode)
+	assert.Equal(t, res8.Header.Get("Content-Type"), "image/jpeg")
+	res9, _ := download(t, small, "")
+	assert.Equal(t, 200, res9.StatusCode)
+	assert.Equal(t, res9.Header.Get("Content-Type"), "image/jpeg")
 }
 
 func TestGetFileByPublicLink(t *testing.T) {
