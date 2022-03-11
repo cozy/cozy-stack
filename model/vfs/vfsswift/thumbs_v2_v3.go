@@ -80,7 +80,7 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 	objMeta := swift.Metadata{
 		"file-md5": hex.EncodeToString(img.MD5Sum),
 	}
-	obj, err := t.c.ObjectCreate(t.ctx, t.container, name, true, "", img.Mime, objMeta.ObjectHeaders())
+	obj, err := t.c.ObjectCreate(t.ctx, t.container, name, true, "", "image/jpeg", objMeta.ObjectHeaders())
 	if err != nil {
 		if _, _, errc := t.c.Container(t.ctx, t.container); errc == swift.ContainerNotFound {
 			if errc = t.c.ContainerCreate(t.ctx, t.container, nil); errc != nil {
