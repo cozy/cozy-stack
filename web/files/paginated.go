@@ -354,12 +354,17 @@ func (f *file) Links() *jsonapi.LinksList {
 		}
 	}
 	if f.doc.Class == "pdf" {
+		log := f.instance.Logger().WithNamespace("files")
+		start := time.Now()
+
 		if secret, err := vfs.GetStore().AddIcon(f.instance, f.doc.DocID); err == nil {
 			links.Icon = "/files/" + f.doc.DocID + "/icon/" + secret
 		}
 		if secret, err := vfs.GetStore().AddPreview(f.instance, f.doc.DocID); err == nil {
 			links.Preview = "/files/" + f.doc.DocID + "/preview/" + secret
 		}
+		elapsed := time.Since(start)
+		log.Debugf("Time elapsed to get PDF links: %v\n", elapsed)
 	}
 	return &links
 }
