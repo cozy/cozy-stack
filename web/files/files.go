@@ -905,7 +905,7 @@ func IconHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	secret := c.Param("secret")
-	fileID, err := vfs.GetStore().GetIcon(instance, secret)
+	fileID, err := vfs.GetStore().GetThumb(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -926,7 +926,7 @@ func PreviewHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	secret := c.Param("secret")
-	fileID, err := vfs.GetStore().GetPreview(instance, secret)
+	fileID, err := vfs.GetStore().GetThumb(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1467,6 +1467,24 @@ func FindFilesMango(c echo.Context) error {
 		total = skip + len(results) // let the client know its done.
 	}
 
+	// Create secrets for thumbnail links in batch for performance reasons
+	var thumbIDs []string
+	for _, dof := range results {
+		_, f := dof.Refine()
+		if f != nil {
+			if f.Class == "image" || f.Class == "pdf" {
+				thumbIDs = append(thumbIDs, f.ID())
+			}
+		}
+	}
+	var secrets map[string]string
+	if len(thumbIDs) > 0 {
+		secrets, _ = vfs.GetStore().AddThumbs(instance, thumbIDs)
+	}
+	if secrets == nil {
+		secrets = make(map[string]string)
+	}
+
 	fp := vfs.NewFilePatherWithCache(instance.VFS())
 	out := make([]jsonapi.Object, len(results))
 	fields, ok := findRequest["fields"].([]string)
@@ -1480,11 +1498,18 @@ func FindFilesMango(c echo.Context) error {
 			}
 		} else {
 			if ok {
-				out[i] = newFindFile(f, fields, instance)
+				file := newFindFile(f, fields, instance)
+				if secret, ok := secrets[f.ID()]; ok {
+					file.SetThumbSecret(secret)
+				}
+				out[i] = file
 			} else {
 				file := NewFile(f, instance)
 				if includePath {
 					file.IncludePath(fp)
+				}
+				if secret, ok := secrets[f.ID()]; ok {
+					file.SetThumbSecret(secret)
 				}
 				out[i] = file
 			}

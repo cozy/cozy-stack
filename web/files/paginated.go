@@ -19,6 +19,15 @@ const (
 	defPerPage = 30
 )
 
+type apiArchive struct {
+	*vfs.Archive
+}
+
+type apiMetadata struct {
+	*vfs.Metadata
+	secret string
+}
+
 type dir struct {
 	doc      *vfs.DirDoc
 	rel      jsonapi.RelationshipMap
@@ -33,16 +42,17 @@ type file struct {
 	// fileJSON is used for marshaling to JSON and we keep a reference here to
 	// avoid many allocations.
 	jsonDoc     *fileJSON
+	thumbSecret string
 	includePath bool
 }
 
-type apiArchive struct {
-	*vfs.Archive
-}
-
-type apiMetadata struct {
-	*vfs.Metadata
-	secret string
+type fileJSON struct {
+	*vfs.FileDoc
+	// XXX Hide the internal_vfs_id and referenced_by
+	InternalID   *interface{} `json:"internal_vfs_id,omitempty"`
+	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
+	// Include the path if asked for
+	Fullpath string `json:"path,omitempty"`
 }
 
 func newDir(doc *vfs.DirDoc) *dir {
@@ -110,9 +120,26 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
+	// Create secrets for thumbnail links in batch for performance reasons
+	var thumbIDs []string
+	for _, child := range children {
+		_, f := child.Refine()
+		if f != nil {
+			if f.Class == "image" || f.Class == "pdf" {
+				thumbIDs = append(thumbIDs, f.ID())
+			}
+		}
+	}
+	var secrets map[string]string
+	if len(thumbIDs) > 0 {
+		secrets, _ = vfs.GetStore().AddThumbs(instance, thumbIDs)
+	}
+	if secrets == nil {
+		secrets = make(map[string]string)
+	}
+
 	relsData := make([]couchdb.DocReference, 0)
 	included := make([]jsonapi.Object, 0)
-
 	for _, child := range children {
 		if child.ID() == consts.TrashDirID {
 			continue
@@ -122,7 +149,11 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, NewFile(f, instance))
+			file := NewFile(f, instance)
+			if secret, ok := secrets[f.ID()]; ok {
+				file.SetThumbSecret(secret)
+			}
+			included = append(included, file)
 		}
 	}
 
@@ -215,7 +246,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
 func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil, nil, &fileJSON{}, false}
+	return &file{doc, i, nil, nil, &fileJSON{}, "", false}
 }
 
 // FileData returns a jsonapi representation of the given file.
@@ -246,19 +277,6 @@ var (
 	_ jsonapi.Object = (*file)(nil)
 )
 
-func (d *dir) ID() string                             { return d.doc.ID() }
-func (d *dir) Rev() string                            { return d.doc.Rev() }
-func (d *dir) SetID(id string)                        { d.doc.SetID(id) }
-func (d *dir) SetRev(rev string)                      { d.doc.SetRev(rev) }
-func (d *dir) DocType() string                        { return d.doc.DocType() }
-func (d *dir) Clone() couchdb.Doc                     { cloned := *d; return &cloned }
-func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
-func (d *dir) Included() []jsonapi.Object             { return d.included }
-func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
-func (d *dir) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
-}
-
 func (a *apiArchive) Relationships() jsonapi.RelationshipMap { return nil }
 func (a *apiArchive) Included() []jsonapi.Object             { return nil }
 func (a *apiArchive) MarshalJSON() ([]byte, error)           { return json.Marshal(a.Archive) }
@@ -277,21 +295,27 @@ func (m *apiMetadata) Included() []jsonapi.Object             { return nil }
 func (m *apiMetadata) MarshalJSON() ([]byte, error)           { return json.Marshal(m.Metadata) }
 func (m *apiMetadata) Links() *jsonapi.LinksList              { return nil }
 
-type fileJSON struct {
-	*vfs.FileDoc
-	// XXX Hide the internal_vfs_id and referenced_by
-	InternalID   *interface{} `json:"internal_vfs_id,omitempty"`
-	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
-	// Include the path if asked for
-	Fullpath string `json:"path,omitempty"`
+func (d *dir) ID() string                             { return d.doc.ID() }
+func (d *dir) Rev() string                            { return d.doc.Rev() }
+func (d *dir) SetID(id string)                        { d.doc.SetID(id) }
+func (d *dir) SetRev(rev string)                      { d.doc.SetRev(rev) }
+func (d *dir) DocType() string                        { return d.doc.DocType() }
+func (d *dir) Clone() couchdb.Doc                     { cloned := *d; return &cloned }
+func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
+func (d *dir) Included() []jsonapi.Object             { return d.included }
+func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
+func (d *dir) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
 }
 
-func (f *file) ID() string         { return f.doc.ID() }
-func (f *file) Rev() string        { return f.doc.Rev() }
-func (f *file) SetID(id string)    { f.doc.SetID(id) }
-func (f *file) SetRev(rev string)  { f.doc.SetRev(rev) }
-func (f *file) DocType() string    { return f.doc.DocType() }
-func (f *file) Clone() couchdb.Doc { cloned := *f; return &cloned }
+func (f *file) ID() string                   { return f.doc.ID() }
+func (f *file) Rev() string                  { return f.doc.Rev() }
+func (f *file) SetID(id string)              { f.doc.SetID(id) }
+func (f *file) SetRev(rev string)            { f.doc.SetRev(rev) }
+func (f *file) DocType() string              { return f.doc.DocType() }
+func (f *file) Clone() couchdb.Doc           { cloned := *f; return &cloned }
+func (f *file) SetThumbSecret(secret string) { f.thumbSecret = secret }
+
 func (f *file) Relationships() jsonapi.RelationshipMap {
 	rels := jsonapi.RelationshipMap{
 		"parent": jsonapi.Relationship{
@@ -346,25 +370,21 @@ func (f *file) MarshalJSON() ([]byte, error) {
 func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
 	if f.doc.Class == "image" || f.doc.Class == "pdf" {
-		if secret, err := vfs.GetStore().AddThumb(f.instance, f.doc.DocID); err == nil {
-			links.Tiny = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/tiny"
-			links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
-			links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
-			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
+		if f.thumbSecret == "" {
+			if secret, err := vfs.GetStore().AddThumb(f.instance, f.doc.DocID); err == nil {
+				f.thumbSecret = secret
+			}
 		}
-	}
-	if f.doc.Class == "pdf" {
-		log := f.instance.Logger().WithNamespace("files")
-		start := time.Now()
-
-		if secret, err := vfs.GetStore().AddIcon(f.instance, f.doc.DocID); err == nil {
-			links.Icon = "/files/" + f.doc.DocID + "/icon/" + secret
+		if f.thumbSecret != "" {
+			links.Tiny = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/tiny"
+			links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/small"
+			links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/medium"
+			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/large"
+			if f.doc.Class == "pdf" {
+				links.Icon = "/files/" + f.doc.DocID + "/icon/" + f.thumbSecret
+				links.Preview = "/files/" + f.doc.DocID + "/preview/" + f.thumbSecret
+			}
 		}
-		if secret, err := vfs.GetStore().AddPreview(f.instance, f.doc.DocID); err == nil {
-			links.Preview = "/files/" + f.doc.DocID + "/preview/" + secret
-		}
-		elapsed := time.Since(start)
-		log.Debugf("Time elapsed to get PDF links: %v\n", elapsed)
 	}
 	return &links
 }
@@ -414,6 +434,7 @@ type findFile struct {
 	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
 }
 
+func (f *findFile) SetThumbSecret(secret string)           { f.file.SetThumbSecret(secret) }
 func (f *findFile) Relationships() jsonapi.RelationshipMap { return f.file.Relationships() }
 func (f *findFile) Included() []jsonapi.Object             { return f.file.Included() }
 func (f *findFile) Links() *jsonapi.LinksList              { return f.file.Links() }
