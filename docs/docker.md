@@ -36,7 +36,7 @@ docker run -it --rm --name cozy-stack \
     --workdir /app \
     -v $(pwd):/app \
     -v $(pwd):/go/bin \
-    golang:1.17 \
+    golang:1.18 \
     go get -v github.com/cozy/cozy-stack
 ```
 

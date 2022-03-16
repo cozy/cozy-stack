@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -492,14 +491,7 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	start := time.Now()
 	resp, err = client.Do(req)
 	if err != nil {
-		// Try again for temporary errors
-		start = time.Now()
-		if ne, ok := err.(net.Error); ok && ne.Temporary() {
-			resp, err = client.Do(req)
-		}
-		if err != nil {
-			return
-		}
+		return
 	}
 	elapsed := time.Since(start)
 	defer func() {

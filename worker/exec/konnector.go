@@ -27,6 +27,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/spf13/afero"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -381,7 +383,8 @@ func computeFolderPath(inst *instance.Instance, slug string, acc *account.Accoun
 		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
 		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
 	accountName := r.Replace(acc.Name)
-	return fmt.Sprintf("/%s/%s/%s", admin, strings.Title(slug), accountName)
+	title := cases.Title(language.Make(inst.Locale)).String(slug)
+	return fmt.Sprintf("/%s/%s/%s", admin, title, accountName)
 }
 
 // ensurePermissions checks that the konnector has the permissions to write
