@@ -19,15 +19,12 @@ import (
 type Store interface {
 	AddFile(db prefixer.Prefixer, filePath string) (string, error)
 	AddThumb(db prefixer.Prefixer, fileID string) (string, error)
-	AddIcon(db prefixer.Prefixer, fileID string) (string, error)
-	AddPreview(db prefixer.Prefixer, fileID string) (string, error)
+	AddThumbs(db prefixer.Prefixer, fileIDs []string) (map[string]string, error)
 	AddVersion(db prefixer.Prefixer, versionID string) (string, error)
 	AddArchive(db prefixer.Prefixer, archive *Archive) (string, error)
 	AddMetadata(db prefixer.Prefixer, metadata *Metadata) (string, error)
 	GetFile(db prefixer.Prefixer, key string) (string, error)
 	GetThumb(db prefixer.Prefixer, key string) (string, error)
-	GetIcon(db prefixer.Prefixer, key string) (string, error)
-	GetPreview(db prefixer.Prefixer, key string) (string, error)
 	GetVersion(db prefixer.Prefixer, key string) (string, error)
 	GetArchive(db prefixer.Prefixer, key string) (*Archive, error)
 	GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error)
@@ -107,26 +104,16 @@ func (s *memStore) AddThumb(db prefixer.Prefixer, fileID string) (string, error)
 	return key, nil
 }
 
-func (s *memStore) AddIcon(db prefixer.Prefixer, fileID string) (string, error) {
-	key := makeSecret()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.vals[db.DBPrefix()+":"+key] = &memRef{
-		val: fileID,
-		exp: time.Now().Add(storeTTL),
+func (s *memStore) AddThumbs(db prefixer.Prefixer, fileIDs []string) (map[string]string, error) {
+	secrets := make(map[string]string)
+	for _, fileID := range fileIDs {
+		secret, err := s.AddThumb(db, fileID)
+		if err != nil {
+			return nil, err
+		}
+		secrets[fileID] = secret
 	}
-	return key, nil
-}
-
-func (s *memStore) AddPreview(db prefixer.Prefixer, fileID string) (string, error) {
-	key := makeSecret()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.vals[db.DBPrefix()+":"+key] = &memRef{
-		val: fileID,
-		exp: time.Now().Add(storeTTL),
-	}
-	return key, nil
+	return secrets, nil
 }
 
 func (s *memStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
@@ -182,44 +169,6 @@ func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 }
 
 func (s *memStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	key = db.DBPrefix() + ":" + key
-	ref, ok := s.vals[key]
-	if !ok {
-		return "", ErrWrongToken
-	}
-	if time.Now().After(ref.exp) {
-		delete(s.vals, key)
-		return "", ErrWrongToken
-	}
-	f, ok := ref.val.(string)
-	if !ok {
-		return "", ErrWrongToken
-	}
-	return f, nil
-}
-
-func (s *memStore) GetIcon(db prefixer.Prefixer, key string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	key = db.DBPrefix() + ":" + key
-	ref, ok := s.vals[key]
-	if !ok {
-		return "", ErrWrongToken
-	}
-	if time.Now().After(ref.exp) {
-		delete(s.vals, key)
-		return "", ErrWrongToken
-	}
-	f, ok := ref.val.(string)
-	if !ok {
-		return "", ErrWrongToken
-	}
-	return f, nil
-}
-
-func (s *memStore) GetPreview(db prefixer.Prefixer, key string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key = db.DBPrefix() + ":" + key
@@ -321,20 +270,18 @@ func (s *redisStore) AddThumb(db prefixer.Prefixer, fileID string) (string, erro
 	return key, nil
 }
 
-func (s *redisStore) AddIcon(db prefixer.Prefixer, fileID string) (string, error) {
-	key := makeSecret()
-	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
-		return "", err
+func (s *redisStore) AddThumbs(db prefixer.Prefixer, fileIDs []string) (map[string]string, error) {
+	secrets := make(map[string]string)
+	pipe := s.c.Pipeline()
+	for _, fileID := range fileIDs {
+		key := makeSecret()
+		secrets[fileID] = key
+		pipe.Set(s.ctx, db.DBPrefix()+":"+key, fileID, storeTTL)
 	}
-	return key, nil
-}
-
-func (s *redisStore) AddPreview(db prefixer.Prefixer, fileID string) (string, error) {
-	key := makeSecret()
-	if err := s.c.Set(s.ctx, db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
-		return "", err
+	if _, err := pipe.Exec(s.ctx); err != nil {
+		return nil, err
 	}
-	return key, nil
+	return secrets, nil
 }
 
 func (s *redisStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
@@ -381,28 +328,6 @@ func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 }
 
 func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
-	if err == redis.Nil {
-		return "", ErrWrongToken
-	}
-	if err != nil {
-		return "", err
-	}
-	return f, nil
-}
-
-func (s *redisStore) GetIcon(db prefixer.Prefixer, key string) (string, error) {
-	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
-	if err == redis.Nil {
-		return "", ErrWrongToken
-	}
-	if err != nil {
-		return "", err
-	}
-	return f, nil
-}
-
-func (s *redisStore) GetPreview(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken
