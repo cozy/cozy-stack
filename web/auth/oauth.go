@@ -234,14 +234,17 @@ func authorizeForm(c echo.Context) error {
 	}
 	params.client.ClientID = params.client.CouchID
 
+	u, err := url.ParseRequestURI(params.redirectURI)
+	if err != nil {
+		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
+	}
+	q := u.Query()
 	if params.client.CreatedAtOnboarding {
-		u, err := url.ParseRequestURI(params.redirectURI)
-		if err != nil {
-			return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
-		}
-		q := u.Query()
 		return createAccessCode(c, params, u, q)
 	}
+	q.Set("error", "access_denied")
+	u.RawQuery = q.Encode()
+	closeURI := u.String()
 
 	var clientDomain string
 	clientURL, err := url.Parse(params.client.ClientURI)
@@ -279,6 +282,7 @@ func authorizeForm(c echo.Context) error {
 		"Client":           params.client,
 		"State":            params.state,
 		"RedirectURI":      params.redirectURI,
+		"CloseURI":         closeURI,
 		"Scope":            params.scope,
 		"Challenge":        params.challenge,
 		"ChallengeMethod":  params.challengeMethod,
