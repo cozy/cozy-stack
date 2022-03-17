@@ -1018,9 +1018,11 @@ type IndexCreationResponse struct {
 
 // UpdateResponse is the response from couchdb when updating documents
 type UpdateResponse struct {
-	ID  string `json:"id"`
-	Rev string `json:"rev"`
-	Ok  bool   `json:"ok"`
+	ID     string `json:"id"`
+	Rev    string `json:"rev"`
+	Ok     bool   `json:"ok"`
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
 }
 
 // FindResponse is the response from couchdb on a find request
