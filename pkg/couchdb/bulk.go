@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 )
@@ -250,12 +251,20 @@ func bulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 	}
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
+			update := res[i]
+			if update.Error != "" {
+				logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
+					Warnf("bulkUpdateDocs error for %s %s: %s - %s", doctype, update.ID, update.Error, update.Reason)
+			}
+			if update.ID == "" || update.Rev == "" || !update.Ok {
+				continue
+			}
 			event := realtime.EventUpdate
 			if d.Rev() == "" {
 				event = realtime.EventCreate
-				d.SetID(res[i].ID)
+				d.SetID(update.ID)
 			}
-			d.SetRev(res[i].Rev)
+			d.SetRev(update.Rev)
 			if old, ok := olddocs[i].(Doc); ok {
 				RTEvent(db, realtime.EventUpdate, d, old)
 			} else {
