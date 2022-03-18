@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -244,7 +245,10 @@ func authorizeForm(c echo.Context) error {
 	}
 	q.Set("error", "access_denied")
 	u.RawQuery = q.Encode()
-	closeURI := u.String()
+	closeURI := template.URL("/")
+	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "cozy" {
+		closeURI = template.URL(u.String())
+	}
 
 	var clientDomain string
 	clientURL, err := url.Parse(params.client.ClientURI)
