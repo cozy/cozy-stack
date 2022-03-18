@@ -372,6 +372,8 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	}
 	err := couchdb.FindDocs(i, consts.OAuthClients, req, &results)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		i.Logger().WithNamespace("oauth").
+			Warnf("Cannot find clients by name: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
@@ -431,6 +433,8 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	c.Metadata = md
 
 	if err = couchdb.CreateDoc(i, c); err != nil {
+		i.Logger().WithNamespace("oauth").
+			Warnf("Cannot create client: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
