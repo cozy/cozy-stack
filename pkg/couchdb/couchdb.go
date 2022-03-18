@@ -323,6 +323,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 	}
 	req, err := buildCouchRequest(db, doctype, method, path, reqjson, nil)
 	if err != nil {
+		log.Error(err.Error())
 		return err
 	}
 
