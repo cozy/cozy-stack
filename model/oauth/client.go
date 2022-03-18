@@ -545,6 +545,12 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	}
 
 	if err := couchdb.UpdateDoc(i, c); err != nil {
+		if couchdb.IsConflictError(err) {
+			return &ClientRegistrationError{
+				Code:  http.StatusConflict,
+				Error: "conflict",
+			}
+		}
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
