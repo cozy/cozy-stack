@@ -1,6 +1,8 @@
 package vfs
 
 import (
+	"fmt"
+
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -105,7 +107,7 @@ func (f *FsckLog) String() string {
 	case ConflictInIndex:
 		return "this document has a conflict in CouchDB between two branches of revisions"
 	}
-	panic("bad FsckLog type")
+	panic(fmt.Sprintf("bad FsckLog type: %#v", f))
 }
 
 // FsckContentMismatch is a struct used by the FSCK where CouchDB and Swift
