@@ -106,6 +106,8 @@ func (f *FsckLog) String() string {
 		return "a file document has trashed set tot false but its parent is in the trash"
 	case ConflictInIndex:
 		return "this document has a conflict in CouchDB between two branches of revisions"
+	case ThumbnailWithNoFile:
+		return "a thumbnail exists but its original file has been removed"
 	}
 	panic(fmt.Sprintf("bad FsckLog type: %#v", f))
 }
