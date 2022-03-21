@@ -7,7 +7,6 @@ package vfs
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -695,7 +694,6 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		}
 	}
 
-	fmt.Printf("mime = %q class = %q (%s)\n", mime, class, contentType)
 	return mime, class
 }
 
