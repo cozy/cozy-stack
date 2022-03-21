@@ -7,6 +7,7 @@ package vfs
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -668,6 +669,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 	case "application/pdf":
 		class = "pdf"
 	case "application/vnd.ms-powerpoint", "application/x-iwork-keynote-sffkey",
+		"application/vnd.oasis.opendocument.presentation",
 		"application/vnd.oasis.opendocument.graphics",
 		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
 		class = "slide"
@@ -693,6 +695,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		}
 	}
 
+	fmt.Printf("mime = %q class = %q (%s)\n", mime, class, contentType)
 	return mime, class
 }
 
