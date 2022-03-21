@@ -192,6 +192,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
+		public.Routes(router.Group("/public", mws...))
 		wellknown.Routes(router.Group("/.well-known", mws...))
 	}
 
@@ -239,7 +240,6 @@ func SetupRoutes(router *echo.Echo) error {
 
 	// other non-authentified routes
 	{
-		public.Routes(router.Group("/public"))
 		status.Routes(router.Group("/status"))
 		version.Routes(router.Group("/version"))
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -41,10 +42,30 @@ func Avatar(c echo.Context) error {
 	return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 }
 
+// Prelogin returns information that could be useful to show a login page (like
+// in the flagship app).
+func Prelogin(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	publicName, err := inst.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"name":          publicName,
+		"Kdf":           setting.PassphraseKdf,
+		"KdfIterations": setting.PassphraseKdfIterations,
+	})
+}
+
 // Routes sets the routing for the public service
 func Routes(router *echo.Group) {
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
 		MaxAge: 24 * time.Hour,
 	})
-	router.GET("/avatar", Avatar, cacheControl, middlewares.NeedInstance)
+	router.GET("/avatar", Avatar, cacheControl)
+	router.GET("/prelogin", Prelogin)
 }
