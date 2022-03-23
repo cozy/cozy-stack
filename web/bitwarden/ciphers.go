@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -135,11 +134,14 @@ type cipherResponse struct {
 func titleizeKeys(data bitwarden.MapData) map[string]interface{} {
 	res := make(map[string]interface{})
 	for k, v := range data {
-		key := strings.Title(k)
 		if k == "ssn" {
-			key = "SSN"
+			k = "SSN"
 		}
-		res[key] = v
+		key := []byte(k[:])
+		if 'a' <= key[0] && key[0] <= 'z' {
+			key[0] -= 'a' - 'A'
+		}
+		res[string(key)] = v
 	}
 	return res
 }
