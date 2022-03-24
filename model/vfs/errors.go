@@ -13,6 +13,8 @@ var (
 	ErrIllegalFilename = errors.New("Invalid filename: empty or contains an illegal character")
 	// ErrIllegalPath is used when the path has too many levels
 	ErrIllegalPath = errors.New("Invalid path: too many levels")
+	// ErrIllegalMime is used when the mime-type of a file is invalid
+	ErrIllegalMime = errors.New("Invalid Content-Type")
 	// ErrIllegalTime is used when a time given (creation or
 	// modification) is not allowed
 	ErrIllegalTime = errors.New("Invalid time given")

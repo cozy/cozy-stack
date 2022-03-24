@@ -521,6 +521,11 @@ func TestUploadToNonExistingParent(t *testing.T) {
 	assert.Equal(t, 404, res.StatusCode)
 }
 
+func TestUploadWithInvalidContentType(t *testing.T) {
+	res, _ := upload(t, "/files/?Type=file&Name=InvalidMime", "foo € / bar", "foo", "")
+	assert.Equal(t, 422, res.StatusCode)
+}
+
 func TestUploadToTrashedFolder(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=trashed-parent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
