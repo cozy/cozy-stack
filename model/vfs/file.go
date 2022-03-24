@@ -3,6 +3,7 @@ package vfs
 import (
 	"encoding/base64"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -175,9 +176,13 @@ func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, cdate time.Time, executable, trashed bool, tags []string) (*FileDoc, error) {
+func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mimeType, class string, cdate time.Time, executable, trashed bool, tags []string) (*FileDoc, error) {
 	if err := checkFileName(name); err != nil {
 		return nil, err
+	}
+
+	if _, _, err := mime.ParseMediaType(mimeType); err != nil {
+		return nil, ErrIllegalMime
 	}
 
 	if dirID == "" {
@@ -195,7 +200,7 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 		UpdatedAt:  cdate,
 		ByteSize:   size,
 		MD5Sum:     md5Sum,
-		Mime:       mime,
+		Mime:       mimeType,
 		Class:      class,
 		Executable: executable,
 		Trashed:    trashed,
