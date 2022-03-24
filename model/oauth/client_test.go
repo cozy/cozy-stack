@@ -3,14 +3,17 @@ package oauth_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testInstance *instance.Instance
@@ -169,6 +172,26 @@ func TestParseHttpSoftwareID(t *testing.T) {
 	}
 	err := goodClient.CheckSoftwareID(testInstance)
 	assert.Nil(t, err)
+}
+
+func TestSortCLientsByCreatedAtDesc(t *testing.T) {
+	t0 := time.Now().Add(-1 * time.Minute)
+	t1 := t0.Add(10 * time.Second)
+	t2 := t1.Add(10 * time.Second)
+	clients := []*oauth.Client{
+		{CouchID: "a", Metadata: &metadata.CozyMetadata{CreatedAt: t2}},
+		{CouchID: "d"},
+		{CouchID: "c", Metadata: &metadata.CozyMetadata{CreatedAt: t0}},
+		{CouchID: "e"},
+		{CouchID: "b", Metadata: &metadata.CozyMetadata{CreatedAt: t1}},
+	}
+	oauth.SortClientsByCreatedAtDesc(clients)
+	require.Len(t, clients, 5)
+	assert.Equal(t, "a", clients[0].CouchID)
+	assert.Equal(t, "b", clients[1].CouchID)
+	assert.Equal(t, "c", clients[2].CouchID)
+	assert.Equal(t, "d", clients[3].CouchID)
+	assert.Equal(t, "e", clients[4].CouchID)
 }
 
 func TestMain(m *testing.M) {

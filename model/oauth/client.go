@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -184,7 +185,24 @@ func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	// XXX the sort is done here, not via the mango request as some old clients
+	// can have no cozyMetadata
+	SortClientsByCreatedAtDesc(clients)
 	return clients, nil
+}
+
+func SortClientsByCreatedAtDesc(clients []*Client) {
+	sort.SliceStable(clients, func(i, j int) bool {
+		a := clients[i]
+		b := clients[j]
+		if a.Metadata == nil {
+			return false
+		}
+		if b.Metadata == nil {
+			return true
+		}
+		return b.Metadata.CreatedAt.Before(a.Metadata.CreatedAt)
+	})
 }
 
 // FindClient loads a client from the database
