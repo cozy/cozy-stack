@@ -185,13 +185,6 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		hashedSource = hashSource(msg.Source + msg.NotificationID)
 	}
 
-	// notID should be an integer, we take the first 32bits of the hashed source
-	// value.
-	notID := int32(binary.BigEndian.Uint32(hashedSource[:4]))
-	if notID < 0 {
-		notID = -notID
-	}
-
 	notification := &fcm.Message{
 		To:               c.NotificationDeviceToken,
 		Priority:         priority,
@@ -201,20 +194,11 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 			Title: msg.Title,
 			Body:  msg.Message,
 		},
-		Data: map[string]interface{}{
-			// Fields required by phonegap-plugin-push
-			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
-			"notId": notID,
-			"title": msg.Title,
-			"body":  msg.Message,
-		},
+		Data: prepareAndroidData(msg, hashedSource),
 	}
 
 	if msg.Collapsible {
 		notification.CollapseKey = hex.EncodeToString(hashedSource)
-	}
-	for k, v := range msg.Data {
-		notification.Data[k] = v
 	}
 
 	ctx.Logger().Infof("FCM send: %#v", notification)
@@ -233,6 +217,27 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		}
 	}
 	return nil
+}
+
+func prepareAndroidData(msg *center.PushMessage, hashedSource []byte) map[string]interface{} {
+	// notID should be an integer, we take the first 32bits of the hashed source
+	// value.
+	notID := int32(binary.BigEndian.Uint32(hashedSource[:4]))
+	if notID < 0 {
+		notID = -notID
+	}
+
+	data := map[string]interface{}{
+		// Fields required by phonegap-plugin-push
+		// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
+		"notId": notID,
+		"title": msg.Title,
+		"body":  msg.Message,
+	}
+	for k, v := range msg.Data {
+		data[k] = v
+	}
+	return data
 }
 
 func getFirebaseClient(slug, contextName string) *fcm.Client {
@@ -295,7 +300,15 @@ func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessa
 		return nil
 	}
 
-	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken)
+	var hashedSource []byte
+	if msg.Collapsible {
+		hashedSource = hashSource(msg.Source)
+	} else {
+		hashedSource = hashSource(msg.Source + msg.NotificationID)
+	}
+	data := prepareAndroidData(msg, hashedSource)
+
+	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken, data)
 	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
 	err := huaweiClient.PushWithContext(ctx, notification)
 	if err != nil {
