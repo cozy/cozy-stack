@@ -89,7 +89,8 @@ func TestAddReferencesHandler(t *testing.T) {
 	// Make File
 	name := "testtoref.txt"
 	dirID := consts.RootDirID
-	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
+	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -171,7 +172,8 @@ func TestReferencesWithSlash(t *testing.T) {
 	// Make File
 	name := "test-ref-with-slash.txt"
 	dirID := consts.RootDirID
-	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
+	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -322,7 +324,8 @@ func TestReferencesWithSlash(t *testing.T) {
 
 func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {
 	dirID := consts.RootDirID
-	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
+	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, nil)
 	if !assert.NoError(t, err) {
 		return ""
 	}

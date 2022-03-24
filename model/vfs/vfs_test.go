@@ -80,7 +80,8 @@ func createTree(tree H, dirID string) (*vfs.DirDoc, error) {
 				return nil, err
 			}
 		} else {
-			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
+			mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -296,8 +297,8 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, "", fileBefore.Class)
-	assert.Equal(t, "", fileBefore.Mime)
+	assert.Equal(t, "files", fileBefore.Class)
+	assert.Equal(t, "application/octet-stream", fileBefore.Mime)
 	assert.Equal(t, "image", fileAfter.Class)
 	assert.Equal(t, "image/jpeg", fileAfter.Mime)
 }
@@ -572,8 +573,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		consts.RootDirID,
 		diskQuota+1,
 		nil,
-		"",
-		"",
+		"application/octet-stream",
+		"application",
 		time.Now(),
 		false,
 		false,
@@ -590,8 +591,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		consts.RootDirID,
 		diskQuota/2,
 		nil,
-		"",
-		"",
+		"application/octet-stream",
+		"application",
 		time.Now(),
 		false,
 		false,
@@ -612,8 +613,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		consts.RootDirID,
 		diskQuota/2,
 		nil,
-		"",
-		"",
+		"application/octet-stream",
+		"application",
 		time.Now(),
 		false,
 		false,
@@ -638,8 +639,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		consts.RootDirID,
 		-1,
 		nil,
-		"",
-		"",
+		"application/octet-stream",
+		"application",
 		time.Now(),
 		false,
 		false,
