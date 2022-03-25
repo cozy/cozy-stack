@@ -407,7 +407,66 @@ header to prevent conflict on deletion:
 
 -   If no id is provided in URL, an error 400 is returned
 
-## List all the documents
+## List all the documents (recommended & paginated way)
+
+We have added a non-standard `_normal_docs` endpoint. Since 
+`_all_docs` endpoint sends the design docs in the response 
+and that : 
+- It makes it hard to use pagination on it. 
+- You can have performance issue when querying lot of docs 
+
+This `_normal_docs` endpoint skip the design docs (and does 
+not count them in the`total_rows`). It accepts three parameters
+ in the query string: `limit` (default: 100), `skip` (default: 0), 
+ and `bookmark` (default: '').
+
+The response format looks like a `_find` response with mango. 
+And, like for `_find`, the limit cannot be more than 1000.
+The [pagination](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
+is also the same: both `bookmark` and `skip` can be used, but 
+`bookmark` is recommended for performances.
+
+### Request
+
+```http
+GET /data/io.cozy.events/_normal_docs?limit=100&bookmark=g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76 HTTP/1.1
+Accept: application/json
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+    "rows": [
+        {
+            "_id": "16e458537602f5ef2a710089dffd9453",
+            "_rev": "1-967a00dff5e02add41819138abb3284d",
+            "field": "value"
+        },
+        {
+            "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
+            "field": "other-value"
+        },
+        ...
+    ],
+    "total_rows": 202,
+    "bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76"
+}
+```
+
+## List all the documents (alternative & not pagginated way)
+
+You can use `_all_docs` endpoint to get the list of all the documents. 
+In some cases the use of this route is legitimate, but we recommend to
+avoid it as much as possible. 
+Indeed, calling this route on a database with a lot of documents can
+be very time consuming. 
 
 ### Request
 
@@ -456,55 +515,6 @@ Content-Type: application/json
 
 See
 [`_all_docs` in couchdb docs](http://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-all-docs)
-
-## List all the documents (alternative)
-
-The `_all_docs` endpoint sends the design docs in the response. It makes it hard
-to use pagination on it. We have added a non-standard `_normal_docs` endpoint.
-This new endpoint skip the design docs (and does not count them in the
-`total_rows`). It accepts three parameters in the query string: `limit`
-(default: 100), `skip` (default: 0),  and `bookmark` (default: '').
-
-Note that the response format is a bit different, it looks more like a `_find`
-response with mango. And, like for `_find`, the limit cannot be more than 1000.
-The [pagination](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
-is also the same: both `bookmark` and `skip` can be used, but `bookmark` is
-recommended for performances.
-
-### Request
-
-```http
-GET /data/io.cozy.events/_normal_docs?limit=100&bookmark=g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76 HTTP/1.1
-Accept: application/json
-```
-
-### Response
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-```
-
-```json
-{
-    "rows": [
-        {
-            "_id": "16e458537602f5ef2a710089dffd9453",
-            "_rev": "1-967a00dff5e02add41819138abb3284d",
-            "field": "value"
-        },
-        {
-            "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
-            "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
-            "field": "other-value"
-        },
-        ...
-    ],
-    "total_rows": 202,
-    "bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76"
-}
-```
-
 
 ## List the known doctypes
 
