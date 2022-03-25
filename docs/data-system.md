@@ -410,8 +410,8 @@ header to prevent conflict on deletion:
 ## List all the documents (recommended & paginated way)
 
 We have added a non-standard `_normal_docs` endpoint. Since 
-`_all_docs` endpoint sends the design docs in the response. 
-Ant that : 
+`_all_docs` endpoint sends the design docs in the response 
+and that : 
 - It makes it hard to use pagination on it. 
 - You can have performance issue when querying lot of docs 
 
