@@ -899,11 +899,11 @@ func TestFeatureFlags(t *testing.T) {
 		"ratio_1": []map[string]interface{}{
 			{"ratio": 1, "value": "context"},
 		},
-		"ratio_0.001": []map[string]interface{}{
-			{"ratio": 0.001, "value": "context"},
+		"ratio_0.000001": []map[string]interface{}{
+			{"ratio": 0.000001, "value": "context"},
 		},
-		"ratio_0.999": []map[string]interface{}{
-			{"ratio": 0.999, "value": "context"},
+		"ratio_0.999999": []map[string]interface{}{
+			{"ratio": 0.999999, "value": "context"},
 		},
 	}
 	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, testInstance.ContextName)
@@ -914,8 +914,8 @@ func TestFeatureFlags(t *testing.T) {
 	defFlags.M = map[string]interface{}{
 		"ratio_0":              "defaults",
 		"ratio_1":              "defaults",
-		"ratio_0.001":          "defaults",
-		"ratio_0.999":          "defaults",
+		"ratio_0.000001":       "defaults",
+		"ratio_0.999999":       "defaults",
 		"from_multiple_source": "defaults",
 		"from_defaults":        true,
 	}
