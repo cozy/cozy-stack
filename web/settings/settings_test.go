@@ -939,8 +939,8 @@ func TestFeatureFlags(t *testing.T) {
 	assert.EqualValues(t, testInstance.FeatureFlags["json_object"], attrs2["json_object"])
 	assert.Equal(t, "instance_flag", attrs2["from_multiple_source"])
 	assert.Equal(t, "defaults", attrs2["ratio_0"])
-	assert.Equal(t, "defaults", attrs2["ratio_0.001"])
-	assert.Equal(t, "context", attrs2["ratio_0.999"])
+	assert.Equal(t, "defaults", attrs2["ratio_0.000001"])
+	assert.Equal(t, "context", attrs2["ratio_0.999999"])
 	assert.Equal(t, "context", attrs2["ratio_1"])
 }
 
