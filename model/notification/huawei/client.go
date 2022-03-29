@@ -59,6 +59,7 @@ type NotificationMessage struct {
 }
 
 type AndroidStructure struct {
+	Data         string                `json:"data"`
 	Notification NotificationStructure `json:"notification"`
 }
 
@@ -72,8 +73,8 @@ type ClickStructure struct {
 	Type int `json:"type"`
 }
 
-func NewNotification(title, body, token string) *Notification {
-	return &Notification{
+func NewNotification(title, body, token string, data map[string]interface{}) *Notification {
+	notif := &Notification{
 		Message: NotificationMessage{
 			Android: AndroidStructure{
 				Notification: NotificationStructure{
@@ -85,6 +86,10 @@ func NewNotification(title, body, token string) *Notification {
 			Token: []string{token},
 		},
 	}
+	if serializedData, err := json.Marshal(data); err == nil {
+		notif.Message.Android.Data = string(serializedData)
+	}
+	return notif
 }
 
 // PushWithContext send the notification to Push Kit.
