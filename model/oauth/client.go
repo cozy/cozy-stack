@@ -388,7 +388,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		Selector: mango.StartWith("client_name", c.ClientName),
 		Limit:    1000,
 	}
-	err := couchdb.FindDocs(i, consts.OAuthClients, req, &results)
+	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, req, &results)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		i.Logger().WithNamespace("oauth").
 			Warnf("Cannot find clients by name: %s", err)
