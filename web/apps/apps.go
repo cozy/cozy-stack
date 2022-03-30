@@ -535,10 +535,16 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		var filepath string
 		switch appType {
 		case consts.WebappType:
-			filepath = path.Join("/", a.(*app.WebappManifest).Icon())
-			fs = app.AppsFileServer(instance)
+			a := a.(*app.WebappManifest)
+			filepath = path.Join("/", a.Icon())
+			if a.FromAppsDir {
+				fs = app.FSForAppDir(slug)
+			} else {
+				fs = app.AppsFileServer(instance)
+			}
 		case consts.KonnectorType:
-			filepath = path.Join("/", a.(*app.KonnManifest).Icon())
+			a := a.(*app.KonnManifest)
+			filepath = path.Join("/", a.Icon())
 			fs = app.KonnectorsFileServer(instance)
 		}
 
