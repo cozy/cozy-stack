@@ -1,4 +1,4 @@
-# 
+#
 # Translators:
 # Bruno Michel, 2019
 # Nos_ <n.schwirz@freenet.de>, 2019
@@ -7,7 +7,7 @@
 # Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2020
 # IndeedNotJames <indeednotjames@mailbox.org>, 2020
 # J Variance <ltjiri76j@relay.firefox.com>, 2020
-# 
+#
 msgid ""
 msgstr ""
 "Last-Translator: J Variance <ltjiri76j@relay.firefox.com>, 2020\n"
@@ -494,6 +494,9 @@ msgstr "Bank Überweisungsvorlagen"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Rechnungen"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "Anwendungseinstellungen"
 
 msgid "Permissions io.cozy.contacts"
 msgstr "Kontakte"

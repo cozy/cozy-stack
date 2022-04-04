@@ -1,8 +1,8 @@
-# 
+#
 # Translators:
 # Bruno Michel, 2019
 # Naofumi <naofum@gmail.com>, 2020
-# 
+#
 msgid ""
 msgstr ""
 "Last-Translator: Naofumi <naofum@gmail.com>, 2020\n"
@@ -416,6 +416,9 @@ msgstr "銀行繰り返しグループ"
 
 msgid "Permissions io.cozy.bills"
 msgstr "請求書"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "アプリケーション設定"
 
 msgid "Permissions io.cozy.contacts"
 msgstr "連絡先"
