@@ -1,4 +1,4 @@
-# 
+#
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
@@ -9,7 +9,7 @@
 # JC Pagnon <gooz@cozycloud.cc>, 2021
 # Matthieu AMBRY <matthieu@ambry.eu>, 2021
 # Bruno Michel, 2021
-# 
+#
 msgid ""
 msgstr ""
 "Last-Translator: Bruno Michel, 2021\n"
@@ -668,6 +668,9 @@ msgstr "Groupes de récurrence bancaire"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Factures"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "Paramètres de l'application"
 
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"

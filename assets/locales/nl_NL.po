@@ -1,8 +1,8 @@
-# 
+#
 # Translators:
 # Bruno Michel, 2019
 # Heimen Stoffels <vistausss@fastmail.com>, 2021
-# 
+#
 msgid ""
 msgstr ""
 "Last-Translator: Heimen Stoffels <vistausss@fastmail.com>, 2021\n"
@@ -598,6 +598,9 @@ msgstr "Incassogroepen"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Rekeningen"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "App-instellingen"
 
 msgid "Permissions io.cozy.contacts"
 msgstr "Contactpersonen"

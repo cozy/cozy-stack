@@ -288,6 +288,10 @@
   -webkit-mask-image: url("../icons/doctypes/cog.svg");
   mask-image: url("../icons/doctypes/cog.svg");
 }
+.perm[class^="io-cozy-coachco2-settings"] {
+  -webkit-mask-image: url("../icons/doctypes/cog.svg");
+  mask-image: url("../icons/doctypes/cog.svg");
+}
 .perm[class^="io-cozy-accounts"],
 .perm[class^="io-cozy-accounts-stats"] {
   -webkit-mask-image: url("../icons/doctypes/shield.svg");
