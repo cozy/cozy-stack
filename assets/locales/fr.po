@@ -792,7 +792,7 @@ msgstr ""
 
 msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
 msgstr ""
-"Vous avez demandé à changer votre mot de passe Coyz Pass. Si ce n'est pas le"
+"Vous avez demandé à changer votre mot de passe Cozy Pass. Si ce n'est pas le"
 " cas, contactez-nous en réponse à ce mail."
 
 msgid "Mail Reset Passphrase Button instruction"
