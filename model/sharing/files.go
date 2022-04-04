@@ -257,9 +257,20 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 	})
 	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	basename := dir.DocName
-	for i := 2; i < 100; i++ {
+	for i := 2; i < 20; i++ {
 		if err = fs.CreateDir(dir); err == nil {
 			return dir, nil
+		}
+		if couchdb.IsConflictError(err) || err == os.ErrExist {
+			doc, err := fs.DirByID(dir.DocID)
+			if err == nil {
+				doc.AddReferencedBy(couchdb.DocReference{
+					ID:   s.SID,
+					Type: consts.Sharings,
+				})
+				_ = couchdb.UpdateDoc(inst, doc)
+				return doc, nil
+			}
 		}
 		dir.DocName = fmt.Sprintf("%s (%d)", basename, i)
 		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
