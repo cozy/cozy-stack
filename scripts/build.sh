@@ -135,7 +135,7 @@ do_prepare_ldflags() {
 
 do_assets() {
 	printf "executing go generate...\n"
-	go get github.com/cozy/cozy-stack/pkg/statik
+	go install github.com/cozy/cozy-stack/pkg/statik
 	pushd "${WORK_DIR}" > /dev/null
 	go generate ./web
 	popd > /dev/null

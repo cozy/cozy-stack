@@ -49,7 +49,7 @@ scripts/node_modules: Makefile scripts/package.json scripts/yarn.lock
 
 ## assets: package the assets as go code
 assets: web/statik/statik.go
-	@if ! [ -x "$$(command -v statik)" ]; then go get github.com/cozy/cozy-stack/pkg/statik; fi
+	@if ! [ -x "$$(command -v statik)" ]; then go install github.com/cozy/cozy-stack/pkg/statik; fi
 	@scripts/build.sh assets
 .PHONY: assets
 
