@@ -112,6 +112,24 @@ func TestSuccessGet(t *testing.T) {
 	}
 }
 
+func TestGetForMissingDoc(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/data/no.such.doctype/id", nil)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/data/"+Type+"/no.such.id", nil)
+	_, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/data/"+Type+"/no-such-id", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	_, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
 func TestGetWithSlash(t *testing.T) {
 	_ = couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
 		Type: Type, M: map[string]interface{}{
