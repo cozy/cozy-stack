@@ -91,11 +91,15 @@ func getDoc(c echo.Context) error {
 
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(instance, doctype, docid, &out)
+	out.Type = doctype
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			if err := middlewares.Allow(c, permission.GET, &out); err != nil {
+				return err
+			}
+		}
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
-
-	out.Type = doctype
 
 	if err := middlewares.Allow(c, permission.GET, &out); err != nil {
 		return err
