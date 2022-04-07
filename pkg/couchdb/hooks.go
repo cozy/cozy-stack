@@ -24,7 +24,7 @@ const (
 )
 
 // Run runs all hooks for the given event.
-func runHooks(db Database, event string, doc Doc, old Doc) error {
+func runHooks(db prefixer.Prefixer, event string, doc Doc, old Doc) error {
 	if hs, ok := hooks[key{doc.DocType(), event}]; ok {
 		for _, h := range hs {
 			err := h(db, doc, old)

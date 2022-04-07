@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,12 +29,12 @@ func TestGetFirebaseClient(t *testing.T) {
 		Slug:          slug,
 		AndroidAPIKey: "th3_f1r3b4s3_k3y",
 	}
-	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &typ)
+	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &typ)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
-		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &typ)
+		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &typ)
 	}()
 
 	client := getFirebaseClient(slug, contextName)

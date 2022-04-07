@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/labstack/echo/v4"
 )
 
 // Proxy generate a httputil.ReverseProxy which forwards the request to the
 // correct route.
-func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
+func Proxy(db prefixer.Prefixer, doctype, path string) *httputil.ReverseProxy {
 	couchURL := config.CouchURL()
 	couchAuth := config.GetConfig().CouchDB.Auth
 
@@ -51,7 +52,7 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 // request on the _bulk_docs endpoint. This endpoint is specific since it will
 // mutate many document in database, the stack has to read the response from
 // couch to emit the correct realtime events.
-func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
+func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, nil, err

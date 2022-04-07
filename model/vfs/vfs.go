@@ -288,6 +288,13 @@ type VFS interface {
 	GetIndexer() Indexer
 }
 
+// Prefixer interface describes a prefixer that can also give the context for
+// the targeted instance.
+type Prefixer interface {
+	prefixer.Prefixer
+	GetContextName() string
+}
+
 // ErrIteratorDone is returned by the Next() method of the iterator when
 // the iterator is actually done.
 var ErrIteratorDone = errors.New("No more element in the iterator")

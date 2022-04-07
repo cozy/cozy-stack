@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -335,9 +336,9 @@ var globalViews = []*View{
 // on every startup of the stack.
 func InitGlobalDB() error {
 	g, _ := errgroup.WithContext(context.Background())
-	DefineIndexes(g, GlobalSecretsDB, secretIndexes)
-	DefineIndexes(g, GlobalDB, globalIndexes)
-	DefineViews(g, GlobalDB, globalViews)
+	DefineIndexes(g, prefixer.SecretsPrefixer, secretIndexes)
+	DefineIndexes(g, prefixer.GlobalPrefixer, globalIndexes)
+	DefineViews(g, prefixer.GlobalPrefixer, globalViews)
 	return g.Wait()
 }
 

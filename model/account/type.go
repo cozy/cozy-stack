@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 )
 
@@ -403,9 +404,9 @@ func TypeInfo(id, contextName string) (*AccountType, error) {
 		return nil, errors.New("no account type id provided")
 	}
 	var a AccountType
-	err := couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.AccountTypes, contextName+"/"+id, &a)
+	err := couchdb.GetDoc(prefixer.SecretsPrefixer, consts.AccountTypes, contextName+"/"+id, &a)
 	if couchdb.IsNotFoundError(err) {
-		err = couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.AccountTypes, id, &a)
+		err = couchdb.GetDoc(prefixer.SecretsPrefixer, consts.AccountTypes, id, &a)
 	}
 	if err != nil {
 		return nil, err
@@ -421,7 +422,7 @@ func FindAccountTypesBySlug(slug, contextName string) ([]*AccountType, error) {
 		Selector: mango.Equal("slug", slug),
 		Limit:    100,
 	}
-	err := couchdb.FindDocs(couchdb.GlobalSecretsDB, consts.AccountTypes, req, &docs)
+	err := couchdb.FindDocs(prefixer.SecretsPrefixer, consts.AccountTypes, req, &docs)
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/httpcache"
 	"github.com/labstack/echo/v4"
 )
@@ -254,7 +255,7 @@ func extractVariables(verb string, in *http.Request) (map[string]string, error) 
 
 func findSecret(doctype, secretName string) (string, bool) {
 	var doc couchdb.JSONDoc
-	err := couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.RemoteSecrets, doctype, &doc)
+	err := couchdb.GetDoc(prefixer.SecretsPrefixer, consts.RemoteSecrets, doctype, &doc)
 	if err != nil {
 		return "", false
 	}

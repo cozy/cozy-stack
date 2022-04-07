@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
@@ -289,7 +290,7 @@ func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (
 		return nil, err
 	}
 
-	if err := couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
+	if err := couchdb.CreateDoc(prefixer.GlobalPrefixer, exportDoc); err != nil {
 		return nil, err
 	}
 	realtime.GetHub().Publish(i, realtime.EventCreate, exportDoc.Clone(), nil)

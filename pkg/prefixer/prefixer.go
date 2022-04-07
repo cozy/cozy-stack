@@ -7,13 +7,6 @@ type Prefixer interface {
 	DomainName() string
 }
 
-// Contexter interface describes a prefixer that can also give the context for
-// the targeted instance.
-type Contexter interface {
-	Prefixer
-	GetContextName() string
-}
-
 type prefixer struct {
 	domain string
 	prefix string
@@ -42,3 +35,7 @@ func NewPrefixer(domain, prefix string) Prefixer {
 
 // GlobalPrefixer returns a global prefixer with the wildcard '*' as prefix.
 var GlobalPrefixer = NewPrefixer("", "global")
+
+// SecretsPrefixer is the the prefix used for db which hold
+// a cozy stack secrets.
+var SecretsPrefixer = NewPrefixer("", "secrets")

@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/spf13/afero"
 )
 
@@ -571,7 +572,7 @@ func List() ([]*Instance, error) {
 
 // ForeachInstances execute the given callback for each instances.
 func ForeachInstances(fn func(*Instance) error) error {
-	return couchdb.ForeachDocsWithCustomPagination(couchdb.GlobalDB, consts.Instances, 10000, func(_ string, data json.RawMessage) error {
+	return couchdb.ForeachDocsWithCustomPagination(prefixer.GlobalPrefixer, consts.Instances, 10000, func(_ string, data json.RawMessage) error {
 		var doc *Instance
 		if err := json.Unmarshal(data, &doc); err != nil {
 			return err
@@ -590,7 +591,7 @@ func PaginatedList(limit int, startKey string, skip int) ([]*Instance, string, e
 		StartKey: startKey,
 		Skip:     skip,
 	}
-	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
+	err := couchdb.GetAllDocs(prefixer.GlobalPrefixer, consts.Instances, req, &docs)
 	if err != nil {
 		return nil, "", err
 	}

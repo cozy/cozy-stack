@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
@@ -504,7 +505,7 @@ func cleanInstance() {
 	_ = lifecycle.Destroy("tos.test.cozycloud.cc")
 }
 
-func getDB(t *testing.T, domain string) couchdb.Database {
+func getDB(t *testing.T, domain string) prefixer.Prefixer {
 	instance, err := lifecycle.GetInstance(domain)
 	if !assert.NoError(t, err, "Should get instance %v", domain) {
 		t.FailNow()

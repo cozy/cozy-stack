@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -856,8 +857,8 @@ func TestPatchInstanceRemoveParams(t *testing.T) {
 }
 
 func TestFeatureFlags(t *testing.T) {
-	_ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings)
-	defer func() { _ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings) }()
+	_ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings)
+	defer func() { _ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings) }()
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/flags", nil)
 	assert.NoError(t, err)
@@ -908,7 +909,7 @@ func TestFeatureFlags(t *testing.T) {
 	}
 	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, testInstance.ContextName)
 	ctxFlags.SetID(id)
-	err = couchdb.CreateNamedDocWithDB(couchdb.GlobalDB, &ctxFlags)
+	err = couchdb.CreateNamedDocWithDB(prefixer.GlobalPrefixer, &ctxFlags)
 	assert.NoError(t, err)
 	defFlags := couchdb.JSONDoc{Type: consts.Settings}
 	defFlags.M = map[string]interface{}{
@@ -920,7 +921,7 @@ func TestFeatureFlags(t *testing.T) {
 		"from_defaults":        true,
 	}
 	defFlags.SetID(consts.DefaultFlagsSettingsID)
-	err = couchdb.CreateNamedDocWithDB(couchdb.GlobalDB, &defFlags)
+	err = couchdb.CreateNamedDocWithDB(prefixer.GlobalPrefixer, &defFlags)
 	assert.NoError(t, err)
 
 	res2, err := http.DefaultClient.Do(req)

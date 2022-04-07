@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -146,10 +147,10 @@ func TestInjectSecret(t *testing.T) {
 			"token": "123456789",
 		},
 	}
-	err := couchdb.CreateNamedDocWithDB(couchdb.GlobalSecretsDB, &doc)
+	err := couchdb.CreateNamedDocWithDB(prefixer.SecretsPrefixer, &doc)
 	assert.NoError(t, err)
 	defer func() {
-		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &doc)
+		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &doc)
 	}()
 
 	raw := `POST https://example.org/foo/

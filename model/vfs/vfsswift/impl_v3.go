@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift/v2"
@@ -46,7 +45,7 @@ const swiftV3ContainerPrefix = "cozy-v3-"
 // in the name), and it is poor in features (for example, we want to swap an
 // old version with the current version without having to download/upload
 // contents, and it is not supported).
-func NewV3(db prefixer.Contexter, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+func NewV3(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV3{
 		Indexer:         index,
 		DiskThresholder: disk,

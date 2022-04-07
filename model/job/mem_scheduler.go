@@ -80,7 +80,7 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	}
 
 	var ts []*TriggerInfos
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.Instances, func(_ string, data json.RawMessage) error {
 		var db inst
 		if err := json.Unmarshal(data, &db); err != nil {
 			return err

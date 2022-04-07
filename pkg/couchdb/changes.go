@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/google/go-querystring/query"
 )
 
@@ -140,7 +141,7 @@ type Change struct {
 }
 
 // GetChanges returns a list of changes in couchdb
-func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
+func GetChanges(db prefixer.Prefixer, req *ChangesRequest) (*ChangesResponse, error) {
 	if req.DocType == "" {
 		return nil, errors.New("Empty doctype in GetChanges")
 	}
@@ -161,7 +162,7 @@ func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
 }
 
 // PostChanges returns a list of changes in couchdb
-func PostChanges(db Database, req *ChangesRequest, body io.ReadCloser) (*ChangesResponse, error) {
+func PostChanges(db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) (*ChangesResponse, error) {
 	var payload json.RawMessage
 	if err := json.NewDecoder(body).Decode(&payload); err != nil {
 		return nil, err

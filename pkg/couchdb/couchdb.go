@@ -14,6 +14,7 @@ import (
 
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -31,10 +32,6 @@ const MaxString = mango.MaxString
 // document.
 const SelectorReferencedBy = "referenced_by"
 
-// accountDocType is equal to consts.Accounts which we cannot import without
-// a circular dependency for now.
-const accountDocType = "io.cozy.accounts"
-
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
 // ID of the document.
@@ -48,17 +45,8 @@ type Doc interface {
 	SetRev(rev string)
 }
 
-// Database is the type passed to every function in couchdb package
-// for now it is just a string with the database prefix.
-type Database prefixer.Prefixer
-
-// newDatabase returns a Database from a prefix, useful for test
-func newDatabase(prefix string) prefixer.Prefixer {
-	return prefixer.NewPrefixer("", prefix)
-}
-
 // RTEvent published a realtime event for a couchDB change
-func RTEvent(db Database, verb string, doc, oldDoc Doc) {
+func RTEvent(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	if err := runHooks(db, verb, doc, oldDoc); err != nil {
 		logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
@@ -66,13 +54,6 @@ func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 	docClone := doc.Clone()
 	go realtime.GetHub().Publish(db, verb, docClone, oldDoc)
 }
-
-// GlobalDB is the prefix used for stack-scoped db
-var GlobalDB = newDatabase("global")
-
-// GlobalSecretsDB is the the prefix used for db which hold
-// a cozy stack secrets.
-var GlobalSecretsDB = newDatabase("secrets")
 
 // View is the map/reduce thing in CouchDB
 type View struct {
@@ -240,7 +221,7 @@ func EscapeCouchdbName(name string) string {
 	return strings.ToLower(name)
 }
 
-func makeDBName(db Database, doctype string) string {
+func makeDBName(db prefixer.Prefixer, doctype string) string {
 	dbname := EscapeCouchdbName(db.DBPrefix() + "/" + doctype)
 	return url.PathEscape(dbname)
 }
@@ -253,7 +234,7 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 	return true, strings.Replace(dbname, dbprefix, "", 1)
 }
 
-func buildCouchRequest(db Database, doctype, method, path string, reqjson []byte, headers map[string]string) (*http.Request, error) {
+func buildCouchRequest(db prefixer.Prefixer, doctype, method, path string, reqjson []byte, headers map[string]string) (*http.Request, error) {
 	if doctype != "" {
 		path = makeDBName(db, doctype) + "/" + path
 	}
@@ -282,7 +263,7 @@ func buildCouchRequest(db Database, doctype, method, path string, reqjson []byte
 	return req, nil
 }
 
-func handleResponseError(db Database, resp *http.Response) error {
+func handleResponseError(db prefixer.Prefixer, resp *http.Response) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
@@ -302,7 +283,7 @@ func handleResponseError(db Database, resp *http.Response) error {
 	return err
 }
 
-func makeRequest(db Database, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
+func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
 	var err error
 	var reqjson []byte
 
@@ -316,7 +297,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
-	logDebug := doctype != accountDocType && log.IsDebug()
+	logDebug := doctype != consts.Accounts && log.IsDebug()
 
 	if logDebug {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
@@ -368,7 +349,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 }
 
 // UUID requests a Universally Unique Identifier (UUID) from CouchDB.
-func UUID(db Database) (string, error) {
+func UUID(db prefixer.Prefixer) (string, error) {
 	var out UUIDResponse
 	if err := makeRequest(db, "", http.MethodGet, "_uuids", nil, &out); err != nil {
 		return "", err
@@ -378,12 +359,12 @@ func UUID(db Database) (string, error) {
 
 // DBStatus responds with informations on the database: size, number of
 // documents, sequence numbers, etc.
-func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
+func DBStatus(db prefixer.Prefixer, doctype string) (*DBStatusResponse, error) {
 	var out DBStatusResponse
 	return &out, makeRequest(db, doctype, http.MethodGet, "", nil, &out)
 }
 
-func allDbs(db Database) ([]string, error) {
+func allDbs(db prefixer.Prefixer) ([]string, error) {
 	var dbs []string
 	prefix := EscapeCouchdbName(db.DBPrefix())
 	u := fmt.Sprintf(`_all_dbs?start_key="%s"&end_key="%s"`, prefix+"/", prefix+"0")
@@ -395,7 +376,7 @@ func allDbs(db Database) ([]string, error) {
 
 // AllDoctypes returns a list of all the doctypes that have a database
 // on a given instance
-func AllDoctypes(db Database) ([]string, error) {
+func AllDoctypes(db prefixer.Prefixer) ([]string, error) {
 	dbs, err := allDbs(db)
 	if err != nil {
 		return nil, err
@@ -414,7 +395,7 @@ func AllDoctypes(db Database) ([]string, error) {
 
 // GetDoc fetches a document by its docType and id
 // It fills with out by json.Unmarshal-ing
-func GetDoc(db Database, doctype, id string, out Doc) error {
+func GetDoc(db prefixer.Prefixer, doctype, id string, out Doc) error {
 	var err error
 	id, err = validateDocID(id)
 	if err != nil {
@@ -428,7 +409,7 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 
 // GetDocRev fetch a document by its docType and ID on a specific revision, out
 // is filled with the document by json.Unmarshal-ing
-func GetDocRev(db Database, doctype, id, rev string, out Doc) error {
+func GetDocRev(db prefixer.Prefixer, doctype, id, rev string, out Doc) error {
 	var err error
 	id, err = validateDocID(id)
 	if err != nil {
@@ -444,7 +425,7 @@ func GetDocRev(db Database, doctype, id, rev string, out Doc) error {
 // GetDocWithRevs fetches a document by its docType and ID.
 // out is filled with the document by json.Unmarshal-ing and contains the list
 // of all revisions
-func GetDocWithRevs(db Database, doctype, id string, out Doc) error {
+func GetDocWithRevs(db prefixer.Prefixer, doctype, id string, out Doc) error {
 	var err error
 	id, err = validateDocID(id)
 	if err != nil {
@@ -458,7 +439,7 @@ func GetDocWithRevs(db Database, doctype, id string, out Doc) error {
 }
 
 // EnsureDBExist creates the database for the doctype if it doesn't exist
-func EnsureDBExist(db Database, doctype string) error {
+func EnsureDBExist(db prefixer.Prefixer, doctype string) error {
 	_, err := DBStatus(db, doctype)
 	if IsNoDatabaseError(err) {
 		_ = CreateDB(db, doctype)
@@ -468,7 +449,7 @@ func EnsureDBExist(db Database, doctype string) error {
 }
 
 // CreateDB creates the necessary database for a doctype
-func CreateDB(db Database, doctype string) error {
+func CreateDB(db prefixer.Prefixer, doctype string) error {
 	// XXX On dev release of the stack, we force some parameters at the
 	// creation of a database. It helps CouchDB to have more acceptable
 	// performances inside Docker. Those parameters are not suitable for
@@ -491,13 +472,13 @@ func CreateDB(db Database, doctype string) error {
 }
 
 // DeleteDB destroy the database for a doctype
-func DeleteDB(db Database, doctype string) error {
+func DeleteDB(db prefixer.Prefixer, doctype string) error {
 	return makeRequest(db, doctype, http.MethodDelete, "", nil, nil)
 }
 
 // DeleteAllDBs will remove all the couchdb doctype databases for
 // a couchdb.DB.
-func DeleteAllDBs(db Database) error {
+func DeleteAllDBs(db prefixer.Prefixer) error {
 	dbprefix := db.DBPrefix()
 	if dbprefix == "" {
 		return fmt.Errorf("You need to provide a valid database")
@@ -522,7 +503,7 @@ func DeleteAllDBs(db Database) error {
 }
 
 // ResetDB destroy and recreate the database for a doctype
-func ResetDB(db Database, doctype string) error {
+func ResetDB(db prefixer.Prefixer, doctype string) error {
 	err := DeleteDB(db, doctype)
 	if err != nil && !IsNoDatabaseError(err) {
 		return err
@@ -534,7 +515,7 @@ func ResetDB(db Database, doctype string) error {
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
 // The document's SetRev will be called with tombstone revision
-func DeleteDoc(db Database, doc Doc) error {
+func DeleteDoc(db prefixer.Prefixer, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
@@ -546,7 +527,7 @@ func DeleteDoc(db Database, doc Doc) error {
 
 	// XXX Specific log for the deletion of an account, to help monitor this
 	// metric.
-	if doc.DocType() == accountDocType {
+	if doc.DocType() == consts.Accounts {
 		logger.WithDomain(db.DomainName()).
 			WithFields(logrus.Fields{
 				"log_id":      "account_delete",
@@ -583,7 +564,7 @@ func NewEmptyObjectOfSameType(obj interface{}) interface{} {
 
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
-func UpdateDoc(db Database, doc Doc) error {
+func UpdateDoc(db prefixer.Prefixer, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
@@ -613,7 +594,7 @@ func UpdateDoc(db Database, doc Doc) error {
 
 // UpdateDocWithOld updates a document, like UpdateDoc. The difference is that
 // if we already have oldDoc there is no need to refetch it from database.
-func UpdateDocWithOld(db Database, doc, oldDoc Doc) error {
+func UpdateDocWithOld(db prefixer.Prefixer, doc, oldDoc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
@@ -638,7 +619,7 @@ func UpdateDocWithOld(db Database, doc, oldDoc Doc) error {
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.
 // The doc SetRev function will be called with the new rev.
-func CreateNamedDoc(db Database, doc Doc) error {
+func CreateNamedDoc(db prefixer.Prefixer, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
@@ -659,7 +640,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 
 // CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
 // if it does not exist
-func CreateNamedDocWithDB(db Database, doc Doc) error {
+func CreateNamedDocWithDB(db prefixer.Prefixer, doc Doc) error {
 	err := CreateNamedDoc(db, doc)
 	if IsNoDatabaseError(err) {
 		err = CreateDB(db, doc.DocType())
@@ -672,7 +653,7 @@ func CreateNamedDocWithDB(db Database, doc Doc) error {
 }
 
 // Upsert create the doc or update it if it already exists.
-func Upsert(db Database, doc Doc) error {
+func Upsert(db prefixer.Prefixer, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
@@ -698,7 +679,7 @@ func Upsert(db Database, doc Doc) error {
 	return UpdateDoc(db, doc)
 }
 
-func createDocOrDB(db Database, doc Doc, response interface{}) error {
+func createDocOrDB(db prefixer.Prefixer, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
 	err := makeRequest(db, doctype, http.MethodPost, "", doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
@@ -715,7 +696,7 @@ func createDocOrDB(db Database, doc Doc, response interface{}) error {
 // database. The document's SetRev and SetID function will be called
 // with the document's new ID and Rev.
 // This function creates a database if this is the first document of its type
-func CreateDoc(db Database, doc Doc) error {
+func CreateDoc(db prefixer.Prefixer, doc Doc) error {
 	var res *UpdateResponse
 
 	if doc.ID() != "" {
@@ -736,7 +717,7 @@ func CreateDoc(db Database, doc Doc) error {
 }
 
 // DefineViews creates a design doc with some views
-func DefineViews(g *errgroup.Group, db Database, views []*View) {
+func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 	for i := range views {
 		v := views[i]
 		g.Go(func() error {
@@ -808,7 +789,7 @@ func equalViews(v1 *ViewDesignDoc, v2 *ViewDesignDoc) bool {
 }
 
 // ExecView executes the specified view function
-func ExecView(db Database, view *View, req *ViewRequest, results interface{}) error {
+func ExecView(db prefixer.Prefixer, view *View, req *ViewRequest, results interface{}) error {
 	viewurl := fmt.Sprintf("_design/%s/_view/%s", view.Name, view.Name)
 	if req.GroupLevel > 0 {
 		req.Group = true
@@ -839,7 +820,7 @@ func ExecView(db Database, view *View, req *ViewRequest, results interface{}) er
 
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
-func DefineIndex(db Database, index *mango.Index) error {
+func DefineIndex(db prefixer.Prefixer, index *mango.Index) error {
 	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
 	if err != nil {
 		logger.WithDomain(db.DomainName()).
@@ -849,7 +830,7 @@ func DefineIndex(db Database, index *mango.Index) error {
 }
 
 // DefineIndexRaw defines a index
-func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreationResponse, error) {
+func DefineIndexRaw(db prefixer.Prefixer, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := "_index"
 	response := &IndexCreationResponse{}
 	err := makeRequest(db, doctype, http.MethodPost, url, &index, &response)
@@ -872,7 +853,7 @@ func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreat
 }
 
 // DefineIndexes defines a list of indexes
-func DefineIndexes(g *errgroup.Group, db Database, indexes []*mango.Index) {
+func DefineIndexes(g *errgroup.Group, db prefixer.Prefixer, indexes []*mango.Index) {
 	for i := range indexes {
 		index := indexes[i]
 		g.Go(func() error { return DefineIndex(db, index) })
@@ -880,7 +861,7 @@ func DefineIndexes(g *errgroup.Group, db Database, indexes []*mango.Index) {
 }
 
 // Copy copies an existing doc to a specified destination
-func Copy(db Database, doctype, path, destination string) (map[string]interface{}, error) {
+func Copy(db prefixer.Prefixer, doctype, path, destination string) (map[string]interface{}, error) {
 	headers := map[string]string{"Destination": destination}
 	// COPY is not a standard HTTP method
 	req, err := buildCouchRequest(db, doctype, "COPY", path, nil, headers)
@@ -903,19 +884,19 @@ func Copy(db Database, doctype, path, destination string) (map[string]interface{
 
 // FindDocs returns all documents matching the passed FindRequest
 // documents will be unmarshalled in the provided results slice.
-func FindDocs(db Database, doctype string, req *FindRequest, results interface{}) error {
+func FindDocs(db prefixer.Prefixer, doctype string, req *FindRequest, results interface{}) error {
 	_, err := FindDocsRaw(db, doctype, req, results)
 	return err
 }
 
 // FindDocsUnoptimized allows search on non-indexed fields.
 // /!\ Use with care
-func FindDocsUnoptimized(db Database, doctype string, req *FindRequest, results interface{}) error {
+func FindDocsUnoptimized(db prefixer.Prefixer, doctype string, req *FindRequest, results interface{}) error {
 	_, err := findDocsRaw(db, doctype, req, results, true)
 	return err
 }
 
-func findDocsRaw(db Database, doctype string, req interface{}, results interface{}, ignoreUnoptimized bool) (*FindResponse, error) {
+func findDocsRaw(db prefixer.Prefixer, doctype string, req interface{}, results interface{}, ignoreUnoptimized bool) (*FindResponse, error) {
 	url := "_find"
 	// prepare a structure to receive the results
 	var response FindResponse
@@ -944,13 +925,13 @@ func findDocsRaw(db Database, doctype string, req interface{}, results interface
 }
 
 // FindDocsRaw find documents
-func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) (*FindResponse, error) {
+func FindDocsRaw(db prefixer.Prefixer, doctype string, req interface{}, results interface{}) (*FindResponse, error) {
 	return findDocsRaw(db, doctype, req, results, false)
 }
 
 // NormalDocs returns all the documents from a database, with pagination, but
 // it excludes the design docs.
-func NormalDocs(db Database, doctype string, skip, limit int, bookmark string, executionStats bool) (*NormalDocsResponse, error) {
+func NormalDocs(db prefixer.Prefixer, doctype string, skip, limit int, bookmark string, executionStats bool) (*NormalDocsResponse, error) {
 	var findRes struct {
 		Docs           []json.RawMessage `json:"docs"`
 		Bookmark       string            `json:"bookmark"`

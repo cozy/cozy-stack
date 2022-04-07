@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 )
 
@@ -117,7 +118,7 @@ func (e *ExportDoc) MarksAsFinished(i *instance.Instance, size int64, err error)
 		e.State = ExportStateError
 		e.Error = err.Error()
 	}
-	return couchdb.UpdateDoc(couchdb.GlobalDB, e)
+	return couchdb.UpdateDoc(prefixer.GlobalPrefixer, e)
 }
 
 // SendExportMail sends a mail to the user with a link where they can download
@@ -265,7 +266,7 @@ func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
 		return nil, ErrMACInvalid
 	}
 	var exportDoc ExportDoc
-	if err := couchdb.GetDoc(couchdb.GlobalDB, consts.Exports, exportID, &exportDoc); err != nil {
+	if err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Exports, exportID, &exportDoc); err != nil {
 		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
 			return nil, ErrExportNotFound
 		}
@@ -289,7 +290,7 @@ func GetExports(domain string) ([]*ExportDoc, error) {
 		},
 		Limit: 256,
 	}
-	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
+	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Exports, req, &docs)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return nil, err
 	}

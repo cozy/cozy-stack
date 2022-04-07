@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -192,7 +193,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 
 	opts.trace("init couchdb", func() {
 		g, _ := errgroup.WithContext(context.Background())
-		g.Go(func() error { return couchdb.CreateDoc(couchdb.GlobalDB, i) })
+		g.Go(func() error { return couchdb.CreateDoc(prefixer.GlobalPrefixer, i) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Files) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Apps) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Konnectors) })

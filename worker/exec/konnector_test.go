@@ -225,13 +225,13 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		Slug:      "my-konnector-1",
 		Secret:    "s3cr3t",
 	}
-	err = couchdb.CreateDoc(couchdb.GlobalSecretsDB, at)
+	err = couchdb.CreateDoc(prefixer.SecretsPrefixer, at)
 	assert.NoError(t, err)
 	defer func() {
 		// Clean the account types
 		ats, _ := account.FindAccountTypesBySlug("my-konnector-1", "all-contexts")
 		for _, at = range ats {
-			_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
+			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, at)
 		}
 	}()
 
