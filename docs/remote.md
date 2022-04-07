@@ -176,9 +176,11 @@ we want to make the stack add a `token`, we can use `{{secret_token}}` in the
 remote doctype declation:
 
 ```http
-GET https://foobar.com/baz/
+GET https://foobar.com/baz/ HTTP/1.1
 Authorization: Bearer {{secret_token}}
+```
 
+```json
 {
   "foo": "{{json foo}}",
   "bar": "{{json bar}}"
