@@ -24,6 +24,7 @@ type swiftVFSV3 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c         *swift.Connection
+	cluster   int
 	domain    string
 	prefix    string
 	context   string
@@ -51,6 +52,7 @@ func NewV3(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
+		cluster:   db.DBCluster(),
 		domain:    db.DomainName(),
 		prefix:    db.DBPrefix(),
 		context:   db.GetContextName(),
@@ -87,6 +89,10 @@ func makeDocIDV3(objName string) (string, string) {
 		return parts[0], parts[1]
 	}
 	return objName[:22] + objName[23:28] + objName[29:34], objName[35:]
+}
+
+func (sfs *swiftVFSV3) DBCluster() int {
+	return sfs.cluster
 }
 
 func (sfs *swiftVFSV3) DBPrefix() string {

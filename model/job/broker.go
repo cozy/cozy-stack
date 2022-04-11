@@ -76,6 +76,7 @@ type (
 	Job struct {
 		JobID       string      `json:"_id,omitempty"`
 		JobRev      string      `json:"_rev,omitempty"`
+		Cluster     int         `json:"cluster,omitempty"`
 		Domain      string      `json:"domain"`
 		Prefix      string      `json:"prefix,omitempty"`
 		WorkerType  string      `json:"worker"`
@@ -116,6 +117,11 @@ type (
 )
 
 var joblog = logger.WithNamespace("jobs")
+
+// DBCluster implements the prefixer.Prefixer interface.
+func (j *Job) DBCluster() int {
+	return j.Cluster
+}
 
 // DBPrefix implements the prefixer.Prefixer interface.
 func (j *Job) DBPrefix() string {
@@ -318,6 +324,7 @@ func (m Message) MarshalJSON() ([]byte, error) {
 // NewJob creates a new Job instance from a job request.
 func NewJob(db prefixer.Prefixer, req *JobRequest) *Job {
 	return &Job{
+		Cluster:     db.DBCluster(),
 		Domain:      db.DomainName(),
 		Prefix:      db.DBPrefix(),
 		WorkerType:  req.WorkerType,

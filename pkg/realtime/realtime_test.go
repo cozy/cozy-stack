@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testingDB = prefixer.NewPrefixer("testing", "testing")
+var testingDB = prefixer.NewPrefixer(0, "testing", "testing")
 
 type testDoc struct {
 	id      string

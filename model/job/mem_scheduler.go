@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -40,22 +41,6 @@ func newMemScheduler() *memScheduler {
 	}
 }
 
-type inst struct {
-	Domain string `json:"domain"`
-	Prefix string `json:"prefix"`
-}
-
-func (i inst) DBPrefix() string {
-	if i.Prefix != "" {
-		return i.Prefix
-	}
-	return i.Domain
-}
-
-func (i inst) DomainName() string {
-	return i.Domain
-}
-
 // StartScheduler will start the scheduler by actually loading all triggers
 // from the scheduler's storage and associate for each of them a go routine in
 // which they wait for the trigger send job requests.
@@ -81,8 +66,8 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 
 	var ts []*TriggerInfos
 	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.Instances, func(_ string, data json.RawMessage) error {
-		var db inst
-		if err := json.Unmarshal(data, &db); err != nil {
+		db := &instance.Instance{}
+		if err := json.Unmarshal(data, db); err != nil {
 			return err
 		}
 		err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {

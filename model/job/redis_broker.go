@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -158,8 +159,7 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 			continue
 		}
 
-		key := results[0]
-		val := results[1]
+		key, val := results[0], results[1]
 		if len(key) < len(redisPrefix) {
 			joblog.Warnf("Invalid key %s", key)
 			continue
@@ -171,10 +171,17 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 			continue
 		}
 
-		prefix, jobID := parts[0], parts[1]
-		job, err := Get(prefixer.NewPrefixer("", prefix), jobID)
+		jobID := parts[1]
+		parts = strings.SplitN(parts[0], "%", 2)
+		prefix := parts[0]
+		var cluster int
+		if len(parts) > 1 {
+			cluster, _ = strconv.Atoi(parts[1])
+		}
+		job, err := Get(prefixer.NewPrefixer(cluster, "", prefix), jobID)
 		if err != nil {
-			joblog.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
+			joblog.Warnf("Cannot find job %s on domain %s (%d): %s",
+				jobID, prefix, cluster, err)
 			continue
 		}
 
@@ -237,7 +244,11 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	}
 
 	key := redisPrefix + job.WorkerType
-	val := job.DBPrefix() + "/" + job.JobID
+	prefix := job.DBPrefix()
+	if cluster := job.DBCluster(); cluster > 0 {
+		prefix = fmt.Sprintf("%s%%%d", prefix, cluster)
+	}
+	val := prefix + "/" + job.JobID
 
 	// When the job is manual, it is being pushed in a specific prioritized
 	// queue.

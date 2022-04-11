@@ -11,7 +11,7 @@ import (
 
 const redisURL = "redis://localhost:6379/0"
 
-var testInstance = prefixer.NewPrefixer("cozy.example.net", "cozy-example-net")
+var testInstance = prefixer.NewPrefixer(0, "cozy.example.net", "cozy-example-net")
 
 func TestLoginRateNotExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()

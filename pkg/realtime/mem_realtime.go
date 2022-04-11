@@ -6,7 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
-var globalPrefixer = prefixer.NewPrefixer("", "*")
+var globalPrefixer = prefixer.NewPrefixer(prefixer.GlobalCouchCluster, "", "*")
 
 type memHub struct {
 	sync.RWMutex

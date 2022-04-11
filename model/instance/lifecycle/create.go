@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -151,6 +153,12 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		}
 	}
 
+	clusters := config.GetConfig().CouchDB.Clusters
+	i.CouchCluster, err = ChooseCouchCluster(clusters)
+	if err != nil {
+		return nil, err
+	}
+
 	if opts.AuthMode != "" {
 		var authMode instance.AuthMode
 		if authMode, err = instance.StringToAuthMode(opts.AuthMode); err == nil {
@@ -252,6 +260,24 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	})
 
 	return i, nil
+}
+
+func ChooseCouchCluster(clusters []config.CouchDBCluster) (int, error) {
+	index := -1
+	var count uint32 = 0
+	for i, cluster := range clusters {
+		if !cluster.Creation {
+			continue
+		}
+		count++
+		if rand.Uint32() <= math.MaxUint32/count {
+			index = i
+		}
+	}
+	if index < 0 {
+		return index, errors.New("no CouchDB cluster available for creation")
+	}
+	return index, nil
 }
 
 func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, error) {

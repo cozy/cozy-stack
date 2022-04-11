@@ -14,8 +14,8 @@ func TestStoreInMemory(t *testing.T) {
 	storeTTL = 100 * time.Millisecond
 	defer func() { storeTTL = wasStoreTTL }()
 
-	dbA := prefixer.NewPrefixer("alice.cozycloud.local", "alice.cozycloud.local")
-	dbB := prefixer.NewPrefixer("bob.cozycloud.local", "bob.cozycloud.local")
+	dbA := prefixer.NewPrefixer(0, "alice.cozycloud.local", "alice.cozycloud.local")
+	dbB := prefixer.NewPrefixer(0, "bob.cozycloud.local", "bob.cozycloud.local")
 	store := newMemStore()
 
 	path := "/test/random/path.txt"
@@ -76,8 +76,8 @@ func TestStoreInRedis(t *testing.T) {
 	storeTTL = 100 * time.Millisecond
 	defer func() { storeTTL = wasStoreTTL }()
 
-	dbA := prefixer.NewPrefixer("alice.cozycloud.local", "alice.cozycloud.local")
-	dbB := prefixer.NewPrefixer("bob.cozycloud.local", "bob.cozycloud.local")
+	dbA := prefixer.NewPrefixer(0, "alice.cozycloud.local", "alice.cozycloud.local")
+	dbB := prefixer.NewPrefixer(0, "bob.cozycloud.local", "bob.cozycloud.local")
 	opt, err := redis.ParseURL("redis://localhost:6379/15")
 	assert.NoError(t, err)
 	cli := redis.NewClient(opt)

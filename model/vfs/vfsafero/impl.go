@@ -31,6 +31,7 @@ type aferoVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 
+	cluster int
 	domain  string
 	prefix  string
 	context string
@@ -79,6 +80,7 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 		Indexer:         index,
 		DiskThresholder: disk,
 
+		cluster: db.DBCluster(),
 		domain:  db.DomainName(),
 		prefix:  db.DBPrefix(),
 		context: db.GetContextName(),
@@ -89,6 +91,10 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 		// root directory.
 		osFS: fsURL.Scheme == "file",
 	}, nil
+}
+
+func (afs *aferoVFS) DBCluster() int {
+	return afs.cluster
 }
 
 func (afs *aferoVFS) DomainName() string {

@@ -18,28 +18,21 @@ import (
 // Proxy generate a httputil.ReverseProxy which forwards the request to the
 // correct route.
 func Proxy(db prefixer.Prefixer, doctype, path string) *httputil.ReverseProxy {
-	couchURL := config.CouchURL()
-	couchAuth := config.GetConfig().CouchDB.Auth
+	couch := config.CouchCluster(db.DBCluster())
+	transport := config.CouchClient().Transport
 
 	director := func(req *http.Request) {
-		req.URL.Scheme = couchURL.Scheme
-		req.URL.Host = couchURL.Host
+		req.URL.Scheme = couch.URL.Scheme
+		req.URL.Host = couch.URL.Host
 		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
 		req.Header.Del(echo.HeaderCookie)
 		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
 		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
-		if couchAuth != nil {
-			if p, ok := couchAuth.Password(); ok {
-				req.SetBasicAuth(couchAuth.Username(), p)
+		if auth := couch.Auth; auth != nil {
+			if p, ok := auth.Password(); ok {
+				req.SetBasicAuth(auth.Username(), p)
 			}
 		}
-	}
-
-	var transport http.RoundTripper
-	if client := config.GetConfig().CouchDB.Client; client != nil {
-		transport = client.Transport
-	} else {
-		transport = http.DefaultTransport
 	}
 
 	return &httputil.ReverseProxy{
@@ -76,16 +69,9 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 	// reset body to proxy
 	req.Body = ioutil.NopCloser(bytes.NewReader(body))
 
-	var transport http.RoundTripper
-	if client := config.GetConfig().CouchDB.Client; client != nil {
-		transport = client.Transport
-	} else {
-		transport = http.DefaultTransport
-	}
-
 	p := Proxy(db, doctype, "/_bulk_docs")
 	p.Transport = &bulkTransport{
-		RoundTripper: transport,
+		RoundTripper: p.Transport,
 		OnResponseRead: func(data []byte) {
 			type respValue struct {
 				ID    string `json:"id"`

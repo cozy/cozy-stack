@@ -15,7 +15,7 @@ import (
 )
 
 func TestProperSerial(t *testing.T) {
-	job := jobs.NewJob(prefixer.NewPrefixer("cozy.localhost:8080", "cozy.localhost:8080"),
+	job := jobs.NewJob(prefixer.NewPrefixer(0, "cozy.localhost:8080", "cozy.localhost:8080"),
 		&jobs.JobRequest{
 			WorkerType: "",
 		})

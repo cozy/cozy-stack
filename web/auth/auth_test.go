@@ -1052,13 +1052,18 @@ func TestInstallAppWithLinkedApp(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 302, res.StatusCode)
 	defer res.Body.Close()
-	couchdbURL := config.GetConfig().CouchDB.URL
+	couch := config.CouchCluster(testInstance.DBCluster())
 	db := testInstance.DBPrefix() + "%2F" + consts.Apps
 	err = couchdb.EnsureDBExist(testInstance, consts.Apps)
 	assert.NoError(t, err)
-	reqGetChanges, err := http.NewRequest("GET", couchdbURL.String()+couchdb.EscapeCouchdbName(db)+"/_changes?feed=longpoll", nil)
+	reqGetChanges, err := http.NewRequest("GET", couch.URL.String()+couchdb.EscapeCouchdbName(db)+"/_changes?feed=longpoll", nil)
 	assert.NoError(t, err)
-	resGetChanges, err := client.Do(reqGetChanges)
+	if auth := couch.Auth; auth != nil {
+		if p, ok := auth.Password(); ok {
+			reqGetChanges.SetBasicAuth(auth.Username(), p)
+		}
+	}
+	resGetChanges, err := config.CouchClient().Do(reqGetChanges)
 	assert.NoError(t, err)
 	defer resGetChanges.Body.Close()
 	assert.Equal(t, resGetChanges.StatusCode, 200)

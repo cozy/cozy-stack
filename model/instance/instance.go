@@ -68,6 +68,8 @@ type Instance struct {
 	// See model/vfs/vfsswift for more details.
 	SwiftLayout int `json:"swift_cluster,omitempty"`
 
+	CouchCluster int `json:"couch_cluster,omitempty"`
+
 	// PassphraseHash is a hash of a hash of the user's passphrase: the
 	// passphrase is first hashed in client-side to avoid sending it to the
 	// server as it also used for encryption on client-side, and after that,
@@ -144,6 +146,12 @@ func (i *Instance) Clone() couchdb.Doc {
 	cloned.CLISecret = make([]byte, len(i.CLISecret))
 	copy(cloned.CLISecret, i.CLISecret)
 	return &cloned
+}
+
+// DBCluster returns the index of the CouchDB cluster where the databases for
+// this instance can be found.
+func (i *Instance) DBCluster() int {
+	return i.CouchCluster
 }
 
 // DBPrefix returns the prefix to use in database naming for the

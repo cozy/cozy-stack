@@ -26,7 +26,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-var TestPrefix = prefixer.NewPrefixer("test", "couchdb-tests")
+var TestPrefix = prefixer.NewPrefixer(0, "test", "couchdb-tests")
 var receivedEventsMutex sync.Mutex
 var receivedEvents map[string]*realtime.Event
 

@@ -76,7 +76,11 @@ func NewRedisScheduler(client redis.UniversalClient) Scheduler {
 }
 
 func redisKey(t Trigger) string {
-	return t.DBPrefix() + "/" + t.Infos().TID
+	prefix := t.DBPrefix()
+	if cluster := t.DBCluster(); cluster > 0 {
+		prefix = fmt.Sprintf("%s%%%d", prefix, cluster)
+	}
+	return prefix + "/" + t.Infos().TID
 }
 
 func payloadKey(t Trigger) string {
@@ -166,8 +170,8 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 			}
 			t, err := s.GetTrigger(event, triggerID)
 			if err != nil {
-				s.log.Warnf("Could not fetch @event trigger %s %s: %s",
-					event.Domain, triggerID, err.Error())
+				s.log.Warnf("Could not fetch @event trigger %s (%d) %s: %s",
+					event.Domain, event.Cluster, triggerID, err.Error())
 				continue
 			}
 			if t.Infos().WorkerType == "thumbnail" {
@@ -279,8 +283,14 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			return fmt.Errorf("Invalid key %s", res)
 		}
 
+		triggerID := parts[1]
+		parts = strings.SplitN(parts[0], "%", 2)
 		prefix := parts[0]
-		t, err := s.GetTrigger(prefixer.NewPrefixer("", prefix), parts[1])
+		var cluster int
+		if len(parts) > 1 {
+			cluster, _ = strconv.Atoi(parts[1])
+		}
+		t, err := s.GetTrigger(prefixer.NewPrefixer(cluster, "", prefix), triggerID)
 		if err != nil {
 			if err == ErrNotFoundTrigger || err == ErrMalformedTrigger {
 				s.client.ZRem(s.ctx, SchedKey, results[0])

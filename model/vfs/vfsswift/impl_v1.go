@@ -34,6 +34,7 @@ type swiftVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c             *swift.Connection
+	cluster       int
 	domain        string
 	prefix        string
 	container     string
@@ -52,6 +53,7 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		DiskThresholder: disk,
 
 		c:             config.GetSwiftConnection(),
+		cluster:       db.DBCluster(),
 		domain:        db.DomainName(),
 		prefix:        db.DBPrefix(),
 		container:     swiftV1ContainerPrefix + db.DBPrefix(),
@@ -61,6 +63,10 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		ctx:           context.Background(),
 		log:           logger.WithDomain(db.DomainName()).WithNamespace("vfsswift"),
 	}, nil
+}
+
+func (sfs *swiftVFS) DBCluster() int {
+	return sfs.cluster
 }
 
 func (sfs *swiftVFS) DBPrefix() string {

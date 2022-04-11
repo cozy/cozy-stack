@@ -31,7 +31,7 @@ func TestUnknownDomain(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	db := prefixer.NewPrefixer("instance.does.not.exist", "instance.does.not.exist")
+	db := prefixer.NewPrefixer(0, "instance.does.not.exist", "instance.does.not.exist")
 	j := job.NewJob(db, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",

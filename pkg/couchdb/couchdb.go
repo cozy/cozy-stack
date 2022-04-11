@@ -235,12 +235,13 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 }
 
 func buildCouchRequest(db prefixer.Prefixer, doctype, method, path string, reqjson []byte, headers map[string]string) (*http.Request, error) {
+	couch := config.CouchCluster(db.DBCluster())
 	if doctype != "" {
 		path = makeDBName(db, doctype) + "/" + path
 	}
 	req, err := http.NewRequest(
 		method,
-		config.CouchURL().String()+path,
+		couch.URL.String()+path,
 		bytes.NewReader(reqjson),
 	)
 	// Possible err = wrong method, unparsable url
@@ -254,8 +255,7 @@ func buildCouchRequest(db prefixer.Prefixer, doctype, method, path string, reqjs
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	auth := config.GetConfig().CouchDB.Auth
-	if auth != nil {
+	if auth := couch.Auth; auth != nil {
 		if p, ok := auth.Password(); ok {
 			req.SetBasicAuth(auth.Username(), p)
 		}
@@ -309,7 +309,7 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 	}
 
 	start := time.Now()
-	resp, err := config.GetConfig().CouchDB.Client.Do(req)
+	resp, err := config.CouchClient().Do(req)
 	elapsed := time.Since(start)
 	// Possible err = mostly connection failure
 	if err != nil {
@@ -868,7 +868,7 @@ func Copy(db prefixer.Prefixer, doctype, path, destination string) (map[string]i
 	if err != nil {
 		return nil, err
 	}
-	resp, err := config.GetConfig().CouchDB.Client.Do(req)
+	resp, err := config.CouchClient().Do(req)
 	if err != nil {
 		return nil, err
 	}

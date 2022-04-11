@@ -96,6 +96,15 @@ couchdb:
   # pinned_key: 57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6
   # insecure_skip_validation: true
 
+  # Multiple CouchDB clusters:
+  # clusters:
+  #   - url: http://couchdb1:5984/
+  #     instance_creation: true
+  #   - url: http://couchdb2:5984/
+  #     instance_creation: false
+  #   - url: http://couchdb3:5984/
+  #     instance_creation: true
+
 # jobs parameters to configure the job system
 jobs:
   # path to the imagemagick convert binary
