@@ -95,6 +95,45 @@ Magick, konnectors and services for example). And they can take several GB for
 the case of importing a Cozy. If needed, it is possible to configure the
 directory where they will be created via the `TMPDIR` environment variable.
 
+## Multiple CouchDB clusters
+
+With a large number of instances, a single CouchDB cluster may not be enough.
+Most cozy-stack administrators can ignore this section, but if you need this
+advanced settings, let's see how to configure it. We start with a classical
+configuration for a single cluster:
+
+```yaml
+couchdb:
+  url: http://cluster1:5984/
+```
+
+The first step is to add the new cluster, but still forces the creation on the
+first cluster for the moment:
+
+```yaml
+couchdb:
+  url: http://cluster1:5984/
+  clusters:
+    - url: http://cluster1:5984/
+      instance_creation: true
+    - url: http://cluster2:5984/
+      instance_creation: false
+```
+
+Then, we can restart the cozy-stack and every thing will work the same, except
+that the stack now knows how to use an instance on the new cluster. We can now
+use the second cluster for instance creations instead of the first:
+
+```yaml
+couchdb:
+  url: http://cluster1:5984/
+  clusters:
+    - url: http://cluster1:5984/
+      instance_creation: false
+    - url: http://cluster2:5984/
+      instance_creation: true
+```
+
 ## Hooks
 
 Cozy-stack can run scripts on some events to customize it. The scripts must be
