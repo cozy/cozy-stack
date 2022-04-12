@@ -76,7 +76,7 @@ type (
 	Job struct {
 		JobID       string      `json:"_id,omitempty"`
 		JobRev      string      `json:"_rev,omitempty"`
-		Cluster     int         `json:"cluster,omitempty"`
+		Cluster     int         `json:"couch_cluster,omitempty"`
 		Domain      string      `json:"domain"`
 		Prefix      string      `json:"prefix,omitempty"`
 		WorkerType  string      `json:"worker"`

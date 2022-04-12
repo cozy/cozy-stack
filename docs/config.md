@@ -134,6 +134,14 @@ couchdb:
       instance_creation: true
 ```
 
+**Notes:**
+
+1. if several CouchDB clusters are configured to accept creations, a new
+   instance will be put in a CouchDB cluster taken randomly
+
+2. each instance document will keep the list index of the CouchDB cluster used
+   for its databases, so don't remove a cluster in the middle of the list!
+
 ## Hooks
 
 Cozy-stack can run scripts on some events to customize it. The scripts must be

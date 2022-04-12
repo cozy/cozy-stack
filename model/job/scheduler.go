@@ -60,7 +60,7 @@ type (
 	TriggerInfos struct {
 		TID          string                 `json:"_id,omitempty"`
 		TRev         string                 `json:"_rev,omitempty"`
-		Cluster      int                    `json:"cluster,omitempty"`
+		Cluster      int                    `json:"couch_cluster,omitempty"`
 		Domain       string                 `json:"domain"`
 		Prefix       string                 `json:"prefix,omitempty"`
 		Type         string                 `json:"type"`
