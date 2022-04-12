@@ -120,7 +120,7 @@ couchdb:
       instance_creation: false
 ```
 
-Then, we can restart the cozy-stack and every thing will work the same, except
+Then, we can restart the cozy-stack and everything will work the same, except
 that the stack now knows how to use an instance on the new cluster. We can now
 use the second cluster for instance creations instead of the first:
 
