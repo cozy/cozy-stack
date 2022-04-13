@@ -10,35 +10,29 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/labstack/echo/v4"
 )
 
 // Proxy generate a httputil.ReverseProxy which forwards the request to the
 // correct route.
-func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
-	couchURL := config.CouchURL()
-	couchAuth := config.GetConfig().CouchDB.Auth
+func Proxy(db prefixer.Prefixer, doctype, path string) *httputil.ReverseProxy {
+	couch := config.CouchCluster(db.DBCluster())
+	transport := config.CouchClient().Transport
 
 	director := func(req *http.Request) {
-		req.URL.Scheme = couchURL.Scheme
-		req.URL.Host = couchURL.Host
+		req.URL.Scheme = couch.URL.Scheme
+		req.URL.Host = couch.URL.Host
 		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
 		req.Header.Del(echo.HeaderCookie)
 		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
 		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
-		if couchAuth != nil {
-			if p, ok := couchAuth.Password(); ok {
-				req.SetBasicAuth(couchAuth.Username(), p)
+		if auth := couch.Auth; auth != nil {
+			if p, ok := auth.Password(); ok {
+				req.SetBasicAuth(auth.Username(), p)
 			}
 		}
-	}
-
-	var transport http.RoundTripper
-	if client := config.GetConfig().CouchDB.Client; client != nil {
-		transport = client.Transport
-	} else {
-		transport = http.DefaultTransport
 	}
 
 	return &httputil.ReverseProxy{
@@ -51,7 +45,7 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 // request on the _bulk_docs endpoint. This endpoint is specific since it will
 // mutate many document in database, the stack has to read the response from
 // couch to emit the correct realtime events.
-func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
+func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, nil, err
@@ -75,16 +69,9 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 	// reset body to proxy
 	req.Body = ioutil.NopCloser(bytes.NewReader(body))
 
-	var transport http.RoundTripper
-	if client := config.GetConfig().CouchDB.Client; client != nil {
-		transport = client.Transport
-	} else {
-		transport = http.DefaultTransport
-	}
-
 	p := Proxy(db, doctype, "/_bulk_docs")
 	p.Transport = &bulkTransport{
-		RoundTripper: transport,
+		RoundTripper: p.Transport,
 		OnResponseRead: func(data []byte) {
 			type respValue struct {
 				ID    string `json:"id"`

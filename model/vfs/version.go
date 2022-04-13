@@ -160,7 +160,7 @@ func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 // - the tagged versions are kept
 // - two versions must not be too close in time
 // - there is a maximal number of versions.
-func FindVersionsToClean(db prefixer.Contexter, fileID string, candidate *Version) (bool, []*Version, error) {
+func FindVersionsToClean(db Prefixer, fileID string, candidate *Version) (bool, []*Version, error) {
 	olds, err := VersionsFor(db, fileID)
 	if err != nil {
 		return false, nil, err

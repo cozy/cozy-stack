@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // ActivateMaintenance activates maintenance for the given konnector.
@@ -19,7 +20,7 @@ func ActivateMaintenance(slug string, opts map[string]interface{}) error {
 	}
 	doc.M["flag_infra_maintenance"] = true
 	doc.SetID(slug)
-	return couchdb.Upsert(couchdb.GlobalDB, &doc)
+	return couchdb.Upsert(prefixer.GlobalPrefixer, &doc)
 }
 
 // DeactivateMaintenance disables maintenance for the given konnector.
@@ -32,12 +33,12 @@ func DeactivateMaintenance(slug string) error {
 		doc.M = map[string]interface{}{}
 	}
 	doc.SetID(slug)
-	return couchdb.DeleteDoc(couchdb.GlobalDB, &doc)
+	return couchdb.DeleteDoc(prefixer.GlobalPrefixer, &doc)
 }
 
 func loadMaintenance(slug string) (couchdb.JSONDoc, error) {
 	var doc couchdb.JSONDoc
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.KonnectorsMaintenance, slug, &doc)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.KonnectorsMaintenance, slug, &doc)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return doc, err
 	}
@@ -49,7 +50,7 @@ func loadMaintenance(slug string) (couchdb.JSONDoc, error) {
 // konnector if it is in maintenance on this stack.
 func GetMaintenanceOptions(slug string) (map[string]interface{}, error) {
 	var doc couchdb.JSONDoc
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.KonnectorsMaintenance, slug, &doc)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.KonnectorsMaintenance, slug, &doc)
 	if couchdb.IsNotFoundError(err) {
 		return nil, nil
 	}
@@ -65,7 +66,7 @@ func GetMaintenanceOptions(slug string) (map[string]interface{}, error) {
 // (not from apps registry).
 func ListMaintenance() ([]map[string]interface{}, error) {
 	list := []map[string]interface{}{}
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
+	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
 		var opts map[string]interface{}
 		if err := json.Unmarshal(raw, &opts); err != nil {
 			return err

@@ -184,11 +184,18 @@ type FsVersioning struct {
 	MinDelayBetweenTwoVersions time.Duration
 }
 
-// CouchDB contains the configuration values of the database
+// CouchDBCluster contains the configuration values for a cluster of CouchDB.
+type CouchDBCluster struct {
+	Auth     *url.Userinfo
+	URL      *url.URL
+	Creation bool
+}
+
+// CouchDB contains the configuration for the CouchDB clusters.
 type CouchDB struct {
-	Auth   *url.Userinfo
-	URL    *url.URL
-	Client *http.Client
+	Client   *http.Client
+	Global   CouchDBCluster
+	Clusters []CouchDBCluster
 }
 
 // Jobs contains the configuration values for the jobs and triggers
@@ -348,9 +355,18 @@ func AdminServerAddr() string {
 	return net.JoinHostPort(config.AdminHost, strconv.Itoa(config.AdminPort))
 }
 
-// CouchURL returns the CouchDB string url
-func CouchURL() *url.URL {
-	return config.CouchDB.URL
+// CouchCluster returns the CouchDB configuration for the given cluster.
+func CouchCluster(n int) CouchDBCluster {
+	if 0 <= n && n < len(config.CouchDB.Clusters) {
+		return config.CouchDB.Clusters[n]
+	}
+	return config.CouchDB.Global
+}
+
+// CouchClient returns the http client to use when making requests to a CouchDB
+// cluster.
+func CouchClient() *http.Client {
+	return config.CouchDB.Client
 }
 
 // Client returns the redis.Client for a RedisConfig
@@ -497,24 +513,7 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	couchURL, couchAuth, err := parseURL(v.GetString("couchdb.url"))
-	if err != nil {
-		return err
-	}
-	if couchURL.Path == "" {
-		couchURL.Path = "/"
-	}
-	couchClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
-		Timeout:             10 * time.Second,
-		MaxIdleConnsPerHost: 20,
-		RootCAFile:          v.GetString("couchdb.root_ca"),
-		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
-			CertificateFile: v.GetString("couchdb.client_cert"),
-			KeyFile:         v.GetString("couchdb.client_key"),
-		},
-		PinnedKey:              v.GetString("couchdb.pinned_key"),
-		InsecureSkipValidation: v.GetBool("couchdb.insecure_skip_validation"),
-	})
+	couch, err := makeCouch(v)
 	if err != nil {
 		return err
 	}
@@ -766,12 +765,8 @@ func UseViper(v *viper.Viper) error {
 			},
 			Contexts: v.GetStringMap("fs.contexts"),
 		},
-		CouchDB: CouchDB{
-			Auth:   couchAuth,
-			URL:    couchURL,
-			Client: couchClient,
-		},
-		Jobs: jobs,
+		CouchDB: couch,
+		Jobs:    jobs,
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
@@ -923,6 +918,66 @@ func MakeVault(c *Config) error {
 		credsDecryptor: credsDecryptor,
 	}
 	return nil
+}
+
+func makeCouch(v *viper.Viper) (CouchDB, error) {
+	var couch CouchDB
+	couchClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		Timeout:             10 * time.Second,
+		MaxIdleConnsPerHost: 20,
+		RootCAFile:          v.GetString("couchdb.root_ca"),
+		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
+			CertificateFile: v.GetString("couchdb.client_cert"),
+			KeyFile:         v.GetString("couchdb.client_key"),
+		},
+		PinnedKey:              v.GetString("couchdb.pinned_key"),
+		InsecureSkipValidation: v.GetBool("couchdb.insecure_skip_validation"),
+	})
+	if err != nil {
+		return couch, err
+	}
+	couch.Client = couchClient
+
+	couchURL, couchAuth, err := parseURL(v.GetString("couchdb.url"))
+	if err != nil {
+		return couch, err
+	}
+	if couchURL.Path == "" {
+		couchURL.Path = "/"
+	}
+	couch.Global = CouchDBCluster{
+		Auth:     couchAuth,
+		URL:      couchURL,
+		Creation: true,
+	}
+
+	if clusters, ok := v.Get("couchdb.clusters").([]interface{}); ok {
+		for _, cluster := range clusters {
+			cluster, _ := cluster.(map[interface{}]interface{})
+			u, _ := cluster["url"].(string)
+			couchURL, couchAuth, err := parseURL(u)
+			if err != nil {
+				return couch, err
+			}
+			if couchURL.Path == "" {
+				couchURL.Path = "/"
+			}
+			creation := true
+			if c, ok := cluster["instance_creation"].(bool); ok {
+				creation = c
+			}
+			couch.Clusters = append(couch.Clusters, CouchDBCluster{
+				Auth:     couchAuth,
+				URL:      couchURL,
+				Creation: creation,
+			})
+		}
+	}
+
+	if len(couch.Clusters) == 0 {
+		couch.Clusters = []CouchDBCluster{couch.Global}
+	}
+	return couch, nil
 }
 
 func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {

@@ -111,7 +111,7 @@ func TestMemLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-mem")
 	hammerRW(t, l)
 }
@@ -122,7 +122,7 @@ func TestRedisLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-redis")
 	hammerRW(t, l)
 	done := make(chan bool)
@@ -148,7 +148,7 @@ func TestLongLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
 	long := LongOperation(db, "test-long")
 	l := ReadWrite(db, "test-long").(*redisLock)
 	assert.NoError(t, long.Lock())

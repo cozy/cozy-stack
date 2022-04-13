@@ -240,7 +240,7 @@ func listHandler(c echo.Context) error {
 }
 
 func countHandler(c echo.Context) error {
-	count, err := couchdb.CountNormalDocs(couchdb.GlobalDB, consts.Instances)
+	count, err := couchdb.CountNormalDocs(prefixer.GlobalPrefixer, consts.Instances)
 	if couchdb.IsNoDatabaseError(err) {
 		count = 0
 	} else if err != nil {

@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift/v2"
@@ -25,6 +24,7 @@ type swiftVFSV3 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c         *swift.Connection
+	cluster   int
 	domain    string
 	prefix    string
 	context   string
@@ -46,12 +46,13 @@ const swiftV3ContainerPrefix = "cozy-v3-"
 // in the name), and it is poor in features (for example, we want to swap an
 // old version with the current version without having to download/upload
 // contents, and it is not supported).
-func NewV3(db prefixer.Contexter, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+func NewV3(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV3{
 		Indexer:         index,
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
+		cluster:   db.DBCluster(),
 		domain:    db.DomainName(),
 		prefix:    db.DBPrefix(),
 		context:   db.GetContextName(),
@@ -88,6 +89,10 @@ func makeDocIDV3(objName string) (string, string) {
 		return parts[0], parts[1]
 	}
 	return objName[:22] + objName[23:28] + objName[29:34], objName[35:]
+}
+
+func (sfs *swiftVFSV3) DBCluster() int {
+	return sfs.cluster
 }
 
 func (sfs *swiftVFSV3) DBPrefix() string {

@@ -60,6 +60,7 @@ type (
 	TriggerInfos struct {
 		TID          string                 `json:"_id,omitempty"`
 		TRev         string                 `json:"_rev,omitempty"`
+		Cluster      int                    `json:"couch_cluster,omitempty"`
 		Domain       string                 `json:"domain"`
 		Prefix       string                 `json:"prefix,omitempty"`
 		Type         string                 `json:"type"`
@@ -88,6 +89,11 @@ type (
 	}
 )
 
+// DBCluster implements the prefixer.Prefixer interface.
+func (t *TriggerInfos) DBCluster() int {
+	return t.Cluster
+}
+
 // DBPrefix implements the prefixer.Prefixer interface.
 func (t *TriggerInfos) DBPrefix() string {
 	if t.Prefix != "" {
@@ -113,6 +119,7 @@ func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Tri
 		}
 		infos.Message = msg
 	}
+	infos.Cluster = db.DBCluster()
 	infos.Prefix = db.DBPrefix()
 	infos.Domain = db.DomainName()
 

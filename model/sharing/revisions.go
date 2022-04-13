@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 type conflictStatus int
@@ -310,7 +311,7 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 // revisions tree, and the lowest revision of the chain.
 // This can occur when both local and remote updates are made to the same doc,
 // with the remote ones saved before the local ones.
-func addMissingRevsToChain(db couchdb.Database, ref *SharedRef, chain []string) ([]string, error) {
+func addMissingRevsToChain(db prefixer.Prefixer, ref *SharedRef, chain []string) ([]string, error) {
 	refHighestGen := ref.Revisions.Generation()
 	chainLowestGen := RevGeneration(chain[0])
 	if refHighestGen >= chainLowestGen-1 {

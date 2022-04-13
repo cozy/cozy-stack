@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,7 +26,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-var TestPrefix = newDatabase("couchdb-tests")
+var TestPrefix = prefixer.NewPrefixer(0, "test", "couchdb-tests")
 var receivedEventsMutex sync.Mutex
 var receivedEvents map[string]*realtime.Event
 

@@ -714,11 +714,13 @@ func TestMain(m *testing.M) {
 }
 
 type contexter struct {
+	cluster int
 	domain  string
 	prefix  string
 	context string
 }
 
+func (c *contexter) DBCluster() int         { return c.cluster }
 func (c *contexter) DomainName() string     { return c.domain }
 func (c *contexter) DBPrefix() string       { return c.prefix }
 func (c *contexter) GetContextName() string { return c.context }
@@ -729,7 +731,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 		return nil, nil, errors.New("could not create temporary directory")
 	}
 
-	db := &contexter{"io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
+	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	mutex = lock.ReadWrite(db, "vfs-afero-test")
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
@@ -762,7 +764,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 }
 
 func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
-	db := &contexter{"io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
+	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {

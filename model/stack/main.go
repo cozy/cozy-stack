@@ -71,8 +71,6 @@ security features. Please do not use this binary as your production server.
 	}
 
 	// Check that we can properly reach CouchDB.
-	u := config.CouchURL()
-	u.User = config.GetConfig().CouchDB.Auth
 	attempts := 8
 	attemptsSpacing := 1 * time.Second
 	for i := 0; i < attempts; i++ {

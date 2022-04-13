@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -150,6 +153,12 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		}
 	}
 
+	clusters := config.GetConfig().CouchDB.Clusters
+	i.CouchCluster, err = ChooseCouchCluster(clusters)
+	if err != nil {
+		return nil, err
+	}
+
 	if opts.AuthMode != "" {
 		var authMode instance.AuthMode
 		if authMode, err = instance.StringToAuthMode(opts.AuthMode); err == nil {
@@ -192,7 +201,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 
 	opts.trace("init couchdb", func() {
 		g, _ := errgroup.WithContext(context.Background())
-		g.Go(func() error { return couchdb.CreateDoc(couchdb.GlobalDB, i) })
+		g.Go(func() error { return couchdb.CreateDoc(prefixer.GlobalPrefixer, i) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Files) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Apps) })
 		g.Go(func() error { return couchdb.CreateDB(i, consts.Konnectors) })
@@ -251,6 +260,24 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	})
 
 	return i, nil
+}
+
+func ChooseCouchCluster(clusters []config.CouchDBCluster) (int, error) {
+	index := -1
+	var count uint32 = 0
+	for i, cluster := range clusters {
+		if !cluster.Creation {
+			continue
+		}
+		count++
+		if rand.Uint32() <= math.MaxUint32/count {
+			index = i
+		}
+	}
+	if index < 0 {
+		return index, errors.New("no CouchDB cluster available for creation")
+	}
+	return index, nil
 }
 
 func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, error) {

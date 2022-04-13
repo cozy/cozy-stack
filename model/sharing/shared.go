@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // TrackMessage is used for jobs on the share-track worker.
@@ -420,7 +421,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 // UpdateFileShared creates or updates the io.cozy.shared for a file with
 // possibly multiple revisions.
-func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) error {
+func UpdateFileShared(db prefixer.Prefixer, ref *SharedRef, revs RevsStruct) error {
 	chain := revsStructToChain(revs)
 	if ref.Rev() == "" {
 		ref.Revisions = &RevsTree{Rev: chain[0]}

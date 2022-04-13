@@ -68,17 +68,21 @@ func toJSONDoc(d map[string]interface{}) *JSONDoc {
 }
 
 type jsonEvent struct {
-	Domain string
-	Prefix string
-	Verb   string
-	Doc    *JSONDoc
-	Old    *JSONDoc
+	Cluster int
+	Domain  string
+	Prefix  string
+	Verb    string
+	Doc     *JSONDoc
+	Old     *JSONDoc
 }
 
 func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
 	var m map[string]interface{}
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return err
+	}
+	if cluster, ok := m["cluster"].(float64); ok {
+		j.Cluster = int(cluster)
 	}
 	j.Domain, _ = m["domain"].(string)
 	j.Prefix, _ = m["prefix"].(string)
@@ -114,7 +118,7 @@ func (h *redisHub) start() {
 		if je.Old != nil {
 			je.Old.Type = doctype
 		}
-		db := prefixer.NewPrefixer(je.Domain, je.Prefix)
+		db := prefixer.NewPrefixer(je.Cluster, je.Domain, je.Prefix)
 		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
 	}
 }

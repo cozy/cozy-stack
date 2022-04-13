@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
 )
@@ -103,7 +104,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 
-	totalInstances, err := couchdb.CountAllDocs(couchdb.GlobalDB, consts.Instances)
+	totalInstances, err := couchdb.CountAllDocs(prefixer.GlobalPrefixer, consts.Instances)
 	if err != nil {
 		return err
 	}

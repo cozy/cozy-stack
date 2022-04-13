@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 )
 
@@ -120,7 +121,7 @@ func getFeatureConfig(c echo.Context) error {
 func getFeatureContext(c echo.Context) error {
 	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, c.Param("context"))
 	var flags feature.Flags
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &flags)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, id, &flags)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return wrapError(err)
 	}
@@ -135,7 +136,7 @@ type contextParameters struct {
 func patchFeatureContext(c echo.Context) error {
 	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, c.Param("context"))
 	var flags couchdb.JSONDoc
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &flags)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, id, &flags)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return wrapError(err)
 	}
@@ -156,7 +157,7 @@ func patchFeatureContext(c echo.Context) error {
 			flags.M[k] = v
 		}
 	}
-	if err := couchdb.Upsert(couchdb.GlobalDB, &flags); err != nil {
+	if err := couchdb.Upsert(prefixer.GlobalPrefixer, &flags); err != nil {
 		return wrapError(err)
 	}
 
@@ -167,7 +168,7 @@ func patchFeatureContext(c echo.Context) error {
 
 func getFeatureDefaults(c echo.Context) error {
 	var defaults feature.Flags
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return wrapError(err)
 	}
@@ -176,7 +177,7 @@ func getFeatureDefaults(c echo.Context) error {
 
 func patchFeatureDefaults(c echo.Context) error {
 	var defaults couchdb.JSONDoc
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return wrapError(err)
 	}
@@ -197,7 +198,7 @@ func patchFeatureDefaults(c echo.Context) error {
 			defaults.M[k] = v
 		}
 	}
-	if err := couchdb.Upsert(couchdb.GlobalDB, &defaults); err != nil {
+	if err := couchdb.Upsert(prefixer.GlobalPrefixer, &defaults); err != nil {
 		return wrapError(err)
 	}
 

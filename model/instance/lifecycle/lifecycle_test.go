@@ -16,10 +16,46 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
+
+func TestChooseCouchCluster(t *testing.T) {
+	clusters := []config.CouchDBCluster{
+		{Creation: false},
+	}
+	_, err := lifecycle.ChooseCouchCluster(clusters)
+	assert.Error(t, err)
+
+	clusters = []config.CouchDBCluster{
+		{Creation: false},
+		{Creation: true},
+	}
+	index, err := lifecycle.ChooseCouchCluster(clusters)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, index)
+
+	clusters = []config.CouchDBCluster{
+		{Creation: false},
+		{Creation: true},
+		{Creation: true},
+		{Creation: false},
+		{Creation: true},
+	}
+	counts := make([]int, len(clusters))
+	for i := 0; i < 10000; i++ {
+		index, err = lifecycle.ChooseCouchCluster(clusters)
+		assert.NoError(t, err)
+		counts[index] += 1
+	}
+	assert.Equal(t, 0, counts[0])
+	assert.Greater(t, counts[1], 3000)
+	assert.Greater(t, counts[2], 3000)
+	assert.Equal(t, 0, counts[3])
+	assert.Greater(t, counts[4], 3000)
+}
 
 func TestGetInstanceNoDB(t *testing.T) {
 	instance, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
@@ -504,7 +540,7 @@ func cleanInstance() {
 	_ = lifecycle.Destroy("tos.test.cozycloud.cc")
 }
 
-func getDB(t *testing.T, domain string) couchdb.Database {
+func getDB(t *testing.T, domain string) prefixer.Prefixer {
 	instance, err := lifecycle.GetInstance(domain)
 	if !assert.NoError(t, err, "Should get instance %v", domain) {
 		t.FailNow()

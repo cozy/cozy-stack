@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 )
@@ -52,7 +53,7 @@ type BulkGetResponse struct {
 }
 
 // CountAllDocs returns the number of documents of the given doctype.
-func CountAllDocs(db Database, doctype string) (int, error) {
+func CountAllDocs(db prefixer.Prefixer, doctype string) (int, error) {
 	var response AllDocsResponse
 	url := "_all_docs?limit=0"
 	err := makeRequest(db, doctype, http.MethodGet, url, nil, &response)
@@ -64,7 +65,7 @@ func CountAllDocs(db Database, doctype string) (int, error) {
 
 // CountNormalDocs returns the number of documents of the given doctype,
 // and excludes the design docs from the count.
-func CountNormalDocs(db Database, doctype string) (int, error) {
+func CountNormalDocs(db prefixer.Prefixer, doctype string) (int, error) {
 	var designRes ViewResponse
 	err := makeRequest(db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
 	if err != nil {
@@ -85,7 +86,7 @@ func CountNormalDocs(db Database, doctype string) (int, error) {
 
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
-func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) (err error) {
+func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}) (err error) {
 	var v url.Values
 	if req != nil {
 		v, err = req.Values()
@@ -129,14 +130,14 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 
 // ForeachDocs traverse all the documents from the given database with the
 // specified doctype and calls a function for each document.
-func ForeachDocs(db Database, doctype string, fn func(id string, doc json.RawMessage) error) error {
+func ForeachDocs(db prefixer.Prefixer, doctype string, fn func(id string, doc json.RawMessage) error) error {
 	return ForeachDocsWithCustomPagination(db, doctype, 100, fn)
 }
 
 // ForeachDocsWithCustomPagination traverse all the documents from the given
 // database, and calls a function for each document. The documents are fetched
 // from CouchDB with a pagination with a custom number of items per page.
-func ForeachDocsWithCustomPagination(db Database, doctype string, limit int, fn func(id string, doc json.RawMessage) error) error {
+func ForeachDocsWithCustomPagination(db prefixer.Prefixer, doctype string, limit int, fn func(id string, doc json.RawMessage) error) error {
 	var startKey string
 	for {
 		skip := 0
@@ -179,7 +180,7 @@ func ForeachDocsWithCustomPagination(db Database, doctype string, limit int, fn 
 }
 
 // BulkGetDocs returns the documents with the given id at the given revision
-func BulkGetDocs(db Database, doctype string, payload []IDRev) ([]map[string]interface{}, error) {
+func BulkGetDocs(db prefixer.Prefixer, doctype string, payload []IDRev) ([]map[string]interface{}, error) {
 	path := "_bulk_get?revs=true"
 	body := struct {
 		Docs []IDRev `json:"docs"`
@@ -204,7 +205,7 @@ func BulkGetDocs(db Database, doctype string, payload []IDRev) ([]map[string]int
 
 // BulkUpdateDocs is used to update several docs in one call, as a bulk.
 // olddocs parameter is used for realtime / event triggers.
-func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) error {
+func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -236,7 +237,7 @@ func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 	return nil
 }
 
-func bulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) error {
+func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
 	body := struct {
 		Docs []interface{} `json:"docs"`
 	}{
@@ -276,7 +277,7 @@ func bulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 }
 
 // BulkDeleteDocs is used to delete serveral documents in one call.
-func BulkDeleteDocs(db Database, doctype string, docs []Doc) error {
+func BulkDeleteDocs(db prefixer.Prefixer, doctype string, docs []Doc) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -303,7 +304,7 @@ func BulkDeleteDocs(db Database, doctype string, docs []Doc) error {
 
 // BulkForceUpdateDocs is used to update several docs in one call, and to force
 // the revisions history. It is used by replications.
-func BulkForceUpdateDocs(db Database, doctype string, docs []map[string]interface{}) error {
+func BulkForceUpdateDocs(db prefixer.Prefixer, doctype string, docs []map[string]interface{}) error {
 	if len(docs) == 0 {
 		return nil
 	}

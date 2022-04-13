@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Flags is a struct for a set of feature flags.
@@ -217,7 +218,7 @@ func (f *Flags) addConfig(inst *instance.Instance) error {
 func (f *Flags) addContext(inst *instance.Instance) error {
 	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, inst.ContextName)
 	var context Flags
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &context)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, id, &context)
 	if couchdb.IsNotFoundError(err) {
 		return nil
 	} else if err != nil {
@@ -269,7 +270,7 @@ func applyRatio(inst *instance.Instance, key string, data interface{}) interface
 
 func (f *Flags) addDefaults(inst *instance.Instance) error {
 	var defaults Flags
-	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
+	err := couchdb.GetDoc(prefixer.GlobalPrefixer, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
 	if couchdb.IsNotFoundError(err) {
 		return nil
 	} else if err != nil {

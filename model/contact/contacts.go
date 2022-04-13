@@ -176,7 +176,7 @@ func Find(db prefixer.Prefixer, contactID string) (*Contact, error) {
 }
 
 // FindByEmail returns the contact with the given email address, when possible
-func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
+func FindByEmail(db prefixer.Prefixer, email string) (*Contact, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(db, couchdb.ContactByEmail, &couchdb.ViewRequest{
 		Key:         email,
@@ -195,7 +195,7 @@ func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
 }
 
 // CreateMyself creates the myself contact document from the instance settings.
-func CreateMyself(db couchdb.Database, settings *couchdb.JSONDoc) (*Contact, error) {
+func CreateMyself(db prefixer.Prefixer, settings *couchdb.JSONDoc) (*Contact, error) {
 	doc := New()
 	doc.JSONDoc.M["me"] = true
 	if name, ok := settings.M["public_name"]; ok {
@@ -213,7 +213,7 @@ func CreateMyself(db couchdb.Database, settings *couchdb.JSONDoc) (*Contact, err
 }
 
 // GetMyself returns the myself contact document, or an ErrNotFound error.
-func GetMyself(db couchdb.Database) (*Contact, error) {
+func GetMyself(db prefixer.Prefixer) (*Contact, error) {
 	var docs []*Contact
 	req := &couchdb.FindRequest{
 		UseIndex: "by-me",

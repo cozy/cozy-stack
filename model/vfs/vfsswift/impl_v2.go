@@ -25,6 +25,7 @@ type swiftVFSV2 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c             *swift.Connection
+	cluster       int
 	domain        string
 	prefix        string
 	container     string
@@ -52,6 +53,7 @@ func NewV2(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 		DiskThresholder: disk,
 
 		c:             config.GetSwiftConnection(),
+		cluster:       db.DBCluster(),
 		domain:        db.DomainName(),
 		prefix:        db.DBPrefix(),
 		container:     swiftV2ContainerPrefixCozy + db.DBPrefix(),
@@ -78,6 +80,10 @@ func makeDocID(objName string) string {
 		return objName
 	}
 	return objName[:22] + objName[23:28] + objName[29:]
+}
+
+func (sfs *swiftVFSV2) DBCluster() int {
+	return sfs.cluster
 }
 
 func (sfs *swiftVFSV2) DBPrefix() string {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ func TestUseViper(t *testing.T) {
 	cfg := viper.New()
 	cfg.Set("couchdb.url", "http://db:1234")
 	assert.NoError(t, UseViper(cfg))
-	assert.Equal(t, "http://db:1234/", CouchURL().String())
+	assert.Equal(t, "http://db:1234/", CouchCluster(prefixer.GlobalCouchCluster).URL.String())
 }
 
 func TestSetup(t *testing.T) {

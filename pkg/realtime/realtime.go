@@ -25,21 +25,28 @@ type Doc interface {
 
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
-	Domain string `json:"domain"`
-	Prefix string `json:"prefix,omitempty"`
-	Verb   string `json:"verb"`
-	Doc    Doc    `json:"doc"`
-	OldDoc Doc    `json:"old,omitempty"`
+	Cluster int    `json:"cluster,omitempty"`
+	Domain  string `json:"domain"`
+	Prefix  string `json:"prefix,omitempty"`
+	Verb    string `json:"verb"`
+	Doc     Doc    `json:"doc"`
+	OldDoc  Doc    `json:"old,omitempty"`
 }
 
 func newEvent(db prefixer.Prefixer, verb string, doc Doc, oldDoc Doc) *Event {
 	return &Event{
-		Domain: db.DomainName(),
-		Prefix: db.DBPrefix(),
-		Verb:   verb,
-		Doc:    doc,
-		OldDoc: oldDoc,
+		Cluster: db.DBCluster(),
+		Domain:  db.DomainName(),
+		Prefix:  db.DBPrefix(),
+		Verb:    verb,
+		Doc:     doc,
+		OldDoc:  oldDoc,
 	}
+}
+
+// DBCluster implements the prefixer.Prefixer interface.
+func (e *Event) DBCluster() int {
+	return e.Cluster
 }
 
 // DBPrefix implements the prefixer.Prefixer interface.
