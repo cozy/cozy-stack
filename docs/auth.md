@@ -142,7 +142,7 @@ will not directly sent a redirection after this first passphrase step. In such
 case, a `200 OK` response is sent along with a token value in the response
 (either in JSON if requested or directly in a new HTML form).
 
-Along with this token, on 2FA passcode is sent to the user via another transport
+Along with this token, a 2FA passcode is sent to the user via another transport
 (email for instance, depending on the user's preferences). Another request
 should be sent to `/auth/twofactor` with a valid pair `(token, passcode)`,
 ensuring that the user correctly entered its passphrase _and_ received a fresh
