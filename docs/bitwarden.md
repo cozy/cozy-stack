@@ -84,9 +84,10 @@ clientName=Cozy&
 devicePushToken=
 ```
 
-If authentication with two factors is enabled on the instance, this request
-will fail with a 400 status, but it will send an email with the code. The
-request can be retried with an additional paramter: `twoFactorToken`.
+If authentication with two factors is enabled on the instance and the 
+user not logged through a web session, this request will fail with a 
+400 status, but it will send an email with the code. The request can 
+be retried with an additional paramter: `twoFactorToken`.
 
 **Note:** the `clientName` parameter is optional, and is not sent by the
 official bitwarden clients (a default value is used).
