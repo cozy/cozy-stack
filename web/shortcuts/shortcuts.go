@@ -95,7 +95,8 @@ func FromJSONAPI(c echo.Context) (*vfs.FileDoc, []byte, error) {
 		"shortcut",
 		cm.UpdatedAt,
 		false, // Not executable
-		false, // Not trashed
+		false, // Not trashed,
+		false, // Not encrypted
 		nil,   // No tags
 	)
 	if err != nil {

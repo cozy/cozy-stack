@@ -321,6 +321,7 @@ type DocPatch struct {
 	Tags        *[]string  `json:"tags,omitempty"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 	Executable  *bool      `json:"executable,omitempty"`
+	Encrypted   *bool      `json:"encrypted,omitempty"`
 	MD5Sum      *[]byte    `json:"md5sum,omitempty"`
 	Class       *string    `json:"class,omitempty"`
 }
@@ -337,6 +338,7 @@ type DirOrFileDoc struct {
 	Class      string   `json:"class,omitempty"`
 	Executable bool     `json:"executable,omitempty"`
 	Trashed    bool     `json:"trashed,omitempty"`
+	Encrypted  bool     `json:"encrypted,omitempty"`
 	Metadata   Metadata `json:"metadata,omitempty"`
 	InternalID string   `json:"internal_vfs_id,omitempty"`
 }
@@ -368,6 +370,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Class:        fd.Class,
 			Executable:   fd.Executable,
 			Trashed:      fd.Trashed,
+			Encrypted:    fd.Encrypted,
 			Tags:         fd.Tags,
 			Metadata:     fd.Metadata,
 			ReferencedBy: fd.ReferencedBy,
@@ -391,7 +394,7 @@ func Stat(fs VFS, name string) (os.FileInfo, error) {
 }
 
 // OpenFile returns a file handler of the specified name. It is a
-// generalized the generilized call used to open a file. It opens the
+// generalized call used to open a file. It opens the
 // file with the given flag (O_RDONLY, O_WRONLY, O_CREATE, O_EXCL) and
 // permission.
 func OpenFile(fs VFS, name string, flag int, perm os.FileMode) (File, error) {
@@ -437,8 +440,9 @@ func OpenFile(fs VFS, name string, flag int, perm os.FileMode) (File, error) {
 	filename := path.Base(name)
 	exec := false
 	trashed := false
+	encrypted := false
 	mime, class := ExtractMimeAndClassFromFilename(filename)
-	newdoc, err := NewFileDoc(filename, dirID, -1, nil, mime, class, time.Now(), exec, trashed, []string{})
+	newdoc, err := NewFileDoc(filename, dirID, -1, nil, mime, class, time.Now(), exec, trashed, encrypted, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -818,6 +822,10 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 
 	if patch.Executable == nil {
 		patch.Executable = data.Executable
+	}
+
+	if patch.Encrypted == nil {
+		patch.Encrypted = data.Encrypted
 	}
 
 	return patch, nil

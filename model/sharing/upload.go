@@ -562,7 +562,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	}
 
 	newdoc, err := vfs.NewFileDoc(target.DocName, parent.DocID, target.Size(), target.MD5Sum,
-		target.Mime, target.Class, target.CreatedAt, target.Executable, false, target.Tags)
+		target.Mime, target.Class, target.CreatedAt, target.Executable, false, false, target.Tags)
 	if err != nil {
 		return err
 	}

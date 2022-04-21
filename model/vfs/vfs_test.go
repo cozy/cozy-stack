@@ -81,7 +81,7 @@ func createTree(tree H, dirID string) (*vfs.DirDoc, error) {
 			}
 		} else {
 			mime, class := vfs.ExtractMimeAndClassFromFilename(name)
-			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, nil)
+			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, false, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -145,7 +145,7 @@ func TestDiskUsageIsInitiallyZero(t *testing.T) {
 }
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
-	doc, err := vfs.NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", time.Now(), false, false, []string{})
+	doc, err := vfs.NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -223,7 +223,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 	err := fs.CreateDir(dir)
 	assert.NoError(t, err)
 
-	doc, err := vfs.NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, false, []string{})
+	doc, err := vfs.NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -578,6 +578,7 @@ func TestCreateFileTooBig(t *testing.T) {
 		time.Now(),
 		false,
 		false,
+		false,
 		nil,
 	)
 	if !assert.NoError(t, err) {
@@ -594,6 +595,7 @@ func TestCreateFileTooBig(t *testing.T) {
 		"application/octet-stream",
 		"application",
 		time.Now(),
+		false,
 		false,
 		false,
 		nil,
@@ -616,6 +618,7 @@ func TestCreateFileTooBig(t *testing.T) {
 		"application/octet-stream",
 		"application",
 		time.Now(),
+		false,
 		false,
 		false,
 		nil,
@@ -642,6 +645,7 @@ func TestCreateFileTooBig(t *testing.T) {
 		"application/octet-stream",
 		"application",
 		time.Now(),
+		false,
 		false,
 		false,
 		nil,

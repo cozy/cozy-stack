@@ -1096,6 +1096,16 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.True(t, ok)
 
 	assert.Equal(t, "2006-01-02T15:04:05Z", attrs3["updated_at"])
+
+	newcontent = "encryptedcontent"
+	res4, data4 := uploadMod(t, "/files/"+fileID+"?Encrypted=true", "audio/mp3", newcontent, "")
+	assert.Equal(t, 200, res4.StatusCode)
+
+	data4, ok = data4["data"].(map[string]interface{})
+	assert.True(t, ok)
+	attrs4, ok := data4["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, attrs4["encrypted"], true)
 }
 
 func TestModifyContentWithSourceAccount(t *testing.T) {
