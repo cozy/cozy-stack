@@ -1981,6 +1981,19 @@ func TestFileCreateAndDownloadByID(t *testing.T) {
 	assert.Equal(t, `inline; filename="todownload2stepsbis"`, disposition)
 }
 
+func TestEncryptedFileCreate(t *testing.T) {
+	res1, data1 := upload(t, "/files/?Type=file&Name=encryptedfile&Encrypted=true", "text/plain", "foo", "")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	resData, ok := data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs := resData["attributes"].(map[string]interface{})
+	assert.Equal(t, attrs["name"].(string), "encryptedfile")
+	assert.True(t, attrs["encrypted"].(bool))
+}
+
 func TestHeadDirOrFileNotFound(t *testing.T) {
 	req, _ := http.NewRequest("HEAD", ts.URL+"/files/fakeid/?Type=directory", strings.NewReader(""))
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
@@ -2845,6 +2858,7 @@ func TestFind(t *testing.T) {
 		assert.Nil(t, attrs["updated_at"])
 		assert.Nil(t, attrs["tags"])
 		assert.Nil(t, attrs["executable"])
+		assert.Nil(t, attrs["encrypted"])
 		assert.Nil(t, attrs["dir_id"])
 		assert.Nil(t, attrs["path"])
 	}
