@@ -173,36 +173,37 @@ func (m *KonnManifest) VendorLink() interface{} {
 }
 
 func (m *KonnManifest) MarshalJSON() ([]byte, error) {
-	m.doc.Type = consts.Konnectors
-	m.doc.M["slug"] = m.val.Slug
-	m.doc.M["source"] = m.val.Source
-	m.doc.M["state"] = m.val.State
-	m.doc.M["version"] = m.val.Version
+	doc := m.doc.Clone().(*couchdb.JSONDoc)
+	doc.Type = consts.Konnectors
+	doc.M["slug"] = m.val.Slug
+	doc.M["source"] = m.val.Source
+	doc.M["state"] = m.val.State
+	doc.M["version"] = m.val.Version
 	if m.val.AvailableVersion == "" {
-		delete(m.doc.M, "available_version")
+		delete(doc.M, "available_version")
 	} else {
-		m.doc.M["available_version"] = m.val.AvailableVersion
+		doc.M["available_version"] = m.val.AvailableVersion
 	}
-	m.doc.M["checksum"] = m.val.Checksum
+	doc.M["checksum"] = m.val.Checksum
 	if m.val.Parameters == nil {
-		delete(m.doc.M, "parameters")
+		delete(doc.M, "parameters")
 	} else {
-		m.doc.M["parameters"] = m.val.Parameters
+		doc.M["parameters"] = m.val.Parameters
 	}
-	m.doc.M["created_at"] = m.val.CreatedAt
-	m.doc.M["updated_at"] = m.val.UpdatedAt
+	doc.M["created_at"] = m.val.CreatedAt
+	doc.M["updated_at"] = m.val.UpdatedAt
 	if m.val.Err == "" {
-		delete(m.doc.M, "error")
+		delete(doc.M, "error")
 	} else {
-		m.doc.M["error"] = m.val.Err
+		doc.M["error"] = m.val.Err
 	}
 	// XXX: keep the weird UnmarshalJSON of permission.Set
 	perms, err := m.val.Permissions.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
-	m.doc.M["permissions"] = json.RawMessage(perms)
-	return json.Marshal(m.doc)
+	doc.M["permissions"] = json.RawMessage(perms)
+	return json.Marshal(doc)
 }
 
 func (m *KonnManifest) UnmarshalJSON(j []byte) error {
