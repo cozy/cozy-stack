@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -321,6 +322,36 @@ func setAuthMode(c echo.Context) error {
 	return c.JSON(http.StatusNoContent, nil)
 }
 
+func createSessionCode(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	code, err := inst.CreateSessionCode()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	req := c.Request()
+	var ip string
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(req.RemoteAddr, ":")[0]
+	}
+	inst.Logger().WithField("nspace", "loginaudit").
+		Infof("New session_code created from %s at %s", ip, time.Now())
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"session_code": code,
+	})
+}
+
 type diskUsageResult struct {
 	Used          int64 `json:"used,string"`
 	Quota         int64 `json:"quota,string,omitempty"`
@@ -489,6 +520,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.POST("/:domain/auth-mode", setAuthMode)
+	router.POST("/:domain/session_code", createSessionCode)
 
 	// Config
 	router.POST("/redis", rebuildRedis)

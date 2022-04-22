@@ -159,6 +159,29 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/:domain/session_code
+
+Creates a session_code that can be used to login on the given instance.
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/session_code HTTP/1.1
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "L7oJ6BDQtdbLR5Vr5vTxTXLJ1pQzMXcD"
+}
+```
+
 ### POST /instances/:domain/fixers/content-mismatch
 
 Fixes the 64k (or multiple) content mismatch files of an instance
