@@ -753,6 +753,9 @@ msgstr "Statistiques agrégées anonymes"
 msgid "Permissions cc.cozycloud.sentry"
 msgstr "Journaux de l'application"
 
+msgid "Permissions cc.cozycloud.errors"
+msgstr "Journaux de l'application"
+
 msgid "Mail Greeting"
 msgstr "Bonjour"
 
