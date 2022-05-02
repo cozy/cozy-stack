@@ -22,7 +22,7 @@ jobs:
       - name: Build
         run: |
           make cli
-      - uses: stefanzweifel/git-auto-commit-action@v4.13.1
+      - uses: stefanzweifel/git-auto-commit-action@v4.14.1
         with:
           commit_message: Build CLI docs and shell completions
           branch: master
