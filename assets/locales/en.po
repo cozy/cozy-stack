@@ -682,6 +682,9 @@ msgstr "Anonymous aggregate statistics"
 msgid "Permissions cc.cozycloud.sentry"
 msgstr "Application logs"
 
+msgid "Permissions cc.cozycloud.errors"
+msgstr "Application logs"
+
 msgid "Mail Greeting"
 msgstr "Hello"
 

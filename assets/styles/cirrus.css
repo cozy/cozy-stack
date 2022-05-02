@@ -333,6 +333,7 @@
   mask-image: url("../icons/doctypes/bill.svg");
 }
 .perm[class^="cc-cozycloud-sentry"],
+.perm[class^="cc-cozycloud-errors"],
 .perm[class^="io-cozy-files"] {
   -webkit-mask-image: url("../icons/doctypes/file.svg");
   mask-image: url("../icons/doctypes/file.svg");
