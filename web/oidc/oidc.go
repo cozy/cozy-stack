@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -101,6 +102,14 @@ func Login(c echo.Context) error {
 	redirect := c.QueryParam("redirect")
 	confirm := c.QueryParam("confirm_state")
 	idToken := c.QueryParam("id_token")
+
+	err = limits.CheckRateLimit(inst, limits.AuthType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		if err = auth.LoginRateExceeded(inst); err != nil {
+			inst.Logger().WithNamespace("oidc").Warn(err.Error())
+		}
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
+	}
 
 	if idToken != "" && conf.IDTokenKeyURL != "" {
 		if err := checkIDToken(conf, inst, idToken); err != nil {
