@@ -112,6 +112,11 @@ func Login(c echo.Context) error {
 			token = c.QueryParam("access_token")
 		}
 		if token == "" {
+			stateID := c.QueryParam("state")
+			state := getStorage().Find(stateID)
+			if state == nil {
+				return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
+			}
 			code := c.QueryParam("code")
 			token, err = getToken(conf, code)
 			if err != nil {

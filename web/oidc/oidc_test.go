@@ -42,24 +42,6 @@ func TestStartWithOnboardingNotFinished(t *testing.T) {
 }
 
 func TestStartWithOnboardingFinished(t *testing.T) {
-	// Creating a custom context with oidc authentication
-	authentication := map[string]interface{}{
-		"oidc": map[string]interface{}{
-			"redirect_uri":            "http://foobar.com/redirect",
-			"client_id":               "foo",
-			"client_secret":           "bar",
-			"scope":                   "foo",
-			"authorize_url":           "http://foobar.com/authorize",
-			"token_url":               "http://foobar.com/token",
-			"userinfo_url":            "http://foobar.com/userinfos",
-			"userinfo_instance_field": "foooo",
-		},
-	}
-	conf := config.GetConfig()
-	conf.Authentication = map[string]interface{}{
-		"foocontext": authentication,
-	}
-
 	onboardingFinished := true
 	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
 
@@ -89,26 +71,60 @@ func TestStartWithOnboardingFinished(t *testing.T) {
 	assert.NotNil(t, values.Get("scope"))
 }
 
+func TestStateIsMandatoryForLogin(t *testing.T) {
+	onboardingFinished := true
+	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+
+	// Should return a 303 redirect
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
+	req.Host = testInstance.Domain
+	assert.NoError(t, err)
+
+	// Preventing redirection to assert we are effectively redirected
+	c := &http.Client{CheckRedirect: noRedirect}
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 303, res.StatusCode)
+	location := res.Header["Location"][0]
+	redirected, err := url.Parse(location)
+	assert.NoError(t, err)
+	assert.Equal(t, "foobar.com", redirected.Host)
+	assert.Equal(t, "/authorize", redirected.Path)
+
+	values, err := url.ParseQuery(redirected.RawQuery)
+	assert.NoError(t, err)
+	assert.NotNil(t, values.Get("client_id"))
+	assert.NotNil(t, values.Get("nonce"))
+	assert.NotNil(t, values.Get("redirect_uri"))
+	assert.NotNil(t, values.Get("response_type"))
+	assert.NotNil(t, values.Get("state"))
+	assert.NotNil(t, values.Get("scope"))
+
+	// Get the login page, assert we have an error if state is missing
+	stateID := values.Get("state")
+	values.Del("state")
+	v := values.Encode()
+	reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
+	assert.NoError(t, err)
+	reqLogin.Host = testInstance.Domain
+	resLogin, err := c.Do(reqLogin)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, resLogin.StatusCode)
+
+	// And the login page should work with the state
+	values.Add("state", stateID)
+	v = values.Encode()
+	reqLogin, err = http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
+	assert.NoError(t, err)
+	reqLogin.Host = testInstance.Domain
+	resLogin, err = c.Do(reqLogin)
+	assert.NoError(t, err)
+	assert.Equal(t, 303, resLogin.StatusCode)
+	location = resLogin.Header["Location"][0]
+	assert.Equal(t, location, testInstance.DefaultRedirection().String())
+}
+
 func TestLoginWith2FA(t *testing.T) {
-	tokenURL := ts.URL + "/token/getToken"
-	userInfoURL := ts.URL + "/token/" + testInstance.Domain
-	// Creating a custom context with oidc authentication
-	authentication := map[string]interface{}{
-		"oidc": map[string]interface{}{
-			"redirect_uri":            "http://foobar.com/redirect",
-			"client_id":               "foo",
-			"client_secret":           "bar",
-			"scope":                   "foo",
-			"authorize_url":           "http://foobar.com/authorize",
-			"token_url":               tokenURL,
-			"userinfo_url":            userInfoURL,
-			"userinfo_instance_field": "domain",
-		},
-	}
-	conf := config.GetConfig()
-	conf.Authentication = map[string]interface{}{
-		"foocontext": authentication,
-	}
 	onboardingFinished := true
 	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished, AuthMode: "two_factor_mail"})
 
@@ -207,6 +223,26 @@ func TestMain(m *testing.M) {
 
 	ts.Config.Handler.(*echo.Echo).Renderer = render
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	// Creating a custom context with oidc authentication
+	tokenURL := ts.URL + "/token/getToken"
+	userInfoURL := ts.URL + "/token/" + testInstance.Domain
+	authentication := map[string]interface{}{
+		"oidc": map[string]interface{}{
+			"redirect_uri":            "http://foobar.com/redirect",
+			"client_id":               "foo",
+			"client_secret":           "bar",
+			"scope":                   "foo",
+			"authorize_url":           "http://foobar.com/authorize",
+			"token_url":               tokenURL,
+			"userinfo_url":            userInfoURL,
+			"userinfo_instance_field": "domain",
+		},
+	}
+	conf := config.GetConfig()
+	conf.Authentication = map[string]interface{}{
+		"foocontext": authentication,
+	}
 
 	err := dynamic.InitDynamicAssetFS()
 	if err != nil {
