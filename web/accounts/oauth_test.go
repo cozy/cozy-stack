@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -26,6 +27,8 @@ import (
 var ts *httptest.Server
 var testInstance *instance.Instance
 var setup *testutils.TestSetup
+var jar *testutils.CookieJar
+var client *http.Client
 
 func TestAccessCodeOauthFlow(t *testing.T) {
 	redirectURI := ts.URL + "/accounts/test-service/redirect"
@@ -52,7 +55,7 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 
 	u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
 
-	res, err := http.Get(u)
+	res, err := client.Get(u)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -112,7 +115,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 
 	u := ts.URL + "/accounts/test-service2/start?scope=the+world"
 
-	res, err := http.Get(u)
+	res, err := client.Get(u)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -178,7 +181,7 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 		return
 	}
 
-	res, err := http.Get(startURL.String())
+	res, err := client.Get(startURL.String())
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -237,7 +240,16 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 
 	setup = testutils.NewSetup(m, "oauth-konnectors")
-	ts = setup.GetTestServer("/accounts", Routes)
+	ts = setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
+		r.POST("/login", func(c echo.Context) error {
+			sess, _ := session.New(testInstance, session.LongRun)
+			cookie, _ := sess.ToCookie()
+			c.SetCookie(cookie)
+			return c.HTML(http.StatusOK, "OK")
+		})
+		return r
+	})
+
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.localhost", 1),
 	})
@@ -245,6 +257,13 @@ func TestMain(m *testing.M) {
 	setup.AddCleanup(func() error {
 		return couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes)
 	})
+
+	// Login
+	jar = setup.GetCookieJar()
+	client = &http.Client{Jar: jar}
+	req, _ := http.NewRequest("POST", ts.URL+"/login", nil)
+	req.Host = testInstance.Domain
+	_, _ = client.Do(req)
 
 	os.Exit(setup.Run())
 }

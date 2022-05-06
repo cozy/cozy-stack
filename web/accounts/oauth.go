@@ -28,6 +28,10 @@ func (a *apiAccount) Links() *jsonapi.LinksList {
 }
 
 func start(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
 	instance := middlewares.GetInstance(c)
 
 	accountTypeID := c.Param("accountType")
@@ -236,7 +240,7 @@ func reconnect(c echo.Context) error {
 // Careful, the normal middlewares NeedInstance and LoadSession are not applied
 // to this group in web/routing
 func Routes(router *echo.Group) {
-	router.GET("/:accountType/start", start, middlewares.NeedInstance)
+	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession)
 	router.GET("/:accountType/redirect", redirect)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
 	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance)
