@@ -482,6 +482,18 @@ func AllowLogout(c echo.Context) bool {
 	return HasWebAppToken(c)
 }
 
+// AllowMaximal checks that the permission is for the flagship app.
+func AllowMaximal(c echo.Context) error {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if !pdoc.Permissions.IsMaximal() {
+		return ErrForbidden
+	}
+	return nil
+}
+
 // HasWebAppToken returns true if the request comes from a web app (with a token).
 func HasWebAppToken(c echo.Context) bool {
 	pdoc, err := GetPermission(c)

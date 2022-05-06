@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -256,6 +257,16 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		return nil
 	}
 
+	if !isLoggedIn {
+		doc, err := i.SettingsDocument()
+		if err == nil {
+			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
+				subdomainType, _ := doc.M["moved_to_subdomain_type"].(string)
+				return renderMovedLink(c, i, to, subdomainType)
+			}
+		}
+	}
+
 	if intentID := c.QueryParam("intent"); intentID != "" {
 		handleIntent(c, i, slug, intentID)
 	}
@@ -279,22 +290,35 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
 	}
 
+	sessID := ""
+	if isLoggedIn {
+		sessID = sess.ID()
+	}
+	params := buildServeParams(c, i, webapp, isLoggedIn, sessID)
+
+	res := c.Response()
+	res.Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
+	res.WriteHeader(http.StatusOK)
+	return tmpl.Execute(res, params)
+}
+
+func buildServeParams(
+	c echo.Context,
+	inst *instance.Instance,
+	webapp *app.WebappManifest,
+	isLoggedIn bool,
+	sessID string,
+) serveParams {
 	var token string
 	if isLoggedIn {
-		token = i.BuildAppToken(webapp.Slug(), sess.ID())
+		token = inst.BuildAppToken(webapp.Slug(), sessID)
 	} else {
 		token = c.QueryParam("sharecode")
-		doc, err := i.SettingsDocument()
-		if err == nil {
-			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
-				subdomainType, _ := doc.M["moved_to_subdomain_type"].(string)
-				return renderMovedLink(c, i, to, subdomainType)
-			}
-		}
 	}
 
 	tracking := false
-	settings, err := i.SettingsDocument()
+	settings, err := inst.SettingsDocument()
 	if err == nil {
 		if t, ok := settings.M["tracking"].(string); ok {
 			tracking = t == "true"
@@ -308,18 +332,14 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		subdomainsType = "nested"
 	}
 
-	res := c.Response()
-	res.Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
-	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
-	res.WriteHeader(http.StatusOK)
-	return tmpl.Execute(res, serveParams{
+	return serveParams{
 		Token:      token,
 		SubDomain:  subdomainsType,
 		Tracking:   tracking,
 		webapp:     webapp,
-		instance:   i,
+		instance:   inst,
 		isLoggedIn: isLoggedIn,
-	})
+	}
 }
 
 func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType string) error {
@@ -367,14 +387,6 @@ type serveParams struct {
 }
 
 func (s serveParams) CozyData() (string, error) {
-	flags, err := feature.GetFlags(s.instance)
-	if err != nil {
-		flags = &feature.Flags{
-			M: map[string]interface{}{},
-		}
-	}
-	capabilities := settings.NewCapabilities(s.instance)
-	capabilities.SetID("")
 	data := map[string]interface{}{
 		"token":     s.Token,
 		"domain":    s.Domain(),
@@ -388,8 +400,8 @@ func (s serveParams) CozyData() (string, error) {
 			"slug":   s.AppSlug(),
 			"icon":   s.IconPath(),
 		},
-		"flags":        flags,
-		"capabilities": capabilities,
+		"flags":        s.GetFlags(),
+		"capabilities": s.GetCapabilities(),
 	}
 	bytes, err := json.Marshal(data)
 
@@ -433,13 +445,17 @@ func (s serveParams) IconPath() string {
 }
 
 func (s serveParams) Capabilities() (string, error) {
-	capabilities := settings.NewCapabilities(s.instance)
-	capabilities.SetID("")
-	bytes, err := json.Marshal(capabilities)
+	bytes, err := json.Marshal(s.GetCapabilities())
 	if err != nil {
 		return "", err
 	}
 	return string(bytes), nil
+}
+
+func (s serveParams) GetCapabilities() jsonapi.Object {
+	capabilities := settings.NewCapabilities(s.instance)
+	capabilities.SetID("")
+	return capabilities
 }
 
 func (s serveParams) Flags() (string, error) {
@@ -452,6 +468,16 @@ func (s serveParams) Flags() (string, error) {
 		return "", err
 	}
 	return string(bytes), nil
+}
+
+func (s serveParams) GetFlags() *feature.Flags {
+	flags, err := feature.GetFlags(s.instance)
+	if err != nil {
+		flags = &feature.Flags{
+			M: map[string]interface{}{},
+		}
+	}
+	return flags
 }
 
 func (s serveParams) CozyBar() (template.HTML, error) {
