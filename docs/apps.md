@@ -625,20 +625,20 @@ Content-Type: application/vnd.api+json
       "Cookie": "sess-cozyfa713dc4b104110f181959012ef2e0c5=AAAAAGJ1GI8zZDZlNTJhZTgxNThhY2VlMjhhMjE1NTY3ZTA1OTYyOCZ9ShFEsLD-2cb9bUdvYSg91XRw919a5oK1VxfshaZB; Path=/; Domain=example.net; HttpOnly; Secure; SameSite=Lax",
       "AppEditor": "Cozy",
       "AppName": "Drive",
-      "AppIcon": "icon.svg",
       "AppSlug": "drive",
-      "Capabilities": { "file_versioning": true },
+      "Capabilities": "{ \"file_versioning\": true }",
       "CozyBar": "...",
       "CozyClientJS": "...",
       "DefaultWallpaper": "...",
       "Domain": "cozy.example.net",
       "Favicon": "...",
-      "Flags": {},
+      "Flags": "{}",
+      "IconPath": "icon.svg",
       "Locale": "en",
       "SubDomain": "flat",
       "ThemeCSS": "...",
       "Token": "eyJhb...Y4KdA",
-      "Tracking": false
+      "Tracking": "false"
     },
     "links": {
       "self": "/apps/drive/open"
