@@ -20,7 +20,7 @@ require (
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.0
 	github.com/google/go-querystring v1.1.0
-	github.com/google/gops v0.3.22
+	github.com/google/gops v0.3.23
 	github.com/gorilla/websocket v1.5.0
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/go-multierror v1.1.1
