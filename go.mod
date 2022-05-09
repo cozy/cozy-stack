@@ -11,7 +11,6 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.0
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis/v8 v8.11.5
@@ -38,7 +37,7 @@ require (
 	github.com/pquerna/otp v1.3.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sideshow/apns2 v0.20.0
+	github.com/sideshow/apns2 v0.23.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.4.0
