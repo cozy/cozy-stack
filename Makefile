@@ -26,7 +26,7 @@ lint: scripts/golangci-lint
 .PHONY: lint
 
 scripts/golangci-lint: Makefile
-	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b ./scripts v1.45.0
+	@curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b ./scripts v1.46.0
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
