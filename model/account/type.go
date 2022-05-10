@@ -34,12 +34,16 @@ var accountsClient = &http.Client{
 // - BIWebauth is the specific webauth protocol from Budget Insight
 // - SecretGrant is for other secrets (not OAuth)
 // - BIWebauthAndSecret is a combination of BIWebauth and SecretGrant
+// - BIWebview is the specific webview protocol from Budget Insight
+// - BIWebviewAndSecret is a combination of BIWebview and SecretGrant
 const (
 	AuthorizationCode        = "authorization_code"
 	ImplicitGrant            = "token"
 	ImplicitGrantRedirectURL = "token_redirect_url"
 	BIWebauth                = "bi_webauth"
 	BIWebauthAndSecret       = "bi_webauth+secret"
+	BIWebview                = "bi_webview"
+	BIWebviewAndSecret       = "bi_webview+secret"
 	SecretGrant              = "secret"
 )
 
@@ -121,7 +125,7 @@ func (at *AccountType) ServiceID() string {
 
 // HasSecretGrant tells if the account type has non-OAuth secrets.
 func (at *AccountType) HasSecretGrant() bool {
-	return at.GrantMode == SecretGrant || at.GrantMode == BIWebauthAndSecret
+	return at.GrantMode == SecretGrant || at.GrantMode == BIWebauthAndSecret || at.GrantMode == BIWebviewAndSecret
 }
 
 type tokenEndpointResponse struct {
@@ -174,6 +178,12 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, par
 	case ImplicitGrantRedirectURL:
 		vv.Add("response_type", "token")
 		vv.Add("redirect_url", redirectURI)
+	case BIWebview, BIWebviewAndSecret:
+		vv.Add("client_id", at.ClientID)
+		vv.Add("code", params.Get("token"))
+		if id := params.Get("id_connector"); id != "" {
+			vv.Add("connector_ids", id)
+		}
 	case BIWebauth, BIWebauthAndSecret:
 		vv.Add("client_id", at.ClientID)
 		vv.Add("token", params.Get("token"))
@@ -378,7 +388,7 @@ func (at *AccountType) RefreshAccount(a Account) error {
 // BI webauth reconnect flow.
 func (at *AccountType) MakeReconnectURL(i *instance.Instance, state string, params url.Values) (string, error) {
 	switch at.GrantMode {
-	case BIWebauth, BIWebauthAndSecret:
+	case BIWebauth, BIWebauthAndSecret, BIWebview, BIWebviewAndSecret:
 		// OK
 	default:
 		return "", errors.New("Wrong account type")
