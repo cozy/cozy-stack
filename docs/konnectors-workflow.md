@@ -386,7 +386,7 @@ are not related to OAuth. The document still need to be injected manually in
 }
 ```
 
-**Note**: `grant_mode` must be `secret` (or `bi_webauth+secret`), `slug` must
+**Note**: `grant_mode` must be `secret` (or `bi_webauth+secret` or `bi_webview+secret`), `slug` must
 be the slug of the konnector,  but `secret` can be a map instead of a simple
 string if several secrets are needed for this service.
 
@@ -665,6 +665,21 @@ type with the following parameter:
 - `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
 - `client_id`, with the client ID given by Budget Insight
 - `auth_endpoint`, with `https://{domain}.biapi.pro/2.0/webauth` (with the correct `domain`)
+- `reconnect_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/reconnect` (idem).
+
+### BI Weview
+
+A new integration of Budget Insight is available for all the proposed banks.
+This is a workflow similar to OAuth called
+[webview](https://docs.budget-insight.com/reference/webview)
+
+It is possible to use this workflow for konnectors by registering an account
+type with the following parameter:
+
+- `grant_mode`, with `bi_webview+secret` as the value
+- `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
+- `client_id`, with the client ID given by Budget Insight
+- `auth_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/fr/connect` (with the correct `domain`)
 - `reconnect_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/reconnect` (idem).
 
 #### Reconnect
