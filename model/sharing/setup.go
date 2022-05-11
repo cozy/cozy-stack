@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -20,6 +21,12 @@ import (
 func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup receiver on %#v", inst)
+
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
+	if err := mu.Lock(); err != nil {
+		return err
+	}
+	defer mu.Unlock()
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
 		return err
@@ -76,6 +83,9 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
+
+	// XXX Wait a bit to avoid pressure on the recipient Cozy
+	time.Sleep(1 * time.Second)
 
 	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
