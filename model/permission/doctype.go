@@ -41,6 +41,7 @@ var blockList = map[string]bool{
 	consts.BitwardenProfiles:       none,
 	consts.OfficeURL:               none,
 	consts.NotesURL:                none,
+	consts.AppsOpenParameters:      none,
 
 	// Synthetic doctypes (realtime events only)
 	consts.AuthConfirmations:   none,

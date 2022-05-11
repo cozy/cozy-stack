@@ -39,6 +39,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const domain = "cozywithapps.example.net"
@@ -299,7 +300,7 @@ func TestSessionCode(t *testing.T) {
 		flagship.ClientID, "*", "", time.Now())
 	assert.NoError(t, err)
 
-	// Create the sesssion code
+	// Create the session code
 	req, err := http.NewRequest("POST", ts.URL+"/auth/session_code", nil)
 	assert.NoError(t, err)
 	req.Host = testInstance.Domain
@@ -416,6 +417,61 @@ func TestIconForApp(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "<svg>...</svg>", string(body))
+}
+
+func TestOpenWebapp(t *testing.T) {
+	// Create the OAuth client for the flagship app
+	flagship := oauth.Client{
+		RedirectURIs: []string{"cozy://flagship"},
+		ClientName:   "flagship-app",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+		Flagship:     true,
+	}
+	require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+	// Create a maximal permission for it
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		flagship.ClientID, "*", "", time.Now())
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("GET", ts.URL+"/apps/mini/open", nil)
+	require.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, res.StatusCode)
+
+	var results map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&results)
+	assert.NoError(t, err)
+	data := results["data"].(map[string]interface{})
+	id := data["id"].(string)
+	assert.NotEmpty(t, id)
+	typ := data["type"].(string)
+	assert.Equal(t, "io.cozy.apps.open", typ)
+
+	attrs := data["attributes"].(map[string]interface{})
+	name := attrs["AppName"].(string)
+	assert.Equal(t, "Mini", name)
+	slug := attrs["AppSlug"].(string)
+	assert.Equal(t, "mini", slug)
+	icon := attrs["IconPath"].(string)
+	assert.Equal(t, "icon.svg", icon)
+	tracking := attrs["Tracking"].(string)
+	assert.Equal(t, "false", tracking)
+	subdomain := attrs["SubDomain"].(string)
+	assert.Equal(t, "flat", subdomain)
+	cookie := attrs["Cookie"].(string)
+	assert.Contains(t, cookie, "HttpOnly")
+	appToken := attrs["Token"].(string)
+	assert.NotEmpty(t, appToken)
+	flags := attrs["Flags"].(string)
+	assert.Equal(t, "{}", flags)
+
+	links := data["links"].(map[string]interface{})
+	self := links["self"].(string)
+	assert.Equal(t, "/apps/mini/open", self)
 }
 
 func TestUninstallAppWithLinkedClient(t *testing.T) {

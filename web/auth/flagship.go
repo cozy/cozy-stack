@@ -74,8 +74,7 @@ const (
 )
 
 func canCreateSessionCode(c echo.Context, inst *instance.Instance) canCreateSessionCodeResult {
-	pdoc, err := middlewares.GetPermission(c)
-	if err == nil && pdoc.Permissions.IsMaximal() {
+	if err := middlewares.AllowMaximal(c); err == nil {
 		return allowedToCreateSessionCode
 	}
 

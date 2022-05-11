@@ -592,6 +592,61 @@ Content-Type: image/svg+xml
 </svg>
 ```
 
+## Open an application inside the flagship app
+
+This endpoint can be used by the flagship app to get all the parameters needed
+to open a webview for a Cozy webapp. It includes a cookie for a session, and
+the values for filling the HTML template.
+
+### GET /apps/:slug/open
+
+#### Request
+
+```http
+GET /apps/drive/open HTTP/1.1
+Accept: application/vnd.api+json
+Authorization: Bearer flagship-token
+Host: cozy.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "da903430-af6e-013a-8b14-18c04daba326",
+    "type": "io.cozy.apps.open",
+    "attributes": {
+      "Cookie": "sess-cozyfa713dc4b104110f181959012ef2e0c5=AAAAAGJ1GI8zZDZlNTJhZTgxNThhY2VlMjhhMjE1NTY3ZTA1OTYyOCZ9ShFEsLD-2cb9bUdvYSg91XRw919a5oK1VxfshaZB; Path=/; Domain=example.net; HttpOnly; Secure; SameSite=Lax",
+      "AppEditor": "Cozy",
+      "AppName": "Drive",
+      "AppSlug": "drive",
+      "Capabilities": "{ \"file_versioning\": true }",
+      "CozyBar": "...",
+      "CozyClientJS": "...",
+      "DefaultWallpaper": "...",
+      "Domain": "cozy.example.net",
+      "Favicon": "...",
+      "Flags": "{}",
+      "IconPath": "icon.svg",
+      "Locale": "en",
+      "SubDomain": "flat",
+      "ThemeCSS": "...",
+      "Token": "eyJhb...Y4KdA",
+      "Tracking": "false"
+    },
+    "links": {
+      "self": "/apps/drive/open"
+    }
+  }
+}
+```
+
 ## Uninstall an application
 
 ### DELETE /apps/:slug

@@ -11,6 +11,9 @@ const (
 	Apps = "io.cozy.apps"
 	// AppsSuggestion doc type for suggesting apps to the user
 	AppsSuggestion = "io.cozy.apps.suggestions"
+	// AppsOpenParameters doc type for the parameters used by the flagship to
+	// open a webapp
+	AppsOpenParameters = "io.cozy.apps.open"
 	// Konnectors doc type for konnector application manifests
 	Konnectors = "io.cozy.konnectors"
 	// KonnectorsMaintenance doc type for maintenance of konnectors.

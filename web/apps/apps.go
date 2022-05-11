@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -592,6 +593,80 @@ func createTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, jobs.NewAPITrigger(t.Infos(), inst), nil)
 }
 
+type apiOpenParams struct {
+	slug   string
+	cookie string
+	params serveParams
+}
+
+func (o *apiOpenParams) ID() string         { return o.slug }
+func (o *apiOpenParams) Rev() string        { return "" }
+func (o *apiOpenParams) DocType() string    { return consts.AppsOpenParameters }
+func (o *apiOpenParams) SetID(id string)    {}
+func (o *apiOpenParams) SetRev(rev string)  {}
+func (o *apiOpenParams) Clone() couchdb.Doc { return o }
+func (o *apiOpenParams) MarshalJSON() ([]byte, error) {
+	data := map[string]interface{}{}
+	data["Cookie"] = o.cookie
+	data["Token"] = o.params.Token
+	data["Domain"] = o.params.Domain()
+	data["SubDomain"] = o.params.SubDomain
+	data["Tracking"] = strconv.FormatBool(o.params.Tracking)
+	data["Locale"] = o.params.Locale()
+	data["AppEditor"] = o.params.AppEditor()
+	data["AppName"] = o.params.AppName()
+	data["AppNamePrefix"] = o.params.AppNamePrefix()
+	data["AppSlug"] = o.params.AppSlug()
+	data["IconPath"] = o.params.IconPath()
+	data["Flags"], _ = o.params.Flags()
+	data["Capabilities"], _ = o.params.Capabilities()
+	data["CozyBar"], _ = o.params.CozyBar()
+	data["CozyClientJS"], _ = o.params.CozyClientJS()
+	data["ThemeCSS"] = o.params.ThemeCSS()
+	data["Favicon"] = o.params.Favicon()
+	data["DefaultWallpaper"] = o.params.DefaultWallpaper()
+	return json.Marshal(data)
+}
+
+func (o *apiOpenParams) Relationships() jsonapi.RelationshipMap { return nil }
+func (o *apiOpenParams) Included() []jsonapi.Object             { return nil }
+func (o *apiOpenParams) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/apps/" + o.slug + "/open"}
+}
+
+// openWebapp handles GET /apps/:slug/open requests and returns the data useful
+// for the flagship app to open the given the webapp in a webview.
+func openWebapp(c echo.Context) error {
+	if err := middlewares.AllowMaximal(c); err != nil {
+		return wrapAppsError(err)
+	}
+
+	inst := middlewares.GetInstance(c)
+	slug := c.Param("slug")
+	webapp, err := app.GetWebappBySlug(inst, slug)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+
+	session, err := session.New(inst, session.NormalRun)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	cookie, err := session.ToCookie()
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	isLoggedIn := true
+
+	params := buildServeParams(c, inst, webapp, isLoggedIn, session.ID())
+	obj := &apiOpenParams{
+		slug:   slug,
+		cookie: cookie.String(),
+		params: params,
+	}
+	return jsonapi.Data(c, http.StatusOK, obj, nil)
+}
+
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
@@ -601,6 +676,7 @@ func WebappsRoutes(router *echo.Group) {
 	router.DELETE("/:slug", deleteHandler(consts.WebappType))
 	router.GET("/:slug/icon", iconHandler(consts.WebappType))
 	router.GET("/:slug/icon/:version", iconHandler(consts.WebappType))
+	router.GET("/:slug/open", openWebapp)
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
