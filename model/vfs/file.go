@@ -40,6 +40,7 @@ type FileDoc struct {
 	Class      string   `json:"class,omitempty"`
 	Executable bool     `json:"executable"`
 	Trashed    bool     `json:"trashed"`
+	Encrypted  bool     `json:"encrypted,omitempty"`
 	Tags       []string `json:"tags,omitempty"`
 
 	Metadata     Metadata               `json:"metadata,omitempty"`
@@ -176,7 +177,7 @@ func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mimeType, class string, cdate time.Time, executable, trashed bool, tags []string) (*FileDoc, error) {
+func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mimeType, class string, cdate time.Time, executable, trashed, encrypted bool, tags []string) (*FileDoc, error) {
 	if err := checkFileName(name); err != nil {
 		return nil, err
 	}
@@ -204,6 +205,7 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mimeType, class s
 		Class:      class,
 		Executable: executable,
 		Trashed:    trashed,
+		Encrypted:  encrypted,
 		Tags:       tags,
 	}
 
@@ -268,6 +270,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 		Tags:        &olddoc.Tags,
 		UpdatedAt:   &olddoc.UpdatedAt,
 		Executable:  &olddoc.Executable,
+		Encrypted:   &olddoc.Encrypted,
 	}, patch, cdate)
 	if err != nil {
 		return nil, err
@@ -299,6 +302,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 		cdate,
 		*patch.Executable,
 		trashed,
+		*patch.Encrypted,
 		*patch.Tags,
 	)
 	if err != nil {

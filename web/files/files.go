@@ -1928,6 +1928,7 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 
 	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 	executable := c.QueryParam("Executable") == "true"
+	encrypted := c.QueryParam("Encrypted") == "true"
 	trashed := false
 	doc, err := vfs.NewFileDoc(
 		name,
@@ -1939,6 +1940,7 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 		cdate,
 		executable,
 		trashed,
+		encrypted,
 		tags,
 	)
 	if err != nil {

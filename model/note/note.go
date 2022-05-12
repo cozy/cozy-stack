@@ -237,6 +237,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 		cm.UpdatedAt,
 		false, // Not executable
 		false, // Not trashed
+		false, // Not encrypted
 		nil,   // No tags
 	)
 	if err != nil {

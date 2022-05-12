@@ -582,6 +582,7 @@ then the `updated_at` will be set with the value of the `created_at`.
 | Size                    | the file size (when `Content-Length` can't be used)            |
 | Tags                    | an array of tags                                               |
 | Executable              | `true` if the file is executable (UNIX permission)             |
+| Encrypted               | `true` if the file is client-side encrypted                    |
 | Metadata                | a JSON with metadata on this file (_deprecated_)               |
 | MetadataID              | the identifier of a metadata object                            |
 | CreatedAt               | the creation date of the file                                  |
@@ -905,6 +906,7 @@ The `updated_at` field will be the first value in this list:
 | ---------- | -------------------------------------------------- |
 | Tags       | an array of tags                                   |
 | Executable | `true` if the file is executable (UNIX permission) |
+| Encrypted  | `true` if the file is client-side encrypted        |
 | MetadataID | the identifier of a metadata object                |
 | UpdatedAt  | the modification date of the file                  |
 

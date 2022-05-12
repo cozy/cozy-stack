@@ -29,7 +29,7 @@ type Stats struct {
 func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc) {
 	size := 1 + rand.Intn(25)
 	name := crypto.GenerateRandomString(8)
-	doc, err := vfs.NewFileDoc(name, parent.DocID, -1, nil, "application/octet-stream", "application", time.Now(), false, false, nil)
+	doc, err := vfs.NewFileDoc(name, parent.DocID, -1, nil, "application/octet-stream", "application", time.Now(), false, false, false, nil)
 	assert.NoError(t, err)
 	doc.CozyMetadata = vfs.NewCozyMetadata("")
 	file, err := fs.CreateFile(doc, nil)

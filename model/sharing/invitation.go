@@ -223,6 +223,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		cm.UpdatedAt,
 		false, // Not executable
 		false, // Not trashed
+		false, // Not encrypted
 		nil,   // No tags
 	)
 	if err != nil {

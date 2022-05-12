@@ -27,7 +27,7 @@ func WorkerZip(ctx *job.WorkerContext) error {
 
 func createZip(fs vfs.VFS, files map[string]string, dirID, filename string) error {
 	now := time.Now()
-	zipDoc, err := vfs.NewFileDoc(filename, dirID, -1, nil, "application/zip", "zip", now, false, false, nil)
+	zipDoc, err := vfs.NewFileDoc(filename, dirID, -1, nil, "application/zip", "zip", now, false, false, false, nil)
 	if err != nil {
 		return err
 	}

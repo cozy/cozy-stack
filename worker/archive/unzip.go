@@ -84,7 +84,7 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 		size := int64(f.UncompressedSize64)
 		mime, class := vfs.ExtractMimeAndClassFromFilename(f.Name)
 		mod := f.Modified
-		doc, err := vfs.NewFileDoc(name, dir.ID(), size, nil, mime, class, mod, false, false, nil)
+		doc, err := vfs.NewFileDoc(name, dir.ID(), size, nil, mime, class, mod, false, false, false, nil)
 		if err != nil {
 			return err
 		}

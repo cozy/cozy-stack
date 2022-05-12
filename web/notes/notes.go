@@ -53,6 +53,7 @@ func CreateNote(c echo.Context) error {
 			time.Now(),
 			false, // Not executable
 			false, // Not trashed
+			false, // Not encrypted
 			nil,   // No tags
 		)
 		if errf != nil {

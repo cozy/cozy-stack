@@ -134,7 +134,7 @@ func TestMain(m *testing.M) {
 func createFile() error {
 	dirID := consts.RootDirID
 	filedoc, err := vfs.NewFileDoc("letter.docx", dirID, -1, nil,
-		"application/msword", "text", time.Now(), false, false, nil)
+		"application/msword", "text", time.Now(), false, false, false, nil)
 	if err != nil {
 		return err
 	}
