@@ -93,7 +93,7 @@ func newswiftFS() (*swiftFS, error) {
 	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
 	err := swiftFS.swiftConn.ContainerCreate(ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Cannot create container for dynamic assets: %s", err)
 	}
 
 	return swiftFS, nil
