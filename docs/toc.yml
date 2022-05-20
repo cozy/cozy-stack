@@ -14,6 +14,7 @@
   - "Build a release": ./release.md
   - "The contributing guide": ./CONTRIBUTING.md
 - Explanations:
+  - "Flagship app": ./flagship.md
   - "Move design": ./move-design.md
   - "Sharing design": ./sharing-design.md
   - "Workflow of the konnectors": ./konnectors-workflow.md
