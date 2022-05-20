@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -9,6 +10,9 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -36,6 +40,10 @@ func CreateSessionCode(c echo.Context) error {
 		})
 	}
 
+	return ReturnSessionCode(c, http.StatusCreated, inst)
+}
+
+func ReturnSessionCode(c echo.Context, statusCode int, inst *instance.Instance) error {
 	code, err := inst.CreateSessionCode()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -54,7 +62,7 @@ func CreateSessionCode(c echo.Context) error {
 	inst.Logger().WithField("nspace", "loginaudit").
 		Infof("New session_code created from %s at %s", ip, time.Now())
 
-	return c.JSON(http.StatusCreated, echo.Map{
+	return c.JSON(statusCode, echo.Map{
 		"session_code": code,
 	})
 }
@@ -163,4 +171,87 @@ func confirmFlagship(c echo.Context) error {
 		})
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+type loginFlagshipParameters struct {
+	ClientID          string `json:"client_id"`
+	ClientSecret      string `json:"client_secret"`
+	Passphrase        string `json:"passphrase"`
+	TwoFactorPasscode string `json:"two_factor_passcode"`
+	TwoFactorToken    []byte `json:"two_factor_token"`
+}
+
+func loginFlagship(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	var args loginFlagshipParameters
+	if err := c.Bind(&args); err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+		err := limits.CheckRateLimit(inst, limits.AuthType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			if err = LoginRateExceeded(inst); err != nil {
+				inst.Logger().WithNamespace("auth").Warn(err.Error())
+			}
+		}
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": inst.Translate(CredentialsErrorKey),
+		})
+	}
+
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		if len(args.TwoFactorPasscode) == 0 || len(args.TwoFactorToken) == 0 {
+			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+			if err != nil {
+				return err
+			}
+			return c.JSON(http.StatusAccepted, echo.Map{
+				"two_factor_token": string(twoFactorToken),
+			})
+		}
+		if !inst.ValidateTwoFactorPasscode(args.TwoFactorToken, args.TwoFactorPasscode) {
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": inst.Translate(TwoFactorErrorKey),
+			})
+		}
+	}
+
+	client, err := oauth.FindClient(inst, args.ClientID)
+	if err != nil {
+		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
+			return err
+		}
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+	if subtle.ConstantTimeCompare([]byte(args.ClientSecret), []byte(client.ClientSecret)) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid client_secret",
+		})
+	}
+
+	if !client.Flagship || !client.CertifiedFromStore {
+		return ReturnSessionCode(c, http.StatusAccepted, inst)
+	}
+
+	out := AccessTokenReponse{
+		Type:  "bearer",
+		Scope: "*",
+	}
+	out.Refresh, err = client.CreateJWT(inst, consts.RefreshTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate refresh token",
+		})
+	}
+	out.Access, err = client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+	return c.JSON(http.StatusOK, out)
 }

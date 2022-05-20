@@ -95,6 +95,7 @@ type Client struct {
 	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
 
 	Flagship            bool `json:"flagship,omitempty"`
+	CertifiedFromStore  bool `json:"certified_from_store,omitempty"`
 	CreatedAtOnboarding bool `json:"created_at_onboarding,omitempty"`
 
 	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
@@ -625,6 +626,7 @@ func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
 		return err
 	}
 
+	c.CertifiedFromStore = true
 	return c.SetFlagship(inst)
 }
 
