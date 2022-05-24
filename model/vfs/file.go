@@ -40,7 +40,7 @@ type FileDoc struct {
 	Class      string   `json:"class,omitempty"`
 	Executable bool     `json:"executable"`
 	Trashed    bool     `json:"trashed"`
-	Encrypted  bool     `json:"encrypted,omitempty"`
+	Encrypted  bool     `json:"encrypted"`
 	Tags       []string `json:"tags,omitempty"`
 
 	Metadata     Metadata               `json:"metadata,omitempty"`
