@@ -1429,7 +1429,6 @@ func TestLoginFlagship(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	var resbody map[string]interface{}
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&resbody))
-	fmt.Printf("resbody = %#v\n", resbody)
 	assert.NotNil(t, resbody["access_token"])
 	assert.NotNil(t, resbody["refresh_token"])
 	assert.Equal(t, "*", resbody["scope"])

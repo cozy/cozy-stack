@@ -178,7 +178,7 @@ type loginFlagshipParameters struct {
 	ClientSecret      string `json:"client_secret"`
 	Passphrase        string `json:"passphrase"`
 	TwoFactorPasscode string `json:"two_factor_passcode"`
-	TwoFactorToken    []byte `json:"two_factor_token"`
+	TwoFactorToken    string `json:"two_factor_token"`
 }
 
 func loginFlagship(c echo.Context) error {
@@ -211,7 +211,8 @@ func loginFlagship(c echo.Context) error {
 				"two_factor_token": string(twoFactorToken),
 			})
 		}
-		if !inst.ValidateTwoFactorPasscode(args.TwoFactorToken, args.TwoFactorPasscode) {
+		twoFactorToken := []byte(args.TwoFactorToken)
+		if !inst.ValidateTwoFactorPasscode(twoFactorToken, args.TwoFactorPasscode) {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": inst.Translate(TwoFactorErrorKey),
 			})
