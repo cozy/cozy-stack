@@ -2854,11 +2854,11 @@ func TestFind(t *testing.T) {
 		assert.NotEmpty(t, attrs["type"].(string))
 		assert.NotEmpty(t, attrs["size"].(string))
 		assert.False(t, attrs["trashed"].(bool))
+		assert.False(t, attrs["encrypted"].(bool))
 		assert.Nil(t, attrs["created_at"])
 		assert.Nil(t, attrs["updated_at"])
 		assert.Nil(t, attrs["tags"])
 		assert.Nil(t, attrs["executable"])
-		assert.Nil(t, attrs["encrypted"])
 		assert.Nil(t, attrs["dir_id"])
 		assert.Nil(t, attrs["path"])
 	}
