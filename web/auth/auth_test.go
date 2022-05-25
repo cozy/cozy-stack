@@ -1366,6 +1366,75 @@ func TestConfirmFlagship(t *testing.T) {
 	assert.True(t, client.Flagship)
 }
 
+func TestLoginFlagship(t *testing.T) {
+	oauthClient := &oauth.Client{
+		RedirectURIs:    []string{"cozy://flagship"},
+		ClientName:      "Cozy Flagship",
+		ClientKind:      "mobile",
+		SoftwareID:      "cozy-flagship",
+		SoftwareVersion: "0.1.0",
+	}
+	require.Nil(t, oauthClient.Create(testInstance))
+	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
+	require.NoError(t, err)
+	client.CertifiedFromStore = true
+	require.NoError(t, client.SetFlagship(testInstance))
+
+	args, err := json.Marshal(&echo.Map{
+		"passphrase":    "InvalidPassphrase",
+		"client_id":     client.CouchID,
+		"client_secret": client.ClientSecret,
+	})
+	require.NoError(t, err)
+	req, err := http.NewRequest("POST", ts.URL+"/auth/login/flagship", bytes.NewReader(args))
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 401, res.StatusCode)
+
+	args, err = json.Marshal(&echo.Map{
+		"passphrase":    "MyPassphrase",
+		"client_id":     client.CouchID,
+		"client_secret": "InvalidClientSecret",
+	})
+	require.NoError(t, err)
+	req, err = http.NewRequest("POST", ts.URL+"/auth/login/flagship", bytes.NewReader(args))
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 400, res.StatusCode)
+
+	args, err = json.Marshal(&echo.Map{
+		"passphrase":    "MyPassphrase",
+		"client_id":     client.CouchID,
+		"client_secret": client.ClientSecret,
+	})
+	require.NoError(t, err)
+	req, err = http.NewRequest("POST", ts.URL+"/auth/login/flagship", bytes.NewReader(args))
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+	var resbody map[string]interface{}
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&resbody))
+	assert.NotNil(t, resbody["access_token"])
+	assert.NotNil(t, resbody["refresh_token"])
+	assert.Equal(t, "*", resbody["scope"])
+	assert.Equal(t, "bearer", resbody["token_type"])
+}
+
 func TestAppRedirectionOnLogin(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect=drive/%23/foobar", nil)
 	req.Host = domain

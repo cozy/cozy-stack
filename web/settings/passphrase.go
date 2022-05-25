@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -76,7 +75,6 @@ type passphraseRegistrationParameters struct {
 	// For flagship app
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
-	Code         string `json:"code"`
 }
 
 func registerPassphrase(c echo.Context) error {
@@ -211,7 +209,7 @@ func registerPassphraseFlagship(c echo.Context) error {
 		}
 		if !skipCertification {
 			_ = client.SetCreatedAtOnboarding(inst)
-			return createSessionCode(c, inst)
+			return auth.ReturnSessionCode(c, http.StatusAccepted, inst)
 		}
 	}
 
@@ -232,30 +230,6 @@ func registerPassphraseFlagship(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, out)
-}
-
-func createSessionCode(c echo.Context, inst *instance.Instance) error {
-	code, err := inst.CreateSessionCode()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
-		})
-	}
-
-	req := c.Request()
-	var ip string
-	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
-		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
-	}
-	if ip == "" {
-		ip = strings.Split(req.RemoteAddr, ":")[0]
-	}
-	inst.Logger().WithField("nspace", "loginaudit").
-		Infof("New session_code created from %s at %s (onboarding)", ip, time.Now())
-
-	return c.JSON(http.StatusAccepted, echo.Map{
-		"session_code": code,
-	})
 }
 
 func updatePassphrase(c echo.Context) error {

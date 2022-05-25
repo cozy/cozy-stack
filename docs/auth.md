@@ -164,6 +164,90 @@ Set-Cookie: ...
 Location: https://contacts.cozy.example.org/foo
 ```
 
+### POST /auth/login/flagship
+
+This endpoint is similar to `POST /auth/login`, but it allows the flagship app
+to also obtain OAuth access and register tokens without having to make the
+OAuth dance (which can be awkward for the user).
+
+#### Request
+
+```http
+POST /auth/login/flagship HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg",
+  "token_type": "bearer",
+  "refresh_token": "YTUwMjcyYjgtOTNmNi0xMWVjLWE4YTQtZWJhMzlmMTAwMWJiCg",
+  "scope": "*"
+}
+```
+
+**Note:** if two-factor authentication is enabled on the Cozy, an email
+will be sent to the user with a code, and this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "two_factor_token": "123123123123"
+}
+```
+
+Then, the client can retry by sending the two-factor token and code:
+
+```json
+{
+  "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "two_factor_token": "123123123123",
+  "two_factor_code": "123456"
+}
+```
+
+**Note:** if the OAuth client has not been certified as the flagship app,
+this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "ZmY4ODI3NGMtOTY1Yy0xMWVjLThkMDgtMmI5M2"
+}
+```
+
+The `session_code` can be put in the query string while opening the OAuth
+authorize page. It will be used to open the session, and let the user type the
+6-digits code they have received by mail to confirm that they want to use this
+app as the flagship app.
+
+
 ### DELETE /auth/login
 
 This can be used to log-out the user. An app token must be passed in the
