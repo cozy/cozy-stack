@@ -23,7 +23,7 @@ just that for a new Cozy, there are a few additional steps like accepting the
 terms of services.
 
 **Note:** the flagship app can be used with self-hosted stack. The user will
-have to type their Cozy address inside of using their email address, but
+have to type their Cozy address instead of using their email address, but
 everything else should work, including the certification via the Google and
 Apple stores (there are some config parameters, but they have a default value
 that make this possible).
@@ -31,7 +31,7 @@ that make this possible).
 ## Create the OAuth client & certification
 
 When the flagship app knows the Cozy instance of the user, it will register
-its-self as an OAuth client, and will try to attest that it is really the
+itself as an OAuth client, and will try to attest that it is really the
 flagship app via the Google and Apple APIs. It is done by calling these 3
 routes from the stack:
 

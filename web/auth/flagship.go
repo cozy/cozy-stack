@@ -207,13 +207,13 @@ func loginFlagship(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			return c.JSON(http.StatusAccepted, echo.Map{
+			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"two_factor_token": string(twoFactorToken),
 			})
 		}
 		twoFactorToken := []byte(args.TwoFactorToken)
 		if !inst.ValidateTwoFactorPasscode(twoFactorToken, args.TwoFactorPasscode) {
-			return c.JSON(http.StatusUnauthorized, echo.Map{
+			return c.JSON(http.StatusForbidden, echo.Map{
 				"error": inst.Translate(TwoFactorErrorKey),
 			})
 		}

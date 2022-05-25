@@ -224,7 +224,7 @@ Then, the client can retry by sending the two-factor token and code:
   "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
   "client_secret": "eyJpc3Mi[...omitted for brevity...]",
   "two_factor_token": "123123123123",
-  "two-factor-code": "123456"
+  "two_factor_code": "123456"
 }
 ```
 
