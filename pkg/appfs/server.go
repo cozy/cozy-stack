@@ -1,6 +1,7 @@
 package appfs
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -15,6 +16,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -31,6 +33,8 @@ type FileServer interface {
 	FilesList(slug, version, shasum string) ([]string, error)
 	ServeFileContent(w http.ResponseWriter, req *http.Request,
 		slug, version, shasum, file string) error
+	ServeCodeTarball(w http.ResponseWriter, req *http.Request,
+		slug, version, shasum string) error
 }
 
 type swiftServer struct {
@@ -175,6 +179,39 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
 	web_utils.ServeContent(w, req, contentType, size, r)
+	return nil
+}
+
+func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
+	objName := path.Join(slug, version)
+	if shasum != "" {
+		objName += "-" + shasum
+	}
+	objName += ".tgz"
+
+	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
+	if err == nil {
+		defer f.Close()
+		contentLength := h["Content-Length"]
+		contentType := h["Content-Type"]
+		size, _ := strconv.ParseInt(contentLength, 10, 64)
+		web_utils.ServeContent(w, req, contentType, size, f)
+		return nil
+	}
+
+	buf, err := prepareTarball(s, slug, version, shasum)
+	if err != nil {
+		return err
+	}
+	contentType := mime.TypeByExtension(".gz")
+
+	file, err := s.c.ObjectCreate(s.ctx, s.container, objName, true, "", contentType, nil)
+	if err == nil {
+		_, _ = io.Copy(file, buf)
+		_ = file.Close()
+	}
+
+	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
 	return nil
 }
 
@@ -345,6 +382,17 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	return nil
 }
 
+func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
+	buf, err := prepareTarball(s, slug, version, shasum)
+	if err != nil {
+		return err
+	}
+
+	contentType := mime.TypeByExtension(".gz")
+	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
+	return nil
+}
+
 func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) {
 	var names []string
 	rootPath := s.mkPath(slug, version, shasum, "")
@@ -395,4 +443,52 @@ func wrapSwiftErr(err error) error {
 		return os.ErrNotExist
 	}
 	return err
+}
+
+func prepareTarball(s FileServer, slug, version, shasum string) (*bytes.Buffer, error) {
+	filenames, err := s.FilesList(slug, version, shasum)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := &bytes.Buffer{}
+	gw := gzip.NewWriter(buf)
+	tw := tar.NewWriter(gw)
+	now := time.Now()
+
+	for _, filename := range filenames {
+		f, err := s.Open(slug, version, shasum, filename)
+		if err != nil {
+			return nil, err
+		}
+		content, err := ioutil.ReadAll(f)
+		errc := f.Close()
+		if err != nil {
+			return nil, err
+		}
+		if errc != nil {
+			return nil, errc
+		}
+		hdr := &tar.Header{
+			Name:     filename,
+			Mode:     0640,
+			Size:     int64(len(content)),
+			Typeflag: tar.TypeReg,
+			ModTime:  now,
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			return nil, err
+		}
+		if _, err := tw.Write(content); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tw.Close(); err != nil {
+		return nil, err
+	}
+	if err := gw.Close(); err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
