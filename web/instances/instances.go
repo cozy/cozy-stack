@@ -83,6 +83,14 @@ func createHandler(c echo.Context) error {
 	} else {
 		opts.SwiftLayout = -1
 	}
+	if cluster := c.QueryParam("CouchCluster"); cluster != "" {
+		opts.CouchCluster, err = strconv.Atoi(cluster)
+		if err != nil {
+			return wrapError(err)
+		}
+	} else {
+		opts.CouchCluster = -1
+	}
 	if diskQuota := c.QueryParam("DiskQuota"); diskQuota != "" {
 		opts.DiskQuota, err = strconv.ParseInt(diskQuota, 10, 64)
 		if err != nil {

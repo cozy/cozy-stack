@@ -28,6 +28,7 @@ $ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,s
 ```
       --apps strings             Apps to be preinstalled
       --context-name string      Context name of the instance
+      --couch-cluster int        Specify the CouchDB cluster where the instance will be created (-1 means the default) (default -1)
       --dev                      To create a development instance (deprecated)
       --disk-quota string        The quota allowed to the instance's VFS
       --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')

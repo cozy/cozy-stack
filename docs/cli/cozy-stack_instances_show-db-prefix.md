@@ -8,6 +8,8 @@ Show the instance DB prefix of the specified domain
 cozy-stack instances show allows to show the instance prefix on the cozy for a
 given domain. The prefix is used for databases and VFS prefixing.
 
+It will also show the couch_cluster if it is not the default one.
+
 
 ```
 cozy-stack instances show-db-prefix <domain> [flags]
