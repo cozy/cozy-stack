@@ -4,9 +4,12 @@
 package apps_test
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -32,6 +35,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
@@ -417,6 +421,33 @@ func TestIconForApp(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "<svg>...</svg>", string(body))
+}
+
+func TestDownloadApp(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/download", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, res.StatusCode)
+
+	mimeType, reader := filetype.FromReader(res.Body)
+	require.Equal(t, "application/gzip", mimeType)
+	gr, err := gzip.NewReader(reader)
+	require.NoError(t, err)
+	tr := tar.NewReader(gr)
+	indexFound := false
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		if header.Name == "/index.html" {
+			indexFound = true
+		}
+	}
+	require.True(t, indexFound)
 }
 
 func TestOpenWebapp(t *testing.T) {

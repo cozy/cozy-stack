@@ -592,6 +592,39 @@ Content-Type: image/svg+xml
 </svg>
 ```
 
+## Download the code of an app
+
+This endpoint is used by the flagship app to download the code of an
+application, in order to use it even while offline.
+
+### GET /apps/:slug/download & GET /apps/:slug/download/:version
+
+The first route will download a tarball of the source code of the latest
+installed version of the application. The second route will force a specific
+version of an app (and a 412 Precondition failed may be sent if the code of
+this specific version is not available).
+
+#### Request
+
+```http
+GET /apps/drive/download/3.0.1 HTTP/1.1
+Authorization: Bearer flagship-token
+Host: cozy.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/gzip
+```
+
+When the application has been installed from the registry, the stack will
+respond with a redirect to the registry. In that case, the downloaded tarball
+can be gzipped or not (the registry allows both). When the application is
+installed from another source, the stack will create a gzipped tarball and
+send it to the client.
+
 ## Open an application inside the flagship app
 
 This endpoint can be used by the flagship app to get all the parameters needed

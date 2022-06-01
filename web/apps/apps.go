@@ -5,6 +5,7 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -100,6 +102,55 @@ func getHandler(appType consts.AppType) echo.HandlerFunc {
 			webapp.Instance = instance
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
+	}
+}
+
+func downloadHandler(appType consts.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		inst := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		man, err := app.GetBySlug(inst, slug, appType)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		if err := middlewares.Allow(c, permission.GET, man); err != nil {
+			return err
+		}
+
+		version := c.Param("version")
+		if version == "" {
+			version = man.Version()
+		}
+
+		source := man.Source()
+		if strings.HasPrefix(source, "registry://") {
+			registries := inst.Registries()
+			v, err := registry.GetVersion(slug, version, registries)
+			if err != nil {
+				return wrapAppsError(err)
+			}
+			return c.Redirect(http.StatusSeeOther, v.URL)
+		}
+
+		if version != man.Version() {
+			err := errors.New("code for this version is not available")
+			return jsonapi.PreconditionFailed("version", err)
+		}
+
+		var fs appfs.FileServer
+		switch appType {
+		case consts.WebappType:
+			man := man.(*app.WebappManifest)
+			if man.FromAppsDir {
+				fs = app.FSForAppDir(slug)
+			} else {
+				fs = app.AppsFileServer(inst)
+			}
+		case consts.KonnectorType:
+			fs = app.KonnectorsFileServer(inst)
+		}
+
+		return fs.ServeCodeTarball(c.Response(), c.Request(), slug, version, man.Checksum())
 	}
 }
 
@@ -677,6 +728,8 @@ func WebappsRoutes(router *echo.Group) {
 	router.GET("/:slug/icon", iconHandler(consts.WebappType))
 	router.GET("/:slug/icon/:version", iconHandler(consts.WebappType))
 	router.GET("/:slug/open", openWebapp)
+	router.GET("/:slug/download", downloadHandler(consts.WebappType))
+	router.GET("/:slug/download/:version", downloadHandler(consts.WebappType))
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
@@ -689,6 +742,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.GET("/:slug/icon", iconHandler(consts.KonnectorType))
 	router.GET("/:slug/icon/:version", iconHandler(consts.KonnectorType))
 	router.POST("/:slug/trigger", createTrigger)
+	router.GET("/:slug/download", downloadHandler(consts.KonnectorType))
 }
 
 func wrapAppsError(err error) error {
