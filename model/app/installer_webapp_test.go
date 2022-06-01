@@ -137,19 +137,23 @@ func TestWebappInstallSuccessful(t *testing.T) {
 
 func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	manifest1 := func() string {
-		return ` {
+		return `{
 "description": "A mini app to test cozy-stack-v2",
 "developer": {
-	"name": "Cozy",
-	"url": "cozy.io"
+  "name": "Cozy",
+  "url": "cozy.io"
 },
 "license": "MIT",
 "name": "mini-app",
 "permissions": {
   "rule0": {
-	"type": "io.cozy.files",
-	"verbs": ["GET"],
-	"values": ["foobar"]
+    "type": "io.cozy.files",
+    "verbs": ["GET"],
+    "values": ["foobar"]
+  },
+  "rule1": {
+    "type": "cc.cozycloud.sentry",
+    "verbs": ["POST"]
   }
 },
 "slug": "mini-test-perms",
@@ -159,26 +163,57 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	}
 
 	manifest2 := func() string {
-		return ` {
+		return `{
 "description": "A mini app to test cozy-stack-v2",
 "developer": {
-	"name": "Cozy",
-	"url": "cozy.io"
+  "name": "Cozy",
+  "url": "cozy.io"
 },
 "license": "MIT",
 "name": "mini-app",
 "permissions": {
-	"rule0": {
-		"type": "io.cozy.files",
-		"verbs": ["GET"],
-		"values": ["foobar"]
-	}
+  "rule0": {
+    "type": "io.cozy.files",
+    "verbs": ["GET"],
+    "values": ["foobar"]
+  },
+  "rule1": {
+    "type": "cc.cozycloud.sentry",
+    "verbs": ["POST"]
+  }
 },
 "slug": "mini-test-perms",
 "type": "webapp",
 "version": "2.0.0"
 }`
 	}
+
+	manifest3 := func() string {
+		return `{
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+  "name": "Cozy",
+  "url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+    "type": "io.cozy.files",
+    "verbs": ["GET"],
+    "values": ["foobar"]
+  },
+  "rule1": {
+    "type": "cc.cozycloud.errors",
+    "verbs": ["POST"]
+  }
+},
+"slug": "mini-test-perms",
+"type": "webapp",
+"version": "3.0.0"
+}`
+	}
+
 	manGen = manifest1
 	manName = app.WebappManifestName
 	finished := true
@@ -206,7 +241,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	assert.Contains(t, man.Version(), "1.0.0")
 
 	// Altering permissions by adding a value and a verb
-	newPerms, err := permission.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
+	newPerms, err := permission.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2 cc.cozycloud.sentry:POST")
 	assert.NoError(t, err)
 
 	customRule := permission.Rule{
@@ -243,6 +278,38 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	// Assert the rules were kept
 	assert.False(t, p2.Permissions.HasSameRules(man.Permissions()))
 	assert.True(t, p1.Permissions.HasSameRules(p2.Permissions))
+
+	// Update again the app
+	manGen = manifest3
+	inst3, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation:        app.Update,
+		Type:             consts.WebappType,
+		Slug:             "mini-test-perms",
+		SourceURL:        "git://localhost/",
+		PermissionsAcked: true,
+	})
+	assert.NoError(t, err)
+
+	man, err = inst3.RunSync()
+	assert.NoError(t, err)
+
+	p3, err := permission.GetForWebapp(instance, "mini-test-perms")
+	assert.NoError(t, err)
+	assert.Contains(t, man.Version(), "3.0.0")
+	assert.False(t, p3.Permissions.HasSameRules(man.Permissions()))
+	// Assert that rule1 type has been changed
+	sentry := permission.Rule{
+		Type:  "cc.cozycloud.sentry",
+		Title: "rule1",
+		Verbs: permission.Verbs(permission.POST),
+	}
+	assert.False(t, p3.Permissions.RuleInSubset(sentry))
+	errors := permission.Rule{
+		Type:  "cc.cozycloud.errors",
+		Title: "rule1",
+		Verbs: permission.Verbs(permission.POST),
+	}
+	assert.True(t, p3.Permissions.RuleInSubset(errors))
 }
 
 func TestWebappUpgradeNotExist(t *testing.T) {
