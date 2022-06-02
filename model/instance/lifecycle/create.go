@@ -44,6 +44,7 @@ type Options struct {
 	Key                string
 	KdfIterations      int
 	SwiftLayout        int
+	CouchCluster       int
 	DiskQuota          int64
 	Apps               []string
 	AutoUpdate         *bool
@@ -153,10 +154,14 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		}
 	}
 
-	clusters := config.GetConfig().CouchDB.Clusters
-	i.CouchCluster, err = ChooseCouchCluster(clusters)
-	if err != nil {
-		return nil, err
+	if opts.CouchCluster >= 0 {
+		i.CouchCluster = opts.CouchCluster
+	} else {
+		clusters := config.GetConfig().CouchDB.Clusters
+		i.CouchCluster, err = ChooseCouchCluster(clusters)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if opts.AuthMode != "" {

@@ -449,6 +449,7 @@ func writeInstanceDoc(in *instance.Instance, name string, now time.Time, tw *tar
 	clone.OAuthSecret = nil
 	clone.CLISecret = nil
 	clone.SwiftLayout = 0
+	clone.CouchCluster = 0
 	clone.IndexViewsVersion = 0
 	return writeDoc("", name, clone, now, tw)
 }

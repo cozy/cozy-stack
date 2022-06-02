@@ -35,6 +35,7 @@ type Instance struct {
 		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
+		CouchCluster         int       `json:"couch_cluster,omitempty"`
 		SwiftLayout          int       `json:"swift_cluster,omitempty"`
 		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
 		PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
@@ -58,6 +59,7 @@ type InstanceOptions struct {
 	Settings           string
 	BlockingReason     string
 	SwiftLayout        int
+	CouchCluster       int
 	DiskQuota          int64
 	Apps               []string
 	Passphrase         string
@@ -145,6 +147,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		"PublicName":    {opts.PublicName},
 		"Settings":      {opts.Settings},
 		"SwiftLayout":   {strconv.Itoa(opts.SwiftLayout)},
+		"CouchCluster":  {strconv.Itoa(opts.CouchCluster)},
 		"DiskQuota":     {strconv.FormatInt(opts.DiskQuota, 10)},
 		"Apps":          {strings.Join(opts.Apps, ",")},
 		"Passphrase":    {opts.Passphrase},

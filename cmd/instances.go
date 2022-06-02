@@ -45,6 +45,7 @@ var flagJSON bool
 var flagForceRegistry bool
 var flagOnlyRegistry bool
 var flagSwiftLayout int
+var flagCouchCluster int
 var flagUUID string
 var flagOIDCID string
 var flagTOSSigned string
@@ -114,6 +115,8 @@ var showDBPrefixInstanceCmd = &cobra.Command{
 	Long: `
 cozy-stack instances show allows to show the instance prefix on the cozy for a
 given domain. The prefix is used for databases and VFS prefixing.
+
+It will also show the couch_cluster if it is not the default one.
 `,
 	Example: "$ cozy-stack instances show-db-prefix cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -130,6 +133,9 @@ given domain. The prefix is used for databases and VFS prefixing.
 			fmt.Println(in.Attrs.Prefix)
 		} else {
 			fmt.Println(couchdb.EscapeCouchdbName(in.Attrs.Domain))
+		}
+		if in.Attrs.CouchCluster != 0 {
+			fmt.Printf("couch_cluster: %d\n", in.Attrs.CouchCluster)
 		}
 		return nil
 	},
@@ -183,6 +189,7 @@ be used as the error message.
 			PublicName:    flagPublicName,
 			Settings:      flagSettings,
 			SwiftLayout:   flagSwiftLayout,
+			CouchCluster:  flagCouchCluster,
 			DiskQuota:     diskQuota,
 			Apps:          flagApps,
 			Passphrase:    flagPassphrase,
@@ -1092,6 +1099,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
 	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
 	addInstanceCmd.Flags().IntVar(&flagSwiftLayout, "swift-layout", -1, "Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default)")
+	addInstanceCmd.Flags().IntVar(&flagCouchCluster, "couch-cluster", -1, "Specify the CouchDB cluster where the instance will be created (-1 means the default)")
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance (deprecated)")
