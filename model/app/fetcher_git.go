@@ -104,6 +104,19 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 	src, branch = getRemoteURL(src)
 	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
 	defer cancel()
+
+	if branch == "" {
+		branch = "main"
+		handle, err := g.doFetchManifestFromGitArchive(src, branch, ctx)
+		if err == nil {
+			return handle, nil
+		}
+		branch = "master"
+	}
+	return g.doFetchManifestFromGitArchive(src, branch, ctx)
+}
+
+func (g *gitFetcher) doFetchManifestFromGitArchive(src *url.URL, branch string, ctx context.Context) (io.ReadCloser, error) {
 	cmd := exec.CommandContext(ctx, "git",
 		"archive",
 		"--remote", src.String(),
@@ -188,6 +201,24 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
 	defer cancel()
 
+	if branch == "" {
+		branch = "main"
+		err := g.doFetchWithGit(gitFs, gitDir, srcStr, branch, fs, man, ctx)
+		if err == nil {
+			return nil
+		}
+		branch = "master"
+	}
+	return g.doFetchWithGit(gitFs, gitDir, srcStr, branch, fs, man, ctx)
+}
+
+func (g *gitFetcher) doFetchWithGit(
+	gitFs afero.Fs,
+	gitDir, srcStr, branch string,
+	fs appfs.Copier,
+	man Manifest,
+	ctx context.Context,
+) (err error) {
 	// The first command we execute is a ls-remote to check the last commit from
 	// the remote branch and see if we already have a checked-out version of this
 	// tree.
@@ -274,9 +305,6 @@ func getWebBranch(src *url.URL) string {
 
 func getRemoteURL(src *url.URL) (*url.URL, string) {
 	branch := src.Fragment
-	if branch == "" {
-		branch = "master"
-	}
 	clonedSrc := *src
 	clonedSrc.Fragment = ""
 	return &clonedSrc, branch
