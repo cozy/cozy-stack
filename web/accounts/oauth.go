@@ -242,6 +242,6 @@ func reconnect(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession)
 	router.GET("/:accountType/redirect", redirect)
-	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance, middlewares.LoadSession)
-	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance)
+	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
+	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession)
 }
