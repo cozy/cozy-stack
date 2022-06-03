@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"math"
+	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/afero"
 )
 
 var defaultTimeout = 300 * time.Second
@@ -164,4 +167,42 @@ func wrapErr(ctx context.Context, err error) error {
 		return context.DeadlineExceeded
 	}
 	return err
+}
+
+// MaxPayloadSizeInEnvVar is the maximal size that the COZY_PAYLOAD env
+// variable can be. If the payload is larger, we can't put it in the env
+// variable as the kernel as a limit for it. Instead, we put the payload in a
+// temporary file and only gives the filename in the COZY_PAYLOAD variable.
+const MaxPayloadSizeInEnvVar = 100000
+
+const payloadFilename = "cozy_payload.json"
+
+func preparePayload(ctx *job.WorkerContext, workDir string) (string, error) {
+	var payload string
+	if p, err := ctx.UnmarshalPayload(); err == nil {
+		marshaled, err := json.Marshal(p)
+		if err != nil {
+			return "", err
+		}
+		payload = string(marshaled)
+	}
+
+	if len(payload) > MaxPayloadSizeInEnvVar {
+		workFS := afero.NewBasePathFs(afero.NewOsFs(), workDir)
+		f, err := workFS.OpenFile(payloadFilename, os.O_CREATE|os.O_WRONLY, 0640)
+		if err != nil {
+			return "", err
+		}
+		_, err = f.WriteString(payload)
+		errc := f.Close()
+		if err != nil {
+			return "", err
+		}
+		if errc != nil {
+			return "", errc
+		}
+		payload = "@" + payloadFilename
+	}
+
+	return payload, nil
 }

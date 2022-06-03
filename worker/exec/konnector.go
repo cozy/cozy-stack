@@ -38,9 +38,10 @@ const (
 )
 
 type konnectorWorker struct {
-	slug string
-	msg  *KonnectorMessage
-	man  *app.KonnManifest
+	slug    string
+	msg     *KonnectorMessage
+	man     *app.KonnManifest
+	workDir string
 
 	err     error
 	lastErr error
@@ -237,6 +238,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	cleanDir = func() {
 		_ = os.RemoveAll(workDir)
 	}
+	w.workDir = workDir
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := app.KonnectorsFileServer(i)
@@ -523,12 +525,9 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	fieldsJSON := w.msg.ToJSON()
 	token := i.BuildKonnectorToken(w.man.Slug())
 
-	payload := []byte{}
-	if p, err := ctx.UnmarshalPayload(); err == nil {
-		payload, err = json.Marshal(p)
-		if err != nil {
-			return "", nil, err
-		}
+	payload, err := preparePayload(ctx, w.workDir)
+	if err != nil {
+		return "", nil, err
 	}
 
 	cmd = config.GetConfig().Konnectors.Cmd
@@ -537,7 +536,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + fieldsJSON,
 		"COZY_PARAMETERS=" + string(paramsJSON),
-		"COZY_PAYLOAD=" + string(payload),
+		"COZY_PAYLOAD=" + payload,
 		"COZY_LANGUAGE=" + language,
 		"COZY_LOCALE=" + i.Locale,
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),

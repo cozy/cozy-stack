@@ -29,9 +29,10 @@ type ServiceOptions struct {
 }
 
 type serviceWorker struct {
-	man  *app.WebappManifest
-	slug string
-	name string
+	man     *app.WebappManifest
+	slug    string
+	name    string
+	workDir string
 }
 
 func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, cleanDir func(), err error) {
@@ -119,6 +120,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	cleanDir = func() {
 		_ = os.RemoveAll(workDir)
 	}
+	w.workDir = workDir
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	var fs appfs.FileServer
@@ -165,12 +167,9 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		}
 	}
 
-	payload := []byte{}
-	if p, err := ctx.UnmarshalPayload(); err == nil {
-		payload, err = json.Marshal(p)
-		if err != nil {
-			return "", nil, err
-		}
+	payload, err := preparePayload(ctx, w.workDir)
+	if err != nil {
+		return "", nil, err
 	}
 
 	token := i.BuildAppToken(w.man.Slug(), "")
@@ -183,7 +182,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),
 		"COZY_COUCH_DOC=" + string(marshaled),
-		"COZY_PAYLOAD=" + string(payload),
+		"COZY_PAYLOAD=" + payload,
 	}
 	if triggerID, ok := ctx.TriggerID(); ok {
 		env = append(env, "COZY_TRIGGER_ID="+triggerID)

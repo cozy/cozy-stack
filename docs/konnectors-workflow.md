@@ -793,6 +793,13 @@ HTTP/1.1 204 No Content
 - `COZY_PAYLOAD={"param_from_http_body": "bar"}`
 - etc.
 
+**Note:** the environnement variables have a limit for their size defined by
+the linux kernel. If the payload is too big to fit inside the env variable,
+the stack will put the payload in a temporary file, and will set the
+`COZY_PAYLOAD` variable to `@` + the filename of this file, like:
+
+`COZY_PAYLOAD=@cozy_payload.json`
+
 7. The konnector will fetch the documents from the external service and save
    them in the Cozy.
 
