@@ -26,7 +26,7 @@ jobs:
             lint: true
           # More exotic version
           - go-version: 1.15.x
-            couchdb-version: 3.2.0
+            couchdb-version: 3.2.2
     steps:
       - name: Install CouchDB
         run: |
@@ -35,14 +35,16 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${VERSION_CODENAME} main" | sudo tee /etc/apt/sources.list.d/couchdb.list
           sudo apt-get update
           sudo debconf-set-selections <<-EOF
-          	couchdb couchdb/mode select standalone
-          	couchdb couchdb/mode seen true
-          	couchdb couchdb/bindaddress string 127.0.0.1
-          	couchdb couchdb/bindaddress seen true
-          	couchdb couchdb/adminpass password password
-          	couchdb couchdb/adminpass seen true
-          	couchdb couchdb/adminpass_again password password
-          	couchdb couchdb/adminpass_again seen true
+                couchdb couchdb/mode select standalone
+                couchdb couchdb/mode seen true
+                couchdb couchdb/bindaddress string 127.0.0.1
+                couchdb couchdb/bindaddress seen true
+                couchdb couchdb/adminpass password password
+                couchdb couchdb/adminpass seen true
+                couchdb couchdb/adminpass_again password password
+                couchdb couchdb/adminpass_again seen true
+                couchdb couchdb/cookie string elmo
+                couchdb couchdb/cookie seen true
           EOF
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=${{ matrix.couchdb-version }}*
           echo "COZY_COUCHDB_URL=http://admin:password@localhost:5984/" >> $GITHUB_ENV
