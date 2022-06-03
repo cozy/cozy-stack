@@ -200,15 +200,15 @@ func refresh(c echo.Context) error {
 
 // reconnect can used to reconnect a user from BI
 func reconnect(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
 	instance := middlewares.GetInstance(c)
 	accountid := c.Param("accountid")
 
 	var acc account.Account
 	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &acc); err != nil {
-		return err
-	}
-
-	if err := middlewares.Allow(c, permission.GET, &acc); err != nil {
 		return err
 	}
 
@@ -243,5 +243,5 @@ func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession)
 	router.GET("/:accountType/redirect", redirect)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
-	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance)
+	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession)
 }
