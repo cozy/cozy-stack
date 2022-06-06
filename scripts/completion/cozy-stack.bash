@@ -4294,6 +4294,38 @@ _cozy-stack_tools_encrypt-with-rsa()
     noun_aliases=()
 }
 
+_cozy-stack_tools_unxor-document-id()
+{
+    last_command="cozy-stack_tools_unxor-document-id"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_tools()
 {
     last_command="cozy-stack_tools"
@@ -4303,6 +4335,7 @@ _cozy-stack_tools()
     commands=()
     commands+=("bug")
     commands+=("encrypt-with-rsa")
+    commands+=("unxor-document-id")
 
     flags=()
     two_word_flags=()
