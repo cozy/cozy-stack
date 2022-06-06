@@ -312,31 +312,47 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 	if err = json.NewDecoder(res.Body).Decode(&states); err != nil {
 		return err
 	}
-	for _, m := range api.members {
-		found := false
-		for i, member := range s.Members {
-			if i == 0 {
-				continue // skip the owner
+
+	// We can have conflicts when updating the sharing document, so we are
+	// retrying when it is the case.
+	maxRetries := 3
+	i := 0
+	for {
+		for _, m := range api.members {
+			found := false
+			for i, member := range s.Members {
+				if i == 0 {
+					continue // skip the owner
+				}
+				if m.Email == "" {
+					found = m.Instance == member.Instance
+				} else {
+					found = m.Email == member.Email
+				}
+				if found && member.Status != MemberStatusReady {
+					s.Members[i].Status = m.Status
+					s.Members[i].Name = m.Name
+					s.Members[i].Instance = m.Instance
+					s.Members[i].ReadOnly = m.ReadOnly
+					break
+				}
 			}
-			if m.Email == "" {
-				found = m.Instance == member.Instance
-			} else {
-				found = m.Email == member.Email
-			}
-			if found && member.Status != MemberStatusReady {
-				s.Members[i].Status = m.Status
-				s.Members[i].Name = m.Name
-				s.Members[i].Instance = m.Instance
-				s.Members[i].ReadOnly = m.ReadOnly
-				break
+			if !found {
+				s.Members = append(s.Members, m)
 			}
 		}
-		if !found {
-			s.Members = append(s.Members, m)
+		if err := couchdb.UpdateDoc(inst, s); err == nil {
+			break
 		}
-	}
-	if err := couchdb.UpdateDoc(inst, s); err != nil {
-		return err
+		i++
+		if i > maxRetries {
+			return err
+		}
+		time.Sleep(1 * time.Second)
+		s, err = FindSharing(inst, s.SID)
+		if err != nil {
+			return err
+		}
 	}
 	return s.SendInvitationsToMembers(inst, api.members, states)
 }

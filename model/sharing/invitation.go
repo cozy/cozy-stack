@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -67,6 +68,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
 	sharer, desc := s.getSharerAndDescription(inst)
 
+	keys := make([]string, 0, len(members))
 	for _, m := range members {
 		key := m.Email
 		if key == "" {
@@ -89,23 +91,42 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 				return ErrInvitationNotSent
 			}
 		}
-		for i, member := range s.Members {
-			if i == 0 {
+		keys = append(keys, key)
+	}
+
+	// We can have conflicts when updating the sharing document, so we are
+	// retrying when it is the case.
+	maxRetries := 3
+	i := 0
+	for {
+		for j, member := range s.Members {
+			if j == 0 {
 				continue // skip the owner
 			}
-			var found bool
-			if m.Email == "" {
-				found = m.Instance == member.Instance
-			} else {
-				found = m.Email == member.Email
+			if member.Status != MemberStatusMailNotSent {
+				continue
 			}
-			if found && member.Status == MemberStatusMailNotSent {
-				s.Members[i].Status = MemberStatusPendingInvitation
-				break
+			for _, key := range keys {
+				if member.Email == key || member.Instance == key {
+					s.Members[j].Status = MemberStatusPendingInvitation
+					break
+				}
 			}
 		}
+		err := couchdb.UpdateDoc(inst, s)
+		if err == nil {
+			return nil
+		}
+		i++
+		if i > maxRetries {
+			return err
+		}
+		time.Sleep(1 * time.Second)
+		s, err = FindSharing(inst, s.SID)
+		if err != nil {
+			return err
+		}
 	}
-	return couchdb.UpdateDoc(inst, s)
 }
 
 func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, string) {
