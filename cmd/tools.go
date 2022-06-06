@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -14,6 +15,8 @@ import (
 	"runtime"
 
 	"github.com/cozy/cozy-stack/cmd/browser"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/sharing"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +26,47 @@ var toolsCmdGroup = &cobra.Command{
 	Short: "Regroup some tools for debugging and tests",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
+	},
+}
+
+var unxorDocumentID = &cobra.Command{
+	Use:   "unxor-document-id <domain> <sharing_id> <document_id>",
+	Short: "transform the id of a shared document",
+	Long: `
+This command can be used when you have the identifier of a shared document on a
+recipient instance, and you want the identifier of the same document on the
+owner's instance.
+`,
+	Example: `
+If you a log message like:
+
+	PUT http://bob.localhost:8080/sharings/7f47c470c7b1013a8a8818c04daba326/io.cozy.files/4ded650c803f67a4 500 Internal Server Error
+
+you can execute this command:
+
+    $ cozy-stack tools unxor-document-id bob.localhost:8080 7f47c470c7b1013a8a8818c04daba326 4ded650c803f67a4
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 3 {
+			return cmd.Usage()
+		}
+		inst, err := instance.GetFromCouch(args[0])
+		if err != nil {
+			return err
+		}
+		s, err := sharing.FindSharing(inst, args[1])
+		if err != nil {
+			return err
+		}
+		if s.Owner {
+			return errors.New("it only works on a recipient's instance")
+		}
+		if len(s.Credentials) != 1 {
+			return errors.New("unexpected credentials")
+		}
+		key := s.Credentials[0].XorKey
+		fmt.Printf("ID: %q\n", sharing.XorID(args[2], key))
+		return nil
 	},
 }
 
@@ -139,6 +183,7 @@ The report includes useful system information.
 }
 
 func init() {
+	toolsCmdGroup.AddCommand(unxorDocumentID)
 	toolsCmdGroup.AddCommand(encryptRSACmd)
 	toolsCmdGroup.AddCommand(bugCmd)
 	RootCmd.AddCommand(toolsCmdGroup)
