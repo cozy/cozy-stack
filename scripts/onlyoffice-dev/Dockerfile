@@ -1,6 +1,6 @@
 # Taken from https://github.com/ONLYOFFICE/Docker-DocumentServer/blob/master/Dockerfile
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 \
     DEBIAN_FRONTEND=noninteractive \
