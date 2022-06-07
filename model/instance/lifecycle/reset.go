@@ -49,6 +49,9 @@ func Reset(inst *instance.Instance) error {
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.BitwardenCiphers) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Contacts) })
 	g.Go(func() error {
+		if err := couchdb.CreateDB(inst, consts.Settings); err != nil {
+			return err
+		}
 		if bitwardenSettings != nil {
 			bitwardenSettings.SetRev("")
 			if err := bitwardenSettings.Save(inst); err != nil {
