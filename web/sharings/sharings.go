@@ -181,14 +181,12 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 	if len(sharings) == 0 {
 		return jsonapi.DataList(c, http.StatusOK, nil, nil)
 	}
-	sharingIDs := make([]string, len(sharings))
-	i := 0
+	sharingIDs := make([]string, 0, len(sharings))
 	for sID, s := range sharings {
 		if err = checkGetPermissions(c, s); err != nil {
 			return wrapErrors(err)
 		}
-		sharingIDs[i] = sID
-		i++
+		sharingIDs = append(sharingIDs, sID)
 	}
 	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
 	if err != nil {
@@ -196,16 +194,14 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	res := make([]*sharing.APISharing, len(sharings))
-	i = 0
+	res := make([]*sharing.APISharing, 0, len(sharings))
 	for sID, s := range sharings {
 		as := &sharing.APISharing{
 			Sharing:     s,
 			SharedDocs:  sDocs[sID],
 			Credentials: nil,
 		}
-		res[i] = as
-		i++
+		res = append(res, as)
 	}
 	return sharing.InfoByDocTypeData(c, http.StatusOK, res)
 }
