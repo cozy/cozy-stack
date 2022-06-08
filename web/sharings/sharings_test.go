@@ -874,10 +874,10 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 
 	assertSharingInfoRequestIsCorrect(t, res.Body, s1.ID(), s2.ID())
 
-	req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.notyet", nil)
+	req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.tests.notyet", nil)
 	assert.NoError(t, err)
 	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppTokenWildcard)
 	res2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
@@ -891,6 +891,14 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 	res3.Body.Close()
+
+	req4, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.things", nil)
+	assert.NoError(t, err)
+	req4.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	res4, err := http.DefaultClient.Do(req4)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, res4.StatusCode)
+	res4.Body.Close()
 }
 
 func TestRevokeSharing(t *testing.T) {
