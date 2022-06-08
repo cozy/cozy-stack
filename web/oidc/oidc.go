@@ -529,13 +529,13 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 }
 
 func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
-	keys, err := getKeys(conf.IDTokenKeyURL)
+	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
 	if err != nil {
 		return err
 	}
 
 	token, err := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
-		return chooseKey(keys, token)
+		return ChooseKeyForIDToken(keys, token)
 	})
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
@@ -573,7 +573,9 @@ var keysClient = &http.Client{
 	},
 }
 
-func getKeys(keyURL string) ([]*jwKey, error) {
+// GetIDTokenKeys returns the keys that can be used to verify that an OIDC
+// id_token is valid.
+func GetIDTokenKeys(keyURL string) ([]*jwKey, error) {
 	cache := config.GetConfig().CacheStorage
 	cacheKey := "oidc-jwk:" + keyURL
 
@@ -616,7 +618,8 @@ func getKeysFromHTTP(keyURL string) ([]byte, error) {
 	return ioutil.ReadAll(res.Body)
 }
 
-func chooseKey(keys []*jwKey, token *jwt.Token) (interface{}, error) {
+// ChooseKeyForIDToken can be used to check an id_token as a JWT.
+func ChooseKeyForIDToken(keys []*jwKey, token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 		return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 	}
