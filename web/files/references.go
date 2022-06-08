@@ -126,6 +126,7 @@ func ListReferencesHandler(c echo.Context) error {
 		docs = make([]jsonapi.Object, len(res.Rows))
 	}
 
+	var thumbIDs []string
 	for i, row := range res.Rows {
 		refs[i] = couchdb.DocReference{
 			ID:   row.ID,
@@ -136,6 +137,24 @@ func ListReferencesHandler(c echo.Context) error {
 			docs[i], err = rawMessageToObject(instance, row.Doc)
 			if err != nil {
 				return err
+			}
+			if f, ok := docs[i].(*file); ok {
+				if f.doc.Class == "image" || f.doc.Class == "pdf" {
+					thumbIDs = append(thumbIDs, f.ID())
+				}
+			}
+		}
+	}
+
+	// Create secrets for thumbnail links in batch for performance reasons
+	if len(thumbIDs) > 0 {
+		if secrets, err := vfs.GetStore().AddThumbs(instance, thumbIDs); err == nil {
+			for _, doc := range docs {
+				if f, ok := doc.(*file); ok {
+					if secret, ok := secrets[f.ID()]; ok {
+						f.SetThumbSecret(secret)
+					}
+				}
 			}
 		}
 	}
