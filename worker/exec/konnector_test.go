@@ -94,7 +94,7 @@ func TestBadFileExec(t *testing.T) {
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
-	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
+	assert.Contains(t, err.Error(), "exec")
 
 	config.GetConfig().Konnectors.Cmd = "echo"
 	err = worker(ctx)
