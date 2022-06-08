@@ -235,45 +235,6 @@ func TestReferencesWithSlash(t *testing.T) {
 	assert.Equal(t, *result.Meta.Count, 1)
 	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
 
-	// Add dummy references on io.cozy.apps%2ffoobaz and io.cozy.apps%2Ffooqux
-	foobazRef := couchdb.DocReference{
-		ID:   "io.cozy.apps%2ffoobaz",
-		Type: Type,
-	}
-	fooquxRef := couchdb.DocReference{
-		ID:   "io.cozy.apps%2Ffooqux",
-		Type: Type,
-	}
-	fdoc.ReferencedBy = append(fdoc.ReferencedBy, foobazRef, fooquxRef)
-	err = couchdb.UpdateDoc(testInstance, fdoc)
-	assert.NoError(t, err)
-
-	// Check that we can find the reference with %2f
-	url2 := ts.URL + "/data/" + Type + "/io.cozy.apps%2ffoobaz/relationships/references"
-	result.Data = result.Data[:0]
-	result.Meta = jsonapi.Meta{}
-	req, _ = http.NewRequest("GET", url2, nil)
-	req.Header.Add("Authorization", "Bearer "+token)
-	_, res, err = doRequest(req, &result)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	assert.Len(t, result.Data, 1)
-	assert.Equal(t, *result.Meta.Count, 1)
-	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
-
-	// Check that we can find the reference with %2F
-	url3 := ts.URL + "/data/" + Type + "/io.cozy.apps%2Ffooqux/relationships/references"
-	result.Data = result.Data[:0]
-	result.Meta = jsonapi.Meta{}
-	req, _ = http.NewRequest("GET", url3, nil)
-	req.Header.Add("Authorization", "Bearer "+token)
-	_, res, err = doRequest(req, &result)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	assert.Len(t, result.Data, 1)
-	assert.Equal(t, *result.Meta.Count, 1)
-	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
-
 	// Remove the reference with a /
 	in = jsonReader(jsonapi.Relationship{
 		Data: []couchdb.DocReference{
@@ -281,34 +242,6 @@ func TestReferencesWithSlash(t *testing.T) {
 		},
 	})
 	req, _ = http.NewRequest("DELETE", url, in)
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/vnd.api+json")
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, 204, res.StatusCode)
-
-	// Remove the reference with a %2f
-	in = jsonReader(jsonapi.Relationship{
-		Data: []couchdb.DocReference{
-			{ID: fdoc.ID(), Type: consts.Files},
-		},
-	})
-	req, _ = http.NewRequest("DELETE", url2, in)
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/vnd.api+json")
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, 204, res.StatusCode)
-
-	// Remove the reference with a %2F
-	in = jsonReader(jsonapi.Relationship{
-		Data: []couchdb.DocReference{
-			{ID: fdoc.ID(), Type: consts.Files},
-		},
-	})
-	req, _ = http.NewRequest("DELETE", url3, in)
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 	res, err = http.DefaultClient.Do(req)

@@ -42,7 +42,6 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 // Beware, this is actually used in the web/data Routes
 func ListReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	defer lockVFS(instance)()
 
 	doctype := c.Param("doctype")
 	id := getDocID(c)
@@ -60,6 +59,8 @@ func ListReferencesHandler(c echo.Context) error {
 		return err
 	}
 
+	defer lockVFS(instance)()
+
 	key := []string{doctype, id}
 	reqCount := &couchdb.ViewRequest{Key: key, Reduce: true}
 
@@ -72,17 +73,6 @@ func ListReferencesHandler(c echo.Context) error {
 	count := 0
 	if len(resCount.Rows) > 0 {
 		count = int(resCount.Rows[0].Value.(float64))
-	}
-
-	// XXX Some references can contains %2f instead of in the id (legacy),
-	// and to preserve compatibility, we try to find those documents if no
-	// documents with the correct reference are found.
-	if count == 0 && strings.Contains(id, "/") {
-		key[1] = c.Param("docid")
-		err = couchdb.ExecView(instance, couchdb.FilesReferencedByView, reqCount, &resCount)
-		if err == nil && len(resCount.Rows) > 0 {
-			count = int(resCount.Rows[0].Value.(float64))
-		}
 	}
 	meta := &jsonapi.Meta{Count: &count}
 
@@ -136,6 +126,7 @@ func ListReferencesHandler(c echo.Context) error {
 		docs = make([]jsonapi.Object, len(res.Rows))
 	}
 
+	var thumbIDs []string
 	for i, row := range res.Rows {
 		refs[i] = couchdb.DocReference{
 			ID:   row.ID,
@@ -146,6 +137,24 @@ func ListReferencesHandler(c echo.Context) error {
 			docs[i], err = rawMessageToObject(instance, row.Doc)
 			if err != nil {
 				return err
+			}
+			if f, ok := docs[i].(*file); ok {
+				if f.doc.Class == "image" || f.doc.Class == "pdf" {
+					thumbIDs = append(thumbIDs, f.ID())
+				}
+			}
+		}
+	}
+
+	// Create secrets for thumbnail links in batch for performance reasons
+	if len(thumbIDs) > 0 {
+		if secrets, err := vfs.GetStore().AddThumbs(instance, thumbIDs); err == nil {
+			for _, doc := range docs {
+				if f, ok := doc.(*file); ok {
+					if secret, ok := secrets[f.ID()]; ok {
+						f.SetThumbSecret(secret)
+					}
+				}
 			}
 		}
 	}
@@ -230,17 +239,6 @@ func RemoveReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	// XXX References with an ID that contains a / could have it encoded as %2F
-	// (legacy). We delete the references for both versions to preserve
-	// compatibility.
-	var altRef *couchdb.DocReference
-	if strings.Contains(id, "/") {
-		altRef = &couchdb.DocReference{
-			Type: doctype,
-			ID:   c.Param("docid"),
-		}
-	}
-
 	if err := middlewares.AllowTypeAndID(c, permission.DELETE, doctype, id); err != nil {
 		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
 			return err
@@ -258,18 +256,12 @@ func RemoveReferencesHandler(c echo.Context) error {
 		if dir != nil {
 			oldDir := dir.Clone()
 			dir.RemoveReferencedBy(docRef)
-			if altRef != nil {
-				dir.RemoveReferencedBy(*altRef)
-			}
 			updateDirCozyMetadata(c, dir)
 			docs[i] = dir
 			oldDocs[i] = oldDir
 		} else {
 			oldFile := file.Clone().(*vfs.FileDoc)
 			file.RemoveReferencedBy(docRef)
-			if altRef != nil {
-				file.RemoveReferencedBy(*altRef)
-			}
 			updateFileCozyMetadata(c, file, false)
 			_, _ = file.Path(fs)    // Ensure the fullpath is filled to realtime
 			_, _ = oldFile.Path(fs) // Ensure the fullpath is filled to realtime
