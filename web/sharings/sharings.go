@@ -178,14 +178,14 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 		inst.Logger().WithNamespace("sharing").Errorf("GetSharingsByDocType error: %s", err)
 		return wrapErrors(err)
 	}
+	if err := middlewares.AllowWholeType(c, permission.GET, docType); err != nil {
+		return wrapErrors(err)
+	}
 	if len(sharings) == 0 {
 		return jsonapi.DataList(c, http.StatusOK, nil, nil)
 	}
 	sharingIDs := make([]string, 0, len(sharings))
-	for sID, s := range sharings {
-		if err = checkGetPermissions(c, s); err != nil {
-			return wrapErrors(err)
-		}
+	for sID := range sharings {
 		sharingIDs = append(sharingIDs, sID)
 	}
 	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
