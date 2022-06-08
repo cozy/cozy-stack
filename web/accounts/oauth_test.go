@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -155,7 +156,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 }
 
 func TestFixedRedirectURIOauthFlow(t *testing.T) {
-	redirectURI := "http://_oauth_callback.cozy.localhost/accounts/test-service3/redirect"
+	redirectURI := "http://oauth_callback.cozy.localhost/accounts/test-service3/redirect"
 	service := makeTestACService(redirectURI)
 	defer service.Close()
 
@@ -234,6 +235,47 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	_ = couchdb.DeleteDoc(testInstance, &out)
 }
 
+func TestCheckLogin(t *testing.T) {
+	serviceType := account.AccountType{
+		DocID:                 "test-service4",
+		GrantMode:             account.AuthorizationCode,
+		ClientID:              "the-client-id",
+		ClientSecret:          "the-client-secret",
+		AuthEndpoint:          "https://test-service4/auth",
+		TokenEndpoint:         "https://test-service4/token",
+		RegisteredRedirectURI: "https://oauth_callback.cozy.localhost/accounts/test-service4/redirect",
+	}
+	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer func() {
+		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
+	}()
+
+	u := ts.URL + "/accounts/test-service4/start?scope=foo&state=bar"
+	inAppBrowser := &http.Client{
+		CheckRedirect: noRedirect,
+		Jar:           setup.GetCookieJar(),
+	}
+	res, err := inAppBrowser.Get(u)
+	require.NoError(t, err)
+	res.Body.Close()
+	require.Equal(t, res.StatusCode, 403)
+
+	sessionCode, err := testInstance.CreateSessionCode()
+	require.NoError(t, err)
+	u2 := u + "&session_code=" + sessionCode
+	res2, err := inAppBrowser.Get(u2)
+	require.NoError(t, err)
+	res2.Body.Close()
+	require.Equal(t, res2.StatusCode, 303)
+	assert.Contains(t, res2.Header.Get("Location"), serviceType.AuthEndpoint)
+	cookies := res2.Cookies()
+	require.Len(t, cookies, 1)
+	assert.Equal(t, cookies[0].Name, "cozysessid")
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	build.BuildMode = build.ModeDev
@@ -266,6 +308,10 @@ func TestMain(m *testing.M) {
 	_, _ = client.Do(req)
 
 	os.Exit(setup.Run())
+}
+
+func noRedirect(*http.Request, []*http.Request) error {
+	return http.ErrUseLastResponse
 }
 
 func stopBeforeDataCollectFail(req *http.Request, via []*http.Request) error {

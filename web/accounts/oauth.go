@@ -9,9 +9,11 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -28,10 +30,6 @@ func (a *apiAccount) Links() *jsonapi.LinksList {
 }
 
 func start(c echo.Context) error {
-	if !middlewares.IsLoggedIn(c) {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-
 	instance := middlewares.GetInstance(c)
 
 	accountTypeID := c.Param("accountType")
@@ -200,10 +198,6 @@ func refresh(c echo.Context) error {
 
 // reconnect can used to reconnect a user from BI
 func reconnect(c echo.Context) error {
-	if !middlewares.IsLoggedIn(c) {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-
 	instance := middlewares.GetInstance(c)
 	accountid := c.Param("accountid")
 
@@ -236,12 +230,40 @@ func reconnect(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
+func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		isLoggedIn := middlewares.IsLoggedIn(c)
+		if code := c.QueryParam("session_code"); code != "" {
+			// XXX we should always clear the session code to avoid it being
+			// reused, even if the user is already logged in and we don't want to
+			// create a new session
+			inst := middlewares.GetInstance(c)
+			if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+				sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun)
+				req := c.Request()
+				if err == nil {
+					if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+						inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+					}
+				}
+				isLoggedIn = true
+			}
+		}
+
+		if !isLoggedIn {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+
+		return next(c)
+	}
+}
+
 // Routes setups routing for cozy-as-oauth-client routes
 // Careful, the normal middlewares NeedInstance and LoadSession are not applied
 // to this group in web/routing
 func Routes(router *echo.Group) {
-	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession)
+	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 	router.GET("/:accountType/redirect", redirect)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
-	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession)
+	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 }
