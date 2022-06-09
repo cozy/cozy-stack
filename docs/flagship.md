@@ -86,3 +86,10 @@ Some routes of the stack are dedicated to the flagship app, like:
 
 - creating a session code with `POST /auth/session_code`
 - getting the parameters to open a webapp with `GET /apps/:slug/open`
+
+And some routes accept a `session_code` to open a session in a webview or
+inAppBrowser, like:
+
+- serving the `index.html` of a webapp
+- starting the OAuth danse of a konnector (`/accounts/:slug/start`)
+- starting the reconnect BI flow (`/accounts/:slug/reconnect`).
