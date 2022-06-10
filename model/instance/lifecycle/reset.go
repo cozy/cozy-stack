@@ -44,9 +44,12 @@ func Reset(inst *instance.Instance) error {
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Konnectors) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.OAuthClients) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Jobs) })
+	g.Go(func() error { return couchdb.CreateDB(inst, consts.Triggers) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Permissions) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Sharings) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.BitwardenCiphers) })
+	g.Go(func() error { return couchdb.CreateDB(inst, consts.SessionsLogins) })
+	g.Go(func() error { return couchdb.CreateDB(inst, consts.Notifications) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Contacts) })
 	g.Go(func() error {
 		if err := couchdb.CreateDB(inst, consts.Settings); err != nil {

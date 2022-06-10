@@ -171,6 +171,40 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		}
 	}
 
+	opts.trace("init couchdb", func() {
+		g, _ := errgroup.WithContext(context.Background())
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Files) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Apps) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Konnectors) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.OAuthClients) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Jobs) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Triggers) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Permissions) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Sharings) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.BitwardenCiphers) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.SessionsLogins) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Notifications) })
+		g.Go(func() error {
+			var errg error
+			if errg = couchdb.CreateNamedDocWithDB(i, settings); errg != nil {
+				return errg
+			}
+			_, errg = contact.CreateMyself(i, settings)
+			return errg
+		})
+		err = g.Wait()
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	opts.trace("define views and indexes", func() {
+		err = DefineViewsAndIndex(i)
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	// If the authentication is disabled, we force a random password. It won't
 	// be known by the user and cannot be used to authenticate. It will only be
 	// used if the configuration is changed later: the user will be able to
@@ -204,35 +238,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.NoAutoUpdate = !(*opts.AutoUpdate)
 	}
 
-	opts.trace("init couchdb", func() {
-		g, _ := errgroup.WithContext(context.Background())
-		g.Go(func() error { return couchdb.CreateDoc(prefixer.GlobalPrefixer, i) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Files) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Apps) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Konnectors) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.OAuthClients) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Jobs) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Permissions) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.Sharings) })
-		g.Go(func() error { return couchdb.CreateDB(i, consts.BitwardenCiphers) })
-		g.Go(func() error {
-			var errg error
-			if errg = couchdb.CreateNamedDocWithDB(i, settings); errg != nil {
-				return errg
-			}
-			_, errg = contact.CreateMyself(i, settings)
-			return errg
-		})
-		err = g.Wait()
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	opts.trace("define views and indexes", func() {
-		err = DefineViewsAndIndex(i)
-	})
-	if err != nil {
+	if err = couchdb.CreateDoc(prefixer.GlobalPrefixer, i); err != nil {
 		return nil, err
 	}
 
