@@ -13,8 +13,9 @@ This will run a new instance of CouchDB in `single` mode (no cluster) and in
 $ docker run -d \
     --name cozy-stack-couch \
     -p 5984:5984 \
+    -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
-    couchdb:2.3
+    couchdb:3.2
 $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
 ```
 
