@@ -73,7 +73,7 @@ describe "Copying accounts to bitwarden ciphers" do
     # Check that the cipher has been linked
     assert_equal account["relationships"]["vaultCipher"]["data"]["_id"], cipher[:id]
 
-    # Check that the account auth fields have not been removed 
+    # Check that the account auth fields have not been removed
     assert_equal account["auth"]["login"], "Isabelle"
     assert_equal account["auth"]["zipcode"], "64000"
   end
