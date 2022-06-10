@@ -953,7 +953,7 @@ func makeCouch(v *viper.Viper) (CouchDB, error) {
 
 	if clusters, ok := v.Get("couchdb.clusters").([]interface{}); ok {
 		for _, cluster := range clusters {
-			cluster, _ := cluster.(map[interface{}]interface{})
+			cluster, _ := cluster.(map[string]interface{})
 			u, _ := cluster["url"].(string)
 			couchURL, couchAuth, err := parseURL(u)
 			if err != nil {

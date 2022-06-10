@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -118,6 +117,6 @@ func context(c echo.Context) error {
 	if !ok {
 		ctx = map[string]interface{}{}
 	}
-	doc := &apiContext{config.Normalize(ctx)}
+	doc := &apiContext{ctx}
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
