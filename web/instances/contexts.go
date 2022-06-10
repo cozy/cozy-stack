@@ -95,7 +95,7 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 	}
 
 	return contextAPI{
-		Config:           config.Normalize(cfg),
+		Config:           cfg,
 		Context:          contextName,
 		Registries:       registriesList,
 		Office:           office,
