@@ -18,6 +18,7 @@ type Object interface {
 // in JSON-API land
 type Meta struct {
 	Rev            string                  `json:"rev,omitempty"`
+	Warning        string                  `json:"warning,omitempty"`
 	Count          *int                    `json:"count,omitempty"`
 	ExecutionStats *couchdb.ExecutionStats `json:"execution_stats,omitempty"`
 }

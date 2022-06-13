@@ -1516,7 +1516,12 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links, resp.ExecutionStats)
+	meta := jsonapi.Meta{
+		Count:          &total,
+		ExecutionStats: resp.ExecutionStats,
+		Warning:        resp.Warning,
+	}
+	return jsonapi.DataListWithMeta(c, http.StatusOK, meta, out, &links)
 }
 
 var allowedChangesParams = map[string]bool{

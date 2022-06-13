@@ -913,8 +913,8 @@ func findDocsRaw(db prefixer.Prefixer, doctype string, req interface{}, results 
 		}
 		return nil, err
 	}
-	if !ignoreUnoptimized && response.Warning != "" {
-		// Developer should not rely on unoptimized index.
+	if !ignoreUnoptimized && strings.Contains(response.Warning, "matching index found") {
+		// Developers should not rely on fullscan with no index.
 		return nil, unoptimalError()
 	}
 	if response.Bookmark == "nil" {
