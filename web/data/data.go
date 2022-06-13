@@ -374,6 +374,9 @@ func findDocuments(c echo.Context) error {
 	if resp.ExecutionStats != nil {
 		out["execution_stats"] = resp.ExecutionStats
 	}
+	if resp.Warning != "" {
+		out["warning"] = resp.Warning
+	}
 	return c.JSON(http.StatusOK, out)
 }
 

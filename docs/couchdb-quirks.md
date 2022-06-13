@@ -34,6 +34,24 @@ reasons. In general, you can follow these two rules of thumb:
    omit the `sort` operator on the query (except if you want the `descending`
    order).
 
+### Warnings for slow requests
+
+When requesting a mango index, CouchDB can use an index. But there are also
+cases where no index can be used, or where the index is not optimal. Let's
+see the different scenarios:
+
+- CouchDB does use an index, it will respond with a warning, and cozy-stack
+  will transform this warning in an error, as developers should really avoid
+  this issue
+
+- CouchDB can use an index for the selector but not for the sort, it will
+  respond with an error, and the cozy-stack will just forward the error
+
+- CouchDB can use an index, but will still look at much more documents in
+  the index that what will be in the response (it happens with `$or` and `$in`
+  operators, which should be avoided), CouchDB 3+ will send a warning and the
+  cozy-stack will forward the documents and the warning to the client.
+
 ### Comparison of strings
 
 Comparison of strings is done using ICU which implements the Unicode Collation

@@ -73,12 +73,14 @@ func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 // DataList can be called to send an multiple-value answer with a
 // JSON-API document contains multiple objects.
 func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) error {
-	return DataListWithTotal(c, statusCode, len(objs), objs, links, nil)
+	count := len(objs)
+	meta := Meta{Count: &count}
+	return DataListWithMeta(c, statusCode, meta, objs, links)
 }
 
-// DataListWithTotal can be called to send a list of Object with a different
-// meta:count, useful to indicate total number of results with pagination.
-func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, links *LinksList, executionStats *couchdb.ExecutionStats) error {
+// DataListWithMeta can be called to send a list of Objects with meta like a
+// count, useful to indicate total number of results with pagination.
+func DataListWithMeta(c echo.Context, statusCode int, meta Meta, objs []Object, links *LinksList) error {
 	objsMarshaled := make([]json.RawMessage, len(objs))
 	for i, o := range objs {
 		j, err := MarshalObject(o)
@@ -95,7 +97,7 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 	doc := Document{
 		Data:  (*json.RawMessage)(&data),
-		Meta:  &Meta{Count: &total, ExecutionStats: executionStats},
+		Meta:  &meta,
 		Links: links,
 	}
 
