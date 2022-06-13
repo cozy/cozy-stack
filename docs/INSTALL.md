@@ -39,12 +39,15 @@ file (choose the one for your platform). Rename it to cozy-stack, give it the
 executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
 `cozy-stack version` should show you the version if every thing is right.
 
-#### Using `go`
+#### Compile the binary using `go`
 
-[Install go](https://golang.org/doc/install), version >= 1.15. With `go`
-installed and configured, you can run the following command:
+You can compile a `cozy-stack` from the source.
+First, you need to [install go](https://golang.org/doc/install), version >= 1.15. With `go`
+installed and configured, you can run the following commands:
 
 ```
+git clone git@github.com:cozy/cozy-stack.git
+cd cozy-stack
 make
 ```
 
@@ -57,7 +60,7 @@ that you can execute the binary without entering its full path.
 export PATH="$(go env GOPATH)/bin:$PATH"
 ```
 
-Troubleshooting?
+##### Troubleshooting
 
 Check if you don't have an alias "go" configurated in your `*rc` file.
 
