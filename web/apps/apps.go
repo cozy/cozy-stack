@@ -702,17 +702,23 @@ func openWebapp(c echo.Context) error {
 		return wrapAppsError(err)
 	}
 
-	session, err := session.New(inst, session.NormalRun)
+	var cookie *http.Cookie
+	sess, err := session.FromCookie(c, inst)
+	if err == nil {
+		cookie, err = c.Cookie(session.CookieName(inst))
+	} else {
+		sess, err = session.New(inst, session.NormalRun)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		cookie, err = sess.ToCookie()
+	}
 	if err != nil {
 		return wrapAppsError(err)
 	}
-	cookie, err := session.ToCookie()
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	isLoggedIn := true
 
-	params := buildServeParams(c, inst, webapp, isLoggedIn, session.ID())
+	isLoggedIn := true
+	params := buildServeParams(c, inst, webapp, isLoggedIn, sess.ID())
 	obj := &apiOpenParams{
 		slug:   slug,
 		cookie: cookie.String(),
