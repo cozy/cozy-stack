@@ -40,7 +40,7 @@ When requesting a mango index, CouchDB can use an index. But there are also
 cases where no index can be used, or where the index is not optimal. Let's
 see the different scenarios:
 
-- CouchDB does use an index, it will respond with a warning, and cozy-stack
+- CouchDB doesn't use an index, it will respond with a warning, and cozy-stack
   will transform this warning in an error, as developers should really avoid
   this issue
 
