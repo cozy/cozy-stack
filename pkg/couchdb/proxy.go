@@ -69,7 +69,7 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 	// reset body to proxy
 	req.Body = ioutil.NopCloser(bytes.NewReader(body))
 
-	p := Proxy(db, doctype, "/_bulk_docs")
+	p := Proxy(db, doctype, "_bulk_docs")
 	p.Transport = &bulkTransport{
 		RoundTripper: p.Transport,
 		OnResponseRead: func(data []byte) {
