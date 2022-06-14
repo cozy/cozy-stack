@@ -642,6 +642,9 @@ Authorization: Bearer flagship-token
 Host: cozy.example.net
 ```
 
+**Note:** it is possible to send a cookie in HTTP headers to use the
+corresponding session when opening the webapp.
+
 #### Response
 
 ```http
