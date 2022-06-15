@@ -33,6 +33,8 @@ type (
 		CSPStyleSrc       []CSPSource
 		CSPWorkerSrc      []CSPSource
 		CSPFrameAncestors []CSPSource
+		CSPBaseURI        []CSPSource
+		CSPFormAction     []CSPSource
 
 		CSPDefaultSrcAllowList     string
 		CSPScriptSrcAllowList      string
@@ -46,6 +48,8 @@ type (
 		CSPStyleSrcAllowList       string
 		CSPWorkerSrcAllowList      string
 		CSPFrameAncestorsAllowList string
+		CSPBaseURIAllowList        string
+		CSPFormActionAllowList     string
 
 		// context_name -> source -> allow_list
 		CSPPerContext map[string]map[string]string
@@ -150,6 +154,8 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			cspHeader += b.makeCSPHeader("style-src", conf.CSPStyleSrcAllowList, conf.CSPStyleSrc)
 			cspHeader += b.makeCSPHeader("worker-src", conf.CSPWorkerSrcAllowList, conf.CSPWorkerSrc)
 			cspHeader += b.makeCSPHeader("frame-ancestors", conf.CSPFrameAncestorsAllowList, conf.CSPFrameAncestors)
+			cspHeader += b.makeCSPHeader("base-uri", conf.CSPBaseURIAllowList, conf.CSPBaseURI)
+			cspHeader += b.makeCSPHeader("form-action", conf.CSPFormActionAllowList, conf.CSPFormAction)
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
 			}
@@ -276,6 +282,8 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 				src = "style"
 			case "font-src":
 				src = "font"
+			case "media-src":
+				src = "font"
 			case "frame-src":
 				src = "frame"
 			}
@@ -305,6 +313,9 @@ func appendCSPRule(currentRules, ruleType string, appendedValues ...string) (new
 			return
 		}
 		ruleFields := strings.Fields(currentRules[ruleIndex : ruleIndex+ruleTerminationIndex])
+		if len(ruleFields) == 2 && ruleFields[1] == "'none'" {
+			ruleFields = ruleFields[:1]
+		}
 		ruleFields = append(ruleFields, appendedValues...)
 		newRules = currentRules[:ruleIndex] + strings.Join(ruleFields, " ") +
 			currentRules[ruleIndex+ruleTerminationIndex:]

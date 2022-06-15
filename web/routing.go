@@ -117,6 +117,8 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPObjectSrc:      []middlewares.CSPSource{middlewares.CSPSrcNone},
 			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPBaseURI:        []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFormAction:     []middlewares.CSPSource{middlewares.CSPSrcNone},
 
 			CSPDefaultSrcAllowList: config.GetConfig().CSPAllowList["default"],
 			CSPImgSrcAllowList:     config.GetConfig().CSPAllowList["img"] + " " + cspImgSrcAllowList,
@@ -124,6 +126,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPConnectSrcAllowList: config.GetConfig().CSPAllowList["connect"] + " " + cspScriptSrcAllowList,
 			CSPStyleSrcAllowList:   config.GetConfig().CSPAllowList["style"],
 			CSPFontSrcAllowList:    config.GetConfig().CSPAllowList["font"],
+			CSPMediaSrcAllowList:   config.GetConfig().CSPAllowList["media"],
 			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + frameSrc,
 
 			CSPPerContext: perContext,
