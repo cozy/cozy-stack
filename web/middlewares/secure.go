@@ -305,6 +305,9 @@ func appendCSPRule(currentRules, ruleType string, appendedValues ...string) (new
 			return
 		}
 		ruleFields := strings.Fields(currentRules[ruleIndex : ruleIndex+ruleTerminationIndex])
+		if len(ruleFields) == 2 && ruleFields[1] == "'none'" {
+			ruleFields = ruleFields[:1]
+		}
 		ruleFields = append(ruleFields, appendedValues...)
 		newRules = currentRules[:ruleIndex] + strings.Join(ruleFields, " ") +
 			currentRules[ruleIndex+ruleTerminationIndex:]

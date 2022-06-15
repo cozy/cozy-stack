@@ -94,6 +94,9 @@ func TestAppendCSPRule(t *testing.T) {
 	r = appendCSPRule("frame-ancestors 1 2 3 ;", "frame-ancestors", "new-rule", "new-rule-2")
 	assert.Equal(t, "frame-ancestors 1 2 3 new-rule new-rule-2;", r)
 
+	r = appendCSPRule("frame-ancestors 'none';", "frame-ancestors", "new-rule")
+	assert.Equal(t, "frame-ancestors new-rule;", r)
+
 	r = appendCSPRule("script '*'; frame-ancestors 'self';", "frame-ancestors", "new-rule")
 	assert.Equal(t, "script '*'; frame-ancestors 'self' new-rule;", r)
 
