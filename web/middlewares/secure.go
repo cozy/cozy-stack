@@ -33,6 +33,7 @@ type (
 		CSPStyleSrc       []CSPSource
 		CSPWorkerSrc      []CSPSource
 		CSPFrameAncestors []CSPSource
+		CSPBaseURI        []CSPSource
 
 		CSPDefaultSrcAllowList     string
 		CSPScriptSrcAllowList      string
@@ -46,6 +47,7 @@ type (
 		CSPStyleSrcAllowList       string
 		CSPWorkerSrcAllowList      string
 		CSPFrameAncestorsAllowList string
+		CSPBaseURIAllowList        string
 
 		// context_name -> source -> allow_list
 		CSPPerContext map[string]map[string]string
@@ -150,6 +152,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			cspHeader += b.makeCSPHeader("style-src", conf.CSPStyleSrcAllowList, conf.CSPStyleSrc)
 			cspHeader += b.makeCSPHeader("worker-src", conf.CSPWorkerSrcAllowList, conf.CSPWorkerSrc)
 			cspHeader += b.makeCSPHeader("frame-ancestors", conf.CSPFrameAncestorsAllowList, conf.CSPFrameAncestors)
+			cspHeader += b.makeCSPHeader("base-uri", conf.CSPBaseURIAllowList, conf.CSPBaseURI)
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
 			}
