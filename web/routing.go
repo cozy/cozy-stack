@@ -118,6 +118,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
 			CSPBaseURI:        []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFormAction:     []middlewares.CSPSource{middlewares.CSPSrcNone},
 
 			CSPDefaultSrcAllowList: config.GetConfig().CSPAllowList["default"],
 			CSPImgSrcAllowList:     config.GetConfig().CSPAllowList["img"] + " " + cspImgSrcAllowList,
