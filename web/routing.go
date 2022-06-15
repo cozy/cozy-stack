@@ -56,9 +56,7 @@ const (
 
 	// cspImgSrcAllowList is an allowlist of images domains that are allowed in
 	// CSP.
-	cspImgSrcAllowList = "https://matomo.cozycloud.cc " +
-		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
-		"https://*.tiles.mapbox.com https://api.mapbox.com"
+	cspImgSrcAllowList = "https://matomo.cozycloud.cc https://*.tile.openstreetmap.org https://*.tile.osm.org"
 
 	// cspFrameSrcAllowList is an allowlist of custom protocols that are allowed
 	// in the CSP. We are using iframes on these custom protocols to open
