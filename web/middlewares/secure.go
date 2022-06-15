@@ -276,6 +276,8 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 				src = "style"
 			case "font-src":
 				src = "font"
+			case "media-src":
+				src = "font"
 			case "frame-src":
 				src = "frame"
 			}
