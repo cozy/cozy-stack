@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -108,7 +109,7 @@ func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
 }
 
 func fetchManifest(manifestURL string) (*ExportDoc, error) {
-	res, err := http.Get(manifestURL)
+	res, err := safehttp.DefaultClient.Get(manifestURL)
 	if err != nil {
 		return nil, err
 	}
