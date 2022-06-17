@@ -54,10 +54,6 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 		return fmt.Errorf("%s is not a valid host/port pair: %s", address, err)
 	}
 
-	if port != "80" && port != "443" {
-		return fmt.Errorf("%s is not a safe port number", port)
-	}
-
 	ipaddress := net.ParseIP(host)
 	if ipaddress == nil {
 		return fmt.Errorf("%s is not a valid IP address", host)
@@ -67,10 +63,19 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 		return fmt.Errorf("%s is not a public IP address", ipaddress)
 	}
 
-	// Allow loopback for dev only (127.0.0.1 / localhost), as it can be useful
-	// for accepeting sharings for example.
-	if ipaddress.IsLoopback() && !build.IsDevRelease() {
+	// Allow loopback and custom ports for dev only (127.0.0.1 / localhost), as
+	// it can be useful for accepting sharings on cozy.localhost:8080 for
+	// example.
+	if build.IsDevRelease() {
+		return nil
+	}
+
+	if ipaddress.IsLoopback() {
 		return fmt.Errorf("%s is not a public IP address", ipaddress)
+	}
+
+	if port != "80" && port != "443" {
+		return fmt.Errorf("%s is not a safe port number", port)
 	}
 
 	return nil
