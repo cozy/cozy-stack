@@ -3,12 +3,15 @@ package safehttp
 import (
 	"testing"
 
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultClient(t *testing.T) {
+	build.BuildMode = build.ModeProd
+
 	res, err := DefaultClient.Get("https://github.com/")
 	require.NoError(t, err)
 	defer res.Body.Close()
