@@ -108,6 +108,9 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			}
 		}
 
+		// Add CSO exception for starting a move from settings
+		formAction := config.GetConfig().Move.URL
+
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:        hstsMaxAge,
 			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
@@ -118,7 +121,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
 			CSPBaseURI:        []middlewares.CSPSource{middlewares.CSPSrcSelf},
-			CSPFormAction:     []middlewares.CSPSource{middlewares.CSPSrcNone},
+			CSPFormAction:     []middlewares.CSPSource{middlewares.CSPSrcParent},
 
 			CSPDefaultSrcAllowList: config.GetConfig().CSPAllowList["default"],
 			CSPImgSrcAllowList:     config.GetConfig().CSPAllowList["img"] + " " + cspImgSrcAllowList,
@@ -128,6 +131,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFontSrcAllowList:    config.GetConfig().CSPAllowList["font"],
 			CSPMediaSrcAllowList:   config.GetConfig().CSPAllowList["media"],
 			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + frameSrc,
+			CSPFormActionAllowList: config.GetConfig().CSPAllowList["form"] + " " + formAction,
 
 			CSPPerContext: perContext,
 		})

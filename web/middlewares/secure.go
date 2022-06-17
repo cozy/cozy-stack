@@ -113,6 +113,8 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 		validCSPList(conf.CSPStyleSrc, conf.CSPDefaultSrc, conf.CSPStyleSrcAllowList)
 	conf.CSPWorkerSrc, conf.CSPWorkerSrcAllowList =
 		validCSPList(conf.CSPWorkerSrc, conf.CSPDefaultSrc, conf.CSPWorkerSrcAllowList)
+	conf.CSPFormAction, conf.CSPFormActionAllowList =
+		validCSPList(conf.CSPFormAction, nil, conf.CSPFormActionAllowList)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
