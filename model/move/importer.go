@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -68,7 +69,7 @@ func (im *importer) downloadFile(cursor string) error {
 	if cursor != "" {
 		u.RawQuery = url.Values{"cursor": {cursor}}.Encode()
 	}
-	res, err := http.Get(u.String())
+	res, err := safehttp.DefaultClient.Get(u.String())
 	if err != nil {
 		return err
 	}

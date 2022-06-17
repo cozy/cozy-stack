@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
 )
 
@@ -177,7 +178,7 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	}
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+to.Token)
-	res, err := http.DefaultClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

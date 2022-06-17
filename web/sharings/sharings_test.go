@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -63,7 +64,7 @@ func assertSharingByAliceToBobAndDave(t *testing.T, members []interface{}) {
 	assert.Equal(t, owner["status"], "owner")
 	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
+	assert.Equal(t, owner["instance"], "http://"+aliceInstance.Domain)
 	recipient := members[1].(map[string]interface{})
 	assert.Equal(t, recipient["status"], "pending")
 	assert.Equal(t, recipient["name"], "Bob")
@@ -227,7 +228,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, owner.Status, "owner")
 	assert.Equal(t, owner.PublicName, "Alice")
 	assert.Equal(t, owner.Email, "alice@example.net")
-	assert.Equal(t, owner.Instance, "https://"+aliceInstance.Domain)
+	assert.Equal(t, owner.Instance, "http://"+aliceInstance.Domain)
 	recipient := s.Members[1]
 	assert.Equal(t, recipient.Status, "pending")
 	assert.Equal(t, recipient.Email, "bob@example.net")
@@ -633,7 +634,7 @@ func assertSharingByAliceToBobDaveAndCharlie(t *testing.T, members []interface{}
 	assert.Equal(t, owner["status"], "owner")
 	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
+	assert.Equal(t, owner["instance"], "http://"+aliceInstance.Domain)
 	bob := members[1].(map[string]interface{})
 	assert.Equal(t, bob["status"], "pending")
 	assert.Equal(t, bob["name"], "Bob")
@@ -1121,6 +1122,7 @@ func TestClearAppInURL(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	build.BuildMode = build.ModeDev
 	config.GetConfig().Assets = "../../assets"
 	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb()

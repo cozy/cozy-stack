@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	jwt "github.com/golang-jwt/jwt/v4"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
@@ -227,7 +228,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
 	r.Header.Add(echo.HeaderAuthorization, "Bearer "+req.TargetCreds.Token)
-	_, err = http.DefaultClient.Do(r)
+	_, err = safehttp.DefaultClient.Do(r)
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
@@ -285,7 +286,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 		return
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, err := http.DefaultClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().
 			WithNamespace("move").
@@ -399,7 +400,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		return
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, err := http.DefaultClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil {
 		inst.Logger().
 			WithNamespace("move").

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
@@ -668,7 +669,7 @@ func GetAvatar(c echo.Context) error {
 	}
 
 	// Use the public avatar from the member's instance
-	res, err := http.Get(m.Instance + "/public/avatar?fallback=404")
+	res, err := safehttp.DefaultClient.Get(m.Instance + "/public/avatar?fallback=404")
 	if err != nil {
 		return localAvatar(c, m)
 	}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/html"
 )
@@ -21,15 +22,6 @@ const (
 	cacheTTL = 7 * 24 * time.Hour // 1 week
 	maxSize  = 100000             // 100kb
 )
-
-var iconClient = &http.Client{
-	Timeout: 10 * time.Second,
-	// As we are connecting to a new host each time, it is better to disable
-	// keep-alive
-	Transport: &http.Transport{
-		DisableKeepAlives: true,
-	},
-}
 
 // Icon is a simple struct with a content-type and the content of an icon.
 type Icon struct {
@@ -103,7 +95,7 @@ func getPage(domain string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := iconClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +228,7 @@ func downloadIcon(u string) (*Icon, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := iconClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -11,17 +11,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
+
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 )
 
 const defaultUserAgent = "go-cozy-client"
-
-// defaultClient is the client used by default to access the stack. We avoid
-// the use of http.DefaultClient which does not have a timeout for awaiting
-// HTTP headers.
-var defaultClient = &http.Client{
-	Timeout: 60 * time.Second,
-}
 
 type (
 	// Authorizer is an interface to represent any element that can be used as a
@@ -152,7 +146,7 @@ func Req(opts *Options) (*http.Response, error) {
 
 	client := opts.Client
 	if client == nil {
-		client = defaultClient
+		client = safehttp.DefaultClient
 	}
 
 	res, err := client.Do(req)

@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 )
@@ -626,7 +627,7 @@ func TryTokenForMovedSharing(i *instance.Instance, c *oauth.Client, token string
 	}
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
-	res, err := http.DefaultClient.Do(req)
+	res, err := safehttp.DefaultClient.Do(req)
 	if err != nil || res.StatusCode != http.StatusOK {
 		return "", claims, false
 	}
