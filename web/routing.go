@@ -168,9 +168,10 @@ func SetupRoutes(router *echo.Echo) error {
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:        hstsMaxAge,
-			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
-			CSPImgSrc:         []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcNone},
+			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcNone},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
+			CSPBaseURI:        []middlewares.CSPSource{middlewares.CSPSrcNone},
 		})
 		router.Use(secure)
 	}

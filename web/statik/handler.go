@@ -198,6 +198,11 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			return err
 		}
 	}
+
+	// Add some CSP for rendered web pages
+	middlewares.AppendCSPRule(c, "default-src", "'self'")
+	middlewares.AppendCSPRule(c, "img-src", "'self' data:")
+
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
 
