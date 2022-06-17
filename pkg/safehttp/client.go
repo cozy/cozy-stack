@@ -63,7 +63,7 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 		return fmt.Errorf("%s is not a valid IP address", host)
 	}
 
-	if ipaddress.IsPrivate() {
+	if isPrivateIP(ipaddress) {
 		return fmt.Errorf("%s is not a public IP address", ipaddress)
 	}
 
@@ -74,4 +74,28 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 	}
 
 	return nil
+}
+
+// isPrivateIP reports whether ip is a private address, according to RFC 1918
+// (IPv4 addresses) and RFC 4193 (IPv6 addresses).
+//
+// Note: this function has been copied from https://pkg.go.dev/net#IP.IsPrivate
+// as it has been added for go1.17 and we still want to support go1.15.
+func isPrivateIP(ip net.IP) bool {
+	const IPv6len = 16
+
+	if ip4 := ip.To4(); ip4 != nil {
+		// Following RFC 1918, Section 3. Private Address Space which says:
+		//   The Internet Assigned Numbers Authority (IANA) has reserved the
+		//   following three blocks of the IP address space for private internets:
+		//     10.0.0.0        -   10.255.255.255  (10/8 prefix)
+		//     172.16.0.0      -   172.31.255.255  (172.16/12 prefix)
+		//     192.168.0.0     -   192.168.255.255 (192.168/16 prefix)
+		return ip4[0] == 10 ||
+			(ip4[0] == 172 && ip4[1]&0xf0 == 16) ||
+			(ip4[0] == 192 && ip4[1] == 168)
+	}
+	// Following RFC 4193, Section 8. IANA Considerations which says:
+	//   The IANA has assigned the FC00::/7 prefix to "Unique Local Unicast".
+	return len(ip) == IPv6len && ip[0]&0xfe == 0xfc
 }
