@@ -11,7 +11,7 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.0
-	github.com/dhowden/tag v0.0.0-20220530110423-77907a30b7f1
+	github.com/dhowden/tag v0.0.0-20220618230019-adf36e896086
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofrs/uuid v4.1.0+incompatible
