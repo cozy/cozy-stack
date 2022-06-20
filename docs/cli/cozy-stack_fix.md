@@ -29,7 +29,6 @@ cozy-stack fix <command> [flags]
 * [cozy-stack fix content-mismatch](cozy-stack_fix_content-mismatch.md)	 - Fix the content mismatch differences for 64K issue
 * [cozy-stack fix indexes](cozy-stack_fix_indexes.md)	 - Rebuild the CouchDB views and indexes
 * [cozy-stack fix jobs](cozy-stack_fix_jobs.md)	 - Take a look at the consistency of the jobs
-* [cozy-stack fix md5](cozy-stack_fix_md5.md)	 - Fix missing md5 from contents in the vfs
 * [cozy-stack fix mime](cozy-stack_fix_mime.md)	 - Fix the class computed from the mime-type
 * [cozy-stack fix orphan-account](cozy-stack_fix_orphan-account.md)	 - Remove the orphan accounts
 * [cozy-stack fix redis](cozy-stack_fix_redis.md)	 - Rebuild scheduling data strucutures in redis
