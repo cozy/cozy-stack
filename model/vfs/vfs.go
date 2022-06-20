@@ -322,7 +322,6 @@ type DocPatch struct {
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 	Executable  *bool      `json:"executable,omitempty"`
 	Encrypted   *bool      `json:"encrypted,omitempty"`
-	MD5Sum      *[]byte    `json:"md5sum,omitempty"`
 	Class       *string    `json:"class,omitempty"`
 }
 
