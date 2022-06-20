@@ -79,7 +79,6 @@ type FilePatchAttrs struct {
 	Tags       []string  `json:"tags,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 	Executable bool      `json:"executable,omitempty"`
-	MD5Sum     []byte    `json:"md5sum,omitempty"`
 	Class      string    `json:"class,omitempty"`
 }
 

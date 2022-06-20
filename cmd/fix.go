@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/mail"
 	"net/url"
@@ -32,54 +30,6 @@ var fixerCmdGroup = &cobra.Command{
 	Short:   "A set of tools to fix issues or migrate content.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
-	},
-}
-
-var md5FixerCmd = &cobra.Command{
-	Use:   "md5 <domain>",
-	Short: "Fix missing md5 from contents in the vfs",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Usage()
-		}
-		c := newClient(args[0], consts.Files)
-		return c.WalkByPath("/", func(name string, doc *client.DirOrFile, err error) error {
-			if err != nil {
-				return err
-			}
-			attrs := doc.Attrs
-			if attrs.Type == consts.DirType {
-				return nil
-			}
-			if len(attrs.MD5Sum) > 0 {
-				return nil
-			}
-			fmt.Printf("Recalculate md5 of %s...", name)
-			r, err := c.DownloadByID(doc.ID)
-			if err != nil {
-				fmt.Printf("failed to init download: %s", err.Error())
-				return nil
-			}
-			defer r.Close()
-			h := md5.New()
-			_, err = io.Copy(h, r)
-			if err != nil {
-				fmt.Printf("failed to download: %s", err.Error())
-				return nil
-			}
-			_, err = c.UpdateAttrsByID(doc.ID, &client.FilePatch{
-				Rev: doc.Rev,
-				Attrs: client.FilePatchAttrs{
-					MD5Sum: h.Sum(nil),
-				},
-			})
-			if err != nil {
-				fmt.Printf("failed to update: %s", err.Error())
-				return nil
-			}
-			fmt.Println("ok.")
-			return nil
-		})
 	},
 }
 
@@ -415,7 +365,6 @@ func init() {
 	contentMismatch64Kfixer.Flags().BoolVar(&noDryRunFlag, "no-dry-run", false, "Do not dry run")
 
 	fixerCmdGroup.AddCommand(jobsFixer)
-	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
