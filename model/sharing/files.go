@@ -395,6 +395,12 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		if errp != nil {
 			return nil, errp
 		}
+		if strings.HasPrefix(parent.Fullpath, vfs.TrashDirName) {
+			parent, errp = fs.DirByID(consts.RootDirID)
+			if errp != nil {
+				return nil, errp
+			}
+		}
 		name := inst.Translate("Tree No longer shared")
 		dir, err = vfs.NewDirDocWithParent(name, parent, nil)
 		if err != nil {
