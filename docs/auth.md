@@ -206,7 +206,7 @@ Content-Type: application/json
 will be sent to the user with a code, and this request will return:
 
 ```http
-HTTP/1.1 401 Forbidden
+HTTP/1.1 401 Unauthorized
 Content-Type: application/json
 ```
 
