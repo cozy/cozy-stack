@@ -1012,6 +1012,9 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 		}
 	}
 
+	// Forbid extracting autofilled passwords on an HTML page hosted in the Cozy
+	middlewares.AppendCSPRule(c, "form-action", "'none'")
+
 	disposition := "inline"
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
