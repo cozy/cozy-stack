@@ -236,27 +236,34 @@ func reconnect(c echo.Context) error {
 
 func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		inst := middlewares.GetInstance(c)
 		isLoggedIn := middlewares.IsLoggedIn(c)
+		wasLoggedIn := isLoggedIn
+
 		if code := c.QueryParam("session_code"); code != "" {
 			// XXX we should always clear the session code to avoid it being
 			// reused, even if the user is already logged in and we don't want to
 			// create a new session
-			inst := middlewares.GetInstance(c)
-			if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
-				sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun)
-				req := c.Request()
-				if err == nil {
-					if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
-						inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
-					}
-				}
+			if checked := inst.CheckAndClearSessionCode(code); checked {
 				isLoggedIn = true
 			}
 		}
 
+		if !isLoggedIn && checkIDToken(c) {
+			isLoggedIn = true
+		}
+
 		if !isLoggedIn {
-			if !checkIDToken(c) {
-				return echo.NewHTTPError(http.StatusForbidden)
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+
+		if !wasLoggedIn {
+			sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun)
+			req := c.Request()
+			if err == nil {
+				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				}
 			}
 		}
 
