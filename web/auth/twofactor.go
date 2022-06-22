@@ -86,6 +86,12 @@ func twoFactorForm(c echo.Context) error {
 // twoFactor handles a the twoFactor POST request
 func twoFactor(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	if !inst.HasAuthMode(instance.TwoFactorMail) {
+		errorMessage := inst.Translate(TwoFactorErrorKey)
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": errorMessage,
+		})
+	}
 
 	// Retreiving data from request
 	token := []byte(c.FormValue("two-factor-token"))
