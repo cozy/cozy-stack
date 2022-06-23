@@ -62,7 +62,12 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToApp(c echo.Context, inst *instance.Instance, acc *account.Account, clientState, slug string) error {
+func redirectToApp(
+	c echo.Context,
+	inst *instance.Instance,
+	acc *account.Account,
+	clientState, slug, errorMessage string,
+) error {
 	if slug == "" {
 		slug = consts.HomeSlug
 	}
@@ -73,6 +78,9 @@ func redirectToApp(c echo.Context, inst *instance.Instance, acc *account.Account
 	}
 	if clientState != "" {
 		vv.Add("state", clientState)
+	}
+	if errorMessage != "" {
+		vv.Add("error", errorMessage)
 	}
 	u.RawQuery = vv.Encode()
 	return c.Redirect(http.StatusSeeOther, u.String())
@@ -126,7 +134,7 @@ func redirect(c echo.Context) error {
 
 		// https://developers.google.com/identity/protocols/oauth2/web-server?hl=en#handlingresponse
 		if c.QueryParam("error") == "access_denied" {
-			return redirectToApp(c, i, nil, clientState, slug)
+			return redirectToApp(c, i, nil, clientState, slug, "access_denied")
 		}
 
 		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
@@ -135,7 +143,7 @@ func redirect(c echo.Context) error {
 		}
 
 		if state.ReconnectFlow {
-			return redirectToApp(c, i, nil, clientState, slug)
+			return redirectToApp(c, i, nil, clientState, slug, "")
 		}
 
 		if accountType.TokenEndpoint == "" {
@@ -162,7 +170,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, i, acc, clientState, slug)
+	return redirectToApp(c, i, acc, clientState, slug, "")
 }
 
 // refresh is an internal route used by konnectors to refresh accounts
