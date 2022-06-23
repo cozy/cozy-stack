@@ -24,3 +24,10 @@ jobs:
         run: |
           tag_name="${GITHUB_REF##*/}"
           gh release create "$tag_name" cozy-stack-* --target "$GITHUB_SHA"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and publish the cozy-app-dev image
+        run: scripts/release.sh
