@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
@@ -61,18 +62,25 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToApp(c echo.Context, acc *account.Account, clientState, slug string) error {
-	instance := middlewares.GetInstance(c)
+func redirectToApp(
+	c echo.Context,
+	inst *instance.Instance,
+	acc *account.Account,
+	clientState, slug, errorMessage string,
+) error {
 	if slug == "" {
 		slug = consts.HomeSlug
 	}
-	u := instance.SubDomain(slug)
+	u := inst.SubDomain(slug)
 	vv := &url.Values{}
 	if acc != nil {
 		vv.Add("account", acc.ID())
 	}
 	if clientState != "" {
 		vv.Add("state", clientState)
+	}
+	if errorMessage != "" {
+		vv.Add("error", errorMessage)
 	}
 	u.RawQuery = vv.Encode()
 	return c.Redirect(http.StatusSeeOther, u.String())
@@ -121,11 +129,12 @@ func redirect(c echo.Context) error {
 			}
 		}
 
+		clientState = state.ClientState
+		slug = state.Slug
+
 		// https://developers.google.com/identity/protocols/oauth2/web-server?hl=en#handlingresponse
 		if c.QueryParam("error") == "access_denied" {
-			u := i.SubDomain(consts.StoreSlug)
-			u.Fragment = "/discover/" + accountTypeID
-			return c.Redirect(http.StatusSeeOther, u.String())
+			return redirectToApp(c, i, nil, clientState, slug, "access_denied")
 		}
 
 		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
@@ -133,11 +142,8 @@ func redirect(c echo.Context) error {
 			return err
 		}
 
-		clientState = state.ClientState
-		slug = state.Slug
-
 		if state.ReconnectFlow {
-			return redirectToApp(c, nil, clientState, slug)
+			return redirectToApp(c, i, nil, clientState, slug, "")
 		}
 
 		if accountType.TokenEndpoint == "" {
@@ -164,7 +170,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, acc, clientState, slug)
+	return redirectToApp(c, i, acc, clientState, slug, "")
 }
 
 // refresh is an internal route used by konnectors to refresh accounts
