@@ -90,7 +90,9 @@ func (sfs *swiftVFSV3) checkFiles(
 		}
 		for _, obj := range objs {
 			if strings.HasPrefix(obj.Name, "thumbs/") {
-				objName := strings.Split(strings.TrimPrefix(obj.Name, "thumbs/"), "-")[0]
+				objName := strings.TrimPrefix(obj.Name, "thumbs/")
+				idx := strings.LastIndex(objName, "-")
+				objName = objName[0:idx] // Remove -format suffix
 				fileID := makeDocID(objName)
 				if _, ok := fileIDs[fileID]; !ok {
 					if _, ok := images[fileID]; !ok {
