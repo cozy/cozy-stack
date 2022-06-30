@@ -754,6 +754,7 @@ func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pt
 	if d != nil {
 		old := d.Clone().(*vfs.DirDoc)
 		d.DocName = name
+		d.Fullpath = path.Join(path.Dir(d.Fullpath), d.DocName)
 		return "", fs.UpdateDirDoc(old, d)
 	}
 	old := f.Clone().(*vfs.FileDoc)
@@ -1083,6 +1084,7 @@ func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.Dir
 	newdoc.SetRev("")
 	if err := fs.DissociateDir(olddoc, newdoc); err != nil {
 		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		newdoc.Fullpath = path.Join(path.Dir(newdoc.Fullpath), newdoc.DocName)
 		if err := fs.DissociateDir(olddoc, newdoc); err != nil {
 			return err
 		}
