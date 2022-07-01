@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -65,7 +66,7 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 
 	var ts []*TriggerInfos
 	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.Instances, func(_ string, data json.RawMessage) error {
-		db := prefixer.GlobalPrefixer
+		db := &instance.Instance{}
 		if err := json.Unmarshal(data, db); err != nil {
 			return err
 		}
