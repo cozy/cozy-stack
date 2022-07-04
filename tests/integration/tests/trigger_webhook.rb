@@ -32,9 +32,30 @@ describe "A webhook trigger" do
     assert_equal executed["fields"], args
     assert_equal executed["payload"], body
 
-    # With debounce
+    # With a big payload
     account2 = Account.create inst, type: konnector_name, name: "2_#{Faker::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account2.couch_id, "foo" => "bar" }
+    webhook_url = Trigger::Webhook.create inst, args
+
+    opts = { :"content-type" => 'application/json' }
+    body = { "big" => "x" * 1_000_000 }
+    RestClient.post webhook_url, JSON.generate(body), opts
+
+    done = false
+    10.times do
+      sleep 1
+      done = File.exist? account2.log
+      break if done
+    end
+    assert done
+    executed = JSON.parse File.read(account2.log)
+    assert_equal executed["account"]["_id"], account2.couch_id
+    assert_equal executed["fields"], args
+    assert_equal executed["payload"], { "fromFile" => body }
+
+    # With debounce
+    account3 = Account.create inst, type: konnector_name, name: "3_#{Faker::DrWho.character}"
+    args = { "konnector" => konnector_name, "account" => account3.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args, "1s"
 
     opts = { :"content-type" => 'application/json' }
@@ -46,13 +67,13 @@ describe "A webhook trigger" do
     done = false
     10.times do
       sleep 1
-      done = File.exist? account2.log
+      done = File.exist? account3.log
       break if done
     end
     assert done
-    executed = JSON.parse File.read(account2.log)
+    executed = JSON.parse File.read(account3.log)
     payloads = [{ "part" => 1 }, { "part" => 2 }, { "part" => 3 }, { "part" => 4 }]
-    assert_equal executed["account"]["_id"], account2.couch_id
+    assert_equal executed["account"]["_id"], account3.couch_id
     assert_equal executed["fields"], args
     assert_equal executed["payload"], { "payloads" => payloads }
 
