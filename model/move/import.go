@@ -109,7 +109,7 @@ func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
 }
 
 func fetchManifest(manifestURL string) (*ExportDoc, error) {
-	res, err := safehttp.DefaultClient.Get(manifestURL)
+	res, err := safehttp.ClientWithKeepAlive.Get(manifestURL)
 	if err != nil {
 		return nil, err
 	}

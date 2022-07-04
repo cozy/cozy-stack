@@ -69,7 +69,7 @@ func (im *importer) downloadFile(cursor string) error {
 	if cursor != "" {
 		u.RawQuery = url.Values{"cursor": {cursor}}.Encode()
 	}
-	res, err := safehttp.DefaultClient.Get(u.String())
+	res, err := safehttp.ClientWithKeepAlive.Get(u.String())
 	if err != nil {
 		return err
 	}

@@ -178,7 +178,7 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	}
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+to.Token)
-	res, err := safehttp.DefaultClient.Do(req)
+	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil {
 		return err
 	}

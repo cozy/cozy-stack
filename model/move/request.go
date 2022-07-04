@@ -228,7 +228,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
 	r.Header.Add(echo.HeaderAuthorization, "Bearer "+req.TargetCreds.Token)
-	_, err = safehttp.DefaultClient.Do(r)
+	_, err = safehttp.ClientWithKeepAlive.Do(r)
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
@@ -286,7 +286,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 		return
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, err := safehttp.DefaultClient.Do(req)
+	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil {
 		inst.Logger().
 			WithNamespace("move").
@@ -400,7 +400,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		return
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, err := safehttp.DefaultClient.Do(req)
+	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil {
 		inst.Logger().
 			WithNamespace("move").

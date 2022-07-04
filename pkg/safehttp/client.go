@@ -44,6 +44,24 @@ var DefaultClient = &http.Client{
 	Transport: safeTransport,
 }
 
+var transportWithKeepAlive = &http.Transport{
+	// Default values for http.DefaultClient
+	Proxy:                 http.ProxyFromEnvironment,
+	DialContext:           safeDialer.DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
+// ClientWithKeepAlive is an http client that can be used to avoid SSRF. And it
+// has keep-alive (contrary to safehttp.DefaultClient). The typical use case is
+// moving a Cozy.
+var ClientWithKeepAlive = &http.Client{
+	Transport: transportWithKeepAlive,
+}
+
 func safeControl(network string, address string, conn syscall.RawConn) error {
 	if !(network == "tcp4" || network == "tcp6") {
 		return fmt.Errorf("%s is not a safe network type", network)

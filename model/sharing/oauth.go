@@ -627,7 +627,7 @@ func TryTokenForMovedSharing(i *instance.Instance, c *oauth.Client, token string
 	}
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
-	res, err := safehttp.DefaultClient.Do(req)
+	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil || res.StatusCode != http.StatusOK {
 		return "", claims, false
 	}
