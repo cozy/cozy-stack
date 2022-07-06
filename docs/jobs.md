@@ -29,6 +29,8 @@ Jobs can be launched by different types of triggers:
 - `@at` to schedule a one-time job executed after at a specific time in the
   future
 - `@in` to schedule a one-time job executed after a specific amount of time
+- `@weekly` to schedule jobs that run once a week
+- `@monthly` to schedule jobs that run once a month
 - `@every` to schedule periodic jobs executed at a given fix interval
 - `@cron` to schedule recurring jobs scheduled at specific times
 - `@event` to launch a job after a change on documents in the cozy
@@ -60,6 +62,39 @@ Examples
 ```
 @in 10m
 @in 1h30m
+```
+
+### `@weekly` syntax
+
+The `@weekly` trigger will create a job once a week. By default, the stack is
+free to choose the day and hour when to do that, but you can add restrictions:
+
+```
+@weekly                      # Once a week, any day, any hour
+@weekly on monday            # Every monday
+@weekly on mon,wed,fri       # Once a week, on a monday, wednesday, or friday
+@weekly on wed-fri           # Once a week, on a wednesday, thursday, or friday
+@weekly on weekday           # Once a week, but not the week-end
+@weekly on weekend           # Every week-end (saturday or sunday)
+@weekly before 5am           # Once a week, any day, but between midnight and 5am (UTC)
+@weekly after 10pm           # Once a week, any day, but between 10pm and midnight (UTC)
+@weekly between 8am and 6pm  # Once a week, any day, between 8am and 6pm (UTC)
+@weekly on monday before 9am # Every monday, between midnight and 9am (UTC)
+```
+
+### `@monthly` syntax
+
+The `@monthly` trigger will create a job once a month. By default, the stack is
+free to choose the day and hour when to do that, but you can add restrictions:
+
+```
+@monthly                      # Once a month, any day, any hour
+@monthly on the 1             # Every first day of the month
+@monthly on the 1-5           # Once a month, on the first five days of the month
+@monthly before 5am           # Once a month, any day, but between midnight and 5am (UTC)
+@monthly after 10pm           # Once a month, any day, but between 10pm and midnight (UTC)
+@monthly between 8am and 6pm  # Once a month, any day, between 8am and 6pm (UTC)
+@monthly on the 1 before 9am  # Every first day of the month, between midnight and 9am (UTC)
 ```
 
 ### `@every` syntax
