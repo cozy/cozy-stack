@@ -61,9 +61,10 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 			"request body is not valid JSON")
 	}
 
-	docs := make(map[string]JSONDoc)
-	for _, d := range reqValue.Docs {
-		docs[d.ID()] = d
+	var docs []JSONDoc
+	for _, doc := range reqValue.Docs {
+		doc.Type = doctype
+		docs = append(docs, doc)
 	}
 
 	// reset body to proxy
@@ -84,8 +85,7 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 			// does not contain any value. We only rely on the request data and
 			// expect no error.
 			if reqValue.NewEdits != nil && !*reqValue.NewEdits {
-				for _, doc := range reqValue.Docs {
-					doc.Type = doctype
+				for _, doc := range docs {
 					rev := doc.Rev()
 					var event string
 					if strings.HasPrefix(rev, "1-") {
@@ -101,22 +101,16 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 					return
 				}
 
-				docs := make(map[string]JSONDoc)
-				for _, doc := range reqValue.Docs {
-					docs[doc.ID()] = doc
-				}
-
-				for _, r := range respValues {
+				for i, r := range respValues {
 					if r.Error != "" || !r.OK {
 						continue
 					}
-					doc, ok := docs[r.ID]
-					if !ok {
-						continue
-					}
+					doc := docs[i]
 					var event string
+
 					if doc.Rev() == "" {
 						event = realtime.EventCreate
+						doc.SetID(r.ID)
 					} else if doc.Get("_deleted") == true {
 						event = realtime.EventDelete
 					} else {
