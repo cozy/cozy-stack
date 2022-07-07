@@ -690,7 +690,7 @@ func TestMain(m *testing.M) {
 	res1 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(0)
+	fs, rollback, err = makeSwiftFS(2)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -698,23 +698,7 @@ func TestMain(m *testing.M) {
 	res2 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(1)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	res3 := m.Run()
-	rollback()
-
-	fs, rollback, err = makeSwiftFS(2)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	res4 := m.Run()
-	rollback()
-
-	os.Exit(res1 + res2 + res3 + res4)
+	os.Exit(res1 + res2)
 }
 
 type contexter struct {
