@@ -496,16 +496,19 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 		return nil, err
 	}
 
-	if len(res.Rows) == 0 {
-		return nil, os.ErrNotExist
+	// XXX CouchDB can return documents with the same name but in a different
+	// encoding (NFC vs NFD), so we need to check that the name is really the
+	// expected one.
+	for _, row := range res.Rows {
+		var doc FileDoc
+		if err = json.Unmarshal(row.Doc, &doc); err != nil {
+			return nil, err
+		}
+		if doc.DocName == path.Base(name) {
+			return &doc, nil
+		}
 	}
-
-	var fdoc FileDoc
-	err = json.Unmarshal(res.Rows[0].Doc, &fdoc)
-	if fdoc.Type != consts.FileType {
-		return nil, os.ErrNotExist
-	}
-	return &fdoc, err
+	return nil, os.ErrNotExist
 }
 
 func (c *couchdbIndexer) FilePath(doc *FileDoc) (string, error) {
@@ -618,23 +621,25 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 			[]string{dirID, consts.FileType, name},
 			[]string{dirID, consts.DirType, name},
 		},
-		Reduce: true,
-		Group:  true,
+		IncludeDocs: true,
 	}, &res)
 	if err != nil {
 		return false, err
 	}
 
-	if len(res.Rows) == 0 {
-		return false, nil
+	// XXX CouchDB can return documents with the same name but in a different
+	// encoding (NFC vs NFD), so we need to check that the name is really the
+	// expected one.
+	for _, row := range res.Rows {
+		var doc DirOrFileDoc
+		if err = json.Unmarshal(row.Doc, &doc); err != nil {
+			return false, err
+		}
+		if doc.DocName == name {
+			return true, nil
+		}
 	}
-
-	// Reduce of _count should give us a number value
-	f64, ok := res.Rows[0].Value.(float64)
-	if !ok {
-		return false, ErrWrongCouchdbState
-	}
-	return int(f64) > 0, nil
+	return false, nil
 }
 
 func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) error {

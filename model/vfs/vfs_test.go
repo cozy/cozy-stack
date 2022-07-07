@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -378,6 +379,63 @@ func TestUpdateDir(t *testing.T) {
 			},
 		},
 	}, tree)
+}
+
+func TestEncodingOfDirName(t *testing.T) {
+	base := "encoding-dir"
+	nfc := "chaîne"
+	nfd := "chaîne"
+
+	origtree := H{base + "/": H{
+		nfc: H{},
+		nfd: H{},
+	}}
+	_, err := createTree(origtree, consts.RootDirID)
+	require.NoError(t, err)
+
+	f1, err := fs.FileByPath("/" + base + "/" + nfc)
+	require.NoError(t, err)
+	assert.Equal(t, nfc, f1.DocName)
+
+	f2, err := fs.FileByPath("/" + base + "/" + nfd)
+	require.NoError(t, err)
+	assert.Equal(t, nfd, f2.DocName)
+
+	assert.NotEqual(t, f1.DocID, f2.DocID)
+}
+
+func TestChangeEncodingOfDirName(t *testing.T) {
+	nfc := "dir-nfc-to-nfd-é"
+	nfd := "dir-nfc-to-nfd-é"
+
+	origtree := H{nfc + "/": H{
+		"dirchild1/": H{
+			"food/": H{},
+			"bard/": H{},
+		},
+		"dirchild2/": H{},
+		"filechild1": nil,
+	}}
+	doc, err := createTree(origtree, consts.RootDirID)
+	require.NoError(t, err)
+
+	newname := nfd
+	doc, err = vfs.ModifyDirMetadata(fs, doc, &vfs.DocPatch{
+		Name: &newname,
+	})
+	require.NoError(t, err)
+	d, err := fs.DirByPath("/" + newname)
+	require.NoError(t, err)
+	assert.Equal(t, newname, d.DocName)
+
+	newname = nfc
+	_, err = vfs.ModifyDirMetadata(fs, doc, &vfs.DocPatch{
+		Name: &newname,
+	})
+	require.NoError(t, err)
+	d, err = fs.DirByPath("/" + newname)
+	require.NoError(t, err)
+	assert.Equal(t, newname, d.DocName)
 }
 
 func TestWalk(t *testing.T) {
