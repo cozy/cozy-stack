@@ -3,6 +3,8 @@ package job
 import (
 	"errors"
 	"fmt"
+	"hash/crc64"
+	"math/rand"
 	"strconv"
 	"strings"
 )
@@ -13,6 +15,8 @@ type PeriodicParser struct{}
 
 // PeriodicSpec is the result of a successful parsing
 type PeriodicSpec struct {
+	// TODO Frequency
+	// TODO DaysOfMonth
 	DaysOfWeek []int // a slice of acceptable days, from 0 for sunday to 6 for saturday
 	AfterHour  int   // an hour between 0 and 23
 	BeforeHour int   // an hour between 1 and 24
@@ -168,4 +172,21 @@ func (p *PeriodicParser) parseHour(hour string) (int, error) {
 	}
 
 	return -1, errors.New("invalid hour")
+}
+
+// ToRandomCrontab generates a crontab that verifies the PeriodicSpec.
+// The values are taken randomly, and the random generator uses the given
+// seed to allow stability for a trigger, ie a weekly trigger must always
+// run on the same day at the same hour.
+func (s *PeriodicSpec) ToRandomCrontab(seed string) string {
+	seed64 := crc64.Checksum([]byte(seed), crc64.MakeTable(crc64.ISO))
+	src := rand.NewSource(int64(seed64))
+	rnd := rand.New(src)
+
+	second := rnd.Intn(60)
+	minute := rnd.Intn(60)
+	hour := s.AfterHour + rnd.Intn(s.BeforeHour-s.AfterHour)
+
+	dow := s.DaysOfWeek[rnd.Intn(len(s.DaysOfWeek))]
+	return fmt.Sprintf("%d %d %d * * %d", second, minute, hour, dow)
 }

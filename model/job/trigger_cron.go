@@ -14,11 +14,14 @@ type CronTrigger struct {
 	done  chan struct{}
 }
 
-var parser = cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+var (
+	cronParser     = cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	periodicParser = NewPeriodicParser()
+)
 
 // NewCronTrigger returns a new instance of CronTrigger given the specified options.
 func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	schedule, err := parser.Parse(infos.Arguments)
+	schedule, err := cronParser.Parse(infos.Arguments)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
@@ -29,10 +32,31 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	}, nil
 }
 
-// NewEveryTrigger returns an new instance of CronTrigger given the specified
+// NewEveryTrigger returns a new instance of CronTrigger given the specified
 // options as @every.
 func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	schedule, err := parser.Parse("@every " + infos.Arguments)
+	schedule, err := cronParser.Parse("@every " + infos.Arguments)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	return &CronTrigger{
+		TriggerInfos: infos,
+		sched:        schedule,
+		done:         make(chan struct{}),
+	}, nil
+}
+
+// NewWeeklyTrigger returns a new instance of CronTrigger given the specified
+// options as @weekly. It will take a random day/hour in the possible range to
+// spread the triggers from the same app manifest.
+func NewWeeklyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
+	spec, err := periodicParser.Parse(infos.Arguments)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	seed := infos.Domain + "/" + infos.WorkerType
+	crontab := spec.ToRandomCrontab(seed)
+	schedule, err := cronParser.Parse(crontab)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
