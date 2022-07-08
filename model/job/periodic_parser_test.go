@@ -1,9 +1,14 @@
 package job_test
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -163,4 +168,82 @@ func TestPeriodicParser(t *testing.T) {
 	assert.Error(t, err)
 	_, err = p.Parse(job.MonthlyKind, "on monday")
 	assert.Error(t, err)
+}
+
+func TestToRandomCrontab(t *testing.T) {
+	day := 24 * time.Hour
+	cronParser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	seed := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	spec := job.PeriodicSpec{
+		Frequency:   job.MonthlyKind,
+		DaysOfMonth: []int{3, 4, 5, 6, 7},
+		AfterHour:   8,
+		BeforeHour:  16,
+	}
+	crontab := spec.ToRandomCrontab(seed)
+	fields := strings.Fields(crontab)
+	require.Len(t, fields, 6)
+
+	second, err := strconv.Atoi(fields[0])
+	assert.NoError(t, err)
+	assert.True(t, 0 <= second && second < 60)
+
+	minute, err := strconv.Atoi(fields[1])
+	assert.NoError(t, err)
+	assert.True(t, 0 <= minute && minute < 60)
+
+	hour, err := strconv.Atoi(fields[2])
+	assert.NoError(t, err)
+	assert.True(t, 8 <= hour && hour < 16)
+
+	dom, err := strconv.Atoi(fields[3]) // day of month
+	assert.NoError(t, err)
+	assert.True(t, 3 <= dom && dom <= 7)
+
+	assert.Equal(t, fields[4], "*") // month
+	assert.Equal(t, fields[5], "*") // day of week
+
+	// Check that two successive executions are separated by about 30 days
+	schedule, err := cronParser.Parse(crontab)
+	require.NoError(t, err)
+	exec := schedule.Next(time.Now())
+	next := schedule.Next(exec)
+	assert.WithinDuration(t, exec.Add(30*day), next, 3*day)
+
+	spec = job.PeriodicSpec{
+		Frequency:  job.WeeklyKind,
+		DaysOfWeek: []int{1, 2, 3, 4, 5},
+		AfterHour:  0,
+		BeforeHour: 5,
+	}
+	crontab = spec.ToRandomCrontab(seed)
+	fields = strings.Fields(crontab)
+	require.Len(t, fields, 6)
+
+	second, err = strconv.Atoi(fields[0])
+	assert.NoError(t, err)
+	assert.True(t, 0 <= second && second < 60)
+
+	minute, err = strconv.Atoi(fields[1])
+	assert.NoError(t, err)
+	assert.True(t, 0 <= minute && minute < 60)
+
+	hour, err = strconv.Atoi(fields[2])
+	assert.NoError(t, err)
+	assert.True(t, 0 <= hour && hour < 5)
+
+	assert.Equal(t, fields[3], "*") // day of month
+	assert.Equal(t, fields[4], "*") // month
+
+	dow, err := strconv.Atoi(fields[5]) // day of week
+	assert.NoError(t, err)
+	assert.True(t, 1 <= dow && dow <= 5)
+
+	// Check that two successive executions are separated by about 7 days
+	schedule, err = cronParser.Parse(crontab)
+	require.NoError(t, err)
+	exec = schedule.Next(time.Now())
+	next = schedule.Next(exec)
+	assert.WithinDuration(t, exec.Add(7*day), next, 3*time.Minute)
 }
