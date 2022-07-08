@@ -29,6 +29,7 @@ Jobs can be launched by different types of triggers:
 - `@at` to schedule a one-time job executed after at a specific time in the
   future
 - `@in` to schedule a one-time job executed after a specific amount of time
+- `@daily` to schedule jobs that run once a day
 - `@weekly` to schedule jobs that run once a week
 - `@monthly` to schedule jobs that run once a month
 - `@every` to schedule periodic jobs executed at a given fix interval
@@ -62,6 +63,18 @@ Examples
 ```
 @in 10m
 @in 1h30m
+```
+
+### `@daily` syntax
+
+The `@daily` trigger will create a job once a day. By default, the stack is
+free to choose the day and hour when to do that, but you can add restrictions:
+
+```
+@daily                      # Once a day, any hour
+@daily before 5am           # Once a day, between midnight and 5am (UTC)
+@daily after 10pm           # Once a day, between 10pm and midnight (UTC)
+@daily between 8am and 6pm  # Once a day, between 8am and 6pm (UTC)
 ```
 
 ### `@weekly` syntax

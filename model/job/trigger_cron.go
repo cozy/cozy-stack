@@ -88,6 +88,27 @@ func NewWeeklyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	}, nil
 }
 
+// NewDailyTrigger returns a new instance of CronTrigger given the specified
+// options as @daily. It will take a random hour in the possible range to
+// spread the triggers from the same app manifest.
+func NewDailyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
+	spec, err := periodicParser.Parse(DailyKind, infos.Arguments)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	seed := infos.Domain + "/" + infos.WorkerType
+	crontab := spec.ToRandomCrontab(seed)
+	schedule, err := cronParser.Parse(crontab)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	return &CronTrigger{
+		TriggerInfos: infos,
+		sched:        schedule,
+		done:         make(chan struct{}),
+	}, nil
+}
+
 // Type implements the Type method of the Trigger interface.
 func (c *CronTrigger) Type() string {
 	return c.TriggerInfos.Type
