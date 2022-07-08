@@ -2,9 +2,7 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"math/rand"
 	"net/url"
 	"time"
 
@@ -319,22 +317,20 @@ func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByA
 }
 
 func (m *KonnManifest) triggerCrontab() string {
-	now := time.Now()
-	hours := m.getRandomHour()
+	spec := &job.PeriodicSpec{}
+
 	freq, _ := m.doc.M["frequency"].(string)
 	switch freq {
 	case "hourly":
-		return fmt.Sprintf("0 %d * * * *", now.Minute())
+		spec.Frequency = job.HourlyKind
 	case "daily":
-		return fmt.Sprintf("0 %d %d * * *", now.Minute(), hours)
+		spec.Frequency = job.DailyKind
 	case "monthly":
-		return fmt.Sprintf("0 %d %d %d * *", now.Minute(), hours, now.Day())
+		spec.Frequency = job.MonthlyKind
 	default: // weekly
-		return fmt.Sprintf("0 %d %d * * %d", now.Minute(), hours, now.Weekday())
+		spec.Frequency = job.WeeklyKind
 	}
-}
 
-func (m *KonnManifest) getRandomHour() int {
 	min, max := 0, 5 // By default konnectors are run at random hour between 12:00PM and 05:00AM
 	interval, ok := m.doc.M["time_interval"].([]int)
 	if ok && len(interval) == 2 {
@@ -343,7 +339,10 @@ func (m *KonnManifest) getRandomHour() int {
 			max = interval[1]
 		}
 	}
-	return min + rand.Intn(max-min)
+	spec.AfterHour = min
+	spec.BeforeHour = max
+
+	return spec.ToRandomCrontab(m.Slug())
 }
 
 func (m *KonnManifest) hasFolderPath() bool {

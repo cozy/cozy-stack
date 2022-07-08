@@ -29,6 +29,7 @@ const (
 	MonthlyKind FrequencyKind = iota
 	WeeklyKind
 	DailyKind
+	HourlyKind
 )
 
 // NewPeriodicParser creates a PeriodicParser.
@@ -266,6 +267,10 @@ func (s *PeriodicSpec) ToRandomCrontab(seed string) string {
 	if s.Frequency == WeeklyKind {
 		dow := s.DaysOfWeek[rnd.Intn(len(s.DaysOfWeek))]
 		return fmt.Sprintf("%d %d %d * * %d", second, minute, hour, dow)
+	}
+
+	if s.Frequency == HourlyKind {
+		return fmt.Sprintf("%d %d * * * *", second, minute)
 	}
 
 	return fmt.Sprintf("%d %d %d * * *", second, minute, hour)
