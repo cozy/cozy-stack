@@ -46,11 +46,32 @@ func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	}, nil
 }
 
+// NewMonthlyTrigger returns a new instance of CronTrigger given the specified
+// options as @monthly. It will take a random day/hour in the possible range to
+// spread the triggers from the same app manifest.
+func NewMonthlyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
+	spec, err := periodicParser.Parse(MonthlyKind, infos.Arguments)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	seed := infos.Domain + "/" + infos.WorkerType
+	crontab := spec.ToRandomCrontab(seed)
+	schedule, err := cronParser.Parse(crontab)
+	if err != nil {
+		return nil, ErrMalformedTrigger
+	}
+	return &CronTrigger{
+		TriggerInfos: infos,
+		sched:        schedule,
+		done:         make(chan struct{}),
+	}, nil
+}
+
 // NewWeeklyTrigger returns a new instance of CronTrigger given the specified
 // options as @weekly. It will take a random day/hour in the possible range to
 // spread the triggers from the same app manifest.
 func NewWeeklyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	spec, err := periodicParser.Parse(infos.Arguments)
+	spec, err := periodicParser.Parse(WeeklyKind, infos.Arguments)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
