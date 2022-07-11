@@ -976,6 +976,9 @@ created before using this endpoint. Its body must be a JSON that will be
 available to the konnector or to the service through the
 `process.env['COZY_PAYLOAD']` variable.
 
+It is possible to pass a `Manual=true` parameter in the query-string if the job
+is interactive. It will give it an higher priority in the queues.
+
 #### Request
 
 ```http

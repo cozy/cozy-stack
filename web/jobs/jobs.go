@@ -495,7 +495,12 @@ func fireWebhook(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	webhook.Fire(payload)
+
+	manual := false
+	if c.QueryParam("Manual") == "true" {
+		manual = true
+	}
+	webhook.Fire(payload, manual)
 	return c.NoContent(http.StatusNoContent)
 }
 
