@@ -141,6 +141,12 @@ func fromTriggerInfos(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
+	case "@daily":
+		return NewDailyTrigger(infos)
+	case "@weekly":
+		return NewWeeklyTrigger(infos)
+	case "@monthly":
+		return NewMonthlyTrigger(infos)
 	case "@cron":
 		return NewCronTrigger(infos)
 	case "@every":
