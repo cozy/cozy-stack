@@ -3,6 +3,7 @@ package move
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -96,6 +97,9 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 	credIndex := 0
 	if s.Owner {
 		credIndex = index - 1
+	}
+	if len(s.Credentials) <= credIndex || s.Credentials[credIndex].AccessToken == nil {
+		return errors.New("sharing in invalid state")
 	}
 	token := s.Credentials[credIndex].AccessToken.AccessToken
 
