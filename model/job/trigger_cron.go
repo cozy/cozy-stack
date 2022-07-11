@@ -50,49 +50,25 @@ func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 // options as @monthly. It will take a random day/hour in the possible range to
 // spread the triggers from the same app manifest.
 func NewMonthlyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	spec, err := periodicParser.Parse(MonthlyKind, infos.Arguments)
-	if err != nil {
-		return nil, ErrMalformedTrigger
-	}
-	seed := infos.Domain + "/" + infos.WorkerType
-	crontab := spec.ToRandomCrontab(seed)
-	schedule, err := cronParser.Parse(crontab)
-	if err != nil {
-		return nil, ErrMalformedTrigger
-	}
-	return &CronTrigger{
-		TriggerInfos: infos,
-		sched:        schedule,
-		done:         make(chan struct{}),
-	}, nil
+	return newPeriodicTrigger(infos, MonthlyKind)
 }
 
 // NewWeeklyTrigger returns a new instance of CronTrigger given the specified
 // options as @weekly. It will take a random day/hour in the possible range to
 // spread the triggers from the same app manifest.
 func NewWeeklyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	spec, err := periodicParser.Parse(WeeklyKind, infos.Arguments)
-	if err != nil {
-		return nil, ErrMalformedTrigger
-	}
-	seed := infos.Domain + "/" + infos.WorkerType
-	crontab := spec.ToRandomCrontab(seed)
-	schedule, err := cronParser.Parse(crontab)
-	if err != nil {
-		return nil, ErrMalformedTrigger
-	}
-	return &CronTrigger{
-		TriggerInfos: infos,
-		sched:        schedule,
-		done:         make(chan struct{}),
-	}, nil
+	return newPeriodicTrigger(infos, WeeklyKind)
 }
 
 // NewDailyTrigger returns a new instance of CronTrigger given the specified
 // options as @daily. It will take a random hour in the possible range to
 // spread the triggers from the same app manifest.
 func NewDailyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	spec, err := periodicParser.Parse(DailyKind, infos.Arguments)
+	return newPeriodicTrigger(infos, DailyKind)
+}
+
+func newPeriodicTrigger(infos *TriggerInfos, frequency FrequencyKind) (*CronTrigger, error) {
+	spec, err := periodicParser.Parse(frequency, infos.Arguments)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
