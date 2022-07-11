@@ -60,11 +60,12 @@ func (w *WebhookTrigger) SetCallback(cb firer) {
 }
 
 // Fire is called with a payload when the webhook has been requested.
-func (w *WebhookTrigger) Fire(payload Payload) {
+func (w *WebhookTrigger) Fire(payload Payload, manual bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	req := w.JobRequest()
 	req.Payload = payload
+	req.Manual = manual
 	if w.ch != nil {
 		w.ch <- req
 	}
