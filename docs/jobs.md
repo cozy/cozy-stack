@@ -110,6 +110,10 @@ free to choose the day and hour when to do that, but you can add restrictions:
 @monthly on the 1 before 9am  # Every first day of the month, between midnight and 9am (UTC)
 ```
 
+**Note:** the current implementation is to take a random day/hour and run the
+job each month at this day/hour. So, you should avoid 29-31 if you really want
+the job to run each month.
+
 ### `@every` syntax
 
 The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but
