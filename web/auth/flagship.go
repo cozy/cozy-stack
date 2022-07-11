@@ -238,6 +238,13 @@ func loginFlagship(c echo.Context) error {
 		return ReturnSessionCode(c, http.StatusAccepted, inst)
 	}
 
+	if client.Pending {
+		client.Pending = false
+		client.ClientID = ""
+		_ = couchdb.UpdateDoc(inst, client)
+		client.ClientID = client.CouchID
+	}
+
 	out := AccessTokenReponse{
 		Type:  "bearer",
 		Scope: "*",
