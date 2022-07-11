@@ -1,6 +1,7 @@
 package job
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -72,7 +73,7 @@ func newPeriodicTrigger(infos *TriggerInfos, frequency FrequencyKind) (*CronTrig
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
-	seed := infos.Domain + "/" + infos.WorkerType
+	seed := fmt.Sprintf("%s/%s/%v", infos.Domain, infos.WorkerType, infos.Message)
 	crontab := spec.ToRandomCrontab(seed)
 	schedule, err := cronParser.Parse(crontab)
 	if err != nil {
