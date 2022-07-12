@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -31,7 +32,13 @@ func getAccount(c echo.Context) error {
 	var err error
 	rev := c.QueryParam("rev")
 	if rev != "" {
-		err = couchdb.GetDocRev(instance, doctype, docid, rev, &out)
+		err = couchdb.GetDoc(instance, consts.SoftDeletedAccounts, docid, &out)
+		if err == nil && out.M["soft_deleted_rev"] != rev {
+			err = errors.New("invalid rev")
+		}
+		if err != nil {
+			err = couchdb.GetDocRev(instance, doctype, docid, rev, &out)
+		}
 	} else {
 		err = couchdb.GetDoc(instance, doctype, docid, &out)
 	}

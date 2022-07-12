@@ -621,6 +621,19 @@ func (w *konnectorWorker) Commit(ctx *job.WorkerContext, errjob error) error {
 	}
 	if errjob == nil {
 		log.Info("Konnector success")
+		// Clean the soft-deleted account
+		msg := &KonnectorMessage{}
+		if err := ctx.UnmarshalMessage(&msg); err == nil && msg.AccountDeleted {
+			var doc couchdb.JSONDoc
+			err := couchdb.GetDoc(ctx.Instance, consts.SoftDeletedAccounts, msg.Account, &doc)
+			if err == nil {
+				doc.Type = consts.SoftDeletedAccounts
+				err = couchdb.DeleteDoc(ctx.Instance, &doc)
+			}
+			if err != nil {
+				log.Warnf("Cannot clean soft-deleted account: %s", err)
+			}
+		}
 	} else {
 		log.Infof("Konnector failure: %s", errjob)
 	}
