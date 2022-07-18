@@ -38,6 +38,6 @@ http.get(url, options, (res) => {
   res.on('end', () => {
     let account = JSON.parse(rawData)
     let data = { account, fields, payload }
-    fs.writeFileSync(account.log, JSON.stringify(data, null, '  '))
+    fs.writeFileSync(account.data.log, JSON.stringify(data, null, '  '))
   })
 })

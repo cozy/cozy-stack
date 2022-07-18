@@ -213,17 +213,17 @@ func (c *WorkerContext) Cookie() interface{} {
 	return c.cookie
 }
 
+// Manual returns if the job was started manually
+func (c *WorkerContext) Manual() bool {
+	return c.job.Manual
+}
+
 // NewWorker creates a new instance of Worker with the given configuration.
 func NewWorker(conf *WorkerConfig) *Worker {
 	return &Worker{
 		Type: conf.WorkerType,
 		Conf: conf,
 	}
-}
-
-// Manual returns if the job was started manually
-func (c *WorkerContext) Manual() bool {
-	return c.job.Manual
 }
 
 // Start is used to start the worker consumption of messages from its queue.

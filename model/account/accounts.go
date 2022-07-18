@@ -1,6 +1,7 @@
 package account
 
 import (
+	"encoding/json"
 	"net/url"
 	"time"
 
@@ -104,6 +105,18 @@ func (ac *Account) Fetch(field string) []string {
 	return nil
 }
 
+func (ac *Account) toJSONDoc() (*couchdb.JSONDoc, error) {
+	buf, err := json.Marshal(ac)
+	if err != nil {
+		return nil, err
+	}
+	doc := couchdb.JSONDoc{}
+	if err := json.Unmarshal(buf, &doc); err != nil {
+		return nil, err
+	}
+	return &doc, nil
+}
+
 // GetTriggers returns the list of triggers associated with the given
 // accountID. In particular, the stack will need to remove them when the
 // account is deleted.
@@ -164,6 +177,7 @@ func CleanAndWait(inst *instance.Instance, toClean []CleanEntry) error {
 func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
 	jobsSystem := job.System()
 	acc := entry.Account
+	createSoftDeletedAccount(inst, acc)
 	acc.ManualCleaning = true
 	oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
 	if err := couchdb.DeleteDoc(inst, acc); err != nil {
@@ -263,6 +277,7 @@ func init() {
 			if old == nil {
 				return nil
 			}
+
 			var konnector string
 			switch v := old.(type) {
 			case *Account:
@@ -277,9 +292,41 @@ func init() {
 					Info("No associated konnector for account: cannot create on_delete job")
 				return nil
 			}
+
+			createSoftDeletedAccount(db, old)
+
 			_, err = PushAccountDeletedJob(jobsSystem, db, old.ID(), old.Rev(), konnector)
 			return err
 		})
+}
+
+func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
+	var cloned *couchdb.JSONDoc
+	switch old := old.(type) {
+	case *Account:
+		doc, err := old.toJSONDoc()
+		if err != nil {
+			logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
+			return
+		}
+		cloned = doc
+	case *couchdb.JSONDoc:
+		cloned = old.Clone().(*couchdb.JSONDoc)
+	default:
+		return
+	}
+
+	cloned.Type = consts.SoftDeletedAccounts
+	cloned.M["soft_deleted_rev"] = cloned.Rev()
+	cloned.SetRev("")
+	logger.WithNamespace("foobar").Debugf("cloned = %#v\n", cloned)
+	if err := couchdb.CreateNamedDocWithDB(db, cloned); err != nil {
+		logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
+	}
+	logger.WithDomain(db.DomainName()).Infof("cloned= %#v (%T)", cloned, cloned)
+	if err := couchdb.Compact(db, consts.Accounts); err != nil {
+		logger.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
+	}
 }
 
 var _ permission.Fetcher = &Account{}

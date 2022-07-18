@@ -20,8 +20,10 @@ class Account
   def as_json
     json = {
       name: @name,
-      log: @log,
-      failure: @failure,
+      data: {
+        log: @log,
+        failure: @failure
+      },
       account_type: @type,
       auth: @auth
     }.compact

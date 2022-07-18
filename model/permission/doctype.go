@@ -21,14 +21,15 @@ var blockList = map[string]bool{
 	consts.RemoteSecrets:         none,
 
 	// Only stack can manipulate them
-	consts.Sessions:         none,
-	consts.Permissions:      none,
-	consts.Intents:          none,
-	consts.OAuthClients:     none,
-	consts.OAuthAccessCodes: none,
-	consts.Archives:         none,
-	consts.Sharings:         none,
-	consts.Shared:           none,
+	consts.Sessions:            none,
+	consts.Permissions:         none,
+	consts.Intents:             none,
+	consts.OAuthClients:        none,
+	consts.OAuthAccessCodes:    none,
+	consts.Archives:            none,
+	consts.Sharings:            none,
+	consts.Shared:              none,
+	consts.SoftDeletedAccounts: none,
 
 	// Synthetic doctypes (API only)
 	consts.CertifiedCarbonCopy:     none,

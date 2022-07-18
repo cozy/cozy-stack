@@ -97,6 +97,8 @@ const (
 	TriggersState = "io.cozy.triggers.state"
 	// Accounts doc type for accounts
 	Accounts = "io.cozy.accounts"
+	// SoftDeletedAccounts doc type for old revisions of deleted accounts
+	SoftDeletedAccounts = "io.cozy.accounts.soft_deleted"
 	// AccountTypes doc type for account types
 	AccountTypes = "io.cozy.account_types"
 	// BitwardenProfiles doc type for Bitwarden profile

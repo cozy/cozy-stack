@@ -29,15 +29,15 @@ const main = () => {
     })
     res.on('end', () => {
       let data = JSON.parse(rawData)
-      if (data.failure) {
-        throw new Error(data.failure)
+      if (data.data.failure) {
+        throw new Error(data.data.failure)
       }
       url = instance + 'data/io.cozy.accounts/' + data.relationships.data._id
       http.get(url, options, (res2) => {
         if (res2.statusCode !== 200) {
           throw new Error(`Status Code: ${res2.statusCode}`)
         }
-        res2.pipe(fs.createWriteStream(data.log))
+        res2.pipe(fs.createWriteStream(data.data.log))
       })
     })
   })
