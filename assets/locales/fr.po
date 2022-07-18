@@ -1175,7 +1175,7 @@ msgstr ""
 msgid "Compat Subtitle"
 msgstr ""
 "Assurez-vous de disposer de la version la plus récente ou télécharger l'une "
-"de ses options pour profiter pleinement de votre Cozy. Nous recommandons "
+"de ces options pour profiter pleinement de votre Cozy. Nous recommandons "
 "Firefox !"
 
 msgid "Compat Browser Chrome Link"
