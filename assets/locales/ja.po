@@ -447,6 +447,9 @@ msgstr "設定"
 msgid "Permissions io.cozy.jobs"
 msgstr "ジョブ"
 
+msgid "Permissions io.cozy.tags"
+msgstr "タグ"
+
 msgid "Permissions io.cozy.triggers"
 msgstr "ジョブのスケジュール中"
 
