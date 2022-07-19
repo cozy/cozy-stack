@@ -525,6 +525,9 @@ msgstr "Einstellungen"
 msgid "Permissions io.cozy.jobs"
 msgstr "Arbeitsplätze"
 
+msgid "Permissions io.cozy.tags"
+msgstr "Tags"
+
 msgid "Permissions io.cozy.triggers"
 msgstr "Aufträge planen"
 

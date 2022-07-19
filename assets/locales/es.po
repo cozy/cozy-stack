@@ -525,6 +525,9 @@ msgstr "Trabajos por efectuar"
 msgid "Permissions io.cozy.triggers"
 msgstr "Tareas programadas"
 
+msgid "Permissions io.cozy.tags"
+msgstr "Tags"
+
 msgid "Permissions io.cozy.permissions"
 msgstr "Delegación de permisos"
 
