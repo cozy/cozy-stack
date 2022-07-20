@@ -9186,14 +9186,14 @@ T07VxdiInFT2WP/qflrv+rZ5Fw==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /icons/doctypes/tags.svg
-Size: 422
+Size: 445
 
-G6UBAMTMsVJ2p765TcoHpNii40ecOqef5A+gvUwOXevO33DAs1LY7qJim4fy0DpZ
-/Bn7X793uJVsdSG6sNBO3/5xSxCawRefMSMyYLvH5VcDd6GL/BV/IStXRrLz9Xvn
-hv24X3AZuHVCPioUrAO9gYM4wg6uoyAOm+//R0Ysqn+7XJwR1sCjwTSd2G+S2tj3
-kFQzVKKm5yStYnIs4WgSswEDjnWQWBUU7CxkXzZFSPMgVbBSzejbr7JqEhgk1TLx
-+lik1grO7PBC2H1iCf9BwaweKVFrQHeQHNuz2yIiBCHGQcGXl5wMXBmK1LbZF7GX
-/hA=
+G7wBABwHuTn0JieqSnzYXl0jAsPTyrVStmtPZyh8DBbdA0CBuEzd1J/kD6BjtRZY
+OhZ1UZRh4NFSCNudsW2KcmjZJrKf5l+/d4hKe3UhmrDwd/z230sg0ARNzYPyq15B
+XJxZ8edPYmkiwl+/d813Lc5bVvNsruC7/44Rixy9XV83/Yez8+teu4h0oRSSa3GG
+iqSBnRtWEHdwy5Q0whrkwpjmA/u1VPE1KJYEpaDx2VowWGd/YUMyUCD9xlMoCnnW
+fHJplEnEHEgVrFQzceVT3lby4imWPPJ6m6mUAlna+WXsnkj4DzJl5YITtQZ0Akqh
+PrstApYgpnFU+OYoRYNsDZlK3e+L2G6/Dw==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /icons/doctypes/team.svg
