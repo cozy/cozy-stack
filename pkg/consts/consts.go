@@ -101,4 +101,6 @@ var PlatformApps = []string{
 	"photos",
 	"settings",
 	"store",
+	"coachco2",
+	"mespapiers",
 }
