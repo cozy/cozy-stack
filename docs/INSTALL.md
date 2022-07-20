@@ -6,11 +6,11 @@
 
 -   A reverse-proxy (nginx, caddy, haproxy, etc.)
 -   A SMTP server
--   CouchDB 2
+-   CouchDB 3
 -   Git
 -   Image Magick (and the Lato font)
 
-To install CouchDB 2 through Docker, take a look at our
+To install CouchDB 3 through Docker, take a look at our
 [Docker specific documentation](docker.md).
 
 **Note:** to generate thumbnails for heic/heif images, the version 6.9+ of
