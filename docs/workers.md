@@ -37,6 +37,14 @@ To execute a konnector through a job, the expected `arguments` are the following
 The `service` worker is used to process background jobs, generally to compute
 non-realtime user data.
 
+```
+"arguments": {
+    "slug": <app slug>,
+    "name": <service name>,
+    "fields": <custom fields>
+}
+```
+
 ### Job arguments
 
 To execute a service through a job, the expected `arguments` are the following:
