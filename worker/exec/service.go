@@ -21,9 +21,10 @@ import (
 
 // ServiceOptions contains the options to execute a service.
 type ServiceOptions struct {
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-	File string `json:"service_file"`
+	Slug   string          `json:"slug"`   // The application slug
+	Name   string          `json:"name"`   // The service name
+	Fields json.RawMessage `json:"fields"` // Custom fields
+	File   string          `json:"service_file"`
 
 	Message *ServiceOptions `json:"message"`
 }
@@ -32,6 +33,7 @@ type serviceWorker struct {
 	man     *app.WebappManifest
 	slug    string
 	name    string
+	fields  json.RawMessage
 	workDir string
 }
 
@@ -47,6 +49,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 
 	slug := opts.Slug
 	name := opts.Name
+	fields := opts.Fields
 
 	man, err := app.GetWebappBySlugAndUpdate(i, slug,
 		app.Copier(consts.WebappType, i), i.Registries())
@@ -59,6 +62,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 
 	w.slug = slug
 	w.name = name
+	w.fields = fields
 
 	// Upgrade "installed" to "ready"
 	if err = app.UpgradeInstalledState(i, man); err != nil {
@@ -183,6 +187,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		"COZY_JOB_ID=" + ctx.ID(),
 		"COZY_COUCH_DOC=" + string(marshaled),
 		"COZY_PAYLOAD=" + payload,
+		"COZY_FIELDS=" + string(w.fields),
 	}
 	if triggerID, ok := ctx.TriggerID(); ok {
 		env = append(env, "COZY_TRIGGER_ID="+triggerID)
