@@ -319,11 +319,9 @@ func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
 	cloned.Type = consts.SoftDeletedAccounts
 	cloned.M["soft_deleted_rev"] = cloned.Rev()
 	cloned.SetRev("")
-	logger.WithNamespace("foobar").Debugf("cloned = %#v\n", cloned)
 	if err := couchdb.CreateNamedDocWithDB(db, cloned); err != nil {
 		logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
 	}
-	logger.WithDomain(db.DomainName()).Infof("cloned= %#v (%T)", cloned, cloned)
 	if err := couchdb.Compact(db, consts.Accounts); err != nil {
 		logger.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
 	}
