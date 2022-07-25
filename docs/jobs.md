@@ -1004,7 +1004,17 @@ This endpoint is used to create jobs for banking konnectors. It requires a
 payload with the format defined by [Budget
 Insight](https://docs.budget-insight.com/guides/webhooks) and an
 `Authorization` header with a Bearer token, where a trigger and an account can
-be found on this instance matching their data.
+be found on this instance matching their data. The event type is also sent in
+the query-string.
+
+#### Request
+
+```http
+POST /jobs/webhooks/bi?event=CONNECTION_SYNCED HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer token-from-bi
+Host: cozy.example.com
+```
 
 #### Response
 

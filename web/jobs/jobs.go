@@ -469,7 +469,12 @@ func fireBIWebhook(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	if err := bi.FireWebhook(inst, token, payload); err != nil {
+	biEvent, err := bi.ParseEventBI(c.QueryParam("event"))
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if err := bi.FireWebhook(inst, token, biEvent, payload); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 	return c.NoContent(http.StatusNoContent)

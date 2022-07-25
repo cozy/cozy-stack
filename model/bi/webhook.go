@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -17,11 +18,34 @@ import (
 // user BI token is persisted.
 const aggregatorID = "bi-aggregator"
 
+// EventBI is a type used for the events sent by BI in the webhooks
+type EventBI string
+
+const (
+	// EventConnectionSynced is emitted after a connection has been synced
+	EventConnectionSynced EventBI = "CONNECTION_SYNCED"
+)
+
+// ParseEventBI returns the event of the webhook, or an error if the event
+// cannot be handled by the stack.
+func ParseEventBI(evt string) (EventBI, error) {
+	if evt == "" {
+		return EventConnectionSynced, nil
+	}
+
+	biEvent := EventBI(strings.ToUpper(evt))
+	switch biEvent {
+	case EventConnectionSynced:
+		return biEvent, nil
+	}
+	return EventBI("INVALID"), errors.New("invalid event")
+}
+
 // FireWebhook is used when the stack receives a call for a BI webhook, with an
 // bearer token and a JSON payload. It will try to find a matching
 // io.cozy.account and a io.cozy.trigger, and launch a job for them if
 // needed.
-func FireWebhook(inst *instance.Instance, token string, payload map[string]interface{}) error {
+func FireWebhook(inst *instance.Instance, token string, evt EventBI, payload map[string]interface{}) error {
 	var accounts []*account.Account
 	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
 		return err
