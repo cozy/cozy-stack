@@ -41,6 +41,14 @@ func ParseEventBI(evt string) (EventBI, error) {
 	return EventBI("INVALID"), errors.New("invalid event")
 }
 
+type webhookCall struct {
+	Instance *instance.Instance
+	Accounts []*account.Account
+	Token    string
+	Event    EventBI
+	Payload  map[string]interface{}
+}
+
 // FireWebhook is used when the stack receives a call for a BI webhook, with an
 // bearer token and a JSON payload. It will try to find a matching
 // io.cozy.account and a io.cozy.trigger, and launch a job for them if
@@ -50,11 +58,27 @@ func FireWebhook(inst *instance.Instance, token string, evt EventBI, payload map
 	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
 		return err
 	}
-	if err := checkToken(accounts, token); err != nil {
+	call := &webhookCall{
+		Instance: inst,
+		Accounts: accounts,
+		Token:    token,
+		Event:    evt,
+		Payload:  payload,
+	}
+
+	if err := call.checkToken(); err != nil {
 		return err
 	}
 
-	connID, err := extractPayloadConnID(payload)
+	switch evt {
+	case EventConnectionSynced:
+		return call.handleConnectionSynced()
+	}
+	return errors.New("event not handled")
+}
+
+func (c *webhookCall) handleConnectionSynced() error {
+	connID, err := extractPayloadConnID(c.Payload)
 	if err != nil {
 		return err
 	}
@@ -62,25 +86,25 @@ func FireWebhook(inst *instance.Instance, token string, evt EventBI, payload map
 		return errors.New("no connection.id")
 	}
 
-	account, err := findAccount(accounts, connID)
+	account, err := findAccount(c.Accounts, connID)
 	if err != nil {
 		return err
 	}
-	trigger, err := findTrigger(inst, account)
+	trigger, err := findTrigger(c.Instance, account)
 	if err != nil {
 		return err
 	}
 
-	if mustExecuteKonnector(inst, trigger, payload) {
-		return fireTrigger(inst, trigger, account, payload)
+	if c.mustExecuteKonnector(trigger) {
+		return c.fireTrigger(trigger, account)
 	}
-	return copyLastUpdate(inst, account, payload)
+	return c.copyLastUpdate(account)
 }
 
-func checkToken(accounts []*account.Account, token string) error {
-	for _, acc := range accounts {
+func (c *webhookCall) checkToken() error {
+	for _, acc := range c.Accounts {
 		if acc.ID() == aggregatorID {
-			if subtle.ConstantTimeCompare([]byte(token), []byte(acc.Token)) == 1 {
+			if subtle.ConstantTimeCompare([]byte(c.Token), []byte(acc.Token)) == 1 {
 				return nil
 			}
 			return errors.New("token is invalid")
@@ -139,12 +163,8 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 	return triggers[0], nil
 }
 
-func mustExecuteKonnector(
-	inst *instance.Instance,
-	trigger job.Trigger,
-	payload map[string]interface{},
-) bool {
-	return payloadHasAccounts(payload) || lastExecNotSuccessful(inst, trigger)
+func (c *webhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
+	return payloadHasAccounts(c.Payload) || lastExecNotSuccessful(c.Instance, trigger)
 }
 
 func payloadHasAccounts(payload map[string]interface{}) bool {
@@ -167,12 +187,7 @@ func lastExecNotSuccessful(inst *instance.Instance, trigger job.Trigger) bool {
 	return lastJobs[0].State != job.Done
 }
 
-func fireTrigger(
-	inst *instance.Instance,
-	trigger job.Trigger,
-	account *account.Account,
-	payload map[string]interface{},
-) error {
+func (c *webhookCall) fireTrigger(trigger job.Trigger, account *account.Account) error {
 	req := trigger.Infos().JobRequest()
 	var msg map[string]interface{}
 	if err := json.Unmarshal(req.Message, &msg); err == nil {
@@ -181,20 +196,16 @@ func fireTrigger(
 			req.Message = updated
 		}
 	}
-	j, err := job.System().PushJob(inst, req)
+	j, err := job.System().PushJob(c.Instance, req)
 	if err == nil {
-		inst.Logger().WithNamespace("webhook").
+		c.Instance.Logger().WithNamespace("webhook").
 			Debugf("Push job %s (account: %s - trigger: %s)", j.ID(), account.ID(), trigger.ID())
 	}
 	return err
 }
 
-func copyLastUpdate(
-	inst *instance.Instance,
-	account *account.Account,
-	payload map[string]interface{},
-) error {
-	conn, ok := payload["connection"].(map[string]interface{})
+func (c *webhookCall) copyLastUpdate(account *account.Account) error {
+	conn, ok := c.Payload["connection"].(map[string]interface{})
 	if !ok {
 		return errors.New("no connection")
 	}
@@ -214,9 +225,9 @@ func copyLastUpdate(
 		return fmt.Errorf("no data.auth.bi in account %s", account.ID())
 	}
 	bi["lastUpdate"] = lastUpdate
-	err := couchdb.UpdateDoc(inst, account)
+	err := couchdb.UpdateDoc(c.Instance, account)
 	if err == nil {
-		inst.Logger().WithNamespace("webhook").
+		c.Instance.Logger().WithNamespace("webhook").
 			Debugf("Set lastUpdate to %s (account :%s)", lastUpdate, account.ID())
 	}
 	return err
