@@ -24,6 +24,8 @@ type EventBI string
 const (
 	// EventConnectionSynced is emitted after a connection has been synced
 	EventConnectionSynced EventBI = "CONNECTION_SYNCED"
+	// EventConnectionDeleted is emitted after a connection has been deleted
+	EventConnectionDeleted EventBI = "CONNECTION_DELETED"
 )
 
 // ParseEventBI returns the event of the webhook, or an error if the event
@@ -35,7 +37,7 @@ func ParseEventBI(evt string) (EventBI, error) {
 
 	biEvent := EventBI(strings.ToUpper(evt))
 	switch biEvent {
-	case EventConnectionSynced:
+	case EventConnectionSynced, EventConnectionDeleted:
 		return biEvent, nil
 	}
 	return EventBI("INVALID"), errors.New("invalid event")
@@ -73,8 +75,22 @@ func FireWebhook(inst *instance.Instance, token string, evt EventBI, payload map
 	switch evt {
 	case EventConnectionSynced:
 		return call.handleConnectionSynced()
+	case EventConnectionDeleted:
+		return call.handleConnectionDeleted()
 	}
 	return errors.New("event not handled")
+}
+
+func (c *webhookCall) checkToken() error {
+	for _, acc := range c.Accounts {
+		if acc.ID() == aggregatorID {
+			if subtle.ConstantTimeCompare([]byte(c.Token), []byte(acc.Token)) == 1 {
+				return nil
+			}
+			return errors.New("token is invalid")
+		}
+	}
+	return errors.New("no bi-aggregator account found")
 }
 
 func (c *webhookCall) handleConnectionSynced() error {
@@ -101,18 +117,6 @@ func (c *webhookCall) handleConnectionSynced() error {
 	return c.copyLastUpdate(account)
 }
 
-func (c *webhookCall) checkToken() error {
-	for _, acc := range c.Accounts {
-		if acc.ID() == aggregatorID {
-			if subtle.ConstantTimeCompare([]byte(c.Token), []byte(acc.Token)) == 1 {
-				return nil
-			}
-			return errors.New("token is invalid")
-		}
-	}
-	return errors.New("no bi-aggregator account found")
-}
-
 func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 	conn, ok := payload["connection"].(map[string]interface{})
 	if !ok {
@@ -123,6 +127,61 @@ func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 		return 0, errors.New("connection.id not found")
 	}
 	return int(connID), nil
+}
+
+func (c *webhookCall) handleConnectionDeleted() error {
+	connID, err := extractPayloadID(c.Payload)
+	if err != nil {
+		return err
+	}
+	if connID == 0 {
+		return errors.New("no connection.id")
+	}
+
+	msg := "no io.cozy.accounts deleted"
+	if account, _ := findAccount(c.Accounts, connID); account != nil {
+		// The account has already been deleted on BI side, so we can skip the
+		// on_delete execution for the konnector.
+		account.ManualCleaning = true
+		if err := couchdb.DeleteDoc(c.Instance, account); err != nil {
+			c.Instance.Logger().WithNamespace("webhook").
+				Warnf("failed to delete account: %s", err)
+			return err
+		}
+		msg = fmt.Sprintf("account %s ", account.ID())
+
+		trigger, _ := findTrigger(c.Instance, account)
+		if trigger != nil {
+			jobsSystem := job.System()
+			if err := jobsSystem.DeleteTrigger(c.Instance, trigger.ID()); err != nil {
+				c.Instance.Logger().WithNamespace("webhook").
+					Errorf("failed to delete trigger: %s", err)
+			}
+			msg += fmt.Sprintf("and trigger %s ", trigger.ID())
+		}
+		msg += "deleted"
+	}
+
+	userID, _ := extractPayloadIDUser(c.Payload)
+	c.Instance.Logger().WithNamespace("webhook").
+		Infof("Connection deleted user_id=%d connection_id=%d %s", userID, connID, msg)
+	return nil
+}
+
+func extractPayloadID(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id"].(float64)
+	if !ok {
+		return 0, errors.New("id not found")
+	}
+	return int(id), nil
+}
+
+func extractPayloadIDUser(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id_user"].(float64)
+	if !ok {
+		return 0, errors.New("id not found")
+	}
+	return int(id), nil
 }
 
 func findAccount(accounts []*account.Account, connID int) (*account.Account, error) {
@@ -192,6 +251,7 @@ func (c *webhookCall) fireTrigger(trigger job.Trigger, account *account.Account)
 	var msg map[string]interface{}
 	if err := json.Unmarshal(req.Message, &msg); err == nil {
 		msg["bi_webhook"] = true
+		msg["event"] = string(c.Event)
 		if updated, err := json.Marshal(msg); err == nil {
 			req.Message = updated
 		}
