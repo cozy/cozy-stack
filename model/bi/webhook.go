@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -102,6 +105,24 @@ func (c *webhookCall) handleConnectionSynced() error {
 		return errors.New("no connection.id")
 	}
 
+	uuid, err := extractPayloadConnectionConnectorUUID(c.Payload)
+	if err != nil {
+		return err
+	}
+	slug, err := mapUUIDToSlug(uuid)
+	if err != nil {
+		c.Instance.Logger().WithNamespace("webhook").
+			Warnf("no slug found for uuid %s: %s", uuid, err)
+		return err
+	}
+	_, err = app.GetBySlug(c.Instance, slug, consts.KonnectorType)
+	if err != nil {
+		userID, _ := extractPayloadUserID(c.Payload)
+		c.Instance.Logger().WithNamespace("webhook").
+			Warnf("konnector not installed id_connection=%d id_user=%d uuid=%s slug=%s", connID, userID, uuid, slug)
+		return nil
+	}
+
 	account, err := findAccount(c.Accounts, connID)
 	if err != nil {
 		return err
@@ -117,6 +138,38 @@ func (c *webhookCall) handleConnectionSynced() error {
 	return c.copyLastUpdate(account)
 }
 
+func mapUUIDToSlug(uuid string) (string, error) {
+	f := statik.GetAsset("/mappings/bi-banks.json")
+	if f == nil {
+		return "", os.ErrNotExist
+	}
+	var mapping map[string]string
+	if err := json.Unmarshal(f.GetData(), &mapping); err != nil {
+		return "", err
+	}
+	slug, ok := mapping[uuid]
+	if !ok || slug == "" {
+		return "", errors.New("not found")
+	}
+	return slug, nil
+}
+
+func extractPayloadConnectionConnectorUUID(payload map[string]interface{}) (string, error) {
+	conn, ok := payload["connection"].(map[string]interface{})
+	if !ok {
+		return "", errors.New("connection not found")
+	}
+	connector, ok := conn["connector"].(map[string]interface{})
+	if !ok {
+		return "", errors.New("connection.connector not found")
+	}
+	uuid, ok := connector["uuid"].(string)
+	if !ok {
+		return "", errors.New("connection.connector.uuid not found")
+	}
+	return uuid, nil
+}
+
 func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 	conn, ok := payload["connection"].(map[string]interface{})
 	if !ok {
@@ -127,6 +180,18 @@ func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 		return 0, errors.New("connection.id not found")
 	}
 	return int(connID), nil
+}
+
+func extractPayloadUserID(payload map[string]interface{}) (int, error) {
+	user, ok := payload["user"].(map[string]interface{})
+	if !ok {
+		return 0, errors.New("user not found")
+	}
+	id, ok := user["id"].(float64)
+	if !ok {
+		return 0, errors.New("user.id not found")
+	}
+	return int(id), nil
 }
 
 func (c *webhookCall) handleConnectionDeleted() error {
