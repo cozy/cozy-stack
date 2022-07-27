@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/permission"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -51,7 +49,7 @@ func getAccount(c echo.Context) error {
 		return err
 	}
 
-	if EncryptAccount(out) {
+	if account.Encrypt(out) {
 		if err = couchdb.UpdateDoc(instance, &out); err != nil {
 			return err
 		}
@@ -64,7 +62,7 @@ func getAccount(c echo.Context) error {
 	if perm.Type == permission.TypeKonnector ||
 		(c.QueryParam("include") == "credentials" && perm.Type == permission.TypeWebapp) {
 		// The account decryption is allowed for konnectors or for apps services
-		DecryptAccount(out)
+		account.Decrypt(out)
 	}
 
 	return c.JSON(http.StatusOK, out.ToMapWithType())
@@ -117,7 +115,7 @@ func updateAccount(c echo.Context) error {
 		}
 	}
 
-	EncryptAccount(doc)
+	account.Encrypt(doc)
 
 	errUpdate := couchdb.UpdateDoc(instance, &doc)
 	if errUpdate != nil {
@@ -129,7 +127,7 @@ func updateAccount(c echo.Context) error {
 		return err
 	}
 	if perm.Type == permission.TypeKonnector {
-		DecryptAccount(doc)
+		account.Decrypt(doc)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -139,105 +137,6 @@ func updateAccount(c echo.Context) error {
 		"type": doc.DocType(),
 		"data": doc.ToMapWithType(),
 	})
-}
-
-// Encrypts sensitive fields inside the account. The document
-// is modified in place.
-func EncryptAccount(doc couchdb.JSONDoc) bool {
-	if config.GetVault().CredentialsEncryptorKey() != nil {
-		return encryptMap(doc.M)
-	}
-	return false
-}
-
-// Decrypts sensitive fields inside the account. The document
-// is modified in place.
-func DecryptAccount(doc couchdb.JSONDoc) bool {
-	if config.GetVault().CredentialsDecryptorKey() != nil {
-		return decryptMap(doc.M)
-	}
-	return false
-}
-
-func encryptMap(m map[string]interface{}) (encrypted bool) {
-	auth, ok := m["auth"].(map[string]interface{})
-	if !ok {
-		return
-	}
-	login, _ := auth["login"].(string)
-	cloned := make(map[string]interface{}, len(auth))
-	var encKeys []string
-	for k, v := range auth {
-		var err error
-		switch k {
-		case "password":
-			password, _ := v.(string)
-			cloned["credentials_encrypted"], err = account.EncryptCredentials(login, password)
-			if err == nil {
-				encrypted = true
-			}
-		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret", "session":
-			cloned[k+"_encrypted"], err = account.EncryptCredentialsData(v)
-			if err == nil {
-				encrypted = true
-			}
-		default:
-			if strings.HasSuffix(k, "_encrypted") {
-				encKeys = append(encKeys, k)
-			} else {
-				cloned[k] = v
-			}
-		}
-	}
-	for _, key := range encKeys {
-		if _, ok := cloned[key]; !ok {
-			cloned[key] = auth[key]
-		}
-	}
-	m["auth"] = cloned
-	if data, ok := m["data"].(map[string]interface{}); ok {
-		if encryptMap(data) && !encrypted {
-			encrypted = true
-		}
-	}
-	return
-}
-
-func decryptMap(m map[string]interface{}) (decrypted bool) {
-	auth, ok := m["auth"].(map[string]interface{})
-	if !ok {
-		return
-	}
-	cloned := make(map[string]interface{}, len(auth))
-	for k, v := range auth {
-		if !strings.HasSuffix(k, "_encrypted") {
-			cloned[k] = v
-			continue
-		}
-		k = strings.TrimSuffix(k, "_encrypted")
-		var str string
-		str, ok = v.(string)
-		if !ok {
-			cloned[k] = v
-			continue
-		}
-		var err error
-		if k == "credentials" {
-			cloned["login"], cloned["password"], err = account.DecryptCredentials(str)
-		} else {
-			cloned[k], err = account.DecryptCredentialsData(str)
-		}
-		if !decrypted {
-			decrypted = err == nil
-		}
-	}
-	m["auth"] = cloned
-	if data, ok := m["data"].(map[string]interface{}); ok {
-		if decryptMap(data) && !decrypted {
-			decrypted = true
-		}
-	}
-	return
 }
 
 func createAccount(c echo.Context) error {
@@ -253,7 +152,7 @@ func createAccount(c echo.Context) error {
 		return err
 	}
 
-	EncryptAccount(doc)
+	account.Encrypt(doc)
 
 	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err
