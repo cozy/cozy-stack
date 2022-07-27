@@ -46,46 +46,42 @@ func ParseEventBI(evt string) (EventBI, error) {
 	return EventBI("INVALID"), errors.New("invalid event")
 }
 
-type webhookCall struct {
+// WebhookCall contains the data relative to a call from BI for a webhook.
+type WebhookCall struct {
 	Instance *instance.Instance
-	Accounts []*account.Account
 	Token    string
+	BIurl    string
 	Event    EventBI
 	Payload  map[string]interface{}
+
+	accounts []*account.Account
 }
 
-// FireWebhook is used when the stack receives a call for a BI webhook, with an
-// bearer token and a JSON payload. It will try to find a matching
-// io.cozy.account and a io.cozy.trigger, and launch a job for them if
-// needed.
-func FireWebhook(inst *instance.Instance, token string, evt EventBI, payload map[string]interface{}) error {
+// Fire is used when the stack receives a call for a BI webhook, with an bearer
+// token and a JSON payload. It will try to find a matching io.cozy.account and
+// a io.cozy.trigger, and launch a job for them if needed.
+func (c *WebhookCall) Fire() error {
 	var accounts []*account.Account
-	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
+	if err := couchdb.GetAllDocs(c.Instance, consts.Accounts, nil, &accounts); err != nil {
 		return err
 	}
-	call := &webhookCall{
-		Instance: inst,
-		Accounts: accounts,
-		Token:    token,
-		Event:    evt,
-		Payload:  payload,
-	}
+	c.accounts = accounts
 
-	if err := call.checkToken(); err != nil {
+	if err := c.checkToken(); err != nil {
 		return err
 	}
 
-	switch evt {
+	switch c.Event {
 	case EventConnectionSynced:
-		return call.handleConnectionSynced()
+		return c.handleConnectionSynced()
 	case EventConnectionDeleted:
-		return call.handleConnectionDeleted()
+		return c.handleConnectionDeleted()
 	}
 	return errors.New("event not handled")
 }
 
-func (c *webhookCall) checkToken() error {
-	for _, acc := range c.Accounts {
+func (c *WebhookCall) checkToken() error {
+	for _, acc := range c.accounts {
 		if acc.ID() == aggregatorID {
 			if subtle.ConstantTimeCompare([]byte(c.Token), []byte(acc.Token)) == 1 {
 				return nil
@@ -96,7 +92,7 @@ func (c *webhookCall) checkToken() error {
 	return errors.New("no bi-aggregator account found")
 }
 
-func (c *webhookCall) handleConnectionSynced() error {
+func (c *WebhookCall) handleConnectionSynced() error {
 	connID, err := extractPayloadConnID(c.Payload)
 	if err != nil {
 		return err
@@ -123,7 +119,7 @@ func (c *webhookCall) handleConnectionSynced() error {
 		return nil
 	}
 
-	account, err := findAccount(c.Accounts, connID)
+	account, err := findAccount(c.accounts, connID)
 	if err != nil {
 		return err
 	}
@@ -194,7 +190,7 @@ func extractPayloadUserID(payload map[string]interface{}) (int, error) {
 	return int(id), nil
 }
 
-func (c *webhookCall) handleConnectionDeleted() error {
+func (c *WebhookCall) handleConnectionDeleted() error {
 	connID, err := extractPayloadID(c.Payload)
 	if err != nil {
 		return err
@@ -204,7 +200,7 @@ func (c *webhookCall) handleConnectionDeleted() error {
 	}
 
 	msg := "no io.cozy.accounts deleted"
-	if account, _ := findAccount(c.Accounts, connID); account != nil {
+	if account, _ := findAccount(c.accounts, connID); account != nil {
 		// The account has already been deleted on BI side, so we can skip the
 		// on_delete execution for the konnector.
 		account.ManualCleaning = true
@@ -230,6 +226,22 @@ func (c *webhookCall) handleConnectionDeleted() error {
 	userID, _ := extractPayloadIDUser(c.Payload)
 	c.Instance.Logger().WithNamespace("webhook").
 		Infof("Connection deleted user_id=%d connection_id=%d %s", userID, connID, msg)
+
+	// If the user has no longer any connections on BI, we must remove their
+	// data from BI.
+	api, err := newApiClient(c.BIurl)
+	if err != nil {
+		return err
+	}
+	nb, err := api.getNumberOfConnections(c.Token)
+	if err != nil {
+		return fmt.Errorf("getNumberOfConnections: %s", err)
+	}
+	if nb == 0 {
+		if err := api.deleteUser(c.Token); err != nil {
+			return fmt.Errorf("deleteUser: %s", err)
+		}
+	}
 	return nil
 }
 
@@ -287,7 +299,7 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 	return triggers[0], nil
 }
 
-func (c *webhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
+func (c *WebhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
 	return payloadHasAccounts(c.Payload) || lastExecNotSuccessful(c.Instance, trigger)
 }
 
@@ -311,7 +323,7 @@ func lastExecNotSuccessful(inst *instance.Instance, trigger job.Trigger) bool {
 	return lastJobs[0].State != job.Done
 }
 
-func (c *webhookCall) fireTrigger(trigger job.Trigger, account *account.Account) error {
+func (c *WebhookCall) fireTrigger(trigger job.Trigger, account *account.Account) error {
 	req := trigger.Infos().JobRequest()
 	var msg map[string]interface{}
 	if err := json.Unmarshal(req.Message, &msg); err == nil {
@@ -329,7 +341,7 @@ func (c *webhookCall) fireTrigger(trigger job.Trigger, account *account.Account)
 	return err
 }
 
-func (c *webhookCall) copyLastUpdate(account *account.Account) error {
+func (c *WebhookCall) copyLastUpdate(account *account.Account) error {
 	conn, ok := c.Payload["connection"].(map[string]interface{})
 	if !ok {
 		return errors.New("no connection")

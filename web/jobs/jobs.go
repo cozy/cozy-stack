@@ -480,7 +480,14 @@ func fireBIWebhook(c echo.Context) error {
 	mutex := lock.ReadWrite(inst, "bi")
 	defer mutex.Unlock()
 
-	if err := bi.FireWebhook(inst, token, biEvent, payload); err != nil {
+	call := &bi.WebhookCall{
+		Instance: inst,
+		Token:    token,
+		BIurl:    c.QueryParam("bi_url"),
+		Event:    biEvent,
+		Payload:  payload,
+	}
+	if err := call.Fire(); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 	return c.NoContent(http.StatusNoContent)
