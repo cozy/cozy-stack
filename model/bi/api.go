@@ -3,6 +3,7 @@ package bi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -78,8 +79,9 @@ func (c *apiClient) deleteUser(token string) error {
 	return errors.New("invalid response from BI API")
 }
 
-func (c *apiClient) getConnectorUUID(connectionID, token string) (string, error) {
-	res, err := c.get("/connections/"+connectionID, token)
+func (c *apiClient) getConnectorUUID(connectionID int, token string) (string, error) {
+	path := fmt.Sprintf("/connections/%d", connectionID)
+	res, err := c.get(path, token)
 	if err != nil {
 		return "", err
 	}

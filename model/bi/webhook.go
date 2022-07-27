@@ -29,6 +29,10 @@ const (
 	EventConnectionSynced EventBI = "CONNECTION_SYNCED"
 	// EventConnectionDeleted is emitted after a connection has been deleted
 	EventConnectionDeleted EventBI = "CONNECTION_DELETED"
+	// EventAccountEnabled is emitted after a bank account was enabled
+	EventAccountEnabled EventBI = "ACCOUNT_ENABLED"
+	// EventAccountDisabled is emitted after a bank account was disabled
+	EventAccountDisabled EventBI = "ACCOUNT_DISABLED"
 )
 
 // ParseEventBI returns the event of the webhook, or an error if the event
@@ -40,7 +44,8 @@ func ParseEventBI(evt string) (EventBI, error) {
 
 	biEvent := EventBI(strings.ToUpper(evt))
 	switch biEvent {
-	case EventConnectionSynced, EventConnectionDeleted:
+	case EventConnectionSynced, EventConnectionDeleted,
+		EventAccountEnabled, EventAccountDisabled:
 		return biEvent, nil
 	}
 	return EventBI("INVALID"), errors.New("invalid event")
@@ -76,6 +81,8 @@ func (c *WebhookCall) Fire() error {
 		return c.handleConnectionSynced()
 	case EventConnectionDeleted:
 		return c.handleConnectionDeleted()
+	case EventAccountEnabled, EventAccountDisabled:
+		return c.handleAccountEnabledOrDisabled()
 	}
 	return errors.New("event not handled")
 }
@@ -341,6 +348,56 @@ func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connection
 		Relationships: rels,
 	}
 	return created, trigger, nil
+}
+
+func (c *WebhookCall) handleAccountEnabledOrDisabled() error {
+	connID, err := extractPayloadIDConnection(c.Payload)
+	if err != nil {
+		return err
+	}
+	if connID == 0 {
+		return errors.New("no id_connection")
+	}
+
+	var trigger job.Trigger
+	account, err := findAccount(c.accounts, connID)
+	if err != nil {
+		api, err := newApiClient(c.BIurl)
+		if err != nil {
+			return err
+		}
+		uuid, err := api.getConnectorUUID(connID, c.Token)
+		if err != nil {
+			return err
+		}
+		slug, err := mapUUIDToSlug(uuid)
+		if err != nil {
+			return err
+		}
+		konn, err := app.GetKonnectorBySlug(c.Instance, slug)
+		if err != nil {
+			return err
+		}
+		account, trigger, err = c.createAccountAndTrigger(konn, connID)
+		if err != nil {
+			return err
+		}
+	} else {
+		trigger, err = findTrigger(c.Instance, account)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.fireTrigger(trigger, account)
+}
+
+func extractPayloadIDConnection(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id_connection"].(float64)
+	if !ok {
+		return 0, errors.New("id_connection not found")
+	}
+	return int(id), nil
 }
 
 func (c *WebhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
