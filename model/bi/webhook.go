@@ -111,7 +111,7 @@ func (c *WebhookCall) handleConnectionSynced() error {
 			Warnf("no slug found for uuid %s: %s", uuid, err)
 		return err
 	}
-	_, err = app.GetBySlug(c.Instance, slug, consts.KonnectorType)
+	konn, err := app.GetKonnectorBySlug(c.Instance, slug)
 	if err != nil {
 		userID, _ := extractPayloadUserID(c.Payload)
 		c.Instance.Logger().WithNamespace("webhook").
@@ -119,11 +119,13 @@ func (c *WebhookCall) handleConnectionSynced() error {
 		return nil
 	}
 
+	var trigger job.Trigger
 	account, err := findAccount(c.accounts, connID)
 	if err != nil {
-		return err
+		account, trigger, err = c.createAccountAndTrigger(konn, connID)
+	} else {
+		trigger, err = findTrigger(c.Instance, account)
 	}
-	trigger, err := findTrigger(c.Instance, account)
 	if err != nil {
 		return err
 	}
@@ -297,6 +299,48 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 		return nil, errors.New("no trigger found for this account")
 	}
 	return triggers[0], nil
+}
+
+func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connectionID int) (*account.Account, job.Trigger, error) {
+	acc := couchdb.JSONDoc{Type: consts.Accounts}
+	data := map[string]interface{}{
+		"auth": map[string]interface{}{
+			"bi": map[string]interface{}{
+				"connId": connectionID,
+			},
+		},
+	}
+	rels := map[string]interface{}{
+		"parent": map[string]interface{}{
+			"data": map[string]interface{}{
+				"_id":   "bi-aggregator",
+				"_type": "io.cozy.accounts",
+			},
+		},
+	}
+	acc.M = map[string]interface{}{
+		"account_type":  konn.Slug(),
+		"data":          data,
+		"relationships": rels,
+	}
+	account.Encrypt(acc)
+	if err := couchdb.CreateDoc(c.Instance, &acc); err != nil {
+		return nil, nil, err
+	}
+
+	trigger, err := konn.CreateTrigger(c.Instance, acc.ID(), "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	created := &account.Account{
+		DocID:         acc.ID(),
+		DocRev:        acc.Rev(),
+		AccountType:   konn.Slug(),
+		Data:          data,
+		Relationships: rels,
+	}
+	return created, trigger, nil
 }
 
 func (c *WebhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
