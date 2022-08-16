@@ -71,7 +71,8 @@ type JSONDoc struct {
 }
 
 // ID returns the identifier field of the document
-//   "io.cozy.event/123abc123" == doc.ID()
+//
+//	"io.cozy.event/123abc123" == doc.ID()
 func (j *JSONDoc) ID() string {
 	id, ok := j.M["_id"].(string)
 	if ok {
@@ -81,7 +82,8 @@ func (j *JSONDoc) ID() string {
 }
 
 // Rev returns the revision field of the document
-//   "3-1234def1234" == doc.Rev()
+//
+//	"3-1234def1234" == doc.Rev()
 func (j *JSONDoc) Rev() string {
 	rev, ok := j.M["_rev"].(string)
 	if ok {
@@ -91,7 +93,8 @@ func (j *JSONDoc) Rev() string {
 }
 
 // DocType returns the document type of the document
-//   "io.cozy.event" == doc.Doctype()
+//
+//	"io.cozy.event" == doc.Doctype()
 func (j *JSONDoc) DocType() string {
 	return j.Type
 }
@@ -186,8 +189,10 @@ func (j *JSONDoc) Get(key string) interface{} {
 // rule has the format "doctype/id" and it cannot directly be compared to the
 // same field of a JSONDoc since, in the latter, the format is:
 // "referenced_by": [
-//     {"type": "doctype1", "id": "id1"},
-//     {"type": "doctype2", "id": "id2"},
+//
+//	{"type": "doctype1", "id": "id1"},
+//	{"type": "doctype2", "id": "id2"},
+//
 // ]
 func (j *JSONDoc) Fetch(field string) []string {
 	if field == SelectorReferencedBy {

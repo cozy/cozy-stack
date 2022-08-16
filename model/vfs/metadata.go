@@ -312,8 +312,8 @@ func (e *ExifExtractor) Result() Metadata {
 // https://github.com/perkeep/perkeep/blob/7f17c0483f2e86575ed87aac35fb75154b16b7f4/pkg/schema/schema.go#L1043-L1094
 
 // This is basically a copy of the exif.Exif.DateTime() method, except:
-//   * it takes a *time.Location to assume
-//   * the caller already assumes there's no timezone offset or GPS time
+//   - it takes a *time.Location to assume
+//   - the caller already assumes there's no timezone offset or GPS time
 //     in the EXIF, so any of that code can be ignored.
 func exifDateTimeInLocation(x *exif.Exif, loc *time.Location) (time.Time, error) {
 	tag, err := x.Get(exif.DateTimeOriginal)

@@ -27,15 +27,15 @@ var accountsClient = &http.Client{
 // docs/konnectors-workflow.md
 
 // Various grant types
-// - AuthorizationCode is the server-side grant type.
-// - ImplicitGrant is the implicit grant type
-// - ImplicitGrantRedirectURL is the implicit grant type but with redirect_url
-//   instead of redirect_uri
-// - BIWebauth is the specific webauth protocol from Budget Insight
-// - SecretGrant is for other secrets (not OAuth)
-// - BIWebauthAndSecret is a combination of BIWebauth and SecretGrant
-// - BIWebview is the specific webview protocol from Budget Insight
-// - BIWebviewAndSecret is a combination of BIWebview and SecretGrant
+//   - AuthorizationCode is the server-side grant type.
+//   - ImplicitGrant is the implicit grant type
+//   - ImplicitGrantRedirectURL is the implicit grant type but with redirect_url
+//     instead of redirect_uri
+//   - BIWebauth is the specific webauth protocol from Budget Insight
+//   - SecretGrant is for other secrets (not OAuth)
+//   - BIWebauthAndSecret is a combination of BIWebauth and SecretGrant
+//   - BIWebview is the specific webview protocol from Budget Insight
+//   - BIWebviewAndSecret is a combination of BIWebview and SecretGrant
 const (
 	AuthorizationCode        = "authorization_code"
 	ImplicitGrant            = "token"

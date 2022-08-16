@@ -41,11 +41,10 @@ type MACConfig struct {
 //
 // Message format (name prefix is in MAC but removed from message):
 //
-//  <---------------- MAC input ---------------->
-//                           <---------- Message ---------->
-//  | name | additional data |    time |  value  |     hmac |
-//  | ---- |       ---       | 8 bytes |   ---   | 32 bytes |
-//
+//	<---------------- MAC input ---------------->
+//	                         <---------- Message ---------->
+//	| name | additional data |    time |  value  |     hmac |
+//	| ---- |       ---       | 8 bytes |   ---   | 32 bytes |
 func EncodeAuthMessage(c MACConfig, key, value, additionalData []byte) ([]byte, error) {
 	// Create message with MAC
 	preludeLen := len(c.Name) + len(additionalData)
