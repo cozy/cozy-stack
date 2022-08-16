@@ -319,12 +319,24 @@ func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
 	cloned.Type = consts.SoftDeletedAccounts
 	cloned.M["soft_deleted_rev"] = cloned.Rev()
 	cloned.SetRev("")
-	if err := couchdb.CreateNamedDocWithDB(db, cloned); err != nil {
+	if err := createNamedDocWithDB(db, cloned); err != nil {
 		logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
 	}
 	if err := couchdb.Compact(db, consts.Accounts); err != nil {
 		logger.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
 	}
+}
+
+func createNamedDocWithDB(db prefixer.Prefixer, doc couchdb.Doc) error {
+	err := couchdb.CreateNamedDoc(db, doc)
+	if couchdb.IsNoDatabaseError(err) {
+		// XXX Ignore errors: we can have several requests in parallel to
+		// create the database, and only one of them will succeed, but the
+		// stack can still create documents in other goroutines / servers.
+		_ = couchdb.CreateDB(db, doc.DocType())
+		return couchdb.CreateNamedDoc(db, doc)
+	}
+	return err
 }
 
 var _ permission.Fetcher = &Account{}
