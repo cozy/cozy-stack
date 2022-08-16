@@ -108,7 +108,8 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 
 // ParseTOSVersion returns the "major" and the date encoded in a version string
 // with the following format:
-//    parseTOSVersion(A.B.C-YYYYMMDD) -> (A, YYYY, true)
+//
+//	parseTOSVersion(A.B.C-YYYYMMDD) -> (A, YYYY, true)
 func ParseTOSVersion(v string) (major int, date time.Time, ok bool) {
 	if v == "" {
 		return

@@ -70,13 +70,13 @@ func XorID(id string, key []byte) string {
 }
 
 // SortFilesToSent sorts the files slice that will be sent in bulk_docs:
-// - directories must come before files (if a file is created in a new
-//   directory, we must create directory before the file)
-// - directories are sorted by increasing depth (if a sub-folder is created
-//   in a new directory, we must create the parent before the child)
-// - deleted elements must come at the end, to efficiently cope with moves.
-//	 For example, if we have A->B->C hierarchy and C is moved elsewhere
-//	 and B deleted, we must make the move before deleting B and its children.
+//   - directories must come before files (if a file is created in a new
+//     directory, we must create directory before the file)
+//   - directories are sorted by increasing depth (if a sub-folder is created
+//     in a new directory, we must create the parent before the child)
+//   - deleted elements must come at the end, to efficiently cope with moves.
+//     For example, if we have A->B->C hierarchy and C is moved elsewhere
+//     and B deleted, we must make the move before deleting B and its children.
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]

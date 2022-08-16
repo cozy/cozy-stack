@@ -303,11 +303,11 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 //
 // About MaxLength, for a session of size 100 bytes
 //
-//       8 bytes time
-//   +  32 bytes HMAC-SHA256
-//   + 100 bytes session
-//   + base64 encoding (4*n/3)
-//   < 200 bytes
+//	    8 bytes time
+//	+  32 bytes HMAC-SHA256
+//	+ 100 bytes session
+//	+ base64 encoding (4*n/3)
+//	< 200 bytes
 //
 // 256 bytes should be sufficient enough to support any type of session.
 func cookieSessionMACConfig(i *instance.Instance) crypto.MACConfig {
