@@ -165,12 +165,41 @@ func redirect(c echo.Context) error {
 		}
 	}
 
-	if err := couchdb.CreateDoc(i, acc); err != nil {
-		return err
+	if connID := c.QueryParam("connection_id"); connID != "" {
+		if existingAccount, err := findAccountWithSameConnectionID(i, connID); err == nil {
+			acc = existingAccount
+		}
+	}
+
+	if acc.ID() == "" {
+		if err := couchdb.CreateDoc(i, acc); err != nil {
+			return err
+		}
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
 	return redirectToApp(c, i, acc, clientState, slug, "")
+}
+
+func findAccountWithSameConnectionID(inst *instance.Instance, connectionID string) (*account.Account, error) {
+	var accounts []*account.Account
+	req := &couchdb.AllDocsRequest{Limit: 1000}
+	err := couchdb.GetAllDocs(inst, consts.Accounts, req, &accounts)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, a := range accounts {
+		if a.Oauth == nil || a.Oauth.Query == nil {
+			continue
+		}
+		connID := a.Oauth.Query.Get("connection_id")
+		if connID == connectionID {
+			return a, nil
+		}
+	}
+
+	return nil, errors.New("not found")
 }
 
 // refresh is an internal route used by konnectors to refresh accounts
