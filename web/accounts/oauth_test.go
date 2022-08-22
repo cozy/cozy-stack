@@ -155,6 +155,59 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	_ = couchdb.DeleteDoc(testInstance, &out)
 }
 
+func TestDoNotRecreateAccountIfItAlreadyExists(t *testing.T) {
+	existingAccount := &couchdb.JSONDoc{
+		Type: consts.Accounts,
+		M: map[string]interface{}{
+			"account_type": "test-service3",
+			"oauth": map[string]interface{}{
+				"query": map[string]interface{}{
+					"connection_id": []interface{}{
+						"1750",
+					},
+				},
+			},
+		},
+	}
+	err := couchdb.CreateDoc(testInstance, existingAccount)
+	require.NoError(t, err)
+	defer func() {
+		existingAccount.M["manual_cleaning"] = true
+		_ = couchdb.DeleteDoc(testInstance, existingAccount)
+	}()
+
+	redirectURI := "http://" + testInstance.Domain + "/accounts/test-service3/redirect"
+	service := makeTestRedirectURLService(redirectURI)
+	defer service.Close()
+
+	serviceType := account.AccountType{
+		DocID:        "test-service3",
+		GrantMode:    account.ImplicitGrantRedirectURL,
+		AuthEndpoint: service.URL + "/oauth2/v2/auth",
+	}
+	err = couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
+	require.NoError(t, err)
+	defer func() {
+		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
+	}()
+
+	u := ts.URL + "/accounts/test-service3/start?scope=the+world"
+	res, err := client.Get(u)
+	require.NoError(t, err)
+	defer res.Body.Close()
+	require.Equal(t, 200, res.StatusCode)
+	bb, err := ioutil.ReadAll(res.Body)
+	require.NoError(t, err)
+	okURL := string(bb)
+
+	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, res2.StatusCode)
+	finalURL, err := res2.Location()
+	require.NoError(t, err)
+	assert.Equal(t, finalURL.Query().Get("account"), existingAccount.ID())
+}
+
 func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	redirectURI := "http://oauth_callback.cozy.localhost/accounts/test-service3/redirect"
 	service := makeTestACService(redirectURI)
@@ -333,6 +386,7 @@ func makeTestRedirectURLService(redirectURI string) *httptest.Server {
 		}
 		opts := &url.Values{}
 		opts.Add("access_token", "the-access-token2")
+		opts.Add("connection_id", "1750")
 		return c.String(200, c.QueryParam("redirect_url")+"?"+opts.Encode())
 	})
 	return httptest.NewServer(serviceHandler)
