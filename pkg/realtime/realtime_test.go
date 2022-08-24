@@ -28,7 +28,7 @@ func TestMemRealtime(t *testing.T) {
 	h := newMemHub()
 	c1 := h.Subscriber(testingDB)
 	c2 := h.Subscriber(testingDB)
-	c3 := h.SubscribeLocalAll()
+	c3 := h.SubscribeFirehose()
 	wg := sync.WaitGroup{}
 
 	err := c1.Subscribe("io.cozy.testobject")
@@ -215,7 +215,7 @@ func TestRedisRealtime(t *testing.T) {
 	h := newRedisHub(client)
 	c1 := h.Subscriber(testingDB)
 	c2 := h.Subscriber(testingDB)
-	c3 := h.SubscribeLocalAll()
+	c3 := h.SubscribeFirehose()
 	wg := sync.WaitGroup{}
 
 	err = c1.Subscribe("io.cozy.testobject")

@@ -29,12 +29,12 @@ func (h *memHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	}
 }
 
-func (h *memHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
-	return newDynamicSubscriber(h, db)
+func (h *memHub) Subscriber(db prefixer.Prefixer) *Subscriber {
+	return newSubscriber(h, db)
 }
 
-func (h *memHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, globalPrefixer)
+func (h *memHub) SubscribeFirehose() *Subscriber {
+	ds := newSubscriber(nil, globalPrefixer)
 	t := h.GetTopic(globalPrefixer, "*")
 	ds.addTopic(t, "")
 	return ds
@@ -60,83 +60,4 @@ func (h *memHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 
 func (h *memHub) topicKey(db prefixer.Prefixer, doctype string) string {
 	return db.DBPrefix() + ":" + doctype
-}
-
-type filter struct {
-	whole bool // true if the events for the whole doctype should be sent
-	ids   []string
-}
-
-type toWatch struct {
-	sub *MemSub
-	id  string
-}
-
-type topic struct {
-	key string
-
-	// chans for subscribe/unsubscribe requests
-	subscribe   chan *toWatch
-	unsubscribe chan *toWatch
-	broadcast   chan *Event
-
-	// set of this topic subs, it should only be manipulated by the topic
-	// loop goroutine
-	subs map[*MemSub]filter
-}
-
-func newTopic(key string) *topic {
-	topic := &topic{
-		key:         key,
-		subscribe:   make(chan *toWatch),
-		unsubscribe: make(chan *toWatch),
-		broadcast:   make(chan *Event, 10),
-		subs:        make(map[*MemSub]filter),
-	}
-	go topic.loop()
-	return topic
-}
-
-func (t *topic) loop() {
-	for {
-		select {
-		case w := <-t.unsubscribe:
-			if w.id == "" {
-				delete(t.subs, w.sub)
-			} else if f, ok := t.subs[w.sub]; ok {
-				ids := f.ids[:0]
-				for _, id := range f.ids {
-					if id != w.id {
-						ids = append(ids, id)
-					}
-				}
-				f.ids = ids
-			}
-		case w := <-t.subscribe:
-			f := t.subs[w.sub]
-			if w.id == "" {
-				f.whole = true
-			} else {
-				f.ids = append(f.ids, w.id)
-			}
-			t.subs[w.sub] = f
-		case e := <-t.broadcast:
-			for s, f := range t.subs {
-				ok := false
-				if f.whole {
-					ok = true
-				} else {
-					for _, id := range f.ids {
-						if e.Doc.ID() == id {
-							ok = true
-							break
-						}
-					}
-				}
-				if ok {
-					*s <- e
-				}
-			}
-		}
-	}
 }

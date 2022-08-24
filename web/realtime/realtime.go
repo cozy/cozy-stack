@@ -149,7 +149,7 @@ func authorized(i *instance.Instance, perms permission.Set, permType, id string)
 }
 
 func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *websocket.Conn,
-	ds *realtime.DynamicSubscriber, errc chan *wsError, withAuthentication bool) {
+	ds *realtime.Subscriber, errc chan *wsError, withAuthentication bool) {
 	defer close(errc)
 
 	var err error

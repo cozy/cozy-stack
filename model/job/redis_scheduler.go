@@ -123,7 +123,7 @@ func (s *redisScheduler) pollLoop() {
 func (s *redisScheduler) startEventDispatcher() {
 	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
-		c := realtime.GetHub().SubscribeLocalAll()
+		c := realtime.GetHub().SubscribeFirehose()
 		defer func() {
 			c.Close()
 			close(eventsCh)

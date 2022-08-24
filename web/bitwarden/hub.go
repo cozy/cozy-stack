@@ -73,7 +73,7 @@ type wsNotifier struct {
 	UserID    string
 	Settings  *settings.Settings
 	WS        *websocket.Conn
-	DS        *realtime.DynamicSubscriber
+	DS        *realtime.Subscriber
 	Responses chan []byte
 }
 
