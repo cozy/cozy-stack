@@ -12,7 +12,7 @@ digraph from_cozy_move {
 
 	subgraph cluster_stack_1 {
 		label="Stack 1"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
-		sub_1 [label="DynamicSubscriber"];
+		sub_1 [label="Subscriber"];
 		hub_1 [label="Redis Hub"];
 		mem_1 [label="Mem Hub"];
 	}
@@ -24,7 +24,7 @@ digraph from_cozy_move {
 		endpoint_2 [label="HTTP endpoint"];
 		hub_2 [label="Redis Hub"];
 		mem_2 [label="Mem Hub"];
-		local_2 [label="Local topic"];
+		local_2 [label="Firehose topic"];
 		sched_2 [label="Redis scheduler"];
 	}
 
