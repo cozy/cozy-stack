@@ -13,17 +13,17 @@ import (
 const eventsRedisKey = "realtime:events"
 
 type redisHub struct {
-	c     redis.UniversalClient
-	ctx   context.Context
-	mem   *memHub
-	local *topic
+	c        redis.UniversalClient
+	ctx      context.Context
+	mem      *memHub
+	firehose *topic
 }
 
 func newRedisHub(c redis.UniversalClient) *redisHub {
 	ctx := context.Background()
-	local := newTopic("*")
+	firehose := newTopic()
 	mem := newMemHub()
-	hub := &redisHub{c, ctx, mem, local}
+	hub := &redisHub{c, ctx, mem, firehose}
 	go hub.start()
 	return hub
 }
@@ -123,13 +123,9 @@ func (h *redisHub) start() {
 	}
 }
 
-func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
-	return nil
-}
-
 func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	e := newEvent(db, verb, doc, oldDoc)
-	h.local.broadcast <- e
+	h.firehose.broadcast <- e
 	buf, err := json.Marshal(e)
 	if err != nil {
 		log := logger.WithNamespace("realtime-redis")
@@ -139,14 +135,33 @@ func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	h.c.Publish(h.ctx, eventsRedisKey, e.Doc.DocType()+","+string(buf))
 }
 
-func (h *redisHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
+func (h *redisHub) Subscriber(db prefixer.Prefixer) *Subscriber {
 	return h.mem.Subscriber(db)
 }
 
-func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, globalPrefixer)
-	ds.addTopic(h.local, "")
-	return ds
+func (h *redisHub) SubscribeFirehose() *Subscriber {
+	sub := newSubscriber(h, globalPrefixer)
+	key := topicKey(sub, "*")
+	h.subscribe(sub, key)
+	return sub
+}
+
+func (h *redisHub) subscribe(sub *Subscriber, key string) {
+	h.firehose.subs[&sub.Channel] = filter{whole: true}
+	sub.addTopic(key)
+}
+
+func (h *redisHub) unsubscribe(sub *Subscriber, key string) {
+	delete(h.firehose.subs, &sub.Channel)
+	sub.removeTopic(key)
+}
+
+func (h *redisHub) watch(sub *Subscriber, key, id string) {
+	panic("not reachable code")
+}
+
+func (h *redisHub) unwatch(sub *Subscriber, key, id string) {
+	panic("not reachable code")
 }
 
 var _ Doc = (*JSONDoc)(nil)

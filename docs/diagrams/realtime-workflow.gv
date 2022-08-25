@@ -1,0 +1,50 @@
+digraph from_cozy_move {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.45; nodesep=1;
+
+	subgraph clients {
+		rank=same; margin=24;
+		client_1 [label="Client 1", shape="oval", color="#7F6BEE"];
+		client_2 [label="Client 2", shape="oval", color="#7F6BEE"];
+	}
+
+	subgraph cluster_stack_1 {
+		label="Stack 1"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		sub_1 [label="Subscriber"];
+		hub_1 [label="Redis Hub"];
+		mem_1 [label="Mem Hub"];
+	}
+
+	redis [label="Redis", shape="cylinder", color="#7F6BEE", margin=0.2];
+
+	subgraph cluster_stack_2 {
+		label="Stack 2"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		endpoint_2 [label="HTTP endpoint"];
+		hub_2 [label="Redis Hub"];
+		mem_2 [label="Mem Hub"];
+		local_2 [label="Firehose topic"];
+		sched_2 [label="Redis scheduler"];
+	}
+
+	client_1 -> sub_1 [label="(1) WebSockets"];
+	sub_1 -> mem_1 [label="(2) subscribe"];
+
+	client_2 -> endpoint_2 [label="(3) HTTP request"];
+	endpoint_2 -> hub_2 [label="(4) publish"]
+	hub_2 -> redis [label="(5) PUB"]
+	redis -> hub_2 [label="(6)"]
+	redis -> hub_1 [label="(6)"]
+	hub_2 -> mem_2 [label="(7)"]
+	hub_1 -> mem_1 [label="(7)"]
+	mem_1 -> sub_1 [label="(8)"]
+	sub_1 -> client_1 [label="(9)"]
+
+	hub_2 -> local_2 [label="(10) broadcast"]
+	local_2 -> sched_2 [label="(11)"]
+
+	// Hidden, to order the clusters/nodes
+	client_1 -> endpoint_2 [style="invis"];
+	mem_1 -> redis [style="invis"];
+}

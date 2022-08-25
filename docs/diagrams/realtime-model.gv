@@ -1,0 +1,22 @@
+digraph realtime {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.45; nodesep=0.6;
+
+	sub [label="{<0>Subscriber|<1>prefixer (prefixer.Prefixer)|<2>Channel (EventsChan)|<3>hub (Hub)|<4>topics (map[string]struct)}", shape="record"]
+	redisHub [label="{<0>redisHub|<1>cli (redis client)|<2>mem (*memHub)|<3>firehose (*topic)}", shape="record"];
+	memHub [label="{<0>memHub|<1>mutex (RWMutex)|<2>topics (map[string]*topic)}", shape="record"]
+	topic [label="{<0>topic|<1>broadcast (chan)|<2>subs (map[*EventsChan]filter)}", shape="record"];
+	memSub [label="{<0>EventsChan (chan)}", shape="record"]
+	filter [label="{<0>filter|<1>whole (bool)|<2>ids ([]string)}", shape="record"]
+
+	sub:2 -> memSub;
+	sub:3 -> redisHub;
+	sub:4 -> topic;
+	redisHub:2 -> memHub;
+	redisHub:3 -> topic;
+	memHub:2 -> topic;
+	topic:2 -> memSub;
+	topic:2 -> filter;
+}

@@ -18,125 +18,134 @@ func newMemHub() *memHub {
 }
 
 func (h *memHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
-	e := newEvent(db, verb, doc, oldDoc)
-	topic := h.get(e, doc.DocType())
-	if topic != nil {
-		topic.broadcast <- e
-	}
-	topic = h.get(globalPrefixer, "*")
-	if topic != nil {
-		topic.broadcast <- e
-	}
-}
-
-func (h *memHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
-	return newDynamicSubscriber(h, db)
-}
-
-func (h *memHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, globalPrefixer)
-	t := h.GetTopic(globalPrefixer, "*")
-	ds.addTopic(t, "")
-	return ds
-}
-
-func (h *memHub) get(db prefixer.Prefixer, doctype string) *topic {
 	h.RLock()
 	defer h.RUnlock()
-	return h.topics[h.topicKey(db, doctype)]
+
+	e := newEvent(db, verb, doc, oldDoc)
+	it := h.topics[topicKey(db, doc.DocType())]
+	if it != nil {
+		it.broadcast <- e
+	}
+	it = h.topics[topicKey(globalPrefixer, "*")]
+	if it != nil {
+		it.broadcast <- e
+	}
 }
 
-func (h *memHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
+func (h *memHub) Subscriber(db prefixer.Prefixer) *Subscriber {
+	return newSubscriber(h, db)
+}
+
+func (h *memHub) SubscribeFirehose() *Subscriber {
+	sub := newSubscriber(h, globalPrefixer)
+	key := topicKey(sub, "*")
+	h.subscribe(sub, key)
+	return sub
+}
+
+func (h *memHub) subscribe(sub *Subscriber, key string) {
 	h.Lock()
 	defer h.Unlock()
-	key := h.topicKey(db, doctype)
+
+	if sub.closed() {
+		return
+	}
+
 	it, exists := h.topics[key]
 	if !exists {
-		it = newTopic(key)
+		it = newTopic()
 		h.topics[key] = it
 	}
-	return it
+
+	it.subs[&sub.Channel] = filter{whole: true}
+
+	sub.addTopic(key)
 }
 
-func (h *memHub) topicKey(db prefixer.Prefixer, doctype string) string {
-	return db.DBPrefix() + ":" + doctype
-}
+func (h *memHub) unsubscribe(sub *Subscriber, key string) {
+	h.Lock()
+	defer h.Unlock()
 
-type filter struct {
-	whole bool // true if the events for the whole doctype should be sent
-	ids   []string
-}
-
-type toWatch struct {
-	sub *MemSub
-	id  string
-}
-
-type topic struct {
-	key string
-
-	// chans for subscribe/unsubscribe requests
-	subscribe   chan *toWatch
-	unsubscribe chan *toWatch
-	broadcast   chan *Event
-
-	// set of this topic subs, it should only be manipulated by the topic
-	// loop goroutine
-	subs map[*MemSub]filter
-}
-
-func newTopic(key string) *topic {
-	topic := &topic{
-		key:         key,
-		subscribe:   make(chan *toWatch),
-		unsubscribe: make(chan *toWatch),
-		broadcast:   make(chan *Event, 10),
-		subs:        make(map[*MemSub]filter),
+	if sub.closed() {
+		return
 	}
-	go topic.loop()
-	return topic
+
+	it, exists := h.topics[key]
+	if !exists {
+		return
+	}
+
+	delete(it.subs, &sub.Channel)
+	if len(it.subs) == 0 {
+		delete(h.topics, key)
+		close(it.broadcast)
+	}
+
+	sub.removeTopic(key)
 }
 
-func (t *topic) loop() {
-	for {
-		select {
-		case w := <-t.unsubscribe:
-			if w.id == "" {
-				delete(t.subs, w.sub)
-			} else if f, ok := t.subs[w.sub]; ok {
-				ids := f.ids[:0]
-				for _, id := range f.ids {
-					if id != w.id {
-						ids = append(ids, id)
-					}
-				}
-				f.ids = ids
-			}
-		case w := <-t.subscribe:
-			f := t.subs[w.sub]
-			if w.id == "" {
-				f.whole = true
-			} else {
-				f.ids = append(f.ids, w.id)
-			}
-			t.subs[w.sub] = f
-		case e := <-t.broadcast:
-			for s, f := range t.subs {
-				ok := false
-				if f.whole {
-					ok = true
-				} else {
-					for _, id := range f.ids {
-						if e.Doc.ID() == id {
-							ok = true
-							break
-						}
-					}
-				}
-				if ok {
-					*s <- e
-				}
-			}
+func (h *memHub) watch(sub *Subscriber, key, id string) {
+	h.Lock()
+	defer h.Unlock()
+
+	if sub.closed() {
+		return
+	}
+
+	it, exists := h.topics[key]
+	if !exists {
+		it = newTopic()
+		h.topics[key] = it
+	}
+
+	f := it.subs[&sub.Channel]
+	if f.whole {
+		return
+	}
+	f.ids = append(f.ids, id)
+	it.subs[&sub.Channel] = f
+
+	sub.addTopic(key)
+}
+
+func (h *memHub) unwatch(sub *Subscriber, key, id string) {
+	h.Lock()
+	defer h.Unlock()
+
+	if sub.closed() {
+		return
+	}
+
+	it, exists := h.topics[key]
+	if !exists {
+		return
+	}
+
+	f := it.subs[&sub.Channel]
+	if f.whole {
+		return
+	}
+	ids := f.ids[:0]
+	for i := range f.ids {
+		if f.ids[i] != id {
+			ids = append(ids, f.ids[i])
 		}
 	}
+	if len(ids) > 0 {
+		f.ids = ids
+		it.subs[&sub.Channel] = f
+		return
+	}
+
+	delete(it.subs, &sub.Channel)
+	if len(it.subs) == 0 {
+		delete(h.topics, key)
+		close(it.broadcast)
+	}
+
+	sub.removeTopic(key)
+}
+
+func topicKey(db prefixer.Prefixer, doctype string) string {
+	return db.DBPrefix() + ":" + doctype
 }

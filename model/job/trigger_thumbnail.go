@@ -22,7 +22,7 @@ func NewThumbnailTrigger(broker Broker) *ThumbnailTrigger {
 }
 
 func (t *ThumbnailTrigger) Schedule() {
-	sub := realtime.GetHub().SubscribeLocalAll()
+	sub := realtime.GetHub().SubscribeFirehose()
 	defer sub.Close()
 	for {
 		select {
