@@ -75,9 +75,10 @@ type Hub interface {
 	// cozy-stack process.
 	SubscribeFirehose() *Subscriber
 
-	// GetTopic returns the topic for the given domain+doctype.
-	// It creates the topic if it does not exist.
-	GetTopic(db prefixer.Prefixer, doctype string) *topic
+	subscribe(sub *Subscriber, key string)
+	unsubscribe(sub *Subscriber, key string)
+	watch(sub *Subscriber, key, id string)
+	unwatch(sub *Subscriber, key, id string)
 }
 
 var globalHubMu sync.Mutex

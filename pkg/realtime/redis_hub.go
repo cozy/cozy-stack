@@ -21,7 +21,7 @@ type redisHub struct {
 
 func newRedisHub(c redis.UniversalClient) *redisHub {
 	ctx := context.Background()
-	firehose := newTopic("*")
+	firehose := newTopic()
 	mem := newMemHub()
 	hub := &redisHub{c, ctx, mem, firehose}
 	go hub.start()
@@ -123,10 +123,6 @@ func (h *redisHub) start() {
 	}
 }
 
-func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
-	return h.firehose
-}
-
 func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	e := newEvent(db, verb, doc, oldDoc)
 	h.firehose.broadcast <- e
@@ -144,9 +140,28 @@ func (h *redisHub) Subscriber(db prefixer.Prefixer) *Subscriber {
 }
 
 func (h *redisHub) SubscribeFirehose() *Subscriber {
-	ds := newSubscriber(nil, globalPrefixer)
-	ds.addTopic(h.firehose, "")
-	return ds
+	sub := newSubscriber(h, globalPrefixer)
+	key := topicKey(sub, "*")
+	h.subscribe(sub, key)
+	return sub
+}
+
+func (h *redisHub) subscribe(sub *Subscriber, key string) {
+	h.firehose.subs[&sub.Channel] = filter{whole: true}
+	sub.addTopic(key)
+}
+
+func (h *redisHub) unsubscribe(sub *Subscriber, key string) {
+	delete(h.firehose.subs, &sub.Channel)
+	sub.removeTopic(key)
+}
+
+func (h *redisHub) watch(sub *Subscriber, key, id string) {
+	panic("not reachable code")
+}
+
+func (h *redisHub) unwatch(sub *Subscriber, key, id string) {
+	panic("not reachable code")
 }
 
 var _ Doc = (*JSONDoc)(nil)

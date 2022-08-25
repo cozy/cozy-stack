@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"errors"
-	"sync"
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -13,7 +12,7 @@ type Subscriber struct {
 	prefixer.Prefixer
 	Channel EventsChan
 	hub     Hub
-	topics  []*topic
+	topics  map[string]struct{}
 	c       uint32 // mark whether or not the sub is closed
 }
 
@@ -25,100 +24,79 @@ func newSubscriber(hub Hub, db prefixer.Prefixer) *Subscriber {
 		Prefixer: db,
 		Channel:  make(chan *Event, 10),
 		hub:      hub,
+		topics:   make(map[string]struct{}),
 	}
 }
 
 // Subscribe adds a listener for events on a whole doctype
-func (ds *Subscriber) Subscribe(doctype string) error {
-	if ds.closed() || ds.hub == nil {
+func (sub *Subscriber) Subscribe(doctype string) error {
+	if sub.closed() || sub.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds, doctype)
-	ds.addTopic(t, "")
+	key := topicKey(sub, doctype)
+	sub.hub.subscribe(sub, key)
 	return nil
 }
 
 // Unsubscribe removes a listener for events on a whole doctype
-func (ds *Subscriber) Unsubscribe(doctype string) error {
-	if ds.closed() || ds.hub == nil {
-		return errors.New("Can't unsubscribe")
+func (sub *Subscriber) Unsubscribe(doctype string) error {
+	if sub.closed() || sub.hub == nil {
+		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds, doctype)
-	ds.removeTopic(t, "")
+	key := topicKey(sub, doctype)
+	sub.hub.unsubscribe(sub, key)
 	return nil
 }
 
 // Watch adds a listener for events for a specific document (doctype+id)
-func (ds *Subscriber) Watch(doctype, id string) error {
-	if ds.closed() || ds.hub == nil {
+func (sub *Subscriber) Watch(doctype, id string) error {
+	if sub.closed() || sub.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds, doctype)
-	ds.addTopic(t, id)
+	key := topicKey(sub, doctype)
+	sub.hub.watch(sub, key, id)
 	return nil
 }
 
 // Unwatch removes a listener for events for a specific document (doctype+id)
-func (ds *Subscriber) Unwatch(doctype, id string) error {
-	if ds.closed() || ds.hub == nil {
-		return errors.New("Can't unsubscribe")
+func (sub *Subscriber) Unwatch(doctype, id string) error {
+	if sub.closed() || sub.hub == nil {
+		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds, doctype)
-	ds.removeTopic(t, id)
+	key := topicKey(sub, doctype)
+	sub.hub.unwatch(sub, key, id)
 	return nil
 }
 
-func (ds *Subscriber) addTopic(t *topic, id string) {
-	found := false
-	for _, topic := range ds.topics {
-		if t == topic {
-			found = true
-			break
-		}
-	}
-	if !found {
-		ds.topics = append(ds.topics, t)
-	}
-	t.subscribe <- &toWatch{&ds.Channel, id}
+func (sub *Subscriber) addTopic(key string) {
+	sub.topics[key] = struct{}{}
 }
 
-func (ds *Subscriber) removeTopic(t *topic, id string) {
-	for _, topic := range ds.topics {
-		if t == topic {
-			t.unsubscribe <- &toWatch{&ds.Channel, id}
-		}
-	}
+func (sub *Subscriber) removeTopic(key string) {
+	delete(sub.topics, key)
 }
 
 // closed returns true if it will no longer send events in its channel
-func (ds *Subscriber) closed() bool {
-	return atomic.LoadUint32(&ds.c) == 1
+func (sub *Subscriber) closed() bool {
+	return atomic.LoadUint32(&sub.c) == 1
 }
 
 // Close closes the channel (async)
-func (ds *Subscriber) Close() error {
-	if !atomic.CompareAndSwapUint32(&ds.c, 0, 1) {
+func (sub *Subscriber) Close() error {
+	if !atomic.CompareAndSwapUint32(&sub.c, 0, 1) {
 		return errors.New("closing a closed subscription")
 	}
-	// Don't block on Close
-	wg := sync.WaitGroup{}
-	for _, t := range ds.topics {
-		wg.Add(1)
-		go func(t *topic) {
-			for {
-				select {
-				case t.unsubscribe <- &toWatch{&ds.Channel, ""}:
-					wg.Done()
-					return
-				case <-ds.Channel:
-					// Purge events
-				}
-			}
-		}(t)
+
+	for key := range sub.topics {
+		sub.hub.unsubscribe(sub, key)
 	}
+
+	// Purge events, in a not-blocking way
 	go func() {
-		wg.Wait()
-		close(ds.Channel)
+		for range sub.Channel {
+		}
+		close(sub.Channel)
 	}()
+
 	return nil
 }
