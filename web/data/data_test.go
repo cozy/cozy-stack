@@ -73,7 +73,10 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 }
 
 func getDocForTest() *couchdb.JSONDoc {
-	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{"test": "value"}}
+	doc := couchdb.JSONDoc{
+		Type: Type,
+		M:    map[string]interface{}{"test": "value", "foo": "bar"},
+	}
 	_ = couchdb.CreateDoc(testInstance, &doc)
 	return &doc
 }
@@ -897,6 +900,31 @@ func TestGetAllDocs(t *testing.T) {
 	assert.True(t, ok)
 	value := doc["test"].(string)
 	assert.Equal(t, "value", value)
+	bar := doc["foo"].(string)
+	assert.Equal(t, "bar", bar)
+}
+
+func TestGetAllDocsWithFields(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_all_docs?include_docs=true&Fields=test,nosuchfield"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err := doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	totalRows := out["total_rows"].(float64)
+	assert.Equal(t, float64(3), totalRows)
+	offset := out["offset"].(float64)
+	assert.Equal(t, float64(0), offset)
+	rows := out["rows"].([]interface{})
+	assert.Len(t, rows, 3)
+	row := rows[0].(map[string]interface{})
+	id := row["id"].(string)
+	assert.NotEmpty(t, id)
+	doc, ok := row["doc"].(map[string]interface{})
+	assert.True(t, ok)
+	value := doc["test"].(string)
+	assert.Equal(t, "value", value)
+	assert.NotContains(t, doc, "foo")
 }
 
 func TestNormalDocs(t *testing.T) {

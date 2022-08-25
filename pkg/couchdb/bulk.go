@@ -29,12 +29,15 @@ type AllDocsRequest struct {
 
 // AllDocsResponse is the response we receive from an _all_docs request
 type AllDocsResponse struct {
-	Offset    int `json:"offset"`
-	TotalRows int `json:"total_rows"`
-	Rows      []struct {
-		ID  string          `json:"id"`
-		Doc json.RawMessage `json:"doc"`
-	} `json:"rows"`
+	Offset    int          `json:"offset"`
+	TotalRows int          `json:"total_rows"`
+	Rows      []AllDocsRow `json:"rows"`
+}
+
+// AllDocsRow is a row inside the _all_docs response
+type AllDocsRow struct {
+	ID  string          `json:"id"`
+	Doc json.RawMessage `json:"doc"`
 }
 
 // IDRev is used for the payload of POST _bulk_get

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -388,7 +389,50 @@ func allDocs(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
-	return proxy(c, "_all_docs")
+
+	if c.QueryParam("Fields") == "" {
+		// Fast path, just proxy the request/response
+		return proxy(c, "_all_docs")
+	}
+
+	inst := middlewares.GetInstance(c)
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	skip, _ := strconv.Atoi(c.QueryParam("skip"))
+	req := &couchdb.AllDocsRequest{
+		Descending: c.QueryParam("descending") == "true",
+		Limit:      limit,
+		Skip:       skip,
+		StartKey:   c.QueryParam("startkey"),
+		EndKey:     c.QueryParam("endkey"),
+	}
+	var docs []*couchdb.JSONDoc
+	if err := couchdb.GetAllDocs(inst, doctype, req, &docs); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
+	}
+
+	fields := strings.Split(c.QueryParam("Fields"), ",")
+	res := couchdb.AllDocsResponse{
+		Offset:    req.Skip,
+		TotalRows: len(docs),
+	}
+	for _, doc := range docs {
+		m := make(map[string]interface{})
+		for _, field := range fields {
+			if val, ok := doc.M[field]; ok {
+				m[field] = val
+			}
+		}
+		raw, err := json.Marshal(m)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
+		}
+		row := couchdb.AllDocsRow{
+			ID:  doc.ID(),
+			Doc: raw,
+		}
+		res.Rows = append(res.Rows, row)
+	}
+	return c.JSON(http.StatusOK, res)
 }
 
 func normalDocs(c echo.Context) error {
