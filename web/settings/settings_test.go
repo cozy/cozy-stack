@@ -331,6 +331,30 @@ func TestUpdatePassphraseWithForce(t *testing.T) {
 	assert.Equal(t, "204 No Content", res.Status)
 }
 
+func TestCheckPassphrase(t *testing.T) {
+	args, _ := json.Marshal(&echo.Map{
+		"passphrase": "Invalid Passphrase",
+	})
+	req, _ := http.NewRequest("POST", ts.URL+"/settings/passphrase/check", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 403, res.StatusCode)
+
+	args, _ = json.Marshal(&echo.Map{
+		"passphrase": "MyPassphrase",
+	})
+	req, _ = http.NewRequest("POST", ts.URL+"/settings/passphrase/check", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "204 No Content", res.Status)
+}
+
 func TestGetHint(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/settings/hint", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
