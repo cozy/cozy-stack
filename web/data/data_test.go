@@ -75,7 +75,11 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 func getDocForTest() *couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: Type,
-		M:    map[string]interface{}{"test": "value", "foo": "bar"},
+		M: map[string]interface{}{
+			"test":   "value",
+			"foo":    map[string]interface{}{"bar": "one", "baz": "two", "qux": "quux"},
+			"courge": 1,
+		},
 	}
 	_ = couchdb.CreateDoc(testInstance, &doc)
 	return &doc
@@ -900,12 +904,96 @@ func TestGetAllDocs(t *testing.T) {
 	assert.True(t, ok)
 	value := doc["test"].(string)
 	assert.Equal(t, "value", value)
-	bar := doc["foo"].(string)
-	assert.Equal(t, "bar", bar)
+	foo := doc["foo"].(map[string]interface{})
+	bar := foo["bar"].(string)
+	assert.Equal(t, "one", bar)
+	baz := foo["baz"].(string)
+	assert.Equal(t, "two", baz)
+	qux := foo["qux"].(string)
+	assert.Equal(t, "quux", qux)
+}
+
+func TestFilterFields(t *testing.T) {
+	m := map[string]interface{}{
+		"hello": "world",
+		"foo": map[string]interface{}{
+			"bar": map[string]interface{}{
+				"baz": "baz",
+			},
+			"courge": map[string]interface{}{
+				"qux":  "qux",
+				"quux": "quux",
+			},
+		},
+		"123": "456",
+	}
+	doc := &couchdb.JSONDoc{M: m}
+	fields := [][]string{
+		{"hello"},
+		{"foo", "courge", "qux"},
+	}
+	filtered := filterFields(doc, fields)
+	expected := map[string]interface{}{
+		"hello": "world",
+		"foo": map[string]interface{}{
+			"courge": map[string]interface{}{
+				"qux": "qux",
+			},
+		},
+	}
+	assert.EqualValues(t, expected, filtered)
+}
+
+func TestExtractField(t *testing.T) {
+	m := map[string]interface{}{
+		"hello": "world",
+		"foo": map[string]interface{}{
+			"bar": map[string]interface{}{
+				"baz": "baz",
+			},
+			"courge": map[string]interface{}{
+				"qux":  "qux",
+				"quux": "quux",
+			},
+		},
+	}
+	doc := &couchdb.JSONDoc{M: m}
+	_, ok := extractField(doc, []string{"nosuchfield"})
+	assert.False(t, ok)
+	val, ok := extractField(doc, []string{"hello"})
+	assert.True(t, ok)
+	assert.Equal(t, "world", val)
+	val, ok = extractField(doc, []string{"foo", "bar"})
+	assert.True(t, ok)
+	assert.EqualValues(t, map[string]interface{}{"baz": "baz"}, val)
+	val, ok = extractField(doc, []string{"foo", "bar", "baz"})
+	assert.True(t, ok)
+	assert.Equal(t, "baz", val)
+}
+
+func TestAssignField(t *testing.T) {
+	m := make(map[string]interface{})
+	assignField(m, []string{"hello"}, "world")
+	assignField(m, []string{"foo", "bar", "baz"}, "baz")
+	assignField(m, []string{"foo", "courge", "qux"}, "qux")
+	assignField(m, []string{"foo", "courge", "quux"}, "quux")
+	expected := map[string]interface{}{
+		"hello": "world",
+		"foo": map[string]interface{}{
+			"bar": map[string]interface{}{
+				"baz": "baz",
+			},
+			"courge": map[string]interface{}{
+				"qux":  "qux",
+				"quux": "quux",
+			},
+		},
+	}
+	assert.EqualValues(t, expected, m)
 }
 
 func TestGetAllDocsWithFields(t *testing.T) {
-	url := ts.URL + "/data/" + Type + "/_all_docs?include_docs=true&Fields=test,nosuchfield"
+	url := ts.URL + "/data/" + Type + "/_all_docs?include_docs=true&Fields=test,nosuchfield,foo.qux"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	out, res, err := doRequest(req, nil)
@@ -924,7 +1012,12 @@ func TestGetAllDocsWithFields(t *testing.T) {
 	assert.True(t, ok)
 	value := doc["test"].(string)
 	assert.Equal(t, "value", value)
-	assert.NotContains(t, doc, "foo")
+	foo := doc["foo"].(map[string]interface{})
+	assert.NotContains(t, foo, "bar")
+	assert.NotContains(t, foo, "baz")
+	qux := foo["qux"].(string)
+	assert.Equal(t, "quux", qux)
+	assert.NotContains(t, doc, "courge")
 }
 
 func TestNormalDocs(t *testing.T) {
