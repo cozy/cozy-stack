@@ -466,7 +466,8 @@ avoid it as much as possible.
 
 The stack also supports a `Fields` query parameter to only include those fields
 in the response (with an uppercase `F` to avoid collusion with a possible
-future `fields` by CouchDB). Example: `?Fields=foo,bar,baz`.
+future `fields` by CouchDB), and a `DesignDocs` query parameter to skip design
+docs. Example: `?Fields=foo,bar,baz&DesignDocs=false`.
 
 ### Request
 

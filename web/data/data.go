@@ -390,7 +390,7 @@ func allDocs(c echo.Context) error {
 		return err
 	}
 
-	if c.QueryParam("Fields") == "" {
+	if c.QueryParam("Fields") == "" && c.QueryParam("DesignDocs") == "" {
 		// Fast path, just proxy the request/response
 		return proxy(c, "_all_docs")
 	}
@@ -410,12 +410,16 @@ func allDocs(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
 	}
 
+	skipDDoc := c.QueryParam("DesignDocs") == "false"
 	fields := strings.Split(c.QueryParam("Fields"), ",")
 	res := couchdb.AllDocsResponse{
 		Offset:    req.Skip,
 		TotalRows: len(docs),
 	}
 	for _, doc := range docs {
+		if skipDDoc && strings.HasPrefix(doc.ID(), "_design") {
+			continue
+		}
 		m := make(map[string]interface{})
 		for _, field := range fields {
 			if val, ok := doc.M[field]; ok {
