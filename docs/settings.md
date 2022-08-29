@@ -497,6 +497,24 @@ Cookie: sessionid=xxxx
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `GET`.
 
+### POST /settings/instance/deletion
+
+The settings application can use this route if the user wants to delete their
+Cozy instance.
+
+#### Request
+
+```http
+POST /settings/instance/deletion HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### DELETE /settings/instance/moved_from
 
 When there is an attribute `moved_from` in the instance settings, it means that

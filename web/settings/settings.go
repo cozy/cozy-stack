@@ -95,6 +95,7 @@ func Routes(router *echo.Group) {
 	router.GET("/capabilities", getCapabilities)
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
+	router.POST("/instance/deletion", askInstanceDeletion)
 	router.PUT("/instance/auth_mode", updateInstanceAuthMode)
 	router.PUT("/instance/sign_tos", updateInstanceTOS)
 	router.DELETE("/instance/moved_from", clearMovedFrom)
