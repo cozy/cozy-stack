@@ -409,21 +409,19 @@ header to prevent conflict on deletion:
 
 ## List all the documents (recommended & paginated way)
 
-We have added a non-standard `_normal_docs` endpoint. Since 
-`_all_docs` endpoint sends the design docs in the response 
-and that : 
-- It makes it hard to use pagination on it. 
-- You can have performance issue when querying lot of docs 
+We have added a non-standard `_normal_docs` endpoint since
+`_all_docs` endpoint sends the design docs in the response
+and that it makes it hard to use pagination on it.
 
-This `_normal_docs` endpoint skip the design docs (and does 
+This `_normal_docs` endpoint skip the design docs (and does
 not count them in the`total_rows`). It accepts three parameters
- in the query string: `limit` (default: 100), `skip` (default: 0), 
+ in the query string: `limit` (default: 100), `skip` (default: 0),
  and `bookmark` (default: '').
 
-The response format looks like a `_find` response with mango. 
+The response format looks like a `_find` response with mango.
 And, like for `_find`, the limit cannot be more than 1000.
 The [pagination](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook)
-is also the same: both `bookmark` and `skip` can be used, but 
+is also the same: both `bookmark` and `skip` can be used, but
 `bookmark` is recommended for performances.
 
 ### Request
@@ -462,11 +460,14 @@ Content-Type: application/json
 
 ## List all the documents (alternative & not pagginated way)
 
-You can use `_all_docs` endpoint to get the list of all the documents. 
+You can use `_all_docs` endpoint to get the list of all the documents.
 In some cases the use of this route is legitimate, but we recommend to
-avoid it as much as possible. 
-Indeed, calling this route on a database with a lot of documents can
-be very time consuming. 
+avoid it as much as possible.
+
+The stack also supports a `Fields` query parameter to only include those fields
+in the response (with an uppercase `F` to avoid collusion with a possible
+future `fields` by CouchDB), and a `DesignDocs` query parameter to skip design
+docs. Example: `?Fields=name,metadata.title,tags&DesignDocs=false`.
 
 ### Request
 
