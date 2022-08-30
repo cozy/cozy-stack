@@ -494,6 +494,19 @@ func AllowMaximal(c echo.Context) error {
 	return nil
 }
 
+// RequireSettingsApp checks that the permission is for the settings app.
+func RequireSettingsApp(c echo.Context) error {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return err
+	}
+	settingsSourceID := consts.Apps + "/" + consts.SettingsSlug
+	if pdoc.Type != permission.TypeWebapp || pdoc.SourceID != settingsSourceID {
+		return ErrForbidden
+	}
+	return nil
+}
+
 // HasWebAppToken returns true if the request comes from a web app (with a token).
 func HasWebAppToken(c echo.Context) bool {
 	pdoc, err := GetPermission(c)

@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -14,6 +15,18 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
 )
+
+func AskDeletion(inst *instance.Instance) error {
+	u, err := inst.ManagerURL(instance.ManagerAskDeletionURL)
+	if err != nil {
+		return err
+	}
+	res, err := doManagerRequest(http.MethodDelete, u, nil, nil)
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
+}
 
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.

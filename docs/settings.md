@@ -335,6 +335,31 @@ Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp
 HTTP/1.1 204 No Content
 ```
 
+### POST /settings/passphrase/check
+
+This route can be used to check the passphrase of the user before making
+important changes like asking for the Cozy deletion.
+
+#### Request
+
+```http
+POST /settings/passphrase/check HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Authentication: Bearer xxx
+```
+
+```json
+{
+    "passphrase": "2e7e1e04300356adc8fabf5d304b58c564399746cc7a21464fd6593edd925720"
+}
+```
+
+#### Response
+
+It will be `204 No Content` if the passphrase is correct, or a `403 Forbidden` if
+the passphrase is incorrect.
+
 ### GET /settings/hint
 
 This route can be used to know if a hint has been chosen (but the hint won't be
@@ -471,6 +496,24 @@ Cookie: sessionid=xxxx
 
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `GET`.
+
+### POST /settings/instance/deletion
+
+The settings application can use this route if the user wants to delete their
+Cozy instance.
+
+#### Request
+
+```http
+POST /settings/instance/deletion HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
 
 ### DELETE /settings/instance/moved_from
 

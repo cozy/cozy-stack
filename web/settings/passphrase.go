@@ -351,6 +351,30 @@ func updatePassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func checkPassphrase(c echo.Context) error {
+	// Even if the current passphrase is needed for this request to work, we
+	// enforce a valid permission to avoid having an unauthorized enpoint that
+	// can be bruteforced.
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	args := struct {
+		Passphrase string `json:"passphrase"`
+	}{}
+	err := c.Bind(&args)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+		return jsonapi.Forbidden(instance.ErrInvalidPassphrase)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func getHint(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 

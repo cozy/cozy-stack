@@ -169,6 +169,18 @@ func updateInstanceAuthMode(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func askInstanceDeletion(c echo.Context) error {
+	if err := middlewares.RequireSettingsApp(c); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := lifecycle.AskDeletion(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func clearMovedFrom(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return echo.NewHTTPError(http.StatusForbidden)
