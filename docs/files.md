@@ -872,18 +872,6 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
-### GET /files/:file-id/icon/:secret
-
-Get an image that shows the first page of a PDF in a small resolution (96x96).
-
-**Note:** this route is deprecated, you should use thumbnails instead.
-
-### GET /files/:file-id/preview/:secret
-
-Get an image that shows the first page of a PDF (at most 1080x1920).
-
-**Note:** this route is deprecated, you should use thumbnails instead.
-
 ### GET /files/:file-id/thumbnails/:secret/:format
 
 Get a thumbnail of a file (for an image & pdf only). `:format` can be `tiny` (96x96)
