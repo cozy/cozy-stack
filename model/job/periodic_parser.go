@@ -37,17 +37,21 @@ func NewPeriodicParser() PeriodicParser {
 	return PeriodicParser{}
 }
 
-// Parse will transform a string like "on monday" to a PeriodicSpec, or will
-// return an error if the format is not supported.
-func (p *PeriodicParser) Parse(frequency FrequencyKind, periodic string) (*PeriodicSpec, error) {
-	fields := strings.Fields(periodic)
-	spec := PeriodicSpec{
-		Frequency:   frequency,
+func NewPeriodicSpec() *PeriodicSpec {
+	return &PeriodicSpec{
 		DaysOfMonth: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28},
 		DaysOfWeek:  []int{0, 1, 2, 3, 4, 5, 6},
 		AfterHour:   0,
 		BeforeHour:  24,
 	}
+}
+
+// Parse will transform a string like "on monday" to a PeriodicSpec, or will
+// return an error if the format is not supported.
+func (p *PeriodicParser) Parse(frequency FrequencyKind, periodic string) (*PeriodicSpec, error) {
+	fields := strings.Fields(periodic)
+	spec := NewPeriodicSpec()
+	spec.Frequency = frequency
 
 	for len(fields) > 0 {
 		switch fields[0] {
@@ -111,7 +115,7 @@ func (p *PeriodicParser) Parse(frequency FrequencyKind, periodic string) (*Perio
 		return nil, errors.New("invalid hours range")
 	}
 
-	return &spec, nil
+	return spec, nil
 }
 
 func (p *PeriodicParser) parseDaysOfMonth(field string) ([]int, error) {
