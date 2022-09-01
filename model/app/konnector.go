@@ -317,7 +317,7 @@ func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByA
 }
 
 func (m *KonnManifest) triggerCrontab() string {
-	spec := &job.PeriodicSpec{}
+	spec := job.NewPeriodicSpec()
 
 	freq, _ := m.doc.M["frequency"].(string)
 	switch freq {
