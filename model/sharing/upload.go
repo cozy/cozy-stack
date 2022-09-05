@@ -474,13 +474,13 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
 	defer body.Close()
 	target, err := getStore().Get(inst, key)
-	inst.Logger().WithNamespace("upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	if err != nil {
 		return err
 	}
 	if target == nil {
 		return ErrMissingFileMetadata
 	}
+	inst.Logger().WithNamespace("upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	sid := consts.Files + "/" + target.DocID
 	mu := lock.ReadWrite(inst, "shared/"+sid)
 	if err = mu.Lock(); err != nil {
