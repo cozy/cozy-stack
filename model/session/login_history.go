@@ -175,6 +175,16 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 }
 
 func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
+	// Don't send a notification the first time the user logs in their Cozy, as
+	// it doesn't make sense for the user. In general, this function is not
+	// even called when this is the case, but sometimes the user can create
+	// their Cozy from the manager with an OIDC flow, with no confirmation mail
+	// no password choosing, and we need this trick for them.
+	nb, _ := couchdb.CountNormalDocs(i, consts.SessionsLogins)
+	if nb == 1 {
+		return nil
+	}
+
 	var results []*LoginEntry
 	r := &couchdb.FindRequest{
 		UseIndex: "by-os-browser-ip",
