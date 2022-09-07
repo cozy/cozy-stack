@@ -117,6 +117,8 @@ github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945 h1:EfeD2CzaZclMHyFx
 github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945/go.mod h1:rLnjIcybyvs+PoCzi4+GmpOVp0+q+qdcuZKnKUKJoF4=
 github.com/cozy/prosemirror-go v0.5.0 h1:4VhyxSvfTfq5/L8WOjdW85aQRc07yvlcznPDxmjJtKA=
 github.com/cozy/prosemirror-go v0.5.0/go.mod h1:pK1bwqX1BJQ+7QB54pY44j9Dd7rAzorFWZwDRhAu5KM=
+github.com/cozy/prosemirror-go v0.5.1 h1:N4roswTYjcGVhfQf7DVC9eF4u/8IvOgt6e3HisFQ7/Q=
+github.com/cozy/prosemirror-go v0.5.1/go.mod h1:XzvtyPWOh8rugSxe2d3HPpUXvQLT74PJ17MqTxMwpMU=
 github.com/cpuguy83/go-md2man/v2 v2.0.2 h1:p1EgwI/C7NhT0JmVkwCD2ZBK8j4aeHQX2pMHHBfMQ6w=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
