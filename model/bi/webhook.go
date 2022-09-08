@@ -164,13 +164,9 @@ func extractPayloadConnectionConnectorUUID(payload map[string]interface{}) (stri
 	if !ok {
 		return "", errors.New("connection not found")
 	}
-	connector, ok := conn["connector"].(map[string]interface{})
+	uuid, ok := conn["connector_uuid"].(string)
 	if !ok {
 		return "", errors.New("connection.connector not found")
-	}
-	uuid, ok := connector["uuid"].(string)
-	if !ok {
-		return "", errors.New("connection.connector.uuid not found")
 	}
 	return uuid, nil
 }
