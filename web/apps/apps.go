@@ -627,7 +627,7 @@ func createTrigger(c echo.Context) error {
 			createdByApp = cl.Subject
 		}
 	}
-	t, err := man.(*app.KonnManifest).CreateTrigger(inst, c.QueryParam("AccountID"), createdByApp)
+	t, err := man.(*app.KonnManifest).BuildTrigger(inst, c.QueryParam("AccountID"), createdByApp)
 	if err != nil {
 		return wrapAppsError(err)
 	}
