@@ -26,6 +26,7 @@ func Proxy(db prefixer.Prefixer, doctype, path string) *httputil.ReverseProxy {
 		req.URL.Host = couch.URL.Host
 		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
 		req.Header.Del(echo.HeaderCookie)
+		req.Header.Del("Host")
 		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
 		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
 		if auth := couch.Auth; auth != nil {
