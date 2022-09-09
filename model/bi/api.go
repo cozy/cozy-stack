@@ -88,7 +88,7 @@ func (c *apiClient) deleteUser(token string) error {
 }
 
 func (c *apiClient) getConnectorUUID(connectionID int, token string) (string, error) {
-	path := fmt.Sprintf("/connections/%d", connectionID)
+	path := fmt.Sprintf("/users/me/connections/%d", connectionID)
 	res, err := c.get(path, token)
 	if err != nil {
 		return "", err
