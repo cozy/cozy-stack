@@ -53,6 +53,10 @@ func (c *apiClient) delete(path, token string) (*http.Response, error) {
 	return c.makeRequest(http.MethodDelete, path, token, nil)
 }
 
+type connectionsResponse struct {
+	Total int `json:"total"`
+}
+
 func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 	res, err := c.get("/users/me/connections", token)
 	if err != nil {
@@ -64,11 +68,11 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 		return 0, fmt.Errorf("/users/me/connections received response code %d", res.StatusCode)
 	}
 
-	var data []interface{}
+	var data connectionsResponse
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return 0, err
 	}
-	return len(data), nil
+	return data.Total, nil
 }
 
 func (c *apiClient) deleteUser(token string) error {
