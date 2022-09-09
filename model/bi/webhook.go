@@ -132,6 +132,9 @@ func (c *WebhookCall) handleConnectionSynced() error {
 		account, trigger, err = c.createAccountAndTrigger(konn, connID)
 	} else {
 		trigger, err = findTrigger(c.Instance, account)
+		if err != nil {
+			trigger, err = konn.CreateTrigger(c.Instance, account.ID(), "")
+		}
 	}
 	if err != nil {
 		return err
