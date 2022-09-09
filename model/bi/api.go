@@ -60,6 +60,10 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode/100 != 2 {
+		return 0, fmt.Errorf("/users/me/connections received response code %d", res.StatusCode)
+	}
+
 	var data []interface{}
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return 0, err
