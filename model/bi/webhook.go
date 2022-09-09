@@ -430,6 +430,9 @@ func (c *WebhookCall) fireTrigger(trigger job.Trigger, account *account.Account)
 			req.Message = updated
 		}
 	}
+	if raw, err := json.Marshal(c.Payload); err == nil {
+		req.Payload = raw
+	}
 	j, err := job.System().PushJob(c.Instance, req)
 	if err == nil {
 		c.Instance.Logger().WithNamespace("webhook").
