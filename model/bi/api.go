@@ -29,7 +29,7 @@ func newApiClient(rawURL string) (*apiClient, error) {
 
 func (c *apiClient) makeRequest(verb, path, token string, body io.Reader) (*http.Response, error) {
 	u := &url.URL{
-		Scheme: "https:",
+		Scheme: "https",
 		Host:   c.host,
 		Path:   path,
 	}
