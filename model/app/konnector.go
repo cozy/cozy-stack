@@ -345,7 +345,11 @@ func (m *KonnManifest) triggerCrontab() string {
 	return spec.ToRandomCrontab(m.Slug())
 }
 
+// Cf https://github.com/cozy/cozy-libs/blob/55b5f23f0adbc308c3b70fa287c3938ee1b0a4cc/packages/cozy-harvest-lib/src/helpers/konnectors.js#L213-L225
 func (m *KonnManifest) hasFolderPath() bool {
+	if _, ok := m.doc.M["folders"].(map[string]interface{}); ok {
+		return true
+	}
 	fields, ok := m.doc.M["fields"].(map[string]interface{})
 	if !ok {
 		return false
