@@ -317,7 +317,10 @@ func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessa
 
 	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken, data)
 	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
-	err := huaweiClient.PushWithContext(ctx, notification)
+	unregistered, err := huaweiClient.PushWithContext(ctx, notification)
+	if unregistered {
+		_ = c.Delete(ctx.Instance)
+	}
 	if err != nil {
 		ctx.Logger().Warnf("Error during huawei send: %s", err)
 	}

@@ -17,6 +17,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const invalidTokenCode = "80300007"
+
 // Client can be used to send notifications via the Huawei Push Kit APIs.
 type Client struct {
 	getTokenURL     string
@@ -92,27 +94,29 @@ func NewNotification(title, body, token string, data map[string]interface{}) *No
 	return notif
 }
 
-// PushWithContext send the notification to Push Kit.
-func (c *Client) PushWithContext(ctx context.Context, notification *Notification) error {
+// PushWithContext send the notification to Push Kit. It returns a bool that
+// indicates true if the client is no longer registered (app has been
+// uninstalled), and an error.
+func (c *Client) PushWithContext(ctx context.Context, notification *Notification) (bool, error) {
 	token, err := c.fetchAccessToken()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	payload, err := json.Marshal(notification)
 	if err != nil {
-		return fmt.Errorf("cannot marshal notification: %s", err)
+		return false, fmt.Errorf("cannot marshal notification: %s", err)
 	}
 	body := bytes.NewBuffer(payload)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.sendMessagesURL, body)
 	if err != nil {
-		return fmt.Errorf("cannot make request: %s", err)
+		return false, fmt.Errorf("cannot make request: %s", err)
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("cannot send notification: %s", err)
+		return false, fmt.Errorf("cannot send notification: %s", err)
 	}
 	defer res.Body.Close()
 
@@ -122,9 +126,11 @@ func (c *Client) PushWithContext(ctx context.Context, notification *Notification
 			logger.WithNamespace("huawei").
 				Infof("Failed to send notification (%d): %#v", res.StatusCode, data)
 		}
-		return fmt.Errorf("cannot send notification: bad code %d", res.StatusCode)
+		unregistered := data["code"] == invalidTokenCode
+		err = fmt.Errorf("cannot send notification: bad code %d", res.StatusCode)
+		return unregistered, err
 	}
-	return nil
+	return false, nil
 }
 
 type accessTokenResponse struct {
