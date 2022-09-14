@@ -212,6 +212,9 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 	}
 
 	for _, result := range res.Results {
+		if result.Unregistered() {
+			_ = c.Delete(ctx.Instance)
+		}
 		if err = result.Error; err != nil {
 			return err
 		}
