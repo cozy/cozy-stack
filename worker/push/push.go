@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -212,6 +213,9 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 	}
 
 	for _, result := range res.Results {
+		if result.Unregistered() {
+			_ = c.Delete(ctx.Instance)
+		}
 		if err = result.Error; err != nil {
 			return err
 		}
@@ -288,7 +292,10 @@ func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage
 	if err != nil {
 		return err
 	}
-	if res.StatusCode != 200 {
+	if res.StatusCode == http.StatusGone {
+		_ = c.Delete(ctx.Instance)
+	}
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to push apns notification: %d %s", res.StatusCode, res.Reason)
 	}
 	return nil
@@ -310,7 +317,10 @@ func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessa
 
 	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken, data)
 	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
-	err := huaweiClient.PushWithContext(ctx, notification)
+	unregistered, err := huaweiClient.PushWithContext(ctx, notification)
+	if unregistered {
+		_ = c.Delete(ctx.Instance)
+	}
 	if err != nil {
 		ctx.Logger().Warnf("Error during huawei send: %s", err)
 	}
