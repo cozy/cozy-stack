@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -291,7 +292,10 @@ func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage
 	if err != nil {
 		return err
 	}
-	if res.StatusCode != 200 {
+	if res.StatusCode == http.StatusGone {
+		_ = c.Delete(ctx.Instance)
+	}
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to push apns notification: %d %s", res.StatusCode, res.Reason)
 	}
 	return nil
