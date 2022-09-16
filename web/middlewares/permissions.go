@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -332,6 +333,9 @@ func GetPermission(c echo.Context) (*permission.Permission, error) {
 
 	pdoc, err = ParseJWT(c, inst, tok)
 	if err != nil {
+		cookie, _ := c.Cookie(session.CookieName(inst))
+		inst.Logger().WithNamespace("middlewares").
+			Infof("Invalid token with cookie=%q: %s", cookie, err)
 		return nil, err
 	}
 
