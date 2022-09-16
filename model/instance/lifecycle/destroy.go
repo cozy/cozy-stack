@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -14,14 +15,35 @@ import (
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/labstack/echo/v4"
 )
 
 func AskDeletion(inst *instance.Instance) error {
-	u, err := inst.ManagerURL(instance.ManagerAskDeletionURL)
+	clouderies := config.GetConfig().Clouderies
+	var cloudery interface{}
+	cloudery, ok := clouderies[inst.ContextName]
+	if !ok {
+		cloudery = clouderies[config.DefaultInstanceContext]
+	}
+	if cloudery == nil {
+		return nil
+	}
+	api := cloudery.(map[string]interface{})["api"]
+	clouderyURL, _ := api.(map[string]interface{})["url"].(string)
+	clouderyToken, _ := api.(map[string]interface{})["token"].(string)
+
+	u, err := url.Parse(clouderyURL)
 	if err != nil {
 		return err
 	}
-	res, err := doManagerRequest(http.MethodDelete, u, nil, nil)
+	u.Path = "/api/admin/instances" + url.PathEscape(inst.UUID)
+
+	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+clouderyToken)
+	res, err := managerHTTPClient.Do(req)
 	if err != nil {
 		return err
 	}

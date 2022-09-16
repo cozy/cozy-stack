@@ -20,8 +20,6 @@ const (
 	ManagerPremiumURL
 	// ManagerBlockedURL is the kind for a redirection of a blocked instance.
 	ManagerBlockedURL
-	// ManagerAskDeletionURL is the kind for asking to delete a Cozy instance.
-	ManagerAskDeletionURL
 )
 
 // ManagerURL returns an external string for the given ManagerURL kind. It is
@@ -54,8 +52,6 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
 	case ManagerBlockedURL:
 		path = fmt.Sprintf("/cozy/instances/%s/blocked", url.PathEscape(i.UUID))
-	case ManagerAskDeletionURL:
-		path = fmt.Sprintf("/api/admin/instances/%s", url.PathEscape(i.UUID))
 	default:
 		panic("unknown ManagerURLKind")
 	}
