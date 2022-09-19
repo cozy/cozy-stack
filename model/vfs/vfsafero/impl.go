@@ -832,13 +832,13 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if v != nil {
-		cleanV, toClean, _ := vfs.FindVersionsToClean(f.afs, newdoc.DocID, v)
-		if !cleanV {
+		actionV, toClean, _ := vfs.FindVersionsToClean(f.afs, newdoc.DocID, v)
+		if actionV == vfs.KeepCandidateVersion {
 			if errv := f.afs.Indexer.CreateVersion(v); errv != nil {
-				cleanV = true
+				actionV = vfs.CleanCandidateVersion
 			}
 		}
-		if cleanV {
+		if actionV == vfs.CleanCandidateVersion {
 			vPath := pathForVersion(v)
 			_ = f.afs.fs.Remove(vPath)
 		}

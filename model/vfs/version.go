@@ -154,20 +154,28 @@ func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 	return versions, nil
 }
 
+type ActionForCandidateVersion int
+
+const (
+	DoNothingForCandidateVersion ActionForCandidateVersion = iota
+	KeepCandidateVersion
+	CleanCandidateVersion
+)
+
 // FindVersionsToClean returns a bool to say if the candidate version must be
 // cleaned, a list of old versions to clean, and an error. The rules to know
 // the versions to clean or keep are:
 // - the tagged versions are kept
 // - two versions must not be too close in time
 // - there is a maximal number of versions.
-func FindVersionsToClean(db Prefixer, fileID string, candidate *Version) (bool, []*Version, error) {
+func FindVersionsToClean(db Prefixer, fileID string, candidate *Version) (ActionForCandidateVersion, []*Version, error) {
 	olds, err := VersionsFor(db, fileID)
 	if err != nil {
-		return false, nil, err
+		return DoNothingForCandidateVersion, nil, err
 	}
 	maxNumber, minDelay := getVersioningConfig(db.GetContextName())
-	cleanCandidate, toClean := detectVersionsToClean(candidate, olds, maxNumber, minDelay)
-	return cleanCandidate, toClean, nil
+	action, toClean := detectVersionsToClean(candidate, olds, maxNumber, minDelay)
+	return action, toClean, nil
 }
 
 func getVersioningConfig(contextName string) (int, time.Duration) {
@@ -188,13 +196,22 @@ func getVersioningConfig(contextName string) (int, time.Duration) {
 	return maxNumber, minDelay
 }
 
-func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, minDelay time.Duration) (bool, []*Version) {
+func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, minDelay time.Duration) (ActionForCandidateVersion, []*Version) {
 	if maxNumber == 0 {
-		return true, olds
+		return CleanCandidateVersion, olds
 	}
 
 	if len(olds) == 0 {
-		return false, nil
+		return KeepCandidateVersion, nil
+	}
+
+	// When there are 2 concurrent uploads for the same file, we may have a
+	// race condition on the candidate version, and we can avoid it by checking
+	// the ID.
+	for _, old := range olds {
+		if old.DocID == candidate.DocID {
+			return DoNothingForCandidateVersion, nil
+		}
 	}
 
 	sort.Slice(olds, func(i, j int) bool {
@@ -203,22 +220,22 @@ func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, m
 
 	// We will keep the candidate version if it has no tags and is not too
 	// close to the previous version.
-	cleanCandidate := false
+	action := KeepCandidateVersion
 	if candidate != nil && len(candidate.Tags) == 0 {
 		candidateTime := candidate.CozyMetadata.CreatedAt
 		previousTime := olds[len(olds)-1].CozyMetadata.CreatedAt
 		if previousTime.Add(minDelay).After(candidateTime) {
-			cleanCandidate = true
+			action = CleanCandidateVersion
 		}
 	}
 
 	// Find the number of old versions to clean
 	nb := len(olds) + 1 - maxNumber // +1 is for the current version
-	if candidate != nil && !cleanCandidate {
+	if candidate != nil && action == KeepCandidateVersion {
 		nb++ // +1 for the candidate version (if it is kept)
 	}
 	if nb <= 0 {
-		return cleanCandidate, nil
+		return action, nil
 	}
 
 	var toClean []*Version
@@ -232,7 +249,7 @@ func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, m
 			break
 		}
 	}
-	return cleanCandidate, toClean
+	return action, toClean
 }
 
 var _ jsonapi.Object = &Version{}

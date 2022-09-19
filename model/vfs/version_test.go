@@ -35,30 +35,35 @@ func TestDetectVersionsToClean(t *testing.T) {
 	candidate := genVersion(0 * time.Minute)
 
 	olds := []*Version{&v0, &v1, &v2}
-	cleanCandidate, toClean := detectVersionsToClean(&candidate, olds, 20, 1*time.Minute)
-	assert.False(t, cleanCandidate)
+	action, toClean := detectVersionsToClean(&candidate, olds, 20, 1*time.Minute)
+	assert.Equal(t, KeepCandidateVersion, action)
+	assert.Len(t, toClean, 0)
+
+	olds = []*Version{&v0, &v1, &v2, &v3}
+	action, toClean = detectVersionsToClean(&v1, olds, 20, 1*time.Minute)
+	assert.Equal(t, DoNothingForCandidateVersion, action)
 	assert.Len(t, toClean, 0)
 
 	olds = []*Version{&v0, &v1, &v2, &v3, &v4, &v5, &v6}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 20, 15*time.Minute)
-	assert.True(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 20, 15*time.Minute)
+	assert.Equal(t, CleanCandidateVersion, action)
 	assert.Len(t, toClean, 0)
 
 	olds = []*Version{&v1, &v2, &v3, &v4, &v5}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 5, 30*time.Minute)
-	assert.True(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 5, 30*time.Minute)
+	assert.Equal(t, CleanCandidateVersion, action)
 	assert.Len(t, toClean, 1)
 	assert.Equal(t, &v1, toClean[0])
 
 	olds = []*Version{&v1, &v2, &v3, &v4}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 5, 15*time.Minute)
-	assert.False(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 5, 15*time.Minute)
+	assert.Equal(t, KeepCandidateVersion, action)
 	assert.Len(t, toClean, 1)
 	assert.Equal(t, &v1, toClean[0])
 
 	olds = []*Version{&v3, &v6, &v2, &v0, &v5, &v4, &v1}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 5, 1*time.Minute)
-	assert.False(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 5, 1*time.Minute)
+	assert.Equal(t, KeepCandidateVersion, action)
 	assert.Len(t, toClean, 4)
 	assert.Equal(t, &v0, toClean[0])
 	assert.Equal(t, &v1, toClean[1])
@@ -66,8 +71,8 @@ func TestDetectVersionsToClean(t *testing.T) {
 	assert.Equal(t, &v3, toClean[3])
 
 	olds = []*Version{&v3, &v6, &v2, &v0, &v5, &v4, &v1}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 5, 10*time.Minute)
-	assert.True(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 5, 10*time.Minute)
+	assert.Equal(t, CleanCandidateVersion, action)
 	assert.Len(t, toClean, 3)
 	assert.Equal(t, &v0, toClean[0])
 	assert.Equal(t, &v1, toClean[1])
@@ -78,8 +83,8 @@ func TestDetectVersionsToClean(t *testing.T) {
 	candidate.Tags = []string{"qux"}
 
 	olds = []*Version{&v3, &v6, &v2, &v0, &v5, &v4, &v1}
-	cleanCandidate, toClean = detectVersionsToClean(&candidate, olds, 5, 10*time.Minute)
-	assert.False(t, cleanCandidate)
+	action, toClean = detectVersionsToClean(&candidate, olds, 5, 10*time.Minute)
+	assert.Equal(t, KeepCandidateVersion, action)
 	assert.Len(t, toClean, 4)
 	assert.Equal(t, &v1, toClean[0])
 	assert.Equal(t, &v3, toClean[1])
