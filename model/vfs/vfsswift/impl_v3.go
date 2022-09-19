@@ -824,13 +824,13 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 
 	if v != nil {
-		cleanV, toClean, _ := vfs.FindVersionsToClean(f.fs, newdoc.DocID, v)
-		if !cleanV {
+		actionV, toClean, _ := vfs.FindVersionsToClean(f.fs, newdoc.DocID, v)
+		if actionV == vfs.KeepCandidateVersion {
 			if errv := f.fs.Indexer.CreateVersion(v); errv != nil {
-				cleanV = true
+				actionV = vfs.CleanCandidateVersion
 			}
 		}
-		if cleanV {
+		if actionV == vfs.CleanCandidateVersion {
 			internalID := v.DocID
 			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
 				internalID = parts[1]
