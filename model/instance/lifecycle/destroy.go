@@ -36,7 +36,7 @@ func AskDeletion(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	u.Path = "/api/admin/instances" + url.PathEscape(inst.UUID)
+	u.Path = "/api/admin/instances/" + url.PathEscape(inst.UUID)
 
 	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
 	if err != nil {
