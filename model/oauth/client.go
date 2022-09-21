@@ -92,7 +92,8 @@ type Client struct {
 	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
 
 	// XXX omitempty does not work for time.Time, thus the interface{} type
-	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
+	SynchronizedAt  interface{} `json:"synchronized_at,omitempty"`   // Date of the last synchronization, updated by /settings/synchronized
+	LastRefreshedAt interface{} `json:"last_refreshed_at,omitempty"` // Date of the last refresh of the OAuth token
 
 	Flagship            bool `json:"flagship,omitempty"`
 	CertifiedFromStore  bool `json:"certified_from_store,omitempty"`

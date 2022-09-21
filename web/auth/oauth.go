@@ -877,6 +877,11 @@ func accessToken(c echo.Context) error {
 				"error": "invalid refresh token",
 			})
 		}
+
+		// Update the last_refreshed_at field of the OAuth client
+		client.LastRefreshedAt = time.Now()
+		_ = couchdb.UpdateDoc(instance, client)
+
 		// Code below is used to transform an old OAuth client token scope to
 		// the new linked-app scope
 		if slug != "" {

@@ -747,6 +747,7 @@ Content-Type: application/vnd.api+json
                 "policy_uri": "https://cozy.io/policy",
                 "software_id": "/github.com/cozy-labs/cozy-desktop",
                 "software_version": "0.16.0",
+                "last_refreshed_at": "2017-09-04T08:14:47Z",
                 "synchronized_at": "2017-09-05T16:23:04Z"
             },
             "links": {
