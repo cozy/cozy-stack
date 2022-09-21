@@ -84,6 +84,7 @@ type Client struct {
 	PolicyURI       string   `json:"policy_uri,omitempty"`       // Declared by the client (optional)
 	SoftwareID      string   `json:"software_id"`                // Declared by the client (mandatory)
 	SoftwareVersion string   `json:"software_version,omitempty"` // Declared by the client (optional)
+	ClientOS        string   `json:"client_os,omitempty"`        // Inferred by the server from the user-agent
 
 	// Notifications parameters
 	Notifications map[string]notification.Properties `json:"notifications,omitempty"`

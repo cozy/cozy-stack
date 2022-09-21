@@ -32,6 +32,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 )
 
 type webappParams struct {
@@ -351,6 +352,12 @@ func authorize(c echo.Context) error {
 			q.Set("fallback", instance.SubDomain(slug).String())
 		}
 	}
+
+	// Fill the client_os of the OAuth client
+	rawUserAgent := c.Request().UserAgent()
+	ua := user_agent.New(rawUserAgent)
+	params.client.ClientOS = ua.OS()
+	_ = couchdb.UpdateDoc(instance, params.client)
 
 	return createAccessCode(c, params, u, q)
 }
