@@ -772,6 +772,13 @@ func openWebapp(c echo.Context) error {
 
 	var cookie *http.Cookie
 	sess, err := session.FromCookie(c, inst)
+
+	log := inst.Logger().WithNamespace("debug-apps-open")
+	log.Infof("sess = %v", sess)
+	cookie, _ = c.Cookie(session.CookieName(inst))
+	log.Infof("cookie %q -> %v", session.CookieName(inst), cookie)
+	log.Infof("header Cookie: %v", c.Request().Header.Values("Cookie"))
+
 	if err == nil {
 		cookie, err = c.Cookie(session.CookieName(inst))
 		if err != nil {
