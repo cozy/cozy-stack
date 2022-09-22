@@ -272,8 +272,15 @@ func reconnect(c echo.Context) error {
 func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		inst := middlewares.GetInstance(c)
-		isLoggedIn := middlewares.IsLoggedIn(c)
+		sess, isLoggedIn := middlewares.GetSession(c)
 		wasLoggedIn := isLoggedIn
+
+		if sess != nil && sess.ShortRun {
+			// XXX it's better to create a new session in that case, as the
+			// existing short session can easily timeout between now and when
+			// the user will come back.
+			wasLoggedIn = false
+		}
 
 		if code := c.QueryParam("session_code"); code != "" {
 			// XXX we should always clear the session code to avoid it being
