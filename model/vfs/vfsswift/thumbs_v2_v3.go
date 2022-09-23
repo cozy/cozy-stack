@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
@@ -188,6 +189,9 @@ func (t *thumbsV2) RemoveNoteThumb(id string, formats []string) error {
 		objNames[i] = t.makeName(id, format)
 	}
 	_, err := t.c.BulkDelete(t.ctx, t.container, objNames)
+	if err != nil {
+		logger.WithNamespace("vfsswift").Infof("Cannot remove note thumbs: %s", err)
+	}
 	return err
 }
 
