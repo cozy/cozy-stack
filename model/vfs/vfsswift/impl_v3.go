@@ -259,6 +259,62 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	}, nil
 }
 
+func (sfs *swiftVFSV3) CopyFile(olddoc, newdoc *vfs.FileDoc) (err error) {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	diskQuota := sfs.DiskQuota()
+
+	var maxsize, newsize, capsize int64
+	maxsize = maxFileSize
+	newsize = olddoc.ByteSize
+	if diskQuota > 0 {
+		diskUsage, err := sfs.DiskUsage()
+		if err != nil {
+			return err
+		}
+		maxsize = diskQuota - diskUsage
+		if maxsize > maxFileSize {
+			maxsize = maxFileSize
+		}
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
+		}
+	}
+	if newsize > maxsize {
+		return vfs.ErrFileTooBig
+	}
+
+	if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {
+		return err
+	}
+	newdoc.InternalID = NewInternalID()
+
+	// Copy the file
+	srcName := MakeObjectNameV3(olddoc.DocID, olddoc.InternalID)
+	dstName := MakeObjectNameV3(newdoc.DocID, newdoc.InternalID)
+	headers := swift.Metadata{
+		"creation-name": newdoc.Name(),
+		"created-at":    newdoc.CreatedAt.Format(time.RFC3339),
+		"copied-from":   olddoc.ID(),
+	}.ObjectHeaders()
+	if _, err := sfs.c.ObjectCopy(sfs.ctx, sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+		return err
+	}
+	if err := sfs.Indexer.CreateNamedFileDoc(newdoc); err != nil {
+		_ = sfs.c.ObjectDelete(sfs.ctx, sfs.container, dstName)
+		return err
+	}
+
+	if capsize > 0 && newsize >= capsize {
+		vfs.PushDiskQuotaAlert(sfs, true)
+	}
+
+	return nil
+}
+
 func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr

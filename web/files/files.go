@@ -293,6 +293,52 @@ func UploadMetadataHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &m, nil)
 }
 
+// FileCopyHandler handles POST requests on /files/:file-id/copy
+//
+// It is used to duplicate the given file and its metadata except for
+// relationships.
+func FileCopyHandler(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fs := inst.VFS()
+
+	fileID := c.Param("file-id")
+	olddoc, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	err = checkPerm(c, permission.POST, nil, olddoc)
+	if err != nil {
+		return err
+	}
+
+	copyName := fileCopyName(inst, olddoc.DocName)
+	newdoc := vfs.CreateFileDocCopy(olddoc, copyName)
+	exists, err := fs.GetIndexer().DirChildExists(newdoc.DirID, newdoc.DocName)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if exists {
+		newdoc.DocName = vfs.ConflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		exists, err = fs.GetIndexer().DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return WrapVfsError(err)
+		}
+		if exists {
+			return WrapVfsError(os.ErrExist)
+		}
+	}
+	newdoc.ResetFullpath()
+	updateFileCozyMetadata(c, newdoc, true)
+
+	err = fs.CopyFile(olddoc, newdoc)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	return FileData(c, http.StatusCreated, newdoc, true, nil)
+}
+
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
 //
 // It can be used to modify the file or directory metadata, as well as
@@ -1795,6 +1841,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:file-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 	router.POST("/upload/metadata", UploadMetadataHandler)
+	router.POST("/:file-id/copy", FileCopyHandler)
 
 	router.GET("/:file-id/icon/:secret", IconHandler)
 	router.GET("/:file-id/preview/:secret", PreviewHandler)
@@ -2203,4 +2250,13 @@ func CozyMetadataFromClaims(c echo.Context, setUploadFields bool) (*vfs.FilesCoz
 	}
 
 	return fcm, slug
+}
+
+func fileCopyName(inst *instance.Instance, name string) string {
+	base, ext := name, ""
+	ext = filepath.Ext(name)
+	base = strings.TrimSuffix(base, ext)
+	suffix := inst.Translate("File copy Suffix")
+
+	return fmt.Sprintf("%s (%s)%s", base, suffix, ext)
 }

@@ -1220,3 +1220,6 @@ msgid "Compat Guide Link"
 msgstr ""
 "https://support.cozy.io/article/273-cozy-nest-pas-compatible-avec-internet-"
 "explorer-11"
+
+msgid "File copy Suffix"
+msgstr "copie"

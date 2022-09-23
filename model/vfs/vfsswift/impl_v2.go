@@ -433,6 +433,11 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
+func (sfs *swiftVFSV2) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
+	// The file duplication is not implemented in Swift layout v2
+	return os.ErrNotExist
+}
+
 func (sfs *swiftVFSV2) DissociateFile(src, dst *vfs.FileDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr

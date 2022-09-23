@@ -914,3 +914,6 @@ msgstr "Consulte nuestra guía de asistencia."
 
 msgid "Compat Guide Link"
 msgstr "https://help.cozy.io/article/274-ie-11-not-supported"
+
+msgid "File copy Suffix"
+msgstr "copia"
