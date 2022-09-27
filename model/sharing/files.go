@@ -183,7 +183,11 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		}
 		dir.DocID = consts.SharedWithMeDirID
 		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
-		if err = fs.CreateDir(dir); err != nil {
+		err = fs.CreateDir(dir)
+		if err == os.ErrExist {
+			dir, err = fs.DirByPath(dir.Fullpath)
+		}
+		if err != nil {
 			return nil, err
 		}
 		return dir, nil
