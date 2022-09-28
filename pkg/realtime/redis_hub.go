@@ -121,6 +121,7 @@ func (h *redisHub) start() {
 		db := prefixer.NewPrefixer(je.Cluster, je.Domain, je.Prefix)
 		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
 	}
+	logger.WithNamespace("realtime-redis").Infof("End of subscribe channel")
 }
 
 func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
