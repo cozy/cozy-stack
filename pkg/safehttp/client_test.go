@@ -24,5 +24,5 @@ func TestDefaultClient(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "is not a safe port")
 
-	testutils.TODO(t, "2022-10-01", "Replace isPrivateIP by net#IP.IsPrivate")
+	testutils.TODO(t, "2023-03-01", "Replace isPrivateIP by net#IP.IsPrivate")
 }
