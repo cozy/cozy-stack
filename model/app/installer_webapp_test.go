@@ -7,12 +7,14 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWebappInstallBadSlug(t *testing.T) {
@@ -432,6 +434,208 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	assert.True(t, ok, "The manifest has the right version")
 	manWebapp = man.(*app.WebappManifest)
 	assert.Nil(t, manWebapp.Services()["service1"])
+}
+
+func TestWebappUpdateServices(t *testing.T) {
+	manifest1 := func() string {
+		return `{
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+  "name": "Cozy",
+  "url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+    "type": "io.cozy.files",
+    "verbs": ["GET"]
+  }
+},
+"services": {
+  "dacc": {
+    "file": "services/dacc/drive.js",
+    "trigger": "@every 720h",
+    "type": "node"
+  },
+  "qualificationMigration": {
+    "debounce": "24h",
+    "file": "services/qualificationMigration/drive.js",
+    "trigger": "@event io.cozy.files:CREATED,UPDATED",
+    "type": "node"
+  }
+},
+"slug": "mini-test-services",
+"type": "webapp",
+"version": "1.0.0"
+}`
+	}
+
+	// @every -> @monthly
+	manifest2 := func() string {
+		return `{
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+  "name": "Cozy",
+  "url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+    "type": "io.cozy.files",
+    "verbs": ["GET"]
+  }
+},
+"services": {
+  "dacc": {
+    "file": "services/dacc/drive.js",
+    "trigger": "@monthly on the 3-5 between 2pm and 7pm",
+    "type": "node"
+  },
+  "qualificationMigration": {
+    "debounce": "24h",
+    "file": "services/qualificationMigration/drive.js",
+    "trigger": "@event io.cozy.files:CREATED,UPDATED",
+    "type": "node"
+  }
+},
+"slug": "mini-test-services",
+"type": "webapp",
+"version": "2.0.0"
+}`
+	}
+
+	// monthly arguments
+	manifest3 := func() string {
+		return `{
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+  "name": "Cozy",
+  "url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+    "type": "io.cozy.files",
+    "verbs": ["GET"]
+  }
+},
+"services": {
+  "dacc": {
+    "file": "services/dacc/drive.js",
+    "trigger": "@monthly on the 2-4 between 1pm and 6pm",
+    "type": "node"
+  },
+  "qualificationMigration": {
+    "debounce": "24h",
+    "file": "services/qualificationMigration/drive.js",
+    "trigger": "@event io.cozy.files:CREATED,UPDATED",
+    "type": "node"
+  }
+},
+"slug": "mini-test-services",
+"type": "webapp",
+"version": "3.0.0"
+}`
+	}
+
+	manGen = manifest1
+	manName = app.WebappManifestName
+	finished := true
+
+	instance, err := lifecycle.Create(&lifecycle.Options{
+		Domain:             "test-update-services",
+		OnboardingFinished: &finished,
+	})
+	require.NoError(t, err)
+
+	defer func() { _ = lifecycle.Destroy("test-update-services") }()
+
+	inst, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Install,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-services",
+		SourceURL: "git://localhost/",
+	})
+	require.NoError(t, err)
+
+	man, err := inst.RunSync()
+	require.NoError(t, err)
+	assert.Contains(t, man.Version(), "1.0.0")
+
+	jobsSystem := job.System()
+	triggers, err := jobsSystem.GetAllTriggers(instance)
+	require.NoError(t, err)
+	nbTriggers := len(triggers)
+
+	trigger := findTrigger(triggers, "@event")
+	require.NotNil(t, trigger)
+	assert.Equal(t, "24h", trigger.Infos().Debounce)
+	trigger = findTrigger(triggers, "@every")
+	require.NotNil(t, trigger)
+	assert.Equal(t, "720h", trigger.Infos().Arguments)
+
+	// Update the app
+	manGen = manifest2
+	inst2, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Update,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-services",
+		SourceURL: "git://localhost/",
+	})
+	require.NoError(t, err)
+
+	man, err = inst2.RunSync()
+	require.NoError(t, err)
+	assert.Contains(t, man.Version(), "2.0.0")
+
+	triggers, err = jobsSystem.GetAllTriggers(instance)
+	require.NoError(t, err)
+	assert.Equal(t, nbTriggers, len(triggers))
+
+	trigger = findTrigger(triggers, "@event")
+	require.NotNil(t, trigger)
+	assert.Equal(t, "24h", trigger.Infos().Debounce)
+	trigger = findTrigger(triggers, "@every")
+	assert.Nil(t, trigger)
+	trigger = findTrigger(triggers, "@monthly")
+	assert.NotNil(t, trigger)
+	assert.Equal(t, "on the 3-5 between 2pm and 7pm", trigger.Infos().Arguments)
+
+	// Update again the app
+	manGen = manifest3
+	inst3, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Update,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-services",
+		SourceURL: "git://localhost/",
+	})
+	require.NoError(t, err)
+
+	man, err = inst3.RunSync()
+	require.NoError(t, err)
+	assert.Contains(t, man.Version(), "3.0.0")
+
+	triggers, err = jobsSystem.GetAllTriggers(instance)
+	require.NoError(t, err)
+	assert.Equal(t, nbTriggers, len(triggers))
+	trigger = findTrigger(triggers, "@event")
+	require.NotNil(t, trigger)
+	assert.Equal(t, "24h", trigger.Infos().Debounce)
+	trigger = findTrigger(triggers, "@monthly")
+	assert.NotNil(t, trigger)
+	assert.Equal(t, "on the 2-4 between 1pm and 6pm", trigger.Infos().Arguments)
+}
+
+func findTrigger(triggers []job.Trigger, typ string) job.Trigger {
+	for _, trigger := range triggers {
+		if trigger.Type() == typ {
+			return trigger
+		}
+	}
+	return nil
 }
 
 func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {

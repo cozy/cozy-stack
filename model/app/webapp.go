@@ -264,6 +264,12 @@ func (m *WebappManifest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	doc.M["permissions"] = json.RawMessage(perms)
+	doc.M["terms"] = m.val.Terms
+	doc.M["intents"] = m.val.Intents
+	doc.M["routes"] = m.val.Routes
+	doc.M["services"] = m.val.Services
+	doc.M["locales"] = m.val.Locales
+	doc.M["notifications"] = m.val.Notifications
 	return json.Marshal(doc)
 }
 
