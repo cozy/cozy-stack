@@ -682,6 +682,18 @@ msgstr "Categorization model enrichment file"
 msgid "Permissions cc.cozycloud.dacc"
 msgstr "Anonymous aggregate statistics"
 
+msgid "Permissions cc.cozycloud.dacc.dev"
+msgstr "Anonymous aggregate statistics for development purpose"
+
+msgid "Permissions cc.cozycloud.dacc_v2"
+msgstr "Anonymous aggregate statistics"
+
+msgid "Permissions cc.cozycloud.dacc.dev_v2"
+msgstr "Anonymous aggregate statistics for development purpose"
+
+msgid "Permissions eu.mycozy.dacc_v2"
+msgstr "Anonymous aggregate statistics"
+
 msgid "Permissions cc.cozycloud.sentry"
 msgstr "Application logs"
 

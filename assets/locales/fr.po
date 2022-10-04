@@ -753,6 +753,18 @@ msgstr "Fichier d'enrichissement du modèle de catégorisation"
 msgid "Permissions cc.cozycloud.dacc"
 msgstr "Statistiques agrégées anonymes"
 
+msgid "Permissions cc.cozycloud.dacc.dev"
+msgstr "Statistiques agrégées anonymes pour le développement"
+
+msgid "Permissions cc.cozycloud.dacc_v2"
+msgstr "Statistiques agrégées anonymes"
+
+msgid "Permissions cc.cozycloud.dacc.dev_v2"
+msgstr "Statistiques agrégées anonymes pour le développement"
+
+msgid "Permissions eu.mycozy.dacc_v2"
+msgstr "Statistiques agrégées anonymes"
+
 msgid "Permissions cc.cozycloud.sentry"
 msgstr "Journaux de l'application"
 
