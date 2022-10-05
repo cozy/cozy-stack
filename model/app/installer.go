@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -271,7 +272,13 @@ func (i *Installer) run() (err error) {
 	if i.man == nil {
 		panic("Manifest is nil")
 	}
+	mu := lock.ReadWrite(i.db, "app-"+i.man.Slug())
+	if err = mu.Lock(); err != nil {
+		i.log.Errorf("Could not get lock: %s", err)
+		return err
+	}
 	defer func() {
+		mu.Unlock()
 		if err != nil {
 			i.log.Errorf("Could not commit installer process: %s", err)
 		} else {
@@ -349,6 +356,26 @@ func (i *Installer) checkSkipPermissions() (bool, error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() error {
+	// Reload the manifest from the database. It was loaded before this
+	// goroutine obtains the lock, and it may happen that another goroutine has
+	// made an update between the first load and the lock obtention.
+	//
+	// The first read is made before the lock to make the happy path (the app
+	// is already up-to-date) faster.
+	if i.man.AppType() == consts.WebappType {
+		reloaded, err := GetWebappBySlug(i.db, i.man.Slug())
+		if err != nil {
+			return err
+		}
+		i.man = reloaded
+	} else {
+		reloaded, err := GetKonnectorBySlug(i.db, i.man.Slug())
+		if err != nil {
+			return err
+		}
+		i.man = reloaded
+	}
+
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
