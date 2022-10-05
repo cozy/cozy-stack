@@ -279,7 +279,11 @@
   -webkit-mask-image: url("../icons/doctypes/organization.svg");
   mask-image: url("../icons/doctypes/organization.svg");
 }
-.perm[class^="cc-cozycloud-dacc"] {
+.perm[class^="cc-cozycloud-dacc"],
+.perm[class^="cc-cozycloud-dacc-dev"],
+.perm[class^="cc-cozycloud-dacc_v2"],
+.perm[class^="cc-cozycloud-dacc-dev_v2"],
+.perm[class^="eu.mycozy.dacc_v2"] {
   -webkit-mask-image: url("../icons/doctypes/stats.svg");
   mask-image: url("../icons/doctypes/stats.svg");
 }
