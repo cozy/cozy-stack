@@ -298,7 +298,11 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	}
 
 	// Remove the source
-	thumbsFS := &thumbsV2{c: sfs.c, container: sfs.container}
+	thumbsFS := &thumbsV2{
+		c:         sfs.c,
+		container: sfs.container,
+		ctx:       context.Background(),
+	}
 	if err := thumbsFS.RemoveThumbs(src, vfs.ThumbnailFormatNames); err != nil {
 		sfs.log.Infof("Cleaning thumbnails in DissociateFile %s has failed: %s", src.ID(), err)
 	}
