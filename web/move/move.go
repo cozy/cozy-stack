@@ -256,9 +256,7 @@ func wsImporting(c echo.Context) error {
 	defer ticker.Stop()
 	ds := realtime.GetHub().Subscriber(inst)
 	defer ds.Close()
-	if err = ds.Subscribe(consts.Jobs); err != nil {
-		return err
-	}
+	ds.Subscribe(consts.Jobs)
 
 	for {
 		select {

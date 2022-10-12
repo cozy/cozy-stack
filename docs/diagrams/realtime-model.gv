@@ -4,19 +4,23 @@ digraph realtime {
 	edge [color="#32363F"];
 	ranksep=0.45; nodesep=0.6;
 
-	sub [label="{<0>Subscriber|<1>prefixer (prefixer.Prefixer)|<2>Channel (EventsChan)|<3>hub (Hub)|<4>topics (map[string]struct)}", shape="record"]
 	redisHub [label="{<0>redisHub|<1>cli (redis client)|<2>mem (*memHub)|<3>firehose (*topic)}", shape="record"];
-	memHub [label="{<0>memHub|<1>mutex (RWMutex)|<2>topics (map[string]*topic)}", shape="record"]
-	topic [label="{<0>topic|<1>broadcast (chan)|<2>subs (map[*EventsChan]filter)}", shape="record"];
+	memHub [label="{<0>memHub|<1>mutex (RWMutex)|<2>topics (map[string]*topic)|<3>bySubscribers (map[*Subscriber][]string)}", shape="record"]
+	topic [label="{<0>topic|<1>broadcast (chan)|<2>subs (map[*Subscriber]filter)|<3>subscribe (chan *toWatch)|<4>unsubscribe (chan *toWatch)|<5>running (chan bool)}", shape="record"];
+	sub [label="{<0>Subscriber|<1>prefixer (prefixer.Prefixer)|<2>Channel (EventsChan)|<3>hub (Hub)|<4>running (chan)}", shape="record"]
 	memSub [label="{<0>EventsChan (chan)}", shape="record"]
 	filter [label="{<0>filter|<1>whole (bool)|<2>ids ([]string)}", shape="record"]
+	toWatch [label="{<0>toWatch|<1>sub (*Subscriber)|<2>id (string)}", shape="record"]
 
 	sub:2 -> memSub;
 	sub:3 -> redisHub;
-	sub:4 -> topic;
 	redisHub:2 -> memHub;
 	redisHub:3 -> topic;
 	memHub:2 -> topic;
-	topic:2 -> memSub;
+	memHub:3 -> sub;
+	topic:2 -> sub;
 	topic:2 -> filter;
+	topic:3 -> toWatch;
+	topic:4 -> toWatch;
+	toWatch:1 -> sub;
 }

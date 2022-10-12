@@ -10,11 +10,15 @@ var globalPrefixer = prefixer.NewPrefixer(prefixer.GlobalCouchCluster, "", "*")
 
 type memHub struct {
 	sync.RWMutex
-	topics map[string]*topic
+	topics        map[string]*topic
+	bySubscribers map[*Subscriber][]string // the list of topic keys by subscriber
 }
 
 func newMemHub() *memHub {
-	return &memHub{topics: make(map[string]*topic)}
+	return &memHub{
+		topics:        make(map[string]*topic),
+		bySubscribers: make(map[*Subscriber][]string),
+	}
 }
 
 func (h *memHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
@@ -22,9 +26,14 @@ func (h *memHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	defer h.RUnlock()
 
 	e := newEvent(db, verb, doc, oldDoc)
-	it := h.topics[topicKey(db, doc.DocType())]
+	key := topicKey(db, doc.DocType())
+	it := h.topics[key]
 	if it != nil {
-		it.broadcast <- e
+		select {
+		case it.broadcast <- e:
+		case <-it.running:
+			delete(h.topics, key)
+		}
 	}
 	it = h.topics[topicKey(globalPrefixer, "*")]
 	if it != nil {
@@ -47,103 +56,120 @@ func (h *memHub) subscribe(sub *Subscriber, key string) {
 	h.Lock()
 	defer h.Unlock()
 
-	if sub.closed() {
-		return
+	h.addTopic(sub, key)
+
+	w := &toWatch{sub, ""}
+	for {
+		it, exists := h.topics[key]
+		if !exists {
+			it = newTopic()
+			h.topics[key] = it
+		}
+
+		select {
+		case it.subscribe <- w:
+			return
+		case <-it.running:
+			delete(h.topics, key)
+		}
 	}
-
-	it, exists := h.topics[key]
-	if !exists {
-		it = newTopic()
-		h.topics[key] = it
-	}
-
-	it.subs[&sub.Channel] = filter{whole: true}
-
-	sub.addTopic(key)
 }
 
 func (h *memHub) unsubscribe(sub *Subscriber, key string) {
 	h.Lock()
 	defer h.Unlock()
 
-	if sub.closed() {
-		return
-	}
-
 	it, exists := h.topics[key]
 	if !exists {
 		return
 	}
 
-	delete(it.subs, &sub.Channel)
-	if len(it.subs) == 0 {
-		delete(h.topics, key)
-		close(it.broadcast)
-	}
+	h.removeTopic(sub, key)
 
-	sub.removeTopic(key)
+	w := &toWatch{sub, ""}
+	select {
+	case it.unsubscribe <- w:
+		if running := <-it.running; !running {
+			delete(h.topics, key)
+		}
+	case <-it.running:
+		delete(h.topics, key)
+	}
 }
 
 func (h *memHub) watch(sub *Subscriber, key, id string) {
 	h.Lock()
 	defer h.Unlock()
 
-	if sub.closed() {
-		return
-	}
+	h.addTopic(sub, key)
 
-	it, exists := h.topics[key]
-	if !exists {
-		it = newTopic()
-		h.topics[key] = it
-	}
+	w := &toWatch{sub, id}
+	for {
+		it, exists := h.topics[key]
+		if !exists {
+			it = newTopic()
+			h.topics[key] = it
+		}
 
-	f := it.subs[&sub.Channel]
-	if f.whole {
-		return
+		select {
+		case it.subscribe <- w:
+			return
+		case <-it.running:
+			delete(h.topics, key)
+		}
 	}
-	f.ids = append(f.ids, id)
-	it.subs[&sub.Channel] = f
-
-	sub.addTopic(key)
 }
 
 func (h *memHub) unwatch(sub *Subscriber, key, id string) {
 	h.Lock()
 	defer h.Unlock()
 
-	if sub.closed() {
-		return
-	}
-
 	it, exists := h.topics[key]
 	if !exists {
 		return
 	}
 
-	f := it.subs[&sub.Channel]
-	if f.whole {
-		return
+	w := &toWatch{sub, id}
+	select {
+	case it.unsubscribe <- w:
+		if running := <-it.running; !running {
+			delete(h.topics, key)
+		}
+	case <-it.running:
+		delete(h.topics, key)
 	}
-	ids := f.ids[:0]
-	for i := range f.ids {
-		if f.ids[i] != id {
-			ids = append(ids, f.ids[i])
+}
+
+func (h *memHub) close(sub *Subscriber) {
+	h.Lock()
+	list := h.bySubscribers[sub]
+	h.Unlock()
+
+	for _, key := range list {
+		h.unsubscribe(sub, key)
+	}
+}
+
+func (h *memHub) addTopic(sub *Subscriber, key string) {
+	list := h.bySubscribers[sub]
+	for _, k := range list {
+		if k == key {
+			return
 		}
 	}
-	if len(ids) > 0 {
-		f.ids = ids
-		it.subs[&sub.Channel] = f
-		return
-	}
+	list = append(list, key)
+	h.bySubscribers[sub] = list
+}
 
-	delete(it.subs, &sub.Channel)
-	if len(it.subs) == 0 {
-		delete(h.topics, key)
-		close(it.broadcast)
+func (h *memHub) removeTopic(sub *Subscriber, key string) {
+	list := h.bySubscribers[sub]
+	kept := list[:0]
+	for _, k := range list {
+		if k != key {
+			kept = append(kept, k)
+		}
 	}
-
-	sub.removeTopic(key)
+	h.bySubscribers[sub] = kept
 }
 
 func topicKey(db prefixer.Prefixer, doctype string) string {

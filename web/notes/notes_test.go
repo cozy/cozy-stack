@@ -506,8 +506,7 @@ func TestPutTelepointer(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		sub := realtime.GetHub().Subscriber(inst)
-		err := sub.Subscribe(consts.NotesEvents)
-		assert.NoError(t, err)
+		sub.Subscribe(consts.NotesEvents)
 		wg.Done()
 		e := <-sub.Channel
 		assert.Equal(t, "UPDATED", e.Verb)

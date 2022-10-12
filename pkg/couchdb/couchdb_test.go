@@ -416,7 +416,7 @@ func TestMain(m *testing.M) {
 
 	receivedEvents = make(map[string]*realtime.Event)
 	eventChan := realtime.GetHub().Subscriber(TestPrefix)
-	_ = eventChan.Subscribe(TestDoctype)
+	eventChan.Subscribe(TestDoctype)
 	go func() {
 		for ev := range eventChan.Channel {
 			receivedEventsMutex.Lock()

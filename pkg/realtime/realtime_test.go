@@ -31,10 +31,8 @@ func TestMemRealtime(t *testing.T) {
 	c3 := h.SubscribeFirehose()
 	wg := sync.WaitGroup{}
 
-	err := c1.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
-	err = c2.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
+	c1.Subscribe("io.cozy.testobject")
+	c2.Subscribe("io.cozy.testobject")
 
 	wg.Add(1)
 	go func() {
@@ -70,27 +68,19 @@ func TestMemRealtime(t *testing.T) {
 
 	wg.Wait()
 
-	err = c1.Close()
-	assert.NoError(t, err)
-	err = c2.Close()
-	assert.NoError(t, err)
-	err = c3.Close()
-	assert.NoError(t, err)
+	c1.Close()
+	c2.Close()
+	c3.Close()
 
-	err = c1.Close()
-	assert.Error(t, err)
+	c1.Close()
 
 	h.Publish(testingDB, EventCreate, &testDoc{doctype: "io.cozy.testobject", id: "nobodywillseeme"}, nil)
-
 	h.Publish(testingDB, EventCreate, &testDoc{doctype: "io.cozy.testobject", id: "meneither"}, nil)
-
 	time.Sleep(1 * time.Millisecond)
 
 	c4 := h.Subscriber(testingDB)
-	err = c4.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
-	err = c4.Subscribe("io.cozy.testobject2")
-	assert.NoError(t, err)
+	c4.Subscribe("io.cozy.testobject")
+	c4.Subscribe("io.cozy.testobject2")
 
 	wg.Add(2)
 	go func() {
@@ -126,10 +116,8 @@ func TestWatch(t *testing.T) {
 	c1 := h.Subscriber(testingDB)
 	wg := sync.WaitGroup{}
 
-	err := c1.Watch("io.cozy.testobject", "id1")
-	assert.NoError(t, err)
-	err = c1.Watch("io.cozy.testobject", "id2")
-	assert.NoError(t, err)
+	c1.Watch("io.cozy.testobject", "id1")
+	c1.Watch("io.cozy.testobject", "id2")
 
 	wg.Add(1)
 	go func() {
@@ -164,8 +152,7 @@ func TestWatch(t *testing.T) {
 
 	wg.Wait()
 
-	err = c1.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
+	c1.Subscribe("io.cozy.testobject")
 
 	wg.Add(1)
 	go func() {
@@ -204,8 +191,7 @@ func TestWatch(t *testing.T) {
 
 	wg.Wait()
 
-	err = c1.Close()
-	assert.NoError(t, err)
+	c1.Close()
 }
 
 func TestRedisRealtime(t *testing.T) {
@@ -218,10 +204,8 @@ func TestRedisRealtime(t *testing.T) {
 	c3 := h.SubscribeFirehose()
 	wg := sync.WaitGroup{}
 
-	err = c1.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
-	err = c2.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
+	c1.Subscribe("io.cozy.testobject")
+	c2.Subscribe("io.cozy.testobject")
 
 	wg.Add(1)
 	go func() {
@@ -260,15 +244,11 @@ func TestRedisRealtime(t *testing.T) {
 
 	wg.Wait()
 
-	err = c1.Close()
-	assert.NoError(t, err)
-	err = c2.Close()
-	assert.NoError(t, err)
-	err = c3.Close()
-	assert.NoError(t, err)
+	c1.Close()
+	c2.Close()
+	c3.Close()
 
-	err = c1.Close()
-	assert.Error(t, err)
+	c1.Close()
 
 	h.Publish(testingDB, EventCreate, &testDoc{
 		doctype: "io.cozy.testobject",
@@ -283,10 +263,8 @@ func TestRedisRealtime(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	c4 := h.Subscriber(testingDB)
-	err = c4.Subscribe("io.cozy.testobject")
-	assert.NoError(t, err)
-	err = c4.Subscribe("io.cozy.testobject2")
-	assert.NoError(t, err)
+	c4.Subscribe("io.cozy.testobject")
+	c4.Subscribe("io.cozy.testobject2")
 
 	wg.Add(2)
 	go func() {
