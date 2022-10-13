@@ -3,6 +3,7 @@ package realtime
 import (
 	"sync"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -31,8 +32,12 @@ func (h *memHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	if it != nil {
 		select {
 		case it.broadcast <- e:
-		case <-it.running:
-			delete(h.topics, key)
+		case running := <-it.running:
+			logger.WithNamespace("realtime").
+				Warnf("unexpected state: publish with running=%v", running)
+			if !running {
+				delete(h.topics, key)
+			}
 		}
 	}
 	it = h.topics[topicKey(globalPrefixer, "*")]
@@ -69,8 +74,12 @@ func (h *memHub) subscribe(sub *Subscriber, key string) {
 		select {
 		case it.subscribe <- w:
 			return
-		case <-it.running:
-			delete(h.topics, key)
+		case running := <-it.running:
+			logger.WithNamespace("realtime").
+				Warnf("unexpected state: subscribe with running=%v", running)
+			if !running {
+				delete(h.topics, key)
+			}
 		}
 	}
 }
@@ -92,8 +101,12 @@ func (h *memHub) unsubscribe(sub *Subscriber, key string) {
 		if running := <-it.running; !running {
 			delete(h.topics, key)
 		}
-	case <-it.running:
-		delete(h.topics, key)
+	case running := <-it.running:
+		logger.WithNamespace("realtime").
+			Warnf("unexpected state: unsubscribe with running=%v", running)
+		if !running {
+			delete(h.topics, key)
+		}
 	}
 }
 
@@ -114,8 +127,12 @@ func (h *memHub) watch(sub *Subscriber, key, id string) {
 		select {
 		case it.subscribe <- w:
 			return
-		case <-it.running:
-			delete(h.topics, key)
+		case running := <-it.running:
+			logger.WithNamespace("realtime").
+				Warnf("unexpected state: watch with running=%v", running)
+			if !running {
+				delete(h.topics, key)
+			}
 		}
 	}
 }
@@ -135,8 +152,12 @@ func (h *memHub) unwatch(sub *Subscriber, key, id string) {
 		if running := <-it.running; !running {
 			delete(h.topics, key)
 		}
-	case <-it.running:
-		delete(h.topics, key)
+	case running := <-it.running:
+		logger.WithNamespace("realtime").
+			Warnf("unexpected state: unwatch with running=%v", running)
+		if !running {
+			delete(h.topics, key)
+		}
 	}
 }
 
