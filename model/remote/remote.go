@@ -97,6 +97,11 @@ type Request struct {
 	ContentType   string            `json:"content_type"`
 	Variables     map[string]string `json:"variables"`
 	CreatedAt     time.Time         `json:"created_at"`
+	CozyMetadata  CozyMetadata      `json:"cozyMetadata"`
+}
+
+type CozyMetadata struct {
+	CreatedByApp string `json:"createdByApp,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -351,7 +356,12 @@ func injectVariables(remote *Remote, vars map[string]string) error {
 }
 
 // ProxyTo calls the external website and proxy the response
-func (remote *Remote) ProxyTo(ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
+func (remote *Remote) ProxyTo(
+	ins *instance.Instance,
+	rw http.ResponseWriter,
+	in *http.Request,
+	slug string,
+) error {
 	vars, err := extractVariables(remote.Verb, in)
 	if err != nil {
 		log.Infof("Error on extracting variables: %s", err)
@@ -419,6 +429,7 @@ func (remote *Remote) ProxyTo(ins *instance.Instance, rw http.ResponseWriter, in
 		ContentType:   ctype,
 		Variables:     vars,
 		CreatedAt:     time.Now(),
+		CozyMetadata:  CozyMetadata{CreatedByApp: slug},
 	}
 	err = couchdb.CreateDoc(ins, logged)
 	if err != nil {

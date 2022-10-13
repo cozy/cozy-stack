@@ -1,6 +1,8 @@
 package remote
 
 import (
+	"strings"
+
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/remote"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -10,7 +12,8 @@ import (
 
 func remoteGet(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
+	slug, err := allowWholeType(c, permission.GET, doctype)
+	if err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)
@@ -21,7 +24,7 @@ func remoteGet(c echo.Context) error {
 	if remote.Verb != "GET" {
 		return jsonapi.MethodNotAllowed("GET")
 	}
-	err = remote.ProxyTo(instance, c.Response(), c.Request())
+	err = remote.ProxyTo(instance, c.Response(), c.Request(), slug)
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
@@ -30,7 +33,8 @@ func remoteGet(c echo.Context) error {
 
 func remotePost(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
+	slug, err := allowWholeType(c, permission.POST, doctype)
+	if err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)
@@ -41,7 +45,7 @@ func remotePost(c echo.Context) error {
 	if remote.Verb != "POST" {
 		return jsonapi.MethodNotAllowed("POST")
 	}
-	err = remote.ProxyTo(instance, c.Response(), c.Request())
+	err = remote.ProxyTo(instance, c.Response(), c.Request(), slug)
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
@@ -82,4 +86,19 @@ func wrapRemoteErr(err error) error {
 		return jsonapi.NotFound(err)
 	}
 	return err
+}
+
+func allowWholeType(c echo.Context, v permission.Verb, doctype string) (string, error) {
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return "", err
+	}
+	if !pdoc.Permissions.AllowWholeType(v, doctype) {
+		return "", middlewares.ErrForbidden
+	}
+	slug := ""
+	if parts := strings.SplitN(pdoc.SourceID, "/", 2); len(parts) > 1 {
+		slug = parts[1]
+	}
+	return slug, nil
 }
