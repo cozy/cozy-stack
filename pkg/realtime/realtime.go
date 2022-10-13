@@ -79,6 +79,7 @@ type Hub interface {
 	unsubscribe(sub *Subscriber, key string)
 	watch(sub *Subscriber, key, id string)
 	unwatch(sub *Subscriber, key, id string)
+	close(sub *Subscriber)
 }
 
 var globalHubMu sync.Mutex

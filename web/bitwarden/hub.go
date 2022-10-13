@@ -148,21 +148,9 @@ func readPump(notifier *wsNotifier) {
 			Infof("Unexpected message: %v", msg)
 		return
 	}
-	if err := ds.Watch(consts.Settings, consts.BitwardenSettingsID); err != nil {
-		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-			Infof("Subscribe error: %s", err)
-		return
-	}
-	if err := ds.Subscribe(consts.BitwardenFolders); err != nil {
-		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-			Infof("Subscribe error: %s", err)
-		return
-	}
-	if err := ds.Subscribe(consts.BitwardenCiphers); err != nil {
-		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-			Infof("Subscribe error: %s", err)
-		return
-	}
+	ds.Watch(consts.Settings, consts.BitwardenSettingsID)
+	ds.Subscribe(consts.BitwardenFolders)
+	ds.Subscribe(consts.BitwardenCiphers)
 	notifier.Responses <- initialResponse
 
 	// Just send back the pings from the client

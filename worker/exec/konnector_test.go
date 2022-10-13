@@ -146,13 +146,12 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
-		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
+		evCh.Subscribe(consts.JobEvents)
 		wg.Done()
 		ch := evCh.Channel
 		ev1 := <-ch
 		ev2 := <-ch
-		err = evCh.Close()
-		assert.NoError(t, err)
+		evCh.Close()
 		doc1 := ev1.Doc.(*couchdb.JSONDoc)
 		doc2 := ev2.Doc.(*couchdb.JSONDoc)
 
@@ -258,12 +257,11 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
-		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
+		evCh.Subscribe(consts.JobEvents)
 		wg.Done()
 		ch := evCh.Channel
 		ev1 := <-ch
-		err = evCh.Close()
-		assert.NoError(t, err)
+		evCh.Close()
 		doc1 := ev1.Doc.(*couchdb.JSONDoc)
 
 		assert.Equal(t, inst.Domain, ev1.Domain)
@@ -336,12 +334,12 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
-		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
+		evCh.Subscribe(consts.JobEvents)
 		wg.Done()
 
 		ch := evCh.Channel
 		ev := <-ch
-		assert.NoError(t, evCh.Close())
+		evCh.Close()
 		assert.Equal(t, inst.Domain, ev.Domain)
 		wg.Done()
 	}()

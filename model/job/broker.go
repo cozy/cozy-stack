@@ -262,9 +262,7 @@ func (j *Job) Create() error {
 func (j *Job) WaitUntilDone(db prefixer.Prefixer) error {
 	sub := realtime.GetHub().Subscriber(db)
 	defer sub.Close()
-	if err := sub.Watch(j.DocType(), j.ID()); err != nil {
-		return err
-	}
+	sub.Watch(j.DocType(), j.ID())
 	timeout := time.After(10 * time.Minute)
 	for {
 		select {

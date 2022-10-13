@@ -216,22 +216,16 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 
 		if method == "SUBSCRIBE" {
 			if cmd.Payload.ID == "" {
-				err = ds.Subscribe(cmd.Payload.Type)
+				ds.Subscribe(cmd.Payload.Type)
 			} else {
-				err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
+				ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
 			}
 		} else if method == "UNSUBSCRIBE" {
 			if cmd.Payload.ID == "" {
-				err = ds.Unsubscribe(cmd.Payload.Type)
+				ds.Unsubscribe(cmd.Payload.Type)
 			} else {
-				err = ds.Unwatch(cmd.Payload.Type, cmd.Payload.ID)
+				ds.Unwatch(cmd.Payload.Type, cmd.Payload.ID)
 			}
-		}
-		if err != nil {
-			logger.
-				WithDomain(ds.DomainName()).
-				WithNamespace("realtime").
-				Warnf("Error: %s", err)
 		}
 	}
 }

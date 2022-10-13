@@ -142,19 +142,17 @@ func (h *redisHub) Subscriber(db prefixer.Prefixer) *Subscriber {
 
 func (h *redisHub) SubscribeFirehose() *Subscriber {
 	sub := newSubscriber(h, globalPrefixer)
-	key := topicKey(sub, "*")
-	h.subscribe(sub, key)
+	h.firehose.subscribe <- &toWatch{sub, ""}
 	return sub
 }
 
 func (h *redisHub) subscribe(sub *Subscriber, key string) {
-	h.firehose.subs[&sub.Channel] = filter{whole: true}
-	sub.addTopic(key)
+	panic("not reachable code")
 }
 
 func (h *redisHub) unsubscribe(sub *Subscriber, key string) {
-	delete(h.firehose.subs, &sub.Channel)
-	sub.removeTopic(key)
+	h.firehose.unsubscribe <- &toWatch{sub, ""}
+	<-h.firehose.running
 }
 
 func (h *redisHub) watch(sub *Subscriber, key, id string) {
@@ -163,6 +161,10 @@ func (h *redisHub) watch(sub *Subscriber, key, id string) {
 
 func (h *redisHub) unwatch(sub *Subscriber, key, id string) {
 	panic("not reachable code")
+}
+
+func (h *redisHub) close(sub *Subscriber) {
+	h.unsubscribe(sub, "*")
 }
 
 var _ Doc = (*JSONDoc)(nil)
