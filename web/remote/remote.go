@@ -1,14 +1,29 @@
 package remote
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/remote"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+func allDoctypes(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Doctypes); err != nil {
+		return wrapRemoteErr(err)
+	}
+
+	inst := middlewares.GetInstance(c)
+	doctypes, err := remote.ListDoctypes(inst)
+	if err != nil {
+		return wrapRemoteErr(err)
+	}
+	return c.JSON(http.StatusOK, doctypes)
+}
 
 func remoteGet(c echo.Context) error {
 	doctype := c.Param("doctype")
@@ -63,6 +78,7 @@ func remoteAsset(c echo.Context) error {
 
 // Routes set the routing for the remote service
 func Routes(router *echo.Group) {
+	router.GET("/_all_doctypes", allDoctypes)
 	router.GET("/:doctype", remoteGet)
 	router.POST("/:doctype", remotePost)
 	router.GET("/assets/:asset-name", remoteAsset)
