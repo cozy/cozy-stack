@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -47,6 +48,8 @@ func TestRemoteGET(t *testing.T) {
 	vars := logged["variables"].(map[string]interface{})
 	assert.Equal(t, "Q42", vars["entity"].(string))
 	assert.Equal(t, "foo", vars["comment"].(string))
+	meta, _ := logged["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, "answers", meta["createdByApp"])
 }
 
 func TestMain(m *testing.M) {
@@ -55,8 +58,39 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "remote_test")
 
 	testInstance = setup.GetTestInstance()
-	_, token = setup.GetTestClient("org.wikidata.entity")
+	token = generateAppToken(testInstance, "answers", "org.wikidata.entity")
 
 	ts = setup.GetTestServer("/remote", Routes)
 	os.Exit(setup.Run())
+}
+
+func generateAppToken(inst *instance.Instance, slug, doctype string) string {
+	rules := permission.Set{
+		permission.Rule{
+			Type:  doctype,
+			Verbs: permission.ALL,
+		},
+	}
+	permReq := permission.Permission{
+		Permissions: rules,
+		Type:        permission.TypeWebapp,
+		SourceID:    consts.Apps + "/" + slug,
+	}
+	err := couchdb.CreateDoc(inst, &permReq)
+	if err != nil {
+		return ""
+	}
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":         consts.Apps + "/" + slug,
+			"slug":        slug,
+			"permissions": rules,
+		},
+	}
+	err = couchdb.CreateNamedDocWithDB(inst, manifest)
+	if err != nil {
+		return ""
+	}
+	return inst.BuildAppToken(slug, "")
 }

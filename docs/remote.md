@@ -151,6 +151,26 @@ JSON or XML are accepted. Other content-types are blocked the time to evaluate
 if they are useful and their security implication (javascript is probably not
 something we want to allow).
 
+### GET `/remote/_all_doctypes`
+
+This endpoint lists all the known remote doctypes. A permission on
+`io.cozy.doctypes` for `GET` is needed to query this endoint.
+
+Example:
+
+```http
+GET /remote/_all_doctypes HTTP/1.1
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+["cc.cozycloud.dacc", "cc.cozycloud.errors", "org.wikidata.entity", "org.wikidata.search"]
+```
+
 ### GET `/remote/assets/:asset-name`
 
 The client application can fetch a list of predefined assets via this route. The
