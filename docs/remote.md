@@ -153,7 +153,7 @@ something we want to allow).
 
 ### GET `/remote/_all_doctypes`
 
-This endpoint list all the known remote doctypes. A permission on
+This endpoint lists all the known remote doctypes. A permission on
 `io.cozy.doctypes` for `GET` is needed to query this endoint.
 
 Example:
