@@ -337,6 +337,27 @@ done, the konnector is uninstalled again.
 	},
 }
 
+var serviceTriggersFixer = &cobra.Command{
+	Use:   "service-triggers <domain>",
+	Short: "Clean the duplicate triggers for webapp services",
+	Long: `
+This fixer cleans duplicate triggers for webapp services.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/service-triggers", domain)
+		_, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
+		return err
+	},
+}
+
 var indexesFixer = &cobra.Command{
 	Use:   "indexes <domain>",
 	Short: "Rebuild the CouchDB views and indexes",
@@ -371,6 +392,7 @@ func init() {
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
 	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
+	fixerCmdGroup.AddCommand(serviceTriggersFixer)
 	fixerCmdGroup.AddCommand(indexesFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
