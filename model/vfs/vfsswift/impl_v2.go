@@ -82,6 +82,10 @@ func makeDocID(objName string) string {
 	return objName[:22] + objName[23:28] + objName[29:]
 }
 
+func (sfs *swiftVFSV2) MaxFileSize() int64 {
+	return maxFileSize
+}
+
 func (sfs *swiftVFSV2) DBCluster() int {
 	return sfs.cluster
 }

@@ -777,6 +777,37 @@ func TestConflictName(t *testing.T) {
 	assert.Equal(t, "existing (copy) (2)", newname)
 }
 
+func TestCheckAvailableSpace(t *testing.T) {
+	diskQuota = 0
+
+	doc, err := vfs.NewFileDoc("toto", consts.RootDirID, 100, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
+	require.NoError(t, err)
+	_, _, _, err = vfs.CheckAvailableDiskSpace(fs, doc)
+	require.NoError(t, err)
+
+	diskQuota = 100
+
+	doc, err = vfs.NewFileDoc("toto", consts.RootDirID, 100, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
+	require.NoError(t, err)
+	_, _, _, err = vfs.CheckAvailableDiskSpace(fs, doc)
+	require.NoError(t, err)
+
+	doc, err = vfs.NewFileDoc("toto", consts.RootDirID, 101, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
+	require.NoError(t, err)
+	_, _, _, err = vfs.CheckAvailableDiskSpace(fs, doc)
+	assert.Error(t, err)
+	assert.Equal(t, vfs.ErrFileTooBig, err)
+
+	maxFileSize := fs.MaxFileSize()
+	if maxFileSize > 0 {
+		doc, err = vfs.NewFileDoc("toto", consts.RootDirID, maxFileSize+1, nil, "foo/bar", "foo", time.Now(), false, false, false, []string{})
+		require.NoError(t, err)
+		_, _, _, err = vfs.CheckAvailableDiskSpace(fs, doc)
+		assert.Error(t, err)
+		assert.Equal(t, vfs.ErrFileTooBig, err)
+	}
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 

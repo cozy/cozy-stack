@@ -65,6 +65,10 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 	}, nil
 }
 
+func (sfs *swiftVFS) MaxFileSize() int64 {
+	return maxFileSize
+}
+
 func (sfs *swiftVFS) DBCluster() int {
 	return sfs.cluster
 }

@@ -91,6 +91,10 @@ func makeDocIDV3(objName string) (string, string) {
 	return objName[:22] + objName[23:28] + objName[29:34], objName[35:]
 }
 
+func (sfs *swiftVFSV3) MaxFileSize() int64 {
+	return maxFileSize
+}
+
 func (sfs *swiftVFSV3) DBCluster() int {
 	return sfs.cluster
 }
@@ -181,23 +185,9 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	}
 	defer sfs.mu.Unlock()
 
-	diskQuota := sfs.DiskQuota()
-
-	var maxsize, newsize, capsize int64
-	maxsize = maxFileSize
-	newsize = newdoc.ByteSize
-	if diskQuota > 0 {
-		diskUsage, err := sfs.DiskUsage()
-		if err != nil {
-			return nil, err
-		}
-		maxsize = diskQuota - diskUsage
-		if maxsize > maxFileSize {
-			maxsize = maxFileSize
-		}
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
-			capsize = quotaBytes - diskUsage
-		}
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(sfs, newdoc)
+	if err != nil {
+		return nil, err
 	}
 	if newsize > maxsize {
 		return nil, vfs.ErrFileTooBig
@@ -259,32 +249,15 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	}, nil
 }
 
-func (sfs *swiftVFSV3) CopyFile(olddoc, newdoc *vfs.FileDoc) (err error) {
+func (sfs *swiftVFSV3) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
 
-	diskQuota := sfs.DiskQuota()
-
-	var maxsize, newsize, capsize int64
-	maxsize = maxFileSize
-	newsize = olddoc.ByteSize
-	if diskQuota > 0 {
-		diskUsage, err := sfs.DiskUsage()
-		if err != nil {
-			return err
-		}
-		maxsize = diskQuota - diskUsage
-		if maxsize > maxFileSize {
-			maxsize = maxFileSize
-		}
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
-			capsize = quotaBytes - diskUsage
-		}
-	}
-	if newsize > maxsize {
-		return vfs.ErrFileTooBig
+	newsize, _, capsize, err := vfs.CheckAvailableDiskSpace(sfs, olddoc)
+	if err != nil {
+		return err
 	}
 
 	if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {

@@ -74,6 +74,9 @@ type Fs interface {
 	InitFs() error
 	Delete() error
 
+	// Maximum file size
+	MaxFileSize() int64
+
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
@@ -891,6 +894,32 @@ func CreateFileDocCopy(doc *FileDoc, copyName string) *FileDoc {
 	newdoc.Metadata.RemoveCertifiedMetadata()
 
 	return newdoc
+}
+
+func CheckAvailableDiskSpace(fs VFS, doc *FileDoc) (newsize, maxsize, capsize int64, err error) {
+	newsize = doc.ByteSize
+
+	maxsize = fs.MaxFileSize()
+	if maxsize > 0 && newsize > maxsize {
+		return 0, 0, 0, ErrFileTooBig
+	}
+
+	diskQuota := fs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := fs.DiskUsage()
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		maxsize = diskQuota - diskUsage
+		if newsize > maxsize {
+			return 0, 0, 0, ErrFileTooBig
+		}
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
+		}
+	}
+
+	return newsize, maxsize, capsize, nil
 }
 
 // conflictName generates a new name for a file/folder in conflict with another

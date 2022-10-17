@@ -93,6 +93,10 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 	}, nil
 }
 
+func (afs *aferoVFS) MaxFileSize() int64 {
+	return -1 // no limit
+}
+
 func (afs *aferoVFS) DBCluster() int {
 	return afs.cluster
 }
@@ -186,23 +190,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 	}
 	defer afs.mu.Unlock()
 
-	diskQuota := afs.DiskQuota()
-
-	var maxsize, newsize, capsize int64
-	maxsize = -1 // no limit
-	newsize = newdoc.ByteSize
-	if diskQuota > 0 {
-		diskUsage, err := afs.DiskUsage()
-		if err != nil {
-			return nil, err
-		}
-		maxsize = diskQuota - diskUsage
-		if newsize > maxsize {
-			return nil, vfs.ErrFileTooBig
-		}
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
-			capsize = quotaBytes - diskUsage
-		}
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(afs, newdoc)
+	if err != nil {
+		return nil, err
 	}
 
 	if olddoc != nil {
@@ -275,23 +265,9 @@ func (afs *aferoVFS) CopyFile(olddoc, newdoc *vfs.FileDoc) (err error) {
 	}
 	defer afs.mu.Unlock()
 
-	diskQuota := afs.DiskQuota()
-
-	var maxsize, newsize, capsize int64
-	maxsize = -1 // no limit
-	newsize = olddoc.ByteSize
-	if diskQuota > 0 {
-		diskUsage, err := afs.DiskUsage()
-		if err != nil {
-			return err
-		}
-		maxsize = diskQuota - diskUsage
-		if newsize > maxsize {
-			return vfs.ErrFileTooBig
-		}
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
-			capsize = quotaBytes - diskUsage
-		}
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(afs, olddoc)
+	if err != nil {
+		return err
 	}
 
 	f, err := afero.TempFile(afs.fs, "/", newdoc.DocName)
