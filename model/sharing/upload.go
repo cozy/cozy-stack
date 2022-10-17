@@ -212,6 +212,8 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 			return nil, 0, since, err
 		}
 		if len(results) == 0 {
+			inst.Logger().WithNamespace("upload").
+				Warnf("missing results for bulk get %v", query)
 			return nil, 0, since, ErrInternalServerError
 		}
 		return results[0], int(idx), since, nil
@@ -266,6 +268,8 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
+			inst.Logger().WithNamespace("upload").
+				Warnf("%s got response %d", opts.Path, res.StatusCode)
 			return ErrInternalServerError
 		}
 		return err
@@ -291,7 +295,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	defer content.Close()
 
-	res2, err := request.Req(&request.Options{
+	opts2 := &request.Options{
 		Method:  http.MethodPut,
 		Scheme:  u.Scheme,
 		Domain:  u.Host,
@@ -303,9 +307,12 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		},
 		Body:   content,
 		Client: http.DefaultClient,
-	})
+	}
+	res2, err := request.Req(opts2)
 	if err != nil {
 		if res2 != nil && res2.StatusCode/100 == 5 {
+			inst.Logger().WithNamespace("upload").
+				Warnf("%s got response %d", opts2.Path, res2.StatusCode)
 			return ErrInternalServerError
 		}
 		return err
