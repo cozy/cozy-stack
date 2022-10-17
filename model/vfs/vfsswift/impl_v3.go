@@ -829,6 +829,9 @@ func (f *swiftFileCreationV3) Close() (err error) {
 
 	if v != nil {
 		actionV, toClean, _ := vfs.FindVersionsToClean(f.fs, newdoc.DocID, v)
+		if bytes.Equal(newdoc.MD5Sum, olddoc.MD5Sum) {
+			actionV = vfs.CleanCandidateVersion
+		}
 		if actionV == vfs.KeepCandidateVersion {
 			if errv := f.fs.Indexer.CreateVersion(v); errv != nil {
 				actionV = vfs.CleanCandidateVersion
