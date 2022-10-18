@@ -10,7 +10,7 @@ on:
       - 'docs/**'
 jobs:
   integration:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     services:
       mailhog:
         image: mailhog/mailhog
@@ -25,16 +25,19 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${VERSION_CODENAME} main" | sudo tee /etc/apt/sources.list.d/couchdb.list
           sudo apt-get update
           sudo debconf-set-selections <<-EOF
-          	couchdb couchdb/mode select standalone
-          	couchdb couchdb/mode seen true
-          	couchdb couchdb/bindaddress string 127.0.0.1
-          	couchdb couchdb/bindaddress seen true
-          	couchdb couchdb/adminpass password
-          	couchdb couchdb/adminpass seen true
-          	couchdb couchdb/adminpass_again password
-          	couchdb couchdb/adminpass_again seen true
+                couchdb couchdb/mode select standalone
+                couchdb couchdb/mode seen true
+                couchdb couchdb/bindaddress string 127.0.0.1
+                couchdb couchdb/bindaddress seen true
+                couchdb couchdb/adminpass password password
+                couchdb couchdb/adminpass seen true
+                couchdb couchdb/adminpass_again password password
+                couchdb couchdb/adminpass_again seen true
+                couchdb couchdb/cookie string elmo
+                couchdb couchdb/cookie seen true
           EOF
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=2.3.1*
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=3.2.2*
+          echo "COZY_COUCHDB_URL=http://admin:password@127.0.0.1:5984/" >> $GITHUB_ENV
       - name: Install Go
         uses: actions/setup-go@v3
         with:
@@ -47,7 +50,6 @@ jobs:
         uses: actions/checkout@v3
       - name: Install
         run: |
-          curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           go install
       - name: Test
