@@ -350,11 +350,19 @@ This fixer cleans duplicate triggers for webapp services.
 		domain := args[0]
 		c := newAdminClient()
 		path := fmt.Sprintf("/instances/%s/fixers/service-triggers", domain)
-		_, err := c.Req(&request.Options{
+		res, err := c.Req(&request.Options{
 			Method: "POST",
 			Path:   path,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		out, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(out))
+		return nil
 	},
 }
 

@@ -407,7 +407,10 @@ func serviceTriggersFixer(c echo.Context) error {
 		}
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusOK, echo.Map{
+		"Domain":               domain,
+		"DeletedTriggersCount": len(toDelete),
+	})
 }
 
 func indexesFixer(c echo.Context) error {
