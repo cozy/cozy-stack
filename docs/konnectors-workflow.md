@@ -680,7 +680,31 @@ type with the following parameter:
 - `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
 - `client_id`, with the client ID given by Budget Insight
 - `auth_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/fr/connect` (with the correct `domain`)
+- `manage_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/reconnect` (idem).
 - `reconnect_endpoint`, with `https://{domain}.biapi.pro/2.0/auth/webview/reconnect` (idem).
+
+#### Manage
+
+The [manage webview](https://docs.budget-insight.com/reference/webview#manage-connections)
+can be called with this route:
+
+```http
+GET /accounts/:accountType/:accountID/manage?code={code}&connection_id={id}&slug={slug}&state={state} HTTP/1.1
+Host: jane.cozy.example
+```
+
+```http
+HTTP/1.1 303 See Other
+Location: https://domain.biapi.pro/2.0/auth/webview/manage
+    ?client_id={client_id}
+    &code={code}
+    &connection_id={id}
+    &redirect_uri=https://oauthcallback.cozy.example/accounts/{accountType}/redirect
+    &state={stackState}
+```
+
+At the end of flow, the user will be redirected to
+`https://jane-{slug}.cozy.example/?state={state}`.
 
 #### Reconnect
 

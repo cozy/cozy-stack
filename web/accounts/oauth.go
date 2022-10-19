@@ -142,7 +142,7 @@ func redirect(c echo.Context) error {
 			return err
 		}
 
-		if state.ReconnectFlow {
+		if state.WebviewFlow {
 			return redirectToApp(c, i, nil, clientState, slug, "")
 		}
 
@@ -235,7 +235,42 @@ func refresh(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiAccount{&acc}, nil)
 }
 
-// reconnect can used to reconnect a user from BI
+// manage redirects the user to the BI webview allowing them to manage their
+// bank connections
+func manage(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	accountid := c.Param("accountid")
+
+	var acc account.Account
+	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &acc); err != nil {
+		return err
+	}
+
+	accountType, err := account.TypeInfo(acc.AccountType, instance.ContextName)
+	if err != nil {
+		return err
+	}
+
+	state, err := getStorage().Add(&stateHolder{
+		InstanceDomain: instance.Domain,
+		AccountType:    accountType.ServiceID(),
+		ClientState:    c.QueryParam("state"),
+		Slug:           c.QueryParam("slug"),
+		WebviewFlow:    true,
+	})
+	if err != nil {
+		return err
+	}
+
+	url, err := accountType.MakeManageURL(instance, state, c.QueryParams())
+	if err != nil {
+		return err
+	}
+
+	return c.Redirect(http.StatusSeeOther, url)
+}
+
+// reconnect can be used to reconnect a user from BI
 func reconnect(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	accountid := c.Param("accountid")
@@ -255,7 +290,7 @@ func reconnect(c echo.Context) error {
 		AccountType:    accountType.ServiceID(),
 		ClientState:    c.QueryParam("state"),
 		Slug:           c.QueryParam("slug"),
-		ReconnectFlow:  true,
+		WebviewFlow:    true,
 	})
 	if err != nil {
 		return err
@@ -359,6 +394,7 @@ func checkIDToken(c echo.Context) bool {
 func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 	router.GET("/:accountType/redirect", redirect)
+	router.GET("/:accountType/:accountid/manage", manage, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
 	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 }

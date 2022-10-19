@@ -74,6 +74,7 @@ type AccountType struct {
 	ClientID              string            `json:"client_id,omitempty"`
 	ClientSecret          string            `json:"client_secret,omitempty"`
 	AuthEndpoint          string            `json:"auth_endpoint,omitempty"`
+	ManageEndpoint        string            `json:"manage_endpoint,omitempty"`
 	ReconnectEndpoint     string            `json:"reconnect_endpoint,omitempty"`
 	TokenEndpoint         string            `json:"token_endpoint,omitempty"`
 	TokenAuthMode         string            `json:"token_mode,omitempty"`
@@ -382,6 +383,30 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	return nil
+}
+
+// MakeManageURL returns the url at which the user can be redirected to access
+// the BI manage webview
+func (at *AccountType) MakeManageURL(i *instance.Instance, state string, params url.Values) (string, error) {
+	switch at.GrantMode {
+	case BIWebauth, BIWebauthAndSecret, BIWebview, BIWebviewAndSecret:
+		// OK
+	default:
+		return "", errors.New("Wrong account type")
+	}
+
+	u, err := url.Parse(at.ManageEndpoint)
+	if err != nil {
+		return "", err
+	}
+	vv := u.Query()
+	vv.Add("client_id", at.ClientID)
+	vv.Add("code", params.Get("code"))
+	vv.Add("connection_id", params.Get("connection_id"))
+	vv.Add("redirect_uri", at.RedirectURI(i))
+	vv.Add("state", state)
+	u.RawQuery = vv.Encode()
+	return u.String(), nil
 }
 
 // MakeReconnectURL returns the url at which the user can be redirected for a

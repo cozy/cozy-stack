@@ -22,7 +22,7 @@ type stateHolder struct {
 	Nonce          string
 	Slug           string
 	ExpiresAt      int64
-	ReconnectFlow  bool
+	WebviewFlow    bool
 }
 
 type stateStorage interface {
