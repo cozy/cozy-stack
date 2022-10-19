@@ -304,6 +304,115 @@ func orphanAccountFixer(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+type serviceMessage struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+	// and some other fields not needed here
+}
+
+func serviceTriggersFixer(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	jobsSystem := job.System()
+	triggers, err := jobsSystem.GetAllTriggers(inst)
+	if err != nil {
+		return err
+	}
+	byApps := make(map[string][]job.Trigger)
+	for _, trigger := range triggers {
+		trigger := trigger
+		infos := trigger.Infos()
+		if infos.WorkerType != "service" {
+			continue
+		}
+		var msg serviceMessage
+		if err := json.Unmarshal(infos.Message, &msg); err != nil {
+			continue
+		}
+		list := byApps[msg.Slug]
+		list = append(list, trigger)
+		byApps[msg.Slug] = list
+	}
+
+	var toDelete []job.Trigger
+
+	for slug, triggers := range byApps {
+		manifest, err := app.GetWebappBySlug(inst, slug)
+		if err == app.ErrNotFound {
+			// The app has been uninstalled, but some duplicate triggers has
+			// been left
+			toDelete = append(toDelete, triggers...)
+			continue
+		} else if err != nil {
+			return err
+		}
+
+		// Fill the trigger ids for the services when they are missing.
+		update := false
+		for name, service := range manifest.Services() {
+			if service.TriggerOptions == "" || service.TriggerID != "" {
+				continue
+			}
+			for _, trigger := range triggers {
+				infos := trigger.Infos()
+				if infos.Debounce != service.Debounce {
+					continue
+				}
+				opts := infos.Type + " " + infos.Arguments
+				if opts != service.TriggerOptions {
+					continue
+				}
+				var msg serviceMessage
+				if err := json.Unmarshal(infos.Message, &msg); err != nil {
+					continue
+				}
+				if msg.Name != name {
+					continue
+				}
+				service.TriggerID = infos.TID
+				update = true
+			}
+		}
+
+		if update {
+			if err := couchdb.UpdateDoc(inst, manifest); err != nil {
+				return err
+			}
+		}
+
+		// Add to the list of triggers that should be deleted all the triggers
+		// for this application that are not tied to a service.
+		for _, trigger := range triggers {
+			trigger := trigger
+			tid := trigger.Infos().TID
+			found := false
+			for _, service := range manifest.Services() {
+				if service.TriggerID == tid {
+					found = true
+				}
+			}
+			if !found {
+				toDelete = append(toDelete, trigger)
+			}
+		}
+	}
+
+	for _, trigger := range toDelete {
+		if err := jobsSystem.DeleteTrigger(inst, trigger.ID()); err != nil {
+			return err
+		}
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"Domain":               domain,
+		"DeletedTriggersCount": len(toDelete),
+	})
+}
+
 func indexesFixer(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := lifecycle.GetInstance(domain)

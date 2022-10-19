@@ -548,5 +548,6 @@ func Routes(router *echo.Group) {
 	// Fixers
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)
 	router.POST("/:domain/fixers/orphan-account", orphanAccountFixer)
+	router.POST("/:domain/fixers/service-triggers", serviceTriggersFixer)
 	router.POST("/:domain/fixers/indexes", indexesFixer)
 }
