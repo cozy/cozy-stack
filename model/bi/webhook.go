@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -17,20 +21,86 @@ import (
 // user BI token is persisted.
 const aggregatorID = "bi-aggregator"
 
-// FireWebhook is used when the stack receives a call for a BI webhook, with an
-// bearer token and a JSON payload. It will try to find a matching
-// io.cozy.account and a io.cozy.trigger, and launch a job for them if
-// needed.
-func FireWebhook(inst *instance.Instance, token string, payload map[string]interface{}) error {
+// EventBI is a type used for the events sent by BI in the webhooks
+type EventBI string
+
+const (
+	// EventConnectionSynced is emitted after a connection has been synced
+	EventConnectionSynced EventBI = "CONNECTION_SYNCED"
+	// EventConnectionDeleted is emitted after a connection has been deleted
+	EventConnectionDeleted EventBI = "CONNECTION_DELETED"
+	// EventAccountEnabled is emitted after a bank account was enabled
+	EventAccountEnabled EventBI = "ACCOUNT_ENABLED"
+	// EventAccountDisabled is emitted after a bank account was disabled
+	EventAccountDisabled EventBI = "ACCOUNT_DISABLED"
+)
+
+// ParseEventBI returns the event of the webhook, or an error if the event
+// cannot be handled by the stack.
+func ParseEventBI(evt string) (EventBI, error) {
+	if evt == "" {
+		return EventConnectionSynced, nil
+	}
+
+	biEvent := EventBI(strings.ToUpper(evt))
+	switch biEvent {
+	case EventConnectionSynced, EventConnectionDeleted,
+		EventAccountEnabled, EventAccountDisabled:
+		return biEvent, nil
+	}
+	return EventBI("INVALID"), errors.New("invalid event")
+}
+
+// WebhookCall contains the data relative to a call from BI for a webhook.
+type WebhookCall struct {
+	Instance *instance.Instance
+	Token    string
+	BIurl    string
+	Event    EventBI
+	Payload  map[string]interface{}
+
+	accounts []*account.Account
+}
+
+// Fire is used when the stack receives a call for a BI webhook, with an bearer
+// token and a JSON payload. It will try to find a matching io.cozy.account and
+// a io.cozy.trigger, and launch a job for them if needed.
+func (c *WebhookCall) Fire() error {
 	var accounts []*account.Account
-	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
+	if err := couchdb.GetAllDocs(c.Instance, consts.Accounts, nil, &accounts); err != nil {
 		return err
 	}
-	if err := checkToken(accounts, token); err != nil {
+	c.accounts = accounts
+
+	if err := c.checkToken(); err != nil {
 		return err
 	}
 
-	connID, err := extractPayloadConnID(payload)
+	switch c.Event {
+	case EventConnectionSynced:
+		return c.handleConnectionSynced()
+	case EventConnectionDeleted:
+		return c.handleConnectionDeleted()
+	case EventAccountEnabled, EventAccountDisabled:
+		return c.handleAccountEnabledOrDisabled()
+	}
+	return errors.New("event not handled")
+}
+
+func (c *WebhookCall) checkToken() error {
+	for _, acc := range c.accounts {
+		if acc.ID() == aggregatorID {
+			if subtle.ConstantTimeCompare([]byte(c.Token), []byte(acc.Token)) == 1 {
+				return nil
+			}
+			return errors.New("token is invalid")
+		}
+	}
+	return errors.New("no bi-aggregator account found")
+}
+
+func (c *WebhookCall) handleConnectionSynced() error {
+	connID, err := extractPayloadConnID(c.Payload)
 	if err != nil {
 		return err
 	}
@@ -38,31 +108,70 @@ func FireWebhook(inst *instance.Instance, token string, payload map[string]inter
 		return errors.New("no connection.id")
 	}
 
-	account, err := findAccount(accounts, connID)
+	uuid, err := extractPayloadConnectionConnectorUUID(c.Payload)
 	if err != nil {
 		return err
 	}
-	trigger, err := findTrigger(inst, account)
+	slug, err := mapUUIDToSlug(uuid)
 	if err != nil {
+		c.Instance.Logger().WithNamespace("webhook").
+			Warnf("no slug found for uuid %s: %s", uuid, err)
 		return err
 	}
-
-	if mustExecuteKonnector(inst, trigger, payload) {
-		return fireTrigger(inst, trigger, account, payload)
+	konn, err := app.GetKonnectorBySlug(c.Instance, slug)
+	if err != nil {
+		userID, _ := extractPayloadUserID(c.Payload)
+		c.Instance.Logger().WithNamespace("webhook").
+			Warnf("konnector not installed id_connection=%d id_user=%d uuid=%s slug=%s", connID, userID, uuid, slug)
+		return nil
 	}
-	return copyLastUpdate(inst, account, payload)
-}
 
-func checkToken(accounts []*account.Account, token string) error {
-	for _, acc := range accounts {
-		if acc.ID() == aggregatorID {
-			if subtle.ConstantTimeCompare([]byte(token), []byte(acc.Token)) == 1 {
-				return nil
-			}
-			return errors.New("token is invalid")
+	var trigger job.Trigger
+	account, err := findAccount(c.accounts, connID)
+	if err != nil {
+		account, trigger, err = c.createAccountAndTrigger(konn, connID)
+	} else {
+		trigger, err = findTrigger(c.Instance, account)
+		if err != nil {
+			trigger, err = konn.CreateTrigger(c.Instance, account.ID(), "")
 		}
 	}
-	return errors.New("no bi-aggregator account found")
+	if err != nil {
+		return err
+	}
+
+	if c.mustExecuteKonnector(trigger) {
+		return c.fireTrigger(trigger, account)
+	}
+	return c.copyLastUpdate(account)
+}
+
+func mapUUIDToSlug(uuid string) (string, error) {
+	f := statik.GetAsset("/mappings/bi-banks.json")
+	if f == nil {
+		return "", os.ErrNotExist
+	}
+	var mapping map[string]string
+	if err := json.Unmarshal(f.GetData(), &mapping); err != nil {
+		return "", err
+	}
+	slug, ok := mapping[uuid]
+	if !ok || slug == "" {
+		return "", errors.New("not found")
+	}
+	return slug, nil
+}
+
+func extractPayloadConnectionConnectorUUID(payload map[string]interface{}) (string, error) {
+	conn, ok := payload["connection"].(map[string]interface{})
+	if !ok {
+		return "", errors.New("connection not found")
+	}
+	uuid, ok := conn["connector_uuid"].(string)
+	if !ok {
+		return "", errors.New("connection.connector not found")
+	}
+	return uuid, nil
 }
 
 func extractPayloadConnID(payload map[string]interface{}) (int, error) {
@@ -75,6 +184,89 @@ func extractPayloadConnID(payload map[string]interface{}) (int, error) {
 		return 0, errors.New("connection.id not found")
 	}
 	return int(connID), nil
+}
+
+func extractPayloadUserID(payload map[string]interface{}) (int, error) {
+	user, ok := payload["user"].(map[string]interface{})
+	if !ok {
+		return 0, errors.New("user not found")
+	}
+	id, ok := user["id"].(float64)
+	if !ok {
+		return 0, errors.New("user.id not found")
+	}
+	return int(id), nil
+}
+
+func (c *WebhookCall) handleConnectionDeleted() error {
+	connID, err := extractPayloadID(c.Payload)
+	if err != nil {
+		return err
+	}
+	if connID == 0 {
+		return errors.New("no connection.id")
+	}
+
+	msg := "no io.cozy.accounts deleted"
+	if account, _ := findAccount(c.accounts, connID); account != nil {
+		// The account has already been deleted on BI side, so we can skip the
+		// on_delete execution for the konnector.
+		account.ManualCleaning = true
+		if err := couchdb.DeleteDoc(c.Instance, account); err != nil {
+			c.Instance.Logger().WithNamespace("webhook").
+				Warnf("failed to delete account: %s", err)
+			return err
+		}
+		msg = fmt.Sprintf("account %s ", account.ID())
+
+		trigger, _ := findTrigger(c.Instance, account)
+		if trigger != nil {
+			jobsSystem := job.System()
+			if err := jobsSystem.DeleteTrigger(c.Instance, trigger.ID()); err != nil {
+				c.Instance.Logger().WithNamespace("webhook").
+					Errorf("failed to delete trigger: %s", err)
+			}
+			msg += fmt.Sprintf("and trigger %s ", trigger.ID())
+		}
+		msg += "deleted"
+	}
+
+	userID, _ := extractPayloadIDUser(c.Payload)
+	c.Instance.Logger().WithNamespace("webhook").
+		Infof("Connection deleted user_id=%d connection_id=%d %s", userID, connID, msg)
+
+	// If the user has no longer any connections on BI, we must remove their
+	// data from BI.
+	api, err := newApiClient(c.BIurl)
+	if err != nil {
+		return err
+	}
+	nb, err := api.getNumberOfConnections(c.Token)
+	if err != nil {
+		return fmt.Errorf("getNumberOfConnections: %s", err)
+	}
+	if nb == 0 {
+		if err := api.deleteUser(c.Token); err != nil {
+			return fmt.Errorf("deleteUser: %s", err)
+		}
+	}
+	return nil
+}
+
+func extractPayloadID(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id"].(float64)
+	if !ok {
+		return 0, errors.New("id not found")
+	}
+	return int(id), nil
+}
+
+func extractPayloadIDUser(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id_user"].(float64)
+	if !ok {
+		return 0, errors.New("id not found")
+	}
+	return int(id), nil
 }
 
 func findAccount(accounts []*account.Account, connID int) (*account.Account, error) {
@@ -115,12 +307,100 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 	return triggers[0], nil
 }
 
-func mustExecuteKonnector(
-	inst *instance.Instance,
-	trigger job.Trigger,
-	payload map[string]interface{},
-) bool {
-	return payloadHasAccounts(payload) || lastExecNotSuccessful(inst, trigger)
+func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connectionID int) (*account.Account, job.Trigger, error) {
+	acc := couchdb.JSONDoc{Type: consts.Accounts}
+	data := map[string]interface{}{
+		"auth": map[string]interface{}{
+			"bi": map[string]interface{}{
+				"connId": connectionID,
+			},
+		},
+	}
+	rels := map[string]interface{}{
+		"parent": map[string]interface{}{
+			"data": map[string]interface{}{
+				"_id":   "bi-aggregator",
+				"_type": "io.cozy.accounts",
+			},
+		},
+	}
+	acc.M = map[string]interface{}{
+		"account_type":  konn.Slug(),
+		"data":          data,
+		"relationships": rels,
+	}
+	account.Encrypt(acc)
+	if err := couchdb.CreateDoc(c.Instance, &acc); err != nil {
+		return nil, nil, err
+	}
+
+	trigger, err := konn.CreateTrigger(c.Instance, acc.ID(), "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	created := &account.Account{
+		DocID:         acc.ID(),
+		DocRev:        acc.Rev(),
+		AccountType:   konn.Slug(),
+		Data:          data,
+		Relationships: rels,
+	}
+	return created, trigger, nil
+}
+
+func (c *WebhookCall) handleAccountEnabledOrDisabled() error {
+	connID, err := extractPayloadIDConnection(c.Payload)
+	if err != nil {
+		return err
+	}
+	if connID == 0 {
+		return errors.New("no id_connection")
+	}
+
+	var trigger job.Trigger
+	account, err := findAccount(c.accounts, connID)
+	if err != nil {
+		api, err := newApiClient(c.BIurl)
+		if err != nil {
+			return err
+		}
+		uuid, err := api.getConnectorUUID(connID, c.Token)
+		if err != nil {
+			return err
+		}
+		slug, err := mapUUIDToSlug(uuid)
+		if err != nil {
+			return err
+		}
+		konn, err := app.GetKonnectorBySlug(c.Instance, slug)
+		if err != nil {
+			return err
+		}
+		account, trigger, err = c.createAccountAndTrigger(konn, connID)
+		if err != nil {
+			return err
+		}
+	} else {
+		trigger, err = findTrigger(c.Instance, account)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.fireTrigger(trigger, account)
+}
+
+func extractPayloadIDConnection(payload map[string]interface{}) (int, error) {
+	id, ok := payload["id_connection"].(float64)
+	if !ok {
+		return 0, errors.New("id_connection not found")
+	}
+	return int(id), nil
+}
+
+func (c *WebhookCall) mustExecuteKonnector(trigger job.Trigger) bool {
+	return payloadHasAccounts(c.Payload) || lastExecNotSuccessful(c.Instance, trigger)
 }
 
 func payloadHasAccounts(payload map[string]interface{}) bool {
@@ -143,34 +423,29 @@ func lastExecNotSuccessful(inst *instance.Instance, trigger job.Trigger) bool {
 	return lastJobs[0].State != job.Done
 }
 
-func fireTrigger(
-	inst *instance.Instance,
-	trigger job.Trigger,
-	account *account.Account,
-	payload map[string]interface{},
-) error {
+func (c *WebhookCall) fireTrigger(trigger job.Trigger, account *account.Account) error {
 	req := trigger.Infos().JobRequest()
 	var msg map[string]interface{}
 	if err := json.Unmarshal(req.Message, &msg); err == nil {
 		msg["bi_webhook"] = true
+		msg["event"] = string(c.Event)
 		if updated, err := json.Marshal(msg); err == nil {
 			req.Message = updated
 		}
 	}
-	j, err := job.System().PushJob(inst, req)
+	if raw, err := json.Marshal(c.Payload); err == nil {
+		req.Payload = raw
+	}
+	j, err := job.System().PushJob(c.Instance, req)
 	if err == nil {
-		inst.Logger().WithNamespace("webhook").
+		c.Instance.Logger().WithNamespace("webhook").
 			Debugf("Push job %s (account: %s - trigger: %s)", j.ID(), account.ID(), trigger.ID())
 	}
 	return err
 }
 
-func copyLastUpdate(
-	inst *instance.Instance,
-	account *account.Account,
-	payload map[string]interface{},
-) error {
-	conn, ok := payload["connection"].(map[string]interface{})
+func (c *WebhookCall) copyLastUpdate(account *account.Account) error {
+	conn, ok := c.Payload["connection"].(map[string]interface{})
 	if !ok {
 		return errors.New("no connection")
 	}
@@ -190,9 +465,9 @@ func copyLastUpdate(
 		return fmt.Errorf("no data.auth.bi in account %s", account.ID())
 	}
 	bi["lastUpdate"] = lastUpdate
-	err := couchdb.UpdateDoc(inst, account)
+	err := couchdb.UpdateDoc(c.Instance, account)
 	if err == nil {
-		inst.Logger().WithNamespace("webhook").
+		c.Instance.Logger().WithNamespace("webhook").
 			Debugf("Set lastUpdate to %s (account :%s)", lastUpdate, account.ID())
 	}
 	return err

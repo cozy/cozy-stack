@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"golang.org/x/crypto/nacl/box"
 )
@@ -212,4 +214,103 @@ func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte)
 	}
 
 	return plainBuffer, nil
+}
+
+// Encrypts sensitive fields inside the account. The document
+// is modified in place.
+func Encrypt(doc couchdb.JSONDoc) bool {
+	if config.GetVault().CredentialsEncryptorKey() != nil {
+		return encryptMap(doc.M)
+	}
+	return false
+}
+
+// Decrypts sensitive fields inside the account. The document
+// is modified in place.
+func Decrypt(doc couchdb.JSONDoc) bool {
+	if config.GetVault().CredentialsDecryptorKey() != nil {
+		return decryptMap(doc.M)
+	}
+	return false
+}
+
+func encryptMap(m map[string]interface{}) (encrypted bool) {
+	auth, ok := m["auth"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	login, _ := auth["login"].(string)
+	cloned := make(map[string]interface{}, len(auth))
+	var encKeys []string
+	for k, v := range auth {
+		var err error
+		switch k {
+		case "password":
+			password, _ := v.(string)
+			cloned["credentials_encrypted"], err = EncryptCredentials(login, password)
+			if err == nil {
+				encrypted = true
+			}
+		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret", "session":
+			cloned[k+"_encrypted"], err = EncryptCredentialsData(v)
+			if err == nil {
+				encrypted = true
+			}
+		default:
+			if strings.HasSuffix(k, "_encrypted") {
+				encKeys = append(encKeys, k)
+			} else {
+				cloned[k] = v
+			}
+		}
+	}
+	for _, key := range encKeys {
+		if _, ok := cloned[key]; !ok {
+			cloned[key] = auth[key]
+		}
+	}
+	m["auth"] = cloned
+	if data, ok := m["data"].(map[string]interface{}); ok {
+		if encryptMap(data) && !encrypted {
+			encrypted = true
+		}
+	}
+	return
+}
+
+func decryptMap(m map[string]interface{}) (decrypted bool) {
+	auth, ok := m["auth"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	cloned := make(map[string]interface{}, len(auth))
+	for k, v := range auth {
+		if !strings.HasSuffix(k, "_encrypted") {
+			cloned[k] = v
+			continue
+		}
+		k = strings.TrimSuffix(k, "_encrypted")
+		var str string
+		str, ok = v.(string)
+		if !ok {
+			cloned[k] = v
+			continue
+		}
+		var err error
+		if k == "credentials" {
+			cloned["login"], cloned["password"], err = DecryptCredentials(str)
+		} else {
+			cloned[k], err = DecryptCredentialsData(str)
+		}
+		if !decrypted {
+			decrypted = err == nil
+		}
+	}
+	m["auth"] = cloned
+	if data, ok := m["data"].(map[string]interface{}); ok {
+		if decryptMap(data) && !decrypted {
+			decrypted = true
+		}
+	}
+	return
 }

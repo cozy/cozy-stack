@@ -3,6 +3,7 @@ package migrations
 import (
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
@@ -14,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
-	"github.com/cozy/cozy-stack/web/data"
 
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -254,7 +254,7 @@ func migrateAccountsToOrganization(domain string) error {
 
 		accJSON.Type = consts.Accounts
 
-		data.DecryptAccount(accJSON)
+		account.Decrypt(accJSON)
 
 		cipher, err := buildCipher(orgKey, manifest, accJSON, link, log)
 		if err != nil {
@@ -268,7 +268,7 @@ func migrateAccountsToOrganization(domain string) error {
 
 		addCipherRelationshipToAccount(accJSON, cipher)
 
-		data.EncryptAccount(accJSON)
+		account.Encrypt(accJSON)
 
 		log.Infof("Updating doc %s", accJSON)
 		if err := couchdb.UpdateDoc(inst, &accJSON); err != nil {

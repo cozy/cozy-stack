@@ -277,9 +277,9 @@ func (m *KonnManifest) Delete(db prefixer.Prefixer) error {
 	return couchdb.DeleteDoc(db, m)
 }
 
-// CreateTrigger creates a @cron trigger with the parameter from the konnector
-// manifest.
-func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByApp string) (job.Trigger, error) {
+// BuildTrigger builds a @cron trigger with the parameter from the konnector
+// manifest (not yet persisted in CouchDB).
+func (m *KonnManifest) BuildTrigger(db prefixer.Prefixer, accountID, createdByApp string) (job.Trigger, error) {
 	var md *metadata.CozyMetadata
 	if createdByApp == "" {
 		md = metadata.New()
@@ -314,6 +314,20 @@ func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByA
 		Message:    msg,
 		Metadata:   md,
 	})
+}
+
+// CreateTrigger creates a @cron trigger with the parameter from the konnector
+// manifest (persisted in CouchDB).
+func (m *KonnManifest) CreateTrigger(db prefixer.Prefixer, accountID, createdByApp string) (job.Trigger, error) {
+	t, err := m.BuildTrigger(db, accountID, createdByApp)
+	if err != nil {
+		return nil, err
+	}
+	sched := job.System()
+	if err = sched.AddTrigger(t); err != nil {
+		return nil, err
+	}
+	return t, nil
 }
 
 func (m *KonnManifest) triggerCrontab() string {

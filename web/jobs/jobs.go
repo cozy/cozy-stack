@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -469,7 +470,27 @@ func fireBIWebhook(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	if err := bi.FireWebhook(inst, token, payload); err != nil {
+	biEvent, err := bi.ParseEventBI(c.QueryParam("event"))
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	// The stack will create or delete accounts and triggers on some webhooks,
+	// so it is safer to avoid concurrency on this part of the code.
+	mutex := lock.ReadWrite(inst, "bi")
+	if err := mutex.Lock(); err != nil {
+		return err
+	}
+	defer mutex.Unlock()
+
+	call := &bi.WebhookCall{
+		Instance: inst,
+		Token:    token,
+		BIurl:    c.QueryParam("bi_url"),
+		Event:    biEvent,
+		Payload:  payload,
+	}
+	if err := call.Fire(); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 	return c.NoContent(http.StatusNoContent)
