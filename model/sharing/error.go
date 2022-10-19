@@ -44,7 +44,7 @@ var (
 	// ErrFolderNotFound is used when informations about a folder is asked,
 	// but this folder was not found
 	ErrFolderNotFound = errors.New("This folder was not found")
-	// ErrSafety is used when an operation is aborted due to the safery principal
+	// ErrSafety is used when an operation is aborted due to the safety principal
 	ErrSafety = errors.New("Operation aborted")
 	// ErrAlreadyAccepted is used when someone tries to accept twice a sharing
 	// on the same cozy instance
