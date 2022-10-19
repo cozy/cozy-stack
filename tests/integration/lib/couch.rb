@@ -1,6 +1,6 @@
 class Couch
   def initialize(opts = {})
-    @url = opts.delete(:url) || "http://localhost:5984"
+    @url = opts.delete(:url) || ENV['COZY_COUCHDB_URL'] || "http://localhost:5984"
     @client = RestClient::Resource.new @url, opts
   end
 
