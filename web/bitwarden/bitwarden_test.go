@@ -39,11 +39,13 @@ func TestPrelogin(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	var result map[string]int
+	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, result["Kdf"])
-	assert.Equal(t, crypto.DefaultPBKDF2Iterations, result["KdfIterations"])
+	assert.EqualValues(t, 0, result["Kdf"])
+	assert.EqualValues(t, crypto.DefaultPBKDF2Iterations, result["KdfIterations"])
+	assert.Equal(t, false, result["OIDC"])
+	assert.Equal(t, false, result["HasCiphers"])
 }
 
 func TestConnect(t *testing.T) {
