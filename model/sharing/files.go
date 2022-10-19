@@ -520,6 +520,8 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		if ref != nil {
 			infos, ok = ref.Infos[s.SID]
 			if !ok {
+				inst.Logger().WithNamespace("replicator").
+					Infof("Operation aborted for %s on sharing %s", id, s.SID)
 				errm = multierror.Append(errm, ErrSafety)
 				continue
 			}
