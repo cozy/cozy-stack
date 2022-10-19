@@ -93,6 +93,10 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 	}, nil
 }
 
+func (afs *aferoVFS) MaxFileSize() int64 {
+	return -1 // no limit
+}
+
 func (afs *aferoVFS) DBCluster() int {
 	return afs.cluster
 }
@@ -186,23 +190,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 	}
 	defer afs.mu.Unlock()
 
-	diskQuota := afs.DiskQuota()
-
-	var maxsize, newsize, capsize int64
-	maxsize = -1 // no limit
-	newsize = newdoc.ByteSize
-	if diskQuota > 0 {
-		diskUsage, err := afs.DiskUsage()
-		if err != nil {
-			return nil, err
-		}
-		maxsize = diskQuota - diskUsage
-		if newsize > maxsize {
-			return nil, vfs.ErrFileTooBig
-		}
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
-			capsize = quotaBytes - diskUsage
-		}
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(afs, newdoc)
+	if err != nil {
+		return nil, err
 	}
 
 	if olddoc != nil {
@@ -253,6 +243,62 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 		hash:    hash,
 		meta:    extractor,
 	}, nil
+}
+
+func (afs *aferoVFS) CopyFile(olddoc, newdoc *vfs.FileDoc) (err error) {
+	var newfile *aferoFileCreation
+	defer func() {
+		// XXX: we need to release the VFS lock before closing newfile as
+		// aferoFileCreation.Close requests its own lock.
+		// Therefore, this defer method needs to come before the afs.mu.Unlock
+		// deferred call.
+		if newfile == nil {
+			return
+		}
+		if cerr := newfile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(afs, olddoc)
+	if err != nil {
+		return err
+	}
+
+	f, err := afero.TempFile(afs.fs, "/", newdoc.DocName)
+	if err != nil {
+		return err
+	}
+	tmppath := path.Join("/", f.Name())
+
+	// XXX: we use the internal openFile method as we already have a VFS lock
+	content, err := afs.openFile(olddoc)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+
+	hash := md5.New()
+
+	newfile = &aferoFileCreation{
+		afs:     afs,
+		f:       f,
+		newdoc:  newdoc,
+		tmppath: tmppath,
+		w:       0,
+		size:    newsize,
+		maxsize: maxsize,
+		capsize: capsize,
+		hash:    hash,
+	}
+
+	_, err = io.Copy(newfile, content)
+	return err
 }
 
 func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
@@ -418,11 +464,7 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 	return afs.Indexer.BatchDeleteVersions(versions)
 }
 
-func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	if lockerr := afs.mu.RLock(); lockerr != nil {
-		return nil, lockerr
-	}
-	defer afs.mu.RUnlock()
+func (afs *aferoVFS) openFile(doc *vfs.FileDoc) (vfs.File, error) {
 	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
 		return nil, err
@@ -432,6 +474,14 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &aferoFileOpen{f}, nil
+}
+
+func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
+	defer afs.mu.RUnlock()
+	return afs.openFile(doc)
 }
 
 func (afs *aferoVFS) EnsureErased(journal vfs.TrashJournal) error {

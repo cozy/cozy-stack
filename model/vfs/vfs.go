@@ -7,10 +7,13 @@ package vfs
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +74,9 @@ type Fs interface {
 	InitFs() error
 	Delete() error
 
+	// Maximum file size
+	MaxFileSize() int64
+
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
@@ -86,6 +92,9 @@ type Fs interface {
 	//
 	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc, opts ...CreateOptions) (File, error)
+	// CopyFile creates a fresh copy of the source file with the given newdoc
+	// attributes (e.g. a new name)
+	CopyFile(olddoc, newdoc *FileDoc) error
 	// DissociateFile creates a copy of the source file with the name and
 	// directory of the destination file doc, and then remove the source file
 	// with all of its version. It is used by the sharings to change the ID
@@ -869,4 +878,77 @@ func OptionsAllowCreationInTrash(opts []CreateOptions) bool {
 		}
 	}
 	return false
+}
+
+func CreateFileDocCopy(doc *FileDoc, copyName string) *FileDoc {
+	newdoc := doc.Clone().(*FileDoc)
+	newdoc.DocID = ""
+	newdoc.DocRev = ""
+	newdoc.DocName = copyName
+	newdoc.CozyMetadata = nil
+	newdoc.InternalID = ""
+	newdoc.CreatedAt = time.Now()
+	newdoc.UpdatedAt = newdoc.CreatedAt
+	newdoc.RemoveReferencedBy()
+	newdoc.ResetFullpath()
+	newdoc.Metadata.RemoveCertifiedMetadata()
+
+	return newdoc
+}
+
+func CheckAvailableDiskSpace(fs VFS, doc *FileDoc) (newsize, maxsize, capsize int64, err error) {
+	newsize = doc.ByteSize
+
+	maxsize = fs.MaxFileSize()
+	if maxsize > 0 && newsize > maxsize {
+		return 0, 0, 0, ErrFileTooBig
+	}
+
+	diskQuota := fs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := fs.DiskUsage()
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		maxsize = diskQuota - diskUsage
+		if newsize > maxsize {
+			return 0, 0, 0, ErrFileTooBig
+		}
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
+		}
+	}
+
+	return newsize, maxsize, capsize, nil
+}
+
+// conflictName generates a new name for a file/folder in conflict with another
+// that has the same path. A conflicted file `foo` will be renamed foo (2),
+// then foo (3), etc.
+func ConflictName(fs VFS, dirID, name string, isFile bool) string {
+	base, ext := name, ""
+	if isFile {
+		ext = filepath.Ext(name)
+		base = strings.TrimSuffix(base, ext)
+	}
+	i := 2
+	if strings.HasSuffix(base, ")") {
+		if idx := strings.LastIndex(base, " ("); idx > 0 {
+			num, err := strconv.Atoi(base[idx+2 : len(base)-1])
+			if err == nil {
+				i = num + 1
+				base = base[0:idx]
+			}
+		}
+	}
+
+	indexer := fs.GetIndexer()
+	for ; i < 1000; i++ {
+		newname := fmt.Sprintf("%s (%d)%s", base, i, ext)
+		exists, err := indexer.DirChildExists(dirID, newname)
+		if err != nil || !exists {
+			return newname
+		}
+	}
+	return fmt.Sprintf("%s (%d)%s", base, i, ext)
 }

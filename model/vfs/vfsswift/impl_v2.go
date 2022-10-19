@@ -82,6 +82,10 @@ func makeDocID(objName string) string {
 	return objName[:22] + objName[23:28] + objName[29:]
 }
 
+func (sfs *swiftVFSV2) MaxFileSize() int64 {
+	return maxFileSize
+}
+
 func (sfs *swiftVFSV2) DBCluster() int {
 	return sfs.cluster
 }
@@ -431,6 +435,11 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileOpenV2{f, nil}, nil
+}
+
+func (sfs *swiftVFSV2) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
+	// The file duplication is not implemented in Swift layout v2
+	return os.ErrNotExist
 }
 
 func (sfs *swiftVFSV2) DissociateFile(src, dst *vfs.FileDoc) error {

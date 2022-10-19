@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -21,12 +22,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/cozy/cozy-stack/web/statik"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
@@ -762,6 +765,60 @@ func TestUploadWithSourceAccount(t *testing.T) {
 	fcm := attrs["cozyMetadata"].(map[string]interface{})
 	assert.Equal(t, account, fcm["sourceAccount"])
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+}
+
+func TestCopyFile(t *testing.T) {
+	_, copyFileDir := createDir(t, "/files/?Name=copyFileDir&Type=directory")
+	fmt.Println(copyFileDir)
+	copyFileDirID := copyFileDir["data"].(map[string]interface{})["id"].(string)
+
+	fileName := "bar"
+	fileContent := "file content"
+
+	// 1. Upload file and get its id
+	res, obj := upload(t, "/files/"+copyFileDirID+"?Type=file&Name="+fileName, "text/plain", fileContent, "")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	fileID = data["id"].(string)
+	fileAttributes := data["attributes"].(map[string]interface{})
+
+	var body map[string]interface{}
+
+	// 2. Send file copy request
+	res, _ = httpPost(ts.URL+"/files/"+fileID+"/copy", "")
+	assert.Equal(t, 201, res.StatusCode)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
+	copyID := body["data"].(map[string]interface{})["id"].(string)
+	assert.NotEqual(t, fileID, copyID)
+
+	// 3. Fetch copy metadata and compare with file
+	res, _ = httpGet(ts.URL + "/files/" + copyID)
+	assert.Equal(t, 200, res.StatusCode)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
+	data = body["data"].(map[string]interface{})
+
+	copyAttributes := data["attributes"].(map[string]interface{})
+	assert.NotEmpty(t, copyAttributes["created_at"])
+	assert.NotEqual(t, fileAttributes["created_at"], copyAttributes["created_at"])
+	assert.Equal(t, fileAttributes["dir_id"], copyAttributes["dir_id"])
+	assert.Equal(t, fileName+" (copy)", copyAttributes["name"])
+	assert.Equal(t, fileAttributes["md5sum"], copyAttributes["md5sum"])
+
+	rels := data["relationships"].(map[string]interface{})
+	assert.Nil(t, rels["old_versions"])
+
+	// 4. fetch copy and check its content
+	res, resbody := download(t, "/files/download/"+copyID, "")
+	assert.Equal(t, 200, res.StatusCode)
+	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Disposition"), "inline"))
+	println("Content-Disposition", res.Header.Get("Content-Disposition"))
+	assert.True(t, strings.Contains(res.Header.Get("Content-Disposition"), `filename="`+fileName+`(copy)"`))
+	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "text/plain"))
+	assert.NotEmpty(t, res.Header.Get("Etag"))
+	assert.Equal(t, res.Header.Get("Etag")[:1], `"`)
+	assert.Equal(t, res.Header.Get("Content-Length"), strconv.Itoa(len(fileContent)))
+	assert.Equal(t, res.Header.Get("Accept-Ranges"), "bytes")
+	assert.Equal(t, fileContent, string(resbody))
 }
 
 func TestModifyMetadataByPath(t *testing.T) {
@@ -2926,6 +2983,11 @@ func TestDeprecatePreviewAndIcon(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	err := loadLocale()
+	if err != nil {
+		fmt.Println("Could not load default locale translations: ", err)
+		os.Exit(1)
+	}
 	testutils.NeedCouchdb()
 	setup = testutils.NewSetup(m, "files_test")
 
@@ -2966,4 +3028,28 @@ func httpGet(url string) (*http.Response, error) {
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	return http.DefaultClient.Do(req)
+}
+
+func httpPost(url string, body string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "text/plain")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	return http.DefaultClient.Do(req)
+}
+
+func loadLocale() error {
+	locale := consts.DefaultLocale
+	assetsPath := config.GetConfig().Assets
+	if assetsPath != "" {
+		pofile := path.Join("../..", assetsPath, "locales", locale+".po")
+		po, err := ioutil.ReadFile(pofile)
+		if err != nil {
+			return fmt.Errorf("Can't load the po file for %s", locale)
+		}
+		i18n.LoadLocale(locale, "", po)
+	}
+	return nil
 }

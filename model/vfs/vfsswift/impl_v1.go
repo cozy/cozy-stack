@@ -65,6 +65,10 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 	}, nil
 }
 
+func (sfs *swiftVFS) MaxFileSize() int64 {
+	return maxFileSize
+}
+
 func (sfs *swiftVFS) DBCluster() int {
 	return sfs.cluster
 }
@@ -432,6 +436,11 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileOpen{f, nil}, nil
+}
+
+func (sfs *swiftVFS) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
+	// The file duplication is not implemented in Swift layout v1
+	return os.ErrNotExist
 }
 
 func (sfs *swiftVFS) DissociateFile(src, dst *vfs.FileDoc) error {

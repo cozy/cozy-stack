@@ -1000,6 +1000,85 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /files/:file-id/copy
+
+Create a copy of a file in the same directory with a copy suffix in its name
+
+#### Request
+
+```http
+POST /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/copy HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Status codes
+
+- 201 Created, when the file has been successfully copied
+- 404 Not Found, when the file does not exist
+- 409 Conflict, when a file with the same name as the copy would have already exists
+- 413 Payload Too Large, when there is not enough available space on the cozy
+  to copy the file
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "7382f28a-21d4-12d9-4438-3fd53e98a219",
+    "meta": {
+      "rev": "1-83a82e9"
+    },
+    "attributes": {
+      "type": "file",
+      "name": "hello (copy).pdf",
+      "trashed": false,
+      "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
+      "created_at": "2022-10-18T18:33:24Z",
+      "updated_at": "2022-10-18T18:33:24Z",
+      "tags": [],
+      "size": 12,
+      "executable": false,
+      "class": "pdf",
+      "mime": "application/pdf",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2022-10-18T18:33:24Z",
+        "createdByApp": "drive",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2022-10-18T18:33:24Z"
+      }
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "io.cozy.files",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
+    "links": {
+      "self": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219",
+      "icon": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/icon/543d7eb8",
+      "preview": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/preview/77e117e0",
+      "tiny": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/thumbnails/93fd0a5d96b22e9d/tiny",
+      "small": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/thumbnails/93fd0a5d96b22e9d/small",
+      "medium": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/thumbnails/93fd0a5d96b22e9d/medium",
+      "large": "/files/7382f28a-21d4-12d9-4438-3fd53e98a219/thumbnails/93fd0a5d96b22e9d/large"
+    }
+  }
+}
+```
+
 ### DELETE /files/:file-id
 
 Put a file in the trash.
