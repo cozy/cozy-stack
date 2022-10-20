@@ -66,7 +66,7 @@ func redirectToApp(
 	c echo.Context,
 	inst *instance.Instance,
 	acc *account.Account,
-	clientState, slug, errorMessage string,
+	clientState, slug, connID, connDeleted, errorMessage string,
 ) error {
 	if slug == "" {
 		slug = consts.HomeSlug
@@ -78,6 +78,12 @@ func redirectToApp(
 	}
 	if clientState != "" {
 		vv.Add("state", clientState)
+	}
+	if connID != "" {
+		vv.Add("connection_id", connID)
+	}
+	if connDeleted != "" {
+		vv.Add("connection_deleted", connDeleted)
 	}
 	if errorMessage != "" {
 		vv.Add("error", errorMessage)
@@ -98,8 +104,11 @@ func redirect(c echo.Context) error {
 	accountTypeID := c.Param("accountType")
 
 	i, _ := lifecycle.GetInstance(c.Request().Host)
-	var clientState, slug string
+	var clientState, connID, connDeleted, slug string
 	var acc *account.Account
+
+	connID = c.QueryParam("connection_id")
+	connDeleted = c.QueryParam("connection_deleted")
 
 	if accessToken != "" {
 		if i == nil {
@@ -134,7 +143,7 @@ func redirect(c echo.Context) error {
 
 		// https://developers.google.com/identity/protocols/oauth2/web-server?hl=en#handlingresponse
 		if c.QueryParam("error") == "access_denied" {
-			return redirectToApp(c, i, nil, clientState, slug, "access_denied")
+			return redirectToApp(c, i, nil, clientState, slug, connID, connDeleted, "access_denied")
 		}
 
 		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
@@ -143,7 +152,7 @@ func redirect(c echo.Context) error {
 		}
 
 		if state.WebviewFlow {
-			return redirectToApp(c, i, nil, clientState, slug, "")
+			return redirectToApp(c, i, nil, clientState, slug, connID, connDeleted, "")
 		}
 
 		if accountType.TokenEndpoint == "" {
@@ -165,7 +174,7 @@ func redirect(c echo.Context) error {
 		}
 	}
 
-	if connID := c.QueryParam("connection_id"); connID != "" {
+	if connID != "" {
 		if existingAccount, err := findAccountWithSameConnectionID(i, connID); err == nil {
 			acc = existingAccount
 		}
@@ -178,7 +187,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, i, acc, clientState, slug, "")
+	return redirectToApp(c, i, acc, clientState, slug, connID, connDeleted, "")
 }
 
 func findAccountWithSameConnectionID(inst *instance.Instance, connectionID string) (*account.Account, error) {
