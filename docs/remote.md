@@ -191,25 +191,15 @@ in the previous example), and the application that has made the request.
 
 ## Secrets
 
-It is possible to make the stack inject a secret in a request. For example, if
-we want to make the stack add a `token`, we can use `{{secret_token}}` in the
-remote doctype declation:
+It is possible to make the stack inject a secret in a request. 
 
-```http
-GET https://foobar.com/baz/ HTTP/1.1
-Authorization: Bearer {{secret_token}}
-```
+For example, if we want to make the stack inject a `token` for 
+the request, then:
 
-```json
-{
-  "foo": "{{json foo}}",
-  "bar": "{{json bar}}"
-}
-```
-
-And the secret must be stored in CouchDB, in the
-`secrets/io-cozy-remote-secrets` database. The document must have the remote
-doctype as an id, and the secret in another field, like this:
+1- We need to store the secret in CouchDB, in the 
+`secrets/io-cozy-remote-secrets` database. The document must 
+have the remote doctype as an id, and the secret in another field, 
+like this:
 
 ```json
 {
@@ -217,6 +207,22 @@ doctype as an id, and the secret in another field, like this:
   "token": "1c7f3ba03bd801391a91543d7eb8149c"
 }
 ```
+
+2- Use this secret in the remote doctype declaration:
+
+```http
+GET https://foobar.com/baz/ HTTP/1.1
+Authorization: Bearer {{secret_token}}
+```
+
+You can see that we store `token` in the `io-cozy-remote-secret`
+but we use `secret_token` in the remote doctype declaration, this
+is a convention to follow. Like that, we quickly know what come 
+from secrets and what come from the caller. 
+
+If you use secret and you get a 400 Bad Request error 
+`a variable is used in the template, but no value was given` 
+check if you follow this convention. 
 
 ## For developers
 
