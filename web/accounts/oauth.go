@@ -66,7 +66,7 @@ func redirectToApp(
 	c echo.Context,
 	inst *instance.Instance,
 	acc *account.Account,
-	clientState, slug, errorMessage string,
+	clientState, slug, connID, connDeleted, errorMessage string,
 ) error {
 	if slug == "" {
 		slug = consts.HomeSlug
@@ -78,6 +78,12 @@ func redirectToApp(
 	}
 	if clientState != "" {
 		vv.Add("state", clientState)
+	}
+	if connID != "" {
+		vv.Add("connection_id", connID)
+	}
+	if connDeleted != "" {
+		vv.Add("connection_deleted", connDeleted)
 	}
 	if errorMessage != "" {
 		vv.Add("error", errorMessage)
@@ -98,8 +104,11 @@ func redirect(c echo.Context) error {
 	accountTypeID := c.Param("accountType")
 
 	i, _ := lifecycle.GetInstance(c.Request().Host)
-	var clientState, slug string
+	var clientState, connID, connDeleted, slug string
 	var acc *account.Account
+
+	connID = c.QueryParam("connection_id")
+	connDeleted = c.QueryParam("connection_deleted")
 
 	if accessToken != "" {
 		if i == nil {
@@ -134,7 +143,7 @@ func redirect(c echo.Context) error {
 
 		// https://developers.google.com/identity/protocols/oauth2/web-server?hl=en#handlingresponse
 		if c.QueryParam("error") == "access_denied" {
-			return redirectToApp(c, i, nil, clientState, slug, "access_denied")
+			return redirectToApp(c, i, nil, clientState, slug, connID, connDeleted, "access_denied")
 		}
 
 		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
@@ -142,8 +151,8 @@ func redirect(c echo.Context) error {
 			return err
 		}
 
-		if state.ReconnectFlow {
-			return redirectToApp(c, i, nil, clientState, slug, "")
+		if state.WebviewFlow {
+			return redirectToApp(c, i, nil, clientState, slug, connID, connDeleted, "")
 		}
 
 		if accountType.TokenEndpoint == "" {
@@ -165,7 +174,7 @@ func redirect(c echo.Context) error {
 		}
 	}
 
-	if connID := c.QueryParam("connection_id"); connID != "" {
+	if connID != "" {
 		if existingAccount, err := findAccountWithSameConnectionID(i, connID); err == nil {
 			acc = existingAccount
 		}
@@ -178,7 +187,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, i, acc, clientState, slug, "")
+	return redirectToApp(c, i, acc, clientState, slug, connID, connDeleted, "")
 }
 
 func findAccountWithSameConnectionID(inst *instance.Instance, connectionID string) (*account.Account, error) {
@@ -235,7 +244,42 @@ func refresh(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiAccount{&acc}, nil)
 }
 
-// reconnect can used to reconnect a user from BI
+// manage redirects the user to the BI webview allowing them to manage their
+// bank connections
+func manage(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	accountid := c.Param("accountid")
+
+	var acc account.Account
+	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &acc); err != nil {
+		return err
+	}
+
+	accountType, err := account.TypeInfo(acc.AccountType, instance.ContextName)
+	if err != nil {
+		return err
+	}
+
+	state, err := getStorage().Add(&stateHolder{
+		InstanceDomain: instance.Domain,
+		AccountType:    accountType.ServiceID(),
+		ClientState:    c.QueryParam("state"),
+		Slug:           c.QueryParam("slug"),
+		WebviewFlow:    true,
+	})
+	if err != nil {
+		return err
+	}
+
+	url, err := accountType.MakeManageURL(instance, state, c.QueryParams())
+	if err != nil {
+		return err
+	}
+
+	return c.Redirect(http.StatusSeeOther, url)
+}
+
+// reconnect can be used to reconnect a user from BI
 func reconnect(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	accountid := c.Param("accountid")
@@ -255,7 +299,7 @@ func reconnect(c echo.Context) error {
 		AccountType:    accountType.ServiceID(),
 		ClientState:    c.QueryParam("state"),
 		Slug:           c.QueryParam("slug"),
-		ReconnectFlow:  true,
+		WebviewFlow:    true,
 	})
 	if err != nil {
 		return err
@@ -359,6 +403,7 @@ func checkIDToken(c echo.Context) bool {
 func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 	router.GET("/:accountType/redirect", redirect)
+	router.GET("/:accountType/:accountid/manage", manage, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
 	router.GET("/:accountType/:accountid/reconnect", reconnect, middlewares.NeedInstance, middlewares.LoadSession, checkLogin)
 }
