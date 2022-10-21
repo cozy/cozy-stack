@@ -11,11 +11,11 @@ def assert_conflict_children(inst_a, inst_b, parent_id_a, parent_id_b, filename)
   basename = File.basename filename, File.extname(filename)
 
   _, children_a = children_by_parent_id inst_a, parent_id_a
-  assert 2, children_a.length
+  assert_equal 2, children_a.length
   children_a.each { |child| assert child.name.include? basename }
 
   _, children_b = children_by_parent_id inst_b, parent_id_b
-  assert 2, children_b.length
+  assert_equal 2, children_b.length
   children_b.each { |child| assert child.name.include? basename }
 
   assert_equal children_a[0].name, children_b[0].name
