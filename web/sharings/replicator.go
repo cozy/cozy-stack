@@ -78,9 +78,10 @@ func GetFolder(c echo.Context) error {
 		inst.Logger().WithNamespace("replicator").Infof("Member was not found: %s", err)
 		return wrapErrors(err)
 	}
-	folder, err := s.GetFolder(inst, member, c.Param("id"))
+	folderID := c.Param("id")
+	folder, err := s.GetFolder(inst, member, folderID)
 	if err != nil {
-		inst.Logger().WithNamespace("replicator").Infof("Folder was not found: %s", err)
+		inst.Logger().WithNamespace("replicator").Infof("Folder %s was not found: %s", folderID, err)
 		return wrapErrors(err)
 	}
 	return c.JSON(http.StatusOK, folder)
