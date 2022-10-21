@@ -185,8 +185,7 @@ func isFileNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEv
 	} else {
 		// For a directory, we have to check the path, as it can be a subfolder
 		// of a folder moved from inside the sharing to outside, and we will
-		// have an event for that (path is updated by the VFS, and we will have
-		// an event for that (path is updated by the VFS).
+		// have an event for that (path is updated by the VFS).
 		if evt.OldDoc.Get("path") == evt.Doc.Get("path") {
 			olds := extractReferencedBy(evt.OldDoc)
 			news := extractReferencedBy(&evt.Doc)
@@ -209,6 +208,14 @@ func isFileNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEv
 			}
 		}
 		return true, nil
+	}
+	if rule.Selector == "" || rule.Selector == "id" {
+		docID := evt.Doc.ID()
+		for _, id := range rule.Values {
+			if id == docID {
+				return false, nil
+			}
+		}
 	}
 
 	var docPath string

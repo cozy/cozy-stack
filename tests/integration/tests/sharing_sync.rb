@@ -213,8 +213,11 @@ describe "A folder" do
     assert_equal file.couch_rev, file_recipient.couch_rev
 
     # Check the sync sharer -> recipient
+    newdir = Folder.create inst, dir_id: Folder::ROOT_DIR
     file.overwrite inst, mime: 'text/plain'
     file.rename inst, "#{Faker::Internet.slug}.txt"
+    sleep 1
+    file.move_to inst, newdir.couch_id
     sleep 12
     file = CozyFile.find inst, file.couch_id
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
@@ -231,6 +234,15 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.couch_rev, file_recipient.couch_rev
+
+    # Check that no file has been created as a conflict
+    _, files = Folder.children inst, newdir.path
+    conflict_files = files.select { |c| c.name =~ / \(\d+\)/ }
+    assert_empty conflict_files
+    assert_equal files.length, 1
+    assert_equal file.couch_id, files.first.couch_id
+
+    # Debug.visualize_tree [inst, inst_recipient], sharing
 
     assert_equal inst.check, []
     # XXX we don't check the FS of inst_recipient as we have played directly with CouchDB on it
