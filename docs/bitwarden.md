@@ -31,9 +31,9 @@ to `https://<instance>/bitwarden`.
 ### POST /bitwarden/api/accounts/prelogin
 
 It allows the client to know the number of KDF iterations to apply when hashing
-the master password. It can also tell if the login via OIDC is mandatory, and
-if the vault is empty (when both conditions are true, the onboarding process is
-a bit different).
+the master password. It can also tell if the login via OIDC is mandatory, if
+the vault is empty (when both conditions are true, the onboarding process is a
+bit different), and if flat or nested subdomains are used.
 
 #### Request
 
@@ -61,7 +61,8 @@ Content-Type: application/json
   "Kdf": 0,
   "KdfIterations": 10000,
   "OIDC": false,
-  "HasCiphers": true
+  "HasCiphers": true,
+  "FlatSubdomains": true
 }
 ```
 
