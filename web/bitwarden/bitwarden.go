@@ -50,11 +50,13 @@ func Prelogin(c echo.Context) error {
 	if resp, err := couchdb.NormalDocs(inst, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
 	}
+	flat := config.GetConfig().Subdomains == config.FlatSubdomains
 	return c.JSON(http.StatusOK, echo.Map{
-		"Kdf":           setting.PassphraseKdf,
-		"KdfIterations": setting.PassphraseKdfIterations,
-		"OIDC":          !passwordAuth,
-		"HasCiphers":    hasCiphers,
+		"Kdf":            setting.PassphraseKdf,
+		"KdfIterations":  setting.PassphraseKdfIterations,
+		"OIDC":           !passwordAuth,
+		"HasCiphers":     hasCiphers,
+		"FlatSubdomains": flat,
 	})
 }
 
