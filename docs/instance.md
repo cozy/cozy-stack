@@ -87,6 +87,7 @@ A `--blocking-reason` can be added for specific cases and to inform a user the
 reason of the blocking.
 
 Several pre-included reasons are included, but you can define your owns if needed. These reasons are:
+
 - `"LOGIN_FAILED"`: The instance was blocked because of too many login attempts
 - `"PAYMENT_FAILED"`: The instance waits for a payment to be done
 - `"UNKNOWN"`: The instance was blocked for an unknown reason
