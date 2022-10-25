@@ -777,7 +777,7 @@ func TestCopyFile(t *testing.T) {
 
 	// 1. Upload file and get its id
 	res, obj := upload(t, "/files/"+copyFileDirID+"?Type=file&Name="+fileName, "text/plain", fileContent, "")
-	assert.Equal(t, 201, res.StatusCode)
+	require.Equal(t, 201, res.StatusCode)
 	data := obj["data"].(map[string]interface{})
 	fileID = data["id"].(string)
 	fileAttributes := data["attributes"].(map[string]interface{})
@@ -786,14 +786,14 @@ func TestCopyFile(t *testing.T) {
 
 	// 2. Send file copy request
 	res, _ = httpPost(ts.URL+"/files/"+fileID+"/copy", "")
-	assert.Equal(t, 201, res.StatusCode)
+	require.Equal(t, 201, res.StatusCode)
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
 	copyID := body["data"].(map[string]interface{})["id"].(string)
-	assert.NotEqual(t, fileID, copyID)
+	require.NotEqual(t, fileID, copyID)
 
 	// 3. Fetch copy metadata and compare with file
 	res, _ = httpGet(ts.URL + "/files/" + copyID)
-	assert.Equal(t, 200, res.StatusCode)
+	require.Equal(t, 200, res.StatusCode)
 	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
 	data = body["data"].(map[string]interface{})
 
@@ -809,9 +809,8 @@ func TestCopyFile(t *testing.T) {
 
 	// 4. fetch copy and check its content
 	res, resbody := download(t, "/files/download/"+copyID, "")
-	assert.Equal(t, 200, res.StatusCode)
+	require.Equal(t, 200, res.StatusCode)
 	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Disposition"), "inline"))
-	println("Content-Disposition", res.Header.Get("Content-Disposition"))
 	assert.True(t, strings.Contains(res.Header.Get("Content-Disposition"), `filename="`+fileName+`(copy)"`))
 	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "text/plain"))
 	assert.NotEmpty(t, res.Header.Get("Etag"))
