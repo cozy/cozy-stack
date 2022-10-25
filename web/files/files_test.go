@@ -773,10 +773,11 @@ func TestCopyFile(t *testing.T) {
 	copyFileDirID := copyFileDir["data"].(map[string]interface{})["id"].(string)
 
 	fileName := "bar"
+	fileExt := ".txt"
 	fileContent := "file content"
 
 	// 1. Upload file and get its id
-	res, obj := upload(t, "/files/"+copyFileDirID+"?Type=file&Name="+fileName, "text/plain", fileContent, "")
+	res, obj := upload(t, "/files/"+copyFileDirID+"?Type=file&Name="+fileName+fileExt, "text/plain", fileContent, "")
 	require.Equal(t, 201, res.StatusCode)
 	data := obj["data"].(map[string]interface{})
 	fileID = data["id"].(string)
@@ -801,7 +802,7 @@ func TestCopyFile(t *testing.T) {
 	assert.NotEmpty(t, copyAttributes["created_at"])
 	assert.NotEqual(t, fileAttributes["created_at"], copyAttributes["created_at"])
 	assert.Equal(t, fileAttributes["dir_id"], copyAttributes["dir_id"])
-	assert.Equal(t, fileName+" (copy)", copyAttributes["name"])
+	assert.Equal(t, fileName+" (copy)"+fileExt, copyAttributes["name"])
 	assert.Equal(t, fileAttributes["md5sum"], copyAttributes["md5sum"])
 
 	rels := data["relationships"].(map[string]interface{})
@@ -811,13 +812,34 @@ func TestCopyFile(t *testing.T) {
 	res, resbody := download(t, "/files/download/"+copyID, "")
 	require.Equal(t, 200, res.StatusCode)
 	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Disposition"), "inline"))
-	assert.True(t, strings.Contains(res.Header.Get("Content-Disposition"), `filename="`+fileName+`(copy)"`))
+	assert.True(t, strings.Contains(res.Header.Get("Content-Disposition"), `filename="`+fileName+"(copy)"+fileExt+`"`))
 	assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "text/plain"))
 	assert.NotEmpty(t, res.Header.Get("Etag"))
 	assert.Equal(t, res.Header.Get("Etag")[:1], `"`)
 	assert.Equal(t, res.Header.Get("Content-Length"), strconv.Itoa(len(fileContent)))
 	assert.Equal(t, res.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, fileContent, string(resbody))
+
+	// 5. Send file copy request specifying copy name and parent id
+	_, destDir := createDir(t, "/files/?Name=destDir&Type=directory")
+	destDirID := destDir["data"].(map[string]interface{})["id"].(string)
+	copyName := "My-file-copy"
+
+	res, _ = httpPost(ts.URL+"/files/"+fileID+"/copy?Name="+copyName+"&DirID="+destDirID, "")
+	require.Equal(t, 201, res.StatusCode)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
+	copyID = body["data"].(map[string]interface{})["id"].(string)
+	assert.NotEqual(t, fileID, copyID)
+
+	// 6. Fetch copy metadata and compare with file
+	res, _ = httpGet(ts.URL + "/files/" + copyID)
+	require.Equal(t, 200, res.StatusCode)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
+	data = body["data"].(map[string]interface{})
+
+	copyAttributes = data["attributes"].(map[string]interface{})
+	assert.Equal(t, destDirID, copyAttributes["dir_id"])
+	assert.Equal(t, copyName, copyAttributes["name"])
 }
 
 func TestModifyMetadataByPath(t *testing.T) {

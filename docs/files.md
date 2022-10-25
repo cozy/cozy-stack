@@ -1004,6 +1004,13 @@ Content-Type: application/vnd.api+json
 
 Create a copy of a file in the same directory with a copy suffix in its name
 
+#### Query-String
+
+| Parameter  | Description                                        |
+| ---------- | -------------------------------------------------- |
+| Name       | the file copy name (optional)                      |
+| DirID      | the destination directory id (optional)            |
+
 #### Request
 
 ```http
