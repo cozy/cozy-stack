@@ -341,7 +341,7 @@ func FileCopyHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusCreated, newdoc, true, nil)
+	return FileData(c, http.StatusCreated, newdoc, false, nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
