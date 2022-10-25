@@ -735,12 +735,14 @@ func TestCreateFileDocCopy(t *testing.T) {
 	file, err := vfs.NewFileDoc("file", consts.RootDirID, -1, md5sum, "foo/bar", "foo", time.Now(), false, false, false, []string{})
 	require.NoError(t, err)
 
-	newname := "file (copy)"
-	newdoc := vfs.CreateFileDocCopy(file, newname)
+	newname := "file (copy).txt"
+	newdoc := vfs.CreateFileDocCopy(file, "12345", newname)
 	assert.Empty(t, newdoc.DocID)
 	assert.Empty(t, newdoc.DocRev)
+	assert.Equal(t, "12345", newdoc.DirID)
 	assert.Equal(t, newname, newdoc.DocName)
-	assert.Equal(t, file.DirID, newdoc.DirID)
+	assert.Equal(t, "text/plain", newdoc.Mime)
+	assert.Equal(t, "text", newdoc.Class)
 	assert.Equal(t, file.ByteSize, newdoc.ByteSize)
 	assert.Equal(t, file.MD5Sum, newdoc.MD5Sum)
 	assert.NotEqual(t, file.CreatedAt, newdoc.CreatedAt)

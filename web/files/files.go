@@ -307,13 +307,18 @@ func FileCopyHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permission.POST, nil, olddoc)
+	newDirID := c.QueryParam("DirID")
+	copyName := c.QueryParam("Name")
+	if copyName == "" {
+		copyName = fileCopyName(inst, olddoc.DocName)
+	}
+	newdoc := vfs.CreateFileDocCopy(olddoc, newDirID, copyName)
+
+	err = checkPerm(c, permission.POST, nil, newdoc)
 	if err != nil {
 		return err
 	}
 
-	copyName := fileCopyName(inst, olddoc.DocName)
-	newdoc := vfs.CreateFileDocCopy(olddoc, copyName)
 	exists, err := fs.GetIndexer().DirChildExists(newdoc.DirID, newdoc.DocName)
 	if err != nil {
 		return WrapVfsError(err)
@@ -336,7 +341,7 @@ func FileCopyHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusCreated, newdoc, true, nil)
+	return FileData(c, http.StatusCreated, newdoc, false, nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id

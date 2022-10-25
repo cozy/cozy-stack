@@ -880,11 +880,19 @@ func OptionsAllowCreationInTrash(opts []CreateOptions) bool {
 	return false
 }
 
-func CreateFileDocCopy(doc *FileDoc, copyName string) *FileDoc {
+func CreateFileDocCopy(doc *FileDoc, newDirID, copyName string) *FileDoc {
 	newdoc := doc.Clone().(*FileDoc)
 	newdoc.DocID = ""
 	newdoc.DocRev = ""
-	newdoc.DocName = copyName
+	if newDirID != "" {
+		newdoc.DirID = newDirID
+	}
+	if copyName != "" {
+		newdoc.DocName = copyName
+		mime, class := ExtractMimeAndClassFromFilename(copyName)
+		newdoc.Mime = mime
+		newdoc.Class = class
+	}
 	newdoc.CozyMetadata = nil
 	newdoc.InternalID = ""
 	newdoc.CreatedAt = time.Now()
