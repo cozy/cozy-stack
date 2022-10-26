@@ -25,7 +25,7 @@ type allDocsFilter struct {
 	path       string     // The JSON object keys leading to the current position, joined with `.` (inside a row)
 	depth      int        // The number of `{` and `[` minus the number of `}` and `]`
 	matchedAt  int        // The depth of an exact match on a field, or -1
-	rejectedAt int        // The depth were no fields can match (partial or exact), or -1
+	rejectedAt int        // The depth where no fields can match (partial or exact), or -1
 	total      int        // The number of rows kept
 	err        error
 }
