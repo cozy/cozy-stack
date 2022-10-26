@@ -63,7 +63,7 @@ func (f *allDocsFilter) Stream(r io.Reader, w io.Writer) error {
 }
 
 func (f *allDocsFilter) isKeptField() bool {
-	// Decision has already been at an higher level
+	// Decision has already been made at an higher level
 	if f.matchedAt >= 0 {
 		return true
 	}
