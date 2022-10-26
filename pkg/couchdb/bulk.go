@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -129,6 +131,54 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 		return err
 	}
 	return json.Unmarshal(data, results)
+}
+
+func MakeAllDocsRequest(db prefixer.Prefixer, doctype string, params *AllDocsRequest) (io.ReadCloser, error) {
+	if len(params.Keys) > 0 {
+		return nil, errors.New("keys is not supported by MakeAllDocsRequest")
+	}
+	var v url.Values
+	var err error
+	if params != nil {
+		v, err = params.Values()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		v = make(url.Values)
+	}
+	v.Add("include_docs", "true")
+	path := "_all_docs?" + v.Encode()
+	method := http.MethodGet
+
+	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
+	if log.IsDebug() {
+		log.Debugf("request: %s %s %s", method, path, "")
+	}
+	req, err := buildCouchRequest(db, doctype, method, path, nil, nil)
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	start := time.Now()
+	resp, err := config.CouchClient().Do(req)
+	elapsed := time.Since(start)
+	// Possible err = mostly connection failure
+	if err != nil {
+		err = newConnectionError(err)
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	if elapsed.Seconds() >= 10 {
+		log.Infof("slow request on %s %s (%s)", method, path, elapsed)
+	}
+
+	if err = handleResponseError(db, resp); err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
 }
 
 // ForeachDocs traverse all the documents from the given database with the

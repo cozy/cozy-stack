@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/stream"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -405,77 +406,24 @@ func allDocs(c echo.Context) error {
 		StartKey:   c.QueryParam("startkey"),
 		EndKey:     c.QueryParam("endkey"),
 	}
-	var docs []*couchdb.JSONDoc
-	if err := couchdb.GetAllDocs(inst, doctype, req, &docs); err != nil {
+	body, err := couchdb.MakeAllDocsRequest(inst, doctype, req)
+	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
 	}
+	defer body.Close()
 
-	skipDDoc := c.QueryParam("DesignDocs") == "false"
-	var fields [][]string
-	for _, f := range strings.Split(c.QueryParam("Fields"), ",") {
-		fields = append(fields, strings.Split(f, "."))
+	fields := strings.Split(c.QueryParam("Fields"), ",")
+	filter := stream.NewAllDocsFilter(fields)
+	if c.QueryParam("DesignDocs") == "false" {
+		filter.SkipDesignDocs()
 	}
-	res := couchdb.AllDocsResponse{
-		Offset:    req.Skip,
-		TotalRows: len(docs),
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	c.Response().WriteHeader(http.StatusOK)
+	if err := filter.Stream(body, c.Response()); err != nil {
+		inst.Logger().WithNamespace("couchdb").Warnf("error on all_docs: %s", err)
+		return err
 	}
-	for _, doc := range docs {
-		if skipDDoc && strings.HasPrefix(doc.ID(), "_design") {
-			continue
-		}
-		m := filterFields(doc, fields)
-		raw, err := json.Marshal(m)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
-		}
-		row := couchdb.AllDocsRow{
-			ID:  doc.ID(),
-			Doc: raw,
-		}
-		res.Rows = append(res.Rows, row)
-	}
-	return c.JSON(http.StatusOK, res)
-}
-
-func filterFields(doc *couchdb.JSONDoc, fields [][]string) map[string]interface{} {
-	m := make(map[string]interface{})
-	for _, field := range fields {
-		if val, ok := extractField(doc, field); ok {
-			assignField(m, field, val)
-		}
-	}
-	return m
-}
-
-func extractField(doc *couchdb.JSONDoc, field []string) (interface{}, bool) {
-	var value interface{} = doc.M
-	for _, part := range field {
-		val, ok := value.(map[string]interface{})
-		if !ok {
-			return nil, false
-		}
-		value, ok = val[part]
-		if !ok {
-			return nil, false
-		}
-	}
-	return value, true
-}
-
-func assignField(m map[string]interface{}, field []string, val interface{}) {
-	for i, part := range field {
-		if i == len(field)-1 {
-			m[part] = val
-		} else {
-			if v, ok := m[part].(map[string]interface{}); ok {
-				m = v
-			} else {
-				nested := make(map[string]interface{})
-				m[part] = nested
-				m = nested
-			}
-		}
-	}
+	return nil
 }
 
 func normalDocs(c echo.Context) error {
