@@ -30,7 +30,7 @@ type allDocsFilter struct {
 	err        error
 }
 
-// NewAllDocsFilter creates an object that can be use to remove some fields
+// NewAllDocsFilter creates an object that can be used to remove some fields
 // from a response to the all_docs endpoint of CouchDB.
 func NewAllDocsFilter(fields []string) *allDocsFilter {
 	for k, v := range fields {
