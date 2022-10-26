@@ -208,8 +208,9 @@ func (f *allDocsFilter) objectStartInDoc() error {
 		return f.row.Object()
 	}
 
-	// We need to keep cozyMetadata.uploadedBy if fields include cozyMetadata,
-	// and we keep everything if fields is empty.
+	// We keep every attribute of an included field and we keep everything if
+	// fields is empty.
+	// e.g. we keep `cozyMetadata.uploadedBy` if fields include `cozyMetadata`,
 	if f.matchedAt >= 0 || len(f.fields) == 0 {
 		return f.row.Object(key)
 	}
