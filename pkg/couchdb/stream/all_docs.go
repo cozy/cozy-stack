@@ -223,7 +223,8 @@ func (f *allDocsFilter) objectStartInDoc() error {
 		}
 	}
 
-	// We need to keep metadata if fields include metadata.datetime
+	// We keep parent attributes of included fields.
+	// e.g. we keep `metadata` if fields include `metadata.datetime`.
 	for _, field := range f.fields {
 		if strings.HasPrefix(field, f.path+".") {
 			return f.row.Object(key)
