@@ -780,6 +780,14 @@ func (c *couchdbIndexer) checkTrashedDirIsShared(doc *DirDoc) {
 // the main file of a sharing. If it is the case, the sharing is revoked and
 // the reference to the sharing is removed.
 func (c *couchdbIndexer) checkTrashedFileIsShared(doc *FileDoc) {
+	// A shortcut is created for a sharing not yet accepted if the owner of the
+	// sharing knows the Cozy URL of a recipient. Normally, this shortcut is
+	// removed when the sharing is accepted, but it is safer to avoid revoking
+	// the sharing is such a shortcut is deleted later.
+	if doc.Class == "shortcut" {
+		return
+	}
+
 	refs := doc.ReferencedBy[:0]
 	for _, ref := range doc.ReferencedBy {
 		if ref.Type == consts.Sharings {
