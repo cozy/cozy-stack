@@ -699,6 +699,41 @@ DELETE /apps/tasky HTTP/1.1
 HTTP/1.1 204 No Content
 ```
 
+## Send application logs to cozy-stack
+
+### POST /apps/:slug/logs
+
+Send client-side logs to cozy-stack so they can be stored in the server's 
+logging system.
+
+#### Status codes
+
+-   204 No Content, when all the log lines have been processed.
+-   400 Bad-Request, when the JSON body is invalid.
+-   404 Not Found, when no apps with the given slug could be found.
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    slug is invalid or log level does not exist)
+
+#### Request
+
+```http
+POST /apps/emails/logs HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+```json
+[
+  { "timestamp": "2022-10-27T17:13:37.293Z", "level": "info", "msg": "Fetching e-mail data..." },
+  { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "Could not find requested e-mail" }
+]
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Access an application
 
 Each application will run on its sub-domain. The sub-domain is the slug used
