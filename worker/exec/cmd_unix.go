@@ -12,13 +12,11 @@ import (
 
 // CreateCmd creates an exec.Cmd.
 func CreateCmd(cmdStr, workDir string) *exec.Cmd {
-	script := "."
 	cwd := workDir
 	if info, err := os.Stat(workDir); err == nil && !info.IsDir() {
-		script = filepath.Base(workDir)
 		cwd = filepath.Dir(workDir)
 	}
-	c := exec.Command(cmdStr, script)
+	c := exec.Command(cmdStr, workDir)
 	c.Dir = cwd
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return c

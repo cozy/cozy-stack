@@ -162,7 +162,8 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		assert.Equal(t, "manifest", doc2.M["type"])
 
 		msg2 := doc2.M["message"].(string)
-		assert.Equal(t, "./manifest.konnector", msg2)
+		assert.True(t, strings.HasPrefix(msg2, os.TempDir()))
+		assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
 
 		msg1 := doc1.M["message"].(string)
 		cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
