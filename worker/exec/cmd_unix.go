@@ -4,13 +4,22 @@
 package exec
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
 
 // CreateCmd creates an exec.Cmd.
 func CreateCmd(cmdStr, workDir string) *exec.Cmd {
-	c := exec.Command(cmdStr, workDir)
+	script := "."
+	cwd := workDir
+	if info, err := os.Stat(workDir); err == nil && !info.IsDir() {
+		script = filepath.Base(workDir)
+		cwd = filepath.Dir(workDir)
+	}
+	c := exec.Command(cmdStr, script)
+	c.Dir = cwd
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	return c
 }
