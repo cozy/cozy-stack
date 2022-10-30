@@ -19,8 +19,16 @@ cozy-stack instances add <domain> [flags]
 
 ### Examples
 
+A simple exemple creating an instance with the domain `instance01.localhost:8080`
+
+```sh
+$ cozy-stack instances add instance01.localhost:8080 --passphrase cozy --apps drive,photos,settings,home,store
 ```
-$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,store cozy.localhost:8080
+
+A more complexe exemple, with pre-installed apps, a context, the user email, public name and local and a context.
+
+```sh
+$ cozy-stack instances add instance02.localhost:8080 --passphrase cozy --apps home,store,drive,photos,settings,contacts,notes,passwords --email claude@cozy.localhost --locale fr --public-name Claude --context-name dev
 ```
 
 ### Options
