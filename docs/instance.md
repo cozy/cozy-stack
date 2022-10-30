@@ -57,6 +57,15 @@ At the end of the instance creation, the CLI returns a token, called
 where they will be able to choose their password. After that, the instance
 is said to be onboarded, and the user can use it normally.
 
+## Listing
+
+To get the list of all the instances that can be served by this server :
+
+```sh
+$ cozy-stack instances ls [flags]
+```
+Flags are optional, [more info on ls](cli/cozy-stack_instances_ls.md).
+
 ## Destroying
 
 An instance is destroyed through the command line. A confirmation is asked from
