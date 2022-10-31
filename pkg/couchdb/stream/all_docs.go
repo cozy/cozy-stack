@@ -5,6 +5,7 @@
 package stream
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -15,14 +16,15 @@ import (
 
 type allDocsFilter struct {
 	// config
-	fields   []string
+	fields   [][]byte
 	skipDDoc bool
 
 	// state
 	w          io.Writer
 	row        oj.Builder // The current row without the filtered fields
 	rowIsDDoc  bool       // The current row is a design doc
-	path       string     // The JSON object keys leading to the current position, joined with `.` (inside a row)
+	inDoc      bool       // The current value is inside the "doc" part of a row
+	path       []byte     // The JSON object keys leading to the current position, joined with `.` (inside a doc)
 	depth      int        // The number of `{` and `[` minus the number of `}` and `]`
 	matchedAt  int        // The depth of an exact match on a field, or -1
 	rejectedAt int        // The depth where no fields can match (partial or exact), or -1
@@ -33,10 +35,11 @@ type allDocsFilter struct {
 // NewAllDocsFilter creates an object that can be used to remove some fields
 // from a response to the all_docs endpoint of CouchDB.
 func NewAllDocsFilter(fields []string) *allDocsFilter {
-	for k, v := range fields {
-		fields[k] = "doc." + v
+	slices := make([][]byte, 0, len(fields))
+	for _, field := range fields {
+		slices = append(slices, []byte(field))
 	}
-	return &allDocsFilter{fields: fields}
+	return &allDocsFilter{fields: slices}
 }
 
 // SkipDesignDocs must be called to configure the filter to also remove the
@@ -49,7 +52,7 @@ func (f *allDocsFilter) SkipDesignDocs() {
 // write the filtered JSON to the w writer to be sent to the client.
 func (f *allDocsFilter) Stream(r io.Reader, w io.Writer) error {
 	f.w = w
-	f.path = ""
+	f.path = make([]byte, 0, 128)
 	f.depth = 0
 	f.matchedAt = -1
 	f.rejectedAt = -1
@@ -61,6 +64,13 @@ func (f *allDocsFilter) Stream(r io.Reader, w io.Writer) error {
 	}
 	return f.err
 }
+
+var (
+	keySlice   = []byte("key")
+	arraySlice = []byte("[]")
+	idSlice    = []byte("id")
+	docSlice   = []byte("doc")
+)
 
 func (f *allDocsFilter) isKeptField() bool {
 	// Decision has already been made at an higher level
@@ -75,16 +85,17 @@ func (f *allDocsFilter) isKeptField() bool {
 	if len(f.fields) == 0 {
 		return true
 	}
-	if f.depth <= 3 {
-		// offset, rows, and total_rows
-		// id, key, value, and doc
+	if f.depth <= 3 || !f.inDoc {
+		// keys at global level: offset, rows, and total_rows
+		// keys at row level: id, key, value, and doc
+		// keys at row.value level: rev
 		// -> we can remove key (same as id) to gain a few kbs in the response
-		return f.path != "key"
+		return !bytes.Equal(f.path, keySlice)
 	}
 
 	// Looks at fields to decide
 	for _, field := range f.fields {
-		if field == f.path {
+		if bytes.Equal(field, f.path) {
 			return true
 		}
 	}
@@ -92,8 +103,8 @@ func (f *allDocsFilter) isKeptField() bool {
 }
 
 // currentKey returns the last object key we have seen.
-func (f *allDocsFilter) currentKey() string {
-	idx := strings.LastIndex(f.path, ".")
+func (f *allDocsFilter) currentKey() []byte {
+	idx := bytes.LastIndexByte(f.path, '.')
 	if idx == -1 {
 		return f.path
 	}
@@ -102,12 +113,12 @@ func (f *allDocsFilter) currentKey() string {
 
 // popKey removes the given key from the path after we have finished processing
 // its value.
-func (f *allDocsFilter) popKey(key string) {
+func (f *allDocsFilter) popKey(key []byte) {
 	pos := len(f.path) - len(key) - 1
 	if pos > 0 {
 		f.path = f.path[:pos]
 	} else {
-		f.path = ""
+		f.path = f.path[:0]
 	}
 }
 
@@ -115,13 +126,13 @@ func (f *allDocsFilter) popKey(key string) {
 func (f *allDocsFilter) value(value interface{}) {
 	var err error
 	key := f.currentKey()
-	if key == "[]" {
+	if bytes.Equal(key, arraySlice) {
 		if f.rejectedAt < 0 {
 			err = f.row.Value(value)
 		}
 	} else {
 		if f.isKeptField() {
-			err = f.row.Value(value, key)
+			err = f.row.Value(value, string(key))
 		}
 		f.popKey(key)
 	}
@@ -155,21 +166,21 @@ func (f *allDocsFilter) Number(n string) {
 }
 
 func (f *allDocsFilter) String(s string) {
-	if f.skipDDoc && f.depth == 3 && f.path == "id" && strings.HasPrefix(s, "_design") {
+	if f.skipDDoc && f.depth == 3 &&
+		bytes.Equal(f.path, idSlice) && strings.HasPrefix(s, "_design") {
 		// skip design docs
 		f.rowIsDDoc = true
-		f.path = ""
+		f.path = f.path[:0]
 	} else {
 		f.value(s)
 	}
 }
 
 func (f *allDocsFilter) Key(s string) {
-	if f.path == "" {
-		f.path = s
-	} else {
-		f.path += "." + s
+	if len(f.path) != 0 {
+		f.path = append(f.path, '.')
 	}
+	f.path = append(f.path, s...)
 }
 
 func (f *allDocsFilter) ObjectStart() {
@@ -181,12 +192,16 @@ func (f *allDocsFilter) ObjectStart() {
 		err = errors.New("unexpected case")
 	case 2: // a row
 		f.rowIsDDoc = false
-		f.path = ""
+		f.path = f.path[:0]
 		err = f.row.Object()
 	case 3: // doc or value
-		if len(f.fields) == 0 || f.path != "value" {
-			err = f.row.Object(f.path)
+		if bytes.Equal(f.path, docSlice) {
+			f.inDoc = true
 		}
+		if len(f.fields) == 0 || f.inDoc {
+			err = f.row.Object(string(f.path))
+		}
+		f.path = f.path[:0]
 	default: // inside doc
 		err = f.objectStartInDoc()
 	}
@@ -204,7 +219,7 @@ func (f *allDocsFilter) objectStartInDoc() error {
 
 	// Objects inside an array are always kept
 	key := f.currentKey()
-	if key == "[]" {
+	if bytes.Equal(key, arraySlice) {
 		return f.row.Object()
 	}
 
@@ -212,22 +227,25 @@ func (f *allDocsFilter) objectStartInDoc() error {
 	// fields is empty.
 	// e.g. we keep `cozyMetadata.uploadedBy` if fields include `cozyMetadata`,
 	if f.matchedAt >= 0 || len(f.fields) == 0 {
-		return f.row.Object(key)
+		return f.row.Object(string(key))
 	}
 
 	// Exact match
 	for _, field := range f.fields {
-		if field == f.path {
+		if bytes.Equal(field, f.path) {
 			f.matchedAt = f.depth
-			return f.row.Object(key)
+			return f.row.Object(string(key))
 		}
 	}
 
 	// We keep parent attributes of included fields.
 	// e.g. we keep `metadata` if fields include `metadata.datetime`.
+	withDot := make([]byte, len(f.path)+1)
+	copy(withDot, f.path)
+	withDot[len(f.path)] = '.'
 	for _, field := range f.fields {
-		if strings.HasPrefix(field, f.path+".") {
-			return f.row.Object(key)
+		if bytes.HasPrefix(field, withDot) {
+			return f.row.Object(string(key))
 		}
 	}
 
@@ -253,17 +271,18 @@ func (f *allDocsFilter) ObjectEnd() {
 			f.flushRow()
 		}
 	case 3: // doc or value
-		if len(f.fields) == 0 || f.path != "value" {
+		if len(f.fields) == 0 || f.inDoc {
 			f.row.Pop()
 		}
-		f.path = ""
+		f.path = f.path[:0]
+		f.inDoc = false
 	default: // inside doc
 		f.objectEndInDoc()
 	}
 }
 
 func (f *allDocsFilter) objectEndInDoc() {
-	if key := f.currentKey(); key != "[]" {
+	if key := f.currentKey(); !bytes.Equal(key, arraySlice) {
 		f.popKey(key)
 	}
 
@@ -305,17 +324,17 @@ func (f *allDocsFilter) ArrayStart() {
 	}
 
 	key := f.currentKey()
-	f.path += ".[]"
+	f.path = append(f.path, '.', '[', ']')
 
 	if f.rejectedAt >= 0 {
 		return
 	}
 
 	var err error
-	if key == "[]" {
+	if bytes.Equal(key, arraySlice) {
 		err = f.row.Array()
 	} else if f.isKeptField() {
-		err = f.row.Array(key)
+		err = f.row.Array(string(key))
 	} else {
 		f.rejectedAt = f.depth - 1
 	}
@@ -336,8 +355,8 @@ func (f *allDocsFilter) ArrayEnd() {
 		return
 	}
 
-	f.popKey("[]")
-	if key := f.currentKey(); key != "[]" {
+	f.popKey(arraySlice)
+	if key := f.currentKey(); !bytes.Equal(key, arraySlice) {
 		f.popKey(key)
 	}
 
