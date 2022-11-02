@@ -26,7 +26,7 @@ describe "Export and import" do
     photos.each { |p| album.add source, p }
 
     # Export the data from one Cozy and import them and the other
-    sleep 1
+    sleep 2
     export = Export.new(source)
     export.run
     link = export.get_link

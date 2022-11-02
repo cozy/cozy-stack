@@ -25,7 +25,7 @@ describe "A directory" do
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing
-    sleep 1
+    sleep 3
 
     # Create two directories and check they are synchronized
     one = Folder.create inst_alice, name: "foo", dir_id: folder.couch_id
