@@ -6,7 +6,7 @@
 
 You can configure your `cozy-stack` using a configuration file. 
 
-By default, `cozy-stack` comes with a file named [`cozy.example.yaml`].(https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml)
+By default, `cozy-stack` comes with a file named [`cozy.example.yaml`](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml).
 
 If you need to edit the configuration, we recommend to only copy the 
 needed part in a new file. This new file should be named `cozy.yaml`, 
