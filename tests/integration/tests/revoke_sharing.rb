@@ -176,14 +176,14 @@ describe "A sharing" do
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing
-    sleep 2
+    sleep 3
 
     # Add Charlie, Dave, and Emily to the sharing
     code = sharing.add_members inst_alice, [contact_charlie], Folder.doctype
     assert_equal 200, code
     sleep 1
     inst_charlie.accept sharing
-    sleep 4
+    sleep 6
     code = sharing.add_members inst_bob, [contact_dave], Folder.doctype
     assert_equal 200, code
     code = sharing.add_members inst_bob, [contact_emily], Folder.doctype
@@ -191,7 +191,7 @@ describe "A sharing" do
     sleep 1
     inst_dave.accept sharing, inst_bob
     inst_emily.accept sharing, inst_bob
-    sleep 5
+    sleep 6
 
     # Get the clients id and triggers id on alice side
     doc = Helpers.couch.get_doc inst_alice.domain, Sharing.doctype, sharing.couch_id

@@ -172,6 +172,8 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
 	if err != nil && err != os.ErrNotExist {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("EnsureSharedWithMeDir failed to find the dir: %s", err)
 		return nil, err
 	}
 
@@ -179,6 +181,8 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		name := inst.Translate("Tree Shared with me")
 		dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
 		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("EnsureSharedWithMeDir failed to make the dir: %s", err)
 			return nil, err
 		}
 		dir.DocID = consts.SharedWithMeDirID
@@ -188,6 +192,8 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 			dir, err = fs.DirByPath(dir.Fullpath)
 		}
 		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("EnsureSharedWithMeDir failed to create the dir: %s", err)
 			return nil, err
 		}
 		return dir, nil
@@ -203,10 +209,14 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		}
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("EnsureSharedWithMeDir failed to restore the dir: %s", err)
 			return nil, err
 		}
 		children, err := fs.DirBatch(dir, couchdb.NewSkipCursor(0, 0))
 		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("EnsureSharedWithMeDir failed to find children: %s", err)
 			return nil, err
 		}
 		for _, child := range children {
@@ -227,6 +237,8 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("EnsureSharedWithMeDir failed to trash children: %s", err)
 				return nil, err
 			}
 		}
@@ -247,12 +259,16 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		parent, err = fs.DirByID(parentID)
 	}
 	if err != nil {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("CreateDirForSharing failed to find parent directory: %s", err)
 		return nil, err
 	}
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
 	parts := strings.Split(rule.Values[0], "/")
 	dir.DocID = parts[len(parts)-1]
 	if err != nil {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("CreateDirForSharing failed to make dir: %s", err)
 		return nil, err
 	}
 	dir.AddReferencedBy(couchdb.DocReference{
@@ -289,8 +305,13 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 	fs := inst.VFS()
 	parts := strings.Split(rule.Values[0], "/")
 	dir, _, err := fs.DirOrFileByID(parts[len(parts)-1])
-	if err != nil || dir == nil {
+	if err != nil {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("AddReferenceForSharingDir failed to find dir: %s", err)
 		return err
+	}
+	if dir == nil {
+		return nil
 	}
 	for _, ref := range dir.ReferencedBy {
 		if ref.Type == consts.Sharings && ref.ID == s.SID {
@@ -330,12 +351,19 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	var parentID string
 	if len(res.Rows) > 0 {
 		dir, file, err := inst.VFS().DirOrFileByID(res.Rows[0].ID)
-		if err != nil || dir != nil {
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("GetSharingDir failed to find dir: %s", err)
 			return dir, err
+		}
+		if dir != nil {
+			return dir, nil
 		}
 		// file is a shortcut
 		parentID = file.DirID
 		if err := inst.VFS().DestroyFile(file); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("GetSharingDir failed to delete shortcut: %s", err)
 			return nil, err
 		}
 		s.ShortcutID = ""
@@ -343,6 +371,8 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 	rule := s.FirstFilesRule()
 	if rule == nil {
+		inst.Logger().WithNamespace("sharing").
+			Errorf("no first rule for: %#v", s)
 		return nil, ErrInternalServerError
 	}
 	return s.CreateDirForSharing(inst, rule, parentID)

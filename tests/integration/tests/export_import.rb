@@ -15,7 +15,7 @@ describe "Export and import" do
     folder = Folder.create source
     folder.couch_id.wont_be_empty
     file = CozyFile.create source, dir_id: folder.couch_id
-    file.overwrite source, mime: 'text/plain'
+    file.overwrite source, mime: 'text/plain', content: Faker::DrWho.quote
 
     # Create an album with some photos
     CozyFile.ensure_photos_in_cache
@@ -26,7 +26,7 @@ describe "Export and import" do
     photos.each { |p| album.add source, p }
 
     # Export the data from one Cozy and import them and the other
-    sleep 1
+    sleep 2
     export = Export.new(source)
     export.run
     link = export.get_link

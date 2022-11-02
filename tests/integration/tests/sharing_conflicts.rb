@@ -62,7 +62,7 @@ describe 'A sharing' do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
-    sleep 2
+    sleep 3
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
     file1_recipient = CozyFile.find_by_path inst_recipient, path
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"

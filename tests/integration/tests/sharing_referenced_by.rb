@@ -104,7 +104,7 @@ describe "A photo" do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
-    sleep 2
+    sleep 4
 
     # Check the recipient has the shared album and photo
     xored_id = Sharing.xor_id album.couch_id, key

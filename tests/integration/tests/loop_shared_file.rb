@@ -27,7 +27,7 @@ describe "A sharing" do
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing
-    sleep 1
+    sleep 3
     file = CozyFile.find inst_alice, file.couch_id
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_bob = CozyFile.find_by_path inst_bob, path

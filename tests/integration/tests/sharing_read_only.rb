@@ -38,7 +38,7 @@ describe "A file or folder" do
     inst_bob.accept sharing
     sleep 1
     inst_charlie.accept sharing
-    sleep 1
+    sleep 3
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
     file1_charlie = CozyFile.find_by_path inst_charlie, path
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"
