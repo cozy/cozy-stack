@@ -29,16 +29,24 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 )
 
 // JSMimeType is the content-type for javascript
 const JSMimeType = "application/javascript"
 
 const typeTextEventStream = "text/event-stream"
+
+type AppLog struct {
+	Time  time.Time `json:"timestamp"`
+	Level string    `json:"level"`
+	Msg   string    `json:"msg"`
+}
 
 type apiApp struct {
 	app.Manifest
@@ -211,6 +219,68 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 
 		go inst.Run()
 		return pollInstaller(c, instance, isEventStream, w, slug, inst)
+	}
+}
+
+// logsHandler handles all POST /:slug/logs requests and forwards the log lines
+// sent as a JSON array to the server logger.
+func logsHandler(appType consts.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		inst := middlewares.GetInstance(c)
+
+		var slug string
+		err := middlewares.AllowMaximal(c)
+		if err == nil {
+			// If logs are sent by the flagship app, get the slug from the
+			// request params.
+			slug = c.Param("slug")
+			_, err := app.GetBySlug(inst, slug, appType)
+			if err != nil {
+				return wrapAppsError(err)
+			}
+		} else {
+			// If logs are not sent by the flagship app, check that it's sent by
+			// a konnector or an app with the logs permission and get its slug
+			// from the permission.
+			pdoc, err := middlewares.GetPermission(c)
+			if err != nil {
+				return err
+			}
+
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.AppLogs); err != nil {
+				return err
+			}
+
+			if appType == consts.KonnectorType && pdoc.Type == permission.TypeKonnector {
+				slug = strings.TrimPrefix(pdoc.SourceID, consts.Konnectors+"/")
+			} else if appType == consts.WebappType && pdoc.Type == permission.TypeWebapp {
+				slug = strings.TrimPrefix(pdoc.SourceID, consts.Apps+"/")
+			} else {
+				return middlewares.ErrForbidden
+			}
+		}
+
+		var logs []AppLog
+		if err := json.NewDecoder(c.Request().Body).Decode(&logs); err != nil {
+			return jsonapi.BadJSON()
+		}
+
+		logger := logger.WithDomain(inst.Domain).WithField("slug", slug)
+		if appType == consts.KonnectorType {
+			logger = logger.WithNamespace("konnectors")
+		} else {
+			logger = logger.WithNamespace("apps")
+		}
+
+		for _, log := range logs {
+			level, err := logrus.ParseLevel(log.Level)
+			if err != nil {
+				return jsonapi.InvalidAttribute("level", err)
+			}
+			logger.WithTime(log.Time).Log(level, log.Msg)
+		}
+
+		return c.NoContent(http.StatusNoContent)
 	}
 }
 
@@ -749,6 +819,7 @@ func WebappsRoutes(router *echo.Group) {
 	router.GET("/:slug/open", openWebapp)
 	router.GET("/:slug/download", downloadHandler(consts.WebappType))
 	router.GET("/:slug/download/:version", downloadHandler(consts.WebappType))
+	router.POST("/:slug/logs", logsHandler(consts.WebappType))
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
@@ -762,6 +833,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.GET("/:slug/icon/:version", iconHandler(consts.KonnectorType))
 	router.POST("/:slug/trigger", createTrigger)
 	router.GET("/:slug/download", downloadHandler(consts.KonnectorType))
+	router.POST("/:slug/logs", logsHandler(consts.KonnectorType))
 }
 
 func wrapAppsError(err error) error {

@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
@@ -41,6 +42,7 @@ import (
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +77,16 @@ func createFile(dir, filename, content string) error {
 	return err
 }
 
-func installMiniApp() error {
+func installMiniApp(setup *testutils.TestSetup) error {
+	setup.AddCleanup(func() error { return permission.DestroyWebapp(testInstance, slug) })
+
+	permissions := permission.Set{
+		permission.Rule{
+			Type:  "io.cozy.apps.logs",
+			Verbs: permission.Verbs(permission.POST),
+		},
+	}
+	version := "1.0.0"
 	manifest := &couchdb.JSONDoc{
 		Type: consts.Apps,
 		M: map[string]interface{}{
@@ -109,6 +120,8 @@ func installMiniApp() error {
 					Public: true,
 				},
 			},
+			"permissions": permissions,
+			"version":     version,
 		},
 	}
 
@@ -117,7 +130,12 @@ func installMiniApp() error {
 		return err
 	}
 
-	appdir := path.Join(vfs.WebappsDirName, slug)
+	_, err = permission.CreateWebappSet(testInstance, slug, permissions, version)
+	if err != nil {
+		return err
+	}
+
+	appdir := path.Join(vfs.WebappsDirName, slug, version)
 	_, err = vfs.MkdirAll(testInstance.VFS(), appdir)
 	if err != nil {
 		return err
@@ -150,6 +168,50 @@ func installMiniApp() error {
 		return err
 	}
 	err = createFile(pubdir, "index.html", "this is a file in public/")
+	return err
+}
+
+func installMiniKonnector(setup *testutils.TestSetup) error {
+	setup.AddCleanup(func() error { return permission.DestroyKonnector(testInstance, slug) })
+
+	permissions := permission.Set{
+		permission.Rule{
+			Type:  "io.cozy.apps.logs",
+			Verbs: permission.Verbs(permission.POST),
+		},
+	}
+	version := "1.0.0"
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Konnectors,
+		M: map[string]interface{}{
+			"_id":         consts.Konnectors + "/" + slug,
+			"name":        "Mini",
+			"icon":        "icon.svg",
+			"slug":        slug,
+			"source":      "git://github.com/cozy/mini.git",
+			"state":       apps.Ready,
+			"permissions": permissions,
+			"version":     version,
+		},
+	}
+
+	err := couchdb.CreateNamedDoc(testInstance, manifest)
+	if err != nil {
+		return err
+	}
+
+	_, err = permission.CreateKonnectorSet(testInstance, slug, permissions, version)
+	if err != nil {
+		return err
+	}
+
+	konnDir := path.Join(vfs.KonnectorsDirName, slug, version)
+	_, err = vfs.MkdirAll(testInstance.VFS(), konnDir)
+	if err != nil {
+		return err
+	}
+
+	err = createFile(konnDir, "icon.svg", "<svg>...</svg>")
 	return err
 }
 
@@ -409,7 +471,7 @@ func TestListApps(t *testing.T) {
 	related := links["related"].(string)
 	assert.Equal(t, "https://cozywithapps-mini.example.net/", related)
 	icon := links["icon"].(string)
-	assert.Equal(t, "/apps/mini/icon/", icon)
+	assert.Equal(t, "/apps/mini/icon/1.0.0", icon)
 }
 
 func TestIconForApp(t *testing.T) {
@@ -609,6 +671,121 @@ func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 	assert.Nil(t, errc)
 }
 
+func TestSendKonnectorLogsFromFlagshipApp(t *testing.T) {
+	initialOutput := logrus.New().Out
+	defer logrus.SetOutput(initialOutput)
+
+	testOutput := new(bytes.Buffer)
+	logrus.SetOutput(testOutput)
+
+	// Create the OAuth client for the flagship app
+	flagship := oauth.Client{
+		RedirectURIs: []string{"cozy://flagship"},
+		ClientName:   "flagship-app",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+		Flagship:     true,
+	}
+	require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+	// Give it the maximal permission
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		flagship.ClientID, "*", "", time.Now())
+	require.NoError(t, err)
+
+	// Send logs for a konnector
+	konnectorLogs := `[
+		{ "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" }
+	]`
+	req, _ := http.NewRequest("POST", ts.URL+"/konnectors/"+slug+"/logs", bytes.NewBufferString(konnectorLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 204, res.StatusCode)
+
+	assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" nspace=konnectors slug="+slug+"\n", testOutput.String())
+
+	// Send logs for a webapp
+	testOutput.Reset()
+	appLogs := `[
+		{ "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" }
+	]`
+	req, _ = http.NewRequest("POST", ts.URL+"/apps/"+slug+"/logs", bytes.NewBufferString(appLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err = client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 204, res.StatusCode)
+
+	assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" nspace=apps slug="+slug+"\n", testOutput.String())
+}
+
+func TestSendKonnectorLogsFromKonnector(t *testing.T) {
+	initialOutput := logrus.New().Out
+	defer logrus.SetOutput(initialOutput)
+
+	testOutput := new(bytes.Buffer)
+	logrus.SetOutput(testOutput)
+
+	token := testInstance.BuildKonnectorToken(slug)
+
+	konnectorLogs := `[
+		{ "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" }
+	]`
+	req, _ := http.NewRequest("POST", ts.URL+"/konnectors/"+slug+"/logs", bytes.NewBufferString(konnectorLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 204, res.StatusCode)
+
+	assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" nspace=konnectors slug="+slug+"\n", testOutput.String())
+
+	// Sending logs for a webapp should fail
+	req, _ = http.NewRequest("POST", ts.URL+"/apps/"+slug+"/logs", bytes.NewBufferString(konnectorLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err = client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 403, res.StatusCode)
+}
+
+func TestSendAppLogsFromWebApp(t *testing.T) {
+	initialOutput := logrus.New().Out
+	defer logrus.SetOutput(initialOutput)
+
+	testOutput := new(bytes.Buffer)
+	logrus.SetOutput(testOutput)
+
+	token := testInstance.BuildAppToken(slug, "")
+
+	appLogs := `[
+		{ "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" }
+	]`
+	req, _ := http.NewRequest("POST", ts.URL+"/apps/"+slug+"/logs", bytes.NewBufferString(appLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 204, res.StatusCode)
+
+	assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" nspace=apps slug="+slug+"\n", testOutput.String())
+
+	// Sending logs for a konnector should fail
+	req, _ = http.NewRequest("POST", ts.URL+"/konnectors/"+slug+"/logs", bytes.NewBufferString(appLogs))
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+token)
+
+	res, err = client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 403, res.StatusCode)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
@@ -645,7 +822,12 @@ func TestMain(m *testing.M) {
 	testInstance.OnboardingFinished = true
 	_ = testInstance.Update()
 
-	err = installMiniApp()
+	err = installMiniApp(setup)
+	if err != nil {
+		setup.CleanupAndDie("Could not install mini app.", err)
+	}
+
+	err = installMiniKonnector(setup)
 	if err != nil {
 		setup.CleanupAndDie("Could not install mini app.", err)
 	}

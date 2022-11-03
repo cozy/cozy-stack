@@ -139,6 +139,12 @@ func (e *Entry) WithFields(fields logrus.Fields) *Entry {
 	return &Entry{entry}
 }
 
+// WithTime overrides the Entry's time
+func (e *Entry) WithTime(t time.Time) *Entry {
+	entry := e.entry.WithTime(t)
+	return &Entry{entry}
+}
+
 // Clone clones a logger entry.
 func (e *Entry) AddHook(hook logrus.Hook) {
 	// We need to clone the underlying logger in order to add a specific hook

@@ -51,6 +51,7 @@ var blockList = map[string]bool{
 	consts.NotesEvents:         none,
 	consts.NotesTelepointers:   none,
 	consts.Thumbnails:          none,
+	consts.AppLogs:             none,
 
 	// Only stack can write them
 	consts.Jobs:              readable,
