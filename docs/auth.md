@@ -1036,6 +1036,50 @@ authentication cookie.
 The passcode can be sent to the instance's owner via email — more transport
 shall be added later.
 
+### POST /auth/tokens/konnectors/:slug
+
+This endpoint can be used by the flagship application in order to create a
+token for the konnector with the given slug. This token can then be used by the
+client-side konnector to make requests to cozy-stack.
+The flagship app will need to use its own access token to request the konnector 
+token.
+
+#### Request
+
+```http
+POST /auth/tokens/konnectors/impots HTTP/1.1
+Host: cozy.example.org
+Accept: application/json
+Authorization: Bearer eyJpc3Mi...
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+"OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg"
+```
+
+### FAQ
+
+> What format is used for tokens?
+
+The access tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/),
+like this:
+
+| Claim   | Fullname  | What it identifies                                                      |
+| ------- | --------- | ----------------------------------------------------------------------- |
+| `aud`   | Audience  | Identify the recipient where the token can be used (i.e. `konn`)        |
+| `iss`   | Issuer    | Identify the Cozy instance (its domain in fact)                         |
+| `iat`   | Issued At | Identify when the token was issued (Unix timestamp)                     |
+| `sub`   | Subject   | Identify the client that can use the token (i.e. the konnector slug)    |
+| `scope` | Scope     | Konnector tokens don't have any scope                                   |
+
+
 ## Client-side apps
 
 **Important**: OAuth2 is not used here! The steps looks similar (like obtaining

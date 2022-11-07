@@ -63,6 +63,7 @@ var linkedClientID string
 var linkedClientSecret string
 var linkedCode string
 var confirmCode string
+var konnSlug string
 
 func getSessionID(cookies []*http.Cookie) string {
 	for _, c := range cookies {
@@ -1976,6 +1977,98 @@ func TestConfirmCodeOK(t *testing.T) {
 	assert.Equal(t, 204, res.StatusCode)
 }
 
+func TestBuildKonnectorToken(t *testing.T) {
+	// Create an flagship OAuth client
+	oauthClient := oauth.Client{
+		RedirectURIs: []string{"cozy://client"},
+		ClientName:   "oauth-client",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/client",
+		Flagship:     true,
+	}
+	require.Nil(t, oauthClient.Create(testInstance, oauth.NotPending))
+
+	// Give it the maximal permission
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		oauthClient.ClientID, "*", "", time.Now())
+	require.NoError(t, err)
+
+	// Get konnector access_token
+	req, err := http.NewRequest("POST", ts.URL+"/auth/tokens/konnectors/"+konnSlug, nil)
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status)
+
+	defer res.Body.Close()
+	var response string
+	err = json.NewDecoder(res.Body).Decode(&response)
+	require.NoError(t, err)
+
+	// Validate token
+	claims := permission.Claims{}
+	err = crypto.ParseJWT(response, func(token *jwt.Token) (interface{}, error) {
+		return testInstance.SessionSecret(), nil
+	}, &claims)
+	assert.NoError(t, err)
+	assert.Equal(t, consts.KonnectorAudience, claims.Audience)
+	assert.Equal(t, domain, claims.Issuer)
+	assert.Equal(t, konnSlug, claims.Subject)
+	assert.Equal(t, "", claims.Scope)
+}
+
+func TestBuildKonnectorTokenNotFlagshipApp(t *testing.T) {
+	// Create an OAuth client
+	oauthClient := oauth.Client{
+		RedirectURIs: []string{"cozy://client"},
+		ClientName:   "oauth-client",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/client",
+		Flagship:     false,
+	}
+	require.Nil(t, oauthClient.Create(testInstance, oauth.NotPending))
+
+	// Give it the maximal permission
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		oauthClient.ClientID, "*", "", time.Now())
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("POST", ts.URL+"/auth/tokens/konnectors/"+konnSlug, nil)
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, "403 Forbidden", res.Status)
+}
+
+func TestBuildKonnectorTokenInvalidSlug(t *testing.T) {
+	// Create an flagship OAuth client
+	oauthClient := oauth.Client{
+		RedirectURIs: []string{"cozy://client"},
+		ClientName:   "oauth-client",
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/client",
+		Flagship:     true,
+	}
+	require.Nil(t, oauthClient.Create(testInstance, oauth.NotPending))
+
+	// Give it the maximal permission
+	token, err := testInstance.MakeJWT(consts.AccessTokenAudience,
+		oauthClient.ClientID, "*", "", time.Now())
+	require.NoError(t, err)
+
+	req, err := http.NewRequest("POST", ts.URL+"/auth/tokens/konnectors/missing", nil)
+	require.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	conf := config.GetConfig()
@@ -2017,6 +2110,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Could not init dynamic FS")
 	}
+
+	konnSlug, err = setup.InstallMiniKonnector()
+	if err != nil {
+		setup.CleanupAndDie("Could not install mini konnector.", err)
+	}
+
 	os.Exit(setup.Run())
 }
 
