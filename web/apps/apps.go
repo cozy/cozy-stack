@@ -833,6 +833,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.GET("/:slug/icon/:version", iconHandler(consts.KonnectorType))
 	router.POST("/:slug/trigger", createTrigger)
 	router.GET("/:slug/download", downloadHandler(consts.KonnectorType))
+	router.GET("/:slug/download/:version", downloadHandler(consts.KonnectorType))
 	router.POST("/:slug/logs", logsHandler(consts.KonnectorType))
 }
 

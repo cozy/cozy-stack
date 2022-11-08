@@ -318,6 +318,39 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+## Download the code of a konnector
+
+This endpoint is used by the flagship app to download the code of a konnector,
+in order to install it on the user's device.
+
+### GET /konnectors/:slug/download & GET /konnectors/:slug/download/:version
+
+The first route will download a tarball of the source code of the latest
+installed version of the konnector. The second route will force a specific
+version of the konnector (and a 412 Precondition failed may be sent if the code
+of this specific version is not available).
+
+#### Request
+
+```http
+GET /konnectors/pajemploi/download/3.0.1 HTTP/1.1
+Authorization: Bearer flagship-token
+Host: cozy.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/gzip
+```
+
+When the konnector has been installed from the registry, the stack will respond
+with a redirect to the registry. In that case, the downloaded tarball can be 
+gzipped or not (the registry allows both). When the konnector is installed from 
+another source, the stack will create a gzipped tarball and send it to the 
+client.
+
 ## Uninstall a konnector
 
 ### DELETE /konnectors/:slug
