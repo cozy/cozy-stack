@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,13 +11,18 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/andybalholm/brotli"
+	apps "github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/stack"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -296,4 +302,165 @@ func (c *TestSetup) GetCookieJar() *CookieJar {
 		Jar: j,
 		URL: instanceURL,
 	}
+}
+
+func (c *TestSetup) InstallMiniApp() (string, error) {
+	slug := "mini"
+	instance := c.GetTestInstance()
+	c.AddCleanup(func() error { return permission.DestroyWebapp(instance, slug) })
+
+	permissions := permission.Set{
+		permission.Rule{
+			Type:  "io.cozy.apps.logs",
+			Verbs: permission.Verbs(permission.POST),
+		},
+	}
+	version := "1.0.0"
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Apps,
+		M: map[string]interface{}{
+			"_id":    consts.Apps + "/" + slug,
+			"name":   "Mini",
+			"icon":   "icon.svg",
+			"slug":   slug,
+			"source": "git://github.com/cozy/mini.git",
+			"state":  apps.Ready,
+			"intents": []apps.Intent{
+				{
+					Action: "PICK",
+					Types:  []string{"io.cozy.foos"},
+					Href:   "/foo",
+				},
+			},
+			"routes": apps.Routes{
+				"/foo": apps.Route{
+					Folder: "/",
+					Index:  "index.html",
+					Public: false,
+				},
+				"/bar": apps.Route{
+					Folder: "/bar",
+					Index:  "index.html",
+					Public: false,
+				},
+				"/public": apps.Route{
+					Folder: "/public",
+					Index:  "index.html",
+					Public: true,
+				},
+			},
+			"permissions": permissions,
+			"version":     version,
+		},
+	}
+
+	err := couchdb.CreateNamedDoc(instance, manifest)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = permission.CreateWebappSet(instance, slug, permissions, version)
+	if err != nil {
+		return "", err
+	}
+
+	appdir := path.Join(vfs.WebappsDirName, slug, version)
+	_, err = vfs.MkdirAll(instance.VFS(), appdir)
+	if err != nil {
+		return "", err
+	}
+	bardir := path.Join(appdir, "bar")
+	_, err = vfs.Mkdir(instance.VFS(), bardir, nil)
+	if err != nil {
+		return "", err
+	}
+	pubdir := path.Join(appdir, "public")
+	_, err = vfs.Mkdir(instance.VFS(), pubdir, nil)
+	if err != nil {
+		return "", err
+	}
+
+	err = createFile(instance, appdir, "icon.svg", "<svg>...</svg>")
+	if err != nil {
+		return "", err
+	}
+	err = createFile(instance, appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a> {{.Favicon}}`)
+	if err != nil {
+		return "", err
+	}
+	err = createFile(instance, bardir, "index.html", "{{.CozyBar}}")
+	if err != nil {
+		return "", err
+	}
+	err = createFile(instance, appdir, "hello.html", "world {{.Token}}")
+	if err != nil {
+		return "", err
+	}
+	err = createFile(instance, pubdir, "index.html", "this is a file in public/")
+	return slug, err
+}
+
+func (c *TestSetup) InstallMiniKonnector() (string, error) {
+	slug := "mini"
+	instance := c.GetTestInstance()
+	c.AddCleanup(func() error { return permission.DestroyKonnector(instance, slug) })
+
+	permissions := permission.Set{
+		permission.Rule{
+			Type:  "io.cozy.apps.logs",
+			Verbs: permission.Verbs(permission.POST),
+		},
+	}
+	version := "1.0.0"
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Konnectors,
+		M: map[string]interface{}{
+			"_id":         consts.Konnectors + "/" + slug,
+			"name":        "Mini",
+			"icon":        "icon.svg",
+			"slug":        slug,
+			"source":      "git://github.com/cozy/mini.git",
+			"state":       apps.Ready,
+			"permissions": permissions,
+			"version":     version,
+		},
+	}
+
+	err := couchdb.CreateNamedDoc(instance, manifest)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = permission.CreateKonnectorSet(instance, slug, permissions, version)
+	if err != nil {
+		return "", err
+	}
+
+	konnDir := path.Join(vfs.KonnectorsDirName, slug, version)
+	_, err = vfs.MkdirAll(instance.VFS(), konnDir)
+	if err != nil {
+		return "", err
+	}
+
+	err = createFile(instance, konnDir, "icon.svg", "<svg>...</svg>")
+	return slug, err
+}
+
+func createFile(instance *instance.Instance, dir, filename, content string) error {
+	abs := path.Join(dir, filename+".br")
+	file, err := vfs.Create(instance.VFS(), abs)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(compress(content))
+	return err
+}
+
+func compress(content string) []byte {
+	buf := &bytes.Buffer{}
+	bw := brotli.NewWriter(buf)
+	_, _ = bw.Write([]byte(content))
+	_ = bw.Close()
+	return buf.Bytes()
 }

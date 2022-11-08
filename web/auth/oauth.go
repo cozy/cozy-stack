@@ -914,6 +914,24 @@ func accessToken(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
+func buildKonnectorToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	slug := c.Param("slug")
+
+	if err := middlewares.AllowMaximal(c); err != nil {
+		return c.JSON(http.StatusForbidden, err)
+	}
+
+	_, err := app.GetBySlug(inst, slug, consts.KonnectorType)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, err)
+	}
+
+	token := inst.BuildKonnectorToken(slug)
+
+	return c.JSON(http.StatusCreated, token)
+}
+
 // Used to trade a secret for OAuth client informations
 func secretExchange(c echo.Context) error {
 	type exchange struct {

@@ -85,6 +85,7 @@ will have to do a few more steps to have access to the Cozy:
 Some routes of the stack are dedicated to the flagship app, like:
 
 - creating a session code with `POST /auth/session_code`
+- getting a konnector token with `POST /auth/tokens/konnectors/:slug`
 - getting the parameters to open a webapp with `GET /apps/:slug/open`
 
 And some routes accept a `session_code` to open a session in a webview or

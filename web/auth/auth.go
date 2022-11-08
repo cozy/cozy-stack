@@ -614,6 +614,7 @@ func Routes(router *echo.Group) {
 
 	// Flagship app
 	router.POST("/session_code", CreateSessionCode)
+	router.POST("/tokens/konnectors/:slug", buildKonnectorToken)
 
 	// 2FA
 	router.GET("/twofactor", twoFactorForm)
