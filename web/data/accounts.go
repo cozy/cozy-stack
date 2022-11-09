@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -153,6 +154,17 @@ func createAccount(c echo.Context) error {
 	}
 
 	account.Encrypt(doc)
+
+	// Generate CozyMetadata if the client creating the account did not pass
+	// this data.
+	if doc.M["cozyMetadata"] == nil {
+		now := time.Now()
+		doc.M["cozyMetadata"] = map[string]interface{}{
+			"metadataVersion": 1,
+			"createdAt":       now.String(),
+			"updatedAt":       now.String(),
+		}
+	}
 
 	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err
