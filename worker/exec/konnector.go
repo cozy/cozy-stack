@@ -367,6 +367,13 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		dir.CozyMetadata.SourceAccount = acc.ID()
 		_ = couchdb.UpdateDoc(inst, dir)
 	}
+
+	// 6. Ensure that the account knows the folder path
+	if acc.DefaultFolderPath == "" {
+		acc.DefaultFolderPath = folderPath
+		_ = couchdb.UpdateDoc(inst, acc)
+	}
+
 	return nil
 }
 
@@ -376,7 +383,12 @@ func computeFolderPath(inst *instance.Instance, slug string, acc *account.Accoun
 		",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
 		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
 		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
+
 	accountName := r.Replace(acc.Name)
+	if accountName == "" {
+		accountName = acc.ID()
+	}
+
 	title := cases.Title(language.Make(inst.Locale)).String(slug)
 	return fmt.Sprintf("/%s/%s/%s", admin, title, accountName)
 }
