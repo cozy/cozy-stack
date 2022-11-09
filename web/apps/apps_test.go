@@ -372,6 +372,33 @@ func TestDownloadApp(t *testing.T) {
 	require.True(t, indexFound)
 }
 
+func TestDownloadKonnectorVersion(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/konnectors/mini/download/1.0.0", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, res.StatusCode)
+
+	mimeType, reader := filetype.FromReader(res.Body)
+	require.Equal(t, "application/gzip", mimeType)
+	gr, err := gzip.NewReader(reader)
+	require.NoError(t, err)
+	tr := tar.NewReader(gr)
+	iconFound := false
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		require.NoError(t, err)
+		if header.Name == "/icon.svg" {
+			iconFound = true
+		}
+	}
+	require.True(t, iconFound)
+}
+
 func TestOpenWebapp(t *testing.T) {
 	// Create the OAuth client for the flagship app
 	flagship := oauth.Client{
@@ -715,7 +742,7 @@ func TestMain(m *testing.M) {
 	req.Host = testInstance.Domain
 	_, _ = client.Do(req)
 
-	_, token = setup.GetTestClient(consts.Apps + " io.cozy.registry.webapps")
+	_, token = setup.GetTestClient(consts.Apps + " " + consts.Konnectors)
 
 	os.Exit(setup.Run())
 }
