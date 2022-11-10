@@ -58,7 +58,7 @@ func init() {
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Reserved:     true,
-		Timeout:      10 * time.Minute,
+		Timeout:      3 * time.Hour,
 		WorkerFunc:   WorkerCheck,
 	})
 }
