@@ -8,7 +8,7 @@
 -   A SMTP server
 -   CouchDB 3
 -   Git
--   Image Magick (and the Lato font)
+-   Image Magick (and the Lato font, ghostscript et rsvg-convert)
 
 To install CouchDB 3 through Docker, take a look at our
 [Docker specific documentation](docker.md).
