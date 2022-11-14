@@ -56,7 +56,15 @@ type fileJSON struct {
 }
 
 func newDir(doc *vfs.DirDoc) *dir {
-	return &dir{doc: doc}
+	rel := jsonapi.RelationshipMap{
+		"referenced_by": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + doc.ID() + "/relationships/references",
+			},
+			Data: doc.ReferencedBy,
+		},
+	}
+	return &dir{doc: doc, rel: rel}
 }
 
 func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.DirOrFileDoc, error) {
@@ -405,9 +413,18 @@ type findDir struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
-func (d *findDir) Relationships() jsonapi.RelationshipMap { return nil }
-func (d *findDir) Included() []jsonapi.Object             { return nil }
-func (d *findDir) Links() *jsonapi.LinksList              { return nil }
+func (d *findDir) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"referenced_by": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + d.ID() + "/relationships/references",
+			},
+			Data: d.DirDoc.ReferencedBy,
+		},
+	}
+}
+func (d *findDir) Included() []jsonapi.Object { return nil }
+func (d *findDir) Links() *jsonapi.LinksList  { return nil }
 
 func newFindDir(doc *vfs.DirDoc, fields []string) *findDir {
 	dir := &findDir{doc, nil, nil}
