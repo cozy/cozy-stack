@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -2940,6 +2941,57 @@ func TestFind(t *testing.T) {
 		assert.Nil(t, attrs["dir_id"])
 		assert.Nil(t, attrs["path"])
 	}
+
+	_, dirdata := createDir(t, "/files/?Type=directory&Name=aDirectoryWithReferencedBy")
+	dirdata, ok := dirdata["data"].(map[string]interface{})
+	assert.True(t, ok)
+	dirID, ok := dirdata["id"].(string)
+	assert.True(t, ok)
+	path := "/files/" + dirID + "/relationships/referenced_by"
+	content, err := json.Marshal(&jsonapi.Relationship{
+		Data: couchdb.DocReference{
+			ID:   "fooalbumid",
+			Type: "io.cozy.photos.albums",
+		},
+	})
+	require.NoError(t, err)
+	req, err = http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
+	require.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	query5 := strings.NewReader(`{
+		"selector": {
+			"name": "aDirectoryWithReferencedBy"
+		},
+		"limit": 1
+	}`)
+	req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query5)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	require.NoError(t, err)
+	resData = obj["data"].([]interface{})
+	require.Len(t, resData, 1)
+	dataFields = resData[0].(map[string]interface{})
+	attrs = dataFields["attributes"].(map[string]interface{})
+	assert.Equal(t, "aDirectoryWithReferencedBy", attrs["name"])
+	assert.NotEmpty(t, attrs["referenced_by"])
+	relationships, ok := dataFields["relationships"].(map[string]interface{})
+	require.True(t, ok)
+	referencedBy, ok := relationships["referenced_by"].(map[string]interface{})
+	require.True(t, ok)
+	dataRef, ok := referencedBy["data"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, dataRef, 1)
+	ref := dataRef[0].(map[string]interface{})
+	assert.Equal(t, "fooalbumid", ref["id"])
+	assert.Equal(t, "io.cozy.photos.albums", ref["type"])
 }
 
 func TestDirSize(t *testing.T) {
