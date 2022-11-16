@@ -1108,6 +1108,9 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 		}
 
 		for i, m := range s.Members {
+			if m.Status == MemberStatusRevoked && !s.Active {
+				continue
+			}
 			isFirst := i == 0
 			isOwner := m.Status == MemberStatusOwner
 			if isFirst != isOwner {
