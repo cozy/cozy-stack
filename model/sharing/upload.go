@@ -143,6 +143,13 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
 
 	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
+	if err == ErrInternalServerError {
+		// Retrying is useless in this case, let's skip this file
+		if seq != lastSeq {
+			_ = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+		}
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
