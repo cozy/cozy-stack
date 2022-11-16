@@ -553,17 +553,31 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 			return err
 		}
 	}
-	s.Credentials = nil
-	s.Active = false
 
-	for i, m := range s.Members {
-		if i > 0 && m.Instance != "" {
-			s.Members[i].Status = MemberStatusRevoked
+	var err error
+	for i := 0; i < 3; i++ {
+		s.Triggers = Triggers{}
+		s.Credentials = nil
+		s.Active = false
+
+		for i, m := range s.Members {
+			if i > 0 && m.Instance != "" {
+				s.Members[i].Status = MemberStatusRevoked
+				break
+			}
+		}
+
+		err := couchdb.UpdateDoc(inst, s)
+		if err == nil || !couchdb.IsConflictError(err) {
+			break
+		}
+
+		// In case of conflict (409 from CouchDB), reload the document and try again
+		if errb := couchdb.GetDoc(inst, consts.Sharings, s.ID(), s); errb != nil {
 			break
 		}
 	}
-
-	return couchdb.UpdateDoc(inst, s)
+	return err
 }
 
 // RevokeRecipientByNotification is called on the sharer side, after a
