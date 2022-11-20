@@ -424,6 +424,16 @@ func copyFiles(workFS afero.Fs, fileServer appfs.FileServer, slug, version, shas
 		return err
 	}
 	for _, file := range files {
+		switch file {
+		// The following files are completely useless for running a konnector, so we skip them
+		// in order to lower pressure on underlying file storage backend during high konnector execution rate
+		case
+			"README.md",
+			"package.json",
+			".travis.yml",
+			"LICENSE":
+			continue
+		}
 		var src io.ReadCloser
 		var dst io.WriteCloser
 		src, err = fileServer.Open(slug, version, shasum, file)
