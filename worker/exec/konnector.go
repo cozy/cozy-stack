@@ -242,15 +242,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := app.KonnectorsFileServer(i)
-	tarFile, err := fileServer.Open(slug, man.Version(), man.Checksum(), app.KonnectorArchiveName)
-	if err == nil {
-		err = extractTar(workFS, tarFile)
-		if errc := tarFile.Close(); err == nil {
-			err = errc
-		}
-	} else if os.IsNotExist(err) {
-		err = copyFiles(workFS, fileServer, slug, man.Version(), man.Checksum())
-	}
+	err = copyFiles(workFS, fileServer, slug, man.Version(), man.Checksum())
 	if err != nil {
 		return "", cleanDir, err
 	}
@@ -424,6 +416,31 @@ func copyFiles(workFS afero.Fs, fileServer appfs.FileServer, slug, version, shas
 		return err
 	}
 	for _, file := range files {
+		switch file {
+		// The following files are completely useless for running a konnector, so we skip them
+		// in order to lower pressure on underlying file storage backend during high konnector execution rate
+		case
+			"README.md",
+			"package.json",
+			".travis.yml",
+			"LICENSE":
+			continue
+		// Backward compatibility with older konnector storage pattern
+		// in unique tar file which has ben removed in #1332
+		case app.KonnectorArchiveName:
+			tarFile, err := fileServer.Open(slug, version, shasum, file)
+			if err != nil {
+				return err
+			}
+			err = extractTar(workFS, tarFile)
+			if errc := tarFile.Close(); err == nil {
+				err = errc
+			}
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		var src io.ReadCloser
 		var dst io.WriteCloser
 		src, err = fileServer.Open(slug, version, shasum, file)
