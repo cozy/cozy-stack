@@ -25,6 +25,7 @@
   - "/apps - Applications Management": ./apps.md
   - " /apps - Apps registry": ./registry.md
   - "/bitwarden - Bitwarden": ./bitwarden.md
+  - "/connection_check - Connection check": ./connection-check.md
   - "/contacts - Contacts": ./contacts.md
   - "/data - Data System": ./data-system.md
   - " /data - Mango": ./mango.md
