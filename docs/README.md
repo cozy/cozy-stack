@@ -77,6 +77,7 @@ designing new services.
     -   [Apps registry](registry.md)
     -   [Konnectors](konnectors.md)
 -   `/bitwarden` - [Bitwarden](bitwarden.md)
+-   `/connection_check` - [Connection check](connection-check.md)
 -   `/contacts` - [Contacts](contacts.md)
 -   `/data` - [Data System](data-system.md)
     -   [Mango](mango.md)

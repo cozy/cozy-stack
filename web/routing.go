@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/bitwarden"
 	"github.com/cozy/cozy-stack/web/compat"
+	"github.com/cozy/cozy-stack/web/conncheck"
 	"github.com/cozy/cozy-stack/web/contacts"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -247,6 +248,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 	// other non-authentified routes
 	{
+		conncheck.Routes(router.Group("/connection_check"))
 		status.Routes(router.Group("/status"))
 		version.Routes(router.Group("/version"))
 	}
