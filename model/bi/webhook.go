@@ -21,6 +21,8 @@ import (
 // user BI token is persisted.
 const aggregatorID = "bi-aggregator"
 
+const aggregatorUserID = "bi-aggregator-user"
+
 // EventBI is a type used for the events sent by BI in the webhooks
 type EventBI string
 
@@ -249,6 +251,9 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 		if err := api.deleteUser(c.Token); err != nil {
 			return fmt.Errorf("deleteUser: %s", err)
 		}
+		if err := c.resetAggregator(); err != nil {
+			return fmt.Errorf("resetAggregator: %s", err)
+		}
 	}
 	return nil
 }
@@ -307,6 +312,35 @@ func findTrigger(inst *instance.Instance, acc *account.Account) (job.Trigger, er
 	return triggers[0], nil
 }
 
+func (c *WebhookCall) resetAggregator() error {
+	aggregator := findAccountByID(c.accounts, aggregatorID)
+	if aggregator != nil {
+		aggregator.Token = ""
+		if err := couchdb.UpdateDoc(c.Instance, aggregator); err != nil {
+			return err
+		}
+	}
+
+	user := findAccountByID(c.accounts, aggregatorUserID)
+	if user != nil {
+		user.UserID = ""
+		if err := couchdb.UpdateDoc(c.Instance, user); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func findAccountByID(accounts []*account.Account, id string) *account.Account {
+	for _, account := range accounts {
+		if id == account.DocID {
+			return account
+		}
+	}
+	return nil
+}
+
 func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connectionID int) (*account.Account, job.Trigger, error) {
 	acc := couchdb.JSONDoc{Type: consts.Accounts}
 	data := map[string]interface{}{
@@ -319,8 +353,8 @@ func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connection
 	rels := map[string]interface{}{
 		"parent": map[string]interface{}{
 			"data": map[string]interface{}{
-				"_id":   "bi-aggregator",
-				"_type": "io.cozy.accounts",
+				"_id":   aggregatorID,
+				"_type": consts.Accounts,
 			},
 		},
 	}
