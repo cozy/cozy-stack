@@ -29,6 +29,7 @@ import (
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/worker/archive"
+	"github.com/cozy/cozy-stack/worker/exec"
 	_ "github.com/cozy/cozy-stack/worker/log"
 	_ "github.com/cozy/cozy-stack/worker/mails"
 	_ "github.com/cozy/cozy-stack/worker/migrations"
@@ -620,16 +621,27 @@ func patchJob(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
+
+	log := inst.Logger().
+		WithField("job_id", j.ID()).
+		WithField("worker_id", "client").
+		WithNamespace("jobs")
+	msg := &exec.KonnectorMessage{}
+	if err := j.Message.Unmarshal(&msg); err == nil {
+		log = log.
+			WithField("slug", msg.Konnector).
+			WithField("account_id", msg.Account).
+			WithField("exec_time", time.Since(j.StartedAt))
+	}
+
 	switch req.State {
 	case job.Errored:
 		err = j.Nack(req.Error)
-		inst.Logger().
-			WithField("job_id", j.ID()).
-			WithField("worker_id", "client").
-			WithNamespace("jobs").
-			Errorf("error while performing job: %s", req.Error)
+		log.Infof("Konnector failure: %s", req.Error)
+		log.Errorf("error while performing job: %s", req.Error)
 	case job.Done:
 		err = j.Ack()
+		log.Info("Konnector success")
 	default:
 		err = jsonapi.InvalidAttribute("State", errors.New("State must be done or errored"))
 	}
