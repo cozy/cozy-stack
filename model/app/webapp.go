@@ -70,9 +70,8 @@ type Terms struct {
 }
 
 // Locales is used for the translations of the application name.
-type Locales map[string]struct {
-	Name string `json:"name"`
-}
+// "fr" -> "name" -> "Cozy Drive"
+type Locales map[string]map[string]interface{}
 
 // WebappManifest contains all the informations associated with an installed web
 // application.
@@ -231,8 +230,10 @@ func (m *WebappManifest) Fetch(field string) []string {
 // NameLocalized returns the name of the app in the given locale
 func (m *WebappManifest) NameLocalized(locale string) string {
 	if m.val.Locales != nil && locale != "" {
-		if v, ok := m.val.Locales[locale]; ok && v.Name != "" {
-			return v.Name
+		if dict, ok := m.val.Locales[locale]; ok {
+			if v, ok := dict["name"].(string); ok && v != "" {
+				return v
+			}
 		}
 	}
 	return m.val.Name
