@@ -318,6 +318,12 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	if err := couchdb.CreateDoc(inst, s); err != nil {
 		return nil, err
 	}
+	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
+		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
+		}
+	}
 
 	if s.Owner && s.PreviewPath != "" {
 		return s.CreatePreviewPermissions(inst)
