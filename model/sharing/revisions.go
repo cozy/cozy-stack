@@ -122,6 +122,13 @@ func (rt *RevsTree) Add(rev string) *RevsTree {
 		if rt.Branches[0].Rev == rev {
 			return &rt.Branches[0]
 		}
+		if RevGeneration(rev) < RevGeneration(rt.Branches[0].Rev) {
+			rt.Branches = []RevsTree{
+				{Rev: rt.Rev, Branches: rt.Branches},
+			}
+			rt.Rev = rev
+			return rt
+		}
 		return rt.Branches[0].Add(rev)
 	}
 	rt.Branches = []RevsTree{
