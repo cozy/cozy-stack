@@ -399,7 +399,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	} else {
 		if evt.OldDoc == nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Updating an io.cozy.shared with no previous revision: %v %v", evt, ref)
+				Infof("Updating an io.cozy.shared with no previous revision: %v %v", evt, ref)
 			if subtree, _ := ref.Revisions.Find(rev); subtree == nil {
 				ref.Revisions.Add(rev)
 			}
