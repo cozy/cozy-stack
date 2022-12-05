@@ -3051,7 +3051,7 @@ func TestDirSize(t *testing.T) {
 }
 
 func TestDeprecatePreviewAndIcon(t *testing.T) {
-	testutils.TODO(t, "2022-12-01", "Remove the deprecated preview and icon for PDF files")
+	testutils.TODO(t, "2023-12-01", "Remove the deprecated preview and icon for PDF files")
 }
 
 func TestMain(m *testing.M) {
