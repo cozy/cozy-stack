@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -310,13 +311,7 @@ func buildServeParams(
 	isLoggedIn bool,
 	sessID string,
 ) serveParams {
-	var token string
-	if isLoggedIn {
-		token = inst.BuildAppToken(webapp.Slug(), sessID)
-	} else {
-		token = c.QueryParam("sharecode")
-	}
-
+	token := getServeToken(c, inst, webapp, isLoggedIn, sessID)
 	tracking := false
 	settings, err := inst.SettingsDocument()
 	if err == nil {
@@ -340,6 +335,56 @@ func buildServeParams(
 		instance:   inst,
 		isLoggedIn: isLoggedIn,
 	}
+}
+
+func getServeToken(
+	c echo.Context,
+	inst *instance.Instance,
+	webapp *app.WebappManifest,
+	isLoggedIn bool,
+	sessID string,
+) string {
+	sharecode := c.QueryParam("sharecode")
+	if sharecode == "" {
+		if isLoggedIn {
+			return inst.BuildAppToken(webapp.Slug(), sessID)
+		}
+		return ""
+	}
+
+	// XXX The sharecode can be used for share by links, or for Cozy to Cozy
+	// sharings. When it is used for a Cozy to Cozy sharing, it can be for a
+	// preview token, and we need to upgrade it to an interact token if the
+	// member has a known Cozy URL. We do this upgrade when serving the preview
+	// page, not when sending the invitation link by mail, because we want the
+	// same link to work (and be upgraded) after the user has accepted the
+	// sharing.
+	token, pdoc, err := permission.GetTokenAndPermissionsFromShortcode(inst, sharecode)
+	if err != nil || pdoc.Type != permission.TypeSharePreview {
+		return sharecode
+	}
+	sharingID := strings.Split(pdoc.SourceID, "/")
+	sharingDoc, err := sharing.FindSharing(inst, sharingID[1])
+	if err != nil || sharingDoc.ReadOnlyRules() {
+		return token
+	}
+	m, err := sharingDoc.FindMemberBySharecode(inst, token)
+	if err != nil {
+		return token
+	}
+	if m.Instance != "" && !m.ReadOnly && m.Status != sharing.MemberStatusRevoked {
+		memberIndex := 0
+		for i := range sharingDoc.Members {
+			if sharingDoc.Members[i].Instance == m.Instance {
+				memberIndex = i
+			}
+		}
+		interact, err := sharingDoc.GetInteractCode(inst, m, memberIndex)
+		if err == nil {
+			return interact
+		}
+	}
+	return token
 }
 
 func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType string) error {

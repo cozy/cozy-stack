@@ -171,7 +171,7 @@ func (o *FileOpener) GetSharecode(memberIndex int, readOnly bool) (string, error
 	if readOnly {
 		return o.getPreviewCode(member, memberIndex)
 	}
-	return o.getInteractCode(member, memberIndex)
+	return o.Sharing.GetInteractCode(o.Inst, member, memberIndex)
 }
 
 // getPreviewCode returns a sharecode that can be used for reading the file. It
@@ -206,61 +206,6 @@ func (o *FileOpener) getPreviewCode(member *Member, memberIndex int) (string, er
 	}
 
 	return "", ErrCannotOpenFile
-}
-
-// getInteractCode returns a sharecode that can be use for reading and writing
-// the file. It uses a share-interact token.
-func (o *FileOpener) getInteractCode(member *Member, memberIndex int) (string, error) {
-	interact, err := permission.GetForShareInteract(o.Inst, o.Sharing.ID())
-	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return o.Sharing.CreateInteractPermissions(o.Inst, member)
-		}
-		return "", err
-	}
-
-	// Check if the sharing has not been revoked and accepted again, in which
-	// case, we need to update the permission set.
-	needUpdate := false
-	set := o.Sharing.CreateInteractSet()
-	if !set.HasSameRules(interact.Permissions) {
-		interact.Permissions = set
-		needUpdate = true
-	}
-
-	// If we already have a code for this member, let's use it
-	indexKey := keyFromMemberIndex(memberIndex)
-	for key, code := range interact.Codes {
-		if key == "" {
-			continue
-		}
-		if key == member.Instance || key == member.Email || key == indexKey {
-			if needUpdate {
-				if err := couchdb.UpdateDoc(o.Inst, interact); err != nil {
-					return "", err
-				}
-			}
-			return code, nil
-		}
-	}
-
-	// Else, create a code and add it to the permission doc
-	key := member.Email
-	if key == "" {
-		key = member.Instance
-	}
-	if key == "" {
-		key = indexKey
-	}
-	code, err := o.Inst.CreateShareCode(key)
-	if err != nil {
-		return "", err
-	}
-	interact.Codes[key] = code
-	if err := couchdb.UpdateDoc(o.Inst, interact); err != nil {
-		return "", err
-	}
-	return code, nil
 }
 
 // OpenFileParameters is the list of parameters for building the URL where the
