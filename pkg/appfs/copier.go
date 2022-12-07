@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/ncw/swift/v2"
-	"github.com/spf13/afero"
 )
 
 // Copier is an interface defining a common set of functions for the installer

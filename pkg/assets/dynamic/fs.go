@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/ncw/swift/v2"
-	"github.com/spf13/afero"
 )
 
 var assetFS assetsFS
