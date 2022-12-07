@@ -60,7 +60,7 @@ assets-fast:
 
 ## cli: builds the CLI documentation and shell completions
 cli:
-	@if ! [ -x "$$(command -v cozy-stack)" ]; then make build; fi
+	@if ! [ -x "$$(command -v cozy-stack)" ]; then make install; fi
 	@scripts/build.sh assets
 	@rm -rf docs/cli/*
 	@cozy-stack doc markdown docs/cli
