@@ -34,8 +34,6 @@ following line to the .bash_profile
 		case "bash":
 			return RootCmd.GenBashCompletion(os.Stdout)
 		case "zsh":
-			// Zsh completion support is still basic
-			// https://github.com/spf13/cobra/issues/107
 			return RootCmd.GenZshCompletion(os.Stdout)
 		case "fish":
 			includeDescription := true
