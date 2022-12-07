@@ -19,11 +19,11 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
-	"github.com/spf13/afero"
 )
 
 // FileServer interface defines a way to access and serve the application's

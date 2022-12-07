@@ -7,6 +7,7 @@ require (
 	github.com/andybalholm/brotli v1.0.4
 	github.com/appleboy/go-fcm v0.1.5
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
+	github.com/cozy/afero v1.3.0
 	github.com/cozy/goexif2 v0.0.0-20200819113101-00e1cc8cc9d3
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
@@ -40,7 +41,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.23.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/afero v1.9.3
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.1
@@ -54,5 +54,3 @@ require (
 	golang.org/x/text v0.3.7
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
-
-replace github.com/spf13/afero => github.com/cozy/afero v1.2.3
