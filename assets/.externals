@@ -27,12 +27,12 @@ url     https://unpkg.com/cozy-ui@37.3.2/dist/cozy-ui.min.css
 sha256  242168ee02948c43a9575adfa728a0f245dce1f7869528e4091e236b519e5f76
 
 name    ./js/cozy-bar.min.js
-url     https://unpkg.com/cozy-bar@7.21.1/dist/cozy-bar.min.js
-sha256  cb21bf54451d7113d34001b97a6f9817b9c359ab8e12781ffe3af644f998cb8a
+url     https://unpkg.com/cozy-bar@7.23.0/dist/cozy-bar.min.js
+sha256  d5a893960f4c2792a250b56c9bccc9802245f10e80a93278a2243821a93c7e4b
 
 name    ./css/cozy-bar.min.css
-url     https://unpkg.com/cozy-bar@7.21.1/dist/cozy-bar.min.css
-sha256  57d953851d2c022876623321c988d13aac2492056f1fb82ad099867fdd95aa0b
+url     https://unpkg.com/cozy-bar@7.23.0/dist/cozy-bar.min.css
+sha256  766e5d189274d3bb55009e945cf905ff3b47e3ac5d1e2f38fea901c950303fd0
 
 name    ./js/piwik.js
 url     https://matomo.cozycloud.cc/piwik.js
