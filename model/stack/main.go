@@ -78,7 +78,7 @@ security features. Please do not use this binary as your production server.
 		if err == nil {
 			break
 		}
-		err = fmt.Errorf("Could not reach Couchdb 2 database: %s", err.Error())
+		err = fmt.Errorf("Could not reach Couchdb database: %s", err.Error())
 		if i < attempts-1 {
 			logrus.Warnf("%s, retrying in %v", err, attemptsSpacing)
 			time.Sleep(attemptsSpacing)
