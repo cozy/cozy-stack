@@ -51,7 +51,7 @@ documentation](docs/config.md).
 
 ## How to contribute?
 
-We are eager for contributions and very happy when we receive them! It can
+We are eager for contributions and very happy when we receive them! It can be
 code, of course, but it can also take other forms. The workflow is explained
 in [the contributing guide](docs/CONTRIBUTING.md).
 
