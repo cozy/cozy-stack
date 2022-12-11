@@ -4,15 +4,21 @@
 
 This section will list important changes to the stack or its usage, and migration procedures if any is needed.
 
+## October 2021: 401 for invalid bearer tokens
+
+We used to send 400 Bad Request when a bearer token was sent in the request but is not valid (the token has expired, its signature is incorrect, its audience isn't the expected one, etc.).
+
+We will now send a 401 Unauthorized for this case, following [RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750).
+
 ## December 2020: Jobs permissions
 
 We used to have a specific permission logic for jobs, in order to allow apps to direclty manage konnectors. More specifically, an app had the right to access a trigger state or remove it, if there was a doctype in common between the app permissions and the konnector manifest.
 
-This does not seem useful anymore as the konnectors are handled directly through harvest.  
+This does not seem useful anymore as the konnectors are handled directly through harvest.
 
 ## October 2019: Authentication
 
-We are about to change our authentification logic. 
+We are about to change our authentification logic.
 
 This change will be transparent for end-users. End-users don't need to change anything.
 
@@ -53,6 +59,3 @@ Users will migrate transparently to the new authentification logic on their firs
 ### Why this change
 
 Some content will support end-to-end encryption in the future. To ease the use for most users, we'll use the same passphrase for to login in their cozy instance and to encrypt their data. As we do not want the server to be able to read this encrypted data, we do not want to know your real passphrase anymore.
-
-
-
