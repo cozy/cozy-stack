@@ -261,7 +261,7 @@ func keyFromMemberIndex(index int) string {
 	return fmt.Sprintf("index:%d", index)
 }
 
-// GetInteractCode returns a sharecode that can be use for reading and writing
+// GetInteractCode returns a sharecode that can be used for reading and writing
 // the file. It uses a share-interact token.
 func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, memberIndex int) (string, error) {
 	interact, err := permission.GetForShareInteract(inst, s.ID())
