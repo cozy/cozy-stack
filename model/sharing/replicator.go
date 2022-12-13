@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/errgroup"
 )
@@ -622,6 +623,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		},
 		Body:       bytes.NewReader(body),
 		ParseError: ParseRequestError,
+		Client:     safehttp.ClientWithKeepAlive,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
