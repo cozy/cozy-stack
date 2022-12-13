@@ -311,6 +311,12 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 
 // GetTokenFromShortcode retrieves the token doc for a given sharing shortcode
 func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, error) {
+	token, _, err := GetTokenAndPermissionsFromShortcode(db, shortcode)
+	return token, err
+}
+
+// GetTokenAndPermissionsFromShortcode retrieves the token and permissions doc for a given sharing shortcode
+func GetTokenAndPermissionsFromShortcode(db prefixer.Prefixer, shortcode string) (string, *Permission, error) {
 	var res couchdb.ViewResponse
 
 	err := couchdb.ExecView(db, couchdb.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
@@ -318,31 +324,31 @@ func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, erro
 		IncludeDocs: true,
 	}, &res)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if len(res.Rows) == 0 {
-		return "", fmt.Errorf("no permission doc for shortcode %v", shortcode)
+		return "", nil, fmt.Errorf("no permission doc for shortcode %v", shortcode)
 	}
 
 	if len(res.Rows) > 1 {
-		return "", fmt.Errorf("Bad state: several permission docs for shortcode %v", shortcode)
+		return "", nil, fmt.Errorf("Bad state: several permission docs for shortcode %v", shortcode)
 	}
 
 	perm := Permission{}
 	err = json.Unmarshal(res.Rows[0].Doc, &perm)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	for mail, code := range perm.Codes {
 		if mail == res.Rows[0].Value {
-			return code, nil
+			return code, &perm, nil
 		}
 	}
 
-	return "", fmt.Errorf("Cannot find token for shortcode %s", res.Rows[0].Key)
+	return "", nil, fmt.Errorf("Cannot find token for shortcode %s", res.Rows[0].Key)
 }
 
 // CreateWebappSet creates a Permission doc for an app
