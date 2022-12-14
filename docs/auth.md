@@ -282,8 +282,14 @@ Display a form for the user to reset its password, in case he has forgotten it
 for example. If the user is connected, he won't be shown this form and he will
 be directly redirected to his cozy.
 
+This endpoint accepts a `hideBackButton` parameter. If this parameter is present
+and set to `true` then the passphrase reset page won't display any button to go
+back to the login page.
+This is useful when this page is opened in a different context from the one in 
+which the login page was opened (e.g. a browser vs a mobile native application).
+
 ```http
-GET /auth/passphrase_reset HTTP/1.1
+GET /auth/passphrase_reset?hideBackButton=true HTTP/1.1
 Host: cozy.example.org
 Content-Type: text/html
 Cookie: ...
