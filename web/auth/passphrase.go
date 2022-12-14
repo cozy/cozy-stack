@@ -29,18 +29,23 @@ func passphraseResetForm(c echo.Context) error {
 	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
 	}
+	showBackButton := true
+	if c.QueryParam("hideBackButton") == "true" {
+		showBackButton = false
+	}
 	passwordAuth := instance.IsPasswordAuthenticationEnabled()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"Domain":      instance.ContextualDomain(),
-		"ContextName": instance.ContextName,
-		"Locale":      instance.Locale,
-		"Title":       instance.TemplateTitle(),
-		"Favicon":     middlewares.Favicon(instance),
-		"CSRF":        c.Get("csrf"),
-		"Redirect":    c.QueryParam("redirect"),
-		"HasHint":     hasHint,
-		"HasCiphers":  hasCiphers,
-		"CozyPass":    !passwordAuth,
+		"Domain":         instance.ContextualDomain(),
+		"ContextName":    instance.ContextName,
+		"Locale":         instance.Locale,
+		"Title":          instance.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(instance),
+		"CSRF":           c.Get("csrf"),
+		"Redirect":       c.QueryParam("redirect"),
+		"HasHint":        hasHint,
+		"HasCiphers":     hasCiphers,
+		"CozyPass":       !passwordAuth,
+		"ShowBackButton": showBackButton,
 	})
 }
 
