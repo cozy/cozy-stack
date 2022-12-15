@@ -568,7 +568,7 @@ Content-Type: application/json
 
 ### GET /registry/maintenance
 
-Get the list of applications with maintenance mode activated.
+Get the list of applications (and konnectors) with maintenance mode activated.
 
 #### Request
 
