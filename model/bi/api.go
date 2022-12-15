@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 )
 
@@ -68,8 +70,19 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 		return 0, fmt.Errorf("/users/me/connections received response code %d", res.StatusCode)
 	}
 
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, err
+	}
 	var data connectionsResponse
-	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+	if err := json.Unmarshal(body, &data); err != nil {
+		// Truncate the body for the log message if too long
+		msg := string(body)
+		if len(msg) > 200 {
+			msg = msg[0:198] + "..."
+		}
+		logger.WithNamespace("bi").
+			Warnf("getNumberOfConnections [%d] cannot parse JSON %s: %s", res.StatusCode, msg, err)
 		return 0, err
 	}
 	return data.Total, nil
