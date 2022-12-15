@@ -444,7 +444,7 @@ logging system.
 #### Request
 
 ```http
-POST /apps/pajemploi/logs HTTP/1.1
+POST /konnectors/pajemploi/logs HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
