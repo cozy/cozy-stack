@@ -90,7 +90,7 @@ describe "A folder" do
 
     # Check the sync (create + update) sharer -> recipient
     child1.rename inst, Faker::Internet.slug
-    child2 = Folder.create inst, dir_id: folder.couch_id
+    child2 = Folder.create inst, dir_id: folder.couch_id, name: Faker::Internet.unique.slug
     child1.move_to inst, child2.couch_id
     opts = CozyFile.metadata_options_for(inst, label: Faker::Simpsons.quote)
     opts[:mime] = 'text/plain'
