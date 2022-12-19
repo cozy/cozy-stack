@@ -34,16 +34,16 @@ func InitSwiftConnection(fs Fs) error {
 		authURL = &url.URL{
 			Scheme: "http",
 			Host:   fsURL.Host,
-			Path:   "/identity/v3",
+			Path:   fsURL.Path,
+		}
+		if isSecure {
+			authURL.Scheme = "https"
 		}
 	} else {
 		authURL, err = url.Parse(auth)
 		if err != nil {
 			panic(fmt.Sprintf("swift: could not parse AuthURL %s", err))
 		}
-	}
-	if isSecure {
-		authURL.Scheme = "https"
 	}
 
 	var username, password string
