@@ -117,7 +117,6 @@ type Config struct {
 	Konnectors     Konnectors
 	Mail           *gomail.DialerOptions
 	MailPerContext map[string]interface{}
-	Matomo         Matomo
 	Move           Move
 	Notifications  Notifications
 	Flagship       Flagship
@@ -215,13 +214,6 @@ type Jobs struct {
 // Konnectors contains the configuration values for the konnectors
 type Konnectors struct {
 	Cmd string
-}
-
-// Matomo contains the configuration for the JS tracking
-type Matomo struct {
-	URL             string
-	SiteID          int
-	OnboardingAppID int
 }
 
 // Move contains the configuration for the move wizard
@@ -770,11 +762,6 @@ func UseViper(v *viper.Viper) error {
 		Jobs:    jobs,
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
-		},
-		Matomo: Matomo{
-			URL:             v.GetString("matomo.url"),
-			SiteID:          v.GetInt("matomo.siteid"),
-			OnboardingAppID: v.GetInt("matomo.onboarding_app_id"),
 		},
 		Move: Move{
 			URL: v.GetString("move.url"),
