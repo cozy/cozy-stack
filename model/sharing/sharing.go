@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -1046,6 +1047,7 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 				"type":  "invalid_rules",
 				"error": err.Error(),
 			})
+			return nil
 		}
 
 		accepted := false
@@ -1055,9 +1057,61 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 			}
 		}
 
-		checks = append(checks, s.checkSharingTriggers(inst, accepted)...)
-		checks = append(checks, s.checkSharingMembers()...)
-		checks = append(checks, s.checkSharingCredentials()...)
+		membersChecks, validMembers := s.checkSharingMembers()
+		checks = append(checks, membersChecks...)
+
+		triggersChecks := s.checkSharingTriggers(inst, accepted)
+		checks = append(checks, triggersChecks...)
+
+		credentialsChecks := s.checkSharingCredentials()
+		checks = append(checks, credentialsChecks...)
+
+		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
+			if !s.Owner || !s.Active || s.Initial || s.ReadOnly() {
+				return nil
+			}
+
+			isSharingReady := false
+			for _, m := range s.Members {
+				if m.Status == MemberStatusReady {
+					isSharingReady = true
+					break
+				}
+			}
+			if !isSharingReady {
+				return nil
+			}
+
+			rule := s.FirstFilesRule()
+			if rule == nil {
+				return nil
+			}
+
+			ownerDocs, err := FindMatchingDocs(inst, *rule)
+			if err != nil {
+				checks = append(checks, map[string]interface{}{
+					"id":    s.SID,
+					"type":  "missing_matching_docs_for_owner",
+					"error": err.Error(),
+				})
+				return nil
+			}
+
+			for _, m := range validMembers {
+				ms, err := FindSharing(m, s.ID())
+				if err != nil {
+					checks = append(checks, map[string]interface{}{
+						"id":     s.SID,
+						"type":   "missing_sharing_for_member",
+						"member": m.Domain,
+						"error":  err.Error(),
+					})
+					continue
+				}
+
+				checks = append(checks, s.checkSharingTreesConsistency(inst, ownerDocs, m, ms)...)
+			}
+		}
 
 		return nil
 	})
@@ -1169,22 +1223,25 @@ func (s *Sharing) checkSharingTriggers(inst *instance.Instance, accepted bool) (
 	return checks
 }
 
-func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}) {
+func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validMembers []*instance.Instance) {
 	if len(s.Members) < 2 {
 		checks = append(checks, map[string]interface{}{
 			"id":         s.SID,
 			"type":       "not_enough_members",
 			"nb_members": len(s.Members),
 		})
-		return checks
+		return checks, nil
 	}
 
+	var ownerDomain string
 	for i, m := range s.Members {
 		if m.Status == MemberStatusRevoked && !s.Active {
 			continue
 		}
+
 		isFirst := i == 0
 		isOwner := m.Status == MemberStatusOwner
+
 		if isFirst != isOwner {
 			checks = append(checks, map[string]interface{}{
 				"id":     s.SID,
@@ -1193,9 +1250,55 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}) {
 				"status": m.Status,
 			})
 		}
+
+		if isOwner {
+			ownerDomain = strings.SplitN(m.Instance, ".", 2)[1]
+		}
 	}
 
-	return checks
+	for _, m := range s.Members {
+		if m.Status == MemberStatusOwner {
+			continue
+		}
+
+		u, err := url.Parse(m.Instance)
+		if err != nil {
+			checks = append(checks, map[string]interface{}{
+				"id":     s.SID,
+				"type":   "invalid_instance_for_member",
+				"member": m.Instance,
+			})
+			continue
+		}
+
+		var domain string
+		if (strings.HasPrefix(m.Instance, "http:") && u.Port() != "80") || (strings.HasPrefix(m.Instance, "https:") && u.Port() != "443") {
+			domain = u.Hostname() + ":" + u.Port()
+		} else {
+			domain = u.Hostname()
+		}
+
+		member, err := instance.Get(domain)
+		if err != nil {
+			// If the member's instance cannot be found and doesn't share the
+			// owner's instance domain, they're probably on different
+			// environments so we simply skip this member.
+			if !strings.HasSuffix(m.Instance, ownerDomain) {
+				continue
+			}
+
+			checks = append(checks, map[string]interface{}{
+				"id":     s.SID,
+				"type":   "missing_instance_for_member",
+				"member": domain,
+			})
+			continue
+		}
+
+		validMembers = append(validMembers, member)
+	}
+
+	return checks, validMembers
 }
 
 func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
@@ -1245,10 +1348,10 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 	} else {
 		if len(s.Credentials) != 1 {
 			checks = append(checks, map[string]interface{}{
-				"id":         s.SID,
-				"type":       "invalid_number_of_credentials",
-				"owner":      false,
-				"nb_members": len(s.Credentials),
+				"id":        s.SID,
+				"type":      "invalid_number_of_credentials",
+				"owner":     false,
+				"nb_embers": len(s.Credentials),
 			})
 			return checks
 		}
@@ -1271,4 +1374,194 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 	}
 
 	return checks
+}
+
+func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDocs []couchdb.JSONDoc, m *instance.Instance, ms *Sharing) (checks []map[string]interface{}) {
+	// We checked earlier that this rule exists
+	ownerRule := s.FirstFilesRule()
+
+	memberRule := ms.FirstFilesRule()
+	if memberRule == nil {
+		checks = append(checks, map[string]interface{}{
+			"id":     s.SID,
+			"type":   "missing_files_rule_for_member",
+			"member": m.Domain,
+		})
+		return checks
+	}
+
+	memberDocs, err := FindMatchingDocs(m, *memberRule)
+	if err != nil {
+		checks = append(checks, map[string]interface{}{
+			"id":     s.SID,
+			"type":   "missing_matching_docs_for_member",
+			"member": m.Domain,
+			"error":  err.Error(),
+		})
+		return checks
+	}
+	// Build a map of owner docs with their member's counterpart ids
+	ownerKey := ms.Credentials[0].XorKey
+	ownerDocsById := make(map[string]couchdb.JSONDoc)
+	for _, doc := range ownerDocs {
+		ownerDocsById[doc.ID()] = doc
+	}
+
+	for _, memberDoc := range memberDocs {
+		ownerID := XorID(memberDoc.ID(), ownerKey)
+
+		if ownerDoc, found := ownerDocsById[ownerID]; found {
+			if ownerDoc.Rev() != memberDoc.Rev() {
+				if RevGeneration(ownerDoc.Rev()) < RevGeneration(memberDoc.Rev()) && ms.ReadOnly() {
+					checks = append(checks, map[string]interface{}{
+						"id":     s.SID,
+						"type":   "read_only_member",
+						"member": m.Domain,
+					})
+				} else if RevGeneration(ownerDoc.Rev()) > RevGeneration(memberDoc.Rev()) && isFileTooBigForInstance(m, ownerDoc) {
+					checks = append(checks, map[string]interface{}{
+						"id":       s.SID,
+						"type":     "disk_quota_exceeded",
+						"instance": m.Domain,
+						"file":     ownerDoc,
+					})
+				} else if RevGeneration(ownerDoc.Rev()) < RevGeneration(memberDoc.Rev()) && isFileTooBigForInstance(inst, memberDoc) {
+					checks = append(checks, map[string]interface{}{
+						"id":       s.SID,
+						"type":     "disk_quota_exceeded",
+						"instance": inst.Domain,
+						"file":     memberDoc,
+					})
+				} else {
+					checks = append(checks, map[string]interface{}{
+						"id":        s.SID,
+						"type":      "invalid_doc_rev",
+						"member":    m.Domain,
+						"ownerDoc":  ownerDoc,
+						"memberRev": memberDoc.Rev(),
+					})
+				}
+			} else {
+				// It's unnecessary to run these checks if both docs don't
+				// have the same revision in the first place.
+
+				if ownerDoc.M["name"] != memberDoc.M["name"] {
+					checks = append(checks, map[string]interface{}{
+						"id":         s.SID,
+						"type":       "invalid_doc_name",
+						"member":     m.Domain,
+						"ownerDoc":   ownerDoc,
+						"memberName": memberDoc.M["name"],
+					})
+				}
+
+				if ownerDoc.M["type"] == consts.FileType && ownerDoc.M["checksum"] != memberDoc.M["checksum"] {
+					checks = append(checks, map[string]interface{}{
+						"id":             s.SID,
+						"type":           "invalid_doc_checksum",
+						"member":         m.Domain,
+						"ownerDoc":       ownerDoc,
+						"memberChecksum": memberDoc.M["checksum"],
+					})
+				}
+
+				isSharingRoot := false
+				for _, v := range ownerRule.Values {
+					if ownerDoc.ID() == v {
+						isSharingRoot = true
+						break
+					}
+				}
+
+				// Sharing roots are expected not to have the same parent
+				if !isSharingRoot {
+					memberDirID := memberDoc.M["dir_id"].(string)
+					ownerDirID := ownerDoc.M["dir_id"].(string)
+					if ownerDirID != XorID(memberDirID, ownerKey) {
+						checks = append(checks, map[string]interface{}{
+							"id":           s.SID,
+							"type":         "invalid_doc_parent",
+							"member":       m.Domain,
+							"ownerDoc":     ownerDoc,
+							"memberParent": memberDirID,
+						})
+					}
+				}
+			}
+
+			delete(ownerDocsById, ownerID)
+		} else {
+			if ms.ReadOnly() {
+				checks = append(checks, map[string]interface{}{
+					"id":     s.SID,
+					"type":   "read_only_member",
+					"member": m.Domain,
+				})
+				continue
+			}
+
+			if isFileTooBigForInstance(inst, memberDoc) {
+				checks = append(checks, map[string]interface{}{
+					"id":       s.SID,
+					"type":     "disk_quota_exceeded",
+					"instance": inst.Domain,
+					"file":     memberDoc,
+				})
+				continue
+			}
+
+			checks = append(checks, map[string]interface{}{
+				"id":      s.SID,
+				"type":    "missing_matching_doc_for_owner",
+				"member":  m.Domain,
+				"missing": memberDoc,
+			})
+		}
+	}
+
+	// The only docs left in the map do not exist on the member's instance
+	for _, ownerDoc := range ownerDocsById {
+		if isFileTooBigForInstance(m, ownerDoc) {
+			checks = append(checks, map[string]interface{}{
+				"id":       s.SID,
+				"type":     "disk_quota_exceeded",
+				"instance": m.Domain,
+				"file":     ownerDoc,
+			})
+			break
+		}
+
+		checks = append(checks, map[string]interface{}{
+			"id":         s.SID,
+			"type":       "missing_matching_doc_for_member",
+			"member":     m.Domain,
+			"missing":    ownerDoc,
+			"ownerDocID": ownerDoc.ID(),
+		})
+	}
+
+	return checks
+}
+
+// isFileTooBigForInstance returns true if the given doc represents a file and
+// its size is greater than the available space on the given instance.
+// If said instance does not have any defined quota, it returns false.
+func isFileTooBigForInstance(inst *instance.Instance, doc couchdb.JSONDoc) bool {
+	if docType, ok := doc.M["type"].(string); !ok || docType == "" || docType == consts.DirType {
+		return false
+	}
+
+	var file *vfs.FileDoc
+
+	fileJSON, err := json.Marshal(doc)
+	if err != nil {
+		return false
+	}
+
+	if err := json.Unmarshal(fileJSON, &file); err != nil {
+		return false
+	}
+
+	_, _, _, err = vfs.CheckAvailableDiskSpace(inst.VFS(), file)
+	return err == vfs.ErrFileTooBig
 }

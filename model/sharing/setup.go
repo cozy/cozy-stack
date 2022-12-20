@@ -221,7 +221,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	}
 	defer mu.Unlock()
 
-	docs, err := findDocsToCopy(inst, rule)
+	docs, err := FindMatchingDocs(inst, rule)
 	if err != nil {
 		return err
 	}
@@ -237,8 +237,8 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs, olds)
 }
 
-// findDocsToCopy finds the documents that match the given rule
-func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, error) {
+// FindMatchingDocs finds the documents that match the given rule
+func FindMatchingDocs(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, error) {
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
 		if rule.DocType == consts.Files {
