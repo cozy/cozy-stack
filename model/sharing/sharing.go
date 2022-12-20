@@ -1055,206 +1055,220 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 			}
 		}
 
-		// Check triggers
-		if s.Active && accepted {
-			if s.Triggers.TrackID == "" && len(s.Triggers.TrackIDs) == 0 {
+		checks = append(checks, s.checkSharingTriggers(inst, accepted)...)
+		checks = append(checks, s.checkSharingMembers()...)
+		checks = append(checks, s.checkSharingCredentials()...)
+
+		return nil
+	})
+	return checks, err
+}
+
+func (s *Sharing) checkSharingTriggers(inst *instance.Instance, accepted bool) (checks []map[string]interface{}) {
+	if s.Active && accepted {
+		if s.Triggers.TrackID == "" && len(s.Triggers.TrackIDs) == 0 {
+			checks = append(checks, map[string]interface{}{
+				"id":      s.SID,
+				"type":    "missing_trigger_on_active_sharing",
+				"trigger": "track",
+			})
+		} else if s.Triggers.TrackID != "" {
+			err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.TrackID, nil)
+			if couchdb.IsNotFoundError(err) {
 				checks = append(checks, map[string]interface{}{
-					"id":      s.SID,
-					"type":    "missing_trigger_on_active_sharing",
-					"trigger": "track",
+					"id":         s.SID,
+					"type":       "missing_trigger_on_active_sharing",
+					"trigger":    "track",
+					"trigger_id": s.Triggers.TrackID,
 				})
-			} else if s.Triggers.TrackID != "" {
-				err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.TrackID, nil)
+			}
+		} else {
+			for _, id := range s.Triggers.TrackIDs {
+				err := couchdb.GetDoc(inst, consts.Triggers, id, nil)
 				if couchdb.IsNotFoundError(err) {
 					checks = append(checks, map[string]interface{}{
 						"id":         s.SID,
 						"type":       "missing_trigger_on_active_sharing",
 						"trigger":    "track",
-						"trigger_id": s.Triggers.TrackID,
+						"trigger_id": id,
 					})
 				}
+			}
+		}
+
+		if s.Owner || !s.ReadOnly() {
+			if s.Triggers.ReplicateID == "" {
+				checks = append(checks, map[string]interface{}{
+					"id":      s.SID,
+					"type":    "missing_trigger_on_active_sharing",
+					"trigger": "replicate",
+				})
 			} else {
-				for _, id := range s.Triggers.TrackIDs {
-					err := couchdb.GetDoc(inst, consts.Triggers, id, nil)
-					if couchdb.IsNotFoundError(err) {
-						checks = append(checks, map[string]interface{}{
-							"id":         s.SID,
-							"type":       "missing_trigger_on_active_sharing",
-							"trigger":    "track",
-							"trigger_id": id,
-						})
-					}
+				err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.ReplicateID, nil)
+				if couchdb.IsNotFoundError(err) {
+					checks = append(checks, map[string]interface{}{
+						"id":         s.SID,
+						"type":       "missing_trigger_on_active_sharing",
+						"trigger":    "replicate",
+						"trigger_id": s.Triggers.ReplicateID,
+					})
 				}
 			}
 
-			if s.Owner || !s.ReadOnly() {
-				if s.Triggers.ReplicateID == "" {
+			if s.FirstFilesRule() != nil {
+				if s.Triggers.UploadID == "" {
 					checks = append(checks, map[string]interface{}{
 						"id":      s.SID,
 						"type":    "missing_trigger_on_active_sharing",
-						"trigger": "replicate",
+						"trigger": "upload",
 					})
 				} else {
-					err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.ReplicateID, nil)
+					err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.UploadID, nil)
 					if couchdb.IsNotFoundError(err) {
 						checks = append(checks, map[string]interface{}{
 							"id":         s.SID,
 							"type":       "missing_trigger_on_active_sharing",
-							"trigger":    "replicate",
-							"trigger_id": s.Triggers.ReplicateID,
+							"trigger":    "upload",
+							"trigger_id": s.Triggers.UploadID,
 						})
 					}
 				}
-
-				if s.FirstFilesRule() != nil {
-					if s.Triggers.UploadID == "" {
-						checks = append(checks, map[string]interface{}{
-							"id":      s.SID,
-							"type":    "missing_trigger_on_active_sharing",
-							"trigger": "upload",
-						})
-					} else {
-						err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.UploadID, nil)
-						if couchdb.IsNotFoundError(err) {
-							checks = append(checks, map[string]interface{}{
-								"id":         s.SID,
-								"type":       "missing_trigger_on_active_sharing",
-								"trigger":    "upload",
-								"trigger_id": s.Triggers.UploadID,
-							})
-						}
-					}
-				}
-			}
-		} else {
-			if s.Triggers.TrackID != "" || len(s.Triggers.TrackIDs) > 0 {
-				id := s.Triggers.TrackID
-				if id == "" {
-					id = s.Triggers.TrackIDs[0]
-				}
-				checks = append(checks, map[string]interface{}{
-					"id":         s.SID,
-					"type":       "trigger_on_inactive_sharing",
-					"trigger":    "track",
-					"trigger_id": id,
-				})
-			}
-			if s.Triggers.ReplicateID != "" {
-				checks = append(checks, map[string]interface{}{
-					"id":         s.SID,
-					"type":       "trigger_on_inactive_sharing",
-					"trigger":    "replicate",
-					"trigger_id": s.Triggers.ReplicateID,
-				})
-			}
-			if s.Triggers.UploadID != "" {
-				checks = append(checks, map[string]interface{}{
-					"id":         s.SID,
-					"type":       "trigger_on_inactive_sharing",
-					"trigger":    "upload",
-					"trigger_id": s.Triggers.UploadID,
-				})
 			}
 		}
-
-		// Check members and credentials
-		if len(s.Members) < 2 {
+	} else {
+		if s.Triggers.TrackID != "" || len(s.Triggers.TrackIDs) > 0 {
+			id := s.Triggers.TrackID
+			if id == "" {
+				id = s.Triggers.TrackIDs[0]
+			}
 			checks = append(checks, map[string]interface{}{
 				"id":         s.SID,
-				"type":       "not_enough_members",
-				"nb_members": len(s.Members),
+				"type":       "trigger_on_inactive_sharing",
+				"trigger":    "track",
+				"trigger_id": id,
 			})
-			return nil
 		}
+		if s.Triggers.ReplicateID != "" {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "trigger_on_inactive_sharing",
+				"trigger":    "replicate",
+				"trigger_id": s.Triggers.ReplicateID,
+			})
+		}
+		if s.Triggers.UploadID != "" {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "trigger_on_inactive_sharing",
+				"trigger":    "upload",
+				"trigger_id": s.Triggers.UploadID,
+			})
+		}
+	}
 
+	return checks
+}
+
+func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}) {
+	if len(s.Members) < 2 {
+		checks = append(checks, map[string]interface{}{
+			"id":         s.SID,
+			"type":       "not_enough_members",
+			"nb_members": len(s.Members),
+		})
+		return checks
+	}
+
+	for i, m := range s.Members {
+		if m.Status == MemberStatusRevoked && !s.Active {
+			continue
+		}
+		isFirst := i == 0
+		isOwner := m.Status == MemberStatusOwner
+		if isFirst != isOwner {
+			checks = append(checks, map[string]interface{}{
+				"id":     s.SID,
+				"type":   "invalid_member_status",
+				"member": i,
+				"status": m.Status,
+			})
+		}
+	}
+
+	return checks
+}
+
+func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
+	if !s.Active {
+		return checks
+	}
+
+	if s.Owner {
 		for i, m := range s.Members {
-			if m.Status == MemberStatusRevoked && !s.Active {
+			if i == 0 || m.Status != MemberStatusReady {
 				continue
 			}
-			isFirst := i == 0
-			isOwner := m.Status == MemberStatusOwner
-			if isFirst != isOwner {
+			if s.Credentials[i-1].Client == nil {
 				checks = append(checks, map[string]interface{}{
 					"id":     s.SID,
-					"type":   "invalid_member_status",
+					"type":   "missing_oauth_client",
 					"member": i,
-					"status": m.Status,
+					"owner":  true,
 				})
 			}
-		}
-
-		if !s.Active {
-			return nil
-		}
-
-		if s.Owner {
-			for i, m := range s.Members {
-				if i == 0 || m.Status != MemberStatusReady {
-					continue
-				}
-				if s.Credentials[i-1].Client == nil {
-					checks = append(checks, map[string]interface{}{
-						"id":     s.SID,
-						"type":   "missing_oauth_client",
-						"member": i,
-						"owner":  true,
-					})
-				}
-				if s.Credentials[i-1].AccessToken == nil {
-					checks = append(checks, map[string]interface{}{
-						"id":     s.SID,
-						"type":   "missing_access_token",
-						"member": i,
-						"owner":  true,
-					})
-				}
-				if m.Instance == "" {
-					checks = append(checks, map[string]interface{}{
-						"id":     s.SID,
-						"type":   "missing_instance_for_member",
-						"member": i,
-					})
-				}
-			}
-
-			if len(s.Credentials)+1 != len(s.Members) {
+			if s.Credentials[i-1].AccessToken == nil {
 				checks = append(checks, map[string]interface{}{
-					"id":         s.SID,
-					"type":       "invalid_number_of_credentials",
-					"owner":      true,
-					"nb_members": len(s.Credentials),
-				})
-				return nil
-			}
-		} else {
-			if len(s.Credentials) != 1 {
-				checks = append(checks, map[string]interface{}{
-					"id":         s.SID,
-					"type":       "invalid_number_of_credentials",
-					"owner":      false,
-					"nb_members": len(s.Credentials),
-				})
-				return nil
-			}
-
-			if s.Credentials[0].InboundClientID == "" {
-				checks = append(checks, map[string]interface{}{
-					"id":    s.SID,
-					"type":  "missing_inbound_client_id",
-					"owner": false,
+					"id":     s.SID,
+					"type":   "missing_access_token",
+					"member": i,
+					"owner":  true,
 				})
 			}
-
-			if !s.ReadOnly() && s.Members[0].Instance == "" {
+			if m.Instance == "" {
 				checks = append(checks, map[string]interface{}{
 					"id":     s.SID,
 					"type":   "missing_instance_for_member",
-					"member": 0,
+					"member": i,
 				})
 			}
 		}
 
-		return nil
-	})
-	return checks, err
+		if len(s.Credentials)+1 != len(s.Members) {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "invalid_number_of_credentials",
+				"owner":      true,
+				"nb_members": len(s.Credentials),
+			})
+			return checks
+		}
+	} else {
+		if len(s.Credentials) != 1 {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "invalid_number_of_credentials",
+				"owner":      false,
+				"nb_members": len(s.Credentials),
+			})
+			return checks
+		}
+
+		if s.Credentials[0].InboundClientID == "" {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "missing_inbound_client_id",
+				"owner": false,
+			})
+		}
+
+		if !s.ReadOnly() && s.Members[0].Instance == "" {
+			checks = append(checks, map[string]interface{}{
+				"id":     s.SID,
+				"type":   "missing_instance_for_member",
+				"member": 0,
+			})
+		}
+	}
+
+	return checks
 }
