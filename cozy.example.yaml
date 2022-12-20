@@ -289,12 +289,6 @@ clouderies:
       url: https://manager.cozycloud.cc/
       token: xxxxxx
 
-# [internal usage] Tracking with matomo
-matomo:
-  url: https://matomo.cozycloud.cc/piwik.php
-  siteid: 8
-  onboarding_app_id: 1
-
 notifications:
   # Activate development APIs (iOS only)
   development: false
