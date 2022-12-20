@@ -34,10 +34,6 @@ name    ./css/cozy-bar.min.css
 url     https://unpkg.com/cozy-bar@7.23.1/dist/cozy-bar.min.css
 sha256  d6ee7a2467baa6447b3f10d5fcea58759f102f2795a8248c17d79938d5fc7c97
 
-name    ./js/piwik.js
-url     https://matomo.cozycloud.cc/piwik.js
-sha256  0995371a359a4a701d66f8b183de6144de9a042e5bac84b6f920968f51567742
-
 name    ./js/cozy-mjml.js
 url     https://unpkg.com/cozy-mjml@0.10.0/dist/main.js
 sha256  26fd473bae2d1285dd6d5e2e7da61c68e11348947fc591c7e67fafcbc878116e

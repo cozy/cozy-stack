@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -73,10 +72,6 @@ func passphraseForm(c echo.Context) error {
 	if cryptoPolyfill {
 		iterations = crypto.EdgePBKDF2Iterations
 	}
-	matomo := config.GetConfig().Matomo
-	if matomo.URL != "" {
-		middlewares.AppendCSPRule(c, "img", matomo.URL)
-	}
 
 	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
 		"Domain":         inst.ContextualDomain(),
@@ -89,9 +84,6 @@ func passphraseForm(c echo.Context) error {
 		"Salt":           string(inst.PassphraseSalt()),
 		"RegisterToken":  registerToken,
 		"CryptoPolyfill": cryptoPolyfill,
-		"MatomoURL":      matomo.URL,
-		"MatomoSiteID":   matomo.SiteID,
-		"MatomoAppID":    matomo.OnboardingAppID,
 	})
 }
 
