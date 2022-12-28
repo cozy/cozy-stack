@@ -299,6 +299,19 @@ func (c *Client) EnableDebug(domain string, ttl time.Duration) error {
 	return err
 }
 
+// CleanSessions delete the databases for io.cozy.sessions and io.cozy.sessions.logins
+func (c *Client) CleanSessions(domain string) error {
+	if !validDomain(domain) {
+		return fmt.Errorf("Invalid domain: %s", domain)
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "DELETE",
+		Path:       "/instances/" + domain + "/sessions",
+		NoResponse: true,
+	})
+	return err
+}
+
 // DisableDebug disables the debug mode for the logger of an instance.
 func (c *Client) DisableDebug(domain string) error {
 	if !validDomain(domain) {

@@ -169,7 +169,7 @@ Creates a session_code that can be used to login on the given instance.
 POST /instances/alice.cozy.localhost/session_code HTTP/1.1
 ```
 
-### Response
+#### Response
 
 ```http
 HTTP/1.1 200 OK
@@ -180,6 +180,22 @@ Content-Type: application/json
 {
   "session_code": "L7oJ6BDQtdbLR5Vr5vTxTXLJ1pQzMXcD"
 }
+```
+
+### DELETE /instances/:domain/sessions
+
+Delete the databases for io.cozy.sessions and io.cozy.sessions.logins.
+
+#### Request
+
+```http
+DELETE /instances/alice.cozy.localhost/sessions HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
 ```
 
 ### POST /instances/:domain/fixers/content-mismatch

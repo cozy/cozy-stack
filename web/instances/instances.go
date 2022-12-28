@@ -360,6 +360,22 @@ func createSessionCode(c echo.Context) error {
 	})
 }
 
+func cleanSessions(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	if err := couchdb.DeleteDB(inst, consts.Sessions); err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+	if err := couchdb.DeleteDB(inst, consts.SessionsLogins); err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 type diskUsageResult struct {
 	Used          int64 `json:"used,string"`
 	Quota         int64 `json:"quota,string,omitempty"`
@@ -529,6 +545,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.POST("/:domain/auth-mode", setAuthMode)
 	router.POST("/:domain/session_code", createSessionCode)
+	router.DELETE("/:domain/sessions", cleanSessions)
 
 	// Config
 	router.POST("/redis", rebuildRedis)
