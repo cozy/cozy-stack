@@ -43,6 +43,7 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/swift"
+	"github.com/cozy/cozy-stack/web/tools"
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/cozy/cozy-stack/web/wellknown"
 	"github.com/labstack/echo/v4"
@@ -295,6 +296,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	oauth.Routes(router.Group("/oauth", mws...))
 	realtime.Routes(router.Group("/realtime", mws...))
 	swift.Routes(router.Group("/swift", mws...))
+	tools.Routes(router.Group("/tools", mws...))
 
 	setupRecover(router)
 
