@@ -339,9 +339,10 @@ done, the konnector is uninstalled again.
 
 var serviceTriggersFixer = &cobra.Command{
 	Use:   "service-triggers <domain>",
-	Short: "Clean the duplicate triggers for webapp services",
+	Short: "Clean the triggers for webapp services",
 	Long: `
-This fixer cleans duplicate triggers for webapp services.
+This fixer cleans duplicate triggers for webapp services, and recreates missing
+triggers.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {

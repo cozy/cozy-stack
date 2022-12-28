@@ -339,6 +339,7 @@ func serviceTriggersFixer(c echo.Context) error {
 	}
 
 	var toDelete []job.Trigger
+	recreated := 0
 
 	for slug, triggers := range byApps {
 		manifest, err := app.GetWebappBySlug(inst, slug)
@@ -354,7 +355,20 @@ func serviceTriggersFixer(c echo.Context) error {
 		// Fill the trigger ids for the services when they are missing.
 		update := false
 		for name, service := range manifest.Services() {
-			if service.TriggerOptions == "" || service.TriggerID != "" {
+			if service.TriggerOptions == "" {
+				continue
+			}
+			if service.TriggerID != "" {
+				_, err := jobsSystem.GetTrigger(inst, service.TriggerID)
+				if err == job.ErrNotFoundTrigger {
+					triggerID, err := app.CreateServiceTrigger(inst, slug, service)
+					if err != nil {
+						return err
+					}
+					service.TriggerID = triggerID
+					update = true
+					recreated++
+				}
 				continue
 			}
 			for _, trigger := range triggers {
@@ -408,8 +422,9 @@ func serviceTriggersFixer(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"Domain":               domain,
-		"DeletedTriggersCount": len(toDelete),
+		"Domain":                 domain,
+		"RecreatedTriggersCount": recreated,
+		"DeletedTriggersCount":   len(toDelete),
 	})
 }
 

@@ -419,47 +419,60 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 	}
 
 	for _, service := range created {
-		var triggerType string
-		var triggerArgs string
-		triggerOpts := strings.SplitN(service.TriggerOptions, " ", 2)
-		if len(triggerOpts) > 0 {
-			triggerType = strings.TrimSpace(triggerOpts[0])
-		}
-		if len(triggerOpts) > 1 {
-			triggerArgs = strings.TrimSpace(triggerOpts[1])
-		}
-
-		// Do not create triggers for services called programmatically
-		if triggerType == "" || service.TriggerOptions == "@at 2000-01-01T00:00:00.000Z" {
-			continue
-		}
-
-		// Add metadata
-		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersionTrigger)
+		triggerID, err := CreateServiceTrigger(db, slug, service)
 		if err != nil {
 			return err
 		}
-		msg := map[string]string{
-			"slug": slug,
-			"name": service.name,
+		if triggerID != "" {
+			service.TriggerID = triggerID
 		}
-		trigger, err := job.NewTrigger(db, job.TriggerInfos{
-			Type:       triggerType,
-			WorkerType: "service",
-			Debounce:   service.Debounce,
-			Arguments:  triggerArgs,
-			Metadata:   md,
-		}, msg)
-		if err != nil {
-			return err
-		}
-		if err = sched.AddTrigger(trigger); err != nil {
-			return err
-		}
-		service.TriggerID = trigger.ID()
 	}
 
 	return nil
+}
+
+// CreateServiceTrigger creates a trigger for the given service. It returns the
+// id of the created trigger or an error.
+func CreateServiceTrigger(db prefixer.Prefixer, slug string, service *Service) (string, error) {
+	var triggerType string
+	var triggerArgs string
+	triggerOpts := strings.SplitN(service.TriggerOptions, " ", 2)
+	if len(triggerOpts) > 0 {
+		triggerType = strings.TrimSpace(triggerOpts[0])
+	}
+	if len(triggerOpts) > 1 {
+		triggerArgs = strings.TrimSpace(triggerOpts[1])
+	}
+
+	// Do not create triggers for services called programmatically
+	if triggerType == "" || service.TriggerOptions == "@at 2000-01-01T00:00:00.000Z" {
+		return "", nil
+	}
+
+	// Add metadata
+	md, err := metadata.NewWithApp(slug, "", job.DocTypeVersionTrigger)
+	if err != nil {
+		return "", err
+	}
+	msg := map[string]string{
+		"slug": slug,
+		"name": service.name,
+	}
+	trigger, err := job.NewTrigger(db, job.TriggerInfos{
+		Type:       triggerType,
+		WorkerType: "service",
+		Debounce:   service.Debounce,
+		Arguments:  triggerArgs,
+		Metadata:   md,
+	}, msg)
+	if err != nil {
+		return "", err
+	}
+	sched := job.System()
+	if err = sched.AddTrigger(trigger); err != nil {
+		return "", err
+	}
+	return trigger.ID(), nil
 }
 
 // FindRoute takes a path, returns the route which matches the best,
