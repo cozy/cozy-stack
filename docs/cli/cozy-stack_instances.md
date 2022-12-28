@@ -40,6 +40,7 @@ cozy-stack instances <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
 * [cozy-stack instances auth-mode](cozy-stack_instances_auth-mode.md)	 - Set instance auth-mode
+* [cozy-stack instances clean-sessions](cozy-stack_instances_clean-sessions.md)	 - Remove the io.cozy.sessions and io.cozy.sessions.logins bases
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances count](cozy-stack_instances_count.md)	 - Count the instances
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance

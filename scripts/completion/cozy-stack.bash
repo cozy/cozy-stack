@@ -2395,6 +2395,38 @@ _cozy-stack_instances_auth-mode()
     noun_aliases=()
 }
 
+_cozy-stack_instances_clean-sessions()
+{
+    last_command="cozy-stack_instances_clean-sessions"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_instances_client-oauth()
 {
     last_command="cozy-stack_instances_client-oauth"
@@ -3250,6 +3282,7 @@ _cozy-stack_instances()
         aliashash["create"]="add"
     fi
     commands+=("auth-mode")
+    commands+=("clean-sessions")
     commands+=("client-oauth")
     commands+=("count")
     commands+=("debug")
