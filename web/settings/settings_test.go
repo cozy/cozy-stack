@@ -257,7 +257,7 @@ func TestSettings(t *testing.T) {
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "passphrase":     "MyFirstPassphrase",
-        "iterations":     5000,
+        "iterations":     50000,
         "register_token": "BADBEEF",
       }`)).
 			Expect().Status(400)
@@ -267,7 +267,7 @@ func TestSettings(t *testing.T) {
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "passphrase":     "MyFirstPassphrase",
-        "iterations":     5000,
+        "iterations":     50000,
         "register_token": "XYZ",
       }`)).
 			Expect().Status(400)
@@ -280,7 +280,7 @@ func TestSettings(t *testing.T) {
 			WithCookie(sessCookie, "connected").
 			WithJSON(map[string]interface{}{
 				"passphrase":     "MyFirstPassphrase",
-				"iterations":     5000,
+				"iterations":     50000,
 				"register_token": hex.EncodeToString(testInstance.RegisterToken),
 				"key":            "xxx",
 			}).
@@ -300,7 +300,7 @@ func TestSettings(t *testing.T) {
 			WithBytes([]byte(`{
         "new_passphrase":     "MyPassphrase",
         "current_passphrase": "BADBEEF",
-        "iterations":         5000
+        "iterations":         50000
       }`)).
 			Expect().Status(400)
 	})
@@ -315,7 +315,7 @@ func TestSettings(t *testing.T) {
 			WithBytes([]byte(`{
         "new_passphrase":     "MyUpdatedPassphrase",
         "current_passphrase": "MyFirstPassphrase",
-        "iterations":         5000
+        "iterations":         50000
       }`)).
 			Expect().Status(204)
 
@@ -332,7 +332,7 @@ func TestSettings(t *testing.T) {
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "new_passphrase": "MyPassphrase",
-        "iterations":     5000,
+        "iterations":     50000,
         "force":          true
       }`)).
 			Expect().Status(400)
@@ -347,7 +347,7 @@ func TestSettings(t *testing.T) {
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "new_passphrase": "MyPassphrase",
-        "iterations":     5000,
+        "iterations":     50000,
         "force":          true
       }`)).
 			Expect().Status(204)
@@ -441,7 +441,7 @@ func TestSettings(t *testing.T) {
 		attrs := data.Value("attributes").Object()
 		attrs.ValueEqual("salt", "me@"+testInstance.Domain)
 		attrs.ValueEqual("kdf", 0.0)
-		attrs.ValueEqual("iterations", 5000.0)
+		attrs.ValueEqual("iterations", 50000)
 	})
 
 	t.Run("GetCapabilities", func(t *testing.T) {
@@ -1134,7 +1134,7 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 	obj := e.POST("/settings/passphrase/flagship").
 		WithJSON(map[string]interface{}{
 			"passphrase":     "MyFirstPassphrase",
-			"iterations":     5000,
+			"iterations":     50000,
 			"register_token": hex.EncodeToString(testInstance.RegisterToken),
 			"key":            "xxx-key-xxx",
 			"public_key":     "xxx-public-key-xxx",

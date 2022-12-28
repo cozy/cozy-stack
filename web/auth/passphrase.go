@@ -88,7 +88,7 @@ func passphraseForm(c echo.Context) error {
 	cryptoPolyfill := middlewares.CryptoPolyfill(c)
 	iterations := crypto.DefaultPBKDF2Iterations
 	if cryptoPolyfill {
-		iterations = crypto.EdgePBKDF2Iterations
+		iterations = crypto.MinPBKDF2Iterations
 	}
 
 	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{
@@ -193,7 +193,7 @@ func passphraseRenewForm(c echo.Context) error {
 	cryptoPolyfill := middlewares.CryptoPolyfill(c)
 	iterations := crypto.DefaultPBKDF2Iterations
 	if cryptoPolyfill {
-		iterations = crypto.EdgePBKDF2Iterations
+		iterations = crypto.MinPBKDF2Iterations
 	}
 
 	return c.Render(http.StatusOK, "passphrase_choose.html", echo.Map{

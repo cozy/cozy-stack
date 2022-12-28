@@ -32,7 +32,7 @@ module OAuth
         client_secret: @client_secret,
         register_token: inst.register_token,
         passphrase: inst.hashed_passphrase,
-        iterations: 100_000,
+        iterations: 650_000,
         hint: "a hint to help me remember my passphrase",
         key: "dont_care_key",
         public_key: "dont_care_public_key",

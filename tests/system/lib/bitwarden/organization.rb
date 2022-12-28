@@ -72,7 +72,7 @@ class Bitwarden
       master_key = PBKDF2.new do |p|
         p.password = inst.passphrase
         p.salt = "me@" + inst.domain.split(':').first
-        p.iterations = 100_000 # See pkg/crypto/pbkdf2.go
+        p.iterations = 650_000 # See pkg/crypto/pbkdf2.go
         p.hash_function = OpenSSL::Digest::SHA256
         p.key_length = 256 / 8
       end.bin_string

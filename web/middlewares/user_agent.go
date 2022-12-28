@@ -69,12 +69,12 @@ var rules = []browserRule{
 		iPhone:     iPhoneOrNotIPhone,
 		minVersion: maxInt,
 	},
-	// We don't support Edge before version 79, because we need support for
-	// unicode property escape of regexps.
+	// We don't support Edge before version 80, because we need support for
+	// unicode property escape of regexps, and PBKDF2 in subtle crypto.
 	{
 		name:       Edge,
 		iPhone:     iPhoneOrNotIPhone,
-		minVersion: 79,
+		minVersion: 80,
 	},
 	// Idem for Chrome and Chromium before version 64.
 	{
@@ -151,16 +151,10 @@ func GetMajorVersion(rawVersion string) (int, bool) {
 }
 
 // CryptoPolyfill returns true if the browser can't use its window.crypto API
-// to hash the password with PBKDF2. It is the case for Edge, but also for most
-// browsers in development mode, because this API is only available in secure
-// more (HTTPS or localhost).
+// to hash the password with PBKDF2. It is the case in development mode,
+// because this API is only available in secure more (HTTPS or localhost).
 func CryptoPolyfill(c echo.Context) bool {
 	req := c.Request()
-	ua := user_agent.New(req.UserAgent())
-	browser, _ := ua.Browser()
-	if browser == Edge {
-		return true
-	}
 	return build.IsDevRelease() && !strings.Contains(req.Host, "localhost")
 }
 
