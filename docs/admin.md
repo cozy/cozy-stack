@@ -789,3 +789,21 @@ Content-Type: application/json
   ]
 }
 ```
+
+## Tools
+
+### GET /tools/pprof/heap
+
+Return a sampling of memory allocations as pprof format.
+
+#### Request
+
+```http
+GET /tools/pprof/heap HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```

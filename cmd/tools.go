@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"os/exec"
 	"runtime"
 
@@ -26,6 +27,30 @@ var toolsCmdGroup = &cobra.Command{
 	Short: "Regroup some tools for debugging and tests",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
+	},
+}
+
+var heapCmd = &cobra.Command{
+	Use:   "heap",
+	Short: "Dump a sampling of memory allocations of live objects",
+	Long: `
+This command can be used for memory profiling. It dumps a sampling of memory
+allocations of live objects on stdout.
+
+See https://go.dev/doc/diagnostics#profiling.
+`,
+	Example: "$ cozy-stack tools heap > heap.pprof && go tool pprof heap.pprof",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		heap, err := c.ProfileHeap()
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(os.Stdout, heap)
+		if errc := heap.Close(); errc != nil && err == nil {
+			err = errc
+		}
+		return err
 	},
 }
 
@@ -183,6 +208,7 @@ The report includes useful system information.
 }
 
 func init() {
+	toolsCmdGroup.AddCommand(heapCmd)
 	toolsCmdGroup.AddCommand(unxorDocumentID)
 	toolsCmdGroup.AddCommand(encryptRSACmd)
 	toolsCmdGroup.AddCommand(bugCmd)

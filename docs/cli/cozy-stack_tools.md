@@ -27,5 +27,6 @@ cozy-stack tools <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack tools bug](cozy-stack_tools_bug.md)	 - start a bug report
 * [cozy-stack tools encrypt-with-rsa](cozy-stack_tools_encrypt-with-rsa.md)	 - encrypt a payload in RSA
+* [cozy-stack tools heap](cozy-stack_tools_heap.md)	 - Dump a sampling of memory allocations of live objects
 * [cozy-stack tools unxor-document-id](cozy-stack_tools_unxor-document-id.md)	 - transform the id of a shared document
 
