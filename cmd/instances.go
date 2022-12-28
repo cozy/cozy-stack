@@ -1063,6 +1063,20 @@ var setAuthModeCmd = &cobra.Command{
 	},
 }
 
+var cleanSessionsCmd = &cobra.Command{
+	Use:     "clean-sessions <domain>",
+	Short:   "Remove the io.cozy.sessions and io.cozy.sessions.logins bases",
+	Example: "$ cozy-stack instance clean-sessions cozy.localhost:8080",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		return c.CleanSessions(domain)
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
@@ -1088,6 +1102,7 @@ func init() {
 	instanceCmdGroup.AddCommand(instanceAppVersionCmd)
 	instanceCmdGroup.AddCommand(updateInstancePassphraseCmd)
 	instanceCmdGroup.AddCommand(setAuthModeCmd)
+	instanceCmdGroup.AddCommand(cleanSessionsCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", consts.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
