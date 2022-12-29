@@ -791,9 +791,11 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 		return err
 	}
 
-	if requestPerm.Type == permission.TypeSharePreview &&
-		requestPerm.SourceID == consts.Sharings+"/"+s.SID {
-		return nil
+	if requestPerm.SourceID == consts.Sharings+"/"+s.SID {
+		if requestPerm.Type == permission.TypeSharePreview ||
+			requestPerm.Type == permission.TypeShareInteract {
+			return nil
+		}
 	}
 	if requestPerm.Type != permission.TypeWebapp &&
 		requestPerm.Type != permission.TypeOauth &&
