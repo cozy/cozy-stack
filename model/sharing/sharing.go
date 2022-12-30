@@ -1504,6 +1504,11 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 						"type":   "read_only_member",
 						"member": m.Domain,
 					})
+				} else if wasUpdatedRecently(ownerDoc) || wasUpdatedRecently(memberDoc) {
+					// If the latest change happened less than 5 minutes ago, we'll
+					// assume the sharing synchronization is still in progress and
+					// that would explain the difference between the 2 revisions.
+					// In this case, we do nothing.
 				} else if RevGeneration(ownerDoc.Rev()) > RevGeneration(memberDoc.Rev()) && isFileTooBigForInstance(m, ownerDoc) {
 					checks = append(checks, map[string]interface{}{
 						"id":       s.SID,
@@ -1586,6 +1591,14 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 				continue
 			}
 
+			if wasUpdatedRecently(memberDoc) {
+				// If the document was created less than 5 minutes ago, we'll
+				// assume the sharing synchronization is still in progress and
+				// that would explain why it's missing on the other instance.
+				// In this case, we do nothing.
+				continue
+			}
+
 			if isFileTooBigForInstance(inst, memberDoc) {
 				checks = append(checks, map[string]interface{}{
 					"id":       s.SID,
@@ -1607,6 +1620,14 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 
 	// The only docs left in the map do not exist on the member's instance
 	for _, ownerDoc := range ownerDocsById {
+		if wasUpdatedRecently(ownerDoc) {
+			// If the document was created less than 5 minutes ago, we'll
+			// assume the sharing synchronization is still in progress and
+			// that would explain why it's missing on the other instance.
+			// In this case, we do nothing.
+			continue
+		}
+
 		if isFileTooBigForInstance(m, ownerDoc) {
 			checks = append(checks, map[string]interface{}{
 				"id":       s.SID,
@@ -1650,4 +1671,19 @@ func isFileTooBigForInstance(inst *instance.Instance, doc couchdb.JSONDoc) bool 
 
 	_, _, _, err = vfs.CheckAvailableDiskSpace(inst.VFS(), file)
 	return err == vfs.ErrFileTooBig
+}
+
+// wasUpdatedRecently returns true if the given document's latest update, given
+// by its `cozyMetadata.updatedAt` attribute, happened less than 5 minutes ago.
+// If the attribute is missing or does not represent a valid date, we consider
+// the latest update happened before that.
+func wasUpdatedRecently(doc couchdb.JSONDoc) bool {
+	cozyMetadata, ok := doc.M["cozyMetadata"].(map[string]interface{})
+	if !ok || cozyMetadata == nil {
+		return false
+	}
+	if updatedAt, ok := cozyMetadata["updatedAt"].(time.Time); ok {
+		return time.Since(updatedAt) < 5*time.Minute
+	}
+	return false
 }
