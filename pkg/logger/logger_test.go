@@ -28,6 +28,10 @@ func TestDebugDomain(t *testing.T) {
 }
 
 func TestDebugDomainWithRedis(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a redis is required for this test, skip due to --short flag")
+	}
+
 	opt, err := redis.ParseURL("redis://localhost:6379/0")
 	assert.NoError(t, err)
 	err = Init(Options{
