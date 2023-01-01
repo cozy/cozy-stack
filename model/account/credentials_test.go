@@ -15,44 +15,39 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncryptDecrytCredentials(t *testing.T) {
 	encryptedCreds1, err := EncryptCredentials("me@mycozy.cloud", "fzEE6HFWsSp8jP")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	encryptedCreds2, err := EncryptCredentials("me@mycozy.cloud", "fzEE6HFWsSp8jP")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	encryptedCreds3, err := EncryptCredentials("", "fzEE6HFWsSp8jP")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NotEqual(t, encryptedCreds1, encryptedCreds2)
 
 	{
 		login, password, err := DecryptCredentials(encryptedCreds1)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		assert.Equal(t, "me@mycozy.cloud", login)
 		assert.Equal(t, "fzEE6HFWsSp8jP", password)
 	}
 	{
 		login, password, err := DecryptCredentials(encryptedCreds2)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		assert.Equal(t, "me@mycozy.cloud", login)
 		assert.Equal(t, "fzEE6HFWsSp8jP", password)
 	}
 	{
 		login, password, err := DecryptCredentials(encryptedCreds3)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		assert.Equal(t, "", login)
 		assert.Equal(t, "fzEE6HFWsSp8jP", password)
 	}
@@ -65,14 +60,10 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 		password := string(crypto.GenerateRandomBytes(rng.Intn(256)))
 
 		encryptedCreds, err := EncryptCredentials(login, password)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 
 		loginDec, passwordDec, err := DecryptCredentials(encryptedCreds)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 
 		assert.Equal(t, loginDec, login)
 		assert.Equal(t, passwordDec, password)
@@ -83,14 +74,10 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 		password := utils.RandomString(rng.Intn(256))
 
 		encryptedCreds, err := EncryptCredentials(login, password)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 
 		loginDec, passwordDec, err := DecryptCredentials(encryptedCreds)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 
 		assert.Equal(t, loginDec, login)
 		assert.Equal(t, passwordDec, password)
@@ -116,20 +103,16 @@ func TestDecryptCredentialsRandom(t *testing.T) {
 
 func TestRandomBitFlipsCredentials(t *testing.T) {
 	original, err := EncryptCredentials("toto@titi.com", "X3hVYLJLRiUyCs")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	originalBuffer, err := base64.StdEncoding.DecodeString(original)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	flipped := make([]byte, len(originalBuffer))
 	copy(flipped, originalBuffer)
 	login, passwd, err := DecryptCredentials(base64.StdEncoding.EncodeToString(flipped))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, "toto@titi.com", login)
 	assert.Equal(t, "X3hVYLJLRiUyCs", passwd)
 
@@ -166,38 +149,30 @@ func TestRandomBitFlipsCredentials(t *testing.T) {
 func TestEncryptDecryptData(t *testing.T) {
 	var data interface{}
 	err := json.Unmarshal([]byte(`{"foo":"bar","baz":{"quz": "quuz"}}`), &data)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	encBuffer, err := EncryptCredentialsData(data)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	decData, err := DecryptCredentialsData(encBuffer)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.EqualValues(t, data, decData)
 }
 
 func TestRandomBitFlipsBuffer(t *testing.T) {
 	plainBuffer := make([]byte, 256)
 	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	original, err := EncryptBufferWithKey(config.GetVault().CredentialsEncryptorKey(), plainBuffer)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	flipped := make([]byte, len(original))
 	copy(flipped, original)
 	testBuffer, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.True(t, bytes.Equal(plainBuffer, testBuffer))
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))

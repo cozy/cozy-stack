@@ -111,9 +111,8 @@ func TestCreateJobForReservedWorker(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 403, res.StatusCode)
 }
 
@@ -130,9 +129,8 @@ func TestCreateJobNotExist(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+tokenNone)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 404, res.StatusCode)
 }
 
@@ -152,9 +150,8 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	assert.NoError(t, err)
 	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, http.StatusCreated, res1.StatusCode)
 
@@ -166,9 +163,8 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
 		return
 	}
@@ -192,36 +188,32 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
 	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req5.Header.Add("Authorization", "Bearer "+token)
 	res5, err := http.DefaultClient.Do(req5)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNotFound, res5.StatusCode)
 }
 
@@ -240,9 +232,8 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	assert.NoError(t, err)
 	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, http.StatusCreated, res1.StatusCode)
 
@@ -254,9 +245,8 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
 		return
 	}
@@ -280,36 +270,32 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
 	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req5.Header.Add("Authorization", "Bearer "+token)
 	res5, err := http.DefaultClient.Do(req5)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNotFound, res5.StatusCode)
 }
 
@@ -328,9 +314,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 	assert.NoError(t, err)
 	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, http.StatusCreated, res1.StatusCode)
 
@@ -342,9 +327,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
 		return
 	}
@@ -365,18 +349,16 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	var v2 struct {
@@ -387,9 +369,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res3.Body).Decode(&v2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
 		return
 	}
@@ -403,9 +384,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 	assert.NoError(t, err)
 	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 }
 
@@ -426,9 +406,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, http.StatusCreated, res1.StatusCode)
 
@@ -442,9 +421,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	}
 
 	err = json.NewDecoder(res1.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
 		return
 	}
@@ -466,9 +444,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
 	// Clean
@@ -476,9 +453,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusNoContent, res3.StatusCode)
 }
 
@@ -496,15 +472,12 @@ func TestGetAllJobs(t *testing.T) {
 	tokenTriggers, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Triggers, "", time.Now())
 	req1.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res1.StatusCode)
 
 	err = json.NewDecoder(res1.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.Len(t, v.Data, 0)
 
@@ -524,24 +497,20 @@ func TestGetAllJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusCreated, res2.StatusCode)
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	err = json.NewDecoder(res3.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	if assert.Len(t, v.Data, 1) {
 		assert.Equal(t, consts.Triggers, v.Data[0].Type)
@@ -554,15 +523,12 @@ func TestGetAllJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req4.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res4, err := http.DefaultClient.Do(req4)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res4.StatusCode)
 
 	err = json.NewDecoder(res4.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	if assert.Len(t, v.Data, 1) {
 		assert.Equal(t, consts.Triggers, v.Data[0].Type)
@@ -575,30 +541,25 @@ func TestGetAllJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req5.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res5, err := http.DefaultClient.Do(req5)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res5.StatusCode)
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Len(t, v.Data, 0)
 
 	req6, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Type=@in", nil)
 	assert.NoError(t, err)
 	req6.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res6, err := http.DefaultClient.Do(req6)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusOK, res6.StatusCode)
 
 	err = json.NewDecoder(res6.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	if assert.Len(t, v.Data, 1) {
 		assert.Equal(t, consts.Triggers, v.Data[0].Type)
@@ -624,9 +585,8 @@ func TestClientJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req1.Header.Add("Authorization", "Bearer "+token2)
 	res1, err := http.DefaultClient.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, http.StatusCreated, res1.StatusCode)
 
@@ -638,9 +598,8 @@ func TestClientJobs(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v1.Data) || !assert.NotNil(t, v1.Data.Attributes) {
 		return
 	}
@@ -653,9 +612,8 @@ func TestClientJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req2.Header.Add("Authorization", "Bearer "+token2)
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusCreated, res2.StatusCode)
 
@@ -667,9 +625,8 @@ func TestClientJobs(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res2.Body).Decode(&v2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
 		return
 	}
@@ -692,9 +649,8 @@ func TestClientJobs(t *testing.T) {
 	assert.NoError(t, err)
 	req3.Header.Add("Authorization", "Bearer "+token2)
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res3.Body.Close()
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
@@ -706,9 +662,8 @@ func TestClientJobs(t *testing.T) {
 		}
 	}
 	err = json.NewDecoder(res3.Body).Decode(&v3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.NotNil(t, v3.Data) || !assert.NotNil(t, v3.Data.Attributes) {
 		return
 	}

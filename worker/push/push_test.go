@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetFirebaseClient(t *testing.T) {
@@ -30,9 +31,8 @@ func TestGetFirebaseClient(t *testing.T) {
 		AndroidAPIKey: "th3_f1r3b4s3_k3y",
 	}
 	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &typ)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &typ)
 	}()

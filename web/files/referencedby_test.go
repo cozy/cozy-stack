@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var fileID1, fileID2 string
@@ -18,9 +19,7 @@ var fileData1, fileData2 map[string]interface{}
 func TestAddReferencedByOneRelation(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=toreference", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID1, fileData1 = extractDirData(t, data1)
 
@@ -31,9 +30,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 			Type: "io.cozy.photos.albums",
 		},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	var result struct {
 		Data []couchdb.DocReference `json:"data"`
@@ -43,20 +40,17 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 		} `json:"meta"`
 	}
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NotEqual(t, result.Meta.Rev, fileData1["_rev"])
 	assert.Equal(t, result.Meta.Count, 1)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
@@ -75,9 +69,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 func TestAddReferencedByMultipleRelation(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=toreference2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID2, fileData2 = extractDirData(t, data1)
 
@@ -89,14 +81,11 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
 		},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	var result struct {
@@ -107,14 +96,12 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 		} `json:"meta"`
 	}
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NotEqual(t, result.Meta.Rev, fileData2["_rev"])
 	assert.Equal(t, result.Meta.Count, 3)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
@@ -153,9 +140,8 @@ func TestRemoveReferencedByOneRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, result.Meta.Count, 0)
 	assert.Equal(t, result.Data, []couchdb.DocReference{})
 
@@ -189,9 +175,8 @@ func TestRemoveReferencedByMultipleRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, result.Meta.Count, 1)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
 		{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},

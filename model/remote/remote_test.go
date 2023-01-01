@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const doctype = "org.example.request"
@@ -106,9 +107,7 @@ Accept-Language: {{lang}},en
 { "one": "{{ json one }}", "two": "{{ json two }}" }
 <p>{{html content}}</p>`
 	r, err := ParseRawRequest(doctype, raw)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	vars := map[string]string{
 		"contentType": "application/json",

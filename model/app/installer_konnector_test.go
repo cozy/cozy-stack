@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func compressedFileContainsBytes(fs afero.Fs, filename string, content []byte) (ok bool, err error) {
@@ -42,9 +43,7 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -54,9 +53,8 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -65,9 +63,8 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -125,9 +122,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 		Slug:      "cozy-konnector-b",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -135,9 +130,8 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 	for {
 		var done bool
 		man, done, err = inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if done {
 			break
 		}
@@ -157,9 +151,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-b",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -167,9 +159,8 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 	for {
 		var done bool
 		man, done, err = inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
@@ -178,9 +169,8 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -269,9 +259,7 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 		Slug:      "cozy-konnector-test-skip",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	var man app.Manifest
 
@@ -289,9 +277,7 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-test-skip",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	man, err = inst.RunSync()
 	konnManifest = man.(*app.KonnManifest)
@@ -326,9 +312,7 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		Slug:      "local-konnector-branch",
 		SourceURL: "git://localhost/#branch",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -338,9 +322,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -349,9 +332,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -374,9 +356,7 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		Type:      consts.KonnectorType,
 		Slug:      "local-konnector-branch",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -385,9 +365,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
@@ -396,9 +375,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -424,16 +402,14 @@ func TestKonnectorUninstall(t *testing.T) {
 		Slug:      "konnector-delete",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	go inst1.Run()
 	for {
 		var done bool
 		_, done, err = inst1.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if done {
 			break
 		}
@@ -443,13 +419,11 @@ func TestKonnectorUninstall(t *testing.T) {
 		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = inst2.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 		Operation: app.Delete,
 		Type:      consts.KonnectorType,

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const redisURL = "redis://localhost:6379/15"
@@ -308,9 +309,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	count, _ := bro.WorkerQueueLen("incr")
-	if !assert.Equal(t, 1, count) {
-		return
-	}
+	require.Equal(t, 1, count)
 
 	var evt struct {
 		Domain string `json:"domain"`
@@ -381,9 +380,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	count, _ := bro.WorkerQueueLen("incr")
-	if !assert.Equal(t, 0, count) {
-		return
-	}
+	require.Equal(t, 0, count)
 
 	barID := utils.RandomString(10)
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
