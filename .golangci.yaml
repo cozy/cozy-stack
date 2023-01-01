@@ -47,6 +47,7 @@ linters:
     - bidichk 
     - exportloopref 
     - gofmt
+    - govet
     - misspell
     - unconvert
     - unused 
