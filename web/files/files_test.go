@@ -36,14 +36,16 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
 
-var ts *httptest.Server
-var testInstance *instance.Instance
-var setup *testutils.TestSetup
-var token string
-var clientID string
-var imgID string
-var fileID string
-var publicToken string
+var (
+	ts           *httptest.Server
+	testInstance *instance.Instance
+	setup        *testutils.TestSetup
+	token        string
+	clientID     string
+	imgID        string
+	fileID       string
+	publicToken  string
+)
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
 	doc, err := fs.FileByPath(name)
@@ -427,6 +429,7 @@ func TestCreateDirWithDateSuccessAndUpdatedAt(t *testing.T) {
 	assert.NotEmpty(t, fcm["updatedAt"])
 	assert.NotContains(t, fcm, "uploadedAt")
 }
+
 func TestCreateDirWithParentSuccess(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=dirparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
@@ -2088,23 +2091,19 @@ func TestDirTrash(t *testing.T) {
 	require.Equal(t, 200, res4.StatusCode)
 
 	res5, err := httpGet(ts.URL + "/files/" + dirID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res5.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res5.StatusCode)
 
 	res6, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child1"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res6.StatusCode)
 
 	res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child2"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res7.StatusCode)
 
 	res8, _ := trash(t, "/files/"+dirID)
 	require.Equal(t, 400, res8.StatusCode)
-
 }
 
 func TestFileTrash(t *testing.T) {
@@ -2118,9 +2117,8 @@ func TestFileTrash(t *testing.T) {
 	require.Equal(t, 200, res2.StatusCode)
 
 	res3, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+fileID)
 	require.Equal(t, 400, res4.StatusCode)
@@ -2142,9 +2140,8 @@ func TestFileTrash(t *testing.T) {
 	assert.Equal(t, 412, res6.StatusCode)
 
 	res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res7.StatusCode)
 
 	req8, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
 	req8.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
@@ -2157,7 +2154,6 @@ func TestFileTrash(t *testing.T) {
 
 	res9, _ := trash(t, "/files/"+fileID)
 	require.Equal(t, 400, res9.StatusCode)
-
 }
 
 func TestForbidMovingTrashedFile(t *testing.T) {
@@ -2200,9 +2196,8 @@ func TestFileRestore(t *testing.T) {
 	assert.False(t, trashed)
 
 	res4, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape("/torestorefile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res4.StatusCode)
 }
 
 func TestFileRestoreWithConflicts(t *testing.T) {
@@ -2300,9 +2295,8 @@ func TestDirRestore(t *testing.T) {
 	require.Equal(t, 200, res3.StatusCode)
 
 	res4, err := httpGet(ts.URL + "/files/" + fileID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res4.StatusCode)
 
 	var v map[string]interface{}
 	err = extractJSONRes(res4, &v)
@@ -2316,9 +2310,8 @@ func TestDirRestore(t *testing.T) {
 	require.Equal(t, 200, res5.StatusCode)
 
 	res6, err := httpGet(ts.URL + "/files/" + fileID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res6.StatusCode)
 
 	err = extractJSONRes(res6, &v)
 	assert.NoError(t, err)

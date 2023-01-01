@@ -24,9 +24,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ts *httptest.Server
-var testInstance *instance.Instance
-var token string
+var (
+	ts           *httptest.Server
+	testInstance *instance.Instance
+	token        string
+)
 
 type jobRequest struct {
 	Arguments interface{} `json:"arguments"`
@@ -165,9 +167,8 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	err = json.NewDecoder(res1.Body).Decode(&v)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v.Data)
+	require.NotNil(t, v.Data.Attributes)
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@at", v.Data.Attributes.Type)
@@ -247,9 +248,8 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	err = json.NewDecoder(res1.Body).Decode(&v)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v.Data)
+	require.NotNil(t, v.Data.Attributes)
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@in", v.Data.Attributes.Type)
@@ -329,9 +329,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 	err = json.NewDecoder(res1.Body).Decode(&v)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v.Data)
+	require.NotNil(t, v.Data.Attributes)
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@cron", v.Data.Attributes.Type)
@@ -371,9 +370,8 @@ func TestAddGetUpdateAndDeleteTriggerCron(t *testing.T) {
 	err = json.NewDecoder(res3.Body).Decode(&v2)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v2.Data)
+	require.NotNil(t, v2.Data.Attributes)
 	assert.Equal(t, triggerID, v2.Data.ID)
 	assert.Equal(t, consts.Triggers, v2.Data.Type)
 	assert.Equal(t, "@cron", v2.Data.Attributes.Type)
@@ -423,9 +421,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	err = json.NewDecoder(res1.Body).Decode(&v)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v.Data)
+	require.NotNil(t, v.Data.Attributes)
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@webhook", v.Data.Attributes.Type)
@@ -600,9 +597,8 @@ func TestClientJobs(t *testing.T) {
 	err = json.NewDecoder(res1.Body).Decode(&v1)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v1.Data) || !assert.NotNil(t, v1.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v1.Data)
+	require.NotNil(t, v1.Data.Attributes)
 	triggerID := v1.Data.ID
 	assert.Equal(t, consts.Triggers, v1.Data.Type)
 	assert.Equal(t, "@client", v1.Data.Attributes.Type)
@@ -627,9 +623,8 @@ func TestClientJobs(t *testing.T) {
 	err = json.NewDecoder(res2.Body).Decode(&v2)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v2.Data) || !assert.NotNil(t, v2.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v2.Data)
+	require.NotNil(t, v2.Data.Attributes)
 	jobID := v2.Data.ID
 	assert.Equal(t, consts.Jobs, v2.Data.Type)
 	assert.Equal(t, "client", v2.Data.Attributes.WorkerType)
@@ -664,9 +659,8 @@ func TestClientJobs(t *testing.T) {
 	err = json.NewDecoder(res3.Body).Decode(&v3)
 	require.NoError(t, err)
 
-	if !assert.NotNil(t, v3.Data) || !assert.NotNil(t, v3.Data.Attributes) {
-		return
-	}
+	require.NotNil(t, v3.Data)
+	require.NotNil(t, v3.Data.Attributes)
 	assert.Equal(t, consts.Jobs, v3.Data.Type)
 	assert.Equal(t, "client", v3.Data.Attributes.WorkerType)
 	assert.Equal(t, job.Errored, v3.Data.Attributes.State)
