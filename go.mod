@@ -44,7 +44,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.1
-	github.com/ugorji/go/codec v1.2.7
+	github.com/ugorji/go/codec v1.2.8
 	github.com/yuin/goldmark v1.5.3
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
 	golang.org/x/image v0.0.0-20220902085622-e7cb96979f69
