@@ -99,8 +99,9 @@ func (s *SharedRef) Fetch(field string) []string {
 			keys = append(keys, key)
 		}
 		return keys
+	default:
+		return nil
 	}
-	return nil
 }
 
 // FindReferences returns the io.cozy.shared references to the given identifiers

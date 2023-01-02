@@ -228,8 +228,9 @@ func (t *TriggerInfos) Fetch(field string) []string {
 	switch field {
 	case "worker":
 		return []string{t.WorkerType}
+	default:
+		return nil
 	}
-	return nil
 }
 
 func createTrigger(t Trigger) error {

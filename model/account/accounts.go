@@ -102,8 +102,9 @@ func (ac *Account) Fetch(field string) []string {
 	switch field {
 	case "account_type":
 		return []string{ac.AccountType}
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (ac *Account) toJSONDoc() (*couchdb.JSONDoc, error) {

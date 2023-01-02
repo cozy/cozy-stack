@@ -102,8 +102,9 @@ func (q apiQueue) Fetch(field string) []string {
 	switch field {
 	case "worker":
 		return []string{q.workerType}
+	default:
+		return nil
 	}
-	return nil
 }
 
 // NewAPITrigger creates a jsonapi representation of a trigger.

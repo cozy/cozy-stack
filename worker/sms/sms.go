@@ -59,8 +59,9 @@ func sendSMS(ctx *job.WorkerContext, msg *center.SMS) error {
 	case "api_sen":
 		log := ctx.Logger()
 		return sendSenAPI(cfg, msg, number, log)
+	default:
+		return errors.New("Unknown provider for sending SMS")
 	}
-	return errors.New("Unknown provider for sending SMS")
 }
 
 func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logger.Entry) error {
