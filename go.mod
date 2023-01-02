@@ -44,7 +44,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/ugorji/go/codec v1.2.8
 	github.com/yuin/goldmark v1.5.3
-	golang.org/x/crypto v0.2.0
+	golang.org/x/crypto v0.4.0
 	golang.org/x/image v0.2.0
 	golang.org/x/net v0.4.0
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
