@@ -48,7 +48,6 @@ func TestMACMessageWithName(t *testing.T) {
 
 	_, err8 := DecodeAuthMessage(o1, k1, encoded2, []byte("plop"))
 	require.Error(t, err8)
-
 }
 
 func TestMACMessageWithoutName(t *testing.T) {
@@ -75,7 +74,6 @@ func TestMACMessageWithoutName(t *testing.T) {
 
 	_, err4 := DecodeAuthMessage(o3, k3, encoded, nil)
 	require.Error(t, err4)
-
 }
 
 func TestMACWrongMessage(t *testing.T) {
@@ -88,27 +86,23 @@ func TestMACWrongMessage(t *testing.T) {
 	{
 		_, err := DecodeAuthMessage(o, k, []byte(""), nil)
 		require.Equal(t, errMACInvalid, err)
-
 	}
 
 	{
 		_, err := DecodeAuthMessage(o, k, []byte("ccc"), nil)
 		require.Equal(t, errMACInvalid, err)
-
 	}
 
 	{
 		buf := Base64Encode(GenerateRandomBytes(32))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
 		require.Equal(t, errMACInvalid, err)
-
 	}
 
 	{
 		buf := Base64Encode(createMAC(k, []byte("")))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
 		require.Equal(t, errMACInvalid, err)
-
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -116,7 +110,6 @@ func TestMACWrongMessage(t *testing.T) {
 		buf := Base64Encode(GenerateRandomBytes(rng.Intn(1000)))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
 		require.Equal(t, errMACInvalid, err)
-
 	}
 }
 
@@ -142,7 +135,6 @@ func TestMACMaxAge(t *testing.T) {
 
 		msg2, err = EncodeAuthMessage(c2, key, val, add)
 		require.NoError(t, err)
-
 	}
 
 	{
@@ -182,6 +174,5 @@ func TestAuthentication(t *testing.T) {
 
 		ok2 := verifyMAC(hashKey, GenerateRandomBytes(32), mac)
 		require.False(t, ok2)
-
 	}
 }

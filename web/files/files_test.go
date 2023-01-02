@@ -1878,7 +1878,6 @@ func TestArchiveDirectDownload(t *testing.T) {
 	for _, name := range names {
 		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
 		require.Equal(t, 201, res2.StatusCode)
-
 	}
 
 	// direct download
@@ -1914,7 +1913,6 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 	for _, name := range names {
 		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
 		require.Equal(t, 201, res2.StatusCode)
-
 	}
 
 	body := bytes.NewBufferString(`{

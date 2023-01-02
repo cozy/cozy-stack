@@ -130,7 +130,6 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 		_, err = installer.RunSync()
 		require.NoError(t, err)
-
 	}
 
 	var wg sync.WaitGroup
@@ -235,7 +234,6 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 
 		_, err = installer.RunSync()
 		require.NoError(t, err)
-
 	}
 
 	var wg sync.WaitGroup
@@ -306,7 +304,6 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		_, err = installer.RunSync()
 		require.NoError(t, err)
-
 	}
 
 	var wg sync.WaitGroup

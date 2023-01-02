@@ -29,11 +29,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ts *httptest.Server
-var token string
-var testInstance *instance.Instance
-var clientVal *oauth.Client
-var clientID string
+var (
+	ts           *httptest.Server
+	token        string
+	testInstance *instance.Instance
+	clientVal    *oauth.Client
+	clientID     string
+)
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
@@ -339,7 +341,6 @@ func TestCreateSubSubFail(t *testing.T) {
 	eveCode := codes["eve"].(string)
 	_, _, err = createTestSubPermissions(eveCode, "eve")
 	require.Error(t, err)
-
 }
 
 func TestPatchNoopFail(t *testing.T) {
@@ -545,7 +546,6 @@ func createTestSubPermissions(tok string, codes string) (string, map[string]inte
 	}
 }
 	}`)
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -572,7 +572,6 @@ func createTestTinyCode(tok string, codes string, ttl string) (string, map[strin
 	}
 }
 	}`)
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -769,13 +768,15 @@ func TestListPermission(t *testing.T) {
 			Type:   "io.cozy.events",
 			Verbs:  permission.Verbs(permission.DELETE, permission.PATCH),
 			Values: []string{ev1.ID()},
-		}}
+		},
+	}
 	p2 := permission.Set{
 		permission.Rule{
 			Type:   "io.cozy.events",
 			Verbs:  permission.Verbs(permission.GET),
 			Values: []string{ev2.ID()},
-		}}
+		},
+	}
 
 	perm1 := permission.Permission{
 		Permissions: p1,
