@@ -173,11 +173,12 @@ func (e *ImageExtractor) Result() Metadata {
 	m := NewMetadata()
 	m["datetime"] = e.createdAt
 	cfg := <-e.ch
-	switch cfg := cfg.(type) {
-	case image.Config:
+
+	if cfg, ok := cfg.(image.Config); ok {
 		m["width"] = cfg.Width
 		m["height"] = cfg.Height
 	}
+
 	return m
 }
 
@@ -256,8 +257,7 @@ func (e *ExifExtractor) Result() Metadata {
 	}
 	select {
 	case x := <-e.ch:
-		switch x := x.(type) {
-		case *exif.Exif:
+		if x, ok := x.(*exif.Exif); ok {
 			localTZ := false
 			if dt, err := x.DateTime(); err == nil {
 				m["datetime"] = dt
@@ -422,8 +422,7 @@ func (e *AudioExtractor) Abort(err error) {
 func (e *AudioExtractor) Result() Metadata {
 	m := NewMetadata()
 	tags := <-e.ch
-	switch tags := tags.(type) {
-	case tag.Metadata:
+	if tags, ok := tags.(tag.Metadata); ok {
 		if album := tags.Album(); album != "" {
 			m["album"] = album
 		}
@@ -511,8 +510,7 @@ func (e *ShortcutExtractor) Abort(err error) {
 func (e *ShortcutExtractor) Result() Metadata {
 	m := NewMetadata()
 	link := <-e.ch
-	switch link := link.(type) {
-	case shortcut.Result:
+	if link, ok := link.(shortcut.Result); ok {
 		cozy, app := extractCozyLink(link, e.instance)
 		if cozy != "" {
 			target := map[string]interface{}{

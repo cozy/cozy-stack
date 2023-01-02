@@ -198,8 +198,9 @@ func (jr *JobRequest) Fetch(field string) []string {
 	switch field {
 	case "worker":
 		return []string{jr.WorkerType}
+	default:
+		return nil
 	}
-	return nil
 }
 
 // Logger returns a logger associated with the job domain
