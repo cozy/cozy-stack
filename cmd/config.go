@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/account"
@@ -42,7 +41,7 @@ The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphr
 		}
 		var filename string
 		if len(args) == 1 {
-			filename = filepath.Join(utils.AbsPath(args[0]))
+			filename = path.Clean(utils.AbsPath(args[0]))
 			ok, err := utils.DirExists(filename)
 			if err == nil && ok {
 				filename = path.Join(filename, config.GetConfig().AdminSecretFileName)
@@ -122,7 +121,7 @@ keyfiles written in:
 			return cmd.Usage()
 		}
 
-		filename := filepath.Join(utils.AbsPath(args[0]))
+		filename := path.Clean(utils.AbsPath(args[0]))
 		encryptorFilename := filename + ".enc"
 		decryptorFilename := filename + ".dec"
 
