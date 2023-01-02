@@ -49,6 +49,7 @@ linters:
     - gofmt
     - govet
     - misspell
+    - nolintlint
     - unconvert
     - unused 
     - whitespace
