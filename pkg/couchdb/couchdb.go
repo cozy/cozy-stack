@@ -215,14 +215,14 @@ func (j *JSONDoc) Fetch(field string) []string {
 }
 
 func unescapeCouchdbName(name string) string {
-	return strings.Replace(name, "-", ".", -1)
+	return strings.ReplaceAll(name, "-", ".")
 }
 
 // EscapeCouchdbName can be used to build the name of a database from the
 // instance prefix and doctype.
 func EscapeCouchdbName(name string) string {
-	name = strings.Replace(name, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
+	name = strings.ReplaceAll(name, ".", "-")
+	name = strings.ReplaceAll(name, ":", "-")
 	return strings.ToLower(name)
 }
 

@@ -20,9 +20,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var dryRunFlag bool
-var withMetadataFlag bool
-var noDryRunFlag bool
+var (
+	dryRunFlag       bool
+	withMetadataFlag bool
+	noDryRunFlag     bool
+)
 
 var fixerCmdGroup = &cobra.Command{
 	Use:     "fix <command>",
@@ -206,16 +208,16 @@ var contactEmailsFixer = &cobra.Command{
 					if err != nil {
 						old := address
 						address = strings.TrimSpace(address)
-						address = strings.Replace(address, "\"", "", -1)
-						address = strings.Replace(address, ",", ".", -1)
-						address = strings.Replace(address, " .", ".", -1)
-						address = strings.Replace(address, ". ", ".", -1)
-						address = strings.Replace(address, ". ", ".", -1)
-						address = strings.Replace(address, "..", ".", -1)
-						address = strings.Replace(address, ".@", "@", -1)
-						address = strings.Replace(address, "@.", "@", -1)
-						address = strings.Replace(address, " @", "@", -1)
-						address = strings.Replace(address, "@ ", "@", -1)
+						address = strings.ReplaceAll(address, "\"", "")
+						address = strings.ReplaceAll(address, ",", ".")
+						address = strings.ReplaceAll(address, " .", ".")
+						address = strings.ReplaceAll(address, ". ", ".")
+						address = strings.ReplaceAll(address, ". ", ".")
+						address = strings.ReplaceAll(address, "..", ".")
+						address = strings.ReplaceAll(address, ".@", "@")
+						address = strings.ReplaceAll(address, "@.", "@")
+						address = strings.ReplaceAll(address, " @", "@")
+						address = strings.ReplaceAll(address, "@ ", "@")
 						address = mailto.ReplaceAllString(address, "")
 						address = semicolonAtEnd.ReplaceAllString(address, "")
 						address = dotAtStart.ReplaceAllString(address, "")

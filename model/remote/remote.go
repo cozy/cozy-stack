@@ -307,7 +307,7 @@ func injectVar(src string, vars map[string]string, defautFunc, doctype string) (
 		case "path":
 			return url.PathEscape(val)
 		case "header":
-			return strings.Replace(val, "\n", "\\n", -1)
+			return strings.ReplaceAll(val, "\n", "\\n")
 		case "json":
 			var b []byte
 			b, err = json.Marshal(val)

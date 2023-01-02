@@ -24,8 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testInstance *instance.Instance
-var testClient *client.Client
+var (
+	testInstance *instance.Instance
+	testClient   *client.Client
+)
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
@@ -61,7 +63,7 @@ func TestMain(m *testing.M) {
 
 	ts := httptest.NewServer(server)
 	u, _ := url.Parse(ts.URL)
-	domain := strings.Replace(u.Host, "127.0.0.1", "localhost", -1)
+	domain := strings.ReplaceAll(u.Host, "127.0.0.1", "localhost")
 
 	_ = lifecycle.Destroy(domain)
 	testInstance, err = lifecycle.Create(&lifecycle.Options{
