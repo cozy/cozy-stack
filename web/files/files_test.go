@@ -36,14 +36,16 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
 
-var ts *httptest.Server
-var testInstance *instance.Instance
-var setup *testutils.TestSetup
-var token string
-var clientID string
-var imgID string
-var fileID string
-var publicToken string
+var (
+	ts           *httptest.Server
+	testInstance *instance.Instance
+	setup        *testutils.TestSetup
+	token        string
+	clientID     string
+	imgID        string
+	fileID       string
+	publicToken  string
+)
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
 	doc, err := fs.FileByPath(name)
@@ -453,6 +455,7 @@ func TestCreateDirWithDateSuccessAndUpdatedAt(t *testing.T) {
 	assert.NotEmpty(t, fcm["updatedAt"])
 	assert.NotContains(t, fcm, "uploadedAt")
 }
+
 func TestCreateDirWithParentSuccess(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=dirparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
@@ -503,7 +506,7 @@ func TestCreateDirConcurrently(t *testing.T) {
 		case res := <-errs:
 			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
 		case <-done:
-			c = c + 1
+			c += 1
 		}
 	}
 

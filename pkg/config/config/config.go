@@ -80,8 +80,10 @@ const (
 // administration hashed passphrase.
 const defaultAdminSecretFileName = "cozy-admin-passphrase"
 
-var config *Config
-var vault *Vault
+var (
+	config *Config
+	vault  *Vault
+)
 
 var log = logger.WithNamespace("config")
 
@@ -1163,7 +1165,7 @@ func findConfigFiles(name string) ([]string, error) {
 
 	configFiles = append(configFiles, configFile)
 
-	configFile = configFile + ".local"
+	configFile += ".local"
 	ok, _ := utils.FileExists(configFile)
 	if ok {
 		configFiles = append(configFiles, configFile)

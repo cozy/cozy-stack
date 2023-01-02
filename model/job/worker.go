@@ -541,7 +541,7 @@ func (t *task) nextDelay(prevError error) (bool, time.Duration, time.Duration) {
 
 		// fuzzDelay number between delay * (1 +/- 0.1)
 		fuzzDelay := int(0.1 * float64(nextDelay))
-		nextDelay = nextDelay + time.Duration((rand.Intn(2*fuzzDelay) - fuzzDelay))
+		nextDelay += time.Duration((rand.Intn(2*fuzzDelay) - fuzzDelay))
 	}
 
 	return true, nextDelay, timeout

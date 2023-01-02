@@ -20,7 +20,7 @@ var numericFuncsMap = map[string]interface{}{
 	"mul": func(a interface{}, v ...interface{}) int64 {
 		val := toInt64(a)
 		for _, b := range v {
-			val = val * toInt64(b)
+			val *= toInt64(b)
 		}
 		return val
 	},
