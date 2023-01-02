@@ -18,8 +18,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const numUpdaters = 4
-const numUpdatersSingleInstance = 4
+const (
+	numUpdaters               = 4
+	numUpdatersSingleInstance = 4
+)
 
 func init() {
 	job.AddWorker(&job.WorkerConfig{
@@ -108,7 +110,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	if err != nil {
 		return err
 	}
-	totalInstances = totalInstances - 1
+	totalInstances -= 1
 
 	// log a message for every hundredth instances updated, rounded to the
 	// closest multiple of 100.

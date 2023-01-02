@@ -350,7 +350,7 @@ func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
 		srccopy.Path += "/"
 	}
-	srccopy.Path = srccopy.Path + filename
+	srccopy.Path += filename
 	return srccopy.String(), nil
 }
 

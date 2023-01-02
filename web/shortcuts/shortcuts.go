@@ -78,7 +78,7 @@ func FromJSONAPI(c echo.Context) (*vfs.FileDoc, []byte, error) {
 		return nil, nil, jsonapi.InvalidAttribute("name", errors.New("No name"))
 	}
 	if !strings.HasSuffix(doc.Name, ".url") {
-		doc.Name = doc.Name + ".url"
+		doc.Name += ".url"
 	}
 	if doc.DirID == "" {
 		doc.DirID = consts.RootDirID

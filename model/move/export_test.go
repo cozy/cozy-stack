@@ -60,7 +60,7 @@ func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc) {
 func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int) {
 	nbDirs := rand.Intn(5)
 	if nbDirs > nb {
-		nbDirs = nbDirs % (nb + 1)
+		nbDirs %= (nb + 1)
 	}
 
 	// Create the sub-directories
