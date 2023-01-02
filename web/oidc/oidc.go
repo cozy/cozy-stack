@@ -522,8 +522,8 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 	if !ok {
 		return "", errors.New("Error The authentication has failed")
 	}
-	domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
-	domain = strings.ToLower(domain)              // The domain is case insensitive
+	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
+	domain = strings.ToLower(domain)             // The domain is case insensitive
 	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
 	return domain, nil
 }

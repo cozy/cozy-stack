@@ -109,6 +109,6 @@ func (s *FileStorage) Save(domain string, client *Client, token *AccessToken) er
 }
 
 func newFileLock(name string) (lockfile.Lockfile, error) {
-	lockName := strings.Replace(name, "/", "_", -1) + ".lock"
+	lockName := strings.ReplaceAll(name, "/", "_") + ".lock"
 	return lockfile.New(filepath.Join(os.TempDir(), lockName))
 }
