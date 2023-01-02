@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	stdlog "log"
 	"net"
 	"net/http"
@@ -873,7 +872,7 @@ func MakeVault(c *Config) error {
 	var credsDecryptor *keymgmt.NACLKey
 
 	if credsEncryptorKey := config.CredentialsEncryptorKey; credsEncryptorKey != "" {
-		keyBytes, err := ioutil.ReadFile(credsEncryptorKey)
+		keyBytes, err := os.ReadFile(credsEncryptorKey)
 		if err != nil {
 			return err
 		}
@@ -884,7 +883,7 @@ func MakeVault(c *Config) error {
 	}
 
 	if credsDecryptorKey := config.CredentialsDecryptorKey; credsDecryptorKey != "" {
-		keyBytes, err := ioutil.ReadFile(credsDecryptorKey)
+		keyBytes, err := os.ReadFile(credsDecryptorKey)
 		if err != nil {
 			return err
 		}

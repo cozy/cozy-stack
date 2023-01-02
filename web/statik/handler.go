@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -140,7 +139,7 @@ func NewRenderer() (AssetRenderer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)
 		}
-		b, err := ioutil.ReadAll(f)
+		b, err := io.ReadAll(f)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +179,7 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 				assets.LoadContextualizedLocale(context, i.Locale)
 			}
 			if f, err := assets.Open("/templates/"+name, context); err == nil {
-				b, err := ioutil.ReadAll(f)
+				b, err := io.ReadAll(f)
 				if err != nil {
 					return err
 				}

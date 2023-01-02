@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/mail"
 	"net/url"
 	"os"
@@ -174,7 +174,7 @@ var contactEmailsFixer = &cobra.Command{
 					Contact contact.Contact `json:"doc"`
 				} `json:"rows"`
 			}
-			buf, err := ioutil.ReadAll(res.Body)
+			buf, err := io.ReadAll(res.Body)
 			if err != nil {
 				return err
 			}
@@ -302,7 +302,7 @@ var contentMismatch64Kfixer = &cobra.Command{
 			return err
 		}
 
-		out, err := ioutil.ReadAll(res.Body)
+		out, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
@@ -359,7 +359,7 @@ This fixer cleans duplicate triggers for webapp services.
 		if err != nil {
 			return err
 		}
-		out, err := ioutil.ReadAll(res.Body)
+		out, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}

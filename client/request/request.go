@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -169,7 +168,7 @@ func Req(opts *Options) (*http.Response, error) {
 }
 
 func parseError(opts *Options, res *http.Response) error {
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	if cerr := res.Body.Close(); err == nil && cerr != nil {
 		err = cerr
 	}

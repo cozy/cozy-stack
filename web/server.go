@@ -6,8 +6,9 @@ package web
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"path"
 	"time"
 
@@ -40,7 +41,7 @@ func LoadSupportedLocales() error {
 	if assetsPath != "" {
 		for _, locale := range consts.SupportedLocales {
 			pofile := path.Join(assetsPath, "locales", locale+".po")
-			po, err := ioutil.ReadFile(pofile)
+			po, err := os.ReadFile(pofile)
 			if err != nil {
 				return fmt.Errorf("Can't load the po file for %s", locale)
 			}
@@ -54,7 +55,7 @@ func LoadSupportedLocales() error {
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
 		}
-		po, err := ioutil.ReadAll(f)
+		po, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}

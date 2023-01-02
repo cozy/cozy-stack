@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -292,7 +291,7 @@ func TestDiscovery(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Connect to your Cozy")
 	assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
 
@@ -421,7 +420,7 @@ func TestAuthorizeSharing(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 
 	assertAuthorizePageShowsTheSharing(t, string(body))
 
@@ -697,7 +696,7 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+sharecode)
 	assert.NoError(t, err)
 	res2, err := http.DefaultClient.Do(req2)
-	content, _ := ioutil.ReadAll(res2.Body)
+	content, _ := io.ReadAll(res2.Body)
 	assert.NoError(t, err)
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
@@ -766,7 +765,7 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	assert.NoError(t, err)
 	res2, err = http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
-	badRequestContent, err := ioutil.ReadAll(res2.Body)
+	badRequestContent, err := io.ReadAll(res2.Body)
 	assert.NoError(t, err)
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)

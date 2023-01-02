@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -57,7 +57,7 @@ func readFile(fs vfs.VFS, name string) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return ioutil.ReadAll(f)
+	return io.ReadAll(f)
 }
 
 func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
@@ -223,7 +223,7 @@ func download(t *testing.T, path, byteRange string) (res *http.Response, body []
 	res, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	return
@@ -1863,7 +1863,7 @@ func TestArchiveNoFiles(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
-	msg, err := ioutil.ReadAll(res.Body)
+	msg, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	actual := strings.TrimSpace(string(msg))
 	assert.Equal(t, `"Can't create an archive with no files"`, actual)
@@ -2616,7 +2616,7 @@ func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 500, res.StatusCode)
-	resbody, err := ioutil.ReadAll(res.Body)
+	resbody, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(resbody), "Rate limit exceeded")
 }
@@ -2889,7 +2889,7 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup = testutils.NewSetup(m, "files_test")
 
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
@@ -2943,7 +2943,7 @@ func loadLocale() error {
 	assetsPath := config.GetConfig().Assets
 	if assetsPath != "" {
 		pofile := path.Join("../..", assetsPath, "locales", locale+".po")
-		po, err := ioutil.ReadFile(pofile)
+		po, err := os.ReadFile(pofile)
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
 		}

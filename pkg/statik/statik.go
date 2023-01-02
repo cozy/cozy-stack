@@ -26,7 +26,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -281,7 +280,7 @@ func generateSource(destFilename, srcPath, externalsFile string) (f *os.File, no
 		return
 	}
 
-	f, err = ioutil.TempFile("", namePackage)
+	f, err = os.CreateTemp("", namePackage)
 	if err != nil {
 		return
 	}
@@ -424,7 +423,7 @@ func downloadExternal(ext *asset) (f *asset, err error) {
 	h := sha256.New()
 	r := io.TeeReader(res.Body, h)
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch external asset: %s", err)
 	}
@@ -443,7 +442,7 @@ func downloadExternal(ext *asset) (f *asset, err error) {
 }
 
 func readCurrentAssets(filename string) (assets []*asset, err error) {
-	statikFile, err := ioutil.ReadFile(filename)
+	statikFile, err := os.ReadFile(filename)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -473,7 +472,7 @@ func readCurrentAssets(filename string) (assets []*asset, err error) {
 		var data []byte
 		h := sha256.New()
 		r := io.TeeReader(br, h)
-		data, err = ioutil.ReadAll(r)
+		data, err = io.ReadAll(r)
 		if err != nil {
 			return
 		}

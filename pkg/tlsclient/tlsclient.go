@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -205,7 +204,7 @@ func (s *tlsConfig) LoadRootCA(rootCA []byte) error {
 }
 
 func (s *tlsConfig) LoadRootCAFile(rootCAFile string) error {
-	pemCerts, err := ioutil.ReadFile(rootCAFile)
+	pemCerts, err := os.ReadFile(rootCAFile)
 	if err != nil {
 		return fmt.Errorf("tlsclient: could not load root CA file %q: %s", rootCAFile, err)
 	}

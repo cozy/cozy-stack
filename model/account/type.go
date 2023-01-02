@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -266,7 +266,7 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 	}
 	defer res.Body.Close()
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	if res.StatusCode != 200 {
 		return nil, errors.New("oauth services responded with non-200 res: " + string(resBody))
 	}
@@ -356,7 +356,7 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	if res.StatusCode != 200 {
-		resBody, _ := ioutil.ReadAll(res.Body)
+		resBody, _ := io.ReadAll(res.Body)
 		return errors.New("oauth services responded with non-200 res: " + string(resBody))
 	}
 

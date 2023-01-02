@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"runtime"
@@ -209,7 +209,7 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 				return nil, ErrNotFoundRemote
 			}
 			defer res.Body.Close()
-			b, err := ioutil.ReadAll(res.Body)
+			b, err := io.ReadAll(res.Body)
 			if err != nil {
 				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
 				return nil, ErrNotFoundRemote
@@ -229,7 +229,7 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 		raw = dt.Request
 	} else {
 		filename := path.Join(config.GetConfig().Doctypes, doctype, "request")
-		bytes, err := ioutil.ReadFile(filename)
+		bytes, err := os.ReadFile(filename)
 		if err != nil {
 			log.Infof("Cannot read file %s: %s", filename, err)
 			return nil, ErrNotFoundRemote

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -774,7 +773,7 @@ func (f *swiftFileOpenV2) Read(p []byte) (int, error) {
 
 func (f *swiftFileOpenV2) ReadAt(p []byte, off int64) (int, error) {
 	if f.br == nil {
-		buf, err := ioutil.ReadAll(f.f)
+		buf, err := io.ReadAll(f.f)
 		if err != nil {
 			return 0, err
 		}

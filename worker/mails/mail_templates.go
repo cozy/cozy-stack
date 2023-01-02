@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	text "text/template"
 
 	"github.com/cozy/cozy-stack/model/job"
@@ -159,5 +159,5 @@ func loadTemplate(name, context string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadAll(f)
+	return io.ReadAll(f)
 }

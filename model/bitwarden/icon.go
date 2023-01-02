@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"sort"
@@ -236,7 +235,7 @@ func downloadIcon(u string) (*Icon, error) {
 	if res.StatusCode != http.StatusOK {
 		return nil, errors.New("Not status OK")
 	}
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}

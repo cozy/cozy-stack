@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -277,7 +276,7 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 }
 
 func readKeyFromFile(filepath string) (*keymgmt.NACLKey, error) {
-	keyBytes, err := ioutil.ReadFile(filepath)
+	keyBytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -497,7 +496,7 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	defer func() {
 		if !ok {
 			// Flush the body, so that the connecion can be reused by keep-alive
-			_, _ = io.Copy(ioutil.Discard, resp.Body)
+			_, _ = io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 		}
 	}()

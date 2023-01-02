@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"sync"
 	"time"
@@ -60,7 +59,7 @@ func Init(opt Options) error {
 			return err
 		}
 		logrus.AddHook(hook)
-		logrus.SetOutput(ioutil.Discard)
+		logrus.SetOutput(io.Discard)
 	} else if build.IsDevRelease() && logLevel == logrus.DebugLevel {
 		formatter := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
 		formatter.TimestampFormat = time.RFC3339Nano
@@ -223,7 +222,7 @@ func addDebugDomain(domain string, ttl time.Duration) {
 		hook, err := syslogHook()
 		if err == nil {
 			logger.Hooks.Add(hook)
-			logger.Out = ioutil.Discard
+			logger.Out = io.Discard
 		}
 	}
 	expiredAt := time.Now().Add(ttl)

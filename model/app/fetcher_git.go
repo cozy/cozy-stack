@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -146,7 +145,7 @@ func (g *gitFetcher) doFetchManifestFromGitArchive(src *url.URL, branch string, 
 		if _, err = io.Copy(buf, r); err != nil {
 			return nil, ErrManifestNotReachable
 		}
-		return ioutil.NopCloser(buf), nil
+		return io.NopCloser(buf), nil
 	}
 	return nil, ErrManifestNotReachable
 }

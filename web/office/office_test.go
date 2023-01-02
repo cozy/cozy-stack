@@ -3,7 +3,7 @@ package office
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -85,7 +85,7 @@ func TestSaveOnlyOffice(t *testing.T) {
 	file, err := inst.VFS().OpenFile(doc)
 	assert.NoError(t, err)
 	defer file.Close()
-	buf, err := ioutil.ReadAll(file)
+	buf, err := io.ReadAll(file)
 	assert.NoError(t, err)
 	assert.Equal(t, "version 1", string(buf))
 
@@ -104,7 +104,7 @@ func TestSaveOnlyOffice(t *testing.T) {
 	file, err = inst.VFS().OpenFile(doc)
 	assert.NoError(t, err)
 	defer file.Close()
-	buf, err = ioutil.ReadAll(file)
+	buf, err = io.ReadAll(file)
 	assert.NoError(t, err)
 	assert.Equal(t, "version 2", string(buf))
 }

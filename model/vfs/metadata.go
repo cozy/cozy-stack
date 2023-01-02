@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"strings"
@@ -380,7 +379,7 @@ func (e *AudioExtractor) Start() {
 	var tags tag.Metadata
 	var buf []byte
 	var err error
-	buf, err = ioutil.ReadAll(e.r)
+	buf, err = io.ReadAll(e.r)
 	if err != nil {
 		e.r.Close()
 		e.ch <- err

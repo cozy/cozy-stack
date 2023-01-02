@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -116,7 +115,7 @@ func getColor(name string) string {
 func draw(info info) ([]byte, error) {
 	var env []string
 	{
-		tempDir, err := ioutil.TempDir("", "magick")
+		tempDir, err := os.MkdirTemp("", "magick")
 		if err == nil {
 			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)

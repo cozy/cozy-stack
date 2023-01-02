@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -80,7 +79,7 @@ func manifestKonnector() string {
 }
 
 func serveGitRep() {
-	dir, err := ioutil.TempDir("", "cozy-app")
+	dir, err := os.MkdirTemp("", "cozy-app")
 	if err != nil {
 		panic(err)
 	}

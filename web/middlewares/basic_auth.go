@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -48,7 +48,7 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 		}
 		defer f.Close()
 
-		b, err := ioutil.ReadAll(f)
+		b, err := io.ReadAll(f)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err)
 		}

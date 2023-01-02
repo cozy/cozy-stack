@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -431,12 +430,12 @@ func getToken(conf *Config, code string) (string, error) {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
 		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
@@ -502,7 +501,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
 		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
@@ -615,7 +614,7 @@ func getKeysFromHTTP(keyURL string) ([]byte, error) {
 		logger.WithNamespace("oidc").Warnf("getKeys cannot fetch jwk: %d", res.StatusCode)
 		return nil, errors.New("cannot fetch jwk")
 	}
-	return ioutil.ReadAll(res.Body)
+	return io.ReadAll(res.Body)
 }
 
 // ChooseKeyForIDToken can be used to check an id_token as a JWT.

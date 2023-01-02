@@ -1,7 +1,7 @@
 package remote
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,7 +27,7 @@ func TestRemoteGET(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Equal(t, `{"entities":`, string(body[:12]))
 
 	var results []map[string]interface{}

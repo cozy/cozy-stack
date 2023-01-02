@@ -2,7 +2,7 @@ package accounts
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -58,7 +58,7 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	res, err := client.Get(u)
 	require.NoError(t, err)
 
-	bb, err := ioutil.ReadAll(res.Body)
+	bb, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	res.Body.Close()
@@ -112,7 +112,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	res, err := client.Get(u)
 	require.NoError(t, err)
 
-	bb, err := ioutil.ReadAll(res.Body)
+	bb, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	res.Body.Close()
@@ -184,7 +184,7 @@ func TestDoNotRecreateAccountIfItAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 	defer res.Body.Close()
 	require.Equal(t, 200, res.StatusCode)
-	bb, err := ioutil.ReadAll(res.Body)
+	bb, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	okURL := string(bb)
 
@@ -223,7 +223,7 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	res, err := client.Get(startURL.String())
 	require.NoError(t, err)
 
-	bb, err := ioutil.ReadAll(res.Body)
+	bb, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	res.Body.Close()

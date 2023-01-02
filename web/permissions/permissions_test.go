@@ -3,7 +3,7 @@ package permissions
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -235,7 +235,7 @@ func TestGetPermissions(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	var out map[string]interface{}
@@ -270,7 +270,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Invalid JWT token`, string(body))
 	assert.Equal(t, `Bearer error="invalid_token"`, res.Header.Get("WWW-Authenticate"))
@@ -286,7 +286,7 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `Expired token`, string(body))
 	assert.Equal(t, `Bearer error="invalid_token" error_description="The access token expired"`, res.Header.Get("WWW-Authenticate"))
@@ -319,7 +319,7 @@ func TestCreateSubPermission(t *testing.T) {
 	require.NoError(t, err)
 
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	var out map[string]interface{}
@@ -593,7 +593,7 @@ func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	resbody, err := ioutil.ReadAll(res.Body)
+	resbody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -805,7 +805,7 @@ func TestListPermission(t *testing.T) {
 
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	var out jsonapi.Document
