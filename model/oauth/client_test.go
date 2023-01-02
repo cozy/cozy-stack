@@ -115,9 +115,7 @@ func TestCreateClientWithNotifications(t *testing.T) {
 	{
 		var err error
 		goodClient, err = oauth.FindClient(testInstance, goodClient.ClientID)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	{

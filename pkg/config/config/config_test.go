@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUseViper(t *testing.T) {
@@ -22,9 +23,8 @@ func TestUseViper(t *testing.T) {
 func TestSetup(t *testing.T) {
 	tmpdir := os.TempDir()
 	tmpfile, err := os.OpenFile(filepath.Join(tmpdir, "cozy.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
@@ -71,13 +71,10 @@ registries:
   default:
     - https://default
 `))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = Setup(tmpfile.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, "myhost", GetConfig().Host)
 	assert.Equal(t, 1235, GetConfig().Port)

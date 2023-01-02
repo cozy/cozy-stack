@@ -47,9 +47,8 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 		RegisteredRedirectURI: redirectURI,
 	}
 	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
 	}()
@@ -57,14 +56,11 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
 
 	res, err := client.Get(u)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	bb, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	res.Body.Close()
 	okURL := string(bb)
 
@@ -75,14 +71,12 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 
 	// the user click the oauth link
 	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
 	finalURL, err := res2.Location()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
@@ -107,9 +101,8 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 		AuthEndpoint: service.URL + "/oauth2/v2/auth",
 	}
 	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
 	}()
@@ -117,14 +110,11 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	u := ts.URL + "/accounts/test-service2/start?scope=the+world"
 
 	res, err := client.Get(u)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	bb, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	res.Body.Close()
 	okURL := string(bb)
 
@@ -134,14 +124,12 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	}
 
 	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
 	finalURL, err := res2.Location()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
@@ -223,27 +211,21 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 		RegisteredRedirectURI: redirectURI,
 	}
 	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
 	}()
 
 	startURL, err := url.Parse(ts.URL + "/accounts/test-service3/start?scope=the+world")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res, err := client.Get(startURL.String())
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	bb, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	res.Body.Close()
 	okURL := string(bb)
 
@@ -253,28 +235,23 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	}
 
 	okURLObj, err := url.Parse(okURL)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	// hack, we want to speak with ts.URL but setting Host to _oauth_callback
 	host := okURLObj.Host
 	okURLObj.Host = startURL.Host
 	req2, err := http.NewRequest("GET", okURLObj.String(), nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req2.Host = host
 
 	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
 	finalURL, err := res2.Location()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
@@ -299,9 +276,8 @@ func TestCheckLogin(t *testing.T) {
 		RegisteredRedirectURI: "https://oauth_callback.cozy.localhost/accounts/test-service4/redirect",
 	}
 	err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
 	}()

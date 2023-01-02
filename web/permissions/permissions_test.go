@@ -26,13 +26,16 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var ts *httptest.Server
-var token string
-var testInstance *instance.Instance
-var clientVal *oauth.Client
-var clientID string
+var (
+	ts           *httptest.Server
+	token        string
+	testInstance *instance.Instance
+	clientVal    *oauth.Client
+	clientID     string
+)
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
@@ -227,16 +230,14 @@ func TestGetPermissions(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	var out map[string]interface{}
 	err = json.Unmarshal(body, &out)
 	assert.NoError(t, err)
@@ -295,18 +296,15 @@ func TestBadPermissionsBearer(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer garbage")
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func TestCreateSubPermission(t *testing.T) {
 	_, codes, err := createTestSubPermissions(token, "alice,bob")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	aCode := codes["alice"].(string)
 	bCode := codes["bob"].(string)
@@ -318,14 +316,12 @@ func TestCreateSubPermission(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+aCode)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	var out map[string]interface{}
 	err = json.Unmarshal(body, &out)
 
@@ -340,21 +336,16 @@ func TestCreateSubPermission(t *testing.T) {
 
 func TestCreateSubSubFail(t *testing.T) {
 	_, codes, err := createTestSubPermissions(token, "eve")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	eveCode := codes["eve"].(string)
 	_, _, err = createTestSubPermissions(eveCode, "eve")
-	if !assert.Error(t, err) {
-		return
-	}
+	require.Error(t, err)
 }
 
 func TestPatchNoopFail(t *testing.T) {
 	id, _, err := createTestSubPermissions(token, "pierre")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
 	  "data": {
@@ -371,9 +362,7 @@ func TestPatchNoopFail(t *testing.T) {
 
 func TestBadPatchAddRuleForbidden(t *testing.T) {
 	id, _, err := createTestSubPermissions(token, "jacque")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
 	  "data": {
@@ -393,9 +382,7 @@ func TestBadPatchAddRuleForbidden(t *testing.T) {
 
 func TestPatchAddRule(t *testing.T) {
 	id, _, err := createTestSubPermissions(token, "paul")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
 	  "data": {
@@ -423,9 +410,7 @@ func TestPatchAddRule(t *testing.T) {
 
 func TestPatchRemoveRule(t *testing.T) {
 	id, _, err := createTestSubPermissions(token, "paul")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
 	  "data": {
@@ -450,9 +435,7 @@ func TestPatchRemoveRule(t *testing.T) {
 
 func TestPatchChangesCodes(t *testing.T) {
 	id, codes, err := createTestSubPermissions(token, "john,jane")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, codes["john"])
 	janeToken := codes["jane"].(string)
@@ -481,9 +464,8 @@ func TestPatchChangesCodes(t *testing.T) {
 	  }
 `)
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	data := out["data"].(map[string]interface{})
 	assert.Equal(t, id, data["id"])
 	attrs := data["attributes"].(map[string]interface{})
@@ -494,9 +476,7 @@ func TestPatchChangesCodes(t *testing.T) {
 
 func TestRevoke(t *testing.T) {
 	id, codes, err := createTestSubPermissions(token, "igor")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	igorToken := codes["igor"].(string)
 	assert.NotEmpty(t, igorToken)
@@ -511,9 +491,7 @@ func TestRevoke(t *testing.T) {
 
 func TestRevokeByAnotherApp(t *testing.T) {
 	id, _, err := createTestSubPermissions(token, "roger")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
@@ -524,9 +502,7 @@ func TestRevokeByAnotherApp(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	_, err = installer.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	notesToken, err := testInstance.MakeJWT(consts.AppAudience, "notes", "", "", time.Now())
 	assert.NoError(t, err)
@@ -570,7 +546,6 @@ func createTestSubPermissions(tok string, codes string) (string, map[string]inte
 	}
 }
 	}`)
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -597,7 +572,6 @@ func createTestTinyCode(tok string, codes string, ttl string) (string, map[strin
 	}
 }
 	}`)
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -794,13 +768,15 @@ func TestListPermission(t *testing.T) {
 			Type:   "io.cozy.events",
 			Verbs:  permission.Verbs(permission.DELETE, permission.PATCH),
 			Values: []string{ev1.ID()},
-		}}
+		},
+	}
 	p2 := permission.Set{
 		permission.Rule{
 			Type:   "io.cozy.events",
 			Verbs:  permission.Verbs(permission.GET),
 			Values: []string{ev2.ID()},
-		}}
+		},
+	}
 
 	perm1 := permission.Permission{
 		Permissions: p1,
@@ -825,28 +801,22 @@ func TestListPermission(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Content-Type", "application/json")
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	var out jsonapi.Document
 	err = json.Unmarshal(body, &out)
-	if !assert.NoError(t, err) {
-		return
-	}
-	if !assert.NotNil(t, out.Data) {
-		return
-	}
+	require.NoError(t, err)
+
+	require.NotNil(t, out.Data)
+
 	var results []refAndVerb
 	err = json.Unmarshal(*out.Data, &results)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.Len(t, results, 2)
 	for _, result := range results {
@@ -863,9 +833,8 @@ func TestListPermission(t *testing.T) {
 	req2.Header.Add("Authorization", "Bearer "+token)
 	req2.Header.Add("Content-Type", "application/json")
 	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res2.Body.Close()
 
 	var resBody struct {
@@ -880,9 +849,8 @@ func TestListPermission(t *testing.T) {
 	req3.Header.Add("Authorization", "Bearer "+token)
 	req3.Header.Add("Content-Type", "application/json")
 	res3, err := http.DefaultClient.Do(req3)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res3.Body.Close()
 
 	var resBody3 struct {

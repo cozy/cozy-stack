@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var domain string
@@ -19,9 +20,7 @@ var domain string
 func TestSetupAssets(t *testing.T) {
 	e := echo.New()
 	err := SetupAssets(e, "../assets")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	ts := httptest.NewServer(e)
 	defer ts.Close()
@@ -44,9 +43,7 @@ func TestSetupAssets(t *testing.T) {
 func TestSetupAssetsStatik(t *testing.T) {
 	e := echo.New()
 	err := SetupAssets(e, "")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	ts := httptest.NewServer(e)
 	defer ts.Close()
@@ -94,9 +91,7 @@ func TestSetupAssetsStatik(t *testing.T) {
 func TestSetupRoutes(t *testing.T) {
 	e := echo.New()
 	err := SetupRoutes(e)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	ts := httptest.NewServer(e)
 	defer ts.Close()
@@ -121,9 +116,7 @@ func TestParseHost(t *testing.T) {
 		return c.String(200, "OK:"+slug)
 	})
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	urls := map[string]string{
 		"https://" + domain + "/test":    "OK",

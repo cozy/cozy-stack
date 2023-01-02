@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -101,34 +102,25 @@ func TestWSNoPermissionsForADoctype(t *testing.T) {
 func TestWSSuccess(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
 	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer ws.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
 	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.foos" }}`
 	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg = `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-one" }}`
 	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg = `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-two" }}`
 	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	h := realtime.GetHub()
 	var res map[string]interface{}
@@ -175,9 +167,8 @@ func TestWSSuccess(t *testing.T) {
 
 	msg = `{"method": "UNSUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-one" }}`
 	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	time.Sleep(30 * time.Millisecond)
 
 	h.Publish(inst, realtime.EventUpdate, &testDoc{
@@ -201,22 +192,17 @@ func TestWSSuccess(t *testing.T) {
 func TestWSNotify(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
 	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer ws.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
 	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bazs", "id": "baz-one" }}`
 	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	time.Sleep(30 * time.Millisecond)
 	body := `{"hello": "world"}`
@@ -225,15 +211,12 @@ func TestWSNotify(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, http.StatusNoContent, res.StatusCode) {
-		return
-	}
+	require.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	var resp map[string]interface{}
 	err = ws.ReadJSON(&resp)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, "NOTIFIED", resp["event"])
 	payload := resp["payload"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.bazs", payload["type"])

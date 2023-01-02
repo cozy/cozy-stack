@@ -200,13 +200,11 @@ func TestRemoveAll(t *testing.T) {
 		},
 	}
 	_, err := createTree(origtree, consts.RootDirID)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = vfs.RemoveAll(fs, "/removemeall", fs.EnsureErased)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = fs.DirByPath("/removemeall/dirchild1")
 	assert.Error(t, err)
 	_, err = fs.DirByPath("/removemeall")
@@ -264,40 +262,31 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 
 	olddoc, err := createTree(origtree, consts.RootDirID)
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	newname := "createandget2"
 	_, err = vfs.ModifyDirMetadata(fs, olddoc, &vfs.DocPatch{
 		Name: &newname,
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	tree, err := fetchTree("/createandget2")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.EqualValues(t, origtree["createandget1/"], tree["createandget2/"], "should have same tree")
 
 	fileBefore, err := fs.FileByPath("/createandget2/dirchild2/foof")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	newfilename := "foof.jpg"
 	_, err = vfs.ModifyFileMetadata(fs, fileBefore, &vfs.DocPatch{
 		Name: &newfilename,
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	fileAfter, err := fs.FileByPath("/createandget2/dirchild2/foof.jpg")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, "files", fileBefore.Class)
 	assert.Equal(t, "application/octet-stream", fileBefore.Mime)
 	assert.Equal(t, "image", fileAfter.Class)
@@ -321,49 +310,35 @@ func TestUpdateDir(t *testing.T) {
 	}
 
 	doc1, err := createTree(origtree, consts.RootDirID)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	newname := "update2"
 	_, err = vfs.ModifyDirMetadata(fs, doc1, &vfs.DocPatch{
 		Name: &newname,
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	tree, err := fetchTree("/update2")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	if !assert.EqualValues(t, origtree["update1/"], tree["update2/"], "should have same tree") {
 		return
 	}
 
 	dirchild2, err := fs.DirByPath("/update2/dirchild2")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	dirchild3, err := fs.DirByPath("/update2/dirchild3")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	newfolid := dirchild2.ID()
 	_, err = vfs.ModifyDirMetadata(fs, dirchild3, &vfs.DocPatch{
 		DirID: &newfolid,
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	tree, err = fetchTree("/update2")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.EqualValues(t, H{
 		"update2/": H{
@@ -455,9 +430,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	_, err := createTree(walktree, consts.RootDirID)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	walked := H{}
 	err = vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
@@ -510,9 +483,7 @@ func TestWalkAlreadyLocked(t *testing.T) {
 	}
 
 	_, err := createTree(walktree, consts.RootDirID)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	done := make(chan bool)
 
@@ -622,9 +593,7 @@ func TestCreateFileTooBig(t *testing.T) {
 	defer func() { diskQuota = 0 }()
 
 	diskUsage1, err := fs.DiskUsage()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	doc1, err := vfs.NewFileDoc(
 		"too-big",
@@ -639,9 +608,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = fs.CreateFile(doc1, nil)
 	assert.Equal(t, vfs.ErrFileTooBig, err)
 
@@ -658,9 +626,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	f, err := fs.CreateFile(doc2, nil)
 	assert.NoError(t, err)
 	assert.Error(t, f.Close())
@@ -681,9 +648,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	f, err = fs.CreateFile(doc3, nil)
 	assert.NoError(t, err)
 	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(doc3.ByteSize))))
@@ -708,9 +674,8 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	f, err = fs.CreateFile(doc4, nil)
 	assert.NoError(t, err)
 	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(diskQuota/2+1))))
@@ -724,9 +689,8 @@ func TestCreateFileTooBig(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 
 	root, err := fs.DirByPath("/")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NoError(t, fs.DestroyDirContent(root, fs.EnsureErased))
 }
 

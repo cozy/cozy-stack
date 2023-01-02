@@ -25,6 +25,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -369,9 +370,8 @@ func TestGetSteps(t *testing.T) {
 	meta2, _ := result2["meta"].(map[string]interface{})
 	assert.EqualValues(t, 2, meta2["count"])
 	data2, _ := result2["data"].([]interface{})
-	if !assert.Len(t, data2, 2) {
-		return
-	}
+	require.Len(t, data2, 2)
+
 	first, _ := data2[0].(map[string]interface{})
 	assert.NotNil(t, first["id"])
 	attrsF, _ := first["attributes"].(map[string]interface{})
@@ -562,30 +562,24 @@ func TestNoteMarkdown(t *testing.T) {
 func TestNoteRealtime(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
 	c, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer c.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
 	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.notes.events", "id": "` + noteID + `" }}`
 	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	// To check that the realtime has made the subscription, we send a fake
 	// message and wait for its response.
 	msg = `{"method": "PING"}`
 	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	var res map[string]interface{}
 	err = c.ReadJSON(&res)
 	assert.NoError(t, err)
@@ -639,9 +633,7 @@ func TestNoteRealtime(t *testing.T) {
 		{"sessionID": "543781490137", "stepType": "replace", "from": 3, "to": 3, "slice": slice},
 	}
 	file, err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	var res4 map[string]interface{}
 	err = c.ReadJSON(&res4)

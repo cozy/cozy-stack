@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTriggersBadArguments(t *testing.T) {
@@ -80,13 +81,11 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	for _, infos := range triggersInfos {
 		trigger, err := jobs.NewTrigger(testInstance, infos, msg)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		err = sch.AddTrigger(trigger)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		triggers = append(triggers, trigger)
 	}
 

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -33,9 +34,8 @@ func TestOnlyOfficeLocal(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, 200, res.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res.StatusCode)
+
 	var doc map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&doc)
 	assert.NoError(t, err)
@@ -73,9 +73,8 @@ func TestSaveOnlyOffice(t *testing.T) {
 	req.Header.Add("Content-Type", "application/json")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, 200, res.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res.StatusCode)
+
 	var data map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)
 	assert.NoError(t, err)
@@ -96,9 +95,8 @@ func TestSaveOnlyOffice(t *testing.T) {
 	req.Header.Add("Content-Type", "application/json")
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, 200, res.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res.StatusCode)
+
 	defer res.Body.Close()
 
 	doc, err = inst.VFS().FileByID(fileID)

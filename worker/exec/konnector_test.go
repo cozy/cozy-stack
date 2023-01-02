@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var inst *instance.Instance
@@ -70,13 +71,10 @@ func TestBadFileExec(t *testing.T) {
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = installer.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector":      "my-konnector-1",
@@ -114,14 +112,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
 	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = osFs.Chmod(tmpScript, 0777)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
@@ -132,13 +126,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		},
 	)
 	if err != app.ErrAlreadyExists {
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		_, err = installer.RunSync()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	var wg sync.WaitGroup
@@ -210,14 +201,10 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
 	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = osFs.Chmod(tmpScript, 0777)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	at := &account.AccountType{
 		GrantMode: account.SecretGrant,
@@ -243,13 +230,10 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		},
 	)
 	if err != app.ErrAlreadyExists {
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		_, err = installer.RunSync()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	var wg sync.WaitGroup
@@ -302,14 +286,10 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 	defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
 	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = osFs.Chmod(tmpScript, 0777)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
@@ -320,13 +300,10 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		},
 	)
 	if err != app.ErrAlreadyExists {
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		_, err = installer.RunSync()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	var wg sync.WaitGroup

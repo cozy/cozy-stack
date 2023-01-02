@@ -69,15 +69,13 @@ func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
 
 func createDir(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	req, err := http.NewRequest("POST", ts.URL+path, strings.NewReader(""))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "text/plain")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 
 	err = extractJSONRes(res, &v)
@@ -98,9 +96,7 @@ func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (r
 	}
 
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	defer res.Body.Close()
 
@@ -113,9 +109,8 @@ func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (r
 func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
 	buf := strings.NewReader(body)
 	req, err := http.NewRequest("POST", ts.URL+path, buf)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if strings.Contains(path, "Size=") {
 		req.ContentLength = -1
@@ -127,23 +122,18 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 	buf := strings.NewReader(body)
 	req, err := http.NewRequest("PUT", ts.URL+path, buf)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	return doUploadOrMod(t, req, contentType, hash)
 }
 
 func trash(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = extractJSONRes(res, &v)
 	assert.NoError(t, err)
@@ -154,14 +144,10 @@ func trash(t *testing.T, path string) (res *http.Response, v map[string]interfac
 func restore(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = extractJSONRes(res, &v)
 	assert.NoError(t, err)
@@ -208,20 +194,14 @@ func patchFile(t *testing.T, path, docType, id string, attrs map[string]interfac
 	}
 
 	b, err := json.Marshal(map[string]*jsonData{"data": bodyreq})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	req, err := http.NewRequest("PATCH", ts.URL+path, bytes.NewReader(b))
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	defer res.Body.Close()
 
@@ -234,23 +214,17 @@ func patchFile(t *testing.T, path, docType, id string, attrs map[string]interfac
 func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
 	req, err := http.NewRequest("GET", ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	if byteRange != "" {
 		req.Header.Add("Range", byteRange)
 	}
 
 	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	body, err = ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	return
 }
@@ -1298,9 +1272,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	errs := make(chan *http.Response)
 
 	res, data := upload(t, "/files/?Type=file&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
-	if !assert.Equal(t, 201, res.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res.StatusCode)
 
 	var ok bool
 	data, ok = data["data"].(map[string]interface{})
@@ -1882,15 +1854,12 @@ func TestArchiveNoFiles(t *testing.T) {
 		}
 	}`)
 	req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
@@ -1902,16 +1871,13 @@ func TestArchiveNoFiles(t *testing.T) {
 
 func TestArchiveDirectDownload(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=archive&Type=directory")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
+
 	dirID, _ := extractDirData(t, data1)
 	names := []string{"foo", "bar", "baz"}
 	for _, name := range names {
 		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
-		if !assert.Equal(t, 201, res2.StatusCode) {
-			return
-		}
+		require.Equal(t, 201, res2.StatusCode)
 	}
 
 	// direct download
@@ -1940,16 +1906,13 @@ func TestArchiveDirectDownload(t *testing.T) {
 
 func TestArchiveCreateAndDownload(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=archive2&Type=directory")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
+
 	dirID, _ := extractDirData(t, data1)
 	names := []string{"foo", "bar", "baz"}
 	for _, name := range names {
 		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
-		if !assert.Equal(t, 201, res2.StatusCode) {
-			return
-		}
+		require.Equal(t, 201, res2.StatusCode)
 	}
 
 	body := bytes.NewBufferString(`{
@@ -1965,15 +1928,12 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 	}`)
 
 	req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -1992,22 +1952,17 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 func TestFileCreateAndDownloadByPath(t *testing.T) {
 	body := "foo,bar"
 	res1, _ := upload(t, "/files/?Type=file&Name=todownload2steps", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	path := "/todownload2steps"
 
 	req, err := http.NewRequest("POST", ts.URL+"/files/downloads?Path="+path, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -2033,21 +1988,17 @@ func TestFileCreateAndDownloadByPath(t *testing.T) {
 func TestFileCreateAndDownloadByID(t *testing.T) {
 	body := "foo,bar"
 	res1, v := upload(t, "/files/?Type=file&Name=todownload2stepsbis", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
+
 	id := v["data"].(map[string]interface{})["id"].(string)
 
 	req, err := http.NewRequest("POST", ts.URL+"/files/downloads?Id="+id, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -2112,89 +2063,66 @@ func TestArchiveNotFound(t *testing.T) {
 		}
 	}`)
 	req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDirTrash(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=directory")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 
 	res2, _ := createDir(t, "/files/"+dirID+"?Name=child1&Type=file")
-	if !assert.Equal(t, 201, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res2.StatusCode)
+
 	res3, _ := createDir(t, "/files/"+dirID+"?Name=child2&Type=file")
-	if !assert.Equal(t, 201, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res4.StatusCode)
 
 	res5, err := httpGet(ts.URL + "/files/" + dirID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res5.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res5.StatusCode)
 
 	res6, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child1"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res6.StatusCode)
 
 	res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child2"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res7.StatusCode)
 
 	res8, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 400, res8.StatusCode) {
-		return
-	}
+	require.Equal(t, 400, res8.StatusCode)
 }
 
 func TestFileTrash(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 
 	res2, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res3, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 400, res4.StatusCode) {
-		return
-	}
+	require.Equal(t, 400, res4.StatusCode)
 
 	res5, data2 := upload(t, "/files/?Type=file&Name=totrashfile2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res5.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res5.StatusCode)
 
 	fileID, v2 := extractDirData(t, data2)
 	meta2 := v2["meta"].(map[string]interface{})
@@ -2210,9 +2138,8 @@ func TestFileTrash(t *testing.T) {
 	assert.Equal(t, 412, res6.StatusCode)
 
 	res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res7.StatusCode)
 
 	req8, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
 	req8.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
@@ -2224,23 +2151,17 @@ func TestFileTrash(t *testing.T) {
 	assert.Equal(t, 200, res8.StatusCode)
 
 	res9, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 400, res9.StatusCode) {
-		return
-	}
+	require.Equal(t, 400, res9.StatusCode)
 }
 
 func TestForbidMovingTrashedFile(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=forbidmovingtrashedfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 	res2, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	attrs := map[string]interface{}{
 		"dir_id": consts.RootDirID,
@@ -2252,64 +2173,50 @@ func TestForbidMovingTrashedFile(t *testing.T) {
 func TestFileRestore(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=torestorefile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 
 	res2, body2 := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
+
 	data2 := body2["data"].(map[string]interface{})
 	attrs2 := data2["attributes"].(map[string]interface{})
 	trashed := attrs2["trashed"].(bool)
 	assert.True(t, trashed)
 
 	res3, body3 := restore(t, "/files/trash/"+fileID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
+
 	data3 := body3["data"].(map[string]interface{})
 	attrs3 := data3["attributes"].(map[string]interface{})
 	trashed = attrs3["trashed"].(bool)
 	assert.False(t, trashed)
 
 	res4, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape("/torestorefile"))
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res4.StatusCode)
 }
 
 func TestFileRestoreWithConflicts(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 
 	res2, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res1, _ = upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	res3, data3 := restore(t, "/files/trash/"+fileID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	restoredID, restoredData := extractDirData(t, data3)
-	if !assert.Equal(t, fileID, restoredID) {
-		return
-	}
+	require.Equal(t, fileID, restoredID)
+
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestorefilewithconflict"))
 	assert.NotEqual(t, "torestorefilewithconflict", restoredData["name"].(string))
@@ -2317,39 +2224,28 @@ func TestFileRestoreWithConflicts(t *testing.T) {
 
 func TestFileRestoreWithWithoutParent(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 
 	body := "foo,bar"
 	res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 
 	res2, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res2, _ = trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res3, data3 := restore(t, "/files/trash/"+fileID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	restoredID, restoredData := extractDirData(t, data3)
-	if !assert.Equal(t, fileID, restoredID) {
-		return
-	}
+	require.Equal(t, fileID, restoredID)
+
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.Equal(t, "torestorefilewithconflict", restoredData["name"].(string))
 	assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
@@ -2357,34 +2253,25 @@ func TestFileRestoreWithWithoutParent(t *testing.T) {
 
 func TestFileRestoreWithWithoutParent2(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein2")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 
 	body := "foo,bar"
 	res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	fileID, _ := extractDirData(t, data1)
 
 	res2, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res3, data3 := restore(t, "/files/trash/"+fileID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	restoredID, restoredData := extractDirData(t, data3)
-	if !assert.Equal(t, fileID, restoredID) {
-		return
-	}
+	require.Equal(t, fileID, restoredID)
+
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.Equal(t, "torestorefilewithconflict2", restoredData["name"].(string))
 	assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
@@ -2392,29 +2279,22 @@ func TestFileRestoreWithWithoutParent2(t *testing.T) {
 
 func TestDirRestore(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredir")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 
 	body := "foo,bar"
 	res2, data2 := upload(t, "/files/"+dirID+"?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res2.StatusCode)
 
 	fileID, _ := extractDirData(t, data2)
 
 	res3, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, err := httpGet(ts.URL + "/files/" + fileID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res4.StatusCode)
 
 	var v map[string]interface{}
 	err = extractJSONRes(res4, &v)
@@ -2425,14 +2305,11 @@ func TestDirRestore(t *testing.T) {
 	assert.True(t, trashed)
 
 	res5, _ := restore(t, "/files/trash/"+dirID)
-	if !assert.Equal(t, 200, res5.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res5.StatusCode)
 
 	res6, err := httpGet(ts.URL + "/files/" + fileID)
-	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
-		return
-	}
+	require.NoError(t, err)
+	require.Equal(t, 200, res6.StatusCode)
 
 	err = extractJSONRes(res6, &v)
 	assert.NoError(t, err)
@@ -2444,31 +2321,22 @@ func TestDirRestore(t *testing.T) {
 
 func TestDirRestoreWithConflicts(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 
 	res2, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res2.StatusCode)
 
 	res1, _ = createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	res3, data3 := restore(t, "/files/trash/"+dirID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	restoredID, restoredData := extractDirData(t, data3)
-	if !assert.Equal(t, dirID, restoredID) {
-		return
-	}
+	require.Equal(t, dirID, restoredID)
+
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestoredirwithconflict"))
 	assert.NotEqual(t, "torestoredirwithconflict", restoredData["name"].(string))
@@ -2477,32 +2345,23 @@ func TestDirRestoreWithConflicts(t *testing.T) {
 func TestTrashList(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-	if !assert.Equal(t, 201, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res2.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 	fileID, _ := extractDirData(t, data2)
 
 	res3, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res4.StatusCode)
 
 	res5, err := httpGet(ts.URL + "/files/trash")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res5.Body.Close()
 
 	var v struct {
@@ -2510,9 +2369,7 @@ func TestTrashList(t *testing.T) {
 	}
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.True(t, len(v.Data) >= 2, "response should contains at least 2 items")
 }
@@ -2520,44 +2377,31 @@ func TestTrashList(t *testing.T) {
 func TestTrashClear(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-	if !assert.Equal(t, 201, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res2.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 	fileID, _ := extractDirData(t, data2)
 
 	res3, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res4.StatusCode)
 
 	path := "/files/trash"
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	_, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res5, err := httpGet(ts.URL + "/files/trash")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res5.Body.Close()
 
 	var v struct {
@@ -2565,9 +2409,7 @@ func TestTrashClear(t *testing.T) {
 	}
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.True(t, len(v.Data) == 0)
 }
@@ -2575,44 +2417,31 @@ func TestTrashClear(t *testing.T) {
 func TestDestroyFile(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-	if !assert.Equal(t, 201, res2.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res2.StatusCode)
 
 	dirID, _ := extractDirData(t, data1)
 	fileID, _ := extractDirData(t, data2)
 
 	res3, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res3.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res3.StatusCode)
 
 	res4, _ := trash(t, "/files/"+fileID)
-	if !assert.Equal(t, 200, res4.StatusCode) {
-		return
-	}
+	require.Equal(t, 200, res4.StatusCode)
 
 	path := "/files/trash/" + fileID
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	_, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res5, err := httpGet(ts.URL + "/files/trash")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res5.Body.Close()
 
 	var v struct {
@@ -2620,33 +2449,26 @@ func TestDestroyFile(t *testing.T) {
 	}
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.True(t, len(v.Data) == 1)
 
 	path = "/files/trash/" + dirID
 	req, err = http.NewRequest(http.MethodDelete, ts.URL+path, nil)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	_, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	res5, err = httpGet(ts.URL + "/files/trash")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res5.Body.Close()
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.True(t, len(v.Data) == 0)
 }
 

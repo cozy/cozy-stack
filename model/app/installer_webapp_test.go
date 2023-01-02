@@ -86,9 +86,7 @@ func TestWebappInstallSuccessful(t *testing.T) {
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -98,9 +96,8 @@ func TestWebappInstallSuccessful(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -109,9 +106,8 @@ func TestWebappInstallSuccessful(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -234,9 +230,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 		Slug:      "mini-test-perms",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	man, err := inst.RunSync()
 	assert.NoError(t, err)
@@ -359,9 +353,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	man, err := inst.RunSync()
 	assert.NoError(t, err)
@@ -391,9 +383,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 		Type:      consts.WebappType,
 		Slug:      "cozy-app-b",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -401,9 +391,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	for {
 		var done bool
 		man, done, err = inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
@@ -412,9 +401,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -649,9 +637,7 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -661,9 +647,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -672,9 +657,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -700,9 +684,7 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
@@ -711,9 +693,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		var done bool
 		var err2 error
 		man, done, err2 = inst.Poll()
-		if !assert.NoError(t, err2) {
-			return
-		}
+		require.NoError(t, err2)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
@@ -722,9 +703,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -751,14 +731,11 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	man, err = inst.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, "git://localhost/", man.Source())
 
 	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".br"))
@@ -781,18 +758,15 @@ func TestWebappInstallFromGithub(t *testing.T) {
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
 	var state app.State
 	for {
 		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -801,9 +775,8 @@ func TestWebappInstallFromGithub(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -822,18 +795,15 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 		Slug:      "http-cozy-drive",
 		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	go inst.Run()
 
 	var state app.State
 	for {
 		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if state == "" {
 			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
@@ -842,9 +812,8 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
-			if !assert.True(t, done) {
-				return
-			}
+			require.True(t, done)
+
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -937,9 +906,7 @@ func TestWebappUpdateWithService(t *testing.T) {
 		Slug:      "mini-test-service",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	man, err := inst.RunSync()
 	assert.NoError(t, err)
@@ -978,16 +945,14 @@ func TestWebappUninstall(t *testing.T) {
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	go inst1.Run()
 	for {
 		var done bool
 		_, done, err = inst1.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if done {
 			break
 		}
@@ -997,13 +962,11 @@ func TestWebappUninstall(t *testing.T) {
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = inst2.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 		Operation: app.Delete,
 		Type:      consts.WebappType,
@@ -1023,16 +986,14 @@ func TestWebappUninstallErrored(t *testing.T) {
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	go inst1.Run()
 	for {
 		var done bool
 		_, done, err = inst1.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		if done {
 			break
 		}
@@ -1044,9 +1005,8 @@ func TestWebappUninstallErrored(t *testing.T) {
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://foobar.does.not.exist/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	go inst2.Run()
 	for {
 		var done bool
@@ -1055,22 +1015,17 @@ func TestWebappUninstallErrored(t *testing.T) {
 			break
 		}
 	}
-	if !assert.Error(t, err) {
-		return
-	}
+	require.Error(t, err)
 
 	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = inst3.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	inst4, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 		Operation: app.Delete,

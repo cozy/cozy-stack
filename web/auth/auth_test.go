@@ -1559,9 +1559,8 @@ func TestPassphraseResetLoggedIn(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
 	req.Host = domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
@@ -1573,9 +1572,8 @@ func TestPassphraseReset(t *testing.T) {
 	req1, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
 	req1.Host = domain
 	res1, err := client.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	assert.Equal(t, "200 OK", res1.Status)
 	csrfCookie := res1.Cookies()[0]
@@ -1583,9 +1581,8 @@ func TestPassphraseReset(t *testing.T) {
 	res2, err := postForm("/auth/passphrase_reset", &url.Values{
 		"csrf_token": {csrfCookie.Value},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res2.Body.Close()
 	assert.Equal(t, "200 OK", res2.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res2.Header.Get("Content-Type"))
@@ -1595,9 +1592,8 @@ func TestPassphraseRenewFormNoToken(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew", nil)
 	req.Host = domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
@@ -1608,9 +1604,8 @@ func TestPassphraseRenewFormBadToken(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew?token=zzzz", nil)
 	req.Host = domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
@@ -1621,9 +1616,8 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew?token=badbee", nil)
 	req.Host = domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 }
@@ -1636,9 +1630,8 @@ func TestPassphraseRenew(t *testing.T) {
 		Locale: "en",
 		Email:  "alice@example.com",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer func() {
 		_ = lifecycle.Destroy(d)
 	}()
@@ -1647,38 +1640,33 @@ func TestPassphraseRenew(t *testing.T) {
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req1, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
 	req1.Host = domain
 	res1, err := client.Do(req1)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res1.Body.Close()
 	csrfCookie := res1.Cookies()[0]
 	assert.Equal(t, "_csrf", csrfCookie.Name)
 	res2, err := postFormDomain(d, "/auth/passphrase_reset", &url.Values{
 		"csrf_token": {csrfCookie.Value},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res2.Body.Close()
 	assert.Equal(t, "200 OK", res2.Status)
 	in2, err := instance.GetFromCouch(d)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	res3, err := postFormDomain(d, "/auth/passphrase_renew", &url.Values{
 		"passphrase_reset_token": {hex.EncodeToString(in2.PassphraseResetToken)},
 		"passphrase":             {"NewPassphrase"},
 		"csrf_token":             {csrfCookie.Value},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	defer res3.Body.Close()
 	if assert.Equal(t, "303 See Other", res3.Status) {
 		assert.Equal(t, "https://test.cozycloud.cc.web_reset_form/auth/login",
@@ -1709,9 +1697,7 @@ func TestSecretExchangeGoodSecret(t *testing.T) {
 	req.Header.Add("Accept", "application/json")
 
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	resBody, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "client_secret")
@@ -1736,9 +1722,7 @@ func TestSecretExchangeBadSecret(t *testing.T) {
 
 	res, err := client.Do(req)
 
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	resBody, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "errors")
@@ -1755,9 +1739,7 @@ func TestSecretExchangeBadPayload(t *testing.T) {
 	req.Header.Add("Accept", "application/json")
 
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	resBody, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "Missing secret")
@@ -1771,9 +1753,7 @@ func TestSecretExchangeNoPayload(t *testing.T) {
 	req.Header.Add("Accept", "application/json")
 
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, res.StatusCode, 400)
 	defer res.Body.Close()
@@ -1795,9 +1775,8 @@ func TestPassphraseOnboarding(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/?registerToken="+hex.EncodeToString(inst.RegisterToken), nil)
 	req.Host = inst.Domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 303, res.StatusCode)
 	assert.Contains(t, res.Header.Get("Location"), "/auth/passphrase?registerToken=")
 
@@ -1826,9 +1805,8 @@ func TestPassphraseOnboardingFinished(t *testing.T) {
 	req.Host = domain
 
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, res.StatusCode, 303)
 	assert.Equal(t, res.Header.Get("Location"), "https://home.cozy.example.net/")
 }
@@ -1849,9 +1827,8 @@ func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase?registerToken=coincoin", nil)
 	req.Host = inst.Domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
@@ -1873,9 +1850,8 @@ func TestLoginOnboardingNotFinished(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = inst.Domain
 	res, err := client.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")

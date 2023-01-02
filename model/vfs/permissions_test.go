@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPermissions(t *testing.T) {
@@ -30,42 +31,33 @@ func TestPermissions(t *testing.T) {
 		},
 	}
 	O, err := createTree(origtree, consts.RootDirID)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	A, err := fs.DirByPath("/O/A")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	B, err := fs.DirByPath("/O/B")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = vfs.ModifyDirMetadata(fs, B, &vfs.DocPatch{
 		Tags: &[]string{"testtagparent"},
 	})
 	assert.NoError(t, err)
 
 	B2, err := fs.DirByPath("/O/B2")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	f, err := fs.FileByPath("/O/B/b1.txt")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	_, err = vfs.ModifyFileMetadata(fs, f, &vfs.DocPatch{
 		Tags: &[]string{"testtag"},
 	})
 	assert.NoError(t, err)
 	// reload
 	f, err = fs.FileByPath("/O/B/b1.txt")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	// hack to have a Class attribute
 	f.Class = "superfile"
 

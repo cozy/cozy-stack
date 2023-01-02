@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
@@ -298,30 +299,24 @@ func TestRequestPassphraseReset(t *testing.T) {
 		Domain: "test.cozycloud.cc.pass_reset",
 		Locale: "en",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = lifecycle.RequestPassphraseReset(in)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	// token should not have been generated since we have not set a passphrase
 	// yet
-	if !assert.Nil(t, in.PassphraseResetToken) {
-		return
-	}
+	require.Nil(t, in.PassphraseResetToken)
+
 	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
 		Pass:       []byte("MyPassphrase"),
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = lifecycle.RequestPassphraseReset(in)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	regToken := in.PassphraseResetToken
 	regTime := in.PassphraseResetTime
@@ -339,46 +334,40 @@ func TestPassphraseRenew(t *testing.T) {
 		Domain: "test.cozycloud.cc.pass_renew",
 		Locale: "en",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
 		Pass:       []byte("MyPassphrase"),
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	passHash := in.PassphraseHash
 	err = lifecycle.PassphraseRenew(in, nil, lifecycle.PassParameters{
 		Pass:       []byte("NewPass"),
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.Error(t, err) {
-		return
-	}
+	require.Error(t, err)
+
 	err = lifecycle.RequestPassphraseReset(in)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	err = lifecycle.PassphraseRenew(in, []byte("token"), lifecycle.PassParameters{
 		Pass:       []byte("NewPass"),
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.Error(t, err) {
-		return
-	}
+	require.Error(t, err)
+
 	err = lifecycle.PassphraseRenew(in, in.PassphraseResetToken, lifecycle.PassParameters{
 		Pass:       []byte("NewPass"),
 		Iterations: 5000,
 		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.False(t, bytes.Equal(passHash, in.PassphraseHash))
 }
 
@@ -387,9 +376,8 @@ func TestInstanceNoDuplicate(t *testing.T) {
 		Domain: "test.cozycloud.cc.duplicate",
 		Locale: "en",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	i, err := lifecycle.Create(&lifecycle.Options{
 		Domain: "test.cozycloud.cc.duplicate",
 		Locale: "en",
@@ -423,9 +411,7 @@ func TestCheckTOSNotSigned(t *testing.T) {
 		Locale:    "en",
 		TOSSigned: "1.0.0-" + now.Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
@@ -435,9 +421,7 @@ func TestCheckTOSNotSigned(t *testing.T) {
 	err = lifecycle.Patch(i, &lifecycle.Options{
 		TOSLatest: "1.0.1-" + now.Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
@@ -447,9 +431,7 @@ func TestCheckTOSNotSigned(t *testing.T) {
 	err = lifecycle.Patch(i, &lifecycle.Options{
 		TOSLatest: "2.0.1-" + now.Add(40*24*time.Hour).Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
@@ -459,9 +441,8 @@ func TestCheckTOSNotSigned(t *testing.T) {
 	err = lifecycle.Patch(i, &lifecycle.Options{
 		TOSLatest: "2.0.1-" + now.Add(10*24*time.Hour).Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
 	assert.True(t, notSigned)
@@ -470,9 +451,8 @@ func TestCheckTOSNotSigned(t *testing.T) {
 	err = lifecycle.Patch(i, &lifecycle.Options{
 		TOSLatest: "2.0.1-" + now.Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
 	assert.True(t, notSigned)
@@ -481,9 +461,8 @@ func TestCheckTOSNotSigned(t *testing.T) {
 	err = lifecycle.Patch(i, &lifecycle.Options{
 		TOSSigned: "2.0.1-" + now.Format("20060102"),
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
 	assert.False(t, notSigned)
@@ -497,9 +476,7 @@ func TestInstanceDestroy(t *testing.T) {
 		Domain: "test.cozycloud.cc",
 		Locale: "en",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	err = lifecycle.Destroy("test.cozycloud.cc")
 	assert.NoError(t, err)

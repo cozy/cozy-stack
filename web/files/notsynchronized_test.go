@@ -10,15 +10,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var dirID1, dirID2 string
 
 func TestAddNotSynchronizedOnOneRelation(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=to_sync_or_not_to_sync_1")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	var dirData1 map[string]interface{}
 	dirID1, dirData1 = extractDirData(t, data1)
@@ -30,9 +29,7 @@ func TestAddNotSynchronizedOnOneRelation(t *testing.T) {
 			Type: "io.cozy.oauth.clients",
 		},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	var result struct {
 		Data []couchdb.DocReference `json:"data"`
@@ -42,20 +39,17 @@ func TestAddNotSynchronizedOnOneRelation(t *testing.T) {
 		} `json:"meta"`
 	}
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NotEqual(t, result.Meta.Rev, dirData1["_rev"])
 	assert.Equal(t, result.Meta.Count, 1)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
@@ -73,9 +67,7 @@ func TestAddNotSynchronizedOnOneRelation(t *testing.T) {
 
 func TestAddNotSynchronizedOnMultipleRelation(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Type=directory&Name=to_sync_or_not_to_sync_2")
-	if !assert.Equal(t, 201, res1.StatusCode) {
-		return
-	}
+	require.Equal(t, 201, res1.StatusCode)
 
 	var dirData2 map[string]interface{}
 	dirID2, dirData2 = extractDirData(t, data1)
@@ -88,14 +80,11 @@ func TestAddNotSynchronizedOnMultipleRelation(t *testing.T) {
 			{ID: "fooclientid3", Type: "io.cozy.oauth.clients"},
 		},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	var result struct {
@@ -106,14 +95,12 @@ func TestAddNotSynchronizedOnMultipleRelation(t *testing.T) {
 		} `json:"meta"`
 	}
 	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.NotEqual(t, result.Meta.Rev, dirData2["_rev"])
 	assert.Equal(t, result.Meta.Count, 3)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
@@ -152,9 +139,8 @@ func TestRemoveNotSynchronizedOnOneRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, result.Meta.Count, 0)
 	assert.Equal(t, result.Data, []couchdb.DocReference{})
 
@@ -188,9 +174,8 @@ func TestRemoveNotSynchronizedOnMultipleRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	err = json.NewDecoder(res.Body).Decode(&result)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	assert.Equal(t, result.Meta.Count, 1)
 	assert.Equal(t, result.Data, []couchdb.DocReference{
 		{ID: "fooclientid2", Type: "io.cozy.oauth.clients"},

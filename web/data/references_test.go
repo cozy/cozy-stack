@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestListNotSynchronizedOn(t *testing.T) {
@@ -91,14 +92,11 @@ func TestAddReferencesHandler(t *testing.T) {
 	dirID := consts.RootDirID
 	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
 	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	f, err := testInstance.VFS().CreateFile(filedoc, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if err = f.Close(); !assert.NoError(t, err) {
 		return
 	}
@@ -174,13 +172,11 @@ func TestReferencesWithSlash(t *testing.T) {
 	dirID := consts.RootDirID
 	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
 	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	f, err := testInstance.VFS().CreateFile(filedoc, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
+
 	if err = f.Close(); !assert.NoError(t, err) {
 		return
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testStrings = []string{"foo", "bar", "baz"}
@@ -22,42 +23,31 @@ func TestMACMessageWithName(t *testing.T) {
 	o3 := MACConfig{Name: "message1"}
 
 	encoded, err1 := EncodeAuthMessage(o1, k1, value, nil)
-	if !assert.NoError(t, err1) {
-		return
-	}
+	require.NoError(t, err1)
+
 	v, err2 := DecodeAuthMessage(o1, k1, encoded, nil)
-	if !assert.NoError(t, err2) {
-		return
-	}
+	require.NoError(t, err2)
+
 	if !assert.EqualValues(t, v, value) {
 		t.Fatalf("Expected %v, got %v.", v, value)
 	}
 	_, err3 := DecodeAuthMessage(o2, k2, encoded, nil)
-	if !assert.Error(t, err3) {
-		return
-	}
+	require.Error(t, err3)
+
 	_, err4 := DecodeAuthMessage(o3, k3, encoded, nil)
-	if !assert.Error(t, err4) {
-		return
-	}
+	require.Error(t, err4)
+
 	_, err5 := DecodeAuthMessage(o1, k1, encoded, []byte("plop"))
-	if !assert.Error(t, err5) {
-		return
-	}
+	require.Error(t, err5)
 
 	encoded2, err6 := EncodeAuthMessage(o1, k1, value, []byte("foo"))
-	if !assert.NoError(t, err6) {
-		return
-	}
+	require.NoError(t, err6)
 
 	_, err7 := DecodeAuthMessage(o1, k1, encoded2, []byte("foo"))
-	if !assert.NoError(t, err7) {
-		return
-	}
+	require.NoError(t, err7)
+
 	_, err8 := DecodeAuthMessage(o1, k1, encoded2, []byte("plop"))
-	if !assert.Error(t, err8) {
-		return
-	}
+	require.Error(t, err8)
 }
 
 func TestMACMessageWithoutName(t *testing.T) {
@@ -71,24 +61,19 @@ func TestMACMessageWithoutName(t *testing.T) {
 	o3 := MACConfig{Name: ""}
 
 	encoded, err1 := EncodeAuthMessage(o1, k1, value, nil)
-	if !assert.NoError(t, err1) {
-		return
-	}
+	require.NoError(t, err1)
+
 	v, err2 := DecodeAuthMessage(o1, k1, encoded, nil)
-	if !assert.NoError(t, err2) {
-		return
-	}
+	require.NoError(t, err2)
+
 	if !reflect.DeepEqual(v, value) {
 		t.Fatalf("Expected %v, got %v.", value, v)
 	}
 	_, err3 := DecodeAuthMessage(o2, k2, encoded, nil)
-	if !assert.Error(t, err3) {
-		return
-	}
+	require.Error(t, err3)
+
 	_, err4 := DecodeAuthMessage(o3, k3, encoded, nil)
-	if !assert.Error(t, err4) {
-		return
-	}
+	require.Error(t, err4)
 }
 
 func TestMACWrongMessage(t *testing.T) {
@@ -100,41 +85,31 @@ func TestMACWrongMessage(t *testing.T) {
 
 	{
 		_, err := DecodeAuthMessage(o, k, []byte(""), nil)
-		if !assert.Equal(t, errMACInvalid, err) {
-			return
-		}
+		require.Equal(t, errMACInvalid, err)
 	}
 
 	{
 		_, err := DecodeAuthMessage(o, k, []byte("ccc"), nil)
-		if !assert.Equal(t, errMACInvalid, err) {
-			return
-		}
+		require.Equal(t, errMACInvalid, err)
 	}
 
 	{
 		buf := Base64Encode(GenerateRandomBytes(32))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
-		if !assert.Equal(t, errMACInvalid, err) {
-			return
-		}
+		require.Equal(t, errMACInvalid, err)
 	}
 
 	{
 		buf := Base64Encode(createMAC(k, []byte("")))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
-		if !assert.Equal(t, errMACInvalid, err) {
-			return
-		}
+		require.Equal(t, errMACInvalid, err)
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 10000; i++ {
 		buf := Base64Encode(GenerateRandomBytes(rng.Intn(1000)))
 		_, err := DecodeAuthMessage(o, k, buf, nil)
-		if !assert.Equal(t, errMACInvalid, err) {
-			return
-		}
+		require.Equal(t, errMACInvalid, err)
 	}
 }
 
@@ -156,26 +131,21 @@ func TestMACMaxAge(t *testing.T) {
 	{
 		var err error
 		msg1, err = EncodeAuthMessage(c1, key, val, add)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		msg2, err = EncodeAuthMessage(c2, key, val, add)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 	}
 
 	{
 		ret1, err := DecodeAuthMessage(c1, key, msg1, add)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		assert.Equal(t, val, ret1)
 
 		ret2, err := DecodeAuthMessage(c2, key, msg2, add)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
+
 		assert.Equal(t, val, ret2)
 	}
 
@@ -197,16 +167,12 @@ func TestAuthentication(t *testing.T) {
 	hashKey := []byte("secret-key")
 	for _, value := range testStrings {
 		mac := createMAC(hashKey, []byte(value))
-		if !assert.Len(t, mac, macLen) {
-			return
-		}
+		require.Len(t, mac, macLen)
+
 		ok1 := verifyMAC(hashKey, []byte(value), mac)
-		if !assert.True(t, ok1) {
-			return
-		}
+		require.True(t, ok1)
+
 		ok2 := verifyMAC(hashKey, GenerateRandomBytes(32), mac)
-		if !assert.False(t, ok2) {
-			return
-		}
+		require.False(t, ok2)
 	}
 }
