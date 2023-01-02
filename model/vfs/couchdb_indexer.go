@@ -328,7 +328,7 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 }
 
 func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
-	remaining := docs[:]
+	remaining := docs
 	for len(remaining) > 0 {
 		n := 1000
 		if len(remaining) < n {

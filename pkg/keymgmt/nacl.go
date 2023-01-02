@@ -82,7 +82,7 @@ func UnmarshalNACLKey(marshaledKey []byte) (key *NACLKey, err error) {
 	}
 	publicKey := new([naclKeyLen]byte)
 	privateKey := new([naclKeyLen]byte)
-	copy(publicKey[:], keys[:])
+	copy(publicKey[:], keys)
 	copy(privateKey[:], keys[naclKeyLen:])
 	key = &NACLKey{
 		publicKey:  publicKey,
@@ -94,7 +94,7 @@ func UnmarshalNACLKey(marshaledKey []byte) (key *NACLKey, err error) {
 // MarshalNACLKey takes a key and returns its encoded version.
 func MarshalNACLKey(key *NACLKey) []byte {
 	keyBytes := make([]byte, 2*naclKeyLen)
-	copy(keyBytes[:], key.publicKey[:])
+	copy(keyBytes, key.publicKey[:])
 	copy(keyBytes[naclKeyLen:], key.privateKey[:])
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  naclKeyBlockType,

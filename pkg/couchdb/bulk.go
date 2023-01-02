@@ -263,8 +263,8 @@ func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 		return nil
 	}
 
-	remaining := docs[:]
-	olds := olddocs[:]
+	remaining := docs
+	olds := olddocs
 	for len(remaining) > 0 {
 		n := 1000
 		if len(remaining) < n {

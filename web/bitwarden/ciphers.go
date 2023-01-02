@@ -137,7 +137,7 @@ func titleizeKeys(data bitwarden.MapData) map[string]interface{} {
 		if k == "ssn" {
 			k = "SSN"
 		}
-		key := []byte(k[:])
+		key := []byte(k)
 		if 'a' <= key[0] && key[0] <= 'z' {
 			key[0] -= 'a' - 'A'
 		}
