@@ -14,16 +14,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var flagAllDomains bool
-var flagAppsDeactivated bool
-var flagSafeUpdate bool
+var (
+	flagAllDomains      bool
+	flagAppsDeactivated bool
+	flagSafeUpdate      bool
+)
 
-var flagKonnectorAccountID string
-var flagKonnectorsParameters string
+var (
+	flagKonnectorAccountID   string
+	flagKonnectorsParameters string
+)
 
-var flagKonnectorContext string
-var flagKonnectorsShortMaintenance bool
-var flagKonnectorsDisallowManualExec bool
+var (
+	flagKonnectorContext             string
+	flagKonnectorsShortMaintenance   bool
+	flagKonnectorsDisallowManualExec bool
+)
 
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps <command>",
@@ -513,7 +519,6 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 		Slug:    args[0],
 		AppType: appType,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -576,9 +581,7 @@ var launchTriggerCmd = &cobra.Command{
 	Use:     "launch [triggerId]",
 	Short:   `Creates a job from a specific trigger`,
 	Example: "$ cozy-stack triggers launch --domain cozy.localhost:8080 748f42b65aca8c99ec2492eb660d1891",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return launchTrigger(cmd, args)
-	},
+	RunE:    launchTrigger,
 }
 
 func launchTrigger(cmd *cobra.Command, args []string) error {
