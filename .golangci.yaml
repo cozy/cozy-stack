@@ -51,6 +51,7 @@ linters:
     - govet
     - misspell
     - nolintlint
+    - tenv
     - unconvert
     - unused 
     - whitespace
