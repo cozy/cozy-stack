@@ -1,4 +1,4 @@
-;(function (w, d) {
+(function (w, d) {
   // On android, change the address bar color to match the page background
   const paperColor = getComputedStyle(d.body).getPropertyValue(
     '--paperBackgroundColor'

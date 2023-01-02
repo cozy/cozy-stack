@@ -1,4 +1,4 @@
-;(function (w, d) {
+(function (w, d) {
   if (!w.fetch || !w.Headers) return
 
   const twofaForm = d.getElementById('two-factor-form')

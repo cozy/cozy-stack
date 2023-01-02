@@ -5,8 +5,7 @@
   "author": "Cozy Cloud <contact@cozycloud.cc>",
   "license": "AGPLv3",
   "dependencies": {
-    "eslint-config-cozy-app": "2.1.1",
-    "eslint-plugin-prettier": "3.4.1",
+    "eslint": "8.31.0",
     "prettier": "2.8.1",
     "svgo": "2.8.0"
   }
