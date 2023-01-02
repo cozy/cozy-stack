@@ -14,20 +14,17 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/andybalholm/brotli"
 	apps "github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -54,25 +51,6 @@ var slug string
 
 var jar *testutils.CookieJar
 var client *http.Client
-
-func compress(content string) []byte {
-	buf := &bytes.Buffer{}
-	bw := brotli.NewWriter(buf)
-	_, _ = bw.Write([]byte(content))
-	_ = bw.Close()
-	return buf.Bytes()
-}
-
-func createFile(dir, filename, content string) error {
-	abs := path.Join(dir, filename+".br")
-	file, err := vfs.Create(testInstance.VFS(), abs)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.Write(compress(content))
-	return err
-}
 
 func doGet(path string, auth bool) (*http.Response, error) {
 	c := client
