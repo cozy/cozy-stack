@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -273,7 +272,7 @@ func handleResponseError(db prefixer.Prefixer, resp *http.Response) error {
 		return nil
 	}
 	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		err = newIOReadError(err)
 		log.Error(err.Error())
@@ -334,13 +333,13 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 	}
 	if resbody == nil {
 		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
 
 	if logDebug {
 		var data []byte
-		data, err = ioutil.ReadAll(resp.Body)
+		data, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}

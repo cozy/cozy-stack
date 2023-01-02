@@ -3,7 +3,7 @@ package jobs
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -513,7 +513,7 @@ func fireWebhook(c echo.Context) error {
 		return jsonapi.InvalidAttribute("Type", errors.New("Not a webhook"))
 	}
 
-	payload, err := ioutil.ReadAll(c.Request().Body)
+	payload, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		return wrapJobsError(err)
 	}

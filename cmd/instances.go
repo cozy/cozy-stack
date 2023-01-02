@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -1053,7 +1053,7 @@ var setAuthModeCmd = &cobra.Command{
 		if res.StatusCode == http.StatusNoContent {
 			fmt.Printf("Auth mode has been changed for %s\n", domain)
 		} else {
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			if err != nil {
 				return err
 			}

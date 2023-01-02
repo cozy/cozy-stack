@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -77,7 +76,7 @@ func (im *importer) downloadFile(cursor string) error {
 	if res.StatusCode != http.StatusOK {
 		return ErrExportNotFound
 	}
-	f, err := ioutil.TempFile("", "export-*")
+	f, err := os.CreateTemp("", "export-*")
 	if err != nil {
 		return err
 	}

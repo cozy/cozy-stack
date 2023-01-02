@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
@@ -221,7 +220,7 @@ func generateSingleThumbnail(ctx *job.WorkerContext, img *vfs.FileDoc, format st
 	var env []string
 	{
 		var tempDir string
-		tempDir, err = ioutil.TempDir("", "magick")
+		tempDir, err = os.MkdirTemp("", "magick")
 		if err == nil {
 			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
@@ -247,7 +246,7 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 	var env []string
 	{
 		var tempDir string
-		tempDir, err = ioutil.TempDir("", "magick")
+		tempDir, err = os.MkdirTemp("", "magick")
 		if err == nil {
 			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
@@ -394,7 +393,7 @@ func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
 
 	var env []string
 	{
-		tempDir, err := ioutil.TempDir("", "magick")
+		tempDir, err := os.MkdirTemp("", "magick")
 		if err == nil {
 			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)

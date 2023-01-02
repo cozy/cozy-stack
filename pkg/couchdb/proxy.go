@@ -3,7 +3,7 @@ package couchdb
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -47,7 +47,7 @@ func Proxy(db prefixer.Prefixer, doctype, path string) *httputil.ReverseProxy {
 // mutate many document in database, the stack has to read the response from
 // couch to emit the correct realtime events.
 func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +69,7 @@ func ProxyBulkDocs(db prefixer.Prefixer, doctype string, req *http.Request) (*ht
 	}
 
 	// reset body to proxy
-	req.Body = ioutil.NopCloser(bytes.NewReader(body))
+	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	p := Proxy(db, doctype, "_bulk_docs")
 	p.Transport = &bulkTransport{
@@ -142,13 +142,13 @@ func (t *bulkTransport) RoundTrip(req *http.Request) (resp *http.Response, err e
 			err = errc
 		}
 	}()
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == http.StatusCreated {
 		go t.OnResponseRead(b)
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewReader(b))
+	resp.Body = io.NopCloser(bytes.NewReader(b))
 	return resp, nil
 }

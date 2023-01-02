@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -554,7 +554,7 @@ func TestNoteMarkdown(t *testing.T) {
 	file, err := inst.VFS().OpenFile(doc)
 	assert.NoError(t, err)
 	defer file.Close()
-	buf, err := ioutil.ReadAll(file)
+	buf, err := io.ReadAll(file)
 	assert.NoError(t, err)
 	assert.Equal(t, "Hello world", string(buf))
 }
@@ -760,9 +760,9 @@ func TestGetImage(t *testing.T) {
 	f2, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 	assert.NoError(t, err)
 	defer f2.Close()
-	expected, err := ioutil.ReadAll(f2)
+	expected, err := io.ReadAll(f2)
 	assert.NoError(t, err)
-	actual, err := ioutil.ReadAll(res.Body)
+	actual, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, actual)
 

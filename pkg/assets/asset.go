@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"time"
 
@@ -149,7 +149,7 @@ func LoadContextualizedLocale(context, locale string) {
 	if err != nil {
 		return
 	}
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	if err == nil {
 		i18n.LoadLocale(locale, context, buf)
 	}

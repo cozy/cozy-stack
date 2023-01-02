@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -145,7 +144,7 @@ func (c *TestSetup) AddCleanup(f func() error) {
 // GetTmpDirectory creates a temporary directory
 // The directory will be removed on container cleanup
 func (c *TestSetup) GetTmpDirectory() string {
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
 		c.CleanupAndDie("Could not create temporary directory.", err)
 	}

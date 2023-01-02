@@ -3,7 +3,6 @@ package hooks
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -21,7 +20,7 @@ func TestExecuteSuccess(t *testing.T) {
 	err := Execute("success", args, fn)
 	assert.NoError(t, err)
 	assert.True(t, executed)
-	content, err := ioutil.ReadFile(tmp)
+	content, err := os.ReadFile(tmp)
 	assert.NoError(t, err)
 	assert.Equal(t, "post-bar\n", string(content))
 }
@@ -44,7 +43,7 @@ func TestExecuteFunctionFails(t *testing.T) {
 	err := Execute("success", args, fn)
 	assert.Equal(t, e, err)
 	assert.True(t, executed)
-	content, err := ioutil.ReadFile(tmp)
+	content, err := os.ReadFile(tmp)
 	assert.NoError(t, err)
 	assert.Equal(t, "pre-bar\n", string(content))
 }
@@ -55,12 +54,12 @@ func TestRunHooks(t *testing.T) {
 	defer os.Remove(tmp)
 	err := runHook("pre", "success", args)
 	assert.NoError(t, err)
-	content, err := ioutil.ReadFile(tmp)
+	content, err := os.ReadFile(tmp)
 	assert.NoError(t, err)
 	assert.Equal(t, "pre-bar\n", string(content))
 	err = runHook("post", "success", args)
 	assert.NoError(t, err)
-	content, err = ioutil.ReadFile(tmp)
+	content, err = os.ReadFile(tmp)
 	assert.NoError(t, err)
 	assert.Equal(t, "post-bar\n", string(content))
 	err = runHook("pre", "no-hook", args)

@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -95,7 +95,7 @@ func TestInstanceBlocked(t *testing.T) {
 	res2, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusServiceUnavailable, res2.StatusCode)
-	body, err := ioutil.ReadAll(res2.Body)
+	body, err := io.ReadAll(res2.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body), "<title>Cozy</title>")
 	assert.Contains(t, string(body), "Your Cozy has been blocked</h1>")
@@ -143,7 +143,7 @@ func TestShowLoginPage(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Log in")
 }
 
@@ -181,7 +181,7 @@ func TestShowLoginPageWithRedirectXSS(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "<script>")
 	assert.Contains(t, string(body), "%3Cscript%3Ealert%28%27foo%27%29%3C/script%3E")
 }
@@ -194,7 +194,7 @@ func TestShowLoginPageWithRedirectFragment(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
 	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://cozy.example.net/auth/authorize#=" />`)
 }
@@ -207,7 +207,7 @@ func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#myfragment" />`)
 }
 
@@ -529,7 +529,7 @@ func TestReadClientNoToken(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "401 Unauthorized", res.Status)
-	buf, _ := ioutil.ReadAll(res.Body)
+	buf, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(buf), clientSecret)
 }
 
@@ -537,7 +537,7 @@ func TestReadClientInvalidToken(t *testing.T) {
 	res, err := getJSON("/auth/register/"+clientID, altRegistrationToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "401 Unauthorized", res.Status)
-	buf, _ := ioutil.ReadAll(res.Body)
+	buf, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(buf), clientSecret)
 }
 
@@ -676,7 +676,7 @@ func TestAuthorizeFormBadResponseType(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Invalid response type")
 }
 
@@ -689,7 +689,7 @@ func TestAuthorizeFormNoState(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The state parameter is mandatory")
 }
 
@@ -702,7 +702,7 @@ func TestAuthorizeFormNoClientId(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client_id parameter is mandatory")
 }
 
@@ -714,7 +714,7 @@ func TestAuthorizeFormNoRedirectURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter is mandatory")
 }
 
@@ -727,7 +727,7 @@ func TestAuthorizeFormNoScope(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The scope parameter is mandatory")
 }
 
@@ -740,7 +740,7 @@ func TestAuthorizeFormInvalidClient(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client must be registered")
 }
 
@@ -753,7 +753,7 @@ func TestAuthorizeFormInvalidRedirectURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
 }
 
@@ -766,7 +766,7 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "would like permission to access your Cozy")
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 	matches := re.FindStringSubmatch(string(body))
@@ -788,7 +788,7 @@ func TestAuthorizeFormClientMobileApp(t *testing.T) {
 	req.Host = testInstance.Domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
-	content, _ := ioutil.ReadAll(res.Body)
+	content, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(content), "io.cozy.files")
 	defer res.Body.Close()
 }
@@ -802,7 +802,7 @@ func TestAuthorizeFormFlagshipApp(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "would like permission to access your Cozy")
 	assert.Contains(t, string(body), "The origin of this application is not certified.")
 }
@@ -836,7 +836,7 @@ func TestAuthorizeWithInvalidCSRFToken(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "403 Forbidden", res.Status)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "invalid csrf token")
 }
 
@@ -851,7 +851,7 @@ func TestAuthorizeWithNoState(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The state parameter is mandatory")
 }
 
@@ -866,7 +866,7 @@ func TestAuthorizeWithNoClientID(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client_id parameter is mandatory")
 }
 
@@ -883,7 +883,7 @@ func TestAuthorizeWithInvalidClientID(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client must be registered")
 }
 
@@ -899,7 +899,7 @@ func TestAuthorizeWithNoRedirectURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter is mandatory")
 }
 
@@ -916,7 +916,7 @@ func TestAuthorizeWithInvalidURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
 }
 
@@ -932,7 +932,7 @@ func TestAuthorizeWithNoScope(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The scope parameter is mandatory")
 }
 
@@ -978,7 +978,7 @@ func TestAuthorizeSuccessOnboardingDeeplink(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "would like permission to access your Cozy")
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 	matches := re.FindStringSubmatch(string(body))
@@ -1003,7 +1003,7 @@ func TestAuthorizeSuccessOnboardingDeeplink(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, 200, res.StatusCode) {
-		content, err := ioutil.ReadAll(res.Body)
+		content, err := io.ReadAll(res.Body)
 		assert.NoError(t, err)
 		assert.Contains(t, string(content), "\"deeplink\":")
 	}
@@ -1068,7 +1068,7 @@ func TestInstallAppWithLinkedApp(t *testing.T) {
 	assert.NoError(t, err)
 	defer resGetChanges.Body.Close()
 	assert.Equal(t, resGetChanges.StatusCode, 200)
-	body, err := ioutil.ReadAll(resGetChanges.Body)
+	body, err := io.ReadAll(resGetChanges.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body), "io.cozy.apps/drive")
 
@@ -1289,7 +1289,7 @@ func TestOAuthWithPKCE(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	require.Equal(t, res.StatusCode, 200)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 	matches := re.FindStringSubmatch(string(body))
 	require.Len(t, matches, 2)
@@ -1563,7 +1563,7 @@ func TestPassphraseResetLoggedIn(t *testing.T) {
 
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), `my password`)
 	assert.Contains(t, string(body), `<input type="hidden" name="csrf_token"`)
 }
@@ -1596,7 +1596,7 @@ func TestPassphraseRenewFormNoToken(t *testing.T) {
 
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), `The link to reset the password is truncated or has expired`)
 }
 
@@ -1608,7 +1608,7 @@ func TestPassphraseRenewFormBadToken(t *testing.T) {
 
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), `The link to reset the password is truncated or has expired`)
 }
 
@@ -1699,7 +1699,7 @@ func TestSecretExchangeGoodSecret(t *testing.T) {
 	res, err := client.Do(req)
 	require.NoError(t, err)
 
-	resBody, _ := ioutil.ReadAll(res.Body)
+	resBody, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "client_secret")
 	defer res.Body.Close()
 }
@@ -1724,7 +1724,7 @@ func TestSecretExchangeBadSecret(t *testing.T) {
 
 	require.NoError(t, err)
 
-	resBody, _ := ioutil.ReadAll(res.Body)
+	resBody, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "errors")
 
 	defer res.Body.Close()
@@ -1741,7 +1741,7 @@ func TestSecretExchangeBadPayload(t *testing.T) {
 	res, err := client.Do(req)
 	require.NoError(t, err)
 
-	resBody, _ := ioutil.ReadAll(res.Body)
+	resBody, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(resBody), "Missing secret")
 	defer res.Body.Close()
 }
@@ -1829,7 +1829,7 @@ func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 	res, err := client.Do(req)
 	require.NoError(t, err)
 
-	content, _ := ioutil.ReadAll(res.Body)
+	content, _ := io.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
 }
@@ -1852,7 +1852,7 @@ func TestLoginOnboardingNotFinished(t *testing.T) {
 	res, err := client.Do(req)
 	require.NoError(t, err)
 
-	content, _ := ioutil.ReadAll(res.Body)
+	content, _ := io.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
 }
@@ -1865,7 +1865,7 @@ func TestShowConfirmForm(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
 	assert.Contains(t, string(body), `<input id="state" type="hidden" name="state" value="342dd650-599b-0139-cfb0-543d7eb8149c" />`)
 }
@@ -2168,7 +2168,7 @@ func getTestURL() (string, error) {
 		return "", err
 	}
 	defer res.Body.Close()
-	content, _ := ioutil.ReadAll(res.Body)
+	content, _ := io.ReadAll(res.Body)
 	return string(content), nil
 }
 

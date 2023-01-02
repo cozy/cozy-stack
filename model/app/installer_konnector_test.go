@@ -2,7 +2,7 @@ package app_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"path"
 	"testing"
 
@@ -23,7 +23,7 @@ func compressedFileContainsBytes(fs afero.Fs, filename string, content []byte) (
 	}
 	defer f.Close()
 	br := brotli.NewReader(f)
-	b, err := ioutil.ReadAll(br)
+	b, err := io.ReadAll(br)
 	if err != nil {
 		return
 	}

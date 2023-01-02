@@ -2,7 +2,6 @@ package app
 
 import (
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -57,7 +56,7 @@ func (f *fileFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err er
 }
 
 func copyRec(root, path string, fs appfs.Copier) error {
-	files, err := ioutil.ReadDir(filepath.Join(root, path))
+	files, err := os.ReadDir(filepath.Join(root, path))
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,11 @@ func copyRec(root, path string, fs appfs.Copier) error {
 		if err != nil {
 			return err
 		}
-		info := appfs.NewFileInfo(relpath, file.Size(), file.Mode())
+		fileinfo, err := file.Info()
+		if err != nil {
+			return err
+		}
+		info := appfs.NewFileInfo(relpath, fileinfo.Size(), fileinfo.Mode())
 		err = fs.Copy(info, f)
 		f.Close()
 		if err != nil {

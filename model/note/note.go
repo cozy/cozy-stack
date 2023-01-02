@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"runtime"
@@ -450,7 +450,7 @@ func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, 
 		if err != nil {
 			return nil, err
 		}
-		img, err := ioutil.ReadAll(th)
+		img, err := io.ReadAll(th)
 		if errc := th.Close(); err == nil && errc != nil {
 			err = errc
 		}

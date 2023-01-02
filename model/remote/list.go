@@ -2,8 +2,8 @@ package remote
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -53,7 +53,7 @@ func ListDoctypes(inst *instance.Instance) ([]string, error) {
 			doctypes = append(doctypes, entry.Name)
 		}
 	} else {
-		entries, err := ioutil.ReadDir(config.GetConfig().Doctypes)
+		entries, err := os.ReadDir(config.GetConfig().Doctypes)
 		if err != nil {
 			return nil, err
 		}

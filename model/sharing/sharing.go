@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -1026,7 +1025,7 @@ func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string
 	if err != nil {
 		return err
 	}
-	_, _ = io.Copy(ioutil.Discard, res.Body)
+	_, _ = io.Copy(io.Discard, res.Body)
 	res.Body.Close()
 	return nil
 }

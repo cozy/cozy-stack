@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -759,7 +759,7 @@ func TestPatchInstanceSameParams(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, content)
 
@@ -795,7 +795,7 @@ func TestPatchInstanceChangeParams(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, content)
 
@@ -832,7 +832,7 @@ func TestPatchInstanceAddParam(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, content)
 
@@ -868,7 +868,7 @@ func TestPatchInstanceRemoveParams(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, content)
 

@@ -3,7 +3,6 @@ package vfs
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -49,7 +48,7 @@ func generateIcon(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
 	}
 	defer f.Close()
 
-	tempDir, err := ioutil.TempDir("", "magick")
+	tempDir, err := os.MkdirTemp("", "magick")
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func generatePreview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
 	}
 	defer f.Close()
 
-	tempDir, err := ioutil.TempDir("", "magick")
+	tempDir, err := os.MkdirTemp("", "magick")
 	if err != nil {
 		return nil, err
 	}

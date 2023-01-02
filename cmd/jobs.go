@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -104,7 +104,7 @@ var jobsPurgeCmd = &cobra.Command{
 			return err
 		}
 
-		resContent, err := ioutil.ReadAll(res.Body)
+		resContent, err := io.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}

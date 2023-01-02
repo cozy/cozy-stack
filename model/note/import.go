@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"path"
 	"strconv"
 	"strings"
@@ -48,7 +47,7 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 	if content != nil {
 		fillMetadata(newdoc, olddoc, schemaSpecs, content)
 	} else {
-		_, _ = io.Copy(ioutil.Discard, reader)
+		_, _ = io.Copy(io.Discard, reader)
 		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot import notes: %s", err)
 	}
@@ -164,7 +163,7 @@ func fillMetadata(newdoc, olddoc *vfs.FileDoc, schemaSpecs map[string]interface{
 }
 
 func parseFile(r io.Reader, schema *model.Schema) (*model.Node, error) {
-	buf, err := ioutil.ReadAll(io.LimitReader(r, MaxMarkdownSize))
+	buf, err := io.ReadAll(io.LimitReader(r, MaxMarkdownSize))
 	if err != nil {
 		return nil, err
 	}

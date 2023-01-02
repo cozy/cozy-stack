@@ -2,7 +2,7 @@ package status
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,7 +19,7 @@ func testRequest(t *testing.T, url string) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 
-	body, ioerr := ioutil.ReadAll(res.Body)
+	body, ioerr := io.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	var data map[string]interface{}

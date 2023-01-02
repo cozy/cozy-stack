@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -92,7 +91,7 @@ func doGetAll(t *testing.T, path string, auth bool) []byte {
 	res, err := doGet(path, auth)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	return body
 }
@@ -101,7 +100,7 @@ func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Equal(t, 200, res.StatusCode)
 	actual := strings.ToLower(res.Header.Get("Content-Type"))
 	assert.Equal(t, contentType, actual)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), content)
 }
 
@@ -204,7 +203,7 @@ func TestFaviconWithContext(t *testing.T) {
 	res, err := doGet("/foo", true)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
 	assert.Contains(t, string(body), expected)
 	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/favicon.ico", context))
@@ -248,7 +247,7 @@ func TestSessionCode(t *testing.T) {
 	res, err = webview.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Contains(t, string(body), "this is index.html")
 
 	// Try again and check that the session code cannot be reused
@@ -341,7 +340,7 @@ func TestIconForApp(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	assert.Equal(t, "<svg>...</svg>", string(body))
 }
 
@@ -493,7 +492,7 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body), "linked OAuth client exists")
 

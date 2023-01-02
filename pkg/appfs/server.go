@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"os"
@@ -316,7 +315,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	if checkEtag := req.Header.Get("Cache-Control") == ""; checkEtag {
 		var b []byte
 		h := md5.New()
-		b, err = ioutil.ReadAll(f)
+		b, err = io.ReadAll(f)
 		if err != nil {
 			return err
 		}
@@ -353,7 +352,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 				return err
 			}
 			defer gr.Close()
-			b, err = ioutil.ReadAll(gr)
+			b, err = io.ReadAll(gr)
 			if err != nil {
 				return err
 			}
@@ -366,7 +365,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		} else {
 			var b []byte
 			br := brotli.NewReader(content)
-			b, err = ioutil.ReadAll(br)
+			b, err = io.ReadAll(br)
 			if err != nil {
 				return err
 			}
@@ -461,7 +460,7 @@ func prepareTarball(s FileServer, slug, version, shasum string) (*bytes.Buffer, 
 		if err != nil {
 			return nil, err
 		}
-		content, err := ioutil.ReadAll(f)
+		content, err := io.ReadAll(f)
 		errc := f.Close()
 		if err != nil {
 			return nil, err

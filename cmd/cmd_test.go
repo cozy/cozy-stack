@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -43,7 +42,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)

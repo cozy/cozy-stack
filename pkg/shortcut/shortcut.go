@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 )
 
 // ErrInvalidShortcut is the error when a .url file cannot be parsed.
@@ -26,7 +25,7 @@ var (
 // Parse extracts information from a .url file.
 func Parse(r io.Reader) (Result, error) {
 	var result Result
-	buf, err := ioutil.ReadAll(r)
+	buf, err := io.ReadAll(r)
 	if err != nil {
 		return result, err
 	}

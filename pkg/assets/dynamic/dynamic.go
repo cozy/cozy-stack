@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -185,7 +184,7 @@ func registerCustomExternal(opt model.AssetOption) error {
 	bw := brotli.NewWriter(brotliBuf)
 
 	teeReader := io.TeeReader(body, io.MultiWriter(h, bw))
-	rawData, err := ioutil.ReadAll(teeReader)
+	rawData, err := io.ReadAll(teeReader)
 	if err != nil {
 		return err
 	}

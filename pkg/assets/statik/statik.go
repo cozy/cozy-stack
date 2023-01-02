@@ -22,7 +22,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sync"
 
 	"github.com/andybalholm/brotli"
@@ -53,7 +52,7 @@ func uncompress(data []byte) error {
 		br := brotli.NewReader(bytes.NewReader(brotliData))
 		h := sha256.New()
 		r := io.TeeReader(br, h)
-		rawData, err := ioutil.ReadAll(r)
+		rawData, err := io.ReadAll(r)
 		if err != nil {
 			return err
 		}

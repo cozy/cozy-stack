@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -136,7 +135,7 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	defer func() {
 		// Flush the body in case of error to allow reusing the connection with
 		// Keep-Alive
-		_, _ = io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 	}()
 

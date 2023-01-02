@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -280,7 +279,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	}
 	defer content.Close()
 
-	buf, err := ioutil.ReadAll(content)
+	buf, err := io.ReadAll(content)
 	if err != nil {
 		return err
 	}

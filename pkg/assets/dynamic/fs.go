@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -154,7 +153,7 @@ func (a *aferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
-	entries, err := ioutil.ReadDir(a.folder.Path)
+	entries, err := os.ReadDir(a.folder.Path)
 	if err != nil {
 		return nil, err
 	}

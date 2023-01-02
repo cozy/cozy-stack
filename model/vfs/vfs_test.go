@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -567,7 +566,7 @@ func TestArchive(t *testing.T) {
 	assert.Equal(t, `attachment; filename="test.zip"`, disposition)
 	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
 
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	assert.NoError(t, err)
@@ -816,7 +815,7 @@ func (c *contexter) DBPrefix() string       { return c.prefix }
 func (c *contexter) GetContextName() string { return c.context }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
 		return nil, nil, errors.New("could not create temporary directory")
 	}

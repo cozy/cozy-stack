@@ -2,7 +2,7 @@ package oidc
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -36,7 +36,7 @@ func TestStartWithOnboardingNotFinished(t *testing.T) {
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(content), "Onboarding Not activated")
 }
@@ -162,7 +162,7 @@ func TestLoginWith2FA(t *testing.T) {
 	resLogin, err := c.Do(reqLogin)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, resLogin.StatusCode)
-	content, err := ioutil.ReadAll(resLogin.Body)
+	content, err := io.ReadAll(resLogin.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(content), `<form id="oidc-twofactor-form"`)
 	re := regexp.MustCompile(`name="access-token" value="(\w+)"`)

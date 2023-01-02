@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -70,7 +69,7 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 		return 0, fmt.Errorf("/users/me/connections received response code %d", res.StatusCode)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return 0, err
 	}

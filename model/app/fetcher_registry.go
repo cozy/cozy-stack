@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"regexp"
 	"strings"
@@ -45,7 +44,7 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 		return nil, ErrManifestNotReachable
 	}
 	f.version = version
-	return ioutil.NopCloser(bytes.NewBuffer(version.Manifest)), nil
+	return io.NopCloser(bytes.NewBuffer(version.Manifest)), nil
 }
 
 func (f *registryFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) error {
