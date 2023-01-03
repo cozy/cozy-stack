@@ -6,13 +6,11 @@ import (
 	"errors"
 	"net"
 	"net/textproto"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -32,10 +30,20 @@ const serverString = `220 hello world
 221 Goodbye
 `
 
-var inst *instance.Instance
+func TestMails(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
 
-func TestMailSendServer(t *testing.T) {
-	clientStrings := []string{`EHLO localhost
+	config.UseTestFile()
+
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
+
+	inst := setup.GetTestInstance(&lifecycle.Options{Email: "me@me"})
+
+	t.Run("mail send server", func(t *testing.T) {
+		clientStrings := []string{`EHLO localhost
 HELO localhost
 MAIL FROM:<me@me>
 RCPT TO:<you1@you>
@@ -45,46 +53,46 @@ Hey !!!
 QUIT
 `}
 
-	expectedHeaders := map[string]string{
-		"From":                      "me@me",
-		"To":                        "you1@you",
-		"Subject":                   "Up?",
-		"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
-		"Content-Transfer-Encoding": "quoted-printable",
-		"Content-Type":              "text/plain; charset=UTF-8",
-		"Mime-Version":              "1.0",
-		"X-Cozy":                    "cozy.example.com",
-	}
-
-	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
-		msg := &mail.Options{
-			From: &mail.Address{Email: "me@me"},
-			To: []*mail.Address{
-				{Email: "you1@you"},
-			},
-			Date:    &time.Time{},
-			Subject: "Up?",
-			Dialer: &gomail.DialerOptions{
-				Host:       host,
-				Port:       port,
-				DisableTLS: true,
-			},
-			Parts: []*mail.Part{
-				{
-					Body: "Hey !!!",
-					Type: "text/plain",
-				},
-			},
-			Locale: "en",
+		expectedHeaders := map[string]string{
+			"From":                      "me@me",
+			"To":                        "you1@you",
+			"Subject":                   "Up?",
+			"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
+			"Content-Transfer-Encoding": "quoted-printable",
+			"Content-Type":              "text/plain; charset=UTF-8",
+			"Mime-Version":              "1.0",
+			"X-Cozy":                    "cozy.example.com",
 		}
-		j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
-		ctx := job.NewWorkerContext("0", j, nil)
-		return sendMail(ctx, msg, "cozy.example.com")
-	})
-}
 
-func TestMailSendTemplateMail(t *testing.T) {
-	clientStrings := []string{`EHLO localhost
+		mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
+			msg := &mail.Options{
+				From: &mail.Address{Email: "me@me"},
+				To: []*mail.Address{
+					{Email: "you1@you"},
+				},
+				Date:    &time.Time{},
+				Subject: "Up?",
+				Dialer: &gomail.DialerOptions{
+					Host:       host,
+					Port:       port,
+					DisableTLS: true,
+				},
+				Parts: []*mail.Part{
+					{
+						Body: "Hey !!!",
+						Type: "text/plain",
+					},
+				},
+				Locale: "en",
+			}
+			j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+			ctx := job.NewWorkerContext("0", j, nil)
+			return sendMail(ctx, msg, "cozy.example.com")
+		})
+	})
+
+	t.Run("send template mail", func(t *testing.T) {
+		clientStrings := []string{`EHLO localhost
 HELO localhost
 MAIL FROM:<me@me>
 RCPT TO:<you1@you>
@@ -103,18 +111,18 @@ DATA
 QUIT
 `}
 
-	expectedHeaders := map[string]string{
-		"From":                      "me@me",
-		"To":                        "you1@you",
-		"Subject":                   "Up?",
-		"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
-		"Content-Transfer-Encoding": "quoted-printable",
-		"Content-Type":              "text/html; charset=UTF-8",
-		"Mime-Version":              "1.0",
-		"X-Cozy":                    "cozy.example.com",
-	}
+		expectedHeaders := map[string]string{
+			"From":                      "me@me",
+			"To":                        "you1@you",
+			"Subject":                   "Up?",
+			"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
+			"Content-Transfer-Encoding": "quoted-printable",
+			"Content-Type":              "text/html; charset=UTF-8",
+			"Mime-Version":              "1.0",
+			"X-Cozy":                    "cozy.example.com",
+		}
 
-	mailBody := `<!DOCTYPE html>
+		mailBody := `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
@@ -126,63 +134,134 @@ QUIT
 </html>
 `
 
-	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
+		mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
+			msg := &mail.Options{
+				From: &mail.Address{Email: "me@me"},
+				To: []*mail.Address{
+					{Email: "you1@you"},
+				},
+				Date:    &time.Time{},
+				Subject: "Up?",
+				Dialer: &gomail.DialerOptions{
+					Host:       host,
+					Port:       port,
+					DisableTLS: true,
+				},
+				Parts: []*mail.Part{
+					{Body: mailBody, Type: "text/html"},
+				},
+				Locale: "en",
+			}
+			j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+			ctx := job.NewWorkerContext("0", j, nil)
+			return sendMail(ctx, msg, "cozy.example.com")
+		})
+	})
+
+	t.Run("with missing subject", func(t *testing.T) {
 		msg := &mail.Options{
-			From: &mail.Address{Email: "me@me"},
-			To: []*mail.Address{
-				{Email: "you1@you"},
-			},
-			Date:    &time.Time{},
+			From:   &mail.Address{Email: "me@me"},
+			To:     []*mail.Address{{Email: "you@you"}},
+			Locale: "en",
+		}
+		j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+		ctx := job.NewWorkerContext("0", j, nil)
+		err := sendMail(ctx, msg, "cozy.example.com")
+		if assert.Error(t, err) {
+			assert.Equal(t, "Missing mail subject", err.Error())
+		}
+	})
+
+	t.Run("with bad body type", func(t *testing.T) {
+		msg := &mail.Options{
+			From:    &mail.Address{Email: "me@me"},
+			To:      []*mail.Address{{Email: "you@you"}},
 			Subject: "Up?",
-			Dialer: &gomail.DialerOptions{
-				Host:       host,
-				Port:       port,
-				DisableTLS: true,
-			},
 			Parts: []*mail.Part{
-				{Body: mailBody, Type: "text/html"},
+				{
+					Type: "text/qsdqsd",
+					Body: "foo",
+				},
 			},
 			Locale: "en",
 		}
 		j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
 		ctx := job.NewWorkerContext("0", j, nil)
-		return sendMail(ctx, msg, "cozy.example.com")
+		err := sendMail(ctx, msg, "cozy.example.com")
+		if assert.Error(t, err) {
+			assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
+		}
 	})
-}
 
-func TestMailMissingSubject(t *testing.T) {
-	msg := &mail.Options{
-		From:   &mail.Address{Email: "me@me"},
-		To:     []*mail.Address{{Email: "you@you"}},
-		Locale: "en",
-	}
-	j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
-	ctx := job.NewWorkerContext("0", j, nil)
-	err := sendMail(ctx, msg, "cozy.example.com")
-	if assert.Error(t, err) {
-		assert.Equal(t, "Missing mail subject", err.Error())
-	}
-}
-
-func TestMailBadBodyType(t *testing.T) {
-	msg := &mail.Options{
-		From:    &mail.Address{Email: "me@me"},
-		To:      []*mail.Address{{Email: "you@you"}},
-		Subject: "Up?",
-		Parts: []*mail.Part{
-			{
-				Type: "text/qsdqsd",
-				Body: "foo",
+	t.Run("send with NoReply", func(t *testing.T) {
+		sendMail = func(_ *job.WorkerContext, opts *mail.Options, domain string) error {
+			assert.NotNil(t, opts.From)
+			assert.NotNil(t, opts.To)
+			assert.Len(t, opts.To, 1)
+			assert.Equal(t, "me@me", opts.To[0].Email)
+			assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
+			assert.Equal(t, inst.Domain, domain)
+			return errors.New("yes")
+		}
+		defer func() {
+			sendMail = doSendMail
+		}()
+		msg, _ := job.NewMessage(mail.Options{
+			Mode:    "noreply",
+			Subject: "Up?",
+			Parts: []*mail.Part{
+				{
+					Type: "text/plain",
+					Body: "foo",
+				},
 			},
-		},
-		Locale: "en",
-	}
-	j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
-	ctx := job.NewWorkerContext("0", j, nil)
-	err := sendMail(ctx, msg, "cozy.example.com")
-	if assert.Error(t, err) {
-		assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
-	}
+			Locale: "en",
+		})
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "sendmail",
+		})
+		err := SendMail(job.NewWorkerContext("123", j, inst))
+		if assert.Error(t, err) {
+			assert.Equal(t, "yes", err.Error())
+		}
+	})
+
+	t.Run("send with From", func(t *testing.T) {
+		sendMail = func(_ *job.WorkerContext, opts *mail.Options, domain string) error {
+			assert.NotNil(t, opts.From)
+			assert.NotNil(t, opts.To)
+			assert.Len(t, opts.To, 1)
+			assert.Equal(t, "you@you", opts.To[0].Email)
+			assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
+			assert.Equal(t, "me@me", opts.ReplyTo.Email)
+			assert.Equal(t, inst.Domain, domain)
+			return errors.New("yes")
+		}
+		defer func() {
+			sendMail = doSendMail
+		}()
+		msg, _ := job.NewMessage(mail.Options{
+			Mode:    "from",
+			Subject: "Up?",
+			To:      []*mail.Address{{Email: "you@you"}},
+			Parts: []*mail.Part{
+				{
+					Type: "text/plain",
+					Body: "foo",
+				},
+			},
+			Locale: "en",
+		})
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "sendmail",
+		})
+		err := SendMail(job.NewWorkerContext("123", j, inst))
+		if assert.Error(t, err) {
+			assert.Equal(t, "yes", err.Error())
+		}
+	})
 }
 
 func mailServer(t *testing.T, serverString string, clientStrings []string, expectedHeader map[string]string, send func(string, int) error) {
@@ -277,81 +356,4 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 		assert.Contains(t, actualcmds, s)
 	}
 	assert.EqualValues(t, expectedHeader, headers)
-}
-
-func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
-		assert.NotNil(t, opts.From)
-		assert.NotNil(t, opts.To)
-		assert.Len(t, opts.To, 1)
-		assert.Equal(t, "me@me", opts.To[0].Email)
-		assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
-		assert.Equal(t, inst.Domain, domain)
-		return errors.New("yes")
-	}
-	defer func() {
-		sendMail = doSendMail
-	}()
-	msg, _ := job.NewMessage(mail.Options{
-		Mode:    "noreply",
-		Subject: "Up?",
-		Parts: []*mail.Part{
-			{
-				Type: "text/plain",
-				Body: "foo",
-			},
-		},
-		Locale: "en",
-	})
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "sendmail",
-	})
-	err := SendMail(job.NewWorkerContext("123", j, inst))
-	if assert.Error(t, err) {
-		assert.Equal(t, "yes", err.Error())
-	}
-}
-
-func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
-		assert.NotNil(t, opts.From)
-		assert.NotNil(t, opts.To)
-		assert.Len(t, opts.To, 1)
-		assert.Equal(t, "you@you", opts.To[0].Email)
-		assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
-		assert.Equal(t, "me@me", opts.ReplyTo.Email)
-		assert.Equal(t, inst.Domain, domain)
-		return errors.New("yes")
-	}
-	defer func() {
-		sendMail = doSendMail
-	}()
-	msg, _ := job.NewMessage(mail.Options{
-		Mode:    "from",
-		Subject: "Up?",
-		To:      []*mail.Address{{Email: "you@you"}},
-		Parts: []*mail.Part{
-			{
-				Type: "text/plain",
-				Body: "foo",
-			},
-		},
-		Locale: "en",
-	})
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "sendmail",
-	})
-	err := SendMail(job.NewWorkerContext("123", j, inst))
-	if assert.Error(t, err) {
-		assert.Equal(t, "yes", err.Error())
-	}
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	setup := testutils.NewSetup(m, "mails_test")
-	inst = setup.GetTestInstance(&lifecycle.Options{Email: "me@me"})
-	os.Exit(m.Run())
 }
