@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -25,339 +24,343 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var inst *instance.Instance
+func TestExecKonnector(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
+	}
 
-func TestUnknownDomain(t *testing.T) {
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector": "unknownapp",
-	})
-	assert.NoError(t, err)
-	db := prefixer.NewPrefixer(0, "instance.does.not.exist", "instance.does.not.exist")
-	j := job.NewJob(db, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
-	})
-	ctx := job.NewWorkerContext("id", j, nil).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, "Instance not found", err.Error())
-}
+	config.UseTestFile()
 
-func TestUnknownApp(t *testing.T) {
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector": "unknownapp",
-	})
-	assert.NoError(t, err)
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
-	})
-	ctx := job.NewWorkerContext("id", j, inst).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.Error(t, err)
-	assert.Equal(t, "Application is not installed", err.Error())
-}
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
-func TestBadFileExec(t *testing.T) {
-	folderToSave := "7890"
+	inst := setup.GetTestInstance()
 
-	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
-		&app.InstallerOptions{
-			Operation: app.Install,
-			Type:      consts.KonnectorType,
-			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = installer.RunSync()
-	require.NoError(t, err)
-
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector":      "my-konnector-1",
-		"folder_to_save": folderToSave,
-	})
-	assert.NoError(t, err)
-
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
+	t.Run("with unknown domain", func(t *testing.T) {
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector": "unknownapp",
+		})
+		assert.NoError(t, err)
+		db := prefixer.NewPrefixer(0, "instance.does.not.exist", "instance.does.not.exist")
+		j := job.NewJob(db, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+		ctx := job.NewWorkerContext("id", j, nil).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.Error(t, err)
+		assert.Equal(t, "Instance not found", err.Error())
 	})
 
-	config.GetConfig().Konnectors.Cmd = ""
-	ctx := job.NewWorkerContext("id", j, inst).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "exec")
+	t.Run("with unknown app", func(t *testing.T) {
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector": "unknownapp",
+		})
+		assert.NoError(t, err)
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+		ctx := job.NewWorkerContext("id", j, inst).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.Error(t, err)
+		assert.Equal(t, "Application is not installed", err.Error())
+	})
 
-	config.GetConfig().Konnectors.Cmd = "echo"
-	err = worker(ctx)
-	assert.NoError(t, err)
-}
+	t.Run("with a bad file exec", func(t *testing.T) {
+		folderToSave := "7890"
 
-func TestSuccess(t *testing.T) {
-	script := `#!/bin/bash
+		installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
+			&app.InstallerOptions{
+				Operation: app.Install,
+				Type:      consts.KonnectorType,
+				Slug:      "my-konnector-1",
+				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = installer.RunSync()
+		require.NoError(t, err)
+
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector":      "my-konnector-1",
+			"folder_to_save": folderToSave,
+		})
+		assert.NoError(t, err)
+
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+
+		config.GetConfig().Konnectors.Cmd = ""
+		ctx := job.NewWorkerContext("id", j, inst).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "exec")
+
+		config.GetConfig().Konnectors.Cmd = "echo"
+		err = worker(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		script := `#!/bin/bash
 
 echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL} ${COZY_CREDENTIALS}\"}"
 echo "bad json"
 echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 >&2 echo "log error"
 `
-	osFs := afero.NewOsFs()
-	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
-	defer func() { _ = osFs.RemoveAll(tmpScript) }()
+		osFs := afero.NewOsFs()
+		tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+		defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
-	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	require.NoError(t, err)
-
-	err = osFs.Chmod(tmpScript, 0777)
-	require.NoError(t, err)
-
-	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
-		&app.InstallerOptions{
-			Operation: app.Install,
-			Type:      consts.KonnectorType,
-			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
-		},
-	)
-	if err != app.ErrAlreadyExists {
+		err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
 		require.NoError(t, err)
 
-		_, err = installer.RunSync()
+		err = osFs.Chmod(tmpScript, 0777)
 		require.NoError(t, err)
-	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+		installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
+			&app.InstallerOptions{
+				Operation: app.Install,
+				Type:      consts.KonnectorType,
+				Slug:      "my-konnector-1",
+				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+			},
+		)
+		if err != app.ErrAlreadyExists {
+			require.NoError(t, err)
 
-	go func() {
-		evCh := realtime.GetHub().Subscriber(inst)
-		evCh.Subscribe(consts.JobEvents)
-		wg.Done()
-		ch := evCh.Channel
-		ev1 := <-ch
-		ev2 := <-ch
-		evCh.Close()
-		doc1 := ev1.Doc.(*couchdb.JSONDoc)
-		doc2 := ev2.Doc.(*couchdb.JSONDoc)
+			_, err = installer.RunSync()
+			require.NoError(t, err)
+		}
 
-		assert.Equal(t, inst.Domain, ev1.Domain)
-		assert.Equal(t, inst.Domain, ev2.Domain)
+		var wg sync.WaitGroup
+		wg.Add(1)
 
-		assert.Equal(t, "toto", doc1.M["type"])
-		assert.Equal(t, "manifest", doc2.M["type"])
+		go func() {
+			evCh := realtime.GetHub().Subscriber(inst)
+			evCh.Subscribe(consts.JobEvents)
+			wg.Done()
+			ch := evCh.Channel
+			ev1 := <-ch
+			ev2 := <-ch
+			evCh.Close()
+			doc1 := ev1.Doc.(*couchdb.JSONDoc)
+			doc2 := ev2.Doc.(*couchdb.JSONDoc)
 
-		msg2 := doc2.M["message"].(string)
-		assert.True(t, strings.HasPrefix(msg2, os.TempDir()))
-		assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
+			assert.Equal(t, inst.Domain, ev1.Domain)
+			assert.Equal(t, inst.Domain, ev2.Domain)
 
-		msg1 := doc1.M["message"].(string)
-		cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
-		assert.True(t, strings.HasPrefix(msg1, cozyURL))
-		token := msg1[len(cozyURL):]
-		var claims permission.Claims
-		err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
-			return inst.PickKey(t.Claims.(*permission.Claims).Audience)
-		}, &claims)
+			assert.Equal(t, "toto", doc1.M["type"])
+			assert.Equal(t, "manifest", doc2.M["type"])
+
+			msg2 := doc2.M["message"].(string)
+			assert.True(t, strings.HasPrefix(msg2, os.TempDir()))
+			assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
+
+			msg1 := doc1.M["message"].(string)
+			cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
+			assert.True(t, strings.HasPrefix(msg1, cozyURL))
+			token := msg1[len(cozyURL):]
+			var claims permission.Claims
+			err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
+				return inst.PickKey(t.Claims.(*permission.Claims).Audience)
+			}, &claims)
+			assert.NoError(t, err)
+			assert.Equal(t, consts.KonnectorAudience, claims.Audience)
+			wg.Done()
+		}()
+
+		wg.Wait()
+		wg.Add(1)
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector": "my-konnector-1",
+		})
 		assert.NoError(t, err)
-		assert.Equal(t, consts.KonnectorAudience, claims.Audience)
-		wg.Done()
-	}()
 
-	wg.Wait()
-	wg.Add(1)
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector": "my-konnector-1",
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+
+		config.GetConfig().Konnectors.Cmd = tmpScript
+		ctx := job.NewWorkerContext("id", j, inst).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.NoError(t, err)
+
+		wg.Wait()
 	})
-	assert.NoError(t, err)
 
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
-	})
-
-	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := job.NewWorkerContext("id", j, inst).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.NoError(t, err)
-
-	wg.Wait()
-}
-
-func TestSecretFromAccountType(t *testing.T) {
-	script := `#!/bin/bash
+	t.Run("with secret from accountType", func(t *testing.T) {
+		script := `#!/bin/bash
 
 SECRET=$(echo "$COZY_PARAMETERS" | sed -e 's/.*secret"://' -e 's/[},].*//')
 echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 `
-	osFs := afero.NewOsFs()
-	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
-	defer func() { _ = osFs.RemoveAll(tmpScript) }()
+		osFs := afero.NewOsFs()
+		tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+		defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
-	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	require.NoError(t, err)
+		err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
+		require.NoError(t, err)
 
-	err = osFs.Chmod(tmpScript, 0777)
-	require.NoError(t, err)
+		err = osFs.Chmod(tmpScript, 0777)
+		require.NoError(t, err)
 
-	at := &account.AccountType{
-		GrantMode: account.SecretGrant,
-		Slug:      "my-konnector-1",
-		Secret:    "s3cr3t",
-	}
-	err = couchdb.CreateDoc(prefixer.SecretsPrefixer, at)
-	assert.NoError(t, err)
-	defer func() {
-		// Clean the account types
-		ats, _ := account.FindAccountTypesBySlug("my-konnector-1", "all-contexts")
-		for _, at = range ats {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, at)
-		}
-	}()
-
-	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
-		&app.InstallerOptions{
-			Operation: app.Install,
-			Type:      consts.KonnectorType,
+		at := &account.AccountType{
+			GrantMode: account.SecretGrant,
 			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
-		},
-	)
-	if err != app.ErrAlreadyExists {
-		require.NoError(t, err)
+			Secret:    "s3cr3t",
+		}
+		err = couchdb.CreateDoc(prefixer.SecretsPrefixer, at)
+		assert.NoError(t, err)
+		defer func() {
+			// Clean the account types
+			ats, _ := account.FindAccountTypesBySlug("my-konnector-1", "all-contexts")
+			for _, at = range ats {
+				_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, at)
+			}
+		}()
 
-		_, err = installer.RunSync()
-		require.NoError(t, err)
-	}
+		installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
+			&app.InstallerOptions{
+				Operation: app.Install,
+				Type:      consts.KonnectorType,
+				Slug:      "my-konnector-1",
+				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+			},
+		)
+		if err != app.ErrAlreadyExists {
+			require.NoError(t, err)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+			_, err = installer.RunSync()
+			require.NoError(t, err)
+		}
 
-	go func() {
-		evCh := realtime.GetHub().Subscriber(inst)
-		evCh.Subscribe(consts.JobEvents)
-		wg.Done()
-		ch := evCh.Channel
-		ev1 := <-ch
-		evCh.Close()
-		doc1 := ev1.Doc.(*couchdb.JSONDoc)
+		var wg sync.WaitGroup
+		wg.Add(1)
 
-		assert.Equal(t, inst.Domain, ev1.Domain)
-		assert.Equal(t, "params", doc1.M["type"])
-		msg1 := doc1.M["message"]
-		assert.Equal(t, "s3cr3t", msg1)
-		wg.Done()
-	}()
+		go func() {
+			evCh := realtime.GetHub().Subscriber(inst)
+			evCh.Subscribe(consts.JobEvents)
+			wg.Done()
+			ch := evCh.Channel
+			ev1 := <-ch
+			evCh.Close()
+			doc1 := ev1.Doc.(*couchdb.JSONDoc)
 
-	wg.Wait()
-	wg.Add(1)
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector": "my-konnector-1",
+			assert.Equal(t, inst.Domain, ev1.Domain)
+			assert.Equal(t, "params", doc1.M["type"])
+			msg1 := doc1.M["message"]
+			assert.Equal(t, "s3cr3t", msg1)
+			wg.Done()
+		}()
+
+		wg.Wait()
+		wg.Add(1)
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector": "my-konnector-1",
+		})
+		assert.NoError(t, err)
+
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+
+		config.GetConfig().Konnectors.Cmd = tmpScript
+		ctx := job.NewWorkerContext("id", j, inst).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.NoError(t, err)
+
+		wg.Wait()
 	})
-	assert.NoError(t, err)
 
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
-	})
-
-	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := job.NewWorkerContext("id", j, inst).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.NoError(t, err)
-
-	wg.Wait()
-}
-
-func TestCreateFolder(t *testing.T) {
-	script := `#!/bin/bash
+	t.Run("create folder", func(t *testing.T) {
+		script := `#!/bin/bash
 
 echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 `
-	osFs := afero.NewOsFs()
-	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
-	defer func() { _ = osFs.RemoveAll(tmpScript) }()
+		osFs := afero.NewOsFs()
+		tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+		defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
-	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
-	require.NoError(t, err)
-
-	err = osFs.Chmod(tmpScript, 0777)
-	require.NoError(t, err)
-
-	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
-		&app.InstallerOptions{
-			Operation: app.Install,
-			Type:      consts.KonnectorType,
-			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
-		},
-	)
-	if err != app.ErrAlreadyExists {
+		err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
 		require.NoError(t, err)
 
-		_, err = installer.RunSync()
+		err = osFs.Chmod(tmpScript, 0777)
 		require.NoError(t, err)
-	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+		installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
+			&app.InstallerOptions{
+				Operation: app.Install,
+				Type:      consts.KonnectorType,
+				Slug:      "my-konnector-1",
+				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+			},
+		)
+		if err != app.ErrAlreadyExists {
+			require.NoError(t, err)
 
-	go func() {
-		evCh := realtime.GetHub().Subscriber(inst)
-		evCh.Subscribe(consts.JobEvents)
-		wg.Done()
+			_, err = installer.RunSync()
+			require.NoError(t, err)
+		}
 
-		ch := evCh.Channel
-		ev := <-ch
-		evCh.Close()
-		assert.Equal(t, inst.Domain, ev.Domain)
-		wg.Done()
-	}()
+		var wg sync.WaitGroup
+		wg.Add(1)
 
-	wg.Wait()
-	wg.Add(1)
-	acc := &account.Account{DefaultFolderPath: "/Administrative/toto"}
-	assert.NoError(t, couchdb.CreateDoc(inst, acc))
-	defer func() { _ = couchdb.DeleteDoc(inst, acc) }()
-	msg, err := job.NewMessage(map[string]interface{}{
-		"konnector":      "my-konnector-1",
-		"folder_to_save": "id-of-a-deleted-folder",
-		"account":        acc.ID(),
+		go func() {
+			evCh := realtime.GetHub().Subscriber(inst)
+			evCh.Subscribe(consts.JobEvents)
+			wg.Done()
+
+			ch := evCh.Channel
+			ev := <-ch
+			evCh.Close()
+			assert.Equal(t, inst.Domain, ev.Domain)
+			wg.Done()
+		}()
+
+		wg.Wait()
+		wg.Add(1)
+		acc := &account.Account{DefaultFolderPath: "/Administrative/toto"}
+		assert.NoError(t, couchdb.CreateDoc(inst, acc))
+		defer func() { _ = couchdb.DeleteDoc(inst, acc) }()
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector":      "my-konnector-1",
+			"folder_to_save": "id-of-a-deleted-folder",
+			"account":        acc.ID(),
+		})
+		assert.NoError(t, err)
+
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+
+		config.GetConfig().Konnectors.Cmd = tmpScript
+		ctx := job.NewWorkerContext("id", j, inst).
+			WithCookie(&konnectorWorker{})
+		err = worker(ctx)
+		assert.NoError(t, err)
+
+		wg.Wait()
+		dir, err := inst.VFS().DirByPath("/Administrative/toto")
+		assert.NoError(t, err)
+		assert.Len(t, dir.ReferencedBy, 1)
+		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
+		assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
+		assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
+		assert.Len(t, dir.CozyMetadata.UpdatedByApps, 1)
+		assert.Equal(t, dir.CozyMetadata.SourceAccount, acc.ID())
 	})
-	assert.NoError(t, err)
-
-	j := job.NewJob(inst, &job.JobRequest{
-		Message:    msg,
-		WorkerType: "konnector",
-	})
-
-	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := job.NewWorkerContext("id", j, inst).
-		WithCookie(&konnectorWorker{})
-	err = worker(ctx)
-	assert.NoError(t, err)
-
-	wg.Wait()
-	dir, err := inst.VFS().DirByPath("/Administrative/toto")
-	assert.NoError(t, err)
-	assert.Len(t, dir.ReferencedBy, 1)
-	assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
-	assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
-	assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
-	assert.Len(t, dir.CozyMetadata.UpdatedByApps, 1)
-	assert.Equal(t, dir.CozyMetadata.SourceAccount, acc.ID())
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	setup := testutils.NewSetup(m, "konnector_test")
-	inst = setup.GetTestInstance()
-	os.Exit(setup.Run())
 }
