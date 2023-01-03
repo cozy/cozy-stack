@@ -543,10 +543,11 @@ func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) 
 				return &s.Members[i+1], nil
 			}
 		}
-	} else {
-		if s.Credentials[0].InboundClientID == clientID {
-			return &s.Members[0], nil
-		}
+		return nil, ErrMemberNotFound
+	}
+
+	if s.Credentials[0].InboundClientID == clientID {
+		return &s.Members[0], nil
 	}
 	return nil, ErrMemberNotFound
 }
@@ -559,10 +560,11 @@ func (s *Sharing) FindCredentials(m *Member) *Credentials {
 				return &s.Credentials[i-1]
 			}
 		}
-	} else {
-		if *m == s.Members[0] {
-			return &s.Credentials[0]
-		}
+		return nil
+	}
+
+	if *m == s.Members[0] {
+		return &s.Credentials[0]
 	}
 	return nil
 }
