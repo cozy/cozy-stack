@@ -665,6 +665,7 @@ Content-Type: application/vnd.api+json
       "Capabilities": "{ \"file_versioning\": true }",
       "CozyBar": "...",
       "CozyClientJS": "...",
+      "CozyFonts": "...",
       "DefaultWallpaper": "...",
       "Domain": "cozy.example.net",
       "Favicon": "...",

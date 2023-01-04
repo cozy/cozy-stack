@@ -532,6 +532,10 @@ func (s serveParams) CozyClientJS() (template.HTML, error) {
 	return cozyclientjs(s.instance)
 }
 
+func (s serveParams) CozyFonts() template.HTML {
+	return middlewares.CozyFonts(s.instance)
+}
+
 func (s serveParams) ThemeCSS() template.HTML {
 	return middlewares.ThemeCSS(s.instance)
 }
