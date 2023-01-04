@@ -12,116 +12,123 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTriggersBadArguments(t *testing.T) {
-	var err error
-	_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
-		Type:      "@at",
-		Arguments: "garbage",
-	}, nil)
-	assert.Error(t, err)
-
-	_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
-		Type:      "@in",
-		Arguments: "garbage",
-	}, nil)
-	assert.Error(t, err)
-
-	_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
-		Type:      "@unknown",
-		Arguments: "",
-	}, nil)
-	if assert.Error(t, err) {
-		assert.Equal(t, jobs.ErrUnknownTrigger, err)
-	}
-}
-
-func TestMemSchedulerWithDebounce(t *testing.T) {
+func TestMemScheduler(t *testing.T) {
 	if testing.Short() {
-		return
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	called := 0
-	bro := jobs.NewMemBroker()
-	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
-		{
-			WorkerType:   "worker",
-			Concurrency:  1,
-			MaxExecCount: 1,
-			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *jobs.WorkerContext) error {
-				called++
-				return nil
+	t.Run("TriggersBadArguments", func(t *testing.T) {
+		var err error
+		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+			Type:      "@at",
+			Arguments: "garbage",
+		}, nil)
+		assert.Error(t, err)
+
+		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+			Type:      "@in",
+			Arguments: "garbage",
+		}, nil)
+		assert.Error(t, err)
+
+		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+			Type:      "@unknown",
+			Arguments: "",
+		}, nil)
+		if assert.Error(t, err) {
+			assert.Equal(t, jobs.ErrUnknownTrigger, err)
+		}
+	})
+
+	t.Run("MemSchedulerWithDebounce", func(t *testing.T) {
+		if testing.Short() {
+			return
+		}
+
+		called := 0
+		bro := jobs.NewMemBroker()
+		assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
+			{
+				WorkerType:   "worker",
+				Concurrency:  1,
+				MaxExecCount: 1,
+				Timeout:      1 * time.Millisecond,
+				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+					called++
+					return nil
+				},
 			},
-		},
-	}))
+		}))
 
-	msg, _ := jobs.NewMessage("@event")
-	ti := jobs.TriggerInfos{
-		Type:       "@event",
-		Arguments:  "io.cozy.testdebounce io.cozy.moredebounce",
-		Debounce:   "2s",
-		WorkerType: "worker",
-		Message:    msg,
-	}
+		msg, _ := jobs.NewMessage("@event")
+		ti := jobs.TriggerInfos{
+			Type:       "@event",
+			Arguments:  "io.cozy.testdebounce io.cozy.moredebounce",
+			Debounce:   "2s",
+			WorkerType: "worker",
+			Message:    msg,
+		}
 
-	var triggers []jobs.Trigger
-	triggersInfos := []jobs.TriggerInfos{ti}
-	sch := jobs.NewMemScheduler()
-	if !assert.NoError(t, sch.StartScheduler(bro)) {
-		return
-	}
+		var triggers []jobs.Trigger
+		triggersInfos := []jobs.TriggerInfos{ti}
+		sch := jobs.NewMemScheduler()
+		if !assert.NoError(t, sch.StartScheduler(bro)) {
+			return
+		}
 
-	// Clear the existing triggers before testing with our triggers
-	ts, err := sch.GetAllTriggers(testInstance)
-	assert.NoError(t, err)
-	for _, trigger := range ts {
-		err = sch.DeleteTrigger(testInstance, trigger.ID())
+		// Clear the existing triggers before testing with our triggers
+		ts, err := sch.GetAllTriggers(testInstance)
 		assert.NoError(t, err)
-	}
+		for _, trigger := range ts {
+			err = sch.DeleteTrigger(testInstance, trigger.ID())
+			assert.NoError(t, err)
+		}
 
-	for _, infos := range triggersInfos {
-		trigger, err := jobs.NewTrigger(testInstance, infos, msg)
-		require.NoError(t, err)
+		for _, infos := range triggersInfos {
+			trigger, err := jobs.NewTrigger(testInstance, infos, msg)
+			require.NoError(t, err)
 
-		err = sch.AddTrigger(trigger)
-		require.NoError(t, err)
+			err = sch.AddTrigger(trigger)
+			require.NoError(t, err)
 
-		triggers = append(triggers, trigger)
-	}
+			triggers = append(triggers, trigger)
+		}
 
-	ts, err = sch.GetAllTriggers(testInstance)
-	assert.NoError(t, err)
-	assert.Len(t, ts, len(triggers))
+		ts, err = sch.GetAllTriggers(testInstance)
+		assert.NoError(t, err)
+		assert.Len(t, ts, len(triggers))
 
-	doc := &couchdb.JSONDoc{
-		Type: "io.cozy.testdebounce",
-		M: map[string]interface{}{
-			"_id":  "test-id",
-			"_rev": "1-xxabxx",
-			"test": "value",
-		},
-	}
+		doc := &couchdb.JSONDoc{
+			Type: "io.cozy.testdebounce",
+			M: map[string]interface{}{
+				"_id":  "test-id",
+				"_rev": "1-xxabxx",
+				"test": "value",
+			},
+		}
 
-	for i := 0; i < 24; i++ {
-		time.Sleep(200 * time.Millisecond)
+		for i := 0; i < 24; i++ {
+			time.Sleep(200 * time.Millisecond)
+			realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
+		}
+
+		time.Sleep(3000 * time.Millisecond)
+		assert.Equal(t, 3, called)
+
+		doc2 := doc.Clone().(*couchdb.JSONDoc)
+		doc2.Type = "io.cozy.moredebounce"
 		realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
-	}
+		realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc2, nil)
+		time.Sleep(3000 * time.Millisecond)
+		assert.Equal(t, 4, called)
 
-	time.Sleep(3000 * time.Millisecond)
-	assert.Equal(t, 3, called)
+		for _, trigger := range triggers {
+			err = sch.DeleteTrigger(testInstance, trigger.ID())
+			assert.NoError(t, err)
+		}
 
-	doc2 := doc.Clone().(*couchdb.JSONDoc)
-	doc2.Type = "io.cozy.moredebounce"
-	realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
-	realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc2, nil)
-	time.Sleep(3000 * time.Millisecond)
-	assert.Equal(t, 4, called)
-
-	for _, trigger := range triggers {
-		err = sch.DeleteTrigger(testInstance, trigger.ID())
+		err = sch.ShutdownScheduler(context.Background())
 		assert.NoError(t, err)
-	}
+	})
 
-	err = sch.ShutdownScheduler(context.Background())
-	assert.NoError(t, err)
 }

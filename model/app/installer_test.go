@@ -34,6 +34,107 @@ var manName string
 
 type transport struct{}
 
+var db *instance.Instance
+var fs appfs.Copier
+var baseFS afero.Fs
+
+func TestInstaller(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+
+	go serveGitRep()
+	for i := 0; i < 400; i++ {
+		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if _, err := couchdb.CheckStatus(); err != nil {
+		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+
+	_, err := stack.Start()
+	if err != nil {
+		fmt.Println("Error while starting job system", err)
+		os.Exit(1)
+	}
+
+	app.ManifestClient = &http.Client{
+		Transport: &transport{},
+	}
+
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, manGen())
+	}))
+
+	db = &instance.Instance{
+		ContextName: "foo",
+		Prefix:      "app-test",
+	}
+
+	err = couchdb.ResetDB(db, consts.Apps)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.ResetDB(db, consts.Konnectors)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.ResetDB(db, consts.Files)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var tmpDir string
+	osFS := afero.NewOsFs()
+	tmpDir, err = afero.TempDir(osFS, "", "cozy-installer-test")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer func() { _ = osFS.RemoveAll(tmpDir) }()
+
+	baseFS = afero.NewBasePathFs(osFS, tmpDir)
+	fs = appfs.NewAferoCopier(baseFS)
+
+	err = couchdb.ResetDB(db, consts.Permissions)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Permissions))
+	if err = g.Wait(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	res := m.Run()
+
+	_ = couchdb.DeleteDB(db, consts.Apps)
+	_ = couchdb.DeleteDB(db, consts.Konnectors)
+	_ = couchdb.DeleteDB(db, consts.Files)
+	_ = couchdb.DeleteDB(db, consts.Permissions)
+	ts.Close()
+
+	_ = localGitCmd.Process.Signal(os.Interrupt)
+
+	os.Exit(res)
+
+}
+
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req2 := new(http.Request)
 	*req2 = *req
@@ -127,100 +228,4 @@ git checkout master`
 	} else {
 		fmt.Println("did upgrade", localVersion)
 	}
-}
-
-var db *instance.Instance
-var fs appfs.Copier
-var baseFS afero.Fs
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-
-	go serveGitRep()
-	for i := 0; i < 400; i++ {
-		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	if _, err := couchdb.CheckStatus(); err != nil {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
-
-	_, err := stack.Start()
-	if err != nil {
-		fmt.Println("Error while starting job system", err)
-		os.Exit(1)
-	}
-
-	app.ManifestClient = &http.Client{
-		Transport: &transport{},
-	}
-
-	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.WriteString(w, manGen())
-	}))
-
-	db = &instance.Instance{
-		ContextName: "foo",
-		Prefix:      "app-test",
-	}
-
-	err = couchdb.ResetDB(db, consts.Apps)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(db, consts.Konnectors)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(db, consts.Files)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	var tmpDir string
-	osFS := afero.NewOsFs()
-	tmpDir, err = afero.TempDir(osFS, "", "cozy-installer-test")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer func() { _ = osFS.RemoveAll(tmpDir) }()
-
-	baseFS = afero.NewBasePathFs(osFS, tmpDir)
-	fs = appfs.NewAferoCopier(baseFS)
-
-	err = couchdb.ResetDB(db, consts.Permissions)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	g, _ := errgroup.WithContext(context.Background())
-	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
-	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Permissions))
-	if err = g.Wait(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	res := m.Run()
-
-	_ = couchdb.DeleteDB(db, consts.Apps)
-	_ = couchdb.DeleteDB(db, consts.Konnectors)
-	_ = couchdb.DeleteDB(db, consts.Files)
-	_ = couchdb.DeleteDB(db, consts.Permissions)
-	ts.Close()
-
-	_ = localGitCmd.Process.Signal(os.Interrupt)
-
-	os.Exit(res)
 }
