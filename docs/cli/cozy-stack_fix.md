@@ -32,6 +32,6 @@ cozy-stack fix <command> [flags]
 * [cozy-stack fix mime](cozy-stack_fix_mime.md)	 - Fix the class computed from the mime-type
 * [cozy-stack fix orphan-account](cozy-stack_fix_orphan-account.md)	 - Remove the orphan accounts
 * [cozy-stack fix redis](cozy-stack_fix_redis.md)	 - Rebuild scheduling data strucutures in redis
-* [cozy-stack fix service-triggers](cozy-stack_fix_service-triggers.md)	 - Clean the duplicate triggers for webapp services
+* [cozy-stack fix service-triggers](cozy-stack_fix_service-triggers.md)	 - Clean the triggers for webapp services
 * [cozy-stack fix thumbnails](cozy-stack_fix_thumbnails.md)	 - Rebuild thumbnails image for images files
 

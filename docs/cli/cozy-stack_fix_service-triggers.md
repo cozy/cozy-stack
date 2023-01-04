@@ -1,11 +1,12 @@
 ## cozy-stack fix service-triggers
 
-Clean the duplicate triggers for webapp services
+Clean the triggers for webapp services
 
 ### Synopsis
 
 
-This fixer cleans duplicate triggers for webapp services.
+This fixer cleans duplicate triggers for webapp services, and recreates missing
+triggers.
 
 
 ```
