@@ -16,7 +16,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/appfs"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -107,7 +109,25 @@ func (f *httpFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err er
 }
 
 func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefix string) (err error) {
-	exists, err := fs.Start(man.Slug(), man.Version(), man.Checksum())
+	// Happy path: it exists and we don't need to acquire the lock.
+	exists, err := fs.Exist(man.Slug(), man.Version(), man.Checksum())
+	if err != nil || exists {
+		return err
+	}
+
+	// For the lock key, we use the checksum when available, and else, we
+	// fallback on the app name.
+	mu := lock.ReadWrite(prefixer.GlobalPrefixer, "app-"+man.Slug()+"-"+man.Checksum())
+	if err = mu.Lock(); err != nil {
+		log := logger.WithNamespace("fetcher")
+		log.Infof("cannot get lock: %s", err)
+		return err
+	}
+	defer mu.Unlock()
+
+	// We need to check again if it exists, as the app can have been installed
+	// while we were waiting for the lock.
+	exists, err = fs.Start(man.Slug(), man.Version(), man.Checksum())
 	if err != nil || exists {
 		return err
 	}
