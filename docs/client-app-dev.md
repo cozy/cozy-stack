@@ -176,6 +176,8 @@ There are also some helpers to inject asset tags or URLs:
 -   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
 -   `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
     cozy-client-js.
+-   `{{.CozyFonts}}` will be replaced by the `fonts.css` used to inject the
+    web fonts (Lato and Lato bold by default).
 -   `{{.ThemeCSS}}` will be replaced by the `theme.css`. It is empty by default,
     but can be overrided by using `contexts`. See
     [contexts](https://docs.cozy.io/en/cozy-stack/assets/#contexts) and [dynamic
