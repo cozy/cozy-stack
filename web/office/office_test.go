@@ -54,7 +54,6 @@ func TestOffice(t *testing.T) {
 
 	ts = setup.GetTestServer("/office", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("OnlyOfficeLocal", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", ts.URL+"/office/"+fileID+"/open", nil)

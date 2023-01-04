@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -38,7 +37,6 @@ func TestShortcuts(t *testing.T) {
 
 	ts = setup.GetTestServer("/shortcuts", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = weberrors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("CreateShortcut", func(t *testing.T) {
 		body := `

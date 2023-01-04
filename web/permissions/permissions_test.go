@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -55,8 +54,6 @@ func TestPermissions(t *testing.T) {
 
 	ts = testSetup.GetTestServer("/permissions", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-
-	os.Exit(testSetup.Run())
 
 	t.Run("CreateShareSetByMobileRevokeByLinkedApp", func(t *testing.T) {
 		// Create OAuthLinkedClient

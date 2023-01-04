@@ -14,7 +14,6 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -115,8 +114,6 @@ func TestAuth(t *testing.T) {
 	if err != nil {
 		setup.CleanupAndDie("Could not install mini konnector.", err)
 	}
-
-	os.Exit(setup.Run())
 
 	t.Run("InstanceBlocked", func(t *testing.T) {
 		// Block the instance

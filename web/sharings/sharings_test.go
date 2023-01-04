@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -131,7 +130,6 @@ func TestSharings(t *testing.T) {
 		replSetup.Cleanup()
 		return nil
 	})
-	os.Exit(setup.Run())
 
 	t.Run("CreateSharingSuccess", func(t *testing.T) {
 		bobContact := createBobContact()

@@ -87,7 +87,6 @@ func TestIntents(t *testing.T) {
 
 	ts = setup.GetTestServer("/intents", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("CreateIntent", func(t *testing.T) {
 		body := `{

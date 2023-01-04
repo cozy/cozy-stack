@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"regexp"
 	"testing"
 
@@ -86,7 +85,6 @@ func TestOidc(t *testing.T) {
 	if err != nil {
 		panic("Could not init dynamic FS")
 	}
-	os.Exit(testSetup.Run())
 
 	t.Run("StartWithOnboardingNotFinished", func(t *testing.T) {
 		// Should get a 200 with body "activate your cozy"

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -49,7 +48,6 @@ func TestBitwarden(t *testing.T) {
 
 	ts = setup.GetTestServer("/bitwarden", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("Prelogin", func(t *testing.T) {
 		body := `{ "email": "me@bitwarden.example.net" }`

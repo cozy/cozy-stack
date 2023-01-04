@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -20,7 +19,6 @@ func TestStatus(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	os.Exit(m.Run())
 
 	t.Run("Routes", func(t *testing.T) {
 		handler := echo.New()

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/contact"
@@ -35,7 +34,6 @@ func TestContacts(t *testing.T) {
 	})
 	_, token = setup.GetTestClient(consts.Contacts)
 	ts = setup.GetTestServer("/contacts", Routes)
-	os.Exit(setup.Run())
 
 	t.Run("Myself", func(t *testing.T) {
 		req, _ := http.NewRequest("POST", ts.URL+"/contacts/myself", nil)

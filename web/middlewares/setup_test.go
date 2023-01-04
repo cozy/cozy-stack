@@ -1,7 +1,6 @@
 package middlewares_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -29,7 +28,5 @@ func TestSetup(t *testing.T) {
 		panic("Could not init dynamic FS")
 	}
 	_ = web.SetupAssets(echo.New(), config.GetConfig().Assets)
-
-	os.Exit(setup.Run())
 
 }

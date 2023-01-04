@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -80,8 +79,6 @@ func TestSettings(t *testing.T) {
 	})
 	tsC = setupFlagship.GetTestServer("/settings", Routes)
 	tsC.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-
-	os.Exit(setup.Run())
 
 	t.Run("GetContext", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", ts.URL+"/settings/context", nil)

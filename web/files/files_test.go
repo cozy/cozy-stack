@@ -95,8 +95,6 @@ func TestFiles(t *testing.T) {
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	os.Exit(setup.Run())
-
 	t.Run("Changes", func(t *testing.T) {
 		_, foo := createDir(t, "/files/?Name=foo&Type=directory")
 		fooID := foo["data"].(map[string]interface{})["id"].(string)

@@ -3,7 +3,6 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -32,7 +31,6 @@ func TestRouting(t *testing.T) {
 	if err != nil {
 		panic("Could not init dynamic FS")
 	}
-	os.Exit(setup.Run())
 
 	t.Run("SetupAssets", func(t *testing.T) {
 		e := echo.New()

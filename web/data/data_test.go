@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -79,8 +78,6 @@ func TestData(t *testing.T) {
 			"test": "testvalue",
 		},
 	})
-
-	os.Exit(setup.Run())
 
 	t.Run("SuccessGet", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)

@@ -127,8 +127,6 @@ func TestApps(t *testing.T) {
 
 	_, token = setup.GetTestClient(consts.Apps + " " + consts.Konnectors)
 
-	os.Exit(setup.Run())
-
 	t.Run("Serve", func(t *testing.T) {
 		assertAuthGet(t, "/foo/", "text/html; charset=utf-8", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
 		assertAuthGet(t, "/foo/hello.html", "text/html; charset=utf-8", "world {{.Token}}")

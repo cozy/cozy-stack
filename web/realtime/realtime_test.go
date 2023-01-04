@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +38,6 @@ func TestRealtime(t *testing.T) {
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient("io.cozy.foos io.cozy.bars io.cozy.bazs")
 	ts = setup.GetTestServer("/realtime", Routes)
-	os.Exit(setup.Run())
 
 	t.Run("WSNoAuth", func(t *testing.T) {
 		u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)

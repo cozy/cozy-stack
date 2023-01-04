@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -79,7 +78,6 @@ func TestJobs(t *testing.T) {
 		return r
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("GetQueue", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/queue/print", nil)

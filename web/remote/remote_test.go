@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -33,7 +32,6 @@ func TestRemote(t *testing.T) {
 	token = generateAppToken(testInstance, "answers", "org.wikidata.entity")
 
 	ts = setup.GetTestServer("/remote", Routes)
-	os.Exit(setup.Run())
 
 	t.Run("RemoteGET", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", ts.URL+"/remote/org.wikidata.entity?entity=Q42&comment=foo", nil)

@@ -51,7 +51,6 @@ func TestNotes(t *testing.T) {
 		"/realtime": webRealtime.Routes,
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	os.Exit(setup.Run())
 
 	t.Run("CreateNote", func(t *testing.T) {
 		body := `

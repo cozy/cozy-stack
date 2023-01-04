@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 
@@ -65,8 +64,6 @@ func TestOauth(t *testing.T) {
 	req, _ := http.NewRequest("POST", ts.URL+"/login", nil)
 	req.Host = testInstance.Domain
 	_, _ = client.Do(req)
-
-	os.Exit(setup.Run())
 
 	t.Run("AccessCodeOauthFlow", func(t *testing.T) {
 		redirectURI := ts.URL + "/accounts/test-service/redirect"
