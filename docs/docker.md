@@ -15,7 +15,7 @@ $ docker run -d \
     -p 5984:5984 \
     -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
-    couchdb:3.2
+    couchdb:3.3
 $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
 ```
 
