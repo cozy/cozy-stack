@@ -1067,7 +1067,24 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 		checks = append(checks, credentialsChecks...)
 
 		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
-			if !s.Owner || !s.Active || s.Initial || s.ReadOnly() {
+			if !s.Owner {
+				return nil
+			}
+
+			parentSharingID, err := findParentFileSharingID(inst, s)
+			if err != nil {
+				return err
+			} else if parentSharingID != "" {
+				checks = append(checks, map[string]interface{}{
+					"id":             s.SID,
+					"type":           "sharing_in_sharing",
+					"instance":       inst.Domain,
+					"parent_sharing": parentSharingID,
+				})
+				return nil
+			}
+
+			if !s.Active || s.Initial || s.ReadOnly() {
 				return nil
 			}
 
@@ -1109,6 +1126,19 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 					continue
 				}
 
+				parentSharingID, err := findParentFileSharingID(m, ms)
+				if err != nil {
+					return err
+				} else if parentSharingID != "" {
+					checks = append(checks, map[string]interface{}{
+						"id":             ms.SID,
+						"type":           "sharing_in_sharing",
+						"instance":       m.Domain,
+						"parent_sharing": parentSharingID,
+					})
+					continue
+				}
+
 				checks = append(checks, s.checkSharingTreesConsistency(inst, ownerDocs, m, ms)...)
 			}
 		}
@@ -1116,6 +1146,62 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 		return nil
 	})
 	return checks, err
+}
+
+// findParentFileSharingID returns the first sharing found accepting the root of
+// the given sharing.
+//
+// Since have a sharing within another one will generate unexpected behavior,
+// the goal is to find these situations.
+func findParentFileSharingID(inst *instance.Instance, sharing *Sharing) (string, error) {
+	// 1. Get all root files for the sharing being checked
+	sharingRule := sharing.FirstFilesRule()
+	if sharingRule == nil {
+		return "", nil
+	}
+
+	var sharingRoots []couchdb.JSONDoc
+	for _, id := range sharingRule.Values {
+		var sharingRoot couchdb.JSONDoc
+		if err := couchdb.GetDoc(inst, consts.Files, id, &sharingRoot); err != nil {
+			return "", err
+		}
+		sharingRoots = append(sharingRoots, sharingRoot)
+	}
+
+	// 2. Get all other file sharings on inst
+	fileSharings, err := GetSharingsByDocType(inst, consts.Files)
+	if err != nil {
+		return "", err
+	}
+
+	var sharingIDs []string
+	for _, fileSharing := range fileSharings {
+		// Do not add sharing in sharing error for the sharing currently checked
+		if fileSharing.ID() == sharing.ID() {
+			continue
+		}
+
+		sharingIDs = append(sharingIDs, fileSharing.ID())
+	}
+
+	sharedDocsBySharingID, err := GetSharedDocsBySharingIDs(inst, sharingIDs)
+	if err != nil {
+		return "", err
+	}
+
+	// 3. Check if one of the shared roots is part of another sharing
+	for _, sharedRoot := range sharingRoots {
+		for sid, sharedDocs := range sharedDocsBySharingID {
+			for _, sharedDoc := range sharedDocs {
+				if sharedRoot.ID() == sharedDoc.ID {
+					return sid, nil
+				}
+			}
+		}
+	}
+
+	return "", nil
 }
 
 func (s *Sharing) checkSharingTriggers(inst *instance.Instance, accepted bool) (checks []map[string]interface{}) {
