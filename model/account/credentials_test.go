@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -19,6 +18,8 @@ import (
 )
 
 func TestEncryptDecrytCredentials(t *testing.T) {
+	config.UseTestFile()
+
 	encryptedCreds1, err := EncryptCredentials("me@mycozy.cloud", "fzEE6HFWsSp8jP")
 	require.NoError(t, err)
 
@@ -54,6 +55,8 @@ func TestEncryptDecrytCredentials(t *testing.T) {
 }
 
 func TestEncryptDecrytUTF8Credentials(t *testing.T) {
+	config.UseTestFile()
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 1024; i++ {
 		login := string(crypto.GenerateRandomBytes(rng.Intn(256)))
@@ -85,6 +88,8 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 }
 
 func TestDecryptCredentialsRandom(t *testing.T) {
+	config.UseTestFile()
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 1024; i++ {
 		encrypted := base64.StdEncoding.EncodeToString(crypto.GenerateRandomBytes(rng.Intn(256)))
@@ -102,6 +107,8 @@ func TestDecryptCredentialsRandom(t *testing.T) {
 }
 
 func TestRandomBitFlipsCredentials(t *testing.T) {
+	config.UseTestFile()
+
 	original, err := EncryptCredentials("toto@titi.com", "X3hVYLJLRiUyCs")
 	require.NoError(t, err)
 
@@ -147,6 +154,8 @@ func TestRandomBitFlipsCredentials(t *testing.T) {
 }
 
 func TestEncryptDecryptData(t *testing.T) {
+	config.UseTestFile()
+
 	var data interface{}
 	err := json.Unmarshal([]byte(`{"foo":"bar","baz":{"quz": "quuz"}}`), &data)
 	require.NoError(t, err)
@@ -161,6 +170,8 @@ func TestEncryptDecryptData(t *testing.T) {
 }
 
 func TestRandomBitFlipsBuffer(t *testing.T) {
+	config.UseTestFile()
+
 	plainBuffer := make([]byte, 256)
 	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
 	require.NoError(t, err)
@@ -206,6 +217,8 @@ func TestRandomBitFlipsBuffer(t *testing.T) {
 }
 
 func TestAccountsEncryptDecrypt(t *testing.T) {
+	config.UseTestFile()
+
 	v := []byte(`
 {
     "_id": "d01aa821781612dce542a13d6989e6d0",
@@ -281,9 +294,4 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 			assert.False(t, ok2)
 		}
 	}
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	os.Exit(m.Run())
 }
