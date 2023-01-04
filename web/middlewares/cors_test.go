@@ -36,5 +36,4 @@ func TestCors(t *testing.T) {
 		_ = h(c)
 		assert.Equal(t, "", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 	})
-
 }

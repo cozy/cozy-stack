@@ -29,5 +29,4 @@ func TestSetup(t *testing.T) {
 		panic("Could not init dynamic FS")
 	}
 	_ = web.SetupAssets(echo.New(), config.GetConfig().Assets)
-
 }

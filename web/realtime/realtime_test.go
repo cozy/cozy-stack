@@ -229,7 +229,6 @@ func TestRealtime(t *testing.T) {
 		doc := payload["doc"].(map[string]interface{})
 		assert.Equal(t, "world", doc["hello"])
 	})
-
 }
 
 func (t *testDoc) ID() string      { return t.id }

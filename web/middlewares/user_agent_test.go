@@ -82,7 +82,6 @@ func TestUser(t *testing.T) {
 		assert.Equal(t, -1, v)
 		assert.Equal(t, false, ok)
 	})
-
 }
 
 func (sr *stupidRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {

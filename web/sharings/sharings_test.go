@@ -835,7 +835,6 @@ func TestSharings(t *testing.T) {
 		host = sharings.ClearAppInURL("https://my-cozy.example.net/")
 		assert.Equal(t, "https://my-cozy.example.net/", host)
 	})
-
 }
 
 func assertSharingByAliceToBobAndDave(t *testing.T, members []interface{}) {

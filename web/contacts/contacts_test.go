@@ -51,7 +51,6 @@ func TestContacts(t *testing.T) {
 		assert.NoError(t, err)
 		assertMyself(t, res2)
 	})
-
 }
 
 func assertMyself(t *testing.T, res *http.Response) {

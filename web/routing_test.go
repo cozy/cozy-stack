@@ -148,5 +148,4 @@ func TestRouting(t *testing.T) {
 			assert.Equal(t, k, w.Body.String())
 		}
 	})
-
 }

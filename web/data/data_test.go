@@ -1093,7 +1093,6 @@ func TestData(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "403 Forbidden", res.Status)
 	})
-
 }
 
 func jsonReader(data interface{}) io.Reader {

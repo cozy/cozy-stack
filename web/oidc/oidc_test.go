@@ -252,7 +252,6 @@ func TestOidc(t *testing.T) {
 		assert.Equal(t, "/auth/twofactor", redirected.Path)
 		assert.NotNil(t, redirected.Query().Get("two_factor_token"))
 	})
-
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

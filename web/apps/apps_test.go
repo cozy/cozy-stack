@@ -668,7 +668,6 @@ func TestApps(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 403, res.StatusCode)
 	})
-
 }
 
 func doGet(path string, auth bool) (*http.Response, error) {

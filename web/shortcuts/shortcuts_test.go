@@ -126,5 +126,4 @@ func TestShortcuts(t *testing.T) {
 		assert.Equal(t, 303, res.StatusCode)
 		assert.Equal(t, targetURL, res.Header.Get("Location"))
 	})
-
 }

@@ -157,7 +157,6 @@ func TestNot(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, doc9.NotSynchronizedOn, 1)
 	})
-
 }
 
 func makeNotSynchronzedOnTestDir(t *testing.T, doc couchdb.Doc, name string) *vfs.DirDoc {

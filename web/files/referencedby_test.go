@@ -192,5 +192,4 @@ func TestReferencedby(t *testing.T) {
 		assert.Len(t, doc.ReferencedBy, 1)
 		assert.Equal(t, "fooalbumid2", doc.ReferencedBy[0].ID)
 	})
-
 }

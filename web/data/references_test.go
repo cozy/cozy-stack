@@ -255,7 +255,6 @@ func TestReferences(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, fdoc2.ReferencedBy, 0)
 	})
-
 }
 
 func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {

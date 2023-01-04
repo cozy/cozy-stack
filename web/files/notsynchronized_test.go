@@ -191,5 +191,4 @@ func TestNotsynchronized(t *testing.T) {
 		assert.Len(t, doc.NotSynchronizedOn, 1)
 		assert.Equal(t, "fooclientid2", doc.NotSynchronizedOn[0].ID)
 	})
-
 }

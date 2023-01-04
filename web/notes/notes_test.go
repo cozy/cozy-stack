@@ -837,7 +837,6 @@ Text with **bold** and [underlined]{.underlined}.
 		attrs, _ = data["attributes"].(map[string]interface{})
 		assert.Equal(t, inst.Domain, attrs["instance"])
 	})
-
 }
 
 func assertInitialNote(t *testing.T, result map[string]interface{}) {

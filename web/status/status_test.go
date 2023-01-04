@@ -30,7 +30,6 @@ func TestStatus(t *testing.T) {
 
 		testRequest(t, ts.URL+"/status")
 	})
-
 }
 
 func testRequest(t *testing.T, url string) {

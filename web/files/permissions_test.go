@@ -61,7 +61,6 @@ func TestPermissions(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 403, res.StatusCode)
 	})
-
 }
 
 func request(m, path, token string, body io.Reader) (*http.Response, error) {

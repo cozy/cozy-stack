@@ -148,7 +148,6 @@ func TestIntents(t *testing.T) {
 		assert.NoError(t, err)
 		checkIntentResult(t, res, false)
 	})
-
 }
 
 func checkIntentResult(t *testing.T, res *http.Response, fromWeb bool) {

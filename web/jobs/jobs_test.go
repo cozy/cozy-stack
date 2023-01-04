@@ -706,7 +706,6 @@ func TestJobs(t *testing.T) {
 		assert.NotEmpty(t, v3.Data.Attributes.StartedAt)
 		assert.NotEmpty(t, v3.Data.Attributes.FinishedAt)
 	})
-
 }
 
 func SetToken(next echo.HandlerFunc) echo.HandlerFunc {

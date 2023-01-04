@@ -447,7 +447,6 @@ func TestReplicator(t *testing.T) {
 		assert.NotEmpty(t, attrs["created_at"])
 		assert.NotEmpty(t, attrs["updated_at"])
 	})
-
 }
 
 func uuidv4() string {

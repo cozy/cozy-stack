@@ -1013,7 +1013,6 @@ func TestSettings(t *testing.T) {
 		assert.Equal(t, "context", attrs2["ratio_0.999999"])
 		assert.Equal(t, "context", attrs2["ratio_1"])
 	})
-
 }
 
 func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {

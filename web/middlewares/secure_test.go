@@ -111,5 +111,4 @@ func TestSecure(t *testing.T) {
 		r = appendCSPRule("script '*'; toto;", "frame-ancestors", "new-rule")
 		assert.Equal(t, "script '*'; toto;frame-ancestors new-rule;", r)
 	})
-
 }

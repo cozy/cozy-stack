@@ -86,5 +86,4 @@ func TestCsrf(t *testing.T) {
 		assert.Error(t, err)
 		csrfTokenFromQuery("csrf")
 	})
-
 }

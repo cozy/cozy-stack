@@ -135,7 +135,6 @@ func TestOffice(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "version 2", string(buf))
 	})
-
 }
 
 func createFile() error {

@@ -973,7 +973,6 @@ func TestBitwarden(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, res.StatusCode)
 	})
-
 }
 
 func assertCipherResponse(t *testing.T, result map[string]interface{}) {

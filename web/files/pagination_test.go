@@ -268,7 +268,6 @@ func TestPagination(t *testing.T) {
 
 		trash(t, "/files/"+parentID)
 	})
-
 }
 
 func getJSON(t *testing.T, url string, out interface{}) error {

@@ -894,7 +894,6 @@ func TestPermissions(t *testing.T) {
 		_, err = uninstaller.RunSync()
 		assert.NoError(t, err)
 	})
-
 }
 
 func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {

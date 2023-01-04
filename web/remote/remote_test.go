@@ -65,7 +65,6 @@ func TestRemote(t *testing.T) {
 		meta, _ := logged["cozyMetadata"].(map[string]interface{})
 		assert.Equal(t, "answers", meta["createdByApp"])
 	})
-
 }
 
 func generateAppToken(inst *instance.Instance, slug, doctype string) string {

@@ -39,7 +39,6 @@ import (
 var (
 	ts           *httptest.Server
 	testInstance *instance.Instance
-	setup        *testutils.TestSetup
 	token        string
 	clientID     string
 	imgID        string
@@ -2745,7 +2744,6 @@ func TestFiles(t *testing.T) {
 	t.Run("DeprecatePreviewAndIcon", func(t *testing.T) {
 		testutils.TODO(t, "2023-12-01", "Remove the deprecated preview and icon for PDF files")
 	})
-
 }
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
