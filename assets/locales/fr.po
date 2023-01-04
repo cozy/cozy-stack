@@ -1,21 +1,22 @@
-#
+# 
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
-# Paul Tran-Van <paul@cozycloud.cc>, 2020
 # JC Pagnon <gooz@cozycloud.cc>, 2021
 # Matthieu AMBRY <matthieu@ambry.eu>, 2021
 # Bruno Michel, 2021
-#
+# Cozy Cloud <contact@cozycloud.cc>, 2022
+# Sebastien BLAISOT <sebastien@blaisot.org>, 2023
+# 
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel, 2021\n"
+"Last-Translator: Sebastien BLAISOT <sebastien@blaisot.org>, 2023\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Plural-Forms: nplurals=3; plural=(n == 0 || n == 1) ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
 
 msgid "Time Format Long"
 msgstr "le 2 Jan 2006 à 15h04"
@@ -42,7 +43,7 @@ msgid "Notes New note"
 msgstr "Nouvelle note"
 
 msgid "Back icon label"
-msgstr "Revenir à l'écran précédent"
+msgstr "écran précédent"
 
 msgid "Login Credentials error"
 msgstr ""
@@ -64,7 +65,7 @@ msgstr "Bonne pratique :"
 msgid "Login Password tip"
 msgstr ""
 "n’entrez jamais votre mot de passe sans vérifier que l’adresse ci-dessus "
-"est bien celle de votre Cozy."
+"correspond bien à celle de votre Cozy."
 
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
@@ -128,7 +129,7 @@ msgid "Login Two factor field"
 msgstr "Code (6 chiffres)"
 
 msgid "Login Two factor help"
-msgstr "Entrer le code de vérification qui vient de vous être envoyé par mail"
+msgstr "Saisissez le code reçu par mail"
 
 msgid "Login Two factor device trust field"
 msgstr "Faire confiance à cet appareil"
@@ -154,37 +155,53 @@ msgstr "Mot de passe oublié"
 
 msgid "Passphrase reset Help hint"
 msgstr ""
-"L'indice que vous avez laissé à la création du mot de passe vous sera envoyé par email."
+"Vous avez laissé un indice pour retrouver votre mot de passe. Cliquez sur le"
+" bouton ci-dessous pour le recevoir par email."
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"L'indice que vous avez laissé à la création du mot de passe Cozy pass vous sera envoyé par email."
+"Vous avez laissé un indice pour retrouver votre mot de passe Cozy pass. "
+"Cliquez sur le bouton ci-dessous pour le recevoir par email."
 
 msgid "Passphrase reset Submit hint"
-msgstr "M'aider à retrouver mon mot de passe"
+msgstr "Recevoir mon indice"
+
+msgid "Passphrase reset password Title"
+msgstr ""
+"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
+" :"
+
+msgid "Passphrase reset password Title Cozy Pass"
+msgstr ""
+"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
+" Cozy Pass :"
+
+msgid "Passphrase reset Help Warning"
+msgstr ""
+"Attention ! Vous perdrez toutes les données de votre gestionnaire de mots de"
+" passe Cozy Pass"
 
 msgid "Passphrase reset Help Message"
 msgstr ""
-"Attention ! Votre mot de passe actuel est l’unique moyen "
-"pour accéder aux mots de passe gardés par votre app « Cozy Pass ». "
-"Si vous le réinitialisez, vous perdrez ces données. "
-"Le reste de vos données resteront accessibles."
+"si vous réinitialisez votre mot de passe. Le reste des données de votre Cozy"
+" resteront accessibles. En effet, votre mot de passe actuel est l'unique "
+"moyen pour accéder aux mots de passe gardés par votre app « Cozy Pass »."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
-"Un lien vous sera envoyé par email "
+"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
 "pour choisir un nouveau mot de passe."
 
 msgid "Passphrase reset Help emptyVault Cozy Pass"
 msgstr ""
-"Un lien vous sera envoyé par email "
+"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
 "pour choisir un nouveau mot de passe Cozy Pass."
 
 msgid "Passphrase reset Submit"
-msgstr "Réinitialiser mon mot de passe (dernier recours)"
+msgstr "Réinitialiser mon mot de passe"
 
 msgid "Passphrase reset Submit emptyVault"
-msgstr "Réinitialiser mon mot de passe"
+msgstr "Changer mon mot de passe"
 
 msgid "Hint sent Title"
 msgstr "Consultez vos e-mails !"
@@ -199,9 +216,6 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Utilisez au moins huit caractères avec des lettres, des chiffres et des "
 "symboles."
-
-msgid "Passphrase Pass Error"
-msgstr "Votre mot de passe est trop court !"
 
 msgid "Passphrase Hint Error"
 msgstr "Votre indice doit être différent de votre mot de passe !"
@@ -222,10 +236,8 @@ msgstr "Terminer"
 
 msgid "Hint sent Body"
 msgstr ""
-"Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver votre mot de passe Cozy."
-
-msgid "Hint sent Detail"
-msgstr ""
+"Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver votre mot de passe Cozy.\n"
+"\n"
 "Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "
 
 msgid "Hint sent Login Button"
@@ -233,10 +245,7 @@ msgstr "Aller à la page de connexion"
 
 msgid "Passphrase is reset Body"
 msgstr ""
-"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce lien pour réinitialiser votre mot de passe."
-
-msgid "Passphrase is reset Detail"
-msgstr ""
+"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce lien pour réinitialiser votre mot de passe.\n"
 "Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver."
 
 msgid "Passphrase is reset Login Button"
@@ -281,7 +290,7 @@ msgid "Authorize Client presentation"
 msgstr "voudrait accéder aux données suivantes du cozy "
 
 msgid "Authorize Sharing Request"
-msgstr "Partagé par"
+msgstr "a partagé avec vous :"
 
 msgid "Authorize Sharing Description start"
 msgstr ""
@@ -312,9 +321,8 @@ msgstr "ici"
 
 msgid "Authorize Give permission"
 msgstr ""
-"En cliquant sur **Autoriser**, "
-"vous autorisez l'application à accéder à vos données, selon ses conditions "
-"de service et sa politique de confidentialité."
+"En cliquant sur **Autoriser**, vous autorisez l'application à accéder à vos "
+"données, selon ses conditions de service et sa politique de confidentialité."
 
 msgid "Authorize Submit"
 msgstr "Autoriser"
@@ -326,49 +334,15 @@ msgid "Authorize Linked Title"
 msgstr "Demande de permissions"
 
 msgid "Authorize Linked Webapp"
-msgstr "Une application déclarée comme :"
+msgstr "Une application déclare être :"
 
 msgid "Authorize Linked YourCozy"
-msgstr "demande l'accès à votre Cozy :"
+msgstr "Elle demande l'accès à votre Cozy :"
 
 msgid "Authorize Linked Help"
 msgstr ""
-"L'application demande à accéder aux données suivantes de votre Cozy :"
-
-msgid "Authorize Confirm Flagship title"
-msgstr "Application non certifiée"
-
-msgid "Authorize Confirm Flagship help"
-msgstr ""
-"La provenance de cette application n'est pas certifiée. "
-"Un code à 6 chiffres vous a été evoyé par email à l’adresse : %s "
-"Saisissez le code pour confirmer votre volonté d’utiliser l’application"
-
-msgid "Authorize Confirm Flagship more link"
-msgstr "https://support.cozy.io/"
-
-msgid "Authorize Confirm Flagship more text"
-msgstr "en savoir plus"
-
-msgid "Authorize Confirm Flagship field"
-msgstr "Code de confirmation"
-
-msgid "Authorize Confirm Flagship Confirm"
-msgstr "Confirmer"
-
-msgid "Confirm Flagship Invalid code"
-msgstr "Code invalide"
-
-msgid "Mail Confirm Flagship Subject"
-msgstr "Code de confirmation"
-
-msgid "Mail Confirm Flagship Greeting"
-msgstr "Bonjour %s,"
-
-msgid "Mail Confirm Flagship Intro"
-msgstr ""
-"Pour confirmer votre volonté d'utiliser l'application Cozy, "
-"copiez le code suivant et entrez-le dans l'application :"
+"En l'autorisant, l'application pourra accéder aux données suivantes de votre"
+" Cozy :"
 
 msgid "Move delegated auth Title"
 msgstr "Confirmation du déménagement"
@@ -388,7 +362,7 @@ msgid "Move in progress Title"
 msgstr "Déménagement en cours"
 
 msgid "Move in progress Box"
-msgstr "Depuis **%s** vers **%s**"
+msgstr "Depuis %s vers %s"
 
 msgid "Move in progress Description"
 msgstr ""
@@ -431,28 +405,28 @@ msgstr "Importer mes mots de passe"
 
 msgid "Move Vault Description"
 msgstr ""
-"Suivez les étapes suivantes pour importer les mots de passe que vous avez "
-"exportés en début de parcours :"
+"Suivez les étapes ci-dessous pour importer les mots de passe que vous venez "
+"d'exporter :"
 
 msgid "Move Vault Step 1"
 msgstr "Ouvrez l'extension Cozy installée sur votre navigateur"
 
 msgid "Move Vault Step 2"
 msgstr ""
-"Déconnectez votre ancien Cozy, puis connectez-vous à l'extension avec votre "
+"Déconnectez-vous, puis connectez-vous à l'extension avec l'URL de votre "
 "nouveau Cozy"
 
 msgid "Move Vault Step 3"
-msgstr "Rendez-vous sur « **Paramètres / Importer des éléments** »"
+msgstr "Cliquez sur « Paramètres » en bas puis sur « Importer des éléments »"
 
 msgid "Move Vault Step 4"
 msgstr ""
-"Sélectionnez le format source « **Bitwarden (json)** » cliquez sur « **choisir "
-"un fichier** » et sélectionnez le fichier que vous avez exporté depuis votre "
+"Sélectionnez le format source « Bitwarden (json) » cliquez sur « choisir un "
+"fichier » et sélectionnez le fichier que vous avez exporté depuis votre "
 "extension au début du déménagement"
 
 msgid "Move Vault Step 5"
-msgstr "Cliquez sur « **Importer** »"
+msgstr "Cliquez sur « Importer »"
 
 msgid "Move Vault Link"
 msgstr "J'ai importé mes mots de passe"
@@ -461,7 +435,7 @@ msgid "Move Vault Ignore"
 msgstr "Ignorer cette étape"
 
 msgid "Error Title"
-msgstr "Nous avons rencontré une erreur inattendue."
+msgstr "Désolé, une erreur inattendue est survenue."
 
 msgid "Error Internal Server Error Title"
 msgstr "Oops…"
@@ -487,15 +461,15 @@ msgid "Error Application not installed Message"
 msgstr "Cette application n'est pas encore disponible dans votre Cozy."
 
 msgid "Error Application not found Title"
-msgstr "L’application n’existe pas"
+msgstr "Cette application n'existe pas"
 
 msgid "Error Application not found Message"
 msgstr ""
-"Nous n’avons trouvé aucune application correspondant à cette adresse dans votre Cozy. "
-"Il s’agit peut-être d’une erreur de frappe."
+"Nous n'avons trouvé aucune application qui corresponde à cette adresse dans "
+"votre Cozy. Peut-être avez-vous fait une faute de frappe ?"
 
 msgid "Error Application not found Action"
-msgstr "Retourner à l’accueil"
+msgstr "Aller à l'accueil"
 
 msgid "Error Application not found Button"
 msgstr "Installer cette application"
@@ -504,16 +478,13 @@ msgid "Error Address forgotten"
 msgstr "J'ai oublié mon adresse"
 
 msgid "Error Contact us"
-msgstr "Un problème, une suggestion ? Contactez-nous à"
+msgstr "Un problème, une question ? Contactez nous à"
 
 msgid "Error Contact instance blocked"
-msgstr "Contactez-nous, si vous souhaitez en savoir plus, à l'adresse"
+msgstr "Si vous souhaitez en savoir plus, contactez-nous à"
 
 msgid "Error Message instance blocked"
-msgstr "Le fonctionnement de votre Cozy a été momentanément interrompu"
-
-msgid "Error The authentication has failed"
-msgstr "L'authentification n'a pu aboutir"
+msgstr "Votre Cozy a été bloqué"
 
 msgid "Instance Blocked Login"
 msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"
@@ -560,12 +531,6 @@ msgstr "Le type de réponse est invalide"
 msgid "Error Invalid scope"
 msgstr "Le paramètre scope est invalide"
 
-msgid "Error Invalid challenge code method"
-msgstr "Le paramètre code_challenge_method est invalide"
-
-msgid "Error No challenge code"
-msgstr "Le paramètre code_challenge doit être fourni en présence du paramètre code_challenge_method"
-
 msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
 
@@ -593,7 +558,7 @@ msgid "Error Sharing already accepted"
 msgstr "Vous pourrez retrouver ce partage sur votre Cozy."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Aller sur mon Cozy"
+msgstr "Aller à mon Cozy"
 
 msgid "Two Factor Activation"
 msgstr "L'authentification en deux étapes est activée"
@@ -602,12 +567,6 @@ msgid "Confirmation User Content"
 msgstr ""
 "Votre adresse e-mail est maintenant confirmée. La double-authentification a "
 "bien été activée avec succès sur votre Cozy."
-
-msgid "Permissions Maximal"
-msgstr "Toutes les données"
-
-msgid "Permissions Wildcard"
-msgstr ", avec les données associées "
 
 msgid "Permissions Read only"
 msgstr ", en lecture seule "
@@ -634,7 +593,7 @@ msgid "Permissions com.bitwarden.folders"
 msgstr "Dossiers du gestionnaire de mot de passe"
 
 msgid "Permissions com.bitwarden.organizations"
-msgstr "Dossiers partagés de mot de passe"
+msgstr "Organisations du gestionnaire de mot de passe"
 
 msgid "Permissions io.cozy.accounts"
 msgstr "Comptes"
@@ -669,14 +628,8 @@ msgstr "Groupes de récurrence bancaire"
 msgid "Permissions io.cozy.bills"
 msgstr "Factures"
 
-msgid "Permissions io.cozy.coachco2.settings"
-msgstr "Paramètres de l'application"
-
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"
-
-msgid "Permissions io.cozy.contacts.groups"
-msgstr "Groupes de contacts"
 
 msgid "Permissions io.cozy.files"
 msgstr "Fichiers"
@@ -702,9 +655,6 @@ msgstr "Préférences de notifications de l'application"
 msgid "Permissions io.cozy.photos.albums"
 msgstr "Albums photos"
 
-msgid "Permissions io.cozy.tags"
-msgstr "Tags"
-
 msgid "Permissions io.cozy.timeseries.geojson"
 msgstr "Déplacements"
 
@@ -715,16 +665,13 @@ msgid "Permissions io.cozy.jobs"
 msgstr "Tâches à exécuter"
 
 msgid "Permissions io.cozy.triggers"
-msgstr "Planification de tâches à exécuter"
+msgstr "Planification de tâches à exécuter dans le futur"
 
 msgid "Permissions io.cozy.permissions"
 msgstr "Délégation de permissions"
 
 msgid "Permissions io.cozy.oauth.clients"
 msgstr "Appareils connectés"
-
-msgid "Permissions io.cozy.sharings"
-msgstr "Liste de partages"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contrat (Maif)"
@@ -750,25 +697,7 @@ msgstr "Déclarations d'assurance (Maif)"
 msgid "Permissions cc.cozycloud.autocategorization"
 msgstr "Fichier d'enrichissement du modèle de catégorisation"
 
-msgid "Permissions cc.cozycloud.dacc"
-msgstr "Statistiques agrégées anonymes"
-
-msgid "Permissions cc.cozycloud.dacc.dev"
-msgstr "Statistiques agrégées anonymes pour le développement"
-
-msgid "Permissions cc.cozycloud.dacc_v2"
-msgstr "Statistiques agrégées anonymes"
-
-msgid "Permissions cc.cozycloud.dacc.dev_v2"
-msgstr "Statistiques agrégées anonymes pour le développement"
-
-msgid "Permissions eu.mycozy.dacc_v2"
-msgstr "Statistiques agrégées anonymes"
-
 msgid "Permissions cc.cozycloud.sentry"
-msgstr "Journaux de l'application"
-
-msgid "Permissions cc.cozycloud.errors"
 msgstr "Journaux de l'application"
 
 msgid "Mail Greeting"
@@ -1054,7 +983,7 @@ msgid "Mail Sharing Request Intro"
 msgstr "Bonjour,"
 
 msgid "Mail Sharing Request Description"
-msgstr "%s (%s) vous invite à %s le %s **%s** sur son espace personnel, Cozy."
+msgstr "%s (%s) vous invite à %s le %s %s sur son espace personnel, Cozy."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "consulter"
@@ -1064,20 +993,6 @@ msgstr "modifier"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Accéder au %s"
-
-msgid "Mail Sharing Member To Confirm Subject"
-msgstr "Vérification demandée pour finaliser le partage de vos mot de passe"
-
-msgid "Mail Sharing Member To Confirm Intro"
-msgstr "Bonjour %s,"
-
-msgid "Mail Sharing Member To Confirm Description"
-msgstr ""
-"%s a accepté votre partage de mot de passe. "
-"Afin de finaliser ce partage, vous devez vérifier l'identité de son Cozy."
-
-msgid "Mail Sharing Member To Confirm Button"
-msgstr "Vérifier l'identité"
 
 msgid "Mail Alert Account Subject"
 msgstr ""
@@ -1105,9 +1020,6 @@ msgstr "Vous avez un nouveau partage disponible dans votre Cozy"
 msgid "Notification Sharing Description"
 msgstr "%s vous invite à %s le %s %s"
 
-msgid "Notification Sharing Type Organization"
-msgstr "dossier partagé de mots de passe"
-
 msgid "Notification Sharing Type Document"
 msgstr "document"
 
@@ -1121,7 +1033,7 @@ msgid "Notification Sharing Button text"
 msgstr "Voir le partage"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Renseignez l'adresse de votre Cozy"
+msgstr "Se connecter à votre Cozy"
 
 msgid "Sharing Empty name"
 msgstr "Quelqu'un"
@@ -1129,11 +1041,8 @@ msgstr "Quelqu'un"
 msgid "Sharing Empty description"
 msgstr "Surprise !"
 
-msgid "Sharing Discovery Intro"
-msgstr "Votre adresse sera communiquée à %s pour simplifier vos futurs partages"
-
 msgid "Sharing Discovery URL field"
-msgstr "Adresse de mon Cozy"
+msgstr "L'adresse de votre Cozy"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
@@ -1155,7 +1064,10 @@ msgid "Sharing Discover Cozy"
 msgstr "Découvrez Cozy maintenant !"
 
 msgid "Sharing Forgotten URL"
-msgstr "J'ai oublié mon adresse"
+msgstr "URL oubliée ? Pas de souci."
+
+msgid "Sharing Forgotten URL email"
+msgstr "Vérifiez votre boite e-mail en recherchant \"Cozy\"."
 
 msgid "Notifications Disk Quota Subject"
 msgstr "Vous avez atteint 90% de votre espace de stockage."
@@ -1190,7 +1102,7 @@ msgstr ""
 msgid "Compat Subtitle"
 msgstr ""
 "Assurez-vous de disposer de la version la plus récente ou télécharger l'une "
-"de ces options pour profiter pleinement de votre Cozy. Nous recommandons "
+"de ses options pour profiter pleinement de votre Cozy. Nous recommandons "
 "Firefox !"
 
 msgid "Compat Browser Chrome Link"
@@ -1220,6 +1132,3 @@ msgid "Compat Guide Link"
 msgstr ""
 "https://support.cozy.io/article/273-cozy-nest-pas-compatible-avec-internet-"
 "explorer-11"
-
-msgid "File copy Suffix"
-msgstr "copie"
