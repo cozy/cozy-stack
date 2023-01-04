@@ -538,7 +538,7 @@ msgstr "All the data"
 msgid "Permissions Read only"
 msgstr ", and related documents"
 
-msgid "Permissions Read only"
+msgid "Permissions Wildcard"
 msgstr ", for read only"
 
 msgid "Permissions disk usage"
