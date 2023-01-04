@@ -232,7 +232,9 @@ func checkSharings(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	results, err := sharing.CheckSharings(i)
+	skipFSConsistency, _ := strconv.ParseBool(c.QueryParam("SkipFSConsistency"))
+
+	results, err := sharing.CheckSharings(i, skipFSConsistency)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return c.JSON(http.StatusOK, []map[string]interface{}{

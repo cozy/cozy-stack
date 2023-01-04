@@ -15,6 +15,7 @@ import (
 var flagCheckFSIndexIntegrity bool
 var flagCheckFSFilesConsistensy bool
 var flagCheckFSFailFast bool
+var flagCheckSharingsFast bool
 
 var checkCmdGroup = &cobra.Command{
 	Use:   "check <command>",
@@ -173,6 +174,16 @@ var checkSharingsCmd = &cobra.Command{
 This command checks that the io.cozy.sharings have no inconsistencies. It can
 be triggers that are missing on an active sharing, or missing credentials for
 an active member.
+
+There are 2 steps:
+
+- setup integrity checks that there are nothing wrong in the configuration like
+  a missing trigger
+- files and folders consistency checks that the shared documents are the same
+  for all members
+
+By default, both operations are done, but you can choose to skip the consistency
+check via the flags.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -184,6 +195,9 @@ an active member.
 		res, err := c.Req(&request.Options{
 			Method: "POST",
 			Path:   "/instances/" + url.PathEscape(domain) + "/checks/sharings",
+			Queries: url.Values{
+				"SkipFSConsistency": {strconv.FormatBool(flagCheckSharingsFast)},
+			},
 		})
 		if err != nil {
 			return err
@@ -214,6 +228,7 @@ func init() {
 	checkFSCmd.Flags().BoolVar(&flagCheckFSIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	checkFSCmd.Flags().BoolVar(&flagCheckFSFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
 	checkFSCmd.Flags().BoolVar(&flagCheckFSFailFast, "fail-fast", false, "Stop the FSCK on the first error")
+	checkSharingsCmd.Flags().BoolVar(&flagCheckSharingsFast, "fast", false, "Skip the sharings FS consistency check")
 
 	RootCmd.AddCommand(checkCmdGroup)
 }

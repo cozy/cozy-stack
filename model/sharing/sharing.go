@@ -1033,7 +1033,7 @@ func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string
 
 // CheckSharings will scan all the io.cozy.sharings documents and check their
 // triggers and members/credentials.
-func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
+func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[string]interface{}, error) {
 	checks := []map[string]interface{}{}
 	err := couchdb.ForeachDocs(inst, consts.Sharings, func(_ string, data json.RawMessage) error {
 		s := &Sharing{}
@@ -1139,7 +1139,9 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 					continue
 				}
 
-				checks = append(checks, s.checkSharingTreesConsistency(inst, ownerDocs, m, ms)...)
+				if !skipFSConsistency {
+					checks = append(checks, s.checkSharingTreesConsistency(inst, ownerDocs, m, ms)...)
+				}
 			}
 		}
 

@@ -17,6 +17,7 @@ cozy-stack check sharings <domain> [flags]
 ### Options
 
 ```
+      --fast   Skip the sharings FS consistency check
   -h, --help   help for sharings
 ```
 
