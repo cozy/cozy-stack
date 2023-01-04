@@ -10,11 +10,23 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/sharings"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +50,76 @@ func TestReplicator(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	build.BuildMode = build.ModeDev
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb()
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Prepare Alice's instance
+	setup := testutils.NewSetup(nil, t.Name()+"_alice")
+	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
+		Email:      "alice@example.net",
+		PublicName: "Alice",
+	})
+	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
+	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
+	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
+	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
+	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings":    sharings.Routes,
+		"/permissions": permissions.Routes,
+	})
+	tsA.Config.Handler.(*echo.Echo).Renderer = render
+	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	// Prepare Bob's browser
+	jar := setup.GetCookieJar()
+	bobUA = &http.Client{
+		CheckRedirect: noRedirect,
+		Jar:           jar,
+	}
+
+	// Prepare Bob's instance
+	bobSetup := testutils.NewSetup(nil, t.Name()+"_bob")
+	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
+		Email:         "bob@example.net",
+		PublicName:    "Bob",
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
+		Key:           "xxx",
+	})
+	bobAppToken = generateAppToken(bobInstance, "testapp", iocozytests)
+	edwardContact = createContact(bobInstance, "Edward", "edward@example.net")
+	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
+		"/sharings": sharings.Routes,
+	})
+	tsB.Config.Handler.(*echo.Echo).Renderer = render
+	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	// Prepare another instance for the replicator tests
+	replSetup := testutils.NewSetup(nil, t.Name()+"_replicator")
+	replInstance = replSetup.GetTestInstance()
+	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+
+	err := dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
+	setup.AddCleanup(func() error {
+		bobSetup.Cleanup()
+		replSetup.Cleanup()
+		return nil
+	})
 
 	t.Run("CreateSharingForReplicatorTest", func(t *testing.T) {
 		rule := sharing.Rule{
