@@ -34,7 +34,8 @@ func TestRealtime(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "realtime_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient("io.cozy.foos io.cozy.bars io.cozy.bazs")
 	ts = setup.GetTestServer("/realtime", Routes)

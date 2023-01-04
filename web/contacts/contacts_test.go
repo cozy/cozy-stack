@@ -27,7 +27,8 @@ func TestContacts(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "contacts_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.com",
 		PublicName: "Alice",

@@ -33,7 +33,8 @@ func TestOidc(t *testing.T) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
-	testSetup := testutils.NewSetup(m, "oidc_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 
@@ -47,10 +48,10 @@ func TestOidc(t *testing.T) {
 	}
 	job.AddWorker(wl)
 
-	testInstance = testSetup.GetTestInstance(&lifecycle.Options{ContextName: "foocontext"})
+	testInstance = setup.GetTestInstance(&lifecycle.Options{ContextName: "foocontext"})
 
 	// Mocking API endpoint to validate token
-	ts = testSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/oidc": Routes,
 		"/token": func(g *echo.Group) {
 			g.POST("/getToken", handleToken)

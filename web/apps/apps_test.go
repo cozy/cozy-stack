@@ -60,7 +60,8 @@ func TestApps(t *testing.T) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "apps_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	err := setup.SetupSwiftTest()
 	if err != nil {
 		panic("Could not init Swift test")

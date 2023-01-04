@@ -43,16 +43,17 @@ func TestPermissions(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	testSetup := testutils.NewSetup(m, "permissions_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
-	testInstance = testSetup.GetTestInstance()
+	testInstance = setup.GetTestInstance()
 	scopes := "io.cozy.contacts io.cozy.files:GET io.cozy.events"
-	client, tok := testSetup.GetTestClient(scopes)
+	client, tok := setup.GetTestClient(scopes)
 	clientVal = client
 	clientID = client.ClientID
 	token = tok
 
-	ts = testSetup.GetTestServer("/permissions", Routes)
+	ts = setup.GetTestServer("/permissions", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	t.Run("CreateShareSetByMobileRevokeByLinkedApp", func(t *testing.T) {

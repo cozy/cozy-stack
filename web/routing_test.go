@@ -24,7 +24,8 @@ func TestRouting(t *testing.T) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../assets"
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "routing_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	inst := setup.GetTestInstance()
 	domain = inst.Domain
 	err := dynamic.InitDynamicAssetFS()

@@ -17,7 +17,8 @@ func TestSetup(t *testing.T) {
 
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
-	setup := testutils.NewSetup(m, "middlewares_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
 	err := setup.SetupSwiftTest()
 	if err != nil {

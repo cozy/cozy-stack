@@ -66,7 +66,8 @@ func TestFiles(t *testing.T) {
 		os.Exit(1)
 	}
 	testutils.NeedCouchdb()
-	setup = testutils.NewSetup(m, "files_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
 	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {

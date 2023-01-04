@@ -26,7 +26,6 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-var setup *testutils.TestSetup
 var jar *testutils.CookieJar
 var client *http.Client
 
@@ -39,7 +38,8 @@ func TestOauth(t *testing.T) {
 	build.BuildMode = build.ModeDev
 	testutils.NeedCouchdb()
 
-	setup = testutils.NewSetup(m, "oauth-konnectors")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	ts = setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun)
@@ -338,7 +338,6 @@ func TestOauth(t *testing.T) {
 		require.Len(t, cookies, 1)
 		assert.Equal(t, cookies[0].Name, "cozysessid")
 	})
-
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

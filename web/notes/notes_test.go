@@ -41,7 +41,8 @@ func TestNotes(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "notes_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 

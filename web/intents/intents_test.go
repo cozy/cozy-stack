@@ -37,7 +37,8 @@ func TestIntents(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "intents_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	ins = setup.GetTestInstance(&lifecycle.Options{
 		Domain: "cozy.example.net",
 	})

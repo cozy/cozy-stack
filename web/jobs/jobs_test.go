@@ -49,7 +49,8 @@ func TestJobs(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "jobs_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "print",

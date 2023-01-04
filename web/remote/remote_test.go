@@ -26,7 +26,8 @@ func TestRemote(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "remote_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
 	testInstance = setup.GetTestInstance()
 	token = generateAppToken(testInstance, "answers", "org.wikidata.entity")

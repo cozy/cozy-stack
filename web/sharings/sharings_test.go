@@ -70,7 +70,8 @@ func TestSharings(t *testing.T) {
 	middlewares.BuildTemplates()
 
 	// Prepare Alice's instance
-	setup := testutils.NewSetup(m, "sharing_test_alice")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
@@ -94,7 +95,8 @@ func TestSharings(t *testing.T) {
 	}
 
 	// Prepare Bob's instance
-	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
 		Email:         "bob@example.net",
 		PublicName:    "Bob",
@@ -115,7 +117,8 @@ func TestSharings(t *testing.T) {
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	// Prepare another instance for the replicator tests
-	replSetup := testutils.NewSetup(m, "sharing_test_replicator")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	replInstance = replSetup.GetTestInstance()
 	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings": sharings.Routes,
