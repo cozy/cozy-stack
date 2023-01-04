@@ -535,7 +535,7 @@ msgstr "Your e-mail is now confirmed. We successfully activated two-factor authe
 msgid "Permissions Maximal"
 msgstr "All the data"
 
-msgid "Permissions Read wildcard"
+msgid "Permissions Wildcard"
 msgstr ", and related documents"
 
 msgid "Permissions Read only"
