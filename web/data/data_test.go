@@ -866,10 +866,9 @@ func TestNormalDocs(t *testing.T) {
 		Name:    "foobar",
 		Doctype: Type,
 		Map: `
-function(doc) {
-  emit(doc.foobar, doc);
-}
-		`,
+  function(doc) {
+    emit(doc.foobar, doc);
+  }`,
 	}
 	g, _ := errgroup.WithContext(context.Background())
 	couchdb.DefineViews(g, testInstance, []*couchdb.View{view})

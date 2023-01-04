@@ -354,8 +354,7 @@ func TestPatchNoopFail(t *testing.T) {
 	    "attributes": { }
 	    }
 	  }
-	}
-`)
+	}`)
 
 	assert.Error(t, err)
 }
@@ -374,8 +373,7 @@ func TestBadPatchAddRuleForbidden(t *testing.T) {
 					}
 				}
 	    }
-	  }
-`)
+	  }`)
 
 	assert.Error(t, err)
 }
@@ -394,8 +392,7 @@ func TestPatchAddRule(t *testing.T) {
 					}
 				}
 	    }
-	  }
-`)
+	  }`)
 
 	data := out["data"].(map[string]interface{})
 	assert.Equal(t, id, data["id"])
@@ -420,8 +417,7 @@ func TestPatchRemoveRule(t *testing.T) {
 					}
 				}
 	    }
-	  }
-`)
+	  }`)
 
 	data := out["data"].(map[string]interface{})
 	assert.Equal(t, id, data["id"])
@@ -449,8 +445,7 @@ func TestPatchChangesCodes(t *testing.T) {
 					}
 				}
 			}
-		}
-`)
+		}`)
 	assert.Error(t, err)
 
 	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
@@ -461,8 +456,7 @@ func TestPatchChangesCodes(t *testing.T) {
 					}
 				}
 	    }
-	  }
-`)
+	  }`)
 
 	require.NoError(t, err)
 
@@ -527,24 +521,25 @@ func TestRevokeByAnotherApp(t *testing.T) {
 }
 
 func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {
-	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes, tok, `{
-"data": {
-	"type": "io.cozy.permissions",
-	"attributes": {
-		"permissions": {
-			"whatever": {
-				"type":   "io.cozy.files",
-				"verbs":  ["GET"],
-				"values": ["io.cozy.music"]
-			},
-			"otherrule": {
-				"type":   "io.cozy.files",
-				"verbs":  ["GET"],
-				"values":  ["some-other-dir"]
-		  }
-		}
-	}
-}
+	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes, tok, `
+  {
+    "data": {
+      "type": "io.cozy.permissions",
+      "attributes": {
+        "permissions": {
+          "whatever": {
+            "type":   "io.cozy.files",
+            "verbs":  ["GET"],
+            "values": ["io.cozy.music"]
+          },
+          "otherrule": {
+            "type":   "io.cozy.files",
+            "verbs":  ["GET"],
+            "values":  ["some-other-dir"]
+          }
+        }
+      }
+    }
 	}`)
 	if err != nil {
 		return "", nil, err
@@ -558,19 +553,20 @@ func createTestSubPermissions(tok string, codes string) (string, map[string]inte
 }
 
 func createTestTinyCode(tok string, codes string, ttl string) (string, map[string]interface{}, error) {
-	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes+"&tiny=true&ttl="+ttl, tok, `{
-"data": {
-	"type": "io.cozy.permissions",
-	"attributes": {
-		"permissions": {
-			"whatever": {
-				"type":   "io.cozy.files",
-				"verbs":  ["GET"],
-				"values": ["id.`+codes+`"]
-		  }
-		}
-	}
-}
+	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes+"&tiny=true&ttl="+ttl, tok, `
+  {
+    "data": {
+      "type": "io.cozy.permissions",
+      "attributes": {
+        "permissions": {
+          "whatever": {
+            "type":   "io.cozy.files",
+            "verbs":  ["GET"],
+            "values": ["id.`+codes+`"]
+          }
+        }
+      }
+    }
 	}`)
 	if err != nil {
 		return "", nil, err
