@@ -40,26 +40,26 @@ function write_into_until_end_function  () {
 }
 
 
-mkdir -p /tmp/migration
+TMPDIR=`mktemp -d`
 
 # Iterate on all file path given in argument.
 for arg in "$@"
 do
-  rm -f "/tmp/migration/test.txt"
-  rm -f "/tmp/migration/utils.txt"
-  rm -f "/tmp/migration/other.txt"
-  rm -f "/tmp/migration/main.txt"
-  rm -f "/tmp/migration/out.go"
+  rm -f "$TMPDIR/test.txt"
+  rm -f "$TMPDIR/utils.txt"
+  rm -f "$TMPDIR/other.txt"
+  rm -f "$TMPDIR/main.txt"
+  rm -f "$TMPDIR/out.go"
 
   # Need to create this file manually because only one of the file inside
   # the package have a `TestMain` function.
   #
   # If a test file doesn't have a TestMain we will need to copy/pasta it
   # manually in a next commit.
-  touch /tmp/migration/main.txt
-  touch /tmp/migration/utils.txt
-  touch /tmp/migration/other.txt
-  touch /tmp/migration/test.txt
+  touch "$TMPDIR/main.txt"
+  touch "$TMPDIR/utils.txt"
+  touch "$TMPDIR/other.txt"
+  touch "$TMPDIR/test.txt"
 
   COUNTER=1
 
@@ -88,66 +88,66 @@ do
       func\ TestMain*)
         # Skip the proto
         COUNTER=$((COUNTER+1))
-        write_into_until_end_function "/tmp/migration/main.txt"
-        echo "" >> "/tmp/migration/main.txt"
+        write_into_until_end_function "$TMPDIR/main.txt"
+        echo "" >> "$TMPDIR/main.txt"
         ;;
 
       func\ Test*)
         newProto=$(sed "s/func Test\([a-zA-Z0-9]*\)(t \*testing.T) {/t.Run(\"\1\", func(t *testing.T) {/g" <<< $line)
         testName=$(sed "s/func Test\([a-zA-Z0-9]*\)(t \*testing.T) {/\1/g" <<< $line)
         # echo "Migrate $fileTestName/$testName"
-        echo "$newProto" >> "/tmp/migration/test.txt"
+        echo "$newProto" >> "$TMPDIR/test.txt"
         COUNTER=$((COUNTER+1))
-        write_into_until_end_function "/tmp/migration/test.txt"
-        echo "})" >> "/tmp/migration/test.txt"
-        echo "" >> "/tmp/migration/test.txt"
+        write_into_until_end_function "$TMPDIR/test.txt"
+        echo "})" >> "$TMPDIR/test.txt"
+        echo "" >> "$TMPDIR/test.txt"
         ;;
 
       func*)
-        write_into_until_end_function  "/tmp/migration/utils.txt"
-        echo "}" >> "/tmp/migration/utils.txt"
-        echo "" >> "/tmp/migration/utils.txt"
+        write_into_until_end_function  "$TMPDIR/utils.txt"
+        echo "}" >> "$TMPDIR/utils.txt"
+        echo "" >> "$TMPDIR/utils.txt"
         ;;
 
       *)
-        echo $line >> "/tmp/migration/other.txt"
+        echo $line >> "$TMPDIR/other.txt"
         COUNTER=$((COUNTER+1))
         ;;
     esac
   done
 
-  cat "/tmp/migration/other.txt" >> "/tmp/migration/out.go"
+  cat "$TMPDIR/other.txt" >> "$TMPDIR/out.go"
 
   printf '%s\n' \
     "func Test${fileTestName}(t *testing.T) {" \
     " if testing.Short() {" \
     " t.Skip(\"an instance is required for this test: test skipped due to the use of --short flag\")" \
     "}" \
-    "" >> "/tmp/migration/out.go"
+    "" >> "$TMPDIR/out.go"
 
-  cat "/tmp/migration/main.txt" >> "/tmp/migration/out.go"
-  echo "" >> "/tmp/migration/out.go"
+  cat "$TMPDIR/main.txt" >> "$TMPDIR/out.go"
+  echo "" >> "$TMPDIR/out.go"
 
 # add the sub tests
-cat "/tmp/migration/test.txt" >> "/tmp/migration/out.go"
+cat "$TMPDIR/test.txt" >> "$TMPDIR/out.go"
 
 # close the test
-echo "}" >> "/tmp/migration/out.go"
-echo "" >> "/tmp/migration/out.go"
+echo "}" >> "$TMPDIR/out.go"
+echo "" >> "$TMPDIR/out.go"
 
 # add the helpers at the end
-cat "/tmp/migration/utils.txt" >> "/tmp/migration/out.go"
+cat "$TMPDIR/utils.txt" >> "$TMPDIR/out.go"
 
 # Replace original file by the newly created file
-mv /tmp/migration/out.go $arg
+mv $TMPDIR/out.go $arg
 
 gofmt -s -w $arg
 
-rm -f "/tmp/migration/test.txt"
-rm -f "/tmp/migration/utils.txt"
-rm -f "/tmp/migration/other.txt"
-rm -f "/tmp/migration/main.txt"
-rm -f "/tmp/migration/out.go"
+rm -f "$TMPDIR/test.txt"
+rm -f "$TMPDIR/utils.txt"
+rm -f "$TMPDIR/other.txt"
+rm -f "$TMPDIR/main.txt"
+rm -f "$TMPDIR/out.go"
 done
 
-rm -rf "/tmp/migration"
+rm -rf "$TMPDIR"
