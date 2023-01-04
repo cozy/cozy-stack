@@ -1,8 +1,0 @@
-[main]
-host = https://www.transifex.com
-
-[cozy-stack.global]
-file_filter = assets/locales/<lang>.po
-source_file = assets/locales/en.po
-source_lang = en
-type = PO
