@@ -535,10 +535,10 @@ msgstr "Your e-mail is now confirmed. We successfully activated two-factor authe
 msgid "Permissions Maximal"
 msgstr "All the data"
 
-msgid "Permissions Read only"
+msgid "Permissions Read wildcard"
 msgstr ", and related documents"
 
-msgid "Permissions Wildcard"
+msgid "Permissions Read only"
 msgstr ", for read only"
 
 msgid "Permissions disk usage"
@@ -604,7 +604,7 @@ msgstr "Application settings"
 msgid "Permissions io.cozy.contacts"
 msgstr "Contacts"
 
-msgid "Permissions io.cozy.contacts"
+msgid "Permissions io.cozy.contacts.groups"
 msgstr "Groups of contacts"
 
 msgid "Permissions io.cozy.files"
