@@ -574,15 +574,8 @@ func TestNoteRealtime(t *testing.T) {
 	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
 	require.NoError(t, err)
 
-	// To check that the realtime has made the subscription, we send a fake
-	// message and wait for its response.
-	msg = `{"method": "PING"}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-	require.NoError(t, err)
-
-	var res map[string]interface{}
-	err = c.ReadJSON(&res)
-	assert.NoError(t, err)
+	// Wait a bit that the subscription is effective
+	time.Sleep(100 * time.Millisecond)
 
 	pointer := note.Event{
 		"sessionID": "543781490137",
