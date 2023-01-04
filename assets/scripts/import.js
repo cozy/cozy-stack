@@ -1,4 +1,4 @@
-;(function (w) {
+(function (w) {
   var url = w.location.host + '/move/importing/realtime'
   if (w.location.protocol === 'http:') {
     url = 'ws://' + url

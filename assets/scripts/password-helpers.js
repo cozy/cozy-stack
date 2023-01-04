@@ -1,4 +1,4 @@
-;(function (w) {
+(function (w) {
   // Return given password strength as an object {percentage, label}
   function getStrength(password) {
     if (!password && password !== '') {

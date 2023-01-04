@@ -1,4 +1,4 @@
-;(function (w, d) {
+(function (w, d) {
   const form = d.getElementById('oidc-twofactor-form')
   const trustedTokenInput = d.getElementById('trusted-device-token')
 

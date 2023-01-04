@@ -30,7 +30,7 @@ scripts/golangci-lint: Makefile
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
-	@scripts/node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
+	@scripts/node_modules/.bin/eslint -c scripts/eslintrc.json "assets/scripts/**" tests/integration/konnector/*.js
 .PHONY: jslint
 
 ## pretty: make the assets prettier
