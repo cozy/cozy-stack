@@ -41,10 +41,7 @@ func TestLifecycle(t *testing.T) {
 		os.Exit(1)
 	}
 
-	cleanInstance()
-	res := m.Run()
-	cleanInstance()
-	os.Exit(res)
+	t.Cleanup(cleanInstance)
 
 	t.Run("ChooseCouchCluster", func(t *testing.T) {
 		clusters := []config.CouchDBCluster{

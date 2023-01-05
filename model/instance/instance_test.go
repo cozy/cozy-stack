@@ -1,7 +1,6 @@
 package instance_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -12,13 +11,7 @@ import (
 )
 
 func TestInstance(t *testing.T) {
-	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
-	}
-
 	config.UseTestFile()
-	res := m.Run()
-	os.Exit(res)
 
 	t.Run("Subdomain", func(t *testing.T) {
 		inst := &instance.Instance{

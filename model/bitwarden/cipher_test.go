@@ -27,7 +27,6 @@ func TestCipher(t *testing.T) {
 		fmt.Printf("Error while starting the job system: %s\n", err)
 		os.Exit(1)
 	}
-	os.Exit(m.Run())
 
 	t.Run("DeleteUnrecoverableCiphers", func(t *testing.T) {
 		domain := "cozy.example.net"

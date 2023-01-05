@@ -37,11 +37,9 @@ func TestIntents(t *testing.T) {
 		os.Exit(1)
 	}
 
-	res := m.Run()
-
-	_ = couchdb.DeleteDB(ins, consts.Apps)
-
-	os.Exit(res)
+	t.Cleanup(func() {
+		_ = couchdb.DeleteDB(ins, consts.Apps)
+	})
 
 	t.Run("GenerateHref", func(t *testing.T) {
 		intent := &Intent{IID: "6fba9dd6-1487-11e7-b90d-130a5dedd6d6"}

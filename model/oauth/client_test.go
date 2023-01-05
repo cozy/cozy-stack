@@ -1,7 +1,6 @@
 package oauth_test
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -29,9 +28,8 @@ func TestClient(t *testing.T) {
 
 	config.UseTestFile()
 	setup := testutils.NewSetup(m, "oauth_client")
+	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()
-	os.Exit(m.Run())
-	setup.Cleanup()
 
 	t.Run("CreateJWT", func(t *testing.T) {
 		tokenString, err := c.CreateJWT(testInstance, "test", "foo:read")
