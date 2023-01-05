@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -13,6 +12,25 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestStatus(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+
+	t.Run("Routes", func(t *testing.T) {
+		handler := echo.New()
+		handler.HTTPErrorHandler = errors.ErrorHandler
+		Routes(handler.Group("/status"))
+
+		ts := httptest.NewServer(handler)
+		defer ts.Close()
+
+		testRequest(t, ts.URL+"/status")
+	})
+}
 
 func testRequest(t *testing.T, url string) {
 	res, err := http.Get(url)
@@ -31,20 +49,4 @@ func testRequest(t *testing.T, url string) {
 	assert.Equal(t, "OK", data["status"])
 	assert.Equal(t, "OK", data["message"])
 	assert.Contains(t, data, "latency")
-}
-
-func TestRoutes(t *testing.T) {
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	Routes(handler.Group("/status"))
-
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-
-	testRequest(t, ts.URL+"/status")
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	os.Exit(m.Run())
 }

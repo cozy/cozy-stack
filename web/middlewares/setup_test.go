@@ -1,7 +1,6 @@
 package middlewares_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -11,10 +10,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func TestMain(m *testing.M) {
+func TestSetup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
-	setup := testutils.NewSetup(m, "middlewares_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 
 	err := setup.SetupSwiftTest()
 	if err != nil {
@@ -25,6 +29,4 @@ func TestMain(m *testing.M) {
 		panic("Could not init dynamic FS")
 	}
 	_ = web.SetupAssets(echo.New(), config.GetConfig().Assets)
-
-	os.Exit(setup.Run())
 }

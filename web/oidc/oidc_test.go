@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"regexp"
 	"testing"
 
@@ -26,177 +25,16 @@ import (
 var testInstance *instance.Instance
 var ts *httptest.Server
 
-func TestStartWithOnboardingNotFinished(t *testing.T) {
-	// Should get a 200 with body "activate your cozy"
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
-	req.Host = testInstance.Domain
-	assert.NoError(t, err)
-
-	// Preventing redirects
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	content, err := io.ReadAll(res.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(content), "Onboarding Not activated")
-}
-
-func TestStartWithOnboardingFinished(t *testing.T) {
-	onboardingFinished := true
-	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
-
-	// Should return a 303 redirect
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
-	req.Host = testInstance.Domain
-	assert.NoError(t, err)
-
-	// Preventing redirection to assert we are effectively redirected
-	c := &http.Client{CheckRedirect: noRedirect}
-	res, err := c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 303, res.StatusCode)
-	location := res.Header["Location"][0]
-	redirected, err := url.Parse(location)
-	assert.NoError(t, err)
-	assert.Equal(t, "foobar.com", redirected.Host)
-	assert.Equal(t, "/authorize", redirected.Path)
-
-	values, err := url.ParseQuery(redirected.RawQuery)
-	assert.NoError(t, err)
-	assert.NotNil(t, values.Get("client_id"))
-	assert.NotNil(t, values.Get("nonce"))
-	assert.NotNil(t, values.Get("redirect_uri"))
-	assert.NotNil(t, values.Get("response_type"))
-	assert.NotNil(t, values.Get("state"))
-	assert.NotNil(t, values.Get("scope"))
-}
-
-func TestStateIsMandatoryForLogin(t *testing.T) {
-	onboardingFinished := true
-	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
-
-	// Should return a 303 redirect
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
-	req.Host = testInstance.Domain
-	assert.NoError(t, err)
-
-	// Preventing redirection to assert we are effectively redirected
-	c := &http.Client{CheckRedirect: noRedirect}
-	res, err := c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 303, res.StatusCode)
-	location := res.Header["Location"][0]
-	redirected, err := url.Parse(location)
-	assert.NoError(t, err)
-	assert.Equal(t, "foobar.com", redirected.Host)
-	assert.Equal(t, "/authorize", redirected.Path)
-
-	values, err := url.ParseQuery(redirected.RawQuery)
-	assert.NoError(t, err)
-	assert.NotNil(t, values.Get("client_id"))
-	assert.NotNil(t, values.Get("nonce"))
-	assert.NotNil(t, values.Get("redirect_uri"))
-	assert.NotNil(t, values.Get("response_type"))
-	assert.NotNil(t, values.Get("state"))
-	assert.NotNil(t, values.Get("scope"))
-
-	// Get the login page, assert we have an error if state is missing
-	stateID := values.Get("state")
-	values.Del("state")
-	v := values.Encode()
-	reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
-	assert.NoError(t, err)
-	reqLogin.Host = testInstance.Domain
-	resLogin, err := c.Do(reqLogin)
-	assert.NoError(t, err)
-	assert.Equal(t, 404, resLogin.StatusCode)
-
-	// And the login page should work with the state
-	values.Add("state", stateID)
-	v = values.Encode()
-	reqLogin, err = http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
-	assert.NoError(t, err)
-	reqLogin.Host = testInstance.Domain
-	resLogin, err = c.Do(reqLogin)
-	assert.NoError(t, err)
-	assert.Equal(t, 303, resLogin.StatusCode)
-	location = resLogin.Header["Location"][0]
-	assert.Equal(t, location, testInstance.DefaultRedirection().String())
-}
-
-func TestLoginWith2FA(t *testing.T) {
-	onboardingFinished := true
-	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished, AuthMode: "two_factor_mail"})
-
-	// Should return a 303 redirect
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
-	req.Host = testInstance.Domain
-	assert.NoError(t, err)
-
-	// Preventing redirection to assert we are effectively redirected
-	c := &http.Client{CheckRedirect: noRedirect}
-	res, err := c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 303, res.StatusCode)
-	location := res.Header["Location"][0]
-	redirected, err := url.Parse(location)
-	assert.NoError(t, err)
-	assert.Equal(t, "foobar.com", redirected.Host)
-	assert.Equal(t, "/authorize", redirected.Path)
-
-	values, err := url.ParseQuery(redirected.RawQuery)
-	assert.NoError(t, err)
-	assert.NotNil(t, values.Get("client_id"))
-	assert.NotNil(t, values.Get("nonce"))
-	assert.NotNil(t, values.Get("redirect_uri"))
-	assert.NotNil(t, values.Get("response_type"))
-	assert.NotNil(t, values.Get("state"))
-	assert.NotNil(t, values.Get("scope"))
-
-	// Get the login page, assert we have the 2FA activated
-	values.Add("token", "foo")
-	v := values.Encode()
-	reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
-	assert.NoError(t, err)
-	reqLogin.Host = testInstance.Domain
-	resLogin, err := c.Do(reqLogin)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, resLogin.StatusCode)
-	content, err := io.ReadAll(resLogin.Body)
-	assert.NoError(t, err)
-	assert.Contains(t, string(content), `<form id="oidc-twofactor-form"`)
-	re := regexp.MustCompile(`name="access-token" value="(\w+)"`)
-	matches := re.FindStringSubmatch(string(content))
-	assert.Len(t, matches, 2)
-	accessToken := matches[1]
-
-	// Check that the user is redirected to the 2FA page
-	values = url.Values{
-		"access-token":         {accessToken},
-		"trusted-device-token": {""},
-		"redirect":             {""},
-		"confirm":              {""},
+func TestOidc(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
-	body := bytes.NewReader([]byte(values.Encode()))
-	req2FA, err := http.NewRequest(http.MethodPost, ts.URL+"/oidc/twofactor", body)
-	assert.NoError(t, err)
-	req2FA.Host = testInstance.Domain
-	res2FA, err := c.Do(req2FA)
-	assert.NoError(t, err)
-	assert.Equal(t, 303, res2FA.StatusCode)
 
-	locationLogin := res2FA.Header["Location"][0]
-	redirected, err = url.Parse(locationLogin)
-	assert.NoError(t, err)
-	assert.Equal(t, "/auth/twofactor", redirected.Path)
-	assert.NotNil(t, redirected.Query().Get("two_factor_token"))
-}
-
-func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
-	testSetup := testutils.NewSetup(m, "oidc_test")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 
@@ -210,10 +48,10 @@ func TestMain(m *testing.M) {
 	}
 	job.AddWorker(wl)
 
-	testInstance = testSetup.GetTestInstance(&lifecycle.Options{ContextName: "foocontext"})
+	testInstance = setup.GetTestInstance(&lifecycle.Options{ContextName: "foocontext"})
 
 	// Mocking API endpoint to validate token
-	ts = testSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/oidc": Routes,
 		"/token": func(g *echo.Group) {
 			g.POST("/getToken", handleToken)
@@ -248,7 +86,172 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Could not init dynamic FS")
 	}
-	os.Exit(testSetup.Run())
+
+	t.Run("StartWithOnboardingNotFinished", func(t *testing.T) {
+		// Should get a 200 with body "activate your cozy"
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
+		req.Host = testInstance.Domain
+		assert.NoError(t, err)
+
+		// Preventing redirects
+		res, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, res.StatusCode)
+		content, err := io.ReadAll(res.Body)
+		assert.NoError(t, err)
+		assert.Contains(t, string(content), "Onboarding Not activated")
+	})
+
+	t.Run("StartWithOnboardingFinished", func(t *testing.T) {
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+
+		// Should return a 303 redirect
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
+		req.Host = testInstance.Domain
+		assert.NoError(t, err)
+
+		// Preventing redirection to assert we are effectively redirected
+		c := &http.Client{CheckRedirect: noRedirect}
+		res, err := c.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 303, res.StatusCode)
+		location := res.Header["Location"][0]
+		redirected, err := url.Parse(location)
+		assert.NoError(t, err)
+		assert.Equal(t, "foobar.com", redirected.Host)
+		assert.Equal(t, "/authorize", redirected.Path)
+
+		values, err := url.ParseQuery(redirected.RawQuery)
+		assert.NoError(t, err)
+		assert.NotNil(t, values.Get("client_id"))
+		assert.NotNil(t, values.Get("nonce"))
+		assert.NotNil(t, values.Get("redirect_uri"))
+		assert.NotNil(t, values.Get("response_type"))
+		assert.NotNil(t, values.Get("state"))
+		assert.NotNil(t, values.Get("scope"))
+	})
+
+	t.Run("StateIsMandatoryForLogin", func(t *testing.T) {
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+
+		// Should return a 303 redirect
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
+		req.Host = testInstance.Domain
+		assert.NoError(t, err)
+
+		// Preventing redirection to assert we are effectively redirected
+		c := &http.Client{CheckRedirect: noRedirect}
+		res, err := c.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 303, res.StatusCode)
+		location := res.Header["Location"][0]
+		redirected, err := url.Parse(location)
+		assert.NoError(t, err)
+		assert.Equal(t, "foobar.com", redirected.Host)
+		assert.Equal(t, "/authorize", redirected.Path)
+
+		values, err := url.ParseQuery(redirected.RawQuery)
+		assert.NoError(t, err)
+		assert.NotNil(t, values.Get("client_id"))
+		assert.NotNil(t, values.Get("nonce"))
+		assert.NotNil(t, values.Get("redirect_uri"))
+		assert.NotNil(t, values.Get("response_type"))
+		assert.NotNil(t, values.Get("state"))
+		assert.NotNil(t, values.Get("scope"))
+
+		// Get the login page, assert we have an error if state is missing
+		stateID := values.Get("state")
+		values.Del("state")
+		v := values.Encode()
+		reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
+		assert.NoError(t, err)
+		reqLogin.Host = testInstance.Domain
+		resLogin, err := c.Do(reqLogin)
+		assert.NoError(t, err)
+		assert.Equal(t, 404, resLogin.StatusCode)
+
+		// And the login page should work with the state
+		values.Add("state", stateID)
+		v = values.Encode()
+		reqLogin, err = http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
+		assert.NoError(t, err)
+		reqLogin.Host = testInstance.Domain
+		resLogin, err = c.Do(reqLogin)
+		assert.NoError(t, err)
+		assert.Equal(t, 303, resLogin.StatusCode)
+		location = resLogin.Header["Location"][0]
+		assert.Equal(t, location, testInstance.DefaultRedirection().String())
+	})
+
+	t.Run("LoginWith2FA", func(t *testing.T) {
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished, AuthMode: "two_factor_mail"})
+
+		// Should return a 303 redirect
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)
+		req.Host = testInstance.Domain
+		assert.NoError(t, err)
+
+		// Preventing redirection to assert we are effectively redirected
+		c := &http.Client{CheckRedirect: noRedirect}
+		res, err := c.Do(req)
+		assert.NoError(t, err)
+		assert.Equal(t, 303, res.StatusCode)
+		location := res.Header["Location"][0]
+		redirected, err := url.Parse(location)
+		assert.NoError(t, err)
+		assert.Equal(t, "foobar.com", redirected.Host)
+		assert.Equal(t, "/authorize", redirected.Path)
+
+		values, err := url.ParseQuery(redirected.RawQuery)
+		assert.NoError(t, err)
+		assert.NotNil(t, values.Get("client_id"))
+		assert.NotNil(t, values.Get("nonce"))
+		assert.NotNil(t, values.Get("redirect_uri"))
+		assert.NotNil(t, values.Get("response_type"))
+		assert.NotNil(t, values.Get("state"))
+		assert.NotNil(t, values.Get("scope"))
+
+		// Get the login page, assert we have the 2FA activated
+		values.Add("token", "foo")
+		v := values.Encode()
+		reqLogin, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/login?"+v, nil)
+		assert.NoError(t, err)
+		reqLogin.Host = testInstance.Domain
+		resLogin, err := c.Do(reqLogin)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resLogin.StatusCode)
+		content, err := io.ReadAll(resLogin.Body)
+		assert.NoError(t, err)
+		assert.Contains(t, string(content), `<form id="oidc-twofactor-form"`)
+		re := regexp.MustCompile(`name="access-token" value="(\w+)"`)
+		matches := re.FindStringSubmatch(string(content))
+		assert.Len(t, matches, 2)
+		accessToken := matches[1]
+
+		// Check that the user is redirected to the 2FA page
+		values = url.Values{
+			"access-token":         {accessToken},
+			"trusted-device-token": {""},
+			"redirect":             {""},
+			"confirm":              {""},
+		}
+		body := bytes.NewReader([]byte(values.Encode()))
+		req2FA, err := http.NewRequest(http.MethodPost, ts.URL+"/oidc/twofactor", body)
+		assert.NoError(t, err)
+		req2FA.Host = testInstance.Domain
+		res2FA, err := c.Do(req2FA)
+		assert.NoError(t, err)
+		assert.Equal(t, 303, res2FA.StatusCode)
+
+		locationLogin := res2FA.Header["Location"][0]
+		redirected, err = url.Parse(locationLogin)
+		assert.NoError(t, err)
+		assert.Equal(t, "/auth/twofactor", redirected.Path)
+		assert.NotNil(t, redirected.Query().Get("two_factor_token"))
+	})
 }
 
 func noRedirect(*http.Request, []*http.Request) error {
