@@ -116,21 +116,12 @@ func TestSharings(t *testing.T) {
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	// Prepare another instance for the replicator tests
-	replSetup := testutils.NewSetup(nil, t.Name()+"_replicator")
-	t.Cleanup(replSetup.Cleanup)
-	replInstance = replSetup.GetTestInstance()
-	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/sharings": sharings.Routes,
-	})
-
 	err := dynamic.InitDynamicAssetFS()
 	if err != nil {
 		panic("Could not init dynamic FS")
 	}
 	setup.AddCleanup(func() error {
 		bobSetup.Cleanup()
-		replSetup.Cleanup()
 		return nil
 	})
 
