@@ -4,15 +4,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStore(t *testing.T) {
-	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
-	}
+	config.UseTestFile()
+	// if _, err := couchdb.CheckStatus(); err != nil {
+	// 	t.Fatal("This test need couchdb to run.")
+	// }
 
 	t.Run("StoreInMemory", func(t *testing.T) {
 		wasStoreTTL := storeTTL
@@ -77,6 +79,10 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("StoreInRedis", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
+		}
+
 		wasStoreTTL := storeTTL
 		storeTTL = 100 * time.Millisecond
 		defer func() { storeTTL = wasStoreTTL }()
