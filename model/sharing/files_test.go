@@ -3,8 +3,10 @@ package sharing
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,6 +14,12 @@ func TestFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
+	inst := setup.GetTestInstance()
 
 	t.Run("MakeXorKey", func(t *testing.T) {
 		key := MakeXorKey()

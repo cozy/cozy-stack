@@ -5,7 +5,9 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -232,6 +234,16 @@ func TestMixupChainToResolveConflict(t *testing.T) {
 }
 
 func TestAddMissingRevsToChain(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
+	inst := setup.GetTestInstance()
+
 	doc := &couchdb.JSONDoc{
 		Type: "io.cozy.test",
 		M: map[string]interface{}{

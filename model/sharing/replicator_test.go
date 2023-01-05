@@ -1,7 +1,6 @@
 package sharing
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -14,8 +13,6 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
 )
-
-var inst *instance.Instance
 
 // Some doctypes for the tests
 const testDoctype = "io.cozy.sharing.tests"
@@ -30,9 +27,9 @@ func TestReplicator(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "sharing_test_repl")
-	inst = setup.GetTestInstance()
-	os.Exit(setup.Run())
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
+	inst := setup.GetTestInstance()
 
 	t.Run("SequenceNumber", func(t *testing.T) {
 		// Start with an empty io.cozy.shared database
@@ -45,7 +42,7 @@ func TestReplicator(t *testing.T) {
 		}}
 		nb := 5
 		for i := 0; i < nb; i++ {
-			createASharedRef(t, s.SID)
+			createASharedRef(t, inst, s.SID)
 		}
 		m := &s.Members[1]
 
@@ -91,14 +88,14 @@ func TestReplicator(t *testing.T) {
 		// Create some documents that are not shared
 		for i := 0; i < 10; i++ {
 			id := uuidv4()
-			createDoc(t, testDoctype, id, map[string]interface{}{"foo": id})
+			createDoc(t, inst, testDoctype, id, map[string]interface{}{"foo": id})
 		}
 
 		s := Sharing{SID: uuidv4()}
 
 		// Rule 0 is local => no copy of documents
 		settingsDocID := uuidv4()
-		createDoc(t, consts.Settings, settingsDocID, map[string]interface{}{"foo": settingsDocID})
+		createDoc(t, inst, consts.Settings, settingsDocID, map[string]interface{}{"foo": settingsDocID})
 		s.Rules = append(s.Rules, Rule{
 			Title:   "A local rule",
 			DocType: consts.Settings,
@@ -107,11 +104,11 @@ func TestReplicator(t *testing.T) {
 		})
 		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared := 0
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 
 		// Rule 1 is a unique shared document
 		oneID := uuidv4()
-		oneDoc := createDoc(t, testDoctype, oneID, map[string]interface{}{"foo": "quuuuux"})
+		oneDoc := createDoc(t, inst, testDoctype, oneID, map[string]interface{}{"foo": "quuuuux"})
 		s.Rules = append(s.Rules, Rule{
 			Title:   "A unique document",
 			DocType: testDoctype,
@@ -119,8 +116,8 @@ func TestReplicator(t *testing.T) {
 		})
 		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared++
-		assertNbSharedRef(t, nbShared)
-		oneRef := getSharedRef(t, testDoctype, oneID)
+		assertNbSharedRef(t, inst, nbShared)
+		oneRef := getSharedRef(t, inst, testDoctype, oneID)
 		assert.NotNil(t, oneRef)
 		assert.Equal(t, testDoctype+"/"+oneID, oneRef.SID)
 		assert.Equal(t, &RevsTree{Rev: oneDoc.Rev()}, oneRef.Revisions)
@@ -130,7 +127,7 @@ func TestReplicator(t *testing.T) {
 		// Rule 2 is with a selector
 		twoIDs := []string{uuidv4(), uuidv4(), uuidv4()}
 		for _, id := range twoIDs {
-			createDoc(t, testDoctype, id, map[string]interface{}{"foo": "bar"})
+			createDoc(t, inst, testDoctype, id, map[string]interface{}{"foo": "bar"})
 		}
 		s.Rules = append(s.Rules, Rule{
 			Title:    "the foo: bar documents",
@@ -140,9 +137,9 @@ func TestReplicator(t *testing.T) {
 		})
 		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared += len(twoIDs)
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range twoIDs {
-			twoRef := getSharedRef(t, testDoctype, id)
+			twoRef := getSharedRef(t, inst, testDoctype, id)
 			assert.NotNil(t, twoRef)
 			assert.Contains(t, twoRef.Infos, s.SID)
 			assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
@@ -155,7 +152,7 @@ func TestReplicator(t *testing.T) {
 			for j := 0; j < i; j++ {
 				u += "u"
 			}
-			createDoc(t, testDoctype, id, map[string]interface{}{"foo": "q" + u + "x"})
+			createDoc(t, inst, testDoctype, id, map[string]interface{}{"foo": "q" + u + "x"})
 		}
 		s.Rules = append(s.Rules, Rule{
 			Title:    "the foo: baz documents",
@@ -165,9 +162,9 @@ func TestReplicator(t *testing.T) {
 		})
 		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared += len(threeIDs)
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range threeIDs {
-			threeRef := getSharedRef(t, testDoctype, id)
+			threeRef := getSharedRef(t, inst, testDoctype, id)
 			assert.NotNil(t, threeRef)
 			assert.Contains(t, threeRef.Infos, s.SID)
 			assert.Equal(t, 3, threeRef.Infos[s.SID].Rule)
@@ -177,33 +174,33 @@ func TestReplicator(t *testing.T) {
 		for r, rule := range s.Rules {
 			assert.NoError(t, s.InitialCopy(inst, rule, r))
 		}
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 
 		// A document is added
 		addID := uuidv4()
 		twoIDs = append(twoIDs, addID)
-		createDoc(t, testDoctype, addID, map[string]interface{}{"foo": "bar"})
+		createDoc(t, inst, testDoctype, addID, map[string]interface{}{"foo": "bar"})
 
 		// A document is updated
 		updateID := twoIDs[0]
-		updateRef := getSharedRef(t, testDoctype, updateID)
+		updateRef := getSharedRef(t, inst, testDoctype, updateID)
 		updateRev := updateRef.Revisions.Rev
-		updateDoc := updateDoc(t, testDoctype, updateID, updateRev, map[string]interface{}{"foo": "bar", "updated": true})
+		updateDoc := updateDoc(t, inst, testDoctype, updateID, updateRev, map[string]interface{}{"foo": "bar", "updated": true})
 
 		// A third member accepts the sharing
 		for r, rule := range s.Rules {
 			assert.NoError(t, s.InitialCopy(inst, rule, r))
 		}
 		nbShared++
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range twoIDs {
-			twoRef := getSharedRef(t, testDoctype, id)
+			twoRef := getSharedRef(t, inst, testDoctype, id)
 			assert.NotNil(t, twoRef)
 			assert.Contains(t, twoRef.Infos, s.SID)
 			assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
 			if id == updateID {
 				assert.Equal(t, updateRev, twoRef.Revisions.Rev)
-				assert.Equal(t, updateDoc.Rev(), twoRef.Revisions.Branches[0].Rev)
+				assert.Equal(t, inst, updateDoc.Rev(), twoRef.Revisions.Branches[0].Rev)
 			}
 		}
 
@@ -216,9 +213,9 @@ func TestReplicator(t *testing.T) {
 			Values:   []string{"qux", "quux", "quuux"},
 		})
 		assert.NoError(t, s2.InitialCopy(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1))
-		assertNbSharedRef(t, nbShared)
+		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range threeIDs {
-			threeRef := getSharedRef(t, testDoctype, id)
+			threeRef := getSharedRef(t, inst, testDoctype, id)
 			assert.NotNil(t, threeRef)
 			assert.Contains(t, threeRef.Infos, s.SID)
 			assert.Equal(t, 3, threeRef.Infos[s.SID].Rule)
@@ -245,9 +242,9 @@ func TestReplicator(t *testing.T) {
 				},
 			},
 		}
-		ref1 := createSharedRef(t, s.SID, foobars+"/"+id1, []string{"1-aaa"})
-		ref2 := createSharedRef(t, s.SID, foobars+"/"+id2, []string{"3-bbb"})
-		appendRevisionToSharedRef(t, ref1, "2-ccc")
+		ref1 := createSharedRef(t, inst, s.SID, foobars+"/"+id1, []string{"1-aaa"})
+		ref2 := createSharedRef(t, inst, s.SID, foobars+"/"+id2, []string{"3-bbb"})
+		appendRevisionToSharedRef(t, inst, ref1, "2-ccc")
 
 		feed, err := s.callChangesFeed(inst, "")
 		assert.NoError(t, err)
@@ -269,7 +266,7 @@ func TestReplicator(t *testing.T) {
 		changes = &feed2.Changes
 		assert.Empty(t, changes.Changed)
 
-		appendRevisionToSharedRef(t, ref1, "3-ddd")
+		appendRevisionToSharedRef(t, inst, ref1, "3-ddd")
 		feed3, err := s.callChangesFeed(inst, feed.Seq)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, feed3.Seq)
@@ -284,13 +281,13 @@ func TestReplicator(t *testing.T) {
 		_ = couchdb.CreateDB(inst, hellos)
 
 		id1 := uuidv4()
-		doc1 := createDoc(t, hellos, id1, map[string]interface{}{"hello": id1})
+		doc1 := createDoc(t, inst, hellos, id1, map[string]interface{}{"hello": id1})
 		id2 := uuidv4()
-		doc2 := createDoc(t, hellos, id2, map[string]interface{}{"hello": id2})
-		doc2b := updateDoc(t, hellos, id2, doc2.Rev(), map[string]interface{}{"hello": id2, "bis": true})
+		doc2 := createDoc(t, inst, hellos, id2, map[string]interface{}{"hello": id2})
+		doc2b := updateDoc(t, inst, hellos, id2, doc2.Rev(), map[string]interface{}{"hello": id2, "bis": true})
 		id3 := uuidv4()
-		doc3 := createDoc(t, hellos, id3, map[string]interface{}{"hello": id3})
-		doc3b := updateDoc(t, hellos, id3, doc3.Rev(), map[string]interface{}{"hello": id3, "bis": true})
+		doc3 := createDoc(t, inst, hellos, id3, map[string]interface{}{"hello": id3})
+		doc3b := updateDoc(t, inst, hellos, id3, doc3.Rev(), map[string]interface{}{"hello": id3, "bis": true})
 		s := Sharing{
 			SID: uuidv4(),
 			Rules: []Rule{
@@ -425,11 +422,11 @@ func TestReplicator(t *testing.T) {
 		err := s.ApplyBulkDocs(inst, payload)
 		assert.NoError(t, err)
 		nbShared := 1
-		assertNbSharedRef(t, nbShared)
-		doc := getDoc(t, foos, fooOneID)
+		assertNbSharedRef(t, inst, nbShared)
+		doc := getDoc(t, inst, foos, fooOneID)
 		assert.Equal(t, "1-abc", doc.Rev())
 		assert.Equal(t, "one", doc.Get("number"))
-		ref := getSharedRef(t, foos, fooOneID)
+		ref := getSharedRef(t, inst, foos, fooOneID)
 		assert.Equal(t, &RevsTree{Rev: "1-abc"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 0, ref.Infos[s.SID].Rule)
@@ -451,11 +448,11 @@ func TestReplicator(t *testing.T) {
 		}
 		err = s.ApplyBulkDocs(inst, payload)
 		assert.NoError(t, err)
-		assertNbSharedRef(t, nbShared)
-		doc = getDoc(t, foos, fooOneID)
+		assertNbSharedRef(t, inst, nbShared)
+		doc = getDoc(t, inst, foos, fooOneID)
 		assert.Equal(t, "2-def", doc.Rev())
 		assert.Equal(t, "one bis", doc.Get("number"))
-		ref = getSharedRef(t, foos, fooOneID)
+		ref = getSharedRef(t, inst, foos, fooOneID)
 		expected := &RevsTree{
 			Rev: "1-abc",
 			Branches: []RevsTree{
@@ -485,11 +482,11 @@ func TestReplicator(t *testing.T) {
 		err = s2.ApplyBulkDocs(inst, payload)
 		assert.NoError(t, err)
 		nbShared++
-		assertNbSharedRef(t, nbShared)
-		doc = getDoc(t, bars, barZeroID)
+		assertNbSharedRef(t, inst, nbShared)
+		doc = getDoc(t, inst, bars, barZeroID)
 		assert.Equal(t, "1-111", doc.Rev())
 		assert.Equal(t, "zero", doc.Get("number"))
-		ref = getSharedRef(t, bars, barZeroID)
+		ref = getSharedRef(t, inst, bars, barZeroID)
 		assert.Equal(t, &RevsTree{Rev: "1-111"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s2.SID)
 		assert.Equal(t, 0, ref.Infos[s2.SID].Rule)
@@ -537,25 +534,25 @@ func TestReplicator(t *testing.T) {
 		err = s.ApplyBulkDocs(inst, payload)
 		assert.NoError(t, err)
 		nbShared += 3
-		assertNbSharedRef(t, nbShared)
-		doc = getDoc(t, bars, barTwoID)
+		assertNbSharedRef(t, inst, nbShared)
+		doc = getDoc(t, inst, bars, barTwoID)
 		assert.Equal(t, "2-caa", doc.Rev())
 		assert.Equal(t, "two", doc.Get("number"))
-		ref = getSharedRef(t, bars, barTwoID)
+		ref = getSharedRef(t, inst, bars, barTwoID)
 		assert.Equal(t, &RevsTree{Rev: "2-caa"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 1, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, bazs, bazThreeID)
+		doc = getDoc(t, inst, bazs, bazThreeID)
 		assert.Equal(t, "1-ddd", doc.Rev())
 		assert.Equal(t, "three", doc.Get("number"))
-		ref = getSharedRef(t, bazs, bazThreeID)
+		ref = getSharedRef(t, inst, bazs, bazThreeID)
 		assert.Equal(t, &RevsTree{Rev: "1-ddd"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 2, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, bazs, bazFourID)
+		doc = getDoc(t, inst, bazs, bazFourID)
 		assert.Equal(t, "1-eee", doc.Rev())
 		assert.Equal(t, "four", doc.Get("number"))
-		ref = getSharedRef(t, bazs, bazFourID)
+		ref = getSharedRef(t, inst, bazs, bazFourID)
 		assert.Equal(t, &RevsTree{Rev: "1-eee"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 2, ref.Infos[s.SID].Rule)
@@ -565,7 +562,7 @@ func TestReplicator(t *testing.T) {
 		barSixID := uuidv4()
 		barSevenID := uuidv4()
 		barEightID := uuidv4()
-		barEightRev := createDoc(t, bars, barEightID, map[string]interface{}{"hello": "world", "number": "8"}).Rev()
+		barEightRev := createDoc(t, inst, bars, barEightID, map[string]interface{}{"hello": "world", "number": "8"}).Rev()
 		payload = DocsByDoctype{
 			foos: DocsList{
 				{
@@ -657,58 +654,58 @@ func TestReplicator(t *testing.T) {
 		err = s.ApplyBulkDocs(inst, payload)
 		assert.NoError(t, err)
 		nbShared += 2 // fooFiveID and barSixID
-		assertNbSharedRef(t, nbShared)
-		doc = getDoc(t, foos, fooOneID)
+		assertNbSharedRef(t, inst, nbShared)
+		doc = getDoc(t, inst, foos, fooOneID)
 		assert.Equal(t, "3-fab", doc.Rev())
 		assert.Equal(t, "one ter", doc.Get("number"))
-		ref = getSharedRef(t, foos, fooOneID)
+		ref = getSharedRef(t, inst, foos, fooOneID)
 		expected = &RevsTree{Rev: "1-abc"}
 		expected.Add("2-def")
 		expected.Add("3-fab")
 		assert.Equal(t, expected, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 0, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, foos, fooFiveID)
+		doc = getDoc(t, inst, foos, fooFiveID)
 		assert.Equal(t, "1-aab", doc.Rev())
 		assert.Equal(t, "five", doc.Get("number"))
-		ref = getSharedRef(t, foos, fooFiveID)
+		ref = getSharedRef(t, inst, foos, fooFiveID)
 		assert.Equal(t, &RevsTree{Rev: "1-aab"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 0, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, bazs, bazThreeID)
+		doc = getDoc(t, inst, bazs, bazThreeID)
 		assert.Equal(t, "3-ddf", doc.Rev())
 		assert.Equal(t, "three bis", doc.Get("number"))
-		ref = getSharedRef(t, bazs, bazThreeID)
+		ref = getSharedRef(t, inst, bazs, bazThreeID)
 		expected = &RevsTree{Rev: "1-ddd"}
 		expected.Add("2-dde")
 		expected.Add("3-ddf")
 		assert.Equal(t, expected, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 2, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, bars, barSixID)
+		doc = getDoc(t, inst, bars, barSixID)
 		assert.Equal(t, "1-aac", doc.Rev())
 		assert.Equal(t, "six", doc.Get("number"))
-		ref = getSharedRef(t, bars, barSixID)
+		ref = getSharedRef(t, inst, bars, barSixID)
 		assert.Equal(t, &RevsTree{Rev: "1-aac"}, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 1, ref.Infos[s.SID].Rule)
-		doc = getDoc(t, bars, barTwoID)
+		doc = getDoc(t, inst, bars, barTwoID)
 		assert.Equal(t, "3-daa", doc.Rev())
 		assert.Equal(t, "two bis", doc.Get("number"))
-		ref = getSharedRef(t, bars, barTwoID)
+		ref = getSharedRef(t, inst, bars, barTwoID)
 		expected = &RevsTree{Rev: "2-caa"}
 		expected.Add("3-daa")
 		assert.Equal(t, expected, ref.Revisions)
 		assert.Contains(t, ref.Infos, s.SID)
 		assert.Equal(t, 1, ref.Infos[s.SID].Rule)
 		// New document rejected because it doesn't match the rules
-		assertNoDoc(t, bars, barSevenID)
+		assertNoDoc(t, inst, bars, barSevenID)
 		// Existing document with no shared reference
-		doc = getDoc(t, bars, barEightID)
+		doc = getDoc(t, inst, bars, barEightID)
 		assert.Equal(t, barEightRev, doc.Rev())
 		assert.Equal(t, "8", doc.Get("number"))
 		// Existing document with a shared reference, but not for the good sharing
-		doc = getDoc(t, bars, barZeroID)
+		doc = getDoc(t, inst, bars, barZeroID)
 		assert.Equal(t, "1-111", doc.Rev())
 		assert.Equal(t, "zero", doc.Get("number"))
 	})
@@ -719,7 +716,7 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createASharedRef(t *testing.T, id string) {
+func createASharedRef(t *testing.T, inst *instance.Instance, id string) {
 	ref := SharedRef{
 		SID:       testDoctype + "/" + uuidv4(),
 		Revisions: &RevsTree{Rev: "1-aaa"},
@@ -731,7 +728,7 @@ func createASharedRef(t *testing.T, id string) {
 	assert.NoError(t, err)
 }
 
-func createDoc(t *testing.T, doctype, id string, attrs map[string]interface{}) *couchdb.JSONDoc {
+func createDoc(t *testing.T, inst *instance.Instance, doctype, id string, attrs map[string]interface{}) *couchdb.JSONDoc {
 	attrs["_id"] = id
 	doc := couchdb.JSONDoc{
 		M:    attrs,
@@ -742,7 +739,7 @@ func createDoc(t *testing.T, doctype, id string, attrs map[string]interface{}) *
 	return &doc
 }
 
-func updateDoc(t *testing.T, doctype, id, rev string, attrs map[string]interface{}) *couchdb.JSONDoc {
+func updateDoc(t *testing.T, inst *instance.Instance, doctype, id, rev string, attrs map[string]interface{}) *couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		M:    attrs,
 		Type: doctype,
@@ -754,14 +751,14 @@ func updateDoc(t *testing.T, doctype, id, rev string, attrs map[string]interface
 	return &doc
 }
 
-func getSharedRef(t *testing.T, doctype, id string) *SharedRef {
+func getSharedRef(t *testing.T, inst *instance.Instance, doctype, id string) *SharedRef {
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, doctype+"/"+id, &ref)
 	assert.NoError(t, err)
 	return &ref
 }
 
-func assertNbSharedRef(t *testing.T, expected int) {
+func assertNbSharedRef(t *testing.T, inst *instance.Instance, expected int) {
 	nb, err := couchdb.CountAllDocs(inst, consts.Shared)
 	if err != nil {
 		time.Sleep(1 * time.Second)
@@ -771,7 +768,7 @@ func assertNbSharedRef(t *testing.T, expected int) {
 	assert.Equal(t, expected, nb)
 }
 
-func createSharedRef(t *testing.T, sharingID, sid string, revisions []string) *SharedRef {
+func createSharedRef(t *testing.T, inst *instance.Instance, sharingID, sid string, revisions []string) *SharedRef {
 	tree := &RevsTree{Rev: revisions[0]}
 	sub := tree
 	for _, rev := range revisions[1:] {
@@ -792,7 +789,7 @@ func createSharedRef(t *testing.T, sharingID, sid string, revisions []string) *S
 	return &ref
 }
 
-func appendRevisionToSharedRef(t *testing.T, ref *SharedRef, revision string) {
+func appendRevisionToSharedRef(t *testing.T, inst *instance.Instance, ref *SharedRef, revision string) {
 	ref.Revisions.Add(revision)
 	err := couchdb.UpdateDoc(inst, ref)
 	assert.NoError(t, err)
@@ -807,14 +804,14 @@ func stripGenerations(revs ...string) []interface{} {
 	return res
 }
 
-func getDoc(t *testing.T, doctype, id string) *couchdb.JSONDoc {
+func getDoc(t *testing.T, inst *instance.Instance, doctype, id string) *couchdb.JSONDoc {
 	var doc couchdb.JSONDoc
 	err := couchdb.GetDoc(inst, doctype, id, &doc)
 	assert.NoError(t, err)
 	return &doc
 }
 
-func assertNoDoc(t *testing.T, doctype, id string) {
+func assertNoDoc(t *testing.T, inst *instance.Instance, doctype, id string) {
 	var doc couchdb.JSONDoc
 	err := couchdb.GetDoc(inst, doctype, id, &doc)
 	assert.Error(t, err)
