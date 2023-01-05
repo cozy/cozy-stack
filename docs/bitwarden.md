@@ -28,17 +28,20 @@ to `https://<instance>/bitwarden`.
 
 ## Routes for accounts and connect
 
-### POST /bitwarden/api/accounts/prelogin
+### POST /bitwarden/api/accounts/prelogin & POST /bitwarden/identity/accounts/prelogin
 
 It allows the client to know the number of KDF iterations to apply when hashing
 the master password. It can also tell if the login via OIDC is mandatory, if
 the vault is empty (when both conditions are true, the onboarding process is a
 bit different), and if flat or nested subdomains are used.
 
+There are 2 routes for the same endpoint, as Bitwarden has moved from the first
+to the second, and we want to ensure a smooth migration for clients.
+
 #### Request
 
 ```http
-POST /bitwarden/api/accounts/prelogin HTTP/1.1
+POST /bitwarden/identity/accounts/prelogin HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
 ```
