@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -49,9 +48,7 @@ func TestOffice(t *testing.T) {
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 
-	if err := createFile(); err != nil {
-		os.Exit(1)
-	}
+	require.NoError(t, createFile())
 
 	ts = setup.GetTestServer("/office", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
