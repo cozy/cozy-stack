@@ -53,7 +53,8 @@ func TestRedis(t *testing.T) {
 	}
 
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "test_jobs")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()
 
 	setup.AddCleanup(func() error {

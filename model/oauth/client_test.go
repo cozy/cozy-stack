@@ -27,7 +27,8 @@ func TestClient(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	setup := testutils.NewSetup(m, "oauth_client")
+	setup := testutils.NewSetup(nil, t.Name())
+	t.Cleanup(setup.Cleanup)
 	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()
 
