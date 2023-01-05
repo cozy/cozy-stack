@@ -1,26 +1,14 @@
 package app_test
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
-	"testing"
-	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/stack"
-	"github.com/cozy/cozy-stack/pkg/appfs"
-	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"golang.org/x/sync/errgroup"
 )
 
 var localGitCmd *exec.Cmd
@@ -127,100 +115,4 @@ git checkout master`
 	} else {
 		fmt.Println("did upgrade", localVersion)
 	}
-}
-
-var db *instance.Instance
-var fs appfs.Copier
-var baseFS afero.Fs
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-
-	go serveGitRep()
-	for i := 0; i < 400; i++ {
-		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	if _, err := couchdb.CheckStatus(); err != nil {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
-
-	_, err := stack.Start()
-	if err != nil {
-		fmt.Println("Error while starting job system", err)
-		os.Exit(1)
-	}
-
-	app.ManifestClient = &http.Client{
-		Transport: &transport{},
-	}
-
-	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.WriteString(w, manGen())
-	}))
-
-	db = &instance.Instance{
-		ContextName: "foo",
-		Prefix:      "app-test",
-	}
-
-	err = couchdb.ResetDB(db, consts.Apps)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(db, consts.Konnectors)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(db, consts.Files)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	var tmpDir string
-	osFS := afero.NewOsFs()
-	tmpDir, err = afero.TempDir(osFS, "", "cozy-installer-test")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer func() { _ = osFS.RemoveAll(tmpDir) }()
-
-	baseFS = afero.NewBasePathFs(osFS, tmpDir)
-	fs = appfs.NewAferoCopier(baseFS)
-
-	err = couchdb.ResetDB(db, consts.Permissions)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	g, _ := errgroup.WithContext(context.Background())
-	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
-	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Permissions))
-	if err = g.Wait(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	res := m.Run()
-
-	_ = couchdb.DeleteDB(db, consts.Apps)
-	_ = couchdb.DeleteDB(db, consts.Konnectors)
-	_ = couchdb.DeleteDB(db, consts.Files)
-	_ = couchdb.DeleteDB(db, consts.Permissions)
-	ts.Close()
-
-	_ = localGitCmd.Process.Signal(os.Interrupt)
-
-	os.Exit(res)
 }

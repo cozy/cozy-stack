@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -19,6 +18,8 @@ import (
 const doctype = "org.example.request"
 
 func TestParseRawRequest(t *testing.T) {
+	config.UseTestFile()
+
 	raw := `GET`
 	_, err := ParseRawRequest(doctype, raw)
 	assert.Equal(t, ErrInvalidRequest, err)
@@ -76,6 +77,8 @@ two={{two}}`, r2.Body)
 }
 
 func TestExtractVariablesGET(t *testing.T) {
+	config.UseTestFile()
+
 	u, err := url.Parse("https://example.org/foo?one=un&two=deux")
 	assert.NoError(t, err)
 	in := &http.Request{URL: u}
@@ -86,6 +89,8 @@ func TestExtractVariablesGET(t *testing.T) {
 }
 
 func TestExtractVariablesPOST(t *testing.T) {
+	config.UseTestFile()
+
 	body := bytes.NewReader([]byte(`{"one": "un", "two": "deux"}`))
 	in := httptest.NewRequest("POST", "https://example.com/bar", body)
 	vars, err := extractVariables("POST", in)
@@ -100,6 +105,8 @@ func TestExtractVariablesPOST(t *testing.T) {
 }
 
 func TestInjectVariables(t *testing.T) {
+	config.UseTestFile()
+
 	raw := `POST https://example.org/foo/{{bar}}?q={{q}}
 Content-Type: {{contentType}}
 Accept-Language: {{lang}},en
@@ -138,6 +145,12 @@ Accept-Language: {{lang}},en
 }
 
 func TestInjectSecret(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+
 	doctype := "cc.cozycloud.foobar"
 	doc := couchdb.JSONDoc{
 		Type: consts.RemoteSecrets,
@@ -162,9 +175,4 @@ Authorization: Bearer {{secret_token}}
 	err = injectVariables(r, map[string]string{})
 	assert.NoError(t, err)
 	assert.Equal(t, "Bearer 123456789", r.Headers["Authorization"])
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	os.Exit(m.Run())
 }
