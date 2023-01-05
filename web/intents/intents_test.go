@@ -3,10 +3,8 @@ package intents
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -20,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var ts *httptest.Server
@@ -34,6 +33,8 @@ func TestIntents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	var err error
 
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -51,15 +52,11 @@ func TestIntents(t *testing.T) {
 			"slug": "app",
 		},
 	}
-	err := couchdb.CreateNamedDoc(ins, webapp)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	require.NoError(t, couchdb.CreateNamedDoc(ins, webapp))
+
 	appPerms, err = permission.CreateWebappSet(ins, "app", permission.Set{}, "1.0.0")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		require.NoError(t, err)
 	}
 	appToken = ins.BuildAppToken("app", "")
 	files := &couchdb.JSONDoc{
@@ -76,13 +73,10 @@ func TestIntents(t *testing.T) {
 			},
 		},
 	}
-	if err := couchdb.CreateNamedDoc(ins, files); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+
+	require.NoError(t, couchdb.CreateNamedDoc(ins, files))
 	if _, err := permission.CreateWebappSet(ins, "files", permission.Set{}, "1.0.0"); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		require.NoError(t, err)
 	}
 	filesToken = ins.BuildAppToken("files", "")
 

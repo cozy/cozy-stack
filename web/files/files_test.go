@@ -59,19 +59,15 @@ func TestFiles(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	err := loadLocale()
-	if err != nil {
-		fmt.Println("Could not load default locale translations: ", err)
-		os.Exit(1)
-	}
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
+
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 
 	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
-		fmt.Println("Could not create temporary directory.")
-		os.Exit(1)
+		require.NoError(t, err, "Could not create temporary directory")
 	}
 	setup.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 
