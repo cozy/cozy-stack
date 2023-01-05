@@ -28,12 +28,12 @@ func TestSetup(t *testing.T) {
 	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
-	os.Setenv("OS_USERNAME", "os_username_val")
-	os.Setenv("OS_PASSWORD", "os_password_val")
-	os.Setenv("OS_PROJECT_NAME", "os_project_name_val")
-	os.Setenv("OS_USER_DOMAIN_NAME", "os_user_domain_name_val")
-	os.Setenv("MAIL_USERNAME", "mail_username_val")
-	os.Setenv("MAIL_PASSWORD", "mail_password_val")
+	t.Setenv("OS_USERNAME", "os_username_val")
+	t.Setenv("OS_PASSWORD", "os_password_val")
+	t.Setenv("OS_PROJECT_NAME", "os_project_name_val")
+	t.Setenv("OS_USER_DOMAIN_NAME", "os_user_domain_name_val")
+	t.Setenv("MAIL_USERNAME", "mail_username_val")
+	t.Setenv("MAIL_PASSWORD", "mail_password_val")
 
 	_, err = tmpfile.Write([]byte(`
 # cozy-stack configuration file
