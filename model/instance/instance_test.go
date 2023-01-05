@@ -51,5 +51,4 @@ func TestInstance(t *testing.T) {
 		assert.Equal(t, "test-ctx-token.example.com", claims["iss"])
 		assert.Equal(t, "my-app", claims["sub"])
 	})
-
 }

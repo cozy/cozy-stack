@@ -151,5 +151,4 @@ func TestBroker(t *testing.T) {
 		assert.Equal(t, futureDate.String(), j[len(j)-1].QueuedAt.String())
 		assert.Equal(t, jobs.Errored, j[len(j)-1].State)
 	})
-
 }

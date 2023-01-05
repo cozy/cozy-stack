@@ -506,7 +506,6 @@ func TestLifecycle(t *testing.T) {
 			assert.Equal(t, instance.ErrNotFound, err)
 		}
 	})
-
 }
 
 func cleanInstance() {

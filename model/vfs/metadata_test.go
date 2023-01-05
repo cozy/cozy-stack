@@ -102,5 +102,4 @@ func TestMetadata(t *testing.T) {
 		assert.True(t, ok, "target.app is present")
 		assert.Equal(t, "drive", app)
 	})
-
 }

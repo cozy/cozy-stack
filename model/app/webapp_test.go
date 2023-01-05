@@ -81,5 +81,4 @@ func TestWebapp(t *testing.T) {
 		assert.Equal(t, 3, len(apps))
 		assert.Equal(t, "", next)
 	})
-
 }

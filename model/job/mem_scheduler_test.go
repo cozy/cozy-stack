@@ -130,5 +130,4 @@ func TestMemScheduler(t *testing.T) {
 		err = sch.ShutdownScheduler(context.Background())
 		assert.NoError(t, err)
 	})
-
 }

@@ -159,5 +159,4 @@ func TestIntents(t *testing.T) {
 		assert.Contains(t, res, "home")
 		assert.Contains(t, res, "collect")
 	})
-
 }

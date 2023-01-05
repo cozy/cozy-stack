@@ -91,7 +91,6 @@ func TestVersion(t *testing.T) {
 		assert.Equal(t, &v4, toClean[2])
 		assert.Equal(t, &v5, toClean[3])
 	})
-
 }
 
 func uuidv4() string {

@@ -201,5 +201,4 @@ func TestClient(t *testing.T) {
 		assert.Equal(t, "d", clients[3].CouchID)
 		assert.Equal(t, "e", clients[4].CouchID)
 	})
-
 }

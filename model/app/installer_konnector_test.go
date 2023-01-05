@@ -466,7 +466,6 @@ func TestInstallerKonnector(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "Manifest types are not the same")
 	})
-
 }
 
 func compressedFileContainsBytes(fs afero.Fs, filename string, content []byte) (ok bool, err error) {

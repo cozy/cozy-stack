@@ -66,5 +66,4 @@ func TestCipher(t *testing.T) {
 			assert.True(t, c.SharedWithCozy)
 		}
 	})
-
 }

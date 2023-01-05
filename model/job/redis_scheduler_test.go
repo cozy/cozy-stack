@@ -483,7 +483,6 @@ func TestRedisScheduler(t *testing.T) {
 		count, _ = bro.WorkerQueueLen("incr")
 		assert.Equal(t, 3, count)
 	})
-
 }
 
 func (t *testDoc) ID() string      { return t.id }

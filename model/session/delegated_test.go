@@ -82,5 +82,4 @@ func TestDelegated(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "Issuer")
 	})
-
 }

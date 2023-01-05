@@ -12,9 +12,6 @@ import (
 
 func TestStore(t *testing.T) {
 	config.UseTestFile()
-	// if _, err := couchdb.CheckStatus(); err != nil {
-	// 	t.Fatal("This test need couchdb to run.")
-	// }
 
 	t.Run("StoreInMemory", func(t *testing.T) {
 		wasStoreTTL := storeTTL
@@ -146,5 +143,4 @@ func TestStore(t *testing.T) {
 		assert.Equal(t, ErrWrongToken, err)
 		assert.Nil(t, m3, "no expiration")
 	})
-
 }

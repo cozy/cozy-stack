@@ -1120,7 +1120,6 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "Manifest types are not the same")
 	})
-
 }
 
 func findTrigger(triggers []job.Trigger, typ string) job.Trigger {

@@ -359,5 +359,4 @@ func TestMemBroker(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, j)
 	})
-
 }

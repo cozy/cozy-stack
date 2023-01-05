@@ -208,7 +208,6 @@ func TestTrigger(t *testing.T) {
 		err := sch.ShutdownScheduler(context.Background())
 		assert.NoError(t, err)
 	})
-
 }
 
 func makeMessage(t *testing.T, msg string) jobs.Message {

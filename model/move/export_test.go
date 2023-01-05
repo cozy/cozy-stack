@@ -118,7 +118,6 @@ func TestExport(t *testing.T) {
 		}
 		assert.Len(t, versionsIDs, nbVersions)
 	})
-
 }
 
 func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc) {

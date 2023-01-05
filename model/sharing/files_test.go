@@ -244,5 +244,4 @@ func TestFiles(t *testing.T) {
 			assert.Equal(t, []string{"quux", "courge"}, dir.Tags)
 		}
 	})
-
 }

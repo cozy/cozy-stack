@@ -170,7 +170,6 @@ func TestRedisBroker(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, j)
 	})
-
 }
 
 func randomMicro(min, max int) time.Duration {
