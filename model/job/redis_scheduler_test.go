@@ -37,7 +37,7 @@ type fakeFilePather struct {
 	Fullpath string
 }
 
-func TestRedis(t *testing.T) {
+func TestRedisScheduler(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}

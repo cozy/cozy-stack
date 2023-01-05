@@ -19,7 +19,7 @@ import (
 const redisURL1 = "redis://localhost:6379/0"
 const redisURL2 = "redis://localhost:6379/1"
 
-func TestRedis(t *testing.T) {
+func TestRedisBroker(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
