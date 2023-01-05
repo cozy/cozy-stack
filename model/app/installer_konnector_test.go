@@ -2,24 +2,97 @@ package app_test
 
 import (
 	"bytes"
+	"context"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"os/exec"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/stack"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 )
 
-func TestInstaller(t *testing.T) {
+func TestInstallerKonnector(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+
+	if _, err := couchdb.CheckStatus(); err != nil {
+		require.NoError(t, err, "This test need couchdb to run.")
+	}
+
+	go serveGitRep()
+	for i := 0; i < 400; i++ {
+		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	_, err := stack.Start()
+	if err != nil {
+		require.NoError(t, err, "Error while starting job system")
+	}
+
+	app.ManifestClient = &http.Client{Transport: &transport{}}
+
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, manGen())
+	}))
+	t.Cleanup(ts.Close)
+
+	db := &instance.Instance{
+		ContextName: "foo",
+		Prefix:      "app-test",
+	}
+
+	require.NoError(t, couchdb.ResetDB(db, consts.Apps))
+	require.NoError(t, couchdb.ResetDB(db, consts.Konnectors))
+	require.NoError(t, couchdb.ResetDB(db, consts.Files))
+
+	osFS := afero.NewOsFs()
+	tmpDir, err := afero.TempDir(osFS, "", "cozy-installer-test")
+	if err != nil {
+		require.NoError(t, err)
+	}
+	t.Cleanup(func() { _ = osFS.RemoveAll(tmpDir) })
+
+	baseFS := afero.NewBasePathFs(osFS, tmpDir)
+	fs := appfs.NewAferoCopier(baseFS)
+
+	require.NoError(t, couchdb.ResetDB(db, consts.Permissions))
+
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Permissions))
+
+	require.NoError(t, g.Wait())
+
+	t.Cleanup(func() {
+		assert.NoError(t, couchdb.DeleteDB(db, consts.Apps))
+		assert.NoError(t, couchdb.DeleteDB(db, consts.Konnectors))
+		assert.NoError(t, couchdb.DeleteDB(db, consts.Files))
+		assert.NoError(t, couchdb.DeleteDB(db, consts.Permissions))
+	})
+
+	t.Cleanup(func() { assert.NoError(t, localGitCmd.Process.Signal(os.Interrupt)) })
 
 	t.Run("KonnectorInstallSuccessful", func(t *testing.T) {
 		manGen = manifestKonnector
