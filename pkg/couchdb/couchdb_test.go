@@ -2,8 +2,6 @@ package couchdb
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -16,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const TestDoctype = "io.cozy.testobject"
@@ -34,21 +33,16 @@ type testDoc struct {
 
 func TestCouchdb(t *testing.T) {
 	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
 	config.UseTestFile()
 
 	if _, err := CheckStatus(); err != nil {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
+		require.NoError(t, err, "This test need couchdb to run.")
 	}
 
-	err := ResetDB(TestPrefix, TestDoctype)
-	if err != nil {
-		fmt.Printf("Cant reset db (%s, %s) %s\n", TestPrefix, TestDoctype, err.Error())
-		os.Exit(1)
-	}
+	require.NoError(t, ResetDB(TestPrefix, TestDoctype))
 
 	receivedEvents = make(map[string]*realtime.Event)
 	eventChan := realtime.GetHub().Subscriber(TestPrefix)
@@ -61,12 +55,8 @@ func TestCouchdb(t *testing.T) {
 		}
 	}()
 
-	res := m.Run()
-
-	eventChan.Close()
-	_ = DeleteDB(TestPrefix, TestDoctype)
-
-	os.Exit(res)
+	t.Cleanup(eventChan.Close)
+	t.Cleanup(func() { _ = DeleteDB(TestPrefix, TestDoctype) })
 
 	t.Run("Errors", func(t *testing.T) {
 		err := Error{StatusCode: 404, Name: "not_found", Reason: "missing"}
