@@ -49,7 +49,7 @@ func TestRedisScheduler(t *testing.T) {
 	var err error
 	cfg.Jobs.RedisConfig, err = config.NewRedisConfig(redisURL)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	testutils.NeedCouchdb()

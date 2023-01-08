@@ -39,7 +39,7 @@ func TestInstallerWebApp(t *testing.T) {
 		require.NoError(t, err, "This test need couchdb to run.")
 	}
 
-	go serveGitRep()
+	go serveGitRep(t.TempDir())
 	for i := 0; i < 400; i++ {
 		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
 			break

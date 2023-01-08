@@ -439,7 +439,7 @@ func TestVfs(t *testing.T) {
 				case <-done:
 					return
 				case <-time.After(3 * time.Second):
-					panic(errors.New("deadline: WalkAlreadyLocked is probably trying to acquire the VFS lock"))
+					t.Fatal("deadline: WalkAlreadyLocked is probably trying to acquire the VFS lock")
 				}
 			})
 

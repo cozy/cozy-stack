@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"os/exec"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -66,11 +65,7 @@ func manifestKonnector() string {
 }`
 }
 
-func serveGitRep() {
-	dir, err := os.MkdirTemp("", "cozy-app")
-	if err != nil {
-		panic(err)
-	}
+func serveGitRep(dir string) {
 	localGitDir = dir
 	args := `
 echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
@@ -86,16 +81,16 @@ git checkout -`
 	cmd := exec.Command("bash", "-c", args)
 	cmd.Dir = localGitDir
 	if out, err := cmd.CombinedOutput(); err != nil {
-		fmt.Println(string(out))
-		panic(err)
+		// Can't call t.Fatalf inside an another gorouting
+		panic(fmt.Sprintf("failed to setup the git repo (output: %q): %s", out, err))
 	}
 
 	// "git daemon --reuseaddr --base-path=./ --export-all ./.git"
 	localGitCmd = exec.Command("git", "daemon", "--reuseaddr", "--base-path=./", "--export-all", "./.git")
 	localGitCmd.Dir = localGitDir
 	if out, err := localGitCmd.CombinedOutput(); err != nil {
-		fmt.Println(string(out))
-		os.Exit(1)
+		// Can't call t.Fatalf inside an another gorouting
+		panic(fmt.Sprintf("failed start the git server (output: %q): %s", out, err))
 	}
 }
 

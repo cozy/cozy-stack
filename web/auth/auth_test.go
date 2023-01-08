@@ -62,7 +62,6 @@ var linkedClientID string
 var linkedClientSecret string
 var linkedCode string
 var confirmCode string
-var konnSlug string
 
 func TestAuth(t *testing.T) {
 	if testing.Short() {
@@ -106,12 +105,9 @@ func TestAuth(t *testing.T) {
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	err := dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
-	konnSlug, err = setup.InstallMiniKonnector()
+	konnSlug, err := setup.InstallMiniKonnector()
 	if err != nil {
 		setup.CleanupAndDie("Could not install mini konnector.", err)
 	}
