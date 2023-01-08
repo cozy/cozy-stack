@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -30,10 +31,7 @@ func TestLifecycle(t *testing.T) {
 
 	config.UseTestFile()
 
-	if _, err := couchdb.CheckStatus(); err != nil {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
+	testutils.NeedCouchdb(t)
 
 	_, err := stack.Start()
 	if err != nil {

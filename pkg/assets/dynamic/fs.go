@@ -31,7 +31,7 @@ type assetsFS interface {
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
 	List() (map[string][]*model.Asset, error)
-	CheckStatus() (time.Duration, error)
+	CheckStatus(ctx context.Context) (time.Duration, error)
 }
 
 type swiftFS struct {
@@ -143,7 +143,7 @@ func (a *aferoFS) Remove(context, name string) error {
 	return a.fs.Remove(filePath)
 }
 
-func (a *aferoFS) CheckStatus() (time.Duration, error) {
+func (a *aferoFS) CheckStatus(_ context.Context) (time.Duration, error) {
 	before := time.Now()
 	_, err := a.fs.Stat("/")
 	return time.Since(before), err
@@ -237,13 +237,13 @@ func (s *swiftFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (s *swiftFS) CheckStatus() (time.Duration, error) {
+func (s *swiftFS) CheckStatus(ctx context.Context) (time.Duration, error) {
 	before := time.Now()
 	var err error
 	if config.GetConfig().Fs.CanQueryInfo {
-		_, err = s.swiftConn.QueryInfo(s.ctx)
+		_, err = s.swiftConn.QueryInfo(ctx)
 	} else {
-		_, _, err = s.swiftConn.Container(s.ctx, DynamicAssetsContainerName)
+		_, _, err = s.swiftConn.Container(ctx, DynamicAssetsContainerName)
 	}
 	if err != nil {
 		return 0, err

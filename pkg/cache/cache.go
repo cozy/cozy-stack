@@ -37,12 +37,12 @@ func New(client redis.UniversalClient) Cache {
 }
 
 // CheckStatus checks that the cache is ready, or returns an error.
-func (c Cache) CheckStatus() (time.Duration, error) {
+func (c Cache) CheckStatus(ctx context.Context) (time.Duration, error) {
 	if c.client == nil {
 		return 0, nil
 	}
 	before := time.Now()
-	if err := c.client.Ping(c.ctx).Err(); err != nil {
+	if err := c.client.Ping(ctx).Err(); err != nil {
 		return 0, err
 	}
 	return time.Since(before), nil

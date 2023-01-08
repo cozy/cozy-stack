@@ -58,6 +58,8 @@ security features. Please do not use this binary as your production server.
 
 	var shutdowners []utils.Shutdowner
 
+	ctx := context.Background()
+
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
 		if err != nil {
@@ -74,7 +76,7 @@ security features. Please do not use this binary as your production server.
 	attempts := 8
 	attemptsSpacing := 1 * time.Second
 	for i := 0; i < attempts; i++ {
-		_, err = couchdb.CheckStatus()
+		_, err = couchdb.CheckStatus(ctx)
 		if err == nil {
 			break
 		}

@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -28,14 +28,10 @@ func TestExecCommand(t *testing.T) {
 
 	config.UseTestFile()
 
-	if _, err := couchdb.CheckStatus(); err != nil {
-		require.NoError(t, err)
-	}
+	testutils.NeedCouchdb(t)
 
 	_, err := stack.Start()
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	tempDir := t.TempDir()
 
