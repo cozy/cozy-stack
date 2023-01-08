@@ -21,12 +21,9 @@ func TestUseViper(t *testing.T) {
 }
 
 func TestSetup(t *testing.T) {
-	tmpdir := os.TempDir()
+	tmpdir := t.TempDir()
 	tmpfile, err := os.OpenFile(filepath.Join(tmpdir, "cozy.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
-
-	defer tmpfile.Close()
-	defer os.Remove(tmpfile.Name())
 
 	t.Setenv("OS_USERNAME", "os_username_val")
 	t.Setenv("OS_PASSWORD", "os_password_val")

@@ -179,7 +179,7 @@ func TestApps(t *testing.T) {
 			_ = assets.Remove(asset.Name, asset.Context)
 		}
 		// Create and insert an asset in foo context
-		tmpdir := os.TempDir()
+		tmpdir := t.TempDir()
 		_, err := os.OpenFile(filepath.Join(tmpdir, "custom_favicon.png"), os.O_RDWR|os.O_CREATE, 0600)
 		assert.NoError(t, err)
 
