@@ -46,7 +46,6 @@ func TestDynamic(t *testing.T) {
 			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 		},
 	}), "Could not init swift connection")
-
 	require.NoError(t, config.GetSwiftConnection().ContainerCreate(ctx, DynamicAssetsContainerName, nil), "Could not create dynamic container")
 	require.NoError(t, InitDynamicAssetFS(), "Could not initialize dynamic FS")
 
