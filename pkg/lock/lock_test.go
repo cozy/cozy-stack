@@ -89,7 +89,6 @@ func TestLock(t *testing.T) {
 		assert.Equal(t, ErrTooManyRetries, err)
 		l.Unlock()
 	})
-
 }
 
 func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {

@@ -467,7 +467,6 @@ func TestCouchdb(t *testing.T) {
 		_, err = GetLocal(TestPrefix, TestDoctype, id)
 		assert.True(t, IsNotFoundError(err))
 	})
-
 }
 
 func (t *testDoc) ID() string {

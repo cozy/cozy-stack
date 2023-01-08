@@ -77,5 +77,4 @@ func TestHooks(t *testing.T) {
 		assert.False(t, isExecutable("../../tests/fixtures/logos.zip"))
 		assert.True(t, isExecutable("./testdata/pre-success"))
 	})
-
 }

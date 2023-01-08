@@ -116,5 +116,4 @@ func TestRate(t *testing.T) {
 		}
 		assert.Error(t, CheckRateLimit(testInstance, TwoFactorType))
 	})
-
 }

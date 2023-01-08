@@ -40,5 +40,4 @@ func TestCursor(t *testing.T) {
 		assert.Equal(t, []string{"A", "B"}, c2.(*StartKeyCursor).NextKey)
 		assert.Equal(t, "resultD", c2.(*StartKeyCursor).NextDocID)
 	})
-
 }

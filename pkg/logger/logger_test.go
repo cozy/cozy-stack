@@ -61,5 +61,4 @@ func TestLogger(t *testing.T) {
 		log = WithDomain("foo.bar.redis")
 		assert.Equal(t, logrus.InfoLevel, log.entry.Logger.Level)
 	})
-
 }

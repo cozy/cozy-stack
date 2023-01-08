@@ -58,5 +58,4 @@ func TestCache(t *testing.T) {
 		test(client)
 		test(nil) // In-memory
 	})
-
 }

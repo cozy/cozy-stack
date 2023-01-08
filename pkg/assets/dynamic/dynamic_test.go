@@ -116,5 +116,4 @@ func TestDynamic(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, len(finalAssetsList["bar"]), len(assetsList["bar"]))
 	})
-
 }
