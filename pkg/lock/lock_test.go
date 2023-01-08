@@ -9,7 +9,6 @@ package lock
 import (
 	"flag"
 	"fmt"
-	"os"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -37,8 +36,6 @@ func TestLock(t *testing.T) {
 	config.UseTestFile()
 	backconf := config.GetConfig().Lock
 	defer func() { config.GetConfig().Lock = backconf }()
-
-	os.Exit(m.Run())
 
 	t.Run("MemLock", func(t *testing.T) {
 		var err error
