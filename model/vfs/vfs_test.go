@@ -50,7 +50,7 @@ func TestVfs(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 
 	aferoFS, aferoRollback, err := makeAferoFS()
 	t.Cleanup(aferoRollback)

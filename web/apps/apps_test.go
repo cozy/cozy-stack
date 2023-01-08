@@ -59,7 +59,7 @@ func TestApps(t *testing.T) {
 
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	err := setup.SetupSwiftTest()

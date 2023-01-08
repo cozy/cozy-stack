@@ -52,7 +52,7 @@ func TestRedisScheduler(t *testing.T) {
 		panic(err)
 	}
 
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()

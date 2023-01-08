@@ -61,7 +61,7 @@ func TestFiles(t *testing.T) {
 	config.UseTestFile()
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 

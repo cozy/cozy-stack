@@ -54,7 +54,7 @@ func TestReplicator(t *testing.T) {
 	build.BuildMode = build.ModeDev
 	config.GetConfig().Assets = "../../assets"
 	_ = web.LoadSupportedLocales()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 

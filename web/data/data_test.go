@@ -61,7 +61,7 @@ func TestData(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()

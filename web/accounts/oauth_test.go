@@ -36,7 +36,7 @@ func TestOauth(t *testing.T) {
 
 	config.UseTestFile()
 	build.BuildMode = build.ModeDev
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)

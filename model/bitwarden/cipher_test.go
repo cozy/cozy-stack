@@ -22,7 +22,7 @@ func TestCipher(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	if _, err := stack.Start(); err != nil {
 		fmt.Printf("Error while starting the job system: %s\n", err)
 		os.Exit(1)
