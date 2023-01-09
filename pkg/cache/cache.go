@@ -69,14 +69,14 @@ func (c Cache) Get(ctx context.Context, key string) ([]byte, bool) {
 }
 
 // MultiGet can be used to fetch several keys at once.
-func (c Cache) MultiGet(keys []string) [][]byte {
+func (c Cache) MultiGet(ctx context.Context, keys []string) [][]byte {
 	results := make([][]byte, len(keys))
 	if c.client == nil {
 		for i, key := range keys {
-			results[i], _ = c.Get(context.TODO(), key)
+			results[i], _ = c.Get(ctx, key)
 		}
 	} else {
-		cmd := c.client.MGet(c.ctx, keys...)
+		cmd := c.client.MGet(ctx, keys...)
 		for i, val := range cmd.Val() {
 			if buf, ok := val.(string); ok {
 				results[i] = []byte(buf)

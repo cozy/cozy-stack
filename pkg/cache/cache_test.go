@@ -35,7 +35,7 @@ func TestCache(t *testing.T) {
 		c := New(client)
 		c.Set("one", []byte("1"), 10*time.Millisecond)
 		c.Set("two", []byte("2"), 10*time.Millisecond)
-		bufs := c.MultiGet([]string{"one", "two", "three"})
+		bufs := c.MultiGet(context.TODO(), []string{"one", "two", "three"})
 		assert.Len(t, bufs, 3)
 		assert.Equal(t, []byte("1"), bufs[0])
 		assert.Equal(t, []byte("2"), bufs[1])

@@ -519,7 +519,7 @@ func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 		keys[i] = cacheKey(inst, doc.ID())
 	}
 	cache := config.GetConfig().CacheStorage
-	bufs := cache.MultiGet(keys)
+	bufs := cache.MultiGet(context.TODO(), keys)
 	for i, buf := range bufs {
 		if len(buf) == 0 {
 			continue
