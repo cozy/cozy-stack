@@ -638,7 +638,7 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 func getListFromCache(inst *instance.Instance) []string {
 	cache := config.GetConfig().CacheStorage
 	prefix := fmt.Sprintf("note:%s:", inst.Domain)
-	keys := cache.Keys(prefix)
+	keys := cache.Keys(context.TODO(), prefix)
 	fileIDs := make([]string, len(keys))
 	for i, key := range keys {
 		fileIDs[i] = strings.TrimPrefix(key, prefix)

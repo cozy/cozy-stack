@@ -88,9 +88,9 @@ func (c Cache) MultiGet(ctx context.Context, keys []string) [][]byte {
 
 // Keys returns the list of keys with the given prefix.
 // Note: it can be slow and should be used carefully.
-func (c Cache) Keys(prefix string) []string {
+func (c Cache) Keys(ctx context.Context, prefix string) []string {
 	if c.client != nil {
-		cmd := c.client.Keys(c.ctx, prefix+"*")
+		cmd := c.client.Keys(ctx, prefix+"*")
 		return cmd.Val()
 	}
 	results := make([]string, 0)

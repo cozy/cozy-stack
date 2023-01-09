@@ -48,7 +48,7 @@ func TestCache(t *testing.T) {
 			c.Set("foo:one", []byte("1"), 10*time.Millisecond)
 			c.Set("foo:two", []byte("2"), 10*time.Millisecond)
 			c.Set("bar:baz", []byte("3"), 10*time.Millisecond)
-			keys := c.Keys("foo:")
+			keys := c.Keys(context.TODO(), "foo:")
 			sort.Strings(keys)
 			assert.Equal(t, []string{"foo:one", "foo:two"}, keys)
 		}
