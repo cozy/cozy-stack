@@ -24,7 +24,7 @@ func TestRouting(t *testing.T) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../assets"
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
+	setup := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 	inst := setup.GetTestInstance()
 	domain = inst.Domain

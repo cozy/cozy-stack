@@ -34,7 +34,7 @@ func TestExport(t *testing.T) {
 	fmt.Printf("seed = %d\n", seed)
 	rand.Seed(seed)
 	config.UseTestFile()
-	setup := testutils.NewSetup(nil, t.Name())
+	setup := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 

@@ -65,23 +65,24 @@ func TODO(t *testing.T, date string, args ...interface{}) {
 // setting up instance, client, VFSContext, testserver
 // and cleaning up after itself
 type TestSetup struct {
-	testingM *testing.M
-	name     string
-	host     string
-	inst     *instance.Instance
-	ts       *httptest.Server
-	cleanup  func()
+	t       testing.TB
+	name    string
+	host    string
+	inst    *instance.Instance
+	ts      *httptest.Server
+	cleanup func()
 }
 
 // NewSetup returns a new TestSetup
 // name is used to prevent bug when tests are run in parallel
-func NewSetup(testingM *testing.M, name string) *TestSetup {
+func NewSetup(t testing.TB, name string) *TestSetup {
 	setup := TestSetup{
-		name:     name,
-		testingM: testingM,
-		host:     name + "_" + utils.RandomString(10) + ".cozy.local",
-		cleanup:  func() {},
+		name:    name,
+		t:       t,
+		host:    name + "_" + utils.RandomString(10) + ".cozy.local",
+		cleanup: func() {},
 	}
+
 	return &setup
 }
 

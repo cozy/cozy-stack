@@ -62,7 +62,7 @@ func TestFiles(t *testing.T) {
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
+	setup := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 
 	tempdir, err := os.MkdirTemp("", "cozy-stack")

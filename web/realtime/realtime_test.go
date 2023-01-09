@@ -34,7 +34,7 @@ func TestRealtime(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
+	setup := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient("io.cozy.foos io.cozy.bars io.cozy.bazs")

@@ -60,7 +60,7 @@ func TestReplicator(t *testing.T) {
 	middlewares.BuildTemplates()
 
 	// Prepare Alice's instance
-	setup := testutils.NewSetup(nil, t.Name()+"_alice")
+	setup := testutils.NewSetup(t, t.Name()+"_alice")
 	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
@@ -84,7 +84,7 @@ func TestReplicator(t *testing.T) {
 	}
 
 	// Prepare another instance for the replicator tests
-	replSetup := testutils.NewSetup(nil, t.Name()+"_replicator")
+	replSetup := testutils.NewSetup(t, t.Name()+"_replicator")
 	replInstance = replSetup.GetTestInstance()
 	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings": sharings.Routes,

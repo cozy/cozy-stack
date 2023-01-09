@@ -71,7 +71,7 @@ func TestSharings(t *testing.T) {
 	middlewares.BuildTemplates()
 
 	// Prepare Alice's instance
-	setup := testutils.NewSetup(nil, t.Name()+"_alice")
+	setup := testutils.NewSetup(t, t.Name()+"_alice")
 	t.Cleanup(setup.Cleanup)
 	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
@@ -96,7 +96,7 @@ func TestSharings(t *testing.T) {
 	}
 
 	// Prepare Bob's instance
-	bobSetup := testutils.NewSetup(nil, t.Name()+"_bob")
+	bobSetup := testutils.NewSetup(t, t.Name()+"_bob")
 	t.Cleanup(bobSetup.Cleanup)
 	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
 		Email:         "bob@example.net",

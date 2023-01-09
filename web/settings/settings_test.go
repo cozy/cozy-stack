@@ -46,7 +46,7 @@ func TestSettings(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
+	setup := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
@@ -71,7 +71,7 @@ func TestSettings(t *testing.T) {
 	})
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	setupFlagship := testutils.NewSetup(nil, t.Name())
+	setupFlagship := testutils.NewSetup(t, t.Name())
 	t.Cleanup(setup.Cleanup)
 	testInstanceFlagship = setupFlagship.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
