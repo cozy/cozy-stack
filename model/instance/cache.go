@@ -32,7 +32,7 @@ func Get(domain string) (*Instance, error) {
 		return nil, err
 	}
 	if data, err := json.Marshal(inst); err == nil {
-		cache.SetNX(inst.cacheKey(), data, cacheTTL)
+		cache.SetNX(context.TODO(), inst.cacheKey(), data, cacheTTL)
 	}
 	return inst, nil
 }

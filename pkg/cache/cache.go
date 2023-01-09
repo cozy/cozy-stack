@@ -126,14 +126,14 @@ func (c Cache) Set(ctx context.Context, key string, data []byte, expiration time
 }
 
 // SetNX stores the data in the cache only if the key doesn't exist yet.
-func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
+func (c Cache) SetNX(ctx context.Context, key string, data []byte, expiration time.Duration) {
 	if c.client == nil {
 		c.m.LoadOrStore(key, cacheEntry{
 			payload:   data,
 			expiredAt: time.Now().Add(expiration),
 		})
 	} else {
-		c.client.SetNX(c.ctx, key, data, expiration)
+		c.client.SetNX(ctx, key, data, expiration)
 	}
 }
 
