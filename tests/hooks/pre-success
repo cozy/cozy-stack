@@ -1,3 +1,0 @@
-#!/bin/bash
-echo "pre-$2" > $1
-exit 0
