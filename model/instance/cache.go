@@ -78,9 +78,9 @@ func (inst *Instance) Update(ctx context.Context) error {
 }
 
 // Delete removes the instance document in CouchDB.
-func (inst *Instance) Delete() error {
+func (inst *Instance) Delete(ctx context.Context) error {
 	err := couchdb.DeleteDoc(prefixer.GlobalPrefixer, inst)
 	cache := config.GetConfig().CacheStorage
-	cache.Clear(context.TODO(), inst.cacheKey())
+	cache.Clear(ctx, inst.cacheKey())
 	return err
 }

@@ -108,7 +108,7 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 
-	err = inst.Delete()
+	err = inst.Delete(context.TODO())
 	if couchdb.IsConflictError(err) {
 		// We may need to try again as CouchDB can return an old version of
 		// this document when we have concurrent updates for indexes/views
@@ -118,7 +118,7 @@ func destroyWithoutHooks(domain string) error {
 		if couchdb.IsNotFoundError(errg) {
 			err = nil
 		} else if inst != nil {
-			err = inst.Delete()
+			err = inst.Delete(context.TODO())
 		}
 	}
 	return err
