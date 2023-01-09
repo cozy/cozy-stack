@@ -63,7 +63,7 @@ func TestApps(t *testing.T) {
 	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
-	tempdir := setup.GetTmpDirectory()
+	tempdir := t.TempDir()
 
 	cfg := config.GetConfig()
 	cfg.Fs.URL = &url.URL{

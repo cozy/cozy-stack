@@ -9,7 +9,6 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -123,16 +122,6 @@ func (c *TestSetup) AddCleanup(f func() error) {
 		}
 		next()
 	}
-}
-
-// GetTmpDirectory creates a temporary directory
-// The directory will be removed on container cleanup
-func (c *TestSetup) GetTmpDirectory() string {
-	tempdir, err := os.MkdirTemp("", "cozy-stack")
-	require.NoError(c.t, err, "Could not create temporary directory.")
-
-	c.AddCleanup(func() error { return os.RemoveAll(tempdir) })
-	return tempdir
 }
 
 // GetTestInstance creates an instance with a random host
