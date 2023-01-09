@@ -828,6 +828,8 @@ _cozy-stack_check_sharings()
     flags_with_completion=()
     flags_completion=()
 
+    flags+=("--fast")
+    local_nonpersistent_flags+=("--fast")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")

@@ -9,6 +9,16 @@ This command checks that the io.cozy.sharings have no inconsistencies. It can
 be triggers that are missing on an active sharing, or missing credentials for
 an active member.
 
+There are 2 steps:
+
+- setup integrity checks that there are nothing wrong in the configuration like
+  a missing trigger
+- files and folders consistency checks that the shared documents are the same
+  for all members
+
+By default, both operations are done, but you can choose to skip the consistency
+check via the flags.
+
 
 ```
 cozy-stack check sharings <domain> [flags]
