@@ -8,7 +8,7 @@ require (
 	github.com/appleboy/go-fcm v0.1.5
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
 	github.com/cozy/afero v1.3.0
-	github.com/cozy/goexif2 v0.0.0-20200819113101-00e1cc8cc9d3
+	github.com/cozy/goexif2 v1.2.0
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.2
