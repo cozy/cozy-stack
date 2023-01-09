@@ -303,7 +303,7 @@ func migrateToSwiftV3(domain string) error {
 		inst = in
 	}
 	inst.SwiftLayout = 2
-	if err = inst.Update(); err != nil {
+	if err = inst.Update(context.TODO()); err != nil {
 		return err
 	}
 

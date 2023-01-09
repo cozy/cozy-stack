@@ -18,7 +18,7 @@ import (
 )
 
 func update(inst *instance.Instance) error {
-	if err := inst.Update(); err != nil {
+	if err := inst.Update(context.TODO()); err != nil {
 		inst.Logger().Errorf("Could not update: %s", err.Error())
 		return err
 	}

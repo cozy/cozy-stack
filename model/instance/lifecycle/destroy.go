@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -75,7 +76,7 @@ func destroyWithoutHooks(domain string) error {
 		return instance.ErrDeletionAlreadyRequested
 	}
 	inst.Deleting = true
-	if err := inst.Update(); err != nil {
+	if err := inst.Update(context.TODO()); err != nil {
 		return err
 	}
 
@@ -93,7 +94,7 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 	inst.Deleting = false
-	_ = inst.Update()
+	_ = inst.Update(context.TODO())
 
 	removeTriggers(inst)
 

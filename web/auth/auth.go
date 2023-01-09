@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -298,7 +299,7 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	}
 	settings.PublicKey = pubKey
 	settings.PrivateKey = privKey
-	if err := inst.Update(); err != nil {
+	if err := inst.Update(context.TODO()); err != nil {
 		inst.Logger().Errorf("Could not update: %s", err.Error())
 	}
 	if err := settings.Save(inst); err != nil {

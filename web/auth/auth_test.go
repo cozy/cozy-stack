@@ -5,6 +5,7 @@ package auth_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -110,7 +111,7 @@ func TestAuth(t *testing.T) {
 	t.Run("InstanceBlocked", func(t *testing.T) {
 		// Block the instance
 		testInstance.Blocked = true
-		_ = testInstance.Update()
+		_ = testInstance.Update(context.TODO())
 
 		req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 		req.Host = testInstance.Domain
@@ -131,7 +132,7 @@ func TestAuth(t *testing.T) {
 
 		// Unblock the instance
 		testInstance.Blocked = false
-		_ = testInstance.Update()
+		_ = testInstance.Update(context.TODO())
 	})
 
 	t.Run("IsLoggedInWhenNotLoggedIn", func(t *testing.T) {

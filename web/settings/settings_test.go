@@ -950,7 +950,7 @@ func TestSettings(t *testing.T) {
 			"json_object":          map[string]interface{}{"foo": "bar"},
 		}
 		testInstance.FeatureSets = []string{"set1", "set2"}
-		err = testInstance.Update()
+		err = testInstance.Update(context.TODO())
 		assert.NoError(t, err)
 		cache := config.GetConfig().CacheStorage
 		cacheKey := fmt.Sprintf("flags:%s:%v", testInstance.ContextName, testInstance.FeatureSets)

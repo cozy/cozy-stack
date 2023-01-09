@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,7 +85,7 @@ func TestApps(t *testing.T) {
 	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass), params)
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
-	_ = testInstance.Update()
+	_ = testInstance.Update(context.TODO())
 
 	slug, err := setup.InstallMiniApp()
 	require.NoError(t, err, "Could not install mini app")

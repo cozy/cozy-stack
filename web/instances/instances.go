@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -188,7 +189,7 @@ func modifyHandler(c echo.Context) error {
 	// has its settings database.
 	if deleting, err := strconv.ParseBool(c.QueryParam("Deleting")); err == nil {
 		i.Deleting = deleting
-		if err := i.Update(); err != nil {
+		if err := i.Update(context.TODO()); err != nil {
 			return wrapError(err)
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
@@ -319,7 +320,7 @@ func setAuthMode(c echo.Context) error {
 
 	if !inst.HasAuthMode(authMode) {
 		inst.AuthMode = authMode
-		if err = inst.Update(); err != nil {
+		if err = inst.Update(context.TODO()); err != nil {
 			return err
 		}
 	} else {

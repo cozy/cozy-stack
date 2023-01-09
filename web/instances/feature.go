@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -42,7 +43,7 @@ func patchFeatureFlags(c echo.Context) error {
 			inst.FeatureFlags[k] = v
 		}
 	}
-	if err := inst.Update(); err != nil {
+	if err := inst.Update(context.TODO()); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureFlags)
@@ -67,7 +68,7 @@ func putFeatureSets(c echo.Context) error {
 	}
 	sort.Strings(list)
 	inst.FeatureSets = list
-	if err := inst.Update(); err != nil {
+	if err := inst.Update(context.TODO()); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureSets)
