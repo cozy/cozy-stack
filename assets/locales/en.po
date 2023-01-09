@@ -422,6 +422,9 @@ msgstr "Application not yet available"
 msgid "Error Application not installed Message"
 msgstr "This application is not yet available in your Cozy."
 
+msgid "Error Application not supported Message"
+msgstr "This application is not supported by your Cozy server."
+
 msgid "Error Application not found Title"
 msgstr "The application doesn't exist"
 

@@ -128,6 +128,7 @@ func TestApps(t *testing.T) {
 		assertNotFound(t, slug, "/")
 		assertNotFound(t, slug, "/index.html")
 		assertNotFound(t, slug, "/public/hello.html")
+		assertInternalServerError(t, slug, "/invalid")
 	})
 
 	t.Run("CozyBar", func(t *testing.T) {
@@ -712,6 +713,12 @@ func assertNotFound(t *testing.T, slug, path string) {
 	res, err := doGet(slug, path, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
+}
+
+func assertInternalServerError(t *testing.T, slug, path string) {
+	res, err := doGet(slug, path, true)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

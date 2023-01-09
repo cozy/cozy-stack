@@ -490,6 +490,9 @@ msgstr "Application pas encore disponible"
 msgid "Error Application not installed Message"
 msgstr "Cette application n'est pas encore disponible dans votre Cozy."
 
+msgid "Error Application not supported Message"
+msgstr "Cette application n'est pas prise en charge dans votre serveur Cozy."
+
 msgid "Error Application not found Title"
 msgstr "L’application n’existe pas"
 
