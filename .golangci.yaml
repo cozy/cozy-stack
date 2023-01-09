@@ -62,8 +62,5 @@ linters-settings:
   gocritic:
     disabled-checks:
       - appendAssign
-        # TODO: Remove all the defer from the `TestMain` functions or refactor
-        # the tests and avoid the use of `TestMain` with `os.Exit`
-      - exitAfterDefer 
       - ifElseChain
       - argOrder
