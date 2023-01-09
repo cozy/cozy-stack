@@ -149,14 +149,14 @@ func (c Cache) GetCompressed(ctx context.Context, key string) (io.Reader, bool) 
 }
 
 // SetCompressed works like Set but compress the asset data before storing it.
-func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) {
+func (c Cache) SetCompressed(ctx context.Context, key string, data []byte, expiration time.Duration) {
 	dataCompressed := new(bytes.Buffer)
 	gw := gzip.NewWriter(dataCompressed)
 	defer gw.Close()
 	if _, err := io.Copy(gw, bytes.NewReader(data)); err != nil {
 		return
 	}
-	c.Set(context.TODO(), key, dataCompressed.Bytes(), expiration)
+	c.Set(ctx, key, dataCompressed.Bytes(), expiration)
 }
 
 // RefreshTTL can be used to update the TTL of an existing entry in the cache.

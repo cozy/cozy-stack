@@ -1808,7 +1808,7 @@ func fsckHandler(c echo.Context) error {
 
 	if !noCache {
 		expiration := utils.DurationFuzzing(3*30*24*time.Hour, 0.10)
-		cacheStorage.SetCompressed(key, logsData, expiration)
+		cacheStorage.SetCompressed(ctx, key, logsData, expiration)
 	}
 
 	return c.JSONBlob(http.StatusOK, logsData)
