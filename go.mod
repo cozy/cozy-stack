@@ -34,7 +34,7 @@ require (
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.14.5
 	github.com/oschwald/maxminddb-golang v1.10.0
-	github.com/pquerna/otp v1.3.0
+	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.23.0
