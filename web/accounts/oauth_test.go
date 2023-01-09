@@ -38,8 +38,7 @@ func TestOauth(t *testing.T) {
 	build.BuildMode = build.ModeDev
 	testutils.NeedCouchdb(t)
 
-	setup := testutils.NewSetup(nil, t.Name())
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name())
 	ts = setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun)
@@ -54,9 +53,7 @@ func TestOauth(t *testing.T) {
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.localhost", 1),
 	})
 	_ = couchdb.ResetDB(prefixer.SecretsPrefixer, consts.AccountTypes)
-	setup.AddCleanup(func() error {
-		return couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes)
-	})
+	t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes) })
 
 	// Login
 	jar = setup.GetCookieJar()

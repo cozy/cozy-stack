@@ -62,8 +62,7 @@ func TestData(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name())
 	testInstance = setup.GetTestInstance()
 	scope := "io.cozy.doctypes io.cozy.files io.cozy.events " +
 		"io.cozy.anothertype io.cozy.nottype"

@@ -71,8 +71,7 @@ func TestSharings(t *testing.T) {
 	middlewares.BuildTemplates()
 
 	// Prepare Alice's instance
-	setup := testutils.NewSetup(nil, t.Name()+"_alice")
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name()+"_alice")
 	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
@@ -96,8 +95,7 @@ func TestSharings(t *testing.T) {
 	}
 
 	// Prepare Bob's instance
-	bobSetup := testutils.NewSetup(nil, t.Name()+"_bob")
-	t.Cleanup(bobSetup.Cleanup)
+	bobSetup := testutils.NewSetup(t, t.Name()+"_bob")
 	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
 		Email:         "bob@example.net",
 		PublicName:    "Bob",
@@ -118,11 +116,6 @@ func TestSharings(t *testing.T) {
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
-
-	setup.AddCleanup(func() error {
-		bobSetup.Cleanup()
-		return nil
-	})
 
 	t.Run("CreateSharingSuccess", func(t *testing.T) {
 		bobContact := createBobContact()

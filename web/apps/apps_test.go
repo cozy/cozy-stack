@@ -59,12 +59,11 @@ func TestApps(t *testing.T) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name())
 	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
-	tempdir := setup.GetTmpDirectory()
+	tempdir := t.TempDir()
 
 	cfg := config.GetConfig()
 	cfg.Fs.URL = &url.URL{
@@ -88,14 +87,10 @@ func TestApps(t *testing.T) {
 	_ = testInstance.Update()
 
 	slug, err := setup.InstallMiniApp()
-	if err != nil {
-		setup.CleanupAndDie("Could not install mini app.", err)
-	}
+	require.NoError(t, err, "Could not install mini app")
 
 	_, err = setup.InstallMiniKonnector()
-	if err != nil {
-		setup.CleanupAndDie("Could not install mini konnector.", err)
-	}
+	require.NoError(t, err, "Could not install mini konnector")
 
 	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
@@ -106,9 +101,7 @@ func TestApps(t *testing.T) {
 		})
 		r.POST("/auth/session_code", auth.CreateSessionCode)
 		router, err := web.CreateSubdomainProxy(r, webApps.Serve)
-		if err != nil {
-			setup.CleanupAndDie("Cant start subdoman proxy", err)
-		}
+		require.NoError(t, err, "Cant start subdoman proxy")
 		return router
 	})
 

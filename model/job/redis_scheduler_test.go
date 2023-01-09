@@ -2,7 +2,6 @@ package job_test
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -53,18 +52,15 @@ func TestRedisScheduler(t *testing.T) {
 	}
 
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name())
 	testInstance = setup.GetTestInstance()
 
-	setup.AddCleanup(func() error {
+	t.Cleanup(func() {
 		cfg.Jobs.RedisConfig = was
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		return client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
+		_ = client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey)
 	})
-
-	os.Exit(setup.Run())
 
 	t.Run("RedisSchedulerWithTimeTriggers", func(t *testing.T) {
 		var wAt sync.WaitGroup

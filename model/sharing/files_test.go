@@ -17,8 +17,7 @@ func TestFiles(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(nil, t.Name())
-	t.Cleanup(setup.Cleanup)
+	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()
 
 	t.Run("MakeXorKey", func(t *testing.T) {
