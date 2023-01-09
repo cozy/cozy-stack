@@ -60,7 +60,6 @@ func TestApps(t *testing.T) {
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")

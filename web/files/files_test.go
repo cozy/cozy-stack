@@ -63,8 +63,6 @@ func TestFiles(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
-
 	tempdir, err := os.MkdirTemp("", "cozy-stack")
 	if err != nil {
 		require.NoError(t, err, "Could not create temporary directory")

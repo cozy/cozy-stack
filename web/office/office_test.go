@@ -44,7 +44,6 @@ func TestOffice(t *testing.T) {
 	}
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 

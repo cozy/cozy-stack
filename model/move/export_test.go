@@ -35,7 +35,6 @@ func TestExport(t *testing.T) {
 	rand.Seed(seed)
 	config.UseTestFile()
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
 
 	t.Run("ExportFiles", func(t *testing.T) {

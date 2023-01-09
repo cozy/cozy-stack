@@ -28,8 +28,6 @@ func TestClient(t *testing.T) {
 
 	config.UseTestFile()
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
-	t.Cleanup(setup.Cleanup)
 	testInstance = setup.GetTestInstance()
 
 	t.Run("CreateJWT", func(t *testing.T) {

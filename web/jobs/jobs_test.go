@@ -50,7 +50,6 @@ func TestJobs(t *testing.T) {
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "print",

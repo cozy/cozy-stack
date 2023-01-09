@@ -21,13 +21,9 @@ func TestWebapp(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	_, err := stack.Start()
-	if err != nil {
-		require.NoError(t, err, "Error while starting job system")
-	}
+	require.NoError(t, err, "Error while starting job system")
 
 	t.Run("ListWebappsWithPagination", func(t *testing.T) {
 		of := true

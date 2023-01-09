@@ -91,12 +91,6 @@ func TestReplicator(t *testing.T) {
 	})
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
-
-	setup.AddCleanup(func() error {
-		replSetup.Cleanup()
-		return nil
-	})
-
 	t.Run("CreateSharingForReplicatorTest", func(t *testing.T) {
 		rule := sharing.Rule{
 			Title:    "tests",

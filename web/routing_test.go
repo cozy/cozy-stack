@@ -25,7 +25,6 @@ func TestRouting(t *testing.T) {
 	config.GetConfig().Assets = "../assets"
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	inst := setup.GetTestInstance()
 	domain = inst.Domain
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")

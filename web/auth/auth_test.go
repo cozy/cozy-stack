@@ -80,7 +80,6 @@ func TestAuth(t *testing.T) {
 	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:        domain,

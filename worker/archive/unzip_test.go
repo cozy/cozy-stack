@@ -20,7 +20,6 @@ func Test_archive(t *testing.T) {
 
 	config.UseTestFile()
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	inst := setup.GetTestInstance()
 

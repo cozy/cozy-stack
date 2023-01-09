@@ -44,7 +44,6 @@ func TestPermissions(t *testing.T) {
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	testInstance = setup.GetTestInstance()
 	scopes := "io.cozy.contacts io.cozy.files:GET io.cozy.events"

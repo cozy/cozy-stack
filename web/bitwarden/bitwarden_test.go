@@ -39,7 +39,6 @@ func TestBitwarden(t *testing.T) {
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "bitwarden.example.net",
 		Passphrase: "cozy",

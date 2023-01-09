@@ -35,7 +35,6 @@ func TestOidc(t *testing.T) {
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 

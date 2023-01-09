@@ -39,7 +39,6 @@ func TestOauth(t *testing.T) {
 	testutils.NeedCouchdb(t)
 
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 	ts = setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun)

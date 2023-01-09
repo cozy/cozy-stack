@@ -38,7 +38,6 @@ func TestMails(t *testing.T) {
 	config.UseTestFile()
 
 	setup := testutils.NewSetup(t, t.Name())
-	t.Cleanup(setup.Cleanup)
 
 	inst := setup.GetTestInstance(&lifecycle.Options{Email: "me@me"})
 
