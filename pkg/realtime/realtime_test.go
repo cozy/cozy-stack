@@ -195,6 +195,10 @@ func TestWatch(t *testing.T) {
 }
 
 func TestRedisRealtime(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
+	}
+
 	opt, err := redis.ParseURL("redis://localhost:6379/6")
 	assert.NoError(t, err)
 	client := redis.NewClient(opt)

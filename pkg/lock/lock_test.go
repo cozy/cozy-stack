@@ -9,7 +9,6 @@ package lock
 import (
 	"flag"
 	"fmt"
-	"os"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -23,6 +22,74 @@ import (
 // If you want to test harder the lock, you can set nb = 1000 but it is too
 // slow for CI, and the lock package has very few commits in the last years.
 var nb = 100
+
+func TestLock(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	flag.Parse()
+	if testing.Short() {
+		nb = 3
+	}
+
+	config.UseTestFile()
+	backconf := config.GetConfig().Lock
+	defer func() { config.GetConfig().Lock = backconf }()
+
+	t.Run("MemLock", func(t *testing.T) {
+		var err error
+		config.GetConfig().Lock, err = config.NewRedisConfig("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
+		l := ReadWrite(db, "test-mem")
+		hammerRW(t, l)
+	})
+
+	t.Run("RedisLock", func(t *testing.T) {
+		var err error
+		config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
+		l := ReadWrite(db, "test-redis")
+		hammerRW(t, l)
+		done := make(chan bool)
+		for i := 0; i < 10; i++ {
+			go HammerMutex(l, done)
+		}
+		for i := 0; i < 10; i++ {
+			<-done
+		}
+		other := ReadWrite(db, "test-redis").(*redisLock)
+		assert.NoError(t, l.Lock())
+		assert.Error(t, other.LockWithTimeout(1*time.Second))
+		l.Unlock()
+	})
+
+	t.Run("LongLock", func(t *testing.T) {
+		if testing.Short() {
+			return
+		}
+
+		var err error
+		config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
+		long := LongOperation(db, "test-long")
+		l := ReadWrite(db, "test-long").(*redisLock)
+		assert.NoError(t, long.Lock())
+		err = l.Lock()
+		assert.Error(t, err)
+		assert.Equal(t, ErrTooManyRetries, err)
+		l.Unlock()
+	})
+}
 
 func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
 	for i := 0; i < iterations; i++ {
@@ -103,70 +170,4 @@ func hammerRW(t *testing.T, l ErrorRWLocker) {
 	HammerRWMutex(l, 10, 3, nb)
 	HammerRWMutex(l, 10, 10, nb)
 	HammerRWMutex(l, 10, 5, nb)
-}
-
-func TestMemLock(t *testing.T) {
-	var err error
-	config.GetConfig().Lock, err = config.NewRedisConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-	l := ReadWrite(db, "test-mem")
-	hammerRW(t, l)
-}
-
-func TestRedisLock(t *testing.T) {
-	var err error
-	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-	l := ReadWrite(db, "test-redis")
-	hammerRW(t, l)
-	done := make(chan bool)
-	for i := 0; i < 10; i++ {
-		go HammerMutex(l, done)
-	}
-	for i := 0; i < 10; i++ {
-		<-done
-	}
-	other := ReadWrite(db, "test-redis").(*redisLock)
-	assert.NoError(t, l.Lock())
-	assert.Error(t, other.LockWithTimeout(1*time.Second))
-	l.Unlock()
-}
-
-func TestLongLock(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
-	var err error
-	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-	long := LongOperation(db, "test-long")
-	l := ReadWrite(db, "test-long").(*redisLock)
-	assert.NoError(t, long.Lock())
-	err = l.Lock()
-	assert.Error(t, err)
-	assert.Equal(t, ErrTooManyRetries, err)
-	l.Unlock()
-}
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	if testing.Short() {
-		nb = 3
-	}
-
-	config.UseTestFile()
-	backconf := config.GetConfig().Lock
-	defer func() { config.GetConfig().Lock = backconf }()
-
-	os.Exit(m.Run())
 }
