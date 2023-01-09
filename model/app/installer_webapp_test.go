@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -35,9 +36,7 @@ func TestInstallerWebApp(t *testing.T) {
 
 	config.UseTestFile()
 
-	if _, err := couchdb.CheckStatus(); err != nil {
-		require.NoError(t, err, "This test need couchdb to run.")
-	}
+	testutils.NeedCouchdb(t)
 
 	go serveGitRep(t.TempDir())
 	for i := 0; i < 400; i++ {

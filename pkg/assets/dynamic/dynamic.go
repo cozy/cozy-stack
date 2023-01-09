@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -29,11 +30,11 @@ var assetsClient = &http.Client{
 
 // CheckStatus checks that the FS for dynamic asset is available, or returns an
 // error if it is not the case. It also returns the latency.
-func CheckStatus() (time.Duration, error) {
+func CheckStatus(ctx context.Context) (time.Duration, error) {
 	if assetFS == nil {
 		return 0, nil
 	}
-	return assetFS.CheckStatus()
+	return assetFS.CheckStatus(ctx)
 }
 
 // ListAssets returns the list of the dynamic assets.

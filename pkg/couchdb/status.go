@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,10 +13,10 @@ import (
 
 // CheckStatus checks that the stack can talk to CouchDB, and returns an error
 // if it is not the case.
-func CheckStatus() (time.Duration, error) {
+func CheckStatus(ctx context.Context) (time.Duration, error) {
 	couch := config.CouchCluster(prefixer.GlobalCouchCluster)
 	u := couch.URL.String() + "/_up"
-	req, err := http.NewRequest(http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return 0, err
 	}

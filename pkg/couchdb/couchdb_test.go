@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -38,7 +39,7 @@ func TestCouchdb(t *testing.T) {
 
 	config.UseTestFile()
 
-	if _, err := CheckStatus(); err != nil {
+	if _, err := CheckStatus(context.Background()); err != nil {
 		require.NoError(t, err, "This test need couchdb to run.")
 	}
 

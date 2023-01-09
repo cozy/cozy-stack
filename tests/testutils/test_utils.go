@@ -37,7 +37,7 @@ var stackStarted bool
 
 // NeedCouchdb kill the process if there is no couchdb running
 func NeedCouchdb(t *testing.T) {
-	if _, err := couchdb.CheckStatus(); err != nil {
+	if _, err := couchdb.CheckStatus(context.Background()); err != nil {
 		t.Fatal("This test need couchdb to run.")
 	}
 }

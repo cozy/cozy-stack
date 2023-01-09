@@ -23,9 +23,11 @@ func Status(c echo.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
+	ctx := c.Request().Context()
+
 	go func() {
 		cfg := config.GetConfig()
-		if lat, err := cfg.CacheStorage.CheckStatus(); err == nil {
+		if lat, err := cfg.CacheStorage.CheckStatus(ctx); err == nil {
 			mu.Lock()
 			latencies["cache"] = lat.String()
 			mu.Unlock()
@@ -36,7 +38,7 @@ func Status(c echo.Context) error {
 	}()
 
 	go func() {
-		if lat, err := couchdb.CheckStatus(); err == nil {
+		if lat, err := couchdb.CheckStatus(ctx); err == nil {
 			mu.Lock()
 			latencies["couchdb"] = lat.String()
 			mu.Unlock()
@@ -47,7 +49,7 @@ func Status(c echo.Context) error {
 	}()
 
 	go func() {
-		if lat, err := dynamic.CheckStatus(); err == nil {
+		if lat, err := dynamic.CheckStatus(ctx); err == nil {
 			mu.Lock()
 			latencies["fs"] = lat.String()
 			mu.Unlock()
