@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1366,7 +1367,7 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 			domain = u.Hostname()
 		}
 
-		member, err := instance.Get(domain)
+		member, err := instance.Get(context.TODO(), domain)
 		if err != nil {
 			// If the member's instance cannot be found and doesn't share the
 			// owner's instance domain, they're probably on different

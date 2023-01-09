@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -332,7 +333,7 @@ func (i *Installer) checkSkipPermissions() (bool, error) {
 		return false, nil
 	}
 
-	inst, err := instance.Get(domain)
+	inst, err := instance.Get(context.TODO(), domain)
 	if err != nil {
 		return false, err
 	}
@@ -461,7 +462,7 @@ func (i *Installer) update() error {
 	// to set an AvailableVersion. In this case, the current webapp/konnector
 	// perms will be reapplied and custom ones will be lost if we don't rewrite
 	// them.
-	inst, err := instance.Get(i.Domain())
+	inst, err := instance.Get(context.TODO(), i.Domain())
 	if err == nil {
 		// Check if perms were added on the old manifest
 		if i.man.AppType() == consts.WebappType {

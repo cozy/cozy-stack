@@ -18,9 +18,9 @@ func (inst *Instance) cacheKey() string {
 }
 
 // Get finds an instance from its domain by using CouchDB or the cache.
-func Get(domain string) (*Instance, error) {
+func Get(ctx context.Context, domain string) (*Instance, error) {
 	cache := config.GetConfig().CacheStorage
-	if data, ok := cache.Get(context.TODO(), cachePrefix+domain); ok {
+	if data, ok := cache.Get(ctx, cachePrefix+domain); ok {
 		inst := &Instance{}
 		err := json.Unmarshal(data, inst)
 		if err == nil && inst.MakeVFS() == nil {
@@ -32,7 +32,7 @@ func Get(domain string) (*Instance, error) {
 		return nil, err
 	}
 	if data, err := json.Marshal(inst); err == nil {
-		cache.SetNX(context.TODO(), inst.cacheKey(), data, cacheTTL)
+		cache.SetNX(ctx, inst.cacheKey(), data, cacheTTL)
 	}
 	return inst, nil
 }

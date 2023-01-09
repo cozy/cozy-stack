@@ -1,6 +1,8 @@
 package lifecycle
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -12,7 +14,7 @@ func GetInstance(domain string) (*instance.Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	i, err := instance.Get(domain)
+	i, err := instance.Get(context.TODO(), domain)
 	if err != nil {
 		return nil, err
 	}
