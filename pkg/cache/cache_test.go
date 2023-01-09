@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sort"
 	"testing"
 	"time"
@@ -19,11 +20,11 @@ func TestCache(t *testing.T) {
 		val := []byte("bar")
 		c := New(nil)
 		c.Set(key, val, 10*time.Millisecond)
-		actual, ok := c.Get(key)
+		actual, ok := c.Get(context.TODO(), key)
 		assert.True(t, ok)
 		assert.Equal(t, val, actual)
 		time.Sleep(11 * time.Millisecond)
-		_, ok = c.Get(key)
+		_, ok = c.Get(context.TODO(), key)
 		assert.False(t, ok)
 	})
 

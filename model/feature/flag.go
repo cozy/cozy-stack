@@ -1,6 +1,7 @@
 package feature
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -150,7 +151,7 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 	cache := config.GetConfig().CacheStorage
 	cacheKey := fmt.Sprintf("flags:%s:%v", inst.ContextName, inst.FeatureSets)
 	var flags map[string]interface{}
-	if buf, ok := cache.Get(cacheKey); ok {
+	if buf, ok := cache.Get(context.TODO(), cacheKey); ok {
 		if err := json.Unmarshal(buf, &flags); err == nil {
 			return flags, nil
 		}

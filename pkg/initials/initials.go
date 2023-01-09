@@ -39,7 +39,7 @@ func Image(publicName string, opts ...Options) ([]byte, string, error) {
 
 	cache := config.GetConfig().CacheStorage
 	key := "initials:" + info.initials + info.color
-	if bytes, ok := cache.Get(key); ok {
+	if bytes, ok := cache.Get(context.TODO(), key); ok {
 		return bytes, contentType, nil
 	}
 

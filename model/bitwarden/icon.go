@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -36,7 +37,7 @@ func GetIcon(domain string) (*Icon, error) {
 
 	cache := config.GetConfig().CacheStorage
 	key := "bw-icons:" + domain
-	if data, ok := cache.Get(key); ok {
+	if data, ok := cache.Get(context.TODO(), key); ok {
 		if len(data) == 0 {
 			return nil, errors.New("No icon")
 		}

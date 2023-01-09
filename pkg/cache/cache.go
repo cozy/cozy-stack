@@ -50,7 +50,7 @@ func (c Cache) CheckStatus(ctx context.Context) (time.Duration, error) {
 
 // Get fetch the cached asset at the given key, and returns true only if the
 // asset was found.
-func (c Cache) Get(key string) ([]byte, bool) {
+func (c Cache) Get(ctx context.Context, key string) ([]byte, bool) {
 	if c.client == nil {
 		if value, ok := c.m.Load(key); ok {
 			entry := value.(cacheEntry)
@@ -60,7 +60,7 @@ func (c Cache) Get(key string) ([]byte, bool) {
 			c.Clear(key)
 		}
 	} else {
-		cmd := c.client.Get(c.ctx, key)
+		cmd := c.client.Get(ctx, key)
 		if b, err := cmd.Bytes(); err == nil {
 			return b, true
 		}
@@ -73,7 +73,7 @@ func (c Cache) MultiGet(keys []string) [][]byte {
 	results := make([][]byte, len(keys))
 	if c.client == nil {
 		for i, key := range keys {
-			results[i], _ = c.Get(key)
+			results[i], _ = c.Get(context.TODO(), key)
 		}
 	} else {
 		cmd := c.client.MGet(c.ctx, keys...)
@@ -140,7 +140,7 @@ func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
 // GetCompressed works like Get but expect a compressed asset that is
 // uncompressed.
 func (c Cache) GetCompressed(key string) (io.Reader, bool) {
-	if r, ok := c.Get(key); ok {
+	if r, ok := c.Get(context.TODO(), key); ok {
 		if gr, err := gzip.NewReader(bytes.NewReader(r)); err == nil {
 			return gr, true
 		}

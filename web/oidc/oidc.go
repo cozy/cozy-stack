@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/base64"
@@ -578,7 +579,7 @@ func GetIDTokenKeys(keyURL string) ([]*jwKey, error) {
 	cache := config.GetConfig().CacheStorage
 	cacheKey := "oidc-jwk:" + keyURL
 
-	data, ok := cache.Get(cacheKey)
+	data, ok := cache.Get(context.TODO(), cacheKey)
 	if !ok {
 		var err error
 		data, err = getKeysFromHTTP(keyURL)

@@ -2,6 +2,7 @@ package assets
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -51,19 +52,19 @@ func Get(name, context string) (*model.Asset, bool) {
 
 // Head does the same job as Get, but the returned model.Asset can have no body
 // data. It allows to use a cache for it.
-func Head(name, context string) (*model.Asset, bool) {
-	if context == "" {
-		context = config.DefaultInstanceContext
+func Head(name, instanceCtx string) (*model.Asset, bool) {
+	if instanceCtx == "" {
+		instanceCtx = config.DefaultInstanceContext
 	}
-	key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
+	key := fmt.Sprintf("dyn-assets:%s/%s", instanceCtx, name)
 	cache := config.GetConfig().CacheStorage
-	if data, ok := cache.Get(key); ok {
+	if data, ok := cache.Get(context.TODO(), key); ok {
 		asset := &model.Asset{}
 		if err := json.Unmarshal(data, asset); err == nil {
 			return asset, true
 		}
 	}
-	asset, ok := Get(name, context)
+	asset, ok := Get(name, instanceCtx)
 	if !ok {
 		return nil, false
 	}

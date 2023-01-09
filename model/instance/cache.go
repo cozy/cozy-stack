@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -19,7 +20,7 @@ func (inst *Instance) cacheKey() string {
 // Get finds an instance from its domain by using CouchDB or the cache.
 func Get(domain string) (*Instance, error) {
 	cache := config.GetConfig().CacheStorage
-	if data, ok := cache.Get(cachePrefix + domain); ok {
+	if data, ok := cache.Get(context.TODO(), cachePrefix+domain); ok {
 		inst := &Instance{}
 		err := json.Unmarshal(data, inst)
 		if err == nil && inst.MakeVFS() == nil {

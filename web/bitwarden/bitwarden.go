@@ -355,8 +355,10 @@ func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
 	cache := config.GetConfig().CacheStorage
 	key := "bw-2fa:" + inst.Domain
 
+	ctx := c.Request().Context()
+
 	if passcode := c.FormValue("twoFactorToken"); passcode != "" {
-		if token, ok := cache.Get(key); ok {
+		if token, ok := cache.Get(ctx, key); ok {
 			if inst.ValidateTwoFactorPasscode(token, passcode) {
 				return true
 			}

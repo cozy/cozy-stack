@@ -5,6 +5,7 @@ package note
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -609,7 +610,7 @@ func fromMetadata(file *vfs.FileDoc) (*Document, error) {
 
 func getFromCache(inst *instance.Instance, noteID string) *Document {
 	cache := config.GetConfig().CacheStorage
-	buf, ok := cache.Get(cacheKey(inst, noteID))
+	buf, ok := cache.Get(context.TODO(), cacheKey(inst, noteID))
 	if !ok {
 		return nil
 	}
