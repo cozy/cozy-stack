@@ -2,17 +2,14 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -21,81 +18,63 @@ import (
 	"github.com/cozy/cozy-stack/web"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	testInstance *instance.Instance
-	testClient   *client.Client
-)
+func TestExecCommand(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
 
-func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	if _, err := couchdb.CheckStatus(); err != nil {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
+		require.NoError(t, err)
 	}
 
 	_, err := stack.Start()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		require.NoError(t, err)
 	}
 
-	tempdir, err := os.MkdirTemp("", "cozy-stack")
-	if err != nil {
-		fmt.Println("Could not create temporary directory.")
-		os.Exit(1)
-	}
+	tempDir := t.TempDir()
 
 	config.GetConfig().Fs.URL = &url.URL{
 		Scheme: "file",
 		Host:   "localhost",
-		Path:   tempdir,
+		Path:   tempDir,
 	}
 	server := echo.New()
-	err = web.SetupRoutes(server)
-	if err != nil {
-		fmt.Println("Could not start server", err)
-		os.Exit(1)
-	}
+	require.NoError(t, web.SetupRoutes(server))
 
 	ts := httptest.NewServer(server)
+	t.Cleanup(ts.Close)
+
 	u, _ := url.Parse(ts.URL)
 	domain := strings.ReplaceAll(u.Host, "127.0.0.1", "localhost")
 
 	_ = lifecycle.Destroy(domain)
-	testInstance, err = lifecycle.Create(&lifecycle.Options{
+	testInstance, err := lifecycle.Create(&lifecycle.Options{
 		Domain: domain,
 		Locale: "en",
 	})
 	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
+		require.NoError(t, err, "Could not create test instance.")
 	}
+	t.Cleanup(func() { _ = lifecycle.Destroy("test-files") })
 
 	token, err := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Files, "", time.Now())
 	if err != nil {
-		fmt.Println("Could not get test instance token.", err)
-		os.Exit(1)
+		require.NoError(t, err, "Could not get test instance token.")
 	}
 
-	testClient = &client.Client{
+	testClient := &client.Client{
 		Domain:     domain,
 		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
 
-	res := m.Run()
-	_ = lifecycle.Destroy("test-files")
-	os.RemoveAll(tempdir)
-	ts.Close()
-
-	os.Exit(res)
-}
-
-func TestExecCommand(t *testing.T) {
 	buf := new(bytes.Buffer)
-	err := execCommand(testClient, "mkdir /hello-test", buf)
+	err = execCommand(testClient, "mkdir /hello-test", buf)
 	assert.NoError(t, err)
 
 	buf = new(bytes.Buffer)
