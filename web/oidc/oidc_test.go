@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testInstance *instance.Instance
@@ -82,10 +83,7 @@ func TestOidc(t *testing.T) {
 		"foocontext": authentication,
 	}
 
-	err := dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("StartWithOnboardingNotFinished", func(t *testing.T) {
 		// Should get a 200 with body "activate your cozy"

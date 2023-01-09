@@ -33,6 +33,7 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const iocozytests = "io.cozy.tests"
@@ -116,10 +117,8 @@ func TestSharings(t *testing.T) {
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	err := dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+
 	setup.AddCleanup(func() error {
 		bobSetup.Cleanup()
 		return nil

@@ -28,10 +28,7 @@ func TestRouting(t *testing.T) {
 	t.Cleanup(setup.Cleanup)
 	inst := setup.GetTestInstance()
 	domain = inst.Domain
-	err := dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("SetupAssets", func(t *testing.T) {
 		e := echo.New()

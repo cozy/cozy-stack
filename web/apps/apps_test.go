@@ -47,7 +47,6 @@ const domain = "cozywithapps.example.net"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
-var slug string
 
 var jar *testutils.CookieJar
 var client *http.Client
@@ -62,14 +61,9 @@ func TestApps(t *testing.T) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
-	err := setup.SetupSwiftTest()
-	if err != nil {
-		panic("Could not init Swift test")
-	}
-	err = dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 	tempdir := setup.GetTmpDirectory()
 
 	cfg := config.GetConfig()
@@ -93,7 +87,7 @@ func TestApps(t *testing.T) {
 	testInstance.OnboardingFinished = true
 	_ = testInstance.Update()
 
-	slug, err = setup.InstallMiniApp()
+	slug, err := setup.InstallMiniApp()
 	if err != nil {
 		setup.CleanupAndDie("Could not install mini app.", err)
 	}
@@ -129,22 +123,22 @@ func TestApps(t *testing.T) {
 	_, token = setup.GetTestClient(consts.Apps + " " + consts.Konnectors)
 
 	t.Run("Serve", func(t *testing.T) {
-		assertAuthGet(t, "/foo/", "text/html; charset=utf-8", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
-		assertAuthGet(t, "/foo/hello.html", "text/html; charset=utf-8", "world {{.Token}}")
-		assertAuthGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
-		assertAuthGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
-		assertAnonGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
-		assertAnonGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
-		assertNotPublic(t, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2Ffoo")
-		assertNotPublic(t, "/foo/hello.tml", 401, "")
-		assertNotFound(t, "/404")
-		assertNotFound(t, "/")
-		assertNotFound(t, "/index.html")
-		assertNotFound(t, "/public/hello.html")
+		assertAuthGet(t, slug, "/foo/", "text/html; charset=utf-8", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
+		assertAuthGet(t, slug, "/foo/hello.html", "text/html; charset=utf-8", "world {{.Token}}")
+		assertAuthGet(t, slug, "/public", "text/html; charset=utf-8", "this is a file in public/")
+		assertAuthGet(t, slug, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+		assertAnonGet(t, slug, "/public", "text/html; charset=utf-8", "this is a file in public/")
+		assertAnonGet(t, slug, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+		assertNotPublic(t, slug, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2Ffoo")
+		assertNotPublic(t, slug, "/foo/hello.tml", 401, "")
+		assertNotFound(t, slug, "/404")
+		assertNotFound(t, slug, "/")
+		assertNotFound(t, slug, "/index.html")
+		assertNotFound(t, slug, "/public/hello.html")
 	})
 
 	t.Run("CozyBar", func(t *testing.T) {
-		body := doGetAll(t, "/bar/", true)
+		body := doGetAll(t, slug, "/bar/", true)
 		assert.Contains(t, string(body), `<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`)
 		assert.Contains(t, string(body), `<script src="//cozywithapps.example.net/assets/js/cozy-bar`)
 	})
@@ -164,7 +158,7 @@ func TestApps(t *testing.T) {
 		assert.NoError(t, err)
 
 		path := strings.Replace(intent.Services[0].Href, "https://mini.cozywithapps.example.net", "", 1)
-		res, err := doGet(path, true)
+		res, err := doGet(slug, path, true)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, res.StatusCode)
 		h := res.Header.Get(echo.HeaderContentSecurityPolicy)
@@ -197,7 +191,7 @@ func TestApps(t *testing.T) {
 		}))
 		assert.NoError(t, err)
 
-		res, err := doGet("/foo", true)
+		res, err := doGet(slug, "/foo", true)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, res.StatusCode)
 		body, _ := io.ReadAll(res.Body)
@@ -670,7 +664,7 @@ func TestApps(t *testing.T) {
 	})
 }
 
-func doGet(path string, auth bool) (*http.Response, error) {
+func doGet(slug, path string, auth bool) (*http.Response, error) {
 	c := client
 	if !auth {
 		c = &http.Client{CheckRedirect: noRedirect}
@@ -683,8 +677,8 @@ func doGet(path string, auth bool) (*http.Response, error) {
 	return c.Do(req)
 }
 
-func doGetAll(t *testing.T, path string, auth bool) []byte {
-	res, err := doGet(path, auth)
+func doGetAll(t *testing.T, slug, path string, auth bool) []byte {
+	res, err := doGet(slug, path, auth)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	body, err := io.ReadAll(res.Body)
@@ -700,20 +694,20 @@ func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Contains(t, string(body), content)
 }
 
-func assertAuthGet(t *testing.T, path, contentType, content string) {
-	res, err := doGet(path, true)
+func assertAuthGet(t *testing.T, slug, path, contentType, content string) {
+	res, err := doGet(slug, path, true)
 	assert.NoError(t, err)
 	assertGet(t, contentType, content, res)
 }
 
-func assertAnonGet(t *testing.T, path, contentType, content string) {
-	res, err := doGet(path, false)
+func assertAnonGet(t *testing.T, slug, path, contentType, content string) {
+	res, err := doGet(slug, path, false)
 	assert.NoError(t, err)
 	assertGet(t, contentType, content, res)
 }
 
-func assertNotPublic(t *testing.T, path string, code int, location string) {
-	res, err := doGet(path, false)
+func assertNotPublic(t *testing.T, slug, path string, code int, location string) {
+	res, err := doGet(slug, path, false)
 	assert.NoError(t, err)
 	assert.Equal(t, code, res.StatusCode)
 	if 300 <= code && code < 400 {
@@ -721,8 +715,8 @@ func assertNotPublic(t *testing.T, path string, code int, location string) {
 	}
 }
 
-func assertNotFound(t *testing.T, path string) {
-	res, err := doGet(path, true)
+func assertNotFound(t *testing.T, slug, path string) {
+	res, err := doGet(slug, path, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
 }

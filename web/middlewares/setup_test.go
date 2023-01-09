@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetup(t *testing.T) {
@@ -20,13 +21,8 @@ func TestSetup(t *testing.T) {
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 
-	err := setup.SetupSwiftTest()
-	if err != nil {
-		panic("Could not init Swift test")
-	}
-	err = dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+
 	_ = web.SetupAssets(echo.New(), config.GetConfig().Assets)
 }

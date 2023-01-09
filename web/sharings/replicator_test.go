@@ -29,6 +29,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Things for the replicator tests
@@ -89,10 +90,8 @@ func TestReplicator(t *testing.T) {
 		"/sharings": sharings.Routes,
 	})
 
-	err := dynamic.InitDynamicAssetFS()
-	if err != nil {
-		panic("Could not init dynamic FS")
-	}
+	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+
 	setup.AddCleanup(func() error {
 		replSetup.Cleanup()
 		return nil
