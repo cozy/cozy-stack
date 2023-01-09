@@ -2,7 +2,6 @@ package job_test
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -63,8 +62,6 @@ func TestRedisScheduler(t *testing.T) {
 		client := redis.NewClient(opts)
 		return client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
 	})
-
-	os.Exit(setup.Run())
 
 	t.Run("RedisSchedulerWithTimeTriggers", func(t *testing.T) {
 		var wAt sync.WaitGroup

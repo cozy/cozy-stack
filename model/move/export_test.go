@@ -3,7 +3,6 @@ package move
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -38,7 +37,6 @@ func TestExport(t *testing.T) {
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()
-	os.Exit(setup.Run())
 
 	t.Run("ExportFiles", func(t *testing.T) {
 		fs := inst.VFS()

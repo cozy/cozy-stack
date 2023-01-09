@@ -249,13 +249,6 @@ func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group)
 	return ts
 }
 
-// Run runs the underlying testing.M and cleanup
-func (c *TestSetup) Run() int {
-	value := c.testingM.Run()
-	c.cleanup()
-	return value
-}
-
 // CookieJar is a http.CookieJar which always returns all cookies.
 // NOTE golang stdlib uses cookies for the URL (ie the testserver),
 // not for the host (ie the instance), so we do it manually
