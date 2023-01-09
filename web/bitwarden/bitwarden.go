@@ -492,6 +492,7 @@ func GetCozy(c echo.Context) error {
 func Routes(router *echo.Group) {
 	identity := router.Group("/identity")
 	identity.POST("/connect/token", GetToken)
+	identity.POST("/accounts/prelogin", Prelogin)
 
 	api := router.Group("/api")
 	api.GET("/sync", Sync)
