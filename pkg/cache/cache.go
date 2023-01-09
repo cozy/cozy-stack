@@ -23,17 +23,15 @@ type cacheEntry struct {
 type Cache struct {
 	client redis.UniversalClient
 	m      *sync.Map
-	ctx    context.Context
 }
 
 // New returns a new Cache from a potentially nil redis client.
 func New(client redis.UniversalClient) Cache {
-	ctx := context.Background()
 	if client != nil {
-		return Cache{client, nil, ctx}
+		return Cache{client, nil}
 	}
 	m := sync.Map{}
-	return Cache{nil, &m, ctx}
+	return Cache{nil, &m}
 }
 
 // CheckStatus checks that the cache is ready, or returns an error.
