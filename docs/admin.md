@@ -476,6 +476,151 @@ Content-Type: application/json
 
 ### POST /instances/:domain/checks/sharings
 
+This endpoint can be used to check the setup of sharings owned by a given
+instance and the consistency of the shared files and folders with their
+counterparts on the Cozy they're shared with. It accepts one parameter in the
+query-string:
+
+- `Fast` to skip the files and folders consistency check as it can be quite long
+
+It will return a `200 OK`, except if the instance is not found where the code
+will be `404 Not Found` (a `5xx` can also happen in case of server errors like
+CouchDB not available). The format of the response will be a JSON array of
+objects, each object representing an error.
+
+
+#### Possible error types
+
+##### invalid_rules
+
+This will be raised when the owner's sharing rules are invalid.
+The validation result will be returned in the `error` attribute.
+
+##### sharing_in_sharing
+
+This will be raised when the root of the sharing being checked is part of
+another sharing (i.e. one of its parent folders is shared). The parent
+sharing can be found either on the owner's instance or on one of its members'
+instance.
+The `parent_sharing` attribute will contain the parent sharing ID.
+
+##### missing_matching_docs_for_owner
+
+This will be raised if the shared files and folders associated with the sharing
+could not be fetched on the owner's instance.
+The request error will be returned in the `error` attribute.
+No further consistency checks will be run on this sharing.
+
+##### missing_sharing_for_member
+
+This will be raised when the associated `io.cozy.sharing` document cannot be
+found on a sharing member's instance.
+The request error will be returned in the `error` attribute.
+No further consistency checks will be run for this member.
+
+##### missing_files_rule_for_member
+
+This will be raised if a member's sharing doesn't have any sharing rule for
+`io.cozy.files` documents (while the owner's sharing has been determined to be
+of this type).
+The member's domain will be available in the `member` attribute.
+No further consistency checks will be run for this member.
+
+##### missing_matching_docs_for_member
+
+This will be raised if the shared files and folders associated with the sharing
+could not be fetched on a member's instance.
+The request error will be returned in the `error` attribute and the member's
+domain in the `member` attribute. No further consistency checks will be run for
+this member.
+
+##### disk_quota_exceeded
+
+This will be raised if a file is outdated or missing on an instance and its size
+is larger than the available space on this instance. If the file was created or
+modified in the last 5 minutes, the check is skipped as we expect the
+synchronization to happen later.
+The instance's domain will be available in the `instance` attribute.
+
+##### read_only_member
+
+This will be raised if a file or folder is outdated or missing on the owner's
+instance and the member being checked has only read-only access to the sharing.
+This is not really an error as this behavior is expected but since it can be
+confusing for users we log it for debugging purposes.
+The member's domain will be available in the `member` attribute.
+
+##### invalid_doc_rev
+
+This will be raised if a file or folder's revisions don't match on the owner's
+and member's instances while the member has write access to the sharing and the
+file size is not greater than the outdated instance's available disk space. The
+revisions generations can be the same too. If the document was modified in the
+last 5 minutes, the check is skipped as we expect the synchronization to happen
+later.
+The member's domain will be available in the `member` attribute, as well as the
+revision of the member document in `memberRev` and the complete owner document
+in `ownerDoc`.
+
+##### invalid_doc_name
+
+This will be raised if a file or folder's revisions match on the owner's and
+member's instances but their names don't.
+The member's domain will be available in the `member` attribute, as well as the
+name of the member document in `memberName` and the complete owner document
+in `ownerDoc`.
+
+##### invalid_doc_checksum
+
+This will be raised if a file's revisions match on the owner's and member's
+instances but their checksums don't.
+The member's domain will be available in the `member` attribute, as well as the
+checksum of the member file in `memberChecksum` and the complete owner document
+in `ownerDoc`.
+
+##### invalid_doc_parent
+
+This will be raised if a file or folder's parent directories don't match on the
+owner's and member's instances but their names don't. Since it is expected for
+the sharing root to not have different parents on each instance, the check does
+not apply to this document.
+The member's domain will be available in the `member` attribute, as well as the
+id of the member's parent directory in `memberParent` and the complete owner
+document in `ownerDoc`.
+
+##### missing_matching_doc_for_owner
+
+This will be raised if a file or directory is missing on the owner's instance
+while the member being check has write access to the sharing and the file size
+is not greater than the instance's available disk space. If the missing document
+was created or modified in the last 5 minutes, the check is skipped as we expect
+the synchronization to happen later.
+The member's domain will be available in the `member` attribute and the complete
+missing member document in `memberDoc`.
+
+##### missing_matching_doc_for_member
+
+This will be raised if a file or directory is missing on a member's instance
+while the file size is not greater than the instance's available disk space. If
+the missing document was created or modified in the last 5 minutes, the check is
+skipped as we expect the synchronization to happen later.
+The member's domain will be available in the `member` attribute and the complete
+missing owner document in `ownerDoc`.
+
+===
+
+Other error types include `missing_trigger_on_active_sharing`,
+`trigger_on_inactive_sharing`, `not_enough_members`, `invalid_member_status`,
+`invalid_instance_for_member`, `missing_instance_for_member`,
+`missing_oauth_client`, `missing_access_token`, `invalid_number_of_credentials`
+and `missing_inbound_client_id`.
+
+When checking for files and folders inconsistencies, sharings will be skipped
+when inactive, not initialized, read-only or not about `io.cozy.files`
+documents.
+Also, for each instance, only the sharings owned by said instance will be
+checked. Other sharings will be checked via their owner instance.
+
 #### Request
 
 ```http
