@@ -97,9 +97,7 @@ func TestAuth(t *testing.T) {
 
 	ts = setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
 		handler, err := web.CreateSubdomainProxy(r, apps.Serve)
-		if err != nil {
-			setup.CleanupAndDie("Cant start subdomain proxy", err)
-		}
+		require.NoError(t, err, "Cant start subdomain proxy")
 		return handler
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
@@ -107,9 +105,7 @@ func TestAuth(t *testing.T) {
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	konnSlug, err := setup.InstallMiniKonnector()
-	if err != nil {
-		setup.CleanupAndDie("Could not install mini konnector.", err)
-	}
+	require.NoError(t, err, "Could not install mini konnector.")
 
 	t.Run("InstanceBlocked", func(t *testing.T) {
 		// Block the instance

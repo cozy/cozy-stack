@@ -30,6 +30,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
 
 // This flag avoid starting the stack twice.
@@ -88,12 +89,6 @@ func NewSetup(t testing.TB, name string) *TestSetup {
 	return &setup
 }
 
-// CleanupAndDie cleanup the TestSetup, prints a message and close the process
-func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
-	c.cleanup()
-	Fatal(msg...)
-}
-
 // SetupSwiftTest can be used to start an in-memory Swift server for tests.
 func (c *TestSetup) SetupSwiftTest() error {
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
@@ -110,19 +105,16 @@ func (c *TestSetup) SetupSwiftTest() error {
 		Host:     "localhost",
 		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 	}
+
 	err = config.InitSwiftConnection(config.Fs{
 		URL: swiftURL,
 	})
+	require.NoError(c.t, err, "Could not init swift connection.")
 	viper.Set("fs.url", swiftURL.String())
 
-	if err != nil {
-		c.CleanupAndDie("Could not init swift connection.", err)
-	}
 	ctx := context.Background()
 	err = config.GetSwiftConnection().ContainerCreate(ctx, dynamic.DynamicAssetsContainerName, nil)
-	if err != nil {
-		c.CleanupAndDie("Could not create dynamic container.", err)
-	}
+	require.NoError(c.t, err, "Could not create dynamic container.")
 
 	return nil
 }
@@ -143,9 +135,8 @@ func (c *TestSetup) AddCleanup(f func() error) {
 // The directory will be removed on container cleanup
 func (c *TestSetup) GetTmpDirectory() string {
 	tempdir, err := os.MkdirTemp("", "cozy-stack")
-	if err != nil {
-		c.CleanupAndDie("Could not create temporary directory.", err)
-	}
+	require.NoError(c.t, err, "Could not create temporary directory.")
+
 	c.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 	return tempdir
 }
@@ -159,9 +150,7 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 	var err error
 	if !stackStarted {
 		_, err = stack.Start(stack.NoGops, stack.NoDynAssets)
-		if err != nil {
-			c.CleanupAndDie("Error while starting job system", err)
-		}
+		require.NoError(c.t, err, "Error while starting job system")
 		stackStarted = true
 	}
 	if len(opts) == 0 {
@@ -173,14 +162,11 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 		c.host = opts[0].Domain
 	}
 	err = lifecycle.Destroy(c.host)
-	if err != nil && err != instance.ErrNotFound {
-		c.CleanupAndDie("Error while destroying instance", err)
-	}
-	i, err := lifecycle.Create(opts[0])
+	require.NoError(c.t, err, "Error while destroying instance")
 
-	if err != nil {
-		c.CleanupAndDie("Cannot create test instance", err)
-	}
+	i, err := lifecycle.Create(opts[0])
+	require.NoError(c.t, err, "Cannot create test instance")
+
 	c.AddCleanup(func() error { err := lifecycle.Destroy(i.Domain); return err })
 	c.inst = i
 	return i
@@ -195,11 +181,8 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 		SoftwareID:   "github.com/cozy/cozy-stack/testing/" + c.name,
 	}
 	client.Create(inst, oauth.NotPending)
-	token, err := c.inst.MakeJWT(consts.AccessTokenAudience,
-		client.ClientID, scopes, "", time.Now())
-	if err != nil {
-		c.CleanupAndDie("Cannot create oauth token", err)
-	}
+	token, err := c.inst.MakeJWT(consts.AccessTokenAudience, client.ClientID, scopes, "", time.Now())
+	require.NoError(c.t, err, "Cannot create oauth token")
 
 	return &client, token
 }
@@ -281,13 +264,11 @@ func (j *CookieJar) Reset() error {
 func (c *TestSetup) GetCookieJar() *CookieJar {
 	instance := c.GetTestInstance()
 	instanceURL, err := url.Parse("https://" + instance.Domain + "/auth")
-	if err != nil {
-		c.CleanupAndDie("Cant create cookie jar url", err)
-	}
+	require.NoError(c.t, err, "Cant create cookie jar url")
+
 	j, err := cookiejar.New(nil)
-	if err != nil {
-		c.CleanupAndDie("Cant create cookie jar", err)
-	}
+	require.NoError(c.t, err, "Cant create cookie jar url")
+
 	return &CookieJar{
 		Jar: j,
 		URL: instanceURL,

@@ -87,14 +87,10 @@ func TestApps(t *testing.T) {
 	_ = testInstance.Update()
 
 	slug, err := setup.InstallMiniApp()
-	if err != nil {
-		setup.CleanupAndDie("Could not install mini app.", err)
-	}
+	require.NoError(t, err, "Could not install mini app")
 
 	_, err = setup.InstallMiniKonnector()
-	if err != nil {
-		setup.CleanupAndDie("Could not install mini konnector.", err)
-	}
+	require.NoError(t, err, "Could not install mini konnector")
 
 	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
@@ -105,9 +101,7 @@ func TestApps(t *testing.T) {
 		})
 		r.POST("/auth/session_code", auth.CreateSessionCode)
 		router, err := web.CreateSubdomainProxy(r, webApps.Serve)
-		if err != nil {
-			setup.CleanupAndDie("Cant start subdoman proxy", err)
-		}
+		require.NoError(t, err, "Cant start subdoman proxy")
 		return router
 	})
 
