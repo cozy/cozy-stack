@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,20 +17,18 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddCustomAsset(t *testing.T) {
 	var err error
 
-	tmpfile, err := os.OpenFile(filepath.Join(os.TempDir(), "foo.js"), os.O_CREATE, 0600)
-	if err != nil {
-		t.Error(err)
-	}
-	defer tmpfile.Close()
+	tmpfile, err := os.OpenFile(filepath.Join(t.TempDir(), "foo.js"), os.O_CREATE, 0600)
+	require.NoError(t, err)
 
 	h := sha256.New()
 	if _, err := io.Copy(h, tmpfile); err != nil {
-		log.Fatal(err)
+		require.NoError(t, err)
 	}
 	sum := h.Sum(nil)
 
@@ -66,7 +63,7 @@ func TestRemoveCustomAsset(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Adding the asset
-	tmpfile, err := os.OpenFile(filepath.Join(os.TempDir(), "foo2.js"), os.O_CREATE, 0600)
+	tmpfile, err := os.OpenFile(filepath.Join(t.TempDir(), "foo2.js"), os.O_CREATE, 0600)
 	assert.NoError(t, err)
 	asset.URL = fmt.Sprintf("file://%s", tmpfile.Name())
 

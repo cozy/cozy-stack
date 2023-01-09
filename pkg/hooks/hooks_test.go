@@ -12,9 +12,8 @@ import (
 )
 
 func TestExecuteSuccess(t *testing.T) {
-	tmp := fmt.Sprintf("%s/foo-%d", os.TempDir(), time.Now().Unix())
+	tmp := fmt.Sprintf("%s/foo-%d", t.TempDir(), time.Now().Unix())
 	args := []string{tmp, "bar"}
-	defer os.Remove(tmp)
 	executed := false
 	fn := func() error { executed = true; return nil }
 	err := Execute("success", args, fn)
@@ -34,9 +33,8 @@ func TestExecutePreFails(t *testing.T) {
 }
 
 func TestExecuteFunctionFails(t *testing.T) {
-	tmp := fmt.Sprintf("%s/foo-%d", os.TempDir(), time.Now().Unix())
+	tmp := fmt.Sprintf("%s/foo-%d", t.TempDir(), time.Now().Unix())
 	args := []string{tmp, "bar"}
-	defer os.Remove(tmp)
 	executed := false
 	e := errors.New("fn fails")
 	fn := func() error { executed = true; return e }
@@ -49,9 +47,8 @@ func TestExecuteFunctionFails(t *testing.T) {
 }
 
 func TestRunHooks(t *testing.T) {
-	tmp := fmt.Sprintf("%s/foo-%d", os.TempDir(), time.Now().Unix())
+	tmp := fmt.Sprintf("%s/foo-%d", t.TempDir(), time.Now().Unix())
 	args := []string{tmp, "bar"}
-	defer os.Remove(tmp)
 	err := runHook("pre", "success", args)
 	assert.NoError(t, err)
 	content, err := os.ReadFile(tmp)
