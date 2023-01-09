@@ -53,9 +53,7 @@ func TestOauth(t *testing.T) {
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.localhost", 1),
 	})
 	_ = couchdb.ResetDB(prefixer.SecretsPrefixer, consts.AccountTypes)
-	setup.AddCleanup(func() error {
-		return couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes)
-	})
+	t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes) })
 
 	// Login
 	jar = setup.GetCookieJar()

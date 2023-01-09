@@ -55,11 +55,11 @@ func TestRedisScheduler(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance = setup.GetTestInstance()
 
-	setup.AddCleanup(func() error {
+	t.Cleanup(func() {
 		cfg.Jobs.RedisConfig = was
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		return client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey).Err()
+		_ = client.Del(context.Background(), jobs.TriggersKey, jobs.SchedKey)
 	})
 
 	t.Run("RedisSchedulerWithTimeTriggers", func(t *testing.T) {

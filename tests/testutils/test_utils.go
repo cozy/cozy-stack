@@ -112,18 +112,6 @@ func (c *TestSetup) SetupSwiftTest() error {
 	return nil
 }
 
-// AddCleanup adds a function to be run when the test is finished.
-func (c *TestSetup) AddCleanup(f func() error) {
-	next := c.cleanup
-	c.cleanup = func() {
-		err := f()
-		if err != nil {
-			fmt.Println("Error while cleanup", err)
-		}
-		next()
-	}
-}
-
 // GetTestInstance creates an instance with a random host
 // The instance will be removed on container cleanup
 func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instance {
@@ -150,7 +138,7 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 	i, err := lifecycle.Create(opts[0])
 	require.NoError(c.t, err, "Cannot create test instance")
 
-	c.AddCleanup(func() error { err := lifecycle.Destroy(i.Domain); return err })
+	c.t.Cleanup(func() { _ = lifecycle.Destroy(i.Domain) })
 	c.inst = i
 	return i
 }
@@ -208,7 +196,7 @@ func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group)
 	}
 	handler.Renderer = &stupidRenderer{}
 	ts := httptest.NewServer(handler)
-	c.AddCleanup(func() error { ts.Close(); return nil })
+	c.t.Cleanup(ts.Close)
 	c.ts = ts
 	return ts
 }
@@ -261,7 +249,7 @@ func (c *TestSetup) GetCookieJar() *CookieJar {
 func (c *TestSetup) InstallMiniApp() (string, error) {
 	slug := "mini"
 	instance := c.GetTestInstance()
-	c.AddCleanup(func() error { return permission.DestroyWebapp(instance, slug) })
+	c.t.Cleanup(func() { _ = permission.DestroyWebapp(instance, slug) })
 
 	permissions := permission.Set{
 		permission.Rule{
@@ -357,7 +345,7 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 func (c *TestSetup) InstallMiniKonnector() (string, error) {
 	slug := "mini"
 	instance := c.GetTestInstance()
-	c.AddCleanup(func() error { return permission.DestroyKonnector(instance, slug) })
+	c.t.Cleanup(func() { _ = permission.DestroyKonnector(instance, slug) })
 
 	permissions := permission.Set{
 		permission.Rule{
