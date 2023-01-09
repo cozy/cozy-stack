@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -14,25 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var ts *httptest.Server
-
-type Foo struct {
-	FID  string `json:"-"`
-	FRev string `json:"-"`
-	Bar  string `json:"bar"`
-}
-
 func TestJsonapi(t *testing.T) {
-	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
-	}
-
 	config.UseTestFile()
+
 	router := echo.New()
 	router.GET("/foos/courge", func(c echo.Context) error {
 		courge := &Foo{FID: "courge", FRev: "1-abc", Bar: "baz"}
 		return Data(c, 200, courge, nil)
 	})
+
 	router.GET("/paginated", func(c echo.Context) error {
 		cursor, err := ExtractPaginationCursor(c, 13, 1000)
 		if err != nil {
@@ -50,9 +39,8 @@ func TestJsonapi(t *testing.T) {
 		return fmt.Errorf("Wrong cursor type")
 	})
 
-	ts = httptest.NewServer(router)
-	defer ts.Close()
-	os.Exit(m.Run())
+	ts := httptest.NewServer(router)
+	t.Cleanup(ts.Close)
 
 	t.Run("ObjectMarshalling", func(t *testing.T) {
 		foo := &Foo{FID: "courge", FRev: "1-abc", Bar: "baz"}
@@ -157,7 +145,12 @@ func TestJsonapi(t *testing.T) {
 		assert.NoError(t, json.NewDecoder(res.Body).Decode(&c))
 		assert.Equal(t, "key 13 [a b] c", c)
 	})
+}
 
+type Foo struct {
+	FID  string `json:"-"`
+	FRev string `json:"-"`
+	Bar  string `json:"bar"`
 }
 
 func (f *Foo) ID() string {
