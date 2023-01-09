@@ -133,7 +133,9 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 		c.host = opts[0].Domain
 	}
 	err = lifecycle.Destroy(c.host)
-	require.NoError(c.t, err, "Error while destroying instance")
+	if err != nil && err != instance.ErrNotFound {
+		require.NoError(c.t, err, "Error while destroying instance")
+	}
 
 	i, err := lifecycle.Create(opts[0])
 	require.NoError(c.t, err, "Cannot create test instance")
