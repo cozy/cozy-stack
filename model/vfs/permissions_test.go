@@ -21,13 +21,8 @@ func TestPermissions(t *testing.T) {
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 
-	aferoFS, aferoRollback, err := makeAferoFS()
-	t.Cleanup(aferoRollback)
-	require.NoError(t, err)
-
-	swiftFS, swiftRollback, err := makeSwiftFS(2)
-	t.Cleanup(swiftRollback)
-	require.NoError(t, err)
+	aferoFS := makeAferoFS(t)
+	swiftFS := makeSwiftFS(t, 2)
 
 	var tests = []struct {
 		name string
