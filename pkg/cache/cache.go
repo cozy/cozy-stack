@@ -57,7 +57,7 @@ func (c Cache) Get(ctx context.Context, key string) ([]byte, bool) {
 			if time.Now().Before(entry.expiredAt) {
 				return entry.payload, true
 			}
-			c.Clear(key)
+			c.Clear(ctx, key)
 		}
 	} else {
 		cmd := c.client.Get(ctx, key)
@@ -105,11 +105,11 @@ func (c Cache) Keys(ctx context.Context, prefix string) []string {
 }
 
 // Clear removes a key from the cache
-func (c Cache) Clear(key string) {
+func (c Cache) Clear(ctx context.Context, key string) {
 	if c.client == nil {
 		c.m.Delete(key)
 	} else {
-		c.client.Del(c.ctx, key)
+		c.client.Del(ctx, key)
 	}
 }
 

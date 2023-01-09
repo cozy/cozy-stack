@@ -81,7 +81,7 @@ func Add(options []model.AssetOption) error {
 		cache := config.GetConfig().CacheStorage
 		for _, opt := range options {
 			key := fmt.Sprintf("dyn-assets:%s/%s", opt.Context, opt.Name)
-			cache.Clear(key)
+			cache.Clear(context.TODO(), key)
 		}
 	}
 	return err
@@ -89,12 +89,12 @@ func Add(options []model.AssetOption) error {
 
 // Remove removes an asset
 // Note: Only dynamic assets can be removed
-func Remove(name, context string) error {
-	err := dynamic.RemoveAsset(context, name)
+func Remove(name, instanceCtx string) error {
+	err := dynamic.RemoveAsset(instanceCtx, name)
 	if err == nil {
-		key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
+		key := fmt.Sprintf("dyn-assets:%s/%s", instanceCtx, name)
 		cache := config.GetConfig().CacheStorage
-		cache.Clear(key)
+		cache.Clear(context.TODO(), key)
 	}
 	return err
 }

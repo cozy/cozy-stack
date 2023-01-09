@@ -81,6 +81,6 @@ func (inst *Instance) Update() error {
 func (inst *Instance) Delete() error {
 	err := couchdb.DeleteDoc(prefixer.GlobalPrefixer, inst)
 	cache := config.GetConfig().CacheStorage
-	cache.Clear(inst.cacheKey())
+	cache.Clear(context.TODO(), inst.cacheKey())
 	return err
 }
