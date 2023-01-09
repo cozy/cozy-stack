@@ -36,12 +36,6 @@ import (
 // This flag avoid starting the stack twice.
 var stackStarted bool
 
-// Fatal prints a message and immediately exit the process
-func Fatal(msg ...interface{}) {
-	fmt.Println(msg...)
-	os.Exit(1)
-}
-
 // NeedCouchdb kill the process if there is no couchdb running
 func NeedCouchdb(t *testing.T) {
 	if _, err := couchdb.CheckStatus(); err != nil {
