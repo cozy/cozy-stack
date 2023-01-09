@@ -296,11 +296,27 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	}
 	params := buildServeParams(c, i, webapp, isLoggedIn, sessID)
 
+	generated := &bytes.Buffer{}
+	if err := tmpl.Execute(generated, params); err != nil {
+		i.Logger().WithNamespace("apps").Warnf("%s cannot be interpreted as a template: %s", file, err)
+		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"Locale":       i.Locale,
+			"Title":        i.TemplateTitle(),
+			"Favicon":      middlewares.Favicon(i),
+			"Illustration": "/images/generic-error.svg",
+			"Error":        "Error Application not supported Message",
+			"SupportEmail": i.SupportEmailAddress(),
+		})
+	}
+
 	res := c.Response()
 	res.Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
 	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
-	return tmpl.Execute(res, params)
+	_, err = io.Copy(res, generated)
+	return err
 }
 
 func buildServeParams(

@@ -292,6 +292,11 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 					Index:  "index.html",
 					Public: true,
 				},
+				"/invalid": apps.Route{
+					Folder: "/",
+					Index:  "invalid.html",
+					Public: false,
+				},
 			},
 			"permissions": permissions,
 			"version":     version,
@@ -341,6 +346,10 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 		return "", err
 	}
 	err = createFile(instance, pubdir, "index.html", "this is a file in public/")
+	if err != nil {
+		return "", err
+	}
+	err = createFile(instance, appdir, "invalid.html", "this is invalid.html. {{.InvalidHelper}}")
 	return slug, err
 }
 
