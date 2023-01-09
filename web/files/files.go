@@ -1777,6 +1777,8 @@ func fsckHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	cacheStorage := config.GetConfig().CacheStorage
 
+	ctx := c.Request().Context()
+
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
 	}
@@ -1784,7 +1786,7 @@ func fsckHandler(c echo.Context) error {
 	noCache, _ := strconv.ParseBool(c.QueryParam("NoCache"))
 	key := "fsck:" + instance.DBPrefix()
 	if !noCache {
-		if r, ok := cacheStorage.GetCompressed(key); ok {
+		if r, ok := cacheStorage.GetCompressed(ctx, key); ok {
 			return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
 		}
 	}

@@ -139,8 +139,8 @@ func (c Cache) SetNX(ctx context.Context, key string, data []byte, expiration ti
 
 // GetCompressed works like Get but expect a compressed asset that is
 // uncompressed.
-func (c Cache) GetCompressed(key string) (io.Reader, bool) {
-	if r, ok := c.Get(context.TODO(), key); ok {
+func (c Cache) GetCompressed(ctx context.Context, key string) (io.Reader, bool) {
+	if r, ok := c.Get(ctx, key); ok {
 		if gr, err := gzip.NewReader(bytes.NewReader(r)); err == nil {
 			return gr, true
 		}
