@@ -392,7 +392,7 @@ func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
 		})
 		return false
 	}
-	cache.Set(key, token, 5*time.Minute)
+	cache.Set(ctx, key, token, 5*time.Minute)
 
 	_ = c.JSON(http.StatusBadRequest, echo.Map{
 		"error":             "invalid_grant",

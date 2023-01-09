@@ -2,6 +2,7 @@ package settings
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -958,7 +959,7 @@ func TestSettings(t *testing.T) {
 			"from_multiple_source": "manager",
 		})
 		assert.NoError(t, err)
-		cache.Set(cacheKey, buf, 5*time.Second)
+		cache.Set(context.TODO(), cacheKey, buf, 5*time.Second)
 		ctxFlags := couchdb.JSONDoc{Type: consts.Settings}
 		ctxFlags.M = map[string]interface{}{
 			"ratio_0": []map[string]interface{}{

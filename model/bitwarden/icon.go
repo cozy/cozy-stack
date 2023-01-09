@@ -50,10 +50,10 @@ func GetIcon(domain string) (*Icon, error) {
 
 	icon, err := fetchIcon(domain)
 	if err != nil {
-		cache.Set(key, nil, cacheTTL)
+		cache.Set(context.TODO(), key, nil, cacheTTL)
 	} else {
 		if data, err := json.Marshal(icon); err == nil {
-			cache.Set(key, data, cacheTTL)
+			cache.Set(context.TODO(), key, data, cacheTTL)
 		}
 	}
 	return icon, err

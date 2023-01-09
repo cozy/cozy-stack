@@ -114,14 +114,14 @@ func (c Cache) Clear(ctx context.Context, key string) {
 }
 
 // Set stores an asset to the given key.
-func (c Cache) Set(key string, data []byte, expiration time.Duration) {
+func (c Cache) Set(ctx context.Context, key string, data []byte, expiration time.Duration) {
 	if c.client == nil {
 		c.m.Store(key, cacheEntry{
 			payload:   data,
 			expiredAt: time.Now().Add(expiration),
 		})
 	} else {
-		c.client.Set(c.ctx, key, data, expiration)
+		c.client.Set(ctx, key, data, expiration)
 	}
 }
 
@@ -156,7 +156,7 @@ func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) 
 	if _, err := io.Copy(gw, bytes.NewReader(data)); err != nil {
 		return
 	}
-	c.Set(key, dataCompressed.Bytes(), expiration)
+	c.Set(context.TODO(), key, dataCompressed.Bytes(), expiration)
 }
 
 // RefreshTTL can be used to update the TTL of an existing entry in the cache.

@@ -72,7 +72,7 @@ func (inst *Instance) Update() error {
 	}
 	cache := config.GetConfig().CacheStorage
 	if data, err := json.Marshal(inst); err == nil {
-		cache.Set(inst.cacheKey(), data, cacheTTL)
+		cache.Set(context.TODO(), inst.cacheKey(), data, cacheTTL)
 	}
 	return nil
 }

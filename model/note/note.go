@@ -631,7 +631,7 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 	if err != nil {
 		return err
 	}
-	cache.Set(cacheKey(inst, doc.ID()), buf, cacheDuration)
+	cache.Set(context.TODO(), cacheKey(inst, doc.ID()), buf, cacheDuration)
 	return nil
 }
 

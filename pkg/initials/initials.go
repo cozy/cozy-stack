@@ -47,7 +47,7 @@ func Image(publicName string, opts ...Options) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	cache.Set(key, bytes, cacheTTL)
+	cache.Set(context.TODO(), key, bytes, cacheTTL)
 	return bytes, contentType, nil
 }
 

@@ -595,7 +595,7 @@ func GetIDTokenKeys(keyURL string) ([]*jwKey, error) {
 		return nil, err
 	}
 	if !ok {
-		cache.Set(cacheKey, data, cacheTTL)
+		cache.Set(context.TODO(), cacheKey, data, cacheTTL)
 	}
 	return keys.Keys, nil
 }

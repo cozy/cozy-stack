@@ -175,7 +175,7 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 	}
 
 	if buf, err := json.Marshal(flags); err == nil {
-		cache.Set(cacheKey, buf, cacheDuration)
+		cache.Set(context.TODO(), cacheKey, buf, cacheDuration)
 	}
 	return flags, nil
 }

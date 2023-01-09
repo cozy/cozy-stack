@@ -106,7 +106,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 	return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 }
 
-func context(c echo.Context) error {
+func getContext(c echo.Context) error {
 	// Any request with a token can ask for the context (no permissions are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)

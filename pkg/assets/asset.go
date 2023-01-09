@@ -69,7 +69,7 @@ func Head(name, instanceCtx string) (*model.Asset, bool) {
 		return nil, false
 	}
 	if data, err := json.Marshal(asset); err == nil {
-		cache.Set(key, data, 24*time.Hour)
+		cache.Set(context.TODO(), key, data, 24*time.Hour)
 	}
 	return asset, true
 }

@@ -109,6 +109,6 @@ func Routes(router *echo.Group) {
 	router.POST("/synchronized", synchronized)
 
 	router.GET("/onboarded", onboarded)
-	router.GET("/context", context)
+	router.GET("/context", getContext)
 	router.GET("/warnings", warnings)
 }
