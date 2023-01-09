@@ -18,7 +18,7 @@ func TestPush(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 
 	t.Run("get firebase client", func(t *testing.T) {
 		contextName := "foo"

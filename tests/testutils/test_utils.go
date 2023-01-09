@@ -42,9 +42,9 @@ func Fatal(msg ...interface{}) {
 }
 
 // NeedCouchdb kill the process if there is no couchdb running
-func NeedCouchdb() {
+func NeedCouchdb(t *testing.T) {
 	if _, err := couchdb.CheckStatus(); err != nil {
-		Fatal("This test need couchdb to run.")
+		t.Fatal("This test need couchdb to run.")
 	}
 }
 

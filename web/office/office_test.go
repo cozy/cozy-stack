@@ -42,7 +42,7 @@ func TestOffice(t *testing.T) {
 	config.GetConfig().Office = map[string]config.Office{
 		"default": {OnlyOfficeURL: ooURL},
 	}
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	inst = setup.GetTestInstance()

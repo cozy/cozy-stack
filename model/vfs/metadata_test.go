@@ -19,7 +19,7 @@ func TestMetadata(t *testing.T) {
 	}
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 
 	t.Run("ImageMetadataExtractor", func(t *testing.T) {
 		doc := &vfs.FileDoc{Mime: "image/png"}

@@ -78,7 +78,7 @@ func TestAuth(t *testing.T) {
 	conf.Authentication[config.DefaultInstanceContext] = confAuth
 
 	_ = web.LoadSupportedLocales()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 

@@ -37,7 +37,7 @@ func TestIntents(t *testing.T) {
 	var err error
 
 	config.UseTestFile()
-	testutils.NeedCouchdb()
+	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(nil, t.Name())
 	t.Cleanup(setup.Cleanup)
 	ins = setup.GetTestInstance(&lifecycle.Options{
