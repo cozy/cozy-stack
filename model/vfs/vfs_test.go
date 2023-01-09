@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http/httptest"
@@ -52,13 +51,8 @@ func TestVfs(t *testing.T) {
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 
-	aferoFS, aferoRollback, err := makeAferoFS()
-	t.Cleanup(aferoRollback)
-	require.NoError(t, err)
-
-	swiftFS, swiftRollback, err := makeSwiftFS(2)
-	t.Cleanup(swiftRollback)
-	require.NoError(t, err)
+	aferoFS := makeAferoFS(t)
+	swiftFS := makeSwiftFS(t, 2)
 
 	var tests = []struct {
 		name string
@@ -816,62 +810,47 @@ func (c *contexter) DomainName() string     { return c.domain }
 func (c *contexter) DBPrefix() string       { return c.prefix }
 func (c *contexter) GetContextName() string { return c.context }
 
-func makeAferoFS() (vfs.VFS, func(), error) {
-	tempdir, err := os.MkdirTemp("", "cozy-stack")
-	if err != nil {
-		return nil, nil, errors.New("could not create temporary directory")
-	}
+func makeAferoFS(t *testing.T) vfs.VFS {
+	t.Helper()
+
+	tempdir := t.TempDir()
 
 	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	mutex = lock.ReadWrite(db, "vfs-afero-test")
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
-	err = couchdb.ResetDB(db, consts.Files)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, couchdb.ResetDB(db, consts.Files))
+	t.Cleanup(func() { _ = couchdb.DeleteDB(db, consts.Files) })
 
 	g, _ := errgroup.WithContext(context.Background())
 	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
 	couchdb.DefineViews(g, db, couchdb.ViewsByDoctype(consts.Files))
-	if err = g.Wait(); err != nil {
-		return nil, nil, err
-	}
 
-	err = aferoFs.InitFs()
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, g.Wait())
+	require.NoError(t, aferoFs.InitFs())
 
-	return aferoFs, func() {
-		_ = os.RemoveAll(tempdir)
-		_ = couchdb.DeleteDB(db, consts.Files)
-	}, nil
+	return aferoFs
 }
 
-func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
+func makeSwiftFS(t *testing.T, layout int) vfs.VFS {
+	t.Helper()
+
 	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
-	swiftSrv, err := swifttest.NewSwiftServer("localhost")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
-	}
 
-	err = config.InitSwiftConnection(config.Fs{
+	swiftSrv, err := swifttest.NewSwiftServer("localhost")
+	require.NoError(t, err, "failed to create swift server")
+
+	require.NoError(t, config.InitSwiftConnection(config.Fs{
 		URL: &url.URL{
 			Scheme:   "swift",
 			Host:     "localhost",
 			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 		},
-	})
-	if err != nil {
-		return nil, nil, err
-	}
+	}))
 
 	var swiftFs vfs.VFS
 	switch layout {
@@ -885,31 +864,23 @@ func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
 		mutex = lock.ReadWrite(db, "vfs-swiftv3-test")
 		swiftFs, err = vfsswift.NewV3(db, index, &diskImpl{}, mutex)
 	}
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
-	err = couchdb.ResetDB(db, consts.Files)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, couchdb.ResetDB(db, consts.Files))
 
 	g, _ := errgroup.WithContext(context.Background())
 	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
 	couchdb.DefineViews(g, db, couchdb.ViewsByDoctype(consts.Files))
-	if err = g.Wait(); err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, g.Wait())
 
-	err = swiftFs.InitFs()
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, swiftFs.InitFs())
 
-	return swiftFs, func() {
+	t.Cleanup(func() {
 		_ = couchdb.DeleteDB(db, consts.Files)
 		if swiftSrv != nil {
 			swiftSrv.Close()
 		}
-	}, nil
+	})
+
+	return swiftFs
 }
