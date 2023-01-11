@@ -32,7 +32,7 @@ func PutLocal(ctx context.Context, db prefixer.Prefixer, doctype, id string, doc
 }
 
 // DeleteLocal will delete a local document in CouchDB.
-func DeleteLocal(db prefixer.Prefixer, doctype, id string) error {
+func DeleteLocal(ctx context.Context, db prefixer.Prefixer, doctype, id string) error {
 	u := "_local/" + url.PathEscape(id)
-	return makeRequest(context.TODO(), db, doctype, http.MethodDelete, u, nil, nil)
+	return makeRequest(ctx, db, doctype, http.MethodDelete, u, nil, nil)
 }

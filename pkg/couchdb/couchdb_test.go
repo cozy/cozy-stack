@@ -464,7 +464,7 @@ func TestCouchdb(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "baz", out["bar"])
 
-		err = DeleteLocal(TestPrefix, TestDoctype, id)
+		err = DeleteLocal(ctx, TestPrefix, TestDoctype, id)
 		assert.NoError(t, err)
 
 		_, err = GetLocal(ctx, TestPrefix, TestDoctype, id)

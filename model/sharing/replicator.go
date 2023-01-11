@@ -262,7 +262,7 @@ func (s *Sharing) clearLastSequenceNumber(inst *instance.Instance, m *Member, wo
 	if err != nil {
 		return err
 	}
-	err = couchdb.DeleteLocal(inst, consts.Shared, id+"/"+worker)
+	err = couchdb.DeleteLocal(context.TODO(), inst, consts.Shared, id+"/"+worker)
 	if couchdb.IsNotFoundError(err) {
 		return nil
 	}
