@@ -771,6 +771,9 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 			return "", echo.NewHTTPError(http.StatusForbidden)
 		}
 	}
+	if requestPerm.Type == permission.TypeCLI {
+		return "", nil
+	}
 	if requestPerm.Type == permission.TypeOauth {
 		if requestPerm.Client != nil {
 			oauthClient := requestPerm.Client.(*oauth.Client)
