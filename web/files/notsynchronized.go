@@ -1,6 +1,7 @@
 package files
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -191,7 +192,7 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 	}
 
 	// Use bulk update for better performances
-	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	err = couchdb.BulkUpdateDocs(context.TODO(), instance, consts.Files, docs, oldDocs)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -241,7 +242,7 @@ func RemoveBulkNotSynchronizedOn(c echo.Context) error {
 	}
 
 	// Use bulk update for better performances
-	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	err = couchdb.BulkUpdateDocs(context.TODO(), instance, consts.Files, docs, oldDocs)
 	if err != nil {
 		return WrapVfsError(err)
 	}

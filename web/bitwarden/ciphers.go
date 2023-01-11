@@ -720,7 +720,7 @@ func BulkSoftDeleteCiphers(c echo.Context) error {
 		cipher.DeletedDate = &cipher.Metadata.UpdatedAt
 		docs[i] = cipher
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), inst, consts.BitwardenCiphers, docs, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -767,7 +767,7 @@ func BulkRestoreCiphers(c echo.Context) error {
 		cipher.DeletedDate = nil
 		docs[i] = cipher
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), inst, consts.BitwardenCiphers, docs, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -909,7 +909,7 @@ func ImportCiphers(c echo.Context) error {
 	for i, folder := range req.Folders {
 		folders[i] = folder.toFolder()
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenFolders, folders, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), inst, consts.BitwardenFolders, folders, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -932,7 +932,7 @@ func ImportCiphers(c echo.Context) error {
 		}
 		ciphers[i] = cipher
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, ciphers, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), inst, consts.BitwardenCiphers, ciphers, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})

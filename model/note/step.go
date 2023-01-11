@@ -216,7 +216,7 @@ func saveSteps(inst *instance.Instance, steps []Step) error {
 	for i, s := range steps {
 		news[i] = s
 	}
-	return couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds)
+	return couchdb.BulkUpdateDocs(context.TODO(), inst, consts.NotesSteps, news, olds)
 }
 
 func purgeOldSteps(inst *instance.Instance, fileID string) {

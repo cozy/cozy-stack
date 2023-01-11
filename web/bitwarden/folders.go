@@ -246,7 +246,7 @@ func DeleteFolder(c echo.Context) error {
 		doc.FolderID = ""
 		docs[i] = ciphers[i]
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), inst, consts.BitwardenCiphers, docs, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})

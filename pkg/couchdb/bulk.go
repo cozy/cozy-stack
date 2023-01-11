@@ -259,7 +259,7 @@ func BulkGetDocs(ctx context.Context, db prefixer.Prefixer, doctype string, payl
 
 // BulkUpdateDocs is used to update several docs in one call, as a bulk.
 // olddocs parameter is used for realtime / event triggers.
-func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
+func BulkUpdateDocs(ctx context.Context, db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -275,7 +275,7 @@ func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 		remaining = remaining[n:]
 		bulkOlds := olds[:n]
 		olds = olds[n:]
-		if err := bulkUpdateDocs(db, doctype, bulkDocs, bulkOlds); err != nil {
+		if err := bulkUpdateDocs(ctx, db, doctype, bulkDocs, bulkOlds); err != nil {
 			if IsNoDatabaseError(err) {
 				if err := EnsureDBExist(db, doctype); err != nil {
 					return err
@@ -283,7 +283,7 @@ func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 			}
 			// If it fails once, try again
 			time.Sleep(1 * time.Second)
-			if err := bulkUpdateDocs(db, doctype, bulkDocs, bulkOlds); err != nil {
+			if err := bulkUpdateDocs(ctx, db, doctype, bulkDocs, bulkOlds); err != nil {
 				return err
 			}
 		}
@@ -291,14 +291,14 @@ func BulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 	return nil
 }
 
-func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
+func bulkUpdateDocs(ctx context.Context, db prefixer.Prefixer, doctype string, docs, olddocs []interface{}) error {
 	body := struct {
 		Docs []interface{} `json:"docs"`
 	}{
 		Docs: docs,
 	}
 	var res []UpdateResponse
-	if err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+	if err := makeRequest(ctx, db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
 	if len(res) != len(docs) {

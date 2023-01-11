@@ -708,7 +708,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 		refsToUpdate[i] = ref
 	}
 	olds := make([]interface{}, len(refsToUpdate))
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, refsToUpdate, olds)
+	return couchdb.BulkUpdateDocs(context.TODO(), inst, consts.Shared, refsToUpdate, olds)
 }
 
 // partitionDocsPayload returns two slices: the first with documents that are new,

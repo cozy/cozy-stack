@@ -1,6 +1,7 @@
 package files
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -213,7 +214,7 @@ func AddReferencesHandler(c echo.Context) error {
 	}
 	// Use bulk update for better performances
 	defer lockVFS(instance)()
-	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	err = couchdb.BulkUpdateDocs(context.TODO(), instance, consts.Files, docs, oldDocs)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -271,7 +272,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 	}
 	// Use bulk update for better performances
 	defer lockVFS(instance)()
-	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	err = couchdb.BulkUpdateDocs(context.TODO(), instance, consts.Files, docs, oldDocs)
 	if err != nil {
 		return WrapVfsError(err)
 	}

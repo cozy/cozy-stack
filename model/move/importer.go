@@ -2,6 +2,7 @@ package move
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -229,11 +230,11 @@ func (im *importer) flush() error {
 	}
 
 	olds := make([]interface{}, len(im.docs))
-	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
+	if err := couchdb.BulkUpdateDocs(context.TODO(), im.inst, im.doctype, im.docs, olds); err != nil {
 		// XXX CouchDB can be overloaded sometimes when importing lots of documents.
 		// Let's wait a bit and retry...
 		time.Sleep(10 * time.Minute)
-		if err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
+		if err = couchdb.BulkUpdateDocs(context.TODO(), im.inst, im.doctype, im.docs, olds); err != nil {
 			return err
 		}
 	}
@@ -286,7 +287,7 @@ func (im *importer) importAccount(zf *zip.File) error {
 	if err := couchdb.EnsureDBExist(im.inst, consts.Accounts); err != nil {
 		return err
 	}
-	return couchdb.BulkUpdateDocs(im.inst, consts.Accounts, docs, olds)
+	return couchdb.BulkUpdateDocs(context.TODO(), im.inst, consts.Accounts, docs, olds)
 }
 
 func (im *importer) readTrigger(zf *zip.File) (*job.TriggerInfos, error) {

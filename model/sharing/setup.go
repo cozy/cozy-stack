@@ -235,7 +235,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		return nil
 	}
 	olds := make([]interface{}, len(refs))
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs, olds)
+	return couchdb.BulkUpdateDocs(context.TODO(), inst, consts.Shared, refs, olds)
 }
 
 // FindMatchingDocs finds the documents that match the given rule

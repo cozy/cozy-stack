@@ -410,7 +410,7 @@ func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
 			child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
 			docs = append(docs, child)
 		}
-		if err = couchdb.BulkUpdateDocs(c.db, consts.Files, docs, olddocs); err != nil {
+		if err = couchdb.BulkUpdateDocs(context.TODO(), c.db, consts.Files, docs, olddocs); err != nil {
 			return err
 		}
 		if len(children) < limit {
@@ -685,7 +685,7 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 }
 
 func (c *couchdbIndexer) BatchUpdate(docs, oldDocs []interface{}) error {
-	return couchdb.BulkUpdateDocs(c.db, consts.Files, docs, oldDocs)
+	return couchdb.BulkUpdateDocs(context.TODO(), c.db, consts.Files, docs, oldDocs)
 }
 
 func (c *couchdbIndexer) CreateVersion(v *Version) error {

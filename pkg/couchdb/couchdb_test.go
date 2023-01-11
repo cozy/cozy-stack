@@ -180,7 +180,7 @@ func TestCouchdb(t *testing.T) {
 		for i, doc := range results {
 			docs[i] = doc
 		}
-		err = BulkUpdateDocs(TestPrefix, results[0].DocType(), docs, olddocs)
+		err = BulkUpdateDocs(ctx, TestPrefix, results[0].DocType(), docs, olddocs)
 		assert.NoError(t, err)
 
 		err = GetAllDocs(ctx, TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)

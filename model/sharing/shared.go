@@ -310,7 +310,7 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 		return nil
 	}
 	olds := make([]interface{}, len(docs))
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, docs, olds)
+	return couchdb.BulkUpdateDocs(context.TODO(), inst, consts.Shared, docs, olds)
 }
 
 // UpdateShared updates the io.cozy.shared database when a document is
