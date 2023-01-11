@@ -243,7 +243,7 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, w
 		}
 	}
 	result["last_seq"] = seq
-	return couchdb.PutLocal(inst, consts.Shared, id+"/"+worker, result)
+	return couchdb.PutLocal(context.TODO(), inst, consts.Shared, id+"/"+worker, result)
 }
 
 // ClearLastSequenceNumbers removes the last sequence numbers for a member

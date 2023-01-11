@@ -456,7 +456,7 @@ func TestCouchdb(t *testing.T) {
 		assert.True(t, IsNotFoundError(err))
 
 		doc := map[string]interface{}{"bar": "baz"}
-		err = PutLocal(TestPrefix, TestDoctype, id, doc)
+		err = PutLocal(ctx, TestPrefix, TestDoctype, id, doc)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, doc["_rev"])
 

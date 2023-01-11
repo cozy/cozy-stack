@@ -21,10 +21,10 @@ func GetLocal(ctx context.Context, db prefixer.Prefixer, doctype, id string) (ma
 
 // PutLocal will put a local document in CouchDB.
 // Note that you should put the last revision in `doc` to avoid conflicts.
-func PutLocal(db prefixer.Prefixer, doctype, id string, doc map[string]interface{}) error {
+func PutLocal(ctx context.Context, db prefixer.Prefixer, doctype, id string, doc map[string]interface{}) error {
 	u := "_local/" + url.PathEscape(id)
 	var out UpdateResponse
-	if err := makeRequest(context.TODO(), db, doctype, http.MethodPut, u, doc, &out); err != nil {
+	if err := makeRequest(ctx, db, doctype, http.MethodPut, u, doc, &out); err != nil {
 		return err
 	}
 	doc["_rev"] = out.Rev
