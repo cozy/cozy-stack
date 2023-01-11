@@ -176,7 +176,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 // and the sequence number where it is in the changes feed.
 func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (map[string]interface{}, int, string, error) {
 	for {
-		response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
+		response, err := couchdb.GetChanges(context.TODO(), inst, &couchdb.ChangesRequest{
 			DocType:     consts.Shared,
 			IncludeDocs: true,
 			Since:       since,

@@ -262,7 +262,7 @@ func TestCouchdb(t *testing.T) {
 		request := &ChangesRequest{
 			DocType: TestDoctype,
 		}
-		response, err := GetChanges(TestPrefix, request)
+		response, err := GetChanges(ctx, TestPrefix, request)
 		seqnoAfterCreates := response.LastSeq
 		assert.NoError(t, err)
 		assert.Len(t, response.Results, 0)
@@ -279,7 +279,7 @@ func TestCouchdb(t *testing.T) {
 			Since:   seqnoAfterCreates,
 		}
 
-		response, err = GetChanges(TestPrefix, request)
+		response, err = GetChanges(ctx, TestPrefix, request)
 		assert.NoError(t, err)
 		assert.Len(t, response.Results, 3)
 
@@ -289,7 +289,7 @@ func TestCouchdb(t *testing.T) {
 			Limit:   2,
 		}
 
-		response, err = GetChanges(TestPrefix, request)
+		response, err = GetChanges(ctx, TestPrefix, request)
 		assert.NoError(t, err)
 		assert.Len(t, response.Results, 2)
 
@@ -302,7 +302,7 @@ func TestCouchdb(t *testing.T) {
 			DocType: TestDoctype,
 			Since:   seqnoAfterCreates,
 		}
-		response, err = GetChanges(TestPrefix, request)
+		response, err = GetChanges(ctx, TestPrefix, request)
 		assert.NoError(t, err)
 		assert.Len(t, response.Results, 2)
 	})

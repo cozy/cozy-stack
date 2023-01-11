@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strconv"
@@ -237,7 +238,7 @@ func changesFeed(c echo.Context) error {
 
 	var results *couchdb.ChangesResponse
 	if filter == "" {
-		results, err = couchdb.GetChanges(instance, couchReq)
+		results, err = couchdb.GetChanges(context.TODO(), instance, couchReq)
 	} else {
 		results, err = couchdb.PostChanges(instance, couchReq, c.Request().Body)
 	}

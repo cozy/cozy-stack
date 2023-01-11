@@ -351,7 +351,7 @@ var errRevokeSharing = errors.New("Sharing must be revoked")
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/stable/api/database/changes.html
 func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
-	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
+	response, err := couchdb.GetChanges(context.TODO(), inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
 		Since:       since,
