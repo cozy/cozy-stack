@@ -327,10 +327,10 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		return nil
 	}
 
-	// 4. Find a name for the folder
+	// 4. Find a path for the folder
 	folderPath := acc.DefaultFolderPath
 	if folderPath == "" {
-		folderPath = acc.FolderPath
+		folderPath = acc.FolderPath // For legacy purposes
 	}
 	if folderPath == "" {
 		folderPath = computeFolderPath(inst, w.man.Name(), acc)

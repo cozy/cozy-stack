@@ -18,20 +18,26 @@ import (
 
 // Account holds configuration information for an account
 type Account struct {
-	DocID             string                 `json:"_id,omitempty"`
-	DocRev            string                 `json:"_rev,omitempty"`
-	Name              string                 `json:"name"`
-	AccountType       string                 `json:"account_type"`
-	DefaultFolderPath string                 `json:"defaultFolderPath,omitempty"`
-	FolderPath        string                 `json:"folderPath,omitempty"` // Legacy
-	Token             string                 `json:"token,omitempty"`      // Used by bi-aggregator
-	UserID            string                 `json:"user_id,omitempty"`    // Used by bi-aggregator-user
-	Basic             *BasicInfo             `json:"auth,omitempty"`
-	Oauth             *OauthInfo             `json:"oauth,omitempty"`
-	Extras            map[string]interface{} `json:"oauth_callback_results,omitempty"`
-	Relationships     map[string]interface{} `json:"relationships,omitempty"`
-	Data              map[string]interface{} `json:"data,omitempty"`
-	Metadata          *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+	DocID         string                 `json:"_id,omitempty"`
+	DocRev        string                 `json:"_rev,omitempty"`
+	Relationships map[string]interface{} `json:"relationships,omitempty"`
+	Metadata      *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+
+	AccountType       string                   `json:"account_type"`
+	Name              string                   `json:"name"`                        // Filled during creation request
+	FolderPath        string                   `json:"folderPath,omitempty"`        // Legacy. Replaced by DefaultFolderPath
+	DefaultFolderPath string                   `json:"defaultFolderPath,omitempty"` // Computed from other attributes if not provided
+	Identifier        string                   `json:"identifier,omitempty"`        // Name of the Basic attribute used as identifier
+	Basic             *BasicInfo               `json:"auth,omitempty"`
+	Oauth             *OauthInfo               `json:"oauth,omitempty"`
+	Extras            map[string]interface{}   `json:"oauth_callback_results,omitempty"`
+	Data              map[string]interface{}   `json:"data,omitempty"`
+	State             string                   `json:"state,omitempty"`
+	TwoFACode         string                   `json:"twoFACode,omitempty"`
+	MutedErrors       []map[string]interface{} `json:"mutedErrors,omitempty"`
+	Token             string                   `json:"token,omitempty"`   // Used by bi-aggregator
+	UserID            string                   `json:"user_id,omitempty"` // Used by bi-aggregator-user
+
 	// When an account is deleted, the stack cleans the triggers and calls its
 	// konnector to clean the account remotely (when available). It is done via
 	// a hook on deletion, but when the konnector is removed, this cleaning is
@@ -55,9 +61,13 @@ type OauthInfo struct {
 // BasicInfo holds configuration information for an user/pass account
 type BasicInfo struct {
 	Login                string `json:"login,omitempty"`
-	Email                string `json:"email,omitempty"`    // used in some accounts instead of login
-	Password             string `json:"password,omitempty"` // used when no encryption
+	Email                string `json:"email,omitempty"`          // Legacy, used in some accounts instead of login
+	Identifier           string `json:"identifier,omitempty"`     // Legacy, used in some accounts instead of login
+	NewIdentifier        string `json:"new_identifier,omitempty"` // Legacy, used in some accounts instead of login
+	AccountName          string `json:"accountName,omitempty"`    // Used when konnector has no credentials
+	Password             string `json:"password,omitempty"`       // Legacy, used when no encryption
 	EncryptedCredentials string `json:"credentials_encrypted,omitempty"`
+	Token                string `json:"token,omitempty"` // Used by legacy OAuth konnectors
 }
 
 // ID is used to implement the couchdb.Doc interface
