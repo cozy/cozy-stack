@@ -1,6 +1,7 @@
 package move
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"path"
@@ -51,7 +52,7 @@ func TestExport(t *testing.T) {
 		assert.NoError(t, err)
 		populateTree(t, fs, root, nbFiles)
 
-		nbVersions, err := couchdb.CountNormalDocs(inst, consts.FilesVersions)
+		nbVersions, err := couchdb.CountNormalDocs(context.TODO(), inst, consts.FilesVersions)
 		assert.NoError(t, err)
 
 		// /* Uncomment this section for debug */

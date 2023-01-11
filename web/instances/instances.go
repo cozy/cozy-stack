@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -249,7 +250,7 @@ func listHandler(c echo.Context) error {
 }
 
 func countHandler(c echo.Context) error {
-	count, err := couchdb.CountNormalDocs(prefixer.GlobalPrefixer, consts.Instances)
+	count, err := couchdb.CountNormalDocs(context.TODO(), prefixer.GlobalPrefixer, consts.Instances)
 	if couchdb.IsNoDatabaseError(err) {
 		count = 0
 	} else if err != nil {

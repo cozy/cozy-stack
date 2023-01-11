@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/url"
@@ -180,7 +181,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 	// even called when this is the case, but sometimes the user can create
 	// their Cozy from the manager with an OIDC flow, with no confirmation mail
 	// no password choosing, and we need this trick for them.
-	nb, _ := couchdb.CountNormalDocs(i, consts.SessionsLogins)
+	nb, _ := couchdb.CountNormalDocs(context.TODO(), i, consts.SessionsLogins)
 	if nb == 1 {
 		return nil
 	}

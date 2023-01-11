@@ -972,7 +972,7 @@ func NormalDocs(db prefixer.Prefixer, doctype string, skip, limit int, bookmark 
 	if bookmark == "" && len(res.Rows) < limit {
 		res.Total = skip + len(res.Rows)
 	} else {
-		total, err := CountNormalDocs(db, doctype)
+		total, err := CountNormalDocs(context.TODO(), db, doctype)
 		if err != nil {
 			return nil, err
 		}
