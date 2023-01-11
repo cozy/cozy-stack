@@ -218,7 +218,7 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 		}
 	}
 	if len(expired) > 0 {
-		if err := couchdb.BulkDeleteDocs(inst, consts.Sessions, expired); err != nil {
+		if err := couchdb.BulkDeleteDocs(context.TODO(), inst, consts.Sessions, expired); err != nil {
 			inst.Logger().WithNamespace("sessions").
 				Infof("Error while deleting expired sessions: %s", err)
 		}

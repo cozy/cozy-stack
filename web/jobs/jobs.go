@@ -778,7 +778,7 @@ func purgeJobs(c echo.Context) error {
 			end = len(jobsToDelete)
 		}
 
-		err = couchdb.BulkDeleteDocs(instance, consts.Jobs, jobsToDelete[i:end])
+		err = couchdb.BulkDeleteDocs(context.TODO(), instance, consts.Jobs, jobsToDelete[i:end])
 		if err != nil {
 			return err
 		}

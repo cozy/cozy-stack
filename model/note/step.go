@@ -248,7 +248,7 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 	if len(docs) == 0 {
 		return
 	}
-	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
+	if err := couchdb.BulkDeleteDocs(context.TODO(), inst, consts.NotesSteps, docs); err != nil {
 		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot purge old steps for file %s: %s", fileID, err)
 	}
@@ -275,7 +275,7 @@ func purgeAllSteps(inst *instance.Instance, fileID string) {
 		return
 	}
 
-	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
+	if err := couchdb.BulkDeleteDocs(context.TODO(), inst, consts.NotesSteps, docs); err != nil {
 		inst.Logger().WithNamespace("notes").
 			Warnf("Cannot purge all steps for file %s: %s", fileID, err)
 	}

@@ -1,6 +1,8 @@
 package note
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -36,7 +38,7 @@ func deleteNote(db prefixer.Prefixer, noteID string) {
 			for i := range steps {
 				docs = append(docs, &steps[i])
 			}
-			_ = couchdb.BulkDeleteDocs(db, consts.NotesSteps, docs)
+			_ = couchdb.BulkDeleteDocs(context.TODO(), db, consts.NotesSteps, docs)
 		}
 	}()
 }

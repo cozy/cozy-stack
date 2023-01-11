@@ -337,10 +337,10 @@ func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
 		}
 		toDelete := remaining[:n]
 		remaining = remaining[n:]
-		if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+		if err := couchdb.BulkDeleteDocs(context.TODO(), c.db, consts.Files, toDelete); err != nil {
 			// If it fails once, try again
 			time.Sleep(1 * time.Second)
-			if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+			if err := couchdb.BulkDeleteDocs(context.TODO(), c.db, consts.Files, toDelete); err != nil {
 				return err
 			}
 		}
@@ -721,9 +721,9 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 		}
 		toDelete := remaining[:n]
 		remaining = remaining[n:]
-		if err := couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, toDelete); err != nil {
+		if err := couchdb.BulkDeleteDocs(context.TODO(), c.db, consts.FilesVersions, toDelete); err != nil {
 			// If it fails once, try again
-			if err := couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, toDelete); err != nil {
+			if err := couchdb.BulkDeleteDocs(context.TODO(), c.db, consts.FilesVersions, toDelete); err != nil {
 				return err
 			}
 		}

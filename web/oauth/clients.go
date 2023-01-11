@@ -36,7 +36,7 @@ func deleteClients(c echo.Context) error {
 	}
 
 	if len(clients) > 0 {
-		if err := couchdb.BulkDeleteDocs(inst, consts.OAuthClients, clients); err != nil {
+		if err := couchdb.BulkDeleteDocs(context.TODO(), inst, consts.OAuthClients, clients); err != nil {
 			return err
 		}
 	}

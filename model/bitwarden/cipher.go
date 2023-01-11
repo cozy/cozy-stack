@@ -181,7 +181,7 @@ func DeleteUnrecoverableCiphers(inst *instance.Instance) error {
 		}
 		return err
 	}
-	return couchdb.BulkDeleteDocs(inst, consts.BitwardenCiphers, ciphers)
+	return couchdb.BulkDeleteDocs(context.TODO(), inst, consts.BitwardenCiphers, ciphers)
 }
 
 var _ couchdb.Doc = &Cipher{}

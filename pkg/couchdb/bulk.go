@@ -331,7 +331,7 @@ func bulkUpdateDocs(ctx context.Context, db prefixer.Prefixer, doctype string, d
 }
 
 // BulkDeleteDocs is used to delete serveral documents in one call.
-func BulkDeleteDocs(db prefixer.Prefixer, doctype string, docs []Doc) error {
+func BulkDeleteDocs(ctx context.Context, db prefixer.Prefixer, doctype string, docs []Doc) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -346,7 +346,7 @@ func BulkDeleteDocs(db prefixer.Prefixer, doctype string, docs []Doc) error {
 		))
 	}
 	var res []UpdateResponse
-	if err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+	if err := makeRequest(ctx, db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
 	for i, doc := range docs {

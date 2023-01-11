@@ -109,7 +109,7 @@ func (o *Organization) Delete(inst *instance.Instance) error {
 	for i := range ciphers {
 		docs[i] = ciphers[i].Clone()
 	}
-	if err := couchdb.BulkDeleteDocs(inst, consts.BitwardenCiphers, docs); err != nil {
+	if err := couchdb.BulkDeleteDocs(context.TODO(), inst, consts.BitwardenCiphers, docs); err != nil {
 		return err
 	}
 
