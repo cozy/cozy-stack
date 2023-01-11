@@ -153,6 +153,7 @@ func createAccount(c echo.Context) error {
 	}
 
 	account.Encrypt(doc)
+	account.ComputeName(doc)
 
 	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err

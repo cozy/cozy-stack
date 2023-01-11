@@ -249,6 +249,30 @@ func PushAccountDeletedJob(jobsSystem job.JobSystem, db prefixer.Prefixer, accou
 	})
 }
 
+// ComputeName tries to use the value of the `auth` attribute pointed by the
+// value of the `identifier` attribute as the Account name and set it in the
+// JSON document.
+//
+// See https://github.com/cozy/cozy-doctypes/blob/master/docs/io.cozy.accounts.md#about-the-name-of-the-account
+func ComputeName(doc couchdb.JSONDoc) {
+	auth, ok := doc.M["auth"].(map[string]interface{})
+	if !ok || auth == nil {
+		return
+	}
+
+	identifier, ok := doc.M["identifier"].(string)
+	if !ok || identifier == "" {
+		if login, ok := auth["login"].(string); ok {
+			doc.M["name"] = login
+		}
+		return
+	}
+
+	if name, ok := auth[identifier].(string); ok {
+		doc.M["name"] = name
+	}
+}
+
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(db prefixer.Prefixer, doc couchdb.Doc, old couchdb.Doc) error {
