@@ -2,6 +2,7 @@ package instances
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -99,7 +100,7 @@ func checkTriggers(c echo.Context) error {
 		Message    json.RawMessage `json:"message"`
 	}
 	var triggers []*TriggerInfo
-	err = couchdb.ForeachDocs(inst, consts.Triggers, func(_ string, data json.RawMessage) error {
+	err = couchdb.ForeachDocs(context.TODO(), inst, consts.Triggers, func(_ string, data json.RawMessage) error {
 		var t *TriggerInfo
 		if err := json.Unmarshal(data, &t); err != nil {
 			return err

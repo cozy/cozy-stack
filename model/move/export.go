@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"io"
 	"net/url"
@@ -385,7 +386,7 @@ func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (in
 	}
 
 	versions := make(map[string]int64)
-	err = couchdb.ForeachDocs(i, consts.FilesVersions, func(id string, raw json.RawMessage) error {
+	err = couchdb.ForeachDocs(context.TODO(), i, consts.FilesVersions, func(id string, raw json.RawMessage) error {
 		var doc vfs.Version
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			return err
@@ -425,7 +426,7 @@ func exportDocuments(in *instance.Instance, doc *ExportDoc, now time.Time, tw *t
 			continue
 		}
 		dir := url.PathEscape(doctype)
-		err := couchdb.ForeachDocs(in, doctype, func(id string, doc json.RawMessage) error {
+		err := couchdb.ForeachDocs(context.TODO(), in, doctype, func(id string, doc json.RawMessage) error {
 			n, err := writeMarshaledDoc(dir, id, doc, now, tw)
 			if err == nil {
 				size += n

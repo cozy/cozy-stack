@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 	"time"
@@ -164,7 +165,7 @@ func FindCiphersInFolder(inst *instance.Instance, folderID string) ([]*Cipher, e
 // lost, as there are no ways to recover those encrypted ciphers.
 func DeleteUnrecoverableCiphers(inst *instance.Instance) error {
 	var ciphers []couchdb.Doc
-	err := couchdb.ForeachDocs(inst, consts.BitwardenCiphers, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), inst, consts.BitwardenCiphers, func(_ string, data json.RawMessage) error {
 		var c Cipher
 		if err := json.Unmarshal(data, &c); err != nil {
 			return err

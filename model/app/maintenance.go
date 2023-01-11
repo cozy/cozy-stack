@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -66,7 +67,7 @@ func GetMaintenanceOptions(slug string) (map[string]interface{}, error) {
 // (not from apps registry).
 func ListMaintenance() ([]map[string]interface{}, error) {
 	list := []map[string]interface{}{}
-	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), prefixer.GlobalPrefixer, consts.KonnectorsMaintenance, func(id string, raw json.RawMessage) error {
 		var opts map[string]interface{}
 		if err := json.Unmarshal(raw, &opts); err != nil {
 			return err

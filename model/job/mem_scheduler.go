@@ -65,12 +65,12 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	}
 
 	var ts []*TriggerInfos
-	err := couchdb.ForeachDocs(prefixer.GlobalPrefixer, consts.Instances, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), prefixer.GlobalPrefixer, consts.Instances, func(_ string, data json.RawMessage) error {
 		db := &instance.Instance{}
 		if err := json.Unmarshal(data, db); err != nil {
 			return err
 		}
-		err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
+		err := couchdb.ForeachDocs(context.TODO(), db, consts.Triggers, func(_ string, data json.RawMessage) error {
 			var t *TriggerInfos
 			if err := json.Unmarshal(data, &t); err != nil {
 				return err

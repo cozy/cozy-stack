@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -660,7 +661,7 @@ func cleanJobs(c echo.Context) error {
 	}
 	var ups []*job.Job
 	now := time.Now()
-	err := couchdb.ForeachDocs(instance, consts.Jobs, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), instance, consts.Jobs, func(_ string, data json.RawMessage) error {
 		var j *job.Job
 		if err := json.Unmarshal(data, &j); err != nil {
 			return err

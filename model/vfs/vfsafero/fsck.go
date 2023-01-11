@@ -2,6 +2,7 @@ package vfsafero
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/json"
 	"errors"
@@ -56,7 +57,7 @@ func (afs *aferoVFS) checkFiles(
 	failFast bool,
 ) error {
 	versions := make(map[string]*vfs.Version, 1024)
-	err := couchdb.ForeachDocs(afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &vfs.Version{}
 		if erru := json.Unmarshal(data, v); erru != nil {
 			return erru

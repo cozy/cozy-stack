@@ -481,7 +481,7 @@ func (s *redisScheduler) deleteTrigger(t Trigger) error {
 // GetAllTriggers returns all the triggers for a domain, from couch.
 func (s *redisScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error) {
 	var infos []*TriggerInfos
-	err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), db, consts.Triggers, func(_ string, data json.RawMessage) error {
 		var t *TriggerInfos
 		if err := json.Unmarshal(data, &t); err != nil {
 			return err

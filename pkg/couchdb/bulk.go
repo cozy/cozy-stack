@@ -184,8 +184,8 @@ func MakeAllDocsRequest(ctx context.Context, db prefixer.Prefixer, doctype strin
 
 // ForeachDocs traverse all the documents from the given database with the
 // specified doctype and calls a function for each document.
-func ForeachDocs(db prefixer.Prefixer, doctype string, fn func(id string, doc json.RawMessage) error) error {
-	return ForeachDocsWithCustomPagination(context.TODO(), db, doctype, 100, fn)
+func ForeachDocs(ctx context.Context, db prefixer.Prefixer, doctype string, fn func(id string, doc json.RawMessage) error) error {
+	return ForeachDocsWithCustomPagination(ctx, db, doctype, 100, fn)
 }
 
 // ForeachDocsWithCustomPagination traverse all the documents from the given

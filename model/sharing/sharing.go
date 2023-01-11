@@ -1036,7 +1036,7 @@ func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string
 // triggers and members/credentials.
 func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[string]interface{}, error) {
 	checks := []map[string]interface{}{}
-	err := couchdb.ForeachDocs(inst, consts.Sharings, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), inst, consts.Sharings, func(_ string, data json.RawMessage) error {
 		s := &Sharing{}
 		if err := json.Unmarshal(data, s); err != nil {
 			return err

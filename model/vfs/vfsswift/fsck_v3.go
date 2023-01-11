@@ -52,7 +52,7 @@ func (sfs *swiftVFSV3) checkFiles(
 	failFast bool,
 ) error {
 	versions := make(map[string]*vfs.Version, 1024)
-	err := couchdb.ForeachDocs(sfs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), sfs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &vfs.Version{}
 		if erru := json.Unmarshal(data, v); erru != nil {
 			return erru
@@ -65,7 +65,7 @@ func (sfs *swiftVFSV3) checkFiles(
 	}
 
 	images := make(map[string]struct{})
-	err = couchdb.ForeachDocs(sfs, consts.NotesImages, func(_ string, data json.RawMessage) error {
+	err = couchdb.ForeachDocs(context.TODO(), sfs, consts.NotesImages, func(_ string, data json.RawMessage) error {
 		img := make(map[string]interface{})
 		if erru := json.Unmarshal(data, &img); erru != nil {
 			return erru

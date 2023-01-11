@@ -2,6 +2,7 @@ package exec
 
 import (
 	"archive/tar"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -81,7 +82,7 @@ func (m *KonnectorMessage) updateFolderToSave(inst *instance.Instance, dir strin
 	d["folder_to_save"] = dir
 	m.data, _ = json.Marshal(d)
 
-	_ = couchdb.ForeachDocs(inst, consts.Triggers, func(_ string, data json.RawMessage) error {
+	_ = couchdb.ForeachDocs(context.TODO(), inst, consts.Triggers, func(_ string, data json.RawMessage) error {
 		var infos *job.TriggerInfos
 		if err := json.Unmarshal(data, &infos); err != nil {
 			return err

@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -20,7 +21,7 @@ func deleteClients(c echo.Context) error {
 
 	kind := c.QueryParam("Kind")
 	var clients []couchdb.Doc
-	err = couchdb.ForeachDocs(inst, consts.OAuthClients, func(id string, doc json.RawMessage) error {
+	err = couchdb.ForeachDocs(context.TODO(), inst, consts.OAuthClients, func(id string, doc json.RawMessage) error {
 		client := &oauth.Client{}
 		if err := json.Unmarshal(doc, client); err != nil {
 			return err

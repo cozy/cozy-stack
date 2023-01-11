@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path"
@@ -697,7 +698,7 @@ func (c *couchdbIndexer) DeleteVersion(v *Version) error {
 
 func (c *couchdbIndexer) AllVersions() ([]*Version, error) {
 	var versions []*Version
-	err := couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_id string, doc json.RawMessage) error {
+	err := couchdb.ForeachDocs(context.TODO(), c.db, consts.FilesVersions, func(_id string, doc json.RawMessage) error {
 		var v Version
 		if err := json.Unmarshal(doc, &v); err != nil {
 			return err
@@ -895,7 +896,7 @@ func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog
 		}
 	}
 
-	return couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+	return couchdb.ForeachDocs(context.TODO(), c.db, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &Version{}
 		if erru := json.Unmarshal(data, v); erru != nil {
 			return erru
@@ -931,7 +932,7 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		each = func(*TreeFile) {}
 	}
 
-	err = couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
+	err = couchdb.ForeachDocs(context.TODO(), c.db, consts.Files, func(_ string, data json.RawMessage) error {
 		var f *TreeFile
 		if erru := json.Unmarshal(data, &f); erru != nil {
 			return erru
