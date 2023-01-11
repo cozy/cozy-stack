@@ -354,10 +354,10 @@ func makeRequest(ctx context.Context, db prefixer.Prefixer, doctype, method, pat
 }
 
 // Compact asks CouchDB to compact a database.
-func Compact(db prefixer.Prefixer, doctype string) error {
+func Compact(ctx context.Context, db prefixer.Prefixer, doctype string) error {
 	// CouchDB requires a Content-Type: application/json header
 	body := map[string]interface{}{}
-	return makeRequest(context.TODO(), db, doctype, http.MethodPost, "_compact", body, nil)
+	return makeRequest(ctx, db, doctype, http.MethodPost, "_compact", body, nil)
 }
 
 // UUID requests a Universally Unique Identifier (UUID) from CouchDB.

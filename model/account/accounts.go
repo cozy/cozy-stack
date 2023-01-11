@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"encoding/json"
 	"net/url"
 	"time"
@@ -324,7 +325,7 @@ func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
 	if err := createNamedDocWithDB(db, cloned); err != nil {
 		logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
 	}
-	if err := couchdb.Compact(db, consts.Accounts); err != nil {
+	if err := couchdb.Compact(context.TODO(), db, consts.Accounts); err != nil {
 		logger.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
 	}
 }
