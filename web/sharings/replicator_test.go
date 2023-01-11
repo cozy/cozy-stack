@@ -2,6 +2,7 @@ package sharings_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -441,7 +442,7 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 			"this": "is document " + id + " at revision " + rev,
 		},
 	}
-	err := couchdb.BulkForceUpdateDocs(replInstance, doctype, docs)
+	err := couchdb.BulkForceUpdateDocs(context.TODO(), replInstance, doctype, docs)
 	assert.NoError(t, err)
 	var tree *sharing.RevsTree
 	for i, r := range revisions {

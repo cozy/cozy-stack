@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 
@@ -269,7 +270,7 @@ func (s *sharingIndexer) bulkForceUpdateDoc(olddoc, doc *vfs.FileDoc) error {
 	doc.SetRev(s.bulkRevs.Rev)
 	s.setDirOrFileRevisions(nil, olddoc, docs[0])
 
-	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
+	return couchdb.BulkForceUpdateDocs(context.TODO(), s.db, consts.Files, docs)
 }
 
 // DeleteFileDoc is used when uploading a new file fails (invalid md5sum for example)
@@ -317,7 +318,7 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	doc.SetRev(s.bulkRevs.Rev)
 	s.setDirOrFileRevisions(olddoc, nil, docs[0])
 
-	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
+	if err := couchdb.BulkForceUpdateDocs(context.TODO(), s.db, consts.Files, docs); err != nil {
 		return err
 	}
 

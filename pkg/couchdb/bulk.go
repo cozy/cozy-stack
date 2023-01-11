@@ -358,7 +358,7 @@ func BulkDeleteDocs(ctx context.Context, db prefixer.Prefixer, doctype string, d
 
 // BulkForceUpdateDocs is used to update several docs in one call, and to force
 // the revisions history. It is used by replications.
-func BulkForceUpdateDocs(db prefixer.Prefixer, doctype string, docs []map[string]interface{}) error {
+func BulkForceUpdateDocs(ctx context.Context, db prefixer.Prefixer, doctype string, docs []map[string]interface{}) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -371,5 +371,5 @@ func BulkForceUpdateDocs(db prefixer.Prefixer, doctype string, docs []map[string
 	}
 	// XXX CouchDB returns just an empty array when new_edits is false, so we
 	// ignore the response
-	return makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, nil)
+	return makeRequest(ctx, db, doctype, http.MethodPost, "_bulk_docs", body, nil)
 }

@@ -678,7 +678,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 			}
 		}
 		if len(okDocs) > 0 {
-			if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
+			if err = couchdb.BulkForceUpdateDocs(context.TODO(), inst, doctype, okDocs); err != nil {
 				return err
 			}
 			for _, doc := range okDocs {
