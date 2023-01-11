@@ -211,7 +211,7 @@ func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member, worker st
 	if err != nil {
 		return "", err
 	}
-	result, err := couchdb.GetLocal(inst, consts.Shared, id+"/"+worker)
+	result, err := couchdb.GetLocal(context.TODO(), inst, consts.Shared, id+"/"+worker)
 	if couchdb.IsNotFoundError(err) {
 		return "", nil
 	}
@@ -229,7 +229,7 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, w
 	if err != nil {
 		return err
 	}
-	result, err := couchdb.GetLocal(inst, consts.Shared, id+"/"+worker)
+	result, err := couchdb.GetLocal(context.TODO(), inst, consts.Shared, id+"/"+worker)
 	if err != nil {
 		if !couchdb.IsNotFoundError(err) {
 			return err

@@ -452,7 +452,7 @@ func TestCouchdb(t *testing.T) {
 
 	t.Run("LocalDocuments", func(t *testing.T) {
 		id := "foo"
-		_, err := GetLocal(TestPrefix, TestDoctype, id)
+		_, err := GetLocal(ctx, TestPrefix, TestDoctype, id)
 		assert.True(t, IsNotFoundError(err))
 
 		doc := map[string]interface{}{"bar": "baz"}
@@ -460,14 +460,14 @@ func TestCouchdb(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, doc["_rev"])
 
-		out, err := GetLocal(TestPrefix, TestDoctype, id)
+		out, err := GetLocal(ctx, TestPrefix, TestDoctype, id)
 		assert.NoError(t, err)
 		assert.Equal(t, "baz", out["bar"])
 
 		err = DeleteLocal(TestPrefix, TestDoctype, id)
 		assert.NoError(t, err)
 
-		_, err = GetLocal(TestPrefix, TestDoctype, id)
+		_, err = GetLocal(ctx, TestPrefix, TestDoctype, id)
 		assert.True(t, IsNotFoundError(err))
 	})
 }
