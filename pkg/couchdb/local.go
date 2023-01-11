@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 
@@ -12,7 +13,7 @@ import (
 func GetLocal(db prefixer.Prefixer, doctype, id string) (map[string]interface{}, error) {
 	var out map[string]interface{}
 	u := "_local/" + url.PathEscape(id)
-	if err := makeRequest(db, doctype, http.MethodGet, u, nil, &out); err != nil {
+	if err := makeRequest(context.TODO(), db, doctype, http.MethodGet, u, nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -23,7 +24,7 @@ func GetLocal(db prefixer.Prefixer, doctype, id string) (map[string]interface{},
 func PutLocal(db prefixer.Prefixer, doctype, id string, doc map[string]interface{}) error {
 	u := "_local/" + url.PathEscape(id)
 	var out UpdateResponse
-	if err := makeRequest(db, doctype, http.MethodPut, u, doc, &out); err != nil {
+	if err := makeRequest(context.TODO(), db, doctype, http.MethodPut, u, doc, &out); err != nil {
 		return err
 	}
 	doc["_rev"] = out.Rev
@@ -33,5 +34,5 @@ func PutLocal(db prefixer.Prefixer, doctype, id string, doc map[string]interface
 // DeleteLocal will delete a local document in CouchDB.
 func DeleteLocal(db prefixer.Prefixer, doctype, id string) error {
 	u := "_local/" + url.PathEscape(id)
-	return makeRequest(db, doctype, http.MethodDelete, u, nil, nil)
+	return makeRequest(context.TODO(), db, doctype, http.MethodDelete, u, nil, nil)
 }

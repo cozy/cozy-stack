@@ -2,6 +2,7 @@ package couchdb
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -287,7 +288,7 @@ func handleResponseError(db prefixer.Prefixer, resp *http.Response) error {
 	return err
 }
 
-func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
+func makeRequest(ctx context.Context, db prefixer.Prefixer, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
 	var err error
 	var reqjson []byte
 
@@ -313,7 +314,7 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 	}
 
 	start := time.Now()
-	resp, err := config.CouchClient().Do(req)
+	resp, err := config.CouchClient().Do(req.WithContext(ctx))
 	elapsed := time.Since(start)
 	// Possible err = mostly connection failure
 	if err != nil {
@@ -356,13 +357,13 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 func Compact(db prefixer.Prefixer, doctype string) error {
 	// CouchDB requires a Content-Type: application/json header
 	body := map[string]interface{}{}
-	return makeRequest(db, doctype, http.MethodPost, "_compact", body, nil)
+	return makeRequest(context.TODO(), db, doctype, http.MethodPost, "_compact", body, nil)
 }
 
 // UUID requests a Universally Unique Identifier (UUID) from CouchDB.
 func UUID(db prefixer.Prefixer) (string, error) {
 	var out UUIDResponse
-	if err := makeRequest(db, "", http.MethodGet, "_uuids", nil, &out); err != nil {
+	if err := makeRequest(context.TODO(), db, "", http.MethodGet, "_uuids", nil, &out); err != nil {
 		return "", err
 	}
 	return out.UUIDs[0], nil
@@ -372,14 +373,14 @@ func UUID(db prefixer.Prefixer) (string, error) {
 // documents, sequence numbers, etc.
 func DBStatus(db prefixer.Prefixer, doctype string) (*DBStatusResponse, error) {
 	var out DBStatusResponse
-	return &out, makeRequest(db, doctype, http.MethodGet, "", nil, &out)
+	return &out, makeRequest(context.TODO(), db, doctype, http.MethodGet, "", nil, &out)
 }
 
 func allDbs(db prefixer.Prefixer) ([]string, error) {
 	var dbs []string
 	prefix := EscapeCouchdbName(db.DBPrefix())
 	u := fmt.Sprintf(`_all_dbs?start_key="%s"&end_key="%s"`, prefix+"/", prefix+"0")
-	if err := makeRequest(db, "", http.MethodGet, u, nil, &dbs); err != nil {
+	if err := makeRequest(context.TODO(), db, "", http.MethodGet, u, nil, &dbs); err != nil {
 		return nil, err
 	}
 	return dbs, nil
@@ -415,7 +416,7 @@ func GetDoc(db prefixer.Prefixer, doctype, id string, out Doc) error {
 	if id == "" {
 		return fmt.Errorf("Missing ID for GetDoc")
 	}
-	return makeRequest(db, doctype, http.MethodGet, url.PathEscape(id), nil, out)
+	return makeRequest(context.TODO(), db, doctype, http.MethodGet, url.PathEscape(id), nil, out)
 }
 
 // GetDocRev fetch a document by its docType and ID on a specific revision, out
@@ -430,7 +431,7 @@ func GetDocRev(db prefixer.Prefixer, doctype, id, rev string, out Doc) error {
 		return fmt.Errorf("Missing ID for GetDoc")
 	}
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(rev)
-	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
+	return makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, out)
 }
 
 // GetDocWithRevs fetches a document by its docType and ID.
@@ -446,7 +447,7 @@ func GetDocWithRevs(db prefixer.Prefixer, doctype, id string, out Doc) error {
 		return fmt.Errorf("Missing ID for GetDoc")
 	}
 	url := url.PathEscape(id) + "?revs=true"
-	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
+	return makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, out)
 }
 
 // EnsureDBExist creates the database for the doctype if it doesn't exist
@@ -469,7 +470,7 @@ func CreateDB(db prefixer.Prefixer, doctype string) error {
 	if build.IsDevRelease() {
 		query = "?q=1&n=1"
 	}
-	if err := makeRequest(db, doctype, http.MethodPut, query, nil, nil); err != nil {
+	if err := makeRequest(context.TODO(), db, doctype, http.MethodPut, query, nil, nil); err != nil {
 		return err
 	}
 
@@ -484,7 +485,7 @@ func CreateDB(db prefixer.Prefixer, doctype string) error {
 
 // DeleteDB destroy the database for a doctype
 func DeleteDB(db prefixer.Prefixer, doctype string) error {
-	return makeRequest(db, doctype, http.MethodDelete, "", nil, nil)
+	return makeRequest(context.TODO(), db, doctype, http.MethodDelete, "", nil, nil)
 }
 
 // DeleteAllDBs will remove all the couchdb doctype databases for
@@ -551,7 +552,7 @@ func DeleteDoc(db prefixer.Prefixer, doc Doc) error {
 
 	var res UpdateResponse
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(doc.Rev())
-	err = makeRequest(db, doc.DocType(), http.MethodDelete, url, nil, &res)
+	err = makeRequest(context.TODO(), db, doc.DocType(), http.MethodDelete, url, nil, &res)
 	if err != nil {
 		return err
 	}
@@ -589,12 +590,12 @@ func UpdateDoc(db prefixer.Prefixer, doc Doc) error {
 	// The old doc is requested to be emitted thought RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := NewEmptyObjectOfSameType(doc).(Doc)
-	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)
+	err = makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, oldDoc)
 	if err != nil {
 		return err
 	}
 	var res UpdateResponse
-	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
+	err = makeRequest(context.TODO(), db, doctype, http.MethodPut, url, doc, &res)
 	if err != nil {
 		return err
 	}
@@ -617,7 +618,7 @@ func UpdateDocWithOld(db prefixer.Prefixer, doc, oldDoc Doc) error {
 
 	url := url.PathEscape(id)
 	var res UpdateResponse
-	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
+	err = makeRequest(context.TODO(), db, doctype, http.MethodPut, url, doc, &res)
 	if err != nil {
 		return err
 	}
@@ -640,7 +641,7 @@ func CreateNamedDoc(db prefixer.Prefixer, doc Doc) error {
 		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
 	}
 	var res UpdateResponse
-	err = makeRequest(db, doctype, http.MethodPut, url.PathEscape(id), doc, &res)
+	err = makeRequest(context.TODO(), db, doctype, http.MethodPut, url.PathEscape(id), doc, &res)
 	if err != nil {
 		return err
 	}
@@ -692,13 +693,13 @@ func Upsert(db prefixer.Prefixer, doc Doc) error {
 
 func createDocOrDB(db prefixer.Prefixer, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
-	err := makeRequest(db, doctype, http.MethodPost, "", doc, response)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "", doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
 		return err
 	}
 	err = CreateDB(db, doctype)
 	if err == nil || IsFileExists(err) {
-		err = makeRequest(db, doctype, http.MethodPost, "", doc, response)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodPost, "", doc, response)
 	}
 	return err
 }
@@ -739,7 +740,7 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 				Lang:  "javascript",
 				Views: map[string]*View{v.Name: v},
 			}
-			err := makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+			err := makeRequest(context.TODO(), db, v.Doctype, http.MethodPut, url, &doc, nil)
 			if IsNoDatabaseError(err) {
 				err = CreateDB(db, v.Doctype)
 				if err != nil && !IsFileExists(err) {
@@ -750,11 +751,11 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 					}
 					return err
 				}
-				err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+				err = makeRequest(context.TODO(), db, v.Doctype, http.MethodPut, url, &doc, nil)
 			}
 			if IsConflictError(err) {
 				var old ViewDesignDoc
-				err = makeRequest(db, v.Doctype, http.MethodGet, url, nil, &old)
+				err = makeRequest(context.TODO(), db, v.Doctype, http.MethodGet, url, nil, &old)
 				if err != nil {
 					if err != nil {
 						logger.WithDomain(db.DomainName()).
@@ -765,7 +766,7 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 				}
 				if !equalViews(&old, doc) {
 					doc.Rev = old.Rev
-					err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+					err = makeRequest(context.TODO(), db, v.Doctype, http.MethodPut, url, &doc, nil)
 				} else {
 					err = nil
 				}
@@ -811,13 +812,13 @@ func ExecView(db prefixer.Prefixer, view *View, req *ViewRequest, results interf
 	}
 	viewurl += "?" + v.Encode()
 	if req.Keys != nil {
-		return makeRequest(db, view.Doctype, http.MethodPost, viewurl, req, &results)
+		return makeRequest(context.TODO(), db, view.Doctype, http.MethodPost, viewurl, req, &results)
 	}
-	err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
+	err = makeRequest(context.TODO(), db, view.Doctype, http.MethodGet, viewurl, nil, &results)
 	if IsInternalServerError(err) {
 		time.Sleep(1 * time.Second)
 		// Retry the error on 500, as it may be just that CouchDB is slow to build the view
-		err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
+		err = makeRequest(context.TODO(), db, view.Doctype, http.MethodGet, viewurl, nil, &results)
 		if IsInternalServerError(err) {
 			logger.
 				WithDomain(db.DomainName()).
@@ -844,18 +845,18 @@ func DefineIndex(db prefixer.Prefixer, index *mango.Index) error {
 func DefineIndexRaw(db prefixer.Prefixer, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := "_index"
 	response := &IndexCreationResponse{}
-	err := makeRequest(db, doctype, http.MethodPost, url, &index, &response)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, url, &index, &response)
 	if IsNoDatabaseError(err) {
 		if err = CreateDB(db, doctype); err != nil && !IsFileExists(err) {
 			return nil, err
 		}
-		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodPost, url, &index, &response)
 	}
 	// XXX when creating the same index twice at the same time, CouchDB respond
 	// with a 500, so let's just retry as a work-around...
 	if IsInternalServerError(err) {
 		time.Sleep(100 * time.Millisecond)
-		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodPost, url, &index, &response)
 	}
 	if err != nil {
 		return nil, err
@@ -911,7 +912,7 @@ func findDocsRaw(db prefixer.Prefixer, doctype string, req interface{}, results 
 	url := "_find"
 	// prepare a structure to receive the results
 	var response FindResponse
-	err := makeRequest(db, doctype, http.MethodPost, url, &req, &response)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, url, &req, &response)
 	if err != nil {
 		if isIndexError(err) {
 			jsonReq, errm := json.Marshal(req)
@@ -960,7 +961,7 @@ func NormalDocs(db prefixer.Prefixer, doctype string, skip, limit int, bookmark 
 	} else {
 		req.Skip = skip
 	}
-	err := makeRequest(db, doctype, http.MethodPost, "_find", &req, &findRes)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "_find", &req, &findRes)
 	if err != nil {
 		return nil, err
 	}

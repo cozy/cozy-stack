@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -153,7 +154,7 @@ func GetChanges(db prefixer.Prefixer, req *ChangesRequest) (*ChangesResponse, er
 
 	var response ChangesResponse
 	url := "_changes?" + v.Encode()
-	err = makeRequest(db, req.DocType, http.MethodGet, url, nil, &response)
+	err = makeRequest(context.TODO(), db, req.DocType, http.MethodGet, url, nil, &response)
 
 	if err != nil {
 		return nil, err
@@ -182,7 +183,7 @@ func PostChanges(db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) 
 
 	var response ChangesResponse
 	url := "_changes?" + v.Encode()
-	err = makeRequest(db, req.DocType, http.MethodPost, url, payload, &response)
+	err = makeRequest(context.TODO(), db, req.DocType, http.MethodPost, url, payload, &response)
 
 	if err != nil {
 		return nil, err

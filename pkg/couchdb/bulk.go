@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,7 +62,7 @@ type BulkGetResponse struct {
 func CountAllDocs(db prefixer.Prefixer, doctype string) (int, error) {
 	var response AllDocsResponse
 	url := "_all_docs?limit=0"
-	err := makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &response)
 	if err != nil {
 		return 0, err
 	}
@@ -72,7 +73,7 @@ func CountAllDocs(db prefixer.Prefixer, doctype string) (int, error) {
 // and excludes the design docs from the count.
 func CountNormalDocs(db prefixer.Prefixer, doctype string) (int, error) {
 	var designRes ViewResponse
-	err := makeRequest(db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
 	if err != nil {
 		return 0, err
 	}
@@ -105,7 +106,7 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 	var response AllDocsResponse
 	if req == nil || len(req.Keys) == 0 {
 		url := "_all_docs?" + v.Encode()
-		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &response)
 	} else {
 		v.Del("keys")
 		url := "_all_docs?" + v.Encode()
@@ -114,7 +115,7 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 		}{
 			Keys: req.Keys,
 		}
-		err = makeRequest(db, doctype, http.MethodPost, url, body, &response)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodPost, url, body, &response)
 	}
 	if err != nil {
 		return err
@@ -210,7 +211,7 @@ func ForeachDocsWithCustomPagination(db prefixer.Prefixer, doctype string, limit
 
 		var res AllDocsResponse
 		url := "_all_docs?" + v.Encode()
-		err = makeRequest(db, doctype, http.MethodGet, url, nil, &res)
+		err = makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &res)
 		if err != nil {
 			return err
 		}
@@ -241,7 +242,7 @@ func BulkGetDocs(db prefixer.Prefixer, doctype string, payload []IDRev) ([]map[s
 		Docs: payload,
 	}
 	var response BulkGetResponse
-	err := makeRequest(db, doctype, http.MethodPost, path, body, &response)
+	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, path, body, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +298,7 @@ func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 		Docs: docs,
 	}
 	var res []UpdateResponse
-	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+	if err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
 	if len(res) != len(docs) {
@@ -345,7 +346,7 @@ func BulkDeleteDocs(db prefixer.Prefixer, doctype string, docs []Doc) error {
 		))
 	}
 	var res []UpdateResponse
-	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+	if err := makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
 	for i, doc := range docs {
@@ -370,5 +371,5 @@ func BulkForceUpdateDocs(db prefixer.Prefixer, doctype string, docs []map[string
 	}
 	// XXX CouchDB returns just an empty array when new_edits is false, so we
 	// ignore the response
-	return makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, nil)
+	return makeRequest(context.TODO(), db, doctype, http.MethodPost, "_bulk_docs", body, nil)
 }
