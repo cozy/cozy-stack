@@ -240,7 +240,7 @@ func changesFeed(c echo.Context) error {
 	if filter == "" {
 		results, err = couchdb.GetChanges(context.TODO(), instance, couchReq)
 	} else {
-		results, err = couchdb.PostChanges(instance, couchReq, c.Request().Body)
+		results, err = couchdb.PostChanges(context.TODO(), instance, couchReq, c.Request().Body)
 	}
 	if err != nil {
 		return err

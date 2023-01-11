@@ -5,6 +5,7 @@ package files
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -1640,7 +1641,7 @@ func ChangesFeed(c echo.Context) error {
 		IncludeDocs: includeDocs,
 		Filter:      "_selector",
 	}
-	results, err := couchdb.PostChanges(inst, couchReq, filter)
+	results, err := couchdb.PostChanges(context.TODO(), inst, couchReq, filter)
 	mu.Unlock()
 	if err != nil {
 		return err

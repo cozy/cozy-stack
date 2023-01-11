@@ -163,7 +163,7 @@ func GetChanges(ctx context.Context, db prefixer.Prefixer, req *ChangesRequest) 
 }
 
 // PostChanges returns a list of changes in couchdb
-func PostChanges(db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) (*ChangesResponse, error) {
+func PostChanges(ctx context.Context, db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) (*ChangesResponse, error) {
 	var payload json.RawMessage
 	if err := json.NewDecoder(body).Decode(&payload); err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func PostChanges(db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) 
 
 	var response ChangesResponse
 	url := "_changes?" + v.Encode()
-	err = makeRequest(context.TODO(), db, req.DocType, http.MethodPost, url, payload, &response)
+	err = makeRequest(ctx, db, req.DocType, http.MethodPost, url, payload, &response)
 
 	if err != nil {
 		return nil, err
