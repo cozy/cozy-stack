@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -758,10 +759,10 @@ func getSharedRef(t *testing.T, inst *instance.Instance, doctype, id string) *Sh
 }
 
 func assertNbSharedRef(t *testing.T, inst *instance.Instance, expected int) {
-	nb, err := couchdb.CountAllDocs(inst, consts.Shared)
+	nb, err := couchdb.CountAllDocs(context.TODO(), inst, consts.Shared)
 	if err != nil {
 		time.Sleep(1 * time.Second)
-		nb, err = couchdb.CountAllDocs(inst, consts.Shared)
+		nb, err = couchdb.CountAllDocs(context.TODO(), inst, consts.Shared)
 	}
 	assert.NoError(t, err)
 	assert.Equal(t, expected, nb)

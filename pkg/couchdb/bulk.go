@@ -59,10 +59,10 @@ type BulkGetResponse struct {
 }
 
 // CountAllDocs returns the number of documents of the given doctype.
-func CountAllDocs(db prefixer.Prefixer, doctype string) (int, error) {
+func CountAllDocs(ctx context.Context, db prefixer.Prefixer, doctype string) (int, error) {
 	var response AllDocsResponse
 	url := "_all_docs?limit=0"
-	err := makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &response)
+	err := makeRequest(ctx, db, doctype, http.MethodGet, url, nil, &response)
 	if err != nil {
 		return 0, err
 	}
@@ -83,7 +83,7 @@ func CountNormalDocs(db prefixer.Prefixer, doctype string) (int, error) {
 	// - is the total number of design documents on CouchDB 2.3+
 	// See https://github.com/apache/couchdb/issues/1603
 	if total == len(designRes.Rows) {
-		if total, err = CountAllDocs(db, doctype); err != nil {
+		if total, err = CountAllDocs(context.TODO(), db, doctype); err != nil {
 			return 0, err
 		}
 	}

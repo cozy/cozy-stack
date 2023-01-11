@@ -980,7 +980,7 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, man.Version(), "1.0.0")
 
-		t1, err := couchdb.CountAllDocs(instance, consts.Triggers)
+		t1, err := couchdb.CountAllDocs(context.TODO(), instance, consts.Triggers)
 		assert.NoError(t, err)
 
 		// Update the app, but with new perms. The app should stay on the same
@@ -996,7 +996,7 @@ func TestInstallerWebApp(t *testing.T) {
 
 		man, err = inst2.RunSync()
 		assert.NoError(t, err)
-		t2, err := couchdb.CountAllDocs(instance, consts.Triggers)
+		t2, err := couchdb.CountAllDocs(context.TODO(), instance, consts.Triggers)
 		assert.NoError(t, err)
 
 		assert.Contains(t, man.Version(), "1.0.0")

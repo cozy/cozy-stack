@@ -2,6 +2,7 @@ package bitwarden
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -579,7 +580,7 @@ func TestBitwarden(t *testing.T) {
 	t.Run("BulkDeleteCiphers", func(t *testing.T) {
 		// Setup
 		nbCiphersToDelete := 5
-		nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+		nbCiphers, err := couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 
 		var ids []string
@@ -611,7 +612,7 @@ func TestBitwarden(t *testing.T) {
 			ids = append(ids, result["Id"].(string))
 		}
 
-		nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+		nb, err := couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 		assert.Equal(t, nbCiphers+nbCiphersToDelete, nb)
 
@@ -669,7 +670,7 @@ func TestBitwarden(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, res.StatusCode)
 
-		nb, err = couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+		nb, err = couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 		assert.Equal(t, nbCiphers, nb)
 	})
@@ -779,9 +780,9 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("ImportCiphers", func(t *testing.T) {
-		nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+		nbCiphers, err := couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
-		nbFolders, err := couchdb.CountAllDocs(inst, consts.BitwardenFolders)
+		nbFolders, err := couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenFolders)
 		assert.NoError(t, err)
 		body := `
 {
@@ -822,10 +823,10 @@ func TestBitwarden(t *testing.T) {
 		res, err := http.DefaultClient.Do(req)
 		assert.NoError(t, err)
 		assert.Equal(t, 200, res.StatusCode)
-		nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
+		nb, err := couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 		assert.Equal(t, nbCiphers+2, nb)
-		nb, err = couchdb.CountAllDocs(inst, consts.BitwardenFolders)
+		nb, err = couchdb.CountAllDocs(context.TODO(), inst, consts.BitwardenFolders)
 		assert.NoError(t, err)
 		assert.Equal(t, nbFolders+1, nb)
 	})

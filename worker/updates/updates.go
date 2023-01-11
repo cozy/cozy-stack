@@ -1,6 +1,7 @@
 package updates
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -106,7 +107,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 
-	totalInstances, err := couchdb.CountAllDocs(prefixer.GlobalPrefixer, consts.Instances)
+	totalInstances, err := couchdb.CountAllDocs(context.TODO(), prefixer.GlobalPrefixer, consts.Instances)
 	if err != nil {
 		return err
 	}

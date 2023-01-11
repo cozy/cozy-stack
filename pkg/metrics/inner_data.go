@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -18,7 +20,7 @@ func (i *innerDataCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (i *innerDataCollector) Collect(ch chan<- prometheus.Metric) {
-	if count, err := couchdb.CountAllDocs(prefixer.GlobalPrefixer, consts.Instances); err == nil {
+	if count, err := couchdb.CountAllDocs(context.TODO(), prefixer.GlobalPrefixer, consts.Instances); err == nil {
 		ch <- prometheus.MustNewConstMetric(
 			i.instancesCountDesc,
 			prometheus.CounterValue,
