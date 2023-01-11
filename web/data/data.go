@@ -383,6 +383,8 @@ func findDocuments(c echo.Context) error {
 }
 
 func allDocs(c echo.Context) error {
+	ctx := c.Request().Context()
+
 	doctype := c.Param("doctype")
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
@@ -406,7 +408,7 @@ func allDocs(c echo.Context) error {
 		StartKey:   c.QueryParam("startkey"),
 		EndKey:     c.QueryParam("endkey"),
 	}
-	body, err := couchdb.MakeAllDocsRequest(inst, doctype, req)
+	body, err := couchdb.MakeAllDocsRequest(ctx, inst, doctype, req)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err})
 	}

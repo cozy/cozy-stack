@@ -134,7 +134,7 @@ func GetAllDocs(ctx context.Context, db prefixer.Prefixer, doctype string, req *
 	return json.Unmarshal(data, results)
 }
 
-func MakeAllDocsRequest(db prefixer.Prefixer, doctype string, params *AllDocsRequest) (io.ReadCloser, error) {
+func MakeAllDocsRequest(ctx context.Context, db prefixer.Prefixer, doctype string, params *AllDocsRequest) (io.ReadCloser, error) {
 	if len(params.Keys) > 0 {
 		return nil, errors.New("keys is not supported by MakeAllDocsRequest")
 	}
@@ -163,7 +163,7 @@ func MakeAllDocsRequest(db prefixer.Prefixer, doctype string, params *AllDocsReq
 	}
 
 	start := time.Now()
-	resp, err := config.CouchClient().Do(req)
+	resp, err := config.CouchClient().Do(req.WithContext(ctx))
 	elapsed := time.Since(start)
 	// Possible err = mostly connection failure
 	if err != nil {
