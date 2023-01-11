@@ -256,7 +256,7 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 
 func purgeAllSteps(inst *instance.Instance, fileID string) {
 	var docs []couchdb.Doc
-	err := couchdb.ForeachDocsWithCustomPagination(inst, consts.NotesSteps, 1000, func(_ string, raw json.RawMessage) error {
+	err := couchdb.ForeachDocsWithCustomPagination(context.TODO(), inst, consts.NotesSteps, 1000, func(_ string, raw json.RawMessage) error {
 		var doc Step
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			return err

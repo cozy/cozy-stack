@@ -185,13 +185,13 @@ func MakeAllDocsRequest(ctx context.Context, db prefixer.Prefixer, doctype strin
 // ForeachDocs traverse all the documents from the given database with the
 // specified doctype and calls a function for each document.
 func ForeachDocs(db prefixer.Prefixer, doctype string, fn func(id string, doc json.RawMessage) error) error {
-	return ForeachDocsWithCustomPagination(db, doctype, 100, fn)
+	return ForeachDocsWithCustomPagination(context.TODO(), db, doctype, 100, fn)
 }
 
 // ForeachDocsWithCustomPagination traverse all the documents from the given
 // database, and calls a function for each document. The documents are fetched
 // from CouchDB with a pagination with a custom number of items per page.
-func ForeachDocsWithCustomPagination(db prefixer.Prefixer, doctype string, limit int, fn func(id string, doc json.RawMessage) error) error {
+func ForeachDocsWithCustomPagination(ctx context.Context, db prefixer.Prefixer, doctype string, limit int, fn func(id string, doc json.RawMessage) error) error {
 	var startKey string
 	for {
 		skip := 0
@@ -211,7 +211,7 @@ func ForeachDocsWithCustomPagination(db prefixer.Prefixer, doctype string, limit
 
 		var res AllDocsResponse
 		url := "_all_docs?" + v.Encode()
-		err = makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &res)
+		err = makeRequest(ctx, db, doctype, http.MethodGet, url, nil, &res)
 		if err != nil {
 			return err
 		}

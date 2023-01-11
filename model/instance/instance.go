@@ -581,7 +581,7 @@ func List() ([]*Instance, error) {
 
 // ForeachInstances execute the given callback for each instances.
 func ForeachInstances(fn func(*Instance) error) error {
-	return couchdb.ForeachDocsWithCustomPagination(prefixer.GlobalPrefixer, consts.Instances, 10000, func(_ string, data json.RawMessage) error {
+	return couchdb.ForeachDocsWithCustomPagination(context.TODO(), prefixer.GlobalPrefixer, consts.Instances, 10000, func(_ string, data json.RawMessage) error {
 		var doc *Instance
 		if err := json.Unmarshal(data, &doc); err != nil {
 			return err
