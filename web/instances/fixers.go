@@ -329,6 +329,9 @@ func serviceTriggersFixer(c echo.Context) error {
 		if infos.WorkerType != "service" {
 			continue
 		}
+		if infos.Type == "@at" {
+			continue
+		}
 		var msg serviceMessage
 		if err := json.Unmarshal(infos.Message, &msg); err != nil {
 			continue
