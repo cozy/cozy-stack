@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -133,7 +134,7 @@ func Sync(c echo.Context) error {
 
 	var ciphers []*bitwarden.Cipher
 	req := &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -141,7 +142,7 @@ func Sync(c echo.Context) error {
 
 	var folders []*bitwarden.Folder
 	req = &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenFolders, req, &folders); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenFolders, req, &folders); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			_ = couchdb.CreateDB(inst, consts.BitwardenFolders)
 		} else {

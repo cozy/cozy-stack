@@ -1,6 +1,7 @@
 package move
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -91,7 +92,7 @@ func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cu
 	}
 	for {
 		var results []*vfs.FileDoc
-		if err := couchdb.GetAllDocs(inst, consts.Files, &req, &results); err != nil {
+		if err := couchdb.GetAllDocs(context.TODO(), inst, consts.Files, &req, &results); err != nil {
 			return nil, err
 		}
 		if len(results) == 0 {
@@ -139,7 +140,7 @@ func listVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start
 	}
 	for {
 		var results []*vfs.Version
-		if err := couchdb.GetAllDocs(inst, consts.FilesVersions, &req, &results); err != nil {
+		if err := couchdb.GetAllDocs(context.TODO(), inst, consts.FilesVersions, &req, &results); err != nil {
 			return nil, err
 		}
 		if len(results) == 0 {

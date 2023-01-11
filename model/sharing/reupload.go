@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 
@@ -27,7 +28,7 @@ func AskReupload(inst *instance.Instance) error {
 		Limit: 100,
 	}
 	var sharings []*Sharing
-	err := couchdb.GetAllDocs(inst, consts.Sharings, req, &sharings)
+	err := couchdb.GetAllDocs(context.TODO(), inst, consts.Sharings, req, &sharings)
 	if err != nil {
 		return err
 	}

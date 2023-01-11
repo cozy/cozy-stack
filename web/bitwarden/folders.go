@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -67,7 +68,7 @@ func ListFolders(c echo.Context) error {
 
 	var folders []*bitwarden.Folder
 	req := &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenFolders, req, &folders); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenFolders, req, &folders); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})

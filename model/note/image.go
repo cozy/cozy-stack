@@ -1,6 +1,7 @@
 package note
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path"
@@ -205,7 +206,7 @@ func getImages(db prefixer.Prefixer, fileID string) ([]*Image, error) {
 		StartKey: startkey(fileID),
 		EndKey:   endkey(fileID),
 	}
-	if err := couchdb.GetAllDocs(db, consts.NotesImages, &req, &images); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), db, consts.NotesImages, &req, &images); err != nil {
 		return nil, err
 	}
 	return images, nil

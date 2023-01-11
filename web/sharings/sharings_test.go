@@ -2,6 +2,7 @@ package sharings_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -904,7 +905,7 @@ func assertInvitationMailWasSent(t *testing.T) string {
 func assertSharingRequestHasBeenCreated(t *testing.T) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	err := couchdb.GetAllDocs(context.TODO(), bobInstance, consts.Sharings, &req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	s := results[0]
@@ -992,7 +993,7 @@ func bobLogin(t *testing.T) {
 func fakeAliceInstance(t *testing.T) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	err := couchdb.GetAllDocs(context.TODO(), bobInstance, consts.Sharings, &req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	s := results[0]
@@ -1017,7 +1018,7 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 func assertCredentialsHasBeenExchanged(t *testing.T) {
 	var resultsA []map[string]interface{}
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &resultsA)
+	err := couchdb.GetAllDocs(context.TODO(), bobInstance, consts.OAuthClients, &req, &resultsA)
 	assert.NoError(t, err)
 	assert.True(t, len(resultsA) > 0)
 	clientA := resultsA[len(resultsA)-1]
@@ -1026,7 +1027,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	assert.Equal(t, clientA["client_name"], "Sharing Alice")
 
 	var resultsB []map[string]interface{}
-	err = couchdb.GetAllDocs(aliceInstance, consts.OAuthClients, &req, &resultsB)
+	err = couchdb.GetAllDocs(context.TODO(), aliceInstance, consts.OAuthClients, &req, &resultsB)
 	assert.NoError(t, err)
 	assert.True(t, len(resultsB) > 0)
 	clientB := resultsB[len(resultsB)-1]
@@ -1035,7 +1036,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	assert.Equal(t, clientB["client_name"], "Sharing Bob")
 
 	var sharingsA []*sharing.Sharing
-	err = couchdb.GetAllDocs(aliceInstance, consts.Sharings, &req, &sharingsA)
+	err = couchdb.GetAllDocs(context.TODO(), aliceInstance, consts.Sharings, &req, &sharingsA)
 	assert.NoError(t, err)
 	assert.True(t, len(sharingsA) > 0)
 	assert.Len(t, sharingsA[0].Credentials, 2)
@@ -1052,7 +1053,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	assert.Equal(t, sharingsA[0].Members[2].Status, "pending")
 
 	var sharingsB []*sharing.Sharing
-	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
+	err = couchdb.GetAllDocs(context.TODO(), bobInstance, consts.Sharings, &req, &sharingsB)
 	assert.NoError(t, err)
 	assert.True(t, len(sharingsB) > 0)
 	assert.Len(t, sharingsB[0].Credentials, 1)

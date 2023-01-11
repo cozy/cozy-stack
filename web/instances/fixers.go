@@ -3,6 +3,7 @@ package instances
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -212,13 +213,13 @@ func orphanAccountFixer(c echo.Context) error {
 	}
 
 	var accounts []*account.Account
-	err = couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts)
+	err = couchdb.GetAllDocs(context.TODO(), inst, consts.Accounts, nil, &accounts)
 	if err != nil || len(accounts) == 0 {
 		return err
 	}
 
 	var konnectors []*couchdb.JSONDoc
-	err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
+	err = couchdb.GetAllDocs(context.TODO(), inst, consts.Konnectors, nil, &konnectors)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -203,7 +204,7 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 	req := couchdb.AllDocsRequest{
 		Limit: 50000,
 	}
-	if err := couchdb.GetAllDocs(inst, consts.Sessions, &req, &sessions); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.Sessions, &req, &sessions); err != nil {
 		return nil, err
 	}
 	var expired []couchdb.Doc

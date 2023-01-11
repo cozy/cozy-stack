@@ -389,7 +389,7 @@ func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
 			StartKey: startkey,
 		}
 
-		err := couchdb.GetAllDocs(db, consts.Jobs, req, &jobs)
+		err := couchdb.GetAllDocs(context.TODO(), db, consts.Jobs, req, &jobs)
 		if err != nil {
 			return nil, err
 		}

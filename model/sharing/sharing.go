@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -698,7 +699,7 @@ func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error)
 		Keys: sharingIDs,
 	}
 	var res []*Sharing
-	err := couchdb.GetAllDocs(db, consts.Sharings, req, &res)
+	err := couchdb.GetAllDocs(context.TODO(), db, consts.Sharings, req, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +742,7 @@ func findIntentForRedirect(inst *instance.Instance, webapp *app.WebappManifest, 
 		}
 	}
 	var mans []app.WebappManifest
-	err := couchdb.GetAllDocs(inst, consts.Apps, &couchdb.AllDocsRequest{}, &mans)
+	err := couchdb.GetAllDocs(context.TODO(), inst, consts.Apps, &couchdb.AllDocsRequest{}, &mans)
 	if err != nil {
 		return nil, ""
 	}

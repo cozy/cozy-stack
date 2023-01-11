@@ -5,6 +5,7 @@ package auth_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -278,7 +279,7 @@ func TestAuth(t *testing.T) {
 			assert.NotEmpty(t, cookies[1].Value)
 
 			var results []*session.LoginEntry
-			err = couchdb.GetAllDocs(
+			err = couchdb.GetAllDocs(context.TODO(),
 				testInstance,
 				consts.SessionsLogins,
 				&couchdb.AllDocsRequest{Limit: 100},
@@ -970,7 +971,7 @@ func TestAuth(t *testing.T) {
 		if assert.Equal(t, "302 Found", res.Status) {
 			var results []oauth.AccessCode
 			req := &couchdb.AllDocsRequest{}
-			err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, req, &results)
+			err = couchdb.GetAllDocs(context.TODO(), testInstance, consts.OAuthAccessCodes, req, &results)
 			assert.NoError(t, err)
 			if assert.Len(t, results, 1) {
 				code = results[0].Code
@@ -1094,7 +1095,7 @@ func TestAuth(t *testing.T) {
 
 		var results []oauth.AccessCode
 		reqDocs := &couchdb.AllDocsRequest{}
-		err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, reqDocs, &results)
+		err = couchdb.GetAllDocs(context.TODO(), testInstance, consts.OAuthAccessCodes, reqDocs, &results)
 		assert.NoError(t, err)
 		for _, result := range results {
 			if result.ClientID == linkedClientID {
@@ -1331,7 +1332,7 @@ func TestAuth(t *testing.T) {
 		require.Equal(t, "302 Found", res.Status)
 		var results []oauth.AccessCode
 		allReq := &couchdb.AllDocsRequest{}
-		err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, allReq, &results)
+		err = couchdb.GetAllDocs(context.TODO(), testInstance, consts.OAuthAccessCodes, allReq, &results)
 		assert.NoError(t, err)
 		var code string
 		for _, result := range results {

@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -48,7 +49,7 @@ func TestRemote(t *testing.T) {
 			Descending: true,
 			Limit:      1,
 		}
-		err = couchdb.GetAllDocs(testInstance, consts.RemoteRequests, allReq, &results)
+		err = couchdb.GetAllDocs(context.TODO(), testInstance, consts.RemoteRequests, allReq, &results)
 		assert.NoError(t, err)
 		assert.Len(t, results, 1)
 		logged := results[0]

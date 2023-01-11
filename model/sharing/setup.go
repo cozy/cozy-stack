@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"runtime"
@@ -265,7 +266,7 @@ func FindMatchingDocs(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, er
 			req := &couchdb.AllDocsRequest{
 				Keys: rule.Values,
 			}
-			if err := couchdb.GetAllDocs(inst, rule.DocType, req, &docs); err != nil {
+			if err := couchdb.GetAllDocs(context.TODO(), inst, rule.DocType, req, &docs); err != nil {
 				return nil, err
 			}
 		}

@@ -499,7 +499,7 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Mi
 	}
 	results := make([]SharedRef, 0, len(changed))
 	req := couchdb.AllDocsRequest{Keys: ids}
-	err := couchdb.GetAllDocs(inst, consts.Shared, &req, &results)
+	err := couchdb.GetAllDocs(context.TODO(), inst, consts.Shared, &req, &results)
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +727,7 @@ func partitionDocsPayload(inst *instance.Instance, doctype string, docs DocsList
 	}
 	results := make([]interface{}, 0, len(docs))
 	req := couchdb.AllDocsRequest{Keys: ids}
-	if err = couchdb.GetAllDocs(inst, doctype, &req, &results); err != nil {
+	if err = couchdb.GetAllDocs(context.TODO(), inst, doctype, &req, &results); err != nil {
 		return nil, nil, err
 	}
 	for i, doc := range docs {

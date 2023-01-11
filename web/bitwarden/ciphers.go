@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -247,7 +248,7 @@ func ListCiphers(c echo.Context) error {
 
 	var ciphers []*bitwarden.Cipher
 	req := &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -663,7 +664,7 @@ func BulkDeleteCiphers(c echo.Context) error {
 
 	var ciphers []bitwarden.Cipher
 	keys := couchdb.AllDocsRequest{Keys: req.IDs}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -705,7 +706,7 @@ func BulkSoftDeleteCiphers(c echo.Context) error {
 
 	var ciphers []bitwarden.Cipher
 	keys := couchdb.AllDocsRequest{Keys: req.IDs}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
@@ -752,7 +753,7 @@ func BulkRestoreCiphers(c echo.Context) error {
 
 	var ciphers []bitwarden.Cipher
 	keys := couchdb.AllDocsRequest{Keys: req.IDs}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, &keys, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})

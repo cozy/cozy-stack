@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -599,7 +600,7 @@ func PaginatedList(limit int, startKey string, skip int) ([]*Instance, string, e
 		StartKey: startKey,
 		Skip:     skip,
 	}
-	err := couchdb.GetAllDocs(prefixer.GlobalPrefixer, consts.Instances, req, &docs)
+	err := couchdb.GetAllDocs(context.TODO(), prefixer.GlobalPrefixer, consts.Instances, req, &docs)
 	if err != nil {
 		return nil, "", err
 	}

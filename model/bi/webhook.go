@@ -1,6 +1,7 @@
 package bi
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -69,7 +70,7 @@ type WebhookCall struct {
 // a io.cozy.trigger, and launch a job for them if needed.
 func (c *WebhookCall) Fire() error {
 	var accounts []*account.Account
-	if err := couchdb.GetAllDocs(c.Instance, consts.Accounts, nil, &accounts); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), c.Instance, consts.Accounts, nil, &accounts); err != nil {
 		return err
 	}
 	c.accounts = accounts

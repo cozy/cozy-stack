@@ -92,7 +92,7 @@ func CountNormalDocs(ctx context.Context, db prefixer.Prefixer, doctype string) 
 
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
-func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}) (err error) {
+func GetAllDocs(ctx context.Context, db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}) (err error) {
 	var v url.Values
 	if req != nil {
 		v, err = req.Values()
@@ -106,7 +106,7 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 	var response AllDocsResponse
 	if req == nil || len(req.Keys) == 0 {
 		url := "_all_docs?" + v.Encode()
-		err = makeRequest(context.TODO(), db, doctype, http.MethodGet, url, nil, &response)
+		err = makeRequest(ctx, db, doctype, http.MethodGet, url, nil, &response)
 	} else {
 		v.Del("keys")
 		url := "_all_docs?" + v.Encode()
@@ -115,7 +115,7 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 		}{
 			Keys: req.Keys,
 		}
-		err = makeRequest(context.TODO(), db, doctype, http.MethodPost, url, body, &response)
+		err = makeRequest(ctx, db, doctype, http.MethodPost, url, body, &response)
 	}
 	if err != nil {
 		return err

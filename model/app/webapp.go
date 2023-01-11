@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -624,7 +625,7 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 		Limit:    limit + 1, // Also get the following document for the next key
 		StartKey: startKey,
 	}
-	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
+	err := couchdb.GetAllDocs(context.TODO(), db, consts.Apps, req, &docs)
 	if err != nil {
 		return nil, "", err
 	}

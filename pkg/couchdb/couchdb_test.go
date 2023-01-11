@@ -37,6 +37,8 @@ func TestCouchdb(t *testing.T) {
 		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
+	ctx := context.Background()
+
 	config.UseTestFile()
 
 	if _, err := CheckStatus(context.Background()); err != nil {
@@ -130,7 +132,7 @@ func TestCouchdb(t *testing.T) {
 		assert.NoError(t, CreateDoc(TestPrefix, doc2))
 
 		var results []*testDoc
-		err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+		err := GetAllDocs(ctx, TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
 		if assert.NoError(t, err) {
 			assert.Len(t, results, 2)
 			assert.Equal(t, results[0].Test, "all_1")
@@ -168,7 +170,7 @@ func TestCouchdb(t *testing.T) {
 		assert.NoError(t, CreateDoc(TestPrefix, doc2))
 
 		var results []*testDoc
-		err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+		err := GetAllDocs(ctx, TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
 		assert.NoError(t, err)
 		results[0].Test = "after_1"
 		results[1].Test = "after_2"
@@ -181,7 +183,7 @@ func TestCouchdb(t *testing.T) {
 		err = BulkUpdateDocs(TestPrefix, results[0].DocType(), docs, olddocs)
 		assert.NoError(t, err)
 
-		err = GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+		err = GetAllDocs(ctx, TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
 		if assert.NoError(t, err) {
 			assert.Len(t, results, 2)
 			assert.Equal(t, results[0].Test, "after_1")

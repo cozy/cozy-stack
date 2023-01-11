@@ -1,6 +1,7 @@
 package note
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -119,7 +120,7 @@ func getSteps(db prefixer.Prefixer, fileID string, version int64) ([]Step, error
 		StartKey: stepID(fileID, version),
 		EndKey:   endkey(fileID),
 	}
-	if err := couchdb.GetAllDocs(db, consts.NotesSteps, &req, &steps); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), db, consts.NotesSteps, &req, &steps); err != nil {
 		return nil, err
 	}
 
@@ -225,7 +226,7 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 		StartKey: stepID(fileID, 0),
 		EndKey:   endkey(fileID),
 	}
-	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.NotesSteps, &req, &steps); err != nil {
 		if !couchdb.IsNoDatabaseError(err) {
 			inst.Logger().WithNamespace("notes").
 				Warnf("Cannot purge old steps for file %s: %s", fileID, err)

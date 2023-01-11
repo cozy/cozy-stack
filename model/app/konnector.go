@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/url"
@@ -416,7 +417,7 @@ func ListKonnectorsWithPagination(db prefixer.Prefixer, limit int, startKey stri
 		Limit:    limit + 1, // Also get the following document for the next key
 		StartKey: startKey,
 	}
-	err := couchdb.GetAllDocs(db, consts.Konnectors, req, &docs)
+	err := couchdb.GetAllDocs(context.TODO(), db, consts.Konnectors, req, &docs)
 	if err != nil {
 		return nil, "", err
 	}

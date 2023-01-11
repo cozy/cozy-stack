@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -193,7 +194,7 @@ func redirect(c echo.Context) error {
 func findAccountWithSameConnectionID(inst *instance.Instance, connectionID string) (*account.Account, error) {
 	var accounts []*account.Account
 	req := &couchdb.AllDocsRequest{Limit: 1000}
-	err := couchdb.GetAllDocs(inst, consts.Accounts, req, &accounts)
+	err := couchdb.GetAllDocs(context.TODO(), inst, consts.Accounts, req, &accounts)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"context"
 	"sort"
 	"time"
 
@@ -148,7 +149,7 @@ func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 		StartKey: fileID + "/",
 		EndKey:   fileID + "0", // 0 is the next character after / in ascii
 	}
-	if err := couchdb.GetAllDocs(db, consts.FilesVersions, req, &versions); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), db, consts.FilesVersions, req, &versions); err != nil {
 		return nil, err
 	}
 	return versions, nil

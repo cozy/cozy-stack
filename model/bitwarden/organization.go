@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"errors"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
@@ -177,7 +178,7 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 func FindAllOrganizations(inst *instance.Instance, setting *settings.Settings) ([]*Organization, error) {
 	var orgs []*Organization
 	req := &couchdb.AllDocsRequest{}
-	if err := couchdb.GetAllDocs(inst, consts.BitwardenOrganizations, req, &orgs); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenOrganizations, req, &orgs); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			_ = couchdb.CreateDB(inst, consts.BitwardenOrganizations)
 		} else {

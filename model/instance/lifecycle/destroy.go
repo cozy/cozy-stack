@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -125,7 +126,7 @@ func destroyWithoutHooks(domain string) error {
 
 func deleteAccounts(inst *instance.Instance) error {
 	var accounts []*account.Account
-	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.Accounts, nil, &accounts); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return nil
 		}

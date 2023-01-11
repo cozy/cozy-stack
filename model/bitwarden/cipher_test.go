@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -59,7 +60,7 @@ func TestCipher(t *testing.T) {
 
 		assert.NoError(t, DeleteUnrecoverableCiphers(inst))
 		var ciphers []*Cipher
-		err = couchdb.GetAllDocs(inst, consts.BitwardenCiphers, nil, &ciphers)
+		err = couchdb.GetAllDocs(context.TODO(), inst, consts.BitwardenCiphers, nil, &ciphers)
 		assert.NoError(t, err)
 		assert.Len(t, ciphers, 3)
 		for _, c := range ciphers {

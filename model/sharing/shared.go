@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 
@@ -108,7 +109,7 @@ func (s *SharedRef) Fetch(field string) []string {
 func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error) {
 	var refs []*SharedRef
 	req := &couchdb.AllDocsRequest{Keys: ids}
-	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &refs); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.Shared, req, &refs); err != nil {
 		return nil, err
 	}
 	return refs, nil

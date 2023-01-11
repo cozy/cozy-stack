@@ -2,6 +2,7 @@ package move
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -30,7 +31,7 @@ func NotifySharings(inst *instance.Instance) error {
 
 	var sharings []*sharing.Sharing
 	req := couchdb.AllDocsRequest{Limit: 1000}
-	if err := couchdb.GetAllDocs(inst, consts.Sharings, &req, &sharings); err != nil {
+	if err := couchdb.GetAllDocs(context.TODO(), inst, consts.Sharings, &req, &sharings); err != nil {
 		return err
 	}
 
