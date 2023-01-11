@@ -85,7 +85,7 @@ func displayPermissions(c echo.Context) error {
 
 	// Include the sharing member (when relevant)
 	var included []jsonapi.Object
-	if doc.Type == permission.TypeSharePreview {
+	if doc.Type == permission.TypeSharePreview || doc.Type == permission.TypeShareInteract {
 		inst := middlewares.GetInstance(c)
 		sharingID := strings.TrimPrefix(doc.SourceID, consts.Sharings+"/")
 		if s, err := sharing.FindSharing(inst, sharingID); err == nil {
