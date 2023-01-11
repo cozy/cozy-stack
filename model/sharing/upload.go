@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -214,7 +215,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		docID := strings.SplitN(r.DocID, "/", 2)[1]
 		ir := couchdb.IDRev{ID: docID, Rev: rev}
 		query := []couchdb.IDRev{ir}
-		results, err := couchdb.BulkGetDocs(inst, consts.Files, query)
+		results, err := couchdb.BulkGetDocs(context.TODO(), inst, consts.Files, query)
 		if err != nil {
 			return nil, 0, since, err
 		}

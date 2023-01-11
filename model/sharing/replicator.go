@@ -565,7 +565,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, ch
 	}
 
 	for doctype, query := range queries {
-		results, err := couchdb.BulkGetDocs(inst, doctype, query)
+		results, err := couchdb.BulkGetDocs(context.TODO(), inst, doctype, query)
 		if err != nil {
 			return nil, err
 		}

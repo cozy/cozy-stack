@@ -234,7 +234,7 @@ func ForeachDocsWithCustomPagination(ctx context.Context, db prefixer.Prefixer, 
 }
 
 // BulkGetDocs returns the documents with the given id at the given revision
-func BulkGetDocs(db prefixer.Prefixer, doctype string, payload []IDRev) ([]map[string]interface{}, error) {
+func BulkGetDocs(ctx context.Context, db prefixer.Prefixer, doctype string, payload []IDRev) ([]map[string]interface{}, error) {
 	path := "_bulk_get?revs=true"
 	body := struct {
 		Docs []IDRev `json:"docs"`
@@ -242,7 +242,7 @@ func BulkGetDocs(db prefixer.Prefixer, doctype string, payload []IDRev) ([]map[s
 		Docs: payload,
 	}
 	var response BulkGetResponse
-	err := makeRequest(context.TODO(), db, doctype, http.MethodPost, path, body, &response)
+	err := makeRequest(ctx, db, doctype, http.MethodPost, path, body, &response)
 	if err != nil {
 		return nil, err
 	}
