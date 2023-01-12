@@ -55,8 +55,6 @@ type redisLock struct {
 	// readers is the number of readers when the lock is acquired for reading
 	// or 0 when it is unlocked, or -1 when it is locked for writing.
 	readers int
-	log     *logger.Entry
-	rng     *rand.Rand
 }
 
 func (rl *redisLock) extends() (bool, error) {
@@ -107,7 +105,9 @@ func (rl *redisLock) obtainsWriting(token string) (bool, error) {
 func (rl *redisLock) LockWithTimeout(timeout time.Duration) error {
 	// Calculate the timestamp we are willing to wait for
 	stop := time.Now().Add(timeout)
-	token := utils.RandomStringFast(rl.rng, lockTokenSize)
+	redislocksMu.Lock()
+	token := utils.RandomStringFast(redisRng, lockTokenSize)
+	redislocksMu.Unlock()
 	for {
 		ok, err := rl.obtainsWriting(token)
 		if err != nil || ok {
@@ -137,7 +137,9 @@ func (rl *redisLock) extendsOrObtainsReading(token string) (bool, error) {
 
 func (rl *redisLock) RLock() error {
 	stop := time.Now().Add(LockTimeout)
-	token := utils.RandomStringFast(rl.rng, lockTokenSize)
+	redislocksMu.Lock()
+	token := utils.RandomStringFast(redisRng, lockTokenSize)
+	redislocksMu.Unlock()
 	for {
 		ok, err := rl.extendsOrObtainsReading(token)
 		if err != nil || ok {
@@ -157,7 +159,7 @@ func (rl *redisLock) unlock(writing bool) {
 	defer rl.mu.Unlock()
 
 	if (writing && rl.readers > 0) || (!writing && rl.readers < 0) {
-		rl.log.Errorf("Invalid unlocking: %v %d", writing, rl.readers)
+		redisLogger.Errorf("Invalid unlocking: %v %d (%s)", writing, rl.readers, rl.key)
 		return
 	}
 
@@ -168,7 +170,7 @@ func (rl *redisLock) unlock(writing bool) {
 
 	_, err := rl.client.Eval(rl.ctx, luaRelease, []string{rl.key}, rl.token).Result()
 	if err != nil {
-		rl.log.Warnf("Failed to unlock: %s", err.Error())
+		redisLogger.Warnf("Failed to unlock: %s (%s)", err.Error(), rl.key)
 	}
 
 	if writing {
@@ -191,14 +193,14 @@ func (rl *redisLock) RUnlock() {
 
 var redislocks map[string]*redisLock
 var redislocksMu sync.Mutex
+var redisRng *rand.Rand
+var redisLogger *logger.Entry
 
 func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 	return &redisLock{
 		client: c,
 		ctx:    context.Background(),
 		key:    basicLockNS + ns,
-		log:    logger.WithDomain(ns).WithNamespace("redis-lock"),
-		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -207,6 +209,8 @@ func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
 	defer redislocksMu.Unlock()
 	if redislocks == nil {
 		redislocks = make(map[string]*redisLock)
+		redisRng = rand.New(rand.NewSource(time.Now().UnixNano()))
+		redisLogger = logger.WithNamespace("redis-lock")
 	}
 	l, ok := redislocks[name]
 	if !ok {
