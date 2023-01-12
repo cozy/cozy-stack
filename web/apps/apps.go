@@ -746,6 +746,7 @@ func (o *apiOpenParams) MarshalJSON() ([]byte, error) {
 	data["Flags"], _ = o.params.Flags()
 	data["Capabilities"], _ = o.params.Capabilities()
 	data["CozyBar"], _ = o.params.CozyBar()
+	data["CozyFonts"] = o.params.CozyFonts()
 	data["CozyClientJS"], _ = o.params.CozyClientJS()
 	data["ThemeCSS"] = o.params.ThemeCSS()
 	data["Favicon"] = o.params.Favicon()
