@@ -1067,7 +1067,7 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 		checks = append(checks, credentialsChecks...)
 
 		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
-			if !s.Owner {
+			if !s.Owner || !s.Active {
 				return nil
 			}
 
@@ -1084,7 +1084,7 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 				return nil
 			}
 
-			if !s.Active || s.Initial || s.ReadOnly() {
+			if s.Initial || s.ReadOnly() {
 				return nil
 			}
 
@@ -1156,6 +1156,11 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 // Since have a sharing within another one will generate unexpected behavior,
 // the goal is to find these situations.
 func findParentFileSharingID(inst *instance.Instance, sharing *Sharing) (string, error) {
+	// Inactive sharings are not an issue so we skip them
+	if !sharing.Active {
+		return "", nil
+	}
+
 	// 1. Get all root files for the sharing being checked
 	sharingRule := sharing.FirstFilesRule()
 	if sharingRule == nil {
@@ -1179,8 +1184,9 @@ func findParentFileSharingID(inst *instance.Instance, sharing *Sharing) (string,
 
 	var sharingIDs []string
 	for _, fileSharing := range fileSharings {
-		// Do not add sharing in sharing error for the sharing currently checked
-		if fileSharing.ID() == sharing.ID() {
+		// Do not add sharing in sharing error for inactive sharings or the
+		// sharing currently checked.
+		if !fileSharing.Active || fileSharing.ID() == sharing.ID() {
 			continue
 		}
 
