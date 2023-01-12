@@ -1349,7 +1349,7 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 			continue
 		}
 
-		u, err := url.Parse(m.Instance)
+		u, err := url.ParseRequestURI(m.Instance)
 		if err != nil {
 			checks = append(checks, map[string]interface{}{
 				"id":     s.SID,
@@ -1359,11 +1359,9 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 			continue
 		}
 
-		var domain string
-		if (strings.HasPrefix(m.Instance, "http:") && u.Port() != "80") || (strings.HasPrefix(m.Instance, "https:") && u.Port() != "443") {
-			domain = u.Hostname() + ":" + u.Port()
-		} else {
-			domain = u.Hostname()
+		domain := u.Hostname()
+		if u.Port() != "" {
+			domain += ":" + u.Port()
 		}
 
 		member, err := instance.Get(domain)
