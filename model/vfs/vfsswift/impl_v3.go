@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -485,7 +486,7 @@ func (sfs *swiftVFSV3) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	defer sfs.mu.RUnlock()
 	objName := MakeObjectNameV3(doc.DocID, doc.InternalID)
 	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, objName, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
@@ -505,7 +506,7 @@ func (sfs *swiftVFSV3) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (
 	}
 	objName := MakeObjectNameV3(doc.DocID, internalID)
 	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, objName, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
@@ -551,7 +552,7 @@ func (sfs *swiftVFSV3) ImportFileVersion(version *vfs.Version, content io.ReadCl
 		err = errc
 	}
 	if err != nil {
-		if err == swift.ObjectCorrupted {
+		if errors.Is(err, swift.ObjectCorrupted) {
 			err = vfs.ErrInvalidHash
 		}
 		return err
@@ -718,7 +719,7 @@ func (f *swiftFileCreationV3) Seek(offset int64, whence int) (int64, error) {
 
 func (f *swiftFileCreationV3) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+		if _, err := (*f.meta).Write(p); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}
@@ -759,7 +760,7 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}()
 
 	if err = f.f.Close(); err != nil {
-		if err == swift.ObjectCorrupted {
+		if errors.Is(err, swift.ObjectCorrupted) {
 			err = vfs.ErrInvalidHash
 		}
 		if f.meta != nil {

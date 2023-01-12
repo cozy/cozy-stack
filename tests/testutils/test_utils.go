@@ -3,6 +3,7 @@ package testutils
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -133,7 +134,7 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 		c.host = opts[0].Domain
 	}
 	err = lifecycle.Destroy(c.host)
-	if err != nil && err != instance.ErrNotFound {
+	if err != nil && !errors.Is(err, instance.ErrNotFound) {
 		require.NoError(c.t, err, "Error while destroying instance")
 	}
 

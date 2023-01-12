@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -164,7 +165,7 @@ func (s *redisStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (str
 func (s *redisStore) GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error) {
 	key := docKey(db, secret)
 	b, err := s.c.Get(s.ctx, key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	}
 	if err != nil {

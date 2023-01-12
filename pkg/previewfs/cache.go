@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -112,7 +113,7 @@ func (s swiftCache) SetIcon(md5sum []byte, buffer *bytes.Buffer) error {
 		return err
 	}
 	err = writeClose(f, buffer)
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ContainerNotFound) || errors.Is(err, swift.ObjectNotFound) {
 		_ = s.c.ContainerCreate(s.ctx, containerName, nil)
 		f, err = s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
 		if err == nil {
@@ -140,7 +141,7 @@ func (s swiftCache) SetPreview(md5sum []byte, buffer *bytes.Buffer) error {
 		return err
 	}
 	err = writeClose(f, buffer)
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ContainerNotFound) || errors.Is(err, swift.ObjectNotFound) {
 		_ = s.c.ContainerCreate(s.ctx, containerName, nil)
 		f, err = s.c.ObjectCreate(s.ctx, containerName, objectName, true, "", "image/jpg", headers)
 		if err == nil {

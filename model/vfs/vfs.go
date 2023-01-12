@@ -630,7 +630,7 @@ func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, co
 	}
 	err := walkFn(name, dir, file, nil)
 	if err != nil {
-		if dir != nil && err == ErrSkipDir {
+		if dir != nil && errors.Is(err, ErrSkipDir) {
 			return nil
 		}
 		return err
@@ -641,7 +641,7 @@ func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, co
 	iter := fs.DirIterator(dir, nil)
 	for {
 		d, f, err := iter.Next()
-		if err == ErrIteratorDone {
+		if errors.Is(err, ErrIteratorDone) {
 			break
 		}
 		if err != nil {

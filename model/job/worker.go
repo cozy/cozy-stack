@@ -467,7 +467,7 @@ func (t *task) run() (err error) {
 				// Forcing the timeout counter to 0 if it has not been initialized
 				metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug)
 
-				if err == context.DeadlineExceeded { // This is a timeout
+				if errors.Is(err, context.DeadlineExceeded) { // This is a timeout
 					metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
 				}
 			}

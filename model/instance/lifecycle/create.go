@@ -99,7 +99,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	opts.trace("check if instance already exist", func() {
 		_, err = instance.GetFromCouch(domain)
 	})
-	if err != instance.ErrNotFound {
+	if !errors.Is(err, instance.ErrNotFound) {
 		if err == nil {
 			err = instance.ErrExists
 		}

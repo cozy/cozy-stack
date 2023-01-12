@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,7 +50,7 @@ func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, e
 func (t *thumbs) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img.ID(), format)
 	infos, _, err := t.c.Object(t.ctx, t.container, name)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return false, nil
 	}
 	if err != nil {
@@ -103,7 +104,7 @@ func (t *thumbs) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error
 func (t *thumbs) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	name := t.makeName(id, format)
 	obj, _, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
@@ -145,7 +146,7 @@ func (t *thumbs) makeName(imgID string, format string) string {
 }
 
 func wrapSwiftErr(err error) error {
-	if err == swift.ObjectNotFound || err == swift.ContainerNotFound {
+	if errors.Is(err, swift.ObjectNotFound) || errors.Is(err, swift.ContainerNotFound) {
 		return os.ErrNotExist
 	}
 	return err

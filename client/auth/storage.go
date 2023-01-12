@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,7 +60,7 @@ func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, e
 	}()
 	f, err := os.Open(filename)
 	if err != nil {
-		if os.IsNotExist(err) || err == io.EOF {
+		if os.IsNotExist(err) || errors.Is(err, io.EOF) {
 			err = nil
 		}
 		return nil, nil, err

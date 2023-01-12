@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path"
 	"strings"
@@ -827,7 +828,7 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast
 	if err != nil {
 		return err
 	}
-	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFast {
+	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && !errors.Is(err, ErrFsckFailFast) {
 		return err
 	}
 	return nil
@@ -835,7 +836,7 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast
 
 func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog), failFast bool) error {
 	if err := c.checkNoConflicts(accumulate, failFast); err != nil {
-		if err == ErrFsckFailFast {
+		if errors.Is(err, ErrFsckFailFast) {
 			return nil
 		}
 		return err

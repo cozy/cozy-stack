@@ -187,7 +187,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	}
 	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
 		inst.Logger().WithNamespace("sharing").Warnf("Error on sharing request: %s", err)
-		if err == ErrAlreadyAccepted {
+		if errors.Is(err, ErrAlreadyAccepted) {
 			return err
 		}
 		return ErrRequestFailed

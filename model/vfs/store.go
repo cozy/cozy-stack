@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -318,7 +319,7 @@ func (s *redisStore) AddMetadata(db prefixer.Prefixer, metadata *Metadata) (stri
 
 func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return "", ErrWrongToken
 	}
 	if err != nil {
@@ -329,7 +330,7 @@ func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 
 func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return "", ErrWrongToken
 	}
 	if err != nil {
@@ -340,7 +341,7 @@ func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) 
 
 func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return "", ErrWrongToken
 	}
 	if err != nil {
@@ -351,7 +352,7 @@ func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error
 
 func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
 	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, ErrWrongToken
 	}
 	if err != nil {
@@ -366,7 +367,7 @@ func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, err
 
 func (s *redisStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error) {
 	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, ErrWrongToken
 	}
 	if err != nil {

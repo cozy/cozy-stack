@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -438,7 +439,7 @@ func containerName(appsType consts.AppType) string {
 }
 
 func wrapSwiftErr(err error) error {
-	if err == swift.ObjectNotFound || err == swift.ContainerNotFound {
+	if errors.Is(err, swift.ObjectNotFound) || errors.Is(err, swift.ContainerNotFound) {
 		return os.ErrNotExist
 	}
 	return err

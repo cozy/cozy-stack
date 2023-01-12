@@ -363,7 +363,7 @@ func ResetCounter(p prefixer.Prefixer, ct CounterType) {
 // IsLimitReachedOrExceeded return true if the limit has been reached or
 // exceeded, false otherwise.
 func IsLimitReachedOrExceeded(err error) bool {
-	return err == ErrRateLimitReached || err == ErrRateLimitExceeded
+	return errors.Is(err, ErrRateLimitReached) || errors.Is(err, ErrRateLimitExceeded)
 }
 
 // GetMaximumLimit returns the limit of a CounterType

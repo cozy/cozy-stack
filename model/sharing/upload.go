@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -143,7 +144,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
 
 	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
-	if err == ErrInternalServerError {
+	if errors.Is(err, ErrInternalServerError) {
 		// Retrying is useless in this case, let's skip this file
 		if seq != lastSeq {
 			_ = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
@@ -369,7 +370,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	defer mu.Unlock()
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			if rule, _ := s.findRuleForNewFile(target.FileDoc); rule == nil {
 				return nil, ErrSafety
 			}
@@ -415,7 +416,7 @@ func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.
 		newdoc.DirID = parent.DocID
 	} else if dirID != newdoc.DirID {
 		parent, err := inst.VFS().DirByID(dirID)
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
@@ -460,7 +461,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, newdoc, rule)
 
 	err := fs.UpdateFileDoc(olddoc, newdoc)
-	if err == os.ErrExist {
+	if errors.Is(err, os.ErrExist) {
 		pth, errp := newdoc.Path(fs)
 		if errp != nil {
 			return errp
@@ -503,7 +504,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	defer mu.Unlock()
 
 	current, err := inst.VFS().FileByID(target.DocID)
-	if err != nil && err != os.ErrNotExist {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		inst.Logger().WithNamespace("upload").
 			Warnf("Upload has failed: %s", err)
 		return err
@@ -537,7 +538,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	var addReferencedBy bool
 	if target.DirID != "" {
 		parent, err = fs.DirByID(target.DirID)
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			parent, err = s.recreateParent(inst, target.DirID)
 		}
 		if err != nil {
@@ -595,7 +596,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	}
 
 	file, err := fs.CreateFile(newdoc, nil)
-	if err == os.ErrExist {
+	if errors.Is(err, os.ErrExist) {
 		pth, errp := newdoc.Path(fs)
 		if errp != nil {
 			return errp
@@ -744,7 +745,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	newdoc.DocRev = tmpdoc.DocRev
 	newdoc.InternalID = tmpdoc.InternalID
 	err = fs.UpdateFileDoc(tmpdoc, newdoc)
-	if err == os.ErrExist {
+	if errors.Is(err, os.ErrExist) {
 		pth, errp := newdoc.Path(fs)
 		if errp != nil {
 			return errp
@@ -773,7 +774,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)
-	if _, err := fs.FileByID(newdoc.DocID); err != os.ErrNotExist {
+	if _, err := fs.FileByID(newdoc.DocID); !errors.Is(err, os.ErrNotExist) {
 		if err != nil {
 			return err
 		}
@@ -803,7 +804,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	dst := src.Clone().(*vfs.FileDoc)
 	dst.DocID = conflictID(dst.DocID, rev)
-	if _, err := fs.FileByID(dst.DocID); err != os.ErrNotExist {
+	if _, err := fs.FileByID(dst.DocID); !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	dst.DocName = conflictName(indexer, dst.DirID, dst.DocName, true)

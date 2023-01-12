@@ -129,7 +129,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 		inst.Logger().WithNamespace("files").
 			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, doc.ByteSize)
 	}
-	if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+	if cerr := file.Close(); cerr != nil && (err == nil || errors.Is(err, io.ErrUnexpectedEOF)) {
 		err = cerr
 		inst.Logger().WithNamespace("files").
 			Warnf("Error on uploading file (close): %s", err)
@@ -1015,7 +1015,7 @@ func ThumbnailHandler(c echo.Context) error {
 	format := c.Param("format")
 	err = fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
 	if err != nil {
-		if err != os.ErrInvalid {
+		if !errors.Is(err, os.ErrInvalid) {
 			msg, _ := job.NewMessage(thumbnail.ImageMessage{
 				File:   doc,
 				Format: format,

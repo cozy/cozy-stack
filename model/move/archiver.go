@@ -2,6 +2,7 @@ package move
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -100,7 +101,7 @@ type switfArchiver struct {
 }
 
 func (a *switfArchiver) init() error {
-	if _, _, err := a.c.Container(a.ctx, a.container); err == swift.ContainerNotFound {
+	if _, _, err := a.c.Container(a.ctx, a.container); errors.Is(err, swift.ContainerNotFound) {
 		if err = a.c.ContainerCreate(a.ctx, a.container, nil); err != nil {
 			return err
 		}

@@ -122,7 +122,7 @@ func removeUnwantedFolders(domain string) error {
 
 	var errf error
 	removeDir := func(dir *vfs.DirDoc, err error) {
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			return
 		} else if err != nil {
 			errf = multierror.Append(errf, err)
@@ -278,7 +278,7 @@ func migrateToSwiftV3(domain string) error {
 
 	ctx := context.Background()
 	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
-	if _, _, err = c.Container(ctx, dstContainer); err != swift.ContainerNotFound {
+	if _, _, err = c.Container(ctx, dstContainer); !errors.Is(err, swift.ContainerNotFound) {
 		log.Errorf("Destination container %s already exists or something went wrong. Migration canceled.", dstContainer)
 		return errors.New("Destination container busy")
 	}

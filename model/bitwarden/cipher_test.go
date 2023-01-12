@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -31,7 +32,7 @@ func TestCipher(t *testing.T) {
 	t.Run("DeleteUnrecoverableCiphers", func(t *testing.T) {
 		domain := "cozy.example.net"
 		err := lifecycle.Destroy(domain)
-		if err != instance.ErrNotFound {
+		if !errors.Is(err, instance.ErrNotFound) {
 			assert.NoError(t, err)
 		}
 		inst, err := lifecycle.Create(&lifecycle.Options{

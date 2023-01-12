@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -565,7 +566,7 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	if triggerID != "" {
 		err := job.System().DeleteTrigger(inst, triggerID)
-		if err != nil && err != job.ErrNotFoundTrigger {
+		if err != nil && !errors.Is(err, job.ErrNotFoundTrigger) {
 			return err
 		}
 	}
@@ -1672,7 +1673,7 @@ func isFileTooBigForInstance(inst *instance.Instance, doc couchdb.JSONDoc) bool 
 	}
 
 	_, _, _, err = vfs.CheckAvailableDiskSpace(inst.VFS(), file)
-	return err == vfs.ErrFileTooBig
+	return errors.Is(err, vfs.ErrFileTooBig)
 }
 
 // wasUpdatedRecently returns true if the given document's latest update, given

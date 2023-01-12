@@ -203,7 +203,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 
 	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
 		app.Copier(consts.KonnectorType, i), i.Registries())
-	if err == app.ErrNotFound {
+	if errors.Is(err, app.ErrNotFound) {
 		return "", cleanDir, job.ErrBadTrigger{Err: err}
 	} else if err != nil {
 		return "", cleanDir, err
@@ -478,7 +478,7 @@ func extractTar(workFS afero.Fs, tarFile io.ReadCloser) error {
 	for {
 		var hdr *tar.Header
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		if err != nil {

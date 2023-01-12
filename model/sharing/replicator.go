@@ -161,7 +161,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 
 	feed, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
-		if err == errRevokeSharing {
+		if errors.Is(err, errRevokeSharing) {
 			if s.Owner {
 				return false, s.Revoke(inst)
 			} else {

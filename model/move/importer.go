@@ -272,7 +272,7 @@ func (im *importer) importAccount(zf *zip.File) error {
 	// on deletion.
 	slug, _ := doc["account_type"].(string)
 	man, err := app.GetKonnectorBySlug(im.inst, slug)
-	if err == app.ErrNotFound {
+	if errors.Is(err, app.ErrNotFound) {
 		im.installApp(consts.Konnectors + "/" + slug)
 		man, err = app.GetKonnectorBySlug(im.inst, slug)
 	}
@@ -368,7 +368,7 @@ func (im *importer) installApp(id string) {
 	if err == nil {
 		_, err = installer.RunSync()
 	}
-	if err != nil && err != app.ErrAlreadyExists {
+	if err != nil && !errors.Is(err, app.ErrAlreadyExists) {
 		im.servicesInError[slug] = true
 	}
 }

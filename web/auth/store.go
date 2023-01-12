@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"sync"
 	"time"
 
@@ -107,7 +108,7 @@ func (s *redisStore) AddCode(db prefixer.Prefixer) (string, error) {
 func (s *redisStore) GetCode(db prefixer.Prefixer, code string) (bool, error) {
 	key := confirmKey(db, code)
 	n, err := s.c.Exists(s.ctx, key).Result()
-	if err == redis.Nil || n == 0 {
+	if errors.Is(err, redis.Nil) || n == 0 {
 		return false, nil
 	}
 	if err != nil {

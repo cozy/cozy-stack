@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -382,7 +383,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 		file, err = fs.CreateFile(fileDoc, oldDoc)
 		if err == nil {
 			break
-		} else if err != os.ErrExist {
+		} else if !errors.Is(err, os.ErrExist) {
 			return
 		}
 		filename := strings.TrimSuffix(path.Base(basename), path.Ext(basename))
@@ -554,7 +555,7 @@ func get(inst *instance.Instance, file *vfs.FileDoc) (*Document, error) {
 	}
 	version, _ := versionFromMetadata(file)
 	steps, err := getSteps(inst, file.ID(), version)
-	if err != nil && err != ErrTooOld && !couchdb.IsNoDatabaseError(err) {
+	if err != nil && !errors.Is(err, ErrTooOld) && !couchdb.IsNoDatabaseError(err) {
 		return nil, err
 	}
 	doc, err := fromMetadata(file)

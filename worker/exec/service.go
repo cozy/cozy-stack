@@ -54,7 +54,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	man, err := app.GetWebappBySlugAndUpdate(i, slug,
 		app.Copier(consts.WebappType, i), i.Registries())
 	if err != nil {
-		if err == app.ErrNotFound {
+		if errors.Is(err, app.ErrNotFound) {
 			err = job.ErrBadTrigger{Err: err}
 		}
 		return

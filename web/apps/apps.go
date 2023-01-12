@@ -639,7 +639,7 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		version := c.Param("version")
 		a, err := app.GetBySlug(instance, slug, appType)
 		if err != nil {
-			if err == app.ErrNotFound {
+			if errors.Is(err, app.ErrNotFound) {
 				return jsonapi.NotFound(err)
 			}
 			return err

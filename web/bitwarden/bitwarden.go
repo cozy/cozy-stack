@@ -3,6 +3,7 @@ package bitwarden
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -300,7 +301,7 @@ func getInitialCredentials(c echo.Context) error {
 	}
 	key := setting.Key
 
-	if _, err := setting.OrganizationKey(); err == settings.ErrMissingOrgKey {
+	if _, err := setting.OrganizationKey(); errors.Is(err, settings.ErrMissingOrgKey) {
 		// The organization key should exist at this moment as it is created at the
 		// instance creation or at the login-hashed migration.
 		log.Warnf("Organization key does not exist")

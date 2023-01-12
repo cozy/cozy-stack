@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"hash"
 	"io"
 	"net/http"
@@ -78,7 +79,7 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	tarReader := tar.NewReader(reader)
 	for {
 		hdr, err := tarReader.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil, ErrManifestNotReachable
 		}
 		if err != nil {
@@ -188,7 +189,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	tarReader := tar.NewReader(reader)
 	for {
 		hdr, err := tarReader.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

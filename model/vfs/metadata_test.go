@@ -1,6 +1,7 @@
 package vfs_test
 
 import (
+	"errors"
 	"io"
 	"os"
 	"testing"
@@ -29,7 +30,7 @@ func TestMetadata(t *testing.T) {
 		assert.NoError(t, err)
 		defer f.Close()
 		_, err = io.Copy(*extractor, f)
-		assert.True(t, err == nil || err == io.ErrClosedPipe)
+		assert.True(t, err == nil || errors.Is(err, io.ErrClosedPipe))
 		err = (*extractor).Close()
 		assert.NoError(t, err)
 		meta := (*extractor).Result()

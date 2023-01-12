@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -372,7 +373,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 
 	err := walkFn(name, doc, nil)
 	if err != nil {
-		if isDir && err == filepath.SkipDir {
+		if isDir && errors.Is(err, filepath.SkipDir) {
 			return nil
 		}
 		return err
@@ -405,7 +406,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 		for _, d := range included {
 			fullpath := path.Join(name, d.Attrs.Name)
 			err = walk(c, fullpath, d, walkFn)
-			if err != nil && err != filepath.SkipDir {
+			if err != nil && !errors.Is(err, filepath.SkipDir) {
 				return err
 			}
 		}

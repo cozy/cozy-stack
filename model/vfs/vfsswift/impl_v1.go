@@ -117,7 +117,7 @@ func (sfs *swiftVFS) InitFs() error {
 		return err
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.ctx, sfs.container, sfs.version); err != nil {
-		if err != swift.Forbidden {
+		if !errors.Is(err, swift.Forbidden) {
 			sfs.log.Errorf("Could not create container %s: %s",
 				sfs.container, err.Error())
 			return err
@@ -380,7 +380,7 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) (int64, error) {
 		return 0, err
 	}
 	err = sfs.c.ObjectDelete(sfs.ctx, sfs.container, doc.DirID+"/"+doc.DocName)
-	if err != nil && err != swift.ObjectNotFound {
+	if err != nil && !errors.Is(err, swift.ObjectNotFound) {
 		return 0, err
 	}
 	err = sfs.Indexer.DeleteDirDoc(doc)
@@ -395,7 +395,7 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 			objName, err.Error())
 	}
 	err = sfs.c.ObjectDelete(sfs.ctx, sfs.container, objName)
-	if err != nil && err != swift.ObjectNotFound {
+	if err != nil && !errors.Is(err, swift.ObjectNotFound) {
 		return err
 	}
 	return sfs.Indexer.DeleteFileDoc(doc)
@@ -405,7 +405,7 @@ func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 	versionObjNames, err := sfs.c.VersionObjectList(sfs.ctx, sfs.version, objName)
 	// could happened if the versionning could not be enabled, in which case we
 	// do not propagate the error.
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ContainerNotFound) || errors.Is(err, swift.ObjectNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -428,7 +428,7 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	}
 	defer sfs.mu.RUnlock()
 	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
@@ -645,7 +645,7 @@ func (f *swiftFileCreation) Seek(offset int64, whence int) (int64, error) {
 
 func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+		if _, err := (*f.meta).Write(p); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}
@@ -692,7 +692,7 @@ func (f *swiftFileCreation) Close() (err error) {
 	}()
 
 	if err = f.f.Close(); err != nil {
-		if err == swift.ObjectCorrupted {
+		if errors.Is(err, swift.ObjectCorrupted) {
 			err = vfs.ErrInvalidHash
 		}
 		if f.meta != nil {

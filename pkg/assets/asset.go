@@ -3,6 +3,7 @@ package assets
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,7 +31,7 @@ func Get(name, context string) (*model.Asset, bool) {
 	if err == nil {
 		return dynAsset, true
 	}
-	if err != dynamic.ErrDynAssetNotFound {
+	if !errors.Is(err, dynamic.ErrDynAssetNotFound) {
 		logger.WithNamespace("asset").Errorf("Error while retreiving dynamic asset: %s", err)
 	}
 

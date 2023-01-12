@@ -831,7 +831,7 @@ func wrapJobsError(err error) error {
 func checkReservedWorker(worker string) error {
 	reserved, err := job.System().WorkerIsReserved(worker)
 	if err != nil {
-		if err == job.ErrUnknownWorker {
+		if errors.Is(err, job.ErrUnknownWorker) {
 			return echo.NewHTTPError(http.StatusNotFound)
 		}
 		return err

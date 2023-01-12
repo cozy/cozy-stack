@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -141,7 +142,7 @@ func deleteAccounts(inst *instance.Instance) error {
 			continue
 		}
 		man, err := app.GetKonnectorBySlug(inst, slug)
-		if err == app.ErrNotFound {
+		if errors.Is(err, app.ErrNotFound) {
 			copier := app.Copier(consts.KonnectorType, inst)
 			installer, erri := app.NewInstaller(inst, copier,
 				&app.InstallerOptions{

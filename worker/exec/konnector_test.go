@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -133,7 +134,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 			},
 		)
-		if err != app.ErrAlreadyExists {
+		if !errors.Is(err, app.ErrAlreadyExists) {
 			require.NoError(t, err)
 
 			_, err = installer.RunSync()
@@ -237,7 +238,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 			},
 		)
-		if err != app.ErrAlreadyExists {
+		if !errors.Is(err, app.ErrAlreadyExists) {
 			require.NoError(t, err)
 
 			_, err = installer.RunSync()
@@ -307,7 +308,7 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 				SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 			},
 		)
-		if err != app.ErrAlreadyExists {
+		if !errors.Is(err, app.ErrAlreadyExists) {
 			require.NoError(t, err)
 
 			_, err = installer.RunSync()

@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -171,7 +172,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
-	if err != nil && err != os.ErrNotExist {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("EnsureSharedWithMeDir failed to find the dir: %s", err)
 		return nil, err
@@ -188,7 +189,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		dir.DocID = consts.SharedWithMeDirID
 		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		err = fs.CreateDir(dir)
-		if err == os.ErrExist {
+		if errors.Is(err, os.ErrExist) {
 			dir, err = fs.DirByPath(dir.Fullpath)
 		}
 		if err != nil {
@@ -281,7 +282,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		if err = fs.CreateDir(dir); err == nil {
 			return dir, nil
 		}
-		if couchdb.IsConflictError(err) || err == os.ErrExist {
+		if couchdb.IsConflictError(err) || errors.Is(err, os.ErrExist) {
 			doc, err := fs.DirByID(dir.DocID)
 			if err == nil {
 				doc.AddReferencedBy(couchdb.DocReference{
@@ -420,7 +421,7 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.NoLongerSharedDirID)
-	if err != nil && err != os.ErrNotExist {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 
@@ -557,7 +558,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 		}
 		dir, file, err := fs.DirOrFileByID(id)
-		if err != nil && err != os.ErrNotExist {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			inst.Logger().WithNamespace("replicator").
 				Debugf("Error on finding ref of bulk files: %s", err)
 			errm = multierror.Append(errm, err)
@@ -582,7 +583,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			continue
 		} else if dir == nil {
 			err = s.CreateDir(inst, target, delayResolution)
-			if err == os.ErrExist {
+			if errors.Is(err, os.ErrExist) {
 				retries = append(retries, retryOp{
 					target: target,
 				})
@@ -598,7 +599,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			// the modified doc
 			cloned := dir.Clone().(*vfs.DirDoc)
 			err = s.UpdateDir(inst, target, dir, ref, delayResolution)
-			if err == os.ErrExist {
+			if errors.Is(err, os.ErrExist) {
 				retries = append(retries, retryOp{
 					target: target,
 					dir:    cloned,
@@ -871,7 +872,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 		parent, err = s.GetSharingDir(inst)
 	} else {
 		parent, err = fs.DirByID(doc.DirID)
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			parent, err = s.recreateParent(inst, doc.DirID)
 		}
 	}
@@ -885,7 +886,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	if err != nil {
 		// Maybe the directory has been created concurrently, so let's try
 		// again to fetch it from the database
-		if err == os.ErrExist {
+		if errors.Is(err, os.ErrExist) {
 			return fs.DirByID(dirID)
 		}
 		return nil, err
@@ -945,7 +946,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	var parent *vfs.DirDoc
 	if dirID, ok := target["dir_id"].(string); ok {
 		parent, err = fs.DirByID(dirID)
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
@@ -975,7 +976,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
-	if err == os.ErrExist && resolution == resolveResolution {
+	if errors.Is(err, os.ErrExist) && resolution == resolveResolution {
 		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
 			return errr
@@ -1006,7 +1007,7 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 	} else if dirID != dir.DirID {
 		parent, err := inst.VFS().DirByID(dirID)
-		if err == os.ErrNotExist {
+		if errors.Is(err, os.ErrNotExist) {
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
@@ -1064,7 +1065,7 @@ func (s *Sharing) UpdateDir(
 	copySafeFieldsToDir(target, dir)
 
 	err = fs.UpdateDirDoc(oldDoc, dir)
-	if err == os.ErrExist && resolution == resolveResolution {
+	if errors.Is(err, os.ErrExist) && resolution == resolveResolution {
 		name, errb := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errb != nil {
 			return errb
@@ -1146,7 +1147,7 @@ func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.Dir
 	iter := fs.DirIterator(olddoc, nil)
 	for {
 		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
+		if errors.Is(err, vfs.ErrIteratorDone) {
 			break
 		}
 		if err != nil {
