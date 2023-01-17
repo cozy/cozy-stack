@@ -1126,6 +1126,10 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 					continue
 				}
 
+				if !ms.Active {
+					continue
+				}
+
 				parentSharingID, err := findParentFileSharingID(m, ms)
 				if err != nil {
 					return err
