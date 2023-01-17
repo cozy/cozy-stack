@@ -1440,10 +1440,10 @@ func (s *Sharing) checkSharingCredentials() (checks []map[string]interface{}) {
 	} else {
 		if len(s.Credentials) != 1 {
 			checks = append(checks, map[string]interface{}{
-				"id":        s.SID,
-				"type":      "invalid_number_of_credentials",
-				"owner":     false,
-				"nb_embers": len(s.Credentials),
+				"id":         s.SID,
+				"type":       "invalid_number_of_credentials",
+				"owner":      false,
+				"nb_members": len(s.Credentials),
 			})
 			return checks
 		}
@@ -1492,6 +1492,17 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 		})
 		return checks
 	}
+
+	if len(ms.Credentials) != 1 {
+		checks = append(checks, map[string]interface{}{
+			"id":         s.SID,
+			"type":       "invalid_number_of_credentials",
+			"instance":   m.Domain,
+			"nb_members": len(ms.Credentials),
+		})
+		return checks
+	}
+
 	// Build a map of owner docs with their member's counterpart ids
 	ownerKey := ms.Credentials[0].XorKey
 	ownerDocsById := make(map[string]couchdb.JSONDoc)
