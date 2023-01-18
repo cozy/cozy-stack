@@ -327,10 +327,10 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		return nil
 	}
 
-	// 4. Find a name for the folder
+	// 4. Find a path for the folder
 	folderPath := acc.DefaultFolderPath
 	if folderPath == "" {
-		folderPath = acc.FolderPath
+		folderPath = acc.FolderPath // For legacy purposes
 	}
 	if folderPath == "" {
 		folderPath = computeFolderPath(inst, w.man.Name(), acc)
@@ -367,6 +367,13 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		dir.CozyMetadata.SourceAccount = acc.ID()
 		_ = couchdb.UpdateDoc(inst, dir)
 	}
+
+	// 6. Ensure that the account knows the folder path
+	if acc.DefaultFolderPath == "" {
+		acc.DefaultFolderPath = folderPath
+		_ = couchdb.UpdateDoc(inst, acc)
+	}
+
 	return nil
 }
 
@@ -376,7 +383,12 @@ func computeFolderPath(inst *instance.Instance, slug string, acc *account.Accoun
 		",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
 		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
 		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
+
 	accountName := r.Replace(acc.Name)
+	if accountName == "" {
+		accountName = acc.ID()
+	}
+
 	title := cases.Title(language.Make(inst.Locale)).String(slug)
 	return fmt.Sprintf("/%s/%s/%s", admin, title, accountName)
 }

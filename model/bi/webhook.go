@@ -364,6 +364,7 @@ func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connection
 		"relationships": rels,
 	}
 	account.Encrypt(acc)
+	account.ComputeName(acc)
 	if err := couchdb.CreateDoc(c.Instance, &acc); err != nil {
 		return nil, nil, err
 	}
