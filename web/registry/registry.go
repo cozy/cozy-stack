@@ -85,11 +85,13 @@ func proxyListReq(c echo.Context) error {
 		return err
 	}
 	for _, app := range list.Apps {
-		slug, _ := app["slug"].(string)
+		slug := registry.ParseSlug(app["slug"])
 		for _, item := range maintenance {
 			if item["slug"] == slug {
-				app["maintenance_activated"] = true
-				app["maintenance_options"] = item["maintenance_options"]
+				app["maintenance_activated"] = json.RawMessage("true")
+				if opts, err := json.Marshal(item["maintenance_options"]); err == nil {
+					app["maintenance_options"] = json.RawMessage(opts)
+				}
 			}
 		}
 	}
