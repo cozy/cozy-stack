@@ -387,6 +387,10 @@ func (i *Installer) update() error {
 		return err
 	}
 
+	if fetcher, ok := i.fetcher.(*registryFetcher); ok {
+		newManifest.SetVersion(fetcher.appVersion())
+	}
+
 	// Fast path for registry:// and http:// sources: we do not need to go
 	// further in the case where the fetched manifest has the same version has
 	// the one in database.

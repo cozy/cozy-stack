@@ -47,6 +47,10 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewBuffer(version.Manifest)), nil
 }
 
+func (f *registryFetcher) appVersion() string {
+	return f.version.Version
+}
+
 func (f *registryFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) error {
 	v := f.version
 	shasum, err := hex.DecodeString(v.Sha256)
