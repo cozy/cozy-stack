@@ -3,6 +3,7 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"io"
 	"net/http"
@@ -48,7 +49,7 @@ func Serve(c echo.Context) error {
 
 	webapp, err := app.GetWebappBySlug(i, slug)
 	if err != nil {
-		if err == app.ErrNotFound {
+		if errors.Is(err, app.ErrNotFound) {
 			return handleAppNotFound(c, i, slug)
 		}
 		return err

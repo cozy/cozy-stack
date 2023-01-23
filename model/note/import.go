@@ -3,6 +3,7 @@ package note
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"io"
 	"path"
 	"strconv"
@@ -70,7 +71,7 @@ func importReader(inst *instance.Instance, doc *vfs.FileDoc, reader io.Reader, s
 	buf := &bytes.Buffer{}
 	var hasImages bool
 	if _, err := io.CopyN(buf, reader, 512); err != nil {
-		if err != io.EOF {
+		if !errors.Is(err, io.EOF) {
 			return nil, err
 		}
 		hasImages = false

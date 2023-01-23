@@ -310,7 +310,7 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 	// Move the source file to the destination
 	needRename := true
 	from, err := afs.Indexer.FilePath(src)
-	if err == vfs.ErrParentDoesNotExist {
+	if errors.Is(err, vfs.ErrParentDoesNotExist) {
 		needRename = false // The parent directory has already been dissociated
 	} else if err != nil {
 		return err
@@ -742,7 +742,7 @@ func (f *aferoFileCreation) Seek(offset int64, whence int) (int64, error) {
 
 func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+		if _, err := (*f.meta).Write(p); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}

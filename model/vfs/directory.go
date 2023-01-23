@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -109,7 +110,7 @@ func (d *DirDoc) Sys() interface{} { return nil }
 func (d *DirDoc) IsEmpty(fs VFS) (bool, error) {
 	iter := fs.DirIterator(d, &IteratorOptions{ByFetch: 1})
 	_, _, err := iter.Next()
-	if err == ErrIteratorDone {
+	if errors.Is(err, ErrIteratorDone) {
 		return true, nil
 	}
 	return false, err

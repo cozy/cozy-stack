@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -48,7 +49,7 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 					// We don't want to log panic with ErrAbortHandler, as it
 					// is just noise (http.Server does that too).
 					// See https://golang.org/pkg/net/http/#ErrAbortHandler
-					if err != http.ErrAbortHandler {
+					if !errors.Is(err, http.ErrAbortHandler) {
 						stack := make([]byte, config.StackSize)
 						length := runtime.Stack(stack, false)
 						log := logger.WithDomain(c.Request().Host).WithField("panic", true)

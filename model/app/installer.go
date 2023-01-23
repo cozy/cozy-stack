@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -199,7 +200,7 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 		if err == nil {
 			return nil, ErrAlreadyExists
 		}
-		if err != ErrNotFound {
+		if !errors.Is(err, ErrNotFound) {
 			return nil, err
 		}
 		switch opts.Type {

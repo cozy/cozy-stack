@@ -292,7 +292,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		}
 		t, err := s.GetTrigger(prefixer.NewPrefixer(cluster, "", prefix), triggerID)
 		if err != nil {
-			if err == ErrNotFoundTrigger || err == ErrMalformedTrigger {
+			if errors.Is(err, ErrNotFoundTrigger) || errors.Is(err, ErrMalformedTrigger) {
 				s.client.ZRem(s.ctx, SchedKey, results[0])
 			}
 			return err
@@ -340,7 +340,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			if _, err = s.broker.PushJob(t, job); err != nil {
 				// Remove the cron trigger from redis if it is invalid, as it
 				// may block other cron triggers
-				if err == ErrUnknownWorker || limits.IsLimitReachedOrExceeded(err) {
+				if errors.Is(err, ErrUnknownWorker) || limits.IsLimitReachedOrExceeded(err) {
 					s.client.ZRem(s.ctx, SchedKey, results[0])
 					continue
 				}

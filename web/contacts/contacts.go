@@ -3,6 +3,7 @@ package contacts
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/contact"
@@ -27,7 +28,7 @@ func (m *apiMyself) Included() []jsonapi.Object             { return []jsonapi.O
 func MyselfHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	myself, err := contact.GetMyself(inst)
-	if err == contact.ErrNotFound {
+	if errors.Is(err, contact.ErrNotFound) {
 		var settings *couchdb.JSONDoc
 		settings, err = inst.SettingsDocument()
 		if err == nil {

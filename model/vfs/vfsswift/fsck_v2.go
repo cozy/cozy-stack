@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"path"
 
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -22,7 +23,7 @@ func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) er
 		return err
 	}
 	if err = sfs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
-		if err == vfs.ErrFsckFailFast {
+		if errors.Is(err, vfs.ErrFsckFailFast) {
 			return nil
 		}
 		return err
@@ -93,7 +94,7 @@ func (sfs *swiftVFSV2) checkFiles(
 		return objs, err
 	})
 	if err != nil {
-		if err == errFailFast {
+		if errors.Is(err, errFailFast) {
 			return nil
 		}
 		return err
@@ -107,7 +108,7 @@ func (sfs *swiftVFSV2) checkFiles(
 			IsFile:  true,
 			FileDoc: f,
 		})
-		if err == errFailFast {
+		if errors.Is(err, errFailFast) {
 			return nil
 		}
 	}

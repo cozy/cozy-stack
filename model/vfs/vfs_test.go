@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http/httptest"
@@ -783,7 +784,7 @@ func recFetchTree(fs vfs.VFS, parent *vfs.DirDoc, name string) (H, error) {
 	iter := fs.DirIterator(parent, nil)
 	for {
 		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
+		if errors.Is(err, vfs.ErrIteratorDone) {
 			break
 		}
 		if err != nil {

@@ -3,6 +3,7 @@ package permission
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"reflect"
 	"strconv"
@@ -116,7 +117,7 @@ func extractJSONKeys(j []byte) ([]string, error) {
 	depth := 0
 	for {
 		t, err := dec.Token()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

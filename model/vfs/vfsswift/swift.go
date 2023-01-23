@@ -24,7 +24,7 @@ var errFailFast = errors.New("fail fast")
 // deletes it.
 func DeleteContainer(ctx context.Context, c *swift.Connection, container string) error {
 	_, _, err := c.Container(ctx, container)
-	if err == swift.ContainerNotFound {
+	if errors.Is(err, swift.ContainerNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -48,7 +48,7 @@ func DeleteContainer(ctx context.Context, c *swift.Connection, container string)
 	// container to work-around this limitation.
 	return utils.RetryWithExpBackoff(5, 2*time.Second, func() error {
 		err = c.ContainerDelete(ctx, container)
-		if err == swift.ContainerNotFound {
+		if errors.Is(err, swift.ContainerNotFound) {
 			return nil
 		}
 		return err

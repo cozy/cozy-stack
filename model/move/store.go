@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -144,7 +145,7 @@ type redisStore struct {
 func (s *redisStore) GetRequest(db prefixer.Prefixer, secret string) (*Request, error) {
 	key := requestKey(db, secret)
 	b, err := s.c.Get(s.ctx, key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	}
 	if err != nil {

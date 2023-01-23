@@ -341,7 +341,7 @@ func authorize(c echo.Context) error {
 			Slug:       slug,
 			Registries: instance.Registries(),
 		})
-		if err != app.ErrAlreadyExists {
+		if !errors.Is(err, app.ErrAlreadyExists) {
 			if err != nil {
 				return err
 			}

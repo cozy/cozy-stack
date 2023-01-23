@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -103,7 +104,7 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img.ID(), format)
 	infos, headers, err := t.c.Object(t.ctx, t.container, name)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return false, nil
 	}
 	if err != nil {
@@ -174,7 +175,7 @@ func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, err
 func (t *thumbsV2) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	name := t.makeName(id, format)
 	obj, _, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {

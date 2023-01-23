@@ -75,7 +75,7 @@ var execFilesCmd = &cobra.Command{
 		c := newClient(flagDomain, consts.Files)
 		command := args[0]
 		err := execCommand(c, command, os.Stdout)
-		if err == errFilesExec {
+		if errors.Is(err, errFilesExec) {
 			return cmd.Usage()
 		}
 		return err

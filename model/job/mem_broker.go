@@ -3,6 +3,7 @@ package job
 import (
 	"container/list"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -191,7 +192,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	ct, err := GetCounterTypeFromWorkerType(req.WorkerType)
 	if err == nil {
 		err := limits.CheckRateLimit(db, ct)
-		if err == limits.ErrRateLimitReached {
+		if errors.Is(err, limits.ErrRateLimitReached) {
 			joblog.WithFields(logrus.Fields{
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),

@@ -217,7 +217,7 @@ func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
 	for {
 		var bs []byte
 		bs, err = rb.ReadBytes('\n')
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			err = nil
 			return
 		}

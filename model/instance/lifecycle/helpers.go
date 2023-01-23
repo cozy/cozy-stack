@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 
@@ -133,7 +134,7 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 			return nil, instance.ErrExists
 		}
 		other, err := instance.GetFromCouch(alias)
-		if err != instance.ErrNotFound {
+		if !errors.Is(err, instance.ErrNotFound) {
 			if err != nil {
 				return nil, err
 			}

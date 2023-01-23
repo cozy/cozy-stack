@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -211,7 +212,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	ct, err := GetCounterTypeFromWorkerType(req.WorkerType)
 	if err == nil {
 		err := limits.CheckRateLimit(db, ct)
-		if err == limits.ErrRateLimitReached {
+		if errors.Is(err, limits.ErrRateLimitReached) {
 			joblog.WithFields(logrus.Fields{
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),

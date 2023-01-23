@@ -145,7 +145,7 @@ func GetSteps(c echo.Context) error {
 		return jsonapi.InvalidParameter("Version", err)
 	}
 	steps, err := note.GetSteps(inst, file.DocID, rev)
-	if err == note.ErrTooOld {
+	if errors.Is(err, note.ErrTooOld) {
 		file, err = note.GetFile(inst, file)
 		if err != nil {
 			return wrapError(err)
@@ -391,7 +391,7 @@ func UploadImage(c echo.Context) error {
 
 	// Manage the content upload
 	_, err = io.Copy(upload, c.Request().Body)
-	if cerr := upload.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+	if cerr := upload.Close(); cerr != nil && (err == nil || errors.Is(err, io.ErrUnexpectedEOF)) {
 		err = cerr
 	}
 	if err != nil {

@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -137,7 +138,7 @@ func (r *RealtimeChannel) pump() {
 		}
 		r.ch <- &msg
 	}
-	if err != io.EOF && atomic.LoadUint32(&r.closed) == 0 {
+	if !errors.Is(err, io.EOF) && atomic.LoadUint32(&r.closed) == 0 {
 		r.ch <- &RealtimeServerMessage{
 			Event:   "error",
 			Payload: RealtimeServerPayload{Title: err.Error()},

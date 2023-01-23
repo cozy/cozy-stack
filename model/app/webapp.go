@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -412,7 +413,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 	sched := job.System()
 	for _, service := range deleted {
 		if service.TriggerID != "" {
-			if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != job.ErrNotFoundTrigger {
+			if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && !errors.Is(err, job.ErrNotFoundTrigger) {
 				return err
 			}
 		}

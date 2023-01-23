@@ -1,6 +1,7 @@
 package note
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -98,7 +99,7 @@ func NewImageUpload(inst *instance.Instance, note *vfs.FileDoc, name, mime strin
 // Write implements the io.Writer interface (used by io.Copy).
 func (u *ImageUpload) Write(p []byte) (int, error) {
 	if u.meta != nil {
-		if _, err := (*u.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+		if _, err := (*u.meta).Write(p); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 			(*u.meta).Abort(err)
 			u.meta = nil
 		}

@@ -52,7 +52,7 @@ func GetAsset(context, name string) (*model.Asset, error) {
 	// Re-constructing the asset struct from the dyn FS content
 	content, err := assetFS.Get(context, name)
 	if err != nil {
-		if err == swift.ObjectNotFound || os.IsNotExist(err) {
+		if errors.Is(err, swift.ObjectNotFound) || os.IsNotExist(err) {
 			return nil, ErrDynAssetNotFound
 		}
 		return nil, err

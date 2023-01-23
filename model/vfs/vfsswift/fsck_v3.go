@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"path"
 	"strings"
 
@@ -25,7 +26,7 @@ func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) er
 		return err
 	}
 	if err = sfs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
-		if err == vfs.ErrFsckFailFast {
+		if errors.Is(err, vfs.ErrFsckFailFast) {
 			return nil
 		}
 		return err
@@ -180,7 +181,7 @@ func (sfs *swiftVFSV3) checkFiles(
 		return objs, nil
 	})
 	if err != nil {
-		if err == errFailFast {
+		if errors.Is(err, errFailFast) {
 			return nil
 		}
 		return err

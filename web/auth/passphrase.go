@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -117,7 +118,7 @@ func sendHint(c echo.Context) error {
 
 func passphraseReset(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	if err := lifecycle.RequestPassphraseReset(i); err != nil && err != instance.ErrResetAlreadyRequested {
+	if err := lifecycle.RequestPassphraseReset(i); err != nil && !errors.Is(err, instance.ErrResetAlreadyRequested) {
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -163,7 +164,7 @@ func passphraseRenewForm(c echo.Context) error {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
 	if err = lifecycle.CheckPassphraseRenewToken(inst, token); err != nil {
-		if err == instance.ErrMissingToken {
+		if errors.Is(err, instance.ErrMissingToken) {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -221,7 +222,7 @@ func passphraseRenew(c echo.Context) error {
 		Hint:       c.FormValue("hint"),
 	})
 	if err != nil {
-		if err == instance.ErrMissingToken {
+		if errors.Is(err, instance.ErrMissingToken) {
 			if wantsJSON(c) {
 				return c.JSON(http.StatusUnauthorized, echo.Map{
 					"error": "Invalid reset token",

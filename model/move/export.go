@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/url"
 	"path"
@@ -120,7 +121,7 @@ func copyJSONData(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc,
 
 	for {
 		header, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

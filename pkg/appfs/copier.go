@@ -2,6 +2,7 @@ package appfs
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path"
@@ -63,7 +64,7 @@ func (f *swiftCopier) Exist(slug, version, shasum string) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-	if err != swift.ObjectNotFound {
+	if !errors.Is(err, swift.ObjectNotFound) {
 		return false, err
 	}
 	return false, nil
@@ -75,7 +76,7 @@ func (f *swiftCopier) Start(slug, version, shasum string) (bool, error) {
 		return exist, err
 	}
 
-	if _, _, err = f.c.Container(f.ctx, f.container); err == swift.ContainerNotFound {
+	if _, _, err = f.c.Container(f.ctx, f.container); errors.Is(err, swift.ContainerNotFound) {
 		if err = f.c.ContainerCreate(f.ctx, f.container, nil); err != nil {
 			return false, err
 		}

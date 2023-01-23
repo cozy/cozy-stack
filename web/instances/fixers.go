@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -346,7 +347,7 @@ func serviceTriggersFixer(c echo.Context) error {
 
 	for slug, triggers := range byApps {
 		manifest, err := app.GetWebappBySlug(inst, slug)
-		if err == app.ErrNotFound {
+		if errors.Is(err, app.ErrNotFound) {
 			// The app has been uninstalled, but some duplicate triggers has
 			// been left
 			toDelete = append(toDelete, triggers...)
@@ -363,7 +364,7 @@ func serviceTriggersFixer(c echo.Context) error {
 			}
 			if service.TriggerID != "" {
 				_, err := jobsSystem.GetTrigger(inst, service.TriggerID)
-				if err == job.ErrNotFoundTrigger {
+				if errors.Is(err, job.ErrNotFoundTrigger) {
 					triggerID, err := app.CreateServiceTrigger(inst, slug, service)
 					if err != nil {
 						return err

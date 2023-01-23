@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"strconv"
@@ -135,7 +136,7 @@ func (sfs *swiftVFSV2) InitFs() error {
 		return err
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.ctx, sfs.container, sfs.version); err != nil {
-		if err != swift.Forbidden {
+		if !errors.Is(err, swift.Forbidden) {
 			sfs.log.Errorf("Could not create container %s: %s",
 				sfs.container, err.Error())
 			return err
@@ -390,7 +391,7 @@ func (sfs *swiftVFSV2) destroyFileVersions(objName string) error {
 	versionObjNames, err := sfs.c.VersionObjectList(sfs.ctx, sfs.version, objName)
 	// could happened if the versionning could not be enabled, in which case we
 	// do not propagate the error.
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ContainerNotFound) || errors.Is(err, swift.ObjectNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -406,7 +407,7 @@ func (sfs *swiftVFSV2) destroyFileVersions(objName string) error {
 func (sfs *swiftVFSV2) EnsureErased(journal vfs.TrashJournal) error {
 	// No lock needed
 	_, err := sfs.c.BulkDelete(sfs.ctx, sfs.container, journal.ObjectNames)
-	if err == swift.Forbidden {
+	if errors.Is(err, swift.Forbidden) {
 		sfs.log.Warnf("EnsureErased failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range journal.ObjectNames {
@@ -427,7 +428,7 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	defer sfs.mu.RUnlock()
 	objName := MakeObjectName(doc.DocID)
 	f, _, err := sfs.c.ObjectOpen(sfs.ctx, sfs.container, objName, false, nil)
-	if err == swift.ObjectNotFound {
+	if errors.Is(err, swift.ObjectNotFound) {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
@@ -630,7 +631,7 @@ func (f *swiftFileCreationV2) Seek(offset int64, whence int) (int64, error) {
 
 func (f *swiftFileCreationV2) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+		if _, err := (*f.meta).Write(p); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}
@@ -677,7 +678,7 @@ func (f *swiftFileCreationV2) Close() (err error) {
 	}()
 
 	if err = f.f.Close(); err != nil {
-		if err == swift.ObjectCorrupted {
+		if errors.Is(err, swift.ObjectCorrupted) {
 			err = vfs.ErrInvalidHash
 		}
 		if f.meta != nil {

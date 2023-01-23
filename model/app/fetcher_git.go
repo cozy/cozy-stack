@@ -124,7 +124,7 @@ func (g *gitFetcher) doFetchManifestFromGitArchive(src *url.URL, branch string, 
 	g.log.Infof("Fetching manifest %s", strings.Join(cmd.Args, " "))
 	stdout, err := cmd.Output()
 	if err != nil {
-		if err == exec.ErrNotFound {
+		if errors.Is(err, exec.ErrNotFound) {
 			return nil, ErrNotSupportedSource
 		}
 		return nil, ErrManifestNotReachable
@@ -133,7 +133,7 @@ func (g *gitFetcher) doFetchManifestFromGitArchive(src *url.URL, branch string, 
 	r := tar.NewReader(bytes.NewReader(stdout))
 	for {
 		h, err := r.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -177,7 +177,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err err
 	// If the scheme uses ssh, we have to use the git command.
 	if isGitSSHScheme(src.Scheme) {
 		err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
-		if err == exec.ErrNotFound {
+		if errors.Is(err, exec.ErrNotFound) {
 			return ErrNotSupportedSource
 		}
 		return err
@@ -226,7 +226,7 @@ func (g *gitFetcher) doFetchWithGit(
 		srcStr, fmt.Sprintf("refs/heads/%s", branch))
 	lsRemote, err := cmd.Output()
 	if err != nil {
-		if err != exec.ErrNotFound {
+		if !errors.Is(err, exec.ErrNotFound) {
 			g.log.Errorf("ls-remote error of %s: %s",
 				strings.Join(cmd.Args, " "), err.Error())
 		}
@@ -269,7 +269,7 @@ func (g *gitFetcher) doFetchWithGit(
 	g.log.Infof("Clone with git: %s", strings.Join(cmd.Args, " "))
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
-		if err != exec.ErrNotFound {
+		if !errors.Is(err, exec.ErrNotFound) {
 			g.log.Errorf("Clone error of %s %s: %s", srcStr, stdoutStderr,
 				err.Error())
 		}

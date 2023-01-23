@@ -572,7 +572,7 @@ func PostDiscovery(c echo.Context) error {
 			if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 				return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 			}
-			if err == sharing.ErrAlreadyAccepted {
+			if errors.Is(err, sharing.ErrAlreadyAccepted) {
 				return renderAlreadyAccepted(c, inst, cozyURL)
 			}
 			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, member)
@@ -585,7 +585,7 @@ func PostDiscovery(c echo.Context) error {
 	} else {
 		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
-			if err == sharing.ErrInvalidURL {
+			if errors.Is(err, sharing.ErrInvalidURL) {
 				if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 					return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 				}
