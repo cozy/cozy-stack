@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -229,7 +230,7 @@ func ProxyList(req *http.Request, registries []*url.URL) (*AppsPaginated, error)
 
 type appsList struct {
 	ref        *url.URL
-	list       []map[string]interface{}
+	list       []map[string]json.RawMessage
 	registries []*registryFetchState
 	slugs      map[string][]int
 	limit      int
@@ -244,8 +245,8 @@ type PageInfo struct {
 // AppsPaginated is a struct for listing apps manifest from the registry, with
 // pagination.
 type AppsPaginated struct {
-	Apps     []map[string]interface{} `json:"data"`
-	PageInfo PageInfo                 `json:"meta"`
+	Apps     []map[string]json.RawMessage `json:"data"`
+	PageInfo PageInfo                     `json:"meta"`
 }
 
 type registryFetchState struct {
@@ -271,7 +272,7 @@ func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) 
 	return &appsList{
 		ref:        ref,
 		limit:      limit,
-		list:       make([]map[string]interface{}, 0),
+		list:       make([]map[string]json.RawMessage, 0),
 		slugs:      make(map[string][]int),
 		registries: regStates,
 	}
@@ -338,7 +339,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 				objCursor <= maxCursor
 
 			// if an object with same slug has already been fetched, we skip it
-			slug := obj["slug"].(string)
+			slug := ParseSlug(obj["slug"])
 			offsets, ok := slugs[slug]
 			if !ok {
 				offsets = make([]int, len(a.registries))
@@ -368,29 +369,24 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 	return nil
 }
 
+func ParseSlug(raw json.RawMessage) string {
+	var slug string
+	if err := json.Unmarshal(raw, &slug); err != nil {
+		return ""
+	}
+	return slug
+}
+
 func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *AppsPaginated {
-	sortBySlug := sortBy == "slug"
 	sort.Slice(a.list, func(i, j int) bool {
-		vi := a.list[i]
-		vj := a.list[j]
-		var less, equal bool
-		switch valA := vi[sortBy].(type) {
-		case string:
-			valB := vj[sortBy].(string)
-			less = valA < valB
-			if !sortBySlug && !less {
-				equal = valA == valB
-			}
-		case int:
-			valB := vj[sortBy].(int)
-			less = valA < valB
-			if !sortBySlug && !less {
-				equal = valA == valB
-			}
-		}
+		valA := a.list[i][sortBy]
+		valB := a.list[j][sortBy]
+		cmp := bytes.Compare([]byte(valA), []byte(valB))
+		equal := cmp == 0
+		less := cmp < 0
 		if equal {
-			slugA := vi["slug"].(string)
-			slugB := vj["slug"].(string)
+			slugA := ParseSlug(a.list[i]["slug"])
+			slugB := ParseSlug(a.list[j]["slug"])
 			less = slugA < slugB
 		}
 		if reverse {
@@ -419,7 +415,7 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *AppsPagina
 	// cursor reached the end of the list. If so, the dimension is set to -1.
 	l := len(a.registries)
 	for _, o := range list {
-		slug := o["slug"].(string)
+		slug := ParseSlug(o["slug"])
 		offsets := a.slugs[slug]
 
 		i := 0
@@ -495,7 +491,7 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	elapsed := time.Since(start)
 	defer func() {
 		if !ok {
-			// Flush the body, so that the connecion can be reused by keep-alive
+			// Flush the body, so that the connection can be reused by keep-alive
 			_, _ = io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 		}
