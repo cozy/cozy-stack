@@ -123,19 +123,25 @@ func Worker(ctx *job.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	if len(cs) > 10 {
-		ctx.Logger().Warnf("too many notifiable devices: %d", len(cs))
-		cs = cs[:10]
-	}
-	sent := false
+	slug := msg.Slug()
 	seen := make(map[string]struct{})
+	nbSent := 0
+
+	// First, try to send the notification to the dedicated app
 	for _, c := range cs {
 		if _, ok := seen[c.NotificationDeviceToken]; ok {
 			continue
 		}
+		if c.Flagship {
+			continue
+		}
 		seen[c.NotificationDeviceToken] = struct{}{}
 		if err := push(ctx, c, &msg); err == nil {
-			sent = true
+			nbSent++
+			if nbSent >= 10 {
+				ctx.Logger().Warnf("too many notifiable devices for %s", slug)
+				return nil
+			}
 		} else {
 			ctx.Logger().
 				WithFields(logrus.Fields{
@@ -145,9 +151,40 @@ func Worker(ctx *job.WorkerContext) error {
 				Warnf("could not send notification on device: %s", err)
 		}
 	}
-	if !sent {
-		sendFallbackMail(ctx.Instance, msg.MailFallback)
+	if nbSent > 0 {
+		return nil
 	}
+
+	// If no dedicated app, try to send the notification to the flagship app
+	for _, c := range cs {
+		if _, ok := seen[c.NotificationDeviceToken]; ok {
+			continue
+		}
+		if !c.Flagship {
+			continue
+		}
+		seen[c.NotificationDeviceToken] = struct{}{}
+		if err := push(ctx, c, &msg); err == nil {
+			nbSent++
+			if nbSent >= 10 {
+				ctx.Logger().Warnf("too many notifiable flagship apps")
+				return nil
+			}
+		} else {
+			ctx.Logger().
+				WithFields(logrus.Fields{
+					"device_id":       c.ID(),
+					"device_platform": c.NotificationPlatform,
+				}).
+				Warnf("could not send notification on device: %s", err)
+		}
+	}
+	if nbSent > 0 {
+		return nil
+	}
+
+	// Else, we fallback to send the notifiation by email
+	sendFallbackMail(ctx.Instance, msg.MailFallback)
 	return nil
 }
 
