@@ -156,6 +156,11 @@ func Worker(ctx *job.WorkerContext) error {
 	}
 
 	// If no dedicated app, try to send the notification to the flagship app
+	name := slug
+	if str, ok := msg.Data["appName"].(string); ok {
+		name = str
+	}
+	msg.Title = fmt.Sprintf("%s - %s", name, msg.Title)
 	for _, c := range cs {
 		if _, ok := seen[c.NotificationDeviceToken]; ok {
 			continue
