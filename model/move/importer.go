@@ -510,6 +510,14 @@ func (im *importer) importPermission(zf *zip.File) error {
 	if doc.Type != permission.TypeShareByLink && doc.Type != permission.TypeSharePreview {
 		return nil
 	}
+	// We need to remake the long codes with the new instance domain
+	for name := range doc.Codes {
+		longcode, err := im.inst.CreateShareCode(name)
+		if err != nil {
+			return err
+		}
+		doc.Codes[name] = longcode
+	}
 	doc.SetRev("")
 	return couchdb.CreateNamedDoc(im.inst, doc)
 }
