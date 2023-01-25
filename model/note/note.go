@@ -367,6 +367,8 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			if err != nil {
 				return nil, err
 			}
+			fileDoc.DocName = oldDoc.DocName
+			fileDoc.ResetFullpath()
 		}
 	}
 
@@ -418,8 +420,17 @@ func forceRename(inst *instance.Instance, old *vfs.FileDoc, file *vfs.FileDoc) (
 		tmp.Metadata[k] = v
 	}
 
-	if err := inst.VFS().UpdateFileDoc(old, tmp); err != nil {
-		return nil, err
+	basename := tmp.DocName
+	for i := 2; i < 100; i++ {
+		err := inst.VFS().UpdateFileDoc(old, tmp)
+		if err == nil {
+			break
+		} else if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+		filename := strings.TrimSuffix(path.Base(basename), path.Ext(basename))
+		tmp.DocName = fmt.Sprintf("%s (%d).cozy-note", filename, i)
+		tmp.ResetFullpath()
 	}
 	return tmp, nil
 }
