@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
 // aggregatorID is the ID of the io.cozy.account CouchDB document where the
@@ -145,7 +146,7 @@ func (c *WebhookCall) handleConnectionSynced() error {
 	if c.mustExecuteKonnector(trigger) {
 		return c.fireTrigger(trigger, account)
 	}
-	return c.copyLastUpdate(account)
+	return c.copyLastUpdate(account, konn)
 }
 
 func mapUUIDToSlug(uuid string) (string, error) {
@@ -363,8 +364,24 @@ func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connection
 		"data":          data,
 		"relationships": rels,
 	}
+
 	account.Encrypt(acc)
 	account.ComputeName(acc)
+
+	cm := metadata.New()
+	cm.CreatedByApp = konn.Slug()
+	cm.CreatedByAppVersion = konn.Version()
+	cm.UpdatedByApps = []*metadata.UpdatedByAppEntry{
+		{
+			Slug:    konn.Slug(),
+			Version: konn.Version(),
+			Date:    cm.UpdatedAt,
+		},
+	}
+	// This is not the expected type for a JSON doc but it should work since it
+	// will be marshalled when saved.
+	acc.M["cozyMetadata"] = cm
+
 	if err := couchdb.CreateDoc(c.Instance, &acc); err != nil {
 		return nil, nil, err
 	}
@@ -479,7 +496,7 @@ func (c *WebhookCall) fireTrigger(trigger job.Trigger, account *account.Account)
 	return err
 }
 
-func (c *WebhookCall) copyLastUpdate(account *account.Account) error {
+func (c *WebhookCall) copyLastUpdate(account *account.Account, konn *app.KonnManifest) error {
 	conn, ok := c.Payload["connection"].(map[string]interface{})
 	if !ok {
 		return errors.New("no connection")
@@ -500,6 +517,21 @@ func (c *WebhookCall) copyLastUpdate(account *account.Account) error {
 		return fmt.Errorf("no data.auth.bi in account %s", account.ID())
 	}
 	bi["lastUpdate"] = lastUpdate
+
+	if account.Metadata == nil {
+		cm := metadata.New()
+		cm.CreatedByApp = konn.Slug()
+		cm.CreatedByAppVersion = konn.Version()
+		cm.UpdatedByApps = []*metadata.UpdatedByAppEntry{
+			{
+				Slug:    konn.Slug(),
+				Version: konn.Version(),
+				Date:    cm.UpdatedAt,
+			},
+		}
+		account.Metadata = cm
+	}
+
 	err := couchdb.UpdateDoc(c.Instance, account)
 	if err == nil {
 		c.Instance.Logger().WithNamespace("webhook").

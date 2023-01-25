@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -117,6 +120,12 @@ func updateAccount(c echo.Context) error {
 
 	account.Encrypt(doc)
 
+	if doc.M["cozyMetadata"] == nil {
+		// This is not the expected type for a JSON doc but it should work since it
+		// will be marshalled when saved.
+		doc.M["cozyMetadata"] = CozyMetadataFromClaims(c)
+	}
+
 	errUpdate := couchdb.UpdateDoc(instance, &doc)
 	if errUpdate != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
@@ -155,6 +164,10 @@ func createAccount(c echo.Context) error {
 	account.Encrypt(doc)
 	account.ComputeName(doc)
 
+	// This is not the expected type for a JSON doc but it should work since it
+	// will be marshalled when saved.
+	doc.M["cozyMetadata"] = CozyMetadataFromClaims(c)
+
 	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err
 	}
@@ -166,4 +179,46 @@ func createAccount(c echo.Context) error {
 		"type": doc.DocType(),
 		"data": doc.ToMapWithType(),
 	})
+}
+
+// CozyMetadataFromClaims returns a CozyMetadata struct, with the app fields
+// filled with information from the permission claims.
+func CozyMetadataFromClaims(c echo.Context) *metadata.CozyMetadata {
+	cm := metadata.New()
+
+	var slug, version string
+	if claims := c.Get("claims"); claims != nil {
+		cl := claims.(permission.Claims)
+		switch cl.Audience {
+		case consts.AppAudience, consts.KonnectorAudience:
+			slug = cl.Subject
+		case consts.AccessTokenAudience:
+			if perms, err := middlewares.GetPermission(c); err == nil {
+				if cli, ok := perms.Client.(*oauth.Client); ok {
+					slug = oauth.GetLinkedAppSlug(cli.SoftwareID)
+					// Special case for cozy-desktop: it is an OAuth app not linked
+					// to a web app, so it has no slug, but we still want to keep
+					// in cozyMetadata its changes, so we use a fake slug.
+					if slug == "" && strings.Contains(cli.SoftwareID, "cozy-desktop") {
+						slug = "cozy-desktop"
+					}
+					version = cli.SoftwareVersion
+				}
+			}
+		}
+	}
+
+	if slug != "" {
+		cm.CreatedByApp = slug
+		cm.CreatedByAppVersion = version
+		cm.UpdatedByApps = []*metadata.UpdatedByAppEntry{
+			{
+				Slug:    slug,
+				Version: version,
+				Date:    cm.UpdatedAt,
+			},
+		}
+	}
+
+	return cm
 }
