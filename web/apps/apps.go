@@ -228,17 +228,8 @@ func logsHandler(appType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		inst := middlewares.GetInstance(c)
 
-		var slug string
-		err := middlewares.AllowMaximal(c)
-		if err == nil {
-			// If logs are sent by the flagship app, get the slug from the
-			// request params.
-			slug = c.Param("slug")
-			_, err := app.GetBySlug(inst, slug, appType)
-			if err != nil {
-				return wrapAppsError(err)
-			}
-		} else {
+		slug := c.Param("slug")
+		if err := middlewares.AllowMaximal(c); err != nil {
 			// If logs are not sent by the flagship app, check that it's sent by
 			// a konnector or an app with the logs permission and get its slug
 			// from the permission.
@@ -265,11 +256,13 @@ func logsHandler(appType consts.AppType) echo.HandlerFunc {
 			return jsonapi.BadJSON()
 		}
 
-		logger := logger.WithDomain(inst.Domain).WithField("slug", slug)
-		if appType == consts.KonnectorType {
-			logger = logger.WithNamespace("konnectors")
-		} else {
-			logger = logger.WithNamespace("apps")
+		logger := logger.WithDomain(inst.Domain).
+			WithNamespace("jobs").
+			WithField("slug", slug).
+			WithField("job_id", c.QueryParam("job_id"))
+
+		if v := c.QueryParam("version"); v != "" {
+			logger = logger.WithField("version", v)
 		}
 
 		for _, log := range logs {

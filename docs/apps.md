@@ -704,8 +704,11 @@ HTTP/1.1 204 No Content
 
 ### POST /apps/:slug/logs
 
-Send client-side logs to cozy-stack so they can be stored in the server's 
+Send client-side logs to cozy-stack so they can be stored in the server's
 logging system.
+
+The job identifier must be sent in the `job_id` parameter of the query string.
+The version of the application can be sent in the `version` parameter.
 
 #### Status codes
 
@@ -718,7 +721,7 @@ logging system.
 #### Request
 
 ```http
-POST /apps/emails/logs HTTP/1.1
+POST /apps/emails/logs?job_id=1c6ff5a07eb7013bf7e0-18c04daba326 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
