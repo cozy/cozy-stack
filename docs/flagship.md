@@ -94,3 +94,15 @@ inAppBrowser, like:
 - serving the `index.html` of a webapp
 - starting the OAuth danse of a konnector (`/accounts/:slug/start`)
 - starting the reconnect BI flow (`/accounts/:slug/reconnect`).
+
+## Notifications
+
+When a notification is sent via the push channel, the stack will first try to
+send it to the dedicated mobile app. If there are no dedicated apps with a push
+token, the stack will then try to send the notification to the flagship apps.
+If it fails again, the stack then fallbacks on email.
+
+If the notification is sent to the flagship app, the title is modified to
+preprend the application name. The name is taken from the `appName` field of
+the additional parameters (`data`). It allows the user to have more context
+when reading the notification on their mobile.
