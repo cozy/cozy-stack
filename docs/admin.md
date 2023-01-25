@@ -83,6 +83,31 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /instances/:domain/last-activity
+
+It returns an approximate date of when the instance was last used by their
+owner (automatic jobs like connectors doesn't count). It looks at the sessions
+and OAuth tokens.
+
+#### Request
+
+```http
+GET /instances/john.mycozy.cloud/last-activity HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "last-activity": "2022-12-31"
+}
+```
+
 ### PATCH /instances/:domain
 
 This route can be used to change an instance (email, locale, disk quota, ToS,
