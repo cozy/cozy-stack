@@ -7,7 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,9 +15,8 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/cmd/browser"
-	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/sharing"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -62,35 +61,27 @@ This command can be used when you have the identifier of a shared document on a
 recipient instance, and you want the identifier of the same document on the
 owner's instance.
 `,
-	Example: `
-If you a log message like:
-
-	PUT http://bob.localhost:8080/sharings/7f47c470c7b1013a8a8818c04daba326/io.cozy.files/4ded650c803f67a4 500 Internal Server Error
-
-you can execute this command:
-
-    $ cozy-stack tools unxor-document-id bob.localhost:8080 7f47c470c7b1013a8a8818c04daba326 4ded650c803f67a4
-`,
+	Example: `$ cozy-stack tools unxor-document-id bob.localhost:8080 7f47c470c7b1013a8a8818c04daba326 8cced87acb34b151cc8d7e864e0690ed`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 3 {
 			return cmd.Usage()
 		}
-		inst, err := instance.GetFromCouch(args[0])
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/sharings/%s/unxor/%s", args[0], args[1], args[2])
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   path,
+		})
 		if err != nil {
 			return err
 		}
-		s, err := sharing.FindSharing(inst, args[1])
-		if err != nil {
+		defer res.Body.Close()
+
+		var data map[string]interface{}
+		if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 			return err
 		}
-		if s.Owner {
-			return errors.New("it only works on a recipient's instance")
-		}
-		if len(s.Credentials) != 1 {
-			return errors.New("unexpected credentials")
-		}
-		key := s.Credentials[0].XorKey
-		fmt.Printf("ID: %q\n", sharing.XorID(args[2], key))
+		fmt.Printf("ID: %q\n", data["id"])
 		return nil
 	},
 }
