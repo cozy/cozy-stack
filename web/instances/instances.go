@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -376,6 +377,28 @@ func cleanSessions(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func unxorID(c echo.Context) error {
+	inst, err := instance.GetFromCouch(c.Param("domain"))
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+	s, err := sharing.FindSharing(inst, c.Param("sharing-id"))
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+	if s.Owner {
+		err := errors.New("it only works on a recipient's instance")
+		return jsonapi.BadRequest(err)
+	}
+	if len(s.Credentials) != 1 {
+		err := errors.New("unexpected credentials")
+		return jsonapi.BadRequest(err)
+	}
+	key := s.Credentials[0].XorKey
+	id := sharing.XorID(c.Param("doc-id"), key)
+	return c.JSON(http.StatusOK, echo.Map{"id": id})
+}
+
 type diskUsageResult struct {
 	Used          int64 `json:"used,string"`
 	Quota         int64 `json:"quota,string,omitempty"`
@@ -546,6 +569,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/auth-mode", setAuthMode)
 	router.POST("/:domain/session_code", createSessionCode)
 	router.DELETE("/:domain/sessions", cleanSessions)
+	router.GET("/:domain/sharings/:sharing-id/unxor/:doc-id", unxorID)
 
 	// Config
 	router.POST("/redis", rebuildRedis)
