@@ -386,9 +386,10 @@ are not related to OAuth. The document still need to be injected manually in
 }
 ```
 
-**Note**: `grant_mode` must be `secret` (or `bi_webauth+secret` or `bi_webview+secret`), `slug` must
-be the slug of the konnector,  but `secret` can be a map instead of a simple
-string if several secrets are needed for this service.
+**Note**: `grant_mode` must be `secret` (or `bi_webauth+secret`, or
+`bi_webview+secret`, or `authorization_code+secret`), `slug` must be the slug
+of the konnector,  but `secret` can be a map instead of a simple string if
+several secrets are needed for this service.
 
 The secret is given to the konnector in the `COZY_PARAMETERS` env variable.
 
