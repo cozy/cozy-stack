@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
 )
@@ -187,6 +188,10 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 		return fmt.Errorf("Cannot notify target: %d", res.StatusCode)
 	}
 	return nil
+}
+
+func (e *ExportDoc) NotifyRealtime() {
+	realtime.GetHub().Publish(prefixer.GlobalPrefixer, realtime.EventCreate, e.Clone(), nil)
 }
 
 // GenerateLink generates a link to download the export with a MAC.

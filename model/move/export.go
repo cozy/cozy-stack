@@ -31,6 +31,7 @@ type ExportOptions struct {
 	TokenSource      string         `json:"token_source,omitempty"`
 	IgnoreVault      bool           `json:"ignore_vault,omitempty"`
 	MoveTo           *MoveToOptions `json:"move_to,omitempty"`
+	AdminReq         bool           `json:"admin_req,omitempty"`
 }
 
 // MoveToOptions is used when the export must be sent to another Cozy.
@@ -385,13 +386,13 @@ func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (in
 		return 0, err
 	}
 
-	versions := make(map[string]int64)
+	versionsizes := make(map[string]int64)
 	err = couchdb.ForeachDocs(i, consts.FilesVersions, func(id string, raw json.RawMessage) error {
 		var doc vfs.Version
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			return err
 		}
-		versions[id] = doc.ByteSize
+		versionsizes[id] = doc.ByteSize
 		return nil
 	})
 	if err != nil {
@@ -402,7 +403,7 @@ func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (in
 	var cursors []string
 	cursors, remaining = splitFiles(exportDoc.PartsSize, remaining, filesizes, consts.Files)
 	exportDoc.PartsCursors = cursors
-	cursors, _ = splitFiles(exportDoc.PartsSize, remaining, versions, consts.FilesVersions)
+	cursors, _ = splitFiles(exportDoc.PartsSize, remaining, versionsizes, consts.FilesVersions)
 	if len(cursors) > 0 {
 		exportDoc.PartsCursors = append(exportDoc.PartsCursors, cursors...)
 	}

@@ -4,13 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/move"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/labstack/echo/v4"
 )
 
 // Instance is a struct holding the representation of an instance on the API.
@@ -102,6 +110,11 @@ type UpdatesOptions struct {
 	ForceRegistry      bool
 	OnlyRegistry       bool
 	Logs               chan *JobLog
+}
+
+type ExportOptions struct {
+	Domain    string
+	LocalPath string
 }
 
 // ImportOptions is a struct with the options for importing a tarball.
@@ -413,11 +426,7 @@ func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
 		return err
 	}
 	defer res.Body.Close()
-	var job struct {
-		ID    string `json:"_id"`
-		State string `json:"state"`
-		Error string `json:"error"`
-	}
+	var job job.Job
 	if err = json.NewDecoder(res.Body).Decode(&job); err != nil {
 		return err
 	}
@@ -425,7 +434,7 @@ func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
 		if evt.Event == "error" {
 			return fmt.Errorf("realtime: %s", evt.Payload.Title)
 		}
-		if evt.Payload.ID != job.ID {
+		if evt.Payload.ID != job.ID() {
 			continue
 		}
 		switch evt.Payload.Type {
@@ -453,16 +462,111 @@ func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
 }
 
 // Export launch the creation of a tarball to export data from an instance.
-func (ac *AdminClient) Export(domain string) error {
-	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+func (ac *AdminClient) Export(opts *ExportOptions) error {
+	if !validDomain(opts.Domain) {
+		return fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
-	_, err := ac.Req(&request.Options{
-		Method:     "POST",
-		Path:       "/instances/" + url.PathEscape(domain) + "/export",
-		NoResponse: true,
+
+	downloadArchives := opts.LocalPath != ""
+
+	res, err := ac.Req(&request.Options{
+		Method: "POST",
+		Path:   "/instances/" + url.PathEscape(opts.Domain) + "/export",
+		Queries: url.Values{
+			"admin-req": []string{strconv.FormatBool(downloadArchives)},
+		},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if downloadArchives {
+		channel, err := ac.RealtimeClient(RealtimeOptions{
+			DocTypes: []string{consts.Exports},
+		})
+		if err != nil {
+			return err
+		}
+		defer channel.Close()
+
+		var j job.Job
+		if err = json.NewDecoder(res.Body).Decode(&j); err != nil {
+			return err
+		}
+
+		for evt := range channel.Channel() {
+			if evt.Event == "error" {
+				return fmt.Errorf("realtime: %s", evt.Payload.Title)
+			}
+			if evt.Event == realtime.EventUpdate && evt.Payload.Type == consts.Exports {
+				var exportDoc move.ExportDoc
+				err := json.Unmarshal(evt.Payload.Doc, &exportDoc)
+				if err != nil {
+					return err
+				}
+
+				if exportDoc.Domain != opts.Domain {
+					continue
+				}
+				if exportDoc.State == move.ExportStateError {
+					return fmt.Errorf("Failed to export instance: %s", exportDoc.Error)
+				}
+				if exportDoc.State != move.ExportStateDone {
+					continue
+				}
+
+				cursors := append([]string{""}, exportDoc.PartsCursors...)
+				partsCount := len(cursors)
+				for i, pc := range cursors {
+					res, err := ac.Req(&request.Options{
+						Method: "GET",
+						Path:   "/instances/" + url.PathEscape(exportDoc.Domain) + "/exports/" + exportDoc.ID() + "/data",
+						Queries: url.Values{
+							"cursor": {pc},
+						},
+					})
+					if err != nil {
+						return err
+					}
+					defer res.Body.Close()
+
+					filename := fmt.Sprintf("%s - part%03d.zip", opts.Domain, i)
+					if _, params, err := mime.ParseMediaType(res.Header.Get(echo.HeaderContentDisposition)); err != nil && params["filename"] != "" {
+						filename = params["filename"]
+					}
+
+					fmt.Printf("Exporting archive %d/%d (%s)... ", i+1, partsCount, filename)
+
+					filepath := path.Join(opts.LocalPath, filename)
+					f, err := os.OpenFile(filepath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+					if err != nil {
+						if !os.IsExist(err) {
+							return err
+						}
+						if err := os.Remove(filepath); err != nil {
+							return err
+						}
+						f, err = os.OpenFile(filepath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+						if err != nil {
+							return err
+						}
+					}
+					defer f.Close()
+
+					if _, err := io.Copy(f, res.Body); err != nil {
+						return err
+					}
+
+					fmt.Println("✅")
+				}
+
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
 
 // Import launch the import of a tarball with data to put in an instance.

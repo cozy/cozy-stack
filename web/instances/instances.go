@@ -634,6 +634,7 @@ func Routes(router *echo.Group) {
 	router.POST("/oauth_client", registerClient)
 	router.GET("/:domain/last-activity", lastActivity)
 	router.POST("/:domain/export", exporter)
+	router.GET("/:domain/exports/:export-id/data", dataExporter)
 	router.POST("/:domain/import", importer)
 	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)

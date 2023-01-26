@@ -41,22 +41,28 @@ func ExportWorker(c *job.WorkerContext) error {
 	}
 
 	archiver := move.SystemArchiver()
+
 	exportDoc, err := move.CreateExport(c.Instance, opts, archiver)
 	if err != nil {
+		c.Instance.Logger().WithNamespace("move").
+			Warnf("Export failed: %s", err)
 		if opts.MoveTo != nil {
 			move.Abort(c.Instance, opts.MoveTo.URL, opts.MoveTo.Token)
 		}
-		c.Instance.Logger().WithNamespace("move").
-			Warnf("Export failed: %s", err)
-		_ = move.SendExportFailureMail(c.Instance)
+		if !opts.AdminReq {
+			_ = move.SendExportFailureMail(c.Instance)
+		}
 		return err
 	}
 
-	if opts.MoveTo == nil {
-		return exportDoc.SendExportMail(c.Instance)
+	if opts.AdminReq {
+		exportDoc.NotifyRealtime()
+		return nil
 	}
-
-	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource, opts.IgnoreVault)
+	if opts.MoveTo != nil {
+		return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource, opts.IgnoreVault)
+	}
+	return exportDoc.SendExportMail(c.Instance)
 }
 
 // ImportWorker is the worker responsible for inserting the data from an export

@@ -61,6 +61,7 @@ var flagOnboardingSecret string
 var flagOnboardingApp string
 var flagOnboardingPermissions string
 var flagOnboardingState string
+var flagPath string
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -911,7 +912,10 @@ var exportCmd = &cobra.Command{
 	Long:  `Export the files, documents, and settings`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ac := newAdminClient()
-		return ac.Export(flagDomain)
+		return ac.Export(&client.ExportOptions{
+			Domain:    flagDomain,
+			LocalPath: flagPath,
+		})
 	},
 }
 
@@ -1160,6 +1164,7 @@ func init() {
 	updateCmd.Flags().BoolVar(&flagForceRegistry, "force-registry", false, "Force to update all applications sources from git to the registry")
 	updateCmd.Flags().BoolVar(&flagOnlyRegistry, "only-registry", false, "Only update applications installed from the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	exportCmd.Flags().StringVar(&flagPath, "path", "", "Specify the local path where to store the export archive")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().BoolVar(&flagForce, "force", false, "Force the import without asking for confirmation")
 	_ = exportCmd.MarkFlagRequired("domain")
