@@ -56,8 +56,8 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	// For the CLI client, we rely on the admin APIs to generate a CLI token.
 	// We may want in the future rely on OAuth to handle the permissions with
 	// more granularity.
-	c := newAdminClient()
-	token, err := c.GetToken(&client.TokenOptions{
+	ac := newAdminClient()
+	token, err := ac.GetToken(&client.TokenOptions{
 		Domain:   domain,
 		Subject:  "CLI",
 		Audience: consts.CLIAudience,
@@ -95,7 +95,7 @@ func newClient(domain string, scopes ...string) *client.Client {
 	return client
 }
 
-func newAdminClient() *client.Client {
+func newAdminClient() *client.AdminClient {
 	pass := []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
 	if !build.IsDevRelease() {
 		if len(pass) == 0 {
@@ -116,12 +116,14 @@ func newAdminClient() *client.Client {
 	})
 	checkNoErr(err)
 
-	return &client.Client{
-		Scheme:     adminURL.Scheme,
-		Addr:       adminURL.Host,
-		Domain:     adminURL.Host,
-		Client:     httpClient,
-		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
+	return &client.AdminClient{
+		Client: client.Client{
+			Scheme:     adminURL.Scheme,
+			Addr:       adminURL.Host,
+			Domain:     adminURL.Host,
+			Client:     httpClient,
+			Authorizer: &request.BasicAuthorizer{Password: string(pass)},
+		},
 	}
 }
 

@@ -203,12 +203,12 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 }
 
 // ListMaintenances returns a list of konnectors in maintenance
-func (c *Client) ListMaintenances(context string) ([]interface{}, error) {
+func (ac *AdminClient) ListMaintenances(context string) ([]interface{}, error) {
 	queries := url.Values{}
 	if context != "" {
 		queries.Add("Context", context)
 	}
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "GET",
 		Path:    "/konnectors/maintenance",
 		Queries: queries,
@@ -224,13 +224,13 @@ func (c *Client) ListMaintenances(context string) ([]interface{}, error) {
 }
 
 // ActivateMaintenance is used to activate the maintenance for a konnector
-func (c *Client) ActivateMaintenance(slug string, opts map[string]interface{}) error {
+func (ac *AdminClient) ActivateMaintenance(slug string, opts map[string]interface{}) error {
 	data := map[string]interface{}{"attributes": opts}
 	body, err := writeJSONAPI(data)
 	if err != nil {
 		return err
 	}
-	_, err = c.Req(&request.Options{
+	_, err = ac.Req(&request.Options{
 		Method:     "PUT",
 		Path:       "/konnectors/maintenance/" + slug,
 		Body:       body,
@@ -240,8 +240,8 @@ func (c *Client) ActivateMaintenance(slug string, opts map[string]interface{}) e
 }
 
 // DeactivateMaintenance is used to deactivate the maintenance for a konnector
-func (c *Client) DeactivateMaintenance(slug string) error {
-	_, err := c.Req(&request.Options{
+func (ac *AdminClient) DeactivateMaintenance(slug string) error {
+	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/konnectors/maintenance/" + slug,
 		NoResponse: true,

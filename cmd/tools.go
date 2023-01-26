@@ -40,8 +40,8 @@ See https://go.dev/doc/diagnostics#profiling.
 `,
 	Example: "$ cozy-stack tools heap > heap.pprof && go tool pprof heap.pprof",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		heap, err := c.ProfileHeap()
+		ac := newAdminClient()
+		heap, err := ac.ProfileHeap()
 		if err != nil {
 			return err
 		}
@@ -66,9 +66,9 @@ owner's instance.
 		if len(args) != 3 {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		path := fmt.Sprintf("/instances/%s/sharings/%s/unxor/%s", args[0], args[1], args[2])
-		res, err := c.Req(&request.Options{
+		res, err := ac.Req(&request.Options{
 			Method: "GET",
 			Path:   path,
 		})

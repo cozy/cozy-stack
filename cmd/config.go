@@ -330,12 +330,12 @@ var showContextCmd = &cobra.Command{
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := &request.Options{
 			Method: "GET",
 			Path:   "instances/contexts/" + args[0],
 		}
-		res, err := c.Req(req)
+		res, err := ac.Req(req)
 		if err != nil {
 			return err
 		}
@@ -365,12 +365,12 @@ var listContextsCmd = &cobra.Command{
 	Long:    "List contexts currently used by the stack",
 	Example: "$ cozy-stack config ls-contexts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := &request.Options{
 			Method: "GET",
 			Path:   "instances/contexts",
 		}
-		res, err := c.Req(req)
+		res, err := ac.Req(req)
 		if err != nil {
 			return err
 		}

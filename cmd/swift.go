@@ -29,10 +29,10 @@ var lsLayoutsCmd = &cobra.Command{
 	Short:   `Count layouts by types (v1, v2a, v2b, v3a, v3b)`,
 	Example: "$ cozy-stack swift ls-layouts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
+		ac := newAdminClient()
 		values := url.Values{}
 		values.Add("show_domains", strconv.FormatBool(flagShowDomains))
-		res, err := c.Req(&request.Options{
+		res, err := ac.Req(&request.Options{
 			Method:  "GET",
 			Path:    "/swift/layouts",
 			Queries: values,
@@ -64,9 +64,9 @@ var swiftGetCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
-		res, err := c.Req(&request.Options{
+		res, err := ac.Req(&request.Options{
 			Method: "GET",
 			Path:   path,
 			Domain: args[0],
@@ -93,7 +93,7 @@ expected on the standard input.`,
 			return cmd.Usage()
 		}
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		buf := new(bytes.Buffer)
 
 		_, err := io.Copy(buf, os.Stdin)
@@ -101,7 +101,7 @@ expected on the standard input.`,
 			return err
 		}
 
-		_, err = c.Req(&request.Options{
+		_, err = ac.Req(&request.Options{
 			Method: "PUT",
 			Path:   fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1])),
 			Body:   bytes.NewReader(buf.Bytes()),
@@ -127,9 +127,9 @@ var swiftDeleteCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
-		_, err := c.Req(&request.Options{
+		_, err := ac.Req(&request.Options{
 			Method: "DELETE",
 			Path:   path,
 			Domain: args[0],
@@ -151,8 +151,8 @@ var swiftLsCmd = &cobra.Command{
 			ObjectNameList []string `json:"objects_names"`
 		}
 
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
+		ac := newAdminClient()
+		res, err := ac.Req(&request.Options{
 			Method: "GET",
 			Path:   "/swift/vfs",
 			Domain: args[0],

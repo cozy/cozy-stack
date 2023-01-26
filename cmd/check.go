@@ -57,8 +57,8 @@ func fsck(domain string) error {
 		flagCheckFSFilesConsistensy = false
 	}
 
-	c := newAdminClient()
-	res, err := c.Req(&request.Options{
+	ac := newAdminClient()
+	res, err := ac.Req(&request.Options{
 		Method: "GET",
 		Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
 		Queries: url.Values{
@@ -101,8 +101,8 @@ triggers of the same type, for the same worker, and with the same arguments.
 		}
 		domain := args[0]
 
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
+		ac := newAdminClient()
+		res, err := ac.Req(&request.Options{
 			Method: "POST",
 			Path:   "/instances/" + url.PathEscape(domain) + "/checks/triggers",
 		})
@@ -141,8 +141,8 @@ generation smaller than their generation.
 		}
 		domain := args[0]
 
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
+		ac := newAdminClient()
+		res, err := ac.Req(&request.Options{
 			Method: "POST",
 			Path:   "/instances/" + url.PathEscape(domain) + "/checks/shared",
 		})
@@ -191,8 +191,8 @@ check via the flags.
 		}
 		domain := args[0]
 
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
+		ac := newAdminClient()
+		res, err := ac.Req(&request.Options{
 			Method: "POST",
 			Path:   "/instances/" + url.PathEscape(domain) + "/checks/sharings",
 			Queries: url.Values{

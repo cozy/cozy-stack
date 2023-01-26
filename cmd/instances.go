@@ -95,8 +95,8 @@ given domain.
 			return cmd.Usage()
 		}
 		domain := args[0]
-		c := newAdminClient()
-		in, err := c.GetInstance(domain)
+		ac := newAdminClient()
+		in, err := ac.GetInstance(domain)
 		if err != nil {
 			return err
 		}
@@ -124,8 +124,8 @@ It will also show the couch_cluster if it is not the default one.
 			return cmd.Usage()
 		}
 		domain := args[0]
-		c := newAdminClient()
-		in, err := c.GetInstance(domain)
+		ac := newAdminClient()
+		in, err := ac.GetInstance(domain)
 		if err != nil {
 			return err
 		}
@@ -175,8 +175,8 @@ be used as the error message.
 		}
 
 		domain := args[0]
-		c := newAdminClient()
-		in, err := c.CreateInstance(&client.InstanceOptions{
+		ac := newAdminClient()
+		in, err := ac.CreateInstance(&client.InstanceOptions{
 			Domain:        domain,
 			DomainAliases: flagDomainAliases,
 			Locale:        flagLocale,
@@ -254,7 +254,7 @@ settings for a specified domain.
 		}
 
 		domain := args[0]
-		c := newAdminClient()
+		ac := newAdminClient()
 		opts := &client.InstanceOptions{
 			Domain:         domain,
 			DomainAliases:  flagDomainAliases,
@@ -280,7 +280,7 @@ settings for a specified domain.
 		if flagOnboardingFinished {
 			opts.OnboardingFinished = &flagOnboardingFinished
 		}
-		in, err := c.ModifyInstance(opts)
+		in, err := ac.ModifyInstance(opts)
 		if err != nil {
 			errPrintfln(
 				"Failed to modify instance for domain %s", domain)
@@ -363,8 +363,8 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 			diskQuota = -1
 		}
 		domain := args[0]
-		c := newAdminClient()
-		_, err = c.ModifyInstance(&client.InstanceOptions{
+		ac := newAdminClient()
+		_, err = ac.ModifyInstance(&client.InstanceOptions{
 			Domain:    domain,
 			DiskQuota: diskQuota,
 		})
@@ -403,17 +403,17 @@ specific domain.
 			return cmd.Usage()
 		}
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		var err error
 		var debug bool
 		switch action {
 		case "get":
-			debug, err = c.GetDebug(domain)
+			debug, err = ac.GetDebug(domain)
 		case "enable":
-			err = c.EnableDebug(domain, flagTTL)
+			err = ac.EnableDebug(domain, flagTTL)
 			debug = true
 		case "disable":
-			err = c.DisableDebug(domain)
+			err = ac.DisableDebug(domain)
 			debug = false
 		}
 		if debug {
@@ -430,8 +430,8 @@ var countInstanceCmd = &cobra.Command{
 	Short:   "Count the instances",
 	Example: "$ cozy-stack instances count",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		count, err := c.CountInstances()
+		ac := newAdminClient()
+		count, err := ac.CountInstances()
 		if err != nil {
 			return err
 		}
@@ -467,8 +467,8 @@ by this server.
 			fmt.Println("db_prefix")
 			return nil
 		}
-		c := newAdminClient()
-		list, err := c.ListInstances()
+		ac := newAdminClient()
+		list, err := ac.ListInstances()
 		if err != nil {
 			return err
 		}
@@ -620,8 +620,8 @@ and all its data.
 			}
 		}
 
-		c := newAdminClient()
-		err := c.DestroyInstance(domain)
+		ac := newAdminClient()
+		err := ac.DestroyInstance(domain)
 		if err != nil {
 			errPrintfln(
 				"An error occurred while destroying instance for domain %s", domain)
@@ -684,8 +684,8 @@ func appOrKonnectorTokenInstance(cmd *cobra.Command, args []string, appType stri
 	if len(args) < 2 {
 		return cmd.Usage()
 	}
-	c := newAdminClient()
-	token, err := c.GetToken(&client.TokenOptions{
+	ac := newAdminClient()
+	token, err := ac.GetToken(&client.TokenOptions{
 		Domain:   args[0],
 		Subject:  args[1],
 		Audience: appType,
@@ -721,8 +721,8 @@ var cliTokenInstanceCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
-		token, err := c.GetToken(&client.TokenOptions{
+		ac := newAdminClient()
+		token, err := ac.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Scope:    args[1:],
 			Audience: consts.CLIAudience,
@@ -749,8 +749,8 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		if strings.Contains(args[2], ",") {
 			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
 		}
-		c := newAdminClient()
-		token, err := c.GetToken(&client.TokenOptions{
+		ac := newAdminClient()
+		token, err := ac.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
 			Audience: consts.AccessTokenAudience,
@@ -776,8 +776,8 @@ var oauthRefreshTokenInstanceCmd = &cobra.Command{
 		if strings.Contains(args[2], ",") {
 			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
 		}
-		c := newAdminClient()
-		token, err := c.GetToken(&client.TokenOptions{
+		ac := newAdminClient()
+		token, err := ac.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
 			Audience: consts.RefreshTokenAudience,
@@ -799,8 +799,8 @@ var oauthClientInstanceCmd = &cobra.Command{
 		if len(args) < 4 {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
-		oauthClient, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
+		ac := newAdminClient()
+		oauthClient, err := ac.RegisterOAuthClient(&client.OAuthClientOptions{
 			Domain:                args[0],
 			RedirectURI:           args[1],
 			ClientName:            args[2],
@@ -834,7 +834,7 @@ var findOauthClientCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		var v interface{}
-		c := newAdminClient()
+		ac := newAdminClient()
 
 		q := url.Values{
 			"domain":      {args[0]},
@@ -846,7 +846,7 @@ var findOauthClientCmd = &cobra.Command{
 			Path:    "instances/oauth_client",
 			Queries: q,
 		}
-		res, err := c.Req(req)
+		res, err := ac.Req(req)
 		if err != nil {
 			return err
 		}
@@ -873,7 +873,7 @@ The slugs arguments can be used to select which applications should be
 updated.`,
 	Aliases: []string{"updates"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
+		ac := newAdminClient()
 		if flagAllDomains {
 			logs := make(chan *client.JobLog)
 			go func() {
@@ -885,7 +885,7 @@ updated.`,
 					fmt.Printf(" %s\n", log.Message)
 				}
 			}()
-			return c.Updates(&client.UpdatesOptions{
+			return ac.Updates(&client.UpdatesOptions{
 				Slugs:         args,
 				ForceRegistry: flagForceRegistry,
 				OnlyRegistry:  flagOnlyRegistry,
@@ -895,7 +895,7 @@ updated.`,
 		if flagDomain == "" {
 			return errMissingDomain
 		}
-		return c.Updates(&client.UpdatesOptions{
+		return ac.Updates(&client.UpdatesOptions{
 			Domain:             flagDomain,
 			DomainsWithContext: flagContextName,
 			Slugs:              args,
@@ -910,8 +910,8 @@ var exportCmd = &cobra.Command{
 	Short: "Export an instance",
 	Long:  `Export the files, documents, and settings`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		return c.Export(flagDomain)
+		ac := newAdminClient()
+		return ac.Export(flagDomain)
 	},
 }
 
@@ -920,7 +920,7 @@ var importCmd = &cobra.Command{
 	Short: "Import data from an export link",
 	Long:  "This command will reset the Cozy instance and import data from an export link",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
+		ac := newAdminClient()
 		if len(args) < 1 {
 			return errors.New("The URL to the exported data is missing")
 		}
@@ -931,7 +931,7 @@ var importCmd = &cobra.Command{
 			}
 		}
 
-		return c.Import(flagDomain, &client.ImportOptions{
+		return ac.Import(flagDomain, &client.ImportOptions{
 			ManifestURL: args[0],
 		})
 	},
@@ -944,7 +944,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var v map[string]string
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		if len(args) < 1 {
 			return errors.New("The domain is missing")
 		}
@@ -953,7 +953,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 			Method: "GET",
 			Path:   "instances/" + args[0] + "/swift-prefix",
 		}
-		res, err := c.Req(req)
+		res, err := ac.Req(req)
 		if err != nil {
 			return err
 		}
@@ -980,9 +980,9 @@ var instanceAppVersionCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 
-		c := newAdminClient()
+		ac := newAdminClient()
 		path := fmt.Sprintf("/instances/with-app-version/%s/%s", args[0], args[1])
-		res, err := c.Req(&request.Options{
+		res, err := ac.Req(&request.Options{
 			Method: "GET",
 			Path:   path,
 		})
@@ -1026,7 +1026,7 @@ var setAuthModeCmd = &cobra.Command{
 		}
 
 		domain := args[0]
-		c := newAdminClient()
+		ac := newAdminClient()
 
 		body := struct {
 			AuthMode string `json:"auth_mode"`
@@ -1039,7 +1039,7 @@ var setAuthModeCmd = &cobra.Command{
 			return err
 		}
 
-		res, err := c.Req(&request.Options{
+		res, err := ac.Req(&request.Options{
 			Method: "POST",
 			Path:   "/instances/" + url.PathEscape(domain) + "/auth-mode",
 			Body:   bytes.NewReader(reqBody),
@@ -1072,8 +1072,8 @@ var cleanSessionsCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		domain := args[0]
-		c := newAdminClient()
-		return c.CleanSessions(domain)
+		ac := newAdminClient()
+		return ac.CleanSessions(domain)
 	},
 }
 

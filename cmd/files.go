@@ -116,8 +116,8 @@ var usageFilesCmd = &cobra.Command{
 			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
-		c := newAdminClient()
-		info, err := c.DiskUsage(flagDomain, flagIncludeTrash)
+		ac := newAdminClient()
+		info, err := ac.DiskUsage(flagDomain, flagIncludeTrash)
 		if err != nil {
 			return err
 		}

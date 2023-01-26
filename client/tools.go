@@ -7,8 +7,8 @@ import (
 )
 
 // ProfileHeap returns a sampling of memory allocations as pprof format.
-func (c *Client) ProfileHeap() (io.ReadCloser, error) {
-	res, err := c.Req(&request.Options{
+func (ac *AdminClient) ProfileHeap() (io.ReadCloser, error) {
+	res, err := ac.Req(&request.Options{
 		Method: "GET",
 		Path:   "/tools/pprof/heap",
 	})

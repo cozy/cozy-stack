@@ -118,8 +118,8 @@ func (i *Instance) DBPrefix() string {
 }
 
 // GetInstance returns the instance associated with the specified domain.
-func (c *Client) GetInstance(domain string) (*Instance, error) {
-	res, err := c.Req(&request.Options{
+func (ac *AdminClient) GetInstance(domain string) (*Instance, error) {
+	res, err := ac.Req(&request.Options{
 		Method: "GET",
 		Path:   "/instances/" + domain,
 	})
@@ -131,7 +131,7 @@ func (c *Client) GetInstance(domain string) (*Instance, error) {
 
 // CreateInstance is used to create a new cozy instance of the specified domain
 // and locale.
-func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
+func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	if !validDomain(opts.Domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
@@ -159,7 +159,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	if opts.Trace != nil && *opts.Trace {
 		q.Add("Trace", "true")
 	}
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances",
 		Queries: q,
@@ -171,8 +171,8 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 }
 
 // CountInstances returns the number of instances.
-func (c *Client) CountInstances() (int, error) {
-	res, err := c.Req(&request.Options{
+func (ac *AdminClient) CountInstances() (int, error) {
+	res, err := ac.Req(&request.Options{
 		Method: "GET",
 		Path:   "/instances/count",
 	})
@@ -188,8 +188,8 @@ func (c *Client) CountInstances() (int, error) {
 }
 
 // ListInstances returns the list of instances recorded on the stack.
-func (c *Client) ListInstances() ([]*Instance, error) {
-	res, err := c.Req(&request.Options{
+func (ac *AdminClient) ListInstances() ([]*Instance, error) {
+	res, err := ac.Req(&request.Options{
 		Method: "GET",
 		Path:   "/instances",
 	})
@@ -204,7 +204,7 @@ func (c *Client) ListInstances() ([]*Instance, error) {
 }
 
 // ModifyInstance is used to update an instance.
-func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
+func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	domain := opts.Domain
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
@@ -238,7 +238,7 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))
 	}
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/instances/" + domain,
 		Queries: q,
@@ -250,11 +250,11 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 }
 
 // DestroyInstance is used to delete an instance and all its data.
-func (c *Client) DestroyInstance(domain string) error {
+func (ac *AdminClient) DestroyInstance(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain,
 		NoResponse: true,
@@ -263,11 +263,11 @@ func (c *Client) DestroyInstance(domain string) error {
 }
 
 // GetDebug is used to known if an instance has its logger in debug mode.
-func (c *Client) GetDebug(domain string) (bool, error) {
+func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 	if !validDomain(domain) {
 		return false, fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "GET",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -284,11 +284,11 @@ func (c *Client) GetDebug(domain string) (bool, error) {
 }
 
 // EnableDebug sets the logger of an instance in debug mode.
-func (c *Client) EnableDebug(domain string, ttl time.Duration) error {
+func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -300,11 +300,11 @@ func (c *Client) EnableDebug(domain string, ttl time.Duration) error {
 }
 
 // CleanSessions delete the databases for io.cozy.sessions and io.cozy.sessions.logins
-func (c *Client) CleanSessions(domain string) error {
+func (ac *AdminClient) CleanSessions(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/sessions",
 		NoResponse: true,
@@ -313,11 +313,11 @@ func (c *Client) CleanSessions(domain string) error {
 }
 
 // DisableDebug disables the debug mode for the logger of an instance.
-func (c *Client) DisableDebug(domain string) error {
+func (ac *AdminClient) DisableDebug(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -326,7 +326,7 @@ func (c *Client) DisableDebug(domain string) error {
 }
 
 // GetToken is used to generate a token with the specified options.
-func (c *Client) GetToken(opts *TokenOptions) (string, error) {
+func (ac *AdminClient) GetToken(opts *TokenOptions) (string, error) {
 	q := url.Values{
 		"Domain":   {opts.Domain},
 		"Subject":  {opts.Subject},
@@ -336,7 +336,7 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 	if opts.Expire != nil {
 		q.Add("Expire", opts.Expire.String())
 	}
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances/token",
 		Queries: q,
@@ -354,7 +354,7 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 
 // RegisterOAuthClient register a new OAuth client associated to the specified
 // instance.
-func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]interface{}, error) {
+func (ac *AdminClient) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]interface{}, error) {
 	q := url.Values{
 		"Domain":                {opts.Domain},
 		"RedirectURI":           {opts.RedirectURI},
@@ -366,7 +366,7 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]inter
 		"OnboardingPermissions": {opts.OnboardingPermissions},
 		"OnboardingState":       {opts.OnboardingState},
 	}
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances/oauth_client",
 		Queries: q,
@@ -384,7 +384,7 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]inter
 
 // Updates launch the updating process of the applications. When no Domain is
 // specified, the updates are launched for all the existing instances.
-func (c *Client) Updates(opts *UpdatesOptions) error {
+func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
 	q := url.Values{
 		"Domain":             {opts.Domain},
 		"DomainsWithContext": {opts.DomainsWithContext},
@@ -392,7 +392,7 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 		"ForceRegistry":      {strconv.FormatBool(opts.ForceRegistry)},
 		"OnlyRegistry":       {strconv.FormatBool(opts.OnlyRegistry)},
 	}
-	channel, err := c.RealtimeClient(RealtimeOptions{
+	channel, err := ac.RealtimeClient(RealtimeOptions{
 		DocTypes: []string{"io.cozy.jobs", "io.cozy.jobs.logs"},
 	})
 	if err != nil {
@@ -404,7 +404,7 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 		}
 		channel.Close()
 	}()
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances/updates",
 		Queries: q,
@@ -453,11 +453,11 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 }
 
 // Export launch the creation of a tarball to export data from an instance.
-func (c *Client) Export(domain string) error {
+func (ac *AdminClient) Export(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + url.PathEscape(domain) + "/export",
 		NoResponse: true,
@@ -466,14 +466,14 @@ func (c *Client) Export(domain string) error {
 }
 
 // Import launch the import of a tarball with data to put in an instance.
-func (c *Client) Import(domain string, opts *ImportOptions) error {
+func (ac *AdminClient) Import(domain string, opts *ImportOptions) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
 		"manifest_url": {opts.ManifestURL},
 	}
-	_, err := c.Req(&request.Options{
+	_, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + url.PathEscape(domain) + "/import",
 		Queries:    q,
@@ -483,8 +483,8 @@ func (c *Client) Import(domain string, opts *ImportOptions) error {
 }
 
 // RebuildRedis puts the triggers in redis.
-func (c *Client) RebuildRedis() error {
-	_, err := c.Req(&request.Options{
+func (ac *AdminClient) RebuildRedis() error {
+	_, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/redis",
 		NoResponse: true,
@@ -493,7 +493,7 @@ func (c *Client) RebuildRedis() error {
 }
 
 // DiskUsage returns the information about disk usage and quota
-func (c *Client) DiskUsage(domain string, includeTrash bool) (map[string]interface{}, error) {
+func (ac *AdminClient) DiskUsage(domain string, includeTrash bool) (map[string]interface{}, error) {
 	var q map[string][]string
 	if includeTrash {
 		q = url.Values{
@@ -501,7 +501,7 @@ func (c *Client) DiskUsage(domain string, includeTrash bool) (map[string]interfa
 		}
 	}
 
-	res, err := c.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:  "GET",
 		Path:    "/instances/" + url.PathEscape(domain) + "/disk-usage",
 		Queries: q,
