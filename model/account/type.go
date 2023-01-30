@@ -37,14 +37,15 @@ var accountsClient = &http.Client{
 //   - BIWebview is the specific webview protocol from Budget Insight
 //   - BIWebviewAndSecret is a combination of BIWebview and SecretGrant
 const (
-	AuthorizationCode        = "authorization_code"
-	ImplicitGrant            = "token"
-	ImplicitGrantRedirectURL = "token_redirect_url"
-	BIWebauth                = "bi_webauth"
-	BIWebauthAndSecret       = "bi_webauth+secret"
-	BIWebview                = "bi_webview"
-	BIWebviewAndSecret       = "bi_webview+secret"
-	SecretGrant              = "secret"
+	AuthorizationCode          = "authorization_code"
+	AuthorizationCodeAndSecret = "authorization_code+secret"
+	ImplicitGrant              = "token"
+	ImplicitGrantRedirectURL   = "token_redirect_url"
+	BIWebauth                  = "bi_webauth"
+	BIWebauthAndSecret         = "bi_webauth+secret"
+	BIWebview                  = "bi_webview"
+	BIWebviewAndSecret         = "bi_webview+secret"
+	SecretGrant                = "secret"
 )
 
 // Token Request authentication modes for AuthorizationCode grant type
@@ -126,7 +127,10 @@ func (at *AccountType) ServiceID() string {
 
 // HasSecretGrant tells if the account type has non-OAuth secrets.
 func (at *AccountType) HasSecretGrant() bool {
-	return at.GrantMode == SecretGrant || at.GrantMode == BIWebauthAndSecret || at.GrantMode == BIWebviewAndSecret
+	return at.GrantMode == SecretGrant ||
+		at.GrantMode == BIWebauthAndSecret ||
+		at.GrantMode == BIWebviewAndSecret ||
+		at.GrantMode == AuthorizationCodeAndSecret
 }
 
 type tokenEndpointResponse struct {
@@ -170,7 +174,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, par
 	}
 
 	switch at.GrantMode {
-	case AuthorizationCode:
+	case AuthorizationCode, AuthorizationCodeAndSecret:
 		vv.Add("response_type", "code")
 		vv.Add("client_id", at.ClientID)
 	case ImplicitGrant:
