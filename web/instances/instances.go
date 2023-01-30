@@ -13,6 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -377,6 +379,75 @@ func cleanSessions(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func lastActivity(c echo.Context) error {
+	inst, err := instance.GetFromCouch(c.Param("domain"))
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+	last := time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	err = couchdb.ForeachDocs(inst, consts.SessionsLogins, func(_ string, data json.RawMessage) error {
+		var entry session.LoginEntry
+		if err := json.Unmarshal(data, &entry); err != nil {
+			return err
+		}
+		if last.Before(entry.CreatedAt) {
+			last = entry.CreatedAt
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	err = couchdb.ForeachDocs(inst, consts.Sessions, func(_ string, data json.RawMessage) error {
+		var sess session.Session
+		if err := json.Unmarshal(data, &sess); err != nil {
+			return err
+		}
+		if last.Before(sess.LastSeen) {
+			last = sess.LastSeen
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	err = couchdb.ForeachDocs(inst, consts.OAuthClients, func(_ string, data json.RawMessage) error {
+		var client oauth.Client
+		if err := json.Unmarshal(data, &client); err != nil {
+			return err
+		}
+		// Ignore the OAuth clients used for sharings
+		if client.ClientKind == "sharing" {
+			return nil
+		}
+		if at, ok := client.LastRefreshedAt.(string); ok {
+			if t, err := time.Parse(time.RFC3339Nano, at); err == nil {
+				if last.Before(t) {
+					last = t
+				}
+			}
+		}
+		if at, ok := client.SynchronizedAt.(string); ok {
+			if t, err := time.Parse(time.RFC3339Nano, at); err == nil {
+				if last.Before(t) {
+					last = t
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"last-activity": last.Format("2006-01-02"),
+	})
+}
+
 func unxorID(c echo.Context) error {
 	inst, err := instance.GetFromCouch(c.Param("domain"))
 	if err != nil {
@@ -561,6 +632,7 @@ func Routes(router *echo.Group) {
 	router.POST("/token", createToken)
 	router.GET("/oauth_client", findClientBySoftwareID)
 	router.POST("/oauth_client", registerClient)
+	router.GET("/:domain/last-activity", lastActivity)
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
 	router.GET("/:domain/disk-usage", diskUsage)
