@@ -14,6 +14,7 @@ require (
 	github.com/cozy/prosemirror-go v0.5.2
 	github.com/dhowden/tag v0.0.0-20220618230019-adf36e896086
 	github.com/dustin/go-humanize v1.0.1
+	github.com/gavv/httpexpect/v2 v2.10.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.3
@@ -32,7 +33,7 @@ require (
 	github.com/mssola/user_agent v0.5.3
 	github.com/ncw/swift/v2 v2.0.1
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/ohler55/ojg v1.17.2
+	github.com/ohler55/ojg v1.17.3
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.14.0
@@ -62,7 +63,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/gavv/httpexpect/v2 v2.10.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
