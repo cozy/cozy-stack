@@ -142,6 +142,14 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 
 	ctype := o["Content-Type"]
 	if ctype == echo.MIMEOctetStream {
+		// We have some old images where the thumbnail has not been correctly
+		// saved in Swift. We should delete the thumbnail to allow another try.
+		if l, err := f.Length(t.ctx); err == nil && l > 0 {
+			_ = t.RemoveThumbs(img, vfs.ThumbnailFormatNames)
+			return os.ErrNotExist
+		}
+		// Image magick has failed to generate a thumbnail, and retrying would
+		// be useless.
 		return os.ErrInvalid
 	}
 
