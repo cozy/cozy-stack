@@ -1,16 +1,13 @@
 package status
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestStatus(t *testing.T) {
@@ -26,27 +23,22 @@ func TestStatus(t *testing.T) {
 		Routes(handler.Group("/status"))
 
 		ts := httptest.NewServer(handler)
-		defer ts.Close()
+		t.Cleanup(ts.Close)
 
-		testRequest(t, ts.URL+"/status")
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/status").
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("cache", "healthy")
+		obj.ValueEqual("couchdb", "healthy")
+		obj.ValueEqual("fs", "healthy")
+		obj.ValueEqual("status", "OK")
+		obj.ValueEqual("message", "OK")
+		latencies := obj.Value("latency").Object()
+		latencies.Value("cache").String().NotEmpty()
+		latencies.Value("couchdb").String().NotEmpty()
+		latencies.Value("fs").String().NotEmpty()
 	})
-}
-
-func testRequest(t *testing.T, url string) {
-	res, err := http.Get(url)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-
-	body, ioerr := io.ReadAll(res.Body)
-	assert.NoError(t, ioerr)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-	assert.NoError(t, err)
-	assert.Equal(t, "healthy", data["cache"])
-	assert.Equal(t, "healthy", data["couchdb"])
-	assert.Equal(t, "healthy", data["fs"])
-	assert.Equal(t, "OK", data["status"])
-	assert.Equal(t, "OK", data["message"])
-	assert.Contains(t, data, "latency")
 }
