@@ -86,7 +86,7 @@ Content-Type: application/vnd.api+json
 ### GET /instances/:domain/last-activity
 
 It returns an approximate date of when the instance was last used by their
-owner (automatic jobs like connectors doesn't count). It looks at the sessions
+owner (automatic jobs like connectors don't count). It looks at the sessions
 and OAuth tokens.
 
 #### Request
