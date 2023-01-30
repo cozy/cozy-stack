@@ -9,12 +9,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var domain string
 
 func TestRouting(t *testing.T) {
 	if testing.Short() {
@@ -26,7 +25,7 @@ func TestRouting(t *testing.T) {
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()
-	domain = inst.Domain
+	domain := inst.Domain
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("SetupAssets", func(t *testing.T) {
@@ -35,21 +34,21 @@ func TestRouting(t *testing.T) {
 		require.NoError(t, err)
 
 		ts := httptest.NewServer(e)
-		defer ts.Close()
+		t.Cleanup(ts.Close)
 
-		{
-			res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-		}
+		t.Run("GET on an asset", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-		{
-			res, err := http.Head(ts.URL + "/assets/images/cozy.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-		}
+			e.GET("/assets/images/cozy.svg").
+				Expect().Status(200)
+		})
+
+		t.Run("HEAD on an asset", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.HEAD("/assets/images/cozy.svg").
+				Expect().Status(200)
+		})
 	})
 
 	t.Run("SetupAssetsStatik", func(t *testing.T) {
@@ -58,60 +57,64 @@ func TestRouting(t *testing.T) {
 		require.NoError(t, err)
 
 		ts := httptest.NewServer(e)
-		defer ts.Close()
+		t.Cleanup(ts.Close)
 
-		{
-			res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-			assert.NotContains(t, res.Header.Get("Cache-Control"), "max-age=")
-		}
+		t.Run("WithoutHexaIsNotCached", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-		{
-			res, err := http.Get(ts.URL + "/assets/images/cozy.badbeefbadbeef.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-			assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
-		}
+			e.GET("/assets/images/cozy.svg").
+				Expect().Status(200).
+				Header("Cache-Control").Equal("no-cache, public")
+		})
 
-		{
-			res, err := http.Get(ts.URL + "/assets/images/cozy.immutable.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-			assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
-		}
+		t.Run("WithHexaIsCachedAsImmutable", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-		{
-			res, err := http.Head(ts.URL + "/assets/images/cozy.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-		}
+			e.GET("/assets/images/cozy.badbeefbadbeef.svg").
+				Expect().Status(200).
+				Header("Cache-Control").
+				Contains("max-age=").
+				Contains("immutable")
+		})
 
-		{
-			res, err := http.Head(ts.URL + "/assets/images/cozy.badbeefbadbeef.svg")
-			assert.NoError(t, err)
-			defer res.Body.Close()
-			assert.Equal(t, 200, res.StatusCode)
-			assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
-		}
+		t.Run("WithImmutableNameIsCachedAsImmutable", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.GET("/assets/images/cozy.immutable.svg").
+				Expect().Status(200).
+				Header("Cache-Control").
+				Contains("max-age=").
+				Contains("immutable")
+		})
+
+		t.Run("FileAvailableWithHEAD", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.HEAD("/assets/images/cozy.svg").Expect().Status(200)
+		})
+
+		t.Run("WithImmutableNameIsCachedAsImmutable", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.HEAD("/assets/images/cozy.badbeefbadbeef.svg").
+				Expect().Status(200).
+				Header("Cache-Control").
+				Contains("max-age=").
+				Contains("immutable")
+		})
 	})
 
 	t.Run("SetupRoutes", func(t *testing.T) {
-		e := echo.New()
-		err := SetupRoutes(e)
+		router := echo.New()
+		err := SetupRoutes(router)
 		require.NoError(t, err)
 
-		ts := httptest.NewServer(e)
-		defer ts.Close()
+		ts := httptest.NewServer(router)
+		t.Cleanup(ts.Close)
 
-		res, err := http.Get(ts.URL + "/version")
-		assert.NoError(t, err)
-		defer res.Body.Close()
-		assert.Equal(t, 200, res.StatusCode)
+		e := httpexpect.Default(t, ts.URL)
+
+		e.GET("/version").Expect().Status(200)
 	})
 
 	t.Run("ParseHost", func(t *testing.T) {
@@ -127,8 +130,10 @@ func TestRouting(t *testing.T) {
 			slug := c.Get("slug").(string)
 			return c.String(200, "OK:"+slug)
 		})
-
 		require.NoError(t, err)
+
+		ts := httptest.NewServer(router)
+		t.Cleanup(ts.Close)
 
 		urls := map[string]string{
 			"https://" + domain + "/test":    "OK",
@@ -137,11 +142,13 @@ func TestRouting(t *testing.T) {
 		}
 
 		for u, k := range urls {
-			w := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", u, nil)
-			router.ServeHTTP(w, req)
-			assert.Equal(t, http.StatusOK, w.Code)
-			assert.Equal(t, k, w.Body.String())
+			t.Run(u, func(t *testing.T) {
+				e := httpexpect.Default(t, ts.URL)
+
+				e.GET(u).
+					Expect().Status(200).
+					Body().Equal(k)
+			})
 		}
 	})
 }
