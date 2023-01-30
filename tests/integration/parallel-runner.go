@@ -62,7 +62,7 @@ func runTests(tests []string) error {
 			k := <-tokens
 			cmd := exec.Command("bundle", "exec", "ruby", test)
 			cmd.Env = append(os.Environ(),
-				fmt.Sprintf("COZY_BASE_PORT=%d", 8081+10*i),
+				fmt.Sprintf("COZY_BASE_PORT=%d", 8091+10*i),
 				"COZY_SKIP_LOADING_TRIGGERS=true",
 				"CI=true")
 			out, err := cmd.CombinedOutput()
