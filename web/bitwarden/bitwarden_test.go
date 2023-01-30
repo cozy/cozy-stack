@@ -1,18 +1,15 @@
 package bitwarden
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -21,51 +18,51 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	_ "github.com/cozy/cozy-stack/worker/mails"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-var ts *httptest.Server
-var inst *instance.Instance
-var token string
-var orgaID, collID, folderID, cipherID string
 
 func TestBitwarden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var token, collID, orgaID, folderID, cipherID string
+
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	inst = setup.GetTestInstance(&lifecycle.Options{
+	inst := setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "bitwarden.example.net",
 		Passphrase: "cozy",
 		PublicName: "Pierre",
 		Email:      "pierre@cozy.localhost",
 	})
 
-	ts = setup.GetTestServer("/bitwarden", Routes)
+	ts := setup.GetTestServer("/bitwarden", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	t.Run("Prelogin", func(t *testing.T) {
-		body := `{ "email": "me@bitwarden.example.net" }`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/accounts/prelogin", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.EqualValues(t, 0, result["Kdf"])
-		assert.EqualValues(t, crypto.DefaultPBKDF2Iterations, result["KdfIterations"])
-		assert.Equal(t, false, result["OIDC"])
-		assert.Equal(t, false, result["HasCiphers"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.POST("/bitwarden/api/accounts/prelogin").
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{ "email": "me@bitwarden.example.net" }`)).
+			Expect().Status(http.StatusOK).
+			JSON().Object()
+
+		obj.ValueEqual("Kdf", 0)
+		obj.ValueEqual("OIDC", false)
+		obj.ValueEqual("KdfIterations", crypto.DefaultPBKDF2Iterations)
+		obj.ValueEqual("HasCiphers", false)
 	})
 
 	t.Run("Connect", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		testLogger := test.NewGlobal()
 		setting, err := settings.Get(inst)
 		assert.NoError(t, err)
@@ -76,33 +73,29 @@ func TestBitwarden(t *testing.T) {
 		email := inst.PassphraseSalt()
 		iter := crypto.DefaultPBKDF2Iterations
 		pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
-		v := url.Values{
-			"grant_type": {"password"},
-			"username":   {string(email)},
-			"password":   {string(pass)},
-			"scope":      {"api offline_access"},
-			"client_id":  {"browser"},
-			"deviceType": {"3"},
-		}
-		res, err := http.PostForm(ts.URL+"/bitwarden/identity/connect/token", v)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		expiresIn := consts.AccessTokenValidityDuration.Seconds()
-		assert.Equal(t, "Bearer", result["token_type"])
-		assert.Equal(t, expiresIn, result["expires_in"])
-		if assert.NotEmpty(t, result["access_token"]) {
-			token = result["access_token"].(string)
-		}
-		assert.NotEmpty(t, result["refresh_token"])
-		assert.NotEmpty(t, result["Key"])
-		assert.NotEmpty(t, result["PrivateKey"])
-		assert.NotEmpty(t, result["client_id"])
-		assert.NotEmpty(t, result["registration_access_token"])
-		assert.NotNil(t, result["Kdf"])
-		assert.NotNil(t, result["KdfIterations"])
+
+		obj := e.POST("/bitwarden/identity/connect/token").
+			WithFormField("grant_type", "password").
+			WithFormField("username", string(email)).
+			WithFormField("password", string(pass)).
+			WithFormField("scope", "api offline_access").
+			WithFormField("client_id", "browser").
+			WithFormField("deviceType", "3").
+			Expect().
+			Status(http.StatusOK).
+			JSON().Object()
+
+		obj.ValueEqual("token_type", "Bearer")
+		obj.ValueEqual("expires_in", consts.AccessTokenValidityDuration.Seconds())
+		token = obj.Value("access_token").String().NotEmpty().Raw()
+
+		obj.Value("refresh_token").String().NotEmpty()
+		obj.Value("Key").String().NotEmpty()
+		obj.Value("PrivateKey").String().NotEmpty()
+		obj.Value("client_id").String().NotEmpty()
+		obj.Value("registration_access_token").String().NotEmpty()
+		obj.Value("Kdf").Number()
+		obj.Value("KdfIterations").Number()
 
 		assert.NotZero(t, len(testLogger.Entries))
 		orgKeyDoesNotExist := false
@@ -121,633 +114,553 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("GetCozyOrg", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
-		req.Header.Add("Authorization", "Bearer invalid-token")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 401, res.StatusCode)
+		e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]string
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		orgaID = result["organizationId"]
-		assert.NotEmpty(t, orgaID)
-		collID = result["collectionId"]
-		assert.NotEmpty(t, collID)
-		orgKey := result["organizationKey"]
-		assert.NotEmpty(t, orgKey)
-		_, err = base64.StdEncoding.DecodeString(orgKey)
+		e.GET("/bitwarden/organizations/cozy").
+			WithHeader("Authorization", "Bearer invalid-token").
+			Expect().Status(401)
+
+		obj := e.GET("/bitwarden/organizations/cozy").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		orgaID = obj.Value("organizationId").String().NotEmpty().Raw()
+		collID = obj.Value("collectionId").String().NotEmpty().Raw()
+		orgKey := obj.Value("organizationKey").String().NotEmpty().Raw()
+
+		_, err := base64.StdEncoding.DecodeString(orgKey)
 		assert.NoError(t, err)
 	})
 
 	t.Run("CreateFolder", func(t *testing.T) {
-		body := `
-{
-	"name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/folders", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]string
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", result["Name"])
-		assert.Equal(t, "folder", result["Object"])
-		assert.NotEmpty(t, result["RevisionDate"])
-		assert.NotEmpty(t, result["Id"])
-		folderID = result["Id"]
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.POST("/bitwarden/api/folders").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{ "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=" }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("Name", "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=")
+		obj.ValueEqual("Object", "folder")
+		obj.Value("RevisionDate").String().DateTime(time.RFC3339)
+
+		folderID = obj.Value("Id").String().NotEmpty().Raw()
 	})
 
 	t.Run("ListFolders", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "list", result["Object"])
-		data := result["Data"].([]interface{})
-		assert.Len(t, data, 1)
-		item := data[0].(map[string]interface{})
-		assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", item["Name"])
-		assert.Equal(t, "folder", item["Object"])
-		assert.Equal(t, folderID, item["Id"])
-		assert.NotEmpty(t, item["RevisionDate"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/bitwarden/api/folders").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("Object", "list")
+		obj.Value("Data").Array().Length().Equal(1)
+
+		item := obj.Value("Data").Array().First().Object()
+		item.ValueEqual("Name", "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=")
+		item.ValueEqual("Object", "folder")
+		item.ValueEqual("Id", folderID)
+		item.Value("RevisionDate").String().DateTime(time.RFC3339)
 	})
 
 	t.Run("GetFolder", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders/"+folderID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", result["Name"])
-		assert.Equal(t, "folder", result["Object"])
-		assert.Equal(t, folderID, result["Id"])
-		assert.NotEmpty(t, result["RevisionDate"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/bitwarden/api/folders/"+folderID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("Name", "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=")
+		obj.ValueEqual("Object", "folder")
+		obj.ValueEqual("Id", folderID)
+		obj.Value("RevisionDate").String().DateTime(time.RFC3339)
 	})
 
 	t.Run("RenameFolder", func(t *testing.T) {
-		body := `
-{
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io="
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/folders/"+folderID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]string
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", result["Name"])
-		assert.Equal(t, "folder", result["Object"])
-		assert.NotEmpty(t, result["RevisionDate"])
-		assert.Equal(t, folderID, result["Id"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.PUT("/bitwarden/api/folders/"+folderID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{ "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=" }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("Name", "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=")
+		obj.ValueEqual("Object", "folder")
+		obj.ValueEqual("Id", folderID)
+		obj.Value("RevisionDate").String().DateTime(time.RFC3339)
 	})
 
 	t.Run("DeleteFolder", func(t *testing.T) {
-		body := `
-{
-	"name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/folders", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]string
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		id := result["Id"]
+		e := httpexpect.Default(t, ts.URL)
 
-		body = `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": "` + id + `",
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"totp": null
-	}
-}`
-		req, _ = http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result2 map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result2)
-		assert.NoError(t, err)
-		cID := result2["Id"].(string)
+		obj := e.POST("/bitwarden/api/folders").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{ "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=" }`)).
+			Expect().Status(200).
+			JSON().Object()
 
-		req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/folders/"+id, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		id := obj.Value("Id").String().NotEmpty().Raw()
+
+		obj = e.POST("/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "type": 1,
+      "favorite": false,
+      "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "notes": null,
+      "folderId": "` + id + `",
+      "organizationId": null,
+      "login": {
+        "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+        "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+        "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+        "totp": null
+      }
+    }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		cID := obj.Value("Id").String().NotEmpty().Raw()
+
+		e.DELETE("/bitwarden/api/folders/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
 		// Check that the cipher in this folder has been moved out
-		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+cID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result3 map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result3)
-		assert.NoError(t, err)
-		assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", result3["Name"])
-		fID, ok := result3["FolderId"]
-		assert.True(t, ok)
-		assert.Empty(t, fID)
+		obj = e.GET("/bitwarden/api/ciphers/"+cID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
 
-		req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers/"+cID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj.ValueEqual("Name", "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=")
+		obj.Value("FolderId").Null() // is empty
+
+		e.DELETE("/bitwarden/api/ciphers/"+cID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("CreateNoType", func(t *testing.T) {
-		body := `
-{
-	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
-	"organizationId": null
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 400, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, result["error"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.POST("/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+      "organizationId": null
+    }`)).
+			Expect().Status(400).
+			JSON().Object()
+
+		obj.Value("error").String().NotEmpty()
 	})
 
 	t.Run("CreateLogin", func(t *testing.T) {
-		body := `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": null,
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"passwordRevisionDate": "2019-09-13T12:26:42+02:00",
-		"totp": null
-	}
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertCipherResponse(t, result)
-		orgID, ok := result["OrganizationId"]
-		assert.True(t, ok)
-		assert.Empty(t, orgID)
-		cipherID = result["Id"].(string)
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.POST("/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "type": 1,
+      "favorite": false,
+      "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "notes": null,
+      "folderId": null,
+      "organizationId": null,
+      "login": {
+        "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+        "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+        "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+        "passwordRevisionDate": "2019-09-13T12:26:42+02:00",
+        "totp": null
+      }
+    }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertCipherResponse(t, obj)
+
+		obj.Value("OrganizationId").Null()
+		cipherID = obj.Value("Id").String().NotEmpty().Raw()
 	})
 
 	t.Run("ListCiphers", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "list", result["Object"])
-		data := result["Data"].([]interface{})
-		assert.Len(t, data, 1)
-		item := data[0].(map[string]interface{})
-		assertCipherResponse(t, item)
-		orgID, ok := item["OrganizationId"]
-		assert.True(t, ok)
-		assert.Empty(t, orgID)
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/bitwarden/api/ciphers").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("Object", "list")
+
+		data := obj.Value("Data").Array()
+		data.Length().Equal(1)
+
+		assertCipherResponse(t, data.First().Object())
+
+		data.First().Object().Value("OrganizationId").Null()
 	})
 
 	t.Run("GetCipher", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+cipherID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertCipherResponse(t, result)
-		orgID, ok := result["OrganizationId"]
-		assert.True(t, ok)
-		assert.Empty(t, orgID)
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/bitwarden/api/ciphers/"+cipherID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertCipherResponse(t, obj)
+
+		obj.Value("OrganizationId").Null()
 	})
 
 	t.Run("UpdateCipher", func(t *testing.T) {
-		body := `
-{
-	"type": 2,
-	"favorite": true,
-	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
-	"folderId": "` + folderID + `",
-	"organizationId": null,
-	"notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
-	"secureNote": {
-		"type": 0
-	}
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+cipherID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertUpdatedCipherResponse(t, result)
-		orgID, ok := result["OrganizationId"]
-		assert.True(t, ok)
-		assert.Empty(t, orgID)
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.PUT("/bitwarden/api/ciphers/"+cipherID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "type": 2,
+      "favorite": true,
+      "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+      "folderId": "` + folderID + `",
+      "organizationId": null,
+      "notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+      "secureNote": {
+        "type": 0
+      }
+    }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertUpdatedCipherResponse(t, obj, cipherID, folderID)
+
+		obj.Value("OrganizationId").Null()
 	})
 
 	t.Run("DeleteCipher", func(t *testing.T) {
-		body := `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": null,
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"totp": null
-	}
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		id := result["Id"].(string)
+		e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj := e.POST("/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "type": 1,
+      "favorite": false,
+      "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "notes": null,
+      "folderId": null,
+      "organizationId": null,
+      "login": {
+        "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+        "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+        "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+        "totp": null
+      }
+    }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		id := obj.Value("Id").String().NotEmpty().Raw()
+
+		e.DELETE("/bitwarden/api/ciphers/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("SoftDeleteCipher", func(t *testing.T) {
-		body := `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": null,
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"totp": null
-	}
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		id := result["Id"].(string)
+		e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+id+"/delete", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj := e.POST("/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "type": 1,
+      "favorite": false,
+      "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "notes": null,
+      "folderId": null,
+      "organizationId": null,
+      "login": {
+        "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+        "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+        "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+        "totp": null
+      }
+    }`)).
+			Expect().Status(200).
+			JSON().Object()
 
-		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, result["DeletedDate"])
+		id := obj.Value("Id").String().NotEmpty().Raw()
+
+		e.PUT("/bitwarden/api/ciphers/"+id+"/delete").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		obj = e.GET("/bitwarden/api/ciphers/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.Value("DeletedDate").String().NotEmpty().DateTime(time.RFC3339)
 	})
 
 	t.Run("RestoreCipher", func(t *testing.T) {
-		body := `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": null,
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"totp": null
-	}
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		id := result["Id"].(string)
+		e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+id+"/delete", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj := e.POST(ts.URL+"/bitwarden/api/ciphers").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "type": 1,
+        "favorite": false,
+        "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+        "notes": null,
+        "folderId": null,
+        "organizationId": null,
+        "login": {
+          "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+          "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+          "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+          "totp": null
+        }
+      }`)).
+			Expect().Status(200).
+			JSON().Object()
 
-		req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+id+"/restore", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		id := obj.Value("Id").String().NotEmpty().Raw()
 
-		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Empty(t, result["DeletedDate"])
+		e.PUT(ts.URL+"/bitwarden/api/ciphers/"+id+"/delete").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		e.PUT(ts.URL+"/bitwarden/api/ciphers/"+id+"/restore").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		obj = e.GET(ts.URL+"/bitwarden/api/ciphers/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.NotContainsKey("DeletedDate")
 	})
 
 	t.Run("Sync", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "sync", result["Object"])
+		e := httpexpect.Default(t, ts.URL)
 
-		profile := result["Profile"].(map[string]interface{})
-		assert.NotEmpty(t, profile["Id"])
-		assert.Equal(t, "Pierre", profile["Name"])
-		assert.Equal(t, "me@bitwarden.example.net", profile["Email"])
-		assert.Equal(t, false, profile["EmailVerified"])
-		assert.Equal(t, true, profile["Premium"])
-		assert.Equal(t, nil, profile["MasterPasswordHint"])
-		assert.Equal(t, "en", profile["Culture"])
-		assert.Equal(t, false, profile["TwoFactorEnabled"])
-		assert.NotEmpty(t, profile["Key"])
-		assert.NotEmpty(t, profile["PrivateKey"])
-		assert.NotEmpty(t, profile["SecurityStamp"])
-		assert.Equal(t, "profile", profile["Object"])
+		obj := e.GET("/bitwarden/api/sync").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
 
-		ciphers := result["Ciphers"].([]interface{})
-		assert.Len(t, ciphers, 3)
-		c := ciphers[0].(map[string]interface{})
-		assertUpdatedCipherResponse(t, c)
+		obj.ValueEqual("Object", "sync")
 
-		folders := result["Folders"].([]interface{})
-		assert.Len(t, folders, 1)
-		f := folders[0].(map[string]interface{})
-		assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", f["Name"])
-		assert.Equal(t, "folder", f["Object"])
-		assert.NotEmpty(t, f["RevisionDate"])
-		assert.Equal(t, folderID, f["Id"])
+		profile := obj.Value("Profile").Object()
+		profile.Value("Id").NotNull()
+		profile.ValueEqual("Name", "Pierre")
+		profile.ValueEqual("Email", "me@bitwarden.example.net")
+		profile.ValueEqual("EmailVerified", false)
+		profile.ValueEqual("Premium", true)
+		profile.ValueEqual("MasterPasswordHint", nil)
+		profile.ValueEqual("Culture", "en")
+		profile.ValueEqual("TwoFactorEnabled", false)
+		profile.Value("Key").NotNull()
+		profile.Value("PrivateKey").NotNull()
+		profile.Value("SecurityStamp").NotNull()
+		profile.ValueEqual("Object", "profile")
 
-		domains := result["Domains"].(map[string]interface{})
-		ed, ok := domains["EquivalentDomains"]
-		assert.True(t, ok)
-		assert.Empty(t, ed)
-		ged, ok := domains["GlobalEquivalentDomains"]
-		assert.True(t, ok)
-		assert.NotEmpty(t, ged)
-		assert.Equal(t, "domains", domains["Object"])
+		ciphers := obj.Value("Ciphers").Array()
+		ciphers.Length().Equal(3)
+		assertUpdatedCipherResponse(t, ciphers.First().Object(), cipherID, folderID)
+
+		folders := obj.Value("Folders").Array()
+		folders.Length().Equal(1)
+		folders.First().Object().ValueEqual("Name", "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=")
+		folders.First().Object().ValueEqual("Object", "folder")
+		folders.First().Object().Value("RevisionDate").String().NotEmpty().DateTime(time.RFC3339)
+		folders.First().Object().ValueEqual("Id", folderID)
+
+		domains := obj.Value("Domains").Object()
+		domains.Value("EquivalentDomains").Null()
+		domains.Value("GlobalEquivalentDomains").Array().NotEmpty()
+		domains.ValueEqual("Object", "domains")
 	})
 
 	t.Run("BulkDeleteCiphers", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Setup
 		nbCiphersToDelete := 5
 		nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		var ids []string
 		for i := 0; i < nbCiphersToDelete; i++ {
-			body := `
-{
-	"type": 1,
-	"favorite": false,
-	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
-	"folderId": null,
-	"organizationId": null,
-	"login": {
-		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-		"totp": null
-	}
-}`
-			req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("Authorization", "Bearer "+token)
-			res, err := http.DefaultClient.Do(req)
-			assert.NoError(t, err)
-			assert.Equal(t, 200, res.StatusCode)
-			var result map[string]interface{}
-			err = json.NewDecoder(res.Body).Decode(&result)
-			assert.NoError(t, err)
-			ids = append(ids, result["Id"].(string))
+			obj := e.POST("/bitwarden/api/ciphers").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte(`{
+        "type": 1,
+        "favorite": false,
+        "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+        "notes": null,
+        "folderId": null,
+        "organizationId": null,
+        "login": {
+          "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+          "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+          "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+          "totp": null
+        }
+      }`)).
+				Expect().Status(200).
+				JSON().Object()
+
+			ids = append(ids, obj.Value("Id").String().NotEmpty().Raw())
 		}
 
 		nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 		assert.Equal(t, nbCiphers+nbCiphersToDelete, nb)
 
+		body, _ := json.Marshal(map[string][]string{"ids": ids})
+
 		// Test soft delete in bulk
-		body, _ := json.Marshal(map[string][]string{
-			"ids": ids,
+		t.Run("Soft delete in bulk", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.PUT("/bitwarden/api/ciphers/delete").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes(body).
+				Expect().Status(200)
+
+			for _, id := range ids {
+				obj := e.GET("/bitwarden/api/ciphers/"+id).
+					WithHeader("Authorization", "Bearer "+token).
+					Expect().Status(200).
+					JSON().Object()
+
+				obj.Value("DeletedDate").String().NotEmpty().DateTime(time.RFC3339)
+			}
 		})
-		buf := bytes.NewBuffer(body)
-		req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/delete", buf)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
 
-		for _, id := range ids {
-			req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+id, nil)
-			req.Header.Add("Authorization", "Bearer "+token)
-			res, err = http.DefaultClient.Do(req)
+		t.Run("Restore in bulk", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.PUT("/bitwarden/api/ciphers/restore").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes(body).
+				Expect().Status(200).
+				JSON().Object()
+
+			obj.ValueEqual("Object", "list")
+			data := obj.Value("Data").Array()
+			data.Length().Equal(nbCiphersToDelete)
+
+			for i, item := range data.Iter() {
+				item.Object().ValueEqual("Id", ids[i])
+				item.Object().NotContainsKey("DeletedDate")
+			}
+		})
+
+		t.Run("Delete in bulk", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.DELETE("/bitwarden/api/ciphers").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes(body).
+				Expect().Status(200)
+
+			nb, err = couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 			assert.NoError(t, err)
-			assert.Equal(t, 200, res.StatusCode)
-			var result map[string]interface{}
-			err = json.NewDecoder(res.Body).Decode(&result)
-			assert.NoError(t, err)
-			assert.NotEmpty(t, result["DeletedDate"])
-		}
-
-		// Test restore in bulk
-		buf = bytes.NewBuffer(body)
-		req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/restore", buf)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("Content-Type", "application/json")
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "list", result["Object"])
-		data := result["Data"].([]interface{})
-		assert.Len(t, data, nbCiphersToDelete)
-
-		for i := range data {
-			item := data[i].(map[string]interface{})
-			assert.Equal(t, ids[i], item["Id"])
-			assert.Empty(t, item["DeletedDate"])
-		}
-
-		// Test delete in bulk
-		buf = bytes.NewBuffer(body)
-		req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers", buf)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("Content-Type", "application/json")
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-
-		nb, err = couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
-		assert.NoError(t, err)
-		assert.Equal(t, nbCiphers, nb)
+			assert.Equal(t, nbCiphers, nb)
+		})
 	})
 
 	t.Run("SharedCipher", func(t *testing.T) {
-		body := `
-{
-	"cipher": {
-		"type": 1,
-		"favorite": false,
-		"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-		"notes": null,
-		"folderId": null,
-		"organizationId": "` + orgaID + `",
-		"login": {
-			"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-			"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-			"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-			"passwordRevisionDate": "2019-09-13T12:26:42+02:00",
-			"totp": null
-		}
-	},
-	"collectionIds": ["` + collID + `"]
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers/create", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertCipherResponse(t, result)
-		orgID, ok := result["OrganizationId"]
-		assert.True(t, ok)
-		assert.Equal(t, orgID, orgaID)
-		cipherID = result["Id"].(string)
+		e := httpexpect.Default(t, ts.URL)
 
-		body = `
-{
-	"type": 2,
-	"favorite": true,
-	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
-	"folderId": "` + folderID + `",
-	"organizationId": "` + orgaID + `",
-	"notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
-	"secureNote": {
-		"type": 0
-	}
-}`
-		req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+cipherID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result2 map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result2)
-		assert.NoError(t, err)
-		assertUpdatedCipherResponse(t, result2)
-		orgID, ok = result2["OrganizationId"]
-		assert.True(t, ok)
-		assert.Equal(t, orgID, orgaID)
+		obj := e.POST("/bitwarden/api/ciphers/create").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "cipher": {
+          "type": 1,
+          "favorite": false,
+          "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+          "notes": null,
+          "folderId": null,
+          "organizationId": "` + orgaID + `",
+          "login": {
+            "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+            "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+            "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+            "passwordRevisionDate": "2019-09-13T12:26:42+02:00",
+            "totp": null
+          }
+        },
+        "collectionIds": ["` + collID + `"]
+      }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertCipherResponse(t, obj)
+		obj.ValueEqual("OrganizationId", orgaID)
+		cipherID := obj.Value("Id").String().NotEmpty().Raw()
+
+		obj = e.PUT("/bitwarden/api/ciphers/"+cipherID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "type": 2,
+        "favorite": true,
+        "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+        "folderId": "` + folderID + `",
+        "organizationId": "` + orgaID + `",
+        "notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+        "secureNote": {
+          "type": 0
+        }
+      }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertUpdatedCipherResponse(t, obj, cipherID, folderID)
+		obj.ValueEqual("OrganizationId", orgaID)
 	})
 
 	t.Run("SetKeyPair", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
+		// Needs to be marshaled in order to avoid encoding issues
 		body, _ := json.Marshal(map[string]string{
 			"encryptedPrivateKey": "2.demXNYbv8o47sG+fhYYvhg==|jXpxet7AApeIzrC3Yr752LwmjBdCZn6HJl6SjEOVP3rrOpGu5qV2rN0dBH5yXXWHusfxM7IvXkdC/fzBUAmFFOU5ubTp9kHFBqIn51tiJG6BRs5aTm7kF6TYSHVDIP5kUdX4O7DcmD23dqtq/8211DSAFR/DK1QDm5Da77Clh7NHxQE9Z9RTW1PBGV56DfzrY3N06H6vI+V6fTZ6HJRD2pdPczR2ZNC0ziQP7qCUYNlSjEv70O4VoYMSUsdb4UUE1YetcSdZ+dIAy+V2KHfoHmTFYI4DtMCW6WpDzp0ufPvszFjt1EwaMr78hujMrQr1gFWxgN8kOLJyYCrd1F5aIxWXHghBH/t+QU31gyQOxCdj18f10ssfuY/y7vocSJQ9pTRRPNh4beGAijV1AETaXWLK1L6oMnkbdhr9ZA2I6cZaHNCaHIynHQH7NUqKKQUJL/FyZ8rBv4YNnxCMRi9p88IoTb0oPsUCoNCaIZ2cvzXz+0VpU6zxj4ke7H6Bu7H46MSB1P+YHzGLtFNzZJVsUBEkz7dotUDeTeqlYKnq7oldWJ4HlqODevzCev+FRnYgrYpoXmYC/dxa1R5IlKCu6rEmP05A7Nw4h9cymnTwRMEoZRSppJ2O5FlSx/Go9Jz12g2Tfiaf+RvO7nkIb2qKiz7Jo2aJgakL5lMOlEdBA2+dsYSyX4Tvu8Ua4p0GcYaGOgSjXH27lQ73ZpHSicf4Q1kAooVl+6zTOPAqgMXOnyyVSRqBPse28HuDwGtmD8BAeVDIfkMW+a+PlWa+yoEWKfDHRduoxNod7Pc9xlNFt6eOeGoBQTEIiF7ccBDtNiSU1yfvqBZEgI8QF0QiGUo9eP7+59so5eu9/DuzjdqFMmGPtG3zHifMxuMzO5+E9UxTyHuCwvxuH93F4vmPC8zzXXn8/ErhEeqmYl1lxZbfJDm1qcjTkJibNKJ9+CXUeP0hq8yi07SEN1xJSZpupf90EUjrdFd3impz3gZKummEjTvzr3J1JX4gC/wD0mGkROHQwb0jCTDJNC18cX4usPYtNr3FxLZmxCGgPmZhkzFjF0qppN1aXTxQskdorEejQUwLL5EnWJySd9/W2P6PmjkJTAwKYUNHsmVUAfbMA7y7QBIjVFFWS4xYy0GJcc8NaLKkFMkGv/oluw552prWAJZ4aM2asoNgyv/JARrAF+JbOPSpax+CtUMO+LCFlBITHopbkHz0TwI1UMj/vIOh9wxDiMqe3YBiviymudX+B7awCaUPTLubWW1jwC4kBnXmRGAKyyIvzgOvwkdcKfQRxoTxq7JFTL/hWk7x4HlQqviSWGY166CLIp6SydCT+cqHMf3MHhe8AQZVC+nIDVNQZWfpFbOFb3nNDwlT+laWrtsiuX7hHiL0VLaCU4xzup5m4zvi59/Qxj0+d8n6M/3GP3/Tvp/bKY9m7CHoeimtGF9Ai2QFJFMOEQw3S1SUBL62ZsezKgBap6y1RqmMzdz/h3f5mhHxRMoQ0kgzZwMNWJvi2acGoIttcmBU7Cn6fqxYNi11dg17M7cFJAQCMicvd4pEwl8IBrm7uFrzbLvuLeolyiDx8GX3jfIo//Ceqa6P/RIqN8jKzH3nTSePuVqkXYiIdxhlAeF//EYW0CwOjd3GEoc=|aUt6NKqrLW4HeprkbwjuBzSQbR84imTujhUPxK17eX4=",
 			"publicKey":           "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmAYrTtY4FBJL/TeTGqr1uHCoMCzUDgwvgq7gBGiNrk24gPbb3xreM+HxubBvkzTlgoS6m1KKKKtD4tWrLU33Xc+PevbKSZDLvBfUe+golGU1XKFxUcIkgINtB0i8LmCVCShiCrlhn2VorcAbekR/1RXtoJqpqq1urhI+RdGVXy8HBBoULA7BoV7wC8dBdkRtnQMNuvGyHclV7yjgealKGqgxz4aNcgsfybquKvYg6PUj8dAxUy7KlmMR7klPyO8nahYqyhpQ/t0xle0WyCkdx5YuYhRSA67Tok+E8fCW5WXOPfIdPZDXS+6/wW1NhcQEa5j6EW11PF/Xq0awBUFwnwIDAQAB",
 		})
-		buf := bytes.NewBuffer(body)
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/accounts/keys", buf)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+
+		e.POST("/bitwarden/api/accounts/keys").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes(body).
+			Expect().Status(200)
 
 		setting, err := settings.Get(inst)
 		assert.NoError(t, err)
@@ -757,306 +670,295 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SettingsDomains", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]interface{}{
-			"equivalentDomains": [][]string{
-				{"stackoverflow.com", "serverfault.com", "superuser.com"},
-			},
-			"globalEquivalentDomains": []int{42, 69},
-		})
-		buf := bytes.NewBuffer(body)
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/settings/domains", buf)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assertDomainsReponse(t, res)
+		e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/settings/domains", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assertDomainsReponse(t, res)
+		obj := e.POST("/bitwarden/api/settings/domains").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "equivalentDomains": [ ["stackoverflow.com", "serverfault.com", "superuser.com"] ],
+        "globalEquivalentDomains": [42, 69]
+      }`)).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertDomainsReponse(t, obj)
+
+		obj = e.GET("/bitwarden/api/settings/domains").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		assertDomainsReponse(t, obj)
 	})
 
 	t.Run("ImportCiphers", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
+
 		nbFolders, err := couchdb.CountAllDocs(inst, consts.BitwardenFolders)
 		assert.NoError(t, err)
-		body := `
-{
-  "ciphers": [{
-    "type": 2,
-    "favorite": true,
-    "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
-    "folderId": null,
-    "organizationId": null,
-    "notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
-    "secureNote": {
-      "type": 0
-    }
-  }, {
-    "type": 1,
-    "favorite": false,
-    "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-    "folderId": null,
-    "organizationId": null,
-    "notes": null,
-    "login": {
-      "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-      "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
-      "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
-      "totp": null
-    }
-  }],
-  "folders": [{
-    "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
-  }],
-  "folderRelationships": [
-    {"key": 1, "value": 0}
-  ]
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers/import", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+
+		e.POST("/bitwarden/api/ciphers/import").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+      "ciphers": [{
+        "type": 2,
+        "favorite": true,
+        "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+        "folderId": null,
+        "organizationId": null,
+        "notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+        "secureNote": {
+          "type": 0
+        }
+      }, {
+        "type": 1,
+        "favorite": false,
+        "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+        "folderId": null,
+        "organizationId": null,
+        "notes": null,
+        "login": {
+          "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+          "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+          "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+          "totp": null
+        }
+      }],
+      "folders": [{
+        "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
+      }],
+      "folderRelationships": [
+        {"key": 1, "value": 0}
+      ]
+    }`)).
+			Expect().Status(200)
+
 		nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
 		assert.Equal(t, nbCiphers+2, nb)
+
 		nb, err = couchdb.CountAllDocs(inst, consts.BitwardenFolders)
 		assert.NoError(t, err)
 		assert.Equal(t, nbFolders+1, nb)
 	})
 
-	t.Run("CreateOrganization", func(t *testing.T) {
-		body := `
-{
-	"name": "Family Organization",
-	"key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
-	"collectionName": "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M="
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/organizations", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "Family Organization", result["Name"])
-		assert.Equal(t, "profileOrganization", result["Object"])
-		assert.Equal(t, true, result["Enabled"])
-		assert.EqualValues(t, 2, result["Status"])
-		assert.EqualValues(t, 0, result["Type"])
-		orgaID, _ = result["Id"].(string)
-		assert.NotEmpty(t, orgaID)
-		assert.NotEmpty(t, result["Key"])
-	})
+	t.Run("Organization", func(t *testing.T) {
+		var orgaID string
 
-	t.Run("GetOrganization", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/"+orgaID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "Family Organization", result["Name"])
-		assert.Equal(t, "profileOrganization", result["Object"])
-		assert.Equal(t, true, result["Enabled"])
-		assert.EqualValues(t, 2, result["Status"])
-		assert.EqualValues(t, 0, result["Type"])
-		assert.Equal(t, orgaID, result["Id"])
-		assert.NotEmpty(t, result["Key"])
-	})
+		t.Run("Create", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-	t.Run("ListCollections", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/organizations/"+orgaID+"/collections", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "list", result["Object"])
-		data := result["Data"].([]interface{})
-		assert.Len(t, data, 1)
-		coll := data[0].(map[string]interface{})
-		assert.NotEmpty(t, coll["Id"])
-		assert.Equal(t, "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=", coll["Name"])
-		assert.Equal(t, "collection", coll["Object"])
-		assert.Equal(t, orgaID, coll["OrganizationId"])
-		assert.Equal(t, false, coll["ReadOnly"])
-	})
+			obj := e.POST("/bitwarden/api/organizations").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte(`{
+        "name": "Family Organization",
+        "key": "bmFjbF53D9mrdGbVqQzMB54uIg678EIpU/uHFYjynSPSA6vIv5/6nUy4Uk22SjIuDB3pZ679wLE3o7R/Imzn47OjfT6IrJ8HaysEhsZA25Dn8zwEtTMtgNepUtH084wAMgNeIcElW24U/MfRscjAk8cDUIm5xnzyi2vtJfe9PcHTmzRXyng=",
+        "collectionName": "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M="
+      }`)).
+				Expect().Status(200).
+				JSON().Object()
 
-	t.Run("SyncOrganizationAndCollection", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assert.Equal(t, "sync", result["Object"])
+			obj.ValueEqual("Name", "Family Organization")
+			obj.ValueEqual("Object", "profileOrganization")
+			obj.ValueEqual("Enabled", true)
+			obj.ValueEqual("Status", 2)
+			obj.ValueEqual("Type", 0)
 
-		profile := result["Profile"].(map[string]interface{})
-		orgs := profile["Organizations"].([]interface{})
-		for i := range orgs {
-			org := orgs[i].(map[string]interface{})
-			if org["Id"] == orgaID {
-				assert.Equal(t, "Family Organization", org["Name"])
-			} else {
-				assert.Equal(t, "Cozy", org["Name"])
+			orgaID = obj.Value("Id").String().NotEmpty().Raw()
+
+			obj.Value("Key").String().NotEmpty()
+		})
+
+		t.Run("Get", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.GET("/bitwarden/api/organizations/"+orgaID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200).
+				JSON().Object()
+
+			obj.ValueEqual("Name", "Family Organization")
+			obj.ValueEqual("Object", "profileOrganization")
+			obj.ValueEqual("Enabled", true)
+			obj.ValueEqual("Status", 2)
+			obj.ValueEqual("Type", 0)
+			obj.ValueEqual("Id", orgaID)
+			obj.Value("Key").String().NotEmpty()
+		})
+
+		t.Run("ListCollections", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.GET("/bitwarden/api/organizations/"+orgaID+"/collections").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200).
+				JSON().Object()
+
+			obj.ValueEqual("Object", "list")
+			data := obj.Value("Data").Array()
+			data.Length().Equal(1)
+
+			coll := data.First().Object()
+			coll.Value("Id").String().NotEmpty()
+			coll.ValueEqual("Name", "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=")
+			coll.ValueEqual("Object", "collection")
+			coll.ValueEqual("OrganizationId", orgaID)
+			coll.ValueEqual("ReadOnly", false)
+		})
+
+		t.Run("SyncOrganizationAndCollection", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.GET("/bitwarden/api/sync").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200).
+				JSON().Object()
+
+			obj.ValueEqual("Object", "sync")
+			profile := obj.Value("Profile").Object()
+			orgs := profile.Value("Organizations").Array()
+			orgs.Length().Equal(2)
+
+			for _, item := range orgs.Iter() {
+				org := item.Object()
+
+				if org.Value("Id").String().Raw() == orgaID {
+					org.ValueEqual("Name", "Family Organization")
+				} else {
+					org.ValueEqual("Name", "Cozy")
+				}
+
+				org.Value("Key").String().NotEmpty()
+				org.ValueEqual("Object", "profileOrganization")
 			}
-			assert.NotEmpty(t, org["Key"])
-			assert.Equal(t, "profileOrganization", org["Object"])
-		}
-		assert.Len(t, orgs, 2)
 
-		colls := result["Collections"].([]interface{})
-		for i := range colls {
-			coll := colls[i].(map[string]interface{})
-			if coll["Id"] != collID {
-				assert.Equal(t, coll["OrganizationId"], orgaID)
-				assert.Equal(t, coll["Name"], "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=")
+			colls := obj.Value("Collections").Array()
+			colls.Length().Equal(2)
+			for _, item := range colls.Iter() {
+				coll := item.Object()
+
+				if coll.Value("Id").String().Raw() != collID {
+					coll.ValueEqual("OrganizationId", orgaID)
+					coll.ValueEqual("Name", "2.rrpSDDODsWZqL7EhLVsu/Q==|OSuh+MmmR89ppdb/A7KxBg==|kofpAocL2G4a3P1C2R1U+i9hWbhfKfsPKM6kfoyCg/M=")
+				}
+
+				coll.ValueEqual("Object", "collection")
 			}
-			assert.Equal(t, "collection", coll["Object"])
-		}
-		assert.Len(t, colls, 2)
-	})
+		})
 
-	t.Run("DeleteOrganization", func(t *testing.T) {
-		email := inst.PassphraseSalt()
-		iter := crypto.DefaultPBKDF2Iterations
-		pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
-		body := fmt.Sprintf(`{"masterPasswordHash": "%s"}`, pass)
-		req, _ := http.NewRequest("DELETE", ts.URL+"/bitwarden/api/organizations/"+orgaID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		t.Run("DeleteOrganization", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			email := inst.PassphraseSalt()
+			iter := crypto.DefaultPBKDF2Iterations
+			pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
+
+			e.DELETE("/bitwarden/api/organizations/"+orgaID).
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte(fmt.Sprintf(`{"masterPasswordHash": "%s"}`, pass))).
+				Expect().Status(200)
+		})
 	})
 
 	t.Run("ChangeSecurityStamp", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		email := inst.PassphraseSalt()
 		iter := crypto.DefaultPBKDF2Iterations
 		pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
-		body, _ := json.Marshal(map[string]string{
-			"masterPasswordHash": string(pass),
-		})
-		buf := bytes.NewBuffer(body)
-		res, err := http.Post(ts.URL+"/bitwarden/api/accounts/security-stamp", "application/json", buf)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+
+		e.POST("/bitwarden/api/accounts/security-stamp").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{"masterPasswordHash": %q}`, pass))).Expect().Status(204)
 
 		// Check that token is no longer valid
-		req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 401, res.StatusCode)
+		e.GET("/bitwarden/api/folders").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(401)
 	})
 
 	t.Run("SendHint", func(t *testing.T) {
-		body := `{ "email": "me@bitwarden.example.net" }`
-		req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/accounts/password-hint", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		e := httpexpect.Default(t, ts.URL)
+
+		e.POST("/bitwarden/api/accounts/password-hint").
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{ "email": "me@bitwarden.example.net" }`)).
+			Expect().Status(200)
 	})
 }
 
-func assertCipherResponse(t *testing.T, result map[string]interface{}) {
-	assert.Equal(t, "cipher", result["Object"])
-	assert.NotEmpty(t, result["Id"])
-	assert.Equal(t, float64(1), result["Type"])
-	assert.Equal(t, false, result["Favorite"])
-	assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", result["Name"])
-	notes, ok := result["Notes"]
-	assert.True(t, ok)
-	assert.Empty(t, notes)
-	fID, ok := result["FolderId"]
-	assert.True(t, ok)
-	assert.Empty(t, fID)
-	login := result["Login"].(map[string]interface{})
-	uris := login["Uris"].([]interface{})
-	assert.Len(t, uris, 1)
-	uri := uris[0].(map[string]interface{})
-	assert.Equal(t, "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=", uri["Uri"])
-	match, ok := uri["Match"]
-	assert.True(t, ok)
-	assert.Empty(t, match)
-	assert.Equal(t, "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=", login["Username"])
-	assert.Equal(t, "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=", login["Password"])
-	assert.Equal(t, "2019-09-13T12:26:42+02:00", login["PasswordRevisionDate"])
-	totp, ok := login["Totp"]
-	assert.True(t, ok)
-	assert.Empty(t, totp)
-	fields, ok := result["Fields"]
-	assert.True(t, ok)
-	assert.Empty(t, fields)
-	attachments, ok := result["Attachments"]
-	assert.True(t, ok)
-	assert.Empty(t, attachments)
-	assert.NotEmpty(t, result["RevisionDate"])
-	assert.Equal(t, true, result["Edit"])
-	assert.Equal(t, false, result["OrganizationUseTotp"])
+func assertCipherResponse(t *testing.T, obj *httpexpect.Object) {
+	t.Helper()
+
+	obj.ValueEqual("Object", "cipher")
+	obj.Value("Id").String().NotEmpty()
+	obj.ValueEqual("Type", 1.0)
+	obj.ValueEqual("Favorite", false)
+	obj.ValueEqual("Name", "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=")
+	obj.Value("Notes").Null()
+	obj.Value("FolderId").Null()
+
+	loginObj := obj.Value("Login").Object().NotEmpty()
+	loginObj.ValueEqual("PasswordRevisionDate", "2019-09-13T12:26:42+02:00")
+	loginObj.Value("Totp").Null()
+	loginObj.ValueEqual("Username", "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=")
+	loginObj.ValueEqual("Password", "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=")
+
+	loginObj.Value("Uris").Array().Length().Equal(1)
+	uriObj := loginObj.Value("Uris").Array().First().Object()
+	uriObj.ValueEqual("Uri", "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=")
+	uriObj.Value("Match").Null()
+
+	obj.Value("Fields").Null()
+	obj.Value("Attachments").Null()
+	obj.Value("RevisionDate").String().DateTime(time.RFC3339)
+	obj.ValueEqual("Edit", true)
+	obj.ValueEqual("OrganizationUseTotp", false)
 }
 
-func assertUpdatedCipherResponse(t *testing.T, result map[string]interface{}) {
-	assert.Equal(t, "cipher", result["Object"])
-	assert.Equal(t, cipherID, result["Id"])
-	assert.Equal(t, float64(2), result["Type"])
-	assert.Equal(t, true, result["Favorite"])
-	assert.Equal(t, "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=", result["Name"])
-	assert.Equal(t, folderID, result["FolderId"])
-	assert.Equal(t, "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=", result["Notes"])
-	secure := result["SecureNote"].(map[string]interface{})
-	assert.Equal(t, float64(0), secure["Type"])
-	_, ok := result["Login"]
-	assert.False(t, ok)
-	fields, ok := result["Fields"]
-	assert.True(t, ok)
-	assert.Empty(t, fields)
-	attachments, ok := result["Attachments"]
-	assert.True(t, ok)
-	assert.Empty(t, attachments)
-	assert.NotEmpty(t, result["RevisionDate"])
-	assert.Equal(t, true, result["Edit"])
-	assert.Equal(t, false, result["OrganizationUseTotp"])
+func assertUpdatedCipherResponse(t *testing.T, obj *httpexpect.Object, cipherID, folderID string) {
+	t.Helper()
+
+	obj.ValueEqual("Object", "cipher")
+	obj.ValueEqual("Id", cipherID)
+	obj.ValueEqual("Type", 2.0)
+	obj.ValueEqual("Favorite", true)
+	obj.ValueEqual("Name", "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=")
+	obj.ValueEqual("FolderId", folderID)
+	obj.ValueEqual("Notes", "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=")
+	obj.Value("SecureNote").Object().NotEmpty().ValueEqual("Type", 0.0)
+	obj.NotContainsKey("Login")
+	obj.Value("Fields").Null()
+	obj.Value("Attachments").Null()
+	obj.Value("RevisionDate").String().DateTime(time.RFC3339)
+	obj.ValueEqual("Edit", true)
+	obj.ValueEqual("OrganizationUseTotp", false)
 }
 
-func assertDomainsReponse(t *testing.T, res *http.Response) {
-	assert.Equal(t, 200, res.StatusCode)
-	var result map[string]interface{}
-	err := json.NewDecoder(res.Body).Decode(&result)
-	assert.NoError(t, err)
-	assert.Equal(t, result["Object"], "domains")
-	equivalent, ok := result["EquivalentDomains"].([]interface{})
-	assert.True(t, ok)
-	assert.Len(t, equivalent, 1)
-	domains, ok := equivalent[0].([]interface{})
-	assert.True(t, ok)
-	assert.Len(t, domains, 3)
-	assert.Equal(t, domains[0], "stackoverflow.com")
-	assert.Equal(t, domains[1], "serverfault.com")
-	assert.Equal(t, domains[2], "superuser.com")
-	global, ok := result["GlobalEquivalentDomains"].([]interface{})
-	assert.True(t, ok)
-	assert.Len(t, global, len(bitwarden.GlobalDomains))
-	for i := range global {
-		item := global[i].(map[string]interface{})
-		k := int(item["Type"].(float64))
+func assertDomainsReponse(t *testing.T, obj *httpexpect.Object) {
+	obj.ValueEqual("Object", "domains")
+	equivalent := obj.Value("EquivalentDomains").Array()
+	equivalent.Length().Equal(1)
+	domains := equivalent.First().Array()
+	domains.Length().Equal(3)
+	domains.Element(0).Equal("stackoverflow.com")
+	domains.Element(1).Equal("serverfault.com")
+	domains.Element(2).Equal("superuser.com")
+
+	global := obj.Value("GlobalEquivalentDomains").Array()
+	global.Length().Equal(len(bitwarden.GlobalDomains))
+
+	for _, item := range global.Iter() {
+		k := int(item.Object().Value("Type").Number().Raw())
 		excluded := (k == 42) || (k == 69)
-		assert.Equal(t, item["Excluded"], excluded)
-		assert.True(t, len(item["Domains"].([]interface{})) > 0)
+		item.Object().ValueEqual("Excluded", excluded)
+		item.Object().Value("Domains").Array().Length().Gt(0)
 	}
 }
