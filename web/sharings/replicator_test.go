@@ -67,8 +67,8 @@ func TestReplicator(t *testing.T) {
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
 	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
-	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
-	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
+	charlieContact = createContact(t, aliceInstance, "Charlie", "charlie@example.net")
+	daveContact = createContact(t, aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings":    sharings.Routes,
 		"/permissions": permissions.Routes,

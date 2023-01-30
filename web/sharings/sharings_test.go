@@ -1,15 +1,13 @@
 package sharings_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -31,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,21 +77,14 @@ func TestSharings(t *testing.T) {
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
 	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
-	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
-	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
+	charlieContact = createContact(t, aliceInstance, "Charlie", "charlie@example.net")
+	daveContact = createContact(t, aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings":    sharings.Routes,
 		"/permissions": permissions.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-
-	// Prepare Bob's browser
-	jar := setup.GetCookieJar()
-	bobUA = &http.Client{
-		CheckRedirect: noRedirect,
-		Jar:           jar,
-	}
 
 	// Prepare Bob's instance
 	bobSetup := testutils.NewSetup(t, t.Name()+"_bob")
@@ -104,7 +96,6 @@ func TestSharings(t *testing.T) {
 		Key:           "xxx",
 	})
 	bobAppToken = generateAppToken(bobInstance, "testapp", iocozytests)
-	edwardContact = createContact(bobInstance, "Edward", "edward@example.net")
 	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
@@ -118,236 +109,256 @@ func TestSharings(t *testing.T) {
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("CreateSharingSuccess", func(t *testing.T) {
-		bobContact := createBobContact()
+		eA := httpexpect.Default(t, tsA.URL)
+
+		bobContact := createBobContact(t)
 		assert.NotEmpty(t, aliceAppToken)
 		assert.NotNil(t, bobContact)
 
-		v := echo.Map{
-			"data": echo.Map{
-				"type": consts.Sharings,
-				"attributes": echo.Map{
-					"description":  "this is a test",
-					"open_sharing": true,
-					"rules": []interface{}{
-						echo.Map{
-							"title":   "test one",
-							"doctype": iocozytests,
-							"values":  []string{"000000"},
-							"add":     "sync",
-						},
-					},
-				},
-				"relationships": echo.Map{
-					"recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      bobContact.ID(),
-								"doctype": bobContact.DocType(),
-							},
-						},
-					},
-					"read_only_recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      daveContact.ID(),
-								"doctype": daveContact.DocType(),
-							},
-						},
-					},
-				},
-			},
-		}
-		body, _ := json.Marshal(v)
-		r := bytes.NewReader(body)
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "this is a test",
+            "open_sharing": true,
+            "rules": [{
+                "title": "test one",
+                "doctype": "` + iocozytests + `",
+                "values": ["000000"],
+                "add": "sync"
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+            },
+            "read_only_recipients": {
+                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, res.StatusCode)
-		defer res.Body.Close()
+		sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
-		assertSharingIsCorrectOnSharer(t, res.Body)
+		assertSharingIsCorrectOnSharer(t, obj, sharingID)
 		description := assertInvitationMailWasSent(t)
 		assert.Equal(t, description, "this is a test")
 		assert.Contains(t, discoveryLink, "/discovery?state=")
 	})
 
 	t.Run("GetSharing", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/"+sharingID, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+		eA := httpexpect.Default(t, tsA.URL)
 
-		assertSharingIsCorrectOnSharer(t, res.Body)
+		obj := eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		assertSharingIsCorrectOnSharer(t, obj, sharingID)
 	})
 
 	t.Run("Discovery", func(t *testing.T) {
-		parts := strings.Split(tsA.URL, "://")
 		u, err := url.Parse(discoveryLink)
 		assert.NoError(t, err)
-		u.Scheme = parts[0]
-		u.Host = parts[1]
 		state = u.Query()["state"][0]
-		req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-		assert.NoError(t, err)
-		res, err := bobUA.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-		defer res.Body.Close()
-		body, _ := io.ReadAll(res.Body)
-		assert.Contains(t, string(body), "Connect to your Cozy")
-		assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
 
-		u.RawQuery = ""
-		v := &url.Values{
-			"state": {state},
-			"slug":  {tsB.URL},
-		}
-		req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		assert.NoError(t, err)
-		res, err = bobUA.Do(req)
-		assert.NoError(t, err)
-		defer res.Body.Close()
-		assert.Equal(t, http.StatusFound, res.StatusCode)
-		authorizeLink = res.Header.Get("Location")
-		assert.Contains(t, authorizeLink, tsB.URL)
-		assert.Contains(t, authorizeLink, "/auth/authorize/sharing")
+		// Take only the path and query from the `disoveryLink` and redirect
+		// to the tsA host.
+		eA := httpexpect.Default(t, tsA.URL)
+
+		eA.GET(u.Path).
+			WithQuery("state", state).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Connect to your Cozy").
+			Contains(`<input type="hidden" name="state" value="` + state)
+
+		redirectHeader := eA.POST(u.Path).
+			WithFormField("state", state).
+			WithFormField("slug", tsB.URL).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).Header("Location")
+
+		authorizeLink = redirectHeader.NotEmpty().Raw()
+		redirectHeader.Contains(tsB.URL)
+		redirectHeader.Contains("/auth/authorize/sharing")
 
 		assertSharingRequestHasBeenCreated(t)
 	})
 
 	t.Run("AuthorizeSharing", func(t *testing.T) {
-		bobLogin(t)
+		u, err := url.Parse(authorizeLink)
+		assert.NoError(t, err)
+		sharingID = u.Query()["sharing_id"][0]
+		state := u.Query()["state"][0]
+
+		eB := httpexpect.Default(t, tsB.URL)
+
+		// Bob login
+		token := eB.GET("/auth/login").
+			Expect().Status(200).
+			Cookie("_csrf").Value().NotEmpty().Raw()
+
+		eB.POST("/auth/login").
+			WithCookie("_csrf", token).
+			WithFormField("passphrase", "MyPassphrase").
+			WithFormField("csrf_token", token).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Contains("home")
+		// End bob login
+
 		fakeAliceInstance(t)
 
-		res, err := bobUA.Get(authorizeLink)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-		defer res.Body.Close()
-		body, _ := io.ReadAll(res.Body)
+		t.Logf("redirect header: %q\n\n", authorizeLink)
 
-		assertAuthorizePageShowsTheSharing(t, string(body))
+		body := eB.GET(u.Path).
+			WithQuery("sharing_id", sharingID).
+			WithQuery("state", state).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body()
 
-		v := &url.Values{
-			"state":       {state},
-			"sharing_id":  {sharingID},
-			"csrf_token":  {csrfToken},
-			"synchronize": {"true"},
-		}
-		buf := bytes.NewBufferString(v.Encode())
-		req, err := http.NewRequest(http.MethodPost, tsB.URL+"/auth/authorize/sharing", buf)
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		assert.NoError(t, err)
-		res, err = bobUA.Do(req)
-		assert.NoError(t, err)
-		defer res.Body.Close()
-		assert.Equal(t, http.StatusSeeOther, res.StatusCode)
-		location := res.Header.Get("Location")
-		assert.Contains(t, location, "testapp."+bobInstance.Domain)
+		body.Contains("and you can collaborate by editing the document")
+		body.Contains(`<input type="hidden" name="sharing_id" value="` + sharingID)
+		body.Contains(`<input type="hidden" name="state" value="` + state)
+		body.Contains(`<span class="filetype-other filetype">`)
+
+		matches := body.Match(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+		matches.Length().Equal(2)
+		csrfToken = matches.Index(1).NotEmpty().Raw()
+
+		eB.POST("/auth/authorize/sharing").
+			WithFormField("state", state).
+			WithFormField("sharing_id", sharingID).
+			WithFormField("csrf_token", token).
+			WithFormField("synchronize", true).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Contains("testapp." + bobInstance.Domain)
 
 		assertCredentialsHasBeenExchanged(t)
 	})
 
 	t.Run("DelegateAddRecipientByCozyURL", func(t *testing.T) {
 		assert.NotEmpty(t, bobAppToken)
-		assert.NotNil(t, edwardContact)
+		edwardContact = createContact(t, bobInstance, "Edward", "edward@example.net")
 
-		v := echo.Map{
-			"data": echo.Map{
-				"type": consts.Sharings,
-				"relationships": echo.Map{
-					"recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      edwardContact.ID(),
-								"doctype": edwardContact.DocType(),
-							},
-						},
-					},
-				},
-			},
-		}
-		body, _ := json.Marshal(v)
-		r := bytes.NewReader(body)
-		req, err := http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/recipients", r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+bobAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+		eB := httpexpect.Default(t, tsB.URL)
 
-		var result map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-		data := result["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		members := attrs["members"].([]interface{})
-		assertSharingByAliceToBobDaveAndEdward(t, members)
+		obj := eB.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+bobAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + edwardContact.ID() + `", "doctype": "` + edwardContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+
+		members := attrs.Value("members").Array()
+		members.Length().Equal(4)
+
+		owner := members.Element(0).Object()
+		owner.ValueEqual("status", "owner")
+		owner.ValueEqual("public_name", "Alice")
+		owner.ValueEqual("email", "alice@example.net")
+
+		bob := members.Element(1).Object()
+		bob.ValueEqual("status", "ready")
+		bob.ValueEqual("email", "bob@example.net")
+
+		dave := members.Element(2).Object()
+		dave.ValueEqual("status", "pending")
+		dave.ValueEqual("email", "dave@example.net")
+		dave.ValueEqual("read_only", true)
+
+		edward := members.Element(3).Object()
+		edward.ValueEqual("name", "Edward")
+		edward.ValueEqual("email", "edward@example.net")
 	})
 
 	t.Run("CreateSharingWithPreview", func(t *testing.T) {
-		bobContact := createBobContact()
-		assert.NotEmpty(t, aliceAppToken)
-		assert.NotNil(t, bobContact)
+		bobContact := createBobContact(t)
+		require.NotEmpty(t, aliceAppToken)
+		require.NotNil(t, bobContact)
 
-		v := echo.Map{
-			"data": echo.Map{
-				"type": consts.Sharings,
-				"attributes": echo.Map{
-					"description":  "this is a test with preview",
-					"preview_path": "/preview",
-					"rules": []interface{}{
-						echo.Map{
-							"title":   "test two",
-							"doctype": iocozytests,
-							"values":  []string{"foobaz"},
-						},
-					},
-				},
-				"relationships": echo.Map{
-					"recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      bobContact.ID(),
-								"doctype": bobContact.DocType(),
-							},
-						},
-					},
-					"read_only_recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      daveContact.ID(),
-								"doctype": daveContact.DocType(),
-							},
-						},
-					},
-				},
-			},
-		}
-		body, _ := json.Marshal(v)
-		r := bytes.NewReader(body)
+		eA := httpexpect.Default(t, tsA.URL)
 
-		req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, res.StatusCode)
-		defer res.Body.Close()
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "this is a test with preview",
+            "preview_path": "/preview",
+            "rules": [{
+                "title": "test two",
+                "doctype": "` + iocozytests + `",
+                "values": ["foobaz"]
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+            },
+            "read_only_recipients": {
+                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assertSharingWithPreviewIsCorrect(t, res.Body)
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.Sharings)
+		sharingID = data.Value("id").String().NotEmpty().Raw()
+		data.Value("meta").Object().Value("rev").String().NotEmpty()
+		data.Value("links").Object().ValueEqual("self", "/sharings/"+sharingID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("description", "this is a test with preview")
+		attrs.ValueEqual("app_slug", "testapp")
+		attrs.ValueEqual("preview_path", "/preview")
+		attrs.ValueEqual("owner", true)
+		attrs.Value("created_at").String().DateTime(time.RFC3339)
+		attrs.Value("updated_at").String().DateTime(time.RFC3339)
+		attrs.NotContainsKey("credentials")
+
+		members := attrs.Value("members").Array()
+		assertSharingByAliceToBobAndDave(t, members)
+
+		rules := attrs.Value("rules").Array()
+		rules.Length().Equal(1)
+		rule := rules.First().Object()
+		rule.ValueEqual("title", "test two")
+		rule.ValueEqual("doctype", iocozytests)
+		rule.ValueEqual("values", []string{"foobaz"})
+
 		description := assertInvitationMailWasSent(t)
 		assert.Equal(t, description, "this is a test with preview")
 		assert.Contains(t, discoveryLink, aliceInstance.Domain)
@@ -355,100 +366,109 @@ func TestSharings(t *testing.T) {
 	})
 
 	t.Run("DiscoveryWithPreview", func(t *testing.T) {
-		parts := strings.Split(tsA.URL, "://")
 		u, err := url.Parse(discoveryLink)
 		assert.NoError(t, err)
-		u.Scheme = parts[0]
-		u.Host = parts[1]
-		u.Path = "/sharings/" + sharingID + "/discovery"
 		sharecode := u.Query()["sharecode"][0]
-		u.RawQuery = ""
-		v := &url.Values{
-			"sharecode": {sharecode},
-			"url":       {tsB.URL},
-		}
-		req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Add("Accept", "application/json")
-		assert.NoError(t, err)
-		res, err := bobUA.Do(req)
-		assert.NoError(t, err)
-		defer res.Body.Close()
-		assert.Equal(t, http.StatusOK, res.StatusCode)
 
-		assertCorrectRedirection(t, res.Body)
+		eA := httpexpect.Default(t, tsA.URL)
+
+		t.Logf("sharcode: %q\n\n", sharecode)
+
+		obj := eA.POST("/sharings/"+sharingID+"/discovery").
+			WithHeader("Accept", "application/json").
+			WithFormField("sharecode", sharecode).
+			WithFormField("url", tsB.URL).
+			Expect().Status(200).
+			JSON().Object()
+
+		redirectURI := obj.Value("redirect").String().Contains(tsB.URL).Raw()
+
+		res, err := url.Parse(redirectURI)
+		assert.NoError(t, err)
+		assert.Equal(t, res.Path, "/auth/authorize/sharing")
+		assert.Equal(t, res.Query()["sharing_id"][0], sharingID)
+		assert.NotEmpty(t, res.Query()["state"][0])
 	})
 
 	t.Run("AddRecipient", func(t *testing.T) {
 		assert.NotEmpty(t, aliceAppToken)
 		assert.NotNil(t, charlieContact)
 
-		v := echo.Map{
-			"data": echo.Map{
-				"type": consts.Sharings,
-				"relationships": echo.Map{
-					"recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      charlieContact.ID(),
-								"doctype": charlieContact.DocType(),
-							},
-						},
-					},
-				},
-			},
-		}
-		body, _ := json.Marshal(v)
-		r := bytes.NewReader(body)
-		req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/"+sharingID+"/recipients", r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+		eA := httpexpect.Default(t, tsA.URL)
 
-		var result map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-		data := result["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		members := attrs["members"].([]interface{})
-		assertSharingByAliceToBobDaveAndCharlie(t, members)
+		obj := eA.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + charlieContact.ID() + `", "doctype": "` + charlieContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		members := attrs.Value("members").Array()
+
+		members.Length().Equal(4)
+		owner := members.Element(0).Object()
+		owner.ValueEqual("status", "owner")
+		owner.ValueEqual("public_name", "Alice")
+		owner.ValueEqual("email", "alice@example.net")
+		owner.ValueEqual("instance", "http://"+aliceInstance.Domain)
+
+		bob := members.Element(1).Object()
+		bob.ValueEqual("status", "pending")
+		bob.ValueEqual("name", "Bob")
+		bob.ValueEqual("email", "bob@example.net")
+
+		dave := members.Element(2).Object()
+		dave.ValueEqual("status", "pending")
+		dave.ValueEqual("name", "Dave")
+		dave.ValueEqual("email", "dave@example.net")
+		dave.ValueEqual("read_only", true)
+
+		charlie := members.Element(3).Object()
+		charlie.ValueEqual("status", "pending")
+		charlie.ValueEqual("name", "Charlie")
+		charlie.ValueEqual("email", "charlie@example.net")
 	})
 
 	t.Run("RevokedSharingWithPreview", func(t *testing.T) {
 		sharecode := strings.Split(discoveryLink, "=")[1]
 
-		// Assert the link is available (equivalent to doc perms created)
-		req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
-		req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+sharecode)
-		assert.NoError(t, err)
-		res2, err := http.DefaultClient.Do(req2)
-		content, _ := io.ReadAll(res2.Body)
-		assert.NoError(t, err)
-		defer res2.Body.Close()
-		assert.Equal(t, http.StatusOK, res2.StatusCode)
+		eA := httpexpect.Default(t, tsA.URL)
+
+		obj := eA.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+sharecode).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		sourceID := obj.Value("data").Object().
+			Value("attributes").Object().
+			Value("source_id").String().NotEmpty().Raw()
+		sharingID = strings.Split(sourceID, "/")[1]
 
 		// Adding a new member to the sharing
 		newMemberMail := "foo@bar.com"
-		data := map[string]interface{}{}
-		err = json.Unmarshal(content, &data)
-		assert.NoError(t, err)
-		d := data["data"].(map[string]interface{})
-		a := d["attributes"].(map[string]interface{})
-		sourceID := a["source_id"].(string)
-		sharingID := strings.Split(sourceID, "/")[1]
 		sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		_, err = sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		perms, err := permission.GetForSharePreview(aliceInstance, sharingID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		fooShareCode, err := aliceInstance.CreateShareCode(newMemberMail)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Adding its sharecode
 		codes := perms.Codes
@@ -458,14 +478,10 @@ func TestSharings(t *testing.T) {
 		assert.NoError(t, couchdb.UpdateDoc(aliceInstance, sharingDoc))
 
 		// Assert he has access to the sharing preview
-		req2, err = http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
-		req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fooShareCode)
-		assert.NoError(t, err)
-		res2, err = http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		defer res2.Body.Close()
-		assert.Equal(t, http.StatusOK, res2.StatusCode)
+		eA.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+fooShareCode).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200)
 
 		// Check the member status has been updated to "seen"
 		sharingDoc, err = sharing.FindSharing(aliceInstance, sharingID)
@@ -489,66 +505,49 @@ func TestSharings(t *testing.T) {
 		assert.Equal(t, "revoked", member.Status)
 
 		// Try to get permissions/self, we should get a 400
-		req2, err = http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
-		req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fooShareCode)
-		assert.NoError(t, err)
-		res2, err = http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		badRequestContent, err := io.ReadAll(res2.Body)
-		assert.NoError(t, err)
-		defer res2.Body.Close()
-		assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
-		assert.Contains(t, string(badRequestContent), "Invalid JWT")
+		eA.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+fooShareCode).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(400).
+			Body().Contains("Invalid JWT")
 	})
 
 	t.Run("CheckPermissions", func(t *testing.T) {
-		bobContact := createBobContact()
+		bobContact := createBobContact(t)
 		assert.NotNil(t, bobContact)
 
-		v := echo.Map{
-			"data": echo.Map{
-				"type": consts.Sharings,
-				"attributes": echo.Map{
-					"description": "this is a test",
-					"rules": []interface{}{
-						echo.Map{
-							"title":   "test one",
-							"doctype": iocozytests,
-							"values":  []string{"000000"},
-							"add":     "sync",
-						},
-						echo.Map{
-							"title":   "test two",
-							"doctype": consts.Contacts,
-							"values":  []string{"000000"},
-							"add":     "sync",
-						},
-					},
-				},
-				"relationships": echo.Map{
-					"recipients": echo.Map{
-						"data": []interface{}{
-							echo.Map{
-								"id":      bobContact.ID(),
-								"doctype": bobContact.DocType(),
-							},
-						},
-					},
-				},
-			},
-		}
-		body, _ := json.Marshal(v)
-		r := bytes.NewReader(body)
+		eA := httpexpect.Default(t, tsA.URL)
 
-		req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusForbidden, res.StatusCode)
-		defer res.Body.Close()
+		eA.POST("/sharings").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "this is a test",
+            "preview_path": "/preview",
+            "rules": [
+              {
+                "title": "test one",
+                "doctype": "` + iocozytests + `",
+                "values": ["000000"],
+                "add": "sync"
+              },{
+                "title": "test two",
+                "doctype": "` + consts.Contacts + `",
+                "values": ["000000"],
+                "add": "sync"
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(403)
 
 		other := &sharing.Sharing{
 			Description: "Another sharing",
@@ -562,17 +561,13 @@ func TestSharings(t *testing.T) {
 		}
 		assert.NoError(t, other.BeOwner(aliceInstance, "home"))
 		assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID(), false))
-		_, err = other.Create(aliceInstance)
+		_, err := other.Create(aliceInstance)
 		assert.NoError(t, err)
 
-		req, err = http.NewRequest(http.MethodGet, tsA.URL+"/sharings/"+other.ID(), nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusForbidden, res.StatusCode)
-		defer res.Body.Close()
+		eA.GET("/sharings/"+other.ID()).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(403)
 	})
 
 	t.Run("CheckSharingInfoByDocType", func(t *testing.T) {
@@ -593,48 +588,65 @@ func TestSharings(t *testing.T) {
 			assert.NoError(t, errs)
 			assert.NotNil(t, sd)
 		}
-		req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
 
-		assertSharingInfoRequestIsCorrect(t, res.Body, s1.ID(), s2.ID())
+		eA := httpexpect.Default(t, tsA.URL)
 
-		req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.tests.notyet", nil)
-		assert.NoError(t, err)
-		req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppTokenWildcard)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res2.StatusCode)
-		res2.Body.Close()
+		obj := eA.GET("/sharings/doctype/"+iocozytests).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req3, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
-		assert.NoError(t, err)
-		req3.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req3.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppTokenWildcard)
-		res3, err := http.DefaultClient.Do(req3)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
-		res3.Body.Close()
+		s1Found := false
+		s2Found := false
 
-		req4, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.things", nil)
-		assert.NoError(t, err)
-		req4.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		res4, err := http.DefaultClient.Do(req4)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusUnauthorized, res4.StatusCode)
-		res4.Body.Close()
+		for _, itm := range obj.Value("data").Array().Iter() {
+			data := itm.Object()
+			data.ValueEqual("type", consts.Sharings)
+			sharingID = data.Value("id").String().NotEmpty().Raw()
+			rel := data.Value("relationships").Object()
+			sharedDocs := rel.Value("shared_docs").Object()
+
+			if sharingID == s1.ID() {
+				sharedDocsData := sharedDocs.Value("data").Array()
+				sharedDocsData.Element(0).Object().Value("id").Equal("fakeid1")
+				sharedDocsData.Element(1).Object().Value("id").Equal("fakeid2")
+				sharedDocsData.Element(2).Object().Value("id").Equal("fakeid3")
+				s1Found = true
+			}
+
+			if sharingID == s2.ID() {
+				sharedDocsData := sharedDocs.Value("data").Array()
+				sharedDocsData.Element(0).Object().Value("id").Equal("fakeid4")
+				sharedDocsData.Element(1).Object().Value("id").Equal("fakeid5")
+				s2Found = true
+			}
+		}
+
+		assert.Equal(t, true, s1Found)
+		assert.Equal(t, true, s2Found)
+
+		eA.GET("/sharings/doctype/io.cozy.tests.notyet").
+			WithHeader("Authorization", "Bearer "+aliceAppTokenWildcard).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200)
+
+		eA.GET("/sharings/doctype/"+iocozytests).
+			WithHeader("Authorization", "Bearer "+aliceAppTokenWildcard).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200)
+
+		eA.GET("/sharings/doctype/io.cozy.things").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(401)
 	})
 
 	t.Run("RevokeSharing", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid1", "mygreatid2"}
 		sharedRefs := []*sharing.SharedRef{}
 		s := createSharing(t, aliceInstance, sharedDocs)
+
 		for _, id := range sharedDocs {
 			sid := iocozytests + "/" + id
 			sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
@@ -659,13 +671,12 @@ func TestSharings(t *testing.T) {
 		err = s.AddReplicateTrigger(aliceInstance)
 		assert.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+		eA := httpexpect.Default(t, tsA.URL)
+
+		eA.DELETE("/sharings/"+s.ID()+"/recipients").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
 
 		var sRevoke sharing.Sharing
 		err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoke)
@@ -688,6 +699,7 @@ func TestSharings(t *testing.T) {
 		sharedDocs := []string{"mygreatid3", "mygreatid4"}
 		sharedRefs := []*sharing.SharedRef{}
 		s := createSharing(t, aliceInstance, sharedDocs)
+
 		for _, id := range sharedDocs {
 			sid := iocozytests + "/" + id
 			sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
@@ -710,6 +722,7 @@ func TestSharings(t *testing.T) {
 			Email:    "charlie@cozy.local",
 			Instance: tsB.URL,
 		})
+
 		clientC, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[2])
 		assert.NoError(t, err)
 		tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permission.ALL)
@@ -727,22 +740,20 @@ func TestSharings(t *testing.T) {
 		err = s.AddReplicateTrigger(aliceInstance)
 		assert.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients/1", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+		eA := httpexpect.Default(t, tsA.URL)
+
+		eA.DELETE("/sharings/"+s.ID()+"/recipients/1").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
 		assertOneRecipientIsRevoked(t, s)
 
-		req2, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients/2", nil)
-		assert.NoError(t, err)
-		req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res2.StatusCode)
+		eA.DELETE("/sharings/"+s.ID()+"/recipients/2").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
 		assertLastRecipientIsRevoked(t, s, sharedRefs)
 	})
 
@@ -791,22 +802,20 @@ func TestSharings(t *testing.T) {
 		err = s.AddReplicateTrigger(aliceInstance)
 		assert.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/answer", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+s.Credentials[0].AccessToken.AccessToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+		eA := httpexpect.Default(t, tsA.URL)
+
+		eA.DELETE("/sharings/"+s.ID()+"/answer").
+			WithHeader("Authorization", "Bearer "+s.Credentials[0].AccessToken.AccessToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
 		assertOneRecipientIsRevoked(t, s)
 
-		req, err = http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/answer", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+s.Credentials[1].AccessToken.AccessToken)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+		eA.DELETE("/sharings/"+s.ID()+"/answer").
+			WithHeader("Authorization", "Bearer "+s.Credentials[1].AccessToken.AccessToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
 		assertLastRecipientIsRevoked(t, s, sharedRefs)
 	})
 
@@ -820,53 +829,55 @@ func TestSharings(t *testing.T) {
 	})
 }
 
-func assertSharingByAliceToBobAndDave(t *testing.T, members []interface{}) {
-	assert.Len(t, members, 3)
-	owner := members[0].(map[string]interface{})
-	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["public_name"], "Alice")
-	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], "http://"+aliceInstance.Domain)
-	recipient := members[1].(map[string]interface{})
-	assert.Equal(t, recipient["status"], "pending")
-	assert.Equal(t, recipient["name"], "Bob")
-	assert.Equal(t, recipient["email"], "bob@example.net")
-	assert.NotEqual(t, recipient["read_only"], true)
-	recipient = members[2].(map[string]interface{})
-	assert.Equal(t, recipient["status"], "pending")
-	assert.Equal(t, recipient["name"], "Dave")
-	assert.Equal(t, recipient["email"], "dave@example.net")
-	assert.Equal(t, recipient["read_only"], true)
+func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array) {
+	t.Helper()
+
+	obj.Length().Equal(3)
+
+	owner := obj.First().Object()
+	owner.ValueEqual("status", "owner")
+	owner.ValueEqual("public_name", "Alice")
+	owner.ValueEqual("email", "alice@example.net")
+	owner.ValueEqual("instance", "http://"+aliceInstance.Domain)
+
+	recipient := obj.Element(1).Object()
+	recipient.ValueEqual("status", "pending")
+	recipient.ValueEqual("name", "Bob")
+	recipient.ValueEqual("email", "bob@example.net")
+	recipient.NotContainsKey("read_only")
+
+	recipient2 := obj.Element(2).Object()
+	recipient2.ValueEqual("status", "pending")
+	recipient2.ValueEqual("name", "Dave")
+	recipient2.ValueEqual("email", "dave@example.net")
+	recipient2.ValueEqual("read_only", true)
 }
 
-func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
-	var result map[string]interface{}
-	assert.NoError(t, json.NewDecoder(body).Decode(&result))
-	data := result["data"].(map[string]interface{})
-	assert.Equal(t, data["type"], consts.Sharings)
-	sharingID = data["id"].(string)
-	assert.NotEmpty(t, sharingID)
-	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
-	self := "/sharings/" + sharingID
-	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
+func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharingID string) {
+	t.Helper()
 
-	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, attrs["description"], "this is a test")
-	assert.Equal(t, attrs["app_slug"], "testapp")
-	assert.Equal(t, attrs["owner"], true)
-	assert.NotEmpty(t, attrs["created_at"])
-	assert.NotEmpty(t, attrs["updated_at"])
-	assert.Nil(t, attrs["credentials"])
+	data := obj.Value("data").Object()
 
-	members := attrs["members"].([]interface{})
-	assertSharingByAliceToBobAndDave(t, members)
+	data.ValueEqual("type", consts.Sharings)
+	data.Value("meta").Object().Value("rev").String().NotEmpty()
+	data.Value("links").Object().ValueEqual("self", "/sharings/"+sharingID)
 
-	rules := attrs["rules"].([]interface{})
-	assert.Len(t, rules, 1)
-	rule := rules[0].(map[string]interface{})
-	assert.Equal(t, rule["title"], "test one")
-	assert.Equal(t, rule["doctype"], iocozytests)
-	assert.Equal(t, rule["values"], []interface{}{"000000"})
+	attrs := data.Value("attributes").Object()
+	attrs.ValueEqual("description", "this is a test")
+	attrs.ValueEqual("app_slug", "testapp")
+	attrs.ValueEqual("owner", true)
+	attrs.Value("created_at").String().DateTime(time.RFC3339)
+	attrs.Value("updated_at").String().DateTime(time.RFC3339)
+	attrs.NotContainsKey("credentials")
+
+	assertSharingByAliceToBobAndDave(t, attrs.Value("members").Array())
+
+	rules := attrs.Value("rules").Array()
+	rules.Length().Equal(1)
+	rule := rules.First().Object()
+	rule.ValueEqual("title", "test one")
+	rule.ValueEqual("doctype", iocozytests)
+	rule.ValueEqual("values", []interface{}{"000000"})
 }
 
 func assertInvitationMailWasSent(t *testing.T) string {
@@ -936,59 +947,6 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.NotEmpty(t, rule.Values)
 }
 
-func assertSharingInfoRequestIsCorrect(t *testing.T, body io.Reader, s1, s2 string) {
-	var result map[string]interface{}
-	assert.NoError(t, json.NewDecoder(body).Decode(&result))
-	d := result["data"].([]interface{})
-	data := make([]map[string]interface{}, len(d))
-	s1Found := false
-	s2Found := false
-	for i := range d {
-		data[i] = d[i].(map[string]interface{})
-		assert.Equal(t, consts.Sharings, data[i]["type"])
-		sharingID = data[i]["id"].(string)
-		assert.NotEmpty(t, sharingID)
-		rel := data[i]["relationships"].(map[string]interface{})
-		sharedDocs := rel["shared_docs"].(map[string]interface{})
-		assert.NotEmpty(t, sharedDocs)
-
-		if sharingID == s1 {
-			sharedDocsData := sharedDocs["data"].([]interface{})
-			assert.Equal(t, "fakeid1", sharedDocsData[0].(map[string]interface{})["id"])
-			assert.Equal(t, "fakeid2", sharedDocsData[1].(map[string]interface{})["id"])
-			assert.Equal(t, "fakeid3", sharedDocsData[2].(map[string]interface{})["id"])
-			s1Found = true
-		} else if sharingID == s2 {
-			sharedDocsData := sharedDocs["data"].([]interface{})
-			assert.Equal(t, "fakeid4", sharedDocsData[0].(map[string]interface{})["id"])
-			assert.Equal(t, "fakeid5", sharedDocsData[1].(map[string]interface{})["id"])
-			s2Found = true
-		}
-	}
-	assert.Equal(t, true, s1Found)
-	assert.Equal(t, true, s2Found)
-}
-
-func bobLogin(t *testing.T) {
-	res, err := bobUA.Get(tsB.URL + "/auth/login")
-	assert.NoError(t, err)
-	res.Body.Close()
-	token := res.Cookies()[0].Value
-
-	v := &url.Values{
-		"passphrase": {"MyPassphrase"},
-		"csrf_token": {token},
-	}
-	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/auth/login", bytes.NewBufferString(v.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	assert.NoError(t, err)
-	res, err = bobUA.Do(req)
-	assert.NoError(t, err)
-	res.Body.Close()
-	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
-	assert.Contains(t, res.Header.Get("Location"), "home")
-}
-
 func fakeAliceInstance(t *testing.T) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
@@ -1000,18 +958,6 @@ func fakeAliceInstance(t *testing.T) {
 	s.Members[0].Instance = tsA.URL
 	err = couchdb.UpdateDoc(bobInstance, s)
 	assert.NoError(t, err)
-}
-
-func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
-	assert.Contains(t, body, "and you can collaborate by editing the document")
-	assert.Contains(t, body, `<input type="hidden" name="sharing_id" value="`+sharingID)
-	assert.Contains(t, body, `<input type="hidden" name="state" value="`+state)
-	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
-	matches := re.FindStringSubmatch(body)
-	if assert.Len(t, matches, 2) {
-		csrfToken = matches[1]
-	}
-	assert.Contains(t, body, `<span class="filetype-other filetype">`)
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T) {
@@ -1066,90 +1012,6 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	}
 }
 
-func assertSharingByAliceToBobDaveAndEdward(t *testing.T, members []interface{}) {
-	assert.Len(t, members, 4)
-	owner := members[0].(map[string]interface{})
-	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["public_name"], "Alice")
-	assert.Equal(t, owner["email"], "alice@example.net")
-	bob := members[1].(map[string]interface{})
-	assert.Equal(t, bob["status"], "ready")
-	assert.Equal(t, bob["email"], "bob@example.net")
-	dave := members[2].(map[string]interface{})
-	assert.Equal(t, dave["status"], "pending")
-	assert.Equal(t, dave["email"], "dave@example.net")
-	assert.Equal(t, dave["read_only"], true)
-	edward := members[3].(map[string]interface{})
-	assert.Equal(t, edward["name"], "Edward")
-	assert.Equal(t, edward["email"], "edward@example.net")
-}
-
-func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
-	var result map[string]interface{}
-	assert.NoError(t, json.NewDecoder(body).Decode(&result))
-	data := result["data"].(map[string]interface{})
-	assert.Equal(t, data["type"], consts.Sharings)
-	sharingID = data["id"].(string)
-	assert.NotEmpty(t, sharingID)
-	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
-	self := "/sharings/" + sharingID
-	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
-
-	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, attrs["description"], "this is a test with preview")
-	assert.Equal(t, attrs["app_slug"], "testapp")
-	assert.Equal(t, attrs["preview_path"], "/preview")
-	assert.Equal(t, attrs["owner"], true)
-	assert.NotEmpty(t, attrs["created_at"])
-	assert.NotEmpty(t, attrs["updated_at"])
-	assert.Nil(t, attrs["credentials"])
-
-	members := attrs["members"].([]interface{})
-	assertSharingByAliceToBobAndDave(t, members)
-
-	rules := attrs["rules"].([]interface{})
-	assert.Len(t, rules, 1)
-	rule := rules[0].(map[string]interface{})
-	assert.Equal(t, rule["title"], "test two")
-	assert.Equal(t, rule["doctype"], iocozytests)
-	assert.Equal(t, rule["values"], []interface{}{"foobaz"})
-}
-
-func assertCorrectRedirection(t *testing.T, body io.Reader) {
-	var result map[string]interface{}
-	assert.NoError(t, json.NewDecoder(body).Decode(&result))
-	redirectURI := result["redirect"]
-	assert.NotEmpty(t, redirectURI)
-	assert.Contains(t, redirectURI, tsB.URL)
-	u, err := url.Parse(redirectURI.(string))
-	assert.NoError(t, err)
-	assert.Equal(t, u.Path, "/auth/authorize/sharing")
-	assert.Equal(t, u.Query()["sharing_id"][0], sharingID)
-	assert.NotEmpty(t, u.Query()["state"][0])
-}
-
-func assertSharingByAliceToBobDaveAndCharlie(t *testing.T, members []interface{}) {
-	assert.Len(t, members, 4)
-	owner := members[0].(map[string]interface{})
-	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["public_name"], "Alice")
-	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], "http://"+aliceInstance.Domain)
-	bob := members[1].(map[string]interface{})
-	assert.Equal(t, bob["status"], "pending")
-	assert.Equal(t, bob["name"], "Bob")
-	assert.Equal(t, bob["email"], "bob@example.net")
-	dave := members[2].(map[string]interface{})
-	assert.Equal(t, dave["status"], "pending")
-	assert.Equal(t, dave["name"], "Dave")
-	assert.Equal(t, dave["email"], "dave@example.net")
-	assert.Equal(t, dave["read_only"], true)
-	charlie := members[3].(map[string]interface{})
-	assert.Equal(t, charlie["status"], "pending")
-	assert.Equal(t, charlie["name"], "Charlie")
-	assert.Equal(t, charlie["email"], "charlie@example.net")
-}
-
 func assertOneRecipientIsRevoked(t *testing.T, s *sharing.Sharing) {
 	var sRevoked sharing.Sharing
 	err := couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoked)
@@ -1180,24 +1042,25 @@ func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*shar
 	assert.EqualError(t, err, "CouchDB(not_found): deleted")
 }
 
-func createBobContact() *contact.Contact {
-	return createContact(aliceInstance, "Bob", "bob@example.net")
+func createBobContact(t *testing.T) *contact.Contact {
+	return createContact(t, aliceInstance, "Bob", "bob@example.net")
 }
 
-func createContact(inst *instance.Instance, name, email string) *contact.Contact {
+func createContact(t *testing.T, inst *instance.Instance, name, email string) *contact.Contact {
+	t.Helper()
+
 	mail := map[string]interface{}{"address": email}
 	c := contact.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
-	err := couchdb.CreateDoc(inst, c)
-	if err != nil {
-		return nil
-	}
+
+	require.NoError(t, couchdb.CreateDoc(inst, c))
+
 	return c
 }
 
 func createSharing(t *testing.T, inst *instance.Instance, values []string) *sharing.Sharing {
-	bobContact := createBobContact()
+	bobContact := createBobContact(t)
 	assert.NotNil(t, bobContact)
 
 	r := sharing.Rule{
