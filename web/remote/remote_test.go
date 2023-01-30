@@ -1,8 +1,6 @@
 package remote
 
 import (
-	"io"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -12,7 +10,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testInstance *instance.Instance
@@ -32,25 +32,30 @@ func TestRemote(t *testing.T) {
 	token = generateAppToken(testInstance, "answers", "org.wikidata.entity")
 
 	ts = setup.GetTestServer("/remote", Routes)
+	t.Cleanup(ts.Close)
 
 	t.Run("RemoteGET", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/remote/org.wikidata.entity?entity=Q42&comment=foo", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Host = testInstance.Domain
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		body, _ := io.ReadAll(res.Body)
-		assert.Equal(t, `{"entities":`, string(body[:12]))
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/remote/org.wikidata.entity").
+			WithQuery("entity", "Q42").
+			WithQuery("comment", "foo").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.Value("entities").Object().NotEmpty()
 
 		var results []map[string]interface{}
 		allReq := &couchdb.AllDocsRequest{
 			Descending: true,
 			Limit:      1,
 		}
-		err = couchdb.GetAllDocs(testInstance, consts.RemoteRequests, allReq, &results)
-		assert.NoError(t, err)
-		assert.Len(t, results, 1)
+		err := couchdb.GetAllDocs(testInstance, consts.RemoteRequests, allReq, &results)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+
 		logged := results[0]
 		assert.Equal(t, "org.wikidata.entity", logged["doctype"].(string))
 		assert.Equal(t, "GET", logged["verb"].(string))
