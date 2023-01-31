@@ -1,13 +1,12 @@
 package sharings_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -26,30 +25,27 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// Things for the replicator tests
-var tsR *httptest.Server
-var replInstance *instance.Instance
-var replSharingID, replAccessToken string
-var fileSharingID, fileAccessToken string
-var dirID string
-var xorKey []byte
-
-const replDoctype = "io.cozy.replicator.tests"
-
-// It's not really a test, more a setup for the replicator tests
-
-// It's not really a test, more a setup for the io.cozy.files tests
-
 func TestReplicator(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	// Things for the replicator tests
+	var tsR *httptest.Server
+	var replInstance *instance.Instance
+	var replSharingID, replAccessToken string
+	var fileSharingID, fileAccessToken string
+	var dirID string
+	var xorKey []byte
+
+	const replDoctype = "io.cozy.replicator.tests"
 
 	config.UseTestFile()
 	build.BuildMode = build.ModeDev
@@ -133,33 +129,28 @@ func TestReplicator(t *testing.T) {
 		assert.NotNil(t, replAccessToken)
 
 		id := replDoctype + "/" + uuidv4()
-		createShared(t, id, []string{"111111111"})
+		createShared(t, id, []string{"111111111"}, replInstance, replSharingID)
 
-		body, _ := json.Marshal(sharing.Changed{
-			"id": []string{"1-111111111"},
+		t.Run("WithoutBearerToken", func(t *testing.T) {
+			e := httpexpect.Default(t, tsR.URL)
+
+			e.POST("/sharings/"+replSharingID+"/_revs_diff").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Accept", "application/json").
+				WithBytes([]byte(`{"id": ["1-111111111"]}`)).
+				Expect().Status(401)
 		})
-		u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
 
-		r := bytes.NewReader(body)
-		req, err := http.NewRequest(http.MethodPost, u, r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderContentType, "application/json")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-		defer res.Body.Close()
+		t.Run("OK", func(t *testing.T) {
+			e := httpexpect.Default(t, tsR.URL)
 
-		r = bytes.NewReader(body)
-		req, err = http.NewRequest(http.MethodPost, u, r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderContentType, "application/json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+replAccessToken)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+			e.POST("/sharings/"+replSharingID+"/_revs_diff").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithHeader("Accept", "application/json").
+				WithBytes([]byte(`{"id": ["1-111111111"]}`)).
+				Expect().Status(200)
+		})
 	})
 
 	t.Run("RevsDiff", func(t *testing.T) {
@@ -167,60 +158,49 @@ func TestReplicator(t *testing.T) {
 		assert.NotEmpty(t, replAccessToken)
 
 		sid1 := replDoctype + "/" + uuidv4()
-		createShared(t, sid1, []string{"1a", "1a", "1a"})
+		createShared(t, sid1, []string{"1a", "1a", "1a"}, replInstance, replSharingID)
 		sid2 := replDoctype + "/" + uuidv4()
-		createShared(t, sid2, []string{"2a", "2a", "2a"})
+		createShared(t, sid2, []string{"2a", "2a", "2a"}, replInstance, replSharingID)
 		sid3 := replDoctype + "/" + uuidv4()
-		createShared(t, sid3, []string{"3a", "3a", "3a"})
+		createShared(t, sid3, []string{"3a", "3a", "3a"}, replInstance, replSharingID)
 		sid4 := replDoctype + "/" + uuidv4()
-		createShared(t, sid4, []string{"4a", "4a", "4a"})
+		createShared(t, sid4, []string{"4a", "4a", "4a"}, replInstance, replSharingID)
 		sid5 := replDoctype + "/" + uuidv4()
-		createShared(t, sid5, []string{"5a", "5a", "5a"})
+		createShared(t, sid5, []string{"5a", "5a", "5a"}, replInstance, replSharingID)
 		sid6 := replDoctype + "/" + uuidv4()
 
-		body, _ := json.Marshal(sharing.Changed{
-			sid1: []string{"3-1a"},
-			sid2: []string{"2-2a"},
-			sid3: []string{"5-3b"},
-			sid4: []string{"2-4b", "2-4c", "4-4d"},
-			sid6: []string{"1-6b"},
-		})
-		r := bytes.NewReader(body)
-		u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
-		req, err := http.NewRequest(http.MethodPost, u, r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderContentType, "application/json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+replAccessToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+		e := httpexpect.Default(t, tsR.URL)
 
-		missings := make(sharing.Missings)
-		err = json.NewDecoder(res.Body).Decode(&missings)
-		assert.NoError(t, err)
+		obj := e.POST("/sharings/"+replSharingID+"/_revs_diff").
+			WithHeader("Authorization", "Bearer "+replAccessToken).
+			WithHeader("Accept", "application/json").
+			WithJSON(sharing.Changed{
+				sid1: []string{"3-1a"},
+				sid2: []string{"2-2a"},
+				sid3: []string{"5-3b"},
+				sid4: []string{"2-4b", "2-4c", "4-4d"},
+				sid6: []string{"1-6b"},
+			}).
+			Expect().Status(200).
+			JSON().Object()
 
 		// sid1 is the same on both sides
-		assert.NotContains(t, missings, sid1)
+		obj.NotContainsKey(sid1)
 
 		// sid2 was updated on the target
-		assert.NotContains(t, missings, sid2)
+		obj.NotContainsKey(sid2)
 
 		// sid3 was updated on the source
-		assert.Contains(t, missings, sid3)
-		assert.Equal(t, missings[sid3].Missing, []string{"5-3b"})
+		obj.Value(sid3).Object().Value("missing").Array().Equal([]string{"5-3b"})
 
 		// sid4 is a conflict
-		assert.Contains(t, missings, sid4)
-		assert.Equal(t, missings[sid4].Missing, []string{"2-4b", "2-4c", "4-4d"})
+		obj.Value(sid4).Object().Value("missing").Array().Equal([]string{"2-4b", "2-4c", "4-4d"})
 
 		// sid5 has been created on the target
-		assert.NotContains(t, missings, sid5)
+		obj.NotContainsKey(sid5)
 
 		// sid6 has been created on the source
-		assert.Contains(t, missings, sid6)
-		assert.Equal(t, missings[sid6].Missing, []string{"1-6b"})
+		obj.Value(sid6).Object().Value("missing").Array().Equal([]string{"1-6b"})
 	})
 
 	t.Run("BulkDocs", func(t *testing.T) {
@@ -229,48 +209,43 @@ func TestReplicator(t *testing.T) {
 
 		id1 := uuidv4()
 		sid1 := replDoctype + "/" + id1
-		createShared(t, sid1, []string{"aaa", "bbb"})
+		createShared(t, sid1, []string{"aaa", "bbb"}, replInstance, replSharingID)
 		id2 := uuidv4()
 		sid2 := replDoctype + "/" + id2
 
-		body, _ := json.Marshal(sharing.DocsByDoctype{
-			replDoctype: {
-				{
-					"_id":  id1,
-					"_rev": "3-ccc",
-					"_revisions": map[string]interface{}{
-						"start": 3,
-						"ids":   []string{"ccc", "bbb"},
-					},
-					"this": "is document " + id1 + " at revision 3-ccc",
-					"foo":  "bar",
-				},
-				{
-					"_id":  id2,
-					"_rev": "3-fff",
-					"_revisions": map[string]interface{}{
-						"start": 3,
-						"ids":   []string{"fff", "eee", "dd"},
-					},
-					"this": "is document " + id2 + " at revision 3-fff",
-					"foo":  "baz",
-				},
-			},
-		})
-		r := bytes.NewReader(body)
-		u := tsR.URL + "/sharings/" + replSharingID + "/_bulk_docs"
-		req, err := http.NewRequest(http.MethodPost, u, r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderContentType, "application/json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+replAccessToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
+		e := httpexpect.Default(t, tsR.URL)
 
-		assertSharedDoc(t, sid1, "3-ccc")
-		assertSharedDoc(t, sid2, "3-fff")
+		e.POST("/sharings/"+replSharingID+"/_bulk_docs").
+			WithHeader("Authorization", "Bearer "+replAccessToken).
+			WithHeader("Accept", "application/json").
+			WithJSON(sharing.DocsByDoctype{
+				replDoctype: {
+					{
+						"_id":  id1,
+						"_rev": "3-ccc",
+						"_revisions": map[string]interface{}{
+							"start": 3,
+							"ids":   []string{"ccc", "bbb"},
+						},
+						"this": "is document " + id1 + " at revision 3-ccc",
+						"foo":  "bar",
+					},
+					{
+						"_id":  id2,
+						"_rev": "3-fff",
+						"_revisions": map[string]interface{}{
+							"start": 3,
+							"ids":   []string{"fff", "eee", "dd"},
+						},
+						"this": "is document " + id2 + " at revision 3-fff",
+						"foo":  "baz",
+					},
+				},
+			}).
+			Expect().Status(200)
+
+		assertSharedDoc(t, sid1, "3-ccc", replInstance)
+		assertSharedDoc(t, sid2, "3-fff", replInstance)
 	})
 
 	t.Run("CreateSharingForUploadFileTest", func(t *testing.T) {
@@ -289,12 +264,14 @@ func TestReplicator(t *testing.T) {
 			Rules:       []sharing.Rule{ruleOne},
 		}
 		assert.NoError(t, s.BeOwner(replInstance, ""))
+
 		s.Members = append(s.Members, sharing.Member{
 			Status:   sharing.MemberStatusReady,
 			Name:     "J. Doe",
 			Email:    "j.doe@example.net",
 			Instance: "https://j.example.net/",
 		})
+
 		s.Credentials = append(s.Credentials, sharing.Credentials{})
 		_, err := s.Create(replInstance)
 		assert.NoError(t, err)
@@ -302,15 +279,19 @@ func TestReplicator(t *testing.T) {
 
 		xorKey = sharing.MakeXorKey()
 		s.Credentials[0].XorKey = xorKey
+
 		cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[0])
 		assert.NoError(t, err)
 		s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+
 		token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permission.ALL)
 		assert.NoError(t, err)
 		s.Credentials[0].AccessToken = token
+
 		cli2, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
 		assert.NoError(t, err)
 		s.Credentials[0].InboundClientID = cli2.ClientID
+
 		token2, err := sharing.CreateAccessToken(replInstance, cli2, s.SID, permission.ALL)
 		assert.NoError(t, err)
 		fileAccessToken = token2.AccessToken
@@ -318,57 +299,49 @@ func TestReplicator(t *testing.T) {
 	})
 
 	t.Run("UploadNewFile", func(t *testing.T) {
+		e := httpexpect.Default(t, tsR.URL)
+
 		assert.NotEmpty(t, fileSharingID)
 		assert.NotEmpty(t, fileAccessToken)
 
 		fileOneID := uuidv4()
-		body, _ := json.Marshal(map[string]interface{}{
-			"_id":  fileOneID,
-			"_rev": "1-5f9ba207fefdc250e35f7cd866c84cc6",
-			"_revisions": map[string]interface{}{
-				"start": 1,
-				"ids":   []string{"5f9ba207fefdc250e35f7cd866c84cc6"},
-			},
-			"type":       "file",
-			"name":       "hello.txt",
-			"created_at": "2018-04-23T18:11:42.343937292+02:00",
-			"updated_at": "2018-04-23T18:11:42.343937292+02:00",
-			"size":       "6",
-			"md5sum":     "WReFt5RgHiErJg4lklY2/Q==",
-			"mime":       "text/plain",
-			"class":      "text",
-			"executable": false,
-			"trashed":    false,
-			"tags":       []string{},
-		})
-		r := bytes.NewReader(body)
-		u := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + fileOneID + "/metadata"
-		req, err := http.NewRequest(http.MethodPut, u, r)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderContentType, "application/json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
-		var key map[string]string
-		assert.NoError(t, json.NewDecoder(res.Body).Decode(&key))
-		assert.NotEmpty(t, key["key"])
 
-		r2 := strings.NewReader("world\n")
-		u2 := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + key["key"]
-		req2, err := http.NewRequest(http.MethodPut, u2, r2)
-		assert.NoError(t, err)
-		req2.Header.Add(echo.HeaderContentType, "text/plain")
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusNoContent, res2.StatusCode)
-		defer res.Body.Close()
+		obj := e.PUT("/sharings/"+fileSharingID+"/io.cozy.files/"+fileOneID+"/metadata").
+			WithHeader("Authorization", "Bearer "+fileAccessToken).
+			WithHeader("Accept", "application/json").
+			WithJSON(map[string]interface{}{
+				"_id":  fileOneID,
+				"_rev": "1-5f9ba207fefdc250e35f7cd866c84cc6",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"5f9ba207fefdc250e35f7cd866c84cc6"},
+				},
+				"type":       "file",
+				"name":       "hello.txt",
+				"created_at": "2018-04-23T18:11:42.343937292+02:00",
+				"updated_at": "2018-04-23T18:11:42.343937292+02:00",
+				"size":       "6",
+				"md5sum":     "WReFt5RgHiErJg4lklY2/Q==",
+				"mime":       "text/plain",
+				"class":      "text",
+				"executable": false,
+				"trashed":    false,
+				"tags":       []string{},
+			}).
+			Expect().Status(200).
+			JSON().Object()
+
+		key := obj.Value("key").String().NotEmpty().Raw()
+
+		e.PUT("/sharings/"+fileSharingID+"/io.cozy.files/"+key).
+			WithHeader("Authorization", "Bearer "+fileAccessToken).
+			WithText("world\n"). // Must match the md5sum in the body just above
+			Expect().Status(204)
 	})
 
 	t.Run("GetFolder", func(t *testing.T) {
+		e := httpexpect.Default(t, tsR.URL)
+
 		assert.NotEmpty(t, fileSharingID)
 		assert.NotEmpty(t, fileAccessToken)
 
@@ -398,24 +371,20 @@ func TestReplicator(t *testing.T) {
 		assert.NoError(t, sharing.UpdateShared(replInstance, msg, evt))
 
 		xoredID := sharing.XorID(folder.DocID, xorKey)
-		u := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + xoredID
-		req, err := http.NewRequest(http.MethodGet, u, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAccept, "application/json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-		defer res.Body.Close()
-		var attrs map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res.Body).Decode(&attrs))
-		assert.Equal(t, xoredID, attrs["_id"])
-		assert.Equal(t, folder.DocRev, attrs["_rev"])
-		assert.Equal(t, "directory", attrs["type"])
-		assert.Equal(t, "zorglub", attrs["name"])
-		assert.Empty(t, attrs["dir_id"])
-		assert.NotEmpty(t, attrs["created_at"])
-		assert.NotEmpty(t, attrs["updated_at"])
+
+		obj := e.GET("/sharings/"+fileSharingID+"/io.cozy.files/"+xoredID).
+			WithHeader("Authorization", "Bearer "+fileAccessToken).
+			WithHeader("Accept", "application/json").
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("_id", xoredID)
+		obj.ValueEqual("_rev", folder.DocRev)
+		obj.ValueEqual("type", "directory")
+		obj.ValueEqual("name", "zorglub")
+		obj.NotContainsKey("dir_id")
+		obj.Value("created_at").String().DateTime(time.RFC3339)
+		obj.Value("updated_at").String().DateTime(time.RFC3339)
 	})
 }
 
@@ -424,7 +393,7 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedRef {
+func createShared(t *testing.T, sid string, revisions []string, replInstance *instance.Instance, replSharingID string) *sharing.SharedRef {
 	rev := fmt.Sprintf("%d-%s", len(revisions), revisions[0])
 	parts := strings.SplitN(sid, "/", 2)
 	doctype := parts[0]
@@ -465,7 +434,7 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	return &ref
 }
 
-func assertSharedDoc(t *testing.T, sid, rev string) {
+func assertSharedDoc(t *testing.T, sid, rev string, replInstance *instance.Instance) {
 	parts := strings.SplitN(sid, "/", 2)
 	doctype := parts[0]
 	id := parts[1]
