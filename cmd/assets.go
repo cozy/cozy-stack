@@ -54,13 +54,13 @@ func addAsset(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	c := newAdminClient()
+	ac := newAdminClient()
 	req := &request.Options{
 		Method: "POST",
 		Path:   "instances/assets",
 		Body:   bytes.NewReader(marshaledAssets),
 	}
-	res, err := c.Req(req)
+	res, err := ac.Req(req)
 	if err != nil {
 		return err
 	}
@@ -83,12 +83,12 @@ func rmAsset(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	}
 
-	c := newAdminClient()
+	ac := newAdminClient()
 	req := &request.Options{
 		Method: "DELETE",
 		Path:   fmt.Sprintf("instances/assets/%s/%s", args[0], args[1]),
 	}
-	res, err := c.Req(req)
+	res, err := ac.Req(req)
 	if err != nil {
 		return err
 	}
@@ -106,12 +106,12 @@ var lsAssetsCmd = &cobra.Command{
 }
 
 func lsAssets(cmd *cobra.Command, args []string) error {
-	c := newAdminClient()
+	ac := newAdminClient()
 	req := &request.Options{
 		Method: "GET",
 		Path:   "instances/assets",
 	}
-	res, err := c.Req(req)
+	res, err := ac.Req(req)
 	if err != nil {
 		return err
 	}

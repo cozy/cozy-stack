@@ -90,7 +90,7 @@ If you give a null value, the flag will be removed.
 			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := request.Options{
 			Method: "GET",
 			Path:   fmt.Sprintf("/instances/%s/feature/flags", flagDomain),
@@ -99,7 +99,7 @@ If you give a null value, the flag will be removed.
 			req.Method = "PATCH"
 			req.Body = strings.NewReader(args[0])
 		}
-		res, err := c.Req(&req)
+		res, err := ac.Req(&req)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ All the sets can be removed by setting an empty list ('').
 			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := request.Options{
 			Method: "GET",
 			Path:   fmt.Sprintf("/instances/%s/feature/sets", flagDomain),
@@ -149,7 +149,7 @@ All the sets can be removed by setting an empty list ('').
 			req.Method = "PUT"
 			req.Body = bytes.NewReader(buf)
 		}
-		res, err := c.Req(&req)
+		res, err := ac.Req(&req)
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ To remove a flag, set it to an empty array (or null).
 		if flagContext == "" {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := request.Options{
 			Method: "GET",
 			Path:   fmt.Sprintf("/instances/feature/contexts/%s", flagContext),
@@ -190,7 +190,7 @@ To remove a flag, set it to an empty array (or null).
 			req.Method = "PATCH"
 			req.Body = strings.NewReader(args[0])
 		}
-		res, err := c.Req(&req)
+		res, err := ac.Req(&req)
 		if err != nil {
 			return err
 		}
@@ -219,12 +219,12 @@ These flags are read only and can only be updated by changing configuration and 
 		if flagContext == "" {
 			return cmd.Usage()
 		}
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := request.Options{
 			Method: "GET",
 			Path:   fmt.Sprintf("/instances/feature/config/%s", flagContext),
 		}
-		res, err := c.Req(&req)
+		res, err := ac.Req(&req)
 		if err != nil {
 			return err
 		}
@@ -252,7 +252,7 @@ If you give a null value, the flag will be removed.
 `,
 	Example: `$ cozy-stack feature defaults '{"add_this_flag": true, "remove_this_flag": null}'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
+		ac := newAdminClient()
 		req := request.Options{
 			Method: "GET",
 			Path:   "/instances/feature/defaults",
@@ -261,7 +261,7 @@ If you give a null value, the flag will be removed.
 			req.Method = "PATCH"
 			req.Body = strings.NewReader(args[0])
 		}
-		res, err := c.Req(&req)
+		res, err := ac.Req(&req)
 		if err != nil {
 			return err
 		}

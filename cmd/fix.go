@@ -100,8 +100,8 @@ var redisFixer = &cobra.Command{
 	Use:   "redis",
 	Short: "Rebuild scheduling data strucutures in redis",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		return c.RebuildRedis()
+		ac := newAdminClient()
+		return ac.RebuildRedis()
 	},
 }
 
@@ -138,8 +138,8 @@ var contactEmailsFixer = &cobra.Command{
 	Use:   "contact-emails",
 	Short: "Detect and try to fix invalid emails on contacts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		instances, err := c.ListInstances()
+		ac := newAdminClient()
+		instances, err := ac.ListInstances()
 		if err != nil {
 			return err
 		}

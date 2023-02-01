@@ -279,8 +279,8 @@ var listMaintenancesCmd = &cobra.Command{
 	Use:   "ls-maintenances",
 	Short: `List the konnectors in maintenance`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		c := newAdminClient()
-		list, err := c.ListMaintenances(flagKonnectorContext)
+		ac := newAdminClient()
+		list, err := ac.ListMaintenances(flagKonnectorContext)
 		if err != nil {
 			return err
 		}
@@ -325,8 +325,8 @@ var activateMaintenanceKonnectorsCmd = &cobra.Command{
 			"flag_disallow_manual_exec": flagKonnectorsDisallowManualExec,
 			"messages":                  messages,
 		}
-		c := newAdminClient()
-		return c.ActivateMaintenance(args[0], opts)
+		ac := newAdminClient()
+		return ac.ActivateMaintenance(args[0], opts)
 	},
 }
 
@@ -337,8 +337,8 @@ var deactivateMaintenanceKonnectorsCmd = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Help()
 		}
-		c := newAdminClient()
-		return c.DeactivateMaintenance(args[0])
+		ac := newAdminClient()
+		return ac.DeactivateMaintenance(args[0])
 	},
 }
 
@@ -634,8 +634,8 @@ func lsApps(cmd *cobra.Command, args []string, appType string) error {
 }
 
 func foreachDomains(predicate func(*client.Instance) error) error {
-	c := newAdminClient()
-	list, err := c.ListInstances()
+	ac := newAdminClient()
+	list, err := ac.ListInstances()
 	if err != nil {
 		return nil
 	}
