@@ -1,12 +1,8 @@
 package permissions
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,22 +14,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	ts           *httptest.Server
-	token        string
-	testInstance *instance.Instance
-	clientVal    *oauth.Client
-	clientID     string
 )
 
 func TestPermissions(t *testing.T) {
@@ -45,17 +32,21 @@ func TestPermissions(t *testing.T) {
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 
-	testInstance = setup.GetTestInstance()
+	testInstance := setup.GetTestInstance()
 	scopes := "io.cozy.contacts io.cozy.files:GET io.cozy.events"
-	client, tok := setup.GetTestClient(scopes)
-	clientVal = client
-	clientID = client.ClientID
-	token = tok
+	clientVal, token := setup.GetTestClient(scopes)
+	clientID := clientVal.ClientID
 
-	ts = setup.GetTestServer("/permissions", Routes)
+	// TODO: Remove this line use to remove a error for unused variable
+	fmt.Printf("client: %s / %s", clientID, token)
+
+	ts := setup.GetTestServer("/permissions", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("CreateShareSetByMobileRevokeByLinkedApp", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Create OAuthLinkedClient
 		oauthLinkedClient := &oauth.Client{
 			ClientName:   "test-linked-shareset",
@@ -81,44 +72,43 @@ func TestPermissions(t *testing.T) {
 			oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
 		assert.NoError(t, err)
 
-		// Create body
-		bodyReq := fmt.Sprintf(`{"data": {"id": "%s","type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`, oauthLinkedClient.ClientID)
-
 		// Request to create a permission
-		req, err := http.NewRequest("POST", ts.URL+"/permissions?codes=email", strings.NewReader(bodyReq))
-		assert.NoError(t, err)
-		req.Host = testInstance.Domain
-		req.Header.Add("Authorization", "Bearer "+tok)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj := e.POST("/permissions").
+			WithQuery("codes", "email").
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+tok).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(fmt.Sprintf(`{
+          "data": {
+            "id": "%s",
+            "type": "io.cozy.permissions",
+            "attributes": {
+              "permissions": {
+                "files": {
+                  "type": "io.cozy.files",
+                  "verbs": ["GET"]
+                }
+              }
+            }
+          }
+        }`, oauthLinkedClient.ClientID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		type minPerms struct {
-			Type       string                `json:"type"`
-			ID         string                `json:"id"`
-			Attributes permission.Permission `json:"attributes"`
-		}
-
-		var perm struct {
-			Data minPerms `json:"data"`
-		}
-		err = json.NewDecoder(res.Body).Decode(&perm)
-		assert.NoError(t, err)
 		// Assert the permission received does not have the clientID as source_id
-		assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
+		obj.Path("$.data.attributes.source_id").String().NotEqual(oauthLinkedClient.ClientID)
+		permID := obj.Path("$.data.id").String().NotEmpty().Raw()
 
 		// Create a webapp token
 		webAppToken, err := testInstance.MakeJWT(consts.AppAudience, "drive", "", "", time.Now())
 		assert.NoError(t, err)
 
 		// Login to webapp and try to delete the shared link
-		delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+perm.Data.ID, nil)
-		delReq.Host = testInstance.Domain
-		delReq.Header.Add("Authorization", "Bearer "+webAppToken)
-		assert.NoError(t, err)
-		delRes, err := http.DefaultClient.Do(delReq)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, delRes.StatusCode)
+		e.DELETE("/permissions/"+permID).
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+webAppToken).
+			Expect().Status(204)
 
 		// Cleaning
 		oauthLinkedClient, err = oauth.FindClientBySoftwareID(testInstance, "registry://drive")
@@ -141,6 +131,8 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreateShareSetByLinkedAppRevokeByMobile", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Create a webapp token
 		webAppToken, err := testInstance.MakeJWT(consts.AppAudience, "drive", "", "", time.Now())
 		assert.NoError(t, err)
@@ -157,29 +149,32 @@ func TestPermissions(t *testing.T) {
 		_, err = installer.RunSync()
 		assert.NoError(t, err)
 
-		// Create body
-		bodyReq := fmt.Sprintf(`{"data": {"id": "%s","type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`, "io.cozy.apps/drive")
-
 		// Request to create a permission
-		req, err := http.NewRequest("POST", ts.URL+"/permissions?codes=email", strings.NewReader(bodyReq))
-		assert.NoError(t, err)
-		req.Host = testInstance.Domain
-		req.Header.Add("Authorization", "Bearer "+webAppToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj := e.POST("/permissions").
+			WithQuery("codes", "email").
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+webAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+          "data": {
+            "id": "io.cozy.apps/drive",
+            "type": "io.cozy.permissions",
+            "attributes": {
+              "permissions": {
+                "files": {
+                  "type": "io.cozy.files",
+                  "verbs": ["GET"]
+                }
+              }
+            }
+          }
+        }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		type minPerms struct {
-			Type       string                `json:"type"`
-			ID         string                `json:"id"`
-			Attributes permission.Permission `json:"attributes"`
-		}
-
-		var perm struct {
-			Data minPerms `json:"data"`
-		}
-		err = json.NewDecoder(res.Body).Decode(&perm)
-		assert.NoError(t, err)
+		permSourceID := obj.Path("$.data.attributes.source_id").String().NotEmpty().Raw()
+		permID := obj.Path("$.data.id").String().NotEmpty().Raw()
 
 		// Create OAuthLinkedClient
 		oauthLinkedClient := &oauth.Client{
@@ -195,10 +190,10 @@ func TestPermissions(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Assert the permission received does not have the clientID as source_id
-		assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
+		assert.NotEqual(t, permSourceID, oauthLinkedClient.ClientID)
 
 		// Login to webapp and try to delete the shared link
-		delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+perm.Data.ID, nil)
+		delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+permID, nil)
 		delReq.Host = testInstance.Domain
 		delReq.Header.Add("Authorization", "Bearer "+tok)
 		assert.NoError(t, err)
@@ -227,264 +222,298 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissions", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		e := httpexpect.Default(t, ts.URL)
 
-		assert.Equal(t, "200 OK", res.Status, "should get a 200")
-		defer res.Body.Close()
+		obj := e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		body, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
+		perms := obj.Path("$.data.attributes.permissions").Object()
 
-		var out map[string]interface{}
-		err = json.Unmarshal(body, &out)
-		assert.NoError(t, err)
-
-		data := out["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		perms := attrs["permissions"].(map[string]interface{})
-
-		for key, r := range perms {
-			rule := r.(map[string]interface{})
-			if key == "rule1" {
-				assert.Equal(t, "io.cozy.files", rule["type"])
-				assert.Equal(t, []interface{}{"GET"}, rule["verbs"])
-			} else if key == "rule0" {
-				assert.Equal(t, "io.cozy.contacts", rule["type"])
-			} else {
-				assert.Equal(t, "io.cozy.events", rule["type"])
+		for key, r := range perms.Iter() {
+			switch key {
+			case "rule1":
+				r.Object().ValueEqual("type", "io.cozy.files")
+				r.Object().ValueEqual("verbs", []interface{}{"GET"})
+			case "rule0":
+				r.Object().ValueEqual("type", "io.cozy.contacts")
+			default:
+				r.Object().ValueEqual("type", "io.cozy.events")
 			}
 		}
 	})
 
 	t.Run("GetPermissionsForRevokedClient", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 			"revoked-client",
 			"io.cozy.contacts io.cozy.files:GET",
 			"", time.Now())
 		assert.NoError(t, err)
-		req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req.Header.Add("Authorization", "Bearer "+tok)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 400, res.StatusCode)
-		body, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, `Invalid JWT token`, string(body))
-		assert.Equal(t, `Bearer error="invalid_token"`, res.Header.Get("WWW-Authenticate"))
+
+		res := e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+tok).
+			Expect().Status(400)
+
+		res.Text().Equal(`Invalid JWT token`)
+		res.Header("WWW-Authenticate").Equal(`Bearer error="invalid_token"`)
 	})
 
 	t.Run("GetPermissionsForExpiredToken", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		pastTimestamp := time.Now().Add(-30 * 24 * time.Hour) // in seconds
+
 		tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 			clientID, "io.cozy.contacts io.cozy.files:GET", "", pastTimestamp)
 		assert.NoError(t, err)
-		req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req.Header.Add("Authorization", "Bearer "+tok)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 400, res.StatusCode)
-		body, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, `Expired token`, string(body))
-		assert.Equal(t, `Bearer error="invalid_token" error_description="The access token expired"`, res.Header.Get("WWW-Authenticate"))
+
+		res := e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+tok).
+			Expect().Status(400)
+
+		res.Text().Equal("Expired token")
+		res.Header("WWW-Authenticate").Equal(`Bearer error="invalid_token" error_description="The access token expired"`)
 	})
 
 	t.Run("BadPermissionsBearer", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req.Header.Add("Authorization", "Bearer garbage")
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		e := httpexpect.Default(t, ts.URL)
 
-		defer res.Body.Close()
-		assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+		e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer barbage").
+			Expect().Status(400)
 	})
 
 	t.Run("CreateSubPermission", func(t *testing.T) {
-		_, codes, err := createTestSubPermissions(token, "alice,bob")
+		e := httpexpect.Default(t, ts.URL)
+
+		_, codes, err := createTestSubPermissions(e, token, "alice,bob")
 		require.NoError(t, err)
 
-		aCode := codes["alice"].(string)
-		bCode := codes["bob"].(string)
+		aCode := codes.Value("alice").String().NotEmpty().Raw()
+		bCode := codes.Value("bob").String().NotEmpty().Raw()
 
 		assert.NotEqual(t, aCode, token)
 		assert.NotEqual(t, bCode, token)
 		assert.NotEqual(t, aCode, bCode)
 
-		req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req.Header.Add("Authorization", "Bearer "+aCode)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		obj := e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+aCode).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		defer res.Body.Close()
-		body, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-
-		var out map[string]interface{}
-		err = json.Unmarshal(body, &out)
-
-		assert.NoError(t, err)
-		assert.Equal(t, "200 OK", res.Status, "should get a 200")
-		data := out["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		perms := attrs["permissions"].(map[string]interface{})
-		assert.Len(t, perms, 2)
-		assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
+		perms := obj.Path("$.data.attributes.permissions").Object()
+		perms.Keys().Length().Equal(2)
+		perms.Path("$.whatever.type").String().Equal("io.cozy.files")
 	})
 
 	t.Run("CreateSubSubFail", func(t *testing.T) {
-		_, codes, err := createTestSubPermissions(token, "eve")
+		e := httpexpect.Default(t, ts.URL)
+
+		_, codes, err := createTestSubPermissions(e, token, "eve")
 		require.NoError(t, err)
 
-		eveCode := codes["eve"].(string)
-		_, _, err = createTestSubPermissions(eveCode, "eve")
-		require.Error(t, err)
+		eveCode := codes.Value("eve").String().NotEmpty().Raw()
+
+		e.POST("/permissions").
+			WithQuery("codes", codes).
+			WithHeader("Authorization", "Bearer "+eveCode).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+      "data": {
+        "type": "io.cozy.permissions",
+        "attributes": {
+          "permissions": {
+            "whatever": {
+              "type":   "io.cozy.files",
+              "verbs":  ["GET"],
+              "values": ["io.cozy.music"]
+            },
+            "otherrule": {
+              "type":   "io.cozy.files",
+              "verbs":  ["GET"],
+              "values":  ["some-other-dir"]
+            }
+          }
+        }
+      }
+    }`)).
+			Expect().Status(403)
 	})
 
 	t.Run("PatchNoopFail", func(t *testing.T) {
-		id, _, err := createTestSubPermissions(token, "pierre")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, err := createTestSubPermissions(e, token, "pierre")
 		require.NoError(t, err)
 
-		_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
-	  "data": {
-	    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
-	    "type": "io.cozy.permissions",
-	    "attributes": { }
-	    }
-	  }
-	}`)
-
-		assert.Error(t, err)
+		e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+		  "data": {
+		    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+		    "type": "io.cozy.permissions",
+		    "attributes": { }
+		    }
+		  }
+    }`)).
+			Expect().Status(400)
 	})
 
 	t.Run("BadPatchAddRuleForbidden", func(t *testing.T) {
-		id, _, err := createTestSubPermissions(token, "jacque")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, err := createTestSubPermissions(e, token, "jacque")
 		require.NoError(t, err)
 
-		_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
-	  "data": {
-	    "attributes": {
-					"permissions": {
-						"otherperm": {
-							"type":"io.cozy.token.cant.do.this"
-						}
-					}
-				}
-	    }
-	  }`)
-
-		assert.Error(t, err)
+		e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {
+              "permissions": {
+                "otherperm": {
+                  "type":"io.cozy.token.cant.do.this"
+                }
+              }
+            }
+          }
+      }`)).
+			Expect().Status(403)
 	})
 
 	t.Run("PatchAddRule", func(t *testing.T) {
-		id, _, err := createTestSubPermissions(token, "paul")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, err := createTestSubPermissions(e, token, "paul")
 		require.NoError(t, err)
 
-		out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
-	  "data": {
-	    "attributes": {
-					"permissions": {
-						"otherperm": {
-							"type":"io.cozy.contacts"
+		obj := e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+		  "data": {
+		    "attributes": {
+						"permissions": {
+							"otherperm": {
+								"type":"io.cozy.contacts"
+							}
 						}
 					}
-				}
-	    }
-	  }`)
+		    }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		data := out["data"].(map[string]interface{})
-		assert.Equal(t, id, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		perms := attrs["permissions"].(map[string]interface{})
-
-		assert.NoError(t, err)
-		assert.Len(t, perms, 3)
-		assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
-		assert.Equal(t, "io.cozy.contacts", perms["otherperm"].(map[string]interface{})["type"])
+		perms := obj.Path("$.data.attributes.permissions").Object()
+		perms.Keys().Length().Equal(3)
+		perms.Path("$.whatever.type").String().Equal("io.cozy.files")
+		perms.Path("$.otherperm.type").String().Equal("io.cozy.contacts")
 	})
 
 	t.Run("PatchRemoveRule", func(t *testing.T) {
-		id, _, err := createTestSubPermissions(token, "paul")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, err := createTestSubPermissions(e, token, "paul")
 		require.NoError(t, err)
 
-		out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
-	  "data": {
-	    "attributes": {
-					"permissions": {
-						"otherrule": { }
+		obj := e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+		  "data": {
+		    "attributes": {
+						"permissions": {
+							"otherrule": { }
+						}
 					}
-				}
-	    }
-	  }`)
+		    }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		data := out["data"].(map[string]interface{})
-		assert.Equal(t, id, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		perms := attrs["permissions"].(map[string]interface{})
-
-		assert.NoError(t, err)
-		assert.Len(t, perms, 1)
-		assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
+		perms := obj.Path("$.data.attributes.permissions").Object()
+		perms.Keys().Length().Equal(1)
+		perms.Path("$.whatever.type").String().Equal("io.cozy.files")
 	})
 
 	t.Run("PatchChangesCodes", func(t *testing.T) {
-		id, codes, err := createTestSubPermissions(token, "john,jane")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, codes, err := createTestSubPermissions(e, token, "john,jane")
 		require.NoError(t, err)
 
-		assert.NotEmpty(t, codes["john"])
-		janeToken := codes["jane"].(string)
-		assert.NotEmpty(t, janeToken)
+		codes.Value("john").String().NotEmpty()
+		janeToken := codes.Value("jane").String().NotEmpty().Raw()
 
-		_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, janeToken, `{
-		"data": {
-			"attributes": {
-					"codes": {
-						"john": "set-token"
+		e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+janeToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			"data": {
+				"attributes": {
+						"codes": {
+							"john": "set-token"
+						}
 					}
 				}
-			}
-		}`)
-		assert.Error(t, err)
+      }`)).
+			Expect().Status(403)
 
-		out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
-	  "data": {
-	    "attributes": {
-					"codes": {
-						"john": "set-token"
+		obj := e.PATCH("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+		  "data": {
+		    "attributes": {
+						"codes": {
+							"john": "set-token"
+						}
 					}
-				}
-	    }
-	  }`)
+		    }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		require.NoError(t, err)
+		obj.Path("$.data.id").String().Equal(id)
 
-		data := out["data"].(map[string]interface{})
-		assert.Equal(t, id, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		newcodes := attrs["codes"].(map[string]interface{})
-		assert.NotEmpty(t, newcodes["john"])
-		assert.Nil(t, newcodes["jane"])
+		codes = obj.Path("$.data.attributes.codes").Object()
+		codes.Value("john").String().NotEmpty()
+		codes.NotContainsKey("jane")
 	})
 
 	t.Run("Revoke", func(t *testing.T) {
-		id, codes, err := createTestSubPermissions(token, "igor")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, codes, err := createTestSubPermissions(e, token, "igor")
 		require.NoError(t, err)
 
-		igorToken := codes["igor"].(string)
-		assert.NotEmpty(t, igorToken)
+		igorToken := codes.Value("igor").String().NotEmpty().Raw()
 
-		_, err = doRequest("DELETE", ts.URL+"/permissions/"+id, igorToken, "")
-		assert.Error(t, err)
+		e.DELETE("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+igorToken).
+			WithHeader("Content-Type", "application/json").
+			Expect().Status(403)
 
-		out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, token, "")
-		assert.NoError(t, err)
-		assert.Nil(t, out)
+		e.DELETE("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			Expect().Status(204)
 	})
 
 	t.Run("RevokeByAnotherApp", func(t *testing.T) {
-		id, _, err := createTestSubPermissions(token, "roger")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, err := createTestSubPermissions(e, token, "roger")
 		require.NoError(t, err)
 
 		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
@@ -501,9 +530,9 @@ func TestPermissions(t *testing.T) {
 		notesToken, err := testInstance.MakeJWT(consts.AppAudience, "notes", "", "", time.Now())
 		assert.NoError(t, err)
 
-		out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, notesToken, "")
-		assert.NoError(t, err)
-		assert.Nil(t, out)
+		e.DELETE("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+notesToken).
+			Expect().Status(204)
 
 		// Cleaning
 		uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
@@ -521,51 +550,59 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissionsWithShortCode", func(t *testing.T) {
-		id, _, _ := createTestSubPermissions(token, "daniel")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, _ := createTestSubPermissions(e, token, "daniel")
 		perm, _ := permission.GetByID(testInstance, id)
 
 		assert.NotNil(t, perm.ShortCodes)
 
-		req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["daniel"])
-		res1, _ := http.DefaultClient.Do(req1)
-		assert.Equal(t, res1.StatusCode, http.StatusOK)
+		e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+perm.ShortCodes["daniel"]).
+			Expect().Status(200)
 	})
 
 	t.Run("GetPermissionsWithBadShortCode", func(t *testing.T) {
-		id, _, _ := createTestSubPermissions(token, "alice")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
 
 		assert.NotNil(t, perm.ShortCodes)
 
-		req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req1.Header.Add("Authorization", "Bearer "+"foobar")
-		res1, _ := http.DefaultClient.Do(req1)
-		assert.Equal(t, res1.StatusCode, http.StatusBadRequest)
+		e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer foobar").
+			Expect().Status(400)
 	})
 
 	t.Run("GetTokenFromShortCode", func(t *testing.T) {
-		id, _, _ := createTestSubPermissions(token, "alice")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
 
-		token, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
-		assert.Equal(t, perm.Codes["alice"], token)
+		tok, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+		assert.Equal(t, perm.Codes["alice"], tok)
 	})
 
 	t.Run("GetBadShortCode", func(t *testing.T) {
-		_, _, err := createTestSubPermissions(token, "alice")
+		e := httpexpect.Default(t, ts.URL)
+
+		_, _, err := createTestSubPermissions(e, token, "alice")
 		assert.NoError(t, err)
 		shortcode := "coincoin"
 
-		token, err := permission.GetTokenFromShortcode(testInstance, shortcode)
-		assert.Empty(t, token)
+		tok, err := permission.GetTokenFromShortcode(testInstance, shortcode)
+		assert.Empty(t, tok)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "no permission doc for shortcode")
 	})
 
 	t.Run("GetMultipleShortCode", func(t *testing.T) {
-		id, _, _ := createTestSubPermissions(token, "alice")
-		id2, _, _ := createTestSubPermissions(token, "alice")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, _ := createTestSubPermissions(e, token, "alice")
+		id2, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
 		perm2, _ := permission.GetByID(testInstance, id2)
 
@@ -579,7 +616,9 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CannotFindToken", func(t *testing.T) {
-		id, _, _ := createTestSubPermissions(token, "alice")
+		e := httpexpect.Default(t, ts.URL)
+
+		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
 		perm.Codes = map[string]string{}
 		assert.NoError(t, couchdb.UpdateDoc(testInstance, perm))
@@ -590,8 +629,10 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("TinyShortCodeOK", func(t *testing.T) {
-		id, codes, _ := createTestTinyCode(token, "elise", "30m")
-		code := codes["elise"]
+		e := httpexpect.Default(t, ts.URL)
+
+		id, codes, _ := createTestTinyCode(e, token, "elise", "30m")
+		code := codes.Value("elise").String().NotEmpty().Raw()
 		assert.Len(t, code, 6)
 
 		perm, _ := permission.GetByID(testInstance, id)
@@ -599,18 +640,20 @@ func TestPermissions(t *testing.T) {
 
 		assert.NotNil(t, perm.ShortCodes)
 
-		req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-		req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["elise"])
-		res1, _ := http.DefaultClient.Do(req1)
-		assert.Equal(t, res1.StatusCode, http.StatusOK)
+		e.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+perm.ShortCodes["elise"]).
+			Expect().Status(200)
 
-		token, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["elise"])
-		assert.Equal(t, perm.Codes["elise"], token)
+		tok, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["elise"])
+		assert.Equal(t, perm.Codes["elise"], tok)
 	})
 
 	t.Run("TinyShortCodeInvalid", func(t *testing.T) {
-		_, codes, _ := createTestTinyCode(token, "fanny", "24h")
-		code := codes["fanny"]
+		e := httpexpect.Default(t, ts.URL)
+
+		_, codes, _ := createTestTinyCode(e, token, "fanny", "24h")
+
+		code := codes.Value("fanny").String().NotEmpty().Raw()
 		assert.Len(t, code, 12)
 	})
 
@@ -654,6 +697,8 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("ListPermission", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		ev1, _ := createTestEvent(testInstance)
 		ev2, _ := createTestEvent(testInstance)
 		ev3, _ := createTestEvent(testInstance)
@@ -667,6 +712,7 @@ func TestPermissions(t *testing.T) {
 			},
 			Scope: "io.cozy.events",
 		}, clientVal)
+
 		p1 := permission.Set{
 			permission.Rule{
 				Type:   "io.cozy.events",
@@ -692,82 +738,65 @@ func TestPermissions(t *testing.T) {
 		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm1, nil)
 		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm2, nil)
 
-		reqbody := strings.NewReader(`{
-"data": [
-{ "type": "io.cozy.events", "id": "` + ev1.ID() + `" },
-{ "type": "io.cozy.events", "id": "` + ev2.ID() + `" },
-{ "type": "io.cozy.events", "id": "non-existing-id" },
-{ "type": "io.cozy.events", "id": "another-fake-id" },
-{ "type": "io.cozy.events", "id": "` + ev3.ID() + `" }
-]	}`)
+		obj := e.POST("/permissions/exists").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": [
+          { "type": "io.cozy.events", "id": "` + ev1.ID() + `" },
+          { "type": "io.cozy.events", "id": "` + ev2.ID() + `" },
+          { "type": "io.cozy.events", "id": "non-existing-id" },
+          { "type": "io.cozy.events", "id": "another-fake-id" },
+          { "type": "io.cozy.events", "id": "` + ev3.ID() + `" }
+        ]	
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req, _ := http.NewRequest("POST", ts.URL+"/permissions/exists", reqbody)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		data := obj.Value("data").Array()
+		data.Length().Equal(2)
 
-		defer res.Body.Close()
-		assert.Equal(t, 200, res.StatusCode)
-		body, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
+		res := data.Find(func(_ int, value *httpexpect.Value) bool {
+			value.Object().ValueEqual("id", ev1.ID())
+			return true
+		})
+		res.Object().ValueEqual("type", "io.cozy.events")
+		res.Object().ValueEqual("verbs", []string{"PATCH", "DELETE"})
 
-		var out jsonapi.Document
-		err = json.Unmarshal(body, &out)
-		require.NoError(t, err)
+		res = data.Find(func(_ int, value *httpexpect.Value) bool {
+			value.Object().ValueEqual("id", ev2.ID())
+			return true
+		})
+		res.Object().ValueEqual("type", "io.cozy.events")
+		res.Object().ValueEqual("verbs", []string{"GET"})
 
-		require.NotNil(t, out.Data)
+		obj = e.GET("/permissions/doctype/io.cozy.events/shared-by-link").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		var results []refAndVerb
-		err = json.Unmarshal(*out.Data, &results)
-		require.NoError(t, err)
+		data = obj.Value("data").Array()
+		data.Length().Equal(2)
+		data.Element(0).Object().Value("id").String().
+			NotEqual(data.Element(1).Object().Value("id").String().Raw())
 
-		assert.Len(t, results, 2)
-		for _, result := range results {
-			assert.Equal(t, "io.cozy.events", result.DocType)
-			if result.ID == ev1.ID() {
-				assert.Equal(t, "PATCH,DELETE", result.Verbs.String())
-			} else {
-				assert.Equal(t, ev2.ID(), result.ID)
-				assert.Equal(t, "GET", result.Verbs.String())
-			}
-		}
+		obj = e.GET("/permissions/doctype/io.cozy.events/shared-by-link").
+			WithQuery("page[limit]", 1).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/shared-by-link", nil)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		req2.Header.Add("Content-Type", "application/json")
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
-
-		defer res2.Body.Close()
-
-		var resBody struct {
-			Data []map[string]interface{}
-		}
-		err = json.NewDecoder(res2.Body).Decode(&resBody)
-		assert.NoError(t, err)
-		assert.Len(t, resBody.Data, 2)
-		assert.NotEqual(t, resBody.Data[0]["id"], resBody.Data[1]["id"])
-
-		req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/shared-by-link?page[limit]=1", nil)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		req3.Header.Add("Content-Type", "application/json")
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
-
-		defer res3.Body.Close()
-
-		var resBody3 struct {
-			Data  []interface{}
-			Links *jsonapi.LinksList
-		}
-		err = json.NewDecoder(res3.Body).Decode(&resBody3)
-		assert.NoError(t, err)
-		assert.Len(t, resBody3.Data, 1)
-		assert.NotEmpty(t, resBody3.Links.Next)
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
+		obj.Path("$.links.next").String().NotEmpty()
 	})
 
 	t.Run("CreatePermissionWithoutMetadata", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Install the app
 		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 			Operation:  app.Install,
@@ -780,40 +809,39 @@ func TestPermissions(t *testing.T) {
 		_, err = installer.RunSync()
 		assert.NoError(t, err)
 
-		bodyReq := `{"data": {"type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`
 		tok, err := testInstance.MakeJWT(permission.TypeWebapp,
 			"drive", "io.cozy.files", "", time.Now())
 		assert.NoError(t, err)
 
 		// Request to create a permission
-		req, err := http.NewRequest("POST", ts.URL+"/permissions", strings.NewReader(bodyReq))
-		assert.NoError(t, err)
-		req.Host = testInstance.Domain
-		req.Header.Add("Authorization", "Bearer "+tok)
+		obj := e.POST("/permissions").
+			WithHeader("Authorization", "Bearer "+tok).
+			WithHeader("Content-Type", "application/json").
+			WithHost(testInstance.Domain).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.permissions",
+          "attributes": {
+            "permissions": {
+              "files": {
+                "type": "io.cozy.files",
+                "verbs": ["GET"]
+              }
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-
-		type metaStruct struct {
-			Meta metadata.CozyMetadata `json:"cozyMetadata"`
-		}
-		type attrStruct struct {
-			Attributes metaStruct `json:"attributes"`
-		}
-		type resStruct struct {
-			Data attrStruct `json:"data"`
-		}
-
-		r := resStruct{}
-		err = json.NewDecoder(res.Body).Decode(&r)
-		assert.NoError(t, err)
-
-		// Assert a cozyMetadata has been added
-		meta := r.Data.Attributes.Meta
-		assert.Equal(t, "drive", meta.CreatedByApp)
-		assert.Equal(t, "1", meta.DocTypeVersion)
-		assert.Equal(t, 1, meta.MetadataVersion)
-		assert.True(t, time.Since(meta.CreatedAt) < 5*time.Second)
+			// Assert a cozyMetadata has been added
+		meta := obj.Path("$.data.attributes.cozyMetadata").Object()
+		meta.ValueEqual("createdByApp", "drive")
+		meta.ValueEqual("doctypeVersion", "1")
+		meta.ValueEqual("metadataVersion", 1)
+		meta.Value("createdAt").String().AsDateTime(time.RFC3339).
+			InRange(time.Now().Add(-5*time.Second), time.Now().Add(5*time.Second))
 
 		// Clean
 		uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
@@ -832,6 +860,8 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreatePermissionWithMetadata", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Install the app
 		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 			Operation:  app.Install,
@@ -844,39 +874,38 @@ func TestPermissions(t *testing.T) {
 		_, err = installer.RunSync()
 		assert.NoError(t, err)
 
-		bodyReq := `{"data":{"type":"io.cozy.permissions","attributes":{"permissions":{"files":{"type":"io.cozy.files","verbs":["GET"]}},"cozyMetadata":{"createdByApp":"foobar"}}}}`
 		tok, err := testInstance.MakeJWT(permission.TypeWebapp,
 			"drive", "io.cozy.files", "", time.Now())
 		assert.NoError(t, err)
 
 		// Request to create a permission
-		req, err := http.NewRequest("POST", ts.URL+"/permissions", strings.NewReader(bodyReq))
-		assert.NoError(t, err)
-		req.Host = testInstance.Domain
-		req.Header.Add("Authorization", "Bearer "+tok)
-
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-
-		type metaStruct struct {
-			Meta metadata.CozyMetadata `json:"cozyMetadata"`
-		}
-		type attrStruct struct {
-			Attributes metaStruct `json:"attributes"`
-		}
-		type resStruct struct {
-			Data attrStruct `json:"data"`
-		}
-
-		r := resStruct{}
-		err = json.NewDecoder(res.Body).Decode(&r)
-		assert.NoError(t, err)
+		obj := e.POST("/permissions").
+			WithHeader("Authorization", "Bearer "+tok).
+			WithHeader("Content-Type", "application/json").
+			WithHost(testInstance.Domain).
+			WithBytes([]byte(`{
+        "data": {
+          "type":"io.cozy.permissions",
+          "attributes":{
+            "permissions":{
+              "files":{
+                "type":"io.cozy.files",
+                "verbs":["GET"]
+              }
+            },
+            "cozyMetadata":{"createdByApp":"foobar"}
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
 		// Assert a cozyMetadata has been added
-		meta := r.Data.Attributes.Meta
-		assert.Equal(t, "foobar", meta.CreatedByApp)
-		assert.Equal(t, "1", meta.DocTypeVersion)
-		assert.Equal(t, 1, meta.MetadataVersion)
+		meta := obj.Path("$.data.attributes.cozyMetadata").Object()
+		meta.ValueEqual("createdByApp", "foobar")
+		meta.ValueEqual("doctypeVersion", "1")
+		meta.ValueEqual("metadataVersion", 1)
 
 		// Clean
 		uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
@@ -895,96 +924,71 @@ func TestPermissions(t *testing.T) {
 	})
 }
 
-func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {
-	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes, tok, `
-  {
-    "data": {
-      "type": "io.cozy.permissions",
-      "attributes": {
-        "permissions": {
-          "whatever": {
-            "type":   "io.cozy.files",
-            "verbs":  ["GET"],
-            "values": ["io.cozy.music"]
-          },
-          "otherrule": {
-            "type":   "io.cozy.files",
-            "verbs":  ["GET"],
-            "values":  ["some-other-dir"]
+func createTestSubPermissions(e *httpexpect.Expect, tok string, codes string) (string, *httpexpect.Object, error) {
+	obj := e.POST("/permissions").
+		WithQuery("codes", codes).
+		WithHeader("Authorization", "Bearer "+tok).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+      "data": {
+        "type": "io.cozy.permissions",
+        "attributes": {
+          "permissions": {
+            "whatever": {
+              "type":   "io.cozy.files",
+              "verbs":  ["GET"],
+              "values": ["io.cozy.music"]
+            },
+            "otherrule": {
+              "type":   "io.cozy.files",
+              "verbs":  ["GET"],
+              "values":  ["some-other-dir"]
+            }
           }
         }
       }
-    }
-	}`)
-	if err != nil {
-		return "", nil, err
-	}
+    }`)).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
 
-	data := out["data"].(map[string]interface{})
-	id := data["id"].(string)
-	attrs := data["attributes"].(map[string]interface{})
-	result := attrs["codes"].(map[string]interface{})
-	return id, result, nil
+	data := obj.Value("data").Object()
+	id := data.Value("id").String()
+	result := obj.Path("$.data.attributes.codes").Object()
+
+	return id.Raw(), result, nil
 }
 
-func createTestTinyCode(tok string, codes string, ttl string) (string, map[string]interface{}, error) {
-	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes+"&tiny=true&ttl="+ttl, tok, `
-  {
-    "data": {
-      "type": "io.cozy.permissions",
-      "attributes": {
-        "permissions": {
-          "whatever": {
-            "type":   "io.cozy.files",
-            "verbs":  ["GET"],
-            "values": ["id.`+codes+`"]
+func createTestTinyCode(e *httpexpect.Expect, tok string, codes string, ttl string) (string, *httpexpect.Object, error) {
+	obj := e.POST("/permissions").
+		WithQuery("codes", codes).
+		WithQuery("tiny", true).
+		WithQuery("ttl", ttl).
+		WithHeader("Authorization", "Bearer "+tok).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+      "data": {
+        "type": "io.cozy.permissions",
+        "attributes": {
+          "permissions": {
+            "whatever": {
+              "type":   "io.cozy.files",
+              "verbs":  ["GET"],
+              "values": ["id.` + codes + `"]
+            }
           }
         }
       }
-    }
-	}`)
-	if err != nil {
-		return "", nil, err
-	}
+    }`)).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
 
-	data := out["data"].(map[string]interface{})
-	id := data["id"].(string)
-	attrs := data["attributes"].(map[string]interface{})
-	result := attrs["shortcodes"].(map[string]interface{})
-	return id, result, nil
-}
+	data := obj.Value("data").Object()
+	id := data.Value("id").String()
+	result := obj.Path("$.data.attributes.shortcodes").Object()
 
-func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
-	reqbody := strings.NewReader(body)
-	req, _ := http.NewRequest(method, url, reqbody)
-	req.Header.Add("Authorization", "Bearer "+tok)
-	req.Header.Add("Content-Type", "application/json")
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	resbody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	if len(resbody) == 0 {
-		return nil, nil
-	}
-	if res.StatusCode/200 != 1 {
-		return nil, fmt.Errorf("Bad request: %d", res.StatusCode)
-	}
-	var out map[string]interface{}
-	err = json.Unmarshal(resbody, &out)
-	if err != nil {
-		return nil, err
-	}
-
-	if errstr := out["message"]; errstr != nil {
-		return nil, fmt.Errorf("%s", errstr)
-	}
-
-	return out, nil
+	return id.Raw(), result, nil
 }
 
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
