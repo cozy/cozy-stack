@@ -1,12 +1,10 @@
 package office
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,17 +14,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var ts *httptest.Server
-var inst *instance.Instance
-var ooURL string
-var token string
-var fileID string
-var key string
 
 type fakeServer struct {
 	count int
@@ -37,71 +29,73 @@ func TestOffice(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var key string
+
 	config.UseTestFile()
-	ooURL = fakeOOServer()
+	ooURL := fakeOOServer()
 	config.GetConfig().Office = map[string]config.Office{
 		"default": {OnlyOfficeURL: ooURL},
 	}
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	inst = setup.GetTestInstance()
-	_, token = setup.GetTestClient(consts.Files)
+	inst := setup.GetTestInstance()
+	_, token := setup.GetTestClient(consts.Files)
 
-	require.NoError(t, createFile())
+	fileID := createFile(t, inst)
 
-	ts = setup.GetTestServer("/office", Routes)
+	ts := setup.GetTestServer("/office", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("OnlyOfficeLocal", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/office/"+fileID+"/open", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		require.Equal(t, 200, res.StatusCode)
+		e := httpexpect.Default(t, ts.URL)
 
-		var doc map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&doc)
-		assert.NoError(t, err)
-		data, _ := doc["data"].(map[string]interface{})
-		assert.Equal(t, consts.OfficeURL, data["type"])
-		assert.Equal(t, fileID, data["id"])
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.Equal(t, fileID, attrs["document_id"])
-		assert.Equal(t, "nested", attrs["subdomain"])
-		assert.Contains(t, attrs["protocol"], "http")
-		assert.Equal(t, inst.Domain, attrs["instance"])
-		assert.NotEmpty(t, attrs["public_name"])
-		oo, _ := attrs["onlyoffice"].(map[string]interface{})
-		assert.NotEmpty(t, oo["url"])
-		assert.Equal(t, "word", oo["documentType"])
-		editor, _ := oo["editor"].(map[string]interface{})
-		assert.Equal(t, "edit", editor["mode"])
-		callbackURL, _ := editor["callbackUrl"].(string)
-		assert.True(t, strings.HasSuffix(callbackURL, "/office/callback"))
-		document, _ := oo["document"].(map[string]interface{})
-		key, _ = document["key"].(string)
-		assert.NotEmpty(t, key)
+		obj := e.GET("/office/"+fileID+"/open").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.OfficeURL)
+		data.ValueEqual("id", fileID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("document_id", fileID)
+		attrs.ValueEqual("subdomain", "nested")
+		attrs.Value("protocol").String().Contains("http")
+		attrs.ValueEqual("instance", inst.Domain)
+		attrs.Value("public_name").String().NotEmpty()
+
+		oo := attrs.Value("onlyoffice").Object()
+		oo.Value("url").String().NotEmpty()
+		oo.ValueEqual("documentType", "word")
+
+		editor := oo.Value("editor").Object()
+		editor.ValueEqual("mode", "edit")
+		editor.Value("callbackUrl").String().HasSuffix("/office/callback")
+
+		document := oo.Value("document").Object()
+		key = document.Value("key").String().NotEmpty().Raw()
 	})
 
 	t.Run("SaveOnlyOffice", func(t *testing.T) {
-		// Force save
-		body := fmt.Sprintf(`{
-		"actions": [{"type": 0, "userid": "78e1e841"}],
-		"key": "%s",
-		"status": 6,
-		"url": "%s",
-		"users": ["6d5a81d0"]
-	}`, key, ooURL+"/dl")
-		req, _ := http.NewRequest("POST", ts.URL+"/office/callback", strings.NewReader(body))
-		req.Header.Add("Content-Type", "application/json")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		require.Equal(t, 200, res.StatusCode)
+		e := httpexpect.Default(t, ts.URL)
 
-		var data map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&data)
-		assert.NoError(t, err)
-		assert.Equal(t, data["error"], 0.0)
+		// Force save
+		obj := e.POST("/office/callback").
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(fmt.Sprintf(`{
+      "actions": [{"type": 0, "userid": "78e1e841"}],
+      "key": "%s",
+      "status": 6,
+      "url": "%s",
+      "users": ["6d5a81d0"]
+    }`, key, ooURL+"/dl"))).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.ValueEqual("error", 0.0)
 
 		doc, err := inst.VFS().FileByID(fileID)
 		assert.NoError(t, err)
@@ -113,14 +107,17 @@ func TestOffice(t *testing.T) {
 		assert.Equal(t, "version 1", string(buf))
 
 		// Final save
-		body = strings.Replace(body, `"status": 6`, `"status": 2`, 1)
-		req, _ = http.NewRequest("POST", ts.URL+"/office/callback", strings.NewReader(body))
-		req.Header.Add("Content-Type", "application/json")
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		require.Equal(t, 200, res.StatusCode)
-
-		defer res.Body.Close()
+		e.POST("/office/callback").
+			WithHeader("Content-Type", "application/json").
+			// Change "status": 6 -> "status": 2
+			WithBytes([]byte(fmt.Sprintf(`{
+      "actions": [{"type": 0, "userid": "78e1e841"}],
+      "key": "%s",
+      "status": 2,
+      "url": "%s",
+      "users": ["6d5a81d0"]
+    }`, key, ooURL+"/dl"))).
+			Expect().Status(200)
 
 		doc, err = inst.VFS().FileByID(fileID)
 		assert.NoError(t, err)
@@ -133,22 +130,19 @@ func TestOffice(t *testing.T) {
 	})
 }
 
-func createFile() error {
+func createFile(t *testing.T, inst *instance.Instance) string {
 	dirID := consts.RootDirID
+
 	filedoc, err := vfs.NewFileDoc("letter.docx", dirID, -1, nil,
 		"application/msword", "text", time.Now(), false, false, false, nil)
-	if err != nil {
-		return err
-	}
+	require.NoError(t, err)
+
 	f, err := inst.VFS().CreateFile(filedoc, nil)
-	if err != nil {
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
-	fileID = filedoc.ID()
-	return nil
+	require.NoError(t, err)
+
+	require.NoError(t, f.Close())
+
+	return filedoc.ID()
 }
 
 func (f *fakeServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
