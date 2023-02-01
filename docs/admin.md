@@ -283,6 +283,92 @@ Delete the accounts which are not linked to a konnector
 POST /instances/alice.cozy.localhost/fixers/orphan-account HTTP/1.1
 ```
 
+### POST /instances/:domain/export
+
+Starts an export for the given instance. The CouchDB documents will be saved in 
+an intermediary archive while the files won't be added until the data is 
+actually downloaded.
+
+The response contains the details of the scheduled export job.
+
+#### Query-String
+
+| Parameter | Description                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------- |
+| admin-req | Boolean indicating when the request is made by an admin and the user should not be notified |
+
+The admin-req parameter is optional: by default, the instance's owner will be 
+notified via e-mail, whether the export is successful or not. If it's 
+successful, the e-mail will contain a link to the Settings app allowing the user
+to download the data archives.
+When this parameter is `true`, no e-mails will be sent and the admin will be 
+able to get the export document via realtime events.
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/export?admin-req=true HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "_id": "123123",
+  "_rev": "1-58d2b368da0a1b336bcd18ced210a8a1",
+  "domain": "alice.cozy.localhost",
+   "prefix": "cozyfdd8fd8eb825ad98821b11871abf58c9",
+   "worker": "export",
+   "message": {
+     "parts_size": 0,
+     "max_age": 0,
+     "contextual_domain": "alice.cozy.localhost",
+     "admin_req": true
+   },
+   "event": null,
+   "state": "queued",
+   "queued_at": "2023-02-01T11:50:59.286530525+01:00",
+   "started_at": "0001-01-01T00:00:00Z",
+   "finished_at": "0001-01-01T00:00:00Z"
+}
+```
+
+### GET /instances/:domain/exports/:export-id/data
+
+This endpoint will return an archive containing the metadata and files of the
+user, as part of a multi-part response.
+
+Only the first part of the archive contains the metadata.
+
+#### Query-String
+
+| Parameter | Description                                                         |
+| --------- | ------------------------------------------------------------------- |
+| cursor    | String reprentation of the export cursor to start the download from |
+
+The cursor parameter is optional but any given cursor should be one of the 
+defined `parts_cursors` in the export document.
+To get all the parts, this endpoint must be called one time with no cursors, and
+one time for each cursor in `parts_cursors`.
+
+#### Request
+
+```http
+GET /instances/alice.cozy.localhost/exports/123123/data?cursor=io.cozy.files%2Fa27b3bae83160774a74525de670d5d8e HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/zip
+Content-Disposition: attachment; filename="alice.cozy.localhost - part001.zip"
+```
 
 ## Contexts
 
