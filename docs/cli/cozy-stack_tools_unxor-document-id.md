@@ -17,15 +17,7 @@ cozy-stack tools unxor-document-id <domain> <sharing_id> <document_id> [flags]
 ### Examples
 
 ```
-
-If you a log message like:
-
-	PUT http://bob.localhost:8080/sharings/7f47c470c7b1013a8a8818c04daba326/io.cozy.files/4ded650c803f67a4 500 Internal Server Error
-
-you can execute this command:
-
-    $ cozy-stack tools unxor-document-id bob.localhost:8080 7f47c470c7b1013a8a8818c04daba326 4ded650c803f67a4
-
+$ cozy-stack tools unxor-document-id bob.localhost:8080 7f47c470c7b1013a8a8818c04daba326 8cced87acb34b151cc8d7e864e0690ed
 ```
 
 ### Options

@@ -15,6 +15,7 @@ cozy-stack instances export [flags]
 ```
       --domain string   Specify the domain name of the instance
   -h, --help            help for export
+      --path string     Specify the local path where to store the export archive
 ```
 
 ### Options inherited from parent commands
