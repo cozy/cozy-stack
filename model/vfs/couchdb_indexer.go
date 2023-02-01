@@ -404,7 +404,7 @@ func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
 			}
 			cloned := child.Clone()
 			if isTrashed {
-				c.checkTrashedDirIsShared(cloned.(*DirDoc))
+				c.checkTrashedDirIsShared(child)
 			}
 			olddocs = append(olddocs, cloned)
 			child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
