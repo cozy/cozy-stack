@@ -197,6 +197,7 @@ func sendAlert(inst *instance.Instance, e error) {
 		TemplateName:   "alert_account",
 		TemplateValues: values,
 		Layout:         mail.CozyCloudLayout,
+		Locale:         consts.DefaultLocale,
 	})
 	if err == nil {
 		_, _ = job.System().PushJob(inst, &job.JobRequest{
