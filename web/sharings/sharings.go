@@ -581,7 +581,7 @@ func PostDiscovery(c echo.Context) error {
 		if err != nil {
 			return wrapErrors(err)
 		}
-		sharing.PersistInstanceURL(inst, member.Email, member.Instance)
+		sharing.PersistInstanceURL(inst, member.Email, member.Instance, member.Name)
 	} else {
 		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
