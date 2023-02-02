@@ -1,19 +1,15 @@
 package notes
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -22,487 +18,503 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	webRealtime "github.com/cozy/cozy-stack/web/realtime"
-	"github.com/gorilla/websocket"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var ts *httptest.Server
-var inst *instance.Instance
-var token string
-var noteID string
-var version int64
 
 func TestNotes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var noteID string
+	var version int64
+
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	inst = setup.GetTestInstance()
-	_, token = setup.GetTestClient(consts.Files)
+	inst := setup.GetTestInstance()
+	_, token := setup.GetTestClient(consts.Files)
 
-	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	// TODO: Remove this line used to remove an unused variable error during dev
+	fmt.Printf("to remove: %s / %d / %v", noteID, version, inst)
+
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/files":    files.Routes,
 		"/notes":    Routes,
 		"/realtime": webRealtime.Routes,
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("CreateNote", func(t *testing.T) {
-		body := `
-{
-  "data": {
-    "type": "io.cozy.notes.documents",
-    "attributes": {
-      "title": "A super note",
-      "schema": {
-        "nodes": [
-          ["doc", { "content": "block+" }],
-          ["paragraph", { "content": "inline*", "group": "block" }],
-          ["blockquote", { "content": "block+", "group": "block" }],
-          ["horizontal_rule", { "group": "block" }],
-          [
-            "heading",
-            {
-              "content": "inline*",
-              "group": "block",
-              "attrs": { "level": { "default": 1 } }
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.POST("/notes").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "title": "A super note",
+            "schema": {
+              "nodes": [
+                ["doc", { "content": "block+" }],
+                ["paragraph", { "content": "inline*", "group": "block" }],
+                ["blockquote", { "content": "block+", "group": "block" }],
+                ["horizontal_rule", { "group": "block" }],
+                [
+                  "heading",
+                  {
+                    "content": "inline*",
+                    "group": "block",
+                    "attrs": { "level": { "default": 1 } }
+                  }
+                ],
+                ["code_block", { "content": "text*", "marks": "", "group": "block" }],
+                ["text", { "group": "inline" }],
+                [
+                  "image",
+                  {
+                    "group": "inline",
+                    "inline": true,
+                    "attrs": { "alt": {}, "src": {}, "title": {} }
+                  }
+                ],
+                ["hard_break", { "group": "inline", "inline": true }],
+                [
+                  "ordered_list",
+                  {
+                    "content": "list_item+",
+                    "group": "block",
+                    "attrs": { "order": { "default": 1 } }
+                  }
+                ],
+                ["bullet_list", { "content": "list_item+", "group": "block" }],
+                ["list_item", { "content": "paragraph block*" }]
+              ],
+              "marks": [
+                ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
+                ["em", {}],
+                ["strong", {}],
+                ["code", {}]
+              ],
+              "topNode": "doc"
             }
-          ],
-          ["code_block", { "content": "text*", "marks": "", "group": "block" }],
-          ["text", { "group": "inline" }],
-          [
-            "image",
-            {
-              "group": "inline",
-              "inline": true,
-              "attrs": { "alt": {}, "src": {}, "title": {} }
-            }
-          ],
-          ["hard_break", { "group": "inline", "inline": true }],
-          [
-            "ordered_list",
-            {
-              "content": "list_item+",
-              "group": "block",
-              "attrs": { "order": { "default": 1 } }
-            }
-          ],
-          ["bullet_list", { "content": "list_item+", "group": "block" }],
-          ["list_item", { "content": "paragraph block*" }]
-        ],
-        "marks": [
-          ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
-          ["em", {}],
-          ["strong", {}],
-          ["code", {}]
-        ],
-        "topNode": "doc"
-      }
-    }
-  }
-}`
-		req, _ := http.NewRequest("POST", ts.URL+"/notes", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 201, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertInitialNote(t, result)
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		assertInitialNote(t, obj)
+
+		noteID = obj.Path("$.data.id").String().NotEmpty().Raw()
 	})
 
 	t.Run("GetNote", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		assertInitialNote(t, result)
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/notes/"+noteID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		assertInitialNote(t, obj)
 	})
 
 	t.Run("OpenNote", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID+"/open", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var doc map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&doc)
-		assert.NoError(t, err)
-		data, _ := doc["data"].(map[string]interface{})
-		assert.Equal(t, consts.NotesURL, data["type"])
-		assert.Equal(t, noteID, data["id"])
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.Equal(t, noteID, attrs["note_id"])
-		assert.Equal(t, "nested", attrs["subdomain"])
-		assert.Contains(t, attrs["protocol"], "http")
-		assert.Equal(t, inst.Domain, attrs["instance"])
-		assert.NotEmpty(t, attrs["public_name"])
+		e := httpexpect.Default(t, ts.URL)
+
+		obj := e.GET("/notes/"+noteID+"/open").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.NotesURL)
+		data.ValueEqual("id", noteID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("note_id", noteID)
+		attrs.ValueEqual("subdomain", "nested")
+		attrs.ValueEqual("protocol", "https")
+		attrs.ValueEqual("instance", inst.Domain)
+		attrs.Value("public_name").String().NotEmpty()
 	})
 
 	t.Run("ChangeTitleAndSync", func(t *testing.T) {
-		body := `
-{
-  "data": {
-    "type": "io.cozy.notes.documents",
-    "attributes": {
-      "sessionID": "543781490137",
-      "title": "A new title"
-    }
-  }
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/title", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
+		e := httpexpect.Default(t, ts.URL)
 
-		data, _ := result["data"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data["type"])
-		assert.Equal(t, noteID, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		assert.Equal(t, "A new title", meta["title"])
-		assert.EqualValues(t, 0, meta["version"])
-		assert.NotNil(t, meta["schema"])
-		assert.NotNil(t, meta["content"])
+		obj := e.PUT("/notes/"+noteID+"/title").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "sessionID": "543781490137",
+            "title": "A new title"
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.files")
+		data.ValueEqual("id", noteID)
+
+		attrs := data.Value("attributes").Object()
+		meta := attrs.Value("metadata").Object()
+
+		meta.ValueEqual("title", "A new title")
+		meta.ValueEqual("version", 0)
+		meta.Value("schema").Object().NotEmpty()
+		meta.Value("content").Object().NotEmpty()
 
 		// The change was only made in cache, but we have to force persisting the
 		// change to the VFS to check that renaming the file works.
-		req2, _ := http.NewRequest("POST", ts.URL+"/notes/"+noteID+"/sync", nil)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res2.StatusCode)
+		e.POST("/notes/"+noteID+"/sync").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
 
-		req3, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res3.StatusCode)
-		var result3 map[string]interface{}
-		err = json.NewDecoder(res3.Body).Decode(&result3)
-		assert.NoError(t, err)
-		data3, _ := result3["data"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data3["type"])
-		assert.Equal(t, noteID, data3["id"])
-		attrs3 := data3["attributes"].(map[string]interface{})
-		assert.Equal(t, "A new title.cozy-note", attrs3["name"])
-		meta3, _ := attrs["metadata"].(map[string]interface{})
-		assert.Equal(t, "A new title", meta3["title"])
-		assert.EqualValues(t, 0, meta3["version"])
-		assert.NotNil(t, meta3["schema"])
-		assert.NotNil(t, meta3["content"])
+		obj = e.GET("/notes/"+noteID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.files")
+		data.ValueEqual("id", noteID)
+
+		attrs = data.Value("attributes").Object()
+		attrs.ValueEqual("name", "A new title.cozy-note")
+
+		meta = attrs.Value("metadata").Object()
+		meta.ValueEqual("title", "A new title")
+		meta.ValueEqual("version", 0)
+		meta.Value("schema").Object().NotEmpty()
+		meta.Value("content").Object().NotEmpty()
 	})
 
 	t.Run("ListNotes", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		// Change the title
-		body := `
-{
-  "data": {
-    "type": "io.cozy.notes.documents",
-    "attributes": {
-      "sessionID": "543781490137",
-      "title": "A title in cache"
-    }
-  }
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/title", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		e.PUT("/notes/"+noteID+"/title").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "sessionID": "543781490137",
+            "title": "A title in cache"
+          }
+        }
+      }`)).
+			Expect().Status(200)
 
 		// The title has been changed in cache, but we don't wait that the file has been renamed
-		req, _ = http.NewRequest("GET", ts.URL+"/notes", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		data, _ := result["data"].([]interface{})
-		assert.Len(t, data, 1)
-		data2, _ := data[0].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data2["type"])
-		assert.Equal(t, noteID, data2["id"])
-		attrs := data2["attributes"].(map[string]interface{})
-		assert.Equal(t, "A new title.cozy-note", attrs["name"])
-		assert.Contains(t, attrs["path"], "/A new title.cozy-note")
-		assert.Equal(t, "text/vnd.cozy.note+markdown", attrs["mime"])
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		assert.Equal(t, "A title in cache", meta["title"])
-		assert.EqualValues(t, 0, meta["version"])
-		assert.NotNil(t, meta["schema"])
-		assert.NotNil(t, meta["content"])
+		obj := e.GET("/notes").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
+
+		doc := data.First().Object()
+		doc.ValueEqual("type", "io.cozy.files")
+		doc.ValueEqual("id", noteID)
+
+		attrs := doc.Value("attributes").Object()
+		attrs.ValueEqual("name", "A new title.cozy-note")
+		attrs.Value("path").String().HasSuffix("/A new title.cozy-note")
+		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+
+		meta := attrs.Value("metadata").Object()
+		meta.ValueEqual("title", "A title in cache")
+		meta.ValueEqual("version", 0)
+		meta.Value("schema").Object().NotEmpty()
+		meta.Value("content").Object().NotEmpty()
 	})
 
 	t.Run("PatchNote", func(t *testing.T) {
-		body := `{
-  "data": [{
-    "type": "io.cozy.notes.steps",
-    "attributes": {
-      "sessionID": "543781490137",
-      "stepType": "replace",
-      "from": 1,
-      "to": 1,
-      "slice": {
-        "content": [{ "type": "text", "text": "H" }]
-      }
-    }
-  }, {
-    "type": "io.cozy.notes.steps",
-    "attributes": {
-      "sessionID": "543781490137",
-      "stepType": "replace",
-      "from": 2,
-      "to": 2,
-      "slice": {
-        "content": [{ "type": "text", "text": "ello" }]
-      }
-    }
-  }]
-}`
-		req, _ := http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("If-Match", "0")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
+		body := []byte(`{
+        "data": [{
+          "type": "io.cozy.notes.steps",
+          "attributes": {
+            "sessionID": "543781490137",
+            "stepType": "replace",
+            "from": 1,
+            "to": 1,
+            "slice": {
+              "content": [{ "type": "text", "text": "H" }]
+            }
+          }
+        }, {
+          "type": "io.cozy.notes.steps",
+          "attributes": {
+            "sessionID": "543781490137",
+            "stepType": "replace",
+            "from": 2,
+            "to": 2,
+            "slice": {
+              "content": [{ "type": "text", "text": "ello" }]
+            }
+          }
+        }]
+      }`)
 
-		data, _ := result["data"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data["type"])
-		assert.Equal(t, noteID, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		v, _ := meta["version"].(float64)
-		version = int64(v)
-		assert.Greater(t, version, int64(0))
-		assert.NotNil(t, meta["schema"])
-		assert.NotNil(t, meta["content"])
+		t.Run("Success", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-		req, _ = http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("If-Match", "0")
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 409, res.StatusCode)
+			obj := e.PATCH("/notes/"+noteID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithHeader("If-Match", "0").
+				WithBytes(body).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			data.ValueEqual("type", "io.cozy.files")
+			data.ValueEqual("id", noteID)
+
+			attrs := data.Value("attributes").Object()
+			meta := attrs.Value("metadata").Object()
+
+			version = int64(meta.Value("version").Number().Gt(0).Raw())
+			meta.Value("schema").Object().NotEmpty()
+			meta.Value("content").Object().NotEmpty()
+		})
+
+		t.Run("WithInvalidIfMatchHeader", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			e.PATCH("/notes/"+noteID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithHeader("If-Match", "0").
+				WithBytes(body).
+				Expect().Status(409)
+		})
 	})
 
 	t.Run("GetSteps", func(t *testing.T) {
-		body := `{
-  "data": [{
-    "type": "io.cozy.notes.steps",
-    "attributes": {
-      "sessionID": "543781490137",
-      "stepType": "replace",
-      "from": 6,
-      "to": 6,
-      "slice": {
-        "content": [{ "type": "text", "text": " " }]
-      }
-    }
-  }, {
-    "type": "io.cozy.notes.steps",
-    "attributes": {
-      "sessionID": "543781490137",
-      "stepType": "replace",
-      "from": 7,
-      "to": 7,
-      "slice": {
-        "content": [{ "type": "text", "text": "world" }]
-      }
-    }
-  }]
-}`
-		req, _ := http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Header.Add("If-Match", fmt.Sprintf("%d", version))
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		data, _ := result["data"].(map[string]interface{})
-		attrs, _ := data["attributes"].(map[string]interface{})
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		last, _ := meta["version"].(float64)
-		lastVersion := int64(last)
-		assert.Greater(t, lastVersion, int64(0))
+		var lastVersion int
 
-		path2 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, version)
-		req2, _ := http.NewRequest("GET", ts.URL+path2, nil)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res2.StatusCode)
-		var result2 map[string]interface{}
-		err = json.NewDecoder(res2.Body).Decode(&result2)
-		assert.NoError(t, err)
-		meta2, _ := result2["meta"].(map[string]interface{})
-		assert.EqualValues(t, 2, meta2["count"])
-		data2, _ := result2["data"].([]interface{})
-		require.Len(t, data2, 2)
+		body := []byte(`{
+      "data": [{
+        "type": "io.cozy.notes.steps",
+        "attributes": {
+          "sessionID": "543781490137",
+          "stepType": "replace",
+          "from": 6,
+          "to": 6,
+          "slice": {
+            "content": [{ "type": "text", "text": " " }]
+          }
+        }
+      }, {
+        "type": "io.cozy.notes.steps",
+        "attributes": {
+          "sessionID": "543781490137",
+          "stepType": "replace",
+          "from": 7,
+          "to": 7,
+          "slice": {
+            "content": [{ "type": "text", "text": "world" }]
+          }
+        }
+      }]
+    }`)
 
-		first, _ := data2[0].(map[string]interface{})
-		assert.NotNil(t, first["id"])
-		attrsF, _ := first["attributes"].(map[string]interface{})
-		assert.Equal(t, "543781490137", attrsF["sessionID"])
-		assert.Equal(t, "replace", attrsF["stepType"])
-		assert.EqualValues(t, 6, attrsF["from"])
-		assert.EqualValues(t, 6, attrsF["to"])
-		assert.NotNil(t, attrsF["version"])
-		second, _ := data2[1].(map[string]interface{})
-		assert.NotNil(t, second["id"])
-		attrsS, _ := second["attributes"].(map[string]interface{})
-		assert.Equal(t, "543781490137", attrsS["sessionID"])
-		assert.Equal(t, "replace", attrsS["stepType"])
-		assert.EqualValues(t, 7, attrsS["from"])
-		assert.EqualValues(t, 7, attrsS["to"])
-		assert.EqualValues(t, lastVersion, attrsS["version"])
+		t.Run("Success", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
 
-		path3 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, lastVersion)
-		req3, _ := http.NewRequest("GET", ts.URL+path3, nil)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res3.StatusCode)
-		var result3 map[string]interface{}
-		err = json.NewDecoder(res3.Body).Decode(&result3)
-		assert.NoError(t, err)
-		meta3, _ := result3["meta"].(map[string]interface{})
-		assert.EqualValues(t, 0, meta3["count"])
-		data3, ok := result3["data"].([]interface{})
-		assert.True(t, ok)
-		assert.Empty(t, data3)
-		version = lastVersion
+			obj := e.PATCH("/notes/"+noteID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithHeader("If-Match", strconv.Itoa(int(version))).
+				WithBytes(body).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			lastVersion = int(obj.Path("$.data.attributes.metadata.version").Number().Gt(0).Raw())
+		})
+
+		t.Run("GetStepsFromCurrentVersion", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.GET("/notes/"+noteID+"/steps").
+				WithQuery("Version", int(version)).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithHeader("If-Match", strconv.Itoa(int(version))).
+				WithBytes(body).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			obj.Path("$.meta.count").Number().Equal(2)
+			obj.Path("$.data").Array().Length().Equal(2)
+
+			first := obj.Path("$.data[0]").Object()
+			first.Value("id").String().NotEmpty()
+
+			attrs := first.Value("attributes").Object()
+			attrs.ValueEqual("sessionID", "543781490137")
+			attrs.ValueEqual("stepType", "replace")
+			attrs.ValueEqual("from", 6)
+			attrs.ValueEqual("to", 6)
+			attrs.Value("version").Number()
+
+			second := obj.Path("$.data[1]").Object()
+			second.Value("id").String().NotEmpty()
+
+			attrs = second.Value("attributes").Object()
+			attrs.ValueEqual("sessionID", "543781490137")
+			attrs.ValueEqual("stepType", "replace")
+			attrs.ValueEqual("from", 7)
+			attrs.ValueEqual("to", 7)
+			attrs.ValueEqual("version", lastVersion)
+		})
+
+		t.Run("GetStepsFromLastVersion", func(t *testing.T) {
+			e := httpexpect.Default(t, ts.URL)
+
+			obj := e.GET("/notes/"+noteID+"/steps").
+				WithQuery("Version", lastVersion).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithHeader("If-Match", strconv.Itoa(int(version))).
+				WithBytes(body).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			obj.Path("$.meta.count").Number().Equal(0)
+			obj.Path("$.data").Array().Empty()
+
+			version = int64(lastVersion)
+		})
 	})
 
 	t.Run("PutSchema", func(t *testing.T) {
-		body := `
-{
-  "data": {
-    "type": "io.cozy.notes.documents",
-    "attributes": {
-      "schema": {
-        "nodes": [
-          ["doc", { "content": "block+" }],
-          [
-            "panel",
-            {
-              "content": "(paragraph | heading | bullet_list | ordered_list)+",
-              "group": "block",
-              "attrs": { "panelType": { "default": "info" } }
-            }
-          ],
-          ["paragraph", { "content": "inline*", "group": "block" }],
-          ["blockquote", { "content": "block+", "group": "block" }],
-          ["horizontal_rule", { "group": "block" }],
-          [
-            "heading",
-            {
-              "content": "inline*",
-              "group": "block",
-              "attrs": { "level": { "default": 1 } }
-            }
-          ],
-          ["code_block", { "content": "text*", "marks": "", "group": "block" }],
-          ["text", { "group": "inline" }],
-          [
-            "image",
-            {
-              "group": "inline",
-              "inline": true,
-              "attrs": { "alt": {}, "src": {}, "title": {} }
-            }
-          ],
-          ["hard_break", { "group": "inline", "inline": true }],
-          [
-            "ordered_list",
-            {
-              "content": "list_item+",
-              "group": "block",
-              "attrs": { "order": { "default": 1 } }
-            }
-          ],
-          ["bullet_list", { "content": "list_item+", "group": "block" }],
-          ["list_item", { "content": "paragraph block*" }]
-        ],
-        "marks": [
-          ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
-          ["em", {}],
-          ["strong", {}],
-          ["code", {}]
-        ],
-        "version": 2,
-        "topNode": "doc"
-      }
-    }
-  }
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/schema", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
+		e := httpexpect.Default(t, ts.URL)
 
-		data, _ := result["data"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data["type"])
-		assert.Equal(t, noteID, data["id"])
-		attrs := data["attributes"].(map[string]interface{})
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		schema := meta["schema"].(map[string]interface{})
-		assert.EqualValues(t, 2, schema["version"])
-		nodes, _ := schema["nodes"].([]interface{})
-		panel, _ := nodes[1].([]interface{})
-		assert.EqualValues(t, "panel", panel[0])
+		obj := e.PUT("/notes/"+noteID+"/schema").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "schema": {
+              "nodes": [
+                ["doc", { "content": "block+" }],
+                [
+                  "panel",
+                  {
+                    "content": "(paragraph | heading | bullet_list | ordered_list)+",
+                    "group": "block",
+                    "attrs": { "panelType": { "default": "info" } }
+                  }
+                ],
+                ["paragraph", { "content": "inline*", "group": "block" }],
+                ["blockquote", { "content": "block+", "group": "block" }],
+                ["horizontal_rule", { "group": "block" }],
+                [
+                  "heading",
+                  {
+                    "content": "inline*",
+                    "group": "block",
+                    "attrs": { "level": { "default": 1 } }
+                  }
+                ],
+                ["code_block", { "content": "text*", "marks": "", "group": "block" }],
+                ["text", { "group": "inline" }],
+                [
+                  "image",
+                  {
+                    "group": "inline",
+                    "inline": true,
+                    "attrs": { "alt": {}, "src": {}, "title": {} }
+                  }
+                ],
+                ["hard_break", { "group": "inline", "inline": true }],
+                [
+                  "ordered_list",
+                  {
+                    "content": "list_item+",
+                    "group": "block",
+                    "attrs": { "order": { "default": 1 } }
+                  }
+                ],
+                ["bullet_list", { "content": "list_item+", "group": "block" }],
+                ["list_item", { "content": "paragraph block*" }]
+              ],
+              "marks": [
+                ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
+                ["em", {}],
+                ["strong", {}],
+                ["code", {}]
+              ],
+              "version": 2,
+              "topNode": "doc"
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.files")
+		data.ValueEqual("id", noteID)
+
+		schema := obj.Path("$.data.attributes.metadata.schema").Object()
+		schema.ValueEqual("version", 2)
+		schema.Path("$.nodes[1][0]").Equal("panel")
+
+		// TODO: add an explanation why we need this sleep period
 		time.Sleep(1 * time.Second)
-		path2 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, version)
-		req2, _ := http.NewRequest("GET", ts.URL+path2, nil)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		assert.Equal(t, 412, res2.StatusCode)
 
-		v, _ := meta["version"].(float64)
-		version = int64(v)
+		e.GET("/notes/"+noteID+"/steps").
+			WithQuery("Version", version).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(412)
+
+		version = int64(obj.Path("$.data.attributes.metadata.version").Number().Raw())
 	})
 
 	t.Run("PutTelepointer", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
 			sub := realtime.GetHub().Subscriber(inst)
 			sub.Subscribe(consts.NotesEvents)
+
+			// Suscribtion ok, unlock the first wait
 			wg.Done()
+
 			e := <-sub.Channel
 			assert.Equal(t, "UPDATED", e.Verb)
 			assert.Equal(t, noteID, e.Doc.ID())
@@ -513,29 +525,31 @@ func TestNotes(t *testing.T) {
 			assert.Equal(t, "textSelection", doc["type"])
 			assert.EqualValues(t, 7, doc["anchor"])
 			assert.EqualValues(t, 12, doc["head"])
+
+			// Event received and validated, unlock the second wait.
 			wg.Done()
 		}()
 
 		// Wait that the goroutine has subscribed to the realtime
 		wg.Wait()
+
 		wg.Add(1)
-		body := `{
-  "data": {
-    "type": "io.cozy.notes.telepointers",
-    "attributes": {
-      "sessionID": "543781490137",
-      "anchor": 7,
-      "head": 12,
-      "type": "textSelection"
-    }
-  }
-}`
-		req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/telepointer", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res.StatusCode)
+		e.PUT("/notes/"+noteID+"/telepointer").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.telepointers",
+          "attributes": {
+            "sessionID": "543781490137",
+            "anchor": 7,
+            "head": 12,
+            "type": "textSelection"
+          }
+        }
+      }`)).
+			Expect().Status(204)
+
 		// Wait that the goroutine has received the telepointer update
 		wg.Wait()
 	})
@@ -555,29 +569,23 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("NoteRealtime", func(t *testing.T) {
-		u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-		c, _, err := websocket.DefaultDialer.Dial(u, nil)
-		require.NoError(t, err)
+		e := httpexpect.Default(t, ts.URL)
 
-		defer c.Close()
+		ws := e.GET("/realtime/").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
 
-		auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
-		err = c.WriteMessage(websocket.TextMessage, []byte(auth))
-		require.NoError(t, err)
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token))
 
-		msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.notes.events", "id": "` + noteID + `" }}`
-		err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-		require.NoError(t, err)
+		ws.WriteText(`{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.notes.events", "id": "` + noteID + `" }}`)
 
 		// To check that the realtime has made the subscription, we send a fake
 		// message and wait for its response.
-		msg = `{"method": "PING"}`
-		err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-		require.NoError(t, err)
-
-		var res map[string]interface{}
-		err = c.ReadJSON(&res)
-		assert.NoError(t, err)
+		ws.WriteText(`{"method": "PING"}`).
+			Expect().TextMessage().
+			JSON()
 
 		pointer := note.Event{
 			"sessionID": "543781490137",
@@ -586,37 +594,41 @@ func TestNotes(t *testing.T) {
 			"type":      "textSelection",
 		}
 		pointer.SetID(noteID)
-		err = note.PutTelepointer(inst, pointer)
+		err := note.PutTelepointer(inst, pointer)
 		assert.NoError(t, err)
-		var res2 map[string]interface{}
-		err = c.ReadJSON(&res2)
-		assert.NoError(t, err)
-		assert.Equal(t, "UPDATED", res2["event"])
-		payload2, _ := res2["payload"].(map[string]interface{})
-		assert.Equal(t, noteID, payload2["id"])
-		assert.Equal(t, "io.cozy.notes.events", payload2["type"])
-		doc2, _ := payload2["doc"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.notes.telepointers", doc2["doctype"])
-		assert.Equal(t, "543781490137", doc2["sessionID"])
-		assert.EqualValues(t, 7, doc2["anchor"])
-		assert.EqualValues(t, 12, doc2["head"])
-		assert.Equal(t, "textSelection", doc2["type"])
+
+		obj := ws.Expect().TextMessage().
+			JSON().Object()
+
+		obj.ValueEqual("event", "UPDATED")
+		payload := obj.Value("payload").Object()
+		payload.ValueEqual("id", noteID)
+		payload.ValueEqual("type", "io.cozy.notes.events")
+
+		doc := payload.Value("doc").Object()
+		doc.ValueEqual("doctype", "io.cozy.notes.telepointers")
+		doc.ValueEqual("sessionID", "543781490137")
+		doc.ValueEqual("anchor", 7)
+		doc.ValueEqual("head", 12)
+		doc.ValueEqual("type", "textSelection")
 
 		file, err := inst.VFS().FileByID(noteID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		file, err = note.UpdateTitle(inst, file, "A very new title", "543781490137")
-		assert.NoError(t, err)
-		var res3 map[string]interface{}
-		err = c.ReadJSON(&res3)
-		assert.NoError(t, err)
-		assert.Equal(t, "UPDATED", res3["event"])
-		payload3, _ := res3["payload"].(map[string]interface{})
-		assert.Equal(t, noteID, payload3["id"])
-		assert.Equal(t, "io.cozy.notes.events", payload3["type"])
-		doc3, _ := payload3["doc"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.notes.documents", doc3["doctype"])
-		assert.Equal(t, "A very new title", doc3["title"])
-		assert.Equal(t, "543781490137", doc3["sessionID"])
+		require.NoError(t, err)
+
+		obj = ws.Expect().TextMessage().
+			JSON().Object()
+
+		obj.ValueEqual("event", "UPDATED")
+		payload = obj.Value("payload").Object()
+		payload.ValueEqual("id", noteID)
+		payload.ValueEqual("type", "io.cozy.notes.events")
+
+		doc = payload.Value("doc").Object()
+		doc.ValueEqual("doctype", "io.cozy.notes.documents")
+		doc.ValueEqual("title", "A very new title")
+		doc.ValueEqual("sessionID", "543781490137")
 
 		slice := map[string]interface{}{
 			"content": []interface{}{
@@ -630,233 +642,200 @@ func TestNotes(t *testing.T) {
 		file, err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
 		require.NoError(t, err)
 
-		var res4 map[string]interface{}
-		err = c.ReadJSON(&res4)
-		assert.NoError(t, err)
-		assert.Equal(t, "UPDATED", res4["event"])
-		payload4, _ := res4["payload"].(map[string]interface{})
-		assert.Equal(t, noteID, payload4["id"])
-		assert.Equal(t, "io.cozy.notes.events", payload4["type"])
-		doc4, _ := payload4["doc"].(map[string]interface{})
+		obj = ws.Expect().TextMessage().
+			JSON().Object()
 
-		var res5 map[string]interface{}
-		err = c.ReadJSON(&res5)
-		assert.NoError(t, err)
-		assert.Equal(t, "UPDATED", res5["event"])
-		payload5, _ := res5["payload"].(map[string]interface{})
-		assert.Equal(t, noteID, payload5["id"])
-		assert.Equal(t, "io.cozy.notes.events", payload5["type"])
-		doc5, _ := payload5["doc"].(map[string]interface{})
+		obj.ValueEqual("event", "UPDATED")
+		payload = obj.Value("payload").Object()
+		payload.ValueEqual("id", noteID)
+		payload.ValueEqual("type", "io.cozy.notes.events")
 
-		// In some cases, the steps can be received in the bad order because of the
-		// concurrency between the goroutines in the realtime hub.
-		if doc4["version"].(float64) > doc5["version"].(float64) {
+		doc4 := payload.Value("doc").Object()
+
+		obj = ws.Expect().TextMessage().
+			JSON().Object()
+
+		obj.ValueEqual("event", "UPDATED")
+		payload = obj.Value("payload").Object()
+		payload.ValueEqual("id", noteID)
+		payload.ValueEqual("type", "io.cozy.notes.events")
+		doc5 := payload.Value("doc").Object()
+
+		// // In some cases, the steps can be received in the bad order because of the
+		// // concurrency between the goroutines in the realtime hub.
+		if doc4.Value("version").Number().Raw() > doc5.Value("version").Number().Raw() {
 			doc4, doc5 = doc5, doc4
 		}
 
-		assert.Equal(t, "io.cozy.notes.steps", doc4["doctype"])
-		assert.Equal(t, "543781490137", doc4["sessionID"])
-		assert.Equal(t, "replace", doc4["stepType"])
-		assert.EqualValues(t, 2, doc4["from"])
-		assert.EqualValues(t, 2, doc4["to"])
-		vers4, _ := doc4["version"].(float64)
-		v4 := int(vers4)
-		assert.NotEqual(t, 0, v4)
-		assert.NotEqual(t, version, v4)
+		doc4.ValueEqual("doctype", "io.cozy.notes.steps")
+		doc4.ValueEqual("sessionID", "543781490137")
+		doc4.ValueEqual("stepType", "replace")
+		doc4.ValueEqual("from", 2)
+		doc4.ValueEqual("to", 2)
+		vers4 := int(doc4.Value("version").Number().Gt(0).Raw())
 
-		assert.Equal(t, "io.cozy.notes.steps", doc5["doctype"])
-		assert.Equal(t, "543781490137", doc5["sessionID"])
-		assert.Equal(t, "replace", doc5["stepType"])
-		assert.EqualValues(t, 3, doc5["from"])
-		assert.EqualValues(t, 3, doc5["to"])
-		vers5, _ := doc5["version"].(float64)
-		v5 := int(vers5)
-		assert.NotEqual(t, 0, v5)
-		assert.NotEqual(t, v4, v5)
-		assert.NotEqual(t, version, v5)
-		assert.EqualValues(t, file.Metadata["version"], v5)
+		doc5.ValueEqual("doctype", "io.cozy.notes.steps")
+		doc5.ValueEqual("sessionID", "543781490137")
+		doc5.ValueEqual("stepType", "replace")
+		doc5.ValueEqual("from", 3)
+		doc5.ValueEqual("to", 3)
+		vers5 := int(doc5.Value("version").Number().
+			NotEqual(0).
+			NotEqual(vers4).
+			Raw())
+
+		assert.EqualValues(t, file.Metadata["version"], vers5)
 	})
 
 	t.Run("UploadImage", func(t *testing.T) {
+		e := httpexpect.Default(t, ts.URL)
+
+		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		require.NoError(t, err)
+
 		for i := 0; i < 3; i++ {
-			u := fmt.Sprintf("/notes/%s/images?Name=wet.jpg", noteID)
-			f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-			assert.NoError(t, err)
-			defer f.Close()
-			req, err := http.NewRequest("POST", ts.URL+u, f)
-			assert.NoError(t, err)
-			req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-			req.Header.Add("Content-Type", "image/jpeg")
-			res, err := http.DefaultClient.Do(req)
-			assert.NoError(t, err)
-			assert.Equal(t, 201, res.StatusCode)
-			defer res.Body.Close()
-			var result map[string]interface{}
-			err = json.NewDecoder(res.Body).Decode(&result)
-			assert.NoError(t, err)
-			data, _ := result["data"].(map[string]interface{})
-			assert.Equal(t, consts.NotesImages, data["type"])
-			assert.NotEmpty(t, data["id"])
-			assert.NotEmpty(t, data["meta"])
+			obj := e.POST("/notes/"+noteID+"/images").
+				WithQuery("Name", "wet.jpg").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "image/jpeg").
+				WithBytes(rawFile).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-			attrs, _ := data["attributes"].(map[string]interface{})
+			data := obj.Value("data").Object()
+			data.ValueEqual("type", consts.NotesImages)
+			data.Value("id").String().NotEmpty()
+			data.Value("meta").Object().NotEmpty()
+
+			attrs := data.Value("attributes").Object()
 			if i == 0 {
-				assert.Equal(t, "wet.jpg", attrs["name"])
+				attrs.ValueEqual("name", "wet.jpg")
 			} else {
-				assert.Equal(t, fmt.Sprintf("wet (%d).jpg", i+1), attrs["name"])
+				attrs.ValueEqual("name", fmt.Sprintf("wet (%d).jpg", i+1))
 			}
-			assert.NotEmpty(t, attrs["cozyMetadata"])
-			assert.Equal(t, "image/jpeg", attrs["mime"])
-			assert.EqualValues(t, 440, attrs["width"])
-			assert.EqualValues(t, 294, attrs["height"])
 
-			links, _ := data["links"].(map[string]interface{})
-			assert.NotEmpty(t, links["self"])
+			attrs.Value("cozyMetadata").Object().NotEmpty()
+			attrs.ValueEqual("mime", "image/jpeg")
+			attrs.ValueEqual("width", 440)
+			attrs.ValueEqual("height", 294)
+
+			data.Path("$.links.self").String().NotEmpty()
 		}
 	})
 
 	t.Run("GetImage", func(t *testing.T) {
-		u := fmt.Sprintf("/notes/%s/images?Name=wet-cozy.jpg", noteID)
-		f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-		assert.NoError(t, err)
-		defer f.Close()
-		req, err := http.NewRequest("POST", ts.URL+u, f)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		req.Header.Add("Content-Type", "image/jpeg")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 201, res.StatusCode)
-		defer res.Body.Close()
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		data, _ := result["data"].(map[string]interface{})
-		assert.Equal(t, consts.NotesImages, data["type"])
-		assert.NotEmpty(t, data["id"])
-		assert.NotEmpty(t, data["meta"])
+		e := httpexpect.Default(t, ts.URL)
 
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.NotEmpty(t, attrs["name"])
-		assert.NotEmpty(t, attrs["cozyMetadata"])
-		assert.Equal(t, "image/jpeg", attrs["mime"])
+		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		require.NoError(t, err)
 
-		links, _ := data["links"].(map[string]interface{})
-		link, _ := links["self"].(string)
-		assert.NotEmpty(t, link)
+		obj := e.POST("/notes/"+noteID+"/images").
+			WithQuery("Name", "wet.jpg").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "image/jpeg").
+			WithBytes(rawFile).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req, err = http.NewRequest("GET", ts.URL+link, nil)
-		assert.NoError(t, err)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		defer res.Body.Close()
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.NotesImages)
+		data.Value("id").String().NotEmpty()
+		data.Value("meta").Object().NotEmpty()
 
-		f2, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-		assert.NoError(t, err)
-		defer f2.Close()
-		expected, err := io.ReadAll(f2)
-		assert.NoError(t, err)
-		actual, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, expected, actual)
+		link := data.Path("$.links.self").String().NotEmpty().Raw()
 
-		req, err = http.NewRequest("GET", ts.URL+"/files/"+noteID, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		defer res.Body.Close()
-		var result2 map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result2)
-		assert.NoError(t, err)
-		included, _ := result2["included"].([]interface{})
-		hasImage := false
-		for i := range included {
-			data, _ := included[i].(map[string]interface{})
-			if data["type"] == consts.FilesVersions {
-				continue
-			}
-			assert.Equal(t, consts.NotesImages, data["type"])
-			assert.NotEmpty(t, data["id"])
-			assert.NotEmpty(t, data["meta"])
-			attrs, _ := data["attributes"].(map[string]interface{})
-			assert.NotEmpty(t, attrs["name"])
-			assert.NotEmpty(t, attrs["cozyMetadata"])
-			assert.Equal(t, "image/jpeg", attrs["mime"])
-			links, _ := data["links"].(map[string]interface{})
-			assert.NotEmpty(t, links["self"])
-			hasImage = true
-		}
-		assert.True(t, hasImage)
+		e.GET(link).
+			Expect().Status(200).
+			Body().Equal(string(rawFile))
+
+		obj = e.GET("/files/"+noteID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		image := obj.Value("included").Array().
+			Find(func(_ int, value *httpexpect.Value) bool {
+				value.Object().ValueNotEqual("type", consts.FilesVersions)
+				return true
+			}).
+			Object()
+
+		image.ValueEqual("type", consts.NotesImages)
+		image.Value("id").String().NotEmpty()
+		image.Value("meta").Object().NotEmpty()
+
+		attrs := image.Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.ValueEqual("mime", "image/jpeg")
+
+		data.Path("$.links.self").String().NotEmpty()
 	})
 
 	t.Run("ImportNotes", func(t *testing.T) {
-		buf := strings.NewReader(`
-# Title
+		e := httpexpect.Default(t, ts.URL)
 
-Text with **bold** and [underlined]{.underlined}.
-`)
-		path := "/files/io.cozy.files.root-dir?Type=file&Name=An%20imported%20note.cozy-note"
-		req, err := http.NewRequest("POST", ts.URL+path, buf)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		req.Header.Add("Content-Type", "text/plain")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 201, res.StatusCode)
+		obj := e.POST("/files/io.cozy.files.root-dir").
+			WithQuery("Type", "file").
+			WithQuery("Name", "An imported note.cozy-note").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte(`
+        # Title
 
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		data, _ := result["data"].(map[string]interface{})
-		assert.Equal(t, "io.cozy.files", data["type"])
-		assert.Contains(t, data, "id")
-		fileID := data["id"].(string)
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.Equal(t, "file", attrs["type"])
-		assert.Equal(t, "An imported note.cozy-note", attrs["name"])
-		assert.Equal(t, "text/vnd.cozy.note+markdown", attrs["mime"])
-		meta, _ := attrs["metadata"].(map[string]interface{})
-		assert.Equal(t, "An imported note", meta["title"])
-		assert.NotNil(t, meta["schema"])
-		assert.NotNil(t, meta["content"])
+        Text with **bold** and [underlined]{.underlined}.
+      `)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req, _ = http.NewRequest("GET", ts.URL+"/notes/"+fileID+"/open", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var doc map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&doc)
-		assert.NoError(t, err)
-		data, _ = doc["data"].(map[string]interface{})
-		assert.Equal(t, fileID, data["id"])
-		attrs, _ = data["attributes"].(map[string]interface{})
-		assert.Equal(t, inst.Domain, attrs["instance"])
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.files")
+		fileID := data.Value("id").String().NotEmpty().Raw()
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("type", "file")
+		attrs.ValueEqual("name", "An imported note.cozy-note")
+		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+
+		meta := attrs.Value("metadata").Object()
+		meta.ValueEqual("title", "An imported note")
+		meta.Value("schema").Object().NotEmpty()
+		meta.Value("content").Object().NotEmpty()
+
+		obj = e.GET("/notes/"+fileID+"/open").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.ValueEqual("id", fileID)
+		data.Path("$.attributes.instance").Equal(inst.Domain)
 	})
 }
 
-func assertInitialNote(t *testing.T, result map[string]interface{}) {
-	data, _ := result["data"].(map[string]interface{})
-	assert.Equal(t, "io.cozy.files", data["type"])
-	if noteID == "" {
-		assert.Contains(t, data, "id")
-		noteID = data["id"].(string)
-	} else {
-		assert.Equal(t, noteID, data["id"])
-	}
-	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, "file", attrs["type"])
-	assert.Equal(t, "A super note.cozy-note", attrs["name"])
-	assert.Equal(t, "text/vnd.cozy.note+markdown", attrs["mime"])
-	fcm, _ := attrs["cozyMetadata"].(map[string]interface{})
-	assert.Contains(t, fcm, "createdAt")
-	assert.Contains(t, fcm, "createdOn")
-	meta, _ := attrs["metadata"].(map[string]interface{})
-	assert.Equal(t, "A super note", meta["title"])
-	assert.EqualValues(t, 0, meta["version"])
-	assert.NotNil(t, meta["schema"])
-	assert.NotNil(t, meta["content"])
+func assertInitialNote(t *testing.T, obj *httpexpect.Object) {
+	data := obj.Value("data").Object()
+
+	data.ValueEqual("type", "io.cozy.files")
+	data.Value("id").String().NotEmpty()
+
+	attrs := data.Value("attributes").Object()
+	attrs.ValueEqual("type", "file")
+	attrs.ValueEqual("name", "A super note.cozy-note")
+	attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+
+	fcm := attrs.Value("cozyMetadata").Object()
+	fcm.Value("createdAt").String().DateTime(time.RFC3339)
+	fcm.Value("createdOn").String().NotEmpty()
+
+	meta := attrs.Value("metadata").Object()
+	meta.ValueEqual("title", "A super note")
+	meta.ValueEqual("version", 0)
+	meta.Value("schema").Object().NotEmpty()
+	meta.Value("content").Object().NotEmpty()
 }
