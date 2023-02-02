@@ -529,6 +529,9 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 		return nil
 	}
 	for _, service := range *manifest.Attrs.Services {
+		if service.TriggerID == "" {
+			continue
+		}
 		triggerIDs = append(triggerIDs, service.TriggerID)
 	}
 	var triggers []*client.Trigger
