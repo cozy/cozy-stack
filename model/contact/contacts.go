@@ -139,6 +139,14 @@ func (c *Contact) PrimaryCozyURL() string {
 	return url
 }
 
+// FillFullnameIfMissing can be used to add a fullname if there was none.
+func (c *Contact) FillFullnameIfMissing(fullname string) {
+	name, ok := c.Get("fullname").(string)
+	if !ok || len(name) == 0 {
+		c.M["fullname"] = fullname
+	}
+}
+
 // AddCozyURL adds a cozy URL to this contact (unless the contact has already
 // this cozy URL) and saves the contact.
 func (c *Contact) AddCozyURL(db prefixer.Prefixer, cozyURL string) error {
