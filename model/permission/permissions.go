@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/labstack/echo/v4"
 )
 
 // DocTypeVersion represents the doctype version. Each time this document
@@ -273,11 +274,13 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 	}
 
 	if len(res.Rows) == 0 {
-		return nil, fmt.Errorf("no permission doc for token %v", tokenCode)
+		msg := fmt.Sprintf("no permission doc for token %v", tokenCode)
+		return nil, echo.NewHTTPError(http.StatusForbidden, msg)
 	}
 
 	if len(res.Rows) > 1 {
-		return nil, fmt.Errorf("Bad state: several permission docs for token %v", tokenCode)
+		msg := fmt.Sprintf("Bad state: several permission docs for token %v", tokenCode)
+		return nil, echo.NewHTTPError(http.StatusBadRequest, msg)
 	}
 
 	perm := &Permission{}
@@ -328,11 +331,13 @@ func GetTokenAndPermissionsFromShortcode(db prefixer.Prefixer, shortcode string)
 	}
 
 	if len(res.Rows) == 0 {
-		return "", nil, fmt.Errorf("no permission doc for shortcode %v", shortcode)
+		msg := fmt.Sprintf("no permission doc for shortcode %v", shortcode)
+		return "", nil, echo.NewHTTPError(http.StatusForbidden, msg)
 	}
 
 	if len(res.Rows) > 1 {
-		return "", nil, fmt.Errorf("Bad state: several permission docs for shortcode %v", shortcode)
+		msg := fmt.Sprintf("Bad state: several permission docs for shortcode %v", shortcode)
+		return "", nil, echo.NewHTTPError(http.StatusBadRequest, msg)
 	}
 
 	perm := Permission{}
