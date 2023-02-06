@@ -31,7 +31,7 @@ func TestShortcuts(t *testing.T) {
 	// ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = weberrors.ErrorHandler
 
 	t.Run("CreateShortcut", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/shortcuts").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -80,7 +80,7 @@ func TestShortcuts(t *testing.T) {
 	})
 
 	t.Run("GetShortcut", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/shortcuts/"+shortcutID).
 			WithHeader("Accept", "application/json").

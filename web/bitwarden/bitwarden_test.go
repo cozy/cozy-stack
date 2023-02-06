@@ -46,7 +46,7 @@ func TestBitwarden(t *testing.T) {
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	t.Run("Prelogin", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/accounts/prelogin").
 			WithHeader("Content-Type", "application/json").
@@ -61,7 +61,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("Connect", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		testLogger := test.NewGlobal()
 		setting, err := settings.Get(inst)
@@ -114,7 +114,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("GetCozyOrg", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/bitwarden/organizations/cozy").
 			WithHeader("Authorization", "Bearer invalid-token").
@@ -134,7 +134,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("CreateFolder", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/folders").
 			WithHeader("Content-Type", "application/json").
@@ -151,7 +151,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("ListFolders", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/bitwarden/api/folders").
 			WithHeader("Authorization", "Bearer "+token).
@@ -169,7 +169,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("GetFolder", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/bitwarden/api/folders/"+folderID).
 			WithHeader("Authorization", "Bearer "+token).
@@ -183,7 +183,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("RenameFolder", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/bitwarden/api/folders/"+folderID).
 			WithHeader("Content-Type", "application/json").
@@ -199,7 +199,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("DeleteFolder", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/folders").
 			WithHeader("Content-Type", "application/json").
@@ -251,7 +251,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("CreateNoType", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/ciphers").
 			WithHeader("Content-Type", "application/json").
@@ -267,7 +267,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("CreateLogin", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/ciphers").
 			WithHeader("Content-Type", "application/json").
@@ -297,7 +297,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("ListCiphers", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/bitwarden/api/ciphers").
 			WithHeader("Authorization", "Bearer "+token).
@@ -315,7 +315,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("GetCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/bitwarden/api/ciphers/"+cipherID).
 			WithHeader("Authorization", "Bearer "+token).
@@ -328,7 +328,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("UpdateCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/bitwarden/api/ciphers/"+cipherID).
 			WithHeader("Content-Type", "application/json").
@@ -353,7 +353,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("DeleteCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/ciphers").
 			WithHeader("Content-Type", "application/json").
@@ -383,7 +383,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SoftDeleteCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/ciphers").
 			WithHeader("Content-Type", "application/json").
@@ -420,7 +420,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("RestoreCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST(ts.URL+"/bitwarden/api/ciphers").
 			WithHeader("Content-Type", "application/json").
@@ -461,7 +461,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("Sync", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/bitwarden/api/sync").
 			WithHeader("Authorization", "Bearer "+token).
@@ -502,7 +502,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("BulkDeleteCiphers", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Setup
 		nbCiphersToDelete := 5
@@ -542,7 +542,7 @@ func TestBitwarden(t *testing.T) {
 
 		// Test soft delete in bulk
 		t.Run("Soft delete in bulk", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.PUT("/bitwarden/api/ciphers/delete").
 				WithHeader("Content-Type", "application/json").
@@ -561,7 +561,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("Restore in bulk", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.PUT("/bitwarden/api/ciphers/restore").
 				WithHeader("Content-Type", "application/json").
@@ -581,7 +581,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("Delete in bulk", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.DELETE("/bitwarden/api/ciphers").
 				WithHeader("Content-Type", "application/json").
@@ -596,7 +596,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SharedCipher", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/ciphers/create").
 			WithHeader("Content-Type", "application/json").
@@ -648,7 +648,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SetKeyPair", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Needs to be marshaled in order to avoid encoding issues
 		body, _ := json.Marshal(map[string]string{
@@ -670,7 +670,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SettingsDomains", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/bitwarden/api/settings/domains").
 			WithHeader("Content-Type", "application/json").
@@ -693,7 +693,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("ImportCiphers", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		nbCiphers, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 		assert.NoError(t, err)
@@ -751,7 +751,7 @@ func TestBitwarden(t *testing.T) {
 		var orgaID string
 
 		t.Run("Create", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.POST("/bitwarden/api/organizations").
 				WithHeader("Content-Type", "application/json").
@@ -776,7 +776,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("Get", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.GET("/bitwarden/api/organizations/"+orgaID).
 				WithHeader("Authorization", "Bearer "+token).
@@ -793,7 +793,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("ListCollections", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.GET("/bitwarden/api/organizations/"+orgaID+"/collections").
 				WithHeader("Authorization", "Bearer "+token).
@@ -813,7 +813,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("SyncOrganizationAndCollection", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.GET("/bitwarden/api/sync").
 				WithHeader("Authorization", "Bearer "+token).
@@ -853,7 +853,7 @@ func TestBitwarden(t *testing.T) {
 		})
 
 		t.Run("DeleteOrganization", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			email := inst.PassphraseSalt()
 			iter := crypto.DefaultPBKDF2Iterations
@@ -868,7 +868,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("ChangeSecurityStamp", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		email := inst.PassphraseSalt()
 		iter := crypto.DefaultPBKDF2Iterations
@@ -885,7 +885,7 @@ func TestBitwarden(t *testing.T) {
 	})
 
 	t.Run("SendHint", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/bitwarden/api/accounts/password-hint").
 			WithHeader("Content-Type", "application/json").

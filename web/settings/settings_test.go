@@ -78,7 +78,7 @@ func TestSettings(t *testing.T) {
 	tsC.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	t.Run("GetContext", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/settings/context").
 			WithHeader("Accept", "application/vnd.api+json").
@@ -87,7 +87,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRev", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// We are going to patch an instance with newer values, but with a totally
 		// random rev
@@ -143,7 +143,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevNoChanges", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// We are defining a random rev, but make no changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -170,7 +170,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevAndChanges", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// We are defining a random rev, but make changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -197,7 +197,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("DiskUsage", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/settings/disk-usage").
 			WithHeader("Authorization", "Bearer "+token).
@@ -220,7 +220,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseWrongToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/settings/passphrase").
 			WithHeader("Content-Type", "application/json").
@@ -242,7 +242,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseCorrectToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		res := e.POST("/settings/passphrase").
 			WithJSON(map[string]interface{}{
@@ -295,7 +295,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithWrongPassphrase", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -309,7 +309,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		res := e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -326,7 +326,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithForce", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -358,7 +358,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("CheckPassphrase", func(t *testing.T) {
 		t.Run("invalid", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -370,7 +370,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("valid", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -384,7 +384,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetHint", func(t *testing.T) {
 		t.Run("WithNoHint", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/settings/hint").
 				WithHeader("Authorization", "Bearer "+token).
@@ -392,7 +392,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("WithHint", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			setting, err := settings.Get(testInstance)
 			assert.NoError(t, err)
@@ -407,7 +407,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateHint", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.PUT("/settings/hint").
 			WithHeader("Authorization", "Bearer "+token).
@@ -423,7 +423,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetPassphraseParameters", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -442,7 +442,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetCapabilities", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -464,7 +464,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetInstance", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -497,7 +497,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/settings/instance").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -535,7 +535,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetUpdatedInstance", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/settings/instance").
 			WithHeader("Authorization", "Bearer "+token).
@@ -559,7 +559,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithTwoFactorAuth", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.PUT("/settings/instance/auth_mode").
 			WithHeader("Authorization", "Bearer "+token).
@@ -608,7 +608,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("ListClients", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/settings/clients").
 			Expect().Status(401)
@@ -659,7 +659,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RevokeClient", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.DELETE("/settings/clients/" + oauthClientID).
 			Expect().Status(401)
@@ -714,7 +714,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -749,7 +749,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceChangeParams", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		doc, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -784,7 +784,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceAddParam", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -820,7 +820,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceRemoveParams", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -854,7 +854,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("FeatureFlags", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		_ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings)
 		t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings) })

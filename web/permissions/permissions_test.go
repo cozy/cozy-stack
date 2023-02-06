@@ -42,7 +42,7 @@ func TestPermissions(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("CreateShareSetByMobileRevokeByLinkedApp", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Create OAuthLinkedClient
 		oauthLinkedClient := &oauth.Client{
@@ -128,7 +128,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreateShareSetByLinkedAppRevokeByMobile", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Create a webapp token
 		webAppToken, err := testInstance.MakeJWT(consts.AppAudience, "drive", "", "", time.Now())
@@ -219,7 +219,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissions", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/permissions/self").
 			WithHeader("Authorization", "Bearer "+token).
@@ -243,7 +243,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissionsForRevokedClient", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 			"revoked-client",
@@ -260,7 +260,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissionsForExpiredToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		pastTimestamp := time.Now().Add(-30 * 24 * time.Hour) // in seconds
 
@@ -277,7 +277,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("BadPermissionsBearer", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/permissions/self").
 			WithHeader("Authorization", "Bearer barbage").
@@ -285,7 +285,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreateSubPermission", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		_, codes, err := createTestSubPermissions(e, token, "alice,bob")
 		require.NoError(t, err)
@@ -309,7 +309,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreateSubSubFail", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		_, codes, err := createTestSubPermissions(e, token, "eve")
 		require.NoError(t, err)
@@ -343,7 +343,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("PatchNoopFail", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, err := createTestSubPermissions(e, token, "pierre")
 		require.NoError(t, err)
@@ -363,7 +363,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("BadPatchAddRuleForbidden", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, err := createTestSubPermissions(e, token, "jacque")
 		require.NoError(t, err)
@@ -386,7 +386,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("PatchAddRule", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, err := createTestSubPermissions(e, token, "paul")
 		require.NoError(t, err)
@@ -416,7 +416,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("PatchRemoveRule", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, err := createTestSubPermissions(e, token, "paul")
 		require.NoError(t, err)
@@ -443,7 +443,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("PatchChangesCodes", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, codes, err := createTestSubPermissions(e, token, "john,jane")
 		require.NoError(t, err)
@@ -489,7 +489,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("Revoke", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, codes, err := createTestSubPermissions(e, token, "igor")
 		require.NoError(t, err)
@@ -508,7 +508,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("RevokeByAnotherApp", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, err := createTestSubPermissions(e, token, "roger")
 		require.NoError(t, err)
@@ -547,7 +547,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissionsWithShortCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, _ := createTestSubPermissions(e, token, "daniel")
 		perm, _ := permission.GetByID(testInstance, id)
@@ -560,7 +560,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetPermissionsWithBadShortCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
@@ -573,7 +573,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetTokenFromShortCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
@@ -583,7 +583,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetBadShortCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		_, _, err := createTestSubPermissions(e, token, "alice")
 		assert.NoError(t, err)
@@ -596,7 +596,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("GetMultipleShortCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, _ := createTestSubPermissions(e, token, "alice")
 		id2, _, _ := createTestSubPermissions(e, token, "alice")
@@ -613,7 +613,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CannotFindToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, _, _ := createTestSubPermissions(e, token, "alice")
 		perm, _ := permission.GetByID(testInstance, id)
@@ -626,7 +626,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("TinyShortCodeOK", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		id, codes, _ := createTestTinyCode(e, token, "elise", "30m")
 		code := codes.Value("elise").String().NotEmpty().Raw()
@@ -646,7 +646,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("TinyShortCodeInvalid", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		_, codes, _ := createTestTinyCode(e, token, "fanny", "24h")
 
@@ -694,7 +694,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("ListPermission", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ev1, _ := createTestEvent(testInstance)
 		ev2, _ := createTestEvent(testInstance)
@@ -792,7 +792,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreatePermissionWithoutMetadata", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Install the app
 		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
@@ -857,7 +857,7 @@ func TestPermissions(t *testing.T) {
 	})
 
 	t.Run("CreatePermissionWithMetadata", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Install the app
 		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/spf13/viper"
@@ -35,6 +37,42 @@ import (
 
 // This flag avoid starting the stack twice.
 var stackStarted bool
+var useDebug bool
+
+func init() {
+	flag.BoolVar(&useDebug, "debug", false, "display the requests content")
+
+	if useDebug {
+		useDebug = true
+	}
+}
+
+// CreateTestClient setup an httpexpect.Expect client used to make http tests.
+//
+// This init take allow to use the `--debug` flag in your tests in order to
+// print the requests/responses content.
+//
+// example: `go test ./web/permissions --debug`.
+func CreateTestClient(t testing.TB, url string) *httpexpect.Expect {
+	var printer httpexpect.Printer
+
+	t.Helper()
+
+	flag.Parse()
+
+	if useDebug {
+		printer = httpexpect.NewDebugPrinter(t, true)
+	} else {
+		printer = httpexpect.NewCompactPrinter(t)
+	}
+
+	return httpexpect.WithConfig(httpexpect.Config{
+		TestName: t.Name(),
+		BaseURL:  url,
+		Reporter: httpexpect.NewAssertReporter(t),
+		Printers: []httpexpect.Printer{printer},
+	})
+}
 
 // NeedCouchdb kill the process if there is no couchdb running
 func NeedCouchdb(t *testing.T) {

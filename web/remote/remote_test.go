@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +34,7 @@ func TestRemote(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("RemoteGET", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/remote/org.wikidata.entity").
 			WithQuery("entity", "Q42").

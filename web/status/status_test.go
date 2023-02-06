@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,7 +25,7 @@ func TestStatus(t *testing.T) {
 		ts := httptest.NewServer(handler)
 		t.Cleanup(ts.Close)
 
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/status").
 			Expect().Status(200).
