@@ -190,7 +190,11 @@ func (h *memHub) removeTopic(sub *Subscriber, key string) {
 			kept = append(kept, k)
 		}
 	}
-	h.bySubscribers[sub] = kept
+	if len(kept) == 0 {
+		delete(h.bySubscribers, sub)
+	} else {
+		h.bySubscribers[sub] = kept
+	}
 }
 
 func topicKey(db prefixer.Prefixer, doctype string) string {

@@ -81,6 +81,7 @@ func TestMemRealtime(t *testing.T) {
 	c4 := h.Subscriber(testingDB)
 	c4.Subscribe("io.cozy.testobject")
 	c4.Subscribe("io.cozy.testobject2")
+	defer c4.Close()
 
 	wg.Add(2)
 	go func() {
@@ -269,6 +270,7 @@ func TestRedisRealtime(t *testing.T) {
 	c4 := h.Subscriber(testingDB)
 	c4.Subscribe("io.cozy.testobject")
 	c4.Subscribe("io.cozy.testobject2")
+	defer c4.Close()
 
 	wg.Add(2)
 	go func() {
