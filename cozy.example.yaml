@@ -261,7 +261,6 @@ redis:
   # pool_size: max(25, 10 * runtime.NumCPU())  # pool_size cannot be below 25
   # pool_timeout: 3s
   # idle_timeout: 5m
-  # idle_check_frequency: 1m
 
   # enables read only queries on slave nodes.
   # read_only_slave: false

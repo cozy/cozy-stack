@@ -13,8 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis/v8"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 

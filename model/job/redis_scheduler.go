@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 // TriggersKey is the the key of the sorted set in redis used for triggers
@@ -184,7 +184,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				var d time.Duration
 				if d, err = time.ParseDuration(et.Infos().Debounce); err == nil {
 					timestamp := time.Now().Add(d)
-					s.client.ZAddNX(s.ctx, TriggersKey, &redis.Z{
+					s.client.ZAddNX(s.ctx, TriggersKey, redis.Z{
 						Score:  float64(timestamp.UTC().Unix()),
 						Member: redisKey(t),
 					})
@@ -235,7 +235,7 @@ func (s *redisScheduler) fire(trigger Trigger, request *JobRequest) {
 	case keepOriginalRequest:
 		pipe.SetNX(s.ctx, payloadKey(trigger), string(request.Payload), 30*24*time.Hour)
 	}
-	pipe.ZAddNX(s.ctx, TriggersKey, &redis.Z{
+	pipe.ZAddNX(s.ctx, TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(trigger),
 	})
@@ -391,7 +391,7 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		return errors.New("Not implemented yet")
 	}
 	pipe := s.client.Pipeline()
-	err := pipe.ZAdd(s.ctx, TriggersKey, &redis.Z{
+	err := pipe.ZAdd(s.ctx, TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t),
 	}).Err()
@@ -443,7 +443,7 @@ func (s *redisScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, argum
 	pipe := s.client.Pipeline()
 	pipe.ZRem(s.ctx, TriggersKey, redisKey(updated))
 	pipe.ZRem(s.ctx, SchedKey, redisKey(updated))
-	pipe.ZAdd(s.ctx, TriggersKey, &redis.Z{
+	pipe.ZAdd(s.ctx, TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(updated),
 	})

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 

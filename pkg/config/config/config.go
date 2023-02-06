@@ -27,7 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
 
@@ -576,15 +576,14 @@ func UseViper(v *viper.Viper) error {
 			// Enables read only queries on slave nodes.
 			ReadOnly: v.GetBool("redis.read_only_slave"),
 
-			MaxRetries:         v.GetInt("redis.max_retries"),
-			Password:           v.GetString("redis.password"),
-			DialTimeout:        v.GetDuration("redis.dial_timeout"),
-			ReadTimeout:        v.GetDuration("redis.read_timeout"),
-			WriteTimeout:       v.GetDuration("redis.write_timeout"),
-			PoolSize:           redisPoolSize,
-			PoolTimeout:        v.GetDuration("redis.pool_timeout"),
-			IdleTimeout:        v.GetDuration("redis.idle_timeout"),
-			IdleCheckFrequency: v.GetDuration("redis.idle_check_frequency"),
+			MaxRetries:      v.GetInt("redis.max_retries"),
+			Password:        v.GetString("redis.password"),
+			DialTimeout:     v.GetDuration("redis.dial_timeout"),
+			ReadTimeout:     v.GetDuration("redis.read_timeout"),
+			WriteTimeout:    v.GetDuration("redis.write_timeout"),
+			PoolSize:        redisPoolSize,
+			PoolTimeout:     v.GetDuration("redis.pool_timeout"),
+			ConnMaxIdleTime: v.GetDuration("redis.idle_timeout"),
 		}
 	}
 
