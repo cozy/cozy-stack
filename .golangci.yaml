@@ -64,3 +64,14 @@ linters-settings:
       - appendAssign
       - ifElseChain
       - argOrder
+  nolintlint:
+    # Disable to ensure that all nolint directives actually have an effect.
+    allow-unused: false
+    # Disable to ensure that nolint directives don't have a leading space.
+    allow-leading-space: false
+    # Exclude following linters from requiring an explanation.
+    allow-no-explanation: []
+    # Enable to require an explanation of nonzero length after each nolint directive.
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed.
+    require-specific: true
