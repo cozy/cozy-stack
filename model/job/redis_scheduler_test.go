@@ -16,7 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -253,7 +253,7 @@ func TestRedisScheduler(t *testing.T) {
 
 		ts := now.UTC().Unix()
 		key := testInstance.DBPrefix() + "/" + tat.ID()
-		err = client.ZAdd(context.Background(), jobs.SchedKey, &redis.Z{
+		err = client.ZAdd(context.Background(), jobs.SchedKey, redis.Z{
 			Score:  float64(ts + 1),
 			Member: key,
 		}).Err()
