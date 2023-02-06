@@ -87,7 +87,7 @@ func TestAuth(t *testing.T) {
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("InstanceBlocked", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Block the instance
 		testInstance.Blocked = true
@@ -113,7 +113,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("IsLoggedInWhenNotLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/test").
 			WithHost(domain).
@@ -123,7 +123,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("HomeWhenNotLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/").
 			WithHost(domain).
@@ -133,7 +133,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("HomeWhenNotLoggedInWithJWT", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/").WithQuery("jwt", "foobar").
 			WithHost(domain).
@@ -143,7 +143,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ShowLoginPage", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/login").
 			WithHost(domain).
@@ -157,7 +157,7 @@ func TestAuth(t *testing.T) {
 
 		for _, test := range testsRedirect {
 			t.Run(test, func(t *testing.T) {
-				e := httpexpect.Default(t, ts.URL)
+				e := testutils.CreateTestClient(t, ts.URL)
 
 				e.GET("/auth/login").WithQuery("redirect", test).
 					WithHost(domain).
@@ -168,7 +168,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ShowLoginPageWithRedirectXSS", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/login").WithQuery("redirect", "https://sub."+domain+"/<script>alert('foo')</script>").
 			WithHost(domain).
@@ -179,7 +179,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ShowLoginPageWithRedirectFragment", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/login").WithQuery("redirect", "https://"+domain+"/auth/authorize#myfragment").
 			WithHost(domain).
@@ -190,7 +190,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ShowLoginPageWithRedirectSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/login").WithQuery("redirect", "https://sub."+domain+"/foo/bar?query=foo#myfragment").
 			WithHost(domain).
@@ -200,7 +200,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LoginWithoutCSRFToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/login").WithFormField("passphrase", "MyPassphrase").
 			WithHost(domain).
@@ -208,7 +208,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LoginWithBadPassphrase", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token := getLoginCSRFToken(e)
 
@@ -221,7 +221,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LoginWithGoodPassphrase", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token := getLoginCSRFToken(e)
 
@@ -254,7 +254,7 @@ func TestAuth(t *testing.T) {
 
 	t.Run("LoginWithRedirect", func(t *testing.T) {
 		t.Run("success", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			token := getLoginCSRFToken(e)
 			e.POST("/auth/login").
@@ -269,7 +269,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("invalid redirect field", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			token := getLoginCSRFToken(e)
 			e.POST("/auth/login").
@@ -284,7 +284,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("DelegatedJWTLoginWithRedirect", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, session.ExternalClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -307,7 +307,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("IsLoggedInAfterLogin", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/test").
 			WithHost(domain).
@@ -318,7 +318,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("HomeWhenLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/").
 			WithHost(domain).
@@ -329,7 +329,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RegisterClientNotJSON", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/register").
 			WithHost(domain).
@@ -338,7 +338,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RegisterClientNoRedirectURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/register").
 			WithHost(domain).
@@ -393,7 +393,7 @@ func TestAuth(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				e := httpexpect.Default(t, ts.URL)
+				e := testutils.CreateTestClient(t, ts.URL)
 
 				obj := e.POST("/auth/register").
 					WithHost(domain).
@@ -409,7 +409,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RegisterClientSuccessWithJustMandatoryFields", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/register").
 			WithHost(domain).
@@ -435,7 +435,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RegisterClientSuccessWithAllFields", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/register").
 			WithHost(domain).
@@ -482,7 +482,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RegisterSharingClientSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/register").
 			WithHost(domain).
@@ -508,7 +508,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("DeleteClientNoToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.DELETE("/auth/register/" + altClientID).
 			WithHost(domain).
@@ -516,7 +516,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("DeleteClientSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.DELETE("/auth/register/"+altClientID).
 			WithHost(domain).
@@ -531,7 +531,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ReadClientNoToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/register/"+clientID).
 			WithHost(domain).
@@ -541,7 +541,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ReadClientInvalidToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/register/"+clientID).
 			WithHost(domain).
@@ -552,7 +552,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ReadClientInvalidClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/register/"+altClientID).
 			WithHost(domain).
@@ -562,7 +562,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ReadClientSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/auth/register/"+clientID).
 			WithHost(domain).
@@ -583,7 +583,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("UpdateClientDeletedClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.PUT("/auth/register/"+altClientID).
 			WithHost(domain).
@@ -596,7 +596,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("UpdateClientInvalidClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/auth/register/"+clientID).
 			WithHost(domain).
@@ -613,7 +613,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("UpdateClientNoRedirectURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/auth/register/"+clientID).
 			WithHost(domain).
@@ -632,7 +632,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("UpdateClientSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/auth/register/"+clientID).
 			WithHost(domain).
@@ -661,7 +661,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("UpdateClientSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/auth/register/"+clientID).
 			WithHost(domain).
@@ -692,7 +692,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormRedirectsWhenNotLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -706,7 +706,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormBadResponseType", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "token"). // invalid
@@ -721,7 +721,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormNoState", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -735,7 +735,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormNoClientId", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -749,7 +749,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormNoRedirectURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -763,7 +763,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormNoScope", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -777,7 +777,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormInvalidClient", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -792,7 +792,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormInvalidRedirectURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -807,7 +807,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		resBody := e.GET("/auth/authorize").
 			WithQuery("response_type", "code").
@@ -829,7 +829,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormClientMobileApp", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -853,7 +853,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeFormFlagshipApp", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -881,7 +881,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWhenNotLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -895,7 +895,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithInvalidCSRFToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -912,7 +912,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithNoState", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("client_id", clientID).
@@ -928,7 +928,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithNoClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -944,7 +944,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithInvalidClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -961,7 +961,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithNoRedirectURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -977,7 +977,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithInvalidURI", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -994,7 +994,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeWithNoScope", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -1010,7 +1010,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		redirectURL := e.POST("/auth/authorize").
 			WithFormField("state", "123456").
@@ -1039,7 +1039,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeSuccessOnboardingDeeplink", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 		oauthClient.RedirectURIs = []string{"cozydrive://"}
@@ -1083,7 +1083,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AuthorizeSuccessOnboarding", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 		u := "https://example.org/oauth/callback"
@@ -1113,7 +1113,7 @@ func TestAuth(t *testing.T) {
 		var linkedCode string
 
 		t.Run("Success", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			var oauthClient oauth.Client
 			oauthClient.RedirectURIs = []string{"https://example.org/oauth/callback"}
@@ -1175,7 +1175,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("AccessTokenLinkedAppInstalled", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.POST("/auth/access_token").
 				WithFormField("grant_type", "authorization_code").
@@ -1195,7 +1195,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenNoGrantType", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("client_id", clientID).
@@ -1208,7 +1208,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenInvalidGrantType", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "token"). // invalide
@@ -1222,7 +1222,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenNoClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1235,7 +1235,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenInvalidClientID", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1249,7 +1249,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenNoClientSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1262,7 +1262,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenInvalidClientSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1276,7 +1276,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenNoCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1289,7 +1289,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenInvalidCode", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1303,7 +1303,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AccessTokenSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/access_token").
 			WithFormField("grant_type", "authorization_code").
@@ -1324,7 +1324,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RefreshTokenNoToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "refresh_token").
@@ -1337,7 +1337,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RefreshTokenInvalidToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/access_token").
 			WithFormField("grant_type", "refresh_token").
@@ -1351,7 +1351,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RefreshTokenInvalidSigningMethod", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		claims := permission.Claims{
 			StandardClaims: crypto.StandardClaims{
@@ -1378,7 +1378,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("RefreshTokenSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/auth/access_token").
 			WithFormField("grant_type", "refresh_token").
@@ -1397,7 +1397,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("OAuthWithPKCE", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		/* Values taken from https://datatracker.ietf.org/doc/html/rfc7636#appendix-B */
 		challenge := "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
@@ -1481,7 +1481,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ConfirmFlagship", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token, code, err := oauth.GenerateConfirmCode(testInstance, clientID)
 		require.NoError(t, err)
@@ -1513,7 +1513,7 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, client.SetFlagship(testInstance))
 
 		t.Run("WithAnInvalidPassPhrase", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.POST("/auth/login/flagship").
 				WithHeader("Accept", "application/json").
@@ -1527,7 +1527,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("WithAnInvalidClientSecret", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.POST("/auth/login/flagship").
 				WithHeader("Accept", "application/json").
@@ -1541,7 +1541,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("Success", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.POST("/auth/login/flagship").
 				WithHeader("Accept", "application/json").
@@ -1562,7 +1562,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("AppRedirectionOnLogin", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/login").
 			WithQuery("redirect", "drive/#/foobar").
@@ -1574,7 +1574,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LogoutNoToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.DELETE("/auth/login").
 			WithHost(domain).
@@ -1582,7 +1582,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LogoutSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token := testInstance.BuildAppToken("home", "")
 
@@ -1600,11 +1600,11 @@ func TestAuth(t *testing.T) {
 
 	t.Run("LogoutOthers", func(t *testing.T) {
 		// First two connexion
-		e1 := httpexpect.Default(t, ts.URL)
-		e2 := httpexpect.Default(t, ts.URL)
+		e1 := testutils.CreateTestClient(t, ts.URL)
+		e2 := testutils.CreateTestClient(t, ts.URL)
 
 		// Third connexion closing e2 using the cookies from e1
-		e3 := httpexpect.Default(t, ts.URL)
+		e3 := testutils.CreateTestClient(t, ts.URL)
 
 		// Authenticate user 1
 		csrfToken := getLoginCSRFToken(e1)
@@ -1660,7 +1660,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseResetLoggedIn", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		body := e.GET("/auth/passphrase_reset").
 			WithHost(domain).
@@ -1673,7 +1673,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseReset", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		csrfToken := e.GET("/auth/passphrase_reset").
 			WithHost(domain).
@@ -1689,7 +1689,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseRenewFormNoToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/passphrase_renew").
 			WithHost(domain).
@@ -1699,7 +1699,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseRenewFormBadToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/passphrase_renew").
 			WithQuery("token", "invalid"). // invalid
@@ -1710,7 +1710,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseRenewFormWithToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/auth/passphrase_renew").
 			WithQuery("token", "badbee"). // good format but invalid
@@ -1721,7 +1721,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseRenew", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		d := "test.cozycloud.cc.web_reset_form"
 		_ = lifecycle.Destroy(d)
@@ -1767,7 +1767,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("IsLoggedOutAfterLogout", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/test").
 			WithHost(domain).
@@ -1777,7 +1777,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SecretExchangeGoodSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -1798,7 +1798,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SecretExchangeBadSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -1820,7 +1820,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SecretExchangeBadPayload", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -1847,7 +1847,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SecretExchangeNoPayload", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		var oauthClient oauth.Client
 
@@ -1874,7 +1874,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseOnboarding", func(t *testing.T) {
-		// e := httpexpect.Default(t, ts.URL)
+		// e := testutils.CreateTestClient(t, ts.URL)
 		e := httpexpect.WithConfig(httpexpect.Config{
 			TestName: t.Name(),
 			BaseURL:  ts.URL,
@@ -1923,7 +1923,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseOnboardingFinished", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Using the testInstance which had already been onboarded
 		// Should redirect to home
@@ -1935,7 +1935,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("PassphraseOnboardingBadRegisterToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Should render need_onboarding
 		d := "test.cozycloud.cc.web_passphrase_bad_token"
@@ -1959,7 +1959,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("LoginOnboardingNotFinished", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Should render need_onboarding
 		d := "test.cozycloud.cc.web_login_onboarding_not_finished"
@@ -1981,7 +1981,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("ShowConfirmForm", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		body := e.GET("/auth/confirm").
 			WithQuery("state", "342dd650-599b-0139-cfb0-543d7eb8149c").
@@ -1995,7 +1995,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SendConfirmBadCSRFToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.POST("/auth/confirm").
 			WithHeader("Accept", "application/json").
@@ -2008,7 +2008,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	t.Run("SendConfirmBadPass", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		token := getConfirmCSRFToken(e)
 
@@ -2026,7 +2026,7 @@ func TestAuth(t *testing.T) {
 		var confirmCode string
 
 		t.Run("GetConfirmCode", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			token := getConfirmCSRFToken(e)
 
@@ -2052,7 +2052,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("ConfirmBadCode", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/auth/confirm/123456").
 				WithHost(domain).
@@ -2060,7 +2060,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("ConfirmCodeOK", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/auth/confirm/" + confirmCode).
 				WithHost(domain).
@@ -2073,7 +2073,7 @@ func TestAuth(t *testing.T) {
 		require.NoError(t, err, "Could not install mini konnector.")
 
 		t.Run("BuildKonnectorToken", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			// Create an flagship OAuth client
 			oauthClient := oauth.Client{
@@ -2110,7 +2110,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("BuildKonnectorTokenNotFlagshipApp", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			// Create an OAuth client
 			oauthClient := oauth.Client{
@@ -2134,7 +2134,7 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("BuildKonnectorTokenInvalidSlug", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			// Create an flagship OAuth client
 			oauthClient := oauth.Client{

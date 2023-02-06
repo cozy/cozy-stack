@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,14 +36,14 @@ func TestRouting(t *testing.T) {
 		t.Cleanup(ts.Close)
 
 		t.Run("GET on an asset", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/assets/images/cozy.svg").
 				Expect().Status(200)
 		})
 
 		t.Run("HEAD on an asset", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.HEAD("/assets/images/cozy.svg").
 				Expect().Status(200)
@@ -60,7 +59,7 @@ func TestRouting(t *testing.T) {
 		t.Cleanup(ts.Close)
 
 		t.Run("WithoutHexaIsNotCached", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/assets/images/cozy.svg").
 				Expect().Status(200).
@@ -68,7 +67,7 @@ func TestRouting(t *testing.T) {
 		})
 
 		t.Run("WithHexaIsCachedAsImmutable", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/assets/images/cozy.badbeefbadbeef.svg").
 				Expect().Status(200).
@@ -78,7 +77,7 @@ func TestRouting(t *testing.T) {
 		})
 
 		t.Run("WithImmutableNameIsCachedAsImmutable", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.GET("/assets/images/cozy.immutable.svg").
 				Expect().Status(200).
@@ -88,13 +87,13 @@ func TestRouting(t *testing.T) {
 		})
 
 		t.Run("FileAvailableWithHEAD", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.HEAD("/assets/images/cozy.svg").Expect().Status(200)
 		})
 
 		t.Run("WithImmutableNameIsCachedAsImmutable", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.HEAD("/assets/images/cozy.badbeefbadbeef.svg").
 				Expect().Status(200).
@@ -112,7 +111,7 @@ func TestRouting(t *testing.T) {
 		ts := httptest.NewServer(router)
 		t.Cleanup(ts.Close)
 
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/version").Expect().Status(200)
 	})
@@ -143,7 +142,7 @@ func TestRouting(t *testing.T) {
 
 		for u, k := range urls {
 			t.Run(u, func(t *testing.T) {
-				e := httpexpect.Default(t, ts.URL)
+				e := testutils.CreateTestClient(t, ts.URL)
 
 				e.GET(u).
 					Expect().Status(200).

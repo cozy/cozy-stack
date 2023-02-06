@@ -85,7 +85,7 @@ func TestOidc(t *testing.T) {
 	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
 
 	t.Run("StartWithOnboardingNotFinished", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Should get a 200 with body "activate your cozy"
 		e.GET("/oidc/start").
@@ -98,7 +98,7 @@ func TestOidc(t *testing.T) {
 	t.Run("StartWithOnboardingFinished", func(t *testing.T) {
 		var err error
 
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		onboardingFinished := true
 		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
@@ -125,7 +125,7 @@ func TestOidc(t *testing.T) {
 
 	// Get the login page, assert we have an error if state is missing
 	t.Run("Success", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		e.GET("/oidc/login").
 			WithHost(testInstance.Domain).
@@ -136,7 +136,7 @@ func TestOidc(t *testing.T) {
 	})
 
 	t.Run("WithoutState", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		queryWithoutState := redirectURL.Query()
 		queryWithoutState.Del("state")
@@ -151,7 +151,7 @@ func TestOidc(t *testing.T) {
 	t.Run("LoginWith2FA", func(t *testing.T) {
 		var err error
 
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		onboardingFinished := true
 		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished, AuthMode: "two_factor_mail"})

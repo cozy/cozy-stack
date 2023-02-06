@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/gavv/httpexpect/v2"
 )
 
 type testDoc struct {
@@ -31,7 +30,7 @@ func TestRealtime(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("WSNoAuth", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().
@@ -51,7 +50,7 @@ func TestRealtime(t *testing.T) {
 	})
 
 	t.Run("WSInvalidToken", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().
@@ -71,7 +70,7 @@ func TestRealtime(t *testing.T) {
 	})
 
 	t.Run("WSNoPermissionsForADoctype", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().
@@ -93,7 +92,7 @@ func TestRealtime(t *testing.T) {
 	})
 
 	t.Run("WSSuccess", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().
@@ -171,7 +170,7 @@ func TestRealtime(t *testing.T) {
 	})
 
 	t.Run("WSNotify", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().

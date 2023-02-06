@@ -48,7 +48,7 @@ func TestOffice(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("OnlyOfficeLocal", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/office/"+fileID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
@@ -80,7 +80,7 @@ func TestOffice(t *testing.T) {
 	})
 
 	t.Run("SaveOnlyOffice", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Force save
 		obj := e.POST("/office/callback").

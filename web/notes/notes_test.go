@@ -47,7 +47,7 @@ func TestNotes(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("CreateNote", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/notes").
 			WithHeader("Authorization", "Bearer "+token).
@@ -114,7 +114,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("GetNote", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/notes/"+noteID).
 			WithHeader("Authorization", "Bearer "+token).
@@ -126,7 +126,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("OpenNote", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.GET("/notes/"+noteID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
@@ -147,7 +147,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("ChangeTitleAndSync", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/notes/"+noteID+"/title").
 			WithHeader("Authorization", "Bearer "+token).
@@ -204,7 +204,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("ListNotes", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Change the title
 		e.PUT("/notes/"+noteID+"/title").
@@ -275,7 +275,7 @@ func TestNotes(t *testing.T) {
       }`)
 
 		t.Run("Success", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.PATCH("/notes/"+noteID).
 				WithHeader("Authorization", "Bearer "+token).
@@ -299,7 +299,7 @@ func TestNotes(t *testing.T) {
 		})
 
 		t.Run("WithInvalidIfMatchHeader", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.PATCH("/notes/"+noteID).
 				WithHeader("Authorization", "Bearer "+token).
@@ -340,7 +340,7 @@ func TestNotes(t *testing.T) {
     }`)
 
 		t.Run("Success", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.PATCH("/notes/"+noteID).
 				WithHeader("Authorization", "Bearer "+token).
@@ -355,7 +355,7 @@ func TestNotes(t *testing.T) {
 		})
 
 		t.Run("GetStepsFromCurrentVersion", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.GET("/notes/"+noteID+"/steps").
 				WithQuery("Version", int(version)).
@@ -392,7 +392,7 @@ func TestNotes(t *testing.T) {
 		})
 
 		t.Run("GetStepsFromLastVersion", func(t *testing.T) {
-			e := httpexpect.Default(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
 			obj := e.GET("/notes/"+noteID+"/steps").
 				WithQuery("Version", lastVersion).
@@ -412,7 +412,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("PutSchema", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.PUT("/notes/"+noteID+"/schema").
 			WithHeader("Authorization", "Bearer "+token).
@@ -501,7 +501,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("PutTelepointer", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -566,7 +566,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("NoteRealtime", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		ws := e.GET("/realtime/").
 			WithWebsocketUpgrade().
@@ -685,7 +685,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("UploadImage", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 		require.NoError(t, err)
@@ -722,7 +722,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("GetImage", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 		require.NoError(t, err)
@@ -773,7 +773,7 @@ func TestNotes(t *testing.T) {
 	})
 
 	t.Run("ImportNotes", func(t *testing.T) {
-		e := httpexpect.Default(t, ts.URL)
+		e := testutils.CreateTestClient(t, ts.URL)
 
 		obj := e.POST("/files/io.cozy.files.root-dir").
 			WithQuery("Type", "file").
