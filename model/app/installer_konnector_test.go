@@ -97,7 +97,7 @@ func TestInstallerKonnector(t *testing.T) {
 		manGen = manifestKonnector
 		manName = app.KonnectorManifestName
 
-		doUpgrade(1)
+		doUpgrade(t, 1)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -176,7 +176,7 @@ func TestInstallerKonnector(t *testing.T) {
 		manGen = manifestKonnector
 		manName = app.KonnectorManifestName
 
-		doUpgrade(1)
+		doUpgrade(t, 1)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -206,7 +206,7 @@ func TestInstallerKonnector(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, ok, "The manifest has the right version")
 
-		doUpgrade(2)
+		doUpgrade(t, 2)
 
 		inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Update,
@@ -321,7 +321,7 @@ func TestInstallerKonnector(t *testing.T) {
 	t.Run("KonnectorInstallAndUpgradeWithBranch", func(t *testing.T) {
 		manGen = manifestKonnector
 		manName = app.KonnectorManifestName
-		doUpgrade(3)
+		doUpgrade(t, 3)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -366,7 +366,7 @@ func TestInstallerKonnector(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, ok, "The manifest has the right version")
 
-		doUpgrade(4)
+		doUpgrade(t, 4)
 
 		inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Update,

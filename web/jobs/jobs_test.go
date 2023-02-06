@@ -3,7 +3,6 @@ package jobs
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,8 +58,10 @@ func TestJobs(t *testing.T) {
 			if err := ctx.UnmarshalMessage(&msg); err != nil {
 				return err
 			}
-			_, err := fmt.Println(msg)
-			return err
+
+			t.Log(msg)
+
+			return nil
 		},
 	})
 

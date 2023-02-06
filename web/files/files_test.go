@@ -602,7 +602,6 @@ func TestFiles(t *testing.T) {
 
 	t.Run("CopyFile", func(t *testing.T) {
 		_, copyFileDir := createDir(t, "/files/?Name=copyFileDir&Type=directory")
-		fmt.Println(copyFileDir)
 		copyFileDirID := copyFileDir["data"].(map[string]interface{})["id"].(string)
 
 		fileName := "bar"

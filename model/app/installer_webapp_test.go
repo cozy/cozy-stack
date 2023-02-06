@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -155,7 +154,7 @@ func TestInstallerWebApp(t *testing.T) {
 		manGen = manifestWebapp
 		manName = app.WebappManifestName
 
-		doUpgrade(1)
+		doUpgrade(t, 1)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -422,7 +421,7 @@ func TestInstallerWebApp(t *testing.T) {
 		}
 	}`
 
-		doUpgrade(1)
+		doUpgrade(t, 1)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -452,7 +451,7 @@ func TestInstallerWebApp(t *testing.T) {
 			assert.NotEmpty(t, service1.TriggerID)
 		}
 
-		doUpgrade(2)
+		doUpgrade(t, 2)
 		localServices = ""
 
 		inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
@@ -489,7 +488,7 @@ func TestInstallerWebApp(t *testing.T) {
 		}
 		version2 := man.Version()
 
-		fmt.Println("versions:", version1, version2)
+		t.Log("versions: ", version1, version2)
 
 		ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".br"))
 		assert.NoError(t, err)
@@ -697,7 +696,7 @@ func TestInstallerWebApp(t *testing.T) {
 	t.Run("WebappInstallAndUpgradeWithBranch", func(t *testing.T) {
 		manGen = manifestWebapp
 		manName = app.WebappManifestName
-		doUpgrade(3)
+		doUpgrade(t, 3)
 
 		inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Install,
@@ -745,7 +744,7 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, ok, "The good branch was checked out")
 
-		doUpgrade(4)
+		doUpgrade(t, 4)
 
 		inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Update,
@@ -791,7 +790,7 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, ok, "The good branch was checked out")
 
-		doUpgrade(5)
+		doUpgrade(t, 5)
 
 		inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
 			Operation: app.Update,

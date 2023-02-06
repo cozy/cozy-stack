@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -95,10 +94,7 @@ func TestOauth(t *testing.T) {
 		res.Body.Close()
 		okURL := string(bb)
 
-		if !assert.Equal(t, 200, res.StatusCode) {
-			fmt.Println("Bad response", res, okURL)
-			return
-		}
+		require.Equal(t, 200, res.StatusCode)
 
 		// the user click the oauth link
 		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
@@ -149,10 +145,7 @@ func TestOauth(t *testing.T) {
 		res.Body.Close()
 		okURL := string(bb)
 
-		if !assert.Equal(t, 200, res.StatusCode) {
-			fmt.Println("Bad response", res, okURL)
-			return
-		}
+		require.Equal(t, 200, res.StatusCode)
 
 		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
 		require.NoError(t, err)
@@ -260,10 +253,7 @@ func TestOauth(t *testing.T) {
 		res.Body.Close()
 		okURL := string(bb)
 
-		if !assert.Equal(t, 200, res.StatusCode) {
-			fmt.Println("Bad response", res, okURL)
-			return
-		}
+		require.Equal(t, 200, res.StatusCode)
 
 		okURLObj, err := url.Parse(okURL)
 		require.NoError(t, err)

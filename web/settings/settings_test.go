@@ -37,8 +37,6 @@ func TestSettings(t *testing.T) {
 	var instanceRev string
 	var oauthClientID string
 
-	fmt.Printf("foo: %q", oauthClientID)
-
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())

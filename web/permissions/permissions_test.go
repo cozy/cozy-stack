@@ -37,9 +37,6 @@ func TestPermissions(t *testing.T) {
 	clientVal, token := setup.GetTestClient(scopes)
 	clientID := clientVal.ClientID
 
-	// TODO: Remove this line use to remove a error for unused variable
-	fmt.Printf("client: %s / %s", clientID, token)
-
 	ts := setup.GetTestServer("/permissions", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
