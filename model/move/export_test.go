@@ -1,7 +1,6 @@
 package move
 
 import (
-	"fmt"
 	"math/rand"
 	"path"
 	"testing"
@@ -31,7 +30,7 @@ func TestExport(t *testing.T) {
 	}
 
 	seed := time.Now().UTC().Unix()
-	fmt.Printf("seed = %d\n", seed)
+	t.Logf("seed = %d\n", seed)
 	rand.Seed(seed)
 	config.UseTestFile()
 	setup := testutils.NewSetup(t, t.Name())
@@ -65,22 +64,22 @@ func TestExport(t *testing.T) {
 		// 	level := strings.Count(fpath, "/")
 		// 	for i := 0; i < level; i++ {
 		// 		if i == level-1 {
-		// 			_, err = fmt.Printf("└── ")
+		// 			_, err = t.Logf("└── ")
 		// 		} else {
-		// 			_, err = fmt.Printf("|  ")
+		// 			_, err = t.Logf("|  ")
 		// 		}
 		// 		if err != nil {
 		// 			return err
 		// 		}
 		// 	}
 		// 	if dir != nil {
-		// 		_, err = fmt.Println(dir.DocName)
+		// 		_, err = t.Log(dir.DocName)
 		// 	} else {
-		// 		_, err = fmt.Printf("%s (%d)\n", file.DocName, file.ByteSize)
+		// 		_, err = t.Loff("%s (%d)\n", file.DocName, file.ByteSize)
 		// 	}
 		// 	return err
 		// })
-		// fmt.Printf("nb files = %d\n", nbFiles)
+		// t.Logf("nb files = %d\n", nbFiles)
 
 		// Build the cursors
 		_, err = exportFiles(inst, exportDoc, nil)

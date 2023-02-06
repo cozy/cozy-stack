@@ -38,9 +38,6 @@ func TestNotes(t *testing.T) {
 	inst := setup.GetTestInstance()
 	_, token := setup.GetTestClient(consts.Files)
 
-	// TODO: Remove this line used to remove an unused variable error during dev
-	fmt.Printf("to remove: %s / %d / %v", noteID, version, inst)
-
 	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/files":    files.Routes,
 		"/notes":    Routes,

@@ -2,8 +2,6 @@ package intent
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -12,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,16 +25,12 @@ func TestIntents(t *testing.T) {
 
 	ins = &instance.Instance{Domain: "cozy.example.net"}
 
-	if err := couchdb.ResetDB(ins, consts.Apps); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	err := couchdb.ResetDB(ins, consts.Apps)
+	require.NoError(t, err)
+
 	g, _ := errgroup.WithContext(context.Background())
 	couchdb.DefineIndexes(g, ins, couchdb.IndexesByDoctype(consts.Apps))
-	if err := g.Wait(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	require.NoError(t, g.Wait())
 
 	t.Cleanup(func() {
 		_ = couchdb.DeleteDB(ins, consts.Apps)

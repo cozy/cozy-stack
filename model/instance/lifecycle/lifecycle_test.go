@@ -2,8 +2,6 @@ package lifecycle_test
 
 import (
 	"bytes"
-	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -34,10 +32,7 @@ func TestLifecycle(t *testing.T) {
 	testutils.NeedCouchdb(t)
 
 	_, err := stack.Start()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	require.NoError(t, err)
 
 	t.Cleanup(cleanInstance)
 

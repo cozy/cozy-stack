@@ -3,7 +3,6 @@ package bitwarden
 import (
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -15,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCipher(t *testing.T) {
@@ -24,10 +24,9 @@ func TestCipher(t *testing.T) {
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
-	if _, err := stack.Start(); err != nil {
-		fmt.Printf("Error while starting the job system: %s\n", err)
-		os.Exit(1)
-	}
+
+	_, err := stack.Start()
+	require.NoError(t, err, "Error while starting the job system")
 
 	t.Run("DeleteUnrecoverableCiphers", func(t *testing.T) {
 		domain := "cozy.example.net"

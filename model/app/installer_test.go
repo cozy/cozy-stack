@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os/exec"
+	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
 )
@@ -94,7 +95,7 @@ git checkout -`
 	}
 }
 
-func doUpgrade(major int) {
+func doUpgrade(t *testing.T, major int) {
 	localVersion = fmt.Sprintf("%d.0.0", major)
 	args := `
 echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
@@ -106,8 +107,8 @@ git checkout master`
 	cmd := exec.Command("bash", "-c", args)
 	cmd.Dir = localGitDir
 	if out, err := cmd.Output(); err != nil {
-		fmt.Println(string(out), err)
+		t.Log(string(out), err)
 	} else {
-		fmt.Println("did upgrade", localVersion)
+		t.Log("did upgrade", localVersion)
 	}
 }
