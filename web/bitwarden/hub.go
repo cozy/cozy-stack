@@ -161,6 +161,7 @@ func readPump(notifier *wsNotifier) {
 				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
 					Infof("Read error: %s", err)
 			}
+			close(notifier.Responses)
 			return
 		}
 		notifier.Responses <- msg
@@ -180,7 +181,10 @@ func writePump(notifier *wsNotifier) error {
 
 	for {
 		select {
-		case r := <-notifier.Responses:
+		case r, ok := <-notifier.Responses:
+			if !ok {
+				return nil // Client has closed the websocket
+			}
 			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return err
 			}
