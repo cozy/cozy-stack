@@ -1,45 +1,19 @@
 package jobs
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-var (
-	ts           *httptest.Server
-	testInstance *instance.Instance
-	token        string
-)
-
-type jobRequest struct {
-	Arguments interface{} `json:"arguments"`
-	Manual    bool        `json:"manual,omitempty"`
-}
-
-type jsonapiReq struct {
-	Data *jsonapiData `json:"data"`
-}
-
-type jsonapiData struct {
-	Attributes interface{} `json:"attributes"`
-}
 
 func TestJobs(t *testing.T) {
 	if testing.Short() {
@@ -65,659 +39,584 @@ func TestJobs(t *testing.T) {
 		},
 	})
 
-	testInstance = setup.GetTestInstance()
+	testInstance := setup.GetTestInstance()
 
 	scope := strings.Join([]string{
 		consts.Jobs + ":ALL:print:worker",
 		consts.Triggers + ":ALL:print:worker",
 	}, " ")
-	token, _ = testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
+	token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
-	ts = setup.GetTestServer("/jobs", Routes, func(r *echo.Echo) *echo.Echo {
-		r.Use(SetToken)
+	ts := setup.GetTestServer("/jobs", Routes, func(r *echo.Echo) *echo.Echo {
+		r.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				tok := middlewares.GetRequestToken(c)
+				// Forcing the token parsing to have the "claims" parameter in the
+				// context (in production, it is done via
+				// middlewares.CheckInstanceBlocked)
+				_, err := middlewares.ParseJWT(c, testInstance, tok)
+				if err != nil {
+					return err
+				}
+				return next(c)
+			}
+		})
 		return r
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("GetQueue", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/queue/print", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		assert.NoError(t, err)
-		data := result["data"].([]interface{})
-		assert.Equal(t, 0, len(data))
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.GET("/jobs/queue/print").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Value("data").Array().
+			Length().Equal(0)
 	})
 
 	t.Run("CreateJob", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &jobRequest{Arguments: "foobar"},
-			},
-		})
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/print", bytes.NewReader(body))
-		req.Header.Add("Authorization", "Bearer "+token)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		assert.Equal(t, 202, res.StatusCode)
-		defer res.Body.Close()
-		var resbody map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&resbody)
-		require.NoError(t, err)
-		data, _ := resbody["data"].(map[string]interface{})
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.Equal(t, "print", attrs["worker"])
-		assert.NotEqual(t, true, attrs["manual_execution"])
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/jobs/queue/print").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": { "arguments": "foobar" }
+        }
+      }`)).
+			Expect().Status(202).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("worker", "print")
+		attrs.NotContainsKey("manual_execution")
 	})
 
 	t.Run("CreateManualJob", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &jobRequest{
-					Arguments: "foobar",
-					Manual:    true,
-				},
-			},
-		})
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/print", bytes.NewReader(body))
-		req.Header.Add("Authorization", "Bearer "+token)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		assert.Equal(t, 202, res.StatusCode)
-		var resbody map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&resbody)
-		require.NoError(t, err)
-		data, _ := resbody["data"].(map[string]interface{})
-		attrs, _ := data["attributes"].(map[string]interface{})
-		assert.Equal(t, "print", attrs["worker"])
-		assert.Equal(t, true, attrs["manual_execution"])
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/jobs/queue/print").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "arguments": "foobar",
+            "manual": true
+          }
+        }
+      }`)).
+			Expect().Status(202).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("worker", "print")
+		attrs.ValueEqual("manual_execution", true)
 	})
 
 	t.Run("CreateJobForReservedWorker", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &jobRequest{Arguments: "foobar"},
-			},
-		})
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/trash-files", bytes.NewReader(body))
-		req.Header.Add("Authorization", "Bearer "+token)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		assert.Equal(t, 403, res.StatusCode)
+		e.POST("/jobs/queue/trash-files").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{"data": {"attributes": {"arguments": "foobar"}}}`)).
+			Expect().Status(403)
 	})
 
 	t.Run("CreateJobNotExist", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &jobRequest{Arguments: "foobar"},
-			},
-		})
-		req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		tokenNone, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI",
 			consts.Jobs+":ALL:none:worker",
 			"", time.Now())
-		req.Header.Add("Authorization", "Bearer "+tokenNone)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
 
-		assert.Equal(t, 404, res.StatusCode)
+		e.POST("/jobs/queue/none"). // invalid
+						WithHeader("Authorization", "Bearer "+tokenNone).
+						WithHeader("Content-Type", "application/json").
+						WithBytes([]byte(`{"data": {"attributes": {"arguments": "foobar"}}}`)).
+						Expect().Status(404)
 	})
 
 	t.Run("AddGetAndDeleteTriggerAt", func(t *testing.T) {
+		var triggerID string
 		at := time.Now().Add(1100 * time.Millisecond).Format(time.RFC3339)
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &map[string]interface{}{
-					"type":      "@at",
-					"arguments": at,
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+
+		t.Run("AddSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			obj := e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@at",
+            "arguments": "` + at + `",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			triggerID = data.Value("id").String().NotEmpty().Raw()
+			data.ValueEqual("type", consts.Triggers)
+
+			attrs := data.Value("attributes").Object()
+			attrs.ValueEqual("arguments", at)
+			attrs.ValueEqual("worker", "print")
 		})
-		req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req1.Header.Add("Authorization", "Bearer "+token)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
 
-		defer res1.Body.Close()
-		assert.Equal(t, http.StatusCreated, res1.StatusCode)
+		t.Run("AddFailure", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		var v struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res1.Body).Decode(&v)
-		require.NoError(t, err)
-
-		require.NotNil(t, v.Data)
-		require.NotNil(t, v.Data.Attributes)
-		triggerID := v.Data.ID
-		assert.Equal(t, consts.Triggers, v.Data.Type)
-		assert.Equal(t, "@at", v.Data.Attributes.Type)
-		assert.Equal(t, at, v.Data.Attributes.Arguments)
-		assert.Equal(t, "print", v.Data.Attributes.WorkerType)
-
-		body, _ = json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"type":      "@at",
-					"arguments": "garbage",
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+			e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@at",
+            "arguments": "garbage",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(400)
 		})
-		req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
+		t.Run("GetSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
+			e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200)
+		})
 
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
+		t.Run("DeleteSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req4.Header.Add("Authorization", "Bearer "+token)
-		res4, err := http.DefaultClient.Do(req4)
-		require.NoError(t, err)
+			e.DELETE("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(204)
+		})
 
-		assert.Equal(t, http.StatusNoContent, res4.StatusCode)
+		t.Run("GetNotFound", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req5.Header.Add("Authorization", "Bearer "+token)
-		res5, err := http.DefaultClient.Do(req5)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusNotFound, res5.StatusCode)
+			e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(404)
+		})
 	})
 
 	t.Run("AddGetAndDeleteTriggerIn", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"type":      "@in",
-					"arguments": "1s",
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+		var triggerID string
+
+		t.Run("AddSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			obj := e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@in",
+            "arguments": "1s",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			triggerID = data.Value("id").String().NotEmpty().Raw()
+			data.ValueEqual("type", consts.Triggers)
+
+			attrs := data.Value("attributes").Object()
+			attrs.ValueEqual("type", "@in")
+			attrs.ValueEqual("arguments", "1s")
+			attrs.ValueEqual("worker", "print")
 		})
-		req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req1.Header.Add("Authorization", "Bearer "+token)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
 
-		defer res1.Body.Close()
-		assert.Equal(t, http.StatusCreated, res1.StatusCode)
+		t.Run("AddFailure", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		var v struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res1.Body).Decode(&v)
-		require.NoError(t, err)
-
-		require.NotNil(t, v.Data)
-		require.NotNil(t, v.Data.Attributes)
-		triggerID := v.Data.ID
-		assert.Equal(t, consts.Triggers, v.Data.Type)
-		assert.Equal(t, "@in", v.Data.Attributes.Type)
-		assert.Equal(t, "1s", v.Data.Attributes.Arguments)
-		assert.Equal(t, "print", v.Data.Attributes.WorkerType)
-
-		body, _ = json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"type":      "@in",
-					"arguments": "garbage",
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+			e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@in",
+            "arguments": "garbage",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(400)
 		})
-		req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
+		t.Run("GetSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
+			e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200)
+		})
 
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
+		t.Run("DeleteSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req4.Header.Add("Authorization", "Bearer "+token)
-		res4, err := http.DefaultClient.Do(req4)
-		require.NoError(t, err)
+			e.DELETE("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(204)
+		})
 
-		assert.Equal(t, http.StatusNoContent, res4.StatusCode)
+		t.Run("GetNotFound", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req5.Header.Add("Authorization", "Bearer "+token)
-		res5, err := http.DefaultClient.Do(req5)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusNotFound, res5.StatusCode)
+			e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(404)
+		})
 	})
 
 	t.Run("AddGetUpdateAndDeleteTriggerCron", func(t *testing.T) {
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &map[string]interface{}{
-					"type":      "@cron",
-					"arguments": "0 0 0 * * 0",
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+		var triggerID string
+
+		t.Run("AddSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			obj := e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@cron",
+            "arguments": "0 0 0 * * 0",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			triggerID = data.Value("id").String().NotEmpty().Raw()
+			data.ValueEqual("type", consts.Triggers)
+
+			attrs := data.Value("attributes").Object()
+			attrs.ValueEqual("type", "@cron")
+			attrs.ValueEqual("arguments", "0 0 0 * * 0")
+			attrs.ValueEqual("worker", "print")
 		})
-		req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req1.Header.Add("Authorization", "Bearer "+token)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
 
-		defer res1.Body.Close()
-		assert.Equal(t, http.StatusCreated, res1.StatusCode)
+		t.Run("PatchSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		var v struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res1.Body).Decode(&v)
-		require.NoError(t, err)
-
-		require.NotNil(t, v.Data)
-		require.NotNil(t, v.Data.Attributes)
-		triggerID := v.Data.ID
-		assert.Equal(t, consts.Triggers, v.Data.Type)
-		assert.Equal(t, "@cron", v.Data.Attributes.Type)
-		assert.Equal(t, "0 0 0 * * 0", v.Data.Attributes.Arguments)
-		assert.Equal(t, "print", v.Data.Attributes.WorkerType)
-
-		body, _ = json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"arguments": "0 0 0 * * 1",
-				},
-			},
+			e.PATCH("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "arguments": "0 0 0 * * 1"
+          }
+        }
+      }`)).
+				Expect().Status(200)
 		})
-		req2, err := http.NewRequest(http.MethodPatch, ts.URL+"/jobs/triggers/"+triggerID, bytes.NewReader(body))
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, res2.StatusCode)
+		t.Run("GetSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
+			obj := e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
+			data := obj.Value("data").Object()
+			triggerID = data.Value("id").String().NotEmpty().Raw()
+			data.ValueEqual("type", consts.Triggers)
 
-		var v2 struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res3.Body).Decode(&v2)
-		require.NoError(t, err)
+			attrs := data.Value("attributes").Object()
+			attrs.ValueEqual("type", "@cron")
+			attrs.ValueEqual("arguments", "0 0 0 * * 1")
+			attrs.ValueEqual("worker", "print")
+		})
 
-		require.NotNil(t, v2.Data)
-		require.NotNil(t, v2.Data.Attributes)
-		assert.Equal(t, triggerID, v2.Data.ID)
-		assert.Equal(t, consts.Triggers, v2.Data.Type)
-		assert.Equal(t, "@cron", v2.Data.Attributes.Type)
-		assert.Equal(t, "0 0 0 * * 1", v2.Data.Attributes.Arguments)
-		assert.Equal(t, "print", v2.Data.Attributes.WorkerType)
+		t.Run("DeleteSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req4.Header.Add("Authorization", "Bearer "+token)
-		res4, err := http.DefaultClient.Do(req4)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusNoContent, res4.StatusCode)
+			e.DELETE("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(204)
+		})
 	})
 
 	t.Run("AddTriggerWithMetadata", func(t *testing.T) {
+		var triggerID string
+
 		at := time.Now().Add(1100 * time.Millisecond).Format(time.RFC3339)
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"type":      "@webhook",
-					"arguments": at,
-					"worker":    "print",
-					"message":   "foo",
-				},
-			},
+
+		t.Run("AddSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			obj := e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@webhook",
+            "arguments": "` + at + `",
+            "worker": "print",
+            "message": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			triggerID = data.Value("id").String().NotEmpty().Raw()
+			data.ValueEqual("type", consts.Triggers)
+			data.Path("$.links.webhook").Equal("https://" + testInstance.Domain + "/jobs/webhooks/" + triggerID)
+
+			attrs := data.Value("attributes").Object()
+			attrs.ValueEqual("type", "@webhook")
+			attrs.ValueEqual("arguments", at)
+			attrs.ValueEqual("worker", "print")
+
+			metas := attrs.Value("cozyMetadata").Object()
+			metas.ValueEqual("doctypeVersion", "1")
+			metas.ValueEqual("metadataVersion", 1)
+			metas.ValueEqual("createdByApp", "CLI")
+			metas.Value("createdAt").String().DateTime(time.RFC3339)
+			metas.Value("updatedAt").String().DateTime(time.RFC3339)
 		})
 
-		req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req1.Header.Add("Authorization", "Bearer "+token)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
+		t.Run("GetSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		defer res1.Body.Close()
-		assert.Equal(t, http.StatusCreated, res1.StatusCode)
+			e.GET("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(200)
+		})
 
-		var v struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-				Links      jsonapi.LinksList `json:"links"`
-			}
-		}
+		t.Run("DeleteSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		err = json.NewDecoder(res1.Body).Decode(&v)
-		require.NoError(t, err)
-
-		require.NotNil(t, v.Data)
-		require.NotNil(t, v.Data.Attributes)
-		triggerID := v.Data.ID
-		assert.Equal(t, consts.Triggers, v.Data.Type)
-		assert.Equal(t, "@webhook", v.Data.Attributes.Type)
-		assert.Equal(t, "https://"+testInstance.Domain+"/jobs/webhooks/"+triggerID, v.Data.Links.Webhook)
-		assert.Equal(t, at, v.Data.Attributes.Arguments)
-		assert.Equal(t, "print", v.Data.Attributes.WorkerType)
-
-		assert.Equal(t, "1", v.Data.Attributes.Metadata.DocTypeVersion)
-		assert.Equal(t, 1, v.Data.Attributes.Metadata.MetadataVersion)
-		// "CLI" is the token subject
-		assert.Equal(t, "CLI", v.Data.Attributes.Metadata.CreatedByApp)
-		assert.NotZero(t, v.Data.Attributes.Metadata.CreatedAt)
-		assert.NotZero(t, v.Data.Attributes.Metadata.UpdatedAt)
-
-		req2, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusOK, res2.StatusCode)
-
-		// Clean
-		req3, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+token)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusNoContent, res3.StatusCode)
+			e.DELETE("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(204)
+		})
 	})
 
 	t.Run("GetAllJobs", func(t *testing.T) {
-		var v struct {
-			Data []struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-
-		req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
-		assert.NoError(t, err)
 		tokenTriggers, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Triggers, "", time.Now())
-		req1.Header.Add("Authorization", "Bearer "+tokenTriggers)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusOK, res1.StatusCode)
+		t.Run("GetNoJobs", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		err = json.NewDecoder(res1.Body).Decode(&v)
-		require.NoError(t, err)
-
-		assert.Len(t, v.Data, 0)
-
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: map[string]interface{}{
-					"type":      "@in",
-					"arguments": "10s",
-					"worker":    "print",
-					// worker_arguments is deprecated but should still works
-					// we are using it here to check that it still works
-					"worker_arguments": "foo",
-				},
-			},
+			e.GET("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Value("data").Array().Empty()
 		})
-		req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
 
-		assert.Equal(t, http.StatusCreated, res2.StatusCode)
+		t.Run("CreateAJob", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+tokenTriggers)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
+			e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				WithHeader("Content-Type", "application/json").
+				// worker_arguments is deprecated but should still works
+				// we are using it here to check that it still works
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+            "type": "@in",
+            "arguments": "10s",
+            "worker": "print",
+            "worker_arguments": "foo"
+          }
+        }
+      }`)).
+				Expect().Status(201)
+		})
 
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
+		t.Run("GetAllJobs", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		err = json.NewDecoder(res3.Body).Decode(&v)
-		require.NoError(t, err)
+			obj := e.GET("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		if assert.Len(t, v.Data, 1) {
-			assert.Equal(t, consts.Triggers, v.Data[0].Type)
-			assert.Equal(t, "@in", v.Data[0].Attributes.Type)
-			assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
-			assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
-		}
+			obj.Value("data").Array().Length().Equal(1)
+			elem := obj.Value("data").Array().First().Object()
+			elem.ValueEqual("type", consts.Triggers)
+			attrs := elem.Value("attributes").Object()
+			attrs.ValueEqual("type", "@in")
+			attrs.ValueEqual("arguments", "10s")
+			attrs.ValueEqual("worker", "print")
+		})
 
-		req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=print", nil)
-		assert.NoError(t, err)
-		req4.Header.Add("Authorization", "Bearer "+tokenTriggers)
-		res4, err := http.DefaultClient.Do(req4)
-		require.NoError(t, err)
+		t.Run("WithWorkerQueryAndResult", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		assert.Equal(t, http.StatusOK, res4.StatusCode)
+			obj := e.GET("/jobs/triggers").
+				WithQuery("Worker", "print").
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		err = json.NewDecoder(res4.Body).Decode(&v)
-		require.NoError(t, err)
+			obj.Value("data").Array().Length().Equal(1)
+			elem := obj.Value("data").Array().First().Object()
+			elem.ValueEqual("type", consts.Triggers)
+			attrs := elem.Value("attributes").Object()
+			attrs.ValueEqual("type", "@in")
+			attrs.ValueEqual("arguments", "10s")
+			attrs.ValueEqual("worker", "print")
+		})
 
-		if assert.Len(t, v.Data, 1) {
-			assert.Equal(t, consts.Triggers, v.Data[0].Type)
-			assert.Equal(t, "@in", v.Data[0].Attributes.Type)
-			assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
-			assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
-		}
+		t.Run("WithWorkerQueryAndNoResults", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=nojobforme", nil)
-		assert.NoError(t, err)
-		req5.Header.Add("Authorization", "Bearer "+tokenTriggers)
-		res5, err := http.DefaultClient.Do(req5)
-		require.NoError(t, err)
+			e.GET("/jobs/triggers").
+				WithQuery("Worker", "nojobforme"). // no matching job
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Value("data").
+				Array().Empty()
+		})
 
-		assert.Equal(t, http.StatusOK, res5.StatusCode)
+		t.Run("WithTypeQuery", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		err = json.NewDecoder(res5.Body).Decode(&v)
-		require.NoError(t, err)
+			obj := e.GET("/jobs/triggers").
+				WithQuery("Type", "@in").
+				WithHeader("Authorization", "Bearer "+tokenTriggers).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		assert.Len(t, v.Data, 0)
-
-		req6, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Type=@in", nil)
-		assert.NoError(t, err)
-		req6.Header.Add("Authorization", "Bearer "+tokenTriggers)
-		res6, err := http.DefaultClient.Do(req6)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusOK, res6.StatusCode)
-
-		err = json.NewDecoder(res6.Body).Decode(&v)
-		require.NoError(t, err)
-
-		if assert.Len(t, v.Data, 1) {
-			assert.Equal(t, consts.Triggers, v.Data[0].Type)
-			assert.Equal(t, "@in", v.Data[0].Attributes.Type)
-			assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
-			assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
-		}
+			obj.Value("data").Array().Length().Equal(1)
+			elem := obj.Value("data").Array().First().Object()
+			elem.ValueEqual("type", consts.Triggers)
+			attrs := elem.Value("attributes").Object()
+			attrs.ValueEqual("type", "@in")
+			attrs.ValueEqual("arguments", "10s")
+			attrs.ValueEqual("worker", "print")
+		})
 	})
 
 	t.Run("ClientJobs", func(t *testing.T) {
+		var triggerID string
+		var jobID string
+
 		scope := consts.Jobs + " " + consts.Triggers
-		token2, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope, "", time.Now())
+		token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope, "", time.Now())
 
-		body, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &map[string]interface{}{
-					"type":    "@client",
-					"message": "foobar",
-				},
-			},
+		t.Run("CreateAClientJob", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			obj := e.POST("/jobs/triggers").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+	       "data": {
+	         "attributes": {
+	           "type": "@client",
+	           "message": "foobar"
+	         }
+	       }
+	     }`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			triggerID = obj.Path("$.data.id").String().NotEmpty().Raw()
+
+			attrs := obj.Path("$.data.attributes").Object()
+			attrs.ValueEqual("type", "@client")
+			attrs.ValueEqual("worker", "client")
 		})
-		req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
-		assert.NoError(t, err)
-		req1.Header.Add("Authorization", "Bearer "+token2)
-		res1, err := http.DefaultClient.Do(req1)
-		require.NoError(t, err)
 
-		defer res1.Body.Close()
-		assert.Equal(t, http.StatusCreated, res1.StatusCode)
+		t.Run("LaunchAClientJob", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		var v1 struct {
-			Data struct {
-				ID         string            `json:"id"`
-				Type       string            `json:"type"`
-				Attributes *job.TriggerInfos `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res1.Body).Decode(&v1)
-		require.NoError(t, err)
+			obj := e.POST("/jobs/triggers/"+triggerID+"/launch").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		require.NotNil(t, v1.Data)
-		require.NotNil(t, v1.Data.Attributes)
-		triggerID := v1.Data.ID
-		assert.Equal(t, consts.Triggers, v1.Data.Type)
-		assert.Equal(t, "@client", v1.Data.Attributes.Type)
-		assert.Equal(t, "client", v1.Data.Attributes.WorkerType)
+			jobID = obj.Path("$.data.id").String().NotEmpty().Raw()
 
-		req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers/"+triggerID+"/launch", nil)
-		assert.NoError(t, err)
-		req2.Header.Add("Authorization", "Bearer "+token2)
-		res2, err := http.DefaultClient.Do(req2)
-		require.NoError(t, err)
-
-		defer res2.Body.Close()
-		assert.Equal(t, http.StatusCreated, res2.StatusCode)
-
-		var v2 struct {
-			Data struct {
-				ID         string   `json:"id"`
-				Type       string   `json:"type"`
-				Attributes *job.Job `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res2.Body).Decode(&v2)
-		require.NoError(t, err)
-
-		require.NotNil(t, v2.Data)
-		require.NotNil(t, v2.Data.Attributes)
-		jobID := v2.Data.ID
-		assert.Equal(t, consts.Jobs, v2.Data.Type)
-		assert.Equal(t, "client", v2.Data.Attributes.WorkerType)
-		assert.Equal(t, job.Running, v2.Data.Attributes.State)
-		assert.NotEmpty(t, v2.Data.Attributes.QueuedAt)
-		assert.NotEmpty(t, v2.Data.Attributes.StartedAt)
-
-		body3, _ := json.Marshal(&jsonapiReq{
-			Data: &jsonapiData{
-				Attributes: &map[string]interface{}{
-					"state": "errored",
-					"error": "LOGIN_FAILED",
-				},
-			},
+			obj.Path("$.data.type").Equal(consts.Jobs)
+			attrs := obj.Path("$.data.attributes").Object()
+			attrs.ValueEqual("worker", "client")
+			attrs.ValueEqual("state", job.Running)
+			attrs.Value("queued_at").String().DateTime(time.RFC3339)
+			attrs.Value("started_at").String().DateTime(time.RFC3339)
 		})
-		req3, err := http.NewRequest(http.MethodPatch, ts.URL+"/jobs/"+jobID, bytes.NewReader(body3))
-		assert.NoError(t, err)
-		req3.Header.Add("Authorization", "Bearer "+token2)
-		res3, err := http.DefaultClient.Do(req3)
-		require.NoError(t, err)
 
-		defer res3.Body.Close()
-		assert.Equal(t, http.StatusOK, res3.StatusCode)
+		t.Run("PatchAClientJob", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		var v3 struct {
-			Data struct {
-				ID         string   `json:"id"`
-				Type       string   `json:"type"`
-				Attributes *job.Job `json:"attributes"`
-			}
-		}
-		err = json.NewDecoder(res3.Body).Decode(&v3)
-		require.NoError(t, err)
+			obj := e.PATCH("/jobs/"+jobID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+	       "data": {
+	         "attributes": {
+	           "state": "errored",
+	           "error": "LOGIN_FAILED"
+	         }
+	       }
+	     }`)).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
 
-		require.NotNil(t, v3.Data)
-		require.NotNil(t, v3.Data.Attributes)
-		assert.Equal(t, consts.Jobs, v3.Data.Type)
-		assert.Equal(t, "client", v3.Data.Attributes.WorkerType)
-		assert.Equal(t, job.Errored, v3.Data.Attributes.State)
-		assert.Equal(t, "LOGIN_FAILED", v3.Data.Attributes.Error)
-		assert.NotEmpty(t, v3.Data.Attributes.QueuedAt)
-		assert.NotEmpty(t, v3.Data.Attributes.StartedAt)
-		assert.NotEmpty(t, v3.Data.Attributes.FinishedAt)
+			obj.Path("$.data.type").Equal(consts.Jobs)
+			attrs := obj.Path("$.data.attributes").Object()
+			attrs.ValueEqual("worker", "client")
+			attrs.ValueEqual("state", job.Errored)
+			attrs.ValueEqual("error", "LOGIN_FAILED")
+			attrs.Value("queued_at").String().DateTime(time.RFC3339)
+			attrs.Value("started_at").String().DateTime(time.RFC3339)
+			attrs.Value("finished_at").String().DateTime(time.RFC3339)
+		})
 	})
-}
-
-func SetToken(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		tok := middlewares.GetRequestToken(c)
-		// Forcing the token parsing to have the "claims" parameter in the
-		// context (in production, it is done via
-		// middlewares.CheckInstanceBlocked)
-		_, err := middlewares.ParseJWT(c, testInstance, tok)
-		if err != nil {
-			return err
-		}
-		return next(c)
-	}
 }
