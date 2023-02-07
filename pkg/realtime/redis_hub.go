@@ -100,15 +100,17 @@ func (h *redisHub) start() {
 	sub := h.c.Subscribe(h.ctx, eventsRedisKey)
 	log := logger.WithNamespace("realtime-redis")
 	for msg := range sub.Channel() {
-		je := jsonEvent{}
 		parts := strings.SplitN(msg.Payload, ",", 2)
 		if len(parts) < 2 {
 			log.Warnf("Invalid payload: %s", msg.Payload)
 			continue
 		}
-		doctype := parts[0]
-		buf := []byte(parts[1])
-		if err := json.Unmarshal(buf, &je); err != nil {
+		// We clone the doctype to allow the GC to collect the payload even if
+		// the jsonEvent is still in use.
+		doctype := strings.Clone(parts[0])
+		r := strings.NewReader(parts[1])
+		je := jsonEvent{}
+		if err := json.NewDecoder(r).Decode(&je); err != nil {
 			log.Warnf("Error on start: %s", err)
 			continue
 		}
