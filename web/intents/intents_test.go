@@ -1,14 +1,9 @@
 package intents
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -16,18 +11,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var ts *httptest.Server
-var ins *instance.Instance
-var token string
-var appToken string
-var filesToken string
-var intentID string
-var appPerms *permission.Permission
 
 func TestIntents(t *testing.T) {
 	if testing.Short() {
@@ -35,14 +22,15 @@ func TestIntents(t *testing.T) {
 	}
 
 	var err error
+	var intentID string
 
 	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	ins = setup.GetTestInstance(&lifecycle.Options{
+	ins := setup.GetTestInstance(&lifecycle.Options{
 		Domain: "cozy.example.net",
 	})
-	_, token = setup.GetTestClient(consts.Settings)
+	_, _ = setup.GetTestClient(consts.Settings)
 
 	webapp := &couchdb.JSONDoc{
 		Type: consts.Apps,
@@ -53,11 +41,11 @@ func TestIntents(t *testing.T) {
 	}
 	require.NoError(t, couchdb.CreateNamedDoc(ins, webapp))
 
-	appPerms, err = permission.CreateWebappSet(ins, "app", permission.Set{}, "1.0.0")
+	appPerms, err := permission.CreateWebappSet(ins, "app", permission.Set{}, "1.0.0")
 	if err != nil {
 		require.NoError(t, err)
 	}
-	appToken = ins.BuildAppToken("app", "")
+	appToken := ins.BuildAppToken("app", "")
 	files := &couchdb.JSONDoc{
 		Type: consts.Apps,
 		M: map[string]interface{}{
@@ -77,93 +65,105 @@ func TestIntents(t *testing.T) {
 	if _, err := permission.CreateWebappSet(ins, "files", permission.Set{}, "1.0.0"); err != nil {
 		require.NoError(t, err)
 	}
-	filesToken = ins.BuildAppToken("files", "")
+	filesToken := ins.BuildAppToken("files", "")
 
-	ts = setup.GetTestServer("/intents", Routes)
+	ts := setup.GetTestServer("/intents", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("CreateIntent", func(t *testing.T) {
-		body := `{
-		"data": {
-			"type": "io.cozy.settings",
-			"attributes": {
-				"action": "PICK",
-				"type": "io.cozy.files",
-				"permissions": ["GET"]
-			}
-		}
-	}`
-		req, _ := http.NewRequest("POST", ts.URL+"/intents", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Accept", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+appToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		checkIntentResult(t, res, true)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+appToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		intentID = checkIntentResult(obj, appPerms, true)
 	})
 
 	t.Run("GetIntent", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/intents/"+intentID, nil)
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Accept", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+filesToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		checkIntentResult(t, res, true)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.GET("/intents/"+intentID).
+			WithHeader("Authorization", "Bearer "+filesToken).
+			WithHeader("Accept", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		checkIntentResult(obj, appPerms, true)
 	})
 
 	t.Run("GetIntentNotFromTheService", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/intents/"+intentID, nil)
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Accept", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+appToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 403, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.GET("/intents/"+intentID).
+			WithHeader("Authorization", "Bearer "+appToken).
+			WithHeader("Accept", "application/vnd.api+json").
+			Expect().Status(403)
 	})
 
 	t.Run("CreateIntentOAuth", func(t *testing.T) {
-		body := `{
-		"data": {
-			"type": "io.cozy.settings",
-			"attributes": {
-				"action": "PICK",
-				"type": "io.cozy.files",
-				"permissions": ["GET"]
-			}
-		}
-	}`
-		req, _ := http.NewRequest("POST", ts.URL+"/intents", bytes.NewBufferString(body))
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add("Accept", "application/vnd.api+json")
-		req.Header.Add("Authorization", "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		checkIntentResult(t, res, false)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/intents").
+			WithHeader("Authorization", "Bearer "+appToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.settings",
+          "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		checkIntentResult(obj, appPerms, false)
 	})
 }
 
-func checkIntentResult(t *testing.T, res *http.Response, fromWeb bool) {
-	assert.Equal(t, 200, res.StatusCode)
-	var result map[string]interface{}
-	err := json.NewDecoder(res.Body).Decode(&result)
-	assert.NoError(t, err)
-	data, ok := result["data"].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "io.cozy.intents", data["type"].(string))
-	intentID = data["id"].(string)
-	assert.NotEmpty(t, intentID)
-	attrs := data["attributes"].(map[string]interface{})
-	perms := attrs["permissions"].([]interface{})
-	assert.Len(t, perms, 1)
-	assert.Equal(t, "GET", perms[0].(string))
-	assert.Equal(t, "PICK", attrs["action"].(string))
-	assert.Equal(t, "io.cozy.files", attrs["type"].(string))
+func checkIntentResult(obj *httpexpect.Object, appPerms *permission.Permission, fromWeb bool) string {
+	data := obj.Value("data").Object()
+	data.ValueEqual("type", "io.cozy.intents")
+	intentID := data.Value("id").String().NotEmpty().Raw()
+
+	attrs := data.Value("attributes").Object()
+	attrs.ValueEqual("action", "PICK")
+	attrs.ValueEqual("type", "io.cozy.files")
+
+	perms := attrs.Value("permissions").Array()
+	perms.Length().Equal(1)
+	perms.First().String().Equal("GET")
+
 	if !fromWeb {
-		return
+		return intentID
 	}
-	assert.Equal(t, "https://app.cozy.example.net", attrs["client"].(string))
-	links := data["links"].(map[string]interface{})
-	assert.Equal(t, "/intents/"+intentID, links["self"].(string))
-	assert.Equal(t, "/permissions/"+appPerms.ID(), links["permissions"].(string))
+
+	attrs.ValueEqual("client", "https://app.cozy.example.net")
+
+	links := data.Value("links").Object()
+	links.ValueEqual("self", "/intents/"+intentID)
+	links.ValueEqual("permissions", "/permissions/"+appPerms.ID())
+
+	return intentID
 }
