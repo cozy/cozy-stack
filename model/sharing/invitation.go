@@ -177,7 +177,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	}
 	sharerMail, _ := inst.SettingsEMail()
 	var action string
-	if s.ReadOnlyRules() {
+	if s.ReadOnlyRules() || m.ReadOnly {
 		action = inst.Translate("Mail Sharing Request Action Read")
 	} else {
 		action = inst.Translate("Mail Sharing Request Action Write")
