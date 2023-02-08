@@ -435,6 +435,16 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			}
 			ac.Credentials.AccessToken = token
 
+			// Update the contact to fill the name if missing
+			if email := s.Members[i+1].Email; email != "" {
+				if c, err := contact.FindByEmail(inst, email); err == nil {
+					if err := c.AddNameIfMissing(inst, s.Members[i+1].PublicName); err != nil {
+						inst.Logger().WithNamespace("sharing").
+							Warnf("Error on saving contact: %s", err)
+					}
+				}
+			}
+
 			s.Active = true
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				if !couchdb.IsConflictError(err) {
