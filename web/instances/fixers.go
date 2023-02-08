@@ -362,37 +362,42 @@ func serviceTriggersFixer(c echo.Context) error {
 			if service.TriggerOptions == "" {
 				continue
 			}
-			if service.TriggerID != "" {
-				_, err := jobsSystem.GetTrigger(inst, service.TriggerID)
-				if errors.Is(err, job.ErrNotFoundTrigger) {
-					triggerID, err := app.CreateServiceTrigger(inst, slug, service)
-					if err != nil {
-						return err
+			var recreate bool
+			if service.TriggerID == "" {
+				for _, trigger := range triggers {
+					infos := trigger.Infos()
+					if infos.Debounce != service.Debounce {
+						continue
 					}
-					service.TriggerID = triggerID
+					opts := infos.Type + " " + infos.Arguments
+					if opts != service.TriggerOptions {
+						continue
+					}
+					var msg serviceMessage
+					if err := json.Unmarshal(infos.Message, &msg); err != nil {
+						continue
+					}
+					if msg.Name != name {
+						continue
+					}
+					service.TriggerID = infos.TID
 					update = true
-					recreated++
+					break
 				}
-				continue
+				recreate = service.TriggerID == ""
+			} else {
+				_, err := jobsSystem.GetTrigger(inst, service.TriggerID)
+				recreate = errors.Is(err, job.ErrNotFoundTrigger)
 			}
-			for _, trigger := range triggers {
-				infos := trigger.Infos()
-				if infos.Debounce != service.Debounce {
-					continue
+
+			if recreate {
+				triggerID, err := app.CreateServiceTrigger(inst, slug, service)
+				if err != nil {
+					return err
 				}
-				opts := infos.Type + " " + infos.Arguments
-				if opts != service.TriggerOptions {
-					continue
-				}
-				var msg serviceMessage
-				if err := json.Unmarshal(infos.Message, &msg); err != nil {
-					continue
-				}
-				if msg.Name != name {
-					continue
-				}
-				service.TriggerID = infos.TID
+				service.TriggerID = triggerID
 				update = true
+				recreated++
 			}
 		}
 
