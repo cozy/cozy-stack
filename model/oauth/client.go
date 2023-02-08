@@ -550,6 +550,9 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 		c.NotificationDeviceToken = old.NotificationDeviceToken
 	}
 
+	c.Flagship = old.Flagship
+	c.CertifiedFromStore = old.CertifiedFromStore
+
 	// Updating metadata
 	md := metadata.New()
 	if strings.HasPrefix(c.SoftwareID, "registry://") {
