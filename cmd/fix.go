@@ -364,7 +364,7 @@ triggers.
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(out))
+		fmt.Print(string(out))
 		return nil
 	},
 }
