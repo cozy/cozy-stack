@@ -1356,7 +1356,7 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 	}
 
 	for _, m := range s.Members {
-		if m.Status == MemberStatusOwner {
+		if m.Status != MemberStatusReady {
 			continue
 		}
 
@@ -1370,7 +1370,7 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 			continue
 		}
 
-		domain := u.Hostname()
+		domain := strings.ToLower(u.Hostname())
 		if u.Port() != "" {
 			domain += ":" + u.Port()
 		}
