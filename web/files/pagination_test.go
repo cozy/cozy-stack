@@ -1,15 +1,19 @@
 package files
 
 import (
-	"encoding/json"
 	"net/url"
 	"strconv"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPagination(t *testing.T) {
@@ -17,264 +21,324 @@ func TestPagination(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	config.UseTestFile()
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
+
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   t.TempDir(),
+	}
+
+	_, token := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
+	ts := setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
+		})
+		r.Use(secure)
+		return r
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
 	t.Run("TrashIsSkipped", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		nb := 15
-		body := "foo"
 		for i := 0; i < nb; i++ {
 			name := "foo" + strconv.Itoa(i)
-			upload(t, "/files/io.cozy.files.root-dir?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		}
 
-		opts := &url.Values{}
-		opts.Add("page[limit]", "5")
-		var result struct {
-			Data struct {
-				Relationships struct {
-					Contents struct {
-						Links *jsonapi.LinksList
-						Data  []couchdb.DocReference
-					}
-				}
-			}
-			Included []interface{}
-			Links    *jsonapi.LinksList
+			e.POST("/files/").
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Date", "Mon, 19 Sep 2016 12:38:04 GMT").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
 		}
 
 		ids := []string{}
 
-		assert.NoError(t, getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result))
-		assert.Len(t, result.Data.Relationships.Contents.Data, 5)
-		assert.Len(t, result.Included, 5)
+		// Get the first page
+		obj := e.GET("/files/io.cozy.files.root-dir").
+			WithQuery("page[limit]", "5").
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		for i, ref := range result.Data.Relationships.Contents.Data {
-			id := result.Included[i].(map[string]interface{})["id"].(string)
-			assert.Equal(t, id, ref.ID)
-			assert.NotEqual(t, id, consts.TrashDirID)
+		obj.Path("$.data.relationships.contents.data").Array().Length().Equal(5)
+		obj.Value("included").Array().Length().Equal(5)
+
+		for i, ref := range obj.Path("$.data.relationships.contents.data").Array().Iter() {
+			id := obj.Value("included").Array().Element(i).Object().Value("id").String().Raw()
+			ref.Object().Value("id").Equal(id).NotEqual(consts.TrashDirID)
+
 			for _, seen := range ids {
 				assert.NotEqual(t, id, seen)
 			}
+
 			ids = append(ids, id)
 		}
 
-		next := result.Links.Next
-		assert.NotEmpty(t, next)
+		nextURL, err := url.Parse(obj.Path("$.links.next").String().NotEmpty().Raw())
+		require.NoError(t, err)
 
-		assert.NoError(t, getJSON(t, next, &result))
-		assert.Len(t, result.Data.Relationships.Contents.Data, 5)
-		assert.Len(t, result.Included, 5)
+		// Get the second page
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		for i, ref := range result.Data.Relationships.Contents.Data {
-			id := result.Included[i].(map[string]interface{})["id"].(string)
-			assert.Equal(t, id, ref.ID)
-			assert.NotEqual(t, id, consts.TrashDirID)
+		obj.Path("$.data.relationships.contents.data").Array().Length().Equal(5)
+		obj.Value("included").Array().Length().Equal(5)
+
+		for i, ref := range obj.Path("$.data.relationships.contents.data").Array().Iter() {
+			id := obj.Value("included").Array().Element(i).Object().Value("id").String().Raw()
+			ref.Object().Value("id").Equal(id).NotEqual(consts.TrashDirID)
+
 			for _, seen := range ids {
 				assert.NotEqual(t, id, seen)
 			}
+
 			ids = append(ids, id)
 		}
 
-		next = result.Links.Next
-		assert.NotEmpty(t, next)
+		nextURL, err = url.Parse(obj.Path("$.links.next").String().NotEmpty().Raw())
+		require.NoError(t, err)
 
-		opts.Add("page[skip]", "10")
-		assert.NoError(t, getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result))
-		assert.Len(t, result.Data.Relationships.Contents.Data, 5)
-		assert.Len(t, result.Included, 5)
+		// Get the third page and skip 10 elements
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithQuery("page[skip]", "10").
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		for i, ref := range result.Data.Relationships.Contents.Data {
-			id := result.Included[i].(map[string]interface{})["id"].(string)
-			assert.Equal(t, id, ref.ID)
-			assert.NotEqual(t, id, consts.TrashDirID)
+		obj.Path("$.data.relationships.contents.data").Array().Length().Equal(5)
+		obj.Value("included").Array().Length().Equal(5)
+
+		for i, ref := range obj.Path("$.data.relationships.contents.data").Array().Iter() {
+			id := obj.Value("included").Array().Element(i).Object().Value("id").String().Raw()
+			ref.Object().Value("id").Equal(id).NotEqual(consts.TrashDirID)
+
 			for _, seen := range ids {
 				assert.NotEqual(t, id, seen)
 			}
+
 			ids = append(ids, id)
 		}
 	})
 
 	t.Run("ZeroCountIsPresent", func(t *testing.T) {
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=emptydirectory")
-		dirdata, ok := dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-		parentID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var result map[string]interface{}
-		assert.NoError(t, getJSON(t, "/files/"+parentID, &result))
+		parentID := e.POST("/files/").
+			WithQuery("Name", "emptydirectory").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		data := result["data"].(map[string]interface{})
-		rels := data["relationships"].(map[string]interface{})
-		contents := rels["contents"].(map[string]interface{})
-		meta := contents["meta"].(map[string]interface{})
-		count, ok := meta["count"].(float64)
-		assert.True(t, ok)
-		assert.Equal(t, float64(0), count)
+		obj := e.GET("/files/"+parentID).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.relationships.contents.meta.count").Equal(0)
 	})
 
 	t.Run("ListDirPaginated", func(t *testing.T) {
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=paginationcontainer")
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirdata, ok := dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		parentID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		parentID := e.POST("/files/").
+			WithQuery("Name", "paginationcontainer").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
 		nb := 15
-
-		body := "foo"
 		for i := 0; i < nb; i++ {
 			name := "file" + strconv.Itoa(i)
-			upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+
+			e.POST("/files/"+parentID).
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Date", "Mon, 19 Sep 2016 12:38:04 GMT").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
 		}
 
-		opts := &url.Values{}
-		opts.Add("page[limit]", "7")
-		var result struct {
-			Data struct {
-				Relationships struct {
-					Contents struct {
-						Meta struct {
-							Count int
-						}
-						Links *jsonapi.LinksList
-						Data  []couchdb.DocReference
-					}
-				}
-			}
-			Included []interface{}
-		}
-		assert.NoError(t, getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result))
+		obj := e.GET("/files/"+parentID).
+			WithQuery("page[limit]", "7").
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Len(t, result.Data.Relationships.Contents.Data, 7)
-		assert.Len(t, result.Included, 7)
+		data1 := obj.Path("$.data.relationships.contents.data").Array()
+		data1.Length().Equal(7)
+		obj.Value("included").Array().Length().Equal(7)
 
-		for i, ref := range result.Data.Relationships.Contents.Data {
-			id := result.Included[i].(map[string]interface{})["id"].(string)
-			assert.Equal(t, id, ref.ID)
+		for i, ref := range obj.Path("$.data.relationships.contents.data").Array().Iter() {
+			id := obj.Value("included").Array().Element(i).Object().Value("id").String().Raw()
+			ref.Object().Value("id").Equal(id).NotEqual(consts.TrashDirID)
 		}
 
-		assert.Equal(t, result.Data.Relationships.Contents.Meta.Count, 15)
-		next := result.Data.Relationships.Contents.Links.Next
-		assert.NotEmpty(t, next)
+		obj.Path("$.data.relationships.contents.meta.count").Equal(15)
 
-		var result2 struct {
-			Links *jsonapi.LinksList
-			Meta  struct {
-				Count int
-			}
-			Data []interface{}
-		}
-		assert.NoError(t, getJSON(t, next, &result2))
-		assert.Len(t, result2.Data, 7)
-		assert.Equal(t, result2.Meta.Count, 15)
+		nextURL, err := url.Parse(obj.Path("$.data.relationships.contents.links.next").String().NotEmpty().Raw())
+		require.NoError(t, err)
 
-		assert.NotEqual(t, result.Data.Relationships.Contents.Data[0].ID,
-			result2.Data[0].(map[string]interface{})["id"])
+		// Get the second page
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		next = result2.Links.Next
-		assert.NotEmpty(t, next)
+		data2 := obj.Value("data").Array()
+		data2.Length().Equal(7)
+		obj.Path("$.meta.count").Equal(15)
 
-		var result3 struct {
-			Lins *jsonapi.LinksList
-			Meta struct {
-				Count int
-			}
-			Data []interface{}
-		}
-		assert.NoError(t, getJSON(t, next, &result3))
-		assert.Len(t, result3.Data, 1)
-		assert.Equal(t, result3.Meta.Count, 15)
+		data2.Element(0).Object().Value("id").
+			NotEqual(data1.Element(0).Object().Value("id").String().Raw())
 
-		assert.NotEqual(t, result.Data.Relationships.Contents.Data[0].ID,
-			result3.Data[0].(map[string]interface{})["id"])
+		nextURL, err = url.Parse(obj.Path("$.links.next").String().NotEmpty().Raw())
+		require.NoError(t, err)
 
-		trash(t, "/files/"+parentID)
+		// Get the third page
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data3 := obj.Value("data").Array()
+		data3.Length().Equal(1)
+		obj.Path("$.meta.count").Equal(15)
+
+		data3.Element(0).Object().Value("id").
+			NotEqual(data1.Element(0).Object().Value("id").String().Raw())
+
+			// Trash the dir
+		e.DELETE("/files/"+parentID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("ListDirPaginatedSkip", func(t *testing.T) {
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=paginationcontainerskip")
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirdata, ok := dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		parentID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		parentID := e.POST("/files/").
+			WithQuery("Name", "paginationcontainerskip").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
 		nb := 15
-
-		body := "foo"
 		for i := 0; i < nb; i++ {
 			name := "file" + strconv.Itoa(i)
-			upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+
+			e.POST("/files/"+parentID).
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Date", "Mon, 19 Sep 2016 12:38:04 GMT").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
 		}
 
-		opts := &url.Values{}
-		opts.Add("page[limit]", "7")
-		opts.Add("page[skip]", "0")
-		var result struct {
-			Data struct {
-				Relationships struct {
-					Contents struct {
-						Meta struct {
-							Count int
-						}
-						Links *jsonapi.LinksList
-						Data  []couchdb.DocReference
-					}
-				}
-			}
-			Included []interface{}
-		}
-		assert.NoError(t, getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result))
+		obj := e.GET("/files/"+parentID).
+			WithQuery("page[limit]", "7").
+			WithQuery("page[skip]", "0").
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Len(t, result.Data.Relationships.Contents.Data, 7)
-		assert.Len(t, result.Included, 7)
-		assert.Equal(t, result.Data.Relationships.Contents.Meta.Count, 15)
-		next := result.Data.Relationships.Contents.Links.Next
-		assert.NotEmpty(t, next)
-		assert.Contains(t, next, "skip")
+		data1 := obj.Path("$.data.relationships.contents.data").Array()
+		data1.Length().Equal(7)
+		obj.Value("included").Array().Length().Equal(7)
+		obj.Path("$.data.relationships.contents.meta.count").Equal(15)
 
-		var result2 struct {
-			Links *jsonapi.LinksList
-			Meta  struct {
-				Count int
-			}
-			Data []interface{}
-		}
-		assert.NoError(t, getJSON(t, next, &result2))
-		assert.Len(t, result2.Data, 7)
-		assert.Equal(t, result2.Meta.Count, 15)
+		rawNext := obj.Path("$.data.relationships.contents.links.next").String().NotEmpty().Raw()
+		assert.Contains(t, rawNext, "skip")
 
-		assert.NotEqual(t, result.Data.Relationships.Contents.Data[0].ID,
-			result2.Data[0].(map[string]interface{})["id"])
+		nextURL, err := url.Parse(rawNext)
+		require.NoError(t, err)
 
-		next = result2.Links.Next
-		assert.NotEmpty(t, next)
+		// Get the second page
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		var result3 struct {
-			Lins *jsonapi.LinksList
-			Meta struct {
-				Count int
-			}
-			Data []interface{}
-		}
-		assert.NoError(t, getJSON(t, next, &result3))
-		assert.Len(t, result3.Data, 1)
-		assert.Equal(t, result3.Meta.Count, 15)
+		data2 := obj.Value("data").Array()
+		data2.Length().Equal(7)
+		obj.Path("$.meta.count").Equal(15)
 
-		assert.NotEqual(t, result.Data.Relationships.Contents.Data[0].ID,
-			result3.Data[0].(map[string]interface{})["id"])
+		data2.Element(0).Object().Value("id").
+			NotEqual(data1.Element(0).Object().Value("id").String().Raw())
 
-		trash(t, "/files/"+parentID)
+		nextURL, err = url.Parse(obj.Path("$.links.next").String().NotEmpty().Raw())
+		require.NoError(t, err)
+
+		// Get the third page
+		obj = e.GET(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Accept", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data3 := obj.Value("data").Array()
+		data3.Length().Equal(1)
+		obj.Path("$.meta.count").Equal(15)
+
+		data2.Element(0).Object().Value("id").
+			NotEqual(data1.Element(0).Object().Value("id").String().Raw())
+
+			// Trash the dir
+		e.DELETE("/files/"+parentID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
-}
-
-func getJSON(t *testing.T, url string, out interface{}) error {
-	res, err := httpGet(ts.URL + url)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-
-	assert.Equal(t, 200, res.StatusCode)
-	return json.NewDecoder(res.Body).Decode(&out)
 }
