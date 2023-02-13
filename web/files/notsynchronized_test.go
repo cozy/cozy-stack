@@ -1,190 +1,191 @@
 package files
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
+	"net/url"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var dirID1, dirID2 string
 
 func TestNotsynchronized(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var dirID, dirID2 string
+
+	config.UseTestFile()
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
+
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   t.TempDir(),
+	}
+
+	testInstance := setup.GetTestInstance()
+	_, token := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
+	ts := setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
+		})
+		r.Use(secure)
+		return r
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
 	t.Run("AddNotSynchronizedOnOneRelation", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=to_sync_or_not_to_sync_1")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var dirData1 map[string]interface{}
-		dirID1, dirData1 = extractDirData(t, data1)
+		obj := e.POST("/files/").
+			WithQuery("Name", "to_sync_or_not_to_sync_1").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		path := "/files/" + dirID1 + "/relationships/not_synchronized_on"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   "fooclientid",
-				Type: "io.cozy.oauth.clients",
-			},
-		})
-		require.NoError(t, err)
+		dirID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		dirData := obj.Value("data").Object()
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-		require.NoError(t, err)
+		obj = e.POST("/files/"+dirID+"/relationships/not_synchronized_on").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "id": "fooclientid",
+          "type": "io.cozy.oauth.clients"
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		obj.Path("$.meta.rev").NotEqual(dirData.Path("$.meta.rev").String().Raw())
+		obj.Path("$.meta.count").Equal(1)
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
 
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		item := data.First().Object()
+		item.ValueEqual("id", "fooclientid")
+		item.ValueEqual("type", "io.cozy.oauth.clients")
 
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
-
-		assert.NotEqual(t, result.Meta.Rev, dirData1["_rev"])
-		assert.Equal(t, result.Meta.Count, 1)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{
-				ID:   "fooclientid",
-				Type: "io.cozy.oauth.clients",
-			},
-		})
-
-		doc, err := testInstance.VFS().DirByID(dirID1)
+		doc, err := testInstance.VFS().DirByID(dirID)
 		assert.NoError(t, err)
 		assert.Len(t, doc.NotSynchronizedOn, 1)
-		assert.Equal(t, doc.Rev(), result.Meta.Rev)
+		assert.Equal(t, doc.Rev(), obj.Path("$.meta.rev").String().Raw())
 	})
 
 	t.Run("AddNotSynchronizedOnMultipleRelation", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=to_sync_or_not_to_sync_2")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var dirData2 map[string]interface{}
-		dirID2, dirData2 = extractDirData(t, data1)
+		obj := e.POST("/files/").
+			WithQuery("Name", "to_sync_or_not_to_sync_2").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		path := "/files/" + dirID2 + "/relationships/not_synchronized_on"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: []couchdb.DocReference{
-				{ID: "fooclientid1", Type: "io.cozy.oauth.clients"},
-				{ID: "fooclientid2", Type: "io.cozy.oauth.clients"},
-				{ID: "fooclientid3", Type: "io.cozy.oauth.clients"},
-			},
-		})
-		require.NoError(t, err)
+		dirID2 = obj.Path("$.data.id").String().NotEmpty().Raw()
+		dirData := obj.Value("data").Object()
 
-		req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-		require.NoError(t, err)
+		obj = e.POST("/files/"+dirID2+"/relationships/not_synchronized_on").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": [
+        { "id": "fooclientid1", "type": "io.cozy.oauth.clients" },
+        { "id": "fooclientid2", "type": "io.cozy.oauth.clients" },
+        { "id": "fooclientid3", "type": "io.cozy.oauth.clients" }
+        ]
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		obj.Path("$.meta.rev").NotEqual(dirData.Path("$.meta.rev").String().Raw())
+		obj.Path("$.meta.count").Equal(3)
+		data := obj.Value("data").Array()
+		data.Length().Equal(3)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		item := data.Element(0).Object()
+		item.ValueEqual("id", "fooclientid1")
+		item.ValueEqual("type", "io.cozy.oauth.clients")
 
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
+		item = data.Element(1).Object()
+		item.ValueEqual("id", "fooclientid2")
+		item.ValueEqual("type", "io.cozy.oauth.clients")
 
-		assert.NotEqual(t, result.Meta.Rev, dirData2["_rev"])
-		assert.Equal(t, result.Meta.Count, 3)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{ID: "fooclientid1", Type: "io.cozy.oauth.clients"},
-			{ID: "fooclientid2", Type: "io.cozy.oauth.clients"},
-			{ID: "fooclientid3", Type: "io.cozy.oauth.clients"},
-		})
+		item = data.Element(2).Object()
+		item.ValueEqual("id", "fooclientid3")
+		item.ValueEqual("type", "io.cozy.oauth.clients")
 
 		doc, err := testInstance.VFS().DirByID(dirID2)
 		assert.NoError(t, err)
 		assert.Len(t, doc.NotSynchronizedOn, 3)
-		assert.Equal(t, doc.Rev(), result.Meta.Rev)
+		assert.Equal(t, doc.Rev(), obj.Path("$.meta.rev").String().Raw())
 	})
 
 	t.Run("RemoveNotSynchronizedOnOneRelation", func(t *testing.T) {
-		path := "/files/" + dirID1 + "/relationships/not_synchronized_on"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   "fooclientid",
-				Type: "io.cozy.oauth.clients",
-			},
-		})
-		assert.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
+		obj := e.DELETE("/files/"+dirID+"/relationships/not_synchronized_on").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "id": "fooclientid",
+          "type": "io.cozy.oauth.clients"
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Equal(t, result.Meta.Count, 0)
-		assert.Equal(t, result.Data, []couchdb.DocReference{})
+		obj.Path("$.meta.count").Equal(0)
+		obj.Value("data").Array().Length().Equal(0)
 
-		doc, err := testInstance.VFS().DirByID(dirID1)
+		doc, err := testInstance.VFS().DirByID(dirID)
 		assert.NoError(t, err)
 		assert.Len(t, doc.NotSynchronizedOn, 0)
 	})
 
 	t.Run("RemoveNotSynchronizedOnMultipleRelation", func(t *testing.T) {
-		path := "/files/" + dirID2 + "/relationships/not_synchronized_on"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: []couchdb.DocReference{
-				{ID: "fooclientid3", Type: "io.cozy.oauth.clients"},
-				{ID: "fooclientid5", Type: "io.cozy.oauth.clients"},
-				{ID: "fooclientid1", Type: "io.cozy.oauth.clients"},
-			},
-		})
-		assert.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
+		obj := e.DELETE("/files/"+dirID2+"/relationships/not_synchronized_on").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": [
+        { "id": "fooclientid3", "type": "io.cozy.oauth.clients" },
+        { "id": "fooclientid5", "type": "io.cozy.oauth.clients" },
+        { "id": "fooclientid1", "type": "io.cozy.oauth.clients" }
+        ]
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Equal(t, result.Meta.Count, 1)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{ID: "fooclientid2", Type: "io.cozy.oauth.clients"},
-		})
+		obj.Path("$.meta.count").Equal(1)
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
+		data.First().Object().ValueEqual("id", "fooclientid2")
+		data.First().Object().ValueEqual("type", "io.cozy.oauth.clients")
 
 		doc, err := testInstance.VFS().DirByID(dirID2)
 		assert.NoError(t, err)

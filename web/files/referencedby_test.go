@@ -1,154 +1,170 @@
 package files
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
+	"net/url"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var fileID1, fileID2 string
-var fileData1, fileData2 map[string]interface{}
 
 func TestReferencedby(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var fileID1, fileID2 string
+	var fileData1, fileData2 *httpexpect.Object
+
+	config.UseTestFile()
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
+
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   t.TempDir(),
+	}
+
+	testInstance := setup.GetTestInstance()
+	_, token := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
+	ts := setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
+		})
+		r.Use(secure)
+		return r
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
 	t.Run("AddReferencedByOneRelation", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=toreference", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID1, fileData1 = extractDirData(t, data1)
+		obj := e.POST("/files/").
+			WithQuery("Name", "toreference").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		path := "/files/" + fileID1 + "/relationships/referenced_by"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   "fooalbumid",
-				Type: "io.cozy.photos.albums",
-			},
-		})
-		require.NoError(t, err)
+		fileData1 = obj.Value("data").Object()
+		fileID1 = fileData1.Value("id").String().NotEmpty().Raw()
+		meta1 := fileData1.Value("meta").Object()
+		rev1 := meta1.Value("rev").String().Raw()
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-		require.NoError(t, err)
+		obj = e.POST("/files/"+fileID1+"/relationships/referenced_by").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "id": "fooalbumid",
+          "type": "io.cozy.photos.albums"
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
-
-		assert.NotEqual(t, result.Meta.Rev, fileData1["_rev"])
-		assert.Equal(t, result.Meta.Count, 1)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{
-				ID:   "fooalbumid",
-				Type: "io.cozy.photos.albums",
-			},
-		})
+		rev2 := obj.Path("$.meta.rev").NotEqual(rev1).String().Raw()
+		obj.Path("$.meta.count").Equal(1)
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
+		elem := data.First().Object()
+		elem.ValueEqual("id", "fooalbumid")
+		elem.ValueEqual("type", "io.cozy.photos.albums")
 
 		doc, err := testInstance.VFS().FileByID(fileID1)
 		assert.NoError(t, err)
 		assert.Len(t, doc.ReferencedBy, 1)
-		assert.Equal(t, doc.Rev(), result.Meta.Rev)
+		assert.Equal(t, doc.Rev(), rev2)
 	})
 
 	t.Run("AddReferencedByMultipleRelation", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=toreference2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID2, fileData2 = extractDirData(t, data1)
+		obj := e.POST("/files/").
+			WithQuery("Name", "toreference2").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		path := "/files/" + fileID2 + "/relationships/referenced_by"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: []couchdb.DocReference{
-				{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
-				{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},
-				{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
-			},
-		})
-		require.NoError(t, err)
+		fileData2 = obj.Value("data").Object()
+		fileID2 = fileData2.Value("id").String().NotEmpty().Raw()
+		meta1 := fileData2.Value("meta").Object()
+		rev1 := meta1.Value("rev").String().Raw()
 
-		req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-		require.NoError(t, err)
+		obj = e.POST("/files/"+fileID2+"/relationships/referenced_by").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": [ 
+        { "id": "fooalbumid1", "type": "io.cozy.photos.albums" },
+        { "id": "fooalbumid2", "type": "io.cozy.photos.albums" },
+        { "id": "fooalbumid3", "type": "io.cozy.photos.albums" }
+        ]
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		rev2 := obj.Path("$.meta.rev").NotEqual(rev1).String().Raw()
+		data := obj.Value("data").Array()
+		data.Length().Equal(3)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
-
-		assert.NotEqual(t, result.Meta.Rev, fileData2["_rev"])
-		assert.Equal(t, result.Meta.Count, 3)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
-			{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},
-			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
-		})
+		elem := data.Element(0).Object()
+		elem.ValueEqual("id", "fooalbumid1")
+		elem.ValueEqual("type", "io.cozy.photos.albums")
+		elem = data.Element(1).Object()
+		elem.ValueEqual("id", "fooalbumid2")
+		elem.ValueEqual("type", "io.cozy.photos.albums")
+		elem = data.Element(2).Object()
+		elem.ValueEqual("id", "fooalbumid3")
+		elem.ValueEqual("type", "io.cozy.photos.albums")
 
 		doc, err := testInstance.VFS().FileByID(fileID2)
 		assert.NoError(t, err)
 		assert.Len(t, doc.ReferencedBy, 3)
-		assert.Equal(t, doc.Rev(), result.Meta.Rev)
+		assert.Equal(t, doc.Rev(), rev2)
 	})
 
 	t.Run("RemoveReferencedByOneRelation", func(t *testing.T) {
-		path := "/files/" + fileID1 + "/relationships/referenced_by"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   "fooalbumid",
-				Type: "io.cozy.photos.albums",
-			},
-		})
-		assert.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
+		obj := e.DELETE("/files/"+fileID1+"/relationships/referenced_by").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "id": "fooalbumid",
+          "type": "io.cozy.photos.albums"
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Equal(t, result.Meta.Count, 0)
-		assert.Equal(t, result.Data, []couchdb.DocReference{})
+		obj.Path("$.meta.count").Equal(0)
+		obj.Value("data").Array().Empty()
 
 		doc, err := testInstance.VFS().FileByID(fileID1)
 		assert.NoError(t, err)
@@ -156,36 +172,28 @@ func TestReferencedby(t *testing.T) {
 	})
 
 	t.Run("RemoveReferencedByMultipleRelation", func(t *testing.T) {
-		path := "/files/" + fileID2 + "/relationships/referenced_by"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: []couchdb.DocReference{
-				{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
-				{ID: "fooalbumid5", Type: "io.cozy.photos.albums"},
-				{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
-			},
-		})
-		assert.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var result struct {
-			Data []couchdb.DocReference `json:"data"`
-			Meta struct {
-				Rev   string `json:"rev"`
-				Count int    `json:"count"`
-			} `json:"meta"`
-		}
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = json.NewDecoder(res.Body).Decode(&result)
-		require.NoError(t, err)
+		obj := e.DELETE("/files/"+fileID2+"/relationships/referenced_by").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": [ 
+        { "id": "fooalbumid3", "type": "io.cozy.photos.albums" },
+        { "id": "fooalbumid5", "type": "io.cozy.photos.albums" },
+        { "id": "fooalbumid1", "type": "io.cozy.photos.albums" }
+        ]
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		assert.Equal(t, result.Meta.Count, 1)
-		assert.Equal(t, result.Data, []couchdb.DocReference{
-			{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},
-		})
+		obj.Path("$.meta.count").Equal(1)
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
+		elem := data.First().Object()
+		elem.ValueEqual("id", "fooalbumid2")
+		elem.ValueEqual("type", "io.cozy.photos.albums")
 
 		doc, err := testInstance.VFS().FileByID(fileID2)
 		assert.NoError(t, err)
