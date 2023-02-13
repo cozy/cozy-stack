@@ -7,8 +7,8 @@ describe "Export and import" do
     Helpers.scenario "export_import"
     Helpers.start_mailhog
 
-    source = Instance.create name: "source"
-    target = Instance.create name: "target"
+    source = Instance.create name: "exportsource"
+    target = Instance.create name: "exporttarget"
     source.install_app "photos"
 
     # Create a file with an old version
