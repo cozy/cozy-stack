@@ -48,6 +48,7 @@ describe "A shared directory" do
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing
+    sleep 2
     inst_charlie.accept sharing
     sleep 12
 
