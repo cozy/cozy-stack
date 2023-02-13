@@ -1,33 +1,28 @@
 package files
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,27 +31,14 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
 
-var (
-	ts           *httptest.Server
-	testInstance *instance.Instance
-	token        string
-	clientID     string
-	imgID        string
-	fileID       string
-	publicToken  string
-)
-
-type jsonData struct {
-	Type  string                 `json:"type"`
-	ID    string                 `json:"id"`
-	Attrs map[string]interface{} `json:"attributes,omitempty"`
-	Rels  map[string]interface{} `json:"relationships,omitempty"`
-}
-
 func TestFiles(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	var imgID string
+	var token string
+	var fileID string
 
 	config.UseTestFile()
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
@@ -70,11 +52,10 @@ func TestFiles(t *testing.T) {
 		Path:   t.TempDir(),
 	}
 
-	testInstance = setup.GetTestInstance()
-	client, tok := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
-	clientID = client.ClientID
+	testInstance := setup.GetTestInstance()
+	_, tok := setup.GetTestClient(consts.Files + " " + consts.CertifiedCarbonCopy + " " + consts.CertifiedElectronicSafe)
 	token = tok
-	ts = setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
+	ts := setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
@@ -83,150 +64,210 @@ func TestFiles(t *testing.T) {
 		return r
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
 
 	t.Run("Changes", func(t *testing.T) {
-		_, foo := createDir(t, "/files/?Name=foo&Type=directory")
-		fooID := foo["data"].(map[string]interface{})["id"].(string)
-		_, bar := createDir(t, "/files/"+fooID+"?Name=bar&Type=directory")
-		barID := bar["data"].(map[string]interface{})["id"].(string)
-		_, _ = upload(t, "/files/"+barID+"?Type=file&Name=baz", "text/plain", "baz", "")
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		_, qux := createDir(t, "/files/?Name=qux&Type=directory")
-		quxID := qux["data"].(map[string]interface{})["id"].(string)
-		_, _ = trash(t, "/files/"+quxID)
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+"/files/trash", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		_, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		// Create dir "/foo"
+		fooID := e.POST("/files/").
+			WithQuery("Name", "foo").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&include_file_path=true", nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		// Create dir "/foo/bar"
+		barID := e.POST("/files/"+fooID).
+			WithQuery("Name", "bar").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		var obj map[string]interface{}
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, obj["last_seq"])
-		assert.NotNil(t, obj["pending"])
-		results := obj["results"].([]interface{})
-		hasDeleted := false
-		hasTrashed := false
-		for _, result := range results {
-			result, _ := result.(map[string]interface{})
-			assert.NotEmpty(t, result["id"])
-			if result["deleted"] == true {
-				hasDeleted = true
-			} else {
-				doc, _ := result["doc"].(map[string]interface{})
-				assert.NotEmpty(t, doc["type"])
-				assert.NotEmpty(t, doc["path"])
-				if doc["path"] == "/.cozy_trash" {
-					hasTrashed = true
-				}
+		// Create the file "/foo/bar/baz"
+		e.POST("/files/"+barID).
+			WithQuery("Name", "baz").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(201)
+
+		// Create dir "/foo/qux"
+		quxID := e.POST("/files/"+fooID).
+			WithQuery("Name", "quz").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Delete dir "/foo/qux"
+		e.DELETE("/files/"+quxID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		// Empty Trash
+		e.DELETE("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
+
+		obj := e.GET("/files/_changes").
+			WithQuery("include_docs", true).
+			WithQuery("include_file_path", true).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.Value("last_seq").String().NotEmpty()
+		obj.Value("pending").Number()
+		results := obj.Value("results").Array()
+
+		// Check if there is a deleted doc
+		results.Find(func(_ int, value *httpexpect.Value) bool {
+			value.Object().Value("id").String().NotEmpty()
+			value.Object().ValueEqual("deleted", true)
+			return true
+		}).
+			NotNull()
+
+			// Check if we can fine the trashed "/foo/qux"
+		results.Find(func(_ int, value *httpexpect.Value) bool {
+			doc := value.Object().Value("doc").Object()
+			doc.ValueEqual("type", "directory")
+			doc.ValueEqual("path", "/.cozy_trash")
+			return true
+		}).
+			NotNull()
+
+		obj = e.GET("/files/_changes").
+			WithQuery("include_docs", true).
+			WithQuery("fields", "type,name,dir_id").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().
+			Object()
+
+		obj.Value("last_seq").String().NotEmpty()
+		obj.Value("pending").Number()
+
+		results = obj.Value("results").Array()
+		results.Every(func(_ int, value *httpexpect.Value) {
+			res := value.Object()
+
+			res.Value("id").String().NotEmpty()
+
+			// Skip the deleted entry and the root dir
+			if _, ok := res.Raw()["deleted"]; ok || res.Value("id").String().Raw() == "io.cozy.files.root-dir" {
+				return
 			}
-		}
-		assert.True(t, hasDeleted)
-		assert.True(t, hasTrashed)
 
-		req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&fields=type,name,dir_id", nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+			doc := res.Value("doc").Object()
+			doc.Value("type").String().NotEmpty()
+			doc.Value("name").String().NotEmpty()
+			doc.Value("dir_id").String().NotEmpty()
+			doc.NotContainsKey("path")
+			doc.NotContainsKey("metadata")
+			doc.NotContainsKey("created_at")
+		})
 
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, obj["last_seq"])
-		assert.NotNil(t, obj["pending"])
-		results = obj["results"].([]interface{})
-		for _, result := range results {
-			result, _ := result.(map[string]interface{})
-			assert.NotEmpty(t, result["id"])
-			if result["deleted"] != true && result["id"] != "io.cozy.files.root-dir" {
-				doc, _ := result["doc"].(map[string]interface{})
-				assert.NotEmpty(t, doc["type"])
-				assert.NotEmpty(t, doc["name"])
-				assert.NotEmpty(t, doc["dir_id"])
-				assert.Empty(t, doc["path"])
-				assert.Empty(t, doc["metadata"])
-				assert.Empty(t, doc["created_at"])
-			}
-		}
+		// Delete dir "/foo/bar"
+		e.DELETE("/files/"+barID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		_, _ = trash(t, "/files/"+barID)
-		req, _ = http.NewRequest("GET", ts.URL+"/files/_changes?include_docs=true&skip_deleted=true&skip_trashed=true", nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj = e.GET("/files/_changes").
+			WithQuery("include_docs", true).
+			WithQuery("skip_deleted", "true").
+			WithQuery("skip_trashed", "true").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON().
+			Object()
 
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, obj["last_seq"])
-		assert.NotNil(t, obj["pending"])
-		results = obj["results"].([]interface{})
-		hasDeleted = false
-		hasTrashed = false
-		for _, result := range results {
-			result, _ := result.(map[string]interface{})
-			assert.NotEmpty(t, result["id"])
-			if result["deleted"] == true {
-				hasDeleted = true
-			} else {
-				doc, _ := result["doc"].(map[string]interface{})
-				assert.NotEmpty(t, doc["type"])
-				assert.NotEmpty(t, doc["path"])
-				if doc["path"] == "/.cozy_trash" {
-					hasTrashed = true
-				}
-				if doc["type"] == "directory" && strings.HasPrefix(doc["path"].(string), "/.cozy_trash") {
-					hasTrashed = true
-				}
-				if doc["type"] == "file" && doc["trashed"] == true {
-					hasTrashed = true
-				}
-			}
-		}
-		assert.False(t, hasDeleted)
-		assert.False(t, hasTrashed)
+		obj.Value("last_seq").String().NotEmpty()
+		obj.Value("pending").Number()
 
-		_, _ = trash(t, "/files/"+fooID)
-		req, err = http.NewRequest(http.MethodDelete, ts.URL+"/files/trash", nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		_, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
+		results = obj.Value("results").Array()
+
+		// Check if there is a deleted doc
+		results.NotFind(func(_ int, value *httpexpect.Value) bool {
+			value.Object().ValueEqual("deleted", true)
+			return true
+		})
+
+		// Check if we can fine a trashed file
+		results.NotFind(func(_ int, value *httpexpect.Value) bool {
+			doc := value.Object().Value("doc").Object()
+			doc.Value("path").String().HasPrefix("/.cozy_trash")
+			return true
+		})
+
+		// Delete dir "/foo"
+		e.DELETE("/files/"+fooID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		// Empty Trash
+		e.DELETE("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
 	})
 
 	t.Run("CreateDirWithNoType", func(t *testing.T) {
-		res, _ := createDir(t, "/files/")
-		assert.Equal(t, 422, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(422)
 	})
 
 	t.Run("CreateDirWithNoName", func(t *testing.T) {
-		res, _ := createDir(t, "/files/?Type=directory")
-		assert.Equal(t, 422, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(422)
 	})
 
 	t.Run("CreateDirOnNonExistingParent", func(t *testing.T) {
-		res, _ := createDir(t, "/files/noooop?Name=foo&Type=directory")
-		assert.Equal(t, 404, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/noooooop").
+			WithQuery("Name", "foo").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 	})
 
 	t.Run("CreateDirAlreadyExists", func(t *testing.T) {
-		res1, _ := createDir(t, "/files/?Name=iexist&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := createDir(t, "/files/?Name=iexist&Type=directory")
-		assert.Equal(t, 409, res2.StatusCode)
+		e.POST("/files/").
+			WithQuery("Name", "iexist").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
+
+		e.POST("/files/").
+			WithQuery("Name", "iexist").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(409)
 	})
 
 	t.Run("CreateDirRootSuccess", func(t *testing.T) {
-		res, _ := createDir(t, "/files/?Name=coucou&Type=directory")
-		assert.Equal(t, 201, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Name", "coucou").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
 		storage := testInstance.VFS()
 		exists, err := vfs.DirExists(storage, "/coucou")
@@ -235,69 +276,76 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("CreateDirWithDateSuccess", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date&CreatedAt=2016-09-18T10:24:53Z", strings.NewReader(""))
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		req.Header.Add("Date", "Mon, 19 Sep 2016 12:35:08 GMT")
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 201, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var obj map[string]interface{}
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
-		updatedAt := attrs["updated_at"].(string)
-		assert.Equal(t, "2016-09-19T12:35:08Z", updatedAt)
-		fcm := attrs["cozyMetadata"].(map[string]interface{})
-		assert.Equal(t, float64(1), fcm["metadataVersion"])
-		assert.Equal(t, "1", fcm["doctypeVersion"])
-		assert.Contains(t, fcm["createdOn"], testInstance.Domain)
-		assert.NotEmpty(t, fcm["createdAt"])
-		assert.NotEmpty(t, fcm["updatedAt"])
-		assert.NotContains(t, fcm, "uploadedAt")
+		obj := e.POST("/files/").
+			WithQuery("Name", "dir-with-date").
+			WithQuery("Type", "directory").
+			WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Date", "Mon, 19 Sep 2016 12:35:08 GMT").
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("created_at", "2016-09-18T10:24:53Z")
+		attrs.ValueEqual("updated_at", "2016-09-19T12:35:08Z")
+
+		fcm := attrs.Value("cozyMetadata").Object()
+		fcm.ValueEqual("metadataVersion", 1.0)
+		fcm.ValueEqual("doctypeVersion", "1")
+		fcm.Value("createdOn").String().Contains(testInstance.Domain)
+		fcm.Value("createdAt").String().DateTime(time.RFC3339)
+		fcm.Value("updatedAt").String().DateTime(time.RFC3339)
+		fcm.NotContainsKey("uploadedAt")
 	})
 
 	t.Run("CreateDirWithDateSuccessAndUpdatedAt", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date-and-updatedat&CreatedAt=2016-09-18T10:24:53Z&UpdatedAt=2020-05-12T12:25:00Z", strings.NewReader(""))
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 201, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var obj map[string]interface{}
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
-		updatedAt := attrs["updated_at"].(string)
-		assert.Equal(t, "2020-05-12T12:25:00Z", updatedAt)
-		fcm := attrs["cozyMetadata"].(map[string]interface{})
-		assert.Equal(t, float64(1), fcm["metadataVersion"])
-		assert.Equal(t, "1", fcm["doctypeVersion"])
-		assert.Contains(t, fcm["createdOn"], testInstance.Domain)
-		assert.NotEmpty(t, fcm["createdAt"])
-		assert.NotEmpty(t, fcm["updatedAt"])
-		assert.NotContains(t, fcm, "uploadedAt")
+		obj := e.POST("/files/").
+			WithQuery("Type", "directory").
+			WithQuery("Name", "dir-with-date-and-updatedat").
+			WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+			WithQuery("UpdatedAt", "2020-05-12T12:25:00Z").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Date", "Mon, 19 Sep 2016 12:35:08 GMT").
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("created_at", "2016-09-18T10:24:53Z")
+		attrs.ValueEqual("updated_at", "2020-05-12T12:25:00Z")
+
+		fcm := attrs.Value("cozyMetadata").Object()
+		fcm.ValueEqual("metadataVersion", 1.0)
+		fcm.ValueEqual("doctypeVersion", "1")
+		fcm.Value("createdOn").String().Contains(testInstance.Domain)
+		fcm.Value("createdAt").String().DateTime(time.RFC3339)
+		fcm.Value("updatedAt").String().DateTime(time.RFC3339)
+		fcm.NotContainsKey("uploadedAt")
 	})
 
 	t.Run("CreateDirWithParentSuccess", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=dirparent&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		// Create dir "/dirparent"
+		parentID := e.POST("/files/").
+			WithQuery("Name", "dirparent").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		parentID, ok := data1["id"].(string)
-		assert.True(t, ok)
-
-		res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		// Create dir "/dirparent/child"
+		e.POST("/files/"+parentID).
+			WithQuery("Name", "child").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
 		storage := testInstance.VFS()
 		exists, err := vfs.DirExists(storage, "/dirparent/child")
@@ -306,20 +354,32 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("CreateDirWithIllegalCharacter", func(t *testing.T) {
-		res1, _ := createDir(t, "/files/?Name=coucou/les/copains!&Type=directory")
-		assert.Equal(t, 422, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Name", "coucou/with/slashs!").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(422)
 	})
 
 	t.Run("CreateDirConcurrently", func(t *testing.T) {
-		done := make(chan *http.Response)
-		errs := make(chan *http.Response)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		done := make(chan int)
+		errs := make(chan int)
 
 		doCreateDir := func(name string) {
-			res, _ := createDir(t, "/files/?Name="+name+"&Type=directory")
-			if res.StatusCode == 201 {
-				done <- res
+			status := e.POST("/files/").
+				WithQuery("Name", name).
+				WithQuery("Type", "directory").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Raw().StatusCode
+
+			if status == 201 {
+				done <- status
 			} else {
-				errs <- res
+				errs <- status
 			}
 		}
 
@@ -333,7 +393,7 @@ func TestFiles(t *testing.T) {
 		for i := 0; i < n; i++ {
 			select {
 			case res := <-errs:
-				assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
+				assert.True(t, res == 409 || res == 503)
 			case <-done:
 				c += 1
 			}
@@ -343,39 +403,88 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("UploadWithNoType", func(t *testing.T) {
-		res, _ := upload(t, "/files/", "text/plain", "foo", "")
-		assert.Equal(t, 422, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Name", "baz").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(422)
 	})
 
 	t.Run("UploadWithNoName", func(t *testing.T) {
-		res, _ := upload(t, "/files/?Type=file", "text/plain", "foo", "")
-		assert.Equal(t, 422, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(422)
 	})
 
 	t.Run("UploadToNonExistingParent", func(t *testing.T) {
-		res, _ := upload(t, "/files/nooop?Type=file&Name=no-parent", "text/plain", "foo", "")
-		assert.Equal(t, 404, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/noooop").
+			WithQuery("Type", "file").
+			WithQuery("Name", "no-parent").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(404)
 	})
 
 	t.Run("UploadWithInvalidContentType", func(t *testing.T) {
-		res, _ := upload(t, "/files/?Type=file&Name=InvalidMime", "foo € / bar", "foo", "")
-		assert.Equal(t, 422, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "invalid-mime").
+			WithHeader("Content-Type", "foo € / bar").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(422)
 	})
 
 	t.Run("UploadToTrashedFolder", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=trashed-parent&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
-		dirID, _ := extractDirData(t, data1)
-		res2, _ := trash(t, "/files/"+dirID)
-		assert.Equal(t, 200, res2.StatusCode)
-		res3, _ := upload(t, "/files/"+dirID+"?Type=file&Name=trashed-parent", "text/plain", "foo", "")
-		assert.Equal(t, 404, res3.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Create dir "/foo"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "trashed-parent").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		e.POST("/files/"+dirID).
+			WithQuery("Type", "file").
+			WithQuery("Name", "foo").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(404)
 	})
 
 	t.Run("UploadBadSize", func(t *testing.T) {
-		body := "foo"
-		res, _ := upload(t, "/files/?Type=file&Name=badsize&Size=42", "text/plain", body, "")
-		assert.Equal(t, 412, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "bad-size").
+			WithQuery("Size", 42).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithTransformer(func(r *http.Request) { r.ContentLength = -1 }).
+			WithBytes([]byte("baz")). // not 42 byte
+			Expect().Status(412)
 
 		storage := testInstance.VFS()
 		_, err := readFile(storage, "/badsize")
@@ -383,9 +492,16 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("UploadBadHash", func(t *testing.T) {
-		body := "foo"
-		res, _ := upload(t, "/files/?Type=file&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
-		assert.Equal(t, 412, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "bad-hash").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "3FbbMXfH+PdjAlWFfVb1dQ=="). // invalid md5
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(412)
 
 		storage := testInstance.VFS()
 		_, err := readFile(storage, "/badhash")
@@ -393,467 +509,704 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("UploadAtRootSuccess", func(t *testing.T) {
-		body := "foo"
-		res, _ := upload(t, "/files/?Type=file&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "goodhash").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201)
 
 		storage := testInstance.VFS()
 		buf, err := readFile(storage, "/goodhash")
 		assert.NoError(t, err)
-		assert.Equal(t, body, string(buf))
+		assert.Equal(t, "foo", string(buf))
 	})
 
 	t.Run("UploadImage", func(t *testing.T) {
-		f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-		assert.NoError(t, err)
-		defer f.Close()
-		m := `{"gps":{"city":"Paris","country":"France"}}`
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg&Metadata="+m, f)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, obj := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		imgID = data["id"].(string)
-		attrs := data["attributes"].(map[string]interface{})
-		meta := attrs["metadata"].(map[string]interface{})
-		v := meta["extractor_version"].(float64)
-		assert.Equal(t, float64(vfs.MetadataExtractorVersion), v)
-		flash := meta["flash"].(string)
-		assert.Equal(t, "Off, Did not fire", flash)
-		gps := meta["gps"].(map[string]interface{})
-		assert.Equal(t, "Paris", gps["city"])
-		assert.Equal(t, "France", gps["country"])
-		assert.Contains(t, attrs["created_at"], "2016-09-10T")
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		require.NoError(t, err)
+
+		obj := e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "wet.jpg").
+			WithQuery("Metadata", `{"gps":{"city":"Paris","country":"France"}}`).
+			WithHeader("Content-MD5", "tHWYYuXBBflJ8wXgJ2c2yg==").
+			WithHeader("Content-Type", "image/jpeg").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes(rawFile).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		imgID = data.Value("id").String().NotEmpty().Raw()
+
+		data.Path("$.attributes.created_at").String().HasPrefix("2016-09-10T")
+
+		meta := data.Path("$.attributes.metadata").Object()
+		meta.ValueEqual("extractor_version", float64(vfs.MetadataExtractorVersion))
+		meta.ValueEqual("flash", "Off, Did not fire")
+
+		gps := meta.Value("gps").Object()
+		gps.ValueEqual("city", "Paris")
+		gps.ValueEqual("country", "France")
 	})
 
 	t.Run("UploadShortcut", func(t *testing.T) {
-		f, err := os.Open("../../tests/fixtures/shortcut.url")
-		assert.NoError(t, err)
-		defer f.Close()
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=shortcut.url", f)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, obj := doUploadOrMod(t, req, "application/octet-stream", "+tHtr9V8+4gcCDxTFAqt3w==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		assert.Equal(t, "application/internet-shortcut", attrs["mime"])
-		assert.Equal(t, "shortcut", attrs["class"])
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		rawFile, err := os.ReadFile("../../tests/fixtures/shortcut.url")
+		require.NoError(t, err)
+
+		obj := e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "shortcut.url").
+			WithHeader("Content-MD5", "+tHtr9V8+4gcCDxTFAqt3w==").
+			WithHeader("Content-Type", "application/octet-stream").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes(rawFile).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("mime", "application/internet-shortcut")
+		attrs.ValueEqual("class", "shortcut")
 	})
 
 	t.Run("UploadWithParentSuccess", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=fileparent&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		parentID := e.POST("/files/").
+			WithQuery("Name", "fileparent").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		parentID, ok := data1["id"].(string)
-		assert.True(t, ok)
-
-		body := "foo"
-		res2, _ := upload(t, "/files/"+parentID+"?Type=file&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res2.StatusCode)
+		e.POST("/files/"+parentID).
+			WithQuery("Name", "goodhash").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201)
 
 		storage := testInstance.VFS()
 		buf, err := readFile(storage, "/fileparent/goodhash")
 		assert.NoError(t, err)
-		assert.Equal(t, body, string(buf))
+		assert.Equal(t, "foo", string(buf))
 	})
 
 	t.Run("UploadAtRootAlreadyExists", func(t *testing.T) {
-		body := "foo"
-		res1, _ := upload(t, "/files/?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := upload(t, "/files/?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 409, res2.StatusCode)
+		e.POST("/files/").
+			WithQuery("Name", "iexistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201)
+
+		// Same file
+		e.POST("/files/").
+			WithQuery("Name", "iexistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(409)
 	})
 
 	t.Run("UploadWithParentAlreadyExists", func(t *testing.T) {
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=container")
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		dirdata, ok = dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
+		parentID := e.POST("/files/").
+			WithQuery("Name", "container").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		parentID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		e.POST("/files/"+parentID).
+			WithQuery("Name", "iexistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201)
 
-		body := "foo"
-		res1, _ := upload(t, "/files/"+parentID+"?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
-
-		res2, _ := upload(t, "/files/"+parentID+"?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 409, res2.StatusCode)
+		// Same file, same path
+		e.POST("/files/"+parentID).
+			WithQuery("Name", "iexistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(409)
 	})
 
 	t.Run("UploadWithCreatedAtAndHeaderDate", func(t *testing.T) {
-		buf := strings.NewReader("foo")
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate&CreatedAt=2016-09-18T10:24:53Z", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
-		updatedAt := attrs["updated_at"].(string)
-		assert.Equal(t, "2016-09-19T12:38:04Z", updatedAt)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/").
+			WithQuery("Name", "withcdate").
+			WithQuery("Type", "file").
+			WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Date", "Mon, 19 Sep 2016 12:38:04 GMT").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("created_at", "2016-09-18T10:24:53Z")
+		attrs.ValueEqual("updated_at", "2016-09-19T12:38:04Z")
 	})
 
 	t.Run("UploadWithCreatedAtAndUpdatedAt", func(t *testing.T) {
-		buf := strings.NewReader("foo")
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=TestUploadWithCreatedAtAndUpdatedAt&CreatedAt=2016-09-18T10:24:53Z&UpdatedAt=2020-05-12T12:25:00Z", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
-		updatedAt := attrs["updated_at"].(string)
-		assert.Equal(t, "2020-05-12T12:25:00Z", updatedAt)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/").
+			WithQuery("Name", "TestUploadWithCreatedAtAndUpdatedAt").
+			WithQuery("Type", "file").
+			WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+			WithQuery("UpdatedAt", "2020-05-12T12:25:00Z").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("created_at", "2016-09-18T10:24:53Z")
+		attrs.ValueEqual("updated_at", "2020-05-12T12:25:00Z")
 	})
 
 	t.Run("UploadWithCreatedAtAndUpdatedAtAndDateHeader", func(t *testing.T) {
-		buf := strings.NewReader("foo")
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=TestUploadWithCreatedAtAndUpdatedAtAndDateHeader&CreatedAt=2016-09-18T10:24:53Z&UpdatedAt=2020-05-12T12:25:00Z", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
-		updatedAt := attrs["updated_at"].(string)
-		assert.Equal(t, "2020-05-12T12:25:00Z", updatedAt)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/").
+			WithQuery("Name", "TestUploadWithCreatedAtAndUpdatedAtAndDateHeader").
+			WithQuery("Type", "file").
+			WithQuery("CreatedAt", "2016-09-18T10:24:53Z").
+			WithQuery("UpdatedAt", "2020-05-12T12:25:00Z").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Date", "Mon, 19 Sep 2016 12:38:04 GMT").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("created_at", "2016-09-18T10:24:53Z")
+		attrs.ValueEqual("updated_at", "2020-05-12T12:25:00Z")
 	})
 
 	t.Run("UploadWithMetadata", func(t *testing.T) {
-		buf := strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-            "category": "report",
-            "subCategory": "theft",
-            "datetime": "2017-04-22T01:00:00-05:00",
-            "label": "foobar"
-        }
-    }
-}`)
-		req, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		defer res.Body.Close()
-		assert.Equal(t, 201, res.StatusCode)
-		var obj map[string]interface{}
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		data := obj["data"].(map[string]interface{})
-		assert.Equal(t, consts.FilesMetadata, data["type"])
-		secret := data["id"].(string)
-		attrs := data["attributes"].(map[string]interface{})
-		assert.Equal(t, "report", attrs["category"])
-		assert.Equal(t, "theft", attrs["subCategory"])
-		assert.Equal(t, "foobar", attrs["label"])
-		assert.Equal(t, "2017-04-22T01:00:00-05:00", attrs["datetime"])
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		u := "/files/?Type=file&Name=withmetadataid&MetadataID=" + secret
-		buf = strings.NewReader("foo")
-		req, err = http.NewRequest("POST", ts.URL+u, buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj = doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data = obj["data"].(map[string]interface{})
-		attrs = data["attributes"].(map[string]interface{})
-		meta := attrs["metadata"].(map[string]interface{})
-		assert.Equal(t, "report", meta["category"])
-		assert.Equal(t, "theft", meta["subCategory"])
-		assert.Equal(t, "foobar", meta["label"])
-		assert.Equal(t, "2017-04-22T01:00:00-05:00", meta["datetime"])
+		obj := e.POST("/files/upload/metadata").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+                "category": "report",
+                "subCategory": "theft",
+                "datetime": "2017-04-22T01:00:00-05:00",
+                "label": "foobar"
+            }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.FilesMetadata)
+
+		secret := data.Value("id").String().NotEmpty().Raw()
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("category", "report")
+		attrs.ValueEqual("subCategory", "theft")
+		attrs.ValueEqual("label", "foobar")
+		attrs.ValueEqual("datetime", "2017-04-22T01:00:00-05:00")
+
+		obj = e.POST("/files/").
+			WithQuery("Name", "withmetadataid").
+			WithQuery("Type", "file").
+			WithQuery("MetadataID", secret).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta := obj.Path("$.data.attributes.metadata").Object()
+		meta.ValueEqual("category", "report")
+		meta.ValueEqual("subCategory", "theft")
+		meta.ValueEqual("label", "foobar")
+		meta.ValueEqual("datetime", "2017-04-22T01:00:00-05:00")
 	})
 
 	t.Run("UploadWithSourceAccount", func(t *testing.T) {
-		buf := strings.NewReader("foo")
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		account := "0c5a0a1e-8eb1-11e9-93f3-934f3a2c181d"
 		identifier := "11f68e48"
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=with-sourceAccount&SourceAccount="+account+"&SourceAccountIdentifier="+identifier, buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		fcm := attrs["cozyMetadata"].(map[string]interface{})
-		assert.Equal(t, account, fcm["sourceAccount"])
-		assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+
+		obj := e.POST("/files/").
+			WithQuery("Name", "with-sourceAccount").
+			WithQuery("Type", "file").
+			WithQuery("SourceAccount", account).
+			WithQuery("SourceAccountIdentifier", identifier).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.ValueEqual("sourceAccount", account)
+		fcm.ValueEqual("sourceAccountIdentifier", identifier)
 	})
 
 	t.Run("CopyFile", func(t *testing.T) {
-		_, copyFileDir := createDir(t, "/files/?Name=copyFileDir&Type=directory")
-		copyFileDirID := copyFileDir["data"].(map[string]interface{})["id"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/files/").
+			WithQuery("Name", "copyFileDir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
 		fileName := "bar"
 		fileExt := ".txt"
 		fileContent := "file content"
 
 		// 1. Upload file and get its id
-		res, obj := upload(t, "/files/"+copyFileDirID+"?Type=file&Name="+fileName+fileExt, "text/plain", fileContent, "")
-		require.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		fileID = data["id"].(string)
-		fileAttributes := data["attributes"].(map[string]interface{})
+		obj := e.POST("/files/").
+			WithQuery("Name", fileName+fileExt).
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fileContent)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		var body map[string]interface{}
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		file1Attrs := obj.Path("$.data.attributes").Object()
 
 		// 2. Send file copy request
-		res, _ = httpPost(ts.URL+"/files/"+fileID+"/copy", "")
-		require.Equal(t, 201, res.StatusCode)
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
-		copyID := body["data"].(map[string]interface{})["id"].(string)
-		require.NotEqual(t, fileID, copyID)
+		obj = e.POST("/files/"+fileID+"/copy").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		copyID := obj.Path("$.data.id").String().NotEmpty().NotEqual(fileID).Raw()
 
 		// 3. Fetch copy metadata and compare with file
-		res, _ = httpGet(ts.URL + "/files/" + copyID)
-		require.Equal(t, 200, res.StatusCode)
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
-		data = body["data"].(map[string]interface{})
+		obj = e.GET("/files/"+copyID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		copyAttributes := data["attributes"].(map[string]interface{})
-		assert.NotEmpty(t, copyAttributes["created_at"])
-		assert.NotEqual(t, fileAttributes["created_at"], copyAttributes["created_at"])
-		assert.Equal(t, fileAttributes["dir_id"], copyAttributes["dir_id"])
-		assert.Equal(t, fileName+" (copy)"+fileExt, copyAttributes["name"])
-		assert.Equal(t, fileAttributes["md5sum"], copyAttributes["md5sum"])
+		obj.Path("$.data.relationships").Object().NotContainsKey("old_versions")
 
-		rels := data["relationships"].(map[string]interface{})
-		assert.Nil(t, rels["old_versions"])
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.Value("created_at").String().NotEmpty().
+			NotEqual(file1Attrs.Value("created_at").String().Raw()).
+			DateTime(time.RFC3339)
+		attrs.ValueEqual("dir_id", file1Attrs.Value("dir_id").String().Raw())
+		attrs.ValueEqual("name", fileName+" (copy)"+fileExt)
 
 		// 4. fetch copy and check its content
-		res, resbody := download(t, "/files/download/"+copyID, "")
-		require.Equal(t, 200, res.StatusCode)
-		assert.True(t, strings.HasPrefix(res.Header.Get("Content-Disposition"), "inline"))
-		assert.True(t, strings.Contains(res.Header.Get("Content-Disposition"), `filename="`+fileName+"(copy)"+fileExt+`"`))
-		assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "text/plain"))
-		assert.NotEmpty(t, res.Header.Get("Etag"))
-		assert.Equal(t, res.Header.Get("Etag")[:1], `"`)
-		assert.Equal(t, res.Header.Get("Content-Length"), strconv.Itoa(len(fileContent)))
-		assert.Equal(t, res.Header.Get("Accept-Ranges"), "bytes")
-		assert.Equal(t, fileContent, string(resbody))
+		res := e.GET("/files/download/"+copyID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		res.Header("Content-Disposition").HasPrefix("inline")
+		res.Header("Content-Disposition").Contains(`filename="` + fileName + "(copy)" + fileExt + `"`)
+		res.Header("Content-Type").Contains("text/plain")
+		res.Header("Etag").NotEmpty()
+		res.Header("Content-Length").Equal(strconv.Itoa(len(fileContent)))
+		res.Body().Equal(fileContent)
 
 		// 5. Send file copy request specifying copy name and parent id
-		_, destDir := createDir(t, "/files/?Name=destDir&Type=directory")
-		destDirID := destDir["data"].(map[string]interface{})["id"].(string)
+		destDirID := e.POST("/files/").
+			WithQuery("Name", "destDir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
 		copyName := "My-file-copy"
 
-		res, _ = httpPost(ts.URL+"/files/"+fileID+"/copy?Name="+copyName+"&DirID="+destDirID, "")
-		require.Equal(t, 201, res.StatusCode)
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
-		copyID = body["data"].(map[string]interface{})["id"].(string)
-		assert.NotEqual(t, fileID, copyID)
+		obj = e.POST("/files/"+fileID+"/copy").
+			WithQuery("Name", copyName).
+			WithQuery("DirID", destDirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		copyID = obj.Path("$.data.id").String().NotEqual(fileID).Raw()
 
 		// 6. Fetch copy metadata and compare with file
-		res, _ = httpGet(ts.URL + "/files/" + copyID)
-		require.Equal(t, 200, res.StatusCode)
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&body))
-		data = body["data"].(map[string]interface{})
+		obj = e.GET("/files/"+copyID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		copyAttributes = data["attributes"].(map[string]interface{})
-		assert.Equal(t, destDirID, copyAttributes["dir_id"])
-		assert.Equal(t, copyName, copyAttributes["name"])
+		attrs = obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("dir_id", destDirID)
+		attrs.ValueEqual("name", copyName)
 	})
 
 	t.Run("ModifyMetadataByPath", func(t *testing.T) {
-		body := "foo"
-		res1, data1 := upload(t, "/files/?Type=file&Name=file-move-me-by-path", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "file-move-me-by-path").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, ok := data1["id"].(string)
-		assert.True(t, ok)
+		dirID := e.POST("/files/").
+			WithQuery("Name", "move-by-path").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, data2 := createDir(t, "/files/?Name=move-by-path&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		obj := e.PATCH("/files/metadata").
+			WithQuery("Path", "/file-move-me-by-path").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + fileID + `",
+          "attributes": {
+            "tags": ["bar", "bar", "baz"],
+            "name": "moved",
+            "dir_id": "` + dirID + `",
+            "executable": true
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		data2, ok = data2["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		dirID, ok := data2["id"].(string)
-		assert.True(t, ok)
-
-		attrs := map[string]interface{}{
-			"tags":       []string{"bar", "bar", "baz"},
-			"name":       "moved",
-			"dir_id":     dirID,
-			"executable": true,
-		}
-
-		res3, data3 := patchFile(t, "/files/metadata?Path=/file-move-me-by-path", "file", fileID, attrs, nil)
-		assert.Equal(t, 200, res3.StatusCode)
-
-		data3, ok = data3["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		attrs3, ok := data3["attributes"].(map[string]interface{})
-		assert.True(t, ok)
-
-		assert.Equal(t, "text/plain", attrs3["mime"])
-		assert.Equal(t, "moved", attrs3["name"])
-		assert.EqualValues(t, []interface{}{"bar", "baz"}, attrs3["tags"])
-		assert.Equal(t, "text", attrs3["class"])
-		assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
-		assert.Equal(t, true, attrs3["executable"])
-		assert.Equal(t, "3", attrs3["size"])
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("mime", "text/plain")
+		attrs.ValueEqual("name", "moved")
+		attrs.ValueEqual("tags", []string{"bar", "baz"})
+		attrs.ValueEqual("class", "text")
+		attrs.ValueEqual("md5sum", "rL0Y20zC+Fzt72VPzMSk2A==")
+		attrs.ValueEqual("executable", true)
+		attrs.ValueEqual("size", "3")
 	})
 
 	t.Run("ModifyMetadataFileMove", func(t *testing.T) {
-		body := "foo"
-		res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "filemoveme").
+			WithQuery("Type", "file").
+			WithQuery("Tags", "foo,bar").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, ok := data1["id"].(string)
-		assert.True(t, ok)
+		dirID := e.POST("/files/").
+			WithQuery("Name", "movemeinme").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, data2 := createDir(t, "/files/?Name=movemeinme&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		obj := e.PATCH("/files/"+fileID).
+			WithQuery("Path", "/file-move-me-by-path").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + fileID + `",
+          "attributes": {
+            "tags": ["bar", "bar", "baz"],
+            "name": "moved",
+            "dir_id": "` + dirID + `",
+            "executable": true
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		data2, ok = data2["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		dirID, ok := data2["id"].(string)
-		assert.True(t, ok)
-
-		attrs := map[string]interface{}{
-			"tags":       []string{"bar", "bar", "baz"},
-			"name":       "moved",
-			"dir_id":     dirID,
-			"executable": true,
-		}
-
-		res3, data3 := patchFile(t, "/files/"+fileID, "file", fileID, attrs, nil)
-		assert.Equal(t, 200, res3.StatusCode)
-
-		data3, ok = data3["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		attrs3, ok := data3["attributes"].(map[string]interface{})
-		assert.True(t, ok)
-
-		assert.Equal(t, "text/plain", attrs3["mime"])
-		assert.Equal(t, "moved", attrs3["name"])
-		assert.EqualValues(t, []interface{}{"bar", "baz"}, attrs3["tags"])
-		assert.Equal(t, "text", attrs3["class"])
-		assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
-		assert.Equal(t, true, attrs3["executable"])
-		assert.Equal(t, "3", attrs3["size"])
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("mime", "text/plain")
+		attrs.ValueEqual("name", "moved")
+		attrs.ValueEqual("tags", []string{"bar", "baz"})
+		attrs.ValueEqual("class", "text")
+		attrs.ValueEqual("md5sum", "rL0Y20zC+Fzt72VPzMSk2A==")
+		attrs.ValueEqual("executable", true)
+		attrs.ValueEqual("size", "3")
 	})
 
 	t.Run("ModifyMetadataFileConflict", func(t *testing.T) {
-		body := "foo"
-		res1, data1 := upload(t, "/files/?Type=file&Name=fmodme1&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := upload(t, "/files/?Type=file&Name=fmodme2&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res2.StatusCode)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "fmodme1").
+			WithQuery("Type", "file").
+			WithQuery("Tags", "foo,bar").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
-		file1ID, _ := extractDirData(t, data1)
+		e.POST("/files/").
+			WithQuery("Name", "fmodme2").
+			WithQuery("Type", "file").
+			WithQuery("Tags", "foo,bar").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
-		attrs := map[string]interface{}{
-			"name": "fmodme2",
-		}
-
-		res3, _ := patchFile(t, "/files/"+file1ID, "file", file1ID, attrs, nil)
-		assert.Equal(t, 409, res3.StatusCode)
+		// Try to rename fmodme1 into the existing fmodme2
+		e.PATCH("/files/"+fileID).
+			WithQuery("Path", "/file-move-me-by-path").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + fileID + `",
+          "attributes": {
+            "name": "fmodme2"
+          }
+        }
+      }`)).
+			Expect().Status(409)
 	})
 
 	t.Run("ModifyMetadataDirMove", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=dirmodme&Type=directory&Tags=foo,bar,bar")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dir1ID, _ := extractDirData(t, data1)
+		// Create dir "/dirmodme"
+		dir1ID := e.POST("/files/").
+			WithQuery("Name", "dirmodme").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		reschild1, _ := createDir(t, "/files/"+dir1ID+"?Name=child1&Type=directory")
-		assert.Equal(t, 201, reschild1.StatusCode)
+		// Create dir "/dirmodme/child1"
+		e.POST("/files/"+dir1ID).
+			WithQuery("Name", "child1").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		reschild2, _ := createDir(t, "/files/"+dir1ID+"?Name=child2&Type=directory")
-		assert.Equal(t, 201, reschild2.StatusCode)
+		// Create dir "/dirmodme/child2"
+		e.POST("/files/"+dir1ID).
+			WithQuery("Name", "child2").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinme&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		// Create dir "/dirmodmemoveinme"
+		dir2ID := e.POST("/files/").
+			WithQuery("Name", "dirmodmemoveinme").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		dir2ID, _ := extractDirData(t, data2)
-
-		attrs1 := map[string]interface{}{
-			"tags":   []string{"bar", "baz"},
-			"name":   "renamed",
-			"dir_id": dir2ID,
-		}
-
-		res3, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, attrs1, nil)
-		assert.Equal(t, 200, res3.StatusCode)
+		// Move the folder "/dirmodme" into "/dirmodmemoveinme"
+		e.PATCH("/files/"+dir1ID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dir1ID + `",
+          "attributes": {
+            "tags": ["bar", "baz"],
+            "name": "renamed",
+            "dir_id": "` + dir2ID + `"
+          }
+        }
+      }`)).
+			Expect().Status(200)
 
 		storage := testInstance.VFS()
 		exists, err := vfs.DirExists(storage, "/dirmodmemoveinme/renamed")
 		assert.NoError(t, err)
 		assert.True(t, exists)
 
-		attrs2 := map[string]interface{}{
-			"tags":   []string{"bar", "baz"},
-			"name":   "renamed",
-			"dir_id": dir1ID,
-		}
+		// Try to move the folder "/dirmodmemoveinme" into it sub folder "/dirmodmemoveinme/dirmodme"
+		e.PATCH("/files/"+dir2ID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dir2ID + `",
+          "attributes": {
+            "tags": ["bar", "baz"],
+            "name": "rename",
+            "dir_id": "` + dir1ID + `"
+          }
+        }
+      }`)).
+			Expect().Status(412)
 
-		res4, _ := patchFile(t, "/files/"+dir2ID, "directory", dir2ID, attrs2, nil)
-		assert.Equal(t, 412, res4.StatusCode)
-
-		res5, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, attrs2, nil)
-		assert.Equal(t, 412, res5.StatusCode)
+		// Try to move the folder "/dirmodme" into itself
+		e.PATCH("/files/"+dir1ID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dir1ID + `",
+          "attributes": {
+            "tags": ["bar", "baz"],
+            "name": "rename",
+            "dir_id": "` + dir1ID + `"
+          }
+        }
+      }`)).
+			Expect().Status(412)
 	})
 
 	t.Run("ModifyMetadataDirMoveWithRel", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=dirmodmewithrel&Type=directory&Tags=foo,bar,bar")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dir1ID, _ := extractDirData(t, data1)
+		// Create dir "/dirmodmewithrel"
+		dir1ID := e.POST("/files/").
+			WithQuery("Name", "dirmodmewithrel").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		reschild1, datachild1 := createDir(t, "/files/"+dir1ID+"?Name=child1&Type=directory")
-		assert.Equal(t, 201, reschild1.StatusCode)
+		// Create dir "/dirmodmewithrel/child1"
+		e.POST("/files/"+dir1ID).
+			WithQuery("Name", "child1").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		reschild2, datachild2 := createDir(t, "/files/"+dir1ID+"?Name=child2&Type=directory")
-		assert.Equal(t, 201, reschild2.StatusCode)
+		// Create dir "/dirmodmewithrel/child2"
+		e.POST("/files/"+dir1ID).
+			WithQuery("Name", "child2").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinmewithrel&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		// Create dir "/dirmodmemoveinmewithrel"
+		dir2ID := e.POST("/files/").
+			WithQuery("Name", "dirmodmemoveinmewithrel").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		dir2ID, _ := extractDirData(t, data2)
-		extractDirData(t, datachild1)
-		extractDirData(t, datachild2)
-
-		parent := &jsonData{
-			ID:   dir2ID,
-			Type: "io.cozy.files",
-		}
-
-		res3, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, nil, parent)
-		assert.Equal(t, 200, res3.StatusCode)
+		// Move the folder "/dirmodme" into "/dirmodmemoveinme"
+		e.PATCH("/files/"+dir1ID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dir1ID + `",
+          "attributes": {
+            "type": "io.cozy.files",
+            "dir_id": "` + dir2ID + `"
+          }
+        }
+      }`)).
+			Expect().Status(200)
 
 		storage := testInstance.VFS()
 		exists, err := vfs.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
@@ -862,290 +1215,350 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("ModifyMetadataDirMoveConflict", func(t *testing.T) {
-		res1, _ := createDir(t, "/files/?Name=conflictmodme1&Type=directory&Tags=foo,bar,bar")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, data2 := createDir(t, "/files/?Name=conflictmodme2&Type=directory")
-		assert.Equal(t, 201, res2.StatusCode)
+		// Create dir "/conflictmodme1"
+		e.POST("/files/").
+			WithQuery("Name", "conflictmodme1").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
-		dir2ID, _ := extractDirData(t, data2)
+		// Create dir "/conflictmodme2"
+		dir2ID := e.POST("/files/").
+			WithQuery("Name", "conflictmodme2").
+			WithQuery("Type", "directory").
+			WithQuery("Tags", "foo,bar,bar").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		attrs1 := map[string]interface{}{
-			"tags": []string{"bar", "baz"},
-			"name": "conflictmodme1",
-		}
-
-		res3, _ := patchFile(t, "/files/"+dir2ID, "directory", dir2ID, attrs1, nil)
-		assert.Equal(t, 409, res3.StatusCode)
-	})
-
-	t.Run("ModifyContentNoFileID", func(t *testing.T) {
-		res, _ := uploadMod(t, "/files/badid", "text/plain", "nil", "")
-		assert.Equal(t, 404, res.StatusCode)
+		// Try to rename "/confictmodme2" into the already taken name "/confilctmodme1"
+		e.PATCH("/files/"+dir2ID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dir2ID + `",
+          "attributes": {
+            "tags": ["bar", "baz"],
+            "name": "conflictmodme1"
+          }
+        }
+      }`)).
+			Expect().Status(409)
 	})
 
 	t.Run("ModifyContentBadRev", func(t *testing.T) {
-		res1, data1 := upload(t, "/files/?Type=file&Name=modbadrev&Executable=true", "text/plain", "foo", "")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		obj := e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "modbadrev").
+			WithQuery("Executable", true).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		meta1, ok := data1["meta"].(map[string]interface{})
-		assert.True(t, ok)
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		fileRev := obj.Path("$.data.meta.rev").String().NotEmpty().Raw()
 
-		fileID, ok := data1["id"].(string)
-		assert.True(t, ok)
-		fileRev, ok := meta1["rev"].(string)
-		assert.True(t, ok)
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("If-Match", "badrev"). // invalid
+			WithBytes([]byte("newcontent :)")).
+			Expect().Status(412)
 
-		newcontent := "newcontent :)"
-
-		req2, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-
-		req2.Header.Add("If-Match", "badrev")
-		res2, _ := doUploadOrMod(t, req2, "text/plain", "")
-		assert.Equal(t, 412, res2.StatusCode)
-
-		req3, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
-		req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-
-		req3.Header.Add("If-Match", fileRev)
-		res3, _ := doUploadOrMod(t, req3, "text/plain", "")
-		assert.Equal(t, 200, res3.StatusCode)
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("If-Match", fileRev).
+			WithBytes([]byte("newcontent :)")).
+			Expect().Status(200)
 	})
 
 	t.Run("ModifyContentSuccess", func(t *testing.T) {
-		var err error
-		var buf []byte
-		var fileInfo os.FileInfo
-
+		e := testutils.CreateTestClient(t, ts.URL)
 		storage := testInstance.VFS()
-		res1, data1 := upload(t, "/files/?Type=file&Name=willbemodified&Executable=true", "text/plain", "foo", "")
-		assert.Equal(t, 201, res1.StatusCode)
 
-		buf, err = readFile(storage, "/willbemodified")
+		obj := e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "willbemodified").
+			WithQuery("Executable", true).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data1 := obj.Value("data").Object()
+		attrs1 := data1.Value("attributes").Object()
+		file1ID := data1.Value("id").String().NotEmpty().Raw()
+
+		buf, err := readFile(storage, "/willbemodified")
 		assert.NoError(t, err)
 		assert.Equal(t, "foo", string(buf))
-		fileInfo, err = storage.FileByPath("/willbemodified")
+
+		fileInfo, err := storage.FileByPath("/willbemodified")
 		assert.NoError(t, err)
 		assert.Equal(t, fileInfo.Mode().String(), "-rwxr-xr-x")
 
-		var ok bool
-		data1, ok = data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		newContent := "newcontent :)"
 
-		attrs1, ok := data1["attributes"].(map[string]interface{})
-		assert.True(t, ok)
+		// Upload a new content to the file creating a new version
+		obj = e.PUT("/files/"+file1ID).
+			WithQuery("Executable", false).
+			WithHeader("Content-Type", "audio/mp3").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		links1, ok := data1["links"].(map[string]interface{})
-		assert.True(t, ok)
+		data := obj.Value("data").Object()
+		data.ValueEqual("id", data1.Value("id").Raw())
+		data.Path("$.links.self").Equal(data1.Path("$.links.self").Raw())
 
-		fileID, ok := data1["id"].(string)
-		assert.True(t, ok)
+		meta := data.Value("meta").Object()
+		meta.Value("rev").NotEqual(data1.Path("$.meta.rev").String().Raw())
 
-		newcontent := "newcontent :)"
-		res2, data2 := uploadMod(t, "/files/"+fileID+"?Executable=false", "audio/mp3", newcontent, "")
-		assert.Equal(t, 200, res2.StatusCode)
-
-		data2, ok = data2["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		meta2, ok := data2["meta"].(map[string]interface{})
-		assert.True(t, ok)
-
-		attrs2, ok := data2["attributes"].(map[string]interface{})
-		assert.True(t, ok)
-
-		links2, ok := data2["links"].(map[string]interface{})
-		assert.True(t, ok)
-
-		assert.Equal(t, data2["id"], data1["id"], "same id")
-		assert.Equal(t, data2["path"], data1["path"], "same path")
-		assert.NotEqual(t, meta2["rev"], data1["rev"], "different rev")
-		assert.Equal(t, links2["self"], links1["self"], "same self link")
-
-		assert.Equal(t, attrs2["name"], attrs1["name"])
-		assert.Equal(t, attrs2["created_at"], attrs1["created_at"])
-		assert.NotEqual(t, attrs2["updated_at"], attrs1["updated_at"])
-		assert.NotEqual(t, attrs2["size"], attrs1["size"])
-
-		assert.Equal(t, attrs2["size"], strconv.Itoa(len(newcontent)))
-		assert.NotEqual(t, attrs2["md5sum"], attrs1["md5sum"])
-		assert.NotEqual(t, attrs2["class"], attrs1["class"])
-		assert.NotEqual(t, attrs2["mime"], attrs1["mime"])
-		assert.NotEqual(t, attrs2["executable"], attrs1["executable"])
-		assert.Equal(t, attrs2["class"], "audio")
-		assert.Equal(t, attrs2["mime"], "audio/mp3")
-		assert.Equal(t, attrs2["executable"], false)
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("name", attrs1.Value("name").String().Raw())
+		attrs.ValueEqual("created_at", attrs1.Value("created_at").String().Raw())
+		attrs.Value("updated_at").NotEqual(attrs1.Value("updated_at").String().Raw())
+		attrs.Value("size").NotEqual(attrs1.Value("size").String().Raw())
+		attrs.ValueEqual("size", strconv.Itoa(len(newContent)))
+		attrs.Value("md5sum").NotEqual(attrs1.Value("md5sum").String().Raw())
+		attrs.Value("class").NotEqual(attrs1.Value("class").String().Raw())
+		attrs.Value("mime").NotEqual(attrs1.Value("mime").String().Raw())
+		attrs.Value("executable").NotEqual(attrs1.Value("executable").Boolean().Raw())
+		attrs.ValueEqual("class", "audio")
+		attrs.ValueEqual("mime", "audio/mp3")
+		attrs.ValueEqual("executable", false)
 
 		buf, err = readFile(storage, "/willbemodified")
 		assert.NoError(t, err)
-		assert.Equal(t, newcontent, string(buf))
+		assert.Equal(t, newContent, string(buf))
 		fileInfo, err = storage.FileByPath("/willbemodified")
 		assert.NoError(t, err)
 		assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
 
-		req, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(""))
-		assert.NoError(t, err)
+		e.PUT("/files/"+fileID).
+			WithHeader("Date", "Mon, 02 Jan 2006 15:04:05 MST").
+			WithHeader("Content-Type", "what/ever").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("")).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.updated_at").Equal("2006-01-02T15:04:05Z")
 
-		req.Header.Add("Date", "Mon, 02 Jan 2006 15:04:05 MST")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+		newContent = "encryptedcontent"
 
-		res3, data3 := doUploadOrMod(t, req, "what/ever", "")
-		assert.Equal(t, 200, res3.StatusCode)
-
-		data3, ok = data3["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		attrs3, ok := data3["attributes"].(map[string]interface{})
-		assert.True(t, ok)
-
-		assert.Equal(t, "2006-01-02T15:04:05Z", attrs3["updated_at"])
-
-		newcontent = "encryptedcontent"
-		res4, data4 := uploadMod(t, "/files/"+fileID+"?Encrypted=true", "audio/mp3", newcontent, "")
-		assert.Equal(t, 200, res4.StatusCode)
-
-		data4, ok = data4["data"].(map[string]interface{})
-		assert.True(t, ok)
-		attrs4, ok := data4["attributes"].(map[string]interface{})
-		assert.True(t, ok)
-		assert.Equal(t, attrs4["encrypted"], true)
+		e.PUT("/files/"+fileID).
+			WithQuery("Encrypted", true).
+			WithHeader("Date", "Mon, 02 Jan 2006 15:04:05 MST").
+			WithHeader("Content-Type", "audio/mp3").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.encrypted").Equal(true)
 	})
 
 	t.Run("ModifyContentWithSourceAccount", func(t *testing.T) {
-		buf := strings.NewReader("foo")
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-to-migrate", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		fileID, ok := data["id"].(string)
-		assert.True(t, ok)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		fileID = e.POST("/files/").
+			WithQuery("Name", "old-file-to-migrate").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
 		account := "0c5a0a1e-8eb1-11e9-93f3-934f3a2c181d"
 		identifier := "11f68e48"
-		newcontent := "updated by a konnector to add the sourceAccount"
-		res2, obj2 := uploadMod(t, "/files/"+fileID+"?SourceAccount="+account+"&SourceAccountIdentifier="+identifier, "text/plain", newcontent, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		data2 := obj2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		fcm := attrs2["cozyMetadata"].(map[string]interface{})
-		assert.Equal(t, account, fcm["sourceAccount"])
-		assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+		newContent := "updated by a konnector to add the sourceAccount"
+
+		obj := e.PUT("/files/"+fileID).
+			WithQuery("Name", "old-file-to-migrate").
+			WithQuery("SourceAccount", account).
+			WithQuery("SourceAccountIdentifier", identifier).
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.ValueEqual("sourceAccount", account)
+		fcm.ValueEqual("sourceAccountIdentifier", identifier)
 	})
 
 	t.Run("ModifyContentWithCreatedAt", func(t *testing.T) {
-		buf := strings.NewReader("foo")
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-c", buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		fileID, ok := data["id"].(string)
-		assert.True(t, ok)
-		attrs := data["attributes"].(map[string]interface{})
-		createdAt := attrs["created_at"].(string)
-		updatedAt := attrs["updated_at"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/").
+			WithQuery("Name", "old-file-with-c").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		createdAt := obj.Path("$.data.attributes.created_at").String().NotEmpty().Raw()
+		updatedAt := obj.Path("$.data.attributes.updated_at").String().NotEmpty().Raw()
 
 		createdAt2 := "2017-11-16T13:37:01.345Z"
-		newcontent := "updated by a client with a new CreatedAt"
-		res2, obj2 := uploadMod(t, "/files/"+fileID+"?CreatedAt="+createdAt2, "text/plain", newcontent, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		data2 := obj2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		createdAt3 := attrs2["created_at"].(string)
-		updatedAt2 := attrs2["updated_at"].(string)
-		assert.Equal(t, createdAt3, createdAt)
-		assert.NotEqual(t, updatedAt2, updatedAt)
+		newContent := "updated by a client with a new CreatedAt"
+
+		obj = e.PUT("/files/"+fileID).
+			WithQuery("Name", "old-file-to-migrate").
+			WithQuery("CreatedAt", createdAt2).
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.created_at").Equal(createdAt)
+		obj.Path("$.data.attributes.updated_at").NotEqual(updatedAt)
 	})
 
 	t.Run("ModifyContentWithUpdatedAt", func(t *testing.T) {
-		buf := strings.NewReader("foo")
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		createdAt := "2017-11-16T13:37:01.345Z"
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-u&CreatedAt="+createdAt, buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		fileID, ok := data["id"].(string)
-		assert.True(t, ok)
+
+		fileID = e.POST("/files/").
+			WithQuery("Name", "old-file-with-u").
+			WithQuery("Type", "file").
+			WithQuery("CreatedAt", createdAt).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
 		updatedAt2 := "2017-12-16T13:37:01.345Z"
-		newcontent := "updated by a client with a new UpdatedAt"
-		res2, obj2 := uploadMod(t, "/files/"+fileID+"?UpdatedAt="+updatedAt2, "text/plain", newcontent, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		data2 := obj2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		createdAt2 := attrs2["created_at"].(string)
-		updatedAt3 := attrs2["updated_at"].(string)
-		assert.Equal(t, createdAt2, createdAt)
-		assert.Equal(t, updatedAt3, updatedAt2)
+		newContent := "updated by a client with a new UpdatedAt"
+
+		obj := e.PUT("/files/"+fileID).
+			WithQuery("UpdatedAt", updatedAt2).
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.created_at").Equal(createdAt)
+		obj.Path("$.data.attributes.updated_at").Equal(updatedAt2)
 	})
 
 	t.Run("ModifyContentWithUpdatedAtAndCreatedAt", func(t *testing.T) {
-		buf := strings.NewReader("foo")
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		createdAt := "2017-11-16T13:37:01.345Z"
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-u-and-c&CreatedAt="+createdAt, buf)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		fileID, ok := data["id"].(string)
-		assert.True(t, ok)
+
+		fileID = e.POST("/files/").
+			WithQuery("Name", "old-file-with-u-and-c").
+			WithQuery("Type", "file").
+			WithQuery("CreatedAt", createdAt).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
 		createdAt2 := "2017-10-16T13:37:01.345Z"
 		updatedAt2 := "2017-12-16T13:37:01.345Z"
-		newcontent := "updated by a client with a CreatedAt older than UpdatedAt"
-		res2, obj2 := uploadMod(t, "/files/"+fileID+"?CreatedAt="+createdAt2+"&UpdatedAt="+updatedAt2, "text/plain", newcontent, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		data2 := obj2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		createdAt3 := attrs2["created_at"].(string)
-		updatedAt3 := attrs2["updated_at"].(string)
-		assert.Equal(t, createdAt3, createdAt)
-		assert.Equal(t, updatedAt3, updatedAt2)
+		newContent := "updated by a client with a CreatedAt older than UpdatedAt"
+
+		obj := e.PUT("/files/"+fileID).
+			WithQuery("UpdatedAt", updatedAt2).
+			WithQuery("CreateddAt", createdAt2).
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(newContent)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.created_at").Equal(createdAt)
+		obj.Path("$.data.attributes.updated_at").Equal(updatedAt2)
 	})
 
 	t.Run("ModifyContentConcurrently", func(t *testing.T) {
-		type result struct {
-			rev string
-			idx int64
-		}
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		done := make(chan *result)
-		errs := make(chan *http.Response)
-
-		res, data := upload(t, "/files/?Type=file&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
-		require.Equal(t, 201, res.StatusCode)
-
-		var ok bool
-		data, ok = data["data"].(map[string]interface{})
-		assert.True(t, ok)
-
-		fileID, ok := data["id"].(string)
-		assert.True(t, ok)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "willbemodifiedconcurrently").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
 		var c int64
 
+		type resC struct {
+			obj *httpexpect.Object
+			idx int64
+		}
+
+		errs := make(chan int)
+		done := make(chan resC)
+
 		doModContent := func() {
 			idx := atomic.AddInt64(&c, 1)
-			res, data := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent "+strconv.FormatInt(idx, 10), "")
-			if res.StatusCode == 200 {
-				data = data["data"].(map[string]interface{})
-				meta := data["meta"].(map[string]interface{})
-				done <- &result{meta["rev"].(string), idx}
+
+			res := e.PUT("/files/"+fileID).
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte("newcontent " + strconv.FormatInt(idx, 10))).
+				Expect()
+
+			if res.Raw().StatusCode == 200 {
+				done <- resC{
+					obj: res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object(),
+					idx: idx,
+				}
 			} else {
-				errs <- res
+				errs <- res.Raw().StatusCode
 			}
 		}
 
@@ -1155,11 +1568,11 @@ func TestFiles(t *testing.T) {
 			go doModContent()
 		}
 
-		var successes []*result
+		var successes []resC
 		for i := 0; i < n; i++ {
 			select {
 			case res := <-errs:
-				assert.True(t, res.StatusCode == 409 || res.StatusCode == 503, "status code is %v and not 409 or 503", res.StatusCode)
+				assert.True(t, res == 409 || res == 503, "status code is %d and not 409 or 503", res)
 			case res := <-done:
 				successes = append(successes, res)
 			}
@@ -1167,8 +1580,8 @@ func TestFiles(t *testing.T) {
 
 		assert.True(t, len(successes) >= 1, "there is at least one success")
 
-		for i, s := range successes {
-			assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
+		for i, res := range successes {
+			res.obj.Path("$.data.meta.rev").String().HasPrefix(strconv.Itoa(i+2) + "-")
 		}
 
 		storage := testInstance.VFS()
@@ -1176,8 +1589,9 @@ func TestFiles(t *testing.T) {
 		assert.NoError(t, err)
 
 		found := false
-		for _, s := range successes {
-			if string(buf) == "newcontent "+strconv.FormatInt(s.idx, 10) {
+		for _, res := range successes {
+			t.Logf("succ: %#v\n\n", res)
+			if string(buf) == "newcontent "+strconv.FormatInt(res.idx, 10) {
 				found = true
 				break
 			}
@@ -1187,1295 +1601,1606 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("DownloadFileBadID", func(t *testing.T) {
-		res, _ := download(t, "/files/download/badid", "")
-		assert.Equal(t, 404, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.GET("/files/download/badid").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 	})
 
 	t.Run("DownloadFileBadPath", func(t *testing.T) {
-		res, _ := download(t, "/files/download?Path=/i/do/not/exist", "")
-		assert.Equal(t, 404, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.GET("/files/download/").
+			WithQuery("Path", "/i/do/not/exists").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 	})
 
 	t.Run("DownloadFileByIDSuccess", func(t *testing.T) {
-		body := "foo"
-		res1, filedata := upload(t, "/files/?Type=file&Name=downloadme1", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		filedata, ok = filedata["data"].(map[string]interface{})
-		assert.True(t, ok)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "downloadme1").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, ok := filedata["id"].(string)
-		assert.True(t, ok)
+		res := e.GET("/files/download/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			ContentType("text/plain", "")
 
-		res2, resbody := download(t, "/files/download/"+fileID, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
-		assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), `filename="downloadme1"`))
-		assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
-		assert.NotEmpty(t, res2.Header.Get("Etag"))
-		assert.Equal(t, res2.Header.Get("Etag")[:1], `"`)
-		assert.Equal(t, res2.Header.Get("Content-Length"), "3")
-		assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
-		assert.Equal(t, body, string(resbody))
+		res.Header("Content-Disposition").HasPrefix("inline")
+		res.Header("Content-Disposition").Contains(`filename="downloadme1"`)
+		res.Header("Etag").NotEmpty()
+		res.Header("Content-Length").Equal("3")
+		res.Header("Accept-Ranges").Equal("bytes")
+
+		res.Body().Equal("foo")
 	})
 
 	t.Run("DownloadFileByPathSuccess", func(t *testing.T) {
-		body := "foo"
-		res1, _ := upload(t, "/files/?Type=file&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, resbody := download(t, "/files/download?Dl=1&Path="+url.QueryEscape("/downloadme2"), "")
-		assert.Equal(t, 200, res2.StatusCode)
-		assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
-		assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), `filename="downloadme2"`))
-		assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
-		assert.Equal(t, res2.Header.Get("Content-Length"), "3")
-		assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
-		assert.Equal(t, body, string(resbody))
+		e.POST("/files/").
+			WithQuery("Name", "downloadme2").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
+
+		res := e.GET("/files/download").
+			WithQuery("Dl", "1").
+			WithQuery("Path", "/downloadme2").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			ContentType("text/plain", "")
+
+		res.Header("Content-Disposition").HasPrefix("attachment")
+		res.Header("Content-Disposition").Contains(`filename="downloadme2"`)
+		res.Header("Content-Length").Equal("3")
+		res.Header("Accept-Ranges").Equal("bytes")
+
+		res.Body().Equal("foo")
 	})
 
 	t.Run("DownloadRangeSuccess", func(t *testing.T) {
-		body := "foo,bar"
-		res1, _ := upload(t, "/files/?Type=file&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "nimp")
-		assert.Equal(t, 416, res2.StatusCode)
+		e.POST("/files/").
+			WithQuery("Name", "downloadmebyrange").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201)
 
-		res3, res3body := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "bytes=0-2")
-		assert.Equal(t, 206, res3.StatusCode)
-		assert.Equal(t, "foo", string(res3body))
+		e.GET("/files/download").
+			WithQuery("Path", "/downloadmebyrange").
+			WithQuery("", "/downloadmebyrange").
+			WithHeader("Range", "nimp").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(416)
 
-		res4, res4body := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "bytes=4-")
-		assert.Equal(t, 206, res4.StatusCode)
-		assert.Equal(t, "bar", string(res4body))
+		e.GET("/files/download").
+			WithQuery("Path", "/downloadmebyrange").
+			WithQuery("", "/downloadmebyrange").
+			WithHeader("Range", "bytes=0-2").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(206).
+			Body().Equal("foo")
+
+		e.GET("/files/download").
+			WithQuery("Path", "/downloadmebyrange").
+			WithQuery("", "/downloadmebyrange").
+			WithHeader("Range", "bytes=4-").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(206).
+			Body().Equal("bar")
 	})
 
 	t.Run("GetFileMetadataFromPath", func(t *testing.T) {
-		res1, _ := httpGet(ts.URL + "/files/metadata?Path=/noooooop")
-		assert.Equal(t, 404, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		body := "foo,bar"
-		res2, _ := upload(t, "/files/?Type=file&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		assert.Equal(t, 201, res2.StatusCode)
+		e.GET("/files/metadata").
+			WithQuery("Path", "/nooooop").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 
-		res3, _ := httpGet(ts.URL + "/files/metadata?Path=/getmetadata")
-		assert.Equal(t, 200, res3.StatusCode)
+		e.POST("/files/").
+			WithQuery("Name", "getmetadata").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201)
+
+		e.GET("/files/metadata").
+			WithQuery("Path", "/getmetadata").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("GetDirMetadataFromPath", func(t *testing.T) {
-		res1, _ := createDir(t, "/files/?Name=getdirmeta&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := httpGet(ts.URL + "/files/metadata?Path=/getdirmeta")
-		assert.Equal(t, 200, res2.StatusCode)
+		e.POST("/files/").
+			WithQuery("Name", "getdirmeta").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
+
+		e.GET("/files/metadata").
+			WithQuery("Path", "/getdirmeta").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("GetFileMetadataFromID", func(t *testing.T) {
-		res1, _ := httpGet(ts.URL + "/files/qsdqsd")
-		assert.Equal(t, 404, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		body := "foo,bar"
-		res2, data2 := upload(t, "/files/?Type=file&Name=getmetadatafromid", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		assert.Equal(t, 201, res2.StatusCode)
+		e.GET("/files/qsdqsd").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 
-		fileID, _ := extractDirData(t, data2)
+		fileID = e.POST("/files/").
+			WithQuery("Name", "getmetadatafromid").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res3, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res3.StatusCode)
+		e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("GetDirMetadataFromID", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=getdirmetafromid&Type=directory")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		parentID, _ := extractDirData(t, data1)
+		dirID := e.POST("/files/").
+			WithQuery("Name", "getdirmetafromid").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		body := "foo"
-		res2, data2 := upload(t, "/files/"+parentID+"?Type=file&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res2.StatusCode)
+		fileID = e.POST("/files/"+dirID).
+			WithQuery("Name", "firstfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("baz")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, _ := extractDirData(t, data2)
-
-		res3, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res3.StatusCode)
+		e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("Versions", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		cfg := config.GetConfig()
 		oldDelay := cfg.Fs.Versioning.MinDelayBetweenTwoVersions
 		cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 10 * time.Millisecond
-		defer func() {
-			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = oldDelay
-		}()
+		t.Cleanup(func() { cfg.Fs.Versioning.MinDelayBetweenTwoVersions = oldDelay })
 
-		res1, body1 := upload(t, "/files/?Type=file&Name=versioned", "text/plain", "one", "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data1 := body1["data"].(map[string]interface{})
-		attr1 := data1["attributes"].(map[string]interface{})
-		sum1 := attr1["md5sum"]
-		fileID := data1["id"].(string)
+		obj := e.POST("/files/").
+			WithQuery("Name", "versioned").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		sum1 := obj.Path("$.data.attributes.md5sum").String().NotEmpty().Raw()
+
 		time.Sleep(20 * time.Millisecond)
-		res2, body2 := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
-		data2 := body2["data"].(map[string]interface{})
-		attr2 := data2["attributes"].(map[string]interface{})
-		sum2 := attr2["md5sum"]
+
+		obj = e.PUT("/files/"+fileID).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("two")).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		sum2 := obj.Path("$.data.attributes.md5sum").String().NotEmpty().Raw()
+
 		time.Sleep(20 * time.Millisecond)
-		res3, body3 := uploadMod(t, "/files/"+fileID, "text/plain", "three", "")
-		assert.Equal(t, 200, res3.StatusCode)
-		data3 := body3["data"].(map[string]interface{})
-		attr3 := data3["attributes"].(map[string]interface{})
-		sum3 := attr3["md5sum"]
 
-		res4, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res4.StatusCode)
-		var body map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res4.Body).Decode(&body))
-		data := body["data"].(map[string]interface{})
-		attr := data["attributes"].(map[string]interface{})
-		assert.Equal(t, sum3, attr["md5sum"])
+		obj3 := e.PUT("/files/"+fileID).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("three")).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		rels := data["relationships"].(map[string]interface{})
-		old := rels["old_versions"].(map[string]interface{})
-		refs := old["data"].([]interface{})
-		assert.Len(t, refs, 2)
-		first := refs[0].(map[string]interface{})
-		assert.Equal(t, consts.FilesVersions, first["type"])
-		oneID := first["id"]
-		second := refs[1].(map[string]interface{})
-		assert.Equal(t, consts.FilesVersions, second["type"])
-		twoID := second["id"]
+		resObj := e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		included := body["included"].([]interface{})
-		vone := included[0].(map[string]interface{})
-		assert.Equal(t, oneID, vone["id"])
-		attrv1 := vone["attributes"].(map[string]interface{})
-		assert.Equal(t, sum1, attrv1["md5sum"])
-		vtwo := included[1].(map[string]interface{})
-		assert.Equal(t, twoID, vtwo["id"])
-		attrv2 := vtwo["attributes"].(map[string]interface{})
-		assert.Equal(t, sum2, attrv2["md5sum"])
+		resObj.Path("$.data.attributes.md5sum").Equal(obj3.Path("$.data.attributes.md5sum").String().Raw())
+
+		oldRefs := resObj.Path("$.data.relationships.old_versions.data").Array()
+		oldRefs.Length().Equal(2)
+
+		first := oldRefs.Element(0).Object()
+		first.ValueEqual("type", consts.FilesVersions)
+		oneID := first.Value("id").String().NotEmpty().Raw()
+
+		second := oldRefs.Element(1).Object()
+		second.ValueEqual("type", consts.FilesVersions)
+		secondID := second.Value("id").String().NotEmpty().Raw()
+
+		included := resObj.Value("included").Array()
+		included.Length().Equal(2)
+
+		vOne := included.Element(0).Object()
+		vOne.ValueEqual("id", oneID)
+		vOne.Path("$.attributes.md5sum").Equal(sum1)
+
+		vTwo := included.Element(1).Object()
+		vTwo.ValueEqual("id", secondID)
+		vTwo.Path("$.attributes.md5sum").Equal(sum2)
 	})
 
 	t.Run("PatchVersion", func(t *testing.T) {
-		res1, body1 := upload(t, "/files/?Type=file&Name=patch-version", "text/plain", "one", "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data1 := body1["data"].(map[string]interface{})
-		fileID := data1["id"].(string)
-		res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res3, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res3.StatusCode)
-		var body3 map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body3))
-		data3 := body3["data"].(map[string]interface{})
-		rels := data3["relationships"].(map[string]interface{})
-		old := rels["old_versions"].(map[string]interface{})
-		refs := old["data"].([]interface{})
-		assert.Len(t, refs, 1)
-		ref := refs[0].(map[string]interface{})
-		assert.Equal(t, consts.FilesVersions, ref["type"])
-		versionID := ref["id"].(string)
+		// Create the file
+		fileID = e.POST("/files/").
+			WithQuery("Name", "patch-version").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		attrs := map[string]interface{}{
-			"tags": []string{"qux"},
-		}
-		res4, body4 := patchFile(t, "/files/"+versionID, consts.FilesVersions, versionID, attrs, nil)
-		assert.Equal(t, 200, res4.StatusCode)
-		data4 := body4["data"].(map[string]interface{})
-		assert.Equal(t, versionID, data4["id"])
-		attrs4 := data4["attributes"].(map[string]interface{})
-		tags := attrs4["tags"].([]interface{})
-		assert.Len(t, tags, 1)
-		assert.Equal(t, "qux", tags[0])
+		// Upload a new version
+		e.PUT("/files/"+fileID).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("two")).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+			// Get file informations
+		obj := e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		refs := obj.Path("$.data.relationships.old_versions.data").Array()
+		refs.Length().Equal(1)
+
+		ref := refs.Element(0).Object()
+		ref.ValueEqual("type", consts.FilesVersions)
+		versionID := ref.Value("id").String().NotEmpty().Raw()
+
+		obj = e.PATCH("/files/"+versionID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.FilesVersions + `",
+          "id": "` + versionID + `",
+          "attributes": { "tags": ["qux"] }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.id").Equal(versionID)
+		tags := obj.Path("$.data.attributes.tags").Array()
+		tags.Length().Equal(1)
+		tags.First().Equal("qux")
 	})
 
 	t.Run("DownloadVersion", func(t *testing.T) {
-		content := "one"
-		res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-versioned", "text/plain", content, "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data := body1["data"].(map[string]interface{})
-		fileID := data["id"].(string)
-		meta := data["meta"].(map[string]interface{})
-		firstRev := meta["rev"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
+		obj := e.POST("/files/").
+			WithQuery("Name", "downloadme-versioned").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		res3, resbody := download(t, "/files/download/"+fileID+"/"+firstRev, "")
-		assert.Equal(t, 200, res3.StatusCode)
-		assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Disposition"), "inline"))
-		assert.True(t, strings.Contains(res3.Header.Get("Content-Disposition"), `filename="downloadme-versioned"`))
-		assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "text/plain"))
-		assert.Equal(t, content, string(resbody))
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		firstRev := obj.Path("$.data.meta.rev").String().NotEmpty().Raw()
+
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte(`two`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		res := e.GET("/files/download/"+fileID+"/"+firstRev).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		res.Header("Content-Disposition").HasPrefix("inline")
+		res.Header("Content-Disposition").Contains(`filename="downloadme-versioned"`)
+		res.Header("Content-Type").HasPrefix("text/plain")
+		res.Body().Equal("one")
 	})
 
 	t.Run("FileCreateAndDownloadByVersionID", func(t *testing.T) {
-		content := "one"
-		res1, body1 := upload(t, "/files/?Type=file&Name=direct-downloadme-versioned", "text/plain", content, "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data := body1["data"].(map[string]interface{})
-		fileID := data["id"].(string)
-		meta := data["meta"].(map[string]interface{})
-		firstRev := meta["rev"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
+		obj := e.POST("/files/").
+			WithQuery("Name", "direct-downloadme-versioned").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		req, err := http.NewRequest("POST", ts.URL+"/files/downloads?VersionId="+fileID+"/"+firstRev, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var data2 map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&data2)
-		assert.NoError(t, err)
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		firstRev := obj.Path("$.data.meta.rev").String().NotEmpty().Raw()
 
-		displayURL := ts.URL + data2["links"].(map[string]interface{})["related"].(string)
-		res3, err := http.Get(displayURL)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res3.StatusCode)
-		disposition := res3.Header.Get("Content-Disposition")
-		assert.Equal(t, `inline; filename="direct-downloadme-versioned"`, disposition)
+		// Upload a new content to the file creating a new version
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte(`two`)).
+			Expect().Status(200)
+
+		obj = e.POST("/files/downloads").
+			WithQuery("VersionId", fileID+"/"+firstRev).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		related := obj.Path("$.links.related").String().NotEmpty().Raw()
+
+		// Get display url
+		e.GET(related).
+			Expect().Status(200).
+			Header("Content-Disposition").Equal(`inline; filename="direct-downloadme-versioned"`)
 	})
 
 	t.Run("RevertVersion", func(t *testing.T) {
-		content := "one"
-		res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-reverted", "text/plain", content, "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data := body1["data"].(map[string]interface{})
-		fileID := data["id"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
+		// Create a file
+		fileID = e.POST("/files/").
+			WithQuery("Name", "direct-downloadme-reverted").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res3, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res3.StatusCode)
-		var body map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body))
-		data = body["data"].(map[string]interface{})
-		rels := data["relationships"].(map[string]interface{})
-		old := rels["old_versions"].(map[string]interface{})
-		refs := old["data"].([]interface{})
-		assert.Len(t, refs, 1)
-		version := refs[0].(map[string]interface{})
-		versionID := version["id"].(string)
+		// Upload a new content to the file creating a new version
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte(`two`)).
+			Expect().Status(200)
 
-		req4, _ := http.NewRequest("POST", ts.URL+"/files/revert/"+versionID, strings.NewReader(""))
-		req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res4, err := http.DefaultClient.Do(req4)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res4.StatusCode)
+		// Get the current file version id
+		versionID := e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.relationships.old_versions.data[0].id").
+			String().NotEmpty().Raw()
 
-		res5, resbody := download(t, "/files/download/"+fileID, "")
-		assert.Equal(t, 200, res5.StatusCode)
-		assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Disposition"), "inline"))
-		assert.True(t, strings.Contains(res5.Header.Get("Content-Disposition"), `filename="downloadme-reverted"`))
-		assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "text/plain"))
-		assert.Equal(t, content, string(resbody))
+		// Revert the last version
+		e.POST("/files/revert/"+versionID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		// Check that the file have the reverted content
+		res := e.GET("/files/download/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		res.Header("Content-Disposition").HasPrefix("inline")
+		res.Header("Content-Disposition").Contains(`filename="direct-downloadme-reverted"`)
+		res.Header("Content-Type").HasPrefix("text/plain")
+		res.Body().Equal("one")
 	})
 
 	t.Run("CleanOldVersion", func(t *testing.T) {
-		content := "one"
-		res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-toclean", "text/plain", content, "")
-		assert.Equal(t, 201, res1.StatusCode)
-		data := body1["data"].(map[string]interface{})
-		fileID := data["id"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
-		assert.Equal(t, 200, res2.StatusCode)
+		// Create a file
+		fileID = e.POST("/files/").
+			WithQuery("Name", "downloadme-toclean").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("one")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res3, _ := httpGet(ts.URL + "/files/" + fileID)
-		assert.Equal(t, 200, res3.StatusCode)
-		var body map[string]interface{}
-		assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body))
-		data = body["data"].(map[string]interface{})
-		rels := data["relationships"].(map[string]interface{})
-		old := rels["old_versions"].(map[string]interface{})
-		refs := old["data"].([]interface{})
-		assert.Len(t, refs, 1)
-		version := refs[0].(map[string]interface{})
-		versionID := version["id"].(string)
+		// Upload a new content to the file creating a new version
+		e.PUT("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte(`two`)).
+			Expect().Status(200)
 
-		req4, _ := http.NewRequest("DELETE", ts.URL+"/files/"+versionID, nil)
-		req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res4, err := http.DefaultClient.Do(req4)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, res4.StatusCode)
+		// Get the current file version id
+		versionID := e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.relationships.old_versions.data[0].id").
+			String().NotEmpty().Raw()
 
-		res5, _ := download(t, "/files/download/"+versionID, "")
-		assert.Equal(t, 404, res5.StatusCode)
+		// Delete the last versionID.
+		e.DELETE("/files/"+versionID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
+
+		// Check that the last version have been deleted and is not downloadable
+		e.GET("/files/download/"+versionID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 	})
 
 	t.Run("CopyVersion", func(t *testing.T) {
-		buf := strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-            "category": "report",
-            "label": "foo"
-        }
-    }
-}`)
-		req1, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
-		req1.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res1, err := http.DefaultClient.Do(req1)
-		assert.NoError(t, err)
-		defer res1.Body.Close()
-		assert.Equal(t, 201, res1.StatusCode)
-		var obj1 map[string]interface{}
-		err = extractJSONRes(res1, &obj1)
-		assert.NoError(t, err)
-		data1 := obj1["data"].(map[string]interface{})
-		secret := data1["id"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		content := "should-be-the-same-after-copy"
-		u := "/files/?Type=file&Name=version-to-be-copied&MetadataID=" + secret
-		res2, body2 := upload(t, u, "text/plain", content, "")
-		assert.Equal(t, 201, res2.StatusCode)
-		data2 := body2["data"].(map[string]interface{})
-		fileID := data2["id"].(string)
-		attrs2 := data2["attributes"].(map[string]interface{})
-		meta2 := attrs2["metadata"].(map[string]interface{})
-		assert.Equal(t, "report", meta2["category"])
-		assert.Equal(t, "foo", meta2["label"])
-
-		buf = strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-            "label": "bar"
+		// Upload some file metadata
+		metadataID := e.POST("/files/upload/metadata").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+                "category": "report",
+                "label": "foo"
+            }
         }
-    }
-}`)
-		req3, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions?Tags=qux", buf)
-		req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res3, err := http.DefaultClient.Do(req3)
-		assert.NoError(t, err)
-		defer res3.Body.Close()
-		assert.Equal(t, 200, res3.StatusCode)
-		var obj3 map[string]interface{}
-		err = extractJSONRes(res3, &obj3)
-		assert.NoError(t, err)
-		data3 := obj3["data"].(map[string]interface{})
-		attrs3 := data3["attributes"].(map[string]interface{})
-		meta3 := attrs3["metadata"].(map[string]interface{})
-		assert.Nil(t, meta3["category"])
-		assert.Equal(t, "bar", meta3["label"])
-		assert.Len(t, attrs3["tags"], 1)
-		tags := attrs3["tags"].([]interface{})
-		assert.Equal(t, "qux", tags[0])
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Upload a file content linke to the previous metadata.
+		fileID = e.POST("/files/").
+			WithQuery("Name", "version-to-be-copied").
+			WithQuery("Type", "file").
+			WithQuery("MetadataID", metadataID).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("should-be-the-same-after-copy")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Push some attributes the the last version
+		obj := e.POST("/files/"+fileID+"/versions").
+			WithQuery("Tags", "qux").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+                "label": "bar"
+            }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Path("$.data.attributes").Object()
+		tags := attrs.Value("tags").Array()
+		tags.Length().Equal(1)
+		tags.First().Equal("qux")
+
+		meta := attrs.Value("metadata").Object()
+		meta.NotContainsKey("category")
+		meta.ValueEqual("label", "bar")
 	})
 
 	t.Run("CopyVersionWithCertified", func(t *testing.T) {
-		buf := strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-            "carbonCopy": true,
-            "electronicSafe": true
-        }
-    }
-}`)
-		req1, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
-		req1.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res1, err := http.DefaultClient.Do(req1)
-		assert.NoError(t, err)
-		defer res1.Body.Close()
-		assert.Equal(t, 201, res1.StatusCode)
-		var obj1 map[string]interface{}
-		err = extractJSONRes(res1, &obj1)
-		assert.NoError(t, err)
-		data1 := obj1["data"].(map[string]interface{})
-		secret := data1["id"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		content := "certified carbonCopy and electronicSafe must be kept if only the qualification change"
-		u := "/files/?Type=file&Name=copy-version-with-certified&MetadataID=" + secret
-		res2, body2 := upload(t, u, "text/plain", content, "")
-		assert.Equal(t, 201, res2.StatusCode)
-		data2 := body2["data"].(map[string]interface{})
-		fileID := data2["id"].(string)
-		attrs2 := data2["attributes"].(map[string]interface{})
-		meta2 := attrs2["metadata"].(map[string]interface{})
-		assert.NotNil(t, meta2["carbonCopy"])
-		assert.NotNil(t, meta2["electronicSafe"])
-
-		buf = strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-			"qualification": { "purpose": "attestation" }
+		// Upload some file metadata
+		metadataID := e.POST("/files/upload/metadata").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+                "carbonCopy": true,
+                "electronicSafe": true
+            }
         }
-    }
-}`)
-		req3, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
-		req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res3, err := http.DefaultClient.Do(req3)
-		assert.NoError(t, err)
-		defer res3.Body.Close()
-		assert.Equal(t, 200, res3.StatusCode)
-		var obj3 map[string]interface{}
-		err = extractJSONRes(res3, &obj3)
-		assert.NoError(t, err)
-		data3 := obj3["data"].(map[string]interface{})
-		attrs3 := data3["attributes"].(map[string]interface{})
-		meta3 := attrs3["metadata"].(map[string]interface{})
-		assert.NotNil(t, meta3["qualification"])
-		assert.NotNil(t, meta3["carbonCopy"])
-		assert.NotNil(t, meta3["electronicSafe"])
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		buf = strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-            "label": "bar"
+		// Upload a file content linke to the previous metadata.
+		fileID = e.POST("/files/").
+			WithQuery("Name", "copy-version-with-certified").
+			WithQuery("Type", "file").
+			WithQuery("MetadataID", metadataID).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("certified carbonCopy and electronicSafe must be kept if only the qualification change")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Push some attributes the the last version
+		e.POST("/files/"+fileID+"/versions").
+			WithQuery("Tags", "qux").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.files.metadata",
+          "attributes": { "qualification": { "purpose": "attestation" } }
         }
-    }
-}`)
-		req4, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
-		req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res4, err := http.DefaultClient.Do(req4)
-		assert.NoError(t, err)
-		defer res4.Body.Close()
-		assert.Equal(t, 200, res4.StatusCode)
-		var obj4 map[string]interface{}
-		err = extractJSONRes(res4, &obj4)
-		assert.NoError(t, err)
-		data4 := obj4["data"].(map[string]interface{})
-		attrs4 := data4["attributes"].(map[string]interface{})
-		meta4 := attrs4["metadata"].(map[string]interface{})
-		assert.NotNil(t, meta4["label"])
-		assert.Nil(t, meta4["qualification"])
-		assert.Nil(t, meta4["carbonCopy"])
-		assert.Nil(t, meta4["electronicSafe"])
+      }`)).
+			Expect().Status(200)
+
+		// Push overide the attributes push by the the last call.
+		obj := e.POST("/files/"+fileID+"/versions").
+			WithQuery("Tags", "qux").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.files.metadata",
+          "attributes": { "label": "bar" }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Ensure that only the last attributres remains
+		meta := obj.Path("$.data.attributes.metadata").Object()
+		meta.ContainsKey("label")
+		meta.NotContainsKey("qualification")
+		meta.NotContainsKey("carbonCopy")
+		meta.NotContainsKey("electronicSafe")
 	})
 
 	t.Run("CopyVersionWorksForNotes", func(t *testing.T) {
-		content := "# Title\n\n* foo\n* bar\n"
-		u := "/files/?Type=file&Name=test.cozy-note"
-		res, body := upload(t, u, consts.NoteMimeType, content, "")
-		assert.Equal(t, 201, res.StatusCode)
-		data := body["data"].(map[string]interface{})
-		fileID := data["id"].(string)
-		attrs := data["attributes"].(map[string]interface{})
-		meta := attrs["metadata"].(map[string]interface{})
-		assert.NotNil(t, meta["title"])
-		assert.NotNil(t, meta["content"])
-		assert.NotNil(t, meta["schema"])
-		assert.NotNil(t, meta["version"])
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		buf := strings.NewReader(`{
-    "data": {
-        "type": "io.cozy.files.metadata",
-        "attributes": {
-			"qualification": { "purpose": "attestation" }
+		// Upload a file note.
+		obj := e.POST("/files/").
+			WithQuery("Name", "test.cozy-note").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", consts.NoteMimeType).
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("# Title\n\n* foo\n* bar\n")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		meta1 := obj.Path("$.data.attributes.metadata").Object()
+		meta1.ContainsKey("title")
+		meta1.ContainsKey("content")
+		meta1.ContainsKey("schema")
+		meta1.ContainsKey("version")
+
+		// Update the metadatas.
+		obj = e.POST("/files/"+fileID+"/versions").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+          "qualification": { "purpose": "attestation" }
+            }
         }
-    }
-}`)
-		req2, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions", buf)
-		req2.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-		res2, err := http.DefaultClient.Do(req2)
-		assert.NoError(t, err)
-		defer res2.Body.Close()
-		assert.Equal(t, 200, res2.StatusCode)
-		var obj2 map[string]interface{}
-		err = extractJSONRes(res2, &obj2)
-		assert.NoError(t, err)
-		data2 := obj2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		meta2 := attrs2["metadata"].(map[string]interface{})
-		assert.NotNil(t, meta2["qualification"])
-		assert.Equal(t, meta["title"], meta2["title"])
-		assert.Equal(t, meta["content"], meta2["content"])
-		assert.Equal(t, meta["schema"], meta2["schema"])
-		assert.Equal(t, meta["version"], meta2["version"])
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta := obj.Path("$.data.attributes.metadata").Object()
+		meta.ValueEqual("title", meta1.Value("title").Raw())
+		meta.ValueEqual("content", meta1.Value("content").Raw())
+		meta.ValueEqual("schema", meta1.Value("schema").Raw())
+		meta.ValueEqual("version", meta1.Value("version").Raw())
 	})
 
 	t.Run("ArchiveNoFiles", func(t *testing.T) {
-		body := bytes.NewBufferString(`{
-		"data": {
-			"attributes": {}
-		}
-	}`)
-		req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-		require.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, 400, res.StatusCode)
-		msg, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		actual := strings.TrimSpace(string(msg))
-		assert.Equal(t, `"Can't create an archive with no files"`, actual)
+		e.POST("/files/archive").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {}
+        }
+      }`)).
+			Expect().Status(400).
+			JSON().Equal("Can't create an archive with no files")
 	})
 
 	t.Run("ArchiveDirectDownload", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=archive&Type=directory")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/archive"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "archive").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Create the 3 empty files "/archive/{foo,bar,baz}"
 		names := []string{"foo", "bar", "baz"}
 		for _, name := range names {
-			res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
-			require.Equal(t, 201, res2.StatusCode)
+			e.POST("/files/"+dirID).
+				WithQuery("Name", name+".jpg").
+				WithQuery("Type", "file").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(201)
 		}
 
-		// direct download
-		body := bytes.NewBufferString(`{
-		"data": {
-			"attributes": {
-				"files": [
-					"/archive/foo.jpg",
-					"/archive/bar.jpg",
-					"/archive/baz.jpg"
-				]
-			}
-		}
-	}`)
-
-		req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		req.Header.Add("Content-Type", "application/zip")
-		req.Header.Add("Accept", "application/zip")
-		assert.NoError(t, err)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
+		// Archive several files in a single call and receive a zip file.
+		e.POST("/files/archive").
+			WithHeader("Content-Type", "application/zip").
+			WithHeader("Accept", "application/zip").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {
+            "files": [
+            "/archive/foo.jpg",
+            "/archive/bar.jpg",
+            "/archive/baz.jpg"
+            ]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			Header("Content-Type").Equal("application/zip")
 	})
 
 	t.Run("ArchiveCreateAndDownload", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=archive2&Type=directory")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/archive2"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "archive2").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Create the 3 empty files "/archive/{foo,bar,baz}"
 		names := []string{"foo", "bar", "baz"}
 		for _, name := range names {
-			res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
-			require.Equal(t, 201, res2.StatusCode)
+			e.POST("/files/"+dirID).
+				WithQuery("Name", name+".jpg").
+				WithQuery("Type", "file").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(201)
 		}
 
-		body := bytes.NewBufferString(`{
-		"data": {
-			"attributes": {
-				"files": [
-					"/archive/foo.jpg",
-					"/archive/bar.jpg",
-					"/archive/baz.jpg"
-				]
-			}
-		}
-	}`)
+		// Archive several files in a single call
+		related := e.POST("/files/archive").
+			WithHeader("Content-Type", "application/zip").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {
+            "files": [
+            "/archive/foo.jpg",
+            "/archive/bar.jpg",
+            "/archive/baz.jpg"
+            ]
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
 
-		req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-		require.NoError(t, err)
-
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var data map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&data)
-		assert.NoError(t, err)
-
-		downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
-		res2, err := httpGet(downloadURL)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res2.StatusCode)
-		disposition := res2.Header.Get("Content-Disposition")
-		assert.Equal(t, `attachment; filename="archive.zip"`, disposition)
+		// Fetch the the file preview in order to check if it's accessible.
+		e.GET(related).
+			Expect().Status(200).
+			Header("Content-Disposition").Equal(`attachment; filename="archive.zip"`)
 	})
 
 	t.Run("FileCreateAndDownloadByPath", func(t *testing.T) {
-		body := "foo,bar"
-		res1, _ := upload(t, "/files/?Type=file&Name=todownload2steps", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		path := "/todownload2steps"
+		// Create the file "/todownload2steps"
+		e.POST("/files/").
+			WithQuery("Name", "todownload2steps").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201)
 
-		req, err := http.NewRequest("POST", ts.URL+"/files/downloads?Path="+path, nil)
-		require.NoError(t, err)
+		// Start the download in two steps by requiring the url
+		related := e.POST("/files/downloads").
+			WithQuery("Path", "/todownload2steps").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
 
-		req.Header.Add("Content-Type", "")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		// Fetch the display url.
+		e.GET(related).
+			Expect().Status(200).
+			Header("Content-Disposition").Equal(`inline; filename="todownload2steps"`)
 
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var data map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&data)
-		assert.NoError(t, err)
-
-		displayURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
-		res2, err := http.Get(displayURL)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res2.StatusCode)
-		disposition := res2.Header.Get("Content-Disposition")
-		assert.Equal(t, `inline; filename="todownload2steps"`, disposition)
-
-		downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string) + "?Dl=1"
-		res3, err := http.Get(downloadURL)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res3.StatusCode)
-		disposition = res3.Header.Get("Content-Disposition")
-		assert.Equal(t, `attachment; filename="todownload2steps"`, disposition)
+		// Fetch the display url with the Dl query returning an attachment instead of an inline file.
+		e.GET(related).
+			WithQuery("Dl", "1").
+			Expect().Status(200).
+			Header("Content-Disposition").Equal(`attachment; filename="todownload2steps"`)
 	})
 
 	t.Run("FileCreateAndDownloadByID", func(t *testing.T) {
-		body := "foo,bar"
-		res1, v := upload(t, "/files/?Type=file&Name=todownload2stepsbis", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		id := v["data"].(map[string]interface{})["id"].(string)
+		// Create the file "/todownload2steps"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "todownload2stepsbis").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		req, err := http.NewRequest("POST", ts.URL+"/files/downloads?Id="+id, nil)
-		require.NoError(t, err)
+		// Start the download in two steps by requiring the url
+		related := e.POST("/files/downloads").
+			WithQuery("Id", fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
 
-		req.Header.Add("Content-Type", "")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var data map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&data)
-		assert.NoError(t, err)
-
-		displayURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
-		res2, err := http.Get(displayURL)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res2.StatusCode)
-		disposition := res2.Header.Get("Content-Disposition")
-		assert.Equal(t, `inline; filename="todownload2stepsbis"`, disposition)
+		// Fetch the display url.
+		e.GET(related).
+			Expect().Status(200).
+			Header("Content-Disposition").Equal(`inline; filename="todownload2stepsbis"`)
 	})
 
 	t.Run("EncryptedFileCreate", func(t *testing.T) {
-		res1, data1 := upload(t, "/files/?Type=file&Name=encryptedfile&Encrypted=true", "text/plain", "foo", "")
-		assert.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		var ok bool
-		resData, ok := data1["data"].(map[string]interface{})
-		assert.True(t, ok)
+		// Create the file "/todownload2steps"
+		obj := e.POST("/files/").
+			WithQuery("Name", "encryptedfile").
+			WithQuery("Type", "file").
+			WithQuery("Encrypted", true).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		attrs := resData["attributes"].(map[string]interface{})
-		assert.Equal(t, attrs["name"].(string), "encryptedfile")
-		assert.True(t, attrs["encrypted"].(bool))
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("name", "encryptedfile")
+		attrs.ValueEqual("encrypted", true)
 	})
 
 	t.Run("HeadDirOrFileNotFound", func(t *testing.T) {
-		req, _ := http.NewRequest("HEAD", ts.URL+"/files/fakeid/?Type=directory", strings.NewReader(""))
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 404, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.HEAD("/files/fakeid").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404)
 	})
 
 	t.Run("HeadDirOrFileExists", func(t *testing.T) {
-		res, _ := createDir(t, "/files/?Name=hellothere&Type=directory")
-		assert.Equal(t, 201, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		storage := testInstance.VFS()
-		dir, err := storage.DirByPath("/hellothere")
-		assert.NoError(t, err)
-		id := dir.ID()
-		req, _ := http.NewRequest("HEAD", ts.URL+"/files/"+id+"?Type=directory", strings.NewReader(""))
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		// Create the dir "/hellothere"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "hellothere").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		e.HEAD("/files/"+dirID).
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("ArchiveNotFound", func(t *testing.T) {
-		body := bytes.NewBufferString(`{
-		"data": {
-			"attributes": {
-				"files": [
-					"/archive/foo.jpg",
-					"/no/such/file",
-					"/archive/baz.jpg"
-				]
-			}
-		}
-	}`)
-		req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-		require.NoError(t, err)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		req.Header.Add("Content-Type", "application/vnd.api+json")
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		assert.Equal(t, 404, res.StatusCode)
+		e.POST("/files/archive").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {
+            "files": [
+              "/archive/foo.jpg",
+              "/no/such/file",
+              "/archive/baz.jpg"
+            ]
+          }
+        }
+      }`)).
+			Expect().Status(404)
 	})
 
 	t.Run("DirTrash", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=directory")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/totrashdir"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "totrashdir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, _ := createDir(t, "/files/"+dirID+"?Name=child1&Type=file")
-		require.Equal(t, 201, res2.StatusCode)
+		// Create the file "/totrashdir/child1"
+		e.POST("/files/"+dirID).
+			WithQuery("Name", "child1").
+			WithQuery("Type", "file").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
-		res3, _ := createDir(t, "/files/"+dirID+"?Name=child2&Type=file")
-		require.Equal(t, 201, res3.StatusCode)
+		// Create the file "/totrashdir/child2"
+		e.POST("/files/"+dirID).
+			WithQuery("Name", "child2").
+			WithQuery("Type", "file").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
-		res4, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res4.StatusCode)
+		// Trash "/totrashdir"
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res5, err := httpGet(ts.URL + "/files/" + dirID)
-		require.NoError(t, err)
-		require.Equal(t, 200, res5.StatusCode)
+		// Get "/totrashdir"
+		e.GET("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res6, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child1"))
-		require.NoError(t, err)
-		require.Equal(t, 200, res6.StatusCode)
+		// Get "/totrashdir/child1" from the trash
+		e.GET("/files/download").
+			WithQuery("Path", vfs.TrashDirName+"/totrashdir/child1").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child2"))
-		require.NoError(t, err)
-		require.Equal(t, 200, res7.StatusCode)
+		// Get "/totrashdir/child2" from the trash
+		e.GET("/files/download").
+			WithQuery("Path", vfs.TrashDirName+"/totrashdir/child2").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res8, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 400, res8.StatusCode)
+		// Trash again "/totrashdir" and fail
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(400)
 	})
 
 	t.Run("FileTrash", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID, _ := extractDirData(t, data1)
+		// Create the file "/totrashfile"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "totrashfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res3, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-		require.NoError(t, err)
-		require.Equal(t, 200, res3.StatusCode)
+		// Get the file from the trash
+		e.GET("/files/download").
+			WithQuery("Path", vfs.TrashDirName+"/totrashfile").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res4, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 400, res4.StatusCode)
+		// Create the file "/totrashfile2"
+		obj := e.POST("/files/").
+			WithQuery("Name", "totrashfile2").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		res5, data2 := upload(t, "/files/?Type=file&Name=totrashfile2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res5.StatusCode)
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+		rev := obj.Path("$.data.meta.rev").String().NotEmpty().Raw()
 
-		fileID, v2 := extractDirData(t, data2)
-		meta2 := v2["meta"].(map[string]interface{})
-		rev2 := meta2["rev"].(string)
+		// Trash the file with an invalid rev
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("If-Match", "badrev"). // Invalid
+			Expect().Status(412)
 
-		req6, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
-		req6.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
+		// Trash the file with a valid rev
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("If-Match", rev).
+			Expect().Status(200)
 
-		req6.Header.Add("If-Match", "badrev")
-		res6, err := http.DefaultClient.Do(req6)
-		assert.NoError(t, err)
-		assert.Equal(t, 412, res6.StatusCode)
-
-		res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
-		require.NoError(t, err)
-		require.Equal(t, 200, res7.StatusCode)
-
-		req8, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
-		req8.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		assert.NoError(t, err)
-
-		req8.Header.Add("If-Match", rev2)
-		res8, err := http.DefaultClient.Do(req8)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res8.StatusCode)
-
-		res9, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 400, res9.StatusCode)
+		// Try to trash an the already trashed file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(400)
 	})
 
 	t.Run("ForbidMovingTrashedFile", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=forbidmovingtrashedfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID, _ := extractDirData(t, data1)
-		res2, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Create the file "/forbidmovingtrashedfile"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "forbidmovingtrashedfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		attrs := map[string]interface{}{
-			"dir_id": consts.RootDirID,
-		}
-		res3, _ := patchFile(t, "/files/"+fileID, "file", fileID, attrs, nil)
-		assert.Equal(t, 400, res3.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		// Try to patch a trashed file.
+		e.PATCH("/files/"+fileID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + fileID + `",
+          "attributes": { "dir_id": "` + consts.RootDirID + `" }
+        }
+      }`)).
+			Expect().Status(400)
 	})
 
 	t.Run("FileRestore", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=torestorefile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID, _ := extractDirData(t, data1)
+		// Create the file "/torestorefile"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "torestorefile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, body2 := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().True()
 
-		data2 := body2["data"].(map[string]interface{})
-		attrs2 := data2["attributes"].(map[string]interface{})
-		trashed := attrs2["trashed"].(bool)
-		assert.True(t, trashed)
+		// Restore the file
+		e.POST("/files/trash/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().False()
 
-		res3, body3 := restore(t, "/files/trash/"+fileID)
-		require.Equal(t, 200, res3.StatusCode)
-
-		data3 := body3["data"].(map[string]interface{})
-		attrs3 := data3["attributes"].(map[string]interface{})
-		trashed = attrs3["trashed"].(bool)
-		assert.False(t, trashed)
-
-		res4, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape("/torestorefile"))
-		require.NoError(t, err)
-		require.Equal(t, 200, res4.StatusCode)
+		// Download the file.
+		e.GET("/files/download").
+			WithQuery("Path", "/torestorefile").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 
 	t.Run("FileRestoreWithConflicts", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID, _ := extractDirData(t, data1)
+		// Create the file "/torestorefilewithconflict"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "torestorefilewithconflict").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res1, _ = upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		// Create a new file "/torestorefilewithconflict" while the old one is
+		// in the trash
+		e.POST("/files/").
+			WithQuery("Name", "torestorefilewithconflict").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201)
 
-		res3, data3 := restore(t, "/files/trash/"+fileID)
-		require.Equal(t, 200, res3.StatusCode)
+		// Restore the trashed file
+		obj := e.POST("/files/trash/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		restoredID, restoredData := extractDirData(t, data3)
-		require.Equal(t, fileID, restoredID)
-
-		restoredData = restoredData["attributes"].(map[string]interface{})
-		assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestorefilewithconflict"))
-		assert.NotEqual(t, "torestorefilewithconflict", restoredData["name"].(string))
+			// The file should be restore but with a new name.
+		obj.Path("$.data.id").Equal(fileID)
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.Value("name").String().HasPrefix("torestorefilewithconflict")
+		attrs.Value("name").String().NotEqual("torestorefilewithconflict")
 	})
 
 	t.Run("FileRestoreWithWithoutParent", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/torestorein"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "torestorein").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		body := "foo,bar"
-		res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		// Create the file "/torestorein/torestorefilewithconflict"
+		fileID = e.POST("/files/"+dirID).
+			WithQuery("Name", "torestorefilewithconflict").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, _ := extractDirData(t, data1)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res2, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res2, _ = trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Restore the file without the dir
+		obj := e.POST("/files/trash/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		res3, data3 := restore(t, "/files/trash/"+fileID)
-		require.Equal(t, 200, res3.StatusCode)
-
-		restoredID, restoredData := extractDirData(t, data3)
-		require.Equal(t, fileID, restoredID)
-
-		restoredData = restoredData["attributes"].(map[string]interface{})
-		assert.Equal(t, "torestorefilewithconflict", restoredData["name"].(string))
-		assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("name", "torestorefilewithconflict")
+		attrs.NotValueEqual("dir_id", consts.RootDirID)
 	})
 
 	t.Run("FileRestoreWithWithoutParent2", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein2")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/torestorein2"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "torestorein2").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		body := "foo,bar"
-		res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		// Create the file "/torestorein2/torestorefilewithconflict2"
+		fileID = e.POST("/files/"+dirID).
+			WithQuery("Name", "torestorefilewithconflict2").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, _ := extractDirData(t, data1)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res2, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Restore the file deleted with the dir
+		obj := e.POST("/files/trash/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		res3, data3 := restore(t, "/files/trash/"+fileID)
-		require.Equal(t, 200, res3.StatusCode)
-
-		restoredID, restoredData := extractDirData(t, data3)
-		require.Equal(t, fileID, restoredID)
-
-		restoredData = restoredData["attributes"].(map[string]interface{})
-		assert.Equal(t, "torestorefilewithconflict2", restoredData["name"].(string))
-		assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.ValueEqual("name", "torestorefilewithconflict2")
+		attrs.NotValueEqual("dir_id", consts.RootDirID)
 	})
 
 	t.Run("DirRestore", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredir")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/torestorein3"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "torestorein3").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		body := "foo,bar"
-		res2, data2 := upload(t, "/files/"+dirID+"?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res2.StatusCode)
+		// Create the file "/torestorein3/totrashfile"
+		fileID = e.POST("/files/"+dirID).
+			WithQuery("Name", "totrashfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		fileID, _ := extractDirData(t, data2)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res3, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res3.StatusCode)
+		// Get that the file is marked as trashed.
+		e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.attributes.trashed").Boolean().True()
 
-		res4, err := httpGet(ts.URL + "/files/" + fileID)
-		require.NoError(t, err)
-		require.Equal(t, 200, res4.StatusCode)
+		// Restore the dir.
+		e.POST("/files/trash/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		var v map[string]interface{}
-		err = extractJSONRes(res4, &v)
-		assert.NoError(t, err)
-		data := v["data"].(map[string]interface{})
-		attrs := data["attributes"].(map[string]interface{})
-		trashed := attrs["trashed"].(bool)
-		assert.True(t, trashed)
-
-		res5, _ := restore(t, "/files/trash/"+dirID)
-		require.Equal(t, 200, res5.StatusCode)
-
-		res6, err := httpGet(ts.URL + "/files/" + fileID)
-		require.NoError(t, err)
-		require.Equal(t, 200, res6.StatusCode)
-
-		err = extractJSONRes(res6, &v)
-		assert.NoError(t, err)
-		data = v["data"].(map[string]interface{})
-		attrs = data["attributes"].(map[string]interface{})
-		trashed = attrs["trashed"].(bool)
-		assert.False(t, trashed)
+		// Get that the file is not marked as trashed.
+		e.GET("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.attributes.trashed").Boolean().False()
 	})
 
 	t.Run("DirRestoreWithConflicts", func(t *testing.T) {
-		res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		dirID, _ := extractDirData(t, data1)
+		// Create the dir "/torestoredirwithconflict"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "torestoredirwithconflict").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res2, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res2.StatusCode)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res1, _ = createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
-		require.Equal(t, 201, res1.StatusCode)
+		// Create a new dir with the same name
+		e.POST("/files/").
+			WithQuery("Name", "torestoredirwithconflict").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201)
 
-		res3, data3 := restore(t, "/files/trash/"+dirID)
-		require.Equal(t, 200, res3.StatusCode)
+		// Restore the deleted dir
+		obj := e.POST("/files/trash/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		restoredID, restoredData := extractDirData(t, data3)
-		require.Equal(t, dirID, restoredID)
-
-		restoredData = restoredData["attributes"].(map[string]interface{})
-		assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestoredirwithconflict"))
-		assert.NotEqual(t, "torestoredirwithconflict", restoredData["name"].(string))
+		attrs := obj.Path("$.data.attributes").Object()
+		attrs.Value("name").String().HasPrefix("torestoredirwithconflict")
+		attrs.Value("name").String().NotEqual("torestoredirwithconflict")
 	})
 
 	t.Run("TrashList", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-		require.Equal(t, 201, res2.StatusCode)
+		// Create the file "/tolistfile"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "tolistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		dirID, _ := extractDirData(t, data1)
-		fileID, _ := extractDirData(t, data2)
+		// Create the dir "/tolistdir"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "tolistdir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res3, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res3.StatusCode)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res4, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res4.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res5, err := httpGet(ts.URL + "/files/trash")
-		require.NoError(t, err)
-
-		defer res5.Body.Close()
-
-		var v struct {
-			Data []interface{} `json:"data"`
-		}
-
-		err = json.NewDecoder(res5.Body).Decode(&v)
-		require.NoError(t, err)
-
-		assert.True(t, len(v.Data) >= 2, "response should contains at least 2 items")
+		// Get the number of elements in trash
+		e.GET("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Value("data").Array().Length().Gt(2)
 	})
 
 	t.Run("TrashClear", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-		require.Equal(t, 201, res2.StatusCode)
+		// Check that the trash is not empty
+		e.GET("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Value("data").Array().Length().Gt(2)
 
-		dirID, _ := extractDirData(t, data1)
-		fileID, _ := extractDirData(t, data2)
+		// Empty the trash
+		e.DELETE("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
 
-		res3, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res3.StatusCode)
-
-		res4, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res4.StatusCode)
-
-		path := "/files/trash"
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		require.NoError(t, err)
-
-		_, err = http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		res5, err := httpGet(ts.URL + "/files/trash")
-		require.NoError(t, err)
-
-		defer res5.Body.Close()
-
-		var v struct {
-			Data []interface{} `json:"data"`
-		}
-
-		err = json.NewDecoder(res5.Body).Decode(&v)
-		require.NoError(t, err)
-
-		assert.True(t, len(v.Data) == 0)
+		// Check that the trash is empty
+		e.GET("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Value("data").Array().Length().Equal(0)
 	})
 
 	t.Run("DestroyFile", func(t *testing.T) {
-		body := "foo,bar"
-		res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
-		require.Equal(t, 201, res1.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
-		require.Equal(t, 201, res2.StatusCode)
+		// Create the file "/tolistfile"
+		fileID = e.POST("/files/").
+			WithQuery("Name", "tolistfile").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		dirID, _ := extractDirData(t, data1)
-		fileID, _ := extractDirData(t, data2)
+		// Create the dir "/tolistdir"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "tolistdir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		res3, _ := trash(t, "/files/"+dirID)
-		require.Equal(t, 200, res3.StatusCode)
+		// Trash the dir
+		e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		res4, _ := trash(t, "/files/"+fileID)
-		require.Equal(t, 200, res4.StatusCode)
+		// Trash the file
+		e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 
-		path := "/files/trash/" + fileID
-		req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		require.NoError(t, err)
+		// Destroy the file
+		e.DELETE("/files/trash/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
 
-		_, err = http.DefaultClient.Do(req)
-		require.NoError(t, err)
+		// List the elements in trash
+		e.GET("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Value("data").Array().Length().Equal(1)
 
-		res5, err := httpGet(ts.URL + "/files/trash")
-		require.NoError(t, err)
+		// Detroy the dir
+		e.DELETE("/files/trash/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(204)
 
-		defer res5.Body.Close()
-
-		var v struct {
-			Data []interface{} `json:"data"`
-		}
-
-		err = json.NewDecoder(res5.Body).Decode(&v)
-		require.NoError(t, err)
-
-		assert.True(t, len(v.Data) == 1)
-
-		path = "/files/trash/" + dirID
-		req, err = http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		require.NoError(t, err)
-
-		_, err = http.DefaultClient.Do(req)
-		require.NoError(t, err)
-
-		res5, err = httpGet(ts.URL + "/files/trash")
-		require.NoError(t, err)
-
-		defer res5.Body.Close()
-
-		err = json.NewDecoder(res5.Body).Decode(&v)
-		require.NoError(t, err)
-
-		assert.True(t, len(v.Data) == 0)
+		// List the elements in trash, should be empty
+		e.GET("/files/trash").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Value("data").Array().Length().Equal(0)
 	})
 
 	t.Run("ThumbnailImages", func(t *testing.T) {
-		res1, _ := httpGet(ts.URL + "/files/" + imgID)
-		assert.Equal(t, 200, res1.StatusCode)
-		var obj map[string]interface{}
-		err := extractJSONRes(res1, &obj)
-		assert.NoError(t, err)
-		data := obj["data"].(map[string]interface{})
-		links := data["links"].(map[string]interface{})
-		large := links["large"].(string)
-		medium := links["medium"].(string)
-		small := links["small"].(string)
-		tiny := links["tiny"].(string)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		res2, _ := download(t, large, "")
-		assert.Equal(t, 200, res2.StatusCode)
-		assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "image/jpeg"))
-		res3, _ := download(t, medium, "")
-		assert.Equal(t, 200, res3.StatusCode)
-		assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "image/jpeg"))
-		res4, _ := download(t, small, "")
-		assert.Equal(t, 200, res4.StatusCode)
-		assert.True(t, strings.HasPrefix(res4.Header.Get("Content-Type"), "image/jpeg"))
-		res5, _ := download(t, tiny, "")
-		assert.Equal(t, 200, res5.StatusCode)
-		assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "image/jpeg"))
+		// Get the image file infos.
+		obj := e.GET("/files/"+imgID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+			// Retrieve the thumbnail links
+		links := obj.Path("$.data.links").Object()
+		large := links.Value("large").String().NotEmpty().Raw()
+		medium := links.Value("medium").String().NotEmpty().Raw()
+		small := links.Value("small").String().NotEmpty().Raw()
+		tiny := links.Value("tiny").String().NotEmpty().Raw()
+
+		// Test the large thumbnail
+		e.GET(large).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
+
+		// Test the medium thumbnail
+		e.GET(medium).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
+
+		// Test the small thumbnail
+		e.GET(small).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
+
+		// Test the tiny thumbnail
+		e.GET(tiny).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
 	})
 
 	t.Run("ThumbnailPDFs", func(t *testing.T) {
-		if testing.Short() {
-			return
-		}
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		f, err := os.Open("../../tests/fixtures/dev-desktop.pdf")
-		assert.NoError(t, err)
-		defer f.Close()
-		req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=dev-desktop.pdf", f)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, obj := doUploadOrMod(t, req, "application/pdf", "")
-		assert.Equal(t, 201, res.StatusCode)
-		data := obj["data"].(map[string]interface{})
-		pdfID := data["id"].(string)
+		rawPDF, err := os.ReadFile("../../tests/fixtures/dev-desktop.pdf")
+		require.NoError(t, err)
 
-		res2, _ := httpGet(ts.URL + "/files/" + pdfID)
-		assert.Equal(t, 200, res2.StatusCode)
-		var obj2 map[string]interface{}
-		err = extractJSONRes(res2, &obj2)
-		assert.NoError(t, err)
-		data2 := obj2["data"].(map[string]interface{})
-		links := data2["links"].(map[string]interface{})
-		large := links["large"].(string)
-		medium := links["medium"].(string)
-		small := links["small"].(string)
-		tiny := links["tiny"].(string)
+		// Upload a PDF file
+		pdfID := e.POST("/files/").
+			WithQuery("Name", "dev-desktop.pdf").
+			WithQuery("Type", "file").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/pdf").
+			WithBytes(rawPDF).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.id").String().NotEmpty().Raw()
+
+		// Get the PDF file
+		obj := e.GET("/files/"+pdfID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+			// Retrieve the thumbnail links
+		links := obj.Path("$.data.links").Object()
+		large := links.Value("large").String().NotEmpty().Raw()
+		medium := links.Value("medium").String().NotEmpty().Raw()
+		small := links.Value("small").String().NotEmpty().Raw()
+		tiny := links.Value("tiny").String().NotEmpty().Raw()
 
 		// Large, medium, and small are not generated automatically
-		res3, _ := download(t, large, "")
-		assert.Equal(t, 404, res3.StatusCode)
-		assert.Equal(t, res3.Header.Get("Content-Type"), "image/png")
-		res4, _ := download(t, medium, "")
-		assert.Equal(t, 404, res4.StatusCode)
-		assert.Equal(t, res4.Header.Get("Content-Type"), "image/png")
-		res5, _ := download(t, small, "")
-		assert.Equal(t, 404, res5.StatusCode)
-		assert.Equal(t, res5.Header.Get("Content-Type"), "image/png")
+		e.GET(large).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404).
+			Header("Content-Type").Equal("image/png")
+		e.GET(medium).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404).
+			Header("Content-Type").Equal("image/png")
+		e.GET(small).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(404).
+			Header("Content-Type").Equal("image/png")
 
 		// Wait for tiny thumbnail generation
 		time.Sleep(1 * time.Second)
 
-		res6, _ := download(t, tiny, "")
-		assert.Equal(t, 200, res6.StatusCode)
-		assert.Equal(t, res6.Header.Get("Content-Type"), "image/jpeg")
+		// Test the tiny thumbnail
+		e.GET(tiny).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
 
 		// Wait for other thumbnails generation
 		time.Sleep(2 * time.Second)
 
-		res7, _ := download(t, large, "")
-		assert.Equal(t, 200, res7.StatusCode)
-		assert.Equal(t, res7.Header.Get("Content-Type"), "image/jpeg")
-		res8, _ := download(t, medium, "")
-		assert.Equal(t, 200, res8.StatusCode)
-		assert.Equal(t, res8.Header.Get("Content-Type"), "image/jpeg")
-		res9, _ := download(t, small, "")
-		assert.Equal(t, 200, res9.StatusCode)
-		assert.Equal(t, res9.Header.Get("Content-Type"), "image/jpeg")
+		e.GET(large).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
+		e.GET(medium).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
+		e.GET(small).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Header("Content-Type").Equal("image/jpeg")
 	})
 
 	t.Run("GetFileByPublicLink", func(t *testing.T) {
+		var publicToken string
 		var err error
-		body := "foo"
-		res1, filedata := upload(t, "/files/?Type=file&Name=publicfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-		assert.Equal(t, 201, res1.StatusCode)
 
-		var ok bool
-		filedata, ok = filedata["data"].(map[string]interface{})
-		assert.True(t, ok)
+		t.Run("success", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		fileID, ok = filedata["id"].(string)
-		assert.True(t, ok)
+			// Upload a file
+			fileID = e.POST("/files/").
+				WithQuery("Name", "publicfile").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "application/pdf").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.id").String().NotEmpty().Raw()
 
-		// Generating a new token
-		publicToken, err = testInstance.MakeJWT(consts.ShareAudience, "email", "io.cozy.files", "", time.Now())
-		assert.NoError(t, err)
+			// Generating a new token
+			publicToken, err = testInstance.MakeJWT(consts.ShareAudience, "email", "io.cozy.files", "", time.Now())
+			require.NoError(t, err)
 
-		expires := time.Now().Add(2 * time.Minute)
-		rules := permission.Set{
-			permission.Rule{
-				Type:   "io.cozy.files",
-				Verbs:  permission.Verbs(permission.GET),
-				Values: []string{fileID},
-			},
-		}
-		perms := permission.Permission{
-			Permissions: rules,
-		}
-		_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, perms, &expires)
-		assert.NoError(t, err)
+			expires := time.Now().Add(2 * time.Minute)
+			rules := permission.Set{
+				permission.Rule{
+					Type:   "io.cozy.files",
+					Verbs:  permission.Verbs(permission.GET),
+					Values: []string{fileID},
+				},
+			}
+			perms := permission.Permission{
+				Permissions: rules,
+			}
+			_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, perms, &expires)
+			require.NoError(t, err)
 
-		req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+publicToken)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-	})
+			// Use the public token to get the file
+			e.GET("/files/"+fileID).
+				WithHeader("Authorization", "Bearer "+publicToken).
+				Expect().Status(200)
+		})
 
-	t.Run("GetFileByPublicLinkRateExceeded", func(t *testing.T) {
-		var err error
-		// Blocking the file by accessing it a lot of times
-		for i := 0; i < 1999; i++ {
+		t.Run("GetFileByPublicLinkRateExceeded", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			// Blocking the file by accessing it a lot of times
+			for i := 0; i < 1999; i++ {
+				err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+				assert.NoError(t, err)
+			}
+
 			err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
-			assert.NoError(t, err)
-		}
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "Rate limit reached")
 
-		err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Rate limit reached")
-		req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
-		assert.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+publicToken)
-
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 500, res.StatusCode)
-		resbody, err := io.ReadAll(res.Body)
-		assert.NoError(t, err)
-		assert.Contains(t, string(resbody), "Rate limit exceeded")
+			e.GET("/files/"+fileID).
+				WithHeader("Authorization", "Bearer "+publicToken).
+				Expect().Status(500).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Equal("Rate limit exceeded")
+		})
 	})
 
 	t.Run("Find", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		type M map[string]interface{}
 		type S []interface{}
 
@@ -2487,246 +3212,274 @@ func TestFiles(t *testing.T) {
 		_, err = couchdb.DefineIndexRaw(testInstance, "io.cozy.files", &defIndex2)
 		assert.NoError(t, err)
 
-		query := strings.NewReader(`{
-		"selector": {
-			"type": "file"
-		},
-		"limit": 1
-	}`)
-		req, _ := http.NewRequest("POST", ts.URL+"/files/_find", query)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err := http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		var obj map[string]interface{}
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
+		obj := e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "selector": {
+          "type": "file"
+        },
+        "limit": 1
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		data := obj["data"].([]interface{})
-		meta := obj["meta"].(map[string]interface{})
-		if assert.Len(t, data, 1) {
-			doc := data[0].(map[string]interface{})
-			attrs := doc["attributes"].(map[string]interface{})
-			assert.NotEmpty(t, attrs["name"])
-			assert.NotEmpty(t, attrs["type"])
-			assert.NotEmpty(t, attrs["size"])
-			assert.NotEmpty(t, attrs["path"])
-		}
-		assert.NotNil(t, meta)
-		assert.Nil(t, meta["execution_stats"])
+		meta := obj.Value("meta").Object()
+		meta.NotEmpty()
+		meta.NotContainsKey("execution_stats")
 
-		query2 := strings.NewReader(`{
-		"selector": {
-			"_id": {
-				"$gt": null
-			}
-		},
-		"limit": 1,
-		"execution_stats": true
-	}`)
-		req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query2)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		data = obj["data"].([]interface{})
-		meta = obj["meta"].(map[string]interface{})
-		assert.Equal(t, len(data), 1)
-		id1 := data[0].(map[string]interface{})["id"]
-		assert.NotNil(t, meta)
-		assert.NotEmpty(t, meta["execution_stats"])
-		links := obj["links"].(map[string]interface{})
-		next := links["next"].(string)
+		data := obj.Value("data").Array()
+		data.Length().Equal(1)
 
-		query2 = strings.NewReader(`{
-		"selector": {
-			"_id": {
-				"$gt": null
-			}
-		},
-		"limit": 1,
-		"execution_stats": true
-	}`)
-		req, _ = http.NewRequest("POST", ts.URL+next, query2)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		data = obj["data"].([]interface{})
-		assert.Equal(t, len(data), 1)
-		id2 := data[0].(map[string]interface{})["id"]
-		assert.NotEqual(t, id1, id2)
+		attrs := data.First().Object().Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("type").String().NotEmpty()
+		attrs.Value("size").String().AsNumber(10)
+		attrs.Value("path").String().NotEmpty()
 
-		query3 := strings.NewReader(`{
-		"selector": {
-			"_id": {
-				"$gt": null
-			}
-		},
-		"fields": ["dir_id", "name", "name"],
-		"limit": 1
-	}`)
-		req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query3)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		obj = e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"_id": {
+						"$gt": null
+					}
+				},
+				"limit": 1,
+				"execution_stats": true
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		resData := obj["data"].([]interface{})
-		dataFields := resData[0].(map[string]interface{})
-		attrs := dataFields["attributes"].(map[string]interface{})
-		assert.NotEmpty(t, attrs["name"].(string))
-		assert.NotEmpty(t, attrs["dir_id"].(string))
-		assert.NotEmpty(t, attrs["type"].(string))
-		assert.Nil(t, attrs["path"])
-		assert.Nil(t, attrs["created_at"])
-		assert.Nil(t, attrs["updated_at"])
-		assert.Nil(t, attrs["tags"])
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
 
-		query4 := strings.NewReader(`{
-		"selector": {
-			"type": "file"
-		},
-		"fields": ["name"],
-		"limit": 1
-	}`)
-		req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query4)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		assert.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
-
-		err = extractJSONRes(res, &obj)
-		assert.NoError(t, err)
-		resData = obj["data"].([]interface{})
-		if assert.Len(t, resData, 1) {
-			dataFields = resData[0].(map[string]interface{})
-			attrs = dataFields["attributes"].(map[string]interface{})
-			assert.NotEmpty(t, attrs["name"].(string))
-			assert.NotEmpty(t, attrs["type"].(string))
-			assert.NotEmpty(t, attrs["size"].(string))
-			assert.False(t, attrs["trashed"].(bool))
-			assert.False(t, attrs["encrypted"].(bool))
-			assert.Nil(t, attrs["created_at"])
-			assert.Nil(t, attrs["updated_at"])
-			assert.Nil(t, attrs["tags"])
-			assert.Nil(t, attrs["executable"])
-			assert.Nil(t, attrs["dir_id"])
-			assert.Nil(t, attrs["path"])
-		}
-
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=aDirectoryWithReferencedBy")
-		dirdata, ok := dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-		dirID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
-		path := "/files/" + dirID + "/relationships/referenced_by"
-		content, err := json.Marshal(&jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   "fooalbumid",
-				Type: "io.cozy.photos.albums",
-			},
-		})
+		nextURL, err := url.Parse(obj.Path("$.links.next").String().NotEmpty().Raw())
 		require.NoError(t, err)
-		req, err = http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewReader(content))
-		require.NoError(t, err)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
 
-		query5 := strings.NewReader(`{
-		"selector": {
-			"name": "aDirectoryWithReferencedBy"
-		},
-		"limit": 1
-	}`)
-		req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query5)
-		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-		res, err = http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		assert.Equal(t, 200, res.StatusCode)
+		e.POST(nextURL.Path).
+			WithQueryString(nextURL.RawQuery).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"_id": {
+						"$gt": null
+					}
+				},
+				"limit": 1,
+				"execution_stats": true
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		err = extractJSONRes(res, &obj)
-		require.NoError(t, err)
-		resData = obj["data"].([]interface{})
-		require.Len(t, resData, 1)
-		dataFields = resData[0].(map[string]interface{})
-		attrs = dataFields["attributes"].(map[string]interface{})
-		assert.Equal(t, "aDirectoryWithReferencedBy", attrs["name"])
-		assert.NotEmpty(t, attrs["referenced_by"])
-		relationships, ok := dataFields["relationships"].(map[string]interface{})
-		require.True(t, ok)
-		referencedBy, ok := relationships["referenced_by"].(map[string]interface{})
-		require.True(t, ok)
-		dataRef, ok := referencedBy["data"].([]interface{})
-		require.True(t, ok)
-		require.Len(t, dataRef, 1)
-		ref := dataRef[0].(map[string]interface{})
-		assert.Equal(t, "fooalbumid", ref["id"])
-		assert.Equal(t, "io.cozy.photos.albums", ref["type"])
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
+
+		// Make a request with a whitelist of fields
+		obj = e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"_id": {
+						"$gt": null
+					}
+				},
+				"fields": ["dir_id", "name", "name"],
+				"limit": 1
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs = obj.Path("$.data[0].attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("dir_id").String().NotEmpty()
+		attrs.Value("type").String().NotEmpty()
+		attrs.NotContainsKey("path")
+		attrs.NotContainsKey("create_at")
+		attrs.NotContainsKey("updated_at")
+		attrs.NotContainsKey("tags")
+
+		obj = e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"type": "file"
+				},
+				"fields": ["name"],
+				"limit": 1
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
+
+		attrs = data.First().Object().Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("type").String().NotEmpty()
+		attrs.Value("size").String().AsNumber(10)
+		attrs.ValueEqual("trashed", false)
+		attrs.ValueEqual("encrypted", false)
+		attrs.NotContainsKey("created_at")
+		attrs.NotContainsKey("updated_at")
+		attrs.NotContainsKey("tags")
+		attrs.NotContainsKey("executable")
+		attrs.NotContainsKey("dir_id")
+		attrs.NotContainsKey("path")
+
+		// Create dir "/aDirectoryWithReferencedBy"
+		dirID := e.POST("/files/").
+			WithQuery("Name", "aDirectoryWithReferencedBy").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Create a reference
+		e.POST("/files/"+dirID+"/relationships/referenced_by").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "id": "fooalbumid",
+          "type": "io.cozy.photos.albums"
+        }
+      }`)).
+			Expect().Status(200)
+
+		obj = e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"name": "aDirectoryWithReferencedBy"
+				},
+				"limit": 1
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
+
+		elem := data.First().Object()
+
+		attrs = elem.Value("attributes").Object()
+		attrs.ValueEqual("name", "aDirectoryWithReferencedBy")
+		attrs.ContainsKey("referenced_by")
+
+		dataRefs := elem.Path("$.relationships.referenced_by.data").Array()
+		dataRefs.Length().Equal(1)
+		ref := dataRefs.First().Object()
+		ref.ValueEqual("id", "fooalbumid")
+		ref.ValueEqual("type", "io.cozy.photos.albums")
 	})
 
 	t.Run("DirSize", func(t *testing.T) {
-		_, dirdata := createDir(t, "/files/?Type=directory&Name=dirsizeparent")
-		dirdata, ok := dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-		parentID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		e := testutils.CreateTestClient(t, ts.URL)
 
-		_, dirdata = createDir(t, "/files/"+parentID+"?Type=directory&Name=dirsizesub")
-		dirdata, ok = dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-		subID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		parentID := e.POST("/files/").
+			WithQuery("Name", "dirsizeparent").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		_, dirdata = createDir(t, "/files/"+subID+"?Type=directory&Name=dirsizesubsub")
-		dirdata, ok = dirdata["data"].(map[string]interface{})
-		assert.True(t, ok)
-		subsubID, ok := dirdata["id"].(string)
-		assert.True(t, ok)
+		subID := e.POST("/files/"+parentID).
+			WithQuery("Name", "dirsizesub").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		nb := 10
-		body := "foo"
-		for i := 0; i < nb; i++ {
+		subsubID := e.POST("/files/"+subID).
+			WithQuery("Name", "dirsizesub").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		// Upload files into each folder 10 times.
+		for i := 0; i < 10; i++ {
 			name := "file" + strconv.Itoa(i)
-			upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-			upload(t, "/files/"+subID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
-			upload(t, "/files/"+subsubID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+
+			e.POST("/files/"+parentID).
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
+
+			e.POST("/files/"+subID).
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
+
+			e.POST("/files/"+subsubID).
+				WithQuery("Name", name).
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+token).
+				WithBytes([]byte("foo")).
+				Expect().Status(201)
 		}
 
-		var result struct {
-			Data struct {
-				Type       string
-				ID         string
-				Attributes struct {
-					Size string
-				}
-			}
-		}
-		err := getJSON(t, "/files/"+subsubID+"/size", &result)
-		assert.NoError(t, err)
-		assert.Equal(t, consts.DirSizes, result.Data.Type)
-		assert.Equal(t, subsubID, result.Data.ID)
-		assert.Equal(t, "30", result.Data.Attributes.Size)
+		// validate the subsub dir
+		obj := e.GET("/files/"+subsubID+"/size").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
 
-		err = getJSON(t, "/files/"+subID+"/size", &result)
-		assert.NoError(t, err)
-		assert.Equal(t, consts.DirSizes, result.Data.Type)
-		assert.Equal(t, subID, result.Data.ID)
-		assert.Equal(t, "60", result.Data.Attributes.Size)
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.DirSizes)
+		data.ValueEqual("id", subsubID)
+		data.Value("attributes").Object().ValueEqual("size", "30")
 
-		err = getJSON(t, "/files/"+parentID+"/size", &result)
-		assert.NoError(t, err)
-		assert.Equal(t, consts.DirSizes, result.Data.Type)
-		assert.Equal(t, parentID, result.Data.ID)
-		assert.Equal(t, "90", result.Data.Attributes.Size)
+		// validate the sub dir
+		obj = e.GET("/files/"+subID+"/size").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.ValueEqual("type", consts.DirSizes)
+		data.ValueEqual("id", subID)
+		data.Value("attributes").Object().ValueEqual("size", "60")
+
+		// validate the parent dir
+		obj = e.GET("/files/"+parentID+"/size").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.ValueEqual("type", consts.DirSizes)
+		data.ValueEqual("id", parentID)
+		data.Value("attributes").Object().ValueEqual("size", "90")
 	})
 
 	t.Run("DeprecatePreviewAndIcon", func(t *testing.T) {
@@ -2745,187 +3498,6 @@ func readFile(fs vfs.VFS, name string) ([]byte, error) {
 	}
 	defer f.Close()
 	return io.ReadAll(f)
-}
-
-func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
-	if res.StatusCode >= 300 {
-		return nil
-	}
-	return json.NewDecoder(res.Body).Decode(mp)
-}
-
-func createDir(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
-	req, err := http.NewRequest("POST", ts.URL+path, strings.NewReader(""))
-	require.NoError(t, err)
-
-	req.Header.Add("Content-Type", "text/plain")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	defer res.Body.Close()
-
-	err = extractJSONRes(res, &v)
-	assert.NoError(t, err)
-
-	return
-}
-
-func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (res *http.Response, v map[string]interface{}) {
-	var err error
-
-	if contentType != "" {
-		req.Header.Add("Content-Type", contentType)
-	}
-
-	if hash != "" {
-		req.Header.Add("Content-MD5", hash)
-	}
-
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	defer res.Body.Close()
-
-	err = extractJSONRes(res, &v)
-	assert.NoError(t, err)
-
-	return
-}
-
-func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	buf := strings.NewReader(body)
-	req, err := http.NewRequest("POST", ts.URL+path, buf)
-	require.NoError(t, err)
-
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	if strings.Contains(path, "Size=") {
-		req.ContentLength = -1
-	}
-	return doUploadOrMod(t, req, contentType, hash)
-}
-
-func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	buf := strings.NewReader(body)
-	req, err := http.NewRequest("PUT", ts.URL+path, buf)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	require.NoError(t, err)
-
-	return doUploadOrMod(t, req, contentType, hash)
-}
-
-func trash(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
-	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	require.NoError(t, err)
-
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	err = extractJSONRes(res, &v)
-	assert.NoError(t, err)
-
-	return
-}
-
-func restore(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
-	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	require.NoError(t, err)
-
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	err = extractJSONRes(res, &v)
-	assert.NoError(t, err)
-
-	return
-}
-
-func extractDirData(t *testing.T, data map[string]interface{}) (string, map[string]interface{}) {
-	var ok bool
-
-	data, ok = data["data"].(map[string]interface{})
-	if !assert.True(t, ok) {
-		return "", nil
-	}
-
-	id, ok := data["id"].(string)
-	if !assert.True(t, ok) {
-		return "", nil
-	}
-
-	return id, data
-}
-
-func patchFile(t *testing.T, path, docType, id string, attrs map[string]interface{}, parent *jsonData) (res *http.Response, v map[string]interface{}) {
-	bodyreq := &jsonData{
-		Type:  docType,
-		ID:    id,
-		Attrs: attrs,
-	}
-
-	if parent != nil {
-		bodyreq.Rels = map[string]interface{}{
-			"parent": map[string]interface{}{
-				"data": parent,
-			},
-		}
-	}
-
-	b, err := json.Marshal(map[string]*jsonData{"data": bodyreq})
-	require.NoError(t, err)
-
-	req, err := http.NewRequest("PATCH", ts.URL+path, bytes.NewReader(b))
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	require.NoError(t, err)
-
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	defer res.Body.Close()
-
-	err = extractJSONRes(res, &v)
-	assert.NoError(t, err)
-
-	return
-}
-
-func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
-	req, err := http.NewRequest("GET", ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	require.NoError(t, err)
-
-	if byteRange != "" {
-		req.Header.Add("Range", byteRange)
-	}
-
-	res, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	body, err = io.ReadAll(res.Body)
-	require.NoError(t, err)
-
-	return
-}
-
-func httpGet(url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	return http.DefaultClient.Do(req)
-}
-
-func httpPost(url string, body string) (*http.Response, error) {
-	req, err := http.NewRequest("POST", url, strings.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "text/plain")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	return http.DefaultClient.Do(req)
 }
 
 func loadLocale() error {
