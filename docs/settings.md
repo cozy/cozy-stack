@@ -486,7 +486,8 @@ Cookie: sessionid=xxxx
             "auto_update": true,
             "email": "alice@example.com",
             "public_name": "Alice Martin",
-            "auth_mode": "basic"
+            "auth_mode": "basic",
+            "default_redirection": "drive/#/folder"
         }
     }
 }
@@ -569,11 +570,15 @@ Authorization: Bearer settings-token
             "email": "alice@example.com",
             "public_name": "Alice Martin",
             "timezone": "Europe/Berlin",
-            "auth_mode": "two_factor_mail"
+            "auth_mode": "two_factor_mail",
+            "default_redirection": "drive/#/folder"
         }
     }
 }
 ```
+
+Note: the format for `default_redirection` is the application slug, followed by
+a slash, and then the route for the app (path + fragment).
 
 #### Response
 
@@ -595,7 +600,8 @@ Content-Type: application/json
             "email": "alice@example.com",
             "public_name": "Alice Martin",
             "timezone": "Europe/Berlin",
-            "auth_mode": "two_factor_mail"
+            "auth_mode": "two_factor_mail",
+            "default_redirection": "drive/#/folder"
         }
     }
 }
@@ -834,9 +840,9 @@ Cookie: sessionid=xxxx
         "type": "io.cozy.settings",
         "id": "io.cozy.settings.context",
         "attributes": {
-            "default_redirection": "drive/#/files",
+            "default_redirection": "drive/#/folder",
             "help_link": "https://forum.cozy.io/",
-            "onboarded_redirection": "collect/#/discovery/?intro"
+            "onboarded_redirection": "home/#/discovery/?intro"
         },
         "links": {
             "self": "/settings/context"
@@ -968,7 +974,7 @@ Content-Type: application/vnd.api+json
         "has_feature2": [{ "ratio": 0.1, "value": true }],
         "bar_config": [
           { "ratio": 0.2, "value": { "qux": "quux" } },
-          { "ratio": 0.8, "value": { "qux": "baz" } },
+          { "ratio": 0.8, "value": { "qux": "baz" } }
         ]
       }
     },
