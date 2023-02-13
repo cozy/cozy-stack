@@ -543,12 +543,6 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.OnboardingApp = ""
 	c.OnboardingPermissions = ""
 	c.OnboardingState = ""
-	if c.NotificationPlatform == "" {
-		c.NotificationPlatform = old.NotificationPlatform
-	}
-	if c.NotificationDeviceToken == "" {
-		c.NotificationDeviceToken = old.NotificationDeviceToken
-	}
 
 	c.Flagship = old.Flagship
 	c.CertifiedFromStore = old.CertifiedFromStore
