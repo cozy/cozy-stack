@@ -417,7 +417,7 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	if err = json.NewDecoder(res.Body).Decode(&success); err != nil {
 		return "", err
 	}
-	PersistInstanceURL(inst, success["email"], cozyURL, success["public_name"])
+	PersistInstanceURL(inst, success["email"], cozyURL)
 	return success["redirect"], nil
 }
 
@@ -442,7 +442,7 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 
 // PersistInstanceURL updates the io.cozy.contacts document with the Cozy
 // instance URL, and fills the fullname if it was missing.
-func PersistInstanceURL(inst *instance.Instance, email, cozyURL, name string) {
+func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
 	if email == "" || cozyURL == "" {
 		return
 	}
@@ -450,7 +450,6 @@ func PersistInstanceURL(inst *instance.Instance, email, cozyURL, name string) {
 	if err != nil {
 		return
 	}
-	c.FillFullnameIfMissing(name)
 	if err := c.AddCozyURL(inst, cozyURL); err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on saving contact: %s", err)

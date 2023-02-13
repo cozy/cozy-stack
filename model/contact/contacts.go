@@ -139,12 +139,19 @@ func (c *Contact) PrimaryCozyURL() string {
 	return url
 }
 
-// FillFullnameIfMissing can be used to add a fullname if there was none.
-func (c *Contact) FillFullnameIfMissing(fullname string) {
-	name, ok := c.Get("fullname").(string)
-	if !ok || len(name) == 0 {
-		c.M["fullname"] = fullname
+// AddNameIfMissing can be used to add a name if there was none.
+func (c *Contact) AddNameIfMissing(db prefixer.Prefixer, name string) error {
+	was, ok := c.Get("displayName").(string)
+	if ok && len(was) > 0 {
+		return nil
 	}
+	was, ok = c.Get("fullname").(string)
+	if ok && len(was) > 0 {
+		return nil
+	}
+	c.M["displayName"] = name
+	c.M["fullname"] = name
+	return couchdb.UpdateDoc(db, c)
 }
 
 // AddCozyURL adds a cozy URL to this contact (unless the contact has already
