@@ -395,7 +395,6 @@ contexts:
     reply_to: support@cozy.beta
     # Configure the error page
     support_address: support@cozy.beta
-    hide_button_on_app_not_found: true
     # Change the limit on the number of members for a sharing
     max_members_per_sharing: 50
     # Use a different wizard for moving a Cozy
