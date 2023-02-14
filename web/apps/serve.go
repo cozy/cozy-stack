@@ -103,39 +103,12 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 	if _, err := registry.GetApplication(slug, i.Registries()); err != nil {
 		return app.ErrNotFound
 	}
-
-	linkURL := i.DefaultRedirection().String()
-	link := "Error Application not found Action"
-	button := "Error Application not found Button"
-	if ctxSettings, ok := i.SettingsContext(); ok {
-		if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
-			link = ""
-			button = ""
-		}
+	if _, err := app.GetWebappBySlug(i, consts.StoreSlug); err != nil {
+		return app.ErrNotFound
 	}
-	var buttonURL string
-	if button != "" {
-		u := i.SubDomain(consts.StoreSlug)
-		u.Fragment = "/discover/" + slug
-		buttonURL = u.String()
-	}
-
-	return c.Render(http.StatusNotFound, "error.html", echo.Map{
-		"Domain":       i.ContextualDomain(),
-		"ContextName":  i.ContextName,
-		"Locale":       i.Locale,
-		"Title":        i.TemplateTitle(),
-		"ThemeCSS":     middlewares.ThemeCSS(i),
-		"Favicon":      middlewares.Favicon(i),
-		"Illustration": "/images/desert.svg",
-		"ErrorTitle":   "Error Application not installed Title",
-		"Error":        "Error Application not installed Message",
-		"Link":         link,
-		"LinkURL":      linkURL,
-		"Button":       button,
-		"ButtonURL":    buttonURL,
-		"SupportEmail": i.SupportEmailAddress(),
-	})
+	u := i.SubDomain(consts.StoreSlug)
+	u.Fragment = "/discover/" + slug
+	return c.Redirect(http.StatusTemporaryRedirect, u.String())
 }
 
 // handleIntent will allow iframes from another app if the current app is
