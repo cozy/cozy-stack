@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,35 +17,35 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var ts *httptest.Server
-var testInstance *instance.Instance
-var jar *testutils.CookieJar
-var client *http.Client
 
 func TestOauth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
+	var testInstance *instance.Instance
+
 	config.UseTestFile()
 	build.BuildMode = build.ModeDev
 	testutils.NeedCouchdb(t)
 
 	setup := testutils.NewSetup(t, t.Name())
-	ts = setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
+	ts := setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun)
 			cookie, _ := sess.ToCookie()
+			t.Logf("cookie: %q", cookie)
 			c.SetCookie(cookie)
 			return c.HTML(http.StatusOK, "OK")
 		})
 		return r
 	})
+	t.Cleanup(ts.Close)
 
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.localhost", 1),
@@ -54,18 +53,20 @@ func TestOauth(t *testing.T) {
 	_ = couchdb.ResetDB(prefixer.SecretsPrefixer, consts.AccountTypes)
 	t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.SecretsPrefixer, consts.AccountTypes) })
 
-	// Login
-	jar = setup.GetCookieJar()
-	client = &http.Client{Jar: jar}
-	req, _ := http.NewRequest("POST", ts.URL+"/login", nil)
-	req.Host = testInstance.Domain
-	_, _ = client.Do(req)
-
 	t.Run("AccessCodeOauthFlow", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Retrieve the cozysessid cookie
+		cozysessID := e.POST("/login").
+			WithHost(testInstance.Domain).
+			Expect().Status(200).
+			Cookie("cozysessid").Value().Raw()
+
 		redirectURI := ts.URL + "/accounts/test-service/redirect"
 
+		// Register the client inside the database.
 		service := makeTestACService(redirectURI)
-		defer service.Close()
+		t.Cleanup(service.Close)
 
 		serviceType := account.AccountType{
 			DocID:                 "test-service",
@@ -78,35 +79,29 @@ func TestOauth(t *testing.T) {
 		}
 		err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
 		require.NoError(t, err)
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
 
-		defer func() {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
-		}()
+		// Start the oauth flow
+		rawURL := e.GET("/accounts/test-service/start").
+			WithQuery("scope", "the world").
+			WithQuery("state", "somesecretstate").
+			WithCookie("cozysessid", cozysessID).
+			Expect().Status(200).
+			Body().Raw()
 
-		u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
-
-		res, err := client.Get(u)
+		okURL, err := url.Parse(rawURL)
 		require.NoError(t, err)
-
-		bb, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-
-		res.Body.Close()
-		okURL := string(bb)
-
-		require.Equal(t, 200, res.StatusCode)
 
 		// the user click the oauth link
-		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
-		require.NoError(t, err)
+		rawFinalURL := e.GET(okURL.Path).
+			WithQueryString(okURL.RawQuery).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").NotEmpty().Contains("home").
+			Raw()
 
-		assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
-		finalURL, err := res2.Location()
+		finalURL, err := url.Parse(rawFinalURL)
 		require.NoError(t, err)
-
-		if !assert.Contains(t, finalURL.String(), "home") {
-			return
-		}
 
 		var out couchdb.JSONDoc
 		err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
@@ -118,9 +113,17 @@ func TestOauth(t *testing.T) {
 	})
 
 	t.Run("RedirectURLOauthFlow", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Retrieve the cozysessid cookie
+		cozysessID := e.POST("/login").
+			WithHost(testInstance.Domain).
+			Expect().Status(200).
+			Cookie("cozysessid").Value().Raw()
+
 		redirectURI := "http://" + testInstance.Domain + "/accounts/test-service2/redirect"
 		service := makeTestRedirectURLService(redirectURI)
-		defer service.Close()
+		t.Cleanup(service.Close)
 
 		serviceType := account.AccountType{
 			DocID:        "test-service2",
@@ -129,34 +132,30 @@ func TestOauth(t *testing.T) {
 		}
 		err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
 		require.NoError(t, err)
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
 
-		defer func() {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
-		}()
+		// Start the oauth flow
+		rawURL := e.GET("/accounts/test-service2/start").
+			WithQuery("scope", "the world").
+			WithQuery("state", "somesecretstate").
+			WithCookie("cozysessid", cozysessID).
+			Expect().Status(200).
+			Body().Raw()
 
-		u := ts.URL + "/accounts/test-service2/start?scope=the+world"
-
-		res, err := client.Get(u)
+		okURL, err := url.Parse(rawURL)
 		require.NoError(t, err)
 
-		bb, err := io.ReadAll(res.Body)
+		// the user click the oauth link
+		rawFinalURL := e.GET(okURL.Path).
+			WithQueryString(okURL.RawQuery).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			WithHost(testInstance.Domain).
+			Expect().Status(303).
+			Header("Location").NotEmpty().Contains("home").
+			Raw()
+
+		finalURL, err := url.Parse(rawFinalURL)
 		require.NoError(t, err)
-
-		res.Body.Close()
-		okURL := string(bb)
-
-		require.Equal(t, 200, res.StatusCode)
-
-		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
-		finalURL, err := res2.Location()
-		require.NoError(t, err)
-
-		if !assert.Contains(t, finalURL.String(), "home") {
-			return
-		}
 
 		var out couchdb.JSONDoc
 		err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
@@ -168,6 +167,14 @@ func TestOauth(t *testing.T) {
 	})
 
 	t.Run("DoNotRecreateAccountIfItAlreadyExists", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Retrieve the cozysessid cookie
+		cozysessID := e.POST("/login").
+			WithHost(testInstance.Domain).
+			Expect().Status(200).
+			Cookie("cozysessid").Value().Raw()
+
 		existingAccount := &couchdb.JSONDoc{
 			Type: consts.Accounts,
 			M: map[string]interface{}{
@@ -183,14 +190,14 @@ func TestOauth(t *testing.T) {
 		}
 		err := couchdb.CreateDoc(testInstance, existingAccount)
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			existingAccount.M["manual_cleaning"] = true
 			_ = couchdb.DeleteDoc(testInstance, existingAccount)
-		}()
+		})
 
 		redirectURI := "http://" + testInstance.Domain + "/accounts/test-service3/redirect"
 		service := makeTestRedirectURLService(redirectURI)
-		defer service.Close()
+		t.Cleanup(service.Close)
 
 		serviceType := account.AccountType{
 			DocID:        "test-service3",
@@ -199,31 +206,46 @@ func TestOauth(t *testing.T) {
 		}
 		err = couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
 		require.NoError(t, err)
-		defer func() {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
-		}()
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
 
-		u := ts.URL + "/accounts/test-service3/start?scope=the+world"
-		res, err := client.Get(u)
-		require.NoError(t, err)
-		defer res.Body.Close()
-		require.Equal(t, 200, res.StatusCode)
-		bb, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-		okURL := string(bb)
+		// Start the oauth flow
+		rawURL := e.GET("/accounts/test-service3/start").
+			WithQuery("scope", "the world").
+			WithQuery("state", "somesecretstate").
+			WithCookie("cozysessid", cozysessID).
+			Expect().Status(200).
+			Body().Raw()
 
-		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
+		okURL, err := url.Parse(rawURL)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusSeeOther, res2.StatusCode)
-		finalURL, err := res2.Location()
+
+		// the user click the oauth link
+		rawFinalURL := e.GET(okURL.Path).
+			WithQueryString(okURL.RawQuery).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			WithHost(testInstance.Domain).
+			Expect().Status(303).
+			Header("Location").NotEmpty().Contains("home").
+			Raw()
+
+		finalURL, err := url.Parse(rawFinalURL)
 		require.NoError(t, err)
+
 		assert.Equal(t, finalURL.Query().Get("account"), existingAccount.ID())
 	})
 
 	t.Run("FixedRedirectURIOauthFlow", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Retrieve the cozysessid cookie
+		cozysessID := e.POST("/login").
+			WithHost(testInstance.Domain).
+			Expect().Status(200).
+			Cookie("cozysessid").Value().Raw()
+
 		redirectURI := "http://oauth_callback.cozy.localhost/accounts/test-service3/redirect"
 		service := makeTestACService(redirectURI)
-		defer service.Close()
+		t.Cleanup(service.Close)
 
 		serviceType := account.AccountType{
 			DocID:                 "test-service3",
@@ -236,46 +258,30 @@ func TestOauth(t *testing.T) {
 		}
 		err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
 		require.NoError(t, err)
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
 
-		defer func() {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
-		}()
+		// Start the oauth flow
+		rawURL := e.GET("/accounts/test-service3/start").
+			WithQuery("scope", "the world").
+			WithQuery("state", "somesecretstate").
+			WithCookie("cozysessid", cozysessID).
+			Expect().Status(200).
+			Body().Raw()
 
-		startURL, err := url.Parse(ts.URL + "/accounts/test-service3/start?scope=the+world")
-		require.NoError(t, err)
-
-		res, err := client.Get(startURL.String())
-		require.NoError(t, err)
-
-		bb, err := io.ReadAll(res.Body)
-		require.NoError(t, err)
-
-		res.Body.Close()
-		okURL := string(bb)
-
-		require.Equal(t, 200, res.StatusCode)
-
-		okURLObj, err := url.Parse(okURL)
+		okURL, err := url.Parse(rawURL)
 		require.NoError(t, err)
 
 		// hack, we want to speak with ts.URL but setting Host to _oauth_callback
-		host := okURLObj.Host
-		okURLObj.Host = startURL.Host
-		req2, err := http.NewRequest("GET", okURLObj.String(), nil)
+		rawFinalURL := e.GET(okURL.Path).
+			WithQueryString(okURL.RawQuery).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			WithHost(okURL.Host).
+			Expect().Status(303).
+			Header("Location").NotEmpty().Contains("home").
+			Raw()
+
+		finalURL, err := url.Parse(rawFinalURL)
 		require.NoError(t, err)
-
-		req2.Host = host
-
-		res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Do(req2)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
-		finalURL, err := res2.Location()
-		require.NoError(t, err)
-
-		if !assert.Contains(t, finalURL.String(), "home") {
-			return
-		}
 
 		var out couchdb.JSONDoc
 		err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
@@ -287,6 +293,8 @@ func TestOauth(t *testing.T) {
 	})
 
 	t.Run("CheckLogin", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
 		serviceType := account.AccountType{
 			DocID:                 "test-service4",
 			GrantMode:             account.AuthorizationCode,
@@ -298,44 +306,30 @@ func TestOauth(t *testing.T) {
 		}
 		err := couchdb.CreateNamedDoc(prefixer.SecretsPrefixer, &serviceType)
 		require.NoError(t, err)
+		t.Cleanup(func() { _ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType) })
 
-		defer func() {
-			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &serviceType)
-		}()
-
-		u := ts.URL + "/accounts/test-service4/start?scope=foo&state=bar"
-		inAppBrowser := &http.Client{
-			CheckRedirect: noRedirect,
-			Jar:           setup.GetCookieJar(),
-		}
-		res, err := inAppBrowser.Get(u)
-		require.NoError(t, err)
-		res.Body.Close()
-		require.Equal(t, res.StatusCode, 403)
+		// Start the oauth flow without cookie
+		e.GET("/accounts/test-service4/start").
+			WithQuery("scope", "foo").
+			WithQuery("state", "bar").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(403)
 
 		sessionCode, err := testInstance.CreateSessionCode()
 		require.NoError(t, err)
-		u2 := u + "&session_code=" + sessionCode
-		res2, err := inAppBrowser.Get(u2)
-		require.NoError(t, err)
-		res2.Body.Close()
-		require.Equal(t, res2.StatusCode, 303)
-		assert.Contains(t, res2.Header.Get("Location"), serviceType.AuthEndpoint)
-		cookies := res2.Cookies()
-		require.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, "cozysessid")
+
+		// Start again with a session_code query param.
+		res := e.GET("/accounts/test-service4/start").
+			WithQuery("session_code", sessionCode).
+			WithQuery("scope", "foo").
+			WithQuery("state", "bar").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303)
+
+		res.Header("Location").HasPrefix(serviceType.AuthEndpoint)
+		res.Cookies().Length().Equal(1)
+		res.Cookie("cozysessid").Value().NotEmpty()
 	})
-}
-
-func noRedirect(*http.Request, []*http.Request) error {
-	return http.ErrUseLastResponse
-}
-
-func stopBeforeDataCollectFail(req *http.Request, via []*http.Request) error {
-	if strings.Contains(req.URL.String(), "home") {
-		return http.ErrUseLastResponse
-	}
-	return nil
 }
 
 func makeTestRedirectURLService(redirectURI string) *httptest.Server {
