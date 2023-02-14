@@ -527,15 +527,7 @@ func (i *Instance) PublicName() (string, error) {
 	return publicName, nil
 }
 
-func (i *Instance) redirection(key, defaultSlug string) *url.URL {
-	context, ok := i.SettingsContext()
-	if !ok {
-		return i.SubDomain(defaultSlug)
-	}
-	redirect, ok := context[key].(string)
-	if !ok {
-		return i.SubDomain(defaultSlug)
-	}
+func (i *Instance) parseRedirectAppAndRoute(redirect string) *url.URL {
 	splits := strings.SplitN(redirect, "#", 2)
 	parts := strings.SplitN(splits[0], "/", 2)
 	u := i.SubDomain(parts[0])
@@ -548,9 +540,34 @@ func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 	return u
 }
 
+func (i *Instance) redirection(key, defaultSlug string) *url.URL {
+	context, ok := i.SettingsContext()
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	redirect, ok := context[key].(string)
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	return i.parseRedirectAppAndRoute(redirect)
+}
+
 // DefaultRedirection returns the URL where to redirect the user afer login
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
+	if doc, err := i.SettingsDocument(); err == nil {
+		if redirect, ok := doc.M["default_redirection"].(string); ok {
+			return i.parseRedirectAppAndRoute(redirect)
+		}
+	}
+
+	return i.redirection("default_redirection", consts.HomeSlug)
+}
+
+// DefaultRedirectionFromContext returns the URL where to redirect the user
+// after login from the context parameters. It can be overloaded by instance
+// via the "default_redirection" setting.
+func (i *Instance) DefaultRedirectionFromContext() *url.URL {
 	return i.redirection("default_redirection", consts.HomeSlug)
 }
 

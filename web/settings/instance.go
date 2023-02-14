@@ -53,6 +53,9 @@ func getInstance(c echo.Context) error {
 	doc.M["uuid"] = inst.UUID
 	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["context"] = inst.ContextName
+	if _, ok := doc.M["default_redirection"]; !ok {
+		doc.M["default_redirection"] = inst.DefaultRedirectionFromContext().String()
+	}
 
 	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
 		return err
