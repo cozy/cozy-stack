@@ -1359,6 +1359,15 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 	}
 
 	for _, m := range s.Members {
+		if m.Status == MemberStatusMailNotSent {
+			checks = append(checks, map[string]interface{}{
+				"id":     s.SID,
+				"type":   "mail_not_sent",
+				"member": m.Instance,
+			})
+			continue
+		}
+
 		if m.Status != MemberStatusReady {
 			continue
 		}

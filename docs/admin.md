@@ -721,10 +721,10 @@ missing owner document in `ownerDoc`.
 ===
 
 Other error types include `missing_trigger_on_active_sharing`,
-`trigger_on_inactive_sharing`, `not_enough_members`, `invalid_member_status`,
-`invalid_instance_for_member`, `missing_instance_for_member`,
-`missing_oauth_client`, `missing_access_token`, `invalid_number_of_credentials`
-and `missing_inbound_client_id`.
+`trigger_on_inactive_sharing`, `not_enough_members`, `mail_not_sent`,
+`invalid_member_status`, `invalid_instance_for_member`,
+`missing_instance_for_member`, `missing_oauth_client`, `missing_access_token`,
+`invalid_number_of_credentials` and `missing_inbound_client_id`.
 
 When checking for files and folders inconsistencies, sharings will be skipped
 when inactive, not initialized, read-only or not about `io.cozy.files`
