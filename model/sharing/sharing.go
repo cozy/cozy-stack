@@ -1176,8 +1176,9 @@ func findParentFileSharingID(inst *instance.Instance, sharing *Sharing) (string,
 	for _, id := range sharingRule.Values {
 		var sharingRoot couchdb.JSONDoc
 		if err := couchdb.GetDoc(inst, consts.Files, id, &sharingRoot); err != nil {
-			// We can ignore the error here, it will reported as
-			// missing_matching_docs_for_member later.
+			// We can ignore the error here. It will be reported as
+			// missing_matching_docs_for_owner or missing_matching_docs_for_member
+			// later.
 			return "", nil
 		}
 		sharingRoots = append(sharingRoots, sharingRoot)
