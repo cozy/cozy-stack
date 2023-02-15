@@ -354,6 +354,11 @@ optionaly the old version of this document.
 The message is composed of a sharing ID and a count of the number of errors
 (i.e. the number of times this job was retried).
 
+## office-save
+
+This worker is for the internal usage of the stack. It allows to ask OnlyOffice
+to save opened documents to the VFS.
+
 ## notes-save
 
 This is another worker for the interal usage of the stack. It allows to write

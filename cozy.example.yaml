@@ -133,6 +133,7 @@ jobs:
   #   - "konnector":         launching konnectors
   #   - "service":           launching services
   #   - "migrations":        transforming a VFS with Swift to layout v3
+  #   - "office-save":       saving office documents to the VFS
   #   - "notes-save":        saving notes to the VFS
   #   - "push":              sending push notifications
   #   - "sms":               sending SMS notifications

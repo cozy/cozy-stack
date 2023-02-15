@@ -175,6 +175,10 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot add doc to store: %s", err)
 		return nil, ErrInternalServerError
 	}
+	if err := setupTrigger(o.Inst, key); err != nil {
+		o.Inst.Logger().WithNamespace("office").
+			Warnf("Cannot setup trigger: %s", err)
+	}
 	publicName, _ := o.Inst.PublicName()
 	doc.PublicName = publicName
 	doc.OO = &onlyOffice{
