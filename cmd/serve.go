@@ -12,9 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/stack"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
@@ -23,6 +25,7 @@ import (
 
 var flagAllowRoot bool
 var flagAppdirs []string
+var flagKonnDirs []string
 var flagDevMode bool
 var flagMailhog bool
 
@@ -40,6 +43,7 @@ exiting.
 
 If you are the developer of a client-side app, you can use --appdir
 to mount a directory as the application with the 'app' slug.
+You can also use the --konndir flag to do the same thing for a konnector.
 `,
 	Example: `The most often, this command is used in its simple form:
 
@@ -78,6 +82,29 @@ example), you can use the --appdir flag like this:
 					}
 				default:
 					return errors.New("Invalid appdir value")
+				}
+			}
+		}
+
+		if len(flagKonnDirs) > 0 {
+			if localResources == nil {
+				localResources = make(map[string]app.LocalResource)
+			}
+			for _, konn := range flagKonnDirs {
+				parts := strings.Split(konn, ":")
+				switch len(parts) {
+				case 1:
+					localResources["konn"] = app.LocalResource{
+						Type: consts.KonnectorType,
+						Dir:  parts[0],
+					}
+				case 2:
+					localResources[parts[0]] = app.LocalResource{
+						Type: consts.KonnectorType,
+						Dir:  parts[1],
+					}
+				default:
+					return errors.New("Invalid konndir value")
 				}
 			}
 		}
@@ -254,6 +281,7 @@ func init() {
 	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run in dev mode for a prod release (disabled by default)")
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
+	flags.StringSliceVar(&flagKonnDirs, "konndir", nil, "Mount a directory as the 'konn' konnector")
 
 	flags.Bool("remote-allow-custom-port", false, "Allow to specify a port in request files for remote doctypes")
 	checkNoErr(viper.BindPFlag("remote_allow_custom_port", flags.Lookup("remote-allow-custom-port")))
