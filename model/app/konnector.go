@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"time"
@@ -46,6 +47,8 @@ type KonnManifest struct {
 		Terms         Terms          `json:"terms"`
 		Notifications Notifications  `json:"notifications"`
 	}
+
+	FromLocalDir bool `json:"-"` // Used in development
 }
 
 // ID is part of the Manifest interface
@@ -381,6 +384,15 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
+	for s := range localResources {
+		if s == slug {
+			_, man, err := loadManifestFromDir(slug)
+			if man == nil {
+				err = fmt.Errorf("Could not find the konnector manifest for %s: %s", slug, err.Error())
+			}
+			return man, err
+		}
+	}
 	doc := &KonnManifest{}
 	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, doc)
 	if couchdb.IsNotFoundError(err) {
@@ -426,6 +438,16 @@ func ListKonnectorsWithPagination(db prefixer.Prefixer, limit int, startKey stri
 		nextDoc := docs[len(docs)-1]
 		nextID = nextDoc.ID()
 		docs = docs[:len(docs)-1]
+	}
+
+	// If we get here, either :
+	// - There are no more docs in couchDB
+	// - There are no docs at all
+	// We can load extra konnectors and append them safely to the list
+	for slug := range localResources {
+		if _, konnMan, err := loadManifestFromDir(slug); err == nil && konnMan != nil {
+			docs = append(docs, konnMan)
+		}
 	}
 
 	return docs, nextID, nil

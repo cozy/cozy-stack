@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -108,8 +107,8 @@ type WebappManifest struct {
 		Notifications Notifications  `json:"notifications"`
 	}
 
-	FromAppsDir bool        `json:"-"` // Used in development
-	Instance    SubDomainer `json:"-"` // Used for JSON-API links
+	FromLocalDir bool        `json:"-"` // Used in development
+	Instance     SubDomainer `json:"-"` // Used for JSON-API links
 
 	oldServices Services // Used to diff against when updating the app
 }
@@ -527,67 +526,18 @@ func (m *WebappManifest) FindIntent(action, typ string) *Intent {
 	return nil
 }
 
-// appsdir is a map of slug -> directory used in development for webapps that
-// are not installed in the Cozy but serve directly from a directory.
-var appsdir map[string]string
-
-// SetupAppsDir allow to load some webapps from directories for development.
-func SetupAppsDir(apps map[string]string) {
-	if appsdir == nil {
-		appsdir = make(map[string]string)
-	}
-	for app, dir := range apps {
-		appsdir[app] = dir
-	}
-}
-
-// FSForAppDir returns a FS for the webapp in development.
-func FSForAppDir(slug string) appfs.FileServer {
-	base := baseFSForAppDir(slug)
-	return appfs.NewAferoFileServer(base, func(_, _, _, file string) string {
-		return path.Join("/", file)
-	})
-}
-
-func baseFSForAppDir(slug string) afero.Fs {
-	return afero.NewBasePathFs(afero.NewOsFs(), appsdir[slug])
-}
-
-// loadManifestFromDir returns a manifest for a webapp in development.
-func loadManifestFromDir(slug string) (*WebappManifest, error) {
-	dir, ok := appsdir[slug]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	fs := baseFSForAppDir(slug)
-	manFile, err := fs.Open(WebappManifestName)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Could not find the manifest in your app directory %s", dir)
-		}
-		return nil, err
-	}
-	app := &WebappManifest{
-		doc: &couchdb.JSONDoc{},
-	}
-	man, err := app.ReadManifest(manFile, slug, "file://localhost"+dir)
-	if err != nil {
-		return nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
-	}
-	app = man.(*WebappManifest)
-	app.FromAppsDir = true
-	app.val.State = Ready
-	return app, nil
-}
-
 // GetWebappBySlug fetch the WebappManifest from the database given a slug.
 func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error) {
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
-	for app := range appsdir {
-		if app == slug {
-			return loadManifestFromDir(slug)
+	for s := range localResources {
+		if s == slug {
+			man, _, err := loadManifestFromDir(slug)
+			if man == nil {
+				err = fmt.Errorf("Could not find the app manifest for %s: %s", slug, err.Error())
+			}
+			return man, err
 		}
 	}
 	man := &WebappManifest{}
@@ -642,9 +592,9 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 	// - There are no more docs in couchDB
 	// - There are no docs at all
 	// We can load extra apps and append them safely to the list
-	for slug := range appsdir {
-		if man, err := loadManifestFromDir(slug); err == nil {
-			docs = append(docs, man)
+	for slug := range localResources {
+		if appMan, _, err := loadManifestFromDir(slug); err == nil && appMan != nil {
+			docs = append(docs, appMan)
 		}
 	}
 

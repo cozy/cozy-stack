@@ -128,8 +128,8 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	var fs appfs.FileServer
-	if man.FromAppsDir {
-		fs = app.FSForAppDir(man.Slug())
+	if man.FromLocalDir {
+		fs = app.FSForLocalResource(man.Slug())
 	} else {
 		fs = app.AppsFileServer(i)
 	}

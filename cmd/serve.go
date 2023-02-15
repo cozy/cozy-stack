@@ -60,16 +60,22 @@ example), you can use the --appdir flag like this:
 			build.BuildMode = build.ModeDev
 		}
 
-		var apps map[string]string
+		var localResources map[string]app.LocalResource
 		if len(flagAppdirs) > 0 {
-			apps = make(map[string]string)
-			for _, app := range flagAppdirs {
-				parts := strings.Split(app, ":")
+			localResources = make(map[string]app.LocalResource)
+			for _, appdir := range flagAppdirs {
+				parts := strings.Split(appdir, ":")
 				switch len(parts) {
 				case 1:
-					apps["app"] = parts[0]
+					localResources["app"] = app.LocalResource{
+						Type: consts.WebappType,
+						Dir:  parts[0],
+					}
 				case 2:
-					apps[parts[0]] = parts[1]
+					localResources[parts[0]] = app.LocalResource{
+						Type: consts.WebappType,
+						Dir:  parts[1],
+					}
 				default:
 					return errors.New("Invalid appdir value")
 				}
@@ -95,8 +101,8 @@ example), you can use the --appdir flag like this:
 		}
 
 		var servers *web.Servers
-		if apps != nil {
-			servers, err = web.ListenAndServeWithAppDir(apps)
+		if localResources != nil {
+			servers, err = web.ListenAndServeWithLocalResources(localResources)
 		} else {
 			servers, err = web.ListenAndServe()
 		}

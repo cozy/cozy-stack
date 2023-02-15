@@ -57,13 +57,13 @@ func Serve(c echo.Context) error {
 
 	route, file := webapp.FindRoute(path.Clean(c.Request().URL.Path))
 
-	if webapp.FromAppsDir {
+	if webapp.FromLocalDir {
 		// Save permissions in couchdb before loading an index page
 		if file == "" && webapp.Permissions() != nil {
 			_ = permission.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
 		}
 
-		fs := app.FSForAppDir(slug)
+		fs := app.FSForLocalResource(slug)
 		return ServeAppFile(c, i, fs, webapp)
 	}
 
