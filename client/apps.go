@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -163,7 +162,9 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifestStream(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifestStream(res.Body)
 }
 
 // UpdateApp is used to update an application.
@@ -190,7 +191,9 @@ func (c *Client) UpdateApp(opts *AppOptions, safe bool) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifestStream(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifestStream(res.Body)
 }
 
 // UninstallApp is used to uninstall an application.
@@ -275,9 +278,10 @@ func makeAppsPath(appType, path string) string {
 	panic(fmt.Errorf("Unknown application type %s", appType))
 }
 
-func readAppManifestStream(res *http.Response) (*AppManifest, error) {
+func readAppManifestStream(body io.Reader) (*AppManifest, error) {
 	evtch := make(chan *request.SSEEvent)
-	go request.ReadSSE(res.Body, evtch)
+	go request.ReadSSE(body, evtch)
+
 	var lastevt *request.SSEEvent
 	// get the last sent event
 	for evt := range evtch {
