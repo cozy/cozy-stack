@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -133,7 +134,9 @@ func (c *Client) GetApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifest(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifest(res.Body)
 }
 
 // InstallApp is used to install an application.
@@ -199,7 +202,9 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifest(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifest(res.Body)
 }
 
 // ListMaintenances returns a list of konnectors in maintenance
@@ -298,9 +303,9 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 	return app, nil
 }
 
-func readAppManifest(res *http.Response) (*AppManifest, error) {
+func readAppManifest(body io.Reader) (*AppManifest, error) {
 	app := &AppManifest{}
-	if err := readJSONAPI(res.Body, &app); err != nil {
+	if err := readJSONAPI(body, &app); err != nil {
 		return nil, err
 	}
 	return app, nil
