@@ -127,7 +127,9 @@ func (c *Client) GetDirByID(id string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // GetDirByPath returns a Dir given the specified path
@@ -140,7 +142,9 @@ func (c *Client) GetDirByPath(name string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // GetDirOrFileByPath returns a DirOrFile given the specified path
@@ -181,7 +185,9 @@ func (c *Client) mkdir(name string, recur string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // DownloadByID is used to download a file's content given its ID. It returns
@@ -461,9 +467,9 @@ func readFile(body io.Reader) (*File, error) {
 	return file, nil
 }
 
-func readDir(res *http.Response) (*Dir, error) {
+func readDir(body io.Reader) (*Dir, error) {
 	dir := &Dir{}
-	if err := readJSONAPI(res.Body, &dir); err != nil {
+	if err := readJSONAPI(body, &dir); err != nil {
 		return nil, err
 	}
 	if dir.Attrs.Type != DirType {
