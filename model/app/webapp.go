@@ -420,7 +420,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 	}
 
 	for _, service := range created {
-		triggerID, err := CreateServiceTrigger(db, slug, service)
+		triggerID, err := CreateServiceTrigger(db, slug, service.name, service)
 		if err != nil {
 			return err
 		}
@@ -434,7 +434,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 
 // CreateServiceTrigger creates a trigger for the given service. It returns the
 // id of the created trigger or an error.
-func CreateServiceTrigger(db prefixer.Prefixer, slug string, service *Service) (string, error) {
+func CreateServiceTrigger(db prefixer.Prefixer, slug, serviceName string, service *Service) (string, error) {
 	var triggerType string
 	var triggerArgs string
 	triggerOpts := strings.SplitN(service.TriggerOptions, " ", 2)
@@ -457,7 +457,7 @@ func CreateServiceTrigger(db prefixer.Prefixer, slug string, service *Service) (
 	}
 	msg := map[string]string{
 		"slug": slug,
-		"name": service.name,
+		"name": serviceName,
 	}
 	trigger, err := job.NewTrigger(db, job.TriggerInfos{
 		Type:       triggerType,

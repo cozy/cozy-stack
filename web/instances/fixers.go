@@ -344,6 +344,7 @@ func serviceTriggersFixer(c echo.Context) error {
 
 	var toDelete []job.Trigger
 	recreated := 0
+	updated := 0
 
 	for slug, triggers := range byApps {
 		manifest, err := app.GetWebappBySlug(inst, slug)
@@ -357,7 +358,7 @@ func serviceTriggersFixer(c echo.Context) error {
 		}
 
 		// Fill the trigger ids for the services when they are missing.
-		update := false
+		updateApp := false
 		for name, service := range manifest.Services() {
 			if service.TriggerOptions == "" {
 				continue
@@ -381,27 +382,37 @@ func serviceTriggersFixer(c echo.Context) error {
 						continue
 					}
 					service.TriggerID = infos.TID
-					update = true
+					updateApp = true
 					break
 				}
 				recreate = service.TriggerID == ""
 			} else {
-				_, err := jobsSystem.GetTrigger(inst, service.TriggerID)
+				trigger, err := jobsSystem.GetTrigger(inst, service.TriggerID)
 				recreate = errors.Is(err, job.ErrNotFoundTrigger)
+				if err == nil {
+					var msg serviceMessage
+					if err := json.Unmarshal(trigger.Infos().Message, &msg); err != nil {
+						return err
+					}
+					if msg.Name == "" {
+						fixTriggerName(inst, trigger, msg, name)
+						updated++
+					}
+				}
 			}
 
 			if recreate {
-				triggerID, err := app.CreateServiceTrigger(inst, slug, service)
+				triggerID, err := app.CreateServiceTrigger(inst, slug, name, service)
 				if err != nil {
 					return err
 				}
 				service.TriggerID = triggerID
-				update = true
+				updateApp = true
 				recreated++
 			}
 		}
 
-		if update {
+		if updateApp {
 			if err := couchdb.UpdateDoc(inst, manifest); err != nil {
 				return err
 			}
@@ -433,8 +444,20 @@ func serviceTriggersFixer(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"Domain":                 domain,
 		"RecreatedTriggersCount": recreated,
+		"UpdatedTriggersCount":   updated,
 		"DeletedTriggersCount":   len(toDelete),
 	})
+}
+
+func fixTriggerName(inst *instance.Instance, trigger job.Trigger, msg serviceMessage, name string) error {
+	msg.Name = name
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	infos := trigger.Infos().Clone().(*job.TriggerInfos)
+	infos.Message = job.Message(raw)
+	return couchdb.UpdateDoc(inst, infos)
 }
 
 func indexesFixer(c echo.Context) error {
