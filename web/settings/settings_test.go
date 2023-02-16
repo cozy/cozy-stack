@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"testing"
 	"time"
@@ -205,9 +204,8 @@ func TestSettings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		res, err := http.Get(ts.URL + "/settings/disk-usage")
-		assert.NoError(t, err)
-		assert.Equal(t, 401, res.StatusCode)
+		e.GET("/settings/disk-usage").
+			Expect().Status(401)
 
 		data := obj.Value("data").Object()
 		data.ValueEqual("type", "io.cozy.settings")
