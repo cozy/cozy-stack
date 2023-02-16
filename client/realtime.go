@@ -83,10 +83,12 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 	if authHeader := authorizer.AuthHeader(); authHeader != "" {
 		headers.Add("Authorization", authHeader)
 	}
-	socket, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+
+	socket, res, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
 
 	realtimeToken := authorizer.RealtimeToken()
 	if realtimeToken != "" {

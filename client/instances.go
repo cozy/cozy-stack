@@ -661,10 +661,13 @@ func (ac *AdminClient) DiskUsage(domain string, includeTrash bool) (map[string]i
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var info map[string]interface{}
 	if err = json.NewDecoder(res.Body).Decode(&info); err != nil {
 		return nil, err
 	}
+
 	return info, nil
 }
 
