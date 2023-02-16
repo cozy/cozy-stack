@@ -216,10 +216,13 @@ func (ac *AdminClient) ListInstances() ([]*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var list []*Instance
 	if err = readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
+
 	return list, nil
 }
 

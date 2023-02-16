@@ -113,10 +113,12 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 			Options:     opt,
 		},
 	}
+
 	body, err := writeJSONAPI(job)
 	if err != nil {
 		return nil, err
 	}
+
 	res, err := c.Req(&request.Options{
 		Method: "POST",
 		Path:   "/jobs/queue/" + url.PathEscape(r.Worker),
@@ -125,6 +127,7 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
 
 	var j *Job
 	if err = readJSONAPI(res.Body, &j); err != nil {
@@ -181,10 +184,13 @@ func (c *Client) GetTrigger(triggerID string) (*Trigger, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var t *Trigger
 	if err := readJSONAPI(res.Body, &t); err != nil {
 		return nil, err
 	}
+
 	return t, nil
 }
 
@@ -198,10 +204,13 @@ func (c *Client) GetTriggers(worker string) ([]*Trigger, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var t []*Trigger
 	if err := readJSONAPI(res.Body, &t); err != nil {
 		return nil, err
 	}
+
 	return t, nil
 }
 
@@ -214,10 +223,13 @@ func (c *Client) TriggerLaunch(triggerID string) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var j *Job
 	if err := readJSONAPI(res.Body, &j); err != nil {
 		return nil, err
 	}
+
 	return j, nil
 }
 
@@ -230,9 +242,12 @@ func (c *Client) ListTriggers() ([]*Trigger, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var list []*Trigger
 	if err := readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
+
 	return list, nil
 }

@@ -117,10 +117,13 @@ func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var mans []*AppManifest
 	if err := readJSONAPI(res.Body, &mans); err != nil {
 		return nil, err
 	}
+
 	return mans, nil
 }
 
@@ -216,6 +219,7 @@ func (ac *AdminClient) ListMaintenances(context string) ([]interface{}, error) {
 	if context != "" {
 		queries.Add("Context", context)
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "GET",
 		Path:    "/konnectors/maintenance",
@@ -224,10 +228,13 @@ func (ac *AdminClient) ListMaintenances(context string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var list []interface{}
 	if err := readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
+
 	return list, nil
 }
 
@@ -280,14 +287,17 @@ func makeAppsPath(appType, path string) string {
 
 func readAppManifestStream(body io.Reader) (*AppManifest, error) {
 	evtch := make(chan *request.SSEEvent)
+
 	go request.ReadSSE(body, evtch)
 
 	var lastevt *request.SSEEvent
+
 	// get the last sent event
 	for evt := range evtch {
 		if evt.Error != nil {
 			return nil, evt.Error
 		}
+
 		if evt.Name == "error" {
 			var stringError string
 			if err := json.Unmarshal(evt.Data, &stringError); err != nil {
@@ -295,15 +305,19 @@ func readAppManifestStream(body io.Reader) (*AppManifest, error) {
 			}
 			return nil, errors.New(stringError)
 		}
+
 		lastevt = evt
 	}
+
 	if lastevt == nil {
 		return nil, errors.New("No application data was sent")
 	}
+
 	app := &AppManifest{}
 	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app); err != nil {
 		return nil, err
 	}
+
 	return app, nil
 }
 
