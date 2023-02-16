@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/gorilla/websocket"
@@ -24,7 +23,7 @@ type RealtimeOptions struct {
 type RealtimeChannel struct {
 	socket *websocket.Conn
 	ch     chan *RealtimeServerMessage
-	closed uint32
+	closed chan struct{}
 }
 
 // RealtimeClientMessage is a struct containing the structure of the client
@@ -116,6 +115,7 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 	channel := &RealtimeChannel{
 		socket: socket,
 		ch:     make(chan *RealtimeServerMessage),
+		closed: make(chan struct{}),
 	}
 
 	go channel.pump()
@@ -130,18 +130,28 @@ func (r *RealtimeChannel) Channel() <-chan *RealtimeServerMessage {
 }
 
 func (r *RealtimeChannel) pump() {
+	defer close(r.ch)
 	var err error
 	for {
 		var msg RealtimeServerMessage
 		if err = r.socket.ReadJSON(&msg); err != nil {
 			break
 		}
-		r.ch <- &msg
+		select {
+		case r.ch <- &msg:
+		case <-r.closed:
+			return
+		}
 	}
-	if !errors.Is(err, io.EOF) && atomic.LoadUint32(&r.closed) == 0 {
-		r.ch <- &RealtimeServerMessage{
+	if !errors.Is(err, io.EOF) {
+		msg := RealtimeServerMessage{
 			Event:   "error",
 			Payload: RealtimeServerPayload{Title: err.Error()},
+		}
+		select {
+		case r.ch <- &msg:
+		case <-r.closed:
+			return
 		}
 	}
 }
@@ -149,10 +159,6 @@ func (r *RealtimeChannel) pump() {
 // Close will close the underlying connection of the realtime channel and close
 // the channel of messages.
 func (r *RealtimeChannel) Close() error {
-	if atomic.CompareAndSwapUint32(&r.closed, 0, 1) {
-		err := r.socket.Close()
-		close(r.ch)
-		return err
-	}
-	return nil
+	close(r.closed)
+	return r.socket.Close()
 }
