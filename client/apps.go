@@ -230,23 +230,34 @@ func (ac *AdminClient) ActivateMaintenance(slug string, opts map[string]interfac
 	if err != nil {
 		return err
 	}
-	_, err = ac.Req(&request.Options{
+
+	res, err := ac.Req(&request.Options{
 		Method:     "PUT",
 		Path:       "/konnectors/maintenance/" + slug,
 		Body:       body,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DeactivateMaintenance is used to deactivate the maintenance for a konnector
 func (ac *AdminClient) DeactivateMaintenance(slug string) error {
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/konnectors/maintenance/" + slug,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 func makeAppsPath(appType, path string) string {

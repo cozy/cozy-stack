@@ -267,12 +267,17 @@ func (ac *AdminClient) DestroyInstance(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // GetDebug is used to known if an instance has its logger in debug mode.
@@ -280,7 +285,7 @@ func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 	if !validDomain(domain) {
 		return false, fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "GET",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -293,6 +298,8 @@ func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 		}
 		return false, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	return true, nil
 }
 
@@ -301,7 +308,7 @@ func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -309,7 +316,12 @@ func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 			"TTL": {ttl.String()},
 		},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // CleanSessions delete the databases for io.cozy.sessions and io.cozy.sessions.logins
@@ -317,12 +329,17 @@ func (ac *AdminClient) CleanSessions(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/sessions",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DisableDebug disables the debug mode for the logger of an instance.
@@ -330,12 +347,17 @@ func (ac *AdminClient) DisableDebug(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // GetToken is used to generate a token with the specified options.
@@ -577,23 +599,33 @@ func (ac *AdminClient) Import(domain string, opts *ImportOptions) error {
 	q := url.Values{
 		"manifest_url": {opts.ManifestURL},
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + url.PathEscape(domain) + "/import",
 		Queries:    q,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // RebuildRedis puts the triggers in redis.
 func (ac *AdminClient) RebuildRedis() error {
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/redis",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DiskUsage returns the information about disk usage and quota

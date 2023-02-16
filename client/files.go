@@ -315,12 +315,17 @@ func (c *Client) Move(from, to string) error {
 // TrashByID is used to move a file or directory specified by its ID to the
 // trash
 func (c *Client) TrashByID(id string) error {
-	_, err := c.Req(&request.Options{
+	res, err := c.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/files/" + url.PathEscape(id),
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // TrashByPath is used to move a file or directory specified by its path to the
@@ -336,12 +341,17 @@ func (c *Client) TrashByPath(name string) error {
 // RestoreByID is used to restore a file or directory from the trash given its
 // ID
 func (c *Client) RestoreByID(id string) error {
-	_, err := c.Req(&request.Options{
+	res, err := c.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/files/trash/" + url.PathEscape(id),
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // RestoreByPath is used to restore a file or directory from the trash given its
