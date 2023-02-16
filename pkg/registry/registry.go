@@ -164,17 +164,22 @@ func ProxyMaintenance(registries []*url.URL) ([]json.RawMessage, error) {
 	apps := make([]json.RawMessage, 0)
 	for _, r := range registries {
 		ref := &url.URL{Path: "/registry/maintenance"}
+
 		resp, ok, err := fetch(maintenanceClient, r, ref, WithCache)
 		if err != nil {
 			return nil, err
 		}
+		defer func() { _ = resp.Body.Close() }()
+
 		if !ok {
 			continue
 		}
+
 		var docs []json.RawMessage
 		if err = json.NewDecoder(resp.Body).Decode(&docs); err != nil {
 			return nil, err
 		}
+
 		apps = append(apps, docs...)
 	}
 	return apps, nil
