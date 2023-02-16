@@ -370,16 +370,17 @@ func TestFiles(t *testing.T) {
 		errs := make(chan int)
 
 		doCreateDir := func(name string) {
-			status := e.POST("/files/").
+			res := e.POST("/files/").
 				WithQuery("Name", name).
 				WithQuery("Type", "directory").
 				WithHeader("Authorization", "Bearer "+token).
-				Expect().Raw().StatusCode
+				Expect().Raw()
+			_ = res.Body.Close()
 
-			if status == 201 {
-				done <- status
+			if res.StatusCode == 201 {
+				done <- res.StatusCode
 			} else {
-				errs <- status
+				errs <- res.StatusCode
 			}
 		}
 
@@ -1552,13 +1553,16 @@ func TestFiles(t *testing.T) {
 				WithBytes([]byte("newcontent " + strconv.FormatInt(idx, 10))).
 				Expect()
 
-			if res.Raw().StatusCode == 200 {
+			rawRes := res.Raw()
+			_ = rawRes.Body.Close()
+
+			if rawRes.StatusCode == 200 {
 				done <- resC{
 					obj: res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object(),
 					idx: idx,
 				}
 			} else {
-				errs <- res.Raw().StatusCode
+				errs <- rawRes.StatusCode
 			}
 		}
 

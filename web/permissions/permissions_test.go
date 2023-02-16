@@ -2,7 +2,6 @@ package permissions
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 
@@ -190,13 +189,10 @@ func TestPermissions(t *testing.T) {
 		assert.NotEqual(t, permSourceID, oauthLinkedClient.ClientID)
 
 		// Login to webapp and try to delete the shared link
-		delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+permID, nil)
-		delReq.Host = testInstance.Domain
-		delReq.Header.Add("Authorization", "Bearer "+tok)
-		assert.NoError(t, err)
-		delRes, err := http.DefaultClient.Do(delReq)
-		assert.NoError(t, err)
-		assert.Equal(t, 204, delRes.StatusCode)
+		e.DELETE("/permissions/"+permID).
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+tok).
+			Expect().Status(204)
 
 		// Cleaning
 		oauthLinkedClient, err = oauth.FindClientBySoftwareID(testInstance, "registry://drive")
