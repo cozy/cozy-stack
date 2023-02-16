@@ -98,7 +98,9 @@ func (c *Client) GetFileByID(id string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // GetFileByPath returns a File given the specified path
@@ -111,7 +113,9 @@ func (c *Client) GetFileByPath(name string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // GetDirByID returns a Dir given the specified ID
@@ -241,11 +245,14 @@ func (c *Client) Upload(u *Upload) (*File, error) {
 			"Name": {u.Name},
 		}
 	}
+
 	res, err := c.Req(opts)
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // UpdateAttrsByID is used to update the attributes of a file or directory
@@ -443,9 +450,9 @@ func readDirOrFile(res *http.Response) (*DirOrFile, error) {
 	return dirOrFile, nil
 }
 
-func readFile(res *http.Response) (*File, error) {
+func readFile(body io.Reader) (*File, error) {
 	file := &File{}
-	if err := readJSONAPI(res.Body, &file); err != nil {
+	if err := readJSONAPI(body, &file); err != nil {
 		return nil, err
 	}
 	if file.Attrs.Type != FileType {
