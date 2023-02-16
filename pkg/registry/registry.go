@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -86,19 +85,20 @@ const (
 
 // GetVersion returns a specific version from a slug name
 func GetVersion(slug, version string, registries []*url.URL) (*Version, error) {
-	requestURI := fmt.Sprintf("/registry/%s/%s",
-		url.PathEscape(slug),
-		url.PathEscape(version))
-	resp, ok, err := fetchUntilFound(latestVersionClient, registries, requestURI, WithCache)
+	requestURI := fmt.Sprintf("/registry/%s/%s", url.PathEscape(slug), url.PathEscape(version))
+
+	res, err := fetchUntilFound(latestVersionClient, registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+
+	if res == nil {
 		return nil, errVersionNotFound
 	}
-	defer resp.Body.Close()
+	defer func() { _ = res.Body.Close() }()
+
 	var v *Version
-	if err = json.NewDecoder(resp.Body).Decode(&v); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
 		return nil, err
 	}
 	return v, nil
@@ -108,39 +108,44 @@ func GetVersion(slug, version string, registries []*url.URL) (*Version, error) {
 // registries by resolving them in sequence using the specified application
 // slug and channel name.
 func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, error) {
-	requestURI := fmt.Sprintf("/registry/%s/%s/latest",
-		url.PathEscape(slug),
-		url.PathEscape(channel))
-	resp, ok, err := fetchUntilFound(latestVersionClient, registries, requestURI, WithCache)
+	requestURI := fmt.Sprintf("/registry/%s/%s/latest", url.PathEscape(slug), url.PathEscape(channel))
+
+	res, err := fetchUntilFound(latestVersionClient, registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+
+	if res == nil {
 		return nil, errVersionNotFound
 	}
-	defer resp.Body.Close()
+	defer func() { _ = res.Body.Close() }()
+
 	var v *Version
-	if err = json.NewDecoder(resp.Body).Decode(&v); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
 		return nil, err
 	}
+
 	return v, nil
 }
 
 // GetApplication returns an application from his slug
 func GetApplication(slug string, registries []*url.URL) (*Application, error) {
 	requestURI := fmt.Sprintf("/registry/%s/", slug)
-	resp, ok, err := fetchUntilFound(appClient, registries, requestURI, WithCache)
+	res, err := fetchUntilFound(appClient, registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+
+	if res == nil {
 		return nil, errApplicationNotFound
 	}
-	defer resp.Body.Close()
+	defer func() { _ = res.Body.Close() }()
+
 	var app *Application
-	if err = json.NewDecoder(resp.Body).Decode(&app); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(&app); err != nil {
 		return nil, err
 	}
+
 	return app, nil
 }
 
@@ -148,14 +153,12 @@ func GetApplication(slug string, registries []*url.URL) (*Application, error) {
 // the response as io.ReadCloser when finding a registry returning a HTTP 200OK
 // response.
 func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.Response, error) {
-	resp, ok, err := fetchUntilFound(proxyClient, registries, req.RequestURI, cache)
+	res, err := fetchUntilFound(proxyClient, registries, req.RequestURI, cache)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return nil, echo.NewHTTPError(http.StatusNotFound)
-	}
-	return resp, nil
+
+	return res, nil
 }
 
 // ProxyMaintenance will proxy the given request to the registries to fetch all
@@ -165,23 +168,28 @@ func ProxyMaintenance(registries []*url.URL) ([]json.RawMessage, error) {
 	for _, r := range registries {
 		ref := &url.URL{Path: "/registry/maintenance"}
 
-		resp, ok, err := fetch(maintenanceClient, r, ref, WithCache)
+		res, err := fetch(maintenanceClient, r, ref, WithCache)
 		if err != nil {
 			return nil, err
 		}
-		defer func() { _ = resp.Body.Close() }()
 
-		if !ok {
+		if res == nil {
 			continue
 		}
 
 		var docs []json.RawMessage
-		if err = json.NewDecoder(resp.Body).Decode(&docs); err != nil {
+		if err = json.NewDecoder(res.Body).Decode(&docs); err != nil {
+			_ = res.Body.Close()
 			return nil, err
 		}
 
+		// We are in a loop, we close the body manually now in order to free
+		// the connexion and allow its use in the next loop iteration.
+		_ = res.Body.Close()
+
 		apps = append(apps, docs...)
 	}
+
 	return apps, nil
 }
 
@@ -323,18 +331,23 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 			"cursor", strconv.Itoa(cursor),
 			"limit", strconv.Itoa(limit),
 		)
-		resp, ok, err := fetch(proxyClient, r.url, ref, NoCache)
+		res, err := fetch(proxyClient, r.url, ref, NoCache)
 		if err != nil {
 			return err
 		}
-		if !ok {
+
+		if res == nil {
 			return nil
 		}
-		defer resp.Body.Close()
+
 		var page AppsPaginated
-		if err = json.NewDecoder(resp.Body).Decode(&page); err != nil {
+		if err = json.NewDecoder(res.Body).Decode(&page); err != nil {
+			_ = res.Body.Close()
 			return err
 		}
+		// We are in a loop, we close the body manually now in order to free
+		// the connexion and allow its use in the next loop iteration.
+		_ = res.Body.Close()
 
 		for i, obj := range page.Apps {
 			objCursor := cursor + i
@@ -460,66 +473,73 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *AppsPagina
 	}
 }
 
-func fetchUntilFound(client *http.Client, registries []*url.URL, requestURI string, cache CacheControl) (resp *http.Response, ok bool, err error) {
+func fetchUntilFound(client *http.Client, registries []*url.URL, requestURI string, cache CacheControl) (*http.Response, error) {
 	ref, err := url.Parse(requestURI)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	for _, registry := range registries {
-		resp, ok, err = fetch(client, registry, ref, cache)
+		res, err := fetch(client, registry, ref, cache)
 		if err != nil {
-			return
+			return nil, err
 		}
-		if !ok {
-			continue
+
+		if res != nil {
+			return res, nil
 		}
-		return
 	}
-	return nil, false, nil
+
+	return nil, nil
 }
 
-func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (resp *http.Response, ok bool, err error) {
+func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (*http.Response, error) {
 	u := registry.ResolveReference(ref)
 	u.Path = path.Join(registry.Path, ref.Path)
+
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	if cache == NoCache {
 		req.Header.Set("cache-control", "no-cache")
 	}
+
 	start := time.Now()
-	resp, err = client.Do(req)
+
+	res, err := client.Do(req)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	elapsed := time.Since(start)
-	defer func() {
-		if !ok {
-			// Flush the body, so that the connection can be reused by keep-alive
-			_, _ = io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
-		}
-	}()
+
 	if elapsed.Seconds() >= 3 {
 		log := logger.WithNamespace("registry")
 		log.Infof("slow request on %s (%s)", u.String(), elapsed)
 	}
-	if resp.StatusCode == 404 {
-		return
-	}
-	if resp.StatusCode != 200 {
+
+	switch res.StatusCode {
+	case 200:
+		return res, nil
+
+	case 404:
+		_ = res.Body.Close()
+		return nil, nil
+
+	default:
 		var msg struct {
 			Message string `json:"message"`
 		}
-		if err = json.NewDecoder(resp.Body).Decode(&msg); err != nil {
-			err = echo.NewHTTPError(resp.StatusCode)
-		} else {
-			err = echo.NewHTTPError(resp.StatusCode, msg.Message)
+
+		err = json.NewDecoder(res.Body).Decode(&msg)
+		if err != nil {
+			return nil, echo.NewHTTPError(res.StatusCode)
 		}
-		return
+
+		return nil, echo.NewHTTPError(res.StatusCode, msg.Message)
 	}
-	return resp, true, nil
 }
 
 func printMutliCursor(c []int) string {
