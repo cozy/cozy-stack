@@ -139,7 +139,9 @@ func (ac *AdminClient) GetInstance(domain string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // CreateInstance is used to create a new cozy instance of the specified domain
@@ -166,12 +168,15 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 		"Passphrase":    {opts.Passphrase},
 		"KdfIterations": {strconv.Itoa(opts.KdfIterations)},
 	}
+
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
 	}
+
 	if opts.Trace != nil && *opts.Trace {
 		q.Add("Trace", "true")
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances",
@@ -180,7 +185,9 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // CountInstances returns the number of instances.
@@ -241,16 +248,20 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))
 	}
+
 	if opts.Blocked != nil {
 		q.Add("Blocked", strconv.FormatBool(*opts.Blocked))
 		q.Add("BlockingReason", opts.BlockingReason)
 	}
+
 	if opts.Deleting != nil {
 		q.Add("Deleting", strconv.FormatBool(*opts.Deleting))
 	}
+
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/instances/" + domain,
@@ -259,7 +270,9 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // DestroyInstance is used to delete an instance and all its data.
@@ -652,9 +665,9 @@ func (ac *AdminClient) DiskUsage(domain string, includeTrash bool) (map[string]i
 	return info, nil
 }
 
-func readInstance(res *http.Response) (*Instance, error) {
+func readInstance(body io.Reader) (*Instance, error) {
 	in := &Instance{}
-	if err := readJSONAPI(res.Body, &in); err != nil {
+	if err := readJSONAPI(body, &in); err != nil {
 		return nil, err
 	}
 	return in, nil
