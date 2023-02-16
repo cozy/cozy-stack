@@ -139,10 +139,12 @@ func (c *Contact) PrimaryCozyURL() string {
 	return url
 }
 
-// AddNameIfMissing can be used to add a name if there was none.
-func (c *Contact) AddNameIfMissing(db prefixer.Prefixer, name string) error {
+// AddNameIfMissing can be used to add a name if there was none. We need the
+// email address to ignore it if the displayName was updated with it by a
+// service of the contacts application.
+func (c *Contact) AddNameIfMissing(db prefixer.Prefixer, name, email string) error {
 	was, ok := c.Get("displayName").(string)
-	if ok && len(was) > 0 {
+	if ok && len(was) > 0 && was != email {
 		return nil
 	}
 	was, ok = c.Get("fullname").(string)
