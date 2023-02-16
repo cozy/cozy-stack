@@ -75,16 +75,24 @@ func fsck(domain string) error {
 	scanner := bufio.NewScanner(res.Body)
 	buf := make([]byte, 512*1024) // The default buffer can be too short for some lines
 	scanner.Buffer(buf, len(buf))
+
 	for scanner.Scan() {
 		hasLogs = true
 		fmt.Println(string(scanner.Bytes()))
 	}
 	if err := scanner.Err(); err != nil {
+		_ = res.Body.Close()
 		return err
 	}
+
 	if hasLogs {
+		// Needs to handle manually the body close because os.Exit bypass all the
+		// defer functions.
+		_ = res.Body.Close()
 		os.Exit(1)
 	}
+
+	_ = res.Body.Close()
 	return nil
 }
 
