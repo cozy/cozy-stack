@@ -109,10 +109,6 @@ func TestApps(t *testing.T) {
 	client = &http.Client{Jar: jar}
 
 	// Login
-	req, _ := http.NewRequest("POST", ts.URL+"/login", bytes.NewBufferString("passphrase="+pass))
-	req.Host = testInstance.Domain
-	_, _ = client.Do(req)
-
 	cozysessID := testutils.CreateTestClient(t, ts.URL).POST("/login").
 		WithHost(testInstance.Domain).
 		Expect().Status(200).
