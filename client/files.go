@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -157,7 +156,9 @@ func (c *Client) GetDirOrFileByPath(name string) (*DirOrFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // Mkdir creates a directory with the specified path. If the directory's parent
@@ -281,7 +282,9 @@ func (c *Client) UpdateAttrsByID(id string, patch *FilePatch) (*DirOrFile, error
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // UpdateAttrsByPath is used to update the attributes of a file or directory
@@ -295,6 +298,7 @@ func (c *Client) UpdateAttrsByPath(name string, patch *FilePatch) (*DirOrFile, e
 	if patch.Rev != "" {
 		headers["If-Match"] = patch.Rev
 	}
+
 	res, err := c.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/files/metadata",
@@ -305,7 +309,9 @@ func (c *Client) UpdateAttrsByPath(name string, patch *FilePatch) (*DirOrFile, e
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // Move is used to move a file or directory from a given path to the other
@@ -448,9 +454,9 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 	return nil
 }
 
-func readDirOrFile(res *http.Response) (*DirOrFile, error) {
+func readDirOrFile(body io.Reader) (*DirOrFile, error) {
 	dirOrFile := &DirOrFile{}
-	if err := readJSONAPI(res.Body, &dirOrFile); err != nil {
+	if err := readJSONAPI(body, &dirOrFile); err != nil {
 		return nil, err
 	}
 	return dirOrFile, nil
