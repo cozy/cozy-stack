@@ -161,13 +161,6 @@ func readJSONAPI(r io.Reader, data interface{}) (err error) {
 }
 
 func readJSONAPILinks(r io.Reader, included, links interface{}) (err error) {
-	defer func() {
-		if rc, ok := r.(io.ReadCloser); ok {
-			if cerr := rc.Close(); err == nil && cerr != nil {
-				err = cerr
-			}
-		}
-	}()
 	var doc jsonAPIDocument
 	decoder := json.NewDecoder(r)
 	if err = decoder.Decode(&doc); err != nil {

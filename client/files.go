@@ -431,6 +431,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 		if err = readJSONAPILinks(res.Body, &included, &links); err != nil {
 			return walkFn(name, doc, err)
 		}
+		_ = res.Body.Close()
 
 		for _, d := range included {
 			fullpath := path.Join(name, d.Attrs.Name)
