@@ -19,8 +19,9 @@ func TestRedisCache(t *testing.T) {
 	opts, err := redis.ParseURL(redisURL)
 	require.NoError(t, err)
 
-	redisClient := New(redis.NewClient(opts))
-	inMemoryClient := New(nil)
+	redisClient := NewRedis(redis.NewClient(opts))
+	genericCacheWithClient := New(redis.NewClient(opts))
+	genericCacheWithoutClient := New(nil)
 
 	tests := []struct {
 		name        string
@@ -28,13 +29,18 @@ func TestRedisCache(t *testing.T) {
 		RequireInte bool
 	}{
 		{
-			name:        "RedisClient",
-			client:      &redisClient,
+			name:        "GenericCacheWithClient",
+			client:      &genericCacheWithClient,
 			RequireInte: true,
 		},
 		{
-			name:        "InMemoryClient",
-			client:      &inMemoryClient,
+			name:        "RedisClient",
+			client:      redisClient,
+			RequireInte: true,
+		},
+		{
+			name:        "GenericCacheWithoutClient",
+			client:      &genericCacheWithoutClient,
 			RequireInte: false,
 		},
 	}
