@@ -12,32 +12,55 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Cache is a rudimentary key/value caching store backed by redis. It offers a
+// Get/Set interface as well a its gzip compressed alternative
+// GetCompressed/SetCompressed
+type Cache interface {
+	CheckStatus(ctx context.Context) (time.Duration, error)
+	Get(key string) ([]byte, bool)
+	MultiGet(keys []string) [][]byte
+	Keys(prefix string) []string
+	Clear(key string)
+	Set(key string, data []byte, expiration time.Duration)
+	SetNX(key string, data []byte, expiration time.Duration)
+	GetCompressed(key string) (io.Reader, bool)
+	SetCompressed(key string, data []byte, expiration time.Duration)
+	RefreshTTL(key string, expiration time.Duration)
+}
+
 type cacheEntry struct {
 	payload   []byte
 	expiredAt time.Time
 }
 
-// Cache is a rudimentary key/value caching store backed by redis. It offers a
-// Get/Set interface as well a its gzip compressed alternative
-// GetCompressed/SetCompressed
-type Cache struct {
+// GenericCache is a `GenericCache` implementation handle as well a Redis backend
+// or a in-memory one.
+//
+// The backend selection is done based on the `New.client` argument. If a client is
+// given, the redis backend is chosed, if nil is provided the inmemory backend would
+// be chosen.
+type GenericCache struct {
 	client redis.UniversalClient
 	m      *sync.Map
 	ctx    context.Context
 }
 
-// New returns a new Cache from a potentially nil redis client.
-func New(client redis.UniversalClient) Cache {
+// New instantiate a GenericCache Client.
+//
+// The backend selection is done based on the `client` argument. If a client is
+// given, the redis backend is chosed, if nil is provided the inmemory backend would
+// be chosen.
+func New(client redis.UniversalClient) GenericCache {
 	ctx := context.Background()
 	if client != nil {
-		return Cache{client, nil, ctx}
+		return GenericCache{client, nil, ctx}
 	}
 	m := sync.Map{}
-	return Cache{nil, &m, ctx}
+	return GenericCache{nil, &m, ctx}
 }
 
 // CheckStatus checks that the cache is ready, or returns an error.
-func (c Cache) CheckStatus(ctx context.Context) (time.Duration, error) {
+func (c GenericCache) CheckStatus(ctx context.Context) (time.Duration, error) {
 	if c.client == nil {
 		return 0, nil
 	}
@@ -50,7 +73,7 @@ func (c Cache) CheckStatus(ctx context.Context) (time.Duration, error) {
 
 // Get fetch the cached asset at the given key, and returns true only if the
 // asset was found.
-func (c Cache) Get(key string) ([]byte, bool) {
+func (c GenericCache) Get(key string) ([]byte, bool) {
 	if c.client == nil {
 		if value, ok := c.m.Load(key); ok {
 			entry := value.(cacheEntry)
@@ -69,7 +92,7 @@ func (c Cache) Get(key string) ([]byte, bool) {
 }
 
 // MultiGet can be used to fetch several keys at once.
-func (c Cache) MultiGet(keys []string) [][]byte {
+func (c GenericCache) MultiGet(keys []string) [][]byte {
 	results := make([][]byte, len(keys))
 	if c.client == nil {
 		for i, key := range keys {
@@ -88,7 +111,7 @@ func (c Cache) MultiGet(keys []string) [][]byte {
 
 // Keys returns the list of keys with the given prefix.
 // Note: it can be slow and should be used carefully.
-func (c Cache) Keys(prefix string) []string {
+func (c GenericCache) Keys(prefix string) []string {
 	if c.client != nil {
 		cmd := c.client.Keys(c.ctx, prefix+"*")
 		return cmd.Val()
@@ -105,7 +128,7 @@ func (c Cache) Keys(prefix string) []string {
 }
 
 // Clear removes a key from the cache
-func (c Cache) Clear(key string) {
+func (c GenericCache) Clear(key string) {
 	if c.client == nil {
 		c.m.Delete(key)
 	} else {
@@ -114,7 +137,7 @@ func (c Cache) Clear(key string) {
 }
 
 // Set stores an asset to the given key.
-func (c Cache) Set(key string, data []byte, expiration time.Duration) {
+func (c GenericCache) Set(key string, data []byte, expiration time.Duration) {
 	if c.client == nil {
 		c.m.Store(key, cacheEntry{
 			payload:   data,
@@ -126,7 +149,7 @@ func (c Cache) Set(key string, data []byte, expiration time.Duration) {
 }
 
 // SetNX stores the data in the cache only if the key doesn't exist yet.
-func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
+func (c GenericCache) SetNX(key string, data []byte, expiration time.Duration) {
 	if c.client == nil {
 		c.m.LoadOrStore(key, cacheEntry{
 			payload:   data,
@@ -139,7 +162,7 @@ func (c Cache) SetNX(key string, data []byte, expiration time.Duration) {
 
 // GetCompressed works like Get but expect a compressed asset that is
 // uncompressed.
-func (c Cache) GetCompressed(key string) (io.Reader, bool) {
+func (c GenericCache) GetCompressed(key string) (io.Reader, bool) {
 	if r, ok := c.Get(key); ok {
 		if gr, err := gzip.NewReader(bytes.NewReader(r)); err == nil {
 			return gr, true
@@ -149,7 +172,7 @@ func (c Cache) GetCompressed(key string) (io.Reader, bool) {
 }
 
 // SetCompressed works like Set but compress the asset data before storing it.
-func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) {
+func (c GenericCache) SetCompressed(key string, data []byte, expiration time.Duration) {
 	dataCompressed := new(bytes.Buffer)
 	gw := gzip.NewWriter(dataCompressed)
 	defer gw.Close()
@@ -160,7 +183,7 @@ func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) 
 }
 
 // RefreshTTL can be used to update the TTL of an existing entry in the cache.
-func (c Cache) RefreshTTL(key string, expiration time.Duration) {
+func (c GenericCache) RefreshTTL(key string, expiration time.Duration) {
 	if c.client == nil {
 		if value, ok := c.m.Load(key); ok {
 			entry := value.(cacheEntry)

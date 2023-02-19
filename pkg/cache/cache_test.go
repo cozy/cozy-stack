@@ -10,10 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func GenericCacheImplementsCache(t *testing.T) {
+	require.Implements(t, (*Cache)(nil), new(GenericCache))
+}
+
 func TestRedisCache(t *testing.T) {
 	redisURL := "redis://localhost:6379/0"
 	opts, err := redis.ParseURL(redisURL)
 	require.NoError(t, err)
+
+	redisClient := New(redis.NewClient(opts))
+	inMemoryClient := New(nil)
 
 	tests := []struct {
 		name        string
@@ -22,12 +29,12 @@ func TestRedisCache(t *testing.T) {
 	}{
 		{
 			name:        "RedisClient",
-			client:      New(redis.NewClient(opts)),
+			client:      &redisClient,
 			RequireInte: true,
 		},
 		{
 			name:        "InMemoryClient",
-			client:      New(nil),
+			client:      &inMemoryClient,
 			RequireInte: false,
 		},
 	}
