@@ -20,6 +20,7 @@ func TestRedisCache(t *testing.T) {
 	require.NoError(t, err)
 
 	redisClient := NewRedis(redis.NewClient(opts))
+	inMemoryClient := NewInMemory()
 	genericCacheWithClient := New(redis.NewClient(opts))
 	genericCacheWithoutClient := New(nil)
 
@@ -37,6 +38,11 @@ func TestRedisCache(t *testing.T) {
 			name:        "RedisClient",
 			client:      redisClient,
 			RequireInte: true,
+		},
+		{
+			name:        "InMemoryClient",
+			client:      inMemoryClient,
+			RequireInte: false,
 		},
 		{
 			name:        "GenericCacheWithoutClient",
