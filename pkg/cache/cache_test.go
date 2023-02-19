@@ -10,10 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func GenericCacheImplementsCache(t *testing.T) {
-	require.Implements(t, (*Cache)(nil), new(GenericCache))
-}
-
 func TestRedisCache(t *testing.T) {
 	redisURL := "redis://localhost:6379/0"
 	opts, err := redis.ParseURL(redisURL)
@@ -21,19 +17,12 @@ func TestRedisCache(t *testing.T) {
 
 	redisClient := NewRedis(redis.NewClient(opts))
 	inMemoryClient := NewInMemory()
-	genericCacheWithClient := New(redis.NewClient(opts))
-	genericCacheWithoutClient := New(nil)
 
 	tests := []struct {
 		name        string
 		client      Cache
 		RequireInte bool
 	}{
-		{
-			name:        "GenericCacheWithClient",
-			client:      &genericCacheWithClient,
-			RequireInte: true,
-		},
 		{
 			name:        "RedisClient",
 			client:      redisClient,
@@ -44,20 +33,19 @@ func TestRedisCache(t *testing.T) {
 			client:      inMemoryClient,
 			RequireInte: false,
 		},
-		{
-			name:        "GenericCacheWithoutClient",
-			client:      &genericCacheWithoutClient,
-			RequireInte: false,
-		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			c := test.client
+
+			t.Run("ImplementsCache", func(t *testing.T) {
+				require.Implements(t, (*Cache)(nil), c)
+			})
+
 			if testing.Short() && test.RequireInte {
 				t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
 			}
-
-			c := test.client
 
 			t.Run("SET/GET/EXPIRE", func(t *testing.T) {
 				key := "foo"
