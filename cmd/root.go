@@ -70,7 +70,7 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
 		Host:      config.GetConfig().Host,
 		Port:      config.GetConfig().Port,
-		Timeout:   5 * time.Minute,
+		Timeout:   15 * time.Minute,
 		EnvPrefix: "COZY_HOST",
 	})
 	if err != nil {
@@ -111,7 +111,7 @@ func newAdminClient() *client.AdminClient {
 	httpClient, adminURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
 		Host:      config.GetConfig().AdminHost,
 		Port:      config.GetConfig().AdminPort,
-		Timeout:   10 * time.Minute,
+		Timeout:   30 * time.Minute,
 		EnvPrefix: "COZY_ADMIN",
 	})
 	checkNoErr(err)
