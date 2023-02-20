@@ -22,7 +22,7 @@ else
   exit 1
 fi
 
-NODE_OPTS=""
+NODE_OPTS="--dns-resolution-order=ipv4first"
 
 if [ -z "${COZY_JOB_ID}" ]; then
   COZY_JOB_ID="unknown"
