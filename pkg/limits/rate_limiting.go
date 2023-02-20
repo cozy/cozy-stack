@@ -112,7 +112,7 @@ var configs = []counterConfig{
 	// SharingInviteType
 	{
 		Prefix: "sharing-invite",
-		Limit:  10,
+		Limit:  20,
 		Period: 1 * time.Hour,
 	},
 	// SharingPublicLink
@@ -124,25 +124,25 @@ var configs = []counterConfig{
 	// JobThumbnail
 	{
 		Prefix: "job-thumbnail",
-		Limit:  5000,
+		Limit:  20000,
 		Period: 1 * time.Hour,
 	},
 	// JobShareTrack
 	{
 		Prefix: "job-share-track",
-		Limit:  5000,
+		Limit:  20000,
 		Period: 1 * time.Hour,
 	},
 	// JobShareReplicate
 	{
 		Prefix: "job-share-replicate",
-		Limit:  500,
+		Limit:  2000,
 		Period: 1 * time.Hour,
 	},
 	// JobShareUpload
 	{
 		Prefix: "job-share-upload",
-		Limit:  500,
+		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 	// JobKonnector
@@ -160,13 +160,13 @@ var configs = []counterConfig{
 	// JobSendMail
 	{
 		Prefix: "job-sendmail",
-		Limit:  100,
+		Limit:  200,
 		Period: 1 * time.Hour,
 	},
 	// JobService
 	{
 		Prefix: "job-service",
-		Limit:  100,
+		Limit:  200,
 		Period: 1 * time.Hour,
 	},
 	// JobNotification
