@@ -162,11 +162,13 @@ func (h *memHub) unwatch(sub *Subscriber, key, id string) {
 }
 
 func (h *memHub) close(sub *Subscriber) {
-	h.Lock()
+	h.RLock()
 	list := h.bySubscribers[sub]
-	h.Unlock()
+	h.RUnlock()
+	keys := make([]string, len(list))
+	copy(keys, list)
 
-	for _, key := range list {
+	for _, key := range keys {
 		h.unsubscribe(sub, key)
 	}
 }
