@@ -14,7 +14,7 @@ require (
 	github.com/cozy/prosemirror-go v0.5.2
 	github.com/dhowden/tag v0.0.0-20220618230019-adf36e896086
 	github.com/dustin/go-humanize v1.0.1
-	github.com/gavv/httpexpect/v2 v2.11.0
+	github.com/gavv/httpexpect/v2 v2.12.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
