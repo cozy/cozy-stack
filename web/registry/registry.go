@@ -159,7 +159,6 @@ func proxyMaintenanceReq(c echo.Context) error {
 func Routes(router *echo.Group) {
 	gzip := middleware.Gzip()
 	router.GET("", proxyListReq, gzip)
-	router.GET("/", proxyListReq, gzip)
 	router.GET("/maintenance", proxyMaintenanceReq, gzip)
 	router.GET("/:app", proxyAppReq, gzip)
 	router.GET("/:app/icon", proxyReq(authed, shortClientCache, registry.NoCache))

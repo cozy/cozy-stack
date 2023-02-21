@@ -81,6 +81,4 @@ func Status(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", Status)
 	router.HEAD("", Status)
-	router.GET("/", Status)
-	router.HEAD("/", Status)
 }

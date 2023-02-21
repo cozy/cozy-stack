@@ -563,7 +563,7 @@ func Routes(router *echo.Group) {
 	router.Use(couchdbStyleErrorHandler)
 
 	// API Routes that don't depend on a doctype
-	router.GET("/", dataAPIWelcome)
+	router.GET("", dataAPIWelcome)
 	router.GET("/_all_doctypes", allDoctypes)
 
 	// API Routes under /:doctype
@@ -576,7 +576,7 @@ func Routes(router *echo.Group) {
 	group.GET("/:docid", getDoc)
 	group.PUT("/:docid", UpdateDoc)
 	group.DELETE("/:docid", DeleteDoc)
-	group.POST("/", createDoc)
+	group.POST("", createDoc)
 	group.GET("/_all_docs", allDocs)
 	group.POST("/_all_docs", allDocs)
 	group.GET("/_normal_docs", normalDocs)
@@ -588,5 +588,5 @@ func Routes(router *echo.Group) {
 	group.POST("/_design/:designdocid/copy", copyDesignDoc)
 	group.DELETE("/_design/:designdocid", deleteDesignDoc)
 
-	group.DELETE("/", DeleteDatabase)
+	group.DELETE("", DeleteDatabase)
 }

@@ -23,6 +23,4 @@ func Version(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", Version)
 	router.HEAD("", Version)
-	router.GET("/", Version)
-	router.HEAD("/", Version)
 }

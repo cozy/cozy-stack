@@ -803,7 +803,7 @@ func openWebapp(c echo.Context) error {
 
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
-	router.GET("/", listWebappsHandler)
+	router.GET("", listWebappsHandler)
 	router.GET("/:slug", getHandler(consts.WebappType))
 	router.POST("/:slug", installHandler(consts.WebappType))
 	router.PUT("/:slug", updateHandler(consts.WebappType))
@@ -818,7 +818,7 @@ func WebappsRoutes(router *echo.Group) {
 
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
-	router.GET("/", listKonnectorsHandler)
+	router.GET("", listKonnectorsHandler)
 	router.GET("/:slug", getHandler(consts.KonnectorType))
 	router.POST("/:slug", installHandler(consts.KonnectorType))
 	router.PUT("/:slug", updateHandler(consts.KonnectorType))

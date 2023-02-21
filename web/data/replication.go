@@ -278,10 +278,10 @@ func dbStatus(c echo.Context) error {
 }
 
 func replicationRoutes(group *echo.Group) {
-	group.PUT("/", createDB)
+	group.PUT("", createDB)
 
 	// Routes used only for replication
-	group.GET("/", dbStatus)
+	group.GET("", dbStatus)
 	group.GET("/_changes", changesFeed)
 	// POST=GET+filter see http://docs.couchdb.org/en/stable/api/database/changes.html#post--db-_changes)
 	group.POST("/_changes", changesFeed)

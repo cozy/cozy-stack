@@ -199,7 +199,7 @@ func SetupRoutes(router *echo.Echo) error {
 			middlewares.CheckInstanceDeleting,
 		}
 
-		router.GET("/", auth.Home, mws...)
+		router.GET("", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
 		public.Routes(router.Group("/public", mws...))
 		wellknown.Routes(router.Group("/.well-known", mws...))
