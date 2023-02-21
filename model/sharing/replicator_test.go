@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +56,7 @@ func TestReplicator(t *testing.T) {
 		feed, err := s.callChangesFeed(inst, seq)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, feed.Seq)
-		assert.Equal(t, nb, RevGeneration(feed.Seq))
+		assert.Equal(t, nb, revision.Generation(feed.Seq))
 		err = s.UpdateLastSequenceNumber(inst, m, "replicator", feed.Seq)
 		assert.NoError(t, err)
 
@@ -248,7 +249,7 @@ func TestReplicator(t *testing.T) {
 		feed, err := s.callChangesFeed(inst, "")
 		assert.NoError(t, err)
 		assert.NotEmpty(t, feed.Seq)
-		assert.Equal(t, 3, RevGeneration(feed.Seq))
+		assert.Equal(t, 3, revision.Generation(feed.Seq))
 		changes := &feed.Changes
 		assert.Equal(t, []string{"1-aaa", "2-ccc"}, changes.Changed[ref1.SID])
 		assert.Equal(t, []string{"3-bbb"}, changes.Changed[ref2.SID])
@@ -269,7 +270,7 @@ func TestReplicator(t *testing.T) {
 		feed3, err := s.callChangesFeed(inst, feed.Seq)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, feed3.Seq)
-		assert.Equal(t, 4, RevGeneration(feed3.Seq))
+		assert.Equal(t, 4, revision.Generation(feed3.Seq))
 		changes = &feed3.Changes
 		assert.Equal(t, []string{"1-aaa", "2-ccc", "3-ddd"}, changes.Changed[ref1.SID])
 		assert.NotContains(t, changes.Changed, ref2.SID)

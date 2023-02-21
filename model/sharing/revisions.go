@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -62,7 +63,7 @@ func (rt *RevsTree) Clone() RevsTree {
 // Generation returns the maximal generation of a revision in this tree
 func (rt *RevsTree) Generation() int {
 	if len(rt.Branches) == 0 {
-		return RevGeneration(rt.Rev)
+		return revision.Generation(rt.Rev)
 	}
 	max := 0
 	for _, b := range rt.Branches {
@@ -122,7 +123,7 @@ func (rt *RevsTree) Add(rev string) *RevsTree {
 		if rt.Branches[0].Rev == rev {
 			return &rt.Branches[0]
 		}
-		if RevGeneration(rev) < RevGeneration(rt.Branches[0].Rev) {
+		if revision.Generation(rev) < revision.Generation(rt.Branches[0].Rev) {
 			rt.Branches = []RevsTree{
 				{Rev: rt.Rev, Branches: rt.Branches},
 			}
@@ -205,16 +206,6 @@ func (rt *RevsTree) InsertChain(chain []string) {
 	}
 }
 
-// RevGeneration returns the number before the hyphen, called the generation of a revision
-func RevGeneration(rev string) int {
-	parts := strings.SplitN(rev, "-", 2)
-	gen, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0
-	}
-	return gen
-}
-
 // revsMapToStruct builds a RevsStruct from a json unmarshaled to a map
 func revsMapToStruct(revs interface{}) *RevsStruct {
 	revisions, ok := revs.(map[string]interface{})
@@ -283,8 +274,8 @@ func detectConflict(rev string, chain []string) conflictStatus {
 	}
 
 	last := chain[len(chain)-1]
-	genl := RevGeneration(last)
-	genr := RevGeneration(rev)
+	genl := revision.Generation(last)
+	genr := revision.Generation(rev)
 	if genl > genr {
 		return WonConflict
 	} else if genl < genr {
@@ -299,13 +290,13 @@ func detectConflict(rev string, chain []string) conflictStatus {
 // used to resolve a conflict: the new chain will start the old rev and include
 // other revisions from the chain with a greater generation.
 func MixupChainToResolveConflict(rev string, chain []string) []string {
-	gen := RevGeneration(rev)
+	gen := revision.Generation(rev)
 	mixed := make([]string, 0)
 	found := false
 	for _, r := range chain {
 		if found {
 			mixed = append(mixed, r)
-		} else if gen == RevGeneration(r) {
+		} else if gen == revision.Generation(r) {
 			mixed = append(mixed, rev)
 			found = true
 		}
@@ -320,7 +311,7 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 // with the remote ones saved before the local ones.
 func addMissingRevsToChain(db prefixer.Prefixer, ref *SharedRef, chain []string) ([]string, error) {
 	refHighestGen := ref.Revisions.Generation()
-	chainLowestGen := RevGeneration(chain[0])
+	chainLowestGen := revision.Generation(chain[0])
 	if refHighestGen >= chainLowestGen-1 {
 		return chain, nil
 	}
@@ -408,9 +399,9 @@ func (rt *RevsTree) check() *CheckSharedError {
 		return nil
 	}
 
-	gen := RevGeneration(rt.Rev)
+	gen := revision.Generation(rt.Rev)
 	for _, b := range rt.Branches {
-		if RevGeneration(b.Rev) != gen+1 {
+		if revision.Generation(b.Rev) != gen+1 {
 			return &CheckSharedError{
 				Type:   "invalid_revs_suite",
 				Parent: rt.Rev,

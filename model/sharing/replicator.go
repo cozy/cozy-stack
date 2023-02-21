@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
@@ -237,7 +238,7 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, w
 		result = make(map[string]interface{})
 	} else {
 		if prev, ok := result["last_seq"].(string); ok {
-			if RevGeneration(seq) <= RevGeneration(prev) {
+			if revision.Generation(seq) <= revision.Generation(prev) {
 				return nil
 			}
 		}

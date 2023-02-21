@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metadata"
@@ -1532,7 +1533,7 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 
 		if ownerDoc, found := ownerDocsById[ownerID]; found {
 			if ownerDoc.Rev() != memberDoc.Rev() {
-				if RevGeneration(ownerDoc.Rev()) < RevGeneration(memberDoc.Rev()) && ms.ReadOnly() {
+				if revision.Generation(ownerDoc.Rev()) < revision.Generation(memberDoc.Rev()) && ms.ReadOnly() {
 					checks = append(checks, map[string]interface{}{
 						"id":     s.SID,
 						"type":   "read_only_member",
@@ -1543,14 +1544,14 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 					// assume the sharing synchronization is still in progress and
 					// that would explain the difference between the 2 revisions.
 					// In this case, we do nothing.
-				} else if RevGeneration(ownerDoc.Rev()) > RevGeneration(memberDoc.Rev()) && isFileTooBigForInstance(m, ownerDoc) {
+				} else if revision.Generation(ownerDoc.Rev()) > revision.Generation(memberDoc.Rev()) && isFileTooBigForInstance(m, ownerDoc) {
 					checks = append(checks, map[string]interface{}{
 						"id":       s.SID,
 						"type":     "disk_quota_exceeded",
 						"instance": m.Domain,
 						"file":     ownerDoc,
 					})
-				} else if RevGeneration(ownerDoc.Rev()) < RevGeneration(memberDoc.Rev()) && isFileTooBigForInstance(inst, memberDoc) {
+				} else if revision.Generation(ownerDoc.Rev()) < revision.Generation(memberDoc.Rev()) && isFileTooBigForInstance(inst, memberDoc) {
 					checks = append(checks, map[string]interface{}{
 						"id":       s.SID,
 						"type":     "disk_quota_exceeded",
