@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -303,6 +304,7 @@ func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 	if len(res) != len(docs) {
 		return errors.New("BulkUpdateDoc receive an unexpected number of responses")
 	}
+	logBulk(db, "BulkDeleteDocs", doctype, res)
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
 			update := res[i]
@@ -352,6 +354,7 @@ func BulkDeleteDocs(db prefixer.Prefixer, doctype string, docs []Doc) error {
 		doc.SetRev(res[i].Rev)
 		RTEvent(db, realtime.EventDelete, doc, nil)
 	}
+	logBulk(db, "BulkDeleteDocs", doctype, docs)
 	return nil
 }
 
@@ -368,7 +371,47 @@ func BulkForceUpdateDocs(db prefixer.Prefixer, doctype string, docs []map[string
 		NewEdits: false,
 		Docs:     docs,
 	}
+	logBulk(db, "BulkForceUpdateDocs", doctype, docs)
 	// XXX CouchDB returns just an empty array when new_edits is false, so we
 	// ignore the response
 	return makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, nil)
+}
+
+func logBulk(db prefixer.Prefixer, prefix, doctype string, docs interface{}) {
+	extracted := make([]string, 0, 1000)
+	if documents, ok := docs.([]Doc); ok {
+		for _, doc := range documents {
+			id := doc.ID()
+			rev := revision.Generation(doc.Rev())
+			extracted = append(extracted, fmt.Sprintf("%s (%d)", id, rev))
+		}
+	} else if updates, ok := docs.([]UpdateResponse); ok {
+		for _, update := range updates {
+			id := update.ID
+			rev := revision.Generation(update.Rev)
+			extracted = append(extracted, fmt.Sprintf("%s (%d)", id, rev))
+		}
+	} else if maps, ok := docs.([]map[string]interface{}); ok {
+		for _, doc := range maps {
+			id, _ := doc["_id"].(string)
+			extracted = append(extracted, fmt.Sprintf("%s", id))
+		}
+	}
+
+	var messages []string
+	for len(extracted) > 0 {
+		nb := len(extracted)
+		// We limit the number of ids per log to avoid the line width limit.
+		if nb > 50 {
+			nb = 50
+		}
+		msg := strings.Join(extracted[:nb], " ")
+		messages = append(messages, msg)
+		extracted = extracted[nb:]
+	}
+
+	for _, msg := range messages {
+		logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
+			Infof("%s for %s: %s", prefix, doctype, msg)
+	}
 }
