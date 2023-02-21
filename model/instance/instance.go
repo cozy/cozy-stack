@@ -214,7 +214,7 @@ func (i *Instance) MakeVFS() error {
 		return nil
 	}
 	fsURL := config.FsURL()
-	mutex := lock.ReadWrite(i, "vfs")
+	mutex := config.GetConfig().Lock.ReadWrite(i, "vfs")
 	index := vfs.NewCouchdbIndexer(i)
 	disk := vfs.DiskThresholder(i)
 	var err error
@@ -268,7 +268,7 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 
 // NotesLock returns a mutex for the notes on this instance.
 func (i *Instance) NotesLock() lock.ErrorRWLocker {
-	return lock.ReadWrite(i, "notes")
+	return config.GetConfig().Lock.ReadWrite(i, "notes")
 }
 
 // SettingsDocument returns the document with the settings of this instance

@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
@@ -270,7 +269,7 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
-	mutex := lock.LongOperation(inst, "vfs")
+	mutex := config.GetConfig().Lock.LongOperation(inst, "vfs")
 	if err = mutex.Lock(); err != nil {
 		return err
 	}

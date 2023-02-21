@@ -818,7 +818,7 @@ func makeAferoFS(t *testing.T) vfs.VFS {
 
 	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
-	mutex = lock.ReadWrite(db, "vfs-afero-test")
+	mutex = config.GetConfig().Lock.ReadWrite(db, "vfs-afero-test")
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
 	require.NoError(t, err)
@@ -856,13 +856,13 @@ func makeSwiftFS(t *testing.T, layout int) vfs.VFS {
 	var swiftFs vfs.VFS
 	switch layout {
 	case 0:
-		mutex = lock.ReadWrite(db, "vfs-swift-test")
+		mutex = config.GetConfig().Lock.ReadWrite(db, "vfs-swift-test")
 		swiftFs, err = vfsswift.New(db, index, &diskImpl{}, mutex)
 	case 1:
-		mutex = lock.ReadWrite(db, "vfs-swiftv2-test")
+		mutex = config.GetConfig().Lock.ReadWrite(db, "vfs-swiftv2-test")
 		swiftFs, err = vfsswift.NewV2(db, index, &diskImpl{}, mutex)
 	case 2:
-		mutex = lock.ReadWrite(db, "vfs-swiftv3-test")
+		mutex = config.GetConfig().Lock.ReadWrite(db, "vfs-swiftv3-test")
 		swiftFs, err = vfsswift.NewV3(db, index, &diskImpl{}, mutex)
 	}
 	require.NoError(t, err)

@@ -192,7 +192,6 @@ func (rl *redisLock) RUnlock() {
 	rl.unlock(false)
 }
 
-var redislocks map[string]*redisLock
 var redislocksMu sync.Mutex
 var redisRng *rand.Rand
 var redisLogger *logger.Entry
@@ -228,28 +227,4 @@ func (r *RedisLockGetter) LongOperation(db prefixer.Prefixer, name string) Error
 	return &longOperation{
 		lock: r.ReadWrite(db, name),
 	}
-}
-
-func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
-	return &redisLock{
-		client: c,
-		ctx:    context.Background(),
-		key:    basicLockNS + ns,
-	}
-}
-
-func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
-	redislocksMu.Lock()
-	defer redislocksMu.Unlock()
-	if redislocks == nil {
-		redislocks = make(map[string]*redisLock)
-		redisRng = rand.New(rand.NewSource(time.Now().UnixNano()))
-		redisLogger = logger.WithNamespace("redis-lock")
-	}
-	l, ok := redislocks[name]
-	if !ok {
-		redislocks[name] = makeRedisSimpleLock(c, name)
-		l = redislocks[name]
-	}
-	return l
 }

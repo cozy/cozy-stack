@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -275,7 +274,7 @@ func (i *Installer) run() (err error) {
 	if i.man == nil {
 		panic("Manifest is nil")
 	}
-	mu := lock.ReadWrite(i.db, "app-"+i.man.Slug())
+	mu := config.GetConfig().Lock.ReadWrite(i.db, "app-"+i.man.Slug())
 	if err = mu.Lock(); err != nil {
 		i.log.Errorf("Could not get lock: %s", err)
 		return err

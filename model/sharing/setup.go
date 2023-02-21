@@ -10,10 +10,10 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
@@ -22,7 +22,7 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup receiver on %#v", inst)
 
-	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	// XXX Wait a bit to avoid pressure on the recipient Cozy
 	time.Sleep(1 * time.Second)
 
-	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return
 	}
@@ -215,7 +215,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		return nil
 	}
 
-	mu := lock.ReadWrite(inst, "shared")
+	mu := config.GetConfig().Lock.ReadWrite(inst, "shared")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -479,7 +478,7 @@ func fireBIWebhook(c echo.Context) error {
 
 	// The stack will create or delete accounts and triggers on some webhooks,
 	// so it is safer to avoid concurrency on this part of the code.
-	mutex := lock.ReadWrite(inst, "bi")
+	mutex := config.GetConfig().Lock.ReadWrite(inst, "bi")
 	if err := mutex.Lock(); err != nil {
 		return err
 	}

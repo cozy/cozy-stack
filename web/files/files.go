@@ -33,7 +33,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -1628,7 +1627,7 @@ func ChangesFeed(c echo.Context) error {
 
 	// Use the VFS lock for the files to avoid sending the changed feed while
 	// the VFS is moving a directory.
-	mu := lock.ReadWrite(inst, "vfs")
+	mu := config.GetConfig().Lock.ReadWrite(inst, "vfs")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

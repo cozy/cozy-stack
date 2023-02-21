@@ -9,10 +9,10 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 
@@ -182,7 +182,7 @@ func migrateAccountsToOrganization(domain string) error {
 	if err != nil {
 		return err
 	}
-	mu := lock.ReadWrite(inst, "migrate-accounts")
+	mu := config.GetConfig().Lock.ReadWrite(inst, "migrate-accounts")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

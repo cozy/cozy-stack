@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -122,7 +123,7 @@ type Config struct {
 	Flagship       Flagship
 	Logger         logger.Options
 
-	Lock                RedisConfig
+	Lock                lock.LockGetter
 	SessionStorage      RedisConfig
 	DownloadStorage     RedisConfig
 	OauthStateStorage   RedisConfig
@@ -787,7 +788,7 @@ func UseViper(v *viper.Viper) error {
 			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
 		},
-		Lock:                lockRedis,
+		Lock:                lock.New(lockRedis.Client()),
 		SessionStorage:      sessionsRedis,
 		DownloadStorage:     downloadRedis,
 		RateLimitingStorage: rateLimitingRedis,
