@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 )
 
-var assetFS assetsFS
+var assetFS AssetsFS
 
 // DynamicAssetsContainerName is the Swift container name for dynamic assets
 const DynamicAssetsContainerName = "__dyn-assets__"
@@ -17,7 +17,12 @@ const DynamicAssetsContainerName = "__dyn-assets__"
 // DynamicAssetsFolderName is the folder name for dynamic assets
 const DynamicAssetsFolderName = "dyn-assets"
 
-type assetsFS interface {
+// AssetsFS is the interface implemented by all the implementations handling assets.
+//
+// At the moment there two separate implementations:
+// - [SwiftFS] allowing to manage assets via an OpenStack Swift API.
+// - [OsFS] allowing to manage assets directly via the host Operating System.
+type AssetsFS interface {
 	Add(string, string, *model.Asset) error
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
