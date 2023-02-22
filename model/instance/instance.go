@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
@@ -24,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/spf13/afero"
 )
 
 // DefaultTemplateTitle represents the default template title. It could be

@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -17,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/spf13/afero"
 )
 
 // ServiceOptions contains the options to execute a service.

@@ -11,13 +11,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/afero"
 )
 
 var defaultTimeout = 300 * time.Second

@@ -19,7 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/lock"
 
-	"github.com/cozy/afero"
+	"github.com/spf13/afero"
 )
 
 var memfsMap sync.Map

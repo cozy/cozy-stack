@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/spf13/afero"
 )
 
 // DynamicAssetsFolderName is the folder name for dynamic assets
