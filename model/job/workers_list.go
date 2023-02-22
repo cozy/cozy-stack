@@ -100,7 +100,7 @@ func AddWorker(conf *WorkerConfig) {
 	}
 	for _, w := range workersList {
 		if w.WorkerType == conf.WorkerType {
-			panic(fmt.Errorf("A worker with of type %q is already defined", conf.WorkerType))
+			panic(fmt.Errorf("a worker with of type %q is already defined", conf.WorkerType))
 		}
 	}
 	workersList = append(workersList, conf)

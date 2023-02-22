@@ -106,11 +106,11 @@ func createHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 		if iter < crypto.MinPBKDF2Iterations && iter != 0 {
-			err := errors.New("The KdfIterations number is too low")
+			err := errors.New("the KdfIterations number is too low")
 			return jsonapi.InvalidParameter("KdfIterations", err)
 		}
 		if iter > crypto.MaxPBKDF2Iterations {
-			err := errors.New("The KdfIterations number is too high")
+			err := errors.New("the KdfIterations number is too high")
 			return jsonapi.InvalidParameter("KdfIterations", err)
 		}
 		opts.KdfIterations = iter
@@ -312,7 +312,7 @@ func setAuthMode(c echo.Context) error {
 
 	authModeString, ok := m["auth_mode"]
 	if !ok {
-		return jsonapi.BadRequest(errors.New("Missing auth_mode key"))
+		return jsonapi.BadRequest(errors.New("missing auth_mode key"))
 	}
 
 	authMode, err := instance.StringToAuthMode(authModeString.(string))

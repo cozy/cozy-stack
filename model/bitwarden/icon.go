@@ -38,7 +38,7 @@ func GetIcon(domain string) (*Icon, error) {
 	key := "bw-icons:" + domain
 	if data, ok := cache.Get(key); ok {
 		if len(data) == 0 {
-			return nil, errors.New("No icon")
+			return nil, errors.New("no icon")
 		}
 		icon := &Icon{}
 		if err := json.Unmarshal(data, icon); err != nil {
@@ -60,17 +60,17 @@ func GetIcon(domain string) (*Icon, error) {
 
 func validateDomain(domain string) error {
 	if domain == "" || len(domain) > 255 || strings.Contains(domain, "..") {
-		return errors.New("Unauthorized domain")
+		return errors.New("unauthorized domain")
 	}
 
 	for _, c := range domain {
 		if c == ' ' || !strconv.IsPrint(c) {
-			return errors.New("Invalid domain")
+			return errors.New("invalid domain")
 		}
 	}
 
 	if _, _, err := net.ParseCIDR(domain + "/24"); err == nil {
-		return errors.New("IP address are not authorized")
+		return errors.New("iP address are not authorized")
 	}
 
 	return nil
@@ -100,12 +100,12 @@ func getPage(domain string) (io.ReadCloser, error) {
 	}
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
-		return nil, errors.New("Not status OK")
+		return nil, errors.New("not status OK")
 	}
 	ct := strings.ToLower(res.Header.Get(echo.HeaderContentType))
 	if !strings.Contains(ct, echo.MIMETextHTML) {
 		res.Body.Close()
-		return nil, errors.New("Not html")
+		return nil, errors.New("not html")
 	}
 	return res.Body, nil
 }
@@ -233,24 +233,24 @@ func downloadIcon(u string) (*Icon, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.New("Not status OK")
+		return nil, errors.New("not status OK")
 	}
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 	if len(b) == 0 {
-		return nil, errors.New("Empty icon")
+		return nil, errors.New("empty icon")
 	}
 	if len(b) > maxSize {
-		return nil, errors.New("Max size exceeded")
+		return nil, errors.New("max size exceeded")
 	}
 	ico := Icon{
 		Mime: res.Header.Get(echo.HeaderContentType),
 		Body: b,
 	}
 	if strings.Split(ico.Mime, "/")[0] != "image" {
-		return nil, errors.New("Invalid mime-type")
+		return nil, errors.New("invalid mime-type")
 	}
 	return &ico, nil
 }

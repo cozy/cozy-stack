@@ -72,10 +72,10 @@ func FromJSONAPI(c echo.Context) (*vfs.FileDoc, []byte, error) {
 		return nil, nil, err
 	}
 	if doc.URL == "" {
-		return nil, nil, jsonapi.InvalidAttribute("url", errors.New("No URL"))
+		return nil, nil, jsonapi.InvalidAttribute("url", errors.New("no URL"))
 	}
 	if doc.Name == "" {
-		return nil, nil, jsonapi.InvalidAttribute("name", errors.New("No name"))
+		return nil, nil, jsonapi.InvalidAttribute("name", errors.New("no name"))
 	}
 	if !strings.HasSuffix(doc.Name, ".url") {
 		doc.Name += ".url"
@@ -161,7 +161,7 @@ func Get(c echo.Context) error {
 		return wrapError(err)
 	}
 	if link.URL == "" {
-		return jsonapi.BadRequest(errors.New("No URL found"))
+		return jsonapi.BadRequest(errors.New("no URL found"))
 	}
 
 	if meta, ok := file.Metadata["sharing"].(map[string]interface{}); ok && meta["status"] != "seen" {

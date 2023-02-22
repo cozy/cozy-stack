@@ -237,14 +237,14 @@ var runKonnectorsCmd = &cobra.Command{
 		}
 
 		if len(triggers) == 0 {
-			return fmt.Errorf("Could not find a konnector %q: "+
+			return fmt.Errorf("could not find a konnector %q: "+
 				"it may be installed but it is not activated (no related trigger)", slug)
 		}
 
 		var trigger *localTrigger
 		if len(triggers) > 1 || flagKonnectorAccountID != "" {
 			if flagKonnectorAccountID == "" {
-				return errors.New("Found multiple konnectors with different accounts: use the --account-id flag")
+				return errors.New("found multiple konnectors with different accounts: use the --account-id flag")
 			}
 			for _, t := range triggers {
 				if t.accountID == flagKonnectorAccountID {
@@ -253,7 +253,7 @@ var runKonnectorsCmd = &cobra.Command{
 				}
 			}
 			if trigger == nil {
-				return fmt.Errorf("Could not find konnector linked to account with id %q",
+				return fmt.Errorf("could not find konnector linked to account with id %q",
 					flagKonnectorAccountID)
 			}
 		} else {
@@ -650,7 +650,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 		}
 	}
 	if hasErr {
-		return errors.New("At least one error occurred while executing this command")
+		return errors.New("at least one error occurred while executing this command")
 	}
 	return nil
 }

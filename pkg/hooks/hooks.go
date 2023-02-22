@@ -11,7 +11,7 @@ import (
 )
 
 // ErrHookFailed is used when an hook script exits with a non-zero status
-var ErrHookFailed = errors.New("Hook exited with non-zero status")
+var ErrHookFailed = errors.New("hook exited with non-zero status")
 
 // Execute runs a pre-hook, then calls te function, and finally run the
 // post-hook.

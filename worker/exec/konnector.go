@@ -226,7 +226,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	}
 
 	if man.State() != app.Ready {
-		return "", cleanDir, errors.New("Konnector is not ready")
+		return "", cleanDir, errors.New("konnector is not ready")
 	}
 
 	var workDir string
@@ -589,7 +589,7 @@ func (w *konnectorWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instanc
 		NoRetry bool   `json:"no_retry"`
 	}
 	if err := json.Unmarshal(line, &msg); err != nil {
-		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
+		return fmt.Errorf("could not parse stdout as JSON: %q", string(line))
 	}
 
 	// Truncate very long messages

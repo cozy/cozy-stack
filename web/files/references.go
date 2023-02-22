@@ -90,7 +90,7 @@ func ListReferencesHandler(c echo.Context) error {
 	case "datetime", "-datetime":
 		view = couchdb.ReferencedBySortedByDatetimeView
 	default:
-		return jsonapi.BadRequest(errors.New("Invalid sort parameter"))
+		return jsonapi.BadRequest(errors.New("invalid sort parameter"))
 	}
 
 	req := &couchdb.ViewRequest{

@@ -485,7 +485,7 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (afs *aferoVFS) EnsureErased(journal vfs.TrashJournal) error {
-	return errors.New("EnsureErased is only for Swift")
+	return errors.New("ensureErased is only for Swift")
 }
 
 func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {

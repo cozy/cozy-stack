@@ -272,7 +272,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		}
 		results, ok := res.([]interface{})
 		if !ok {
-			return errors.New("Unexpected response from redis")
+			return errors.New("unexpected response from redis")
 		}
 		if len(results) < 2 {
 			return nil
@@ -280,7 +280,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		parts := strings.SplitN(results[0].(string), "/", 2)
 		if len(parts) != 2 {
 			s.client.ZRem(s.ctx, SchedKey, results[0])
-			return fmt.Errorf("Invalid key %s", res)
+			return fmt.Errorf("invalid key %s", res)
 		}
 
 		triggerID := parts[1]
@@ -357,7 +357,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 				return err
 			}
 		default:
-			return errors.New("Not implemented yet")
+			return errors.New("not implemented yet")
 		}
 	}
 }
@@ -388,7 +388,7 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	case *WebhookTrigger, *ClientTrigger:
 		return nil
 	default:
-		return errors.New("Not implemented yet")
+		return errors.New("not implemented yet")
 	}
 	pipe := s.client.Pipeline()
 	err := pipe.ZAdd(s.ctx, TriggersKey, redis.Z{

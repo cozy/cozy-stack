@@ -315,7 +315,7 @@ func resolveGithubURL(src *url.URL, filename string) (string, error) {
 		return "", &url.Error{
 			Op:  "parsepath",
 			URL: src.String(),
-			Err: errors.New("Could not parse url git path"),
+			Err: errors.New("could not parse url git path"),
 		}
 	}
 
@@ -332,7 +332,7 @@ func resolveGitlabURL(src *url.URL, filename string) (string, error) {
 		return "", &url.Error{
 			Op:  "parsepath",
 			URL: src.String(),
-			Err: errors.New("Could not parse url git path"),
+			Err: errors.New("could not parse url git path"),
 		}
 	}
 

@@ -62,7 +62,7 @@ type subjectEntry struct {
 func (m MailTemplater) Execute(ctx *job.WorkerContext, name, layout, locale string, recipientName string, data map[string]interface{}) (string, []*mail.Part, error) {
 	entry, ok := m[name]
 	if !ok {
-		err := fmt.Errorf("Could not find email named %q", name)
+		err := fmt.Errorf("could not find email named %q", name)
 		return "", nil, err
 	}
 

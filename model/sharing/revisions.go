@@ -332,7 +332,7 @@ func addMissingRevsToChain(db prefixer.Prefixer, ref *SharedRef, chain []string)
 	}
 	revisions := revsMapToStruct(doc.M["_revisions"])
 	if len(revisions.IDs) < chainLowestGen-1 {
-		return nil, fmt.Errorf("Cannot add the missing revs to io.cozy.shared %s", docRef.ID)
+		return nil, fmt.Errorf("cannot add the missing revs to io.cozy.shared %s", docRef.ID)
 	}
 	var oldRevs []string
 	for i := refHighestGen + 1; i < chainLowestGen; i++ {

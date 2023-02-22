@@ -157,7 +157,7 @@ func (r Rule) TranslationKey() string {
 // Rule1 name & description are kept
 func (r Rule) Merge(r2 Rule) (*Rule, error) {
 	if r.Type != r2.Type {
-		return nil, fmt.Errorf("Cannot merge these rules, type is different")
+		return nil, fmt.Errorf("cannot merge these rules, type is different")
 	}
 
 	newRule := &r

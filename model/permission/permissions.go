@@ -353,14 +353,14 @@ func GetTokenAndPermissionsFromShortcode(db prefixer.Prefixer, shortcode string)
 		}
 	}
 
-	return "", nil, fmt.Errorf("Cannot find token for shortcode %s", res.Rows[0].Key)
+	return "", nil, fmt.Errorf("cannot find token for shortcode %s", res.Rows[0].Key)
 }
 
 // CreateWebappSet creates a Permission doc for an app
 func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
 	if existing != nil {
-		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
+		return nil, fmt.Errorf("there is already a permission doc for %v", slug)
 	}
 	// Add metadata
 	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)
@@ -374,7 +374,7 @@ func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, version string)
 func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForKonnector(db, slug)
 	if existing != nil {
-		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
+		return nil, fmt.Errorf("there is already a permission doc for %v", slug)
 	}
 	// Add metadata
 	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)

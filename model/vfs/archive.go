@@ -129,7 +129,7 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			}
 			name, err = filepath.Rel(base, name)
 			if err != nil {
-				return fmt.Errorf("Invalid filepath <%s>: %s", name, err)
+				return fmt.Errorf("invalid filepath <%s>: %s", name, err)
 			}
 			if dir != nil {
 				_, err = zw.Create(a.Name + "/" + name + "/")
@@ -142,11 +142,11 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			}
 			ze, err := zw.CreateHeader(header)
 			if err != nil {
-				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
+				return fmt.Errorf("can't create zip entry <%s>: %s", name, err)
 			}
 			f, err := fs.OpenFile(file)
 			if err != nil {
-				return fmt.Errorf("Can't open file <%s>: %s", name, err)
+				return fmt.Errorf("can't open file <%s>: %s", name, err)
 			}
 			defer f.Close()
 			_, err = io.Copy(ze, f)

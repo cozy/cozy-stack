@@ -57,7 +57,7 @@ func devMailsHandler(c echo.Context) error {
 	}
 	if part == nil {
 		return echo.NewHTTPError(http.StatusNotFound,
-			fmt.Errorf("Could not find template %q with content-type %q", name, contentType))
+			fmt.Errorf("could not find template %q with content-type %q", name, contentType))
 	}
 
 	// Remove all CSP policies to display HTML email. this is a dev-only

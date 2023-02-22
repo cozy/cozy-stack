@@ -146,7 +146,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		switch opts.SwiftLayout {
 		case 0:
-			return nil, errors.New("Swift layout v1 disabled for instance creation")
+			return nil, errors.New("swift layout v1 disabled for instance creation")
 		case 1, 2:
 			i.SwiftLayout = opts.SwiftLayout
 		default:

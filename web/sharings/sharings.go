@@ -741,7 +741,7 @@ func Routes(router *echo.Group) {
 func extractSlugFromSourceID(sourceID string) (string, error) {
 	parts := strings.SplitN(sourceID, "/", 2)
 	if len(parts) < 2 {
-		return "", jsonapi.BadRequest(errors.New("Invalid request"))
+		return "", jsonapi.BadRequest(errors.New("invalid request"))
 	}
 	slug := parts[1]
 	return slug, nil

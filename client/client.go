@@ -13,7 +13,7 @@ import (
 )
 
 // ErrWrongPassphrase is used when the passphrase is wrong
-var ErrWrongPassphrase = errors.New("Unauthorized: wrong passphrase")
+var ErrWrongPassphrase = errors.New("unauthorized: wrong passphrase")
 
 // jsonAPIErrors is a group of errors. It is the error type returned by the
 // API.

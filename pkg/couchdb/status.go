@@ -34,7 +34,7 @@ func CheckStatus(ctx context.Context) (time.Duration, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return 0, fmt.Errorf("Invalid responde code: %d", res.StatusCode)
+		return 0, fmt.Errorf("invalid responde code: %d", res.StatusCode)
 	}
 	return latency, nil
 }

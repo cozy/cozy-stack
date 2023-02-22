@@ -235,7 +235,7 @@ func (w *Worker) Start(jobs chan *Job) error {
 	w.closed = make(chan struct{})
 	if w.Conf.WorkerInit != nil {
 		if err := w.Conf.WorkerInit(); err != nil {
-			return fmt.Errorf("Could not start worker %s: %s", w.Type, err)
+			return fmt.Errorf("could not start worker %s: %s", w.Type, err)
 		}
 	}
 	for i := 0; i < w.Conf.Concurrency; i++ {

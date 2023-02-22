@@ -439,7 +439,7 @@ func readFile(res *http.Response) (*File, error) {
 		return nil, err
 	}
 	if file.Attrs.Type != FileType {
-		return nil, fmt.Errorf("Not a file")
+		return nil, fmt.Errorf("not a file")
 	}
 	return file, nil
 }
@@ -450,7 +450,7 @@ func readDir(res *http.Response) (*Dir, error) {
 		return nil, err
 	}
 	if dir.Attrs.Type != DirType {
-		return nil, fmt.Errorf("Not a directory")
+		return nil, fmt.Errorf("not a directory")
 	}
 	return dir, nil
 }

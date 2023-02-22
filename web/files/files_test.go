@@ -3511,7 +3511,7 @@ func loadLocale() error {
 		pofile := path.Join("../..", assetsPath, "locales", locale+".po")
 		po, err := os.ReadFile(pofile)
 		if err != nil {
-			return fmt.Errorf("Can't load the po file for %s", locale)
+			return fmt.Errorf("can't load the po file for %s", locale)
 		}
 		i18n.LoadLocale(locale, "", po)
 	}

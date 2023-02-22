@@ -306,7 +306,7 @@ type Prefixer interface {
 
 // ErrIteratorDone is returned by the Next() method of the iterator when
 // the iterator is actually done.
-var ErrIteratorDone = errors.New("No more element in the iterator")
+var ErrIteratorDone = errors.New("no more element in the iterator")
 
 // IteratorOptions contains the options of the iterator.
 type IteratorOptions struct {

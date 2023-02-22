@@ -236,7 +236,7 @@ func FindClientBySoftwareID(i *instance.Instance, softwareID string) (*Client, e
 	if len(results) == 1 {
 		return results[0], nil
 	}
-	return nil, fmt.Errorf("Could not find client with software_id %s", softwareID)
+	return nil, fmt.Errorf("could not find client with software_id %s", softwareID)
 }
 
 // FindClientByOnBoardingSecret loads a client from the database with an OnboardingSecret
@@ -255,7 +255,7 @@ func FindClientByOnBoardingSecret(i *instance.Instance, onboardingSecret string)
 	if len(results) == 1 {
 		return results[0], nil
 	}
-	return nil, fmt.Errorf("Could not find client with onboarding_secret %s", onboardingSecret)
+	return nil, fmt.Errorf("could not find client with onboarding_secret %s", onboardingSecret)
 }
 
 // FindOnboardingClient loads a client from the database with an OnboardingSecret
@@ -274,7 +274,7 @@ func FindOnboardingClient(i *instance.Instance) (*Client, error) {
 	if len(results) == 1 {
 		return results[0], nil
 	}
-	return nil, fmt.Errorf("Could not find client with an onboarding_secret")
+	return nil, fmt.Errorf("could not find client with an onboarding_secret")
 }
 
 // ClientRegistrationError is a Client Registration Error Response, as described

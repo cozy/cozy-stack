@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errFilesExec = errors.New("Bad usage of files exec")
+var errFilesExec = errors.New("bad usage of files exec")
 
 const filesExecUsage = `Available commands:
 
@@ -480,7 +480,7 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 			if f.IsDir() {
 				return nil
 			}
-			return fmt.Errorf("Not a directory: %s", localname)
+			return fmt.Errorf("not a directory: %s", localname)
 		}
 
 		distname := path.Join(to, strings.TrimPrefix(localname, from))

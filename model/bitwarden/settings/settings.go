@@ -17,7 +17,7 @@ import (
 const DocTypeVersion = "1"
 
 // ErrMissingOrgKey is used when the organization key does not exist
-var ErrMissingOrgKey = errors.New("No organization key")
+var ErrMissingOrgKey = errors.New("no organization key")
 
 // Settings is the struct that holds the birwarden settings
 type Settings struct {
@@ -128,7 +128,7 @@ func (s *Settings) OrganizationKey() ([]byte, error) {
 	}
 	b64, ok := decrypted.(string)
 	if !ok {
-		return nil, errors.New("Invalid key")
+		return nil, errors.New("invalid key")
 	}
 	return base64.StdEncoding.DecodeString(b64)
 }

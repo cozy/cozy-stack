@@ -179,7 +179,7 @@ type DumpFilePather struct{}
 // FilePath only returns an error saying to not call this method
 func (d DumpFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
 	logger.WithNamespace("event-trigger").Warn("FilePath method of DumpFilePather has been called")
-	return "", errors.New("DumpFilePather FilePath should not have been called")
+	return "", errors.New("dumpFilePather FilePath should not have been called")
 }
 
 var dumpFilePather = DumpFilePather{}

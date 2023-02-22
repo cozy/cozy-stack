@@ -53,7 +53,7 @@ example), you can use the --appdir flag like this:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !flagAllowRoot && os.Getuid() == 0 {
 			errPrintfln("Use --allow-root if you really want to start with the root user")
-			return errors.New("Starting cozy-stack serve as root not allowed")
+			return errors.New("starting cozy-stack serve as root not allowed")
 		}
 
 		if flagDevMode {
@@ -71,7 +71,7 @@ example), you can use the --appdir flag like this:
 				case 2:
 					apps[parts[0]] = parts[1]
 				default:
-					return errors.New("Invalid appdir value")
+					return errors.New("invalid appdir value")
 				}
 			}
 		}

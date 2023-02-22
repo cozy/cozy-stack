@@ -367,11 +367,11 @@ func TestVfs(t *testing.T) {
 					}
 
 					if dir != nil && !assert.Equal(t, dir.Fullpath, name) {
-						return fmt.Errorf("Bad fullpath")
+						return fmt.Errorf("bad fullpath")
 					}
 
 					if file != nil && !assert.True(t, strings.HasSuffix(name, file.DocName)) {
-						return fmt.Errorf("Bad fullpath")
+						return fmt.Errorf("bad fullpath")
 					}
 
 					walked[name] = nil
@@ -792,7 +792,7 @@ func recFetchTree(fs vfs.VFS, parent *vfs.DirDoc, name string) (H, error) {
 		}
 		if d != nil {
 			if path.Join(name, d.DocName) != d.Fullpath {
-				return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.DocName))
+				return nil, fmt.Errorf("bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.DocName))
 			}
 			children, err := recFetchTree(fs, d, d.Fullpath)
 			if err != nil {

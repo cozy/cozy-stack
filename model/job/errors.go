@@ -25,14 +25,14 @@ var (
 	ErrAbort = errors.New("jobs: abort")
 
 	// ErrUnknownTrigger is used when the trigger type is not recognized
-	ErrUnknownTrigger = errors.New("Unknown trigger type")
+	ErrUnknownTrigger = errors.New("unknown trigger type")
 	// ErrNotFoundTrigger is used when the trigger was not found
-	ErrNotFoundTrigger = errors.New("Trigger with specified ID does not exist")
+	ErrNotFoundTrigger = errors.New("trigger with specified ID does not exist")
 	// ErrMalformedTrigger is used to indicate the trigger is unparsable
 	ErrMalformedTrigger = echo.NewHTTPError(http.StatusBadRequest, "Trigger unparsable")
 	// ErrNotCronTrigger is used when a @cron trigger is expected, but it is
 	// not the case
-	ErrNotCronTrigger = errors.New("Invalid type for trigger (@cron expected)")
+	ErrNotCronTrigger = errors.New("invalid type for trigger (@cron expected)")
 )
 
 // ErrBadTrigger is an error conveying the information of a trigger that is not

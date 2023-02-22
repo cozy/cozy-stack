@@ -43,7 +43,7 @@ func LoadSupportedLocales() error {
 			pofile := path.Join(assetsPath, "locales", locale+".po")
 			po, err := os.ReadFile(pofile)
 			if err != nil {
-				return fmt.Errorf("Can't load the po file for %s", locale)
+				return fmt.Errorf("can't load the po file for %s", locale)
 			}
 			i18n.LoadLocale(locale, "", po)
 		}
@@ -53,7 +53,7 @@ func LoadSupportedLocales() error {
 	for _, locale := range consts.SupportedLocales {
 		f, err := assets.Open("/locales/"+locale+".po", config.DefaultInstanceContext)
 		if err != nil {
-			return fmt.Errorf("Can't load the po file for %s", locale)
+			return fmt.Errorf("can't load the po file for %s", locale)
 		}
 		po, err := io.ReadAll(f)
 		if err != nil {
@@ -100,7 +100,7 @@ func checkExists(filepath string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("Directory %s should contain a %s file",
+		return fmt.Errorf("directory %s should contain a %s file",
 			path.Dir(filepath), path.Base(filepath))
 	}
 	return nil

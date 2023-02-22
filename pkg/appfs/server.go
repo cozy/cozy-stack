@@ -295,7 +295,7 @@ func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	case brotlied:
 		return newBrotliReadCloser(f)
 	default:
-		panic(fmt.Errorf("Unknown compression type: %v", compression))
+		panic(fmt.Errorf("unknown compression type: %v", compression))
 	}
 }
 
@@ -374,7 +374,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			content = bytes.NewReader(b)
 		}
 	default:
-		panic(fmt.Errorf("Unknown compression type: %v", compression))
+		panic(fmt.Errorf("unknown compression type: %v", compression))
 	}
 
 	contentType := mime.TypeByExtension(path.Ext(filepath))

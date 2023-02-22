@@ -46,7 +46,7 @@ func contentMismatchFixer(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
-		return fmt.Errorf("Cannot find instance %s", domain)
+		return fmt.Errorf("cannot find instance %s", domain)
 	}
 
 	body := struct {

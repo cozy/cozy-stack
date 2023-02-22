@@ -32,6 +32,6 @@ func GetCounterTypeFromWorkerType(workerType string) (limits.CounterType, error)
 	case "client":
 		return limits.JobClientType, nil
 	default:
-		return -1, errors.New("CounterType was not found")
+		return -1, errors.New("counterType was not found")
 	}
 }

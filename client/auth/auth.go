@@ -189,7 +189,7 @@ func (r *Request) Authenticate() error {
 	}
 	query := receivedURL.Query()
 	if state != query.Get("state") {
-		return errors.New("Non matching states")
+		return errors.New("non matching states")
 	}
 	token, err = r.GetAccessToken(client, query.Get("code"))
 	if err != nil {

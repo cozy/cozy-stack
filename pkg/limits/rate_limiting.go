@@ -17,11 +17,11 @@ type CounterType int
 
 // ErrRateLimitReached is the error returned when we were under the limit
 // before the check, and reach the limit.
-var ErrRateLimitReached = errors.New("Rate limit reached")
+var ErrRateLimitReached = errors.New("rate limit reached")
 
 // ErrRateLimitExceeded is the error returned when the limit was already
 // reached before the check.
-var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
+var ErrRateLimitExceeded = errors.New("rate limit exceeded")
 
 const (
 	// AuthType is used for counting the number of login attempts.

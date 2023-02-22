@@ -11,7 +11,7 @@ import (
 // LoginRateExceeded blocks the instance after too many failed attempts to
 // login
 func LoginRateExceeded(i *instance.Instance) error {
-	err := fmt.Errorf("Instance was blocked because of too many login failed attempts")
+	err := fmt.Errorf("instance was blocked because of too many login failed attempts")
 	i.Logger().WithNamespace("rate_limiting").Warn(err.Error())
 	return lifecycle.Block(i, instance.BlockedLoginFailed.Code)
 }
@@ -32,7 +32,7 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 // TwoFactorGenerationExceeded checks if there was too many attempts to
 // regenerate a 2FA code within an hour
 func TwoFactorGenerationExceeded(i *instance.Instance) error {
-	err := fmt.Errorf("Instance was blocked because of too many 2FA passcode generations")
+	err := fmt.Errorf("instance was blocked because of too many 2FA passcode generations")
 	i.Logger().WithNamespace("rate_limiting").Warn(err.Error())
 
 	return lifecycle.Block(i, instance.BlockedLoginFailed.Code)

@@ -191,12 +191,12 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 			webappMan := app.WebappManifest{}
 			v, err := registry.GetLatestVersion(webapp, "stable", registries)
 			if err != nil {
-				errorsChan <- fmt.Errorf("Could not get last version for %s: %s", webapp, err)
+				errorsChan <- fmt.Errorf("could not get last version for %s: %s", webapp, err)
 				return
 			}
 			err = json.NewDecoder(bytes.NewReader(v.Manifest)).Decode(&webappMan)
 			if err != nil {
-				errorsChan <- fmt.Errorf("Could not get decode manifest for %s: %s", webapp, err)
+				errorsChan <- fmt.Errorf("could not get decode manifest for %s: %s", webapp, err)
 				return
 			}
 

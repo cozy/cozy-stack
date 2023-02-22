@@ -25,11 +25,11 @@ const defaultCookieName = "cozysessid"
 
 var (
 	// ErrNoCookie is returned by GetSession if there is no cookie
-	ErrNoCookie = errors.New("No session cookie")
+	ErrNoCookie = errors.New("no session cookie")
 	// ErrExpired is returned when the session has expired
-	ErrExpired = errors.New("Session expired")
+	ErrExpired = errors.New("session expired")
 	// ErrInvalidID is returned by GetSession if the cookie contains wrong ID
-	ErrInvalidID = errors.New("Session cookie has wrong ID")
+	ErrInvalidID = errors.New("session cookie has wrong ID")
 )
 
 // A Session is an instance opened in a browser

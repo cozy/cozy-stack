@@ -36,7 +36,7 @@ func TestJsonapi(t *testing.T) {
 			return c.JSON(200, fmt.Sprintf("key %d %s %s", c3.Limit, c3.NextKey, c3.NextDocID))
 		}
 
-		return fmt.Errorf("Wrong cursor type")
+		return fmt.Errorf("wrong cursor type")
 	})
 
 	ts := httptest.NewServer(router)

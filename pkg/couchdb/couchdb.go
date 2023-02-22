@@ -413,7 +413,7 @@ func GetDoc(db prefixer.Prefixer, doctype, id string, out Doc) error {
 		return err
 	}
 	if id == "" {
-		return fmt.Errorf("Missing ID for GetDoc")
+		return fmt.Errorf("missing ID for GetDoc")
 	}
 	return makeRequest(db, doctype, http.MethodGet, url.PathEscape(id), nil, out)
 }
@@ -427,7 +427,7 @@ func GetDocRev(db prefixer.Prefixer, doctype, id, rev string, out Doc) error {
 		return err
 	}
 	if id == "" {
-		return fmt.Errorf("Missing ID for GetDoc")
+		return fmt.Errorf("missing ID for GetDoc")
 	}
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(rev)
 	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
@@ -443,7 +443,7 @@ func GetDocWithRevs(db prefixer.Prefixer, doctype, id string, out Doc) error {
 		return err
 	}
 	if id == "" {
-		return fmt.Errorf("Missing ID for GetDoc")
+		return fmt.Errorf("missing ID for GetDoc")
 	}
 	url := url.PathEscape(id) + "?revs=true"
 	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
@@ -492,7 +492,7 @@ func DeleteDB(db prefixer.Prefixer, doctype string) error {
 func DeleteAllDBs(db prefixer.Prefixer) error {
 	dbprefix := db.DBPrefix()
 	if dbprefix == "" {
-		return fmt.Errorf("You need to provide a valid database")
+		return fmt.Errorf("you need to provide a valid database")
 	}
 
 	dbsList, err := allDbs(db)
@@ -532,7 +532,7 @@ func DeleteDoc(db prefixer.Prefixer, doc Doc) error {
 		return err
 	}
 	if id == "" {
-		return fmt.Errorf("Missing ID for DeleteDoc")
+		return fmt.Errorf("missing ID for DeleteDoc")
 	}
 	old := doc.Clone()
 
@@ -582,7 +582,7 @@ func UpdateDoc(db prefixer.Prefixer, doc Doc) error {
 	}
 	doctype := doc.DocType()
 	if id == "" || doc.Rev() == "" || doctype == "" {
-		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+		return fmt.Errorf("updateDoc doc argument should have doctype, id and rev")
 	}
 
 	url := url.PathEscape(id)
@@ -612,7 +612,7 @@ func UpdateDocWithOld(db prefixer.Prefixer, doc, oldDoc Doc) error {
 	}
 	doctype := doc.DocType()
 	if id == "" || doc.Rev() == "" || doctype == "" {
-		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+		return fmt.Errorf("updateDoc doc argument should have doctype, id and rev")
 	}
 
 	url := url.PathEscape(id)
@@ -637,7 +637,7 @@ func CreateNamedDoc(db prefixer.Prefixer, doc Doc) error {
 	}
 	doctype := doc.DocType()
 	if doc.Rev() != "" || id == "" || doctype == "" {
-		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
+		return fmt.Errorf("createNamedDoc should have type and id but no rev")
 	}
 	var res UpdateResponse
 	err = makeRequest(db, doctype, http.MethodPut, url.PathEscape(id), doc, &res)
@@ -718,7 +718,7 @@ func CreateDoc(db prefixer.Prefixer, doc Doc) error {
 	if err != nil {
 		return err
 	} else if !res.Ok {
-		return fmt.Errorf("CouchDB replied with 200 ok=false")
+		return fmt.Errorf("couchDB replied with 200 ok=false")
 	}
 
 	doc.SetID(res.ID)

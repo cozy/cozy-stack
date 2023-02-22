@@ -592,7 +592,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	appTypesMismatch := i.man.AppType() != newManifestAppType
 
 	if !appTypesEmpty && appTypesMismatch {
-		return nil, fmt.Errorf("Manifest types are not the sames. Expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", i.man.AppType(), newManifestAppType, i.man.Slug())
+		return nil, fmt.Errorf("manifest types are not the sames. Expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", i.man.AppType(), newManifestAppType, i.man.Slug())
 	}
 	return newManifest, nil
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // ErrInvalidShortcut is the error when a .url file cannot be parsed.
-var ErrInvalidShortcut = errors.New("The file is not in the expected format")
+var ErrInvalidShortcut = errors.New("the file is not in the expected format")
 
 // Result is the result of the parsing of a .url file.
 type Result struct {

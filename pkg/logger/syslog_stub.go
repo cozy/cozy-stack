@@ -10,5 +10,5 @@ import (
 )
 
 func syslogHook() (logrus.Hook, error) {
-	return nil, errors.New("Syslog is not available on Windows")
+	return nil, errors.New("syslog is not available on Windows")
 }

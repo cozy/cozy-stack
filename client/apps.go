@@ -256,7 +256,7 @@ func makeAppsPath(appType, path string) string {
 	case consts.Konnectors:
 		return "/konnectors/" + path
 	}
-	panic(fmt.Errorf("Unknown application type %s", appType))
+	panic(fmt.Errorf("unknown application type %s", appType))
 }
 
 func readAppManifestStream(res *http.Response) (*AppManifest, error) {
@@ -271,14 +271,14 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 		if evt.Name == "error" {
 			var stringError string
 			if err := json.Unmarshal(evt.Data, &stringError); err != nil {
-				return nil, fmt.Errorf("Could not parse error from event-stream: %s", err.Error())
+				return nil, fmt.Errorf("could not parse error from event-stream: %s", err.Error())
 			}
 			return nil, errors.New(stringError)
 		}
 		lastevt = evt
 	}
 	if lastevt == nil {
-		return nil, errors.New("No application data was sent")
+		return nil, errors.New("no application data was sent")
 	}
 	app := &AppManifest{}
 	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app); err != nil {

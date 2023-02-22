@@ -57,7 +57,7 @@ const TagSeparator = ","
 
 // ErrDocTypeInvalid is used when the document type sent is not
 // recognized
-var ErrDocTypeInvalid = errors.New("Invalid document type")
+var ErrDocTypeInvalid = errors.New("invalid document type")
 
 // CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
@@ -2056,7 +2056,7 @@ func CheckIfMatch(c echo.Context, rev string) error {
 
 func checkIfMatch(rev, wantedRev string) error {
 	if wantedRev != "" && rev != wantedRev {
-		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match"))
+		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("revision does not match"))
 	}
 	return nil
 }
@@ -2076,12 +2076,12 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	// out of these boundaries we know we don't have a good hash and we
 	// can bail immediately.
 	if len(md5B64) < 22 || len(md5B64) > 24 {
-		return nil, fmt.Errorf("Given Content-MD5 is invalid")
+		return nil, fmt.Errorf("given Content-MD5 is invalid")
 	}
 
 	md5Sum, err := base64.StdEncoding.DecodeString(md5B64)
 	if err != nil || len(md5Sum) != 16 {
-		return nil, fmt.Errorf("Given Content-MD5 is invalid")
+		return nil, fmt.Errorf("given Content-MD5 is invalid")
 	}
 
 	return md5Sum, nil

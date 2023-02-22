@@ -43,7 +43,7 @@ func EncryptWithRSA(key string, payload []byte) (string, error) {
 	}
 	pub, ok := pubKey.(*rsa.PublicKey)
 	if !ok {
-		return "", errors.New("Invalid public key")
+		return "", errors.New("invalid public key")
 	}
 
 	hash := sha1.New()

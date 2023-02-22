@@ -94,11 +94,11 @@ func registerPassphrase(c echo.Context) error {
 	}
 
 	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
-		err := errors.New("The KdfIterations number is too low")
+		err := errors.New("the KdfIterations number is too low")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 	if args.Iterations > crypto.MaxPBKDF2Iterations {
-		err := errors.New("The KdfIterations number is too high")
+		err := errors.New("the KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
@@ -150,11 +150,11 @@ func registerPassphraseFlagship(c echo.Context) error {
 	}
 
 	if args.Iterations < crypto.MinPBKDF2Iterations {
-		err := errors.New("The KdfIterations number is too low")
+		err := errors.New("the KdfIterations number is too low")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 	if args.Iterations > crypto.MaxPBKDF2Iterations {
-		err := errors.New("The KdfIterations number is too high")
+		err := errors.New("the KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
@@ -281,7 +281,7 @@ func updatePassphrase(c echo.Context) error {
 		}
 
 		if !canForce {
-			err = fmt.Errorf("Bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
+			err = fmt.Errorf("bitwarden extension has already been installed on this Cozy, cannot force update the passphrase.")
 			return jsonapi.BadRequest(err)
 		}
 
@@ -321,11 +321,11 @@ func updatePassphrase(c echo.Context) error {
 	}
 
 	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
-		err := errors.New("The KdfIterations number is too low")
+		err := errors.New("the KdfIterations number is too low")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 	if args.Iterations > crypto.MaxPBKDF2Iterations {
-		err := errors.New("The KdfIterations number is too high")
+		err := errors.New("the KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
@@ -388,7 +388,7 @@ func getHint(c echo.Context) error {
 	}
 
 	if setting.PassphraseHint == "" {
-		return jsonapi.NotFound(errors.New("No hint"))
+		return jsonapi.NotFound(errors.New("no hint"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

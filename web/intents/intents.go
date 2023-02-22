@@ -72,10 +72,10 @@ func createIntent(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 	if intent.Action == "" {
-		return jsonapi.InvalidParameter("action", errors.New("Action is missing"))
+		return jsonapi.InvalidParameter("action", errors.New("action is missing"))
 	}
 	if intent.Type == "" {
-		return jsonapi.InvalidParameter("type", errors.New("Type is missing"))
+		return jsonapi.InvalidParameter("type", errors.New("type is missing"))
 	}
 	intent.Client = pdoc.SourceID
 	intent.SetID("")

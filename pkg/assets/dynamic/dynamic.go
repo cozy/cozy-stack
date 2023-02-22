@@ -22,7 +22,7 @@ import (
 
 // ErrDynAssetNotFound is the error returned when a dynamic asset cannot be
 // found.
-var ErrDynAssetNotFound = errors.New("Dynamic asset was not found")
+var ErrDynAssetNotFound = errors.New("dynamic asset was not found")
 
 var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,

@@ -321,7 +321,7 @@ type Config struct {
 func getConfig(context string) (*Config, error) {
 	oidc, ok := config.GetOIDC(context)
 	if !ok {
-		return nil, errors.New("No OIDC is configured for this context")
+		return nil, errors.New("no OIDC is configured for this context")
 	}
 
 	// Optional fields
@@ -334,35 +334,35 @@ func getConfig(context string) (*Config, error) {
 	// Mandatory fields
 	clientID, ok := oidc["client_id"].(string)
 	if !ok {
-		return nil, errors.New("The client_id is missing for this context")
+		return nil, errors.New("the client_id is missing for this context")
 	}
 	clientSecret, ok := oidc["client_secret"].(string)
 	if !ok {
-		return nil, errors.New("The client_secret is missing for this context")
+		return nil, errors.New("the client_secret is missing for this context")
 	}
 	scope, ok := oidc["scope"].(string)
 	if !ok {
-		return nil, errors.New("The scope is missing for this context")
+		return nil, errors.New("the scope is missing for this context")
 	}
 	redirectURI, ok := oidc["redirect_uri"].(string)
 	if !ok {
-		return nil, errors.New("The redirect_uri is missing for this context")
+		return nil, errors.New("the redirect_uri is missing for this context")
 	}
 	authorizeURL, ok := oidc["authorize_url"].(string)
 	if !ok {
-		return nil, errors.New("The authorize_url is missing for this context")
+		return nil, errors.New("the authorize_url is missing for this context")
 	}
 	tokenURL, ok := oidc["token_url"].(string)
 	if !ok {
-		return nil, errors.New("The token_url is missing for this context")
+		return nil, errors.New("the token_url is missing for this context")
 	}
 	userInfoURL, ok := oidc["userinfo_url"].(string)
 	if !ok {
-		return nil, errors.New("The userinfo_url is missing for this context")
+		return nil, errors.New("the userinfo_url is missing for this context")
 	}
 	userInfoField, ok := oidc["userinfo_instance_field"].(string)
 	if !ok && !allowCustomInstance {
-		return nil, errors.New("The userinfo_instance_field is missing for this context")
+		return nil, errors.New("the userinfo_instance_field is missing for this context")
 	}
 
 	config := &Config{
@@ -433,7 +433,7 @@ func getToken(conf *Config, code string) (string, error) {
 		_, _ = io.Copy(io.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
-		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+		return "", fmt.Errorf("oIDC service responded with %d", res.StatusCode)
 	}
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -471,7 +471,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		sub, ok := params["sub"].(string)
 		if !ok || sub == "" || sub != inst.OIDCID {
 			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
-			return errors.New("Error The authentication has failed")
+			return errors.New("error The authentication has failed")
 		}
 		return nil
 	}
@@ -482,7 +482,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	}
 	if domain != inst.Domain {
 		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return errors.New("Error The authentication has failed")
+		return errors.New("error The authentication has failed")
 	}
 	return nil
 }
@@ -504,14 +504,14 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 		_, _ = io.Copy(io.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
-		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+		return nil, fmt.Errorf("oIDC service responded with %d", res.StatusCode)
 	}
 
 	var params map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&params)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
-		return nil, errors.New("Invalid response from the identity provider")
+		return nil, errors.New("invalid response from the identity provider")
 	}
 	return params, nil
 }
@@ -519,7 +519,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 func extractDomain(conf *Config, params map[string]interface{}) (string, error) {
 	domain, ok := params[conf.UserInfoField].(string)
 	if !ok {
-		return "", errors.New("Error The authentication has failed")
+		return "", errors.New("error The authentication has failed")
 	}
 	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
 	domain = strings.ToLower(domain)             // The domain is case insensitive
@@ -548,7 +548,7 @@ func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
 	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
 		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
-		return errors.New("Error The authentication has failed")
+		return errors.New("error The authentication has failed")
 	}
 
 	return nil
@@ -620,7 +620,7 @@ func getKeysFromHTTP(keyURL string) ([]byte, error) {
 // ChooseKeyForIDToken can be used to check an id_token as a JWT.
 func ChooseKeyForIDToken(keys []*jwKey, token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-		return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
 
 	var key *jwKey
@@ -634,7 +634,7 @@ func ChooseKeyForIDToken(keys []*jwKey, token *jwt.Token) (interface{}, error) {
 		key = k
 	}
 	if key == nil {
-		return nil, errors.New("Key not found")
+		return nil, errors.New("key not found")
 	}
 	return loadKey(key)
 }

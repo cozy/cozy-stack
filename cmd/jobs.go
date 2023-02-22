@@ -38,7 +38,7 @@ var jobsRunCmd = &cobra.Command{
 			return errMissingDomain
 		}
 		if flagJobJSONArg == "" {
-			return errors.New("The JSON argument is missing")
+			return errors.New("the JSON argument is missing")
 		}
 		c := newClient(flagDomain, "io.cozy.jobs", "io.cozy.jobs.logs")
 		o := &client.JobOptions{

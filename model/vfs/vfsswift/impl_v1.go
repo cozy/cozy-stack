@@ -419,7 +419,7 @@ func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 }
 
 func (sfs *swiftVFS) EnsureErased(journal vfs.TrashJournal) error {
-	return errors.New("EnsureErased is not available for Swift layout v1")
+	return errors.New("ensureErased is not available for Swift layout v1")
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {

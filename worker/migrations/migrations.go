@@ -280,7 +280,7 @@ func migrateToSwiftV3(domain string) error {
 	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
 	if _, _, err = c.Container(ctx, dstContainer); !errors.Is(err, swift.ContainerNotFound) {
 		log.Errorf("Destination container %s already exists or something went wrong. Migration canceled.", dstContainer)
-		return errors.New("Destination container busy")
+		return errors.New("destination container busy")
 	}
 	if err = c.ContainerCreate(ctx, dstContainer, nil); err != nil {
 		return err
@@ -345,7 +345,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swif
 		srcName := getSrcName(inst, f)
 		dstName := getDstName(inst, f)
 		if srcName == "" || dstName == "" {
-			return fmt.Errorf("Unexpected copy: %q -> %q", srcName, dstName)
+			return fmt.Errorf("unexpected copy: %q -> %q", srcName, dstName)
 		}
 
 		if err := sem.Acquire(ctx, 1); err != nil {

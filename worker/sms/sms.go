@@ -60,7 +60,7 @@ func sendSMS(ctx *job.WorkerContext, msg *center.SMS) error {
 		log := ctx.Logger()
 		return sendSenAPI(cfg, msg, number, log)
 	default:
-		return errors.New("Unknown provider for sending SMS")
+		return errors.New("unknown provider for sending SMS")
 	}
 }
 
@@ -98,7 +98,7 @@ func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logger.Ent
 		}
 		log.WithField("status_code", res.StatusCode).Warnf("Cannot send SMS")
 	}
-	return fmt.Errorf("Unexpected status code: %d", res.StatusCode)
+	return fmt.Errorf("unexpected status code: %d", res.StatusCode)
 }
 
 func getMyselfPhoneNumber(inst *instance.Instance) (string, error) {
@@ -108,7 +108,7 @@ func getMyselfPhoneNumber(inst *instance.Instance) (string, error) {
 	}
 	number := myself.PrimaryPhoneNumber()
 	if number == "" {
-		return "", errors.New("No phone number in the myself contact document")
+		return "", errors.New("no phone number in the myself contact document")
 	}
 	return number, nil
 }
@@ -116,7 +116,7 @@ func getMyselfPhoneNumber(inst *instance.Instance) (string, error) {
 func getConfig(inst *instance.Instance) (*config.SMS, error) {
 	cfg, ok := config.GetConfig().Notifications.Contexts[inst.ContextName]
 	if !ok {
-		return nil, errors.New("SMS not configured on this context")
+		return nil, errors.New("sMS not configured on this context")
 	}
 	return &cfg, nil
 }

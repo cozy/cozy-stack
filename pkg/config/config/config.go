@@ -430,7 +430,7 @@ func Setup(cfgFile string) (err error) {
 		tmpl = tmpl.Option("missingkey=zero")
 		tmpl, err = tmpl.Funcs(numericFuncsMap).ParseFiles(cfgFile)
 		if err != nil {
-			return fmt.Errorf("Unable to open and parse configuration file "+
+			return fmt.Errorf("unable to open and parse configuration file "+
 				"template %s: %s", cfgFile, err)
 		}
 
@@ -444,7 +444,7 @@ func Setup(cfgFile string) (err error) {
 		}
 		err = tmpl.ExecuteTemplate(dest, tmplName, ctxt)
 		if err != nil {
-			return fmt.Errorf("Template error for config files %s: %s", cfgFile, err)
+			return fmt.Errorf("template error for config files %s: %s", cfgFile, err)
 		}
 
 		cfgFile = regexp.MustCompile(`\.local$`).ReplaceAllString(cfgFile, "")
@@ -499,10 +499,10 @@ func UseViper(v *viper.Viper) error {
 	if fsURL.Scheme == "file" {
 		fsPath := fsURL.Path
 		if fsPath != "" && !path.IsAbs(fsPath) {
-			return fmt.Errorf("Filesystem path should be absolute, was: %q", fsPath)
+			return fmt.Errorf("filesystem path should be absolute, was: %q", fsPath)
 		}
 		if fsPath == "/" {
-			return fmt.Errorf("Filesystem path should not be root, was: %q", fsPath)
+			return fmt.Errorf("filesystem path should not be root, was: %q", fsPath)
 		}
 	}
 
@@ -1021,11 +1021,11 @@ func makeOffice(v *viper.Viper) (map[string]Office, error) {
 	for k, v := range v.GetStringMap("office") {
 		ctx, ok := v.(map[string]interface{})
 		if !ok {
-			return nil, errors.New("Bad format in the office section of the configuration file")
+			return nil, errors.New("bad format in the office section of the configuration file")
 		}
 		url, ok := ctx["onlyoffice_url"].(string)
 		if !ok {
-			return nil, errors.New("Bad format in the office section of the configuration file")
+			return nil, errors.New("bad format in the office section of the configuration file")
 		}
 		inbox, _ := ctx["onlyoffice_inbox_secret"].(string)
 		outbox, _ := ctx["onlyoffice_outbox_secret"].(string)
@@ -1129,7 +1129,7 @@ func FindConfigFile(name string) (string, error) {
 			return filename, nil
 		}
 	}
-	return "", fmt.Errorf("Could not find config file %q", name)
+	return "", fmt.Errorf("could not find config file %q", name)
 }
 
 // findConfigFiles search in the Paths directories for the first existing directory,

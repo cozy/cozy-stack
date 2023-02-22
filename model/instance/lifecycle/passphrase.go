@@ -18,7 +18,7 @@ import (
 // ErrHintSameAsPassword is used when trying to set an hint that is the same as
 // the password, which would defeat security (e.g. the hint is not encrypted in
 // CouchDB).
-var ErrHintSameAsPassword = errors.New("The hint cannot be the same as the password")
+var ErrHintSameAsPassword = errors.New("the hint cannot be the same as the password")
 
 // PassParameters are the parameters for setting a new passphrase
 type PassParameters struct {

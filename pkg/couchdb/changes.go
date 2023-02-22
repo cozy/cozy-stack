@@ -33,7 +33,7 @@ func ValidChangesMode(feed string) (ChangesFeedMode, error) {
 		return ChangesModeNormal, nil
 	}
 
-	err := fmt.Errorf("Unsuported feed value '%s'", feed)
+	err := fmt.Errorf("unsuported feed value '%s'", feed)
 	return ChangesModeNormal, err
 }
 
@@ -46,7 +46,7 @@ func ValidChangesStyle(style string) (ChangesFeedStyle, error) {
 	if style == string(ChangesStyleAllDocs) {
 		return ChangesStyleAllDocs, nil
 	}
-	err := fmt.Errorf("Unsuported style value '%s'", style)
+	err := fmt.Errorf("unsuported style value '%s'", style)
 	return ChangesStyleMainOnly, err
 }
 
@@ -57,7 +57,7 @@ func StaticChangesFilter(filter string) (string, error) {
 	case "", "_doc_ids", "_selector", "_design":
 		return filter, nil
 	default:
-		return "", fmt.Errorf("Unsuported filter value '%s'", filter)
+		return "", fmt.Errorf("unsuported filter value '%s'", filter)
 	}
 }
 
@@ -143,7 +143,7 @@ type Change struct {
 // GetChanges returns a list of changes in couchdb
 func GetChanges(db prefixer.Prefixer, req *ChangesRequest) (*ChangesResponse, error) {
 	if req.DocType == "" {
-		return nil, errors.New("Empty doctype in GetChanges")
+		return nil, errors.New("empty doctype in GetChanges")
 	}
 
 	v, err := query.Values(req)
@@ -172,7 +172,7 @@ func PostChanges(db prefixer.Prefixer, req *ChangesRequest, body io.ReadCloser) 
 	}
 
 	if req.DocType == "" {
-		return nil, errors.New("Empty doctype in GetChanges")
+		return nil, errors.New("empty doctype in GetChanges")
 	}
 
 	v, err := query.Values(req)

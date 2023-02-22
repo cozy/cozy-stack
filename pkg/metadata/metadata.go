@@ -10,7 +10,7 @@ const MetadataVersion = 1
 
 // ErrSlugEmpty is returned when an UpdatedByApp entry is created with and empty
 // slug
-var ErrSlugEmpty = errors.New("Slug cannot be empty")
+var ErrSlugEmpty = errors.New("slug cannot be empty")
 
 // UpdatedByAppEntry represents a modification made by an application to the
 // document

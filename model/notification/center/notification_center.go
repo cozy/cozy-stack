@@ -235,7 +235,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 			log.Errorf("Error while sending sms: %s", err)
 			errm = multierror.Append(errm, err)
 		default:
-			err := fmt.Errorf("Unknown channel for notification: %s", channel)
+			err := fmt.Errorf("unknown channel for notification: %s", channel)
 			errm = multierror.Append(errm, err)
 		}
 	}
@@ -269,7 +269,7 @@ func sendPush(inst *instance.Instance,
 	at string,
 ) error {
 	if !hasNotifiableDevice(inst) {
-		return errors.New("No device with push notification")
+		return errors.New("no device with push notification")
 	}
 	email := buildMailMessage(p, n)
 	push := PushMessage{

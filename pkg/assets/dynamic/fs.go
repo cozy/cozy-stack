@@ -65,7 +65,7 @@ func InitDynamicAssetFS() error {
 			return err
 		}
 	default:
-		return fmt.Errorf("Invalid scheme %s for dynamic assets FS", scheme)
+		return fmt.Errorf("invalid scheme %s for dynamic assets FS", scheme)
 	}
 
 	return nil
@@ -92,7 +92,7 @@ func newswiftFS() (*swiftFS, error) {
 	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
 	err := swiftFS.swiftConn.ContainerCreate(ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot create container for dynamic assets: %s", err)
+		return nil, fmt.Errorf("cannot create container for dynamic assets: %s", err)
 	}
 
 	return swiftFS, nil

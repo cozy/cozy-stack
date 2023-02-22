@@ -202,7 +202,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, par
 			vv.Add("id_connection", id)
 		}
 	default:
-		return "", errors.New("Wrong account type")
+		return "", errors.New("wrong account type")
 	}
 
 	vv.Add("state", state)
@@ -292,7 +292,7 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 		return nil, err
 	}
 	if out.Error != "" {
-		return nil, fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
+		return nil, fmt.Errorf("oauthError(%s) %s", out.Error, out.ErrorDescription)
 	}
 
 	var ExpiresAt time.Time
@@ -371,7 +371,7 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	if out.Error != "" {
-		return fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
+		return fmt.Errorf("oauthError(%s) %s", out.Error, out.ErrorDescription)
 	}
 
 	if out.AccessToken != "" {
@@ -396,7 +396,7 @@ func (at *AccountType) MakeManageURL(i *instance.Instance, state string, params 
 	case BIWebauth, BIWebauthAndSecret, BIWebview, BIWebviewAndSecret:
 		// OK
 	default:
-		return "", errors.New("Wrong account type")
+		return "", errors.New("wrong account type")
 	}
 
 	u, err := url.Parse(at.ManageEndpoint)
@@ -420,7 +420,7 @@ func (at *AccountType) MakeReconnectURL(i *instance.Instance, state string, para
 	case BIWebauth, BIWebauthAndSecret, BIWebview, BIWebviewAndSecret:
 		// OK
 	default:
-		return "", errors.New("Wrong account type")
+		return "", errors.New("wrong account type")
 	}
 
 	u, err := url.Parse(at.ReconnectEndpoint)

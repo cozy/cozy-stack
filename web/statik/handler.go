@@ -110,7 +110,7 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	var err error
 	t, err = t.Funcs(middlewares.FuncsMap).ParseFiles(list...)
 	if err != nil {
-		return nil, fmt.Errorf("Can't load the assets from %q: %s", assetsPath, err)
+		return nil, fmt.Errorf("can't load the assets from %q: %s", assetsPath, err)
 	}
 
 	return &renderer{t: t, Handler: h}, nil
@@ -137,7 +137,7 @@ func NewRenderer() (AssetRenderer, error) {
 		tmpl := t.New(name).Funcs(middlewares.FuncsMap)
 		f, err := assets.Open("/templates/"+name, config.DefaultInstanceContext)
 		if err != nil {
-			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)
+			return nil, fmt.Errorf("can't load asset %q: %s", name, err)
 		}
 		b, err := io.ReadAll(f)
 		if err != nil {

@@ -66,7 +66,7 @@ The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphr
 				return err
 			}
 			if !bytes.Equal(pass1, pass2) {
-				return fmt.Errorf("Passphrase missmatch")
+				return fmt.Errorf("passphrase missmatch")
 			}
 
 			passphrase = pass1
@@ -243,12 +243,12 @@ var decryptCredentialsCmd = &cobra.Command{
 
 		credentialsEncrypted, err := base64.StdEncoding.DecodeString(args[1])
 		if err != nil {
-			return fmt.Errorf("Cipher text is not properly base64 encoded: %s", err)
+			return fmt.Errorf("cipher text is not properly base64 encoded: %s", err)
 		}
 
 		login, password, err := account.DecryptCredentialsWithKey(credsDecryptor, credentialsEncrypted)
 		if err != nil {
-			return fmt.Errorf("Could not decrypt cipher text: %s", err)
+			return fmt.Errorf("could not decrypt cipher text: %s", err)
 		}
 
 		fmt.Printf(`Decrypted credentials:

@@ -33,7 +33,7 @@ const defaultSaltLen = 16
 
 // Errors
 var (
-	ErrInvalidHash                 = errors.New("Invalid hash format")
+	ErrInvalidHash                 = errors.New("invalid hash format")
 	ErrMismatchedHashAndPassphrase = errors.New("hash and password are different")
 	ErrNoUpdateNeeded              = errors.New("hash already has correct parameters")
 )

@@ -146,7 +146,7 @@ func (ac *AdminClient) GetInstance(domain string) (*Instance, error) {
 // and locale.
 func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	if !validDomain(opts.Domain) {
-		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
+		return nil, fmt.Errorf("invalid domain: %s", opts.Domain)
 	}
 	q := url.Values{
 		"Domain":        {opts.Domain},
@@ -220,7 +220,7 @@ func (ac *AdminClient) ListInstances() ([]*Instance, error) {
 func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	domain := opts.Domain
 	if !validDomain(domain) {
-		return nil, fmt.Errorf("Invalid domain: %s", domain)
+		return nil, fmt.Errorf("invalid domain: %s", domain)
 	}
 	q := url.Values{
 		"Locale":      {opts.Locale},
@@ -265,7 +265,7 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 // DestroyInstance is used to delete an instance and all its data.
 func (ac *AdminClient) DestroyInstance(domain string) error {
 	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("invalid domain: %s", domain)
 	}
 	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
@@ -278,7 +278,7 @@ func (ac *AdminClient) DestroyInstance(domain string) error {
 // GetDebug is used to known if an instance has its logger in debug mode.
 func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 	if !validDomain(domain) {
-		return false, fmt.Errorf("Invalid domain: %s", domain)
+		return false, fmt.Errorf("invalid domain: %s", domain)
 	}
 	_, err := ac.Req(&request.Options{
 		Method:     "GET",
@@ -299,7 +299,7 @@ func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 // EnableDebug sets the logger of an instance in debug mode.
 func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("invalid domain: %s", domain)
 	}
 	_, err := ac.Req(&request.Options{
 		Method:     "POST",
@@ -315,7 +315,7 @@ func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 // CleanSessions delete the databases for io.cozy.sessions and io.cozy.sessions.logins
 func (ac *AdminClient) CleanSessions(domain string) error {
 	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("invalid domain: %s", domain)
 	}
 	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
@@ -328,7 +328,7 @@ func (ac *AdminClient) CleanSessions(domain string) error {
 // DisableDebug disables the debug mode for the logger of an instance.
 func (ac *AdminClient) DisableDebug(domain string) error {
 	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("invalid domain: %s", domain)
 	}
 	_, err := ac.Req(&request.Options{
 		Method:     "DELETE",
@@ -464,7 +464,7 @@ func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
 // Export launch the creation of a tarball to export data from an instance.
 func (ac *AdminClient) Export(opts *ExportOptions) error {
 	if !validDomain(opts.Domain) {
-		return fmt.Errorf("Invalid domain: %s", opts.Domain)
+		return fmt.Errorf("invalid domain: %s", opts.Domain)
 	}
 
 	downloadArchives := opts.LocalPath != ""
@@ -510,7 +510,7 @@ func (ac *AdminClient) Export(opts *ExportOptions) error {
 					continue
 				}
 				if exportDoc.State == move.ExportStateError {
-					return fmt.Errorf("Failed to export instance: %s", exportDoc.Error)
+					return fmt.Errorf("failed to export instance: %s", exportDoc.Error)
 				}
 				if exportDoc.State != move.ExportStateDone {
 					continue
@@ -572,7 +572,7 @@ func (ac *AdminClient) Export(opts *ExportOptions) error {
 // Import launch the import of a tarball with data to put in an instance.
 func (ac *AdminClient) Import(domain string, opts *ImportOptions) error {
 	if !validDomain(domain) {
-		return fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("invalid domain: %s", domain)
 	}
 	q := url.Values{
 		"manifest_url": {opts.ManifestURL},

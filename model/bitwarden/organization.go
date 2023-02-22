@@ -119,7 +119,7 @@ func (o *Organization) Delete(inst *instance.Instance) error {
 // for the konnectors running on the Cozy server.
 func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*Organization, error) {
 	if setting == nil || setting.PublicKey == "" {
-		return nil, errors.New("No public key")
+		return nil, errors.New("no public key")
 	}
 	orgKey, err := setting.OrganizationKey()
 	if err != nil {

@@ -157,7 +157,7 @@ be used as the error message.
 	Example: "$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,store cozy.localhost:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
-			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
+			return fmt.Errorf("sorry, instances add is disabled: %s", reason)
 		}
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -334,7 +334,7 @@ var updateInstancePassphraseCmd = &cobra.Command{
 		case http.StatusNoContent:
 			fmt.Println("Passphrase has been changed for instance ", domain)
 		case http.StatusBadRequest:
-			return fmt.Errorf("Bad current passphrase for instance %s", domain)
+			return fmt.Errorf("bad current passphrase for instance %s", domain)
 		case http.StatusInternalServerError:
 			return fmt.Errorf("%s", err)
 		}
@@ -357,7 +357,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		}
 		parsed, err := humanize.ParseBytes(args[1])
 		if err != nil {
-			return fmt.Errorf("Could not parse disk-quota: %s", err)
+			return fmt.Errorf("could not parse disk-quota: %s", err)
 		}
 		diskQuota := int64(parsed)
 		if diskQuota == 0 {
@@ -607,7 +607,7 @@ and all its data.
 	Aliases: []string{"rm", "delete", "remove"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
-			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
+			return fmt.Errorf("sorry, instances add is disabled: %s", reason)
 		}
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -647,7 +647,7 @@ Type again the domain to confirm: `, action, domain)
 
 	str = strings.ToLower(strings.TrimSpace(str))
 	if str != domain {
-		return errors.New("Aborted")
+		return errors.New("aborted")
 	}
 
 	fmt.Println()
@@ -745,7 +745,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		if args[1] == "" {
-			return errors.New("Missing clientID")
+			return errors.New("missing clientID")
 		}
 		if strings.Contains(args[2], ",") {
 			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
@@ -926,7 +926,7 @@ var importCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ac := newAdminClient()
 		if len(args) < 1 {
-			return errors.New("The URL to the exported data is missing")
+			return errors.New("the URL to the exported data is missing")
 		}
 
 		if !flagForce {
@@ -950,7 +950,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 
 		ac := newAdminClient()
 		if len(args) < 1 {
-			return errors.New("The domain is missing")
+			return errors.New("the domain is missing")
 		}
 
 		req := &request.Options{
@@ -1004,7 +1004,7 @@ var instanceAppVersionCmd = &cobra.Command{
 			return err
 		}
 		if len(out.Instances) == 0 {
-			return fmt.Errorf("No instances have application \"%s\" in version \"%s\"", args[0], args[1])
+			return fmt.Errorf("no instances have application \"%s\" in version \"%s\"", args[0], args[1])
 		}
 
 		json, err := json.MarshalIndent(out.Instances, "", "  ")

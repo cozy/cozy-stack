@@ -182,7 +182,7 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 			return WrapVfsError(err)
 		}
 		if dir == nil {
-			return jsonapi.BadRequest(errors.New("Cannot add not_synchronized_on on files"))
+			return jsonapi.BadRequest(errors.New("cannot add not_synchronized_on on files"))
 		}
 		oldDocs[i] = dir.Clone()
 		dir.AddNotSynchronizedOn(docRef)
@@ -232,7 +232,7 @@ func RemoveBulkNotSynchronizedOn(c echo.Context) error {
 			return WrapVfsError(err)
 		}
 		if dir == nil {
-			return jsonapi.BadRequest(errors.New("Cannot add not_synchronized_on on files"))
+			return jsonapi.BadRequest(errors.New("cannot add not_synchronized_on on files"))
 		}
 		oldDocs[i] = dir.Clone()
 		dir.RemoveNotSynchronizedOn(docRef)

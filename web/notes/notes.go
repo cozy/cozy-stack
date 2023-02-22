@@ -357,7 +357,7 @@ func UploadImage(c echo.Context) error {
 	// Check that the uploaded file is an image
 	contentType := c.Request().Header.Get(echo.HeaderContentType)
 	if !strings.HasPrefix(contentType, "image/") {
-		err := errors.New("Only images are accepted")
+		err := errors.New("only images are accepted")
 		return jsonapi.InvalidParameter(echo.HeaderContentType, err)
 	}
 
@@ -366,7 +366,7 @@ func UploadImage(c echo.Context) error {
 	if quota > 0 {
 		size := c.Request().ContentLength
 		if size <= 0 {
-			err := errors.New("The Content-Length header is mandatory")
+			err := errors.New("the Content-Length header is mandatory")
 			return jsonapi.InvalidParameter(echo.HeaderContentLength, err)
 		}
 		if size > note.MaxImageWeight {
@@ -374,7 +374,7 @@ func UploadImage(c echo.Context) error {
 		}
 		used, err := inst.VFS().FilesUsage()
 		if err != nil {
-			return jsonapi.InternalServerError(errors.New("Cannot check quota"))
+			return jsonapi.InternalServerError(errors.New("cannot check quota"))
 		}
 		if used+size > quota {
 			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrFileTooBig)
@@ -386,7 +386,7 @@ func UploadImage(c echo.Context) error {
 	upload, err := note.NewImageUpload(inst, doc, name, contentType)
 	if err != nil {
 		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
-		return jsonapi.BadRequest(errors.New("Upload has failed"))
+		return jsonapi.BadRequest(errors.New("upload has failed"))
 	}
 
 	// Manage the content upload
@@ -396,7 +396,7 @@ func UploadImage(c echo.Context) error {
 	}
 	if err != nil {
 		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
-		return jsonapi.BadRequest(errors.New("Upload has failed"))
+		return jsonapi.BadRequest(errors.New("upload has failed"))
 	}
 
 	image := files.NewNoteImage(inst, upload.Image)

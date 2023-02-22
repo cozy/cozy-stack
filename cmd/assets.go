@@ -38,7 +38,7 @@ https://example.mycozy.cloud/assets/foo/bar/baz.js (and not on
 
 func addAsset(cmd *cobra.Command, args []string) error {
 	if flagContext == "" {
-		return fmt.Errorf("You must provide a context")
+		return fmt.Errorf("you must provide a context")
 	}
 
 	assetOption := modelAsset.AssetOption{

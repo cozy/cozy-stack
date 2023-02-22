@@ -46,7 +46,7 @@ func RevokeRecipient(c echo.Context) error {
 		return jsonapi.InvalidParameter("index", err)
 	}
 	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+		return jsonapi.InvalidParameter("index", errors.New("invalid index"))
 	}
 	if err = s.RevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)

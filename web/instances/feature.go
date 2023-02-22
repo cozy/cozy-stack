@@ -88,7 +88,7 @@ func getContextFromConfig(context string) (interface{}, error) {
 		return ctx, nil
 	}
 
-	return nil, fmt.Errorf("Unable to get context %q from config", context)
+	return nil, fmt.Errorf("unable to get context %q from config", context)
 }
 
 func getFeatureConfig(c echo.Context) error {

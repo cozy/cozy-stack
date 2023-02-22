@@ -346,7 +346,7 @@ type changesResponse struct {
 // It means that a document fetched from the changes that has been removed, and
 // the sharing rule for it has the revoke action. So, the caller should check
 // for this error, and it is the case, it should revoke the sharing.
-var errRevokeSharing = errors.New("Sharing must be revoked")
+var errRevokeSharing = errors.New("sharing must be revoked")
 
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/stable/api/database/changes.html

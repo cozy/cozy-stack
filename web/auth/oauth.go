@@ -946,7 +946,7 @@ func secretExchange(c echo.Context) error {
 	}
 
 	if e.Secret == "" {
-		return jsonapi.BadRequest(errors.New("Missing secret"))
+		return jsonapi.BadRequest(errors.New("missing secret"))
 	}
 
 	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
@@ -955,7 +955,7 @@ func secretExchange(c echo.Context) error {
 	}
 
 	if doc.OnboardingSecret == "" || doc.OnboardingSecret != e.Secret {
-		return jsonapi.InvalidAttribute("secret", errors.New("Invalid secret"))
+		return jsonapi.InvalidAttribute("secret", errors.New("invalid secret"))
 	}
 
 	doc.TransformIDAndRev()

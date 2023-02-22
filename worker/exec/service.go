@@ -70,7 +70,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	}
 
 	if man.State() != app.Ready {
-		err = errors.New("Application is not ready")
+		err = errors.New("application is not ready")
 		return
 	}
 
@@ -88,7 +88,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 		}
 	}
 	if !ok {
-		err = job.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
+		err = job.ErrBadTrigger{Err: fmt.Errorf("service %q was not found", name)}
 		return
 	}
 	// Check if the trigger is orphan
@@ -98,17 +98,17 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 			var tInfos job.TriggerInfos
 			err = couchdb.GetDoc(i, consts.Triggers, triggerID, &tInfos)
 			if err != nil {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q not found", triggerID)}
+				err = job.ErrBadTrigger{Err: fmt.Errorf("trigger %q not found", triggerID)}
 				return
 			}
 			var msg ServiceOptions
 			err = json.Unmarshal(tInfos.Message, &msg)
 			if err != nil {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
+				err = job.ErrBadTrigger{Err: fmt.Errorf("trigger %q has bad message structure", triggerID)}
 				return
 			}
 			if msg.Name != name {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
+				err = job.ErrBadTrigger{Err: fmt.Errorf("trigger %q is orphan", triggerID)}
 				return
 			}
 		}
@@ -209,7 +209,7 @@ func (w *serviceWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instance,
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(line, &msg); err != nil {
-		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
+		return fmt.Errorf("could not parse stdout as JSON: %q", string(line))
 	}
 
 	// Truncate very long messages

@@ -14,7 +14,7 @@ func getDebug(c echo.Context) error {
 	domain := c.Param("domain")
 	until := logger.DebugExpiration(domain)
 	if until == nil {
-		return jsonapi.NotFound(errors.New("Debug is disabled on this domain"))
+		return jsonapi.NotFound(errors.New("debug is disabled on this domain"))
 	}
 	res := map[string]interface{}{domain: true, "until": until}
 	return c.JSON(http.StatusOK, res)

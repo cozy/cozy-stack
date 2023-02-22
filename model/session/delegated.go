@@ -31,12 +31,12 @@ func CheckDelegatedJWT(instance *instance.Instance, token string) error {
 	}
 	delegatedTypes, ok := authenticationConfig[context]
 	if !ok {
-		return errors.New("No delegated authentication defined for this context")
+		return errors.New("no delegated authentication defined for this context")
 	}
 
 	JWTSecret, ok := delegatedTypes.(map[string]interface{})["jwt_secret"]
 	if !ok {
-		return errors.New("JWT delegated type is not defined for this context")
+		return errors.New("jWT delegated type is not defined for this context")
 	}
 
 	claims := ExternalClaims{}
@@ -50,11 +50,11 @@ func CheckDelegatedJWT(instance *instance.Instance, token string) error {
 	}
 
 	if claims.RegisteredClaims.ExpiresAt != nil && claims.RegisteredClaims.ExpiresAt.Before(time.Now()) {
-		return errors.New("Token has expired")
+		return errors.New("token has expired")
 	}
 
 	if claims.Name != instance.Domain {
-		return errors.New("Issuer is not valid")
+		return errors.New("issuer is not valid")
 	}
 
 	return nil

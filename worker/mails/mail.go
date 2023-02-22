@@ -107,7 +107,7 @@ func SendMail(ctx *job.WorkerContext) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
+		return fmt.Errorf("mail sent with unknown mode %s", opts.Mode)
 	}
 	if opts.TemplateName != "" && opts.Locale == "" {
 		opts.Locale = ctx.Instance.Locale
@@ -125,7 +125,7 @@ func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
 	}
 	email, ok := doc.M["email"].(string)
 	if !ok {
-		return nil, fmt.Errorf("Domain %s has no email in its settings", i.Domain)
+		return nil, fmt.Errorf("domain %s has no email in its settings", i.Domain)
 	}
 	publicName, _ := doc.M["public_name"].(string)
 	return &mail.Address{
@@ -136,13 +136,13 @@ func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
 
 func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
-		return errors.New("Missing mail subject")
+		return errors.New("missing mail subject")
 	}
 	if len(opts.To) == 0 {
-		return errors.New("Missing mail recipient")
+		return errors.New("missing mail recipient")
 	}
 	if opts.From == nil {
-		return errors.New("Missing mail sender")
+		return errors.New("missing mail sender")
 	}
 	email := gomail.NewMessage()
 	dialerOptions := opts.Dialer
@@ -226,7 +226,7 @@ func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error
 func addPart(mail *gomail.Message, part *mail.Part) error {
 	contentType := part.Type
 	if contentType != "text/plain" && contentType != "text/html" {
-		return fmt.Errorf("Unknown body content-type %s", contentType)
+		return fmt.Errorf("unknown body content-type %s", contentType)
 	}
 	mail.AddAlternative(contentType, part.Body)
 	return nil

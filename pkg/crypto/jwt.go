@@ -59,7 +59,7 @@ func NewJWT(secret []byte, claims jwt.Claims) (string, error) {
 func ParseJWT(tokenString string, keyFunc jwt.Keyfunc, claims jwt.Claims) error {
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return keyFunc(token)
 	})
@@ -67,7 +67,7 @@ func ParseJWT(tokenString string, keyFunc jwt.Keyfunc, claims jwt.Claims) error 
 		return err
 	}
 	if !token.Valid {
-		return errors.New("Invalid JSON Web Token")
+		return errors.New("invalid JSON Web Token")
 	}
 	return nil
 }

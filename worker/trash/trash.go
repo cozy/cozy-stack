@@ -94,7 +94,7 @@ func WorkerCleanOldTrashed(ctx *job.WorkerContext) error {
 		} else if d != nil {
 			err = fs.DestroyDirAndContent(d, push)
 		} else {
-			err = fmt.Errorf("Invalid type for %v", item)
+			err = fmt.Errorf("invalid type for %v", item)
 		}
 		if err != nil {
 			errm = multierror.Append(errm, err)

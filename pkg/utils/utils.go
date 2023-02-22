@@ -134,7 +134,7 @@ func FileExists(name string) (bool, error) {
 		return false, err
 	}
 	if infos.IsDir() {
-		return false, fmt.Errorf("Path %s is a directory", name)
+		return false, fmt.Errorf("path %s is a directory", name)
 	}
 	return true, nil
 }
@@ -150,7 +150,7 @@ func DirExists(name string) (bool, error) {
 		return false, err
 	}
 	if !infos.IsDir() {
-		return false, fmt.Errorf("Path %s is not a directory", name)
+		return false, fmt.Errorf("path %s is not a directory", name)
 	}
 	return true, nil
 }

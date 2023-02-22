@@ -76,7 +76,7 @@ type linkedAppScope struct {
 
 func parseLinkedAppScope(scope string) (*linkedAppScope, error) {
 	if !strings.HasPrefix(scope, "@") {
-		return nil, fmt.Errorf("Scope %s is not a linked-app", scope)
+		return nil, fmt.Errorf("scope %s is not a linked-app", scope)
 	}
 	splitted := strings.Split(strings.TrimPrefix(scope, "@"), "/")
 

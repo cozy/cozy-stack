@@ -388,7 +388,7 @@ func (im *importer) importFile(zdoc, zcontent *zip.File) error {
 	}
 
 	if zcontent == nil {
-		return errors.New("No content for file")
+		return errors.New("no content for file")
 	}
 	fileDoc.SetRev("")
 	// Do not trust carbon copy and electronic safe flags on import

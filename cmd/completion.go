@@ -39,7 +39,7 @@ following line to the .bash_profile
 			includeDescription := true
 			return RootCmd.GenFishCompletion(os.Stdout, includeDescription)
 		}
-		return errors.New("Unsupported shell")
+		return errors.New("unsupported shell")
 	},
 }
 

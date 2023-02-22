@@ -220,6 +220,6 @@ func swiftContainer(i *instance.Instance) string {
 	case 2:
 		return "cozy-v3-" + i.DBPrefix()
 	default:
-		panic(errors.New("Unknown Swift layout"))
+		panic(errors.New("unknown Swift layout"))
 	}
 }

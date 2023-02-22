@@ -282,7 +282,7 @@ func (j *Job) WaitUntilDone(db prefixer.Prefixer) error {
 			case Done:
 				return nil
 			case Errored:
-				return errors.New("The konnector failed on account deletion")
+				return errors.New("the konnector failed on account deletion")
 			}
 		case <-timeout:
 			return nil

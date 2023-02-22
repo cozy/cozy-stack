@@ -29,7 +29,7 @@ var flagDomain string
 
 var cfgFile string
 
-var errMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env variable")
+var errMissingDomain = errors.New("missing --domain flag, or COZY_DOMAIN env variable")
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{

@@ -176,7 +176,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	}
 
 	if errors > 0 {
-		return fmt.Errorf("At least one error has happened during the updates: "+
+		return fmt.Errorf("at least one error has happened during the updates: "+
 			"%d errors for %d updates", errors, totals)
 	}
 	return nil
@@ -228,7 +228,7 @@ func UpdateInstance(ctx *job.WorkerContext, inst *instance.Instance, opts *Optio
 	}
 
 	if errors > 0 {
-		return fmt.Errorf("At least one error has happened during the updates: "+
+		return fmt.Errorf("at least one error has happened during the updates: "+
 			"%d errors for %d updates", errors, totals)
 	}
 	return nil

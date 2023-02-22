@@ -403,7 +403,7 @@ func patchTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	if req.Arguments == "" {
-		return jsonapi.BadRequest(errors.New("Only arguments can be patched"))
+		return jsonapi.BadRequest(errors.New("only arguments can be patched"))
 	}
 
 	if err := sched.UpdateCron(inst, t, req.Arguments); err != nil {
@@ -511,7 +511,7 @@ func fireWebhook(c echo.Context) error {
 	}
 	webhook, ok := t.(*job.WebhookTrigger)
 	if !ok {
-		return jsonapi.InvalidAttribute("Type", errors.New("Not a webhook"))
+		return jsonapi.InvalidAttribute("Type", errors.New("not a webhook"))
 	}
 
 	payload, err := io.ReadAll(c.Request().Body)
@@ -644,7 +644,7 @@ func patchJob(c echo.Context) error {
 		err = j.Ack()
 		log.Info("Konnector success")
 	default:
-		err = jsonapi.InvalidAttribute("State", errors.New("State must be done or errored"))
+		err = jsonapi.InvalidAttribute("State", errors.New("state must be done or errored"))
 	}
 	if err != nil {
 		return wrapJobsError(err)

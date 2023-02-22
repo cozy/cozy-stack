@@ -301,7 +301,7 @@ func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 		return err
 	}
 	if len(res) != len(docs) {
-		return errors.New("BulkUpdateDoc receive an unexpected number of responses")
+		return errors.New("bulkUpdateDoc receive an unexpected number of responses")
 	}
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {

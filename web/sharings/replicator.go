@@ -104,7 +104,7 @@ func SyncFile(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if c.Param("id") != fileDoc.DocID {
-		err = errors.New("The identifiers in the URL and in the doc are not the same")
+		err = errors.New("the identifiers in the URL and in the doc are not the same")
 		return jsonapi.InvalidAttribute("id", err)
 	}
 	key, err := s.SyncFile(inst, &fileDoc)

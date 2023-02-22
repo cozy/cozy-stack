@@ -91,15 +91,15 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	if code == "" {
 		source.ClientID = params.Get("client_id")
 		if source.ClientID == "" {
-			return nil, errors.New("No client_id")
+			return nil, errors.New("no client_id")
 		}
 		source.ClientSecret = params.Get("client_secret")
 		if source.ClientSecret == "" {
-			return nil, errors.New("No client_secret")
+			return nil, errors.New("no client_secret")
 		}
 		source.Token = params.Get("token")
 		if source.Token == "" {
-			return nil, errors.New("No code or token")
+			return nil, errors.New("no code or token")
 		}
 		if err := checkSourceToken(inst, source); err != nil {
 			return nil, err
@@ -125,22 +125,22 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	var target RequestCredentials
 	cozyURL := params.Get("target_url")
 	if cozyURL == "" {
-		return nil, errors.New("No target_url")
+		return nil, errors.New("no target_url")
 	}
 	if inst.HasDomain(cozyURL) {
-		return nil, errors.New("Invalid target_url")
+		return nil, errors.New("invalid target_url")
 	}
 	target.Token = params.Get("target_token")
 	if target.Token == "" {
-		return nil, errors.New("No target_token")
+		return nil, errors.New("no target_token")
 	}
 	target.ClientID = params.Get("target_client_id")
 	if target.ClientID == "" {
-		return nil, errors.New("No target_client_id")
+		return nil, errors.New("no target_client_id")
 	}
 	target.ClientSecret = params.Get("target_client_secret")
 	if target.ClientSecret == "" {
-		return nil, errors.New("No target_client_secret")
+		return nil, errors.New("no target_client_secret")
 	}
 
 	// If the user has clicked on the "Ignore this step" button in cozy-move at
@@ -219,18 +219,18 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		return nil, err
 	}
 	if req == nil {
-		return nil, errors.New("Invalid secret")
+		return nil, errors.New("invalid secret")
 	}
 
 	u := req.ImportingURL() + "?source=" + inst.ContextualDomain()
 	r, err := http.NewRequest("POST", u, nil)
 	if err != nil {
-		return nil, errors.New("Cannot reach the other Cozy")
+		return nil, errors.New("cannot reach the other Cozy")
 	}
 	r.Header.Add(echo.HeaderAuthorization, "Bearer "+req.TargetCreds.Token)
 	_, err = safehttp.ClientWithKeepAlive.Do(r)
 	if err != nil {
-		return nil, errors.New("Cannot reach the other Cozy")
+		return nil, errors.New("cannot reach the other Cozy")
 	}
 
 	doc, err := inst.SettingsDocument()

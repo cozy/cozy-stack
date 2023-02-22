@@ -143,7 +143,7 @@ func (f *Flags) addManager(inst *instance.Instance) error {
 
 var (
 	cacheDuration      = 12 * time.Hour
-	errInvalidResponse = errors.New("Invalid response from the manager")
+	errInvalidResponse = errors.New("invalid response from the manager")
 )
 
 func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error) {

@@ -98,7 +98,7 @@ func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
 		u.Host = strings.Join(parts, ".")
 	}
 	if !strings.HasPrefix(u.Fragment, "/exports/") {
-		return "", fmt.Errorf("Fragment is not in the expected format")
+		return "", fmt.Errorf("fragment is not in the expected format")
 	}
 	mac := strings.TrimPrefix(u.Fragment, "/exports/")
 	u.Fragment = ""
@@ -239,7 +239,7 @@ func SendImportDoneMail(inst *instance.Instance, status Status, notInstalled []s
 			TemplateName: "import_error",
 		}
 	default:
-		return fmt.Errorf("Unknown import status: %v", status)
+		return fmt.Errorf("unknown import status: %v", status)
 	}
 
 	msg, err := job.NewMessage(&email)

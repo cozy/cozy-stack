@@ -31,7 +31,7 @@ func AddReadOnly(c echo.Context) error {
 		return jsonapi.InvalidParameter("index", err)
 	}
 	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+		return jsonapi.InvalidParameter("index", errors.New("invalid index"))
 	}
 	if s.Owner {
 		if err = s.AddReadOnlyFlag(inst, index); err != nil {
@@ -85,7 +85,7 @@ func RemoveReadOnly(c echo.Context) error {
 		return jsonapi.InvalidParameter("index", err)
 	}
 	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+		return jsonapi.InvalidParameter("index", errors.New("invalid index"))
 	}
 	if s.Owner {
 		if err = s.RemoveReadOnlyFlag(inst, index); err != nil {
