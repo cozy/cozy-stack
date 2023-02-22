@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -192,12 +193,6 @@ func TestRevsTreeInsertChainStartingBefore(t *testing.T) {
 	assert.Len(t, sub.Branches, 0)
 }
 
-func TestRevGeneration(t *testing.T) {
-	assert.Equal(t, 1, RevGeneration("1-aaa"))
-	assert.Equal(t, 3, RevGeneration("3-123"))
-	assert.Equal(t, 10, RevGeneration("10-1f2"))
-}
-
 func TestRevsStructToChain(t *testing.T) {
 	input := RevsStruct{
 		Start: 3,
@@ -282,7 +277,7 @@ func TestIndexerIncrementRevisions(t *testing.T) {
 	}
 	indexer.IncrementRevision()
 	assert.Equal(t, 4, indexer.bulkRevs.Revisions.Start)
-	gen := RevGeneration(indexer.bulkRevs.Rev)
+	gen := revision.Generation(indexer.bulkRevs.Rev)
 	assert.Equal(t, 4, gen)
 	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 3)
 	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])
@@ -366,7 +361,7 @@ func TestIndexerCreateBogusPrevRev(t *testing.T) {
 	}
 	indexer.CreateBogusPrevRev()
 	assert.Equal(t, 3, indexer.bulkRevs.Revisions.Start)
-	gen := RevGeneration(indexer.bulkRevs.Rev)
+	gen := revision.Generation(indexer.bulkRevs.Rev)
 	assert.Equal(t, 3, gen)
 	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 2)
 	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])

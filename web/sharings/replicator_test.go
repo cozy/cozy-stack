@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -398,7 +399,7 @@ func createShared(t *testing.T, sid string, revisions []string, replInstance *in
 	parts := strings.SplitN(sid, "/", 2)
 	doctype := parts[0]
 	id := parts[1]
-	start := sharing.RevGeneration(rev)
+	start := revision.Generation(rev)
 	docs := []map[string]interface{}{
 		{
 			"_id":  id,

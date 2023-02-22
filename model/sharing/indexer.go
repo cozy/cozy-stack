@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -66,7 +67,7 @@ func (s *sharingIndexer) IncrementRevision() {
 // have to create a new revision that will be propagated to the other cozy.
 func (s *sharingIndexer) WillResolveConflict(rev string, chain []string) {
 	last := chain[len(chain)-1]
-	if RevGeneration(last) == RevGeneration(rev) {
+	if revision.Generation(last) == revision.Generation(rev) {
 		s.bulkRevs = nil
 		return
 	}
