@@ -72,10 +72,10 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("GetInstanceNoDB", func(t *testing.T) {
-		instance, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
+		res, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
 		if assert.Error(t, err, "An error is expected") {
-			assert.Nil(t, instance)
-			assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
+			assert.Nil(t, res)
+			assert.ErrorIs(t, err, instance.ErrNotFound)
 		}
 	})
 
@@ -172,10 +172,10 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("GetWrongInstance", func(t *testing.T) {
-		instance, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
+		res, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
 		if assert.Error(t, err, "An error is expected") {
-			assert.Nil(t, instance)
-			assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
+			assert.Nil(t, res)
+			assert.ErrorIs(t, err, instance.ErrNotFound)
 		}
 	})
 
@@ -397,7 +397,7 @@ func TestLifecycle(t *testing.T) {
 		})
 		if assert.Error(t, err, "Should not be possible to create duplicate") {
 			assert.Nil(t, i)
-			assert.Contains(t, err.Error(), "Instance already exists", "the error is not explicit")
+			assert.ErrorIs(t, err, instance.ErrExists)
 		}
 	})
 

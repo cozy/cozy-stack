@@ -59,6 +59,10 @@ const (
 	assetsExtPrefix = "/assets/ext"
 )
 
+var (
+	ErrInvalidPath = errors.New("invalid file path")
+)
+
 // AssetRenderer is an interface for both a template renderer and an asset HTTP
 // handler.
 type AssetRenderer interface {
@@ -70,7 +74,7 @@ type dir string
 
 func (d dir) Open(name string) (http.File, error) {
 	if filepath.Separator != '/' && strings.ContainsRune(name, filepath.Separator) {
-		return nil, errors.New("http: invalid character in file path")
+		return nil, fmt.Errorf("%w: invalid character", ErrInvalidPath)
 	}
 	dir := string(d)
 	if dir == "" {

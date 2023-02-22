@@ -9,13 +9,13 @@ import (
 
 func TestValidateDomain(t *testing.T) {
 	err := validateDomain("")
-	assert.Equal(t, err.Error(), "Unauthorized domain")
+	assert.ErrorIs(t, err, ErrUnauthorizedDomain)
 
 	err = validateDomain("foo bar baz")
-	assert.Equal(t, err.Error(), "Invalid domain")
+	assert.ErrorIs(t, err, ErrInvalidDomain)
 
 	err = validateDomain("192.168.0.1")
-	assert.Equal(t, err.Error(), "IP address are not authorized")
+	assert.ErrorIs(t, err, ErrUnauthorizedIP)
 
 	err = validateDomain("example.com")
 	assert.NoError(t, err)

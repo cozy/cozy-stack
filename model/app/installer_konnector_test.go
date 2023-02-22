@@ -463,7 +463,7 @@ func TestInstallerKonnector(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = inst.RunSync()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Manifest types are not the same")
+		assert.ErrorIs(t, err, app.ErrInvalidManifestTypes)
 	})
 }
 

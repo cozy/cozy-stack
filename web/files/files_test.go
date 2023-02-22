@@ -3192,7 +3192,7 @@ func TestFiles(t *testing.T) {
 
 			err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "Rate limit reached")
+			require.ErrorIs(t, err, limits.ErrRateLimitReached)
 
 			e.GET("/files/"+fileID).
 				WithHeader("Authorization", "Bearer "+publicToken).

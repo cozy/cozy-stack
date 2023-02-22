@@ -29,6 +29,8 @@ import (
 
 var slugReg = regexp.MustCompile(`^[a-z0-9\-]+$`)
 
+var ErrInvalidManifestTypes = errors.New("manifest types are not the sames")
+
 // Operation is the type of operation the installer is created for.
 type Operation int
 
@@ -592,7 +594,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	appTypesMismatch := i.man.AppType() != newManifestAppType
 
 	if !appTypesEmpty && appTypesMismatch {
-		return nil, fmt.Errorf("Manifest types are not the sames. Expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", i.man.AppType(), newManifestAppType, i.man.Slug())
+		return nil, fmt.Errorf("%w: expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", ErrInvalidManifestTypes, i.man.AppType(), newManifestAppType, i.man.Slug())
 	}
 	return newManifest, nil
 }

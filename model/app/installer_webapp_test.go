@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -136,7 +137,7 @@ func TestInstallerWebApp(t *testing.T) {
 			SourceURL: "git://bar  .baz",
 		})
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "invalid character")
+			assert.ErrorIs(t, err, statik.ErrInvalidPath)
 		}
 
 		_, err = app.NewInstaller(db, fs, &app.InstallerOptions{
@@ -1116,7 +1117,7 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = inst.RunSync()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "Manifest types are not the same")
+		assert.ErrorIs(t, err, app.ErrInvalidManifestTypes)
 	})
 }
 

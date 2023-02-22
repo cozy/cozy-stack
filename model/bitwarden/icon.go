@@ -22,6 +22,12 @@ const (
 	maxSize  = 100000             // 100kb
 )
 
+var (
+	ErrInvalidDomain      = errors.New("Invalid domain")
+	ErrUnauthorizedDomain = errors.New("Unauthorized domain")
+	ErrUnauthorizedIP     = errors.New("IP address are not authorized")
+)
+
 // Icon is a simple struct with a content-type and the content of an icon.
 type Icon struct {
 	Mime string `json:"mime"`
@@ -60,17 +66,17 @@ func GetIcon(domain string) (*Icon, error) {
 
 func validateDomain(domain string) error {
 	if domain == "" || len(domain) > 255 || strings.Contains(domain, "..") {
-		return errors.New("Unauthorized domain")
+		return ErrUnauthorizedDomain
 	}
 
 	for _, c := range domain {
 		if c == ' ' || !strconv.IsPrint(c) {
-			return errors.New("Invalid domain")
+			return ErrInvalidDomain
 		}
 	}
 
 	if _, _, err := net.ParseCIDR(domain + "/24"); err == nil {
-		return errors.New("IP address are not authorized")
+		return ErrUnauthorizedIP
 	}
 
 	return nil

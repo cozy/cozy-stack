@@ -78,5 +78,5 @@ func TestMergeRulesBadType(t *testing.T) {
 	newRule, err := rule1.Merge(rule2)
 	assert.Error(t, err)
 	assert.Nil(t, newRule)
-	assert.Contains(t, err.Error(), "type is different")
+	assert.ErrorIs(t, err, ErrImpossibleMerge)
 }
