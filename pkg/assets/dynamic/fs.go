@@ -37,7 +37,7 @@ func InitDynamicAssetFS() error {
 			return err
 		}
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		assetFS, err = newswiftFS()
+		assetFS, err = NewSwiftFS()
 		if err != nil {
 			return err
 		}

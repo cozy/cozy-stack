@@ -13,14 +13,18 @@ import (
 	"github.com/ncw/swift/v2"
 )
 
-type swiftFS struct {
+// SwiftFS is the Swift implementation of [AssetsFS].
+//
+// It save and fetch assets into/from any OpenStack Swift compatible API.
+type SwiftFS struct {
 	swiftConn *swift.Connection
 	ctx       context.Context
 }
 
-func newswiftFS() (*swiftFS, error) {
+// NewSwiftFS instantiate a new SwiftFS.
+func NewSwiftFS() (*SwiftFS, error) {
 	ctx := context.Background()
-	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
+	swiftFS := &SwiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
 	err := swiftFS.swiftConn.ContainerCreate(ctx, DynamicAssetsContainerName, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create container for dynamic assets: %s", err)
@@ -29,7 +33,7 @@ func newswiftFS() (*swiftFS, error) {
 	return swiftFS, nil
 }
 
-func (s *swiftFS) Add(context, name string, asset *model.Asset) error {
+func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
 	objectName := path.Join(asset.Context, asset.Name)
 	swiftConn := s.swiftConn
 	f, err := swiftConn.ObjectCreate(s.ctx, DynamicAssetsContainerName, objectName, true, "", "", nil)
@@ -45,7 +49,7 @@ func (s *swiftFS) Add(context, name string, asset *model.Asset) error {
 	return f.Close()
 }
 
-func (s *swiftFS) Get(context, name string) ([]byte, error) {
+func (s *SwiftFS) Get(context, name string) ([]byte, error) {
 	objectName := path.Join(context, name)
 	assetContent := new(bytes.Buffer)
 
@@ -57,13 +61,13 @@ func (s *swiftFS) Get(context, name string) ([]byte, error) {
 	return assetContent.Bytes(), nil
 }
 
-func (s *swiftFS) Remove(context, name string) error {
+func (s *SwiftFS) Remove(context, name string) error {
 	objectName := path.Join(context, name)
 
 	return s.swiftConn.ObjectDelete(s.ctx, DynamicAssetsContainerName, objectName)
 }
 
-func (s *swiftFS) List() (map[string][]*model.Asset, error) {
+func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	objNames, err := s.swiftConn.ObjectNamesAll(s.ctx, DynamicAssetsContainerName, nil)
@@ -87,7 +91,7 @@ func (s *swiftFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (s *swiftFS) CheckStatus(ctx context.Context) (time.Duration, error) {
+func (s *SwiftFS) CheckStatus(ctx context.Context) (time.Duration, error) {
 	before := time.Now()
 	var err error
 	if config.GetConfig().Fs.CanQueryInfo {
