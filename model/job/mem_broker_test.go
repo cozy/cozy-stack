@@ -350,7 +350,7 @@ func TestMemBroker(t *testing.T) {
 		})
 		assert.Error(t, err)
 		assert.Nil(t, j)
-		assert.Contains(t, err.Error(), "limit reached")
+		assert.ErrorIs(t, err, limits.ErrRateLimitReached)
 
 		j, err = broker.PushJob(testInstance, &jobs.JobRequest{
 			WorkerType: "thumbnail",
