@@ -1,6 +1,7 @@
 package permission
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -14,6 +15,8 @@ const partSep = ":"
 
 // RefSep is used to separate doctype and value for a referenced selector
 const RefSep = "/"
+
+var ErrImpossibleMerge = errors.New("cannot merge these rules")
 
 // Rule represent a single permissions rule, ie a Verb and a type
 type Rule struct {
@@ -157,7 +160,7 @@ func (r Rule) TranslationKey() string {
 // Rule1 name & description are kept
 func (r Rule) Merge(r2 Rule) (*Rule, error) {
 	if r.Type != r2.Type {
-		return nil, fmt.Errorf("Cannot merge these rules, type is different")
+		return nil, fmt.Errorf("%w: type is different", ErrImpossibleMerge)
 	}
 
 	newRule := &r
