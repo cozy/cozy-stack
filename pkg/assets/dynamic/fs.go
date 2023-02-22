@@ -11,12 +11,6 @@ import (
 
 var assetFS AssetsFS
 
-// DynamicAssetsContainerName is the Swift container name for dynamic assets
-const DynamicAssetsContainerName = "__dyn-assets__"
-
-// DynamicAssetsFolderName is the folder name for dynamic assets
-const DynamicAssetsFolderName = "dyn-assets"
-
 // AssetsFS is the interface implemented by all the implementations handling assets.
 //
 // At the moment there two separate implementations:

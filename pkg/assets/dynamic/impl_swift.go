@@ -13,6 +13,9 @@ import (
 	"github.com/ncw/swift/v2"
 )
 
+// DynamicAssetsContainerName is the Swift container name for dynamic assets
+const DynamicAssetsContainerName = "__dyn-assets__"
+
 // SwiftFS is the Swift implementation of [AssetsFS].
 //
 // It save and fetch assets into/from any OpenStack Swift compatible API.

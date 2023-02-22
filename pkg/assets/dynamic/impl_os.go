@@ -15,7 +15,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 )
 
-// OsFS is the OS implementation of AssetsFS.
+// DynamicAssetsFolderName is the folder name for dynamic assets
+const DynamicAssetsFolderName = "dyn-assets"
+
+// OsFS is the OS implementation of [AssetsFS].
 //
 // It saves the assets directly on the host OS filesyteme.
 //
