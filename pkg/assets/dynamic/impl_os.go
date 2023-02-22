@@ -15,12 +15,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 )
 
-type aferoFS struct {
+// OsFS is the OS implementation of AssetsFS.
+//
+// It saves the assets directly on the host OS filesyteme.
+//
+// Technically this is a wrapper around https://github.com/spf13/afero
+// which handle all the heavy works around the OS compatibility.
+type OsFS struct {
 	fs     afero.Fs
 	folder *url.URL
 }
 
-func newOsFS() (*aferoFS, error) {
+// NewOsFS instantiate a new OsFS.
+func NewOsFS() (*OsFS, error) {
 	tmp := config.FsURL().String()
 	folder, err := url.Parse(tmp)
 	folder.Path = filepath.Join(folder.Path, DynamicAssetsFolderName)
@@ -29,29 +36,29 @@ func newOsFS() (*aferoFS, error) {
 		return nil, err
 	}
 
-	aferoFS := &aferoFS{fs: afero.NewOsFs(), folder: folder}
+	aferoFS := &OsFS{fs: afero.NewOsFs(), folder: folder}
 	if err := aferoFS.fs.MkdirAll(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 	return aferoFS, nil
 }
 
-func (a *aferoFS) GetAssetFolderName(context, name string) string {
+func (a *OsFS) GetAssetFolderName(context, name string) string {
 	return filepath.Join(a.folder.Path, context, name)
 }
 
-func (a *aferoFS) Remove(context, name string) error {
+func (a *OsFS) Remove(context, name string) error {
 	filePath := a.GetAssetFolderName(context, name)
 	return a.fs.Remove(filePath)
 }
 
-func (a *aferoFS) CheckStatus(_ context.Context) (time.Duration, error) {
+func (a *OsFS) CheckStatus(_ context.Context) (time.Duration, error) {
 	before := time.Now()
 	_, err := a.fs.Stat("/")
 	return time.Since(before), err
 }
 
-func (a *aferoFS) List() (map[string][]*model.Asset, error) {
+func (a *OsFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
@@ -81,7 +88,7 @@ func (a *aferoFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (a *aferoFS) Get(context, name string) ([]byte, error) {
+func (a *OsFS) Get(context, name string) ([]byte, error) {
 	filePath := a.GetAssetFolderName(context, name)
 
 	f, err := a.fs.Open(filePath)
@@ -98,7 +105,7 @@ func (a *aferoFS) Get(context, name string) ([]byte, error) {
 	return buf.Bytes(), f.Close()
 }
 
-func (a *aferoFS) Add(context, name string, asset *model.Asset) error {
+func (a *OsFS) Add(context, name string, asset *model.Asset) error {
 	filePath := a.GetAssetFolderName(context, name)
 
 	// Creates the asset folder

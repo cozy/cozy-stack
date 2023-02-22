@@ -41,7 +41,7 @@ func InitDynamicAssetFS() error {
 
 	switch scheme {
 	case config.SchemeFile, config.SchemeMem:
-		assetFS, err = newOsFS()
+		assetFS, err = NewOsFS()
 		if err != nil {
 			return err
 		}
