@@ -3,6 +3,8 @@ package dynamic
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,8 +25,7 @@ import (
 //
 // [spf13/afero]: https://github.com/spf13/afero
 type AferoFS struct {
-	fs       afero.Fs
-	rootPath string
+	fs afero.Fs
 }
 
 // NewInMemoryFS instantiate a new [AferoFS] with the in-memeory driver.
@@ -42,15 +43,18 @@ func NewOsFS(rootPath string) (*AferoFS, error) {
 		return nil, err
 	}
 
-	aferoFS := &AferoFS{fs: afero.NewOsFs(), rootPath: rootPath}
-	if err := aferoFS.fs.MkdirAll(aferoFS.rootPath, 0755); err != nil && !os.IsExist(err) {
-		return nil, err
+	err = os.MkdirAll(rootPath, 0755)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return nil, fmt.Errorf("invalid path: %w", err)
 	}
-	return aferoFS, nil
+
+	fs := afero.NewBasePathFs(afero.NewOsFs(), rootPath)
+
+	return &AferoFS{fs}, nil
 }
 
 func (a *AferoFS) GetAssetFolderName(context, name string) string {
-	return filepath.Join(a.rootPath, context, name)
+	return filepath.Join(context, name)
 }
 
 func (a *AferoFS) Remove(context, name string) error {
@@ -68,17 +72,16 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
-	entries, err := os.ReadDir(a.rootPath)
+	entries, err := os.ReadDir("/")
 	if err != nil {
 		return nil, err
 	}
 	for _, context := range entries {
 		ctxName := context.Name()
-		ctxPath := filepath.Join(a.rootPath, ctxName)
 
-		err := filepath.Walk(ctxPath, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(ctxName, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
-				assetName := strings.Replace(path, ctxPath, "", 1)
+				assetName := strings.Replace(path, ctxName, "", 1)
 				asset, err := GetAsset(ctxName, assetName)
 				if err != nil {
 					return err
