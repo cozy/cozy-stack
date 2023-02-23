@@ -42,9 +42,24 @@ var (
 // Start is the route to start the OpenID Connect dance.
 func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getConfig(inst.ContextName)
+	conf, err := getGenericConfig(inst.ContextName)
 	if err != nil {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
+	}
+	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
+	}
+	return c.Redirect(http.StatusSeeOther, u)
+}
+
+// StartFranceConnect is the route to start the FranceConnect dance.
+func StartFranceConnect(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	conf, err := getFranceConnectConfig(inst.ContextName)
+	if err != nil {
+		inst.Logger().WithNamespace("oidc").Infof("StartFranceConnect error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
@@ -69,7 +84,7 @@ func Redirect(c echo.Context) error {
 
 	domain := state.Instance
 	if contextName, ok := FindLoginDomain(domain); ok {
-		conf, err := getConfig(contextName)
+		conf, err := getGenericConfig(contextName)
 		if err != nil || !conf.AllowOAuthToken {
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
@@ -94,6 +109,9 @@ func Redirect(c echo.Context) error {
 	if state.Confirm != "" {
 		u.Add("confirm_state", state.Confirm)
 	}
+	if state.Provider == FranceConnectProvider {
+		u.Add("franceconnect", "true")
+	}
 	redirect := inst.PageURL("/oidc/login", u)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
@@ -101,10 +119,18 @@ func Redirect(c echo.Context) error {
 // Login checks that the OpenID Connect has been successful and logs in the user.
 func Login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getConfig(inst.ContextName)
+
+	var conf *Config
+	var err error
+	if c.QueryParam("franceconnect") == "" {
+		conf, err = getGenericConfig(inst.ContextName)
+	} else {
+		conf, err = getFranceConnectConfig(inst.ContextName)
+	}
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
+
 	redirect := c.QueryParam("redirect")
 	confirm := c.QueryParam("confirm_state")
 	idToken := c.QueryParam("id_token")
@@ -166,7 +192,7 @@ func TwoFactor(c echo.Context) error {
 	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
 
 	inst := middlewares.GetInstance(c)
-	conf, err := getConfig(inst.ContextName)
+	conf, err := getGenericConfig(inst.ContextName)
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
@@ -218,7 +244,7 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getConfig(inst.ContextName)
+	conf, err := getGenericConfig(inst.ContextName)
 	if err != nil || !conf.AllowOAuthToken {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "this endpoint is not enabled",
@@ -310,6 +336,7 @@ func AccessToken(c echo.Context) error {
 // Config is the config to log in a user with an OpenID Connect identity
 // provider.
 type Config struct {
+	Provider            ProviderOIDC
 	AllowOAuthToken     bool
 	AllowCustomInstance bool
 	ClientID            string
@@ -325,7 +352,7 @@ type Config struct {
 	IDTokenKeyURL       string
 }
 
-func getConfig(context string) (*Config, error) {
+func getGenericConfig(context string) (*Config, error) {
 	oidc, ok := config.GetOIDC(context)
 	if !ok {
 		return nil, errors.New("No OIDC is configured for this context")
@@ -373,6 +400,7 @@ func getConfig(context string) (*Config, error) {
 	}
 
 	config := &Config{
+		Provider:            GenericProvider,
 		AllowOAuthToken:     allowOAuthToken,
 		AllowCustomInstance: allowCustomInstance,
 		ClientID:            clientID,
@@ -390,12 +418,62 @@ func getConfig(context string) (*Config, error) {
 	return config, nil
 }
 
+func getFranceConnectConfig(context string) (*Config, error) {
+	oidc, ok := config.GetFranceConnect(context)
+	if !ok {
+		return nil, errors.New("No FranceConnect is configured for this context")
+	}
+
+	// Mandatory fields
+	clientID, ok := oidc["client_id"].(string)
+	if !ok {
+		return nil, errors.New("The client_id is missing for this context")
+	}
+	clientSecret, ok := oidc["client_secret"].(string)
+	if !ok {
+		return nil, errors.New("The client_secret is missing for this context")
+	}
+	scope, ok := oidc["scope"].(string)
+	if !ok {
+		return nil, errors.New("The scope is missing for this context")
+	}
+	redirectURI, ok := oidc["redirect_uri"].(string)
+	if !ok {
+		return nil, errors.New("The redirect_uri is missing for this context")
+	}
+	authorizeURL, ok := oidc["authorize_url"].(string)
+	if !ok {
+		authorizeURL = "https://app.franceconnect.gouv.fr/api/v1/authorize"
+	}
+	tokenURL, ok := oidc["token_url"].(string)
+	if !ok {
+		tokenURL = "https://app.franceconnect.gouv.fr/api/v1/token"
+	}
+	userInfoURL, ok := oidc["userinfo_url"].(string)
+	if !ok {
+		userInfoURL = "https://app.franceconnect.gouv.fr/api/v1/userinfo"
+	}
+
+	config := &Config{
+		Provider:            FranceConnectProvider,
+		AllowCustomInstance: true,
+		ClientID:            clientID,
+		ClientSecret:        clientSecret,
+		Scope:               scope,
+		RedirectURI:         redirectURI,
+		AuthorizeURL:        authorizeURL,
+		TokenURL:            tokenURL,
+		UserInfoURL:         userInfoURL,
+	}
+	return config, nil
+}
+
 func makeStartURL(domain, redirect, confirm string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newStateHolder(domain, redirect, confirm)
+	state := newStateHolder(domain, redirect, confirm, conf.Provider)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -406,6 +484,9 @@ func makeStartURL(domain, redirect, confirm string, conf *Config) (string, error
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
+	if conf.Provider == FranceConnectProvider {
+		vv.Add("acr_values", "eidas1")
+	}
 	u.RawQuery = vv.Encode()
 	return u.String(), nil
 }
@@ -420,15 +501,26 @@ func getToken(conf *Config, code string) (string, error) {
 		"code":         []string{code},
 		"redirect_uri": []string{conf.RedirectURI},
 	}
+
+	// FranceConnect expects the client_id+client_secret in the body, not in a
+	// Authentication header like normal OIDC.
+	if conf.Provider == FranceConnectProvider {
+		data.Add("client_id", conf.ClientID)
+		data.Add("client_secret", conf.ClientSecret)
+	}
+
 	body := strings.NewReader(data.Encode())
 	req, err := http.NewRequest("POST", conf.TokenURL, body)
 	if err != nil {
 		return "", err
 	}
-	auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
-	req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
+
+	if conf.Provider == GenericProvider {
+		auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
+		req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
+	}
 
 	res, err := oidcClient.Do(req)
 	if err != nil {
@@ -476,8 +568,12 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 
 	if conf.AllowCustomInstance {
 		sub, ok := params["sub"].(string)
-		if !ok || sub == "" || sub != inst.OIDCID {
-			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
+		expected := inst.OIDCID
+		if conf.Provider == FranceConnectProvider {
+			expected = inst.FranceConnectID
+		}
+		if !ok || sub == "" || sub != expected {
+			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
 			return ErrAuthenticationFailed
 		}
 		return nil
@@ -690,6 +786,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 // to this group in web/routing
 func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
+	router.GET("/franceconnect", StartFranceConnect, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
@@ -721,7 +818,7 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 		})
 	}
 
-	conf, err := getConfig(contextName)
+	conf, err := getGenericConfig(contextName)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}

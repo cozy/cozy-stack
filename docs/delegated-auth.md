@@ -41,15 +41,15 @@ authentication:
       scope: openid profile
       login_domain: login.mycozy.cloud
       redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
-      authorize_url: https://identity-prodiver/path/to/authorize
-      token_url: https://identity-prodiver/path/to/token
-      userinfo_url: https://identity-prodiver/path/to/userinfo
+      authorize_url: https://identity-provider/path/to/authorize
+      token_url: https://identity-provider/path/to/token
+      userinfo_url: https://identity-provider/path/to/userinfo
       userinfo_instance_field: cozy_number
       userinfo_instance_prefix: name
       userinfo_instance_suffix: .mycozy.cloud
       allow_custom_instance: false
       allow_oauth_token: false
-      id_token_jwk_url: https://identity-prodiver/path/to/jwk
+      id_token_jwk_url: https://identity-provider/path/to/jwk
 ```
 
 Let's see what it means:
@@ -113,7 +113,7 @@ Host: name00001.mycozy.cloud
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://identity-prodiver/path/to/authorize?response_type=code&state=9f6873dfce7d&scope=openid+profile&client_id=aClientID&nonce=94246498&redirect_uri=https://oauthcallback.mycozy.cloud/oidc/redirect
+Location: https://identity-provider/path/to/authorize?response_type=code&state=9f6873dfce7d&scope=openid+profile&client_id=aClientID&nonce=94246498&redirect_uri=https://oauthcallback.mycozy.cloud/oidc/redirect
 ```
 
 #### GET /oidc/redirect
@@ -217,3 +217,25 @@ Content-Type: application/json
 
 If `id_token_jwk_url` option is set, the client can send an `id_token` instead
 of an `oidc_token` in the payload.
+
+## FranceConnect
+
+It is pretty much the same thing as OIDC. It's logical as FranceConnect is an
+OIDC provider. But we have made a special case for the login page. The
+differences are that the flow is started with `GET /oidc/franceconnect`
+(instead of `GET /oidc/start`) and the configuration looks like this:
+
+```yaml
+authentication:
+  the-context-name:
+    franceconnect:
+      client_id: aClientID
+      client_secret: s3cret3
+      scope: openid profile
+      redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
+      authorize_url: https://identity-provider/path/to/authorize
+      token_url: https://identity-provider/path/to/token
+      userinfo_url: https://identity-provider/path/to/userinfo
+```
+
+The last 3 URL can be omited for production.
