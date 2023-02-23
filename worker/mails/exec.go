@@ -5,12 +5,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/exec"
+	"github.com/spf13/afero"
 )
 
 func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {

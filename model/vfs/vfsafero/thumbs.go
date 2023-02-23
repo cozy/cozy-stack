@@ -7,10 +7,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/spf13/afero"
 )
 
 // NewThumbsFs creates a new thumb filesystem base on a afero.Fs.

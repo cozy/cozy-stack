@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/ncw/swift/v2"
+	"github.com/spf13/afero"
 )
 
 const (
