@@ -451,7 +451,7 @@ msgstr "Contact us, if you want to know more, at"
 msgid "Error Message instance blocked"
 msgstr "Your Cozy has been blocked"
 
-msgid "Error The authentication has failed"
+msgid "the authentication has failed"
 msgstr "The authentication has failed"
 
 msgid "Instance Blocked Login"
