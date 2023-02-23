@@ -519,7 +519,7 @@ msgstr "Contactez-nous, si vous souhaitez en savoir plus, à l'adresse"
 msgid "Error Message instance blocked"
 msgstr "Le fonctionnement de votre Cozy a été momentanément interrompu"
 
-msgid "Error The authentication has failed"
+msgid "the authentication has failed"
 msgstr "L'authentification n'a pu aboutir"
 
 msgid "Instance Blocked Login"
