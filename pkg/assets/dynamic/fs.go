@@ -30,16 +30,21 @@ func InitDynamicAssetFS() error {
 	scheme := config.FsURL().Scheme
 
 	switch scheme {
-	case config.SchemeFile, config.SchemeMem:
+	case config.SchemeMem:
+		assetFS = NewInMemoryFS()
+
+	case config.SchemeFile:
 		assetFS, err = NewOsFS()
 		if err != nil {
 			return err
 		}
+
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		assetFS, err = NewSwiftFS()
 		if err != nil {
 			return err
 		}
+
 	default:
 		return fmt.Errorf("Invalid scheme %s for dynamic assets FS", scheme)
 	}
