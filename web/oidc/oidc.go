@@ -32,6 +32,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var (
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrInvalidConfiguration = errors.New("invalid configuration")
+	ErrAuthenticationFailed = errors.New("the authentication has failed")
+	ErrIdentityProvider     = errors.New("error from the identity provider")
+)
+
 // Start is the route to start the OpenID Connect dance.
 func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -452,7 +459,7 @@ func getToken(conf *Config, code string) (string, error) {
 
 func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 	if conf.AllowCustomInstance {
-		return "", errors.New("invalid configuration")
+		return "", ErrInvalidConfiguration
 	}
 	params, err := getUserInfo(conf, token)
 	if err != nil {
@@ -471,7 +478,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		sub, ok := params["sub"].(string)
 		if !ok || sub == "" || sub != inst.OIDCID {
 			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
-			return errors.New("Error The authentication has failed")
+			return ErrAuthenticationFailed
 		}
 		return nil
 	}
@@ -482,7 +489,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	}
 	if domain != inst.Domain {
 		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return errors.New("Error The authentication has failed")
+		return ErrAuthenticationFailed
 	}
 	return nil
 }
@@ -490,13 +497,13 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	req, err := http.NewRequest("GET", conf.UserInfoURL, nil)
 	if err != nil {
-		return nil, errors.New("invalid configuration")
+		return nil, ErrInvalidConfiguration
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := oidcClient.Do(req)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
-		return nil, errors.New("error from the identity provider")
+		return nil, ErrIdentityProvider
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
@@ -511,7 +518,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	err = json.NewDecoder(res.Body).Decode(&params)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
-		return nil, errors.New("Invalid response from the identity provider")
+		return nil, ErrIdentityProvider
 	}
 	return params, nil
 }
@@ -519,7 +526,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 func extractDomain(conf *Config, params map[string]interface{}) (string, error) {
 	domain, ok := params[conf.UserInfoField].(string)
 	if !ok {
-		return "", errors.New("Error The authentication has failed")
+		return "", ErrAuthenticationFailed
 	}
 	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
 	domain = strings.ToLower(domain)             // The domain is case insensitive
@@ -538,17 +545,17 @@ func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
 	})
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
-		return errors.New("invalid token")
+		return ErrInvalidToken
 	}
 	if !token.Valid {
-		logger.WithNamespace("oidc").Errorf("Invalid token: %#v", token)
-		return errors.New("invalid token")
+		logger.WithNamespace("oidc").Errorf("%s: %#v", ErrInvalidToken, token)
+		return ErrInvalidToken
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
 		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
-		return errors.New("Error The authentication has failed")
+		return ErrAuthenticationFailed
 	}
 
 	return nil
