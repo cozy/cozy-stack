@@ -3,11 +3,15 @@ package dynamic
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 )
+
+// DynamicAssetsFolderName is the folder name for dynamic assets
+const DynamicAssetsFolderName = "dyn-assets"
 
 var assetFS AssetsFS
 
@@ -34,7 +38,7 @@ func InitDynamicAssetFS() error {
 		assetFS = NewInMemoryFS()
 
 	case config.SchemeFile:
-		assetFS, err = NewOsFS()
+		assetFS, err = NewOsFS(filepath.Join(config.FsURL().Path, DynamicAssetsFolderName))
 		if err != nil {
 			return err
 		}
