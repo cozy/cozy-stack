@@ -32,6 +32,14 @@ type AferoFS struct {
 	folder *url.URL
 }
 
+// NewInMemoryFS instantiate a new [AferoFS] with the in-memeory driver.
+//
+// This implementation loose every data after being clean up so it should
+// be only used for the tests.
+func NewInMemoryFS() *AferoFS {
+	return &AferoFS{fs: afero.NewMemMapFs()}
+}
+
 // NewOsFS instantiate a new [AferoFS] with the OsFS driver.
 func NewOsFS() (*AferoFS, error) {
 	tmp := config.FsURL().String()
