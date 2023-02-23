@@ -29,7 +29,7 @@ const DynamicAssetsFolderName = "dyn-asets"
 // [spf13/afero]: https://github.com/spf13/afero
 type AferoFS struct {
 	fs     afero.Fs
-	folder *url.URL
+	folder string
 }
 
 // NewInMemoryFS instantiate a new [AferoFS] with the in-memeory driver.
@@ -50,15 +50,15 @@ func NewOsFS() (*AferoFS, error) {
 		return nil, err
 	}
 
-	aferoFS := &AferoFS{fs: afero.NewOsFs(), folder: folder}
-	if err := aferoFS.fs.MkdirAll(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
+	aferoFS := &AferoFS{fs: afero.NewOsFs(), folder: folder.Path}
+	if err := aferoFS.fs.MkdirAll(aferoFS.folder, 0755); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 	return aferoFS, nil
 }
 
 func (a *AferoFS) GetAssetFolderName(context, name string) string {
-	return filepath.Join(a.folder.Path, context, name)
+	return filepath.Join(a.folder, context, name)
 }
 
 func (a *AferoFS) Remove(context, name string) error {
@@ -76,13 +76,13 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
-	entries, err := os.ReadDir(a.folder.Path)
+	entries, err := os.ReadDir(a.folder)
 	if err != nil {
 		return nil, err
 	}
 	for _, context := range entries {
 		ctxName := context.Name()
-		ctxPath := filepath.Join(a.folder.Path, ctxName)
+		ctxPath := filepath.Join(a.folder, ctxName)
 
 		err := filepath.Walk(ctxPath, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
