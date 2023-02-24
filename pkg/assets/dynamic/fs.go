@@ -3,6 +3,7 @@ package dynamic
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"time"
 
@@ -29,16 +30,18 @@ type AssetsFS interface {
 }
 
 // InitDynamicAssetFS initializes the dynamic asset FS.
-func InitDynamicAssetFS() error {
-	var err error
-	scheme := config.FsURL().Scheme
+func InitDynamicAssetFS(fsURL string) error {
+	u, err := url.Parse(fsURL)
+	if err != nil {
+		return err
+	}
 
-	switch scheme {
+	switch u.Scheme {
 	case config.SchemeMem:
 		assetFS = NewInMemoryFS()
 
 	case config.SchemeFile:
-		assetFS, err = NewOsFS(filepath.Join(config.FsURL().Path, DynamicAssetsFolderName))
+		assetFS, err = NewOsFS(filepath.Join(u.Path, DynamicAssetsFolderName))
 		if err != nil {
 			return err
 		}
@@ -50,7 +53,7 @@ func InitDynamicAssetFS() error {
 		}
 
 	default:
-		return fmt.Errorf("Invalid scheme %s for dynamic assets FS", scheme)
+		return fmt.Errorf("Invalid scheme %s for dynamic assets FS", u.Scheme)
 	}
 
 	return nil

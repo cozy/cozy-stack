@@ -39,15 +39,16 @@ func TestDynamic(t *testing.T) {
 	viper.Set("swift.api_key", "swifttest")
 	viper.Set("swift.auth_url", swiftSrv.AuthURL)
 
-	require.NoError(t, config.InitSwiftConnection(config.Fs{
-		URL: &url.URL{
-			Scheme:   "swift",
-			Host:     "localhost",
-			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
-		},
-	}), "Could not init swift connection")
+	swiftURL := url.URL{
+		Scheme:   "swift",
+		Host:     "localhost",
+		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+	}
+
+	require.NoError(t, config.InitSwiftConnection(config.Fs{URL: &swiftURL}), "Could not init swift connection")
 	require.NoError(t, config.GetSwiftConnection().ContainerCreate(ctx, DynamicAssetsContainerName, nil), "Could not create dynamic container")
-	require.NoError(t, InitDynamicAssetFS(), "Could not initialize dynamic FS")
+
+	require.NoError(t, InitDynamicAssetFS(swiftURL.String()), "Could not initialize dynamic FS")
 
 	t.Run("AddCustomAsset", func(t *testing.T) {
 		var err error

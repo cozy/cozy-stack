@@ -21,7 +21,7 @@ func TestSetup(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 
 	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
-	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	_ = web.SetupAssets(echo.New(), config.GetConfig().Assets)
 }

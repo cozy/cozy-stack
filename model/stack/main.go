@@ -121,7 +121,7 @@ security features. Please do not use this binary as your production server.
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
 	if !hasOptions(NoDynAssets, opts) {
-		err = dynamic.InitDynamicAssetFS()
+		err = dynamic.InitDynamicAssetFS(config.FsURL().String())
 		if err != nil {
 			return nil, err
 		}

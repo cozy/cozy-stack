@@ -87,7 +87,7 @@ func TestReplicator(t *testing.T) {
 		"/sharings": sharings.Routes,
 	})
 
-	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 	t.Run("CreateSharingForReplicatorTest", func(t *testing.T) {
 		rule := sharing.Rule{
 			Title:    "tests",

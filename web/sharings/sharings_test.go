@@ -106,7 +106,7 @@ func TestSharings(t *testing.T) {
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	t.Run("CreateSharingSuccess", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
