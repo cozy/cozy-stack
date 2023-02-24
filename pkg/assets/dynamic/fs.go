@@ -20,7 +20,8 @@ var assetFS AssetsFS
 //
 // At the moment there two separate implementations:
 // - [SwiftFS] allowing to manage assets via an OpenStack Swift API.
-// - [OsFS] allowing to manage assets directly via the host Operating System.
+// - [AferoFS] with [NewOsFS] allowing to manage assets directly on the host filesystem.
+// - [AferoFS] with [NewInMemory] allowing to manage assets directly in a in-memory session.
 type AssetsFS interface {
 	Add(string, string, *model.Asset) error
 	Get(string, string) ([]byte, error)
