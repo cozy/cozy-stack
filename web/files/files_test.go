@@ -3190,11 +3190,11 @@ func TestFiles(t *testing.T) {
 
 			// Blocking the file by accessing it a lot of times
 			for i := 0; i < 1999; i++ {
-				err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+				err = config.GetRateLimiter().CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 				assert.NoError(t, err)
 			}
 
-			err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+			err = config.GetRateLimiter().CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 			require.Error(t, err)
 			require.ErrorIs(t, err, limits.ErrRateLimitReached)
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -160,7 +161,7 @@ func twoFactor(c echo.Context) error {
 // twoFactorFailed returns the 2FA form with an error message
 func twoFactorFailed(c echo.Context, inst *instance.Instance, token []byte) error {
 	errorMessage := inst.Translate(TwoFactorErrorKey)
-	errCheckRateLimit := limits.CheckRateLimit(inst, limits.TwoFactorType)
+	errCheckRateLimit := config.GetRateLimiter().CheckRateLimit(inst, limits.TwoFactorType)
 	if errCheckRateLimit == limits.ErrRateLimitExceeded {
 		if err := TwoFactorRateExceeded(inst); err != nil {
 			inst.Logger().WithNamespace("auth").Warn(err.Error())

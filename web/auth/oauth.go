@@ -408,7 +408,7 @@ func renderConfirmFlagship(c echo.Context, clientID string) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	err := limits.CheckRateLimit(inst, limits.ConfirmFlagshipType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.ConfirmFlagshipType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return renderError(c, http.StatusTooManyRequests, err.Error())
 	}
@@ -689,7 +689,7 @@ func authorizeMove(c echo.Context) error {
 	passphrase := []byte(c.FormValue("passphrase"))
 	if lifecycle.CheckPassphrase(inst, passphrase) != nil {
 		errorMessage := inst.Translate(CredentialsErrorKey)
-		err := limits.CheckRateLimit(inst, limits.AuthType)
+		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
 				inst.Logger().WithNamespace("auth").Warn(err.Error())

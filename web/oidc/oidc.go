@@ -136,7 +136,7 @@ func Login(c echo.Context) error {
 	confirm := c.QueryParam("confirm_state")
 	idToken := c.QueryParam("id_token")
 
-	err = limits.CheckRateLimit(inst, limits.AuthType)
+	err = config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		if err = auth.LoginRateExceeded(inst); err != nil {
 			inst.Logger().WithNamespace("oidc").Warn(err.Error())

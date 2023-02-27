@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/limits"
@@ -17,7 +18,7 @@ import (
 
 func registerClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(instance, limits.OAuthClientType)
+	err := config.GetRateLimiter().CheckRateLimit(instance, limits.OAuthClientType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
@@ -48,7 +49,7 @@ func readClient(c echo.Context) error {
 
 func updateClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(instance, limits.OAuthClientType)
+	err := config.GetRateLimiter().CheckRateLimit(instance, limits.OAuthClientType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -90,7 +91,7 @@ func passphraseForm(c echo.Context) error {
 
 func sendHint(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	if err := limits.CheckRateLimit(i, limits.SendHintByMail); err == nil {
+	if err := config.GetRateLimiter().CheckRateLimit(i, limits.SendHintByMail); err == nil {
 		if err := lifecycle.SendHint(i); err != nil {
 			return err
 		}

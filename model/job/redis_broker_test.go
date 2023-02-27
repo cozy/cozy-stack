@@ -133,7 +133,7 @@ func TestRedisBroker(t *testing.T) {
 			},
 		}
 		ct := limits.JobThumbnailType
-		limits.ResetCounter(testInstance, ct)
+		config.GetRateLimiter().ResetCounter(testInstance, ct)
 
 		broker := job.NewRedisBroker(client1)
 		err := broker.StartWorkers(workersTestList)

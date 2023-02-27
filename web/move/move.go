@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -30,7 +31,7 @@ import (
 
 func createExport(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(inst, limits.ExportType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.ExportType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
@@ -295,7 +296,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	err := limits.CheckRateLimit(inst, limits.ExportType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.ExportType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
@@ -344,7 +345,7 @@ func initializeMove(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	err := limits.CheckRateLimit(inst, limits.ExportType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.ExportType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}

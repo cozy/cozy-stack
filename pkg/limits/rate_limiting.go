@@ -2,11 +2,10 @@ package limits
 
 import (
 	"errors"
-	"sync"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/redis/go-redis/v9"
 )
 
 // CounterType os an enum for the type of counters used by rate-limiting.
@@ -224,54 +223,59 @@ type Counter interface {
 	Reset(key string) error
 }
 
-var globalCounter Counter
-var globalCounterMu sync.Mutex
+// RateLimiter allow to rate limite the access to some resource.
+type RateLimiter struct {
+	counter Counter
+}
 
-func getCounter() Counter {
-	globalCounterMu.Lock()
-	defer globalCounterMu.Unlock()
-	if globalCounter != nil {
-		return globalCounter
-	}
-	client := config.GetConfig().RateLimitingStorage.Client()
+// NewRateLimiter instantiate a new [RateLimiter].
+//
+// The backend selection is done based on the `client` argument. If a client is
+// given, the redis backend is chosen, if nil is provided the inmemory backend would
+// be chosen.
+func NewRateLimiter(client redis.UniversalClient) *RateLimiter {
 	if client == nil {
-		globalCounter = NewInMemory()
-	} else {
-		globalCounter = NewRedis(client)
+		return &RateLimiter{NewInMemory()}
 	}
-	return globalCounter
+
+	return &RateLimiter{NewRedis(client)}
 }
 
 // CheckRateLimit returns an error if the counter for the given type and
 // instance has reached the limit.
-func CheckRateLimit(p prefixer.Prefixer, ct CounterType) error {
-	return CheckRateLimitKey(p.DomainName(), ct)
+func (r *RateLimiter) CheckRateLimit(p prefixer.Prefixer, ct CounterType) error {
+	return r.CheckRateLimitKey(p.DomainName(), ct)
 }
 
 // CheckRateLimitKey allows to check the rate-limit for a key
-func CheckRateLimitKey(customKey string, ct CounterType) error {
+func (r *RateLimiter) CheckRateLimitKey(customKey string, ct CounterType) error {
 	cfg := configs[ct]
 	key := cfg.Prefix + ":" + customKey
-	val, err := getCounter().Increment(key, cfg.Period)
+
+	val, err := r.counter.Increment(key, cfg.Period)
 	if err != nil {
 		return err
 	}
+
 	// The first time we reach the limit, we provide a specific error message.
 	// This allows to log a warning only once if needed.
 	if val == cfg.Limit+1 {
 		return ErrRateLimitReached
 	}
+
 	if val > cfg.Limit {
 		return ErrRateLimitExceeded
 	}
+
 	return nil
 }
 
 // ResetCounter sets again to zero the counter for the given type and instance.
-func ResetCounter(p prefixer.Prefixer, ct CounterType) {
+func (r *RateLimiter) ResetCounter(p prefixer.Prefixer, ct CounterType) {
 	cfg := configs[ct]
 	key := cfg.Prefix + ":" + p.DomainName()
-	_ = getCounter().Reset(key)
+
+	_ = r.counter.Reset(key)
 }
 
 // IsLimitReachedOrExceeded return true if the limit has been reached or
