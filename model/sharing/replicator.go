@@ -43,7 +43,7 @@ type ReplicateMsg struct {
 
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -642,7 +642,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID+"/_bulk_docs")
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/_bulk_docs")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

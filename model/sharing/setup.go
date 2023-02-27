@@ -22,7 +22,7 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup receiver on %#v", inst)
 
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	// XXX Wait a bit to avoid pressure on the recipient Cozy
 	time.Sleep(1 * time.Second)
 
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return
 	}
@@ -215,7 +215,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		return nil
 	}
 
-	mu := config.GetConfig().Lock.ReadWrite(inst, "shared")
+	mu := config.Lock().ReadWrite(inst, "shared")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

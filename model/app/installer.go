@@ -274,7 +274,7 @@ func (i *Installer) run() (err error) {
 	if i.man == nil {
 		panic("Manifest is nil")
 	}
-	mu := config.GetConfig().Lock.ReadWrite(i.db, "app-"+i.man.Slug())
+	mu := config.Lock().ReadWrite(i.db, "app-"+i.man.Slug())
 	if err = mu.Lock(); err != nil {
 		i.log.Errorf("Could not get lock: %s", err)
 		return err

@@ -269,7 +269,7 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
-	mutex := config.GetConfig().Lock.LongOperation(inst, "vfs")
+	mutex := config.Lock().LongOperation(inst, "vfs")
 	if err = mutex.Lock(); err != nil {
 		return err
 	}

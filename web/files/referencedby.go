@@ -14,7 +14,7 @@ import (
 )
 
 func lockVFS(inst *instance.Instance) func() {
-	mu := config.GetConfig().Lock.ReadWrite(inst, "vfs")
+	mu := config.Lock().ReadWrite(inst, "vfs")
 	_ = mu.Lock()
 	return mu.Unlock
 }

@@ -216,7 +216,7 @@ func changesFeed(c echo.Context) error {
 	// Use the VFS lock for the files to avoid sending the changed feed while
 	// the VFS is moving a directory.
 	if doctype == consts.Files {
-		mu := config.GetConfig().Lock.ReadWrite(instance, "vfs")
+		mu := config.Lock().ReadWrite(instance, "vfs")
 		if err := mu.Lock(); err != nil {
 			return err
 		}

@@ -318,7 +318,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	evt.Doc.Type = msg.DocType
 	sid := evt.Doc.Type + "/" + evt.Doc.ID()
 
-	mu := config.GetConfig().Lock.ReadWrite(inst, "shared/"+sid)
+	mu := config.Lock().ReadWrite(inst, "shared/"+sid)
 	if err := mu.Lock(); err != nil {
 		return err
 	}

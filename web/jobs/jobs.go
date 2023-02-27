@@ -478,7 +478,7 @@ func fireBIWebhook(c echo.Context) error {
 
 	// The stack will create or delete accounts and triggers on some webhooks,
 	// so it is safer to avoid concurrency on this part of the code.
-	mutex := config.GetConfig().Lock.ReadWrite(inst, "bi")
+	mutex := config.Lock().ReadWrite(inst, "bi")
 	if err := mutex.Lock(); err != nil {
 		return err
 	}

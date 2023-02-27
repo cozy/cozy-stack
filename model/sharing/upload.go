@@ -30,7 +30,7 @@ type UploadMsg struct {
 
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/upload")
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 // InitialUpload uploads files to just a member, for the first time
 func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
-	mu := config.GetConfig().Lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/upload")
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -363,7 +363,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		return nil, vfs.ErrInvalidHash
 	}
 	sid := consts.Files + "/" + target.DocID
-	mu := config.GetConfig().Lock.ReadWrite(inst, "shared/"+sid)
+	mu := config.Lock().ReadWrite(inst, "shared/"+sid)
 	if err := mu.Lock(); err != nil {
 		return nil, err
 	}
@@ -497,7 +497,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	}
 	inst.Logger().WithNamespace("upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	sid := consts.Files + "/" + target.DocID
-	mu := config.GetConfig().Lock.ReadWrite(inst, "shared/"+sid)
+	mu := config.Lock().ReadWrite(inst, "shared/"+sid)
 	if err = mu.Lock(); err != nil {
 		return err
 	}

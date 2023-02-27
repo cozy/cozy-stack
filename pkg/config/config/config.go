@@ -123,7 +123,7 @@ type Config struct {
 	Flagship       Flagship
 	Logger         logger.Options
 
-	Lock                lock.LockGetter
+	Lock                lock.Getter
 	SessionStorage      RedisConfig
 	DownloadStorage     RedisConfig
 	OauthStateStorage   RedisConfig
@@ -361,6 +361,11 @@ func CouchCluster(n int) CouchDBCluster {
 // cluster.
 func CouchClient() *http.Client {
 	return config.CouchDB.Client
+}
+
+// Lock return the lock getter.
+func Lock() lock.Getter {
+	return config.Lock
 }
 
 // Client returns the redis.Client for a RedisConfig

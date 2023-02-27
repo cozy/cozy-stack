@@ -182,7 +182,7 @@ func migrateAccountsToOrganization(domain string) error {
 	if err != nil {
 		return err
 	}
-	mu := config.GetConfig().Lock.ReadWrite(inst, "migrate-accounts")
+	mu := config.Lock().ReadWrite(inst, "migrate-accounts")
 	if err := mu.Lock(); err != nil {
 		return err
 	}
