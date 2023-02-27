@@ -84,7 +84,7 @@ func TestAuth(t *testing.T) {
 	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	require.NoError(t, dynamic.InitDynamicAssetFS(), "Could not init dynamic FS")
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	t.Run("InstanceBlocked", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)

@@ -3,20 +3,17 @@ package dynamic
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/spf13/afero"
 )
-
-// DynamicAssetsFolderName is the folder name for dynamic assets
-const DynamicAssetsFolderName = "dyn-asets"
 
 // AferoFS is a wrapper around the [spf13/afero] filesystem.
 //
@@ -28,8 +25,7 @@ const DynamicAssetsFolderName = "dyn-asets"
 //
 // [spf13/afero]: https://github.com/spf13/afero
 type AferoFS struct {
-	fs     afero.Fs
-	folder *url.URL
+	fs afero.Fs
 }
 
 // NewInMemoryFS instantiate a new [AferoFS] with the in-memeory driver.
@@ -41,24 +37,24 @@ func NewInMemoryFS() *AferoFS {
 }
 
 // NewOsFS instantiate a new [AferoFS] with the OsFS driver.
-func NewOsFS() (*AferoFS, error) {
-	tmp := config.FsURL().String()
-	folder, err := url.Parse(tmp)
-	folder.Path = filepath.Join(folder.Path, DynamicAssetsFolderName)
-
+func NewOsFS(rootPath string) (*AferoFS, error) {
+	rootPath, err := filepath.Abs(rootPath)
 	if err != nil {
 		return nil, err
 	}
 
-	aferoFS := &AferoFS{fs: afero.NewOsFs(), folder: folder}
-	if err := aferoFS.fs.MkdirAll(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
-		return nil, err
+	err = os.MkdirAll(rootPath, 0755)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return nil, fmt.Errorf("invalid path: %w", err)
 	}
-	return aferoFS, nil
+
+	fs := afero.NewBasePathFs(afero.NewOsFs(), rootPath)
+
+	return &AferoFS{fs}, nil
 }
 
 func (a *AferoFS) GetAssetFolderName(context, name string) string {
-	return filepath.Join(a.folder.Path, context, name)
+	return filepath.Join(context, name)
 }
 
 func (a *AferoFS) Remove(context, name string) error {
@@ -76,17 +72,16 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
-	entries, err := os.ReadDir(a.folder.Path)
+	entries, err := os.ReadDir("/")
 	if err != nil {
 		return nil, err
 	}
 	for _, context := range entries {
 		ctxName := context.Name()
-		ctxPath := filepath.Join(a.folder.Path, ctxName)
 
-		err := filepath.Walk(ctxPath, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(ctxName, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
-				assetName := strings.Replace(path, ctxPath, "", 1)
+				assetName := strings.Replace(path, ctxName, "", 1)
 				asset, err := GetAsset(ctxName, assetName)
 				if err != nil {
 					return err
