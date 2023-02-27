@@ -7,9 +7,9 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -318,7 +318,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	evt.Doc.Type = msg.DocType
 	sid := evt.Doc.Type + "/" + evt.Doc.ID()
 
-	mu := lock.ReadWrite(inst, "shared/"+sid)
+	mu := config.Lock().ReadWrite(inst, "shared/"+sid)
 	if err := mu.Lock(); err != nil {
 		return err
 	}

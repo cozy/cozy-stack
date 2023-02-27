@@ -6,15 +6,15 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
 
 func lockVFS(inst *instance.Instance) func() {
-	mu := lock.ReadWrite(inst, "vfs")
+	mu := config.Lock().ReadWrite(inst, "vfs")
 	_ = mu.Lock()
 	return mu.Unlock
 }

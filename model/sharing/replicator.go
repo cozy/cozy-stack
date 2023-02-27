@@ -15,10 +15,10 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
-	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
@@ -43,7 +43,7 @@ type ReplicateMsg struct {
 
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
-	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return err
 	}
@@ -642,7 +642,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
-	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/_bulk_docs")
+	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/_bulk_docs")
 	if err := mu.Lock(); err != nil {
 		return err
 	}

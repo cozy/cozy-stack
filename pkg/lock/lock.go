@@ -4,19 +4,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/redis/go-redis/v9"
 )
 
-// ReadWrite returns the read/write lock for the given name.
-// By convention, the name should be prefixed by the instance domain on which
-// it applies, then a slash and the package name (ie alice.example.net/vfs).
-func ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker {
-	cli := config.GetConfig().Lock.Client()
-	if cli != nil {
-		return getRedisReadWriteLock(cli, db.DBPrefix()+"/"+name)
+// LockGetter return a lock on a resource matching the given `name`.
+type Getter interface {
+	// ReadWrite returns the read/write lock for the given name.
+	// By convention, the name should be prefixed by the instance domain on which
+	// it applies, then a slash and the package name (ie alice.example.net/vfs).
+	ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker
+
+	// LongOperation returns a lock suitable for long operations. It will refresh
+	// the lock in redis to avoid its automatic expiration.
+	LongOperation(db prefixer.Prefixer, name string) ErrorLocker
+}
+
+func New(client redis.UniversalClient) Getter {
+	if client == nil {
+		return NewInMemory()
 	}
-	return getMemReadWriteLock(name)
+
+	return NewRedisLockGetter(client)
 }
 
 // An ErrorLocker is a locker which can fail (returns an error)
@@ -30,14 +39,6 @@ type ErrorRWLocker interface {
 	ErrorLocker
 	RLock() error
 	RUnlock()
-}
-
-// LongOperation returns a lock suitable for long operations. It will refresh
-// the lock in redis to avoid its automatic expiration.
-func LongOperation(db prefixer.Prefixer, name string) ErrorLocker {
-	return &longOperation{
-		lock: ReadWrite(db, name),
-	}
 }
 
 type longOperation struct {

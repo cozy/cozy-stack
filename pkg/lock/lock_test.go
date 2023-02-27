@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // If you want to test harder the lock, you can set nb = 1000 but it is too
@@ -33,30 +34,24 @@ func TestLock(t *testing.T) {
 		nb = 3
 	}
 
-	config.UseTestFile()
-	backconf := config.GetConfig().Lock
-	defer func() { config.GetConfig().Lock = backconf }()
-
 	t.Run("MemLock", func(t *testing.T) {
-		var err error
-		config.GetConfig().Lock, err = config.NewRedisConfig("")
-		if err != nil {
-			t.Fatal(err)
-		}
+		client := NewInMemory()
+
 		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		l := ReadWrite(db, "test-mem")
+		l := client.ReadWrite(db, "test-mem")
 		hammerRW(t, l)
 	})
 
 	t.Run("RedisLock", func(t *testing.T) {
-		var err error
-		config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
-		if err != nil {
-			t.Fatal(err)
-		}
+		opt, err := redis.ParseURL("redis://localhost:6379/0")
+		require.NoError(t, err)
+		client := NewRedisLockGetter(redis.NewClient(opt))
+
 		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		l := ReadWrite(db, "test-redis")
+		l := client.ReadWrite(db, "test-redis")
+
 		hammerRW(t, l)
+
 		done := make(chan bool)
 		for i := 0; i < 10; i++ {
 			go HammerMutex(l, done)
@@ -64,9 +59,11 @@ func TestLock(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			<-done
 		}
-		other := ReadWrite(db, "test-redis").(*redisLock)
+
+		other := client.ReadWrite(db, "test-redis").(*redisLock)
 		assert.NoError(t, l.Lock())
 		assert.Error(t, other.LockWithTimeout(1*time.Second))
+
 		l.Unlock()
 	})
 
@@ -75,15 +72,16 @@ func TestLock(t *testing.T) {
 			return
 		}
 
-		var err error
-		config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
-		if err != nil {
-			t.Fatal(err)
-		}
+		opt, err := redis.ParseURL("redis://localhost:6379/0")
+		require.NoError(t, err)
+		client := NewRedisLockGetter(redis.NewClient(opt))
+
 		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		long := LongOperation(db, "test-long")
-		l := ReadWrite(db, "test-long").(*redisLock)
+		long := client.LongOperation(db, "test-long")
+
+		l := client.ReadWrite(db, "test-long").(*redisLock)
 		assert.NoError(t, long.Lock())
+
 		err = l.Lock()
 		assert.Error(t, err)
 		assert.Equal(t, ErrTooManyRetries, err)

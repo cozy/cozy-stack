@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -118,7 +118,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 
 	// For the lock key, we use the checksum when available, and else, we
 	// fallback on the app name.
-	mu := lock.ReadWrite(prefixer.GlobalPrefixer, "app-"+man.Slug()+"-"+man.Checksum())
+	mu := config.Lock().ReadWrite(prefixer.GlobalPrefixer, "app-"+man.Slug()+"-"+man.Checksum())
 	if err = mu.Lock(); err != nil {
 		log := logger.WithNamespace("fetcher")
 		log.Infof("cannot get lock: %s", err)

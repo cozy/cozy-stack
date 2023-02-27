@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/redis/go-redis/v9"
 )
@@ -191,31 +192,39 @@ func (rl *redisLock) RUnlock() {
 	rl.unlock(false)
 }
 
-var redislocks map[string]*redisLock
 var redislocksMu sync.Mutex
 var redisRng *rand.Rand
 var redisLogger *logger.Entry
 
-func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
-	return &redisLock{
-		client: c,
-		ctx:    context.Background(),
-		key:    basicLockNS + ns,
+type RedisLockGetter struct {
+	client redis.UniversalClient
+	locks  *sync.Map
+}
+
+func NewRedisLockGetter(client redis.UniversalClient) *RedisLockGetter {
+	redisRng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	redisLogger = logger.WithNamespace("redis-lock")
+
+	return &RedisLockGetter{
+		client: client,
+		locks:  new(sync.Map),
 	}
 }
 
-func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
-	redislocksMu.Lock()
-	defer redislocksMu.Unlock()
-	if redislocks == nil {
-		redislocks = make(map[string]*redisLock)
-		redisRng = rand.New(rand.NewSource(time.Now().UnixNano()))
-		redisLogger = logger.WithNamespace("redis-lock")
+func (r *RedisLockGetter) ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker {
+	lock, _ := r.locks.LoadOrStore(db.DBPrefix()+"/"+name, &redisLock{
+		client: r.client,
+		ctx:    context.Background(),
+		key:    basicLockNS + name,
+	})
+
+	return lock.(*redisLock)
+}
+
+// LongOperation returns a lock suitable for long operations. It will refresh
+// the lock in redis to avoid its automatic expiration.
+func (r *RedisLockGetter) LongOperation(db prefixer.Prefixer, name string) ErrorLocker {
+	return &longOperation{
+		lock: r.ReadWrite(db, name),
 	}
-	l, ok := redislocks[name]
-	if !ok {
-		redislocks[name] = makeRedisSimpleLock(c, name)
-		l = redislocks[name]
-	}
-	return l
 }
