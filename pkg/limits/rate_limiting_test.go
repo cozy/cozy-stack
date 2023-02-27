@@ -36,14 +36,14 @@ func TestRate(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
 		client.Del(context.Background(), "auth:"+testInstance.DomainName())
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 	})
 
 	t.Run("LoginRateExceededRedis", func(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		client.Del(context.Background(), "auth:"+testInstance.DomainName())
 		for i := 1; i <= 1000; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, AuthType))
@@ -69,14 +69,14 @@ func TestRate(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
 		client.Del(context.Background(), "two-factor-generation:"+testInstance.DomainName())
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 	})
 
 	t.Run("2FAGenerationExceededRedis", func(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		client.Del(context.Background(), "two-factor-generation:"+testInstance.DomainName())
 		for i := 1; i <= 20; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
@@ -102,14 +102,14 @@ func TestRate(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
 		client.Del(context.Background(), "two-factor:"+testInstance.DomainName())
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 	})
 
 	t.Run("2FAExceededRedis", func(t *testing.T) {
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		globalCounter = NewRedisCounter(client)
+		globalCounter = NewRedis(client)
 		client.Del(context.Background(), "two-factor:"+testInstance.DomainName())
 		for i := 1; i <= 10; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
