@@ -37,6 +37,23 @@
           <img src="/public/avatar" alt="" class="avatar my-3 border border-primary border-2 rounded-circle" />
           <h1 class="h4 h2-md mb-0 text-center">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
+
+          {{if .FranceConnect}}
+          <div class="alert alert-primary text-center mb-4 mb-md-5">
+            <p class="small w-100">
+              FranceConnect est la solution proposée par l’État pour sécuriser et
+              simplifier la connexion à vos services en ligne.
+            </p>
+            <a href="/oidc/franceconnect" class="d-inline-block mb-2">
+              <img src="{{asset .Domain "/images/franceconnect.svg"}}" alt="S’identifier avec FranceConnect" />
+            </a>
+            <p class="w-100 small mb-0">
+              <a href="https://franceconnect.gouv.fr/">Qu’est-ce que FranceConnect ?</a>
+            </p>
+          </div>
+          <div class="horizontal-separator mb-4 mb-md-5">ou</div>
+          {{end}}
+
           <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" spellcheck="false" />
             <label for="password">{{t "Login Password field"}}</label>

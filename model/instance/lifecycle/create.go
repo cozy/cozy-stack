@@ -31,6 +31,7 @@ type Options struct {
 	Locale             string
 	UUID               string
 	OIDCID             string
+	FranceConnectID    string
 	TOSSigned          string
 	TOSLatest          string
 	Timezone           string
@@ -130,6 +131,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.Locale = locale
 	i.UUID = opts.UUID
 	i.OIDCID = opts.OIDCID
+	i.FranceConnectID = opts.FranceConnectID
 	i.TOSSigned = opts.TOSSigned
 	i.TOSLatest = opts.TOSLatest
 	i.ContextName = opts.ContextName

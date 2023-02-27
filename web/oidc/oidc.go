@@ -36,6 +36,7 @@ var (
 	ErrInvalidToken         = errors.New("invalid token")
 	ErrInvalidConfiguration = errors.New("invalid configuration")
 	ErrAuthenticationFailed = errors.New("the authentication has failed")
+	ErrFranceConnectFailed  = errors.New("the FranceConnect authentication has failed")
 	ErrIdentityProvider     = errors.New("error from the identity provider")
 )
 
@@ -574,6 +575,9 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		}
 		if !ok || sub == "" || sub != expected {
 			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
+			if conf.Provider == FranceConnectProvider {
+				return ErrFranceConnectFailed
+			}
 			return ErrAuthenticationFailed
 		}
 		return nil
