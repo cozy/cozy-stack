@@ -19,12 +19,12 @@ func TestRate(t *testing.T) {
 	}
 
 	t.Run("LoginRateNotExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 	})
 
 	t.Run("LoginRateExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		for i := 1; i <= 1000; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 		}
@@ -52,12 +52,12 @@ func TestRate(t *testing.T) {
 	})
 
 	t.Run("2FAGenerationNotExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 	})
 
 	t.Run("2FAGenerationExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		for i := 1; i <= 20; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 		}
@@ -85,12 +85,12 @@ func TestRate(t *testing.T) {
 	})
 
 	t.Run("2FARateExceededNotExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 	})
 
 	t.Run("2FARateExceededMem", func(t *testing.T) {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 		for i := 1; i <= 10; i++ {
 			assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 		}

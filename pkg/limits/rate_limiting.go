@@ -229,7 +229,6 @@ type Counter interface {
 
 var globalCounter Counter
 var globalCounterMu sync.Mutex
-var counterCleanInterval = 1 * time.Second
 
 func getCounter() Counter {
 	globalCounterMu.Lock()
@@ -239,58 +238,11 @@ func getCounter() Counter {
 	}
 	client := config.GetConfig().RateLimitingStorage.Client()
 	if client == nil {
-		globalCounter = NewMemCounter()
+		globalCounter = NewInMemory()
 	} else {
 		globalCounter = NewRedisCounter(client)
 	}
 	return globalCounter
-}
-
-type memRef struct {
-	val int64
-	exp time.Time
-}
-
-type memCounter struct {
-	mu   sync.Mutex
-	vals map[string]*memRef
-}
-
-// NewMemCounter returns a in-memory counter.
-func NewMemCounter() Counter {
-	counter := &memCounter{vals: make(map[string]*memRef)}
-	go counter.cleaner()
-	return counter
-}
-
-func (c *memCounter) cleaner() {
-	for range time.Tick(counterCleanInterval) {
-		now := time.Now()
-		for k, v := range c.vals {
-			if now.After(v.exp) {
-				delete(c.vals, k)
-			}
-		}
-	}
-}
-
-func (c *memCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if _, ok := c.vals[key]; !ok {
-		c.vals[key] = &memRef{
-			val: 0,
-			exp: time.Now().Add(timeLimit),
-		}
-	}
-	c.vals[key].val++
-	return c.vals[key].val, nil
-}
-
-func (c *memCounter) Reset(key string) error {
-	delete(c.vals, key)
-	return nil
 }
 
 type redisCounter struct {
