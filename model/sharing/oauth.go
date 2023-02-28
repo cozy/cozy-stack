@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -123,23 +122,26 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 
 // countFiles returns the number of files that should be uploaded on the
 // initial synchronisation.
-func (s *Sharing) countFiles(inst *instance.Instance) int {
-	count := 0
+func (s *Sharing) countFiles(inst *instance.Instance) int64 {
+	var count int64
+	fs := inst.VFS()
 	for _, rule := range s.Rules {
 		if rule.DocType != consts.Files || rule.Local || len(rule.Values) == 0 {
 			continue
 		}
 		if rule.Selector == "" || rule.Selector == "id" {
 			for _, fileID := range rule.Values {
-				_ = vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
-					if err != nil {
-						return err
+				dir, _, err := fs.DirOrFileByID(fileID)
+				if err != nil {
+					continue
+				}
+				if dir != nil {
+					if _, nb, err := fs.DirSizeAndCount(dir); err == nil {
+						count += nb
 					}
-					if file != nil {
-						count++
-					}
-					return nil
-				})
+				} else {
+					count++
+				}
 			}
 		} else {
 			var resCount couchdb.ViewResponse
@@ -147,7 +149,7 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 				reqCount := &couchdb.ViewRequest{Key: val, Reduce: true}
 				err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, reqCount, &resCount)
 				if err == nil && len(resCount.Rows) > 0 {
-					count += int(resCount.Rows[0].Value.(float64))
+					count += int64(resCount.Rows[0].Value.(float64))
 				}
 			}
 		}

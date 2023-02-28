@@ -168,8 +168,8 @@ type Indexer interface {
 	// TrashUsage computes the total size of the files contained in the trash.
 	TrashUsage() (int64, error)
 	// DirSize returns the size of a directory, including files in
-	// subdirectories.
-	DirSize(doc *DirDoc) (int64, error)
+	// subdirectories, and the number of files.
+	DirSizeAndCount(doc *DirDoc) (int64, int64, error)
 
 	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error

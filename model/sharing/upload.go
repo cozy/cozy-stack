@@ -626,7 +626,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 // countReceivedFiles counts the number of files received during the initial
 // sync, and pushs an event to the real-time system with this count
 func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
-	count := 0
+	var count int64
 	req := &couchdb.ViewRequest{
 		Key:         s.SID,
 		IncludeDocs: true,
