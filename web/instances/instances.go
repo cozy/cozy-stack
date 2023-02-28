@@ -443,7 +443,7 @@ func lastActivity(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, echo.Map{
+	return c.JSON(http.StatusOK, echo.Map{
 		"last-activity": last.Format("2006-01-02"),
 	})
 }
