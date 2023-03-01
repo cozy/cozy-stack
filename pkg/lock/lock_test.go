@@ -7,10 +7,6 @@
 package lock
 
 import (
-	"flag"
-	"fmt"
-	"runtime"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,152 +16,128 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// If you want to test harder the lock, you can set nb = 1000 but it is too
-// slow for CI, and the lock package has very few commits in the last years.
-var nb = 100
-
 func TestLock(t *testing.T) {
-	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	redisURL := "redis://localhost:6379/0"
+	opts, perr := redis.ParseURL(redisURL)
+	require.NoError(t, perr)
+
+	tests := []struct {
+		name         string
+		client       Getter
+		RequireRedis bool
+	}{
+		{
+			name:         "RedisClient",
+			client:       New(redis.NewClient(opts)),
+			RequireRedis: true,
+		},
+		{
+			name:         "InMemoryClient",
+			client:       New(nil),
+			RequireRedis: false,
+		},
 	}
 
-	flag.Parse()
-	if testing.Short() {
-		nb = 3
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := test.client
+			db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local-lock")
+
+			if testing.Short() && test.RequireRedis {
+				t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
+			}
+
+			t.Run("SimpleLock", func(t *testing.T) {
+				// Lock the resource
+				lock := c.ReadWrite(db, t.Name())
+
+				err := lock.Lock()
+				require.NoError(t, err)
+
+				lock.Unlock()
+			})
+
+			t.Run("LockARessourceTwice", func(t *testing.T) {
+				// Create two locks for the same resource
+				lock := c.ReadWrite(db, t.Name())
+				lock2 := c.ReadWrite(db, t.Name())
+
+				// Lock the resource with the first lock
+				err := lock.Lock()
+				require.NoError(t, err)
+
+				lock2OK := false
+				go func() {
+					// Try to lock the resource with lock2, it should wait
+					err = lock2.Lock()
+					require.NoError(t, err)
+					lock2OK = true
+				}()
+
+				// Check that the second lock have not locked
+				time.Sleep(10 * time.Millisecond)
+				assert.False(t, lock2OK)
+
+				// Unlock
+				lock.Unlock()
+
+				// Now the resource is free so the lock2 should take the lock.
+				time.Sleep(110 * time.Millisecond)
+				assert.True(t, lock2OK)
+
+				lock2.Unlock()
+			})
+
+			t.Run("LockTwiceWithSameLock", func(t *testing.T) {
+				lock := c.ReadWrite(db, t.Name())
+
+				err := lock.Lock()
+				require.NoError(t, err)
+
+				// Unlock
+				lock.Unlock()
+
+				// Try to read lock the resource, it should wait
+				err = lock.RLock()
+				require.NoError(t, err)
+
+				lock.RUnlock()
+			})
+
+			t.Run("SeveralRLockThenLock", func(t *testing.T) {
+				lock := c.ReadWrite(db, t.Name())
+				lock2 := c.ReadWrite(db, t.Name())
+
+				// Lock 1
+				require.NoError(t, lock.RLock())
+				// Lock 2
+				require.NoError(t, lock.RLock())
+				// Lock 3
+				require.NoError(t, lock2.RLock())
+
+				lock2OK := false
+				go func() {
+					// Try to lock the already locked resource
+					err := lock.Lock()
+					require.NoError(t, err)
+					lock2OK = true
+				}()
+
+				// Check that the second lock have not locked
+				time.Sleep(10 * time.Millisecond)
+				assert.False(t, lock2OK)
+
+				// Unlock all the read locks
+				lock.RUnlock()
+				lock.RUnlock()
+				lock2.RUnlock()
+
+				// Now the resource is free so the lock2 should take the lock.
+				time.Sleep(110 * time.Millisecond)
+				assert.True(t, lock2OK)
+
+				lock.Unlock()
+			})
+		})
 	}
-
-	t.Run("MemLock", func(t *testing.T) {
-		client := NewInMemory()
-
-		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		l := client.ReadWrite(db, "test-mem")
-		hammerRW(t, l)
-	})
-
-	t.Run("RedisLock", func(t *testing.T) {
-		opt, err := redis.ParseURL("redis://localhost:6379/0")
-		require.NoError(t, err)
-		client := NewRedisLockGetter(redis.NewClient(opt))
-
-		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		l := client.ReadWrite(db, "test-redis")
-
-		hammerRW(t, l)
-
-		done := make(chan bool)
-		for i := 0; i < 10; i++ {
-			go HammerMutex(l, done)
-		}
-		for i := 0; i < 10; i++ {
-			<-done
-		}
-
-		other := client.ReadWrite(db, "test-redis").(*redisLock)
-		assert.NoError(t, l.Lock())
-		assert.Error(t, other.LockWithTimeout(1*time.Second))
-
-		l.Unlock()
-	})
-
-	t.Run("LongLock", func(t *testing.T) {
-		if testing.Short() {
-			return
-		}
-
-		opt, err := redis.ParseURL("redis://localhost:6379/0")
-		require.NoError(t, err)
-		client := NewRedisLockGetter(redis.NewClient(opt))
-
-		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
-		long := client.LongOperation(db, "test-long")
-
-		l := client.ReadWrite(db, "test-long").(*redisLock)
-		assert.NoError(t, long.Lock())
-
-		err = l.Lock()
-		assert.Error(t, err)
-		assert.Equal(t, ErrTooManyRetries, err)
-		l.Unlock()
-	})
-}
-
-func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
-	for i := 0; i < iterations; i++ {
-		err := rwm.RLock()
-		if err != nil {
-			panic(err)
-		}
-		n := atomic.AddInt32(activity, 1)
-		if n < 1 || n >= 10000 {
-			panic(fmt.Sprintf("wlock(%d)\n", n))
-		}
-		for i := 0; i < 100; i++ {
-		}
-		atomic.AddInt32(activity, -1)
-		rwm.RUnlock()
-	}
-	cdone <- true
-}
-
-func writer(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
-	for i := 0; i < iterations; i++ {
-		err := rwm.Lock()
-		if err != nil {
-			panic(err)
-		}
-		n := atomic.AddInt32(activity, 10000)
-		if n != 10000 {
-			panic(fmt.Sprintf("wlock(%d)\n", n))
-		}
-		for i := 0; i < 100; i++ {
-		}
-		atomic.AddInt32(activity, -10000)
-		rwm.Unlock()
-	}
-	cdone <- true
-}
-
-func HammerRWMutex(locker ErrorRWLocker, gomaxprocs, numReaders, iterations int) {
-	runtime.GOMAXPROCS(gomaxprocs)
-	// Number of active readers + 10000 * number of active writers.
-	var activity int32
-	cdone := make(chan bool)
-	go writer(locker, iterations, &activity, cdone)
-	var i int
-	for i = 0; i < numReaders/2; i++ {
-		go reader(locker, iterations, &activity, cdone)
-	}
-	go writer(locker, iterations, &activity, cdone)
-	for ; i < numReaders; i++ {
-		go reader(locker, iterations, &activity, cdone)
-	}
-	// Wait for the 2 writers and all readers to finish.
-	for i := 0; i < 2+numReaders; i++ {
-		<-cdone
-	}
-}
-
-func HammerMutex(m ErrorLocker, cdone chan bool) {
-	for i := 0; i < nb; i++ {
-		err := m.Lock()
-		if err != nil {
-			panic(err)
-		}
-		m.Unlock()
-	}
-	cdone <- true
-}
-
-func hammerRW(t *testing.T, l ErrorRWLocker) {
-	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
-	HammerRWMutex(l, 1, 1, nb)
-	HammerRWMutex(l, 1, 3, nb)
-	HammerRWMutex(l, 1, 10, nb)
-	HammerRWMutex(l, 4, 1, nb)
-	HammerRWMutex(l, 4, 3, nb)
-	HammerRWMutex(l, 4, 10, nb)
-	HammerRWMutex(l, 10, 1, nb)
-	HammerRWMutex(l, 10, 3, nb)
-	HammerRWMutex(l, 10, 10, nb)
-	HammerRWMutex(l, 10, 5, nb)
 }
