@@ -59,4 +59,4 @@ jobs:
 
       - name: Unit tests
         run: |
-          make unit-tests
+          go test -p 1 -timeout 15m -cover ./...
