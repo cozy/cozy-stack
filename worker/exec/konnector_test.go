@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"testing"
@@ -12,10 +13,12 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -31,10 +34,12 @@ func TestExecKonnector(t *testing.T) {
 	}
 
 	config.UseTestFile()
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
 	setup := testutils.NewSetup(t, t.Name())
 
 	inst := setup.GetTestInstance()
+	fs := inst.VFS()
 
 	t.Run("with unknown domain", func(t *testing.T) {
 		msg, err := job.NewMessage(map[string]interface{}{
@@ -162,7 +167,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 			assert.Equal(t, "manifest", doc2.M["type"])
 
 			msg2 := doc2.M["message"].(string)
-			assert.True(t, strings.HasPrefix(msg2, t.TempDir()))
+			assert.True(t, strings.HasPrefix(msg2, "/tmp"))
 			assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
 
 			msg1 := doc1.M["message"].(string)
@@ -320,14 +325,29 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		go func() {
 			evCh := realtime.GetHub().Subscriber(inst)
-			evCh.Subscribe(consts.JobEvents)
+			evCh.Subscribe(consts.Files)
 			wg.Done()
-
 			ch := evCh.Channel
-			ev := <-ch
-			evCh.Close()
-			assert.Equal(t, inst.Domain, ev.Domain)
-			wg.Done()
+
+			// for DefaultFolderPath
+			for ev := range ch {
+				doc := ev.Doc.(*vfs.DirDoc)
+				if doc.DocName == "toto" {
+					assert.Equal(t, inst.Domain, ev.Domain)
+					wg.Done()
+					break
+				}
+			}
+
+			// for Konnector name and Account name
+			for ev := range ch {
+				doc := ev.Doc.(*vfs.DirDoc)
+				if doc.DocName == "account-1" {
+					assert.Equal(t, inst.Domain, ev.Domain)
+					wg.Done()
+					break
+				}
+			}
 		}()
 
 		wg.Wait()
@@ -360,7 +380,7 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		wg.Wait()
 
-		dir, err := inst.VFS().DirByPath("/Administrative/toto")
+		dir, err := fs.DirByPath("/Administrative/toto")
 		assert.NoError(t, err)
 		assert.Len(t, dir.ReferencedBy, 1)
 		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
@@ -368,6 +388,7 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
 		assert.Len(t, dir.CozyMetadata.UpdatedByApps, 1)
 		assert.Equal(t, dir.CozyMetadata.SourceAccount, acc.ID())
+		require.NoError(t, fs.DestroyDirAndContent(dir, fs.EnsureErased))
 
 		// Folder is created from Konnector name and Account name
 		wg.Add(1)
@@ -398,9 +419,9 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		wg.Wait()
 
-		dir, err = inst.VFS().DirByPath("/Administrative/my-konnector-1/account-1")
-		assert.NoError(t, err)
-		assert.Len(t, dir.ReferencedBy, 1)
+		dir, err = fs.DirByPath("/Administrative/Trainline/account-1")
+		require.NoError(t, err)
+		require.Len(t, dir.ReferencedBy, 1)
 		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
 		assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
 		assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
@@ -410,6 +431,20 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		var updatedAcc account.Account
 		err = couchdb.GetDoc(inst, consts.Accounts, acc.ID(), &updatedAcc)
 		require.NoError(t, err)
-		assert.Equal(t, updatedAcc.DefaultFolderPath, "/Administrative/my-konnector-1/account-1")
+		assert.Equal(t, updatedAcc.DefaultFolderPath, "/Administrative/Trainline/account-1")
 	})
+}
+
+func loadLocale() error {
+	locale := consts.DefaultLocale
+	assetsPath := config.GetConfig().Assets
+	if assetsPath != "" {
+		pofile := path.Join("../..", assetsPath, "locales", locale+".po")
+		po, err := os.ReadFile(pofile)
+		if err != nil {
+			return fmt.Errorf("Can't load the po file for %s", locale)
+		}
+		i18n.LoadLocale(locale, "", po)
+	}
+	return nil
 }
