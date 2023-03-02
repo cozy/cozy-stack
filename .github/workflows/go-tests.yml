@@ -64,7 +64,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -p 1 -timeout 5m -coverprofile=coverage.out -covermode=atomic ./...
+        run: go test -p 1 -timeout -race 5m -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
