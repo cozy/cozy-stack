@@ -29,12 +29,16 @@ func NewInMemory() *InMemory {
 
 func (i *InMemory) cleaner() {
 	for range time.Tick(counterCleanInterval) {
+		i.mu.Lock()
+
 		now := time.Now()
 		for k, v := range i.vals {
 			if now.After(v.exp) {
 				delete(i.vals, k)
 			}
 		}
+
+		i.mu.Unlock()
 	}
 }
 
