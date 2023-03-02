@@ -193,7 +193,7 @@ func TestRedisScheduler(t *testing.T) {
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
-		bro := &mockBroker{}
+		bro := newMockBroker()
 		sch := job.System().(job.Scheduler)
 		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 		assert.NoError(t, sch.StartScheduler(bro))
@@ -227,7 +227,7 @@ func TestRedisScheduler(t *testing.T) {
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
-		bro := &mockBroker{}
+		bro := newMockBroker()
 		sch := job.System().(job.Scheduler)
 		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 		assert.NoError(t, sch.StartScheduler(bro))
@@ -276,7 +276,7 @@ func TestRedisScheduler(t *testing.T) {
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
-		bro := &mockBroker{}
+		bro := newMockBroker()
 		sch := job.System().(job.Scheduler)
 		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 		time.Sleep(1 * time.Second)
@@ -332,7 +332,7 @@ func TestRedisScheduler(t *testing.T) {
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
-		bro := &mockBroker{}
+		bro := newMockBroker()
 		sch := job.System().(job.Scheduler)
 		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 		time.Sleep(1 * time.Second)
@@ -440,7 +440,7 @@ func TestRedisScheduler(t *testing.T) {
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
-		bro := &mockBroker{}
+		bro := newMockBroker()
 		sch := job.System().(job.Scheduler)
 		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 		time.Sleep(1 * time.Second)
@@ -461,6 +461,11 @@ func TestRedisScheduler(t *testing.T) {
 			doctype: "io.cozy.debounce.test",
 		}
 
+		doc2 := testDoc{
+			id:      "foo",
+			doctype: "io.cozy.debounce.more",
+		}
+
 		for i := 0; i < 10; i++ {
 			time.Sleep(600 * time.Millisecond)
 			realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
@@ -471,8 +476,7 @@ func TestRedisScheduler(t *testing.T) {
 		assert.Equal(t, 2, count)
 
 		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
-		doc.doctype = "io.cozy.debounce.more"
-		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
+		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc2, nil)
 		time.Sleep(5000 * time.Millisecond)
 		count, _ = bro.WorkerQueueLen("incr")
 		assert.Equal(t, 3, count)
@@ -484,7 +488,15 @@ func (t *testDoc) Rev() string     { return t.rev }
 func (t *testDoc) DocType() string { return t.doctype }
 
 type mockBroker struct {
+	l    *sync.Mutex
 	jobs []*job.JobRequest
+}
+
+func newMockBroker() *mockBroker {
+	return &mockBroker{
+		l:    new(sync.Mutex),
+		jobs: []*job.JobRequest{},
+	}
 }
 
 func (b *mockBroker) StartWorkers(workersList job.WorkersList) error {
@@ -496,17 +508,26 @@ func (b *mockBroker) ShutdownWorkers(ctx context.Context) error {
 }
 
 func (b *mockBroker) PushJob(db prefixer.Prefixer, request *job.JobRequest) (*job.Job, error) {
+	b.l.Lock()
+
 	b.jobs = append(b.jobs, request)
+
+	b.l.Unlock()
 	return nil, nil
 }
 
 func (b *mockBroker) WorkerQueueLen(workerType string) (int, error) {
 	count := 0
+	b.l.Lock()
+
 	for _, job := range b.jobs {
 		if job.WorkerType == workerType {
 			count++
 		}
 	}
+
+	b.l.Unlock()
+
 	return count, nil
 }
 

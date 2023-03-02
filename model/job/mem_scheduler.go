@@ -269,6 +269,9 @@ func combineRequests(t Trigger, req1, req2 *JobRequest) *JobRequest {
 }
 
 func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	log := s.log.WithField("domain", t.DomainName())
 	log.Infof("trigger %s(%s): Pushing new job %s",
 		t.Type(), t.Infos().TID, req.WorkerType)

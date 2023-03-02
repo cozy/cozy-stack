@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
@@ -85,30 +86,30 @@ func TestRedisBroker(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		go func() {
+		go func(broker job.Broker, instance *instance.Instance, n int) {
 			for i := 0; i < n; i++ {
 				msg, _ := job.NewMessage("a-" + strconv.Itoa(i+1))
-				_, err = broker1.PushJob(testInstance, &job.JobRequest{
+				_, err2 := broker.PushJob(instance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 				})
-				assert.NoError(t, err)
+				assert.NoError(t, err2)
 				time.Sleep(randomMicro(0, v))
 			}
-		}()
+		}(broker1, testInstance, n)
 
-		go func() {
+		go func(broker job.Broker, instance *instance.Instance, n int) {
 			for i := 0; i < n; i++ {
 				msg, _ := job.NewMessage("b-" + strconv.Itoa(i+1))
-				_, err = broker2.PushJob(testInstance, &job.JobRequest{
+				_, err2 := broker.PushJob(instance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 					Manual:     true,
 				})
-				assert.NoError(t, err)
+				assert.NoError(t, err2)
 				time.Sleep(randomMicro(0, v))
 			}
-		}()
+		}(broker2, testInstance, n)
 
 		w.Wait()
 

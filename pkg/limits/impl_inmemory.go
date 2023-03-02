@@ -57,6 +57,10 @@ func (i *InMemory) Increment(key string, timeLimit time.Duration) (int64, error)
 }
 
 func (i *InMemory) Reset(key string) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	delete(i.vals, key)
+
 	return nil
 }
