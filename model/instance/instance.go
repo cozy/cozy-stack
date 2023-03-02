@@ -540,6 +540,20 @@ func (i *Instance) parseRedirectAppAndRoute(redirect string) *url.URL {
 	return u
 }
 
+// DefaultAppAndPath returns the default_redirection from the context, in the
+// slug+path format (or use the home as the default application).
+func (i *Instance) DefaultAppAndPath() string {
+	context, ok := i.SettingsContext()
+	if !ok {
+		return consts.HomeSlug + "/"
+	}
+	redirect, ok := context["default_redirection"].(string)
+	if !ok {
+		return consts.HomeSlug + "/"
+	}
+	return redirect
+}
+
 func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 	context, ok := i.SettingsContext()
 	if !ok {
@@ -556,7 +570,9 @@ func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
 	if doc, err := i.SettingsDocument(); err == nil {
-		if redirect, ok := doc.M["default_redirection"].(string); ok {
+		// XXX we had a bug where the default_redirection was filled by a full URL
+		// instead of slug+path, and we should ignore the bad format here.
+		if redirect, ok := doc.M["default_redirection"].(string); ok && !strings.HasPrefix(redirect, "http") {
 			return i.parseRedirectAppAndRoute(redirect)
 		}
 	}
