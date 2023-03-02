@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -47,11 +48,7 @@ func TestMemScheduler(t *testing.T) {
 	})
 
 	t.Run("MemSchedulerWithDebounce", func(t *testing.T) {
-		if testing.Short() {
-			return
-		}
-
-		called := 0
+		var called int32
 		bro := job.NewMemBroker()
 		assert.NoError(t, bro.StartWorkers(job.WorkersList{
 			{
@@ -59,8 +56,8 @@ func TestMemScheduler(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
-					called++
+				WorkerFunc: func(_ *job.WorkerContext) error {
+					atomic.AddInt32(&called, 1)
 					return nil
 				},
 			},
@@ -119,14 +116,14 @@ func TestMemScheduler(t *testing.T) {
 		}
 
 		time.Sleep(3000 * time.Millisecond)
-		assert.Equal(t, 3, called)
+		assert.Equal(t, int32(3), atomic.LoadInt32(&called))
 
 		doc2 := doc.Clone().(*couchdb.JSONDoc)
 		doc2.Type = "io.cozy.moredebounce"
 		realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
 		realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc2, nil)
 		time.Sleep(3000 * time.Millisecond)
-		assert.Equal(t, 4, called)
+		assert.Equal(t, int32(4), atomic.LoadInt32(&called))
 
 		for _, trigger := range triggers {
 			err = sch.DeleteTrigger(testInstance, trigger.ID())
