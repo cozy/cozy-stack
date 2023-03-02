@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -25,24 +25,24 @@ func TestMemScheduler(t *testing.T) {
 
 	t.Run("TriggersBadArguments", func(t *testing.T) {
 		var err error
-		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+		_, err = job.NewTrigger(testInstance, job.TriggerInfos{
 			Type:      "@at",
 			Arguments: "garbage",
 		}, nil)
 		assert.Error(t, err)
 
-		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+		_, err = job.NewTrigger(testInstance, job.TriggerInfos{
 			Type:      "@in",
 			Arguments: "garbage",
 		}, nil)
 		assert.Error(t, err)
 
-		_, err = jobs.NewTrigger(testInstance, jobs.TriggerInfos{
+		_, err = job.NewTrigger(testInstance, job.TriggerInfos{
 			Type:      "@unknown",
 			Arguments: "",
 		}, nil)
 		if assert.Error(t, err) {
-			assert.Equal(t, jobs.ErrUnknownTrigger, err)
+			assert.Equal(t, job.ErrUnknownTrigger, err)
 		}
 	})
 
@@ -52,22 +52,22 @@ func TestMemScheduler(t *testing.T) {
 		}
 
 		called := 0
-		bro := jobs.NewMemBroker()
-		assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
+		bro := job.NewMemBroker()
+		assert.NoError(t, bro.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "worker",
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					called++
 					return nil
 				},
 			},
 		}))
 
-		msg, _ := jobs.NewMessage("@event")
-		ti := jobs.TriggerInfos{
+		msg, _ := job.NewMessage("@event")
+		ti := job.TriggerInfos{
 			Type:       "@event",
 			Arguments:  "io.cozy.testdebounce io.cozy.moredebounce",
 			Debounce:   "2s",
@@ -75,9 +75,9 @@ func TestMemScheduler(t *testing.T) {
 			Message:    msg,
 		}
 
-		var triggers []jobs.Trigger
-		triggersInfos := []jobs.TriggerInfos{ti}
-		sch := jobs.NewMemScheduler()
+		var triggers []job.Trigger
+		triggersInfos := []job.TriggerInfos{ti}
+		sch := job.NewMemScheduler()
 		if !assert.NoError(t, sch.StartScheduler(bro)) {
 			return
 		}
@@ -91,7 +91,7 @@ func TestMemScheduler(t *testing.T) {
 		}
 
 		for _, infos := range triggersInfos {
-			trigger, err := jobs.NewTrigger(testInstance, infos, msg)
+			trigger, err := job.NewTrigger(testInstance, infos, msg)
 			require.NoError(t, err)
 
 			err = sch.AddTrigger(trigger)

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -26,20 +26,20 @@ func TestMemBroker(t *testing.T) {
 	testInstance := setup.GetTestInstance()
 
 	t.Run("ProperSerial", func(t *testing.T) {
-		job := jobs.NewJob(prefixer.NewPrefixer(0, "cozy.localhost:8080", "cozy.localhost:8080"),
-			&jobs.JobRequest{
+		j := job.NewJob(prefixer.NewPrefixer(0, "cozy.localhost:8080", "cozy.localhost:8080"),
+			&job.JobRequest{
 				WorkerType: "",
 			})
-		assert.NoError(t, job.Create())
-		assert.NoError(t, job.AckConsumed())
-		job2, err := jobs.Get(job, job.ID())
+		assert.NoError(t, j.Create())
+		assert.NoError(t, j.AckConsumed())
+		job2, err := job.Get(j, j.ID())
 		assert.NoError(t, err)
-		assert.Equal(t, jobs.Running, job2.State)
+		assert.Equal(t, job.Running, job2.State)
 	})
 
 	t.Run("MessageMarshalling", func(t *testing.T) {
 		data := []byte(`{"Data": "InZhbHVlIgo=", "Type": "json"}`)
-		var m jobs.Message
+		var m job.Message
 		assert.NoError(t, json.Unmarshal(data, &m))
 		var s string
 		assert.NoError(t, m.Unmarshal(&s))
@@ -56,14 +56,14 @@ func TestMemBroker(t *testing.T) {
 		"message": {"Data": "InZhbHVlIgo=", "Type": "json"}
 }`)
 
-		var j jobs.Job
+		var j job.Job
 		assert.NoError(t, json.Unmarshal(data, &j))
 		assert.Equal(t, "cozy.local", j.Domain)
 		assert.Equal(t, "foo", j.WorkerType)
 		assert.EqualValues(t, []byte(`"value"`), j.Message)
 
 		var err error
-		var j2 jobs.Job
+		var j2 job.Job
 		data, err = json.Marshal(j)
 		assert.NoError(t, err)
 		assert.NoError(t, json.Unmarshal(data, &j2))
@@ -80,11 +80,11 @@ func TestMemBroker(t *testing.T) {
 
 		var w sync.WaitGroup
 
-		workersTestList := jobs.WorkersList{
+		workersTestList := job.WorkersList{
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					if !assert.NoError(t, err) {
@@ -105,8 +105,8 @@ func TestMemBroker(t *testing.T) {
 			},
 		}
 
-		broker1 := jobs.NewMemBroker()
-		broker2 := jobs.NewMemBroker()
+		broker1 := job.NewMemBroker()
+		broker2 := job.NewMemBroker()
 		assert.NoError(t, broker1.StartWorkers(workersTestList))
 		assert.NoError(t, broker2.StartWorkers(workersTestList))
 		w.Add(2)
@@ -114,8 +114,8 @@ func TestMemBroker(t *testing.T) {
 		go func() {
 			for i := 0; i < n; i++ {
 				w.Add(1)
-				msg, _ := jobs.NewMessage("a-" + strconv.Itoa(i+1))
-				_, err := broker1.PushJob(testInstance, &jobs.JobRequest{
+				msg, _ := job.NewMessage("a-" + strconv.Itoa(i+1))
+				_, err := broker1.PushJob(testInstance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 				})
@@ -128,8 +128,8 @@ func TestMemBroker(t *testing.T) {
 		go func() {
 			for i := 0; i < n; i++ {
 				w.Add(1)
-				msg, _ := jobs.NewMessage("b-" + strconv.Itoa(i+1))
-				_, err := broker2.PushJob(testInstance, &jobs.JobRequest{
+				msg, _ := job.NewMessage("b-" + strconv.Itoa(i+1))
+				_, err := broker2.PushJob(testInstance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 				})
@@ -143,29 +143,29 @@ func TestMemBroker(t *testing.T) {
 	})
 
 	t.Run("UnknownWorkerError", func(t *testing.T) {
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{}))
-		_, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{}))
+		_, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "nope",
 			Message:    nil,
 		})
 		assert.Error(t, err)
-		assert.Equal(t, jobs.ErrUnknownWorker, err)
+		assert.Equal(t, job.ErrUnknownWorker, err)
 	})
 
 	t.Run("UnknownMessageType", func(t *testing.T) {
 		var w sync.WaitGroup
 
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					assert.Error(t, err)
-					assert.Equal(t, jobs.ErrMessageNil, err)
+					assert.Equal(t, job.ErrMessageNil, err)
 					w.Done()
 					return nil
 				},
@@ -173,7 +173,7 @@ func TestMemBroker(t *testing.T) {
 		}))
 
 		w.Add(1)
-		_, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		_, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "test",
 			Message:    nil,
 		})
@@ -185,14 +185,14 @@ func TestMemBroker(t *testing.T) {
 	t.Run("Timeout", func(t *testing.T) {
 		var w sync.WaitGroup
 
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "timeout",
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					<-ctx.Done()
 					w.Done()
 					return ctx.Err()
@@ -201,7 +201,7 @@ func TestMemBroker(t *testing.T) {
 		}))
 
 		w.Add(1)
-		_, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		_, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "timeout",
 			Message:    nil,
 		})
@@ -216,15 +216,15 @@ func TestMemBroker(t *testing.T) {
 		maxExecCount := 4
 
 		var count int
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "test",
 				Concurrency:  1,
 				MaxExecCount: maxExecCount,
 				Timeout:      1 * time.Millisecond,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					<-ctx.Done()
 					w.Done()
 					count++
@@ -237,7 +237,7 @@ func TestMemBroker(t *testing.T) {
 		}))
 
 		w.Add(maxExecCount)
-		_, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		_, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "test",
 			Message:    nil,
 		})
@@ -251,14 +251,14 @@ func TestMemBroker(t *testing.T) {
 
 		maxExecCount := 4
 
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "panic",
 				Concurrency:  1,
 				MaxExecCount: maxExecCount,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					w.Done()
 					panic("oops")
 				},
@@ -266,7 +266,7 @@ func TestMemBroker(t *testing.T) {
 		}))
 
 		w.Add(maxExecCount)
-		_, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		_, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "panic",
 			Message:    nil,
 		})
@@ -278,17 +278,17 @@ func TestMemBroker(t *testing.T) {
 	t.Run("Panic", func(t *testing.T) {
 		var w sync.WaitGroup
 
-		even, _ := jobs.NewMessage(0)
-		odd, _ := jobs.NewMessage(1)
+		even, _ := job.NewMessage(0)
+		odd, _ := job.NewMessage(1)
 
-		broker := jobs.NewMemBroker()
-		assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
+		broker := job.NewMemBroker()
+		assert.NoError(t, broker.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "panic2",
 				Concurrency:  1,
 				MaxExecCount: 1,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					var i int
 					if err := ctx.UnmarshalMessage(&i); err != nil {
 						return err
@@ -303,33 +303,33 @@ func TestMemBroker(t *testing.T) {
 		}))
 		w.Add(2)
 		var err error
-		_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: odd})
+		_, err = broker.PushJob(testInstance, &job.JobRequest{WorkerType: "panic2", Message: odd})
 		assert.NoError(t, err)
-		_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: even})
+		_, err = broker.PushJob(testInstance, &job.JobRequest{WorkerType: "panic2", Message: even})
 		assert.NoError(t, err)
-		_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: odd})
+		_, err = broker.PushJob(testInstance, &job.JobRequest{WorkerType: "panic2", Message: odd})
 		assert.NoError(t, err)
-		_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: even})
+		_, err = broker.PushJob(testInstance, &job.JobRequest{WorkerType: "panic2", Message: even})
 		assert.NoError(t, err)
 		w.Wait()
 	})
 
 	t.Run("MemAddJobRateLimitExceeded", func(t *testing.T) {
-		workersTestList := jobs.WorkersList{
+		workersTestList := job.WorkersList{
 			{
 				WorkerType:  "thumbnail",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					return nil
 				},
 			},
 		}
-		broker := jobs.NewMemBroker()
+		broker := job.NewMemBroker()
 		err := broker.StartWorkers(workersTestList)
 		assert.NoError(t, err)
 
-		msg, _ := jobs.NewMessage("z-0")
-		j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		msg, _ := job.NewMessage("z-0")
+		j, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})
@@ -342,7 +342,7 @@ func TestMemBroker(t *testing.T) {
 		maxLimit := limits.GetMaximumLimit(ct)
 		// Blocking the job push
 		for i := int64(0); i < maxLimit-1; i++ {
-			j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+			j, err := broker.PushJob(testInstance, &job.JobRequest{
 				WorkerType: "thumbnail",
 				Message:    msg,
 			})
@@ -350,7 +350,7 @@ func TestMemBroker(t *testing.T) {
 			assert.NotNil(t, j)
 		}
 
-		j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		j, err = broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})
@@ -358,7 +358,7 @@ func TestMemBroker(t *testing.T) {
 		assert.Nil(t, j)
 		assert.ErrorIs(t, err, limits.ErrRateLimitReached)
 
-		j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		j, err = broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})

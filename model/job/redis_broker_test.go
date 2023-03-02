@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
-	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -43,11 +42,11 @@ func TestRedisBroker(t *testing.T) {
 		var w sync.WaitGroup
 		w.Add(2*n + 1)
 
-		workersTestList := jobs.WorkersList{
+		workersTestList := job.WorkersList{
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					if !assert.NoError(t, err) {
@@ -71,16 +70,16 @@ func TestRedisBroker(t *testing.T) {
 			},
 		}
 
-		broker1 := jobs.NewRedisBroker(client1)
+		broker1 := job.NewRedisBroker(client1)
 		err := broker1.StartWorkers(workersTestList)
 		assert.NoError(t, err)
 
-		broker2 := jobs.NewRedisBroker(client2)
+		broker2 := job.NewRedisBroker(client2)
 		err = broker2.StartWorkers(workersTestList)
 		assert.NoError(t, err)
 
-		msg, _ := jobs.NewMessage("z-0")
-		_, err = broker1.PushJob(testInstance, &jobs.JobRequest{
+		msg, _ := job.NewMessage("z-0")
+		_, err = broker1.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "test",
 			Message:    msg,
 		})
@@ -88,8 +87,8 @@ func TestRedisBroker(t *testing.T) {
 
 		go func() {
 			for i := 0; i < n; i++ {
-				msg, _ := jobs.NewMessage("a-" + strconv.Itoa(i+1))
-				_, err = broker1.PushJob(testInstance, &jobs.JobRequest{
+				msg, _ := job.NewMessage("a-" + strconv.Itoa(i+1))
+				_, err = broker1.PushJob(testInstance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 				})
@@ -100,8 +99,8 @@ func TestRedisBroker(t *testing.T) {
 
 		go func() {
 			for i := 0; i < n; i++ {
-				msg, _ := jobs.NewMessage("b-" + strconv.Itoa(i+1))
-				_, err = broker2.PushJob(testInstance, &jobs.JobRequest{
+				msg, _ := job.NewMessage("b-" + strconv.Itoa(i+1))
+				_, err = broker2.PushJob(testInstance, &job.JobRequest{
 					WorkerType: "test",
 					Message:    msg,
 					Manual:     true,
@@ -123,11 +122,11 @@ func TestRedisBroker(t *testing.T) {
 	t.Run("RedisAddJobRateLimitExceeded", func(t *testing.T) {
 		opts1, _ := redis.ParseURL(redisURL1)
 		client1 := redis.NewClient(opts1)
-		workersTestList := jobs.WorkersList{
+		workersTestList := job.WorkersList{
 			{
 				WorkerType:  "thumbnail",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					return nil
 				},
 			},
@@ -135,12 +134,12 @@ func TestRedisBroker(t *testing.T) {
 		ct := limits.JobThumbnailType
 		limits.ResetCounter(testInstance, ct)
 
-		broker := jobs.NewRedisBroker(client1)
+		broker := job.NewRedisBroker(client1)
 		err := broker.StartWorkers(workersTestList)
 		assert.NoError(t, err)
 
-		msg, _ := jobs.NewMessage("z-0")
-		j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		msg, _ := job.NewMessage("z-0")
+		j, err := broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})
@@ -153,7 +152,7 @@ func TestRedisBroker(t *testing.T) {
 
 		// Blocking the job push
 		for i := int64(0); i < maxLimit-1; i++ {
-			j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+			j, err := broker.PushJob(testInstance, &job.JobRequest{
 				WorkerType: "thumbnail",
 				Message:    msg,
 			})
@@ -161,7 +160,7 @@ func TestRedisBroker(t *testing.T) {
 			assert.NotNil(t, j)
 		}
 
-		j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		j, err = broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})
@@ -169,7 +168,7 @@ func TestRedisBroker(t *testing.T) {
 		assert.Nil(t, j)
 		assert.ErrorIs(t, err, limits.ErrRateLimitReached)
 
-		j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		j, err = broker.PushJob(testInstance, &job.JobRequest{
 			WorkerType: "thumbnail",
 			Message:    msg,
 		})

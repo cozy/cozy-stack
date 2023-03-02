@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -29,14 +29,14 @@ func TestTrigger(t *testing.T) {
 		called := make(map[string]bool)
 		verb := "CREATED"
 
-		bro := jobs.NewMemBroker()
-		assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
+		bro := job.NewMemBroker()
+		assert.NoError(t, bro.StartWorkers(job.WorkersList{
 			{
 				WorkerType:   "worker_event",
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				WorkerFunc: func(ctx *job.WorkerContext) error {
 					defer wg.Done()
 					var msg string
 					if err := ctx.UnmarshalMessage(&msg); err != nil {
@@ -61,8 +61,8 @@ func TestTrigger(t *testing.T) {
 			},
 		}))
 
-		var triggers []jobs.Trigger
-		triggersInfos := []jobs.TriggerInfos{
+		var triggers []job.Trigger
+		triggersInfos := []job.TriggerInfos{
 			{
 				Type:       "@event",
 				Arguments:  "io.cozy.testeventobject:DELETED",
@@ -101,11 +101,11 @@ func TestTrigger(t *testing.T) {
 			},
 		}
 
-		sch := jobs.NewMemScheduler()
+		sch := job.NewMemScheduler()
 		assert.NoError(t, sch.StartScheduler(bro))
 
 		for _, infos := range triggersInfos {
-			trigger, err := jobs.NewTrigger(testInstance, infos, infos.Message)
+			trigger, err := job.NewTrigger(testInstance, infos, infos.Message)
 			require.NoError(t, err)
 
 			err = sch.AddTrigger(trigger)
@@ -216,8 +216,8 @@ func TestTrigger(t *testing.T) {
 	})
 }
 
-func makeMessage(t *testing.T, msg string) jobs.Message {
-	out, err := jobs.NewMessage(msg)
+func makeMessage(t *testing.T, msg string) job.Message {
+	out, err := job.NewMessage(msg)
 	assert.NoError(t, err)
 	return out
 }
