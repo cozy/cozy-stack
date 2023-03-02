@@ -9,8 +9,10 @@ import (
 	"time"
 
 	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,6 +20,10 @@ func TestMemBroker(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance()
 
 	t.Run("ProperSerial", func(t *testing.T) {
 		job := jobs.NewJob(prefixer.NewPrefixer(0, "cozy.localhost:8080", "cozy.localhost:8080"),

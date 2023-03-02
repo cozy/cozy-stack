@@ -11,7 +11,9 @@ import (
 
 	"github.com/cozy/cozy-stack/model/job"
 	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,6 +25,10 @@ func TestRedisBroker(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance()
 
 	t.Run("RedisJobs", func(t *testing.T) {
 		job.SetRedisTimeoutForTest()

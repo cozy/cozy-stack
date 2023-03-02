@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -21,10 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const redisURL = "redis://localhost:6379/15"
-
-var testInstance *instance.Instance
-
 type testDoc struct {
 	id      string
 	rev     string
@@ -37,6 +32,8 @@ type fakeFilePather struct {
 }
 
 func TestRedisScheduler(t *testing.T) {
+	const redisURL = "redis://localhost:6379/15"
+
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -51,9 +48,10 @@ func TestRedisScheduler(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	testInstance = setup.GetTestInstance()
+	testInstance := setup.GetTestInstance()
 
 	t.Cleanup(func() {
 		cfg.Jobs.RedisConfig = was
