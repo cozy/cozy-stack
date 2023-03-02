@@ -55,7 +55,7 @@ func (rule *browserRule) canApply(browser string, iPhone bool) bool {
 }
 
 func (rule *browserRule) acceptVersion(rawVersion string) bool {
-	version, ok := getMajorVersion(rawVersion)
+	version, ok := GetMajorVersion(rawVersion)
 	if !ok {
 		return true
 	}
@@ -138,10 +138,10 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// getMajorVersion returns the major version of a browser
+// GetMajorVersion returns the major version of a browser
 // 12 => 12
 // 12.13 => 12
-func getMajorVersion(rawVersion string) (int, bool) {
+func GetMajorVersion(rawVersion string) (int, bool) {
 	splitted := strings.SplitN(rawVersion, ".", 2)
 	v, err := strconv.Atoi(splitted[0])
 	if err != nil {

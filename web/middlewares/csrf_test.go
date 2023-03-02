@@ -7,15 +7,26 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCsrf(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	config.GetConfig().Assets = "../../assets"
+	setup := testutils.NewSetup(t, t.Name())
+
+	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	t.Run("CSRF", func(t *testing.T) {
 		e := echo.New()
