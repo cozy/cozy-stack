@@ -14,8 +14,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var ins *instance.Instance
-
 func TestIntents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -23,7 +21,7 @@ func TestIntents(t *testing.T) {
 
 	config.UseTestFile()
 
-	ins = &instance.Instance{Domain: "cozy.example.net"}
+	ins := &instance.Instance{Domain: "cozy.example.net"}
 
 	err := couchdb.ResetDB(ins, consts.Apps)
 	require.NoError(t, err)
