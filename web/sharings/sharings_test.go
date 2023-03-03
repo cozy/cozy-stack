@@ -2,8 +2,6 @@ package sharings_test
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -39,22 +37,11 @@ const iocozytests = "io.cozy.tests"
 const iocozytestswildcard = "io.cozy.tests.*"
 
 // Things that live on Alice's Cozy
-var tsA *httptest.Server
-var aliceInstance *instance.Instance
-var aliceAppToken string
-var aliceAppTokenWildcard string
 var charlieContact, daveContact, edwardContact *contact.Contact
 var sharingID, state, aliceAccessToken string
 
-// Things that live on Bob's Cozy
-var tsB *httptest.Server
-var bobInstance *instance.Instance
-var bobAppToken string
-
 // Bob's browser
-var bobUA *http.Client
 var discoveryLink, authorizeLink string
-var csrfToken string
 
 func TestSharings(t *testing.T) {
 	if testing.Short() {
@@ -71,32 +58,33 @@ func TestSharings(t *testing.T) {
 
 	// Prepare Alice's instance
 	setup := testutils.NewSetup(t, t.Name()+"_alice")
-	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
+	aliceInstance := setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
 	})
-	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
-	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
+	aliceAppToken := generateAppToken(aliceInstance, "testapp", iocozytests)
+	aliceAppTokenWildcard := generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
 	charlieContact = createContact(t, aliceInstance, "Charlie", "charlie@example.net")
 	daveContact = createContact(t, aliceInstance, "Dave", "dave@example.net")
-	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	tsA := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings":    sharings.Routes,
 		"/permissions": permissions.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsA.Close)
 
 	// Prepare Bob's instance
 	bobSetup := testutils.NewSetup(t, t.Name()+"_bob")
-	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
+	bobInstance := bobSetup.GetTestInstance(&lifecycle.Options{
 		Email:         "bob@example.net",
 		PublicName:    "Bob",
 		Passphrase:    "MyPassphrase",
 		KdfIterations: 5000,
 		Key:           "xxx",
 	})
-	bobAppToken = generateAppToken(bobInstance, "testapp", iocozytests)
-	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	bobAppToken := generateAppToken(bobInstance, "testapp", iocozytests)
+	tsB := bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
 			auth.Routes(g)
@@ -105,13 +93,14 @@ func TestSharings(t *testing.T) {
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsB.Close)
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	t.Run("CreateSharingSuccess", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 
-		bobContact := createBobContact(t)
+		bobContact := createBobContact(t, aliceInstance)
 		assert.NotEmpty(t, aliceAppToken)
 		assert.NotNil(t, bobContact)
 
@@ -147,8 +136,8 @@ func TestSharings(t *testing.T) {
 
 		sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
-		assertSharingIsCorrectOnSharer(t, obj, sharingID)
-		description := assertInvitationMailWasSent(t)
+		assertSharingIsCorrectOnSharer(t, obj, sharingID, aliceInstance)
+		description := assertInvitationMailWasSent(t, aliceInstance)
 		assert.Equal(t, description, "this is a test")
 		assert.Contains(t, discoveryLink, "/discovery?state=")
 	})
@@ -163,7 +152,7 @@ func TestSharings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		assertSharingIsCorrectOnSharer(t, obj, sharingID)
+		assertSharingIsCorrectOnSharer(t, obj, sharingID, aliceInstance)
 	})
 
 	t.Run("Discovery", func(t *testing.T) {
@@ -193,7 +182,7 @@ func TestSharings(t *testing.T) {
 		redirectHeader.Contains(tsB.URL)
 		redirectHeader.Contains("/auth/authorize/sharing")
 
-		assertSharingRequestHasBeenCreated(t)
+		assertSharingRequestHasBeenCreated(t, aliceInstance, bobInstance, tsB.URL)
 	})
 
 	t.Run("AuthorizeSharing", func(t *testing.T) {
@@ -218,7 +207,7 @@ func TestSharings(t *testing.T) {
 			Header("Location").Contains("home")
 		// End bob login
 
-		fakeAliceInstance(t)
+		fakeAliceInstance(t, bobInstance, tsA.URL)
 
 		t.Logf("redirect header: %q\n\n", authorizeLink)
 
@@ -236,7 +225,6 @@ func TestSharings(t *testing.T) {
 
 		matches := body.Match(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 		matches.Length().Equal(2)
-		csrfToken = matches.Index(1).NotEmpty().Raw()
 
 		eB.POST("/auth/authorize/sharing").
 			WithFormField("state", state).
@@ -247,7 +235,7 @@ func TestSharings(t *testing.T) {
 			Expect().Status(303).
 			Header("Location").Contains("testapp." + bobInstance.Domain)
 
-		assertCredentialsHasBeenExchanged(t)
+		assertCredentialsHasBeenExchanged(t, aliceInstance, bobInstance, tsA.URL, tsB.URL)
 	})
 
 	t.Run("DelegateAddRecipientByCozyURL", func(t *testing.T) {
@@ -299,7 +287,7 @@ func TestSharings(t *testing.T) {
 	})
 
 	t.Run("CreateSharingWithPreview", func(t *testing.T) {
-		bobContact := createBobContact(t)
+		bobContact := createBobContact(t, aliceInstance)
 		require.NotEmpty(t, aliceAppToken)
 		require.NotNil(t, bobContact)
 
@@ -350,7 +338,7 @@ func TestSharings(t *testing.T) {
 		attrs.NotContainsKey("credentials")
 
 		members := attrs.Value("members").Array()
-		assertSharingByAliceToBobAndDave(t, members)
+		assertSharingByAliceToBobAndDave(t, members, aliceInstance)
 
 		rules := attrs.Value("rules").Array()
 		rules.Length().Equal(1)
@@ -359,7 +347,7 @@ func TestSharings(t *testing.T) {
 		rule.ValueEqual("doctype", iocozytests)
 		rule.ValueEqual("values", []string{"foobaz"})
 
-		description := assertInvitationMailWasSent(t)
+		description := assertInvitationMailWasSent(t, aliceInstance)
 		assert.Equal(t, description, "this is a test with preview")
 		assert.Contains(t, discoveryLink, aliceInstance.Domain)
 		assert.Contains(t, discoveryLink, "/preview?sharecode=")
@@ -513,7 +501,7 @@ func TestSharings(t *testing.T) {
 	})
 
 	t.Run("CheckPermissions", func(t *testing.T) {
-		bobContact := createBobContact(t)
+		bobContact := createBobContact(t, aliceInstance)
 		assert.NotNil(t, bobContact)
 
 		eA := httpexpect.Default(t, tsA.URL)
@@ -573,8 +561,8 @@ func TestSharings(t *testing.T) {
 	t.Run("CheckSharingInfoByDocType", func(t *testing.T) {
 		sharedDocs1 := []string{"fakeid1", "fakeid2", "fakeid3"}
 		sharedDocs2 := []string{"fakeid4", "fakeid5"}
-		s1 := createSharing(t, aliceInstance, sharedDocs1)
-		s2 := createSharing(t, aliceInstance, sharedDocs2)
+		s1 := createSharing(t, aliceInstance, sharedDocs1, tsB.URL)
+		s2 := createSharing(t, aliceInstance, sharedDocs2, tsB.URL)
 
 		for _, id := range sharedDocs1 {
 			sid := iocozytests + "/" + id
@@ -645,7 +633,7 @@ func TestSharings(t *testing.T) {
 	t.Run("RevokeSharing", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid1", "mygreatid2"}
 		sharedRefs := []*sharing.SharedRef{}
-		s := createSharing(t, aliceInstance, sharedDocs)
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
 
 		for _, id := range sharedDocs {
 			sid := iocozytests + "/" + id
@@ -698,7 +686,7 @@ func TestSharings(t *testing.T) {
 	t.Run("RevokeRecipient", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid3", "mygreatid4"}
 		sharedRefs := []*sharing.SharedRef{}
-		s := createSharing(t, aliceInstance, sharedDocs)
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
 
 		for _, id := range sharedDocs {
 			sid := iocozytests + "/" + id
@@ -747,20 +735,20 @@ func TestSharings(t *testing.T) {
 			WithHeader("Content-Type", "application/vnd.api+json").
 			Expect().Status(204)
 
-		assertOneRecipientIsRevoked(t, s)
+		assertOneRecipientIsRevoked(t, s, aliceInstance)
 
 		eA.DELETE("/sharings/"+s.ID()+"/recipients/2").
 			WithHeader("Authorization", "Bearer "+aliceAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			Expect().Status(204)
 
-		assertLastRecipientIsRevoked(t, s, sharedRefs)
+		assertLastRecipientIsRevoked(t, s, sharedRefs, aliceInstance)
 	})
 
 	t.Run("RevocationFromRecipient", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid5", "mygreatid6"}
 		sharedRefs := []*sharing.SharedRef{}
-		s := createSharing(t, aliceInstance, sharedDocs)
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
 		for _, id := range sharedDocs {
 			sid := iocozytests + "/" + id
 			sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
@@ -809,14 +797,14 @@ func TestSharings(t *testing.T) {
 			WithHeader("Content-Type", "application/vnd.api+json").
 			Expect().Status(204)
 
-		assertOneRecipientIsRevoked(t, s)
+		assertOneRecipientIsRevoked(t, s, aliceInstance)
 
 		eA.DELETE("/sharings/"+s.ID()+"/answer").
 			WithHeader("Authorization", "Bearer "+s.Credentials[1].AccessToken.AccessToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			Expect().Status(204)
 
-		assertLastRecipientIsRevoked(t, s, sharedRefs)
+		assertLastRecipientIsRevoked(t, s, sharedRefs, aliceInstance)
 	})
 
 	t.Run("ClearAppInURL", func(t *testing.T) {
@@ -829,7 +817,7 @@ func TestSharings(t *testing.T) {
 	})
 }
 
-func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array) {
+func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array, instance *instance.Instance) {
 	t.Helper()
 
 	obj.Length().Equal(3)
@@ -838,7 +826,7 @@ func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array) {
 	owner.ValueEqual("status", "owner")
 	owner.ValueEqual("public_name", "Alice")
 	owner.ValueEqual("email", "alice@example.net")
-	owner.ValueEqual("instance", "http://"+aliceInstance.Domain)
+	owner.ValueEqual("instance", "http://"+instance.Domain)
 
 	recipient := obj.Element(1).Object()
 	recipient.ValueEqual("status", "pending")
@@ -853,7 +841,7 @@ func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array) {
 	recipient2.ValueEqual("read_only", true)
 }
 
-func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharingID string) {
+func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharingID string, instance *instance.Instance) {
 	t.Helper()
 
 	data := obj.Value("data").Object()
@@ -870,7 +858,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharin
 	attrs.Value("updated_at").String().DateTime(time.RFC3339)
 	attrs.NotContainsKey("credentials")
 
-	assertSharingByAliceToBobAndDave(t, attrs.Value("members").Array())
+	assertSharingByAliceToBobAndDave(t, attrs.Value("members").Array(), instance)
 
 	rules := attrs.Value("rules").Array()
 	rules.Length().Equal(1)
@@ -880,7 +868,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharin
 	rule.ValueEqual("values", []interface{}{"000000"})
 }
 
-func assertInvitationMailWasSent(t *testing.T) string {
+func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) string {
 	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
@@ -893,7 +881,7 @@ func assertInvitationMailWasSent(t *testing.T) string {
 		},
 		Limit: 2,
 	}
-	err := couchdb.FindDocs(aliceInstance, consts.Jobs, couchReq, &jobs)
+	err := couchdb.FindDocs(instance, consts.Jobs, couchReq, &jobs)
 	assert.NoError(t, err)
 	assert.Len(t, jobs, 2)
 	var msg map[string]interface{}
@@ -912,10 +900,10 @@ func assertInvitationMailWasSent(t *testing.T) string {
 	return values["Description"].(string)
 }
 
-func assertSharingRequestHasBeenCreated(t *testing.T) {
+func assertSharingRequestHasBeenCreated(t *testing.T, instanceA, instanceB *instance.Instance, serverURL string) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	err := couchdb.GetAllDocs(instanceB, consts.Sharings, &req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	s := results[0]
@@ -930,11 +918,11 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, owner.Status, "owner")
 	assert.Equal(t, owner.PublicName, "Alice")
 	assert.Equal(t, owner.Email, "alice@example.net")
-	assert.Equal(t, owner.Instance, "http://"+aliceInstance.Domain)
+	assert.Equal(t, owner.Instance, "http://"+instanceA.Domain)
 	recipient := s.Members[1]
 	assert.Equal(t, recipient.Status, "pending")
 	assert.Equal(t, recipient.Email, "bob@example.net")
-	assert.Equal(t, recipient.Instance, tsB.URL)
+	assert.Equal(t, recipient.Instance, serverURL)
 	recipient = s.Members[2]
 	assert.Equal(t, recipient.Status, "pending")
 	assert.Equal(t, recipient.Email, "dave@example.net")
@@ -947,41 +935,41 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.NotEmpty(t, rule.Values)
 }
 
-func fakeAliceInstance(t *testing.T) {
+func fakeAliceInstance(t *testing.T, instance *instance.Instance, serverURL string) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	err := couchdb.GetAllDocs(instance, consts.Sharings, &req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	s := results[0]
 	assert.Len(t, s.Members, 3)
-	s.Members[0].Instance = tsA.URL
-	err = couchdb.UpdateDoc(bobInstance, s)
+	s.Members[0].Instance = serverURL
+	err = couchdb.UpdateDoc(instance, s)
 	assert.NoError(t, err)
 }
 
-func assertCredentialsHasBeenExchanged(t *testing.T) {
+func assertCredentialsHasBeenExchanged(t *testing.T, instanceA, instanceB *instance.Instance, urlA, urlB string) {
 	var resultsA []map[string]interface{}
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &resultsA)
+	err := couchdb.GetAllDocs(instanceB, consts.OAuthClients, &req, &resultsA)
 	assert.NoError(t, err)
 	assert.True(t, len(resultsA) > 0)
 	clientA := resultsA[len(resultsA)-1]
 	assert.Equal(t, clientA["client_kind"], "sharing")
-	assert.Equal(t, clientA["client_uri"], tsA.URL+"/")
+	assert.Equal(t, clientA["client_uri"], urlA+"/")
 	assert.Equal(t, clientA["client_name"], "Sharing Alice")
 
 	var resultsB []map[string]interface{}
-	err = couchdb.GetAllDocs(aliceInstance, consts.OAuthClients, &req, &resultsB)
+	err = couchdb.GetAllDocs(instanceA, consts.OAuthClients, &req, &resultsB)
 	assert.NoError(t, err)
 	assert.True(t, len(resultsB) > 0)
 	clientB := resultsB[len(resultsB)-1]
 	assert.Equal(t, clientB["client_kind"], "sharing")
-	assert.Equal(t, clientB["client_uri"], tsB.URL+"/")
+	assert.Equal(t, clientB["client_uri"], urlB+"/")
 	assert.Equal(t, clientB["client_name"], "Sharing Bob")
 
 	var sharingsA []*sharing.Sharing
-	err = couchdb.GetAllDocs(aliceInstance, consts.Sharings, &req, &sharingsA)
+	err = couchdb.GetAllDocs(instanceA, consts.Sharings, &req, &sharingsA)
 	assert.NoError(t, err)
 	assert.True(t, len(sharingsA) > 0)
 	assert.Len(t, sharingsA[0].Credentials, 2)
@@ -998,7 +986,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	assert.Equal(t, sharingsA[0].Members[2].Status, "pending")
 
 	var sharingsB []*sharing.Sharing
-	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
+	err = couchdb.GetAllDocs(instanceB, consts.Sharings, &req, &sharingsB)
 	assert.NoError(t, err)
 	assert.True(t, len(sharingsB) > 0)
 	assert.Len(t, sharingsB[0].Credentials, 1)
@@ -1012,9 +1000,9 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	}
 }
 
-func assertOneRecipientIsRevoked(t *testing.T, s *sharing.Sharing) {
+func assertOneRecipientIsRevoked(t *testing.T, s *sharing.Sharing, instance *instance.Instance) {
 	var sRevoked sharing.Sharing
-	err := couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoked)
+	err := couchdb.GetDoc(instance, s.DocType(), s.SID, &sRevoked)
 	assert.NoError(t, err)
 
 	assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[1].Status)
@@ -1024,9 +1012,9 @@ func assertOneRecipientIsRevoked(t *testing.T, s *sharing.Sharing) {
 	assert.True(t, sRevoked.Active)
 }
 
-func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*sharing.SharedRef) {
+func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*sharing.SharedRef, instance *instance.Instance) {
 	var sRevoked sharing.Sharing
-	err := couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoked)
+	err := couchdb.GetDoc(instance, s.DocType(), s.SID, &sRevoked)
 	assert.NoError(t, err)
 
 	assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[1].Status)
@@ -1036,14 +1024,14 @@ func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*shar
 	assert.False(t, sRevoked.Active)
 
 	var sdoc sharing.SharedRef
-	err = couchdb.GetDoc(aliceInstance, refs[0].DocType(), refs[0].ID(), &sdoc)
+	err = couchdb.GetDoc(instance, refs[0].DocType(), refs[0].ID(), &sdoc)
 	assert.EqualError(t, err, "CouchDB(not_found): deleted")
-	err = couchdb.GetDoc(aliceInstance, refs[1].DocType(), refs[1].ID(), &sdoc)
+	err = couchdb.GetDoc(instance, refs[1].DocType(), refs[1].ID(), &sdoc)
 	assert.EqualError(t, err, "CouchDB(not_found): deleted")
 }
 
-func createBobContact(t *testing.T) *contact.Contact {
-	return createContact(t, aliceInstance, "Bob", "bob@example.net")
+func createBobContact(t *testing.T, instance *instance.Instance) *contact.Contact {
+	return createContact(t, instance, "Bob", "bob@example.net")
 }
 
 func createContact(t *testing.T, inst *instance.Instance, name, email string) *contact.Contact {
@@ -1059,8 +1047,8 @@ func createContact(t *testing.T, inst *instance.Instance, name, email string) *c
 	return c
 }
 
-func createSharing(t *testing.T, inst *instance.Instance, values []string) *sharing.Sharing {
-	bobContact := createBobContact(t)
+func createSharing(t *testing.T, inst *instance.Instance, values []string, serverURL string) *sharing.Sharing {
+	bobContact := createBobContact(t, inst)
 	assert.NotNil(t, bobContact)
 
 	r := sharing.Rule{
@@ -1074,14 +1062,14 @@ func createSharing(t *testing.T, inst *instance.Instance, values []string) *shar
 	m := sharing.Member{
 		Name:     bobContact.Get("fullname").(string),
 		Email:    mail.Email,
-		Instance: tsB.URL,
+		Instance: serverURL,
 	}
 	s := &sharing.Sharing{
 		Owner: true,
 		Rules: []sharing.Rule{r},
 	}
 	s.Credentials = append(s.Credentials, sharing.Credentials{})
-	err = s.BeOwner(aliceInstance, "")
+	err = s.BeOwner(inst, "")
 	assert.NoError(t, err)
 	s.Members = append(s.Members, m)
 
@@ -1135,8 +1123,4 @@ func generateAppToken(inst *instance.Instance, slug, doctype string) string {
 		return ""
 	}
 	return inst.BuildAppToken(slug, "")
-}
-
-func noRedirect(*http.Request, []*http.Request) error {
-	return http.ErrUseLastResponse
 }
