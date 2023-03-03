@@ -23,7 +23,6 @@ jobs:
           # Recommended version
           - go-version: '1.20.x'
             couchdb-version: '3.3.1'
-            lint: true
           # More exotic version
           - go-version: '1.18.x'
             couchdb-version: '3.2.2'
@@ -55,10 +54,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Lint
-        if: ${{ matrix.lint }}
-        run: |
-          make jslint
       - name: Unit tests
         run: |
           make unit-tests
