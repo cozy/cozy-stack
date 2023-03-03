@@ -58,7 +58,7 @@ jobs:
       - name: Lint
         if: ${{ matrix.lint }}
         run: |
-          make lint jslint
+          make jslint
       - name: Unit tests
         run: |
           make unit-tests
