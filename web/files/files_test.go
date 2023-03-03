@@ -3125,7 +3125,7 @@ func TestFiles(t *testing.T) {
 			Header("Content-Type").Equal("image/jpeg")
 
 		// Wait for other thumbnails generation
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 
 		e.GET(large).
 			WithHeader("Authorization", "Bearer "+token).
