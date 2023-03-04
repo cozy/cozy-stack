@@ -52,7 +52,7 @@ func TestContacts(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-		// Check the contact data
+		// Check the contact data.
 		data := obj.Value("data").Object()
 		data.Value("id").String().NotEmpty()
 		data.ValueEqual("type", consts.Contacts)
