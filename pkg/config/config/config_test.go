@@ -25,7 +25,7 @@ func TestSetup(t *testing.T) {
 	tmpfile, err := os.OpenFile(filepath.Join(tmpdir, "cozy.yaml"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 
-	t.Setenv("OS_USERNAME", "os_username_val")
+	os.Setenv("OS_USERNAME", "os_username_val")
 	t.Setenv("OS_PASSWORD", "os_password_val")
 	t.Setenv("OS_PROJECT_NAME", "os_project_name_val")
 	t.Setenv("OS_USER_DOMAIN_NAME", "os_user_domain_name_val")

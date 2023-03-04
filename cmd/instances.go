@@ -27,7 +27,6 @@ import (
 
 var flagDomainAliases []string
 var flagListFields []string
-var flagLocale string
 var flagTimezone string
 var flagEmail string
 var flagPublicName string
