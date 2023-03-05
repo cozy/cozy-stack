@@ -200,7 +200,7 @@ func TestReplicator(t *testing.T) {
 			assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
 			if id == updateID {
 				assert.Equal(t, updateRev, twoRef.Revisions.Rev)
-				assert.Equal(t, inst, updateDoc.Rev(), twoRef.Revisions.Branches[0].Rev)
+				assert.Equal(t, updateDoc.Rev(), twoRef.Revisions.Branches[0].Rev)
 			}
 		}
 
