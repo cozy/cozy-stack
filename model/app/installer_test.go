@@ -72,6 +72,8 @@ func serveGitRep(dir string) {
 echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
 echo '` + manifestKonnector() + `' > ` + app.KonnectorManifestName + ` && \
 git init . && \
+git config user.name "cozy" && \
+git config user.email "cozy@cloud.fr" && \
 git add . && \
 git commit -m 'Initial commit' && \
 git checkout -b branch && \
