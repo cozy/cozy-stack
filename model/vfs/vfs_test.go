@@ -127,10 +127,9 @@ func TestVfs(t *testing.T) {
 						"filechild1": nil,
 					},
 				}
-				_, err := createTree(fs, origtree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, origtree, consts.RootDirID)
 
-				err = vfs.RemoveAll(fs, "/removemeall", fs.EnsureErased)
+				err := vfs.RemoveAll(fs, "/removemeall", fs.EnsureErased)
 				require.NoError(t, err)
 
 				_, err = fs.DirByPath("/removemeall/dirchild1")
@@ -188,12 +187,10 @@ func TestVfs(t *testing.T) {
 					},
 				}
 
-				olddoc, err := createTree(fs, origtree, consts.RootDirID)
-
-				require.NoError(t, err)
+				olddoc := createTree(t, fs, origtree, consts.RootDirID)
 
 				newname := "createandget2"
-				_, err = vfs.ModifyDirMetadata(fs, olddoc, &vfs.DocPatch{
+				_, err := vfs.ModifyDirMetadata(fs, olddoc, &vfs.DocPatch{
 					Name: &newname,
 				})
 				require.NoError(t, err)
@@ -237,11 +234,10 @@ func TestVfs(t *testing.T) {
 					},
 				}
 
-				doc1, err := createTree(fs, origtree, consts.RootDirID)
-				require.NoError(t, err)
+				doc1 := createTree(t, fs, origtree, consts.RootDirID)
 
 				newname := "update2"
-				_, err = vfs.ModifyDirMetadata(fs, doc1, &vfs.DocPatch{
+				_, err := vfs.ModifyDirMetadata(fs, doc1, &vfs.DocPatch{
 					Name: &newname,
 				})
 				require.NoError(t, err)
@@ -293,8 +289,7 @@ func TestVfs(t *testing.T) {
 					nfc: H{},
 					nfd: H{},
 				}}
-				_, err := createTree(fs, origtree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, origtree, consts.RootDirID)
 
 				f1, err := fs.FileByPath("/" + base + "/" + nfc)
 				require.NoError(t, err)
@@ -319,11 +314,10 @@ func TestVfs(t *testing.T) {
 					"dirchild2/": H{},
 					"filechild1": nil,
 				}}
-				doc, err := createTree(fs, origtree, consts.RootDirID)
-				require.NoError(t, err)
+				doc := createTree(t, fs, origtree, consts.RootDirID)
 
 				newname := nfd
-				doc, err = vfs.ModifyDirMetadata(fs, doc, &vfs.DocPatch{
+				doc, err := vfs.ModifyDirMetadata(fs, doc, &vfs.DocPatch{
 					Name: &newname,
 				})
 				require.NoError(t, err)
@@ -357,11 +351,10 @@ func TestVfs(t *testing.T) {
 					},
 				}
 
-				_, err := createTree(fs, walktree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, walktree, consts.RootDirID)
 
 				walked := H{}
-				err = vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+				err := vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 					if !assert.NoError(t, err) {
 						return err
 					}
@@ -410,8 +403,7 @@ func TestVfs(t *testing.T) {
 					},
 				}
 
-				_, err := createTree(fs, walktree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, walktree, consts.RootDirID)
 
 				done := make(chan bool)
 
@@ -470,8 +462,7 @@ func TestVfs(t *testing.T) {
 						},
 					},
 				}
-				dirdoc, err := createTree(fs, tree, consts.RootDirID)
-				assert.NoError(t, err)
+				dirdoc := createTree(t, fs, tree, consts.RootDirID)
 
 				foobar, err := fs.FileByPath("/archive/foobar.jpg")
 				assert.NoError(t, err)
@@ -643,29 +634,25 @@ func TestVfs(t *testing.T) {
 
 			t.Run("ConflictName", func(t *testing.T) {
 				tree := H{"existing": nil}
-				_, err := createTree(fs, tree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, tree, consts.RootDirID)
 
 				newname := vfs.ConflictName(fs, consts.RootDirID, "existing", true)
 				assert.Equal(t, "existing (2)", newname)
 
 				tree = H{"existing (2)": nil}
-				_, err = createTree(fs, tree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, tree, consts.RootDirID)
 
 				newname = vfs.ConflictName(fs, consts.RootDirID, "existing", true)
 				assert.Equal(t, "existing (3)", newname)
 
 				tree = H{"existing (3)": nil}
-				_, err = createTree(fs, tree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, tree, consts.RootDirID)
 
 				newname = vfs.ConflictName(fs, consts.RootDirID, "existing (3)", true)
 				assert.Equal(t, "existing (4)", newname)
 
 				tree = H{"existing (copy)": nil}
-				_, err = createTree(fs, tree, consts.RootDirID)
-				require.NoError(t, err)
+				_ = createTree(t, fs, tree, consts.RootDirID)
 
 				newname = vfs.ConflictName(fs, consts.RootDirID, "existing (copy)", true)
 				assert.Equal(t, "existing (copy) (2)", newname)
@@ -724,9 +711,11 @@ func printH(h H, str string, count int) string {
 	return str
 }
 
-func createTree(fs vfs.VFS, tree H, dirID string) (*vfs.DirDoc, error) {
+func createTree(t *testing.T, fs vfs.VFS, tree H, dirID string) *vfs.DirDoc {
+	t.Helper()
+
 	if tree == nil {
-		return nil, nil
+		return nil
 	}
 
 	if dirID == "" {
@@ -738,31 +727,25 @@ func createTree(fs vfs.VFS, tree H, dirID string) (*vfs.DirDoc, error) {
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
 			dirdoc, err = vfs.NewDirDoc(fs, name[:len(name)-1], dirID, nil)
-			if err != nil {
-				return nil, err
-			}
-			if err = fs.CreateDir(dirdoc); err != nil {
-				return nil, err
-			}
-			if _, err = createTree(fs, children, dirdoc.ID()); err != nil {
-				return nil, err
-			}
+			require.NoError(t, err)
+
+			err = fs.CreateDir(dirdoc)
+			require.NoError(t, err)
+
+			createTree(t, fs, children, dirdoc.ID())
 		} else {
 			mime, class := vfs.ExtractMimeAndClassFromFilename(name)
 			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, false, nil)
-			if err != nil {
-				return nil, err
-			}
+			require.NoError(t, err)
+
 			f, err := fs.CreateFile(filedoc, nil)
-			if err != nil {
-				return nil, err
-			}
-			if err = f.Close(); err != nil {
-				return nil, err
-			}
+			require.NoError(t, err)
+
+			err = f.Close()
+			require.NoError(t, err)
 		}
 	}
-	return dirdoc, nil
+	return dirdoc
 }
 
 func fetchTree(fs vfs.VFS, root string) (H, error) {
