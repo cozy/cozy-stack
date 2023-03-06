@@ -692,7 +692,7 @@ func localAvatar(c echo.Context, m sharing.Member) error {
 		m.Status == sharing.MemberStatusPendingInvitation {
 		options = append(options, avatar.GreyBackground)
 	}
-	img, mime, err := config.Avatars().Generate(name, options...)
+	img, mime, err := config.Avatars().GenerateInitials(name, options...)
 	if err != nil {
 		return wrapErrors(err)
 	}

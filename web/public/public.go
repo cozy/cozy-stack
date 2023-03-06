@@ -27,7 +27,7 @@ func Avatar(c echo.Context) error {
 		if err != nil {
 			publicName = strings.Split(inst.Domain, ".")[0]
 		}
-		img, mime, err := config.Avatars().Generate(publicName)
+		img, mime, err := config.Avatars().GenerateInitials(publicName)
 		if err == nil {
 			return c.Blob(http.StatusOK, mime, img)
 		}

@@ -49,9 +49,9 @@ func NewService(cache cache.Cache, cmd string) (*Service, error) {
 	return &Service{cache, initials}, nil
 }
 
-// Generate an image with the initials for the given name (and the
+// GenerateInitials an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-func (s *Service) Generate(publicName string, opts ...Options) ([]byte, string, error) {
+func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, string, error) {
 	name := strings.TrimSpace(publicName)
 	info := extractInfo(name)
 	for _, opt := range opts {
