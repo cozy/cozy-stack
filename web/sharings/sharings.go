@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/initials"
@@ -691,7 +692,7 @@ func localAvatar(c echo.Context, m sharing.Member) error {
 		m.Status == sharing.MemberStatusPendingInvitation {
 		options = append(options, initials.GreyBackground)
 	}
-	img, mime, err := initials.Image(name, options...)
+	img, mime, err := config.Initials().Generate(name, options...)
 	if err != nil {
 		return wrapErrors(err)
 	}

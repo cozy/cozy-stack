@@ -22,6 +22,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -112,6 +113,7 @@ type Config struct {
 
 	RemoteAssets map[string]string
 
+	Initials       *initials.Service
 	Fs             Fs
 	CouchDB        CouchDB
 	Jobs           Jobs
@@ -376,6 +378,11 @@ func (rc *RedisConfig) Client() redis.UniversalClient {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+// Initials return the configured initials service.
+func Initials() *initials.Service {
+	return config.Initials
 }
 
 // GetVault returns the configured instance of Vault
@@ -727,6 +734,8 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
+	cachStorage := cache.New(cacheRedis.Client())
+
 	config = &Config{
 		Host: v.GetString("host"),
 		Port: v.GetInt("port"),
@@ -751,6 +760,7 @@ func UseViper(v *viper.Viper) error {
 		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
+		Initials: initials.NewService(cachStorage, v.GetString("jobs.imagemagick_convert_cmd")),
 		Fs: Fs{
 			URL:                   fsURL,
 			Transport:             fsClient.Transport,
@@ -799,7 +809,7 @@ func UseViper(v *viper.Viper) error {
 		RateLimitingStorage: rateLimitingRedis,
 		OauthStateStorage:   oauthStateRedis,
 		Realtime:            realtimeRedis,
-		CacheStorage:        cache.New(cacheRedis.Client()),
+		CacheStorage:        cachStorage,
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),

@@ -11,7 +11,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -26,9 +26,24 @@ const (
 	GreyBackground Options = 1 + iota
 )
 
-// Image returns an image with the initials for the given name (and the
+// Service handle all the interactions with the initials images.
+type Service struct {
+	cache cache.Cache
+	cmd   string
+}
+
+// NewService instantiate a new [Service].
+func NewService(cache cache.Cache, cmd string) *Service {
+	if cmd == "" {
+		cmd = "convert"
+	}
+
+	return &Service{cache, cmd}
+}
+
+// Generate an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-func Image(publicName string, opts ...Options) ([]byte, string, error) {
+func (s *Service) Generate(publicName string, opts ...Options) ([]byte, string, error) {
 	name := strings.TrimSpace(publicName)
 	info := extractInfo(name)
 	for _, opt := range opts {
@@ -37,17 +52,16 @@ func Image(publicName string, opts ...Options) ([]byte, string, error) {
 		}
 	}
 
-	cache := config.GetConfig().CacheStorage
 	key := "initials:" + info.initials + info.color
-	if bytes, ok := cache.Get(key); ok {
+	if bytes, ok := s.cache.Get(key); ok {
 		return bytes, contentType, nil
 	}
 
-	bytes, err := draw(info)
+	bytes, err := s.draw(info)
 	if err != nil {
 		return nil, "", err
 	}
-	cache.Set(key, bytes, cacheTTL)
+	s.cache.Set(key, bytes, cacheTTL)
 	return bytes, contentType, nil
 }
 
@@ -112,7 +126,7 @@ func getColor(name string) string {
 	return colors[sum%len(colors)]
 }
 
-func draw(info info) ([]byte, error) {
+func (s *Service) draw(info info) ([]byte, error) {
 	var env []string
 	{
 		tempDir, err := os.MkdirTemp("", "magick")
@@ -121,11 +135,6 @@ func draw(info info) ([]byte, error) {
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
 			env = []string{envTempDir}
 		}
-	}
-
-	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
-	if convertCmd == "" {
-		convertCmd = "convert"
 	}
 
 	// convert -size 128x128 null: -fill blue -draw 'circle 64,64 0,64' -fill white -font Lato-Regular
@@ -153,7 +162,7 @@ func draw(info info) ([]byte, error) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(context.Background(), convertCmd, args...)
+	cmd := exec.CommandContext(context.Background(), s.cmd, args...)
 	cmd.Env = env
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

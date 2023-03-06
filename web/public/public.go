@@ -10,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/pkg/assets"
-	"github.com/cozy/cozy-stack/pkg/initials"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
@@ -27,7 +27,7 @@ func Avatar(c echo.Context) error {
 		if err != nil {
 			publicName = strings.Split(inst.Domain, ".")[0]
 		}
-		img, mime, err := initials.Image(publicName)
+		img, mime, err := config.Initials().Generate(publicName)
 		if err == nil {
 			return c.Blob(http.StatusOK, mime, img)
 		}
