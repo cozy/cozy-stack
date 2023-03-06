@@ -1,4 +1,4 @@
-package initials
+package avatar
 
 import (
 	"bytes"

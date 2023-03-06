@@ -20,9 +20,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/avatar"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -113,7 +113,7 @@ type Config struct {
 
 	RemoteAssets map[string]string
 
-	Initials       *initials.Service
+	Avatars        *avatar.Service
 	Fs             Fs
 	CouchDB        CouchDB
 	Jobs           Jobs
@@ -380,9 +380,9 @@ func GetConfig() *Config {
 	return config
 }
 
-// Initials return the configured initials service.
-func Initials() *initials.Service {
-	return config.Initials
+// Avatars return the configured initials service.
+func Avatars() *avatar.Service {
+	return config.Avatars
 }
 
 // GetVault returns the configured instance of Vault
@@ -760,7 +760,7 @@ func UseViper(v *viper.Viper) error {
 		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
-		Initials: initials.NewService(cachStorage, v.GetString("jobs.imagemagick_convert_cmd")),
+		Avatars: avatar.NewService(cachStorage, v.GetString("jobs.imagemagick_convert_cmd")),
 		Fs: Fs{
 			URL:                   fsURL,
 			Transport:             fsClient.Transport,
