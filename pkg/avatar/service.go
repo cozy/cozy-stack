@@ -1,18 +1,14 @@
 package avatar
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/cozy/cozy-stack/pkg/cache"
-	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // Options can be used to give options for the generated image
@@ -26,19 +22,31 @@ const (
 	GreyBackground Options = 1 + iota
 )
 
+// Initials is able to generate initial avatar.
+type Initials interface {
+	// Generate will create a new avatar with the given initials and color.
+	Generate(ctx context.Context, initials, color string) ([]byte, error)
+	ContentType() string
+}
+
 // Service handle all the interactions with the initials images.
 type Service struct {
-	cache cache.Cache
-	cmd   string
+	cache    cache.Cache
+	initials Initials
 }
 
 // NewService instantiate a new [Service].
-func NewService(cache cache.Cache, cmd string) *Service {
+func NewService(cache cache.Cache, cmd string) (*Service, error) {
 	if cmd == "" {
 		cmd = "convert"
 	}
 
-	return &Service{cache, cmd}
+	initials, err := NewPNGInitials(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the PNG initials implem: %w", err)
+	}
+
+	return &Service{cache, initials}, nil
 }
 
 // Generate an image with the initials for the given name (and the
@@ -57,12 +65,12 @@ func (s *Service) Generate(publicName string, opts ...Options) ([]byte, string, 
 		return bytes, contentType, nil
 	}
 
-	bytes, err := s.draw(info)
+	bytes, err := s.initials.Generate(context.TODO(), info.initials, info.color)
 	if err != nil {
 		return nil, "", err
 	}
 	s.cache.Set(key, bytes, cacheTTL)
-	return bytes, contentType, nil
+	return bytes, s.initials.ContentType(), nil
 }
 
 // See https://github.com/cozy/cozy-ui/blob/master/react/Avatar/index.jsx#L9-L26
@@ -124,55 +132,4 @@ func getColor(name string) string {
 		sum += int(name[i])
 	}
 	return colors[sum%len(colors)]
-}
-
-func (s *Service) draw(info info) ([]byte, error) {
-	var env []string
-	{
-		tempDir, err := os.MkdirTemp("", "magick")
-		if err == nil {
-			defer os.RemoveAll(tempDir)
-			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
-			env = []string{envTempDir}
-		}
-	}
-
-	// convert -size 128x128 null: -fill blue -draw 'circle 64,64 0,64' -fill white -font Lato-Regular
-	// -pointsize 64 -gravity center -annotate "+0,+0" "AM" foo.png
-	args := []string{
-		"-limit", "Memory", "1GB",
-		"-limit", "Map", "1GB",
-		// Use a transparent background
-		"-size", "128x128",
-		"null:",
-		// Add a cicle of color
-		"-fill", info.color,
-		"-draw", "circle 64,64 0,64",
-		// Add the initials
-		"-fill", "white",
-		"-font", "Lato-Regular",
-		"-pointsize", "64",
-		"-gravity", "center",
-		"-annotate", "+0,+0",
-		info.initials,
-		// Use the colorspace recommended for web, sRGB
-		"-colorspace", "sRGB",
-		// Send the output on stdout, in PNG format
-		"png:-",
-	}
-
-	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(context.Background(), s.cmd, args...)
-	cmd.Env = env
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		logger.WithNamespace("initials").
-			WithField("stderr", stderr.String()).
-			WithField("initials", info.initials).
-			WithField("color", info.color).
-			Errorf("imagemagick failed: %s", err)
-		return nil, err
-	}
-	return stdout.Bytes(), nil
 }

@@ -734,7 +734,11 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	cachStorage := cache.New(cacheRedis.Client())
+	cacheStorage := cache.New(cacheRedis.Client())
+	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
+	if err != nil {
+		return fmt.Errorf("failed to create the avatar service: %w", err)
+	}
 
 	config = &Config{
 		Host: v.GetString("host"),
@@ -760,7 +764,7 @@ func UseViper(v *viper.Viper) error {
 		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
-		Avatars: avatar.NewService(cachStorage, v.GetString("jobs.imagemagick_convert_cmd")),
+		Avatars: avatars,
 		Fs: Fs{
 			URL:                   fsURL,
 			Transport:             fsClient.Transport,
@@ -809,7 +813,7 @@ func UseViper(v *viper.Viper) error {
 		RateLimitingStorage: rateLimitingRedis,
 		OauthStateStorage:   oauthStateRedis,
 		Realtime:            realtimeRedis,
-		CacheStorage:        cachStorage,
+		CacheStorage:        cacheStorage,
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),
