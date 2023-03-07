@@ -2,8 +2,6 @@ package sharings_test
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -39,8 +37,6 @@ func TestReplicator(t *testing.T) {
 	}
 
 	// Things for the replicator tests
-	var tsR *httptest.Server
-	var replInstance *instance.Instance
 	var replSharingID, replAccessToken string
 	var fileSharingID, fileAccessToken string
 	var dirID string
@@ -58,34 +54,27 @@ func TestReplicator(t *testing.T) {
 
 	// Prepare Alice's instance
 	setup := testutils.NewSetup(t, t.Name()+"_alice")
-	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
+	aliceInstance := setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
 	})
-	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
-	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
 	charlieContact = createContact(t, aliceInstance, "Charlie", "charlie@example.net")
 	daveContact = createContact(t, aliceInstance, "Dave", "dave@example.net")
-	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	tsA := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings":    sharings.Routes,
 		"/permissions": permissions.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-
-	// Prepare Bob's browser
-	jar := setup.GetCookieJar()
-	bobUA = &http.Client{
-		CheckRedirect: noRedirect,
-		Jar:           jar,
-	}
+	t.Cleanup(tsA.Close)
 
 	// Prepare another instance for the replicator tests
 	replSetup := testutils.NewSetup(t, t.Name()+"_replicator")
-	replInstance = replSetup.GetTestInstance()
-	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	replInstance := replSetup.GetTestInstance()
+	tsR := replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings": sharings.Routes,
 	})
+	t.Cleanup(tsR.Close)
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 	t.Run("CreateSharingForReplicatorTest", func(t *testing.T) {

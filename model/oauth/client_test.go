@@ -15,8 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testInstance *instance.Instance
-
 var c = &oauth.Client{
 	CouchID: "my-client-id",
 }
@@ -28,7 +26,7 @@ func TestClient(t *testing.T) {
 
 	config.UseTestFile()
 	setup := testutils.NewSetup(t, t.Name())
-	testInstance = setup.GetTestInstance()
+	testInstance := setup.GetTestInstance()
 
 	t.Run("CreateJWT", func(t *testing.T) {
 		tokenString, err := c.CreateJWT(testInstance, "test", "foo:read")

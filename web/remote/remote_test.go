@@ -1,7 +1,6 @@
 package remote
 
 import (
-	"net/http/httptest"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -14,10 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testInstance *instance.Instance
-var ts *httptest.Server
-var token string
-
 func TestRemote(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -27,10 +22,10 @@ func TestRemote(t *testing.T) {
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 
-	testInstance = setup.GetTestInstance()
-	token = generateAppToken(testInstance, "answers", "org.wikidata.entity")
+	testInstance := setup.GetTestInstance()
+	token := generateAppToken(testInstance, "answers", "org.wikidata.entity")
 
-	ts = setup.GetTestServer("/remote", Routes)
+	ts := setup.GetTestServer("/remote", Routes)
 	t.Cleanup(ts.Close)
 
 	t.Run("RemoteGET", func(t *testing.T) {

@@ -17,8 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var ins *instance.Instance
-
 type stupidRenderer struct{}
 
 func TestUser(t *testing.T) {
@@ -45,7 +43,7 @@ func TestUser(t *testing.T) {
 		req.Header.Set(echo.HeaderAccept, "text/html")
 		req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:96.0) Gecko/20100101 Firefox/96.0") // Firefox
 
-		ins = &instance.Instance{Domain: "cozy.local", Locale: "en"}
+		ins := &instance.Instance{Domain: "cozy.local", Locale: "en"}
 
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)

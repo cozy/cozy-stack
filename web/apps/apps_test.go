@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	"time"
 
 	apps "github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -43,13 +41,6 @@ import (
 )
 
 const domain = "cozywithapps.example.net"
-
-var ts *httptest.Server
-var testInstance *instance.Instance
-var token string
-
-var jar *testutils.CookieJar
-var client *http.Client
 
 func TestApps(t *testing.T) {
 	if testing.Short() {
@@ -76,7 +67,7 @@ func TestApps(t *testing.T) {
 	defer func() { cfg.Subdomains = was }()
 
 	pass := "aephe2Ei"
-	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
+	testInstance := setup.GetTestInstance(&lifecycle.Options{Domain: domain})
 	params := lifecycle.PassParameters{
 		Key:        "fake-encrypt-key",
 		Iterations: 0,
@@ -92,7 +83,7 @@ func TestApps(t *testing.T) {
 	_, err = setup.InstallMiniKonnector()
 	require.NoError(t, err, "Could not install mini konnector")
 
-	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
+	ts := setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			sess, _ := session.New(testInstance, session.LongRun)
 			cookie, _ := sess.ToCookie()
@@ -104,9 +95,10 @@ func TestApps(t *testing.T) {
 		require.NoError(t, err, "Cant start subdoman proxy")
 		return router
 	})
+	t.Cleanup(ts.Close)
 
-	jar = setup.GetCookieJar()
-	client = &http.Client{Jar: jar}
+	jar := setup.GetCookieJar()
+	client := &http.Client{Jar: jar}
 
 	// Login
 	cozysessID := testutils.CreateTestClient(t, ts.URL).POST("/login").
@@ -114,7 +106,7 @@ func TestApps(t *testing.T) {
 		Expect().Status(200).
 		Cookie("cozysessid").Value().Raw()
 
-	_, token = setup.GetTestClient(consts.Apps + " " + consts.Konnectors)
+	_, token := setup.GetTestClient(consts.Apps + " " + consts.Konnectors)
 
 	t.Run("Serve", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
