@@ -37,7 +37,9 @@ func TestInstallerKonnector(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	go serveGitRep(t.TempDir())
+	done := serveGitRep(t.TempDir())
+	defer done()
+
 	for i := 0; i < 400; i++ {
 		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
 			break
@@ -45,9 +47,12 @@ func TestInstallerKonnector(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	_, err := stack.Start()
-	if err != nil {
-		require.NoError(t, err, "Error while starting job system")
+	if !stackStarted {
+		_, err := stack.Start()
+		if err != nil {
+			require.NoError(t, err, "Error while starting job system")
+		}
+		stackStarted = true
 	}
 
 	app.ManifestClient = &http.Client{Transport: &transport{}}
