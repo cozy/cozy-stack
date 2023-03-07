@@ -47,6 +47,12 @@ jobs:
           EOF
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=${{ matrix.couchdb-version }}*
           echo "COZY_COUCHDB_URL=http://admin:password@localhost:5984/" >> $GITHUB_ENV
+      
+        # This step is required to let ImageMagick generate PDF files.
+      - name: Fix ImageMagick config
+        run: |
+          sudo sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
+          cat /etc/ImageMagick-6/policy.xml
 
       - name: Checkout repository
         uses: actions/checkout@v3
