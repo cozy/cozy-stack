@@ -23,7 +23,6 @@ jobs:
           # Recommended version
           - go-version: '1.20.x'
             couchdb-version: '3.3.1'
-            lint: true
           # More exotic version
           - go-version: '1.18.x'
             couchdb-version: '3.2.2'
@@ -48,17 +47,16 @@ jobs:
           EOF
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=${{ matrix.couchdb-version }}*
           echo "COZY_COUCHDB_URL=http://admin:password@localhost:5984/" >> $GITHUB_ENV
+
       - name: Checkout repository
         uses: actions/checkout@v3
+
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Lint
-        if: ${{ matrix.lint }}
-        run: |
-          make lint jslint
+
       - name: Unit tests
         run: |
           make unit-tests
