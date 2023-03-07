@@ -3095,6 +3095,10 @@ func TestFiles(t *testing.T) {
 		large := links.Value("large").String().NotEmpty().Raw()
 		medium := links.Value("medium").String().NotEmpty().Raw()
 		small := links.Value("small").String().NotEmpty().Raw()
+
+		// Wait for tiny thumbnail generation
+		time.Sleep(time.Second)
+
 		tiny := links.Value("tiny").String().NotEmpty().Raw()
 
 		// Large, medium, and small are not generated automatically
