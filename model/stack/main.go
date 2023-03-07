@@ -12,6 +12,7 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -59,6 +60,7 @@ security features. Please do not use this binary as your production server.
 	var shutdowners []utils.Shutdowner
 
 	ctx := context.Background()
+	cfg := config.GetConfig()
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
@@ -68,8 +70,9 @@ security features. Please do not use this binary as your production server.
 		shutdowners = append(shutdowners, gopAgent{})
 	}
 
-	if err = config.MakeVault(config.GetConfig()); err != nil {
-		return
+	cfg.Keyring, err = keyring.NewStub()
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup the keyring stub: %w", err)
 	}
 
 	// Check that we can properly reach CouchDB.
@@ -80,7 +83,7 @@ security features. Please do not use this binary as your production server.
 		if err == nil {
 			break
 		}
-		err = fmt.Errorf("Could not reach Couchdb database: %s", err.Error())
+		err = fmt.Errorf("could not reach Couchdb database: %s", err.Error())
 		if i < attempts-1 {
 			logrus.Warnf("%s, retrying in %v", err, attemptsSpacing)
 			time.Sleep(attemptsSpacing)

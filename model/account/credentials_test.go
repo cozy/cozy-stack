@@ -176,12 +176,12 @@ func TestRandomBitFlipsBuffer(t *testing.T) {
 	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
 	require.NoError(t, err)
 
-	original, err := EncryptBufferWithKey(config.GetVault().CredentialsEncryptorKey(), plainBuffer)
+	original, err := EncryptBufferWithKey(config.GetKeyring().CredentialsEncryptorKey(), plainBuffer)
 	require.NoError(t, err)
 
 	flipped := make([]byte, len(original))
 	copy(flipped, original)
-	testBuffer, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
+	testBuffer, err := DecryptBufferWithKey(config.GetKeyring().CredentialsDecryptorKey(), flipped)
 	require.NoError(t, err)
 
 	assert.True(t, bytes.Equal(plainBuffer, testBuffer))
@@ -208,7 +208,7 @@ func TestRandomBitFlipsBuffer(t *testing.T) {
 			mask := byte(0x1 << uint(flipValue%8))
 			flipped[flipValue/8] ^= mask
 		}
-		_, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
+		_, err := DecryptBufferWithKey(config.GetKeyring().CredentialsDecryptorKey(), flipped)
 		if !assert.Error(t, err) {
 			t.Fatalf("Failed with flips %v", flipsSet)
 			return

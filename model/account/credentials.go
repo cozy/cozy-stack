@@ -63,7 +63,7 @@ func EncryptCredentialsWithKey(encryptorKey *keymgmt.NACLKey, login, password st
 // EncryptCredentialsData takes any json encodable data and encode and encrypts
 // it using the vault public key.
 func EncryptCredentialsData(data interface{}) (string, error) {
-	encryptorKey := config.GetVault().CredentialsEncryptorKey()
+	encryptorKey := config.GetKeyring().CredentialsEncryptorKey()
 	if encryptorKey == nil {
 		return "", errCannotEncrypt
 	}
@@ -97,7 +97,7 @@ func EncryptBufferWithKey(encryptorKey *keymgmt.NACLKey, buf []byte) ([]byte, er
 // EncryptCredentials encrypts the given credentials with the specified encryption
 // key.
 func EncryptCredentials(login, password string) (string, error) {
-	encryptorKey := config.GetVault().CredentialsEncryptorKey()
+	encryptorKey := config.GetKeyring().CredentialsEncryptorKey()
 	if encryptorKey == nil {
 		return "", errCannotEncrypt
 	}
@@ -107,7 +107,7 @@ func EncryptCredentials(login, password string) (string, error) {
 // DecryptCredentials takes an encrypted credentials, constiting of a login /
 // password pair, and decrypts it using the vault private key.
 func DecryptCredentials(encryptedData string) (login, password string, err error) {
-	decryptorKey := config.GetVault().CredentialsDecryptorKey()
+	decryptorKey := config.GetKeyring().CredentialsDecryptorKey()
 	if decryptorKey == nil {
 		return "", "", errCannotDecrypt
 	}
@@ -164,7 +164,7 @@ func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []b
 // DecryptCredentialsData takes an encryted buffer and decrypts and decode its
 // content.
 func DecryptCredentialsData(encryptedData string) (interface{}, error) {
-	decryptorKey := config.GetVault().CredentialsDecryptorKey()
+	decryptorKey := config.GetKeyring().CredentialsDecryptorKey()
 	if decryptorKey == nil {
 		return nil, errCannotDecrypt
 	}
@@ -219,7 +219,7 @@ func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte)
 // Encrypts sensitive fields inside the account. The document
 // is modified in place.
 func Encrypt(doc couchdb.JSONDoc) bool {
-	if config.GetVault().CredentialsEncryptorKey() != nil {
+	if config.GetKeyring().CredentialsEncryptorKey() != nil {
 		return encryptMap(doc.M)
 	}
 	return false
@@ -228,7 +228,7 @@ func Encrypt(doc couchdb.JSONDoc) bool {
 // Decrypts sensitive fields inside the account. The document
 // is modified in place.
 func Decrypt(doc couchdb.JSONDoc) bool {
-	if config.GetVault().CredentialsDecryptorKey() != nil {
+	if config.GetKeyring().CredentialsDecryptorKey() != nil {
 		return decryptMap(doc.M)
 	}
 	return false

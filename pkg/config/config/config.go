@@ -3,7 +3,6 @@ package config
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	stdlog "log"
@@ -23,7 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/avatar"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/keymgmt"
+	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
@@ -83,7 +82,6 @@ const defaultAdminSecretFileName = "cozy-admin-passphrase"
 
 var (
 	config *Config
-	vault  *Vault
 )
 
 var log = logger.WithNamespace("config")
@@ -115,6 +113,7 @@ type Config struct {
 
 	Avatars        *avatar.Service
 	Fs             Fs
+	Keyring        keyring.Keyring
 	CouchDB        CouchDB
 	Jobs           Jobs
 	Konnectors     Konnectors
@@ -148,25 +147,6 @@ type Config struct {
 
 	AssetsPollingDisabled bool
 	AssetsPollingInterval time.Duration
-}
-
-// Vault contains security keys used for various encryption or signing of
-// critical assets.
-type Vault struct {
-	credsEncryptor *keymgmt.NACLKey
-	credsDecryptor *keymgmt.NACLKey
-}
-
-// CredentialsEncryptorKey returns the key used to encrypt credentials values,
-// stored in accounts.
-func (v *Vault) CredentialsEncryptorKey() *keymgmt.NACLKey {
-	return v.credsEncryptor
-}
-
-// CredentialsDecryptorKey returns the key used to decrypt credentials values,
-// stored in accounts.
-func (v *Vault) CredentialsDecryptorKey() *keymgmt.NACLKey {
-	return v.credsDecryptor
 }
 
 // Fs contains the configuration values of the file-system
@@ -385,12 +365,9 @@ func Avatars() *avatar.Service {
 	return config.Avatars
 }
 
-// GetVault returns the configured instance of Vault
-func GetVault() *Vault {
-	if vault == nil {
-		return &Vault{}
-	}
-	return vault
+// GetKeyring returns the configured instance of [keyring.Keyring]
+func GetKeyring() keyring.Keyring {
+	return config.Keyring
 }
 
 // GetOIDC returns the OIDC config for the given context (with a boolean to say
@@ -735,9 +712,21 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	cacheStorage := cache.New(cacheRedis.Client())
+
 	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
 	if err != nil {
 		return fmt.Errorf("failed to create the avatar service: %w", err)
+	}
+
+	// Setup keyring
+	var keyringCfg keyring.Config
+	err = v.UnmarshalKey("vault", &keyringCfg)
+	if err != nil {
+		return fmt.Errorf("failed to decode the vault config: %w", err)
+	}
+	keyring, err := keyring.NewFromConfig(keyringCfg)
+	if err != nil {
+		return fmt.Errorf("failed to setup the keyring: %w", err)
 	}
 
 	config = &Config{
@@ -761,10 +750,8 @@ func UseViper(v *viper.Viper) error {
 
 		RemoteAssets: v.GetStringMapString("remote_assets"),
 
-		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
-		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
-
 		Avatars: avatars,
+		Keyring: keyring,
 		Fs: Fs{
 			URL:                   fsURL,
 			Transport:             fsClient.Transport,
@@ -870,61 +857,6 @@ type contextPrint struct {
 
 func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
 	c.l.Printf(format, args...)
-}
-
-// MakeVault initializes the global vault.
-func MakeVault(c *Config) error {
-	var credsEncryptor *keymgmt.NACLKey
-	var credsDecryptor *keymgmt.NACLKey
-
-	if credsEncryptorKey := config.CredentialsEncryptorKey; credsEncryptorKey != "" {
-		keyBytes, err := os.ReadFile(credsEncryptorKey)
-		if err != nil {
-			return err
-		}
-		credsEncryptor, err = keymgmt.UnmarshalNACLKey(keyBytes)
-		if err != nil {
-			return err
-		}
-	}
-
-	if credsDecryptorKey := config.CredentialsDecryptorKey; credsDecryptorKey != "" {
-		keyBytes, err := os.ReadFile(credsDecryptorKey)
-		if err != nil {
-			return err
-		}
-		credsDecryptor, err = keymgmt.UnmarshalNACLKey(keyBytes)
-		if err != nil {
-			return err
-		}
-	}
-
-	if credsEncryptor == nil && credsDecryptor == nil {
-		// XXX For build instance, it is practical to not have to manually
-		// setup credentials for the vault. In that case, if the user does not
-		// want to use its correctly setup credentials, we are generating some
-		// credentials for them. As the credentials should remain the same
-		// between several executions of the stack, we are using some
-		// credentials generated with a seed defined at build time. It is
-		// obviously not a good idea from a security point of view, and it
-		// should not be used to store sensible data. But for development, it
-		// should be enough.
-		if !build.IsDevRelease() {
-			return nil
-		}
-		var err error
-		r := utils.NewSeededRand(42)
-		credsEncryptor, credsDecryptor, err = keymgmt.GenerateKeyPair(r)
-		if err != nil {
-			return err
-		}
-	}
-
-	vault = &Vault{
-		credsEncryptor: credsEncryptor,
-		credsDecryptor: credsDecryptor,
-	}
-	return nil
 }
 
 func makeCouch(v *viper.Viper) (CouchDB, error) {
@@ -1122,16 +1054,6 @@ func UseTestFile() {
 
 	if err := UseViper(v); err != nil {
 		panic(fmt.Errorf("fatal error test config file: %s", err))
-	}
-
-	credsEncryptor, credsDecryptor, err := keymgmt.GenerateKeyPair(rand.Reader)
-	if err != nil {
-		panic(fmt.Errorf("fatal error test config: could not generate key: %s", err))
-	}
-
-	vault = &Vault{
-		credsEncryptor: credsEncryptor,
-		credsDecryptor: credsDecryptor,
 	}
 }
 
