@@ -1,4 +1,4 @@
-name: CI
+name: Go tests
 on:
   push:
     branches:
