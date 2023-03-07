@@ -38,25 +38,14 @@ func TestRedisScheduler(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	// prefix = "test:"
-	config.UseTestFile()
-	cfg := config.GetConfig()
-	was := cfg.Jobs.RedisConfig
-	var err error
-	cfg.Jobs.RedisConfig, err = config.NewRedisConfig(redisURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	config.UseTestFile()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance()
 
+	config.UseTestFile()
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
 	t.Cleanup(func() {
-		cfg.Jobs.RedisConfig = was
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		_ = client.Del(context.Background(), job.TriggersKey, job.SchedKey)
 	})
 
@@ -103,8 +92,10 @@ func TestRedisScheduler(t *testing.T) {
 			WorkerType: "worker",
 		}
 
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
 		time.Sleep(50 * time.Millisecond)
 
@@ -188,17 +179,15 @@ func TestRedisScheduler(t *testing.T) {
 	})
 
 	t.Run("RedisSchedulerWithCronTriggers", func(t *testing.T) {
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
 		bro := newMockBroker()
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
-		defer func() { _ = sch.StartScheduler(bro) }()
 
 		msg, _ := job.NewMessage("@cron")
 
@@ -222,17 +211,15 @@ func TestRedisScheduler(t *testing.T) {
 	})
 
 	t.Run("RedisPollFromSchedKey", func(t *testing.T) {
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
 		bro := newMockBroker()
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
-		defer func() { _ = sch.StartScheduler(bro) }()
 
 		now := time.Now()
 		msg, _ := job.NewMessage("@at")
@@ -271,15 +258,14 @@ func TestRedisScheduler(t *testing.T) {
 	})
 
 	t.Run("RedisTriggerEvent", func(t *testing.T) {
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
 		bro := newMockBroker()
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
-		time.Sleep(1 * time.Second)
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
 
 		evTrigger := job.TriggerInfos{
@@ -327,15 +313,14 @@ func TestRedisScheduler(t *testing.T) {
 	})
 
 	t.Run("RedisTriggerEventForDirectories", func(t *testing.T) {
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
 		bro := newMockBroker()
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
-		time.Sleep(1 * time.Second)
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
 
 		dir := &vfs.DirDoc{
@@ -431,19 +416,14 @@ func TestRedisScheduler(t *testing.T) {
 	})
 
 	t.Run("RedisSchedulerWithDebounce", func(t *testing.T) {
-		if testing.Short() {
-			return
-		}
-
-		opts, _ := redis.ParseURL(redisURL)
-		client := redis.NewClient(opts)
 		err := client.Del(context.Background(), job.TriggersKey, job.SchedKey).Err()
 		assert.NoError(t, err)
 
 		bro := newMockBroker()
-		sch := job.System().(job.Scheduler)
-		assert.NoError(t, sch.ShutdownScheduler(context.Background()))
-		time.Sleep(1 * time.Second)
+		sch := job.NewRedisScheduler(client)
+		defer func() {
+			assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+		}()
 		assert.NoError(t, sch.StartScheduler(bro))
 
 		evTrigger := job.TriggerInfos{
