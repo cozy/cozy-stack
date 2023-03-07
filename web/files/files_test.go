@@ -2765,7 +2765,7 @@ func TestFiles(t *testing.T) {
 
 		attrs := obj.Path("$.data.attributes").Object()
 		attrs.ValueEqual("name", "torestorefilewithconflict")
-		attrs.NotValueEqual("dir_id", consts.RootDirID)
+		attrs.NotHasValue("dir_id", consts.RootDirID)
 	})
 
 	t.Run("FileRestoreWithWithoutParent2", func(t *testing.T) {
@@ -2806,7 +2806,7 @@ func TestFiles(t *testing.T) {
 
 		attrs := obj.Path("$.data.attributes").Object()
 		attrs.ValueEqual("name", "torestorefilewithconflict2")
-		attrs.NotValueEqual("dir_id", consts.RootDirID)
+		attrs.NotHasValue("dir_id", consts.RootDirID)
 	})
 
 	t.Run("DirRestore", func(t *testing.T) {
