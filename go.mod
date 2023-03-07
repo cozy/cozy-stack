@@ -43,7 +43,7 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	github.com/ugorji/go/codec v1.2.9
+	github.com/ugorji/go/codec v1.2.10
 	github.com/yuin/goldmark v1.5.4
 	golang.org/x/crypto v0.6.0
 	golang.org/x/image v0.5.0
