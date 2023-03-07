@@ -1,6 +1,9 @@
 package app_test
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +13,8 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 )
+
+var stackStarted bool
 
 var localGitCmd *exec.Cmd
 var localGitDir string
@@ -66,7 +71,7 @@ func manifestKonnector() string {
 }`
 }
 
-func serveGitRep(dir string) {
+func serveGitRep(dir string) context.CancelFunc {
 	localGitDir = dir
 	args := `
 echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
@@ -89,12 +94,25 @@ git checkout -`
 	}
 
 	// "git daemon --reuseaddr --base-path=./ --export-all ./.git"
-	localGitCmd = exec.Command("git", "daemon", "--reuseaddr", "--base-path=./", "--export-all", "./.git")
+	ctx, cancel := context.WithCancel(context.Background())
+	localGitCmd = exec.CommandContext(ctx,
+		"git", "daemon", "--reuseaddr", "--base-path=./", "--export-all", "./.git")
 	localGitCmd.Dir = localGitDir
-	if out, err := localGitCmd.CombinedOutput(); err != nil {
-		// Can't call t.Fatalf inside an another gorouting
-		panic(fmt.Sprintf("failed start the git server (output: %q): %s", out, err))
+
+	var out bytes.Buffer
+	localGitCmd.Stdout = &out
+	localGitCmd.Stderr = &out
+	if err := localGitCmd.Start(); err != nil {
+		panic(fmt.Sprintf("failed to start the git server (output: %q): %s", out.String(), err))
 	}
+
+	go func() {
+		err := localGitCmd.Wait()
+		if err != nil && !errors.Is(context.Canceled, ctx.Err()) {
+			panic(fmt.Sprintf("failed to run the git server (output: %q): %s", out.String(), err))
+		}
+	}()
+	return cancel
 }
 
 func doUpgrade(t *testing.T, major int) {
