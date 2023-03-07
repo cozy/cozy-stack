@@ -28,7 +28,7 @@ require (
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/leonelquinteros/gotext v1.5.2
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/mssola/user_agent v0.5.3
+	github.com/mssola/user_agent v0.6.0
 	github.com/ncw/swift/v2 v2.0.1
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.17.5
