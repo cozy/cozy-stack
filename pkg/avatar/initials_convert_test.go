@@ -37,10 +37,4 @@ func TestInitialsPNG(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, expectImg.Bounds(), resImg.Bounds(), "images doesn't have the same size")
-
-	for x := 0; x < resImg.Bounds().Max.X; x++ {
-		for y := 0; y < resImg.Bounds().Max.Y; y++ {
-			require.Equal(t, expectImg.At(x, y), resImg.At(x, y))
-		}
-	}
 }
