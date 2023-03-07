@@ -20,6 +20,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/avatar"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
@@ -112,6 +113,7 @@ type Config struct {
 
 	RemoteAssets map[string]string
 
+	Avatars        *avatar.Service
 	Fs             Fs
 	CouchDB        CouchDB
 	Jobs           Jobs
@@ -376,6 +378,11 @@ func (rc *RedisConfig) Client() redis.UniversalClient {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+// Avatars return the configured initials service.
+func Avatars() *avatar.Service {
+	return config.Avatars
 }
 
 // GetVault returns the configured instance of Vault
@@ -727,6 +734,12 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
+	cacheStorage := cache.New(cacheRedis.Client())
+	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
+	if err != nil {
+		return fmt.Errorf("failed to create the avatar service: %w", err)
+	}
+
 	config = &Config{
 		Host: v.GetString("host"),
 		Port: v.GetInt("port"),
@@ -751,6 +764,7 @@ func UseViper(v *viper.Viper) error {
 		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
+		Avatars: avatars,
 		Fs: Fs{
 			URL:                   fsURL,
 			Transport:             fsClient.Transport,
@@ -799,7 +813,7 @@ func UseViper(v *viper.Viper) error {
 		RateLimitingStorage: rateLimitingRedis,
 		OauthStateStorage:   oauthStateRedis,
 		Realtime:            realtimeRedis,
-		CacheStorage:        cache.New(cacheRedis.Client()),
+		CacheStorage:        cacheStorage,
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),

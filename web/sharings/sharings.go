@@ -14,9 +14,10 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/avatar"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
@@ -686,12 +687,12 @@ func localAvatar(c echo.Context, m sharing.Member) error {
 		name = strings.Split(m.Email, "@")[0]
 	}
 	name = strings.ToUpper(name)
-	var options []initials.Options
+	var options []avatar.Options
 	if m.Status == sharing.MemberStatusMailNotSent ||
 		m.Status == sharing.MemberStatusPendingInvitation {
-		options = append(options, initials.GreyBackground)
+		options = append(options, avatar.GreyBackground)
 	}
-	img, mime, err := initials.Image(name, options...)
+	img, mime, err := config.Avatars().GenerateInitials(name, options...)
 	if err != nil {
 		return wrapErrors(err)
 	}
