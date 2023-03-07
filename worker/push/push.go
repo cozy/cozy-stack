@@ -209,7 +209,11 @@ func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) erro
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
 func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
-	client := getFirebaseClient(msg.Slug(), ctx.Instance.ContextName)
+	slug := msg.Slug()
+	if c.Flagship {
+		slug = ""
+	}
+	client := getFirebaseClient(slug, ctx.Instance.ContextName)
 
 	if client == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
