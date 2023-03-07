@@ -88,13 +88,13 @@ func ListenAndServeWithLocalResources(localResources map[string]app.LocalResourc
 			if err = checkExists(path.Join(res.Dir, app.WebappManifestName)); err != nil {
 				logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
 			}
+			if err = checkExists(path.Join(res.Dir, "index.html")); err != nil {
+				logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
+			}
 		} else {
 			if err = checkExists(path.Join(res.Dir, app.KonnectorManifestName)); err != nil {
 				logger.WithNamespace("dev").Warnf("The konnector manifest is missing: %s", err)
 			}
-		}
-		if err = checkExists(path.Join(res.Dir, "index.html")); err != nil {
-			logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
 		}
 	}
 

@@ -412,7 +412,32 @@ func GetKonnectorBySlugAndUpdate(in *instance.Instance, slug string, copier appf
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(in, man, copier, registries).(*KonnManifest), nil
+
+	if man.FromLocalDir {
+		// Save permissions in couchdb before loading the konnector
+		if man.Permissions() != nil {
+			_ = permission.ForceKonnector(in, man.Slug(), man.Permissions())
+		}
+
+		//perms, err := permission.GetForKonnector(in, slug)
+		//if err != nil && !couchdb.IsNotFoundError(err) {
+		//	return nil, err
+		//}
+
+		//if perms != nil {
+		//	if err := man.Update(in, nil); err != nil {
+		//		return nil, err
+		//	}
+		//} else {
+		//	if err := man.Create(in); err != nil {
+		//		return nil, err
+		//	}
+		//}
+
+		return man, nil
+	} else {
+		return DoLazyUpdate(in, man, copier, registries).(*KonnManifest), nil
+	}
 }
 
 // ListKonnectorsWithPagination returns the list of installed konnectors with a

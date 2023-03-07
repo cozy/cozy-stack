@@ -159,7 +159,12 @@ func downloadHandler(appType consts.AppType) echo.HandlerFunc {
 				fs = app.AppsFileServer(inst)
 			}
 		case consts.KonnectorType:
-			fs = app.KonnectorsFileServer(inst)
+			man := man.(*app.KonnManifest)
+			if man.FromLocalDir {
+				fs = app.FSForLocalResource(slug)
+			} else {
+				fs = app.KonnectorsFileServer(inst)
+			}
 		}
 
 		return fs.ServeCodeTarball(c.Response(), c.Request(), slug, version, man.Checksum())
@@ -664,7 +669,11 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		case consts.KonnectorType:
 			a := a.(*app.KonnManifest)
 			filepath = path.Join("/", a.Icon())
-			fs = app.KonnectorsFileServer(instance)
+			if a.FromLocalDir {
+				fs = app.FSForLocalResource(slug)
+			} else {
+				fs = app.KonnectorsFileServer(instance)
+			}
 		}
 
 		err = fs.ServeFileContent(c.Response(), c.Request(),

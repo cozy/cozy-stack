@@ -241,7 +241,12 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	w.workDir = workDir
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
-	fileServer := app.KonnectorsFileServer(i)
+	var fileServer appfs.FileServer
+	if man.FromLocalDir {
+		fileServer = app.FSForLocalResource(slug)
+	} else {
+		fileServer = app.KonnectorsFileServer(i)
+	}
 	err = copyFiles(workFS, fileServer, slug, man.Version(), man.Checksum())
 	if err != nil {
 		return "", cleanDir, err
@@ -560,6 +565,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	}
 
 	cmd = config.GetConfig().Konnectors.Cmd
+	println("KONNECTORS CMD", cmd)
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,

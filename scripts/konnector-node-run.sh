@@ -8,4 +8,4 @@ if [ ! -f "${arg}" ] && [ ! -d "${arg}" ]; then
   exit 1
 fi
 
-node "${arg}"
+/home/erwan/.nvm/versions/node/v16.16.0/bin/node "${arg}" | tee -a ~/.cozy/services.log
