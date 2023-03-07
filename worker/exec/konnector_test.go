@@ -175,10 +175,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 			assert.True(t, strings.HasPrefix(msg1, cozyURL))
 			token := msg1[len(cozyURL):]
 			var claims permission.Claims
-			err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
+			err2 := crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
 				return inst.PickKey(t.Claims.(*permission.Claims).Audience)
 			}, &claims)
-			assert.NoError(t, err)
+			assert.NoError(t, err2)
 			assert.Equal(t, consts.KonnectorAudience, claims.Audience)
 			wg.Done()
 		}()
