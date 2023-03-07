@@ -799,7 +799,7 @@ func makeAferoFS(t *testing.T) vfs.VFS {
 
 	tempdir := t.TempDir()
 
-	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
+	db := &contexter{0, "swift.testvfs.example.org", "swift.testvfs.example.org", "cozy_beta"}
 	index := vfs.NewCouchdbIndexer(db)
 	mutex = config.Lock().ReadWrite(db, "vfs-afero-test")
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
