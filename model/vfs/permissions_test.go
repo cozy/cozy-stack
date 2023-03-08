@@ -53,8 +53,7 @@ func TestPermissions(t *testing.T) {
 					"d.txt": nil,
 				},
 			}
-			O, err := createTree(fs, origtree, consts.RootDirID)
-			require.NoError(t, err)
+			O := createTree(t, fs, origtree, consts.RootDirID)
 
 			A, err := fs.DirByPath("/O/A")
 			require.NoError(t, err)

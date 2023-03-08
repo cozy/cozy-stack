@@ -37,11 +37,11 @@ func TestInstallerWebApp(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	done := serveGitRep(t.TempDir())
+	gitURL, done := serveGitRep(t)
 	defer done()
 
 	for i := 0; i < 400; i++ {
-		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
+		if err := exec.Command("git", "ls-remote", gitURL).Run(); err == nil {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -165,7 +165,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "local-cozy-mini",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -208,7 +208,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "local-cozy-mini",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.Nil(t, inst2)
 		assert.Equal(t, app.ErrAlreadyExists, err)
@@ -309,7 +309,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-perms",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -342,7 +342,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Update,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-perms",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.NoError(t, err)
 
@@ -362,7 +362,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation:        app.Update,
 			Type:             consts.WebappType,
 			Slug:             "mini-test-perms",
-			SourceURL:        "git://localhost/",
+			SourceURL:        gitURL,
 			PermissionsAcked: true,
 		})
 		assert.NoError(t, err)
@@ -432,7 +432,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "cozy-app-b",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -626,7 +626,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-services",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -652,7 +652,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Update,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-services",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -679,7 +679,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Update,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-services",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -707,7 +707,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "local-cozy-mini-branch",
-			SourceURL: "git://localhost/#branch",
+			SourceURL: gitURL + "#branch",
 		})
 		require.NoError(t, err)
 
@@ -801,14 +801,14 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Update,
 			Type:      consts.WebappType,
 			Slug:      "local-cozy-mini-branch",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
 		man, err = inst.RunSync()
 		require.NoError(t, err)
 
-		assert.Equal(t, "git://localhost/", man.Source())
+		assert.Equal(t, gitURL, man.Source())
 
 		ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".br"))
 		assert.NoError(t, err)
@@ -976,7 +976,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-service",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -994,7 +994,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Update,
 			Type:      consts.WebappType,
 			Slug:      "mini-test-service",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.NoError(t, err)
 
@@ -1015,7 +1015,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "github-cozy-delete",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -1056,7 +1056,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "github-cozy-delete-errored",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -1116,7 +1116,7 @@ func TestInstallerWebApp(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.WebappType,
 			Slug:      "cozy-bad-type",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.NoError(t, err)
 		_, err = inst.RunSync()
