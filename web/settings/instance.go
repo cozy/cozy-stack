@@ -5,6 +5,7 @@ package settings
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -53,8 +54,10 @@ func getInstance(c echo.Context) error {
 	doc.M["uuid"] = inst.UUID
 	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["context"] = inst.ContextName
-	if _, ok := doc.M["default_redirection"]; !ok {
-		doc.M["default_redirection"] = inst.DefaultRedirectionFromContext().String()
+	// XXX we had a bug where the default_redirection was filled by a full URL
+	// instead of slug+path, and we fix it when this endpoint is called.
+	if value, ok := doc.M["default_redirection"].(string); !ok || strings.HasPrefix(value, "http") {
+		doc.M["default_redirection"] = inst.DefaultAppAndPath()
 	}
 
 	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
