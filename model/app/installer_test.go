@@ -5,13 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/stretchr/testify/require"
 )
 
 var stackStarted bool
@@ -71,8 +74,8 @@ func manifestKonnector() string {
 }`
 }
 
-func serveGitRep(dir string) context.CancelFunc {
-	localGitDir = dir
+func serveGitRep(t *testing.T) (string, context.CancelFunc) {
+	localGitDir = t.TempDir()
 	args := `
 echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
 echo '` + manifestKonnector() + `' > ` + app.KonnectorManifestName + ` && \
@@ -86,33 +89,36 @@ echo 'branch' > branch && \
 git add . && \
 git commit -m 'Create a branch' && \
 git checkout -`
+
 	cmd := exec.Command("bash", "-c", args)
 	cmd.Dir = localGitDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		// Can't call t.Fatalf inside an another gorouting
-		panic(fmt.Sprintf("failed to setup the git repo (output: %q): %s", out, err))
-	}
+
+	out1, err := cmd.CombinedOutput()
+	require.NoError(t, err, "failed to setup the git repo (output: %q): %s", out1, err)
+
+	port := findAvailablePort(t)
 
 	// "git daemon --reuseaddr --base-path=./ --export-all ./.git"
 	ctx, cancel := context.WithCancel(context.Background())
 	localGitCmd = exec.CommandContext(ctx,
-		"git", "daemon", "--reuseaddr", "--base-path=./", "--export-all", "./.git")
+		"git", "daemon", "--reuseaddr", "--port="+port, "--base-path=./", "--export-all", "./.git")
 	localGitCmd.Dir = localGitDir
 
-	var out bytes.Buffer
-	localGitCmd.Stdout = &out
-	localGitCmd.Stderr = &out
-	if err := localGitCmd.Start(); err != nil {
-		panic(fmt.Sprintf("failed to start the git server (output: %q): %s", out.String(), err))
-	}
+	var out2 bytes.Buffer
+	localGitCmd.Stdout = &out2
+	localGitCmd.Stderr = &out2
+
+	err = localGitCmd.Start()
+	require.NoError(t, err, "failed to start the git server (output: %q): %s", out2.String(), err)
 
 	go func() {
 		err := localGitCmd.Wait()
 		if err != nil && !errors.Is(context.Canceled, ctx.Err()) {
-			panic(fmt.Sprintf("failed to run the git server (output: %q): %s", out.String(), err))
+			panic(fmt.Sprintf("failed to run the git server (output: %q): %s", out2.String(), err))
 		}
 	}()
-	return cancel
+
+	return fmt.Sprintf("git://localhost:%s/", port), cancel
 }
 
 func doUpgrade(t *testing.T, major int) {
@@ -131,4 +137,17 @@ git checkout master`
 	} else {
 		t.Log("did upgrade", localVersion)
 	}
+}
+
+func findAvailablePort(t *testing.T) string {
+	t.Helper()
+
+	// ":0" means: find my any available port
+	l, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+
+	port := l.Addr().(*net.TCPAddr).Port
+	require.NoError(t, l.Close())
+
+	return strconv.Itoa(port)
 }

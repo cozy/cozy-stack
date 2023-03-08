@@ -37,11 +37,11 @@ func TestInstallerKonnector(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	done := serveGitRep(t.TempDir())
+	gitURL, done := serveGitRep(t)
 	defer done()
 
 	for i := 0; i < 400; i++ {
-		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
+		if err := exec.Command("git", "ls-remote", gitURL).Run(); err == nil {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -108,7 +108,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "local-konnector",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -151,7 +151,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "local-konnector",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.Nil(t, inst2)
 		assert.Equal(t, app.ErrAlreadyExists, err)
@@ -187,7 +187,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "cozy-konnector-b",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -279,7 +279,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "cozy-konnector-test-skip",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -332,7 +332,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "local-konnector-branch",
-			SourceURL: "git://localhost/#branch",
+			SourceURL: gitURL + "#branch",
 		})
 		require.NoError(t, err)
 
@@ -422,7 +422,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "konnector-delete",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		require.NoError(t, err)
 
@@ -463,7 +463,7 @@ func TestInstallerKonnector(t *testing.T) {
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "cozy-bad-type",
-			SourceURL: "git://localhost/",
+			SourceURL: gitURL,
 		})
 		assert.NoError(t, err)
 		_, err = inst.RunSync()
