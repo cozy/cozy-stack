@@ -3,6 +3,7 @@ package data
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -52,10 +53,13 @@ func getAccount(c echo.Context) error {
 		return err
 	}
 
-	if account.Encrypt(out) {
-		if err = couchdb.UpdateDoc(instance, &out); err != nil {
-			return err
-		}
+	err = account.Encrypt(out)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt the account data: %w", err)
+	}
+
+	if err = couchdb.UpdateDoc(instance, &out); err != nil {
+		return err
 	}
 
 	perm, err := middlewares.GetPermission(c)
@@ -118,7 +122,10 @@ func updateAccount(c echo.Context) error {
 		}
 	}
 
-	account.Encrypt(doc)
+	err := account.Encrypt(doc)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt the account data: %w", err)
+	}
 
 	if doc.M["cozyMetadata"] == nil {
 		// This is not the expected type for a JSON doc but it should work since it
@@ -161,7 +168,11 @@ func createAccount(c echo.Context) error {
 		return err
 	}
 
-	account.Encrypt(doc)
+	err := account.Encrypt(doc)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt the account data: %w", err)
+	}
+
 	account.ComputeName(doc)
 
 	// This is not the expected type for a JSON doc but it should work since it

@@ -257,7 +257,7 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 }
 `)
 
-	var encrypted, decrypted bool
+	var decrypted bool
 	var m1 map[string]interface{} // original
 	var m2 map[string]interface{} // encrypted
 	var m3 map[string]interface{} // decrypted
@@ -265,8 +265,8 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(v, &m2))
 	assert.NoError(t, json.Unmarshal(v, &m3))
 
-	encrypted = encryptMap(m2)
-	assert.True(t, encrypted)
+	err := encryptMap(m2)
+	require.NoError(t, err)
 
 	{
 		auth1 := m2["auth"].(map[string]interface{})
@@ -285,9 +285,10 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 		}
 	}
 
-	encrypted = encryptMap(m3)
+	err = encryptMap(m3)
+	require.NoError(t, err)
+
 	decrypted = decryptMap(m3)
-	assert.True(t, encrypted)
 	assert.True(t, decrypted)
 	assert.EqualValues(t, m1, m3)
 

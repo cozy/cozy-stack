@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -268,7 +269,10 @@ func migrateAccountsToOrganization(domain string) error {
 
 		addCipherRelationshipToAccount(accJSON, cipher)
 
-		account.Encrypt(accJSON)
+		err = account.Encrypt(accJSON)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt the account data: %w", err)
+		}
 
 		log.Infof("Updating doc %s", accJSON)
 		if err := couchdb.UpdateDoc(inst, &accJSON); err != nil {

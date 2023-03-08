@@ -365,7 +365,11 @@ func (c *WebhookCall) createAccountAndTrigger(konn *app.KonnManifest, connection
 		"relationships": rels,
 	}
 
-	account.Encrypt(acc)
+	err := account.Encrypt(acc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to encrypt the account data: %w", err)
+	}
+
 	account.ComputeName(acc)
 
 	cm := metadata.New()
