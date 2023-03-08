@@ -12,7 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/keymgmt"
+	"github.com/cozy/cozy-stack/pkg/keyring"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -29,7 +29,7 @@ var (
 
 // EncryptCredentialsWithKey takes a login / password and encrypts their values using
 // the vault public key.
-func EncryptCredentialsWithKey(encryptorKey *keymgmt.NACLKey, login, password string) (string, error) {
+func EncryptCredentialsWithKey(encryptorKey *keyring.NACLKey, login, password string) (string, error) {
 	if encryptorKey == nil {
 		return "", errCannotEncrypt
 	}
@@ -80,7 +80,7 @@ func EncryptCredentialsData(data interface{}) (string, error) {
 
 // EncryptBufferWithKey encrypts the given bytee buffer with the specified encryption
 // key.
-func EncryptBufferWithKey(encryptorKey *keymgmt.NACLKey, buf []byte) ([]byte, error) {
+func EncryptBufferWithKey(encryptorKey *keyring.NACLKey, buf []byte) ([]byte, error) {
 	var nonce [nonceLen]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		panic(err)
@@ -120,7 +120,7 @@ func DecryptCredentials(encryptedData string) (login, password string, err error
 
 // DecryptCredentialsWithKey takes an encrypted credentials, constiting of a
 // login / password pair, and decrypts it using the given private key.
-func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []byte) (login, password string, err error) {
+func DecryptCredentialsWithKey(decryptorKey *keyring.NACLKey, encryptedCreds []byte) (login, password string, err error) {
 	// check the cipher text starts with the cipher header
 	if !bytes.HasPrefix(encryptedCreds, []byte(cipherHeader)) {
 		return "", "", ErrBadCredentials
@@ -185,7 +185,7 @@ func DecryptCredentialsData(encryptedData string) (interface{}, error) {
 
 // DecryptBufferWithKey takes an encrypted buffer and decrypts it using the
 // given private key.
-func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte) ([]byte, error) {
+func DecryptBufferWithKey(decryptorKey *keyring.NACLKey, encryptedBuffer []byte) ([]byte, error) {
 	// check the cipher text starts with the cipher header
 	if !bytes.HasPrefix(encryptedBuffer, []byte(cipherHeader)) {
 		return nil, ErrBadCredentials

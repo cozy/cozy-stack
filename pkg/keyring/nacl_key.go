@@ -1,4 +1,4 @@
-package keymgmt
+package keyring
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ const (
 	naclKeyLen = 32
 )
 
-var errNACLBadKey = errors.New("keymgmt: bad nacl key")
+var errNACLBadKey = errors.New("nacl: bad nacl key")
 
 // NACLKey contains a NACL crypto box keypair.
 type NACLKey struct {
@@ -104,14 +104,14 @@ func MarshalNACLKey(key *NACLKey) []byte {
 
 func unmarshalPEMBlock(keyBytes []byte, blockType string) ([]byte, error) {
 	if !bytes.HasPrefix(keyBytes, []byte("-----BEGIN")) {
-		return nil, fmt.Errorf("keymgmt: bad PEM block header")
+		return nil, fmt.Errorf("nacl: bad PEM block header")
 	}
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
-		return nil, fmt.Errorf("keymgmt: failed to parse PEM block containing the public key")
+		return nil, fmt.Errorf("nacl: failed to parse PEM block containing the public key")
 	}
 	if block.Type != blockType {
-		return nil, fmt.Errorf(`keymgmt: bad PEM block type, got %q expecting %q`,
+		return nil, fmt.Errorf(`nacl: bad PEM block type, got %q expecting %q`,
 			block.Type, blockType)
 	}
 	return block.Bytes, nil
