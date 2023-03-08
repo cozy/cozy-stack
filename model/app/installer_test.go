@@ -108,11 +108,8 @@ git checkout -`
 	localGitCmd.Stdout = &out2
 	localGitCmd.Stderr = &out2
 
-	err = localGitCmd.Start()
-	require.NoError(t, err, "failed to start the git server (output: %q): %s", out2.String(), err)
-
 	go func() {
-		err := localGitCmd.Wait()
+		err = localGitCmd.Run()
 		if err != nil && !errors.Is(context.Canceled, ctx.Err()) {
 			panic(fmt.Sprintf("failed to run the git server (output: %q): %s", out2.String(), err))
 		}
