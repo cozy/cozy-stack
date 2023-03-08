@@ -812,7 +812,7 @@ func GetDirSize(c echo.Context) error {
 		return err
 	}
 
-	size, err := fs.DirSize(dir)
+	size, _, err := fs.DirSizeAndCount(dir)
 	if err != nil {
 		return WrapVfsError(err)
 	}
