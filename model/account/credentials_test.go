@@ -17,6 +17,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDecryptPreviouslyEncryptedField(t *testing.T) {
+	// This test ensure us that futur changes don't break the current format.
+	config.UseTestFile()
+
+	encrypted := "bmFjbM8JkLhGm9Op3b6VWzc2u5FxYsjiJn3xlFDQxKWrFSTyEODustNyiao1ZNVZG62PhKlyNGxIdinJB2ReiJj+FaJkvDXPKy3qd4A="
+
+	login, password, err := DecryptCredentials(encrypted)
+	require.NoError(t, err)
+
+	assert.Equal(t, "me@mycozy.cloud", login)
+	assert.Equal(t, "fzEE6HFWsSp8jP", password)
+}
+
 func TestEncryptDecrytCredentials(t *testing.T) {
 	config.UseTestFile()
 
