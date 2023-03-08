@@ -35,12 +35,12 @@ var (
 	ErrNotCronTrigger = errors.New("Invalid type for trigger (@cron expected)")
 )
 
-// ErrBadTrigger is an error conveying the information of a trigger that is not
+// BadTriggerError is an error conveying the information of a trigger that is not
 // valid, and could be deleted.
-type ErrBadTrigger struct {
+type BadTriggerError struct {
 	Err error
 }
 
-func (e ErrBadTrigger) Error() string {
+func (e BadTriggerError) Error() string {
 	return e.Err.Error()
 }

@@ -341,7 +341,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		// Delete the trigger associated with the job (if any) when we receive a
 		// ErrBadTrigger.
 		if job.TriggerID != "" && globalJobSystem != nil {
-			if _, ok := errRun.(ErrBadTrigger); ok {
+			if _, ok := errRun.(BadTriggerError); ok {
 				_ = globalJobSystem.DeleteTrigger(job, job.TriggerID)
 			}
 		}
@@ -513,7 +513,7 @@ func (t *task) nextDelay(prevError error) (bool, time.Duration, time.Duration) {
 	// for certain kinds of errors, we do not have a retry since these error
 	// cannot be recovered from
 	{
-		if _, ok := prevError.(ErrBadTrigger); ok {
+		if _, ok := prevError.(BadTriggerError); ok {
 			return false, 0, 0
 		}
 		switch prevError {
