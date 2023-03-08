@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/cozy/cozy-stack/pkg/keymgmt"
 )
 
 var (
@@ -16,10 +14,10 @@ var (
 type Keyring interface {
 	// CredentialsEncryptorKey returns the key used to encrypt credentials values,
 	// stored in accounts.
-	CredentialsEncryptorKey() *keymgmt.NACLKey
+	CredentialsEncryptorKey() *NACLKey
 	// CredentialsDecryptorKey returns the key used to decrypt credentials values,
 	// stored in accounts.
-	CredentialsDecryptorKey() *keymgmt.NACLKey
+	CredentialsDecryptorKey() *NACLKey
 }
 
 // Config used to setup a [Keyring] service.
@@ -31,8 +29,8 @@ type Config struct {
 // Service contains security keys used for various encryption or signing of
 // critical assets.
 type Service struct {
-	credsEncryptor *keymgmt.NACLKey
-	credsDecryptor *keymgmt.NACLKey
+	credsEncryptor *NACLKey
+	credsDecryptor *NACLKey
 }
 
 func NewFromConfig(conf Config) (Keyring, error) {
@@ -66,21 +64,21 @@ func NewService(conf Config) (*Service, error) {
 	return &Service{credsEncryptor, credsDecryptor}, nil
 }
 
-func (s *Service) CredentialsEncryptorKey() *keymgmt.NACLKey {
+func (s *Service) CredentialsEncryptorKey() *NACLKey {
 	return s.credsEncryptor
 }
 
-func (s *Service) CredentialsDecryptorKey() *keymgmt.NACLKey {
+func (s *Service) CredentialsDecryptorKey() *NACLKey {
 	return s.credsDecryptor
 }
 
-func decodeKeyFromPath(path string) (*keymgmt.NACLKey, error) {
+func decodeKeyFromPath(path string) (*NACLKey, error) {
 	keyBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %q: %w", path, err)
 	}
 
-	creds, err := keymgmt.UnmarshalNACLKey(keyBytes)
+	creds, err := UnmarshalNACLKey(keyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal NACL key: %w", err)
 	}

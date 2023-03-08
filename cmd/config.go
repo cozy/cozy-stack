@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/keymgmt"
+	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
@@ -125,7 +125,7 @@ keyfiles written in:
 		encryptorFilename := filename + ".enc"
 		decryptorFilename := filename + ".dec"
 
-		marshaledEncryptorKey, marshaledDecryptorKey, err := keymgmt.GenerateEncodedNACLKeyPair()
+		marshaledEncryptorKey, marshaledDecryptorKey, err := keyring.GenerateEncodedNACLKeyPair()
 		if err != nil {
 			return nil
 		}
@@ -274,13 +274,13 @@ func writeFile(filename string, data []byte, perm os.FileMode) error {
 	return err
 }
 
-func readKeyFromFile(filepath string) (*keymgmt.NACLKey, error) {
+func readKeyFromFile(filepath string) (*keyring.NACLKey, error) {
 	keyBytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
 
-	return keymgmt.UnmarshalNACLKey(keyBytes)
+	return keyring.UnmarshalNACLKey(keyBytes)
 }
 
 var insertAssetCmd = &cobra.Command{

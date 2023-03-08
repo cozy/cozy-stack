@@ -3,7 +3,6 @@ package keyring
 import (
 	"fmt"
 
-	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -16,15 +15,15 @@ import (
 // sensible data. This implem is not safe and should never be used in
 // production.
 type Stub struct {
-	credsEncryptor *keymgmt.NACLKey
-	credsDecryptor *keymgmt.NACLKey
+	credsEncryptor *NACLKey
+	credsDecryptor *NACLKey
 }
 
 // NewStub instantiate a new [Stub].
 func NewStub() (*Stub, error) {
 	r := utils.NewSeededRand(42)
 
-	credsEncryptor, credsDecryptor, err := keymgmt.GenerateKeyPair(r)
+	credsEncryptor, credsDecryptor, err := GenerateKeyPair(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate NACL key pair: %w", err)
 	}
@@ -32,10 +31,10 @@ func NewStub() (*Stub, error) {
 	return &Stub{credsEncryptor, credsDecryptor}, nil
 }
 
-func (s *Stub) CredentialsEncryptorKey() *keymgmt.NACLKey {
+func (s *Stub) CredentialsEncryptorKey() *NACLKey {
 	return s.credsEncryptor
 }
 
-func (s *Stub) CredentialsDecryptorKey() *keymgmt.NACLKey {
+func (s *Stub) CredentialsDecryptorKey() *NACLKey {
 	return s.credsDecryptor
 }
