@@ -110,7 +110,7 @@ class Sharing
   end
 
   def initialize(opts = {})
-    @description = opts[:description] || Faker::DrWho.catch_phrase
+    @description = opts[:description] || Faker::TvShows::DrWho.catch_phrase
     @app_slug = opts[:app_slug] || ""
     @rules = []
     @members = [] # Owner's instance + recipients contacts

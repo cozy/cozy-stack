@@ -8,7 +8,7 @@ class Bitwarden
 
     def initialize(opts)
       @id = opts[:id]
-      @name = opts[:name] || Faker::DrWho.character
+      @name = opts[:name] || Faker::TvShows::DrWho.character
       @key = opts[:key]
     end
 

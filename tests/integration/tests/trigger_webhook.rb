@@ -10,14 +10,14 @@ describe "A webhook trigger" do
     # No debounce
     inst = Instance.create
     source_url = "file://" + File.expand_path("../konnector", __dir__)
-    konnector_name = Faker::Cat.name.downcase
+    konnector_name = Faker::Creature::Cat.name.downcase
     inst.install_konnector konnector_name, source_url
-    account = Account.create inst, type: konnector_name, name: "1_#{Faker::DrWho.character}"
+    account = Account.create inst, type: konnector_name, name: "1_#{Faker::TvShows::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args
 
     opts = { :"content-type" => 'application/json' }
-    body = { "quote" => Faker::DrWho.quote }
+    body = { "quote" => Faker::TvShows::DrWho.quote }
     RestClient.post webhook_url, JSON.generate(body), opts
 
     done = false
@@ -33,7 +33,7 @@ describe "A webhook trigger" do
     assert_equal executed["payload"], body
 
     # With a big payload
-    account2 = Account.create inst, type: konnector_name, name: "2_#{Faker::DrWho.character}"
+    account2 = Account.create inst, type: konnector_name, name: "2_#{Faker::TvShows::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account2.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args
 
@@ -54,7 +54,7 @@ describe "A webhook trigger" do
     assert_equal executed["payload"], { "fromFile" => body }
 
     # With debounce
-    account3 = Account.create inst, type: konnector_name, name: "3_#{Faker::DrWho.character}"
+    account3 = Account.create inst, type: konnector_name, name: "3_#{Faker::TvShows::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account3.couch_id, "foo" => "bar" }
     webhook_url = Trigger::Webhook.create inst, args, "1s"
 
