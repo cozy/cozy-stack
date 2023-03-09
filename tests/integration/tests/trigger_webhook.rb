@@ -10,7 +10,7 @@ describe "A webhook trigger" do
     # No debounce
     inst = Instance.create
     source_url = "file://" + File.expand_path("../konnector", __dir__)
-    konnector_name = Faker::Creature::Cat.name.downcase
+    konnector_name = Faker::Creature::Cat.name.downcase.delete(" ")
     inst.install_konnector konnector_name, source_url
     account = Account.create inst, type: konnector_name, name: "1_#{Faker::TvShows::DrWho.character}"
     args = { "konnector" => konnector_name, "account" => account.couch_id, "foo" => "bar" }
