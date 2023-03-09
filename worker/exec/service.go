@@ -55,7 +55,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 		app.Copier(consts.WebappType, i), i.Registries())
 	if err != nil {
 		if errors.Is(err, app.ErrNotFound) {
-			err = job.ErrBadTrigger{Err: err}
+			err = job.BadTriggerError{Err: err}
 		}
 		return
 	}
@@ -88,7 +88,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 		}
 	}
 	if !ok {
-		err = job.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
+		err = job.BadTriggerError{Err: fmt.Errorf("Service %q was not found", name)}
 		return
 	}
 	// Check if the trigger is orphan
@@ -98,17 +98,17 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 			var tInfos job.TriggerInfos
 			err = couchdb.GetDoc(i, consts.Triggers, triggerID, &tInfos)
 			if err != nil {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q not found", triggerID)}
+				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q not found", triggerID)}
 				return
 			}
 			var msg ServiceOptions
 			err = json.Unmarshal(tInfos.Message, &msg)
 			if err != nil {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
+				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
 				return
 			}
 			if msg.Name != name {
-				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
+				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
 				return
 			}
 		}

@@ -46,6 +46,7 @@ linters:
   enable:
     - bidichk 
     - exportloopref 
+    - errname
     - gocritic
     - gofmt
     - govet

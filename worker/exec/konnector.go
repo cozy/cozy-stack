@@ -204,7 +204,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
 		app.Copier(consts.KonnectorType, i), i.Registries())
 	if errors.Is(err, app.ErrNotFound) {
-		return "", cleanDir, job.ErrBadTrigger{Err: err}
+		return "", cleanDir, job.BadTriggerError{Err: err}
 	} else if err != nil {
 		return "", cleanDir, err
 	}
@@ -215,7 +215,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		acc = &account.Account{}
 		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, acc)
 		if couchdb.IsNotFoundError(err) {
-			return "", cleanDir, job.ErrBadTrigger{Err: err}
+			return "", cleanDir, job.BadTriggerError{Err: err}
 		}
 	}
 
