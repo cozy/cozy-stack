@@ -155,6 +155,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	if !i.IsPasswordAuthenticationEnabled() {
 		return redirectOIDC(c, i)
 	}
+	hasFranceConnect := i.FranceConnectID != ""
 
 	publicName, err := i.PublicName()
 	if err != nil {
@@ -209,6 +210,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Redirect":         redirectStr,
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            hasOAuth,
+		"FranceConnect":    hasFranceConnect,
 	})
 }
 

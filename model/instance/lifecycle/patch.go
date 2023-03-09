@@ -80,6 +80,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.FranceConnectID != "" && opts.FranceConnectID != i.FranceConnectID {
+			i.FranceConnectID = opts.FranceConnectID
+			needUpdate = true
+		}
+
 		if opts.ContextName != "" && opts.ContextName != i.ContextName {
 			i.ContextName = opts.ContextName
 			needUpdate = true

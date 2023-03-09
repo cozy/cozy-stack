@@ -38,23 +38,24 @@ const PBKDF2_SHA256 = 0
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID          string   `json:"_id,omitempty"`  // couchdb _id
-	DocRev         string   `json:"_rev,omitempty"` // couchdb _rev
-	Domain         string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	DomainAliases  []string `json:"domain_aliases,omitempty"`
-	Prefix         string   `json:"prefix,omitempty"`     // Possible database prefix
-	Locale         string   `json:"locale"`               // The locale used on the server
-	UUID           string   `json:"uuid,omitempty"`       // UUID associated with the instance
-	OIDCID         string   `json:"oidc_id,omitempty"`    // An identifier to check authentication from OIDC
-	ContextName    string   `json:"context,omitempty"`    // The context attached to the instance
-	TOSSigned      string   `json:"tos,omitempty"`        // Terms of Service signed version
-	TOSLatest      string   `json:"tos_latest,omitempty"` // Terms of Service latest version
-	AuthMode       AuthMode `json:"auth_mode,omitempty"`
-	Deleting       bool     `json:"deleting,omitempty"`
-	Moved          bool     `json:"moved,omitempty"`           // If the instance has been moved to a new place
-	Blocked        bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked
-	BlockingReason string   `json:"blocking_reason,omitempty"` // Why the instance is blocked
-	NoAutoUpdate   bool     `json:"no_auto_update,omitempty"`  // Whether or not the instance has auto updates for its applications
+	DocID           string   `json:"_id,omitempty"`  // couchdb _id
+	DocRev          string   `json:"_rev,omitempty"` // couchdb _rev
+	Domain          string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	DomainAliases   []string `json:"domain_aliases,omitempty"`
+	Prefix          string   `json:"prefix,omitempty"`           // Possible database prefix
+	Locale          string   `json:"locale"`                     // The locale used on the server
+	UUID            string   `json:"uuid,omitempty"`             // UUID associated with the instance
+	OIDCID          string   `json:"oidc_id,omitempty"`          // An identifier to check authentication from OIDC
+	FranceConnectID string   `json:"franceconnect_id,omitempty"` // An identifier to check authentication from FranceConnect
+	ContextName     string   `json:"context,omitempty"`          // The context attached to the instance
+	TOSSigned       string   `json:"tos,omitempty"`              // Terms of Service signed version
+	TOSLatest       string   `json:"tos_latest,omitempty"`       // Terms of Service latest version
+	AuthMode        AuthMode `json:"auth_mode,omitempty"`
+	Deleting        bool     `json:"deleting,omitempty"`
+	Moved           bool     `json:"moved,omitempty"`           // If the instance has been moved to a new place
+	Blocked         bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked
+	BlockingReason  string   `json:"blocking_reason,omitempty"` // Why the instance is blocked
+	NoAutoUpdate    bool     `json:"no_auto_update,omitempty"`  // Whether or not the instance has auto updates for its applications
 
 	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user

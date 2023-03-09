@@ -522,6 +522,9 @@ msgstr "Le fonctionnement de votre Cozy a été momentanément interrompu"
 msgid "the authentication has failed"
 msgstr "L'authentification n'a pu aboutir"
 
+msgid "the FranceConnect authentication has failed"
+msgstr "Le compte FranceConnect utilisé ne correspond pas à votre compte Cozy."
+
 msgid "Instance Blocked Login"
 msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"
 

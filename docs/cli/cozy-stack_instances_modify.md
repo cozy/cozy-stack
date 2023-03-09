@@ -23,6 +23,7 @@ cozy-stack instances modify <domain> [flags]
       --disk-quota string           Specify a new disk quota
       --domain-aliases strings      Specify one or more aliases domain for the instance (separated by ',')
       --email string                New email
+      --franceconnect_id string     The identifier for checking authentication with FranceConnect
   -h, --help                        help for modify
       --locale string               New locale
       --oidc_id string              New identifier for checking authentication from OIDC

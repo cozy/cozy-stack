@@ -384,6 +384,20 @@ func GetOIDC(contextName string) (map[string]interface{}, bool) {
 	return config, ok
 }
 
+// GetFranceConnect returns the FranceConnect config for the given context
+// (with a boolean to say if FranceConnect is enabled).
+func GetFranceConnect(contextName string) (map[string]interface{}, bool) {
+	if contextName == "" {
+		return nil, false
+	}
+	auth, ok := config.Authentication[contextName].(map[string]interface{})
+	if !ok {
+		return nil, false
+	}
+	config, ok := auth["franceconnect"].(map[string]interface{})
+	return config, ok
+}
+
 var defaultPasswordResetInterval = 15 * time.Minute
 
 // PasswordResetInterval returns the minimal delay between two password reset

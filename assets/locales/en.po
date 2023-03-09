@@ -454,6 +454,9 @@ msgstr "Your Cozy has been blocked"
 msgid "the authentication has failed"
 msgstr "The authentication has failed"
 
+msgid "the FranceConnect authentication has failed"
+msgstr "The FranceConnect authentication has failed"
+
 msgid "Instance Blocked Login"
 msgstr "The Cozy was blocked because of too many login attempts"
 
