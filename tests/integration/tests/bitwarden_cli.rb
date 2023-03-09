@@ -64,7 +64,7 @@ describe "The bitwarden API of the stack" do
       folderId: folder_id,
       favorite: false,
       name: "My note",
-      notes: Faker::DrWho.quote,
+      notes: Faker::TvShows::DrWho.quote,
       secureNote: bw.template('item.securenote')
     }
     bw.create_item note
@@ -115,7 +115,7 @@ describe "The bitwarden API of the stack" do
     end
 
     # Updates
-    name = Faker::DrWho.catch_phrase
+    name = Faker::TvShows::DrWho.catch_phrase
     bw.edit_folder folder_id, name
 
     items = bw.items

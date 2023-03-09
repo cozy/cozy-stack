@@ -8,7 +8,7 @@ class Album
   end
 
   def initialize(opts = {})
-    @name = opts[:name] || Faker::DrWho.quote
+    @name = opts[:name] || Faker::TvShows::DrWho.quote
     @created_at = opts[:created_at] || Date.today
   end
 

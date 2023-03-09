@@ -10,8 +10,8 @@ class Notification
   end
 
   def self.create(inst, at = nil)
-    msg = Faker::Friends.quote
-    title = Faker::DrWho.quote
+    msg = Faker::TvShows::Friends.quote
+    title = Faker::TvShows::DrWho.quote
     title = title.gsub(/\W+/, ' ')
     attrs = {
       category: "balance-lower",

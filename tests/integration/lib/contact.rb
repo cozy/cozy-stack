@@ -13,7 +13,7 @@ class Contact
     @name = opts[:name] || { given_name: first, familyName: last }
     @fullname = opts[:fullname] || "#{first} #{last}"
 
-    email = opts[:email] || Faker::Internet.email([first, last, @fullname].sample)
+    email = opts[:email] || Faker::Internet.email(name: [first, last, @fullname].sample)
     @emails = opts[:emails] || [{ address: email }]
 
     @addresses = opts[:addresses] || [{

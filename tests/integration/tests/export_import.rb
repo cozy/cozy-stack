@@ -15,7 +15,7 @@ describe "Export and import" do
     folder = Folder.create source
     folder.couch_id.wont_be_empty
     file = CozyFile.create source, dir_id: folder.couch_id
-    file.overwrite source, mime: 'text/plain', content: Faker::DrWho.quote
+    file.overwrite source, mime: 'text/plain', content: Faker::TvShows::DrWho.quote
 
     # Create an album with some photos
     CozyFile.ensure_photos_in_cache
