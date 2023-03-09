@@ -48,6 +48,7 @@ var flagSwiftLayout int
 var flagCouchCluster int
 var flagUUID string
 var flagOIDCID string
+var flagFranceConnectID string
 var flagTOSSigned string
 var flagTOS string
 var flagTOSLatest string
@@ -178,23 +179,24 @@ be used as the error message.
 		domain := args[0]
 		ac := newAdminClient()
 		in, err := ac.CreateInstance(&client.InstanceOptions{
-			Domain:        domain,
-			DomainAliases: flagDomainAliases,
-			Locale:        flagLocale,
-			UUID:          flagUUID,
-			OIDCID:        flagOIDCID,
-			TOSSigned:     flagTOSSigned,
-			Timezone:      flagTimezone,
-			ContextName:   flagContextName,
-			Email:         flagEmail,
-			PublicName:    flagPublicName,
-			Settings:      flagSettings,
-			SwiftLayout:   flagSwiftLayout,
-			CouchCluster:  flagCouchCluster,
-			DiskQuota:     diskQuota,
-			Apps:          flagApps,
-			Passphrase:    flagPassphrase,
-			Trace:         &flagTrace,
+			Domain:          domain,
+			DomainAliases:   flagDomainAliases,
+			Locale:          flagLocale,
+			UUID:            flagUUID,
+			OIDCID:          flagOIDCID,
+			FranceConnectID: flagFranceConnectID,
+			TOSSigned:       flagTOSSigned,
+			Timezone:        flagTimezone,
+			ContextName:     flagContextName,
+			Email:           flagEmail,
+			PublicName:      flagPublicName,
+			Settings:        flagSettings,
+			SwiftLayout:     flagSwiftLayout,
+			CouchCluster:    flagCouchCluster,
+			DiskQuota:       diskQuota,
+			Apps:            flagApps,
+			Passphrase:      flagPassphrase,
+			Trace:           &flagTrace,
 		})
 		if err != nil {
 			errPrintfln(
@@ -257,20 +259,21 @@ settings for a specified domain.
 		domain := args[0]
 		ac := newAdminClient()
 		opts := &client.InstanceOptions{
-			Domain:         domain,
-			DomainAliases:  flagDomainAliases,
-			Locale:         flagLocale,
-			UUID:           flagUUID,
-			OIDCID:         flagOIDCID,
-			TOSSigned:      flagTOS,
-			TOSLatest:      flagTOSLatest,
-			Timezone:       flagTimezone,
-			ContextName:    flagContextName,
-			Email:          flagEmail,
-			PublicName:     flagPublicName,
-			Settings:       flagSettings,
-			BlockingReason: flagBlockingReason,
-			DiskQuota:      diskQuota,
+			Domain:          domain,
+			DomainAliases:   flagDomainAliases,
+			Locale:          flagLocale,
+			UUID:            flagUUID,
+			OIDCID:          flagOIDCID,
+			FranceConnectID: flagFranceConnectID,
+			TOSSigned:       flagTOS,
+			TOSLatest:       flagTOSLatest,
+			Timezone:        flagTimezone,
+			ContextName:     flagContextName,
+			Email:           flagEmail,
+			PublicName:      flagPublicName,
+			Settings:        flagSettings,
+			BlockingReason:  flagBlockingReason,
+			DiskQuota:       diskQuota,
 		}
 		if flag := cmd.Flag("blocked"); flag.Changed {
 			opts.Blocked = &flagBlocked
@@ -1111,6 +1114,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", consts.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
 	addInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "The identifier for checking authentication from OIDC")
+	addInstanceCmd.Flags().StringVar(&flagFranceConnectID, "franceconnect_id", "", "The identifier for checking authentication with FranceConnect")
 	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "Context name of the instance")
@@ -1128,6 +1132,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
 	modifyInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "New identifier for checking authentication from OIDC")
+	modifyInstanceCmd.Flags().StringVar(&flagFranceConnectID, "franceconnect_id", "", "The identifier for checking authentication with FranceConnect")
 	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")
 	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")
 	modifyInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "New timezone")
