@@ -28,11 +28,11 @@ describe "An io.cozy.accounts" do
     inst.install_konnector "bankone", source_url
     aggregator = Account.create inst, id: ["bank-aggregator", UUID.generate].sample
     acczero = Account.create inst, type: "bankthree", aggregator: aggregator,
-                                   name: Faker::DrWho.specie
+                                   name: Faker::TvShows::DrWho.specie
 
     # 1. When an account is deleted, it is cleaned.
     accone = Account.create inst, type: "bankone", aggregator: aggregator,
-                                  name: Faker::HarryPotter.character
+                                  name: Faker::Movies::HarryPotter.character
     Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
                          message: { konnector: "bankone", account: accone.couch_id }
 
@@ -56,7 +56,7 @@ describe "An io.cozy.accounts" do
     # 2. When a konnector is uninstalled, its account is cleaned.
     inst.install_konnector "banktwo", source_url
     acctwo = Account.create inst, type: "banktwo", aggregator: aggregator,
-                                  name: Faker::Hobbit.thorins_company
+                                  name: Faker::Movies::Hobbit.thorins_company
     Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
                          message: { konnector: "banktwo", account: acctwo.couch_id }
 
@@ -69,9 +69,9 @@ describe "An io.cozy.accounts" do
     inst.install_konnector "bankthree", source_url
     other = Account.create inst, id: UUID.generate
     accthree = Account.create inst, type: "bankthree", aggregator: other,
-                                    name: Faker::Friends.character
+                                    name: Faker::TvShows::Friends.character
     accfour = Account.create inst, type: "bankone", aggregator: aggregator,
-                                   name: Faker::Simpsons.character
+                                   name: Faker::TvShows::Simpsons.character
     assert inst.remove
 
     wait_for_file acczero.log
@@ -92,7 +92,7 @@ describe "An io.cozy.accounts" do
     inst.install_konnector "bankfour", source_url
     aggregator = Account.create inst, id: "bank-aggregator"
     Account.create inst, type: "bankfour", aggregator: aggregator,
-                         name: Faker::DrWho.specie,
+                         name: Faker::TvShows::DrWho.specie,
                          failure: "Will fail for on_delete.js"
     refute inst.remove
 
@@ -112,7 +112,7 @@ describe "An io.cozy.accounts" do
     source.install_konnector "bankfive", source_url
     aggsource = Account.create source, id: "bank-aggregator"
     accfive = Account.create source, type: "banksix", aggregator: aggsource,
-                                     name: Faker::Hobbit.thorins_company
+                                     name: Faker::Movies::Hobbit.thorins_company
     Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
                          message: { konnector: "bankfive", account: accfive.couch_id }
 
@@ -120,7 +120,7 @@ describe "An io.cozy.accounts" do
     target.install_konnector "banksix", source_url
     aggtarget = Account.create target, id: "bank-aggregator"
     accsix = Account.create target, type: "banksix", aggregator: aggtarget,
-                                    name: Faker::Hobbit.thorins_company
+                                    name: Faker::Movies::Hobbit.thorins_company
     Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
                          message: { konnector: "banksix", account: accsix.couch_id }
 

@@ -1,6 +1,6 @@
 class Office
   def self.create(inst, opts = {})
-    opts[:name] = opts[:name] || "#{Faker::DrWho.quote}.docx"
+    opts[:name] = opts[:name] || "#{Faker::TvShows::DrWho.quote}.docx"
     opts[:dir_id] = opts[:dir_id] || Folder::ROOT_DIR
     opts[:mime] = opts[:mime] || "application/msword"
     CozyFile.create inst, opts

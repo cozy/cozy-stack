@@ -77,7 +77,7 @@ class Rule
   end
 
   def initialize(opts = {})
-    @title = opts[:title] || Faker::Hobbit.thorins_company
+    @title = opts[:title] || Faker::Movies::Hobbit.thorins_company
     @doctype = opts[:doctype]
     @selector = opts[:selector]
     @values = opts[:values]

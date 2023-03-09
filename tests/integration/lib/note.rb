@@ -38,7 +38,7 @@ class Note
   end
 
   def initialize(opts = {})
-    @title = opts[:title] || Faker::DrWho.quote
+    @title = opts[:title] || Faker::TvShows::DrWho.quote
     @dir_id = opts[:dir_id] || Folder::ROOT_DIR
     @schema = opts[:schema] || Note.default_schema
   end
