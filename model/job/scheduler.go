@@ -141,6 +141,8 @@ func fromTriggerInfos(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
+	case "@hourly":
+		return NewHourlyTrigger(infos)
 	case "@daily":
 		return NewDailyTrigger(infos)
 	case "@weekly":
