@@ -3115,8 +3115,6 @@ func TestFiles(t *testing.T) {
 			Expect().Status(404).
 			Header("Content-Type").Equal("image/png")
 
-		t.Skip("TODO: Fix those tests")
-
 		// Wait for tiny thumbnail generation
 		time.Sleep(1 * time.Second)
 
