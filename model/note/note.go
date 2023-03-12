@@ -748,7 +748,7 @@ func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := inst.Logger().WithField("panic", true).WithNamespace("note")
+				log := inst.Logger().WithNamespace("note").WithField("panic", true)
 				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()

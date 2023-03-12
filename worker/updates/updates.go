@@ -13,9 +13,9 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -41,8 +41,8 @@ type updateError struct {
 	reason error
 }
 
-func (u *updateError) toFields() logrus.Fields {
-	fields := make(logrus.Fields, 4)
+func (u *updateError) toFields() logger.Fields {
+	fields := make(logger.Fields, 4)
 	fields["step"] = u.step
 	fields["reason"] = u.reason.Error()
 	if u.domain != "" {

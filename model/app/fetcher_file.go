@@ -13,14 +13,14 @@ import (
 
 type fileFetcher struct {
 	manFilename string
-	log         *logger.Entry
+	log         logger.Logger
 }
 
 // The file fetcher is mostly used in development mode. The version of the
 // application installed with this mode is appended with a random number so
 // that multiple version can be installed from the same directory without
 // having to increase the version number from the manifest.
-func newFileFetcher(manFilename string, log *logger.Entry) *fileFetcher {
+func newFileFetcher(manFilename string, log logger.Logger) *fileFetcher {
 	return &fileFetcher{
 		manFilename: manFilename,
 		log:         log,

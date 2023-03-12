@@ -34,7 +34,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // JSMimeType is the content-type for javascript
@@ -256,21 +255,23 @@ func logsHandler(appType consts.AppType) echo.HandlerFunc {
 			return jsonapi.BadJSON()
 		}
 
-		logger := logger.WithDomain(inst.Domain).
-			WithNamespace("jobs").
-			WithField("slug", slug).
-			WithField("job_id", c.QueryParam("job_id"))
-
-		if v := c.QueryParam("version"); v != "" {
-			logger = logger.WithField("version", v)
-		}
+		l := logger.WithDomain(inst.Domain).WithNamespace("jobs")
 
 		for _, log := range logs {
-			level, err := logrus.ParseLevel(log.Level)
+			level, err := logger.ParseLevel(log.Level)
 			if err != nil {
 				return jsonapi.InvalidAttribute("level", err)
 			}
-			logger.WithTime(log.Time).Log(level, log.Msg)
+
+			l := l.WithTime(log.Time).
+				WithField("slug", slug).
+				WithField("job_id", c.QueryParam("job_id"))
+
+			if v := c.QueryParam("version"); v != "" {
+				l = l.WithField("version", v)
+			}
+
+			l.Log(level, log.Msg)
 		}
 
 		return c.NoContent(http.StatusNoContent)
@@ -442,7 +443,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := instance.Logger().WithField("panic", true).WithNamespace("konnectors")
+				log := instance.Logger().WithNamespace("konnectors").WithField("panic", true)
 				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()

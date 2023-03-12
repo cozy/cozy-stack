@@ -578,7 +578,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	return
 }
 
-func (w *konnectorWorker) Logger(ctx *job.WorkerContext) *logger.Entry {
+func (w *konnectorWorker) Logger(ctx *job.WorkerContext) logger.Logger {
 	return ctx.Logger().WithField("slug", w.slug)
 }
 

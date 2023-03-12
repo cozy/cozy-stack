@@ -10,9 +10,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 )
 
 type (
@@ -193,7 +193,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	if err == nil {
 		err := limits.CheckRateLimit(db, ct)
 		if errors.Is(err, limits.ErrRateLimitReached) {
-			joblog.WithFields(logrus.Fields{
+			joblog.WithFields(logger.Fields{
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),
 			}).Warn(err.Error())

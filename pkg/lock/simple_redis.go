@@ -194,7 +194,7 @@ func (rl *redisLock) RUnlock() {
 
 var redislocksMu sync.Mutex
 var redisRng *rand.Rand
-var redisLogger *logger.Entry
+var redisLogger logger.Logger
 
 type RedisLockGetter struct {
 	client redis.UniversalClient

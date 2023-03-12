@@ -23,7 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/sirupsen/logrus"
 )
 
 var slugReg = regexp.MustCompile(`^[a-z0-9\-]+$`)
@@ -59,7 +58,7 @@ type Installer struct {
 	context string
 
 	manc chan Manifest
-	log  *logger.Entry
+	log  logger.Logger
 }
 
 // InstallerOptions provides the slug name of the application along with the
@@ -137,7 +136,7 @@ func NewInstaller(in *instance.Instance, fs appfs.Copier, opts *InstallerOptions
 		installType = "delete"
 	}
 
-	log := logger.WithDomain(in.DomainName()).WithFields(logrus.Fields{
+	log := logger.WithDomain(in.DomainName()).WithFields(logger.Fields{
 		"nspace":        "apps",
 		"slug":          man.Slug(),
 		"version_start": man.Version(),
