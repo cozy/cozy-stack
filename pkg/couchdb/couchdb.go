@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/labstack/echo/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -531,7 +530,7 @@ func DeleteDoc(db prefixer.Prefixer, doc Doc) error {
 	// metric.
 	if doc.DocType() == consts.Accounts {
 		logger.WithDomain(db.DomainName()).
-			WithFields(logrus.Fields{
+			WithFields(logger.Fields{
 				"log_id":      "account_delete",
 				"account_id":  doc.ID(),
 				"account_rev": doc.Rev(),

@@ -23,8 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -219,7 +217,7 @@ func AssetPath(domain, name string, context ...string) string {
 	}
 	f, ok := assets.Head(name, ctx)
 	if !ok {
-		logger.WithNamespace("assets").WithFields(logrus.Fields{
+		logger.WithNamespace("assets").WithFields(logger.Fields{
 			"domain":  domain,
 			"name":    name,
 			"context": ctx,

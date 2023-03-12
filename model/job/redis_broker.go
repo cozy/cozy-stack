@@ -12,10 +12,10 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -213,7 +213,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	if err == nil {
 		err := config.GetRateLimiter().CheckRateLimit(db, ct)
 		if errors.Is(err, limits.ErrRateLimitReached) {
-			joblog.WithFields(logrus.Fields{
+			joblog.WithFields(logger.Fields{
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),
 			}).Warn(err.Error())

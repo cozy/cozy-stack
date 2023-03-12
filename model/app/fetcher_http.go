@@ -31,10 +31,10 @@ var httpClient = http.Client{
 type httpFetcher struct {
 	manFilename string
 	prefix      string
-	log         *logger.Entry
+	log         logger.Logger
 }
 
-func newHTTPFetcher(manFilename string, log *logger.Entry) *httpFetcher {
+func newHTTPFetcher(manFilename string, log logger.Logger) *httpFetcher {
 	return &httpFetcher{
 		manFilename: manFilename,
 		log:         log,

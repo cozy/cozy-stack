@@ -64,7 +64,7 @@ func sendSMS(ctx *job.WorkerContext, msg *center.SMS) error {
 	}
 }
 
-func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log *logger.Entry) error {
+func sendSenAPI(cfg *config.SMS, msg *center.SMS, number string, log logger.Logger) error {
 	payload, err := json.Marshal(map[string]interface{}{
 		"content":  msg.Message,
 		"receiver": []interface{}{number},

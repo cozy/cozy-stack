@@ -56,7 +56,7 @@ type execWorker interface {
 	PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
 	ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
-	Logger(ctx *job.WorkerContext) *logger.Entry
+	Logger(ctx *job.WorkerContext) logger.Logger
 	Commit(ctx *job.WorkerContext, errjob error) error
 }
 

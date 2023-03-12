@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -13,6 +14,30 @@ import (
 )
 
 var debugLogger *logrus.Logger
+
+var domains = new(sync.Map)
+
+// Fields type, used to pass to [Logger.WithFields].
+type Fields map[string]interface{}
+
+// Logger allows to emits logs to the divers log systems.
+type Logger interface {
+	Debugf(format string, args ...interface{})
+	Infof(format string, args ...interface{})
+	Warnf(format string, args ...interface{})
+	Errorf(format string, args ...interface{})
+
+	Debug(msg string)
+	Info(msg string)
+	Warn(msg string)
+	Error(msg string)
+
+	WithField(fn string, fv interface{}) Logger
+	WithFields(fields Fields) Logger
+	WithTime(t time.Time) Logger
+
+	Log(level Level, msg string)
+}
 
 // Options contains the configuration values of the logger system
 type Options struct {
@@ -69,33 +94,36 @@ func WithDomain(domain string) *Entry {
 // WithNamespace returns a logger with the specified nspace field.
 func WithNamespace(nspace string) *Entry {
 	entry := logrus.WithField("nspace", nspace)
+
 	return &Entry{entry}
 }
 
 // WithNamespace adds a namespace (nspace field).
 func (e *Entry) WithNamespace(nspace string) *Entry {
-	return e.WithField("nspace", nspace)
+	entry := e.entry.WithField("nspace", nspace)
+	return &Entry{entry}
 }
 
 // WithDomain add a domain field.
 func (e *Entry) WithDomain(domain string) *Entry {
-	return e.WithField("domain", domain)
+	entry := e.entry.WithField("domain", domain)
+	return &Entry{entry}
 }
 
 // WithField adds a single field to the Entry.
-func (e *Entry) WithField(key string, value interface{}) *Entry {
+func (e *Entry) WithField(key string, value interface{}) Logger {
 	entry := e.entry.WithField(key, value)
 	return &Entry{entry}
 }
 
 // WithFields adds a map of fields to the Entry.
-func (e *Entry) WithFields(fields logrus.Fields) *Entry {
-	entry := e.entry.WithFields(fields)
+func (e *Entry) WithFields(fields Fields) Logger {
+	entry := e.entry.WithFields(logrus.Fields(fields))
 	return &Entry{entry}
 }
 
 // WithTime overrides the Entry's time
-func (e *Entry) WithTime(t time.Time) *Entry {
+func (e *Entry) WithTime(t time.Time) Logger {
 	entry := e.entry.WithTime(t)
 	return &Entry{entry}
 }
@@ -122,37 +150,37 @@ func (e *Entry) AddHook(hook logrus.Hook) {
 // with syslog.
 const maxLineWidth = 2000
 
-func (e *Entry) Log(level logrus.Level, msg string) {
+func (e *Entry) Log(level Level, msg string) {
 	if len(msg) > maxLineWidth {
 		msg = msg[:maxLineWidth-12] + " [TRUNCATED]"
 	}
 
 	domain, haveDomain := e.entry.Data["domain"]
 
-	if haveDomain && level == logrus.DebugLevel && debugger.ExpiresAt(domain.(string)) != nil {
+	if haveDomain && level == DebugLevel && debugger.ExpiresAt(domain.(string)) != nil {
 		// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
 		// to debug
 		debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
 		return
 	}
 
-	e.entry.Log(level, msg)
+	e.entry.Log(getLogrusLevel(level), msg)
 }
 
 func (e *Entry) Debug(msg string) {
-	e.Log(logrus.DebugLevel, msg)
+	e.Log(DebugLevel, msg)
 }
 
 func (e *Entry) Info(msg string) {
-	e.Log(logrus.InfoLevel, msg)
+	e.Log(InfoLevel, msg)
 }
 
 func (e *Entry) Warn(msg string) {
-	e.Log(logrus.WarnLevel, msg)
+	e.Log(WarnLevel, msg)
 }
 
 func (e *Entry) Error(msg string) {
-	e.Log(logrus.ErrorLevel, msg)
+	e.Log(ErrorLevel, msg)
 }
 
 func (e *Entry) Debugf(format string, args ...interface{}) {
@@ -209,4 +237,20 @@ type contextPrint struct {
 
 func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
 	c.l.Printf(format, args...)
+}
+
+func getLogrusLevel(lvl Level) logrus.Level {
+	var logrusLevel logrus.Level
+	switch lvl {
+	case DebugLevel:
+		logrusLevel = logrus.DebugLevel
+	case InfoLevel:
+		logrusLevel = logrus.InfoLevel
+	case WarnLevel:
+		logrusLevel = logrus.WarnLevel
+	default:
+		logrusLevel = logrus.ErrorLevel
+	}
+
+	return logrusLevel
 }

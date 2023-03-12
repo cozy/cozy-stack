@@ -16,25 +16,25 @@ func TestLoggerParseLevel(t *testing.T) {
 		{
 			name:     "Valid",
 			input:    "error",
-			expected: LevelError,
+			expected: ErrorLevel,
 			err:      nil,
 		},
 		{
 			name:     "ValidWithShortcut",
 			input:    "warn",
-			expected: LevelWarning,
+			expected: WarnLevel,
 			err:      nil,
 		},
 		{
 			name:     "UpperCase",
 			input:    "INFO",
-			expected: LevelInfo,
+			expected: InfoLevel,
 			err:      nil,
 		},
 		{
 			name:     "MixUpperLowerCase",
 			input:    "Debug",
-			expected: LevelDebug,
+			expected: DebugLevel,
 			err:      nil,
 		},
 		{
@@ -57,10 +57,10 @@ func TestLoggerParseLevel(t *testing.T) {
 
 func TestLoggerLevelString(t *testing.T) {
 	t.Run("ValidInput", func(t *testing.T) {
-		assert.Equal(t, "error", LevelError.String())
-		assert.Equal(t, "debug", LevelDebug.String())
-		assert.Equal(t, "warning", LevelWarning.String())
-		assert.Equal(t, "info", LevelInfo.String())
+		assert.Equal(t, "error", ErrorLevel.String())
+		assert.Equal(t, "debug", DebugLevel.String())
+		assert.Equal(t, "warning", WarnLevel.String())
+		assert.Equal(t, "info", InfoLevel.String())
 	})
 
 	t.Run("InvalidInput", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLoggerUnmarshalText(t *testing.T) {
 
 		err := lvl.UnmarshalText([]byte("error"))
 		assert.NoError(t, err)
-		assert.Equal(t, LevelError, lvl)
+		assert.Equal(t, ErrorLevel, lvl)
 	})
 
 	t.Run("InvalidInput", func(t *testing.T) {

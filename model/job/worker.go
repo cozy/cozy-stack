@@ -88,7 +88,7 @@ type (
 		context.Context
 		Instance *instance.Instance
 		job      *Job
-		log      *logger.Entry
+		log      logger.Logger
 		id       string
 		cookie   interface{}
 		noRetry  bool
@@ -114,15 +114,16 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *WorkerContext {
 	ctx := context.Background()
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
-	log := logger.WithDomain(job.Domain).
-		WithField("job_id", job.ID()).
-		WithField("worker_id", workerID).
-		WithNamespace("jobs")
+	entry := logger.WithDomain(job.Domain).WithNamespace("jobs")
 
 	if job.ForwardLogs {
 		hook := realtime.LogHook(job, realtime.GetHub(), consts.Jobs, job.ID())
-		log.AddHook(hook)
+		entry.AddHook(hook)
 	}
+
+	log := entry.
+		WithField("job_id", job.ID()).
+		WithField("worker_id", workerID)
 
 	return &WorkerContext{
 		Context:  ctx,
@@ -175,7 +176,7 @@ func (c *WorkerContext) ID() string {
 }
 
 // Logger return the logger associated with the worker context.
-func (c *WorkerContext) Logger() *logger.Entry {
+func (c *WorkerContext) Logger() logger.Logger {
 	return c.log
 }
 
