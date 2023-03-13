@@ -58,6 +58,8 @@ Examples
 
 The `@in` trigger takes the same duration syntax as `@every`
 
+:warning: Be aware that the `@in` trigger is removed from the doctype after it has created the associated job.
+
 Examples
 
 ```
