@@ -39,46 +39,46 @@ func TestRate(t *testing.T) {
 				t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
 			}
 
-			globalCounter = test.Client
+			limiter := &RateLimiter{counter: test.Client}
 
 			t.Run("LoginRateNotExceeded", func(t *testing.T) {
-				require.NoError(t, CheckRateLimit(testInstance, AuthType))
+				require.NoError(t, limiter.CheckRateLimit(testInstance, AuthType))
 			})
 
 			t.Run("LoginRateExceeded", func(t *testing.T) {
 				// Take into account the call above
 				for i := 1; i < 1000; i++ {
-					require.NoError(t, CheckRateLimit(testInstance, AuthType))
+					require.NoError(t, limiter.CheckRateLimit(testInstance, AuthType))
 				}
-				err := CheckRateLimit(testInstance, AuthType)
+				err := limiter.CheckRateLimit(testInstance, AuthType)
 				require.Error(t, err)
 			})
 
 			t.Run("2FAGenerationNotExceeded", func(t *testing.T) {
-				require.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
+				require.NoError(t, limiter.CheckRateLimit(testInstance, TwoFactorGenerationType))
 			})
 
 			t.Run("2FAGenerationExceeded", func(t *testing.T) {
 				// Take into account the call above
 				for i := 1; i < 20; i++ {
-					require.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
+					require.NoError(t, limiter.CheckRateLimit(testInstance, TwoFactorGenerationType))
 				}
 
-				err := CheckRateLimit(testInstance, TwoFactorGenerationType)
+				err := limiter.CheckRateLimit(testInstance, TwoFactorGenerationType)
 				require.Error(t, err)
 			})
 
 			t.Run("2FARateExceededNotExceeded", func(t *testing.T) {
-				require.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
+				require.NoError(t, limiter.CheckRateLimit(testInstance, TwoFactorType))
 			})
 
 			t.Run("2FARateExceeded", func(t *testing.T) {
 				// Take into account the call above
 				for i := 1; i < 10; i++ {
-					require.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
+					require.NoError(t, limiter.CheckRateLimit(testInstance, TwoFactorType))
 				}
 
-				err := CheckRateLimit(testInstance, TwoFactorType)
+				err := limiter.CheckRateLimit(testInstance, TwoFactorType)
 				require.Error(t, err)
 			})
 		})

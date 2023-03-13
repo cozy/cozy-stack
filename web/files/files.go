@@ -749,7 +749,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 
 	// Limiting the number of public share link consultations
 	if perm.Type == permission.TypeShareByLink {
-		err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+		err = config.GetRateLimiter().CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			return err
 		}

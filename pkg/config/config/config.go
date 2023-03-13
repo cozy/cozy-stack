@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/keyring"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
@@ -125,6 +126,7 @@ type Config struct {
 	Logger         logger.Options
 
 	Lock                lock.Getter
+	Limiter             *limits.RateLimiter
 	SessionStorage      RedisConfig
 	DownloadStorage     RedisConfig
 	OauthStateStorage   RedisConfig
@@ -368,6 +370,11 @@ func Avatars() *avatar.Service {
 // GetKeyring returns the configured instance of [keyring.Keyring]
 func GetKeyring() keyring.Keyring {
 	return config.Keyring
+}
+
+// GetRateLimiter return the setup rate limiter.
+func GetRateLimiter() *limits.RateLimiter {
+	return config.Limiter
 }
 
 // GetOIDC returns the OIDC config for the given context (with a boolean to say
@@ -808,13 +815,13 @@ func UseViper(v *viper.Viper) error {
 			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
 		},
-		Lock:                lock.New(lockRedis.Client()),
-		SessionStorage:      sessionsRedis,
-		DownloadStorage:     downloadRedis,
-		RateLimitingStorage: rateLimitingRedis,
-		OauthStateStorage:   oauthStateRedis,
-		Realtime:            realtimeRedis,
-		CacheStorage:        cacheStorage,
+		Lock:              lock.New(lockRedis.Client()),
+		SessionStorage:    sessionsRedis,
+		DownloadStorage:   downloadRedis,
+		Limiter:           limits.NewRateLimiter(rateLimitingRedis.Client()),
+		OauthStateStorage: oauthStateRedis,
+		Realtime:          realtimeRedis,
+		CacheStorage:      cacheStorage,
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),

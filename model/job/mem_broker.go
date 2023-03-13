@@ -191,7 +191,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	// Check for limits
 	ct, err := GetCounterTypeFromWorkerType(req.WorkerType)
 	if err == nil {
-		err := limits.CheckRateLimit(db, ct)
+		err := config.GetRateLimiter().CheckRateLimit(db, ct)
 		if errors.Is(err, limits.ErrRateLimitReached) {
 			joblog.WithFields(logrus.Fields{
 				"worker_type": req.WorkerType,

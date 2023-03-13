@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 )
 
@@ -19,12 +20,12 @@ func LoginRateExceeded(i *instance.Instance) error {
 // TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
 // attempts to login
 func TwoFactorRateExceeded(i *instance.Instance) error {
-	err := limits.CheckRateLimit(i, limits.TwoFactorGenerationType)
+	err := config.GetRateLimiter().CheckRateLimit(i, limits.TwoFactorGenerationType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return TwoFactorGenerationExceeded(i)
 	}
 	// Reset the key and send a new passcode to the user
-	limits.ResetCounter(i, limits.TwoFactorType)
+	config.GetRateLimiter().ResetCounter(i, limits.TwoFactorType)
 	_, err = lifecycle.SendTwoFactorPasscode(i)
 	return err
 }

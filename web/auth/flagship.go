@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -105,7 +106,7 @@ func canCreateSessionCode(c echo.Context, inst *instance.Instance) canCreateSess
 
 func postChallenge(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(inst, limits.OAuthClientType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.OAuthClientType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
@@ -149,7 +150,7 @@ func confirmFlagship(c echo.Context) error {
 		})
 	}
 
-	err = limits.CheckRateLimit(inst, limits.ConfirmFlagshipType)
+	err = config.GetRateLimiter().CheckRateLimit(inst, limits.ConfirmFlagshipType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": inst.Translate("Confirm Flagship Invalid code"),
@@ -190,7 +191,7 @@ func loginFlagship(c echo.Context) error {
 	}
 
 	if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
-		err := limits.CheckRateLimit(inst, limits.AuthType)
+		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
 				inst.Logger().WithNamespace("auth").Warn(err.Error())

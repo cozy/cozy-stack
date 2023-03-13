@@ -455,7 +455,7 @@ func deleteTrigger(c echo.Context) error {
 
 func fireBIWebhook(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(inst, limits.WebhookTriggerType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.WebhookTriggerType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
@@ -499,7 +499,7 @@ func fireBIWebhook(c echo.Context) error {
 
 func fireWebhook(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(inst, limits.WebhookTriggerType)
+	err := config.GetRateLimiter().CheckRateLimit(inst, limits.WebhookTriggerType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
