@@ -13,6 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJobs(t *testing.T) {
@@ -96,6 +98,31 @@ func TestJobs(t *testing.T) {
 		attrs := obj.Path("$.data.attributes").Object()
 		attrs.ValueEqual("worker", "print")
 		attrs.NotContainsKey("manual_execution")
+	})
+
+	t.Run("CreateJobWithTimeout", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/jobs/queue/print").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "attributes": {
+		    "arguments": "foobar",
+		    "options": { "timeout": 42 }
+		  }
+        }
+      }`)).
+			Expect().Status(202).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		jobID := obj.Path("$.data.id").String().NotEmpty().Raw()
+		job, err := job.Get(testInstance, jobID)
+		require.NoError(t, err)
+		require.NotNil(t, job.Options)
+		assert.Equal(t, 42*time.Second, job.Options.Timeout)
 	})
 
 	t.Run("CreateManualJob", func(t *testing.T) {
