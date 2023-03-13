@@ -99,7 +99,7 @@ func TestBitwarden(t *testing.T) {
 
 		assert.NotZero(t, len(testLogger.Entries))
 		orgKeyDoesNotExist := false
-		for _, entry := range testLogger.Entries {
+		for _, entry := range testLogger.AllEntries() {
 			if entry.Message == "Organization key does not exist" {
 				orgKeyDoesNotExist = true
 			}
