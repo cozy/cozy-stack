@@ -19,9 +19,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - run: npm ci # or yarn install
+      - name: Yarn install 
+        run: |
+          cd ./scripts
+          yarn install
       - uses: sibiraj-s/action-eslint@v2
         with:
-          eslint-args: '--ignore-path=.gitignore --quiet'
+          eslint-args: '--config scripts/eslintrc.json --ignore-path=.gitignore --quiet'
           extensions: 'js,jsx,ts,tsx'
+          bin-path: 'scripts/node_modules/eslint/bin'
           annotations: true
