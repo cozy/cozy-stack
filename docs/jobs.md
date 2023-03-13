@@ -29,6 +29,7 @@ Jobs can be launched by different types of triggers:
 - `@at` to schedule a one-time job executed after at a specific time in the
   future
 - `@in` to schedule a one-time job executed after a specific amount of time
+- `@hourly` to schedule jobs that run once an hour
 - `@daily` to schedule jobs that run once a day
 - `@weekly` to schedule jobs that run once a week
 - `@monthly` to schedule jobs that run once a month

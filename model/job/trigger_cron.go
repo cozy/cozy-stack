@@ -68,6 +68,13 @@ func NewDailyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	return newPeriodicTrigger(infos, DailyKind)
 }
 
+// NewHourlyTrigger returns a new instance of CronTrigger given the specified
+// options as @hourly. It will take a random minute in the possible range to
+// spread the triggers from the same app manifest.
+func NewHourlyTrigger(infos *TriggerInfos) (*CronTrigger, error) {
+	return newPeriodicTrigger(infos, HourlyKind)
+}
+
 func newPeriodicTrigger(infos *TriggerInfos, frequency FrequencyKind) (*CronTrigger, error) {
 	spec, err := periodicParser.Parse(frequency, infos.Arguments)
 	if err != nil {
