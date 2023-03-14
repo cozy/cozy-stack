@@ -294,6 +294,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	version.Routes(router.Group("/version", mws...))
 	metrics.Routes(router.Group("/metrics", mws...))
 	oauth.Routes(router.Group("/oauth", mws...))
+	oidc.AdminRoutes(router.Group("/oidc", mws...))
 	realtime.Routes(router.Group("/realtime", mws...))
 	swift.Routes(router.Group("/swift", mws...))
 	tools.Routes(router.Group("/tools", mws...))

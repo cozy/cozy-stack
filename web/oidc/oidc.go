@@ -797,6 +797,45 @@ func Routes(router *echo.Group) {
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
 }
 
+// GetDelegatedCode is mostly a proxy for the userinfo request made by the
+// cloudery to the OIDC provider. It adds a delegated code in the response
+// associated to the sub.
+func GetDelegatedCode(c echo.Context) error {
+	contextName := c.Param("context")
+	provider := c.Param("provider")
+	var conf *Config
+	var err error
+	if provider == "franceconnect" {
+		conf, err = getFranceConnectConfig(contextName)
+	} else {
+		conf, err = getGenericConfig(contextName)
+	}
+	if err != nil {
+		return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
+	}
+
+	authorization := c.Request().Header.Get(echo.HeaderAuthorization)
+	token := strings.TrimPrefix(authorization, "Bearer ")
+	params, err := getUserInfo(conf, token)
+	if err != nil {
+		return err
+	}
+
+	sub, ok := params["sub"].(string)
+	if !ok {
+		logger.WithNamespace("oidc").Errorf("Missing sub")
+		return ErrAuthenticationFailed
+	}
+	params["delegated_code"] = getStorage().CreateCode(sub)
+	return c.JSON(http.StatusOK, params)
+}
+
+// AdminRoutes setup the routing for OpenID Connect on the admin port. It is
+// mostly used by the cloudery.
+func AdminRoutes(router *echo.Group) {
+	router.POST("/:context/:provider/code", GetDelegatedCode)
+}
+
 // LoginDomainHandler is the handler for the requests on the login domain. It
 // shows a page with a login button (that can start the OIDC dance).
 func LoginDomainHandler(c echo.Context, contextName string) error {
