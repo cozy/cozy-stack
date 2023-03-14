@@ -58,6 +58,12 @@ On an existing Cozy instance, the app will fetch some parameters with
 hash will be sent to `POST /auth/login/flagship` to give the app access to the
 whole Cozy.
 
+## OIDC variant
+
+When a user uses an OIDC provider, or FranceConnect, the flagship app will get
+a delegated code from the cloudery and will use it via the `POST /oidc/access_token`
+endpoint to get access to the Cozy.
+
 ## Manual certification
 
 When the certification from the Google and Apple stores has failed, the app

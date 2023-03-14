@@ -246,21 +246,76 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getGenericConfig(inst.ContextName)
-	if err != nil || !conf.AllowOAuthToken {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "this endpoint is not enabled",
-		})
-	}
-
 	var reqBody struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 		Scope        string `json:"scope"`
 		OIDCToken    string `json:"oidc_token"`
 		IDToken      string `json:"id_token"`
+		Code         string `json:"code"`
 	}
 	if err = c.Bind(&reqBody); err != nil {
 		return err
+	}
+
+	if reqBody.Code != "" {
+		client, err := oauth.FindClient(inst, reqBody.ClientID)
+		if err != nil || !client.Flagship {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "the client must be registered as a flagship app",
+			})
+		}
+		if subtle.ConstantTimeCompare([]byte(reqBody.ClientSecret), []byte(client.ClientSecret)) == 0 {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid client_secret",
+			})
+		}
+
+		sub := getStorage().GetSub(reqBody.Code)
+		invalidSub := sub == ""
+		if sub != inst.OIDCID && sub != inst.FranceConnectID {
+			invalidSub = true
+		}
+		if invalidSub {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid code",
+			})
+		}
+
+		// Remove the pending flag on the OAuth client (if needed)
+		if client.Pending {
+			client.Pending = false
+			client.ClientID = ""
+			_ = couchdb.UpdateDoc(inst, client)
+			client.ClientID = client.CouchID
+		}
+
+		// Generate the access/refresh tokens
+		out := auth.AccessTokenReponse{
+			Type:  "bearer",
+			Scope: reqBody.Scope,
+		}
+		accessToken, err := client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Can't generate access token",
+			})
+		}
+		out.Access = accessToken
+		refreshToken, err := client.CreateJWT(inst, consts.RefreshTokenAudience, out.Scope)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Can't generate refresh token",
+			})
+		}
+		out.Refresh = refreshToken
+		return c.JSON(http.StatusOK, out)
+	}
+
+	if err != nil || !conf.AllowOAuthToken {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "this endpoint is not enabled",
+		})
 	}
 
 	// Check the token from the remote URL.

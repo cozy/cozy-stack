@@ -177,7 +177,6 @@ Set-Cookie: ...
 Location: https://name00001-home.mycozy.cloud/
 ```
 
-
 #### POST /oidc/access_token
 
 This additional route can be used by an OAuth client (like a mobile app) when
@@ -217,6 +216,9 @@ Content-Type: application/json
 
 If `id_token_jwk_url` option is set, the client can send an `id_token` instead
 of an `oidc_token` in the payload.
+
+If the flagship makes the request, it also can use a delegated code obtained
+from the cloudery, by using `code` instead of `access_token`.
 
 ## FranceConnect
 

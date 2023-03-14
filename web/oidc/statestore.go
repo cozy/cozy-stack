@@ -52,6 +52,7 @@ type stateStorage interface {
 	Add(*stateHolder) error
 	Find(id string) *stateHolder
 	CreateCode(sub string) string
+	GetSub(code string) string
 }
 
 type memStateStorage struct {
@@ -81,6 +82,10 @@ func (store memStateStorage) CreateCode(sub string) string {
 	code := makeCode()
 	store.codes[code] = sub
 	return code
+}
+
+func (store memStateStorage) GetSub(code string) string {
+	return store.codes[code]
 }
 
 type subRedisInterface interface {
@@ -122,6 +127,10 @@ func (store *redisStateStorage) CreateCode(sub string) string {
 	return code
 }
 
+func (store *redisStateStorage) GetSub(code string) string {
+	return store.cl.Get(store.ctx, code).String()
+}
+
 var globalStorage stateStorage
 var globalStorageMutex sync.Mutex
 
@@ -145,5 +154,5 @@ func getStorage() stateStorage {
 }
 
 func makeCode() string {
-	return hex.EncodeToString(crypto.GenerateRandomBytes(8))
+	return hex.EncodeToString(crypto.GenerateRandomBytes(12))
 }
