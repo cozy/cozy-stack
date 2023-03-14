@@ -1,12 +1,14 @@
 package oidc
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -47,7 +49,8 @@ func TestOidc(t *testing.T) {
 
 	// Mocking API endpoint to validate token
 	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/oidc": Routes,
+		"/oidc":       Routes,
+		"/admin-oidc": AdminRoutes,
 		"/token": func(g *echo.Group) {
 			g.POST("/getToken", func(c echo.Context) error {
 				return c.JSON(http.StatusOK, echo.Map{"access_token": "foobar"})
@@ -56,13 +59,25 @@ func TestOidc(t *testing.T) {
 				return c.JSON(http.StatusOK, echo.Map{"domain": c.Param("domain")})
 			})
 		},
+		"/api": func(g *echo.Group) {
+			g.GET("/v1/userinfo", func(c echo.Context) error {
+				auth := c.Request().Header.Get(echo.HeaderAuthorization)
+				if auth != "Bearer fc_token" {
+					return c.NoContent(http.StatusBadRequest)
+				}
+				return c.JSON(http.StatusOK, echo.Map{
+					"sub":   "fc_sub",
+					"email": "jerome@example.org",
+				})
+			})
+		},
 	})
 
 	ts.Config.Handler.(*echo.Echo).Renderer = render
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 
-	// Creating a custom context with oidc authentication
+	// Creating a custom context with oidc and franceconnect authentication
 	tokenURL := ts.URL + "/token/getToken"
 	userInfoURL := ts.URL + "/token/" + testInstance.Domain
 	authentication := map[string]interface{}{
@@ -75,6 +90,15 @@ func TestOidc(t *testing.T) {
 			"token_url":               tokenURL,
 			"userinfo_url":            userInfoURL,
 			"userinfo_instance_field": "domain",
+		},
+		"franceconnect": map[string]interface{}{
+			"redirect_uri":  "http://foobar.com/redirect",
+			"client_id":     "fc_client_id",
+			"client_secret": "fc_client_secret",
+			"scope":         "openid profile",
+			"authorize_url": "https://franceconnect.gouv.fr/api/v1/authorize",
+			"token_url":     "https://franceconnect.gouv.fr/api/v1/token",
+			"userinfo_url":  ts.URL + "/api/v1/userinfo",
 		},
 	}
 	conf := config.GetConfig()
@@ -149,8 +173,6 @@ func TestOidc(t *testing.T) {
 	})
 
 	t.Run("LoginWith2FA", func(t *testing.T) {
-		var err error
-
 		e := testutils.CreateTestClient(t, ts.URL)
 
 		onboardingFinished := true
@@ -162,14 +184,13 @@ func TestOidc(t *testing.T) {
 			Expect().Status(303).
 			Header("Location").Raw()
 
-		redirectURL, err = url.Parse(u)
+		redirectURL, err := url.Parse(u)
 		require.NoError(t, err)
 
 		// Get the login page, assert we have the 2FA activated
 		queryWithToken := redirectURL.Query()
 		queryWithToken.Add("token", "foo")
 
-		t.Logf("query: %q\n\n", queryWithToken.Encode())
 		body := e.GET("/oidc/login").
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -199,5 +220,58 @@ func TestOidc(t *testing.T) {
 
 		assert.Equal(t, "/auth/twofactor", redirectURL.Path)
 		assert.NotNil(t, redirectURL.Query().Get("two_factor_token"))
+	})
+
+	t.Run("DelegatedCode", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		sub := "fc_sub"
+		email := "jerome@example.org"
+
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+			FranceConnectID:    sub,
+		})
+
+		obj := e.POST("/admin-oidc/"+testInstance.ContextName+"/franceconnect/code").
+			WithHeader("Authorization", "Bearer fc_token").
+			WithHeader("Content-Type", "application/json").
+			Expect().Status(200).
+			JSON().
+			Object()
+		obj.Value("sub").String().Equal(sub)
+		obj.Value("email").String().Equal(email)
+		code := obj.Value("delegated_code").String().NotEmpty().Raw()
+
+		oauthClient := &oauth.Client{
+			RedirectURIs:    []string{"cozy://flagship"},
+			ClientName:      "Cozy Flagship",
+			ClientKind:      "mobile",
+			SoftwareID:      "cozy-flagship",
+			SoftwareVersion: "0.1.0",
+		}
+		require.Nil(t, oauthClient.Create(testInstance))
+		client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
+		require.NoError(t, err)
+		client.CertifiedFromStore = true
+		require.NoError(t, client.SetFlagship(testInstance))
+
+		obj2 := e.POST("/oidc/access_token").
+			WithHost(testInstance.Domain).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(fmt.Sprintf(`{
+          "client_id": "%s",
+          "client_secret": "%s",
+          "scope": "*",
+          "code": "%s"
+        }`, oauthClient.ClientID, oauthClient.ClientSecret, code))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+			Object()
+		obj2.Value("token_type").String().Equal("bearer")
+		obj2.Value("scope").String().Equal("*")
+		obj2.Value("access_token").String().NotEmpty()
+		obj2.Value("refresh_token").String().NotEmpty()
 	})
 }
