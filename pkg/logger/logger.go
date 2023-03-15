@@ -20,26 +20,16 @@ const (
 )
 
 var opts Options
-var loggers = make(map[string]domainEntry)
-var loggersMu sync.RWMutex
+
+var debugLogger *logrus.Logger
+
+var loggers = new(sync.Map)
 
 // Options contains the configuration values of the logger system
 type Options struct {
 	Syslog bool
 	Level  string
 	Redis  redis.UniversalClient
-}
-
-type domainEntry struct {
-	log       *logrus.Logger
-	expiredAt *time.Time
-}
-
-func (entry *domainEntry) Expired() bool {
-	if entry.expiredAt == nil {
-		return false
-	}
-	return entry.expiredAt.Before(time.Now())
 }
 
 // Init initializes the logger module with the specified options.
@@ -52,18 +42,20 @@ func Init(opt Options) error {
 	if err != nil {
 		return err
 	}
-	logrus.SetLevel(logLevel)
-	if opt.Syslog {
-		hook, err := syslogHook()
-		if err != nil {
-			return err
-		}
-		logrus.AddHook(hook)
-		logrus.SetOutput(io.Discard)
-	} else if build.IsDevRelease() && logLevel == logrus.DebugLevel {
-		formatter := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
-		formatter.TimestampFormat = time.RFC3339Nano
+
+	// Setup the global logger in case of someone call the global functions.
+	err = setupLogger(logrus.StandardLogger(), logLevel, opt)
+	if err != nil {
+		return fmt.Errorf("failed to setup the global logger: %w", err)
 	}
+
+	// Setup the debug logger used for the the domains in debug mode.
+	debugLogger = logrus.New()
+	err = setupLogger(debugLogger, logrus.DebugLevel, opt)
+	if err != nil {
+		return fmt.Errorf("failed to setup the debug logger: %w", err)
+	}
+
 	if cli := opt.Redis; cli != nil {
 		ctx := context.Background()
 		go subscribeLoggersDebug(ctx, cli)
@@ -101,17 +93,18 @@ type Entry struct {
 
 // WithDomain returns a logger with the specified domain field.
 func WithDomain(domain string) *Entry {
-	loggersMu.RLock()
-	entry, ok := loggers[domain]
-	loggersMu.RUnlock()
+	res, ok := loggers.Load(domain)
 	if ok {
-		if !entry.Expired() {
-			e := entry.log.WithField("domain", domain)
+		// The debug mode is enable for the domain
+		if time.Now().Before(res.(time.Time)) {
+			e := debugLogger.WithField("domain", domain)
 			return &Entry{e}
 		}
 		removeDebugDomain(domain)
 	}
+
 	e := logrus.WithField("domain", domain)
+
 	return &Entry{e}
 }
 
@@ -210,29 +203,11 @@ func (e *Entry) Writer() *io.PipeWriter {
 }
 
 func addDebugDomain(domain string, ttl time.Duration) {
-	loggersMu.Lock()
-	defer loggersMu.Unlock()
-	_, ok := loggers[domain]
-	if ok {
-		return
-	}
-	logger := logrus.New()
-	logger.Level = logrus.DebugLevel
-	if opts.Syslog {
-		hook, err := syslogHook()
-		if err == nil {
-			logger.Hooks.Add(hook)
-			logger.Out = io.Discard
-		}
-	}
-	expiredAt := time.Now().Add(ttl)
-	loggers[domain] = domainEntry{logger, &expiredAt}
+	loggers.Store(domain, time.Now().Add(ttl))
 }
 
 func removeDebugDomain(domain string) {
-	loggersMu.Lock()
-	defer loggersMu.Unlock()
-	delete(loggers, domain)
+	loggers.Delete(domain)
 }
 
 func subscribeLoggersDebug(ctx context.Context, cli redis.UniversalClient) {
@@ -286,16 +261,38 @@ func publishDebug(ctx context.Context, cli redis.UniversalClient, channel, domai
 // instance logger of the given domain (or nil if the debug mode is not
 // activated).
 func DebugExpiration(domain string) *time.Time {
-	loggersMu.RLock()
-	entry, ok := loggers[domain]
-	loggersMu.RUnlock()
+	res, ok := loggers.Load(domain)
 	if !ok {
 		return nil
 	}
-	return entry.expiredAt
+
+	t := res.(time.Time)
+
+	return &t
 }
 
 // IsDebug returns whether or not the debug mode is activated.
 func (e *Entry) IsDebug() bool {
 	return e.entry.Logger.Level == logrus.DebugLevel
+}
+
+func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) error {
+	logger.SetLevel(lvl)
+
+	if opt.Syslog {
+		hook, err := syslogHook()
+		if err != nil {
+			return err
+		}
+
+		logrus.AddHook(hook)
+		logrus.SetOutput(io.Discard)
+	}
+
+	if build.IsDevRelease() && lvl == logrus.DebugLevel {
+		formatter := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
+		formatter.TimestampFormat = time.RFC3339Nano
+	}
+
+	return nil
 }
