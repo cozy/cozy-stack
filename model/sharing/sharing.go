@@ -59,7 +59,7 @@ type Sharing struct {
 	PreviewPath string    `json:"preview_path,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-	NbFiles     int64     `json:"initial_number_of_files_to_sync,omitempty"`
+	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
 	Initial     bool      `json:"initial_sync,omitempty"`
 	ShortcutID  string    `json:"shortcut_id,omitempty"`
 	MovedFrom   string    `json:"moved_from,omitempty"`

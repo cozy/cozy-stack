@@ -11,7 +11,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 34
+const IndexViewsVersion int = 35
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -69,7 +69,7 @@ function(doc) {
   }
 }
 `,
-	Reduce: "_stats",
+	Reduce: "_sum",
 }
 
 // OldVersionsDiskUsageView is the view used for computing the disk usage for

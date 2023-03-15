@@ -2,12 +2,15 @@ package sharing
 
 import (
 	"testing"
+	"time"
 
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFiles(t *testing.T) {
@@ -243,4 +246,75 @@ func TestFiles(t *testing.T) {
 			assert.Equal(t, []string{"quux", "courge"}, dir.Tags)
 		}
 	})
+
+	t.Run("countFiles", func(t *testing.T) {
+		tree := H{
+			"test-countFiles/": H{
+				"dir1/": H{
+					"subdir1/": H{
+						"file": nil, // 1
+					},
+					"subdir2/": H{
+						"subsubdir/": H{
+							"file": nil, // 2
+						},
+					},
+				},
+				"dir2/": H{
+					"foo": nil, // 3
+					"bar": nil, // 4
+					"baz": nil, // 5
+				},
+				"dir3/": H{
+					"courge": nil, // 6
+				},
+				"qux":  nil, // 7
+				"quux": nil, // 8
+			},
+		}
+		dir := createTree(t, inst.VFS(), tree, consts.RootDirID)
+
+		s := Sharing{
+			SID: uuidv4(),
+			Rules: []Rule{
+				{
+					Title:   "Test countFiles",
+					DocType: consts.Files,
+					Values:  []string{dir.ID()},
+				},
+			},
+		}
+		assert.Equal(t, 8, s.countFiles(inst))
+	})
+}
+
+type H map[string]H
+
+func createTree(t *testing.T, fs vfs.VFS, tree H, dirID string) *vfs.DirDoc {
+	t.Helper()
+
+	var err error
+	var dirdoc *vfs.DirDoc
+	for name, children := range tree {
+		if name[len(name)-1] == '/' {
+			dirdoc, err = vfs.NewDirDoc(fs, name[:len(name)-1], dirID, nil)
+			require.NoError(t, err)
+
+			err = fs.CreateDir(dirdoc)
+			require.NoError(t, err)
+
+			createTree(t, fs, children, dirdoc.ID())
+		} else {
+			mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, mime, class, time.Now(), false, false, false, nil)
+			require.NoError(t, err)
+
+			f, err := fs.CreateFile(filedoc, nil)
+			require.NoError(t, err)
+
+			err = f.Close()
+			require.NoError(t, err)
+		}
+	}
+	return dirdoc
 }

@@ -84,11 +84,7 @@ func (c *couchdbIndexer) FilesUsage() (int64, error) {
 		return 0, nil
 	}
 	// Reduce of _sum should give us a number value
-	stats, ok := doc.Rows[0].Value.(map[string]interface{})
-	if !ok {
-		return 0, ErrWrongCouchdbState
-	}
-	used, ok := stats["sum"].(float64)
+	used, ok := doc.Rows[0].Value.(float64)
 	if !ok {
 		return 0, ErrWrongCouchdbState
 	}
@@ -151,10 +147,7 @@ func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 	return nil
 }
 
-// DirSizeAndCount returns the size taken by the directory and the files inside
-// it (including in the children directories), and also the number of files
-// inside it.
-func (c *couchdbIndexer) DirSizeAndCount(doc *DirDoc) (int64, int64, error) {
+func (c *couchdbIndexer) DirSize(doc *DirDoc) (int64, error) {
 	start := doc.Fullpath + "/"
 	stop := doc.Fullpath + "0" // 0 is the next ascii character after /
 	if doc.DocID == consts.RootDirID {
@@ -177,7 +170,7 @@ func (c *couchdbIndexer) DirSizeAndCount(doc *DirDoc) (int64, int64, error) {
 	var children []couchdb.JSONDoc
 	err := couchdb.FindDocs(c.db, consts.Files, req, &children)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	keys := make([]interface{}, len(children)+1)
 	keys[0] = doc.DocID
@@ -193,31 +186,22 @@ func (c *couchdbIndexer) DirSizeAndCount(doc *DirDoc) (int64, int64, error) {
 		Reduce: true,
 	}, &resp)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	if len(resp.Rows) == 0 {
-		return 0, 0, nil
+		return 0, nil
 	}
 
-	// Reduce of _stats should give us `sum` and `count` fields with number values
-	var size, count int64
+	// Reduce of _sum should give us a number value
+	var size int64
 	for _, row := range resp.Rows {
-		stats, ok := row.Value.(map[string]interface{})
+		value, ok := row.Value.(float64)
 		if !ok {
-			return 0, 0, ErrWrongCouchdbState
-		}
-		value, ok := stats["sum"].(float64)
-		if !ok {
-			return 0, 0, ErrWrongCouchdbState
+			return 0, ErrWrongCouchdbState
 		}
 		size += int64(value)
-		value, ok = stats["count"].(float64)
-		if !ok {
-			return 0, 0, ErrWrongCouchdbState
-		}
-		count += int64(value)
 	}
-	return size, count, nil
+	return size, nil
 }
 
 func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {

@@ -16,8 +16,10 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -122,23 +124,26 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 
 // countFiles returns the number of files that should be uploaded on the
 // initial synchronisation.
-func (s *Sharing) countFiles(inst *instance.Instance) int64 {
-	var count int64
-	fs := inst.VFS()
+func (s *Sharing) countFiles(inst *instance.Instance) int {
+	count := 0
 	for _, rule := range s.Rules {
 		if rule.DocType != consts.Files || rule.Local || len(rule.Values) == 0 {
 			continue
 		}
+
 		if rule.Selector == "" || rule.Selector == "id" {
+			fs := inst.VFS()
 			for _, fileID := range rule.Values {
 				dir, _, err := fs.DirOrFileByID(fileID)
 				if err != nil {
 					continue
 				}
 				if dir != nil {
-					if _, nb, err := fs.DirSizeAndCount(dir); err == nil {
-						count += nb
+					nb, err := countFilesInDirectory(inst, dir)
+					if err != nil {
+						continue
 					}
+					count += nb
 				} else {
 					count++
 				}
@@ -149,12 +154,54 @@ func (s *Sharing) countFiles(inst *instance.Instance) int64 {
 				reqCount := &couchdb.ViewRequest{Key: val, Reduce: true}
 				err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, reqCount, &resCount)
 				if err == nil && len(resCount.Rows) > 0 {
-					count += int64(resCount.Rows[0].Value.(float64))
+					count += int(resCount.Rows[0].Value.(float64))
 				}
 			}
 		}
 	}
 	return count
+}
+
+func countFilesInDirectory(inst *instance.Instance, dir *vfs.DirDoc) (int, error) {
+	// Find the subdirectories
+	start := dir.Fullpath + "/"
+	stop := dir.Fullpath + "0" // 0 is the next ascii character after /
+	if dir.DocID == consts.RootDirID {
+		start = "/"
+		stop = "0"
+	}
+	sel := mango.And(
+		mango.Gt("path", start),
+		mango.Lt("path", stop),
+		mango.Equal("type", consts.DirType),
+	)
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-by-path",
+		Selector: sel,
+		Fields:   []string{"_id"},
+		Limit:    10000,
+	}
+	var children []couchdb.JSONDoc
+	err := couchdb.FindDocs(inst, consts.Files, req, &children)
+	if err != nil {
+		return 0, err
+	}
+	keys := make([]interface{}, len(children)+1)
+	keys[0] = dir.DocID
+	for i, child := range children {
+		keys[i+1] = child.ID()
+	}
+
+	// Get the number of files for the directory and each of its sub-directory
+	var resp couchdb.ViewResponse
+	err = couchdb.ExecView(inst, couchdb.DiskUsageView, &couchdb.ViewRequest{
+		Keys:  keys,
+		Limit: 100_000,
+	}, &resp)
+	if err != nil {
+		return 0, err
+	}
+	return len(resp.Rows), nil
 }
 
 // RegisterCozyURL saves a new Cozy URL for a member
