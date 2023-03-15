@@ -23,7 +23,7 @@ var opts Options
 
 var debugLogger *logrus.Logger
 
-var loggers = new(sync.Map)
+var domains = new(sync.Map)
 
 // Options contains the configuration values of the logger system
 type Options struct {
@@ -93,18 +93,7 @@ type Entry struct {
 
 // WithDomain returns a logger with the specified domain field.
 func WithDomain(domain string) *Entry {
-	res, ok := loggers.Load(domain)
-	if ok {
-		// The debug mode is enable for the domain
-		if time.Now().Before(res.(time.Time)) {
-			e := debugLogger.WithField("domain", domain)
-			return &Entry{e}
-		}
-		removeDebugDomain(domain)
-	}
-
 	e := logrus.WithField("domain", domain)
-
 	return &Entry{e}
 }
 
@@ -163,6 +152,32 @@ func (e *Entry) Log(level logrus.Level, msg string) {
 	if len(msg) > maxLineWidth {
 		msg = msg[:maxLineWidth-12] + " [TRUNCATED]"
 	}
+
+	domain, haveDomain := e.entry.Data["domain"]
+
+	if haveDomain && level == logrus.DebugLevel {
+		now := time.Now()
+		expiration, ok := domains.Load(domain)
+
+		switch {
+		case ok && now.Before(expiration.(time.Time)):
+			// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
+			// to debug
+			debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
+
+		case ok && now.After(expiration.(time.Time)):
+			// The domain is listed in the debu domains but the ttl is no more valid, remove
+			// it from the list and do nothing to the log.
+			err := RemoveDebugDomain(domain.(string))
+			if err != nil {
+				e.entry.Logger.Errorf("failed to remove debug domain %q: %s", domain, err)
+			}
+
+		default:
+			// Log with the default logger
+		}
+	}
+
 	e.entry.Log(level, msg)
 }
 
@@ -203,11 +218,11 @@ func (e *Entry) Writer() *io.PipeWriter {
 }
 
 func addDebugDomain(domain string, ttl time.Duration) {
-	loggers.Store(domain, time.Now().Add(ttl))
+	domains.Store(domain, time.Now().Add(ttl))
 }
 
 func removeDebugDomain(domain string) {
-	loggers.Delete(domain)
+	domains.Delete(domain)
 }
 
 func subscribeLoggersDebug(ctx context.Context, cli redis.UniversalClient) {
@@ -261,7 +276,7 @@ func publishDebug(ctx context.Context, cli redis.UniversalClient, channel, domai
 // instance logger of the given domain (or nil if the debug mode is not
 // activated).
 func DebugExpiration(domain string) *time.Time {
-	res, ok := loggers.Load(domain)
+	res, ok := domains.Load(domain)
 	if !ok {
 		return nil
 	}
