@@ -13,12 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	debugRedisAddChannel = "add:log-debug"
-	debugRedisRmvChannel = "rmv:log-debug"
-	debugRedisPrefix     = "debug:"
-)
-
 var opts Options
 
 var debugLogger *logrus.Logger
