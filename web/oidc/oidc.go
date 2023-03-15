@@ -247,30 +247,20 @@ func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getGenericConfig(inst.ContextName)
 	var reqBody struct {
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
-		Scope        string `json:"scope"`
-		OIDCToken    string `json:"oidc_token"`
-		IDToken      string `json:"id_token"`
-		Code         string `json:"code"`
+		ClientID       string `json:"client_id"`
+		ClientSecret   string `json:"client_secret"`
+		Scope          string `json:"scope"`
+		OIDCToken      string `json:"oidc_token"`
+		IDToken        string `json:"id_token"`
+		Code           string `json:"code"`
+		TwoFactorToken string `json:"two_factor_token"`
+		TwoFactorCode  string `json:"two_factor_passcode"`
 	}
 	if err = c.Bind(&reqBody); err != nil {
 		return err
 	}
 
 	if reqBody.Code != "" {
-		client, err := oauth.FindClient(inst, reqBody.ClientID)
-		if err != nil || !client.Flagship {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "the client must be registered as a flagship app",
-			})
-		}
-		if subtle.ConstantTimeCompare([]byte(reqBody.ClientSecret), []byte(client.ClientSecret)) == 0 {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "invalid client_secret",
-			})
-		}
-
 		sub := getStorage().GetSub(reqBody.Code)
 		invalidSub := sub == ""
 		if sub != inst.OIDCID && sub != inst.FranceConnectID {
@@ -281,53 +271,24 @@ func AccessToken(c echo.Context) error {
 				"error": "invalid code",
 			})
 		}
-
-		// Remove the pending flag on the OAuth client (if needed)
-		if client.Pending {
-			client.Pending = false
-			client.ClientID = ""
-			_ = couchdb.UpdateDoc(inst, client)
-			client.ClientID = client.CouchID
-		}
-
-		// Generate the access/refresh tokens
-		out := auth.AccessTokenReponse{
-			Type:  "bearer",
-			Scope: reqBody.Scope,
-		}
-		accessToken, err := client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{
-				"error": "Can't generate access token",
-			})
-		}
-		out.Access = accessToken
-		refreshToken, err := client.CreateJWT(inst, consts.RefreshTokenAudience, out.Scope)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, echo.Map{
-				"error": "Can't generate refresh token",
-			})
-		}
-		out.Refresh = refreshToken
-		return c.JSON(http.StatusOK, out)
-	}
-
-	if err != nil || !conf.AllowOAuthToken {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "this endpoint is not enabled",
-		})
-	}
-
-	// Check the token from the remote URL.
-	if reqBody.IDToken != "" {
-		err = checkIDToken(conf, inst, reqBody.IDToken)
 	} else {
-		err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
-	}
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err.Error(),
-		})
+		if err != nil || !conf.AllowOAuthToken {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "this endpoint is not enabled",
+			})
+		}
+
+		// Check the token from the remote URL.
+		if reqBody.IDToken != "" {
+			err = checkIDToken(conf, inst, reqBody.IDToken)
+		} else {
+			err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
+		}
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": err.Error(),
+			})
+		}
 	}
 
 	// Load the OAuth client
@@ -346,16 +307,32 @@ func AccessToken(c echo.Context) error {
 		})
 	}
 
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		token := []byte(reqBody.TwoFactorToken)
+		if ok := inst.ValidateTwoFactorPasscode(token, reqBody.TwoFactorCode); !ok {
+			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+			if err != nil {
+				return err
+			}
+			return c.JSON(http.StatusForbidden, echo.Map{
+				"error":            "two factor needed",
+				"two_factor_token": string(twoFactorToken),
+			})
+		}
+	}
+
 	// Prepare the scope
 	out := auth.AccessTokenReponse{
 		Type:  "bearer",
 		Scope: reqBody.Scope,
 	}
-	if slug := oauth.GetLinkedAppSlug(client.SoftwareID); slug != "" {
-		if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
-			return err
+	if !client.Flagship {
+		if slug := oauth.GetLinkedAppSlug(client.SoftwareID); slug != "" {
+			if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
+				return err
+			}
+			out.Scope = oauth.BuildLinkedAppScope(slug)
 		}
-		out.Scope = oauth.BuildLinkedAppScope(slug)
 	}
 	if out.Scope == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{

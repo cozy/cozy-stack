@@ -232,6 +232,7 @@ func TestOidc(t *testing.T) {
 		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
 			OnboardingFinished: &onboardingFinished,
 			FranceConnectID:    sub,
+			AuthMode:           "basic",
 		})
 
 		obj := e.POST("/admin-oidc/"+testInstance.ContextName+"/franceconnect/code").

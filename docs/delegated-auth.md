@@ -220,6 +220,36 @@ of an `oidc_token` in the payload.
 If the flagship makes the request, it also can use a delegated code obtained
 from the cloudery, by using `code` instead of `access_token`.
 
+##### Special case of 2FA
+
+When 2FA is enabled on the instance, the stack will first respond with:
+
+```http
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+```
+
+```json
+{
+  "error": "two factor needed",
+  "two_factor_token": "123123123123"
+}
+```
+
+and the client must ask the user to type its 6-digits code, and then make again
+the request:
+
+```json
+{
+  "access_token": "ooch1Yei",
+  "token_type": "bearer",
+  "refresh_token": "ui0Ohch8",
+  "scope": "io.cozy.files io.cozy.photos.albums",
+  "two_factor_token": "123123123123",
+  "two_factor_passcode": "678678"
+}
+```
+
 ## FranceConnect
 
 It is pretty much the same thing as OIDC. It's logical as FranceConnect is an
