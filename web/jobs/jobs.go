@@ -51,7 +51,11 @@ type (
 		Arguments   json.RawMessage `json:"arguments"`
 		Manual      bool            `json:"manual"`
 		ForwardLogs bool            `json:"forward_logs"`
-		Options     *job.JobOptions `json:"options"`
+		Options     *apiJobOptions  `json:"options"`
+	}
+	apiJobOptions struct {
+		MaxExecCount int `json:"max_exec_count"`
+		Timeout      int `json:"timeout"`
 	}
 	apiSupport struct {
 		Arguments map[string]string `json:"arguments"`
@@ -178,10 +182,17 @@ func pushJob(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
+	var opts *job.JobOptions
+	if req.Options != nil {
+		opts = &job.JobOptions{
+			MaxExecCount: req.Options.MaxExecCount,
+			Timeout:      time.Duration(req.Options.Timeout) * time.Second,
+		}
+	}
 
 	jr := &job.JobRequest{
 		WorkerType:  c.Param("worker-type"),
-		Options:     req.Options,
+		Options:     opts,
 		Manual:      req.Manual,
 		ForwardLogs: req.ForwardLogs,
 		Message:     job.Message(req.Arguments),
