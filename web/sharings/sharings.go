@@ -26,6 +26,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var sharLog = logger.WithNamespace("sharing")
+
 // CreateSharing initializes a new sharing (on the sharer)
 func CreateSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -177,7 +179,7 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 
 	sharings, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").Errorf("GetSharingsByDocType error: %s", err)
+		sharLog.WithDomain(inst.Domain).Errorf("GetSharingsByDocType error: %s", err)
 		return wrapErrors(err)
 	}
 	if err := middlewares.AllowWholeType(c, permission.GET, docType); err != nil {
@@ -192,7 +194,7 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 	}
 	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").Errorf("GetSharedDocsBySharingIDs error: %s", err)
+		sharLog.WithDomain(inst.Domain).Errorf("GetSharedDocsBySharingIDs error: %s", err)
 		return wrapErrors(err)
 	}
 
@@ -894,6 +896,6 @@ func wrapErrors(err error) error {
 	case permission.ErrExpiredToken:
 		return jsonapi.BadRequest(err)
 	}
-	logger.WithNamespace("sharing").Warnf("Not wrapped error: %s", err)
+	sharLog.Warnf("Not wrapped error: %s", err)
 	return err
 }
