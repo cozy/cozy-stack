@@ -114,10 +114,11 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *WorkerContext {
 	ctx := context.Background()
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
-	log := logger.WithDomain(job.Domain).
+	log := logger.
+		WithNamespace("jobs").
+		WithDomain(job.Domain).
 		WithField("job_id", job.ID()).
-		WithField("worker_id", workerID).
-		WithNamespace("jobs")
+		WithField("worker_id", workerID)
 
 	if job.ForwardLogs {
 		hook := realtime.LogHook(job, realtime.GetHub(), consts.Jobs, job.ID())

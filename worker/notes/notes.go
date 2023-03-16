@@ -27,11 +27,10 @@ func WorkerPersist(ctx *job.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	log := ctx.Instance.Logger().WithNamespace("notes")
-	log.Debugf("Persist %#v", msg)
+	ctx.Logger().Debugf("Persist %#v", msg)
 	err := note.Update(ctx.Instance, msg.NoteID)
 	if err != nil {
-		log.Warnf("Cannot persist note %s: %s", msg.NoteID, err)
+		ctx.Logger().Warnf("Cannot persist note %s: %s", msg.NoteID, err)
 	}
 	return err
 }

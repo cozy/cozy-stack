@@ -341,8 +341,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 	if err != nil {
 		dir, err = fs.DirByPath(folderPath)
 		if err != nil {
-			log := inst.Logger().WithNamespace("konnector")
-			log.Warnf("Can't create the default folder %s: %s", folderPath, err)
+			ctx.Logger().Warnf("Can't create the default folder %s: %s", folderPath, err)
 			return err
 		}
 	}

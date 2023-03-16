@@ -44,8 +44,7 @@ func ExportWorker(c *job.WorkerContext) error {
 
 	exportDoc, err := move.CreateExport(c.Instance, opts, archiver)
 	if err != nil {
-		c.Instance.Logger().WithNamespace("move").
-			Warnf("Export failed: %s", err)
+		c.Logger().Warnf("Export failed: %s", err)
 		if opts.MoveTo != nil {
 			move.Abort(c.Instance, opts.MoveTo.URL, opts.MoveTo.Token)
 		}
@@ -97,8 +96,7 @@ func ImportWorker(c *job.WorkerContext) error {
 		if opts.MoveFrom != nil {
 			status = move.StatusMoveFailure
 		}
-		c.Instance.Logger().WithNamespace("move").
-			Warnf("Import failed: %s", err)
+		c.Logger().Warnf("Import failed: %s", err)
 	}
 
 	if opts.MoveFrom != nil {

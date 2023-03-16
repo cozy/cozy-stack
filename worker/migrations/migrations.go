@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"golang.org/x/sync/errgroup"
@@ -68,20 +67,19 @@ func worker(ctx *job.WorkerContext) error {
 		return err
 	}
 
-	logger.WithDomain(ctx.Instance.Domain).WithNamespace("migration").
-		Infof("Start the migration %s", msg.Type)
+	ctx.Logger().Infof("Start the migration %s", msg.Type)
 
 	switch msg.Type {
 	case toSwiftV3:
-		return migrateToSwiftV3(ctx.Instance.Domain)
+		return migrateToSwiftV3(ctx)
 	case swiftV1ToV2:
 		return fmt.Errorf("this migration type is no longer supported")
 	case accountsToOrganization:
-		return migrateAccountsToOrganization(ctx.Instance.Domain)
+		return migrateAccountsToOrganization(ctx)
 	case notesMimeType:
-		return migrateNotesMimeType(ctx.Instance.Domain)
+		return migrateNotesMimeType(ctx)
 	case unwantedFolders:
-		return removeUnwantedFolders(ctx.Instance.Domain)
+		return removeUnwantedFolders(ctx)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -97,11 +95,10 @@ func commit(ctx *job.WorkerContext, err error) error {
 		migrationType = msg.Type
 	}
 
-	log := logger.WithDomain(ctx.Instance.Domain).WithNamespace("migration")
 	if err == nil {
-		log.Infof("Migration %s success", migrationType)
+		ctx.Logger().Infof("Migration %s success", migrationType)
 	} else {
-		log.Errorf("Migration %s error: %s", migrationType, err)
+		ctx.Logger().Errorf("Migration %s error: %s", migrationType, err)
 	}
 	return err
 }
@@ -112,7 +109,9 @@ func pushTrashJob(fs vfs.VFS) func(vfs.TrashJournal) error {
 	}
 }
 
-func removeUnwantedFolders(domain string) error {
+func removeUnwantedFolders(ctx *job.WorkerContext) error {
+	domain := ctx.Instance.Domain
+
 	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err
@@ -198,12 +197,14 @@ func removeUnwantedFolders(domain string) error {
 	return errf
 }
 
-func migrateNotesMimeType(domain string) error {
+func migrateNotesMimeType(ctx *job.WorkerContext) error {
+	domain := ctx.Instance.Domain
+	log := ctx.Logger()
+
 	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err
 	}
-	log := inst.Logger().WithNamespace("migration")
 
 	var docs []*vfs.FileDoc
 	req := &couchdb.FindRequest{
@@ -232,13 +233,15 @@ func migrateNotesMimeType(domain string) error {
 	return nil
 }
 
-func migrateToSwiftV3(domain string) error {
+func migrateToSwiftV3(ctx *job.WorkerContext) error {
+	domain := ctx.Instance.Domain
+	log := ctx.Logger()
+
 	c := config.GetSwiftConnection()
 	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err
 	}
-	log := inst.Logger().WithNamespace("migration")
 
 	var srcContainer, migratedFrom string
 	switch inst.SwiftLayout {
@@ -275,7 +278,6 @@ func migrateToSwiftV3(domain string) error {
 	}
 	defer mutex.Unlock()
 
-	ctx := context.Background()
 	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
 	if _, _, err = c.Container(ctx, dstContainer); !errors.Is(err, swift.ContainerNotFound) {
 		log.Errorf("Destination container %s already exists or something went wrong. Migration canceled.", dstContainer)
@@ -292,7 +294,7 @@ func migrateToSwiftV3(domain string) error {
 		}
 	}()
 
-	if err = copyTheFilesToSwiftV3(inst, ctx, c, root, srcContainer, dstContainer); err != nil {
+	if err = copyTheFilesToSwiftV3(ctx, c, root, srcContainer, dstContainer); err != nil {
 		return err
 	}
 
@@ -317,9 +319,10 @@ func migrateToSwiftV3(domain string) error {
 	return nil
 }
 
-func copyTheFilesToSwiftV3(inst *instance.Instance, ctx context.Context, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
-	log := logger.WithDomain(inst.Domain).
-		WithNamespace("migration")
+func copyTheFilesToSwiftV3(jctx *job.WorkerContext, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
+	log := jctx.Logger()
+	inst := jctx.Instance
+
 	sem := semaphore.NewWeighted(maxSimultaneousCalls)
 	g, ctx := errgroup.WithContext(context.Background())
 	fs := inst.VFS()

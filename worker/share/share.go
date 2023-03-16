@@ -54,8 +54,7 @@ func WorkerTrack(ctx *job.WorkerContext) error {
 	if err := ctx.UnmarshalEvent(&evt); err != nil {
 		return err
 	}
-	ctx.Instance.Logger().WithNamespace("share").
-		Debugf("Track %#v - %#v", msg, evt)
+	ctx.Logger().Debugf("Track %#v - %#v", msg, evt)
 	return sharing.UpdateShared(ctx.Instance, msg, evt)
 }
 
@@ -66,8 +65,7 @@ func WorkerReplicate(ctx *job.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	ctx.Instance.Logger().WithNamespace("share").
-		Debugf("Replicate %#v", msg)
+	ctx.Logger().Debugf("Replicate %#v", msg)
 	s, err := sharing.FindSharing(ctx.Instance, msg.SharingID)
 	if err != nil {
 		return err
@@ -84,7 +82,7 @@ func WorkerUpload(ctx *job.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	ctx.Instance.Logger().WithNamespace("share").
+	ctx.Logger().
 		Debugf("Upload %#v", msg)
 	s, err := sharing.FindSharing(ctx.Instance, msg.SharingID)
 	if err != nil {

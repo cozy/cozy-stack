@@ -177,7 +177,10 @@ func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Ciphe
 // Migrates all the encrypted accounts to Bitwarden ciphers.
 // It decrypts each account, reencrypt the fields with the organization key,
 // and save it in the ciphers database.
-func migrateAccountsToOrganization(domain string) error {
+func migrateAccountsToOrganization(ctx *job.WorkerContext) error {
+	domain := ctx.Instance.Domain
+	log := ctx.Logger()
+
 	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err
@@ -187,7 +190,6 @@ func migrateAccountsToOrganization(domain string) error {
 		return err
 	}
 	defer mu.Unlock()
-	log := inst.Logger().WithNamespace("migration")
 
 	setting, err := settings.Get(inst)
 	if err != nil {
