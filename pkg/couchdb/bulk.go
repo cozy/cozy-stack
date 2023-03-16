@@ -12,7 +12,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
@@ -152,7 +151,7 @@ func MakeAllDocsRequest(db prefixer.Prefixer, doctype string, params *AllDocsReq
 	path := "_all_docs?" + v.Encode()
 	method := http.MethodGet
 
-	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
+	log := plog.WithDomain(db.DomainName())
 	if log.IsDebug() {
 		log.Debugf("request: %s %s %s", method, path, "")
 	}
@@ -309,7 +308,7 @@ func bulkUpdateDocs(db prefixer.Prefixer, doctype string, docs, olddocs []interf
 		if d, ok := doc.(Doc); ok {
 			update := res[i]
 			if update.Error != "" {
-				logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
+				plog.WithDomain(db.DomainName()).
 					Warnf("bulkUpdateDocs error for %s %s: %s - %s", doctype, update.ID, update.Error, update.Reason)
 			}
 			if update.ID == "" || update.Rev == "" || !update.Ok {
@@ -411,7 +410,6 @@ func logBulk(db prefixer.Prefixer, prefix, doctype string, docs interface{}) {
 	}
 
 	for _, msg := range messages {
-		logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
-			Infof("%s for %s: %s", prefix, doctype, msg)
+		plog.WithDomain(db.DomainName()).Infof("%s for %s: %s", prefix, doctype, msg)
 	}
 }

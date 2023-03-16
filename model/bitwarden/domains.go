@@ -1,5 +1,9 @@
 package bitwarden
 
+import "github.com/cozy/cozy-stack/pkg/logger"
+
+var plog = logger.WithNamespace("bitwarden")
+
 // GlobalEquivalentDomainsType is an enum for global domain identifiers.
 type GlobalEquivalentDomainsType int
 

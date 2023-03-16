@@ -58,6 +58,8 @@ const TagSeparator = ","
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
+var plog = logger.WithNamespace("files")
+
 // CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -111,7 +113,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	if filepath.Ext(doc.DocName) == ".cozy-note" {
 		err := note.ImportFile(inst, doc, nil, c.Request().Body)
 		if err != nil {
-			inst.Logger().WithNamespace("files").
+			plog.WithDomain(inst.Domain).
 				Infof("Cannot import note: %s", err)
 			return nil, WrapVfsError(err)
 		}
@@ -125,12 +127,12 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 
 	n, err := io.Copy(file, c.Request().Body)
 	if err != nil {
-		inst.Logger().WithNamespace("files").
+		plog.WithDomain(inst.Domain).
 			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, doc.ByteSize)
 	}
 	if cerr := file.Close(); cerr != nil && (err == nil || errors.Is(err, io.ErrUnexpectedEOF)) {
 		err = cerr
-		inst.Logger().WithNamespace("files").
+		plog.WithDomain(inst.Domain).
 			Warnf("Error on uploading file (close): %s", err)
 	}
 	if err != nil {
@@ -246,7 +248,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	if filepath.Ext(newdoc.DocName) == ".cozy-note" {
 		err := note.ImportFile(instance, newdoc, olddoc, c.Request().Body)
 		if err != nil {
-			instance.Logger().WithNamespace("files").
+			plog.WithDomain(instance.Domain).
 				Infof("Cannot import note: %s", err)
 			return WrapVfsError(err)
 		}
@@ -1392,8 +1394,7 @@ func ClearTrashHandler(c echo.Context) error {
 		go func() {
 			i := inst.Clone().(*instance.Instance)
 			if err := sharing.AskReupload(i); err != nil {
-				i.Logger().WithNamespace("files").
-					Warnf("sharing.AskReupload failed with %s", err)
+				plog.WithDomain(i.Domain).Warnf("sharing.AskReupload failed with %s", err)
 			}
 		}()
 	}
@@ -1924,7 +1925,7 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*jsonapi.Error); !ok {
-		logger.WithNamespace("files").Warnf("Not wrapped error: %s", err)
+		plog.Warnf("Not wrapped error: %s", err)
 	}
 	return nil
 }
@@ -2124,11 +2125,11 @@ func ensureCleanOldTrashedTrigger(inst *instance.Instance) {
 	infos.Arguments = fmt.Sprintf("0 %d %d * * *", now.Minute(), hours)
 	trigger, err := job.NewTrigger(inst, infos, nil)
 	if err != nil {
-		inst.Logger().Errorf("Cannot create clean-old-trashed trigger: %s", err)
+		plog.WithDomain(inst.Domain).Errorf("Cannot create clean-old-trashed trigger: %s", err)
 		return
 	}
 	if err = sched.AddTrigger(trigger); err != nil {
-		inst.Logger().Errorf("Cannot create clean-old-trashed trigger: %s", err)
+		plog.WithDomain(inst.Domain).Errorf("Cannot create clean-old-trashed trigger: %s", err)
 	}
 }
 

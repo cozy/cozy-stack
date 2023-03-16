@@ -377,7 +377,7 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	}
 	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
 		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
 		}
 	}
@@ -518,12 +518,12 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 		return err
 	}
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("RevokeRecipientBySelf failed to remove shared refs (%s)': %s", s.ID(), err)
 	}
 	if !sharingDirTrashed && s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
 		}
 	}

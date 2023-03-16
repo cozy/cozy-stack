@@ -60,7 +60,7 @@ func ReturnSessionCode(c echo.Context, statusCode int, inst *instance.Instance) 
 	if ip == "" {
 		ip = strings.Split(req.RemoteAddr, ":")[0]
 	}
-	inst.Logger().WithField("nspace", "loginaudit").
+	plog.WithDomain(inst.Domain).WithField("nspace", "loginaudit").
 		Infof("New session_code created from %s at %s", ip, time.Now())
 
 	return c.JSON(statusCode, echo.Map{
@@ -133,7 +133,7 @@ func postAttestation(c echo.Context) error {
 		})
 	}
 	if err := client.Attest(inst, data); err != nil {
-		inst.Logger().Infof("Cannot attest %s client: %s", client.ID(), err.Error())
+		plog.WithDomain(inst.Domain).Infof("Cannot attest %s client: %s", client.ID(), err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
 		})
@@ -194,7 +194,7 @@ func loginFlagship(c echo.Context) error {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithNamespace("auth").Warn(err.Error())
+				plog.WithDomain(inst.Domain).Warn(err.Error())
 			}
 		}
 		return c.JSON(http.StatusUnauthorized, echo.Map{

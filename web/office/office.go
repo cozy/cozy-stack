@@ -12,9 +12,12 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+var plog = logger.WithNamespace("office")
 
 // Open returns the parameters to open an office document.
 func Open(c echo.Context) error {
@@ -66,16 +69,14 @@ func Callback(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	var params office.CallbackParameters
 	if err := c.Bind(&params); err != nil {
-		inst.Logger().WithNamespace("office").
-			Warnf("Cannot bind callback parameters: %s", err)
+		plog.WithDomain(inst.Domain).Warnf("Cannot bind callback parameters: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
 	}
 	header := c.Request().Header.Get(echo.HeaderAuthorization)
 	params.Token = strings.TrimPrefix(header, "Bearer ")
 
 	if err := office.Callback(inst, params); err != nil {
-		inst.Logger().WithNamespace("office").
-			Infof("Error on the callback: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Error on the callback: %s", err)
 		code := http.StatusInternalServerError
 		if httpError, ok := err.(*echo.HTTPError); ok {
 			code = httpError.Code

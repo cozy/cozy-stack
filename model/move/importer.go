@@ -40,7 +40,7 @@ func (im *importer) importPart(cursor string) error {
 	defer func() {
 		if im.tmpFile != "" {
 			if err := os.Remove(im.tmpFile); err != nil {
-				im.inst.Logger().WithNamespace("move").
+				plog.WithDomain(im.inst.Domain).
 					Warnf("Cannot remove temp file %s: %s", im.tmpFile, err)
 			}
 		}

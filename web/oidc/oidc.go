@@ -40,12 +40,14 @@ var (
 	ErrIdentityProvider     = errors.New("error from the identity provider")
 )
 
+var plog = logger.WithNamespace("oidc")
+
 // Start is the route to start the OpenID Connect dance.
 func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getGenericConfig(inst.ContextName)
 	if err != nil {
-		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
@@ -60,7 +62,7 @@ func StartFranceConnect(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getFranceConnectConfig(inst.ContextName)
 	if err != nil {
-		inst.Logger().WithNamespace("oidc").Infof("StartFranceConnect error: %s", err)
+		plog.WithDomain(inst.Domain).Infof("StartFranceConnect error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
@@ -139,7 +141,7 @@ func Login(c echo.Context) error {
 	err = config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 	if limits.IsLimitReachedOrExceeded(err) {
 		if err = auth.LoginRateExceeded(inst); err != nil {
-			inst.Logger().WithNamespace("oidc").Warn(err.Error())
+			plog.WithDomain(inst.Domain).Warn(err.Error())
 		}
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
@@ -162,7 +164,7 @@ func Login(c echo.Context) error {
 			code := c.QueryParam("code")
 			token, err = getToken(conf, code)
 			if err != nil {
-				logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+				plog.Errorf("Error on getToken: %s", err)
 				return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
 			}
 		}
@@ -233,7 +235,7 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 		return err
 	}
 	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), "OIDC", true); err != nil {
-		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+		plog.WithDomain(inst.Domain).Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	if redirect == "" {
 		redirect = inst.DefaultRedirection().String()
@@ -531,8 +533,7 @@ func getToken(conf *Config, code string) (string, error) {
 	if res.StatusCode != 200 {
 		// Flush the body, so that the connecion can be reused by keep-alive
 		_, _ = io.Copy(io.Discard, res.Body)
-		logger.WithNamespace("oidc").
-			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
+		plog.Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
 		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 	resBody, err := io.ReadAll(res.Body)
@@ -574,7 +575,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 			expected = inst.FranceConnectID
 		}
 		if !ok || sub == "" || sub != expected {
-			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
+			plog.WithDomain(inst.Domain).Errorf("Invalid sub: %s != %s", sub, expected)
 			if conf.Provider == FranceConnectProvider {
 				return ErrFranceConnectFailed
 			}
@@ -588,7 +589,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		return err
 	}
 	if domain != inst.Domain {
-		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		plog.Errorf("Invalid domains: %s != %s", domain, inst.Domain)
 		return ErrAuthenticationFailed
 	}
 	return nil
@@ -602,14 +603,14 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := oidcClient.Do(req)
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		plog.Errorf("Error on getDomainFromUserInfo: %s", err)
 		return nil, ErrIdentityProvider
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		// Flush the body, so that the connecion can be reused by keep-alive
 		_, _ = io.Copy(io.Discard, res.Body)
-		logger.WithNamespace("oidc").
+		plog.
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
 		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
@@ -617,7 +618,7 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	var params map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&params)
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		plog.Errorf("Error on getDomainFromUserInfo: %s", err)
 		return nil, ErrIdentityProvider
 	}
 	return params, nil
@@ -644,17 +645,17 @@ func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
 		return ChooseKeyForIDToken(keys, token)
 	})
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
+		plog.Errorf("Error on jwt.Parse: %s", err)
 		return ErrInvalidToken
 	}
 	if !token.Valid {
-		logger.WithNamespace("oidc").Errorf("%s: %#v", ErrInvalidToken, token)
+		plog.Errorf("%s: %#v", ErrInvalidToken, token)
 		return ErrInvalidToken
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
-		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
+		plog.WithDomain(inst.Domain).Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
 		return ErrAuthenticationFailed
 	}
 
@@ -718,7 +719,7 @@ func getKeysFromHTTP(keyURL string) ([]byte, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		logger.WithNamespace("oidc").Warnf("getKeys cannot fetch jwk: %d", res.StatusCode)
+		plog.Warnf("getKeys cannot fetch jwk: %d", res.StatusCode)
 		return nil, errors.New("cannot fetch jwk")
 	}
 	return io.ReadAll(res.Body)

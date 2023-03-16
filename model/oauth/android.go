@@ -9,7 +9,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	jwt "github.com/golang-jwt/jwt/v4"
 )
 
@@ -29,7 +28,7 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, req Attestatio
 	if !ok {
 		return errors.New("invalid claims type")
 	}
-	inst.Logger().Debugf("checkAndroidAttestation claims = %#v", claims)
+	plog.WithDomain(inst.Domain).Debugf("checkAndroidAttestation claims = %#v", claims)
 
 	nonce, ok := claims["nonce"].(string)
 	if !ok || len(nonce) == 0 {
@@ -73,8 +72,7 @@ func checkCertificateDigest(claims jwt.MapClaims) error {
 			return nil
 		}
 	}
-	logger.WithNamespace("oauth").
-		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest)
+	plog.Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest)
 	return errors.New("invalid certificate digest")
 }
 

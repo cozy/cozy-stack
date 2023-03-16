@@ -37,14 +37,12 @@ type FromOptions struct {
 func CheckImport(inst *instance.Instance, settingsURL string) error {
 	manifestURL, err := transformSettingsURLToManifestURL(settingsURL)
 	if err != nil {
-		inst.Logger().WithNamespace("move").
-			Debugf("Invalid settings URL %s: %s", settingsURL, err)
+		plog.WithDomain(inst.Domain).Debugf("Invalid settings URL %s: %s", settingsURL, err)
 		return ErrExportNotFound
 	}
 	manifest, err := fetchManifest(manifestURL)
 	if err != nil {
-		inst.Logger().WithNamespace("move").
-			Warnf("Cannot fetch manifest: %s", err)
+		plog.WithDomain(inst.Domain).Warnf("Cannot fetch manifest: %s", err)
 		return ErrExportNotFound
 	}
 	if inst.BytesDiskQuota > 0 && manifest.TotalSize > inst.BytesDiskQuota {

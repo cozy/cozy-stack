@@ -162,7 +162,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 			go func() {
 				inst := i.Clone().(*instance.Instance)
 				if err := AskReupload(inst); err != nil {
-					inst.Logger().WithNamespace("lifecycle").
+					plog.WithDomain(inst.Domain).WithNamespace("lifecycle").
 						Warnf("sharing.AskReupload failed with %s", err)
 				}
 			}()
@@ -214,7 +214,7 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 
 	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, changes); err != nil {
-		inst.Logger().Errorf("Error during cloudery settings update %s", err)
+		plog.WithDomain(inst.Domain).Errorf("Error during cloudery settings update %s", err)
 	}
 }
 

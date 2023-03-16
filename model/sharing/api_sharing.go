@@ -6,8 +6,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
 )
+
+var sharLog = logger.WithNamespace("share")
+var replLog = logger.WithNamespace("replicator")
+var uploadLog = logger.WithNamespace("upload")
 
 // InfoByDocTypeData returns the sharings info as data array in the JSON-API format
 func InfoByDocTypeData(c echo.Context, statusCode int, sharings []*APISharing) error {

@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -34,6 +35,8 @@ const (
 	// ExportStateError is used when the export document is finshed with error.
 	ExportStateError = "error"
 )
+
+var plog = logger.WithNamespace("move")
 
 // ExportDoc is a documents storing the metadata of an export.
 type ExportDoc struct {

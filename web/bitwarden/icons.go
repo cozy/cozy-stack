@@ -31,7 +31,7 @@ func GetIcon(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
-	inst.Logger().WithNamespace("bitwarden").Debugf("Error for icon %s: %s", domain, err)
+	plog.WithDomain(inst.Domain).Debugf("Error for icon %s: %s", domain, err)
 	if c.QueryParam("fallback") == "404" {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}

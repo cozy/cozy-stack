@@ -48,7 +48,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 				return ErrInvitationNotSent
 			}
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithNamespace("sharing").
+				sharLog.WithDomain(inst.Domain).
 					Errorf("Can't send email for %#v: %s", m.Email, err)
 				return ErrInvitationNotSent
 			}
@@ -86,7 +86,7 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 				return ErrInvitationNotSent
 			}
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithNamespace("sharing").
+				sharLog.WithDomain(inst.Domain).
 					Errorf("Can't send email for %#v: %s", m.Email, err)
 				return ErrInvitationNotSent
 			}
@@ -296,7 +296,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 
 	s.ShortcutID = fileDoc.DocID
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
-		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
+		sharLog.WithDomain(inst.Domain).Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
 	}
 
 	return s.SendShortcutMail(inst, fileDoc, previewURL)

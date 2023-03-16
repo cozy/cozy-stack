@@ -279,8 +279,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	u.RawQuery = url.Values{"subdomain": {subdomainType}}.Encode()
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: %s", err)
 		return
@@ -288,16 +287,14 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: %s", err)
 		return
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 204 {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot finalize: code=%d", res.StatusCode)
 	}
@@ -309,8 +306,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 			doc.M["import_vault"] = true
 		}
 		if err := couchdb.UpdateDoc(inst, doc); err != nil {
-			inst.Logger().
-				WithNamespace("move").
+			plog.WithDomain(inst.Domain).
 				WithField("moved_from", u.Host).
 				WithField("vault", strconv.FormatBool(vault)).
 				Warnf("Cannot save settings: %s", err)
@@ -393,8 +389,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 	u.Path = "/move/abort"
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot abort: %s", err)
 		return
@@ -402,16 +397,14 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	if err != nil {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot abort: %s", err)
 		return
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 204 {
-		inst.Logger().
-			WithNamespace("move").
+		plog.WithDomain(inst.Domain).
 			WithField("url", otherURL).
 			Warnf("Cannot abort: code=%d", res.StatusCode)
 	}

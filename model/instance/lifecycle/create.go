@@ -262,7 +262,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		for _, app := range opts.Apps {
 			go func(app string) {
 				if err := installApp(i, app); err != nil {
-					i.Logger().Errorf("Failed to install %s: %s", app, err)
+					plog.WithDomain(i.Domain).Errorf("Failed to install %s: %s", app, err)
 				}
 				done <- struct{}{}
 			}(app)

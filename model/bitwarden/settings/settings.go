@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
@@ -18,6 +19,8 @@ const DocTypeVersion = "1"
 
 // ErrMissingOrgKey is used when the organization key does not exist
 var ErrMissingOrgKey = errors.New("No organization key")
+
+var plog = logger.WithNamespace("bitwarden")
 
 // Settings is the struct that holds the birwarden settings
 type Settings struct {
@@ -164,8 +167,7 @@ func UpdateRevisionDate(inst *instance.Instance, settings *Settings) error {
 		err = settings.Save(inst)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("bitwarden").
-			Infof("Cannot update revision date: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Cannot update revision date: %s", err)
 	}
 	return err
 }

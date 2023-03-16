@@ -30,7 +30,7 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 		Domain: db.DomainName(),
 	}
 
-	log := inst.Logger().WithNamespace("sharing")
+	log := sharLog.WithDomain(inst.Domain)
 	log.Infof("revokeTrashed called for sharing %s", sharingID)
 	if s.Owner {
 		err = s.Revoke(inst)

@@ -79,7 +79,7 @@ func (c *Client) checkAppleAttestation(inst *instance.Instance, req AttestationR
 	if err != nil {
 		return fmt.Errorf("cannot parse attestation: %s", err)
 	}
-	inst.Logger().Debugf("checkAppleAttestation claims = %#v", obj)
+	plog.WithDomain(inst.Domain).Debugf("checkAppleAttestation claims = %#v", obj)
 
 	if err := obj.checkCertificate(req.Challenge, req.KeyID); err != nil {
 		return err

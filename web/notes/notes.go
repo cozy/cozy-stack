@@ -19,10 +19,13 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+var plog = logger.WithNamespace("notes")
 
 // CreateNote is the API handler for POST /notes. It creates a note, aka a file
 // with a set of metadata to enable collaborative edition.
@@ -385,7 +388,7 @@ func UploadImage(c echo.Context) error {
 	name := c.QueryParam("Name")
 	upload, err := note.NewImageUpload(inst, doc, name, contentType)
 	if err != nil {
-		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Image upload has failed: %s", err)
 		return jsonapi.BadRequest(errors.New("Upload has failed"))
 	}
 
@@ -395,7 +398,7 @@ func UploadImage(c echo.Context) error {
 		err = cerr
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("notes").Infof("Image upload has failed: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Image upload has failed: %s", err)
 		return jsonapi.BadRequest(errors.New("Upload has failed"))
 	}
 

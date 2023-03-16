@@ -164,7 +164,7 @@ func twoFactorFailed(c echo.Context, inst *instance.Instance, token []byte) erro
 	errCheckRateLimit := config.GetRateLimiter().CheckRateLimit(inst, limits.TwoFactorType)
 	if errCheckRateLimit == limits.ErrRateLimitExceeded {
 		if err := TwoFactorRateExceeded(inst); err != nil {
-			inst.Logger().WithNamespace("auth").Warn(err.Error())
+			plog.WithDomain(inst.Domain).Warn(err.Error())
 			errorMessage = inst.Translate(TwoFactorExceededErrorKey)
 		}
 	}

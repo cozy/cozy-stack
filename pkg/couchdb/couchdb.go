@@ -31,6 +31,8 @@ const MaxString = mango.MaxString
 // document.
 const SelectorReferencedBy = "referenced_by"
 
+var plog = logger.WithNamespace("couchdb")
+
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
 // ID of the document.
@@ -47,7 +49,7 @@ type Doc interface {
 // RTEvent published a realtime event for a couchDB change
 func RTEvent(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	if err := runHooks(db, verb, doc, oldDoc); err != nil {
-		logger.WithDomain(db.DomainName()).WithNamespace("couchdb").
+		plog.WithDomain(db.DomainName()).
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 	docClone := doc.Clone()
@@ -271,7 +273,7 @@ func handleResponseError(db prefixer.Prefixer, resp *http.Response) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
-	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
+	log := plog.WithDomain(db.DomainName())
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		err = newIOReadError(err)
@@ -297,7 +299,7 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 			return err
 		}
 	}
-	log := logger.WithDomain(db.DomainName()).WithNamespace("couchdb")
+	log := plog.WithDomain(db.DomainName())
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
@@ -539,7 +541,7 @@ func DeleteDoc(db prefixer.Prefixer, doc Doc) error {
 	// XXX Specific log for the deletion of an account, to help monitor this
 	// metric.
 	if doc.DocType() == consts.Accounts {
-		logger.WithDomain(db.DomainName()).
+		plog.WithDomain(db.DomainName()).
 			WithFields(logrus.Fields{
 				"log_id":      "account_delete",
 				"account_id":  doc.ID(),
@@ -743,11 +745,9 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 			if IsNoDatabaseError(err) {
 				err = CreateDB(db, v.Doctype)
 				if err != nil && !IsFileExists(err) {
-					if err != nil {
-						logger.WithDomain(db.DomainName()).
-							Infof("Cannot create view %s %s: cannot create DB - %s",
-								db.DBPrefix(), v.Doctype, err)
-					}
+					plog.WithDomain(db.DomainName()).
+						Infof("Cannot create view %s %s: cannot create DB - %s",
+							db.DBPrefix(), v.Doctype, err)
 					return err
 				}
 				err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
@@ -756,11 +756,9 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 				var old ViewDesignDoc
 				err = makeRequest(db, v.Doctype, http.MethodGet, url, nil, &old)
 				if err != nil {
-					if err != nil {
-						logger.WithDomain(db.DomainName()).
-							Infof("Cannot create view %s %s: conflict - %s",
-								db.DBPrefix(), v.Doctype, err)
-					}
+					plog.WithDomain(db.DomainName()).
+						Infof("Cannot create view %s %s: conflict - %s",
+							db.DBPrefix(), v.Doctype, err)
 					return err
 				}
 				if !equalViews(&old, doc) {
@@ -771,7 +769,7 @@ func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
 				}
 			}
 			if err != nil {
-				logger.WithDomain(db.DomainName()).
+				plog.WithDomain(db.DomainName()).
 					Infof("Cannot create view %s %s: %s", db.DBPrefix(), v.Doctype, err)
 			}
 			return err
@@ -819,9 +817,8 @@ func ExecView(db prefixer.Prefixer, view *View, req *ViewRequest, results interf
 		// Retry the error on 500, as it may be just that CouchDB is slow to build the view
 		err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
 		if IsInternalServerError(err) {
-			logger.
+			plog.
 				WithDomain(db.DomainName()).
-				WithNamespace("couchdb").
 				WithField("critical", "true").
 				Errorf("500 on requesting view: %s", err)
 		}
@@ -834,7 +831,7 @@ func ExecView(db prefixer.Prefixer, view *View, req *ViewRequest, results interf
 func DefineIndex(db prefixer.Prefixer, index *mango.Index) error {
 	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
 	if err != nil {
-		logger.WithDomain(db.DomainName()).
+		plog.WithDomain(db.DomainName()).
 			Infof("Cannot create index %s %s: %s", db.DBPrefix(), index.Doctype, err)
 	}
 	return err
