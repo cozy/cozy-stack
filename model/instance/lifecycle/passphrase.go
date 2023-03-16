@@ -69,7 +69,7 @@ func RegisterPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 // SendHint sends by mail the hint for the passphrase.
 func SendHint(inst *instance.Instance) error {
 	if inst.RegisterToken != nil {
-		inst.Logger().Info("Send hint ignored: not registered")
+		plog.WithDomain(inst.Domain).Info("Send hint ignored: not registered")
 		return nil
 	}
 	publicName, err := inst.PublicName()
@@ -97,14 +97,14 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 	// If a registration token is set, we do not generate another token than the
 	// registration one, and bail.
 	if inst.RegisterToken != nil {
-		inst.Logger().Info("Passphrase reset ignored: not registered")
+		plog.WithDomain(inst.Domain).Info("Passphrase reset ignored: not registered")
 		return nil
 	}
 	// If a passphrase reset token is set and valid, we do not generate new one,
 	// and bail.
 	if inst.PassphraseResetToken != nil && inst.PassphraseResetTime != nil &&
 		time.Now().UTC().Before(*inst.PassphraseResetTime) {
-		inst.Logger().Infof("Passphrase reset ignored: already sent at %s",
+		plog.WithDomain(inst.Domain).Infof("Passphrase reset ignored: already sent at %s",
 			inst.PassphraseResetTime.String())
 		return instance.ErrResetAlreadyRequested
 	}
@@ -363,7 +363,7 @@ func CheckPassphrase(inst *instance.Instance, pass []byte) error {
 
 	inst.PassphraseHash = newHash
 	if err = update(inst); err != nil {
-		inst.Logger().Errorf("Failed to update hash in db: %s", err)
+		plog.WithDomain(inst.Domain).Errorf("Failed to update hash in db: %s", err)
 	}
 	return nil
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/labstack/echo/v4"
 )
@@ -99,12 +98,12 @@ func destroyWithoutHooks(domain string) error {
 	removeTriggers(inst)
 
 	if err = couchdb.DeleteAllDBs(inst); err != nil {
-		inst.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not delete all CouchDB databases: %s", err.Error())
 		return err
 	}
 
 	if err = inst.VFS().Delete(); err != nil {
-		inst.Logger().Errorf("Could not delete VFS: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not delete VFS: %s", err.Error())
 		return err
 	}
 
@@ -213,8 +212,7 @@ func removeTriggers(inst *instance.Instance) {
 	if err == nil {
 		for _, t := range triggers {
 			if err = sched.DeleteTrigger(inst, t.Infos().TID); err != nil {
-				logger.WithDomain(inst.Domain).Errorf(
-					"Failed to remove trigger: %s", err)
+				plog.WithDomain(inst.Domain).Errorf("Failed to remove trigger: %s", err)
 			}
 		}
 	}

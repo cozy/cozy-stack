@@ -79,7 +79,7 @@ func Reset(inst *instance.Instance) error {
 
 	for _, app := range []string{"home", "store", "settings"} {
 		if err = installApp(inst, app); err != nil {
-			inst.Logger().Errorf("Failed to install %s: %s", app, err)
+			plog.WithDomain(inst.Domain).Errorf("Failed to install %s: %s", app, err)
 		}
 	}
 	return nil

@@ -25,9 +25,9 @@ func GetInstance(domain string) (*instance.Instance, error) {
 			break
 		}
 
-		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", couchdb.IndexViewsVersion, i.IndexViewsVersion)
+		plog.WithDomain(i.Domain).Debugf("Indexes outdated: wanted %d; got %d", couchdb.IndexViewsVersion, i.IndexViewsVersion)
 		if err = DefineViewsAndIndex(i); err != nil {
-			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
+			plog.WithDomain(i.Domain).Errorf("Could not re-define indexes and views: %s", err.Error())
 			return nil, err
 		}
 

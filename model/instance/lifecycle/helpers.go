@@ -12,15 +12,18 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"golang.org/x/net/idna"
 	"golang.org/x/sync/errgroup"
 )
 
+var plog = logger.WithNamespace("lifecycle")
+
 func update(inst *instance.Instance) error {
 	if err := inst.Update(); err != nil {
-		inst.Logger().Errorf("Could not update: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not update: %s", err.Error())
 		return err
 	}
 	return nil
