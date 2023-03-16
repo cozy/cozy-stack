@@ -108,6 +108,11 @@ func (e *Entry) WithNamespace(nspace string) *Entry {
 	return e.WithField("nspace", nspace)
 }
 
+// WithDomain add a domain field.
+func (e *Entry) WithDomain(domain string) *Entry {
+	return e.WithField("domain", domain)
+}
+
 // WithField adds a single field to the Entry.
 func (e *Entry) WithField(key string, value interface{}) *Entry {
 	entry := e.entry.WithField(key, value)
