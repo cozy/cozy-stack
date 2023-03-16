@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
@@ -23,6 +24,8 @@ import (
 const aggregatorID = "bi-aggregator"
 
 const aggregatorUserID = "bi-aggregator-user"
+
+var plog = logger.WithNamespace("webhook")
 
 // EventBI is a type used for the events sent by BI in the webhooks
 type EventBI string
@@ -117,14 +120,14 @@ func (c *WebhookCall) handleConnectionSynced() error {
 	}
 	slug, err := mapUUIDToSlug(uuid)
 	if err != nil {
-		c.Instance.Logger().WithNamespace("webhook").
+		plog.WithDomain(c.Instance.Domain).
 			Warnf("no slug found for uuid %s: %s", uuid, err)
 		return err
 	}
 	konn, err := app.GetKonnectorBySlug(c.Instance, slug)
 	if err != nil {
 		userID, _ := extractPayloadUserID(c.Payload)
-		c.Instance.Logger().WithNamespace("webhook").
+		plog.WithDomain(c.Instance.Domain).
 			Warnf("konnector not installed id_connection=%d id_user=%d uuid=%s slug=%s", connID, userID, uuid, slug)
 		return nil
 	}
@@ -216,7 +219,7 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 		// on_delete execution for the konnector.
 		account.ManualCleaning = true
 		if err := couchdb.DeleteDoc(c.Instance, account); err != nil {
-			c.Instance.Logger().WithNamespace("webhook").
+			plog.WithDomain(c.Instance.Domain).
 				Warnf("failed to delete account: %s", err)
 			return err
 		}
@@ -226,7 +229,7 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 		if trigger != nil {
 			jobsSystem := job.System()
 			if err := jobsSystem.DeleteTrigger(c.Instance, trigger.ID()); err != nil {
-				c.Instance.Logger().WithNamespace("webhook").
+				plog.WithDomain(c.Instance.Domain).
 					Errorf("failed to delete trigger: %s", err)
 			}
 			msg += fmt.Sprintf("and trigger %s ", trigger.ID())
@@ -235,7 +238,7 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 	}
 
 	userID, _ := extractPayloadIDUser(c.Payload)
-	c.Instance.Logger().WithNamespace("webhook").
+	plog.WithDomain(c.Instance.Domain).
 		Infof("Connection deleted user_id=%d connection_id=%d %s", userID, connID, msg)
 
 	// If the user has no longer any connections on BI, we must remove their
@@ -490,7 +493,7 @@ func (c *WebhookCall) fireTrigger(trigger job.Trigger, account *account.Account)
 	}
 	j, err := job.System().PushJob(c.Instance, req)
 	if err == nil {
-		c.Instance.Logger().WithNamespace("webhook").
+		plog.WithDomain(c.Instance.Domain).
 			Debugf("Push job %s (account: %s - trigger: %s)", j.ID(), account.ID(), trigger.ID())
 	}
 	return err
@@ -534,7 +537,7 @@ func (c *WebhookCall) copyLastUpdate(account *account.Account, konn *app.KonnMan
 
 	err := couchdb.UpdateDoc(c.Instance, account)
 	if err == nil {
-		c.Instance.Logger().WithNamespace("webhook").
+		plog.WithDomain(c.Instance.Domain).
 			Debugf("Set lastUpdate to %s (account :%s)", lastUpdate, account.ID())
 	}
 	return err

@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 )
 
@@ -80,8 +79,7 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 		if len(msg) > 200 {
 			msg = msg[0:198] + "..."
 		}
-		logger.WithNamespace("bi").
-			Warnf("getNumberOfConnections [%d] cannot parse JSON %s: %s", res.StatusCode, msg, err)
+		plog.Warnf("getNumberOfConnections [%d] cannot parse JSON %s: %s", res.StatusCode, msg, err)
 		return 0, err
 	}
 	return data.Total, nil
