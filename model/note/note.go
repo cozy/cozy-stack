@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/hashicorp/go-multierror"
 )
@@ -31,6 +32,8 @@ const (
 	cacheDuration      = 30 * time.Minute
 	cleanStepsAfter    = 24 * time.Hour
 )
+
+var plog = logger.WithNamespace("notes")
 
 // Document is the note document in memory. It is persisted to the VFS as a
 // file, but with a debounce: the intermediate states are saved in Redis.
@@ -200,22 +203,19 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
 	schema, err := doc.Schema()
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("Cannot instantiate the schema: %s", err)
+		plog.WithDomain(inst.Domain).Infof("Cannot instantiate the schema: %s", err)
 		return nil, ErrInvalidSchema
 	}
 
 	// Create an empty document that matches the schema constraints.
 	typ, err := schema.NodeType(schema.Spec.TopNode)
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("The schema is invalid: %s", err)
+		plog.WithDomain(inst.Domain).Infof("The schema is invalid: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	node, err := typ.CreateAndFill()
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("The topNode cannot be created: %s", err)
+		plog.WithDomain(inst.Domain).Infof("The topNode cannot be created: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	return node, nil
@@ -748,8 +748,9 @@ func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := inst.Logger().WithField("panic", true).WithNamespace("note")
-				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+
+				plog.WithDomain(inst.Domain).WithField("panic", true).
+					Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()
 		purgeAllSteps(inst, doc.ID())
