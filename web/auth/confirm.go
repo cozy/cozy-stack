@@ -63,7 +63,7 @@ func confirmAuth(c echo.Context) error {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithNamespace("auth").Warn(err.Error())
+				plog.WithDomain(inst.Domain).WithNamespace("auth").Warn(err.Error())
 			}
 		}
 		return c.JSON(http.StatusUnauthorized, echo.Map{
@@ -111,7 +111,7 @@ func ConfirmSuccess(c echo.Context, inst *instance.Instance, state string) error
 	}
 	code, err := GetStore().AddCode(inst)
 	if err != nil {
-		inst.Logger().Warnf("Cannot add confirm code: %s", err)
+		plog.WithDomain(inst.Domain).Warnf("Cannot add confirm code: %s", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	q := redirect.Query()
@@ -165,7 +165,7 @@ func confirmCode(c echo.Context) error {
 	}
 	ok, err := GetStore().GetCode(inst, code)
 	if err != nil {
-		inst.Logger().Warnf("Cannot get confirm code: %s", err)
+		plog.WithDomain(inst.Domain).Warnf("Cannot get confirm code: %s", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if !ok {

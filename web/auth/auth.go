@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
@@ -32,6 +33,8 @@ const (
 	// user when there were too many attempts
 	TwoFactorExceededErrorKey = "Login Two factor attempts error"
 )
+
+var plog = logger.WithNamespace("auth")
 
 func wantsJSON(c echo.Context) bool {
 	return c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
@@ -232,14 +235,14 @@ func loginForm(c echo.Context) error {
 	if token := c.QueryParam("jwt"); token != "" {
 		err := session.CheckDelegatedJWT(instance, token)
 		if err != nil {
-			instance.Logger().Warnf("Delegated token check failed: %s", err)
+			plog.WithDomain(instance.Domain).Warnf("Delegated token check failed: %s", err)
 		} else {
 			sessionID, err := SetCookieForNewSession(c, session.NormalRun)
 			if err != nil {
 				return err
 			}
 			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), "JWT", true); err != nil {
-				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				plog.WithDomain(instance.Domain).Errorf("Could not store session history %q: %s", sessionID, err)
 			}
 			if redirect == nil {
 				redirect = instance.DefaultRedirection()
@@ -269,7 +272,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, dura
 	}
 
 	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), logMessage, true); err != nil {
-		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+		plog.WithDomain(inst.Domain).Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
 	return nil
@@ -280,7 +283,7 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
-		inst.Logger().Errorf("Could not hash the passphrase: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not hash the passphrase: %s", err.Error())
 		return
 	}
 	inst.PassphraseHash = hash
@@ -289,22 +292,22 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	settings.SecurityStamp = lifecycle.NewSecurityStamp()
 	key, encKey, err := lifecycle.CreatePassphraseKey(masterKey)
 	if err != nil {
-		inst.Logger().Errorf("Could not create passphrase key: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not create passphrase key: %s", err.Error())
 		return
 	}
 	settings.Key = key
 	pubKey, privKey, err := lifecycle.CreateKeyPair(encKey)
 	if err != nil {
-		inst.Logger().Errorf("Could not create key pair: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not create key pair: %s", err.Error())
 		return
 	}
 	settings.PublicKey = pubKey
 	settings.PrivateKey = privKey
 	if err := inst.Update(); err != nil {
-		inst.Logger().Errorf("Could not update: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not update: %s", err.Error())
 	}
 	if err := settings.Save(inst); err != nil {
-		inst.Logger().Errorf("Could not update: %s", err.Error())
+		plog.WithDomain(inst.Domain).Errorf("Could not update: %s", err.Error())
 	}
 }
 
@@ -364,7 +367,7 @@ func login(c echo.Context) error {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithNamespace("auth").Warn(err.Error())
+				plog.WithDomain(inst.Domain).WithNamespace("auth").Warn(err.Error())
 			}
 		}
 		if wantsJSON(c) {

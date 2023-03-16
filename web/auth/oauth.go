@@ -164,7 +164,7 @@ func authorizeForm(c echo.Context) error {
 			req := c.Request()
 			if err == nil {
 				if err = session.StoreNewLoginEntry(instance, sessionID, "", req, "session_code", false); err != nil {
-					instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+					plog.WithDomain(instance.Domain).Errorf("Could not store session history %q: %s", sessionID, err)
 				}
 			}
 			redirect := req.URL
@@ -379,7 +379,7 @@ func createAccessCode(c echo.Context, params authorizeParams, u *url.URL, q url.
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	params.instance.Logger().WithNamespace("loginaudit").
+	plog.WithDomain(params.instance.Domain).WithNamespace("loginaudit").
 		Infof("Access code created from %s at %s with scope %s", ip, time.Now(), access.Scope)
 
 	// We should be sending "code" only, but for compatibility reason, we keep
@@ -692,7 +692,7 @@ func authorizeMove(c echo.Context) error {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {
-				inst.Logger().WithNamespace("auth").Warn(err.Error())
+				plog.WithDomain(inst.Domain).Warn(err.Error())
 			}
 		}
 		return c.JSON(http.StatusUnauthorized, echo.Map{
@@ -869,7 +869,7 @@ func accessToken(c echo.Context) error {
 		// Delete the access code, it can be used only once
 		err = couchdb.DeleteDoc(instance, accessCode)
 		if err != nil {
-			instance.Logger().Errorf(
+			plog.WithDomain(instance.Domain).Errorf(
 				"[oauth] Failed to delete the access code: %s", err)
 		}
 
