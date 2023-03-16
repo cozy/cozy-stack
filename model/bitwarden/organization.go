@@ -123,13 +123,13 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 	}
 	orgKey, err := setting.OrganizationKey()
 	if err != nil {
-		inst.Logger().WithNamespace("bitwarden").
+		plog.WithDomain(inst.Domain).
 			Infof("Cannot read the organization key: %s", err)
 		return nil, err
 	}
 	key, err := crypto.EncryptWithRSA(setting.PublicKey, orgKey)
 	if err != nil {
-		inst.Logger().WithNamespace("bitwarden").
+		plog.WithDomain(inst.Domain).
 			Infof("Cannot encrypt with RSA: %s", err)
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 	payload := []byte(consts.BitwardenCozyCollectionName)
 	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
 	if err != nil {
-		inst.Logger().WithNamespace("bitwarden").
+		plog.WithDomain(inst.Domain).
 			Infof("Cannot encrypt with AES: %s", err)
 		return nil, err
 	}
