@@ -20,9 +20,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+var plog = logger.WithNamespace("bitwarden")
 
 func migrateAccountsToCiphers(inst *instance.Instance) error {
 	msg, err := job.NewMessage(map[string]interface{}{
@@ -123,7 +126,8 @@ func UpdateProfile(c echo.Context) error {
 // SetKeyPair is the handler for setting the key pair: public and private keys.
 func SetKeyPair(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithNamespace("bitwarden")
+
+	log := plog.WithDomain(inst.Domain)
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid token",
@@ -242,7 +246,7 @@ type AccessTokenReponse struct {
 
 func getInitialCredentials(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithNamespace("bitwarden")
+	log := plog.WithDomain(inst.Domain)
 	pass := []byte(c.FormValue("password"))
 
 	// Authentication
@@ -330,7 +334,7 @@ func getInitialCredentials(c echo.Context) error {
 	if ip == "" {
 		ip = strings.Split(c.Request().RemoteAddr, ":")[0]
 	}
-	inst.Logger().WithNamespace("loginaudit").
+	plog.WithDomain(inst.Domain).
 		Infof("New bitwarden client from %s at %s", ip, time.Now())
 
 	// Send the response

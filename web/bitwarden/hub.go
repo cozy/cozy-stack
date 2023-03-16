@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gorilla/websocket"
@@ -132,20 +131,22 @@ var initialResponse = []byte{0x7b, 0x7d, 0x1e} // {}<RS>
 func readPump(notifier *wsNotifier) {
 	ws := notifier.WS
 	ds := notifier.DS
+
 	var msg struct {
 		Protocol string `json:"protocol"`
 		Version  int    `json:"version"`
 	}
+
+	log := plog.WithDomain(ds.DomainName())
+
 	if err := ws.ReadJSON(&msg); err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-			logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-				Infof("Read error: %s", err)
+			log.Infof("Read error: %s", err)
 		}
 		return
 	}
 	if msg.Protocol != "messagepack" || msg.Version != 1 {
-		logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-			Infof("Unexpected message: %v", msg)
+		log.Infof("Unexpected message: %v", msg)
 		return
 	}
 	ds.Watch(consts.Settings, consts.BitwardenSettingsID)
@@ -158,8 +159,7 @@ func readPump(notifier *wsNotifier) {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-					Infof("Read error: %s", err)
+				log.Infof("Read error: %s", err)
 			}
 			close(notifier.Responses)
 			return
@@ -179,6 +179,8 @@ func writePump(notifier *wsNotifier) error {
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
+	log := plog.WithDomain(ds.DomainName())
+
 	for {
 		select {
 		case r, ok := <-notifier.Responses:
@@ -189,8 +191,7 @@ func writePump(notifier *wsNotifier) error {
 				return err
 			}
 			if err := ws.WriteMessage(websocket.BinaryMessage, r); err != nil {
-				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-					Infof("Write error: %s", err)
+				log.Infof("Write error: %s", err)
 				return nil
 			}
 		case e := <-ds.Channel:
@@ -203,8 +204,7 @@ func writePump(notifier *wsNotifier) error {
 			}
 			serialized, err := serializeNotification(handle, *notif)
 			if err != nil {
-				logger.WithDomain(ds.DomainName()).WithNamespace("bitwarden").
-					Infof("Serialize error: %s", err)
+				log.Infof("Serialize error: %s", err)
 				continue
 			}
 			if err := ws.WriteMessage(websocket.BinaryMessage, serialized); err != nil {

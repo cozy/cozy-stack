@@ -824,23 +824,20 @@ func ShareCipher(c echo.Context) error {
 
 	var req shareCipherRequest
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
-		inst.Logger().WithNamespace("bitwarden").
-			Infof("Bad JSON: %v", err)
+		plog.WithDomain(inst.Domain).Infof("Bad JSON: %v", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid JSON",
 		})
 	}
 	cipher, err := req.Cipher.toCipher()
 	if err != nil {
-		inst.Logger().WithNamespace("bitwarden").
-			Infof("Bad cipher: %v", err)
+		plog.WithDomain(inst.Domain).Infof("Bad cipher: %v", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
 		})
 	}
 	if req.Cipher.OrganizationID == "" {
-		inst.Logger().WithNamespace("bitwarden").
-			Infof("Bad organization: %v", req)
+		plog.WithDomain(inst.Domain).Infof("Bad organization: %v", req)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "organizationId not provided",
 		})
