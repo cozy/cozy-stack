@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 )
 
+var plog = logger.WithNamespace("accounts")
+
 // Account holds configuration information for an account
 type Account struct {
 	DocID         string                 `json:"_id,omitempty"`
@@ -176,8 +178,7 @@ func CleanAndWait(inst *instance.Instance, toClean []CleanEntry) error {
 	var errm error
 	for range toClean {
 		if err := <-ch; err != nil {
-			inst.Logger().
-				WithNamespace("accounts").
+			plog.WithDomain(inst.Domain).
 				WithField("critical", "true").
 				Errorf("Error on delete_for_account: %v", err)
 			errm = multierror.Append(errm, err)
@@ -211,8 +212,7 @@ func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
 	for _, t := range entry.Triggers {
 		err := jobsSystem.DeleteTrigger(inst, t.ID())
 		if err != nil {
-			inst.Logger().WithNamespace("accounts").
-				Errorf("Cannot delete the trigger: %v", err)
+			plog.WithDomain(inst.Domain).Errorf("Cannot delete the trigger: %v", err)
 		}
 	}
 	return nil
@@ -222,7 +222,7 @@ func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
 // the AccountDeleted flag, to allow the konnector to clear the account
 // remotely.
 func PushAccountDeletedJob(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID, accountRev, konnector string) (*job.Job, error) {
-	logger.WithDomain(db.DomainName()).
+	plog.WithDomain(db.DomainName()).
 		WithField("account_id", accountID).
 		WithField("account_rev", accountRev).
 		WithField("konnector", konnector).
@@ -290,13 +290,13 @@ func init() {
 			jobsSystem := job.System()
 			triggers, err := GetTriggers(jobsSystem, db, doc.ID())
 			if err != nil {
-				logger.WithDomain(db.DomainName()).Errorf(
+				plog.WithDomain(db.DomainName()).Errorf(
 					"Failed to fetch triggers after account deletion: %s", err)
 				return err
 			}
 			for _, t := range triggers {
 				if err := jobsSystem.DeleteTrigger(db, t.ID()); err != nil {
-					logger.WithDomain(db.DomainName()).
+					plog.WithDomain(db.DomainName()).
 						Errorf("failed to delete orphan trigger: %s", err)
 				}
 			}
@@ -322,7 +322,7 @@ func init() {
 				konnector, _ = v.M["account_type"].(string)
 			}
 			if konnector == "" {
-				logger.WithDomain(db.DomainName()).
+				plog.WithDomain(db.DomainName()).
 					WithField("account_id", old.ID()).
 					WithField("account_rev", old.Rev()).
 					Info("No associated konnector for account: cannot create on_delete job")
@@ -342,7 +342,7 @@ func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
 	case *Account:
 		doc, err := old.toJSONDoc()
 		if err != nil {
-			logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
+			plog.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
 			return
 		}
 		cloned = doc
@@ -356,10 +356,10 @@ func createSoftDeletedAccount(db prefixer.Prefixer, old couchdb.Doc) {
 	cloned.M["soft_deleted_rev"] = cloned.Rev()
 	cloned.SetRev("")
 	if err := createNamedDocWithDB(db, cloned); err != nil {
-		logger.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
+		plog.WithDomain(db.DomainName()).Errorf("Failed to soft-delete account: %s", err)
 	}
 	if err := couchdb.Compact(db, consts.Accounts); err != nil {
-		logger.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
+		plog.WithDomain(db.DomainName()).Infof("Failed to compact accounts: %s", err)
 	}
 }
 
