@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/registry"
 
@@ -49,6 +50,8 @@ const ChallengeLen = 24
 // ScopeLogin is the special scope used by the manager or any other client
 // for login/authentication purposes.
 const ScopeLogin = "login"
+
+var plog = logger.WithNamespace("oauth")
 
 // CleanMessage is used for messages to the clean-clients worker.
 type CleanMessage struct {
@@ -393,7 +396,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	}
 	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, req, &results)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Warnf("Cannot find clients by name: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
@@ -454,7 +457,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	c.Metadata = md
 
 	if err = couchdb.CreateDoc(i, c); err != nil {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Warnf("Cannot create client: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
@@ -464,7 +467,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 
 	if !hasOptions(NotPending, opts) {
 		if err := setupTrigger(i, c.CouchID); err != nil {
-			i.Logger().WithNamespace("oauth").
+			plog.WithDomain(i.Domain).
 				Warnf("Cannot create trigger: %s", err)
 		}
 	}
@@ -476,7 +479,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		Subject:  c.CouchID,
 	})
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Failed to create the registration access token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
@@ -597,7 +600,7 @@ func (c *Client) CreateChallenge(inst *instance.Instance) (string, error) {
 	if err := store.SaveChallenge(inst, c.ID(), nonce); err != nil {
 		return "", err
 	}
-	inst.Logger().Debugf("OAuth client %s has requested a challenge: %s", c.ID(), nonce)
+	plog.WithDomain(inst.Domain).Debugf("OAuth client %s has requested a challenge: %s", c.ID(), nonce)
 	return nonce, nil
 }
 
@@ -681,7 +684,7 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 		Scope: scope,
 	})
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Failed to create the %s token: %s", audience, err)
 	}
 	return token, err
@@ -696,23 +699,23 @@ func validToken(i *instance.Instance, audience, token string) (permission.Claims
 		return i.OAuthSecret, nil
 	}
 	if err := crypto.ParseJWT(token, keyFunc, &claims); err != nil {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
 	if claims.Expired() {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Failed to verify the %s token: expired", audience)
 		return claims, false
 	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
 	if claims.Audience != audience {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Unexpected audience for %s token: %s", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
 	}
@@ -729,12 +732,12 @@ func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permiss
 	}
 	settings, err := settings.Get(i)
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Error while getting bitwarden settings: %s", err)
 		return claims, false
 	}
 	if claims.SStamp != settings.SecurityStamp {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Expected %s security stamp for %s token, but was: %s",
 				settings.SecurityStamp, claims.Subject, claims.SStamp)
 		return claims, false
@@ -751,7 +754,7 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		return claims, valid
 	}
 	if claims.Subject != c.CouchID {
-		i.Logger().WithNamespace("oauth").
+		plog.WithDomain(i.Domain).
 			Errorf("Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
 		return claims, false
 	}
