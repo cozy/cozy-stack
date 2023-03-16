@@ -9,7 +9,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -96,8 +95,7 @@ func (store *redisStateStorage) Find(id string) *stateHolder {
 	var s stateHolder
 	err = json.Unmarshal(serialized, &s)
 	if err != nil {
-		logger.WithNamespace("redis-state").Errorf(
-			"Bad state in redis %s", string(serialized))
+		plog.Errorf("Bad state in redis %s", string(serialized))
 		return nil
 	}
 	return &s
