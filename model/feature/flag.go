@@ -13,8 +13,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+var plog = logger.WithNamespace("flags")
 
 // Flags is a struct for a set of feature flags.
 type Flags struct {
@@ -82,19 +85,19 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 	}
 	flags.addInstanceFlags(inst)
 	if err := flags.addManager(inst); err != nil {
-		inst.Logger().WithNamespace("flags").
+		plog.WithDomain(inst.Domain).
 			Warnf("Cannot get the flags from the manager: %s", err)
 	}
 	if err := flags.addConfig(inst); err != nil {
-		inst.Logger().WithNamespace("flags").
+		plog.WithDomain(inst.Domain).
 			Warnf("Cannot get the flags from the config: %s", err)
 	}
 	if err := flags.addContext(inst); err != nil {
-		inst.Logger().WithNamespace("flags").
+		plog.WithDomain(inst.Domain).
 			Warnf("Cannot get the flags from the context: %s", err)
 	}
 	if err := flags.addDefaults(inst); err != nil {
-		inst.Logger().WithNamespace("flags").
+		plog.WithDomain(inst.Domain).
 			Warnf("Cannot get the flags from the defaults: %s", err)
 	}
 	return flags, nil
