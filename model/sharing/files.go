@@ -173,7 +173,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("EnsureSharedWithMeDir failed to find the dir: %s", err)
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		name := inst.Translate("Tree Shared with me")
 		dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
 		if err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("EnsureSharedWithMeDir failed to make the dir: %s", err)
 			return nil, err
 		}
@@ -193,7 +193,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 			dir, err = fs.DirByPath(dir.Fullpath)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("EnsureSharedWithMeDir failed to create the dir: %s", err)
 			return nil, err
 		}
@@ -210,13 +210,13 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		}
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("EnsureSharedWithMeDir failed to restore the dir: %s", err)
 			return nil, err
 		}
 		children, err := fs.DirBatch(dir, couchdb.NewSkipCursor(0, 0))
 		if err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("EnsureSharedWithMeDir failed to find children: %s", err)
 			return nil, err
 		}
@@ -238,7 +238,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
-				inst.Logger().WithNamespace("sharing").
+				sharLog.WithDomain(inst.Domain).
 					Warnf("EnsureSharedWithMeDir failed to trash children: %s", err)
 				return nil, err
 			}
@@ -260,7 +260,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		parent, err = fs.DirByID(parentID)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("CreateDirForSharing failed to find parent directory: %s", err)
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 	parts := strings.Split(rule.Values[0], "/")
 	dir.DocID = parts[len(parts)-1]
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("CreateDirForSharing failed to make dir: %s", err)
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		dir.DocName = fmt.Sprintf("%s (%d)", basename, i)
 		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 	}
-	inst.Logger().WithNamespace("sharing").
+	sharLog.WithDomain(inst.Domain).
 		Errorf("Cannot create the sharing directory: %s", err)
 	return nil, err
 }
@@ -307,7 +307,7 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 	parts := strings.Split(rule.Values[0], "/")
 	dir, _, err := fs.DirOrFileByID(parts[len(parts)-1])
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("AddReferenceForSharingDir failed to find dir: %s", err)
 		return err
 	}
@@ -345,7 +345,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
 	}
@@ -353,7 +353,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	if len(res.Rows) > 0 {
 		dir, file, err := inst.VFS().DirOrFileByID(res.Rows[0].ID)
 		if err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("GetSharingDir failed to find dir: %s", err)
 			return dir, err
 		}
@@ -363,7 +363,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		// file is a shortcut
 		parentID = file.DirID
 		if err := inst.VFS().DestroyFile(file); err != nil {
-			inst.Logger().WithNamespace("sharing").
+			sharLog.WithDomain(inst.Domain).
 				Warnf("GetSharingDir failed to delete shortcut: %s", err)
 			return nil, err
 		}
@@ -372,7 +372,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 	rule := s.FirstFilesRule()
 	if rule == nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Errorf("no first rule for: %#v", s)
 		return nil, ErrInternalServerError
 	}
@@ -540,7 +540,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
 		if err != nil {
 			if !couchdb.IsNotFoundError(err) {
-				inst.Logger().WithNamespace("replicator").
+				replLog.WithDomain(inst.Domain).
 					Debugf("Error on finding doc of bulk files: %s", err)
 				errm = multierror.Append(errm, err)
 				continue
@@ -551,7 +551,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		if ref != nil {
 			infos, ok = ref.Infos[s.SID]
 			if !ok {
-				inst.Logger().WithNamespace("replicator").
+				replLog.WithDomain(inst.Domain).
 					Infof("Operation aborted for %s on sharing %s", id, s.SID)
 				errm = multierror.Append(errm, ErrSafety)
 				continue
@@ -559,7 +559,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 		dir, file, err := fs.DirOrFileByID(id)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			inst.Logger().WithNamespace("replicator").
+			replLog.WithDomain(inst.Domain).
 				Debugf("Error on finding ref of bulk files: %s", err)
 			errm = multierror.Append(errm, err)
 			continue
@@ -609,7 +609,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("replicator").
+			replLog.WithDomain(inst.Domain).
 				Debugf("Error on apply bulk file: %s (%#v - %#v)", err, target, ref)
 			errm = multierror.Append(errm, err)
 		}
@@ -623,14 +623,14 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			err = s.UpdateDir(inst, op.target, op.dir, op.ref, resolveResolution)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("replicator").
+			replLog.WithDomain(inst.Domain).
 				Debugf("Error on apply bulk file: %s (%#v - %#v)", err, op.target, op.ref)
 			errm = multierror.Append(errm, err)
 		}
 	}
 
 	if errm != nil {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Warnf("Error on apply bulk files: %s", errm)
 	}
 	return errm
@@ -770,7 +770,7 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 // and let the caller do its operation with the new name (the caller should
 // create a dummy revision to let the other cozy know of the renaming).
 func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pth string) (string, error) {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Infof("Resolve conflict for path=%s (docid=%s)", pth, visitorID)
 	fs := inst.VFS()
 	d, f, err := fs.DirOrFileByPath(pth)
@@ -860,7 +860,7 @@ func (s *Sharing) getDirDocFromNetwork(inst *instance.Instance, dirID string) (*
 // the other instance about the parent directory and will recreate it. It can
 // be necessary to recurse if there were several levels of directories deleted.
 func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Debugf("Recreate parent dirID=%s", dirID)
 	doc, err := s.getDirDocFromNetwork(inst, dirID)
 	if err != nil {
@@ -899,19 +899,19 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}, ref *SharedRef) (string, *sharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Warnf("Missing name for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Warnf("Missing _rev for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
 	revs := revsMapToStruct(target["_revisions"])
 	if revs == nil {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Warnf("Invalid _revisions for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
@@ -932,7 +932,7 @@ const (
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}, resolution nameConflictResolution) error {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Debugf("CreateDir %v (%#v)", target["_id"], target)
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
@@ -950,7 +950,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("replicator").
+			replLog.WithDomain(inst.Domain).
 				Debugf("Conflict for parent on creating dir: %s", err)
 			return err
 		}
@@ -963,7 +963,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 
 	dir, err := vfs.NewDirDocWithParent(name, parent, nil)
 	if err != nil {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Warnf("Cannot initialize dir doc: %s", err)
 		return err
 	}
@@ -988,7 +988,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		err = fs.CreateDir(dir)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Debugf("Cannot create dir: %s", err)
 		return err
 	}
@@ -1011,7 +1011,7 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("replicator").
+			replLog.WithDomain(inst.Domain).
 				Debugf("Conflict for parent on updating dir: %s", err)
 			return err
 		}
@@ -1032,7 +1032,7 @@ func (s *Sharing) UpdateDir(
 	ref *SharedRef,
 	resolution nameConflictResolution,
 ) error {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Debugf("UpdateDir %v (%#v)", target["_id"], target)
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// Don't update a directory in the trash
@@ -1077,7 +1077,7 @@ func (s *Sharing) UpdateDir(
 		err = fs.UpdateDirDoc(oldDoc, dir)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("replicator").
+		replLog.WithDomain(inst.Domain).
 			Debugf("Cannot update dir: %s", err)
 		return err
 	}
@@ -1086,7 +1086,7 @@ func (s *Sharing) UpdateDir(
 
 // TrashDir puts the directory in the trash
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Debugf("TrashDir %s (%#v)", dir.DocID, dir)
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
@@ -1175,7 +1175,7 @@ func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.Dir
 // TrashFile puts the file in the trash (except if the file has a reference, in
 // which case, we keep it in a special folder)
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
-	inst.Logger().WithNamespace("replicator").
+	replLog.WithDomain(inst.Domain).
 		Debugf("TrashFile %s (%#v)", file.DocID, file)
 	if file.Trashed {
 		// Nothing to do if the file is already in the trash

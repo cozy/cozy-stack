@@ -235,7 +235,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 		return ErrInvalidSharing
 	}
 	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
-		inst.Logger().WithNamespace("sharing").Warnf("Error on sharing request: %s", err)
+		sharLog.WithDomain(inst.Domain).Warnf("Error on sharing request: %s", err)
 		if errors.Is(err, ErrAlreadyAccepted) {
 			return err
 		}
@@ -373,7 +373,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	}
 	name, err := inst.PublicName()
 	if err != nil {
-		inst.Logger().WithNamespace("sharing").
+		sharLog.WithDomain(inst.Domain).
 			Infof("No name for instance %v", inst)
 	}
 	ac := APICredentials{
@@ -488,8 +488,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			if email := s.Members[i+1].Email; email != "" {
 				if c, err := contact.FindByEmail(inst, email); err == nil {
 					if err := c.AddNameIfMissing(inst, s.Members[i+1].PublicName, email); err != nil {
-						inst.Logger().WithNamespace("sharing").
-							Warnf("Error on saving contact: %s", err)
+						sharLog.WithDomain(inst.Domain).Warnf("Error on saving contact: %s", err)
 					}
 				}
 			}

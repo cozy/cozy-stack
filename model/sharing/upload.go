@@ -69,7 +69,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		inst.Logger().WithNamespace("upload").Infof("errm=%s\n", errm)
+		uploadLog.WithDomain(inst.Domain).Infof("errm=%s\n", errm)
 	} else if len(members) > 0 {
 		s.pushJob(inst, "share-upload")
 	}
@@ -141,7 +141,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 	if err != nil {
 		return false, err
 	}
-	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
+	uploadLog.WithDomain(inst.Domain).Debugf("lastSeq = %s", lastSeq)
 
 	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
 	if errors.Is(err, ErrInternalServerError) {
@@ -220,7 +220,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 			return nil, 0, since, err
 		}
 		if len(results) == 0 {
-			inst.Logger().WithNamespace("upload").
+			uploadLog.WithDomain(inst.Domain).
 				Warnf("missing results for bulk get %v", query)
 			return nil, 0, since, ErrInternalServerError
 		}
@@ -232,7 +232,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
-	inst.Logger().WithNamespace("upload").Debugf("going to upload %#v", file)
+	uploadLog.WithDomain(inst.Domain).Debugf("going to upload %#v", file)
 
 	// Do not try to send a trashed file, the trash status will be synchronized
 	// via the CouchDB replication protocol
@@ -276,7 +276,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
-			inst.Logger().WithNamespace("upload").
+			uploadLog.WithDomain(inst.Domain).
 				Warnf("%s got response %d", opts.Path, res.StatusCode)
 			return ErrInternalServerError
 		}
@@ -319,7 +319,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	res2, err := request.Req(opts2)
 	if err != nil {
 		if res2 != nil && res2.StatusCode/100 == 5 {
-			inst.Logger().WithNamespace("upload").
+			uploadLog.WithDomain(inst.Domain).
 				Warnf("%s got response %d", opts2.Path, res2.StatusCode)
 			return ErrInternalServerError
 		}
@@ -357,7 +357,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // SyncFile tries to synchronize a file with just the metadata. If it can't,
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	inst.Logger().WithNamespace("upload").Debugf("SyncFile %#v", target)
+	uploadLog.WithDomain(inst.Domain).Debugf("SyncFile %#v", target)
 
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
@@ -420,7 +420,7 @@ func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.
 			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("upload").
+			uploadLog.WithDomain(inst.Domain).
 				Debugf("Conflict for parent on sync file: %s", err)
 			return err
 		}
@@ -477,7 +477,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		err = fs.UpdateFileDoc(olddoc, newdoc)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("upload").
+		uploadLog.WithDomain(inst.Domain).
 			Debugf("Cannot update file: %s", err)
 		return err
 	}
@@ -495,7 +495,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	if target == nil {
 		return ErrMissingFileMetadata
 	}
-	inst.Logger().WithNamespace("upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
+	uploadLog.WithDomain(inst.Domain).Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	sid := consts.Files + "/" + target.DocID
 	mu := config.Lock().ReadWrite(inst, "shared/"+sid)
 	if err = mu.Lock(); err != nil {
@@ -505,7 +505,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		inst.Logger().WithNamespace("upload").
+		uploadLog.WithDomain(inst.Domain).
 			Warnf("Upload has failed: %s", err)
 		return err
 	}
@@ -518,7 +518,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 // UploadNewFile is used to receive a new file.
 func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
-	inst.Logger().WithNamespace("upload").Debugf("UploadNewFile")
+	uploadLog.WithDomain(inst.Domain).Debugf("UploadNewFile")
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
 	}
@@ -542,7 +542,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 			parent, err = s.recreateParent(inst, target.DirID)
 		}
 		if err != nil {
-			inst.Logger().WithNamespace("upload").
+			uploadLog.WithDomain(inst.Domain).
 				Infof("Conflict for parent on file upload: %s", err)
 		}
 	} else if target.DocID == rule.Values[0] {
@@ -613,7 +613,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		file, err = fs.CreateFile(newdoc, nil)
 	}
 	if err != nil {
-		inst.Logger().WithNamespace("upload").
+		uploadLog.WithDomain(inst.Domain).
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
@@ -647,8 +647,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 
 	if count >= s.NbFiles {
 		if err = s.EndInitial(inst); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Errorf("Can't save sharing %v: %s", s, err)
+			sharLog.WithDomain(inst.Domain).Errorf("Can't save sharing %v: %s", s, err)
 		}
 		return
 	}
@@ -674,7 +673,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 // the file (which is not what we want), a conflict of name+dir_id, the higher
 // revision wins and it should be the good one in our case.
 func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
-	inst.Logger().WithNamespace("upload").Debugf("UploadExistingFile")
+	uploadLog.WithDomain(inst.Domain).Debugf("UploadExistingFile")
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
@@ -767,7 +766,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 // uploaded file version goes to a new file.
 func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
 	rev := target.Rev()
-	inst.Logger().WithNamespace("upload").Debugf("uploadLostConflict %s", rev)
+	uploadLog.WithDomain(inst.Domain).Debugf("uploadLostConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -788,7 +787,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	if err != nil {
 		return err
 	}
-	inst.Logger().WithNamespace("upload").Debugf("1. loser = %#v", newdoc)
+	uploadLog.WithDomain(inst.Domain).Debugf("1. loser = %#v", newdoc)
 	return copyFileContent(inst, file, body)
 }
 
@@ -796,7 +795,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 // existing file is copied to a new file to let the upload succeed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
 	rev := src.Rev()
-	inst.Logger().WithNamespace("upload").Debugf("uploadWonConflict %s", rev)
+	uploadLog.WithDomain(inst.Domain).Debugf("uploadWonConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -818,7 +817,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	if err != nil {
 		return err
 	}
-	inst.Logger().WithNamespace("upload").Debugf("2. loser = %#v", dst)
+	uploadLog.WithDomain(inst.Domain).Debugf("2. loser = %#v", dst)
 	return copyFileContent(inst, file, content)
 }
 
@@ -828,7 +827,7 @@ func copyFileContent(inst *instance.Instance, file vfs.File, body io.ReadCloser)
 	_, err := io.Copy(file, body)
 	if cerr := file.Close(); cerr != nil && err == nil {
 		err = cerr
-		inst.Logger().WithNamespace("upload").
+		uploadLog.WithDomain(inst.Domain).
 			Infof("Cannot close file descriptor: %s", err)
 	}
 	return err

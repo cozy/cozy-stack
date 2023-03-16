@@ -37,7 +37,7 @@ func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs, shared *Shar
 		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 		shared:   shared,
-		log:      inst.Logger().WithNamespace("sharing-indexer"),
+		log:      logger.WithNamespace("sharing-indexer").WithDomain(inst.Domain),
 	}
 }
 
