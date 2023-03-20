@@ -843,7 +843,9 @@ func GetDelegatedCode(c echo.Context) error {
 		conf, err = getGenericConfig(contextName)
 	}
 	if err != nil {
-		return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err.Error(),
+		})
 	}
 
 	authorization := c.Request().Header.Get(echo.HeaderAuthorization)
