@@ -246,6 +246,11 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getGenericConfig(inst.ContextName)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "this endpoint is not enabled",
+		})
+	}
 	var reqBody struct {
 		ClientID       string `json:"client_id"`
 		ClientSecret   string `json:"client_secret"`
@@ -272,12 +277,11 @@ func AccessToken(c echo.Context) error {
 			})
 		}
 	} else {
-		if err != nil || !conf.AllowOAuthToken {
+		if !conf.AllowOAuthToken {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "this endpoint is not enabled",
 			})
 		}
-
 		// Check the token from the remote URL.
 		if reqBody.IDToken != "" {
 			err = checkIDToken(conf, inst, reqBody.IDToken)
