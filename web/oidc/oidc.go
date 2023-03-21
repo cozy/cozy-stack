@@ -245,12 +245,6 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getGenericConfig(inst.ContextName)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "this endpoint is not enabled",
-		})
-	}
 	var reqBody struct {
 		ClientID       string `json:"client_id"`
 		ClientSecret   string `json:"client_secret"`
@@ -261,7 +255,7 @@ func AccessToken(c echo.Context) error {
 		TwoFactorToken string `json:"two_factor_token"`
 		TwoFactorCode  string `json:"two_factor_passcode"`
 	}
-	if err = c.Bind(&reqBody); err != nil {
+	if err := c.Bind(&reqBody); err != nil {
 		return err
 	}
 
@@ -277,7 +271,8 @@ func AccessToken(c echo.Context) error {
 			})
 		}
 	} else {
-		if !conf.AllowOAuthToken {
+		conf, err := getGenericConfig(inst.ContextName)
+		if err != nil || !conf.AllowOAuthToken {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "this endpoint is not enabled",
 			})
