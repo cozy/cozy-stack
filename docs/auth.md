@@ -247,7 +247,6 @@ authorize page. It will be used to open the session, and let the user type the
 6-digits code they have received by mail to confirm that they want to use this
 app as the flagship app.
 
-
 ### DELETE /auth/login
 
 This can be used to log-out the user. An app token must be passed in the

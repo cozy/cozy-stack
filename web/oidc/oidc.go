@@ -343,6 +343,11 @@ func AccessToken(c echo.Context) error {
 			"error": "invalid scope",
 		})
 	}
+	if out.Scope == "*" {
+		if !client.Flagship || !client.CertifiedFromStore {
+			return auth.ReturnSessionCode(c, http.StatusAccepted, inst)
+		}
+	}
 
 	// Remove the pending flag on the OAuth client (if needed)
 	if client.Pending {
