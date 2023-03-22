@@ -93,6 +93,15 @@ func CountNormalDocs(db prefixer.Prefixer, doctype string) (int, error) {
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
 func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}) (err error) {
+	return getAllDocs(db, doctype, req, results, false)
+}
+
+// GetDesignDocs does the same as GetAllDocs, but it keeps the design docs.
+func GetDesignDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}) (err error) {
+	return getAllDocs(db, doctype, req, results, true)
+}
+
+func getAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, results interface{}, includeDesignDocs bool) (err error) {
 	var v url.Values
 	if req != nil {
 		v, err = req.Values()
@@ -123,7 +132,7 @@ func GetAllDocs(db prefixer.Prefixer, doctype string, req *AllDocsRequest, resul
 
 	var docs []json.RawMessage
 	for _, row := range response.Rows {
-		if !strings.HasPrefix(row.ID, "_design") {
+		if includeDesignDocs || !strings.HasPrefix(row.ID, "_design") {
 			docs = append(docs, row.Doc)
 		}
 	}

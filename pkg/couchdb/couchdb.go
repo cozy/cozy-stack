@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -52,14 +51,6 @@ func RTEvent(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
 	}
 	docClone := doc.Clone()
 	go realtime.GetHub().Publish(db, verb, docClone, oldDoc)
-}
-
-// View is the map/reduce thing in CouchDB
-type View struct {
-	Name    string `json:"-"`
-	Doctype string `json:"-"`
-	Map     string `json:"map"`
-	Reduce  string `json:"reduce,omitempty"`
 }
 
 // JSONDoc is a map representing a simple json object that implements
@@ -727,150 +718,6 @@ func CreateDoc(db prefixer.Prefixer, doc Doc) error {
 	return nil
 }
 
-// DefineViews creates a design doc with some views
-func DefineViews(g *errgroup.Group, db prefixer.Prefixer, views []*View) {
-	for i := range views {
-		v := views[i]
-		g.Go(func() error {
-			id := "_design/" + v.Name
-			url := url.PathEscape(id)
-			doc := &ViewDesignDoc{
-				ID:    id,
-				Lang:  "javascript",
-				Views: map[string]*View{v.Name: v},
-			}
-			err := makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-			if IsNoDatabaseError(err) {
-				err = CreateDB(db, v.Doctype)
-				if err != nil && !IsFileExists(err) {
-					if err != nil {
-						logger.WithDomain(db.DomainName()).
-							Infof("Cannot create view %s %s: cannot create DB - %s",
-								db.DBPrefix(), v.Doctype, err)
-					}
-					return err
-				}
-				err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-			}
-			if IsConflictError(err) {
-				var old ViewDesignDoc
-				err = makeRequest(db, v.Doctype, http.MethodGet, url, nil, &old)
-				if err != nil {
-					if err != nil {
-						logger.WithDomain(db.DomainName()).
-							Infof("Cannot create view %s %s: conflict - %s",
-								db.DBPrefix(), v.Doctype, err)
-					}
-					return err
-				}
-				if !equalViews(&old, doc) {
-					doc.Rev = old.Rev
-					err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-				} else {
-					err = nil
-				}
-			}
-			if err != nil {
-				logger.WithDomain(db.DomainName()).
-					Infof("Cannot create view %s %s: %s", db.DBPrefix(), v.Doctype, err)
-			}
-			return err
-		})
-	}
-}
-
-func equalViews(v1 *ViewDesignDoc, v2 *ViewDesignDoc) bool {
-	if v1.Lang != v2.Lang {
-		return false
-	}
-	if len(v1.Views) != len(v2.Views) {
-		return false
-	}
-	for name, view1 := range v1.Views {
-		view2, ok := v2.Views[name]
-		if !ok {
-			return false
-		}
-		if view1.Map != view2.Map ||
-			view1.Reduce != view2.Reduce {
-			return false
-		}
-	}
-	return true
-}
-
-// ExecView executes the specified view function
-func ExecView(db prefixer.Prefixer, view *View, req *ViewRequest, results interface{}) error {
-	viewurl := fmt.Sprintf("_design/%s/_view/%s", view.Name, view.Name)
-	if req.GroupLevel > 0 {
-		req.Group = true
-	}
-	v, err := req.Values()
-	if err != nil {
-		return err
-	}
-	viewurl += "?" + v.Encode()
-	if req.Keys != nil {
-		return makeRequest(db, view.Doctype, http.MethodPost, viewurl, req, &results)
-	}
-	err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
-	if IsInternalServerError(err) {
-		time.Sleep(1 * time.Second)
-		// Retry the error on 500, as it may be just that CouchDB is slow to build the view
-		err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
-		if IsInternalServerError(err) {
-			logger.
-				WithDomain(db.DomainName()).
-				WithNamespace("couchdb").
-				WithField("critical", "true").
-				Errorf("500 on requesting view: %s", err)
-		}
-	}
-	return err
-}
-
-// DefineIndex define the index on the doctype database
-// see query package on how to define an index
-func DefineIndex(db prefixer.Prefixer, index *mango.Index) error {
-	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
-	if err != nil {
-		logger.WithDomain(db.DomainName()).
-			Infof("Cannot create index %s %s: %s", db.DBPrefix(), index.Doctype, err)
-	}
-	return err
-}
-
-// DefineIndexRaw defines a index
-func DefineIndexRaw(db prefixer.Prefixer, doctype string, index interface{}) (*IndexCreationResponse, error) {
-	url := "_index"
-	response := &IndexCreationResponse{}
-	err := makeRequest(db, doctype, http.MethodPost, url, &index, &response)
-	if IsNoDatabaseError(err) {
-		if err = CreateDB(db, doctype); err != nil && !IsFileExists(err) {
-			return nil, err
-		}
-		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
-	}
-	// XXX when creating the same index twice at the same time, CouchDB respond
-	// with a 500, so let's just retry as a work-around...
-	if IsInternalServerError(err) {
-		time.Sleep(100 * time.Millisecond)
-		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
-// DefineIndexes defines a list of indexes
-func DefineIndexes(g *errgroup.Group, db prefixer.Prefixer, indexes []*mango.Index) {
-	for i := range indexes {
-		index := indexes[i]
-		g.Go(func() error { return DefineIndex(db, index) })
-	}
-}
-
 // Copy copies an existing doc to a specified destination
 func Copy(db prefixer.Prefixer, doctype, path, destination string) (map[string]interface{}, error) {
 	headers := map[string]string{"Destination": destination}
@@ -990,23 +837,6 @@ func validateDocID(id string) (string, error) {
 		return "", newBadIDError(id)
 	}
 	return id, nil
-}
-
-// ViewDesignDoc is the structure if a _design doc containing views
-type ViewDesignDoc struct {
-	ID    string           `json:"_id,omitempty"`
-	Rev   string           `json:"_rev,omitempty"`
-	Lang  string           `json:"language"`
-	Views map[string]*View `json:"views"`
-}
-
-// IndexCreationResponse is the response from couchdb when we create an Index
-type IndexCreationResponse struct {
-	Result string `json:"result,omitempty"`
-	Error  string `json:"error,omitempty"`
-	Reason string `json:"reason,omitempty"`
-	ID     string `json:"id,omitempty"`
-	Name   string `json:"name,omitempty"`
 }
 
 // UpdateResponse is the response from couchdb when updating documents
