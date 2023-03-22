@@ -43,12 +43,25 @@ func installApp(inst *instance.Instance, slug string) error {
 }
 
 // DefineViewsAndIndex can be used to ensure that the CouchDB views and indexes
-// used by the stack are correctly set.
+// used by the stack are correctly set. It expects that most index/view don't
+// exist. It is faster when creating a new instance for example.
 func DefineViewsAndIndex(inst *instance.Instance) error {
 	g, _ := errgroup.WithContext(context.Background())
 	couchdb.DefineIndexes(g, inst, couchdb.Indexes)
 	couchdb.DefineViews(g, inst, couchdb.Views)
 	if err := g.Wait(); err != nil {
+		return err
+	}
+	inst.IndexViewsVersion = couchdb.IndexViewsVersion
+	return nil
+}
+
+// UpdateViewsAndIndex can be used to ensure that the CouchDB views and indexes
+// used by the stack are correctly set. It has the same effect as
+// DefineViewsAndIndex, but it expect most index/views already exist.
+func UpdateViewsAndIndex(inst *instance.Instance) error {
+	err := couchdb.UpdateIndexesAndViews(inst, couchdb.Indexes, couchdb.Views)
+	if err != nil {
 		return err
 	}
 	inst.IndexViewsVersion = couchdb.IndexViewsVersion
