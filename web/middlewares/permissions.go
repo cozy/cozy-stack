@@ -176,8 +176,13 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SessionID != "" {
 		s, ok := GetSession(c)
 		if !ok || s.ID() != claims.SessionID {
-			logger.WithNamespace("permissions").
-				Debugf("invalid token: bad session %s != %s", s.ID(), claims.SessionID)
+			if ok {
+				logger.WithNamespace("permissions").
+					Debugf("invalid token: bad session %s != %s", s.ID(), claims.SessionID)
+			} else {
+				logger.WithNamespace("permissions").
+					Debugf("invalid token: no session")
+			}
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
