@@ -218,7 +218,7 @@ If `id_token_jwk_url` option is set, the client can send an `id_token` instead
 of an `oidc_token` in the payload.
 
 If the flagship makes the request, it also can use a delegated code obtained
-from the cloudery, by using `code` instead of `access_token`.
+from the cloudery, by using `code` instead of `oidc_token`.
 
 **Note:** if the OAuth client asks for a `*` scope and has not been certified
 as the flagship app, this request will return:
