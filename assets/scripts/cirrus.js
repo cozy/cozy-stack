@@ -56,6 +56,12 @@
     expand.addEventListener('click', function (event) {
       event.preventDefault()
       expand.classList.toggle('expanded')
+
+      if (expand.getAttribute("aria-expanded") === "true") {
+        expand.setAttribute("aria-expanded", "false")
+      } else {
+        expand.setAttribute("aria-expanded", "true")
+      }
     })
   }
 })(window, document)
