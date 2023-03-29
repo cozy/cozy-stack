@@ -140,7 +140,7 @@ func GetTriggers(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID strin
 
 	var toDelete []job.Trigger
 	for _, t := range triggers {
-		if t.Infos().WorkerType != "konnector" {
+		if !(t.Infos().WorkerType == "konnector" || t.Infos().WorkerType == "client") {
 			continue
 		}
 
