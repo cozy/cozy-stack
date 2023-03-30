@@ -231,7 +231,7 @@ authentication:
     franceconnect:
       client_id: aClientID
       client_secret: s3cret3
-      scope: openid profile
+      scope: openid email
       redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
       authorize_url: https://identity-provider/path/to/authorize
       token_url: https://identity-provider/path/to/token
