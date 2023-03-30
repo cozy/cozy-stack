@@ -339,7 +339,7 @@ func AccessToken(c echo.Context) error {
 		})
 	}
 	if out.Scope == "*" {
-		if !client.Flagship || !client.CertifiedFromStore {
+		if !client.Flagship {
 			return auth.ReturnSessionCode(c, http.StatusAccepted, inst)
 		}
 	}
