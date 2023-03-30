@@ -210,8 +210,9 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	// If the authentication is disabled, we force a random password. It won't
 	// be known by the user and cannot be used to authenticate. It will only be
 	// used if the configuration is changed later: the user will be able to
-	// reset the passphrase.
-	if !i.IsPasswordAuthenticationEnabled() {
+	// reset the passphrase. Same when the user has used FranceConnect to
+	// create their instance.
+	if !i.IsPasswordAuthenticationEnabled() || i.FranceConnectID != "" {
 		opts.Passphrase = utils.RandomString(instance.RegisterTokenLen)
 		opts.KdfIterations = crypto.DefaultPBKDF2Iterations
 	}

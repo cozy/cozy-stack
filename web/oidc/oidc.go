@@ -245,34 +245,49 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getGenericConfig(inst.ContextName)
-	if err != nil || !conf.AllowOAuthToken {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "this endpoint is not enabled",
-		})
-	}
-
 	var reqBody struct {
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
-		Scope        string `json:"scope"`
-		OIDCToken    string `json:"oidc_token"`
-		IDToken      string `json:"id_token"`
+		ClientID       string `json:"client_id"`
+		ClientSecret   string `json:"client_secret"`
+		Scope          string `json:"scope"`
+		OIDCToken      string `json:"oidc_token"`
+		IDToken        string `json:"id_token"`
+		Code           string `json:"code"`
+		TwoFactorToken string `json:"two_factor_token"`
+		TwoFactorCode  string `json:"two_factor_passcode"`
 	}
-	if err = c.Bind(&reqBody); err != nil {
+	if err := c.Bind(&reqBody); err != nil {
 		return err
 	}
 
-	// Check the token from the remote URL.
-	if reqBody.IDToken != "" {
-		err = checkIDToken(conf, inst, reqBody.IDToken)
+	if reqBody.Code != "" {
+		sub := getStorage().GetSub(reqBody.Code)
+		invalidSub := sub == ""
+		if sub != inst.OIDCID && sub != inst.FranceConnectID {
+			invalidSub = true
+		}
+		if invalidSub {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid code",
+			})
+		}
 	} else {
-		err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
-	}
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err.Error(),
-		})
+		conf, err := getGenericConfig(inst.ContextName)
+		if err != nil || !conf.AllowOAuthToken {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "this endpoint is not enabled",
+			})
+		}
+		// Check the token from the remote URL.
+		if reqBody.IDToken != "" {
+			err = checkIDToken(conf, inst, reqBody.IDToken)
+		} else {
+			err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
+		}
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": err.Error(),
+			})
+		}
 	}
 
 	// Load the OAuth client
@@ -291,21 +306,42 @@ func AccessToken(c echo.Context) error {
 		})
 	}
 
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		token := []byte(reqBody.TwoFactorToken)
+		if ok := inst.ValidateTwoFactorPasscode(token, reqBody.TwoFactorCode); !ok {
+			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+			if err != nil {
+				return err
+			}
+			return c.JSON(http.StatusForbidden, echo.Map{
+				"error":            "two factor needed",
+				"two_factor_token": string(twoFactorToken),
+			})
+		}
+	}
+
 	// Prepare the scope
 	out := auth.AccessTokenReponse{
 		Type:  "bearer",
 		Scope: reqBody.Scope,
 	}
-	if slug := oauth.GetLinkedAppSlug(client.SoftwareID); slug != "" {
-		if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
-			return err
+	if !client.Flagship {
+		if slug := oauth.GetLinkedAppSlug(client.SoftwareID); slug != "" {
+			if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
+				return err
+			}
+			out.Scope = oauth.BuildLinkedAppScope(slug)
 		}
-		out.Scope = oauth.BuildLinkedAppScope(slug)
 	}
 	if out.Scope == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid scope",
 		})
+	}
+	if out.Scope == "*" {
+		if !client.Flagship {
+			return auth.ReturnSessionCode(c, http.StatusAccepted, inst)
+		}
 	}
 
 	// Remove the pending flag on the OAuth client (if needed)
@@ -795,6 +831,47 @@ func Routes(router *echo.Group) {
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
+}
+
+// GetDelegatedCode is mostly a proxy for the userinfo request made by the
+// cloudery to the OIDC provider. It adds a delegated code in the response
+// associated to the sub.
+func GetDelegatedCode(c echo.Context) error {
+	contextName := c.Param("context")
+	provider := c.Param("provider")
+	var conf *Config
+	var err error
+	if provider == "franceconnect" {
+		conf, err = getFranceConnectConfig(contextName)
+	} else {
+		conf, err = getGenericConfig(contextName)
+	}
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	authorization := c.Request().Header.Get(echo.HeaderAuthorization)
+	token := strings.TrimPrefix(authorization, "Bearer ")
+	params, err := getUserInfo(conf, token)
+	if err != nil {
+		return err
+	}
+
+	sub, ok := params["sub"].(string)
+	if !ok {
+		logger.WithNamespace("oidc").Errorf("Missing sub")
+		return ErrAuthenticationFailed
+	}
+	params["delegated_code"] = getStorage().CreateCode(sub)
+	return c.JSON(http.StatusOK, params)
+}
+
+// AdminRoutes setup the routing for OpenID Connect on the admin port. It is
+// mostly used by the cloudery.
+func AdminRoutes(router *echo.Group) {
+	router.POST("/:context/:provider/code", GetDelegatedCode)
 }
 
 // LoginDomainHandler is the handler for the requests on the login domain. It

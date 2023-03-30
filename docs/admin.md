@@ -861,6 +861,37 @@ DELETE /konnectors/maintenance/ameli HTTP/1.1
 HTTP/1.1 204 No Content
 ```
 
+## OIDC
+
+### POST /oidc/:context/:provider/code
+
+This endpoint is used by the cloudery to create a delegated code, which will be
+then used by the flagship app to obtain its access_token and refresh_token. The
+`:provider` parameter can be `generic` or `franceconnect`.
+
+The cloudery sends its access_token for the OIDC provider, the stack can use it
+to make a request to the userinfo endpoint of the OIDC provider. With the
+response, the stack can create a delegated code associated to the sub.
+
+```http
+POST /oidc/dev/franceconnect/code HTTP/1.1
+Accept: application/json
+Authorization: Bearer ZmE2ZTFmN
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "delegated_code": "wMTNiLTNmZWItMThY",
+  "sub": "DIzYWE2MjA",
+  "email": "jerome@example.org"
+}
+```
+
 ## OAuth clients
 
 ### DELETE /oauth/:domain/clients

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 )
@@ -150,17 +151,21 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	c.Set("claims", claims)
 
 	if err != nil {
+		logger.WithNamespace("permissions").Debugf("invalid token: %s", err)
 		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	// check if the claim is valid
 	if claims.Issuer != instance.Domain {
+		logger.WithNamespace("permissions").
+			Debugf("invalid token: bad domain %s != %s", claims.Issuer, instance.Domain)
 		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	if claims.Expired() {
+		logger.WithNamespace("permissions").Debugf("invalid token: expired")
 		c.Response().Header().Set(echo.HeaderWWWAuthenticate,
 			`Bearer error="invalid_token" error_description="The access token expired"`)
 		return nil, permission.ErrExpiredToken
@@ -171,6 +176,13 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SessionID != "" {
 		s, ok := GetSession(c)
 		if !ok || s.ID() != claims.SessionID {
+			if ok {
+				logger.WithNamespace("permissions").
+					Debugf("invalid token: bad session %s != %s", s.ID(), claims.SessionID)
+			} else {
+				logger.WithNamespace("permissions").
+					Debugf("invalid token: no session")
+			}
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
@@ -181,6 +193,8 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SStamp != "" {
 		settings, err := settings.Get(instance)
 		if err != nil || claims.SStamp != settings.SecurityStamp {
+			logger.WithNamespace("permissions").
+				Debugf("invalid token: bad security stamp %s != %s", claims.SStamp, settings.SecurityStamp)
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
@@ -221,6 +235,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			if couchdb.IsInternalServerError(err) {
 				return nil, err
 			}
+			logger.WithNamespace("permissions").
+				Debugf("invalid token: no client for OAuth - %s", err)
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
@@ -233,6 +249,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	case consts.AppAudience:
 		pdoc, err := permission.GetForWebapp(instance, claims.Subject)
 		if err != nil {
+			logger.WithNamespace("permissions").
+				Debugf("invalid token: no permission for webapp - %s", err)
 			return nil, err
 		}
 		return pdoc, nil
@@ -240,6 +258,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	case consts.KonnectorAudience:
 		pdoc, err := permission.GetForKonnector(instance, claims.Subject)
 		if err != nil {
+			logger.WithNamespace("permissions").
+				Debugf("invalid token: no permission for konnector - %s", err)
 			return nil, err
 		}
 		return pdoc, nil

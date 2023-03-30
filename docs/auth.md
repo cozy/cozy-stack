@@ -247,7 +247,6 @@ authorize page. It will be used to open the session, and let the user type the
 6-digits code they have received by mail to confirm that they want to use this
 app as the flagship app.
 
-
 ### DELETE /auth/login
 
 This can be used to log-out the user. An app token must be passed in the
@@ -982,12 +981,28 @@ Content-Type: application/json
 
 ```json
 {
-    "session_code": "HzEFM3JREpIB6532fQc1FP2t4YJKt3gI"
+  "session_code": "HzEFM3JREpIB6532fQc1FP2t4YJKt3gI"
 }
 ```
 
 The flagship will then be able to open a webview for
 `https://cozy-home.example.org/?session_code=HzEFM3JREpIB6532fQc1FP2t4YJKt3gI`.
+
+#### Response (2FA needed)
+
+In case of error where 2FA is needed, the response will be:
+
+```http
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+```
+
+```json
+{
+  "error": "two factor needed",
+  "two_factor_token": "123123123123"
+}
+```
 
 ### FAQ
 

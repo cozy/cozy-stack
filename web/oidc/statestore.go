@@ -13,7 +13,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const stateTTL = 15 * time.Minute
+const (
+	stateTTL = 15 * time.Minute
+	codeTTL  = 3 * time.Hour
+)
 
 type stateHolder struct {
 	id        string
@@ -48,26 +51,41 @@ func newStateHolder(domain, redirect, confirm string, provider ProviderOIDC) *st
 type stateStorage interface {
 	Add(*stateHolder) error
 	Find(id string) *stateHolder
+	CreateCode(sub string) string
+	GetSub(code string) string
 }
 
-type memStateStorage map[string]*stateHolder
+type memStateStorage struct {
+	states map[string]*stateHolder
+	codes  map[string]string // delegated code -> sub
+}
 
 func (store memStateStorage) Add(state *stateHolder) error {
 	state.expiresAt = time.Now().UTC().Add(stateTTL).Unix()
-	store[state.id] = state
+	store.states[state.id] = state
 	return nil
 }
 
 func (store memStateStorage) Find(id string) *stateHolder {
-	state, ok := store[id]
+	state, ok := store.states[id]
 	if !ok {
 		return nil
 	}
 	if state.expiresAt < time.Now().UTC().Unix() {
-		delete(store, id)
+		delete(store.states, id)
 		return nil
 	}
 	return state
+}
+
+func (store memStateStorage) CreateCode(sub string) string {
+	code := makeCode()
+	store.codes[code] = sub
+	return code
+}
+
+func (store memStateStorage) GetSub(code string) string {
+	return store.codes[code]
 }
 
 type subRedisInterface interface {
@@ -103,6 +121,16 @@ func (store *redisStateStorage) Find(id string) *stateHolder {
 	return &s
 }
 
+func (store *redisStateStorage) CreateCode(sub string) string {
+	code := makeCode()
+	store.cl.Set(store.ctx, code, sub, codeTTL)
+	return code
+}
+
+func (store *redisStateStorage) GetSub(code string) string {
+	return store.cl.Get(store.ctx, code).String()
+}
+
 var globalStorage stateStorage
 var globalStorageMutex sync.Mutex
 
@@ -114,10 +142,17 @@ func getStorage() stateStorage {
 	}
 	cli := config.GetConfig().OauthStateStorage.Client()
 	if cli == nil {
-		globalStorage = &memStateStorage{}
+		globalStorage = &memStateStorage{
+			states: make(map[string]*stateHolder),
+			codes:  make(map[string]string),
+		}
 	} else {
 		ctx := context.Background()
 		globalStorage = &redisStateStorage{cl: cli, ctx: ctx}
 	}
 	return globalStorage
+}
+
+func makeCode() string {
+	return hex.EncodeToString(crypto.GenerateRandomBytes(12))
 }

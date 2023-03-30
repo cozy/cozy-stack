@@ -235,7 +235,7 @@ func loginFlagship(c echo.Context) error {
 		})
 	}
 
-	if !client.Flagship || !client.CertifiedFromStore {
+	if !client.Flagship {
 		return ReturnSessionCode(c, http.StatusAccepted, inst)
 	}
 
