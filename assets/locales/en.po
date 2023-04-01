@@ -625,6 +625,9 @@ msgstr "Electronic safe"
 msgid "Permissions io.cozy.files.versions"
 msgstr "Files versions"
 
+msgid "Permissions io.cozy.home.settings"
+msgstr "Application settings"
+
 msgid "Permissions io.cozy.identities"
 msgstr "Identities"
 
