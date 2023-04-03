@@ -345,7 +345,7 @@ msgstr "Application non certifiée"
 msgid "Authorize Confirm Flagship help"
 msgstr ""
 "La provenance de cette application n'est pas certifiée. Un code à 6 chiffres"
-" vous a été evoyé par email à l’adresse : %s. Saisissez le code pour "
+" vous a été envoyé par email à l’adresse : %s. Saisissez le code pour "
 "confirmer votre volonté d’utiliser l’application"
 
 msgid "Authorize Confirm Flagship more link"
