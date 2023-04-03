@@ -876,7 +876,14 @@ response, the stack can create a delegated code associated to the sub.
 ```http
 POST /oidc/dev/franceconnect/code HTTP/1.1
 Accept: application/json
+Content-Type: application/json
 Authorization: Bearer ZmE2ZTFmN
+```
+
+```json
+{
+  "access_token": "ZmE2ZTFmN"
+}
 ```
 
 ```http
