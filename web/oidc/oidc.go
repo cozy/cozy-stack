@@ -266,6 +266,7 @@ func AccessToken(c echo.Context) error {
 			invalidSub = true
 		}
 		if invalidSub {
+			inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid sub: %s (%s - %s)", sub, inst.OIDCID, inst.FranceConnectID)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
