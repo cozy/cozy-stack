@@ -358,6 +358,10 @@
   -webkit-mask-image: url("../images/icon-safe.svg");
   mask-image: url("../images/icon-safe.svg");
 }
+.perm[class^="io-cozy-home-settings"] {
+  -webkit-mask-image: url("../icons/doctypes/cog.svg");
+  mask-image: url("../icons/doctypes/cog.svg");
+}
 .perm[class^="io-cozy-konnectors"] {
   -webkit-mask-image: url("../icons/doctypes/sync-cozy.svg");
   mask-image: url("../icons/doctypes/sync-cozy.svg");
