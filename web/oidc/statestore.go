@@ -128,7 +128,7 @@ func (store *redisStateStorage) CreateCode(sub string) string {
 }
 
 func (store *redisStateStorage) GetSub(code string) string {
-	return store.cl.Get(store.ctx, code).String()
+	return store.cl.Get(store.ctx, code).Val()
 }
 
 var globalStorage stateStorage
