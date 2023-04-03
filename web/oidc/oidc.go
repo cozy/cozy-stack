@@ -852,9 +852,14 @@ func GetDelegatedCode(c echo.Context) error {
 		})
 	}
 
-	authorization := c.Request().Header.Get(echo.HeaderAuthorization)
-	token := strings.TrimPrefix(authorization, "Bearer ")
-	params, err := getUserInfo(conf, token)
+	var reqBody struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := c.Bind(&reqBody); err != nil {
+		return err
+	}
+
+	params, err := getUserInfo(conf, reqBody.AccessToken)
 	if err != nil {
 		return err
 	}

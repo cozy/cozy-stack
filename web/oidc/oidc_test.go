@@ -236,8 +236,8 @@ func TestOidc(t *testing.T) {
 		})
 
 		obj := e.POST("/admin-oidc/"+testInstance.ContextName+"/franceconnect/code").
-			WithHeader("Authorization", "Bearer fc_token").
 			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{ "access_token": "fc_token" }`)).
 			Expect().Status(200).
 			JSON().
 			Object()
