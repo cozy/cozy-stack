@@ -135,7 +135,7 @@ func UpdateIndexesAndViews(db prefixer.Prefixer, indexes []*mango.Index, views [
 		}
 		exists := false
 		for _, old := range ddocsByDoctype[view.Doctype] {
-			if equalViews(old, ddoc) {
+			if old != nil && equalViews(old, ddoc) {
 				exists = true
 			}
 		}
