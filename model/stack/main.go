@@ -12,7 +12,6 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -60,7 +59,6 @@ security features. Please do not use this binary as your production server.
 	var shutdowners []utils.Shutdowner
 
 	ctx := context.Background()
-	cfg := config.GetConfig()
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
@@ -68,11 +66,6 @@ security features. Please do not use this binary as your production server.
 			fmt.Fprintf(os.Stderr, "Error on gops agent: %s\n", err)
 		}
 		shutdowners = append(shutdowners, gopAgent{})
-	}
-
-	cfg.Keyring, err = keyring.NewStub()
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup the keyring stub: %w", err)
 	}
 
 	// Check that we can properly reach CouchDB.
