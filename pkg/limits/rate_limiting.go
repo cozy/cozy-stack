@@ -210,7 +210,7 @@ var configs = []counterConfig{
 	// ConfirmFlagshipType
 	{
 		Prefix: "confirm-flagship",
-		Limit:  10,
+		Limit:  30,
 		Period: 1 * time.Hour,
 	},
 }
