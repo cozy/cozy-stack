@@ -102,7 +102,7 @@ var configs = []counterConfig{
 	// OAuthClientType
 	{
 		Prefix: "oauth-client",
-		Limit:  20,
+		Limit:  50,
 		Period: 1 * time.Hour,
 	},
 	// SharingInviteType
