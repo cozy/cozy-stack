@@ -107,9 +107,6 @@ type Config struct {
 	GeoDB                 string
 	PasswordResetInterval time.Duration
 
-	CredentialsEncryptorKey string
-	CredentialsDecryptorKey string
-
 	RemoteAssets map[string]string
 
 	Avatars        *avatar.Service
