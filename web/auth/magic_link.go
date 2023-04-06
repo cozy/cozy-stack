@@ -79,7 +79,7 @@ func loginWithMagicLink(c echo.Context) error {
 type magicLinkFlagshipParameters struct {
 	ClientID          string `json:"client_id"`
 	ClientSecret      string `json:"client_secret"`
-	Code              string `json:"code"`
+	Code              string `json:"magic_code"`
 	TwoFactorPasscode string `json:"two_factor_passcode"`
 	TwoFactorToken    string `json:"two_factor_token"`
 }
