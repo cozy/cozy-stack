@@ -36,6 +36,7 @@ $ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,s
       --franceconnect_id string   The identifier for checking authentication with FranceConnect
   -h, --help                      help for add
       --locale string             Locale of the new cozy instance (default "en")
+      --magic_link                Enable authentication with magic links sent by email
       --oidc_id string            The identifier for checking authentication from OIDC
       --passphrase string         Register the instance with this passphrase (useful for tests)
       --public-name string        The public name of the owner

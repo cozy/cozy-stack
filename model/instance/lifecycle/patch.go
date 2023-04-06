@@ -85,6 +85,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.MagicLink != nil && *opts.MagicLink != i.MagicLink {
+			i.MagicLink = *opts.MagicLink
+			needUpdate = true
+		}
+
 		if opts.ContextName != "" && opts.ContextName != i.ContextName {
 			i.ContextName = opts.ContextName
 			needUpdate = true

@@ -272,8 +272,8 @@ func updatePassphrase(c echo.Context) error {
 		}
 
 		// On cozy with OIDC and empty vault, the password can be forced to
-		// allow the setup of Cozy Pass
-		if !inst.IsPasswordAuthenticationEnabled() {
+		// allow the setup of Cozy Pass. Same for magic links.
+		if !inst.IsPasswordAuthenticationEnabled() || inst.MagicLink {
 			bitwarden, err := settings.Get(inst)
 			if err == nil && !bitwarden.ExtensionInstalled {
 				canForce = true

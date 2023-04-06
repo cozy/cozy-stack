@@ -50,7 +50,8 @@ type Instance struct {
 	ContextName     string   `json:"context,omitempty"`          // The context attached to the instance
 	TOSSigned       string   `json:"tos,omitempty"`              // Terms of Service signed version
 	TOSLatest       string   `json:"tos_latest,omitempty"`       // Terms of Service latest version
-	AuthMode        AuthMode `json:"auth_mode,omitempty"`
+	AuthMode        AuthMode `json:"auth_mode,omitempty"`        // 2 factor authentication
+	MagicLink       bool     `json:"magic_link,omitempty"`       // Authentication via a link sent by email
 	Deleting        bool     `json:"deleting,omitempty"`
 	Moved           bool     `json:"moved,omitempty"`           // If the instance has been moved to a new place
 	Blocked         bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked

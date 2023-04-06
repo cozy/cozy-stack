@@ -73,6 +73,7 @@ type InstanceOptions struct {
 	Apps               []string
 	Passphrase         string
 	KdfIterations      int
+	MagicLink          *bool
 	Debug              *bool
 	Blocked            *bool
 	Deleting           *bool
@@ -171,6 +172,9 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
 	}
+	if opts.MagicLink != nil && *opts.MagicLink {
+		q.Add("MagicLink", "true")
+	}
 	if opts.Trace != nil && *opts.Trace {
 		q.Add("Trace", "true")
 	}
@@ -240,6 +244,9 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
+	}
+	if opts.MagicLink != nil {
+		q.Add("MagicLink", strconv.FormatBool(*opts.MagicLink))
 	}
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))

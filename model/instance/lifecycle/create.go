@@ -49,6 +49,7 @@ type Options struct {
 	DiskQuota          int64
 	Apps               []string
 	AutoUpdate         *bool
+	MagicLink          *bool
 	Debug              *bool
 	Traced             *bool
 	OnboardingFinished *bool
@@ -207,12 +208,16 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 
-	// If the authentication is disabled, we force a random password. It won't
-	// be known by the user and cannot be used to authenticate. It will only be
-	// used if the configuration is changed later: the user will be able to
-	// reset the passphrase. Same when the user has used FranceConnect to
-	// create their instance.
-	if !i.IsPasswordAuthenticationEnabled() || i.FranceConnectID != "" {
+	if magicLink := opts.MagicLink; magicLink != nil {
+		i.MagicLink = *magicLink
+	}
+
+	// If the password authentication is disabled, we force a random password.
+	// It won't be known by the user and cannot be used to authenticate. It
+	// will only be used if the configuration is changed later: the user will
+	// be able to reset the passphrase. Same when the user has used
+	// FranceConnect to create their instance.
+	if !i.IsPasswordAuthenticationEnabled() || i.FranceConnectID != "" || i.MagicLink {
 		opts.Passphrase = utils.RandomString(instance.RegisterTokenLen)
 		opts.KdfIterations = crypto.DefaultPBKDF2Iterations
 	}

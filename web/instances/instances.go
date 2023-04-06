@@ -79,6 +79,13 @@ func createHandler(c echo.Context) error {
 		}
 		opts.AutoUpdate = &b
 	}
+	if magicLink := c.QueryParam("MagicLink"); magicLink != "" {
+		ml, err := strconv.ParseBool(magicLink)
+		if err != nil {
+			return wrapError(err)
+		}
+		opts.MagicLink = &ml
+	}
 	if layout := c.QueryParam("SwiftLayout"); layout != "" {
 		opts.SwiftLayout, err = strconv.Atoi(layout)
 		if err != nil {
@@ -172,6 +179,9 @@ func modifyHandler(c echo.Context) error {
 	}
 	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
 		opts.OnboardingFinished = &onboardingFinished
+	}
+	if magicLink, err := strconv.ParseBool(c.QueryParam("MagicLink")); err == nil {
+		opts.MagicLink = &magicLink
 	}
 	// Deprecated: the Debug parameter should no longer be used, but is kept
 	// for compatibility.
