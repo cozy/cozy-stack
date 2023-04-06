@@ -16,12 +16,8 @@ var ErrMagicLinkNotAvailable = errors.New("magic link is not available on this i
 var ErrInvalidMagicLink = errors.New("invalid magic link")
 
 func SendMagicLink(inst *instance.Instance, redirect string) error {
-	if !inst.MagicLink {
-		return ErrMagicLinkNotAvailable
-	}
-
-	code := crypto.GenerateRandomString(instance.MagicLinkCodeLen)
-	if err := GetStore().SaveMagicLinkCode(inst, code); err != nil {
+	code, err := CreateMagicLinkCode(inst)
+	if err != nil {
 		return err
 	}
 
@@ -37,6 +33,18 @@ func SendMagicLink(inst *instance.Instance, redirect string) error {
 			"PublicName": publicName,
 		},
 	})
+}
+
+func CreateMagicLinkCode(inst *instance.Instance) (string, error) {
+	if !inst.MagicLink {
+		return "", ErrMagicLinkNotAvailable
+	}
+
+	code := crypto.GenerateRandomString(instance.MagicLinkCodeLen)
+	if err := GetStore().SaveMagicLinkCode(inst, code); err != nil {
+		return "", err
+	}
+	return code, nil
 }
 
 func CheckMagicLink(inst *instance.Instance, code string) error {
