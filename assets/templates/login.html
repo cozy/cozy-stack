@@ -14,19 +14,25 @@
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
   <body class="theme-inverted">
+    {{if .MagicLink}}
+    <form id="magic-link-form" method="POST" action="/auth/magic_link" class="d-contents">
+    {{else}}
     <form id="login-form" method="POST" action="/auth/login" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
+    {{end}}
       <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
       <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
       <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
       <main class="wrapper">
 
         <header class="wrapper-top">
+          {{if not .MagicLink}}
           {{if not .BottomNavBar}}
           <p class="banner caption small-md fst-italic">
             <span class="icon icon-answer"></span>
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
           </p>
+          {{end}}
           {{end}}
           <a href="https://cozy.io/" class="btn p-2 d-sm-none">
             <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
@@ -54,6 +60,12 @@
           <div class="horizontal-separator mb-4 mb-md-5">ou</div>
           {{end}}
 
+          {{if .MagicLink}}
+          <button id="magic-link-submit" class="btn btn-outline-info btn-md-lg w-100" type="submit">
+            <img src="{{asset .Domain "/icons/email.svg"}}" alt="" />
+            <span>{{t "Magic Link Submit"}}</span>
+          </button>
+          {{else}}
           <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" spellcheck="false" />
             <label for="password">{{t "Login Password field"}}</label>
@@ -84,9 +96,13 @@
             </label>
           </div>
           {{end}}
+          {{end}}
         </div>
 
         <footer class="w-100">
+          {{if .MagicLink}}
+          &nbsp;
+          {{else}}
           <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
             {{t "Login Submit"}}
           </button>
@@ -96,6 +112,7 @@
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
           </p>
+          {{end}}
           {{end}}
         </footer>
 

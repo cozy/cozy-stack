@@ -72,6 +72,9 @@ const (
 	// ConfirmFlagshipType is used when the user is asked to manually certify
 	// that an OAuth client is the flagship app.
 	ConfirmFlagshipType
+	// MagicLinkType is used when sending emails with a magic link that can
+	// authenticate the user into a Cozy
+	MagicLinkType
 )
 
 type counterConfig struct {
@@ -210,6 +213,12 @@ var configs = []counterConfig{
 	// ConfirmFlagshipType
 	{
 		Prefix: "confirm-flagship",
+		Limit:  30,
+		Period: 1 * time.Hour,
+	},
+	// MagicLinkType
+	{
+		Prefix: "magic-link",
 		Limit:  30,
 		Period: 1 * time.Hour,
 	},

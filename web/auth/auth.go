@@ -209,6 +209,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CredentialsError": credsErrors,
 		"Redirect":         redirectStr,
 		"CSRF":             c.Get("csrf"),
+		"MagicLink":        i.MagicLink,
 		"OAuth":            hasOAuth,
 		"FranceConnect":    hasFranceConnect,
 	})
@@ -578,6 +579,10 @@ func Routes(router *echo.Group) {
 	router.OPTIONS("/login/others", logoutPreflight)
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
+
+	// Magic links
+	router.POST("/magic_link", sendMagicLink, noCSRF)
+	router.GET("/magic_link", loginWithMagicLink)
 
 	// Passphrase
 	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)

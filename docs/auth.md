@@ -275,6 +275,17 @@ Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
+### POST /auth/magic_link
+
+If the authentication via magic link is enabled on this instance, this endpoint
+will send an email to the user with a magic link. If the user clicks on this
+link, they will be authenticated on the Cozy.
+
+### GET /auth/magic_link?code=...
+
+When the user has received an email with a magic link, the link goes to the
+endpoint, where the user will be allowed to enter the Cozy.
+
 ### GET /auth/passphrase_reset
 
 Display a form for the user to reset its password, in case he has forgotten it

@@ -113,6 +113,19 @@ msgstr "Bonjour %s !"
 msgid "Login Connect from sharing help"
 msgstr "Saisissez maintenant votre mot de passe"
 
+msgid "Magic Link Submit"
+msgstr "S'identifier avec mon email"
+
+msgid "Magic link has been sent Title"
+msgstr "Ouvrez vos emails"
+
+msgid "Magic link has been sent Body"
+msgstr "Un email vous a été envoyé pour accéder à votre Cozy"
+
+msgid "Magic link has been sent Detail"
+msgstr ""
+"Vous n'avez pas reçu cet email ? Vérifiez dans vos spams ou courriers indésirables."
+
 msgid "Login Two factor title"
 msgstr "Authentification en 2 étapes"
 
@@ -581,6 +594,9 @@ msgstr ""
 msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
 
+msgid "Error Invalid magic link"
+msgstr "Le lien pour accéder à votre Cozy est tronqué ou a expiré"
+
 msgid "Error Invalid reset token"
 msgstr "Le lien de réinitialisation du mot de passe est tronqué ou a expiré"
 
@@ -791,6 +807,18 @@ msgstr "Merci de votre confiance"
 
 msgid "Mail Cozy Team"
 msgstr "L'équipe de Cozy Cloud"
+
+msgid "Mail Magic Link Subject"
+msgstr "Accéder à votre Cozy"
+
+msgid "Mail Magic Link Greeting"
+msgstr "Bonjour %s,"
+
+msgid "Mail Magic Link Intro"
+msgstr "Cliquer sur le bouton ci-dessous pour accéder à votre Cozy :"
+
+msgid "Mail Magic Link Button text"
+msgstr "Accéder à mon Cozy"
 
 msgid "Mail Hint Subject"
 msgstr "Mot de passe oublié : mon indice"
