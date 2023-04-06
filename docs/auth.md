@@ -286,6 +286,89 @@ link, they will be authenticated on the Cozy.
 When the user has received an email with a magic link, the link goes to the
 endpoint, where the user will be allowed to enter the Cozy.
 
+### POST /auth/magic_link/flagship
+
+This endpoint allows the flagship app to also obtain OAuth access and register
+tokens without having to make the OAuth dance (which can be awkward for the
+user). It requires a code sent by email to the user.
+
+#### Request
+
+```http
+POST /auth/magic_link/flagship HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "ODFhNzkxYTAtYjZiYi0wMTNiLTE1YzQtMThjMDRkYWJhMzI2",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg",
+  "token_type": "bearer",
+  "refresh_token": "YTUwMjcyYjgtOTNmNi0xMWVjLWE4YTQtZWJhMzlmMTAwMWJiCg",
+  "scope": "*"
+}
+```
+
+**Note:** if two-factor authentication is enabled on the Cozy, an email
+will be sent to the user with a code, and this request will return:
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+```
+
+```json
+{
+  "two_factor_token": "123123123123"
+}
+```
+
+Then, the client can retry by sending the two-factor token and code:
+
+```json
+{
+  "code": "ODFhNzkxYTAtYjZiYi0wMTNiLTE1YzQtMThjMDRkYWJhMzI2",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "two_factor_token": "123123123123",
+  "two_factor_code": "123456"
+}
+```
+
+**Note:** if the OAuth client has not been certified as the flagship app,
+this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "ZmY4ODI3NGMtOTY1Yy0xMWVjLThkMDgtMmI5M2"
+}
+```
+
+The `session_code` can be put in the query string while opening the OAuth
+authorize page. It will be used to open the session, and let the user type the
+6-digits code they have received by mail to confirm that they want to use this
+app as the flagship app.
+
 ### GET /auth/passphrase_reset
 
 Display a form for the user to reset its password, in case he has forgotten it
