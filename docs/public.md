@@ -42,6 +42,9 @@ Content-Type: application/json
 {
   "Kdf": 0,
   "KdfIterations": 100000,
+  "OIDC": false,
+  "FranceConnect": false,
+  "magic_link": false,
   "name": "Claude"
 }
 ```
