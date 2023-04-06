@@ -217,7 +217,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	// will only be used if the configuration is changed later: the user will
 	// be able to reset the passphrase. Same when the user has used
 	// FranceConnect to create their instance.
-	if !i.IsPasswordAuthenticationEnabled() || i.FranceConnectID != "" || i.MagicLink {
+	if i.HasForcedOIDC() || i.FranceConnectID != "" || i.MagicLink {
 		opts.Passphrase = utils.RandomString(instance.RegisterTokenLen)
 		opts.KdfIterations = crypto.DefaultPBKDF2Iterations
 	}

@@ -78,7 +78,7 @@ func Home(c echo.Context) error {
 
 	// Onboarding to a specific app when authentication via OIDC is enabled
 	redirection := c.QueryParam("redirection")
-	if redirection != "" && !instance.IsPasswordAuthenticationEnabled() {
+	if redirection != "" && instance.HasForcedOIDC() {
 		splits := strings.SplitN(redirection, "#", 2)
 		parts := strings.SplitN(splits[0], "/", 2)
 		if _, err := app.GetWebappBySlug(instance, parts[0]); err == nil {
@@ -152,7 +152,7 @@ func redirectOIDC(c echo.Context, inst *instance.Instance) error {
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
-	if !i.IsPasswordAuthenticationEnabled() {
+	if i.HasForcedOIDC() {
 		return redirectOIDC(c, i)
 	}
 	hasFranceConnect := i.FranceConnectID != ""

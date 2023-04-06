@@ -34,7 +34,7 @@ func passphraseResetForm(c echo.Context) error {
 	if c.QueryParam("hideBackButton") == "true" {
 		showBackButton = false
 	}
-	passwordAuth := instance.IsPasswordAuthenticationEnabled()
+	forcedOIDC := instance.HasForcedOIDC()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Domain":         instance.ContextualDomain(),
 		"ContextName":    instance.ContextName,
@@ -45,7 +45,7 @@ func passphraseResetForm(c echo.Context) error {
 		"Redirect":       c.QueryParam("redirect"),
 		"HasHint":        hasHint,
 		"HasCiphers":     hasCiphers,
-		"CozyPass":       !passwordAuth,
+		"CozyPass":       forcedOIDC,
 		"ShowBackButton": showBackButton,
 	})
 }

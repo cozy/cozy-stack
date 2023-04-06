@@ -24,7 +24,7 @@ func confirmForm(c echo.Context) error {
 	if state == "" {
 		return renderError(c, http.StatusBadRequest, "Error No state parameter")
 	}
-	if !inst.IsPasswordAuthenticationEnabled() {
+	if inst.HasForcedOIDC() {
 		q := url.Values{"redirect": {redirect}, "confirm_state": {state}}
 		return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
 	}
@@ -51,7 +51,7 @@ func confirmForm(c echo.Context) error {
 
 func confirmAuth(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if !inst.IsPasswordAuthenticationEnabled() {
+	if inst.HasForcedOIDC() {
 		return c.NoContent(http.StatusBadRequest)
 	}
 	state := c.FormValue("state")

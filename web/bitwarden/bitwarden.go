@@ -46,7 +46,7 @@ func Prelogin(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	passwordAuth := inst.IsPasswordAuthenticationEnabled()
+	oidc := inst.HasForcedOIDC()
 	hasCiphers := true
 	if resp, err := couchdb.NormalDocs(inst, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
@@ -55,7 +55,7 @@ func Prelogin(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"Kdf":            setting.PassphraseKdf,
 		"KdfIterations":  setting.PassphraseKdfIterations,
-		"OIDC":           !passwordAuth,
+		"OIDC":           oidc,
 		"HasCiphers":     hasCiphers,
 		"FlatSubdomains": flat,
 	})

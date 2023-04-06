@@ -594,7 +594,7 @@ func authorizeMoveForm(c echo.Context) error {
 		return renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
 
-	if !inst.IsPasswordAuthenticationEnabled() {
+	if inst.HasForcedOIDC() {
 		if !middlewares.IsLoggedIn(c) {
 			u := c.Request().URL
 			redirect := inst.PageURL(u.Path, u.Query())
@@ -656,7 +656,7 @@ func authorizeMoveForm(c echo.Context) error {
 
 func authorizeMove(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if !inst.IsPasswordAuthenticationEnabled() {
+	if inst.HasForcedOIDC() {
 		if !middlewares.IsLoggedIn(c) {
 			return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 		}

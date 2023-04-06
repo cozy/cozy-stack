@@ -47,7 +47,7 @@ func NewCapabilities(inst *instance.Instance) jsonapi.Object {
 	flat := config.GetConfig().Subdomains == config.FlatSubdomains
 
 	magicLink := inst.MagicLink
-	password := inst.IsPasswordAuthenticationEnabled() && !magicLink
+	password := !inst.HasForcedOIDC() && !magicLink
 	_, oidc := config.GetOIDC(inst.ContextName)
 	if inst.FranceConnectID != "" {
 		oidc = true
