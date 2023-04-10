@@ -146,32 +146,21 @@ func parseJSONAPIError(res *http.Response, b []byte) error {
 }
 
 func readJSONAPI(r io.Reader, data interface{}) (err error) {
-	defer func() {
-		if rc, ok := r.(io.ReadCloser); ok {
-			if cerr := rc.Close(); err == nil && cerr != nil {
-				err = cerr
-			}
-		}
-	}()
 	var doc jsonAPIDocument
+
 	decoder := json.NewDecoder(r)
 	if err = decoder.Decode(&doc); err != nil {
 		return err
 	}
+
 	if data != nil {
 		return json.Unmarshal(*doc.Data, &data)
 	}
+
 	return nil
 }
 
 func readJSONAPILinks(r io.Reader, included, links interface{}) (err error) {
-	defer func() {
-		if rc, ok := r.(io.ReadCloser); ok {
-			if cerr := rc.Close(); err == nil && cerr != nil {
-				err = cerr
-			}
-		}
-	}()
 	var doc jsonAPIDocument
 	decoder := json.NewDecoder(r)
 	if err = decoder.Decode(&doc); err != nil {

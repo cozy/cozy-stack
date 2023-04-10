@@ -201,14 +201,11 @@ type SSEEvent struct {
 
 // ReadSSE reads and parse a SSE source from a bufio.Reader into a channel of
 // SSEEvent.
-func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
+func ReadSSE(r io.Reader, ch chan *SSEEvent) {
 	var err error
 	defer func() {
 		if err != nil {
 			ch <- &SSEEvent{Error: err}
-		}
-		if errc := r.Close(); errc != nil && err == nil {
-			ch <- &SSEEvent{Error: errc}
 		}
 		close(ch)
 	}()

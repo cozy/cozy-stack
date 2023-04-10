@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
+	"io"
 	"net/url"
 	"strconv"
 	"time"
@@ -117,10 +117,13 @@ func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var mans []*AppManifest
 	if err := readJSONAPI(res.Body, &mans); err != nil {
 		return nil, err
 	}
+
 	return mans, nil
 }
 
@@ -133,7 +136,9 @@ func (c *Client) GetApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifest(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifest(res.Body)
 }
 
 // InstallApp is used to install an application.
@@ -160,7 +165,9 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifestStream(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifestStream(res.Body)
 }
 
 // UpdateApp is used to update an application.
@@ -187,7 +194,9 @@ func (c *Client) UpdateApp(opts *AppOptions, safe bool) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifestStream(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifestStream(res.Body)
 }
 
 // UninstallApp is used to uninstall an application.
@@ -199,7 +208,9 @@ func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifest(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readAppManifest(res.Body)
 }
 
 // ListMaintenances returns a list of konnectors in maintenance
@@ -208,6 +219,7 @@ func (ac *AdminClient) ListMaintenances(context string) ([]interface{}, error) {
 	if context != "" {
 		queries.Add("Context", context)
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "GET",
 		Path:    "/konnectors/maintenance",
@@ -216,10 +228,13 @@ func (ac *AdminClient) ListMaintenances(context string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var list []interface{}
 	if err := readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
+
 	return list, nil
 }
 
@@ -230,23 +245,34 @@ func (ac *AdminClient) ActivateMaintenance(slug string, opts map[string]interfac
 	if err != nil {
 		return err
 	}
-	_, err = ac.Req(&request.Options{
+
+	res, err := ac.Req(&request.Options{
 		Method:     "PUT",
 		Path:       "/konnectors/maintenance/" + slug,
 		Body:       body,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DeactivateMaintenance is used to deactivate the maintenance for a konnector
 func (ac *AdminClient) DeactivateMaintenance(slug string) error {
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/konnectors/maintenance/" + slug,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 func makeAppsPath(appType, path string) string {
@@ -259,15 +285,19 @@ func makeAppsPath(appType, path string) string {
 	panic(fmt.Errorf("Unknown application type %s", appType))
 }
 
-func readAppManifestStream(res *http.Response) (*AppManifest, error) {
+func readAppManifestStream(body io.Reader) (*AppManifest, error) {
 	evtch := make(chan *request.SSEEvent)
-	go request.ReadSSE(res.Body, evtch)
+
+	go request.ReadSSE(body, evtch)
+
 	var lastevt *request.SSEEvent
+
 	// get the last sent event
 	for evt := range evtch {
 		if evt.Error != nil {
 			return nil, evt.Error
 		}
+
 		if evt.Name == "error" {
 			var stringError string
 			if err := json.Unmarshal(evt.Data, &stringError); err != nil {
@@ -275,21 +305,25 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 			}
 			return nil, errors.New(stringError)
 		}
+
 		lastevt = evt
 	}
+
 	if lastevt == nil {
 		return nil, errors.New("No application data was sent")
 	}
+
 	app := &AppManifest{}
 	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app); err != nil {
 		return nil, err
 	}
+
 	return app, nil
 }
 
-func readAppManifest(res *http.Response) (*AppManifest, error) {
+func readAppManifest(body io.Reader) (*AppManifest, error) {
 	app := &AppManifest{}
-	if err := readJSONAPI(res.Body, &app); err != nil {
+	if err := readJSONAPI(body, &app); err != nil {
 		return nil, err
 	}
 	return app, nil

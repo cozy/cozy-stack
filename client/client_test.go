@@ -58,6 +58,8 @@ func TestClientWithOAuth(t *testing.T) {
 			ClientURI:    "uri",
 		},
 	}
+
+	//nolint: bodyclose // This request return an error there is no body to close
 	_, err := c.Req(&request.Options{
 		Method: "PUT",
 		Path:   "/p/a/t/h",
@@ -96,6 +98,7 @@ func TestClientWithoutOAuth(t *testing.T) {
 	body, err := request.WriteJSON(&testjson{Key: "Value"})
 	assert.NoError(t, err)
 
+	//nolint: bodyclose // This request return an error there is no body to close
 	_, err = c.Req(&request.Options{
 		Method:  "PUT",
 		Path:    "/p/a/t/h",

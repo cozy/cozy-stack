@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -98,7 +97,9 @@ func (c *Client) GetFileByID(id string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // GetFileByPath returns a File given the specified path
@@ -111,7 +112,9 @@ func (c *Client) GetFileByPath(name string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // GetDirByID returns a Dir given the specified ID
@@ -123,7 +126,9 @@ func (c *Client) GetDirByID(id string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // GetDirByPath returns a Dir given the specified path
@@ -136,7 +141,9 @@ func (c *Client) GetDirByPath(name string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // GetDirOrFileByPath returns a DirOrFile given the specified path
@@ -149,7 +156,9 @@ func (c *Client) GetDirOrFileByPath(name string) (*DirOrFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // Mkdir creates a directory with the specified path. If the directory's parent
@@ -177,7 +186,9 @@ func (c *Client) mkdir(name string, recur string) (*Dir, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readDir(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDir(res.Body)
 }
 
 // DownloadByID is used to download a file's content given its ID. It returns
@@ -241,11 +252,14 @@ func (c *Client) Upload(u *Upload) (*File, error) {
 			"Name": {u.Name},
 		}
 	}
+
 	res, err := c.Req(opts)
 	if err != nil {
 		return nil, err
 	}
-	return readFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readFile(res.Body)
 }
 
 // UpdateAttrsByID is used to update the attributes of a file or directory
@@ -268,7 +282,9 @@ func (c *Client) UpdateAttrsByID(id string, patch *FilePatch) (*DirOrFile, error
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // UpdateAttrsByPath is used to update the attributes of a file or directory
@@ -282,6 +298,7 @@ func (c *Client) UpdateAttrsByPath(name string, patch *FilePatch) (*DirOrFile, e
 	if patch.Rev != "" {
 		headers["If-Match"] = patch.Rev
 	}
+
 	res, err := c.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/files/metadata",
@@ -292,7 +309,9 @@ func (c *Client) UpdateAttrsByPath(name string, patch *FilePatch) (*DirOrFile, e
 	if err != nil {
 		return nil, err
 	}
-	return readDirOrFile(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readDirOrFile(res.Body)
 }
 
 // Move is used to move a file or directory from a given path to the other
@@ -315,12 +334,17 @@ func (c *Client) Move(from, to string) error {
 // TrashByID is used to move a file or directory specified by its ID to the
 // trash
 func (c *Client) TrashByID(id string) error {
-	_, err := c.Req(&request.Options{
+	res, err := c.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/files/" + url.PathEscape(id),
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // TrashByPath is used to move a file or directory specified by its path to the
@@ -336,12 +360,17 @@ func (c *Client) TrashByPath(name string) error {
 // RestoreByID is used to restore a file or directory from the trash given its
 // ID
 func (c *Client) RestoreByID(id string) error {
-	_, err := c.Req(&request.Options{
+	res, err := c.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/files/trash/" + url.PathEscape(id),
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // RestoreByPath is used to restore a file or directory from the trash given its
@@ -402,6 +431,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 		if err = readJSONAPILinks(res.Body, &included, &links); err != nil {
 			return walkFn(name, doc, err)
 		}
+		_ = res.Body.Close()
 
 		for _, d := range included {
 			fullpath := path.Join(name, d.Attrs.Name)
@@ -425,17 +455,17 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 	return nil
 }
 
-func readDirOrFile(res *http.Response) (*DirOrFile, error) {
+func readDirOrFile(body io.Reader) (*DirOrFile, error) {
 	dirOrFile := &DirOrFile{}
-	if err := readJSONAPI(res.Body, &dirOrFile); err != nil {
+	if err := readJSONAPI(body, &dirOrFile); err != nil {
 		return nil, err
 	}
 	return dirOrFile, nil
 }
 
-func readFile(res *http.Response) (*File, error) {
+func readFile(body io.Reader) (*File, error) {
 	file := &File{}
-	if err := readJSONAPI(res.Body, &file); err != nil {
+	if err := readJSONAPI(body, &file); err != nil {
 		return nil, err
 	}
 	if file.Attrs.Type != FileType {
@@ -444,9 +474,9 @@ func readFile(res *http.Response) (*File, error) {
 	return file, nil
 }
 
-func readDir(res *http.Response) (*Dir, error) {
+func readDir(body io.Reader) (*Dir, error) {
 	dir := &Dir{}
-	if err := readJSONAPI(res.Body, &dir); err != nil {
+	if err := readJSONAPI(body, &dir); err != nil {
 		return nil, err
 	}
 	if dir.Attrs.Type != DirType {

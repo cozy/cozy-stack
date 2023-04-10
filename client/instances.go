@@ -140,7 +140,9 @@ func (ac *AdminClient) GetInstance(domain string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // CreateInstance is used to create a new cozy instance of the specified domain
@@ -168,12 +170,15 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 		"Passphrase":      {opts.Passphrase},
 		"KdfIterations":   {strconv.Itoa(opts.KdfIterations)},
 	}
+
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
 	}
+
 	if opts.Trace != nil && *opts.Trace {
 		q.Add("Trace", "true")
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances",
@@ -182,7 +187,9 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // CountInstances returns the number of instances.
@@ -211,10 +218,13 @@ func (ac *AdminClient) ListInstances() ([]*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var list []*Instance
 	if err = readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
+
 	return list, nil
 }
 
@@ -244,16 +254,20 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))
 	}
+
 	if opts.Blocked != nil {
 		q.Add("Blocked", strconv.FormatBool(*opts.Blocked))
 		q.Add("BlockingReason", opts.BlockingReason)
 	}
+
 	if opts.Deleting != nil {
 		q.Add("Deleting", strconv.FormatBool(*opts.Deleting))
 	}
+
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))
 	}
+
 	res, err := ac.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/instances/" + domain,
@@ -262,7 +276,9 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	if err != nil {
 		return nil, err
 	}
-	return readInstance(res)
+	defer func() { _ = res.Body.Close() }()
+
+	return readInstance(res.Body)
 }
 
 // DestroyInstance is used to delete an instance and all its data.
@@ -270,12 +286,17 @@ func (ac *AdminClient) DestroyInstance(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // GetDebug is used to known if an instance has its logger in debug mode.
@@ -283,7 +304,7 @@ func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 	if !validDomain(domain) {
 		return false, fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "GET",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -296,6 +317,8 @@ func (ac *AdminClient) GetDebug(domain string) (bool, error) {
 		}
 		return false, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	return true, nil
 }
 
@@ -304,7 +327,7 @@ func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
@@ -312,7 +335,12 @@ func (ac *AdminClient) EnableDebug(domain string, ttl time.Duration) error {
 			"TTL": {ttl.String()},
 		},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // CleanSessions delete the databases for io.cozy.sessions and io.cozy.sessions.logins
@@ -320,12 +348,17 @@ func (ac *AdminClient) CleanSessions(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/sessions",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DisableDebug disables the debug mode for the logger of an instance.
@@ -333,12 +366,17 @@ func (ac *AdminClient) DisableDebug(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "DELETE",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // GetToken is used to generate a token with the specified options.
@@ -580,23 +618,33 @@ func (ac *AdminClient) Import(domain string, opts *ImportOptions) error {
 	q := url.Values{
 		"manifest_url": {opts.ManifestURL},
 	}
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/" + url.PathEscape(domain) + "/import",
 		Queries:    q,
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // RebuildRedis puts the triggers in redis.
 func (ac *AdminClient) RebuildRedis() error {
-	_, err := ac.Req(&request.Options{
+	res, err := ac.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/redis",
 		NoResponse: true,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	return nil
 }
 
 // DiskUsage returns the information about disk usage and quota
@@ -616,16 +664,19 @@ func (ac *AdminClient) DiskUsage(domain string, includeTrash bool) (map[string]i
 	if err != nil {
 		return nil, err
 	}
+	defer func() { _ = res.Body.Close() }()
+
 	var info map[string]interface{}
 	if err = json.NewDecoder(res.Body).Decode(&info); err != nil {
 		return nil, err
 	}
+
 	return info, nil
 }
 
-func readInstance(res *http.Response) (*Instance, error) {
+func readInstance(body io.Reader) (*Instance, error) {
 	in := &Instance{}
-	if err := readJSONAPI(res.Body, &in); err != nil {
+	if err := readJSONAPI(body, &in); err != nil {
 		return nil, err
 	}
 	return in, nil
