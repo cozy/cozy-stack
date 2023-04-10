@@ -40,7 +40,7 @@ require (
 	github.com/sideshow/apns2 v0.23.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/afero v1.9.5
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	github.com/ugorji/go/codec v1.2.11
@@ -70,7 +70,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imkira/go-interpol v1.1.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
