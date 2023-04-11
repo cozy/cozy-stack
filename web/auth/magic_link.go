@@ -77,11 +77,10 @@ func loginWithMagicLink(c echo.Context) error {
 }
 
 type magicLinkFlagshipParameters struct {
-	ClientID          string `json:"client_id"`
-	ClientSecret      string `json:"client_secret"`
-	Code              string `json:"magic_code"`
-	TwoFactorPasscode string `json:"two_factor_passcode"`
-	TwoFactorToken    string `json:"two_factor_token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Code         string `json:"magic_code"`
+	Passphrase   string `json:"passphrase"`
 }
 
 func magicLinkFlagship(c echo.Context) error {
@@ -103,10 +102,17 @@ func magicLinkFlagship(c echo.Context) error {
 	}
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
-		// TODO 2FA
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": inst.Translate(CredentialsErrorKey),
-		})
+		if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+			err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
+			if limits.IsLimitReachedOrExceeded(err) {
+				if err = LoginRateExceeded(inst); err != nil {
+					inst.Logger().WithNamespace("auth").Warn(err.Error())
+				}
+			}
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": "passphrase is required as second authentication factor",
+			})
+		}
 	}
 
 	client, err := oauth.FindClient(inst, args.ClientID)

@@ -334,7 +334,7 @@ Content-Type: application/json
 
 ```json
 {
-  "two_factor_token": "123123123123"
+  "error": "passphrase is required as second authentication factor"
 }
 ```
 
@@ -345,8 +345,7 @@ Then, the client can retry by sending the two-factor token and code:
   "magic_code": "ODFhNzkxYTAtYjZiYi0wMTNiLTE1YzQtMThjMDRkYWJhMzI2",
   "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
   "client_secret": "eyJpc3Mi[...omitted for brevity...]",
-  "two_factor_token": "123123123123",
-  "two_factor_code": "123456"
+  "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791"
 }
 ```
 
