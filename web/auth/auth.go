@@ -583,7 +583,7 @@ func Routes(router *echo.Group) {
 	// Magic links
 	router.POST("/magic_link", sendMagicLink, noCSRF)
 	router.GET("/magic_link", loginWithMagicLink)
-	router.POST("/magic_link/flagship", magicLinkFlagship, noCSRF)
+	router.POST("/magic_link/flagship", magicLinkFlagship)
 
 	// Passphrase
 	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)
