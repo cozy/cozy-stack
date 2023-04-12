@@ -286,6 +286,11 @@ link, they will be authenticated on the Cozy.
 When the user has received an email with a magic link, the link goes to the
 endpoint, where the user will be allowed to enter the Cozy.
 
+### POST /auth/magic_link/twofactor
+
+When two-factor authentication is enabled on a Cozy, this endpoint can be used
+to create a session.
+
 ### POST /auth/magic_link/flagship
 
 This endpoint allows the flagship app to also obtain OAuth access and register
@@ -1038,6 +1043,11 @@ query string, as `session_code`) to create a session. The flagship can create
 this code with its access token, and then use it in a webview to avoid the
 reauthentication of the user. It can also create the code with the hashed
 passphrase (and 2FA if needed) to create a session for the authorize page.
+
+Note that the difference between a `session_code` and a `magic_code` (code in a
+magic link sent by email) is the behavior when two-factor authentication is
+enabled. The `session_code` will open the session while the `magic_code` will
+require the password for that.
 
 #### Request (access token variant)
 

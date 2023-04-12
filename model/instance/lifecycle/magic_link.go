@@ -48,7 +48,7 @@ func CreateMagicLinkCode(inst *instance.Instance) (string, error) {
 }
 
 func CheckMagicLink(inst *instance.Instance, code string) error {
-	if !GetStore().CheckAndClearMagicLinkCode(inst, code) {
+	if !GetStore().CheckMagicLinkCode(inst, code) {
 		return ErrInvalidMagicLink
 	}
 	return nil

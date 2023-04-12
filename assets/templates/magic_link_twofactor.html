@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="3600">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.TemplateTitle}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
+  </head>
+  <body class="theme-inverted">
+    <form id="login-form" method="POST" action="/auth/magic_link/twofactor" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
+      <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
+      <input id="magic_code" type="hidden" name="magic_code" value="{{.MagicCode}}" />
+      <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
+      <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
+      <main class="wrapper">
+
+        <header class="wrapper-top">
+          {{if not .BottomNavBar}}
+          <p class="banner caption small-md fst-italic">
+            <span class="icon icon-answer"></span>
+            <strong>{{t "Login Password best practice"}}</strong>
+            {{t "Login Password tip"}}
+          </p>
+          {{end}}
+          <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+            <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+          </a>
+        </header>
+
+        <div class="d-flex flex-column align-items-center">
+          <img src="/public/avatar" alt="" class="avatar my-3 border border-primary border-2 rounded-circle" />
+          <h1 class="h4 h2-md mb-0 text-center">{{.Title}}</h1>
+          <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
+
+          <div id="login-field" class="input-group form-floating has-validation w-100">
+            <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" spellcheck="false" />
+            <label for="password">{{t "Login Password field"}}</label>
+            <button id="password-visibility-button" class="btn btn-outline-info"
+              type="button"
+              name="password-visibility"
+              data-show="{{t "Login Password show"}}"
+              data-hide="{{t "Login Password hide"}}"
+              title="{{t "Login Password show"}}">
+              <span id="password-visibility-icon" class="icon icon-eye-closed"></span>
+            </button>
+            {{if .CredentialsError}}
+            <div class="invalid-tooltip mb-1">
+              <div class="tooltip-arrow"></div>
+              <span class="icon icon-alert bg-danger"></span>
+              {{.CredentialsError}}
+            </div>
+            {{end}}
+          </div>
+          <a href="/auth/passphrase_reset{{if .Redirect}}?redirect={{.Redirect}}{{end}}" class="align-self-start my-3">
+            {{t "Login Forgot password"}}
+          </a>
+        </div>
+
+        <footer class="w-100">
+          <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
+            {{t "Login Submit"}}
+          </button>
+          {{if .BottomNavBar}}
+          <p class="banner caption mt-n1 mb-0 small-md fst-italic fullbleed">
+            <span class="icon icon-answer reverse-y align-bottom"></span>
+            <strong>{{t "Login Password best practice"}}</strong>
+            {{t "Login Password tip"}}
+          </p>
+          {{end}}
+        </footer>
+
+      </main>
+    </form>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+    {{if .CryptoPolyfill}}<script src="{{asset .Domain "/js/asmcrypto.js"}}"></script>{{end}}
+    <script src="{{asset .Domain "/scripts/password-helpers.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/login.js"}}"></script>
+  </body>
+</html>

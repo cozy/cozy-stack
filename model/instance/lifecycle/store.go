@@ -13,7 +13,7 @@ import (
 // Store is an object to store and retrieve magic link codes.
 type Store interface {
 	SaveMagicLinkCode(db prefixer.Prefixer, code string) error
-	CheckAndClearMagicLinkCode(db prefixer.Prefixer, code string) bool
+	CheckMagicLinkCode(db prefixer.Prefixer, code string) bool
 }
 
 // storeTTL is the time an entry stay alive
@@ -71,14 +71,13 @@ func (s *memStore) SaveMagicLinkCode(db prefixer.Prefixer, code string) error {
 	return nil
 }
 
-func (s *memStore) CheckAndClearMagicLinkCode(db prefixer.Prefixer, code string) bool {
+func (s *memStore) CheckMagicLinkCode(db prefixer.Prefixer, code string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	exp, ok := s.vals[code]
 	if !ok {
 		return false
 	}
-	delete(s.vals, code)
 	return time.Now().Before(exp)
 }
 
@@ -92,10 +91,10 @@ func (s *redisStore) SaveMagicLinkCode(db prefixer.Prefixer, code string) error 
 	return s.c.Set(s.ctx, key, "1", storeTTL).Err()
 }
 
-func (s *redisStore) CheckAndClearMagicLinkCode(db prefixer.Prefixer, code string) bool {
+func (s *redisStore) CheckMagicLinkCode(db prefixer.Prefixer, code string) bool {
 	key := magicLinkCodeKey(db, code)
-	n, err := s.c.Del(s.ctx, key).Result()
-	return err == nil && n > 0
+	r, err := s.c.Exists(s.ctx, key).Result()
+	return err == nil && r > 0
 }
 
 func magicLinkCodeKey(db prefixer.Prefixer, suffix string) string {

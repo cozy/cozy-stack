@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -65,8 +66,24 @@ func loginWithMagicLink(c echo.Context) error {
 	}
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
-		// TODO 2FA
-		return renderError(c, http.StatusBadRequest, "Error Invalid magic link")
+		iterations := 0
+		if settings, err := settings.Get(inst); err == nil {
+			iterations = settings.PassphraseKdfIterations
+		}
+		return c.Render(http.StatusOK, "magic_link_twofactor.html", echo.Map{
+			"TemplateTitle":  inst.TemplateTitle(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Iterations":     iterations,
+			"Salt":           string(inst.PassphraseSalt()),
+			"CSRF":           c.Get("csrf"),
+			"Favicon":        middlewares.Favicon(inst),
+			"BottomNavBar":   middlewares.BottomNavigationBar(c),
+			"CryptoPolyfill": middlewares.CryptoPolyfill(c),
+			"MagicCode":      code,
+			"Redirect":       redirect,
+		})
 	}
 
 	err = newSession(c, inst, redirect, session.NormalRun, "magic_link")
@@ -74,6 +91,49 @@ func loginWithMagicLink(c echo.Context) error {
 		return err
 	}
 	return c.Redirect(http.StatusSeeOther, redirect.String())
+}
+
+func loginWithMagicLinkAndPassword(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	code := c.FormValue("magic_code")
+
+	// Check magic code
+	if err := lifecycle.CheckMagicLink(inst, code); err != nil {
+		err := config.GetRateLimiter().CheckRateLimit(inst, limits.MagicLinkType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			return echo.NewHTTPError(http.StatusTooManyRequests, "Too many requests")
+		}
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": inst.Translate("Error Invalid magic link"),
+		})
+	}
+
+	// Check passphrase
+	passphrase := []byte(c.FormValue("passphrase"))
+	if lifecycle.CheckPassphrase(inst, passphrase) != nil {
+		errorMessage := inst.Translate(CredentialsErrorKey)
+		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			if err = LoginRateExceeded(inst); err != nil {
+				inst.Logger().WithNamespace("auth").Warn(err.Error())
+			}
+		}
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": errorMessage,
+		})
+	}
+
+	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
+	if err != nil {
+		return err
+	}
+	err = newSession(c, inst, redirect, session.NormalRun, "magic_link")
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"redirect": redirect.String(),
+	})
 }
 
 type magicLinkFlagshipParameters struct {

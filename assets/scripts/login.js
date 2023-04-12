@@ -11,6 +11,7 @@
   const loginField = d.getElementById('login-field')
   const longRunCheckbox = d.getElementById('long-run-session')
   const trustedTokenInput = d.getElementById('trusted-device-token')
+  const magicCodeInput = d.getElementById('magic_code')
 
   // Set the trusted device token from the localstorage in the form if it exists
   try {
@@ -53,6 +54,10 @@
         }
         if (clientIdInput) {
           data.append('client_id', clientIdInput.value)
+        }
+        // For the /auth/magic_link page
+        if (magicCodeInput) {
+          data.append('magic_code', magicCodeInput.value)
         }
 
         const headers = new Headers()
