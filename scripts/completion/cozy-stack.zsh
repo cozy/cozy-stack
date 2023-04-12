@@ -1,4 +1,5 @@
 #compdef cozy-stack
+compdef _cozy-stack cozy-stack
 
 # zsh completion for cozy-stack                           -*- shell-script -*-
 
@@ -17,8 +18,9 @@ _cozy-stack()
     local shellCompDirectiveNoFileComp=4
     local shellCompDirectiveFilterFileExt=8
     local shellCompDirectiveFilterDirs=16
+    local shellCompDirectiveKeepOrder=32
 
-    local lastParam lastChar flagPrefix requestComp out directive comp lastComp noSpace
+    local lastParam lastChar flagPrefix requestComp out directive comp lastComp noSpace keepOrder
     local -a completions
 
     __cozy-stack_debug "\n========= starting completion logic =========="
@@ -136,6 +138,11 @@ _cozy-stack()
         noSpace="-S ''"
     fi
 
+    if [ $((directive & shellCompDirectiveKeepOrder)) -ne 0 ]; then
+        __cozy-stack_debug "Activating keep order."
+        keepOrder="-V"
+    fi
+
     if [ $((directive & shellCompDirectiveFilterFileExt)) -ne 0 ]; then
         # File extension filtering
         local filteringCmd
@@ -171,7 +178,7 @@ _cozy-stack()
         return $result
     else
         __cozy-stack_debug "Calling _describe"
-        if eval _describe "completions" completions $flagPrefix $noSpace; then
+        if eval _describe $keepOrder "completions" completions $flagPrefix $noSpace; then
             __cozy-stack_debug "_describe found some completions"
 
             # Return the success of having called _describe
