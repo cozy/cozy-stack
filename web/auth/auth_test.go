@@ -2157,6 +2157,79 @@ func TestAuth(t *testing.T) {
 				Expect().Status(404)
 		})
 	})
+
+	t.Run("MagicLink", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		d := "test.cozycloud.cc.magic_link"
+		_ = lifecycle.Destroy(d)
+		magicLink := true
+		inst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:    d,
+			Locale:    "en",
+			Email:     "alice@example.com",
+			MagicLink: &magicLink,
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(d) })
+
+		t.Run("Failure", func(t *testing.T) {
+			code := "badcode"
+
+			e.GET("/auth/magic_link").
+				WithHost(d).
+				WithRedirectPolicy(httpexpect.DontFollowRedirects).
+				WithQuery("code", code).
+				Expect().Status(400)
+		})
+
+		t.Run("Success", func(t *testing.T) {
+			code, err := lifecycle.CreateMagicLinkCode(inst)
+			require.NoError(t, err)
+
+			e.GET("/auth/magic_link").
+				WithHost(d).
+				WithRedirectPolicy(httpexpect.DontFollowRedirects).
+				WithQuery("code", code).
+				Expect().Status(303).
+				Header("Location").Equal("https://home." + d + "/")
+		})
+
+		t.Run("Flagship", func(t *testing.T) {
+			oauthClient := &oauth.Client{
+				RedirectURIs:    []string{"cozy://flagship"},
+				ClientName:      "Cozy Flagship",
+				ClientKind:      "mobile",
+				SoftwareID:      "cozy-flagship",
+				SoftwareVersion: "0.1.0",
+			}
+
+			require.Nil(t, oauthClient.Create(inst))
+			client, err := oauth.FindClient(inst, oauthClient.ClientID)
+			require.NoError(t, err)
+			client.CertifiedFromStore = true
+			require.NoError(t, client.SetFlagship(inst))
+
+			code, err := lifecycle.CreateMagicLinkCode(inst)
+			require.NoError(t, err)
+
+			obj := e.POST("/auth/magic_link/flagship").
+				WithHost(d).
+				WithHeader("Accept", "application/json").
+				WithJSON(map[string]string{
+					"magic_code":    code,
+					"client_id":     client.CouchID,
+					"client_secret": client.ClientSecret,
+				}).
+				Expect().Status(200).
+				JSON().Object()
+
+			obj.Value("access_token").String().NotEmpty()
+			obj.Value("refresh_token").String().NotEmpty()
+			obj.ValueEqual("scope", "*")
+			obj.ValueEqual("token_type", "bearer")
+		})
+	})
 }
 
 func getLoginCSRFToken(e *httpexpect.Expect) string {

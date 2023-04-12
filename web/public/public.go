@@ -54,10 +54,15 @@ func Prelogin(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	_, oidc := config.GetOIDC(inst.ContextName)
+	franceConnect := inst.FranceConnectID != ""
 	return c.JSON(http.StatusOK, echo.Map{
-		"name":          publicName,
 		"Kdf":           setting.PassphraseKdf,
 		"KdfIterations": setting.PassphraseKdfIterations,
+		"OIDC":          oidc,
+		"FranceConnect": franceConnect,
+		"magic_link":    inst.MagicLink,
+		"name":          publicName,
 	})
 }
 

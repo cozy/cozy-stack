@@ -184,6 +184,30 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/:domain/magic_link
+
+Creates a code that can be used in a magic link (if this feature is enabled on
+the Cozy).
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/magic_link HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "code": "YmU5NmEzMzAtYjZiYy0wMTNiLTE1YzUtMThjMDRkYWJhMzI2"
+}
+```
+
 ### POST /instances/:domain/session_code
 
 Creates a session_code that can be used to login on the given instance.

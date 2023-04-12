@@ -39,6 +39,7 @@ var (
 		"import.html",
 		"instance_blocked.html",
 		"login.html",
+		"magic_link_twofactor.html",
 		"move_confirm.html",
 		"move_delegated_auth.html",
 		"move_in_progress.html",

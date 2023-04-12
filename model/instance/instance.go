@@ -50,7 +50,8 @@ type Instance struct {
 	ContextName     string   `json:"context,omitempty"`          // The context attached to the instance
 	TOSSigned       string   `json:"tos,omitempty"`              // Terms of Service signed version
 	TOSLatest       string   `json:"tos_latest,omitempty"`       // Terms of Service latest version
-	AuthMode        AuthMode `json:"auth_mode,omitempty"`
+	AuthMode        AuthMode `json:"auth_mode,omitempty"`        // 2 factor authentication
+	MagicLink       bool     `json:"magic_link,omitempty"`       // Authentication via a link sent by email
 	Deleting        bool     `json:"deleting,omitempty"`
 	Moved           bool     `json:"moved,omitempty"`           // If the instance has been moved to a new place
 	Blocked         bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked
@@ -390,22 +391,22 @@ func (i *Instance) Registries() []*url.URL {
 	return context
 }
 
-// IsPasswordAuthenticationEnabled returns false only if the instance is in a
-// context where the config says that the stack shouldn't allow to authenticate
-// with the password.
-func (i *Instance) IsPasswordAuthenticationEnabled() bool {
+// HasForcedOIDC returns true only if the instance is in a context where the
+// config says that the stack shouldn't allow to authenticate with the
+// password.
+func (i *Instance) HasForcedOIDC() bool {
 	if i.ContextName == "" {
-		return true
+		return false
 	}
 	auth, ok := config.GetConfig().Authentication[i.ContextName].(map[string]interface{})
 	if !ok {
-		return true
+		return false
 	}
 	disabled, ok := auth["disable_password_authentication"].(bool)
 	if !ok {
-		return true
+		return false
 	}
-	return !disabled
+	return disabled
 }
 
 // PassphraseSalt computes the salt for the client-side hashing of the master

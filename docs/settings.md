@@ -419,6 +419,8 @@ are:
   (not nested)
 - `can_auth_with_password` is true when authentication with a Cozy password is
   possible
+- `can_auth_with_magic_links` is true when authentication with a link sent by
+  email is possible
 - `can_auth_with_oidc` is true when delegated authentication with OIDC is
   possible for this instance.
 
@@ -443,7 +445,10 @@ Accept: application/vnd.api+json
         "id": "io.cozy.settings.capabilities",
         "attributes": {
             "file_versioning": true,
-            "flat_subdomains": false
+            "flat_subdomains": false,
+            "can_auth_with_password": true,
+            "can_auth_with_magic_links": false,
+            "can_auth_with_oidc": false
         },
         "links": {
             "self": "/settings/capabilities"

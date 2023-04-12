@@ -203,7 +203,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 	}
 
 	var changePassphraseLink string
-	if i.IsPasswordAuthenticationEnabled() {
+	if !i.HasForcedOIDC() {
 		changePassphraseLink = i.ChangePasswordURL()
 	}
 	var activateTwoFALink string

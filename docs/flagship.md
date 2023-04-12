@@ -58,6 +58,12 @@ On an existing Cozy instance, the app will fetch some parameters with
 hash will be sent to `POST /auth/login/flagship` to give the app access to the
 whole Cozy.
 
+## Magic link variant
+
+When magic link is enabled on a Cozy, the flagship app can use
+`POST /auth/magic_link/flagship` with a code sent by email to the user to get
+access to the Cozy.
+
 ## OIDC variant
 
 When a user uses an OIDC provider, or FranceConnect, the flagship app will get

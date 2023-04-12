@@ -458,6 +458,7 @@ func TestSettings(t *testing.T) {
 		attrs := data.Value("attributes").Object()
 		attrs.ValueEqual("file_versioning", true)
 		attrs.ValueEqual("can_auth_with_password", true)
+		attrs.ValueEqual("can_auth_with_magic_links", false)
 		attrs.ValueEqual("can_auth_with_oidc", false)
 	})
 

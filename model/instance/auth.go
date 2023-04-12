@@ -20,6 +20,7 @@ const (
 	PasswordResetTokenLen = 16
 	SessionCodeLen        = 32
 	SessionSecretLen      = 64
+	MagicLinkCodeLen      = 32
 	OauthSecretLen        = 128
 )
 

@@ -1,0 +1,12 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Magic Link Greeting" .PublicName}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Magic Link Intro"}}
+</mj-text>
+<mj-button href="{{.MagicLink}}" align="center" mj-class="primary-button content-medium">
+	{{t "Mail Magic Link Button text"}}
+</mj-button>
+{{end}}

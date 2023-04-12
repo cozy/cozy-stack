@@ -1,0 +1,3 @@
+{{t "Mail Magic Link Intro"}}
+
+{{.MagicLink}}

@@ -86,7 +86,7 @@ func SendHint(inst *instance.Instance) error {
 			"BaseURL":    inst.PageURL("/", nil),
 			"Hint":       setting.PassphraseHint,
 			"PublicName": publicName,
-			"CozyPass":   !inst.IsPasswordAuthenticationEnabled(),
+			"CozyPass":   inst.HasForcedOIDC(),
 		},
 	})
 }
@@ -129,7 +129,7 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 			"BaseURL":             inst.PageURL("/", nil),
 			"PassphraseResetLink": resetURL,
 			"PublicName":          publicName,
-			"CozyPass":            !inst.IsPasswordAuthenticationEnabled(),
+			"CozyPass":            inst.HasForcedOIDC(),
 		},
 	})
 }

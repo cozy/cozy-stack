@@ -275,6 +275,104 @@ Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
+### POST /auth/magic_link
+
+If the authentication via magic link is enabled on this instance, this endpoint
+will send an email to the user with a magic link. If the user clicks on this
+link, they will be authenticated on the Cozy.
+
+### GET /auth/magic_link?code=...
+
+When the user has received an email with a magic link, the link goes to the
+endpoint, where the user will be allowed to enter the Cozy.
+
+### POST /auth/magic_link/twofactor
+
+When two-factor authentication is enabled on a Cozy, this endpoint can be used
+to create a session.
+
+### POST /auth/magic_link/flagship
+
+This endpoint allows the flagship app to also obtain OAuth access and register
+tokens without having to make the OAuth dance (which can be awkward for the
+user). It requires a code sent by email to the user.
+
+#### Request
+
+```http
+POST /auth/magic_link/flagship HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "magic_code": "ODFhNzkxYTAtYjZiYi0wMTNiLTE1YzQtMThjMDRkYWJhMzI2",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg",
+  "token_type": "bearer",
+  "refresh_token": "YTUwMjcyYjgtOTNmNi0xMWVjLWE4YTQtZWJhMzlmMTAwMWJiCg",
+  "scope": "*"
+}
+```
+
+**Note:** if two-factor authentication is enabled on the Cozy, an email
+will be sent to the user with a code, and this request will return:
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+```
+
+```json
+{
+  "error": "passphrase is required as second authentication factor"
+}
+```
+
+Then, the client can retry by sending the two-factor token and code:
+
+```json
+{
+  "magic_code": "ODFhNzkxYTAtYjZiYi0wMTNiLTE1YzQtMThjMDRkYWJhMzI2",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791"
+}
+```
+
+**Note:** if the OAuth client has not been certified as the flagship app,
+this request will return:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "ZmY4ODI3NGMtOTY1Yy0xMWVjLThkMDgtMmI5M2"
+}
+```
+
+The `session_code` can be put in the query string while opening the OAuth
+authorize page. It will be used to open the session, and let the user type the
+6-digits code they have received by mail to confirm that they want to use this
+app as the flagship app.
+
 ### GET /auth/passphrase_reset
 
 Display a form for the user to reset its password, in case he has forgotten it
@@ -945,6 +1043,11 @@ query string, as `session_code`) to create a session. The flagship can create
 this code with its access token, and then use it in a webview to avoid the
 reauthentication of the user. It can also create the code with the hashed
 passphrase (and 2FA if needed) to create a session for the authorize page.
+
+Note that the difference between a `session_code` and a `magic_code` (code in a
+magic link sent by email) is the behavior when two-factor authentication is
+enabled. The `session_code` will open the session while the `magic_code` will
+require the password for that.
 
 #### Request (access token variant)
 

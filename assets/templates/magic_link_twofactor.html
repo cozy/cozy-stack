@@ -14,25 +14,20 @@
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
   <body class="theme-inverted">
-    {{if .MagicLink}}
-    <form id="magic-link-form" method="POST" action="/auth/magic_link" class="d-contents">
-    {{else}}
-    <form id="login-form" method="POST" action="/auth/login" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
-    {{end}}
+    <form id="login-form" method="POST" action="/auth/magic_link/twofactor" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
       <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
+      <input id="magic_code" type="hidden" name="magic_code" value="{{.MagicCode}}" />
       <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
       <input id="trusted-device-token" type="hidden" name="trusted-device-token" value="" />
       <main class="wrapper">
 
         <header class="wrapper-top">
-          {{if not .MagicLink}}
           {{if not .BottomNavBar}}
           <p class="banner caption small-md fst-italic">
             <span class="icon icon-answer"></span>
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
           </p>
-          {{end}}
           {{end}}
           <a href="https://cozy.io/" class="btn p-2 d-sm-none">
             <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
@@ -44,28 +39,6 @@
           <h1 class="h4 h2-md mb-0 text-center">{{.Title}}</h1>
           <p class="mb-4 mb-md-5 text-muted">{{.Domain}}</p>
 
-          {{if .FranceConnect}}
-          <div class="alert alert-primary text-center mb-4 mb-md-5">
-            <p class="small w-100">
-              FranceConnect est la solution proposée par l’État pour sécuriser et
-              simplifier la connexion à vos services en ligne.
-            </p>
-            <a href="/oidc/franceconnect" class="d-inline-block mb-2">
-              <img src="{{asset .Domain "/images/franceconnect.svg"}}" alt="S’identifier avec FranceConnect" />
-            </a>
-            <p class="w-100 small mb-0">
-              <a href="https://franceconnect.gouv.fr/">Qu’est-ce que FranceConnect ?</a>
-            </p>
-          </div>
-          <div class="horizontal-separator mb-4 mb-md-5">ou</div>
-          {{end}}
-
-          {{if .MagicLink}}
-          <button id="magic-link-submit" class="btn btn-outline-info btn-md-lg w-100" type="submit">
-            <img src="{{asset .Domain "/icons/email.svg"}}" alt="" />
-            <span>{{t "Magic Link Submit"}}</span>
-          </button>
-          {{else}}
           <div id="login-field" class="input-group form-floating has-validation w-100">
             <input type="password" class="form-control form-control-md-lg" id="password" name="passphrase" autofocus autocomplete="current-password" spellcheck="false" />
             <label for="password">{{t "Login Password field"}}</label>
@@ -88,21 +61,9 @@
           <a href="/auth/passphrase_reset{{if .Redirect}}?redirect={{.Redirect}}{{end}}" class="align-self-start my-3">
             {{t "Login Forgot password"}}
           </a>
-          {{if not .OAuth}}
-          <div class="form-check align-self-start">
-            <input class="form-check-input" type="checkbox" id="long-run-session" name="long-run-session" checked />
-            <label class="form-check-label" for="long-run-session">
-              {{t "Login Long Session"}}
-            </label>
-          </div>
-          {{end}}
-          {{end}}
         </div>
 
         <footer class="w-100">
-          {{if .MagicLink}}
-          &nbsp;
-          {{else}}
           <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
             {{t "Login Submit"}}
           </button>
@@ -112,7 +73,6 @@
             <strong>{{t "Login Password best practice"}}</strong>
             {{t "Login Password tip"}}
           </p>
-          {{end}}
           {{end}}
         </footer>
 

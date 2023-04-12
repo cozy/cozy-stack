@@ -17,6 +17,7 @@ type apiCapabilities struct {
 	FileVersioning bool   `json:"file_versioning"`
 	FlatSubdomains bool   `json:"flat_subdomains"`
 	PasswordAuth   bool   `json:"can_auth_with_password"`
+	MagicLinkAuth  bool   `json:"can_auth_with_magic_links"`
 	OIDCAuth       bool   `json:"can_auth_with_oidc"`
 }
 
@@ -45,14 +46,19 @@ func NewCapabilities(inst *instance.Instance) jsonapi.Object {
 	}
 	flat := config.GetConfig().Subdomains == config.FlatSubdomains
 
-	password := inst.IsPasswordAuthenticationEnabled()
+	magicLink := inst.MagicLink
+	password := !inst.HasForcedOIDC() && !magicLink
 	_, oidc := config.GetOIDC(inst.ContextName)
+	if inst.FranceConnectID != "" {
+		oidc = true
+	}
 
 	return &apiCapabilities{
 		DocID:          consts.CapabilitiesSettingsID,
 		FileVersioning: versioning,
 		FlatSubdomains: flat,
 		PasswordAuth:   password,
+		MagicLinkAuth:  magicLink,
 		OIDCAuth:       oidc,
 	}
 }

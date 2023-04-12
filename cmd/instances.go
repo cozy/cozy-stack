@@ -49,6 +49,7 @@ var flagCouchCluster int
 var flagUUID string
 var flagOIDCID string
 var flagFranceConnectID string
+var flagMagicLink bool
 var flagTOSSigned string
 var flagTOS string
 var flagTOSLatest string
@@ -196,6 +197,7 @@ be used as the error message.
 			DiskQuota:       diskQuota,
 			Apps:            flagApps,
 			Passphrase:      flagPassphrase,
+			MagicLink:       &flagMagicLink,
 			Trace:           &flagTrace,
 		})
 		if err != nil {
@@ -274,6 +276,7 @@ settings for a specified domain.
 			Settings:        flagSettings,
 			BlockingReason:  flagBlockingReason,
 			DiskQuota:       diskQuota,
+			MagicLink:       &flagMagicLink,
 		}
 		if flag := cmd.Flag("blocked"); flag.Changed {
 			opts.Blocked = &flagBlocked
@@ -1115,6 +1118,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
 	addInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "The identifier for checking authentication from OIDC")
 	addInstanceCmd.Flags().StringVar(&flagFranceConnectID, "franceconnect_id", "", "The identifier for checking authentication with FranceConnect")
+	addInstanceCmd.Flags().BoolVar(&flagMagicLink, "magic_link", false, "Enable authentication with magic links sent by email")
 	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "Context name of the instance")
@@ -1133,6 +1137,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
 	modifyInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "New identifier for checking authentication from OIDC")
 	modifyInstanceCmd.Flags().StringVar(&flagFranceConnectID, "franceconnect_id", "", "The identifier for checking authentication with FranceConnect")
+	modifyInstanceCmd.Flags().BoolVar(&flagMagicLink, "magic_link", false, "Enable authentication with magic links sent by email")
 	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")
 	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")
 	modifyInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "New timezone")

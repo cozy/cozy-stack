@@ -26,6 +26,7 @@ cozy-stack instances modify <domain> [flags]
       --franceconnect_id string     The identifier for checking authentication with FranceConnect
   -h, --help                        help for modify
       --locale string               New locale
+      --magic_link                  Enable authentication with magic links sent by email
       --oidc_id string              New identifier for checking authentication from OIDC
       --onboarding-finished         Force the finishing of the onboarding
       --public-name string          New public name

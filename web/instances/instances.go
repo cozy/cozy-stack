@@ -79,6 +79,13 @@ func createHandler(c echo.Context) error {
 		}
 		opts.AutoUpdate = &b
 	}
+	if magicLink := c.QueryParam("MagicLink"); magicLink != "" {
+		ml, err := strconv.ParseBool(magicLink)
+		if err != nil {
+			return wrapError(err)
+		}
+		opts.MagicLink = &ml
+	}
 	if layout := c.QueryParam("SwiftLayout"); layout != "" {
 		opts.SwiftLayout, err = strconv.Atoi(layout)
 		if err != nil {
@@ -172,6 +179,9 @@ func modifyHandler(c echo.Context) error {
 	}
 	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
 		opts.OnboardingFinished = &onboardingFinished
+	}
+	if magicLink, err := strconv.ParseBool(c.QueryParam("MagicLink")); err == nil {
+		opts.MagicLink = &magicLink
 	}
 	// Deprecated: the Debug parameter should no longer be used, but is kept
 	// for compatibility.
@@ -333,6 +343,41 @@ func setAuthMode(c echo.Context) error {
 	}
 	// Return success
 	return c.JSON(http.StatusNoContent, nil)
+}
+
+func createMagicLink(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	code, err := lifecycle.CreateMagicLinkCode(inst)
+	if err != nil {
+		if err == lifecycle.ErrMagicLinkNotAvailable {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": err,
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	req := c.Request()
+	var ip string
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(req.RemoteAddr, ":")[0]
+	}
+	inst.Logger().WithField("nspace", "loginaudit").
+		Infof("New magic_link code created from %s at %s", ip, time.Now())
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"code": code,
+	})
 }
 
 func createSessionCode(c echo.Context) error {
@@ -629,11 +674,17 @@ func Routes(router *echo.Group) {
 	router.GET("/feature/defaults", getFeatureDefaults)
 	router.PATCH("/feature/defaults", patchFeatureDefaults)
 
-	// Advanced features for instances
-	router.POST("/updates", updatesHandler)
+	// Authentication
 	router.POST("/token", createToken)
 	router.GET("/oauth_client", findClientBySoftwareID)
 	router.POST("/oauth_client", registerClient)
+	router.POST("/:domain/auth-mode", setAuthMode)
+	router.POST("/:domain/magic_link", createMagicLink)
+	router.POST("/:domain/session_code", createSessionCode)
+	router.DELETE("/:domain/sessions", cleanSessions)
+
+	// Advanced features for instances
+	router.POST("/updates", updatesHandler)
 	router.GET("/:domain/last-activity", lastActivity)
 	router.POST("/:domain/export", exporter)
 	router.GET("/:domain/exports/:export-id/data", dataExporter)
@@ -641,9 +692,6 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
-	router.POST("/:domain/auth-mode", setAuthMode)
-	router.POST("/:domain/session_code", createSessionCode)
-	router.DELETE("/:domain/sessions", cleanSessions)
 	router.GET("/:domain/sharings/:sharing-id/unxor/:doc-id", unxorID)
 
 	// Config
