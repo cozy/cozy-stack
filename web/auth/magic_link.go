@@ -157,7 +157,7 @@ func magicLinkFlagship(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusTooManyRequests, "Too many requests")
 		}
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": inst.Translate(CredentialsErrorKey),
+			"error": "invalid magic code",
 		})
 	}
 
