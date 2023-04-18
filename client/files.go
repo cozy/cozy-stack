@@ -49,6 +49,7 @@ type File struct {
 		Mime       string    `json:"mime"`
 		Class      string    `json:"class"`
 		Executable bool      `json:"executable"`
+		Encrypted  bool      `json:"encrypted"`
 		Tags       []string  `json:"tags"`
 	} `json:"attributes"`
 }
