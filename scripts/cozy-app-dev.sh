@@ -137,16 +137,10 @@ do_check_couchdb() {
 
 	printf "checking couchdb on %s... " "${COUCHDB_URL}"
 	couch_test=$(curl -s -XGET "${COUCHDB_URL}" || echo "")
-	couch_vers=$(grep "\"version\":\s*\"2" <<< "${couch_test}" || echo "")
 
 	if [ -z "${couch_test}" ]; then
 		echo "failed"
 		echo_err "could not reach couchdb on ${COUCHDB_URL}"
-		exit 1
-	elif [ -z "${couch_vers}" ]; then
-		echo "failed"
-		echo_err "couchdb v1 is running on ${COUCHDB_URL}"
-		echo_err "you need couchdb version >= 2"
 		exit 1
 	fi
 
