@@ -488,6 +488,7 @@ Cookie: sessionid=xxxx
         },
         "attributes": {
             "locale": "fr",
+            "password_defined": true,
             "auto_update": true,
             "email": "alice@example.com",
             "public_name": "Alice Martin",

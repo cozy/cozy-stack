@@ -47,6 +47,9 @@ func getInstance(c echo.Context) error {
 
 	doc.M["locale"] = inst.Locale
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
+	if inst.PasswordDefined != nil {
+		doc.M["password_defined"] = *inst.PasswordDefined
+	}
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	doc.M["tos"] = inst.TOSSigned

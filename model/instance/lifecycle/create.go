@@ -212,6 +212,9 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.MagicLink = *magicLink
 	}
 
+	passwordDefined := opts.Passphrase != ""
+	i.PasswordDefined = &passwordDefined
+
 	// If the password authentication is disabled, we force a random password.
 	// It won't be known by the user and cannot be used to authenticate. It
 	// will only be used if the configuration is changed later: the user will
