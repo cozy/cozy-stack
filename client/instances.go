@@ -41,6 +41,7 @@ type Instance struct {
 		NoAutoUpdate         bool      `json:"no_auto_update,omitempty"`
 		Blocked              bool      `json:"blocked,omitempty"`
 		OnboardingFinished   bool      `json:"onboarding_finished"`
+		PasswordDefined      *bool     `json:"password_defined"`
 		MagicLink            bool      `json:"magic_link,omitempty"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
