@@ -213,7 +213,6 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	passwordDefined := opts.Passphrase != ""
-	i.PasswordDefined = &passwordDefined
 
 	// If the password authentication is disabled, we force a random password.
 	// It won't be known by the user and cannot be used to authenticate. It
@@ -241,6 +240,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.OnboardingFinished = true
 	}
 
+	i.PasswordDefined = &passwordDefined
 	if onboardingFinished := opts.OnboardingFinished; onboardingFinished != nil {
 		i.OnboardingFinished = *onboardingFinished
 	}
