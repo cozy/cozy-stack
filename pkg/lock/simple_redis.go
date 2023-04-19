@@ -212,10 +212,11 @@ func NewRedisLockGetter(client redis.UniversalClient) *RedisLockGetter {
 }
 
 func (r *RedisLockGetter) ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker {
-	lock, _ := r.locks.LoadOrStore(db.DBPrefix()+"/"+name, &redisLock{
+	ns := db.DBPrefix() + "/" + name
+	lock, _ := r.locks.LoadOrStore(ns, &redisLock{
 		client: r.client,
 		ctx:    context.Background(),
-		key:    basicLockNS + name,
+		key:    basicLockNS + ns,
 	})
 
 	return lock.(*redisLock)
