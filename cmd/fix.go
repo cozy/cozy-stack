@@ -312,6 +312,29 @@ var contentMismatch64Kfixer = &cobra.Command{
 	},
 }
 
+var passwordDefinedFixer = &cobra.Command{
+	Use:   "password-defined <domain>",
+	Short: "Set the password_defined setting",
+	Long: `
+A password_defined field has been added to the io.cozy.settings.instance
+(available on GET /settings/instance). This fixer can fill it for existing Cozy
+instances if it was missing.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/password-defined", domain)
+		_, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
+		return err
+	},
+}
+
 var orphanAccountFixer = &cobra.Command{
 	Use:   "orphan-account <domain>",
 	Short: "Remove the orphan accounts",
@@ -402,6 +425,7 @@ func init() {
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
 	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
+	fixerCmdGroup.AddCommand(passwordDefinedFixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 	fixerCmdGroup.AddCommand(serviceTriggersFixer)
 	fixerCmdGroup.AddCommand(indexesFixer)
