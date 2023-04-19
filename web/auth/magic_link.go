@@ -56,7 +56,10 @@ func loginWithMagicLink(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	code := c.QueryParam("code")
+	code := c.QueryParam("code") // Login
+	if code == "" {
+		code = c.QueryParam("magic_code") // Onboarding from the cloudery
+	}
 	if err := lifecycle.CheckMagicLink(inst, code); err != nil {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.MagicLinkType)
 		if limits.IsLimitReachedOrExceeded(err) {
