@@ -30,7 +30,7 @@ func (sub *Subscriber) Subscribe(doctype string) {
 		return
 	}
 	key := topicKey(sub, doctype)
-	go sub.hub.subscribe(sub, key)
+	sub.hub.subscribe(sub, key)
 }
 
 // Unsubscribe removes a listener for events on a whole doctype
@@ -39,7 +39,7 @@ func (sub *Subscriber) Unsubscribe(doctype string) {
 		return
 	}
 	key := topicKey(sub, doctype)
-	go sub.hub.unsubscribe(sub, key)
+	sub.hub.unsubscribe(sub, key)
 }
 
 // Watch adds a listener for events for a specific document (doctype+id)
@@ -48,7 +48,7 @@ func (sub *Subscriber) Watch(doctype, id string) {
 		return
 	}
 	key := topicKey(sub, doctype)
-	go sub.hub.watch(sub, key, id)
+	sub.hub.watch(sub, key, id)
 }
 
 // Unwatch removes a listener for events for a specific document (doctype+id)
@@ -57,7 +57,7 @@ func (sub *Subscriber) Unwatch(doctype, id string) {
 		return
 	}
 	key := topicKey(sub, doctype)
-	go sub.hub.unwatch(sub, key, id)
+	sub.hub.unwatch(sub, key, id)
 }
 
 // Close will unsubscribe to all topics and the subscriber should no longer be

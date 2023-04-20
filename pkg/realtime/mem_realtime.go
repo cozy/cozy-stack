@@ -59,106 +59,114 @@ func (h *memHub) SubscribeFirehose() *Subscriber {
 
 func (h *memHub) subscribe(sub *Subscriber, key string) {
 	h.Lock()
-	defer h.Unlock()
+	go func() {
+		defer h.Unlock()
 
-	h.addTopic(sub, key)
+		h.addTopic(sub, key)
 
-	w := &toWatch{sub, ""}
-	for {
-		it, exists := h.topics[key]
-		if !exists {
-			it = newTopic()
-			h.topics[key] = it
-		}
+		w := &toWatch{sub, ""}
+		for {
+			it, exists := h.topics[key]
+			if !exists {
+				it = newTopic()
+				h.topics[key] = it
+			}
 
-		select {
-		case it.subscribe <- w:
-			return
-		case running := <-it.running:
-			logger.WithNamespace("realtime").
-				Warnf("unexpected state: subscribe with running=%v", running)
-			if !running {
-				delete(h.topics, key)
+			select {
+			case it.subscribe <- w:
+				return
+			case running := <-it.running:
+				logger.WithNamespace("realtime").
+					Warnf("unexpected state: subscribe with running=%v", running)
+				if !running {
+					delete(h.topics, key)
+				}
 			}
 		}
-	}
+	}()
 }
 
 func (h *memHub) unsubscribe(sub *Subscriber, key string) {
 	h.Lock()
-	defer h.Unlock()
+	go func() {
+		defer h.Unlock()
 
-	it, exists := h.topics[key]
-	if !exists {
-		return
-	}
-
-	h.removeTopic(sub, key)
-
-	w := &toWatch{sub, ""}
-	select {
-	case it.unsubscribe <- w:
-		if running := <-it.running; !running {
-			delete(h.topics, key)
-		}
-	case running := <-it.running:
-		logger.WithNamespace("realtime").
-			Warnf("unexpected state: unsubscribe with running=%v", running)
-		if !running {
-			delete(h.topics, key)
-		}
-	}
-}
-
-func (h *memHub) watch(sub *Subscriber, key, id string) {
-	h.Lock()
-	defer h.Unlock()
-
-	h.addTopic(sub, key)
-
-	w := &toWatch{sub, id}
-	for {
 		it, exists := h.topics[key]
 		if !exists {
-			it = newTopic()
-			h.topics[key] = it
+			return
 		}
 
+		h.removeTopic(sub, key)
+
+		w := &toWatch{sub, ""}
 		select {
-		case it.subscribe <- w:
-			return
+		case it.unsubscribe <- w:
+			if running := <-it.running; !running {
+				delete(h.topics, key)
+			}
 		case running := <-it.running:
 			logger.WithNamespace("realtime").
-				Warnf("unexpected state: watch with running=%v", running)
+				Warnf("unexpected state: unsubscribe with running=%v", running)
 			if !running {
 				delete(h.topics, key)
 			}
 		}
-	}
+	}()
+}
+
+func (h *memHub) watch(sub *Subscriber, key, id string) {
+	h.Lock()
+	go func() {
+		defer h.Unlock()
+
+		h.addTopic(sub, key)
+
+		w := &toWatch{sub, id}
+		for {
+			it, exists := h.topics[key]
+			if !exists {
+				it = newTopic()
+				h.topics[key] = it
+			}
+
+			select {
+			case it.subscribe <- w:
+				return
+			case running := <-it.running:
+				logger.WithNamespace("realtime").
+					Warnf("unexpected state: watch with running=%v", running)
+				if !running {
+					delete(h.topics, key)
+				}
+			}
+		}
+	}()
 }
 
 func (h *memHub) unwatch(sub *Subscriber, key, id string) {
 	h.Lock()
-	defer h.Unlock()
+	go func() {
+		defer h.Unlock()
 
-	it, exists := h.topics[key]
-	if !exists {
-		return
-	}
+		it, exists := h.topics[key]
+		if !exists {
+			return
+		}
 
-	w := &toWatch{sub, id}
-	select {
-	case it.unsubscribe <- w:
-		if running := <-it.running; !running {
-			delete(h.topics, key)
+		w := &toWatch{sub, id}
+		select {
+		case it.unsubscribe <- w:
+			if running := <-it.running; !running {
+				delete(h.topics, key)
+			}
+		case running := <-it.running:
+			logger.WithNamespace("realtime").
+				Warnf("unexpected state: unwatch with running=%v", running)
+			if !running {
+				delete(h.topics, key)
+			}
 		}
-	case running := <-it.running:
-		logger.WithNamespace("realtime").
-			Warnf("unexpected state: unwatch with running=%v", running)
-		if !running {
-			delete(h.topics, key)
-		}
-	}
+	}()
 }
 
 func (h *memHub) close(sub *Subscriber) {
