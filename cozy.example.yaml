@@ -184,6 +184,7 @@ jobs:
 # konnectors execution parameters for executing external processes.
 konnectors:
   cmd: ./scripts/konnector-node-run.sh # run connectors with node
+  # cmd: ./scripts/konnector-node-run.sh # run connectors with node in dev mode
   # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
   # cmd: ./scripts/konnector-nsjail-node8-run.sh # run connectors with nsjail
 
