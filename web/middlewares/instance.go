@@ -127,7 +127,8 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 	if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
 		switch contentType {
 		case jsonapi.ContentType, echo.MIMEApplicationJSON:
-			return c.JSON(returnCode, i.Warnings())
+			warnings := warningOrBlocked(i, returnCode)
+			return c.JSON(returnCode, warnings)
 		default:
 			return c.Redirect(http.StatusFound, url)
 		}
@@ -142,7 +143,8 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 
 	switch contentType {
 	case jsonapi.ContentType, echo.MIMEApplicationJSON:
-		return c.JSON(returnCode, i.Warnings())
+		warnings := warningOrBlocked(i, returnCode)
+		return c.JSON(returnCode, warnings)
 	default:
 		return c.Render(returnCode, "instance_blocked.html", echo.Map{
 			"Domain":       i.ContextualDomain(),
@@ -154,6 +156,21 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 			"SupportEmail": i.SupportEmailAddress(),
 		})
 	}
+}
+
+func warningOrBlocked(i *instance.Instance, returnCode int) []*jsonapi.Error {
+	warnings := i.Warnings()
+	if len(warnings) == 0 {
+		warnings = []*jsonapi.Error{
+			{
+				Status: returnCode,
+				Title:  "Blocked",
+				Code:   instance.BlockedUnknown.Code,
+				Detail: i.Translate(instance.BlockedUnknown.Message),
+			},
+		}
+	}
+	return warnings
 }
 
 // CheckOnboardingNotFinished checks if there is the instance needs to complete
