@@ -142,7 +142,7 @@ func GetTriggers(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID strin
 
 	var toDelete []job.Trigger
 	for _, t := range triggers {
-		if !(t.Infos().WorkerType == "konnector" || t.Infos().WorkerType == "client") {
+		if !t.Infos().IsKonnectorTrigger() {
 			continue
 		}
 
@@ -278,6 +278,10 @@ func ComputeName(doc couchdb.JSONDoc) {
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(db prefixer.Prefixer, doc couchdb.Doc, old couchdb.Doc) error {
+			logger.WithDomain(db.DomainName()).
+				WithField("account_id", old.ID()).
+				Info("Executing account deletion hook")
+
 			manualCleaning := false
 			switch v := doc.(type) {
 			case *Account:
