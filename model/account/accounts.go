@@ -2,9 +2,11 @@ package account
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -331,8 +333,17 @@ func init() {
 
 			createSoftDeletedAccount(db, old)
 
-			_, err = PushAccountDeletedJob(jobsSystem, db, old.ID(), old.Rev(), konnector)
-			return err
+			// Execute the OnDeleteAccount if the konnector has declared one
+			man, err := app.GetKonnectorBySlug(db, konnector)
+			if man != nil && man.OnDeleteAccount() != "" {
+				_, err = PushAccountDeletedJob(jobsSystem, db, old.ID(), old.Rev(), konnector)
+				return err
+			}
+			if !errors.Is(err, app.ErrNotFound) {
+				return err
+			}
+
+			return nil
 		})
 }
 
