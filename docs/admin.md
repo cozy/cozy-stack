@@ -297,6 +297,17 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/:domain/fixers/password-defined
+
+Fill the `password_defined` field of the io.cozy.settings.instance if it was
+missing.
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/fixers/password-defined HTTP/1.1
+```
+
 ### POST /instances/:domain/fixers/orphan-account
 
 Delete the accounts which are not linked to a konnector

@@ -59,8 +59,10 @@ type Instance struct {
 	NoAutoUpdate    bool     `json:"no_auto_update,omitempty"`  // Whether or not the instance has auto updates for its applications
 
 	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
-	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
-	IndexViewsVersion  int   `json:"indexes_version,omitempty"`
+	PasswordDefined    *bool `json:"password_defined"`              // 3 possibles states: true, false, and unknown (for legacy reasons)
+
+	BytesDiskQuota    int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
+	IndexViewsVersion int   `json:"indexes_version,omitempty"`
 
 	// Swift layout number:
 	// - 0 for layout v1

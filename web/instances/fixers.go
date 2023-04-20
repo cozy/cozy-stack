@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
@@ -203,6 +204,37 @@ func fixFile(content map[string]interface{}, contentMismatch *mismatchStruct, in
 	}
 
 	return nil
+}
+
+func passwordDefinedFixer(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	if inst.PasswordDefined != nil {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	defined := false
+	if inst.OnboardingFinished {
+		defined = true
+		if inst.HasForcedOIDC() || inst.MagicLink {
+			bitwarden, err := settings.Get(inst)
+			if err == nil && !bitwarden.ExtensionInstalled {
+				defined = false
+			}
+		}
+	}
+	inst.PasswordDefined = &defined
+	if err := inst.Update(); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 func orphanAccountFixer(c echo.Context) error {

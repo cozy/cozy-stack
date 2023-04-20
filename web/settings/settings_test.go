@@ -336,11 +336,8 @@ func TestSettings(t *testing.T) {
       }`)).
 			Expect().Status(400)
 
-		cfg := config.GetConfig().Authentication
-		cfg["test-context"] = map[string]interface{}{
-			"disable_password_authentication": true,
-		}
-		defer delete(cfg, "test-context")
+		passwordDefined := false
+		testInstance.PasswordDefined = &passwordDefined
 
 		e.PUT("/settings/passphrase").
 			WithQuery("Force", true).
@@ -493,6 +490,7 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("email", "alice@example.org")
 		attrs.ValueEqual("tz", "Europe/London")
 		attrs.ValueEqual("locale", "en")
+		attrs.ValueEqual("password_defined", true)
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {

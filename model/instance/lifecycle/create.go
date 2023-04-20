@@ -212,6 +212,8 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.MagicLink = *magicLink
 	}
 
+	passwordDefined := opts.Passphrase != ""
+
 	// If the password authentication is disabled, we force a random password.
 	// It won't be known by the user and cannot be used to authenticate. It
 	// will only be used if the configuration is changed later: the user will
@@ -238,6 +240,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.OnboardingFinished = true
 	}
 
+	i.PasswordDefined = &passwordDefined
 	if onboardingFinished := opts.OnboardingFinished; onboardingFinished != nil {
 		i.OnboardingFinished = *onboardingFinished
 	}
