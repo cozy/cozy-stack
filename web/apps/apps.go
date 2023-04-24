@@ -395,7 +395,7 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]account.C
 
 	var toDelete []account.CleanEntry
 	for _, t := range triggers {
-		if t.Infos().WorkerType != "konnector" {
+		if !t.Infos().IsKonnectorTrigger() {
 			continue
 		}
 

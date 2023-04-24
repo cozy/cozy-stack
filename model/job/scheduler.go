@@ -107,6 +107,10 @@ func (t *TriggerInfos) DomainName() string {
 	return t.Domain
 }
 
+func (t *TriggerInfos) IsKonnectorTrigger() bool {
+	return t.WorkerType == "konnector" || t.WorkerType == "client"
+}
+
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
 func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Trigger, error) {
