@@ -46,6 +46,8 @@ var Paths = []string{
 	".",
 	".cozy",
 	"$HOME/.cozy",
+	"$HOME/.config/cozy",
+	"$XDG_CONFIG_HOME/cozy",
 	"/etc/cozy",
 }
 
