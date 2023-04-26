@@ -360,8 +360,12 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
 func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
+	status := MemberStatusPendingInvitation
+	if instanceURL != "" {
+		status = MemberStatusMailNotSent
+	}
 	m := Member{
-		Status:   MemberStatusPendingInvitation,
+		Status:   status,
 		Email:    email,
 		Instance: instanceURL,
 		ReadOnly: readOnly,

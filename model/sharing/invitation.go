@@ -74,17 +74,13 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 		if key == "" {
 			key = m.Instance
 		}
-		sent := false
-		link := m.InvitationLink(inst, s, states[key], nil)
-		if m.Instance != "" {
-			if err := m.SendShortcut(inst, s, link); err != nil {
-				sent = true
-			}
-		}
-		if !sent {
+		// If an instance URL is available, the owner's Cozy has already
+		// created a shortcut, so we don't need to send an invitation.
+		if m.Instance == "" {
 			if m.Email == "" {
 				return ErrInvitationNotSent
 			}
+			link := m.InvitationLink(inst, s, states[key], nil)
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
 				inst.Logger().WithNamespace("sharing").
 					Errorf("Can't send email for %#v: %s", m.Email, err)

@@ -363,7 +363,21 @@ func AddRecipientsDelegated(c echo.Context) error {
 				} else {
 					states[email] = state
 				}
+
+				// If we have an URL for the Cozy, we can create a shortcut as an invitation
+				if cozy != "" {
+					var perms *permission.Permission
+					if s.PreviewPath != "" {
+						if perms, err = s.CreatePreviewPermissions(inst); err != nil {
+							return wrapErrors(err)
+						}
+					}
+					if err = s.SendInvitations(inst, perms); err != nil {
+						return wrapErrors(err)
+					}
+				}
 			}
+
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return wrapErrors(err)
 			}
