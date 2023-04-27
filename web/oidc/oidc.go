@@ -309,14 +309,19 @@ func AccessToken(c echo.Context) error {
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
 		token := []byte(reqBody.TwoFactorToken)
-		if ok := inst.ValidateTwoFactorPasscode(token, reqBody.TwoFactorCode); !ok {
+		if len(reqBody.TwoFactorCode) == 0 || len(reqBody.TwoFactorToken) == 0 {
 			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
 				return err
 			}
-			return c.JSON(http.StatusForbidden, echo.Map{
+			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error":            "two factor needed",
 				"two_factor_token": string(twoFactorToken),
+			})
+		}
+		if ok := inst.ValidateTwoFactorPasscode(token, reqBody.TwoFactorCode); !ok {
+			return c.JSON(http.StatusForbidden, echo.Map{
+				"error": inst.Translate(auth.TwoFactorErrorKey),
 			})
 		}
 	}
