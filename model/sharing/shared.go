@@ -334,12 +334,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	rev := evt.Doc.Rev()
-	// XXX this optimization only works for files
-	if _, ok := ref.Infos[msg.SharingID]; ok && msg.DocType == consts.Files {
-		if sub, _ := ref.Revisions.Find(rev); sub != nil {
-			return nil
-		}
-	}
+	_, wasTracked := ref.Infos[msg.SharingID]
 
 	// If a document was in a sharing, was removed of the sharing, and comes
 	// back inside it, we need to clear the Removed flag.
@@ -389,6 +384,13 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 		if evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.DirType {
 			needToUpdateFiles = removed != wasRemoved
+		}
+	}
+
+	// XXX this optimization only works for files
+	if wasTracked && msg.DocType == consts.Files && !removed {
+		if sub, _ := ref.Revisions.Find(rev); sub != nil {
+			return nil
 		}
 	}
 
