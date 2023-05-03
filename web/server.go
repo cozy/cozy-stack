@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -157,20 +158,36 @@ type Servers struct {
 func (e *Servers) Start() {
 	e.errs = make(chan error)
 
-	go e.start(e.major, "major", &http.Server{
-		Addr:              config.ServerAddr(),
-		ReadHeaderTimeout: ReadHeaderTimeout,
-	})
-
-	go e.start(e.admin, "admin", &http.Server{
-		Addr:              config.AdminServerAddr(),
-		ReadHeaderTimeout: ReadHeaderTimeout,
-	})
+	e.start(e.major, "major", config.ServerAddr())
+	e.start(e.admin, "admin", config.AdminServerAddr())
 }
 
-func (e *Servers) start(s *echo.Echo, name string, server *http.Server) {
-	fmt.Printf("  http server %s started on %q\n", name, server.Addr)
-	e.errs <- s.StartServer(server)
+func (e *Servers) start(s *echo.Echo, name string, addr string) {
+	hosts := []string{}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		panic(err)
+	}
+
+	switch host {
+	case "localhost":
+		hosts = append(hosts, "127.0.0.1", "::1")
+	default:
+		hosts = append(hosts, host)
+	}
+
+	for _, h := range hosts {
+		addr := net.JoinHostPort(h, port)
+
+		fmt.Printf("http server %s started on %q\n", name, addr)
+		go func(addr string) {
+			e.errs <- s.StartServer(&http.Server{
+				Addr:              addr,
+				ReadHeaderTimeout: ReadHeaderTimeout,
+			})
+		}(addr)
+	}
 }
 
 // Wait for servers to stop or fall in error.
