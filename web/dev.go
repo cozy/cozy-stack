@@ -78,20 +78,22 @@ func devTemplatesHandler(c echo.Context) error {
 
 func devData(c echo.Context) echo.Map {
 	data := make(echo.Map)
+	data["Domain"] = c.Request().Host
+	data["ContextName"] = config.DefaultInstanceContext
+	data["Illustration"] = "/images/generic-error.svg"
+	if i, err := lifecycle.GetInstance(c.Request().Host); err == nil {
+		data["Domain"] = i.ContextualDomain()
+		data["ContextName"] = i.ContextName
+		data["Locale"] = i.Locale
+		data["Title"] = i.TemplateTitle()
+		data["Favicon"] = middlewares.Favicon(i)
+		data["InstanceURL"] = i.PageURL("/", nil)
+		data["SupportEmail"] = i.SupportEmailAddress()
+	}
 	for k, v := range c.QueryParams() {
 		if len(v) > 0 {
 			data[k] = v[0]
 		}
-	}
-	if _, ok := data["Domain"]; !ok {
-		data["Domain"] = c.Request().Host
-	}
-	if _, ok := data["ContextName"]; !ok {
-		data["ContextName"] = config.DefaultInstanceContext
-	}
-	if i, err := lifecycle.GetInstance(c.Request().Host); err == nil {
-		data["Favicon"] = middlewares.Favicon(i)
-		data["InstanceURL"] = i.PageURL("/", nil)
 	}
 	return data
 }

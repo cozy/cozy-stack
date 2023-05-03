@@ -36,10 +36,55 @@ $ ln -s path/to/cozy-ui/dist/cozy-ui.min.css debug/assets/css/cozy-ui.min.css
 In development mode, a `/dev` route is available to render a template or a mail
 with given parameter. For example:
 
-```
-http://cozy.localhost:8080/dev/templates/error.html?Error=oops
-http://cozy.localhost:8080/dev/mails/two_factor?TwoFactorPasscode=123456
-```
+### Emails
+
+* http://cozy.localhost:8080/dev/mails/alert_account
+* http://cozy.localhost:8080/dev/mails/archiver
+* http://cozy.localhost:8080/dev/mails/confirm_flagship
+* http://cozy.localhost:8080/dev/mails/export_error
+* http://cozy.localhost:8080/dev/mails/import_error
+* http://cozy.localhost:8080/dev/mails/import_success
+* http://cozy.localhost:8080/dev/mails/magic_link
+* http://cozy.localhost:8080/dev/mails/move_confirm
+* http://cozy.localhost:8080/dev/mails/move_error
+* http://cozy.localhost:8080/dev/mails/move_success
+* http://cozy.localhost:8080/dev/mails/new_connection
+* http://cozy.localhost:8080/dev/mails/new_registration
+* http://cozy.localhost:8080/dev/mails/notification_diskquota
+* http://cozy.localhost:8080/dev/mails/notification_sharing
+* http://cozy.localhost:8080/dev/mails/passphrase_hint
+* http://cozy.localhost:8080/dev/mails/passphrase_reset
+* http://cozy.localhost:8080/dev/mails/sharing_request
+* http://cozy.localhost:8080/dev/mails/sharing_to_confirm
+* http://cozy.localhost:8080/dev/mails/support_request
+* http://cozy.localhost:8080/dev/mails/two_factor?TwoFactorPasscode=123456
+* http://cozy.localhost:8080/dev/mails/two_factor_mail_confirmation
+
+### HTML pages
+
+* http://cozy.localhost:8080/dev/templates/authorize.html
+* http://cozy.localhost:8080/dev/templates/authorize_move.html
+* http://cozy.localhost:8080/dev/templates/authorize_sharing.html
+* http://cozy.localhost:8080/dev/templates/compat.html
+* http://cozy.localhost:8080/dev/templates/confirm_auth.html
+* http://cozy.localhost:8080/dev/templates/confirm_flagship.html?Email=jane@example.com
+* http://cozy.localhost:8080/dev/templates/error.html?Error=oops&Button=Click%20me&ButtonURL=https://cozy.io/
+* http://cozy.localhost:8080/dev/templates/import.html
+* http://cozy.localhost:8080/dev/templates/instance_blocked.html?Reason=test
+* http://cozy.localhost:8080/dev/templates/login.html
+* http://cozy.localhost:8080/dev/templates/magic_link_twofactor.html
+* http://cozy.localhost:8080/dev/templates/move_confirm.html?Email=jane@example.com
+* http://cozy.localhost:8080/dev/templates/move_delegated_auth.html
+* http://cozy.localhost:8080/dev/templates/move_in_progress.html
+* http://cozy.localhost:8080/dev/templates/move_link.html?Link=https://jane.mycozy.cloud/&Illustration=no
+* http://cozy.localhost:8080/dev/templates/move_vault.html
+* http://cozy.localhost:8080/dev/templates/need_onboarding.html
+* http://cozy.localhost:8080/dev/templates/oidc_login.html
+* http://cozy.localhost:8080/dev/templates/oidc_twofactor.html
+* http://cozy.localhost:8080/dev/templates/passphrase_choose.html
+* http://cozy.localhost:8080/dev/templates/passphrase_reset.html?ShowBackButton=true&HasCiphers=true&HasHint=true
+* http://cozy.localhost:8080/dev/templates/sharing_discovery.html?PublicName=Jane&RecipientDomain=mycozy.cloud&NotEmailError=true
+* http://cozy.localhost:8080/dev/templates/twofactor.html?TrustedDeviceCheckBox=true
 
 ## In production
 
