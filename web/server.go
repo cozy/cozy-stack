@@ -5,6 +5,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -32,6 +33,10 @@ import (
 // all servers. This is activated for all handlers from all http servers
 // created by the stack.
 var ReadHeaderTimeout = 15 * time.Second
+
+var (
+	ErrMissingArgument = errors.New("the argument is missing")
+)
 
 // LoadSupportedLocales reads the po files packed in go or from the assets directory
 // and loads them for translations
@@ -140,34 +145,59 @@ func ListenAndServe() (*Servers, error) {
 		return nil, err
 	}
 
-	return &Servers{
-		major: major,
-		admin: admin,
-	}, nil
+	servers := NewServers()
+	err = servers.Start(major, "major", config.ServerAddr())
+	if err != nil {
+		return nil, fmt.Errorf("failed to start major server: %w", err)
+	}
+
+	err = servers.Start(admin, "admin", config.AdminServerAddr())
+	if err != nil {
+		return nil, fmt.Errorf("failed to start admin server: %w", err)
+	}
+
+	return servers, nil
 }
 
-// Servers contains the started HTTP servers and implement the Shutdowner
-// interface.
+// Servers allow to start several [echo.Echo] servers and stop them together.
+//
+//	It also take care of several other task:
+//	- It sanitize the hosts format
+//	- It exposes the handlers on several addresses if needed
+//	- It forces the IPv4/IPv6 dual stack mode for `localhost` by
+//	  remplacing this entry by `["127.0.0.1", "::1]`
 type Servers struct {
-	major *echo.Echo
-	admin *echo.Echo
-	errs  chan error
+	servers []utils.Shutdowner
+	errs    chan error
 }
 
-// Start starts the servers.
-func (e *Servers) Start() {
-	e.errs = make(chan error)
-
-	e.start(e.major, "major", config.ServerAddr())
-	e.start(e.admin, "admin", config.AdminServerAddr())
+func NewServers() *Servers {
+	return &Servers{
+		servers: []utils.Shutdowner{},
+		errs:    make(chan error),
+	}
 }
 
-func (e *Servers) start(s *echo.Echo, name string, addr string) {
+// Start the server 'e' to the given addrs.
+//
+// The 'addrs' arguments must be in the format `"host:port"`. If the host
+// is not a valid IPv4/IPv6/hostname or if the port not present an error is
+// returned.
+
+func (s *Servers) Start(e *echo.Echo, name string, addr string) error {
 	hosts := []string{}
+
+	if len(addr) == 0 {
+		return fmt.Errorf("args: %w", ErrMissingArgument)
+	}
+
+	if len(name) == 0 {
+		return fmt.Errorf("name: %w", ErrMissingArgument)
+	}
 
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	switch host {
@@ -182,12 +212,16 @@ func (e *Servers) start(s *echo.Echo, name string, addr string) {
 
 		fmt.Printf("http server %s started on %q\n", name, addr)
 		go func(addr string) {
-			e.errs <- s.StartServer(&http.Server{
+			s.errs <- e.StartServer(&http.Server{
 				Addr:              addr,
 				ReadHeaderTimeout: ReadHeaderTimeout,
 			})
 		}(addr)
 	}
+
+	s.servers = append(s.servers, e)
+
+	return nil
 }
 
 // Wait for servers to stop or fall in error.
@@ -196,8 +230,8 @@ func (e *Servers) Wait() <-chan error {
 }
 
 // Shutdown gracefully stops the servers.
-func (e *Servers) Shutdown(ctx context.Context) error {
-	g := utils.NewGroupShutdown(e.admin, e.major)
+func (s *Servers) Shutdown(ctx context.Context) error {
+	g := utils.NewGroupShutdown(s.servers...)
 	fmt.Print("  shutting down servers...")
 	if err := g.Shutdown(ctx); err != nil {
 		fmt.Println("failed: ", err.Error())

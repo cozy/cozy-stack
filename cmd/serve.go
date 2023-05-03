@@ -104,9 +104,6 @@ example), you can use the --appdir flag like this:
 			return err
 		}
 
-		fmt.Println("Ready and waiting for connections:")
-		servers.Start()
-
 		group := utils.NewGroupShutdown(servers, processes)
 
 		sigs := make(chan os.Signal, 1)
