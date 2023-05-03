@@ -13,7 +13,7 @@
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
-  <body class="theme-inverted">
+  <body class="cirrus theme-inverted">
     <form id="login-form" method="POST" action="/auth/magic_link/twofactor" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
       <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
       <input id="magic_code" type="hidden" name="magic_code" value="{{.MagicCode}}" />
