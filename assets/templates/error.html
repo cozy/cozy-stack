@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body{{if .Inverted}} class="theme-inverted"{{end}}>
+  <body class="cirrus{{if .Inverted}} theme-inverted{{end}}">
     <main class="wrapper">
       <header class="wrapper-top">
         <a href="https://cozy.io/" class="btn p-2 d-sm-none">

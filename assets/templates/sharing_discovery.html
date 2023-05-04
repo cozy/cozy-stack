@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
     {{.Favicon}}
   </head>
-  <body>
+  <body class="cirrus">
     <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="d-contents">
       <input type="hidden" name="state" value="{{.State}}" />
       <input type="hidden" name="sharecode" value="{{.ShareCode}}" />

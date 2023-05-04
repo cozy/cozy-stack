@@ -13,7 +13,7 @@
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
-  <body class="theme-inverted">
+  <body class="cirrus theme-inverted">
     <form id="login-form" method="POST" action="/auth/authorize/move" class="d-contents" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
       <input id="state" type="hidden" name="state" value="{{.State}}" />
       <input id="client_id" type="hidden" name="client_id" value="{{.ClientID}}" />
