@@ -130,6 +130,15 @@ func (d *Document) Markdown(images []*Image) ([]byte, error) {
 	return []byte(md), nil
 }
 
+func (d *Document) Text() (string, error) {
+	content, err := d.Content()
+	if err != nil {
+		return "", err
+	}
+	text := textSerializer().Serialize(content)
+	return text, nil
+}
+
 // GetDirID returns the ID of the directory where the note will be created.
 func (d *Document) GetDirID(inst *instance.Instance) (string, error) {
 	if d.DirID != "" {
@@ -663,6 +672,21 @@ func getListFromCache(inst *instance.Instance) []string {
 		fileIDs[i] = strings.TrimPrefix(key, prefix)
 	}
 	return fileIDs
+}
+
+func GetText(inst *instance.Instance, file *vfs.FileDoc) (string, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return "", err
+	}
+	defer lock.Unlock()
+
+	doc, err := get(inst, file)
+	if err != nil {
+		return "", err
+	}
+
+	return doc.Text()
 }
 
 // UpdateTitle changes the title of a note and renames the associated file.

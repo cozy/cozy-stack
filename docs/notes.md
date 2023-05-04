@@ -438,6 +438,29 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /notes/:id/text
+
+It returns the content of the note as text with no formatting.
+
+#### Request
+
+```http
+GET /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c/text HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=UTF-8
+```
+
+```
+This is the content of the note.
+```
+
+
 ### GET /notes/:id/steps?Version=xxx
 
 It returns the steps since the given version. If the revision is too old, and

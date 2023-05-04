@@ -27,3 +27,35 @@ foobar **bold**
 	md := markdownSerializer(nil).Serialize(node)
 	assert.Equal(t, initial, md)
 }
+
+func TestText(t *testing.T) {
+	initial := `# My title
+
+hello **world**
+
+- foo
+- bar
+- baz
+`
+
+	expected := `My title
+
+hello world
+
+- foo
+
+- bar
+
+- baz`
+
+	schemaSpecs := DefaultSchemaSpecs()
+	specs := model.SchemaSpecFromJSON(schemaSpecs)
+	schema, err := model.NewSchema(&specs)
+	require.NoError(t, err)
+
+	node, err := parseFile(strings.NewReader(initial), schema)
+	require.NoError(t, err)
+
+	md := textSerializer().Serialize(node)
+	assert.Equal(t, expected, md)
+}
