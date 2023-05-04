@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -23,10 +24,10 @@ func TestServers_ok(t *testing.T) {
 	servers := NewServers()
 	defer servers.Shutdown(context.Background())
 
-	err := servers.Start(major, "major", "localhost:5874")
+	err := servers.Start(major, "major", "localhost:")
 	require.NoError(t, err)
 
-	res, err := http.Get("http://localhost:5874/ping")
+	res, err := http.Get(fmt.Sprintf("http://%s/ping", servers.GetAddr("major")))
 	require.NoError(t, err)
 	defer res.Body.Close()
 
@@ -47,14 +48,14 @@ func TestServers_handle_ipv4_ipv6_on_localhost(t *testing.T) {
 	servers := NewServers()
 	defer servers.Shutdown(context.Background())
 
-	err := servers.Start(major, "major", "localhost:5874")
+	err := servers.Start(major, "major", "localhost:38423")
 	require.NoError(t, err)
 
 	// Need some time to start the goroutines.
 	time.Sleep(50 * time.Millisecond)
 
-	// Call the fisrt host on :5874
-	res, err := http.Get("http://127.0.0.1:5874/ping")
+	// Call the first host on IPv4
+	res, err := http.Get("http://127.0.0.1:38423/ping")
 	require.NoError(t, err)
 
 	raw, err := io.ReadAll(res.Body)
@@ -63,7 +64,7 @@ func TestServers_handle_ipv4_ipv6_on_localhost(t *testing.T) {
 	assert.Equal(t, "pong major", string(raw))
 
 	// Call the second host on :5875
-	res, err = http.Get("http://::1:5874/ping")
+	res, err = http.Get("http://::1:38423/ping")
 	require.NoError(t, err)
 	defer res.Body.Close()
 

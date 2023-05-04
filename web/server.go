@@ -167,14 +167,16 @@ func ListenAndServe() (*Servers, error) {
 //	- It forces the IPv4/IPv6 dual stack mode for `localhost` by
 //	  remplacing this entry by `["127.0.0.1", "::1]`
 type Servers struct {
-	servers []utils.Shutdowner
-	errs    chan error
+	servers   map[string]*http.Server
+	listeners map[string]net.Listener
+	errs      chan error
 }
 
 func NewServers() *Servers {
 	return &Servers{
-		servers: []utils.Shutdowner{},
-		errs:    make(chan error),
+		servers:   map[string]*http.Server{},
+		listeners: map[string]net.Listener{},
+		errs:      make(chan error),
 	}
 }
 
@@ -221,7 +223,8 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 			ReadHeaderTimeout: ReadHeaderTimeout,
 		}
 
-		s.servers = append(s.servers, server)
+		s.servers[name] = server
+		s.listeners[name] = l
 
 		go func(server *http.Server) {
 			s.errs <- server.Serve(l)
@@ -231,19 +234,41 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 	return nil
 }
 
+// GetAddr return the address where the given server listen to.
+//
+// This endpoint is mostly used when we use dynamic port attribution
+// like when we don't specify a port
+func (s *Servers) GetAddr(name string) net.Addr {
+	l, ok := s.listeners[name]
+	if !ok {
+		return nil
+	}
+
+	return l.Addr()
+}
+
 // Wait for servers to stop or fall in error.
-func (e *Servers) Wait() <-chan error {
-	return e.errs
+func (s *Servers) Wait() <-chan error {
+	return s.errs
 }
 
 // Shutdown gracefully stops the servers.
 func (s *Servers) Shutdown(ctx context.Context) error {
-	g := utils.NewGroupShutdown(s.servers...)
+	shutdowners := []utils.Shutdowner{}
+
+	for _, server := range s.servers {
+		shutdowners = append(shutdowners, server)
+	}
+
+	g := utils.NewGroupShutdown(shutdowners...)
+
 	fmt.Print("  shutting down servers...")
 	if err := g.Shutdown(ctx); err != nil {
 		fmt.Println("failed: ", err.Error())
 		return err
 	}
+
 	fmt.Println("ok.")
+
 	return nil
 }
