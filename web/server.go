@@ -184,8 +184,8 @@ func NewServers() *Servers {
 // is not a valid IPv4/IPv6/hostname or if the port not present an error is
 // returned.
 
-func (s *Servers) Start(e *echo.Echo, name string, addr string) error {
-	hosts := []string{}
+func (s *Servers) Start(handler http.Handler, name string, addr string) error {
+	addrs := []string{}
 
 	if len(addr) == 0 {
 		return fmt.Errorf("args: %w", ErrMissingArgument)
@@ -203,23 +203,30 @@ func (s *Servers) Start(e *echo.Echo, name string, addr string) error {
 	fmt.Printf("http server %s started on %q\n", name, addr)
 	switch host {
 	case "localhost":
-		hosts = append(hosts, "127.0.0.1", "::1")
+		addrs = append(addrs, net.JoinHostPort("127.0.0.1", port))
+		addrs = append(addrs, net.JoinHostPort("::1", port))
 	default:
-		hosts = append(hosts, host)
+		addrs = append(addrs, net.JoinHostPort(host, port))
 	}
 
-	for _, h := range hosts {
-		addr := net.JoinHostPort(h, port)
+	for _, addr := range addrs {
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
 
-		go func(addr string) {
-			s.errs <- e.StartServer(&http.Server{
-				Addr:              addr,
-				ReadHeaderTimeout: ReadHeaderTimeout,
-			})
-		}(addr)
+		server := &http.Server{
+			Addr:              addr,
+			Handler:           handler,
+			ReadHeaderTimeout: ReadHeaderTimeout,
+		}
+
+		s.servers = append(s.servers, server)
+
+		go func(server *http.Server) {
+			s.errs <- server.Serve(l)
+		}(server)
 	}
-
-	s.servers = append(s.servers, e)
 
 	return nil
 }
