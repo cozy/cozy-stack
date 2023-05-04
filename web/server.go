@@ -200,6 +200,7 @@ func (s *Servers) Start(e *echo.Echo, name string, addr string) error {
 		return err
 	}
 
+	fmt.Printf("http server %s started on %q\n", name, addr)
 	switch host {
 	case "localhost":
 		hosts = append(hosts, "127.0.0.1", "::1")
@@ -210,7 +211,6 @@ func (s *Servers) Start(e *echo.Echo, name string, addr string) error {
 	for _, h := range hosts {
 		addr := net.JoinHostPort(h, port)
 
-		fmt.Printf("http server %s started on %q\n", name, addr)
 		go func(addr string) {
 			s.errs <- e.StartServer(&http.Server{
 				Addr:              addr,

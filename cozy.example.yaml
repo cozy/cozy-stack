@@ -11,6 +11,15 @@
 # variable. The template is evaluated at startup of the stack.
 
 # server host - flags: --host
+#
+# Specified on which ip/domain the server will listen to. It also define which
+# IP version will be available (IPv4 and/or IPv6). The server will be available
+# only on the IP version you have defined in host. For domains it will favorise
+# the IPv4 version if available.
+#
+# There is two values with custome behavious:
+# - "localhost" -> will listen both on "127.0.0.1" on IPv4 and "[::1]" on IPv6
+# - "0.0.0.0" and "[::] -> will listen both on "0.0.0.0" on IPv4 and "[::]" on IPv6
 host: localhost
 # server port - flags: --port -p
 port: 8080
