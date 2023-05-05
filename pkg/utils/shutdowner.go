@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"sync"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -30,28 +29,14 @@ func NewGroupShutdown(s ...Shutdowner) *GroupShutdown {
 // Shutdown closes all the encapsulated [Shutdowner] in parallel an returns
 // the concatenated errors.
 func (g *GroupShutdown) Shutdown(ctx context.Context) error {
-	var errm error
-	l := sync.Mutex{}
-	w := sync.WaitGroup{}
+	errs := new(multierror.Group)
 
 	for _, s := range g.s {
 		// Shadow the variable to avoid a datarace
 		s := s
-		w.Add(1)
 
-		go (func() {
-			defer w.Done()
-
-			err := s.Shutdown(ctx)
-			if err != nil {
-				l.Lock()
-				defer l.Unlock()
-				errm = multierror.Append(errm, err)
-			}
-		})()
+		errs.Go(func() error { return s.Shutdown(ctx) })
 	}
 
-	w.Wait()
-
-	return errm
+	return errs.Wait().ErrorOrNil()
 }
