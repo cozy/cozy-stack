@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"path"
 	"time"
 
@@ -55,10 +54,6 @@ const KonnectorArchiveName = "app.tar"
 // LocalResource is used to store information about a locally installed
 // konnector or webapp.
 // It is meant to be used by developers via the CLI.
-type LocalResource struct {
-	Type consts.AppType
-	Dir  string
-}
 
 // SubDomainer is an interface with a single method to build an URL from a slug
 type SubDomainer interface {
@@ -102,85 +97,7 @@ type Manifest interface {
 	SetChecksum(shasum string)
 }
 
-// localResources is a map of slug -> LocalResource used during the development
-// of webapps that are not installed in the Cozy but served from local
-// directories.
-var localResources map[string]LocalResource
-
-// SetupLocalResources allows to load some webapps and konnectors from local
-// directories for development.
-func SetupLocalResources(resources map[string]LocalResource) {
-	if localResources == nil {
-		localResources = make(map[string]LocalResource)
-	}
-	for slug, res := range resources {
-		localResources[slug] = res
-	}
-}
-
-// FSForLocalResource returns a FS for the webapp or konnector in development
-func FSForLocalResource(slug string) appfs.FileServer {
-	base := baseFSForLocalResource(slug)
-	return appfs.NewAferoFileServer(base, func(_, _, _, file string) string {
-		return path.Join("/", file)
-	})
-}
-
-func baseFSForLocalResource(slug string) afero.Fs {
-	return afero.NewBasePathFs(afero.NewOsFs(), localResources[slug].Dir)
-}
-
-// loadManifestFromDir returns a manifest for a webapp or konnector in
-// development.
-func loadManifestFromDir(slug string) (*WebappManifest, *KonnManifest, error) {
-	res, ok := localResources[slug]
-	if !ok {
-		return nil, nil, ErrNotFound
-	}
-
-	fs := baseFSForLocalResource(slug)
-	dir := res.Dir
-
-	if res.Type == consts.WebappType {
-		manFile, err := fs.Open(WebappManifestName)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, nil, fmt.Errorf("Could not find the manifest in your app directory %s", dir)
-			}
-			return nil, nil, err
-		}
-		app := &WebappManifest{
-			doc: &couchdb.JSONDoc{},
-		}
-		man, err := app.ReadManifest(manFile, slug, "file://localhost"+dir)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
-		}
-		app = man.(*WebappManifest)
-		app.FromLocalDir = true
-		app.val.State = Ready
-		return app, nil, nil
-	} else {
-		manFile, err := fs.Open(KonnectorManifestName)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, nil, fmt.Errorf("Could not find the manifest in your konnector directory %s", dir)
-			}
-			return nil, nil, err
-		}
-		konn := &KonnManifest{
-			doc: &couchdb.JSONDoc{},
-		}
-		man, err := konn.ReadManifest(manFile, slug, "file://localhost"+dir)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
-		}
-		konn = man.(*KonnManifest)
-		konn.FromLocalDir = true
-		konn.val.State = Ready
-		return nil, konn, nil
-	}
-}
+var localResources LocalRegistry
 
 // GetBySlug returns an app manifest identified by its slug
 func GetBySlug(db prefixer.Prefixer, slug string, appType consts.AppType) (Manifest, error) {

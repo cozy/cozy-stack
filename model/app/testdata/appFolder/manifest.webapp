@@ -1,0 +1,189 @@
+{
+  "name": "Drive",
+  "name_prefix": "Cozy",
+  "slug": "drive",
+  "version": "1.54.0",
+  "type": "webapp",
+  "licence": "AGPL-3.0",
+  "icon": "public/app-icon.svg",
+  "categories": ["cozy"],
+  "source": "https://github.com/cozy/cozy-drive",
+  "editor": "Cozy",
+  "developer": {
+    "name": "Cozy Cloud",
+    "url": "https://cozy.io"
+  },
+  "locales": {
+    "en": {
+      "short_description": "Cozy Drive helps you to save, sync and secure your files on your Cozy.",
+      "long_description": "With Cozy Drive, you can easily:\n- Store your important files and keep them secure in your Cozy\n- Access to all your documents online & offline, from your desktop, and on your smartphone or tablet\n- Share links to files ans folders with who you like;\n- Automatically retrieve bills, payrolls, tax notices and other data from your main online services (internet, energy, retail, mobile, energy, travel...)\n- Upload files to your Cozy from your Android",
+      "screenshots": [
+        "screenshots/en/screenshot01.png",
+        "screenshots/en/screenshot02.png",
+        "screenshots/en/screenshot03.png",
+        "screenshots/en/screenshot04.png"
+      ]
+    },
+    "fr": {
+      "short_description": "Cozy Drive est l’application de sauvegarde, de synchronisation et de sécurisation de tous vos fichiers sur Cozy.",
+      "long_description": "Avec Cozy Drive vous pourrez :\n- Sauvegarder et synchroniser gratuitement tous vos documents importants (carte d’identité, photos de vacances, avis d’imposition, fiches de salaires…);\n- Accéder à vos documents n’importe quand, n’importe ou même en mode avion depuis votre bureau, votre smartphone ou tablette;\n- Partager vos fichiers et dossiers par lien avec qui vous le souhaitez;\n- Récupérer automatiquement vos documents administratifs de vos principaux fournisseurs de service (opérateur mobile, fournisseur d’énergie, assureur, internet, santé…);\n- Rester synchronisé·e lors de vos voyages et déplacements professionnels avec nos applications mobiles.",
+      "screenshots": [
+        "screenshots/fr/screenshot01.png",
+        "screenshots/fr/screenshot02.png",
+        "screenshots/fr/screenshot03.png",
+        "screenshots/fr/screenshot04.png"
+      ]
+    }
+  },
+  "screenshots": [
+    "screenshots/fr/screenshot01.png",
+    "screenshots/fr/screenshot02.png",
+    "screenshots/fr/screenshot03.png",
+    "screenshots/fr/screenshot04.png"
+  ],
+  "langs": ["en", "fr"],
+  "platforms": [
+    {
+      "type": "ios",
+      "url": "https://itunes.apple.com/us/app/cozy-drive/id1224102389?mt=8"
+    },
+    {
+      "type": "android",
+      "url": "https://play.google.com/store/apps/details?id=io.cozy.drive.mobile"
+    }
+  ],
+  "routes": {
+    "/": {
+      "folder": "/",
+      "index": "index.html",
+      "public": false
+    },
+    "/intents": {
+      "folder": "/intents",
+      "index": "index.html",
+      "public": false
+    },
+    "/public": {
+      "folder": "/public",
+      "index": "index.html",
+      "public": true
+    },
+    "/preview": {
+      "folder": "/public",
+      "index": "index.html",
+      "public": true
+    }
+  },
+  "intents": [
+    {
+      "action": "OPEN",
+      "type": ["io.cozy.files"],
+      "href": "/intents"
+    },
+    {
+      "action": "GET_URL",
+      "type": ["io.cozy.files"],
+      "href": "/intents"
+    },
+    {
+      "action": "OPEN",
+      "type": ["io.cozy.suggestions"],
+      "href": "/intents"
+    }
+  ],
+  "services": {
+    "qualificationMigration": {
+      "type": "node",
+      "file": "services/qualificationMigration/drive.js",
+      "trigger": "@event io.cozy.files:CREATED,UPDATED",
+      "debounce": "24h"
+    },
+    "dacc": {
+      "type": "node",
+      "file": "services/dacc/drive.js",
+      "trigger": "@monthly on the 5-7 between 2pm and 7pm"
+    }
+  },
+  "permissions": {
+    "files": {
+      "description": "Required to access the files",
+      "type": "io.cozy.files",
+      "verbs": ["ALL"]
+    },
+    "allFiles": {
+      "description": "Required to access the files",
+      "type": "io.cozy.files.*",
+      "verbs": ["ALL"]
+    },
+    "apps": {
+      "description": "Required by the cozy-bar to display the icons of the apps",
+      "type": "io.cozy.apps",
+      "verbs": ["GET"]
+    },
+    "sharings": {
+      "description": "Required to have access to the sharings in realtime",
+      "type": "io.cozy.sharings",
+      "verbs": ["GET"]
+    },
+    "albums": {
+      "description": "Required to manage photos albums",
+      "type": "io.cozy.photos.albums",
+      "verbs": ["PUT", "GET"]
+    },
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "verbs": ["GET", "POST"]
+    },
+    "groups": {
+      "type": "io.cozy.contacts.groups",
+      "verbs": ["GET"]
+    },
+    "settings": {
+      "description": "Required by the cozy-bar to display Claudy and know which applications are coming soon",
+      "type": "io.cozy.settings",
+      "verbs": ["GET"]
+    },
+    "oauth": {
+      "description": "Required to display the cozy-desktop banner",
+      "type": "io.cozy.oauth.clients",
+      "verbs": ["GET"]
+    },
+    "errorsreporting": {
+      "description": "Allow to report unexpected errors to the support team",
+      "type": "cc.cozycloud.errors",
+      "verbs": ["POST"]
+    },
+    "mail": {
+      "description": "Send feedback emails to the support team",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    },
+    "konnectors": {
+      "description": "Required to display additional information in the viewer for files automatically retrieved by services",
+      "type": "io.cozy.konnectors",
+      "verbs": ["GET"]
+    },
+    "accounts": {
+      "description": "Required to display additional information in the viewer for files automatically retrieved by services",
+      "type": "io.cozy.accounts",
+      "verbs": ["GET"]
+    },
+    "triggers": {
+      "description": "Required to display additional information in the viewer for files automatically retrieved by services",
+      "type": "io.cozy.triggers",
+      "verbs": ["GET"]
+    },
+    "dacc": {
+      "type": "cc.cozycloud.dacc_v2",
+      "verbs": ["POST"],
+      "description": "Remote-doctype required to send anonymized measures to the DACC shared among mycozy.cloud's Cozy."
+    },
+    "dacc-eu": {
+      "type": "eu.mycozy.dacc_v2",
+      "verbs": ["POST"],
+      "description": "Remote-doctype required to send anonymized measures to the DACC shared among mycozy.eu's Cozy."
+    }
+  }
+}

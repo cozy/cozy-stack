@@ -71,47 +71,16 @@ func LoadSupportedLocales() error {
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
 func ListenAndServeWithLocalResources(localResources map[string]app.LocalResource) (*Servers, error) {
+	resources := app.NewLocalResources()
+
 	for slug, res := range localResources {
-		res.Dir = utils.AbsPath(res.Dir)
-		localResources[slug] = res
-
-		exists, err := utils.DirExists(res.Dir)
+		err := resources.Add(slug, res)
 		if err != nil {
-			return nil, err
-		}
-		if !exists {
-			logger.WithNamespace("dev").Warnf("Directory %s does not exist", res.Dir)
-			continue
-		}
-
-		if res.Type == consts.WebappType {
-			if err = checkExists(path.Join(res.Dir, app.WebappManifestName)); err != nil {
-				logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
-			}
-			if err = checkExists(path.Join(res.Dir, "index.html")); err != nil {
-				logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
-			}
-		} else {
-			if err = checkExists(path.Join(res.Dir, app.KonnectorManifestName)); err != nil {
-				logger.WithNamespace("dev").Warnf("The konnector manifest is missing: %s", err)
-			}
+			logger.WithNamespace("dev").Warnf("Could not load local resource %q: %s", slug, err)
 		}
 	}
 
-	app.SetupLocalResources(localResources)
 	return ListenAndServe()
-}
-
-func checkExists(filepath string) error {
-	exists, err := utils.FileExists(filepath)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("Directory %s should contain a %s file",
-			path.Dir(filepath), path.Base(filepath))
-	}
-	return nil
 }
 
 // ListenAndServe creates and setups all the necessary http endpoints and start

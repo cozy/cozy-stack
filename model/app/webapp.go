@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/spf13/afero"
 )
 
 // defaultAppListLimit is the default limit for returned documents
@@ -531,24 +530,23 @@ func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error)
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
-	for s := range localResources {
-		if s == slug {
-			man, _, err := loadManifestFromDir(slug)
-			if man == nil {
-				err = fmt.Errorf("Could not find the app manifest for %s: %s", slug, err.Error())
-			}
-			return man, err
-		}
+
+	man, err := localResources.GetWebAppManifest(slug)
+	if man != nil {
+		return man, nil
 	}
-	man := &WebappManifest{}
-	err := couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
-	if couchdb.IsNotFoundError(err) {
-		return nil, ErrNotFound
+
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return nil, fmt.Errorf("failed to query the local registry: %w", err)
 	}
-	if err != nil {
-		return nil, err
+
+	man = &WebappManifest{}
+	err = couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return nil, fmt.Errorf("failed to query the remote registry: %w", err)
 	}
-	return man, nil
+
+	return man, err
 }
 
 // GetWebappBySlugAndUpdate fetch the WebappManifest and perform an update of
@@ -592,8 +590,8 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 	// - There are no more docs in couchDB
 	// - There are no docs at all
 	// We can load extra apps and append them safely to the list
-	for slug := range localResources {
-		if appMan, _, err := loadManifestFromDir(slug); err == nil && appMan != nil {
+	for _, slug := range localResources.List() {
+		if appMan, err := localResources.GetWebAppManifest(slug); err == nil && appMan != nil {
 			docs = append(docs, appMan)
 		}
 	}

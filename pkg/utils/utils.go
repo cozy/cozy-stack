@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/spf13/afero"
 	"golang.org/x/net/idna"
 )
 
@@ -123,10 +124,15 @@ func UniqueStrings(strs []string) []string {
 	return filteredStrs
 }
 
-// FileExists returns whether or not the file exists on the current file
-// system.
+// FileExists is a wrapper around [fileExistsFs] with [afero.OsFs].
 func FileExists(name string) (bool, error) {
-	infos, err := os.Stat(name)
+	return FileExistsFs(afero.NewOsFs(), name)
+}
+
+// FileExistsFs returns whether or not the file exists on the given
+// file system.
+func FileExistsFs(fs afero.Fs, name string) (bool, error) {
+	infos, err := fs.Stat(name)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -134,15 +140,20 @@ func FileExists(name string) (bool, error) {
 		return false, err
 	}
 	if infos.IsDir() {
-		return false, fmt.Errorf("Path %s is a directory", name)
+		return false, fmt.Errorf("path %s is a directory", name)
 	}
 	return true, nil
 }
 
-// DirExists returns whether or not the directory exists on the current file
-// system.
-func DirExists(name string) (bool, error) {
-	infos, err := os.Stat(name)
+// DirExists is a wrapper around [DirExistsFs] with [afero.OsFs].
+func DirExists(fs afero.Fs, name string) (bool, error) {
+	return DirExistsFs(afero.NewOsFs(), name)
+}
+
+// DirExistsFs returns whether or not the directory exists on the given
+// file system.
+func DirExistsFs(fs afero.Fs, name string) (bool, error) {
+	infos, err := fs.Stat(name)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil

@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -384,24 +385,24 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
-	for s := range localResources {
-		if s == slug {
-			_, man, err := loadManifestFromDir(slug)
-			if man == nil {
-				err = fmt.Errorf("Could not find the konnector manifest for %s: %s", slug, err.Error())
-			}
-			return man, err
-		}
+
+	man, err := localResources.GetKonnManifest(slug)
+	if man != nil {
+		return man, nil
 	}
+
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return nil, fmt.Errorf("failed to query the local registry: %w", err)
+	}
+
 	doc := &KonnManifest{}
-	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, doc)
-	if couchdb.IsNotFoundError(err) {
-		return nil, ErrNotFound
+
+	err = couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, doc)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return nil, fmt.Errorf("failed to query the remote registry: %w", err)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return doc, nil
+
+	return doc, err
 }
 
 // GetKonnectorBySlugAndUpdate fetch the KonnManifest and perform an update of
@@ -469,8 +470,8 @@ func ListKonnectorsWithPagination(db prefixer.Prefixer, limit int, startKey stri
 	// - There are no more docs in couchDB
 	// - There are no docs at all
 	// We can load extra konnectors and append them safely to the list
-	for slug := range localResources {
-		if _, konnMan, err := loadManifestFromDir(slug); err == nil && konnMan != nil {
+	for _, slug := range localResources.List() {
+		if konnMan, err := localResources.GetKonnManifest(slug); err == nil && konnMan != nil {
 			docs = append(docs, konnMan)
 		}
 	}
