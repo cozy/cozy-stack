@@ -2,8 +2,9 @@ package utils
 
 import (
 	"context"
+	"sync"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 )
 
 // NopShutdown implements the Shutdowner interface but does not execute any
@@ -26,14 +27,31 @@ func NewGroupShutdown(s ...Shutdowner) *GroupShutdown {
 	return &GroupShutdown{s}
 }
 
-// Shutdown implement the Shutdown of all the encapsulated Shutdowner contained
-// in the group.
+// Shutdown closes all the encapsulated [Shutdowner] in parallel an returns
+// the concatenated errors.
 func (g *GroupShutdown) Shutdown(ctx context.Context) error {
 	var errm error
+	l := sync.Mutex{}
+	w := sync.WaitGroup{}
+
 	for _, s := range g.s {
-		if err := s.Shutdown(ctx); err != nil {
-			errm = multierror.Append(errm, err)
-		}
+		// Shadow the variable to avoid a datarace
+		s := s
+		w.Add(1)
+
+		go (func() {
+			defer w.Done()
+
+			err := s.Shutdown(ctx)
+			if err != nil {
+				l.Lock()
+				defer l.Unlock()
+				errm = multierror.Append(errm, err)
+			}
+		})()
 	}
+
+	w.Wait()
+
 	return errm
 }
