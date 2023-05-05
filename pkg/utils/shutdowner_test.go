@@ -54,7 +54,7 @@ func TestShutdowner_return_errors(t *testing.T) {
 	group := NewGroupShutdown(s1, s2, s3)
 
 	err := group.Shutdown(context.Background())
-	require.EqualError(t, err, "some-error")
+	require.EqualError(t, err, "1 error occurred:\n\t* some-error\n\n")
 }
 
 func TestShutdowner_are_run_in_parallel(t *testing.T) {
