@@ -46,6 +46,8 @@ func NewService(cache cache.Cache, cmd string) (*Service, error) {
 		return nil, fmt.Errorf("failed to create the PNG initials implem: %w", err)
 	}
 
+	go initials.RunCleanJob()
+
 	return &Service{cache, initials}, nil
 }
 
