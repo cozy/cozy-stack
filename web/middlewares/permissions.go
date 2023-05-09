@@ -193,8 +193,13 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.SStamp != "" {
 		settings, err := settings.Get(instance)
 		if err != nil || claims.SStamp != settings.SecurityStamp {
-			logger.WithNamespace("permissions").
-				Debugf("invalid token: bad security stamp %s != %s", claims.SStamp, settings.SecurityStamp)
+			if err != nil {
+				logger.WithNamespace("permissions").
+					Debugf("could not get instance settings: %s", err)
+			} else {
+				logger.WithNamespace("permissions").
+					Debugf("invalid token: bad security stamp %s != %s", claims.SStamp, settings.SecurityStamp)
+			}
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
