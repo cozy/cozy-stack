@@ -5,8 +5,10 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
@@ -22,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -74,19 +77,22 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 	for slug, dir := range appsdir {
 		dir = utils.AbsPath(dir)
 		appsdir[slug] = dir
-		exists, err := utils.DirExists(dir)
+		err := utils.DirExists(afero.NewOsFs(), dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			logger.WithNamespace("dev").Warnf("Directory %s does not exist", dir)
+			continue
+		}
+
 		if err != nil {
 			return nil, err
 		}
-		if !exists {
-			logger.WithNamespace("dev").Warnf("Directory %s does not exist", dir)
-		} else {
-			if err = checkExists(path.Join(dir, app.WebappManifestName)); err != nil {
-				logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
-			}
-			if err = checkExists(path.Join(dir, "index.html")); err != nil {
-				logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
-			}
+
+		if err = checkExists(path.Join(dir, app.WebappManifestName)); err != nil {
+			logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
+		}
+
+		if err = checkExists(path.Join(dir, "index.html")); err != nil {
+			logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
 		}
 	}
 
@@ -95,14 +101,15 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 }
 
 func checkExists(filepath string) error {
-	exists, err := utils.FileExists(filepath)
+	err := utils.FileExists(afero.NewOsFs(), filepath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("Directory %s should contain a %s file", path.Dir(filepath), path.Base(filepath))
+	}
+
 	if err != nil {
 		return err
 	}
-	if !exists {
-		return fmt.Errorf("Directory %s should contain a %s file",
-			path.Dir(filepath), path.Base(filepath))
-	}
+
 	return nil
 }
 

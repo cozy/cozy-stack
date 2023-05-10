@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -42,8 +43,8 @@ The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphr
 		var filename string
 		if len(args) == 1 {
 			filename = path.Clean(utils.AbsPath(args[0]))
-			ok, err := utils.DirExists(filename)
-			if err == nil && ok {
+			err := utils.DirExists(afero.NewOsFs(), filename)
+			if err == nil {
 				filename = path.Join(filename, config.GetConfig().AdminSecretFileName)
 			}
 		}

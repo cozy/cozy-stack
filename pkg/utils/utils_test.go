@@ -1,12 +1,15 @@
 package utils
 
 import (
+	"io/fs"
 	"math/rand"
 	"os"
 	"sync"
 	"testing"
 
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRandomString(t *testing.T) {
@@ -80,13 +83,55 @@ func TestSplitTrimString(t *testing.T) {
 	assert.EqualValues(t, []string{}, parts5)
 }
 
-func TestFileExists(t *testing.T) {
-	exists, err := FileExists("/no/such/file")
-	assert.NoError(t, err)
-	assert.False(t, exists)
-	exists, err = FileExists("/etc/hosts")
-	assert.NoError(t, err)
-	assert.True(t, exists)
+func TestFileExistsFs(t *testing.T) {
+	t.Run("not exists", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+
+		err := FileExists(afs, "/no/such/file")
+		assert.ErrorIs(t, err, fs.ErrNotExist)
+	})
+
+	t.Run("exists", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+		_, err := afs.Create("/some/file")
+		require.NoError(t, err)
+
+		err = FileExists(afs, "/some/file")
+		assert.NoError(t, err)
+	})
+
+	t.Run("is not file", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+		afs.MkdirAll("/some/dir", 0o755)
+
+		err := FileExists(afs, "/some/dir")
+		assert.ErrorIs(t, err, ErrIsNotFile)
+	})
+}
+
+func TestDirExistsFs(t *testing.T) {
+	t.Run("not exists", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+
+		err := DirExists(afs, "/no/such/dir")
+		assert.ErrorIs(t, err, fs.ErrNotExist)
+	})
+
+	t.Run("exists", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+		afs.MkdirAll("/some/dir", 0o755)
+
+		err := DirExists(afs, "/some/dir")
+		assert.NoError(t, err)
+	})
+
+	t.Run("not a dir", func(t *testing.T) {
+		afs := afero.NewMemMapFs()
+		afs.Create("/some/file")
+
+		err := DirExists(afs, "/some/file")
+		assert.ErrorIs(t, err, ErrIsNotDir)
+	})
 }
 
 func TestAbsPath(t *testing.T) {
