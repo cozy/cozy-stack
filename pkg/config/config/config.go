@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	stdlog "log"
 	"net"
 	"net/http"
@@ -30,6 +31,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 )
 
@@ -1083,14 +1085,16 @@ func UseTestFile() {
 func FindConfigFile(name string) (string, error) {
 	for _, cp := range Paths {
 		filename := filepath.Join(utils.AbsPath(cp), name)
-		ok, err := utils.FileExists(filename)
-		if err != nil {
-			return "", err
-		}
-		if ok {
+		err := utils.FileExists(afero.NewOsFs(), filename)
+		if err == nil {
 			return filename, nil
 		}
+
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
 	}
+
 	return "", fmt.Errorf("Could not find config file %q", name)
 }
 
@@ -1113,8 +1117,8 @@ func findConfigFiles(name string) ([]string, error) {
 	configFiles = append(configFiles, configFile)
 
 	configFile += ".local"
-	ok, _ := utils.FileExists(configFile)
-	if ok {
+	err := utils.FileExists(afero.NewOsFs(), configFile)
+	if err == nil {
 		configFiles = append(configFiles, configFile)
 	}
 

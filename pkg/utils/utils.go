@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fmt"
+	"errors"
 	"math/rand"
 	"net"
 	"net/url"
@@ -11,7 +11,13 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/spf13/afero"
 	"golang.org/x/net/idna"
+)
+
+var (
+	ErrIsNotFile = errors.New("is not a file")
+	ErrIsNotDir  = errors.New("is not a directory")
 )
 
 func init() {
@@ -123,36 +129,44 @@ func UniqueStrings(strs []string) []string {
 	return filteredStrs
 }
 
-// FileExists returns whether or not the file exists on the current file
-// system.
-func FileExists(name string) (bool, error) {
-	infos, err := os.Stat(name)
+// FileExists checks if the given path correspond to an existing file.
+//
+// It returns [fs.ErrNotFound] if nothing exists or [ErrIsNotFile] if
+// the target is a directory.
+// If the given path points to a symbolic link, the link target will
+// be analysed. All the remaining errors, like permission issues,
+// will return fs errors.
+func FileExists(afs afero.Fs, name string) error {
+	infos, err := afs.Stat(name)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
+		return err
 	}
+
 	if infos.IsDir() {
-		return false, fmt.Errorf("Path %s is a directory", name)
+		return ErrIsNotFile
 	}
-	return true, nil
+
+	return nil
 }
 
-// DirExists returns whether or not the directory exists on the current file
-// system.
-func DirExists(name string) (bool, error) {
-	infos, err := os.Stat(name)
+// FileExists checks if the given path corresponds to an existing directory.
+//
+// It returns [fs.ErrNotFound] if nothing exists or [ErrIsNotDir] if
+// the target is a file.
+// If the given path points to a symbolic link it the link target will
+// be analysed. All the remaining errors, like permission issues,
+// will return fs errors.
+func DirExists(afs afero.Fs, name string) error {
+	infos, err := afs.Stat(name)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
+		return err
 	}
+
 	if !infos.IsDir() {
-		return false, fmt.Errorf("Path %s is not a directory", name)
+		return ErrIsNotDir
 	}
-	return true, nil
+
+	return nil
 }
 
 // AbsPath returns an absolute path relative.
