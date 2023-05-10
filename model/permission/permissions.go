@@ -566,6 +566,23 @@ func ForceWebapp(db prefixer.Prefixer, slug string, set Set) error {
 	return couchdb.UpdateDoc(db, doc)
 }
 
+// ForceKonnector creates or updates a Permission doc for a given konnector
+func ForceKonnector(db prefixer.Prefixer, slug string, set Set) error {
+	existing, _ := GetForKonnector(db, slug)
+	doc := &Permission{
+		Type:        TypeKonnector,
+		SourceID:    consts.Konnectors + "/" + slug,
+		Permissions: set,
+	}
+	if existing == nil {
+		return couchdb.CreateDoc(db, doc)
+	}
+
+	doc.SetID(existing.ID())
+	doc.SetRev(existing.Rev())
+	return couchdb.UpdateDoc(db, doc)
+}
+
 // DestroyWebapp remove all Permission docs for a given app
 func DestroyWebapp(db prefixer.Prefixer, slug string) error {
 	return destroyApp(db, TypeWebapp, consts.Apps, slug)
