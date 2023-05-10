@@ -285,6 +285,19 @@ func (m *WebappManifest) UnmarshalJSON(j []byte) error {
 	return nil
 }
 
+// NewWebAppManifestFromReader reads the content of a raw mannifest file from a [io.Reader] and
+// return a structured [WebappManifest].
+func NewWebAppManifestFromReader(r io.Reader, slug, sourceURL string) (*WebappManifest, error) {
+	webapp := &WebappManifest{doc: &couchdb.JSONDoc{}}
+
+	man, err := webapp.ReadManifest(r, slug, sourceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return man.(*WebappManifest), nil
+}
+
 // ReadManifest is part of the Manifest interface
 func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manifest, error) {
 	var newManifest WebappManifest
@@ -567,14 +580,12 @@ func loadManifestFromDir(slug string) (*WebappManifest, error) {
 		}
 		return nil, err
 	}
-	app := &WebappManifest{
-		doc: &couchdb.JSONDoc{},
-	}
-	man, err := app.ReadManifest(manFile, slug, "file://localhost"+dir)
+
+	app, err := NewWebAppManifestFromReader(manFile, slug, "file://localhost"+dir)
 	if err != nil {
 		return nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
 	}
-	app = man.(*WebappManifest)
+
 	app.FromAppsDir = true
 	app.val.State = Ready
 	return app, nil

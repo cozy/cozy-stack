@@ -214,6 +214,19 @@ func (m *KonnManifest) UnmarshalJSON(j []byte) error {
 	return nil
 }
 
+// NewKonnManifestFromReader read the content of a raw manifest file from a [io.Reader] and
+// return a structured [KonnManfiest].
+func NewKonnManifestFromReader(r io.Reader, slug, sourceURL string) (*KonnManifest, error) {
+	konn := &KonnManifest{doc: &couchdb.JSONDoc{}}
+
+	man, err := konn.ReadManifest(r, slug, sourceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return man.(*KonnManifest), nil
+}
+
 // ReadManifest is part of the Manifest interface
 func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manifest, error) {
 	var newManifest KonnManifest
