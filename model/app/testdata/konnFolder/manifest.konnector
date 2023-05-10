@@ -1,0 +1,87 @@
+{
+  "version": "1.9.0",
+  "name": "Oui.sncf",
+  "type": "konnector",
+  "language": "node",
+  "icon": "icon.svg",
+  "slug": "sncf",
+  "source": "git@github.com:konnectors/cozy-konnector-sncf.git",
+  "editor": "Cozy",
+  "vendor_link": "https://www.oui.sncf",
+  "categories": [
+    "transport"
+  ],
+  "fields": {
+    "login": {
+      "type": "text"
+    },
+    "password": {
+      "type": "password"
+    },
+    "advancedFields": {
+      "folderPath": {
+        "advanced": true,
+        "isRequired": false
+      }
+    }
+  },
+  "time_interval": [
+    0,
+    24
+  ],
+  "data_types": [
+    "bill"
+  ],
+  "screenshots": [],
+  "permissions": {
+    "bank operations": {
+      "description": "Required to link bills to bank operations",
+      "type": "io.cozy.bank.operations"
+    },
+    "bills": {
+      "description": "Required to save the bills data",
+      "type": "io.cozy.bills"
+    },
+    "files": {
+      "description": "Required to save the bills",
+      "type": "io.cozy.files"
+    },
+    "accounts": {
+      "description": "Required to get the account's data",
+      "type": "io.cozy.accounts",
+      "verbs": [
+        "GET",
+        "PUT"
+      ]
+    }
+  },
+  "developer": {
+    "name": "Cozy Cloud",
+    "url": "https://cozy.io"
+  },
+  "langs": [
+    "fr"
+  ],
+  "locales": {
+    "fr": {
+      "fields": {
+        "login": {
+          "label": "e-mail"
+        }
+      },
+      "short_description": "Récupérer vos données Oui.sncf dans votre Cozy",
+      "long_description": "Oui.sncf est votre service de transports disponible sur [www.oui.sncf](https://www.oui.sncf).\n\n**Connectez votre compte Oui.sncf à votre Cozy pour**\n\n- récupérer vos billets de train\n- récupérer vos justificatifs de paiment pour vos anciennes commandes\n\n**Accédez directement à vos documents dans votre Drive personnel**\n\nEn connectant votre compte Oui.sncf, votre Cozy crée automatiquement un dossier dans **Drive > Administratif > Oui.sncf**. Vos documents Oui.sncf sont à portée de main et toujours accessibles !\n\n**Suivez le montant de vos prestations avec Banks**\n\nLes commandes récupérées sont automatiquement liées aux opérations bancaires Oui.sncf associées à votre compte si vous utilisez l’application  Banks.\n\n**Configuration**\n\nPour connecter votre compte, il vous suffit de renseigner dans les champs :\n- votre email\n- votre mot de passe créé pour accéder au site www.oui.sncf\n\nUne fois connecté, votre Cozy se connectera régulièrement à votre compte Oui.sncf pour récupérer les nouveaux éléments et les historiser dans un dossier Oui.sncf dans Drive.\n\nSi vous déconnectez votre compte Oui.sncf, les informations déjà sauvegardées dans votre Cozy restent disponibles. Vous pouvez les supprimer manuellement par ailleurs."
+    },
+    "en": {
+      "fields": {
+        "login": {
+          "label": "e-mail"
+        }
+      },
+      "short_description": "Fetch your Oui.sncf data in your Cozy",
+      "long_description": "Oui.sncf is a French child familly service available on [www.oui.sncf](https://www.oui.sncf).\n\n**Connect your Oui.sncf account to your Cozy for**\n\n- importing your train tickets\n- importing your your paiment certificates for past commands\n\n** Access directly to your documents in your personal Drive **\n\nBy connecting your Oui.sncf account, your Cozy automatically creates a folder in **Drive > Administrative Oui.sncf**.\n\n**Follow the amount of your benefits with Banks **\n\nThe recovered certificates are automatically linked to the Oui.sncf banking transactions associated with your account if you use the Banks application.\n\n**Configuration**\n\nTo connect your account, you just have to fill in the fields :\n- your email\n- your password created to access the www.oui.sncf website.\n\nOnce logged in, your Cozy will automatically connect to your Oui.sncf account to retrieve new items and store them in a Oui.sncf folder in Drive.\n\nIf you disconnect your Oui.sncf account, the information already saved in your Cozy remains available. You can delete them manually elsewhere."
+    }
+  },
+  "banksTransactionRegExp": "\\bsncf\\b",
+  "manifest_version": "2"
+}

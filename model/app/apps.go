@@ -25,6 +25,8 @@ const (
 	// WebappManifestName is the name of the manifest at the root of the
 	// client-side application directory
 	WebappManifestName = "manifest.webapp"
+	// WebappIndexPath is the path to the application root file.
+	WebappIndexPath = "index.html"
 	// KonnectorManifestName is the name of the manifest at the root of the
 	// konnector application directory
 	KonnectorManifestName = "manifest.konnector"
