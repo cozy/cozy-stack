@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/spf13/afero"
 )
 
 // defaultAppListLimit is the default limit for returned documents
@@ -554,61 +552,33 @@ func SetupAppsDir(apps map[string]string) {
 	}
 }
 
-// FSForAppDir returns a FS for the webapp in development.
-func FSForAppDir(slug string) appfs.FileServer {
-	base := baseFSForAppDir(slug)
-	return appfs.NewAferoFileServer(base, func(_, _, _, file string) string {
-		return path.Join("/", file)
-	})
-}
-
-func baseFSForAppDir(slug string) afero.Fs {
-	return afero.NewBasePathFs(afero.NewOsFs(), appsdir[slug])
-}
-
-// loadManifestFromDir returns a manifest for a webapp in development.
-func loadManifestFromDir(slug string) (*WebappManifest, error) {
-	dir, ok := appsdir[slug]
-	if !ok {
-		return nil, ErrNotFound
-	}
-	fs := baseFSForAppDir(slug)
-	manFile, err := fs.Open(WebappManifestName)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("could not find the manifest in your app directory %s", dir)
-		}
-		return nil, err
-	}
-
-	app, err := NewWebAppManifestFromReader(manFile, slug, "file://localhost"+dir)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse the manifest: %s", err.Error())
-	}
-
-	app.FromAppsDir = true
-	app.val.State = Ready
-	return app, nil
-}
-
 // GetWebappBySlug fetch the WebappManifest from the database given a slug.
 func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error) {
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
-	for app := range appsdir {
-		if app == slug {
-			return loadManifestFromDir(slug)
+
+	if RegistryFS != nil {
+		man, err := RegistryFS.GetWebAppManifest(slug)
+		if man != nil {
+			return man, nil
+		}
+
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return nil, fmt.Errorf("failed to query the local registry: %w", err)
 		}
 	}
+
 	man := &WebappManifest{}
 	err := couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrNotFound
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return man, nil
 }
 
@@ -653,9 +623,14 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 	// - There are no more docs in couchDB
 	// - There are no docs at all
 	// We can load extra apps and append them safely to the list
-	for slug := range appsdir {
-		if man, err := loadManifestFromDir(slug); err == nil {
-			docs = append(docs, man)
+	if RegistryFS != nil {
+		for _, slug := range RegistryFS.ListApps() {
+			appMan, err := RegistryFS.GetWebAppManifest(slug)
+			if err != nil {
+				return nil, "", err
+			}
+
+			docs = append(docs, appMan)
 		}
 	}
 

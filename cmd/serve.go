@@ -12,11 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/stack"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -60,21 +63,32 @@ example), you can use the --appdir flag like this:
 			build.BuildMode = build.ModeDev
 		}
 
-		var apps map[string]string
-		if len(flagAppdirs) > 0 {
-			apps = make(map[string]string)
-			for _, app := range flagAppdirs {
-				parts := strings.Split(app, ":")
-				switch len(parts) {
-				case 1:
-					apps["app"] = parts[0]
-				case 2:
-					apps[parts[0]] = parts[1]
-				default:
-					return errors.New("Invalid appdir value")
-				}
+		localRegistry := app.NewLocalRegistry(afero.NewOsFs())
+		for _, appDir := range flagAppdirs {
+			parts := strings.Split(appDir, ":")
+			var slug string
+			var dir string
+			switch len(parts) {
+			case 1:
+				slug = "app"
+				dir = parts[0]
+			case 2:
+				slug = parts[0]
+				dir = parts[1]
+			default:
+				return fmt.Errorf("invalid appdir value: %q", appDir)
+			}
+
+			err := localRegistry.Add(slug, app.LocalResource{
+				Type: consts.WebappType,
+				Dir:  dir,
+			})
+			if err != nil {
+				return err
 			}
 		}
+
+		app.RegistryFS = localRegistry
 
 		if !build.IsDevRelease() {
 			adminSecretFile := config.GetConfig().AdminSecretFileName
@@ -95,11 +109,7 @@ example), you can use the --appdir flag like this:
 		}
 
 		var servers *web.Servers
-		if apps != nil {
-			servers, err = web.ListenAndServeWithAppDir(apps)
-		} else {
-			servers, err = web.ListenAndServe()
-		}
+		servers, err = web.ListenAndServe()
 		if err != nil {
 			return err
 		}

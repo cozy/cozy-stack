@@ -152,9 +152,8 @@ func downloadHandler(appType consts.AppType) echo.HandlerFunc {
 		var fs appfs.FileServer
 		switch appType {
 		case consts.WebappType:
-			man := man.(*app.WebappManifest)
-			if man.FromAppsDir {
-				fs = app.FSForAppDir(slug)
+			if app.RegistryFS != nil && app.RegistryFS.Contains(slug) {
+				fs = app.RegistryFS.FileServer(slug)
 			} else {
 				fs = app.AppsFileServer(inst)
 			}
@@ -654,10 +653,9 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		var filepath string
 		switch appType {
 		case consts.WebappType:
-			a := a.(*app.WebappManifest)
 			filepath = path.Join("/", a.Icon())
-			if a.FromAppsDir {
-				fs = app.FSForAppDir(slug)
+			if app.RegistryFS != nil && app.RegistryFS.Contains(slug) {
+				fs = app.RegistryFS.FileServer(slug)
 			} else {
 				fs = app.AppsFileServer(instance)
 			}
