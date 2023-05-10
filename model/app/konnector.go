@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"time"
@@ -214,7 +216,7 @@ func (m *KonnManifest) UnmarshalJSON(j []byte) error {
 	return nil
 }
 
-// NewKonnManifestFromReader read the content of a raw manifest file from a [io.Reader] and
+// NewKonnManifestFromReader reads the content of a raw manifest file from a [io.Reader] and
 // return a structured [KonnManfiest].
 func NewKonnManifestFromReader(r io.Reader, slug, sourceURL string) (*KonnManifest, error) {
 	konn := &KonnManifest{doc: &couchdb.JSONDoc{}}
@@ -394,6 +396,18 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
+
+	if RegistryFS != nil {
+		man, err := RegistryFS.GetKonnManifest(slug)
+		if man != nil {
+			return man, nil
+		}
+
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return nil, fmt.Errorf("failed to query the local registry: %w", err)
+		}
+	}
+
 	doc := &KonnManifest{}
 	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, doc)
 	if couchdb.IsNotFoundError(err) {
@@ -439,6 +453,21 @@ func ListKonnectorsWithPagination(db prefixer.Prefixer, limit int, startKey stri
 		nextDoc := docs[len(docs)-1]
 		nextID = nextDoc.ID()
 		docs = docs[:len(docs)-1]
+	}
+
+	if RegistryFS != nil {
+		for _, slug := range RegistryFS.ListKonns() {
+			konnMan, err := RegistryFS.GetKonnManifest(slug)
+			if errors.Is(err, ErrNotFound) {
+				continue
+			}
+
+			if err != nil {
+				return nil, "", err
+			}
+
+			docs = append(docs, konnMan)
+		}
 	}
 
 	return docs, nextID, nil

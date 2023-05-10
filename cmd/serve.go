@@ -25,7 +25,8 @@ import (
 )
 
 var flagAllowRoot bool
-var flagAppdirs []string
+var flagAppDirs []string
+var flagKonnDirs []string
 var flagDevMode bool
 var flagMailhog bool
 
@@ -64,7 +65,7 @@ example), you can use the --appdir flag like this:
 		}
 
 		localRegistry := app.NewLocalRegistry(afero.NewOsFs())
-		for _, appDir := range flagAppdirs {
+		for _, appDir := range flagAppDirs {
 			parts := strings.Split(appDir, ":")
 			var slug string
 			var dir string
@@ -81,6 +82,30 @@ example), you can use the --appdir flag like this:
 
 			err := localRegistry.Add(slug, app.LocalResource{
 				Type: consts.WebappType,
+				Dir:  dir,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, konnDir := range flagKonnDirs {
+			parts := strings.Split(konnDir, ":")
+			var slug string
+			var dir string
+			switch len(parts) {
+			case 1:
+				slug = "konn"
+				dir = parts[0]
+			case 2:
+				slug = parts[0]
+				dir = parts[1]
+			default:
+				return fmt.Errorf("invalid konndir value: %q", konnDir)
+			}
+
+			err := localRegistry.Add(slug, app.LocalResource{
+				Type: consts.KonnectorType,
 				Dir:  dir,
 			})
 			if err != nil {
@@ -257,7 +282,8 @@ func init() {
 	flags.BoolVar(&flagMailhog, "mailhog", false, "Alias of --mail-disable-tls --mail-port 1025, useful for MailHog")
 	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run in dev mode for a prod release (disabled by default)")
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
-	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
+	flags.StringSliceVar(&flagAppDirs, "appdir", nil, "Mount a directory as the 'app' application")
+	flags.StringSliceVar(&flagKonnDirs, "konndir", nil, "Mount a directory as the 'konn' konnector")
 
 	flags.Bool("remote-allow-custom-port", false, "Allow to specify a port in request files for remote doctypes")
 	checkNoErr(viper.BindPFlag("remote_allow_custom_port", flags.Lookup("remote-allow-custom-port")))

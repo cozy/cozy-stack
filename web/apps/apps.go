@@ -158,7 +158,11 @@ func downloadHandler(appType consts.AppType) echo.HandlerFunc {
 				fs = app.AppsFileServer(inst)
 			}
 		case consts.KonnectorType:
-			fs = app.KonnectorsFileServer(inst)
+			if app.RegistryFS != nil && app.RegistryFS.Contains(slug) {
+				fs = app.RegistryFS.FileServer(slug)
+			} else {
+				fs = app.KonnectorsFileServer(inst)
+			}
 		}
 
 		return fs.ServeCodeTarball(c.Response(), c.Request(), slug, version, man.Checksum())
