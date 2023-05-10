@@ -576,14 +576,14 @@ func loadManifestFromDir(slug string) (*WebappManifest, error) {
 	manFile, err := fs.Open(WebappManifestName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Could not find the manifest in your app directory %s", dir)
+			return nil, fmt.Errorf("could not find the manifest in your app directory %s", dir)
 		}
 		return nil, err
 	}
 
 	app, err := NewWebAppManifestFromReader(manFile, slug, "file://localhost"+dir)
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse the manifest: %s", err.Error())
+		return nil, fmt.Errorf("could not parse the manifest: %s", err.Error())
 	}
 
 	app.FromAppsDir = true
