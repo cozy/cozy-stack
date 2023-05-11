@@ -13678,6 +13678,21 @@ w6aIEiZCl+JSPA5KRoJx4pFqWUSvmnSbWngU8qALUukld3YDmSQqRZtDxrdUKFz+
 1qFZHf2z31F2m1sy+pN2cugRu9uj+sC4ew==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
+Name: /images/icon-cozy-home-inverted.svg
+Size: 898
+
+G4EDAJwFdpvLB3ca/FYNc0ilIFnwWO9+qey8f3ontJAcFMjViBQA3Inn15SCEiEz
+4Fy8LLABDnDKt8ivxCjcWyTYSF+4Cp+e6QfdDVD58/Dz5/aipHzT5s1r+Xj8xs4J
+G9un9tvW+lSVc+rcW/Zu/84itkkiH8u/jcEMdV5fNfOeSOG1PbSqH6dnkuiPjToH
+l387ZdL0f/JBumnv7PfgnXMONhUMZsqkxUQFFZ6g4EQKZlmtV7ki+AdvJMgeqajA
+HpOIg+E6NOEdxlWMTYDxz9b9kpUqoCkNgVUyJZ2zoB+xs33GlMZ+ndAn0IQ5/yTq
+TNplBqoUBTBNUFH2zMqPwiYVnm3uqaCqg9wx6C1MXP2TnkrscTClY+2CTLlj5iXr
+y/+Y7lQHY2O6olBA0airlIJWnfPMM2+v/bmyVWXQM6bxjfDn8wUh5qWR8kPjpCCV
+lD1F49Mx0zjugG7f00ZpgJwLhN8Od0euFFBDCnFD3shIw936S9vU2MfqBpMdxxYK
+ymxnl1sKiWnmXc0Rd++q/bKR6yiEO1WESeNYhsSm+k1dE6EpwahJIKsE9205CMKz
+ALt1Od16HEfxHg==
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
 Name: /images/icon-cozy-home.svg
 Size: 898
 

@@ -4,13 +4,13 @@
 
 ## Main Configuration file
 
-You can configure your `cozy-stack` using a configuration file. 
+You can configure your `cozy-stack` using a configuration file.
 
 By default, `cozy-stack` comes with a file named [`cozy.example.yaml`](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml).
 
-If you need to edit the configuration, we recommend to only copy the 
-needed part in a new file. This new file should be named `cozy.yaml`, 
-`cozy.yml`, or `cozy.json` depending on the format of your chosing, 
+If you need to edit the configuration, we recommend to only copy the
+needed part in a new file. This new file should be named `cozy.yaml`,
+`cozy.yml`, or `cozy.json` depending on the format of your chosing,
 and should be present in one of these directories (ordered by priority):
 
 -   `./.cozy`
@@ -272,3 +272,4 @@ Here are a small list of assets that you may want to customize:
 - `/images/default-wallpaper.jpg`: the image to use as the default wallpapper
   on the home.
 - `/images/icon-cozy-home.svg`: the home icon used and displayed by the cozy-bar.
+- `/images/icon-cozy-home-inverted.svg`: the home icon used and displayed by the cozy-bar when using the theme inverted.
