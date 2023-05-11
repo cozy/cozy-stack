@@ -1,0 +1,7 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        # this allows a 10% drop from the previous base commit coverage
+        threshold: 10%
