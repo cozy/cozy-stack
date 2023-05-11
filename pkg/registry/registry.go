@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -168,6 +167,8 @@ func ProxyMaintenance(registries []*url.URL) ([]json.RawMessage, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer resp.Body.Close()
+
 		if !ok {
 			continue
 		}
@@ -322,10 +323,12 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 		if err != nil {
 			return err
 		}
+		defer resp.Body.Close()
+
 		if !ok {
 			return nil
 		}
-		defer resp.Body.Close()
+
 		var page AppsPaginated
 		if err = json.NewDecoder(resp.Body).Decode(&page); err != nil {
 			return err
@@ -465,6 +468,8 @@ func fetchUntilFound(client *http.Client, registries []*url.URL, requestURI stri
 		if err != nil {
 			return
 		}
+		defer resp.Body.Close()
+
 		if !ok {
 			continue
 		}
@@ -488,14 +493,8 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	if err != nil {
 		return
 	}
+
 	elapsed := time.Since(start)
-	defer func() {
-		if !ok {
-			// Flush the body, so that the connection can be reused by keep-alive
-			_, _ = io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
-		}
-	}()
 	if elapsed.Seconds() >= 3 {
 		log := logger.WithNamespace("registry")
 		log.Infof("slow request on %s (%s)", u.String(), elapsed)
