@@ -15,8 +15,6 @@ import (
 
 var (
 	ErrInvalidDirPath         = errors.New("invalid dir path")
-	ErrInvalidIndexPath       = errors.New("invalid index path")
-	ErrInvalidManifestPath    = errors.New("invalid manifest path")
 	ErrUnexpectedResourceType = errors.New("unexpected resource type")
 )
 
@@ -112,13 +110,13 @@ func (r *LocalRegistry) Add(slug string, res LocalResource) error {
 
 	err = utils.FileExists(r.fs, manifestPath)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidManifestPath, err)
+		return fmt.Errorf("invalid manifest path: %w", err)
 	}
 
 	if indexPath != "" {
 		err = utils.FileExists(r.fs, indexPath)
 		if err != nil {
-			return fmt.Errorf("%w: %w", ErrInvalidIndexPath, err)
+			return fmt.Errorf("invalid index path: %w", err)
 		}
 	}
 

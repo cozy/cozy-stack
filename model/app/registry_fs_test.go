@@ -18,7 +18,7 @@ func TestLocalRegistry_Add_App_ok(t *testing.T) {
 
 	registry := NewLocalRegistry(fs)
 
-	res := registry.List()
+	res := registry.ListApps()
 	assert.Len(t, res, 0)
 
 	err := registry.Add("some-app", LocalResource{
@@ -27,7 +27,7 @@ func TestLocalRegistry_Add_App_ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	res = registry.List()
+	res = registry.ListApps()
 	assert.Len(t, res, 1)
 }
 
@@ -38,7 +38,7 @@ func TestLocalRegistry_Add_Konnector_ok(t *testing.T) {
 
 	registry := NewLocalRegistry(fs)
 
-	res := registry.List()
+	res := registry.ListKonns()
 	assert.Len(t, res, 0)
 
 	err := registry.Add("some-konn", LocalResource{
@@ -47,7 +47,7 @@ func TestLocalRegistry_Add_Konnector_ok(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	res = registry.List()
+	res = registry.ListKonns()
 	assert.Len(t, res, 1)
 }
 
@@ -56,9 +56,6 @@ func TestLocalRegistry_Add_with_folder_not_found(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
 	registry := NewLocalRegistry(fs)
-
-	res := registry.List()
-	assert.Len(t, res, 0)
 
 	err := registry.Add("some-app", LocalResource{
 		Type: consts.KonnectorType,
@@ -73,14 +70,11 @@ func TestLocalRegistry_Add_with_missing_manifest(t *testing.T) {
 
 	registry := NewLocalRegistry(fs)
 
-	res := registry.List()
-	assert.Len(t, res, 0)
-
 	err := registry.Add("someKonn", LocalResource{
 		Type: consts.KonnectorType,
 		Dir:  "/someKonn",
 	})
-	assert.ErrorIs(t, err, ErrInvalidManifestPath)
+	assert.EqualError(t, err, "invalid manifest path: open /someKonn/manifest.konnector: file does not exist")
 }
 
 func TestLocalRegistry_Add_with_missing_index_html(t *testing.T) {
@@ -91,14 +85,11 @@ func TestLocalRegistry_Add_with_missing_index_html(t *testing.T) {
 
 	registry := NewLocalRegistry(fs)
 
-	res := registry.List()
-	assert.Len(t, res, 0)
-
 	err := registry.Add("some-app", LocalResource{
 		Type: consts.WebappType,
 		Dir:  "/someApp",
 	})
-	assert.ErrorIs(t, err, ErrInvalidIndexPath)
+	assert.EqualError(t, err, "invalid index path: open /someApp/index.html: file does not exist")
 }
 
 func TestLocalRegistry_GetKonnManifest_ok(t *testing.T) {
