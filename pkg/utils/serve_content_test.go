@@ -1,10 +1,46 @@
 package utils
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func Test_CheckPreconditions_with_matching_etag(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "http://localhost/foo/bar", nil)
+	w := httptest.NewRecorder()
+
+	r.Header.Set("If-None-Match", `"some-etag"`)
+
+	done := CheckPreconditions(w, r, `"some-etag"`)
+
+	assert.True(t, done)
+	assert.Equal(t, http.StatusNotModified, w.Result().StatusCode)
+}
+
+func Test_CheckPreconditions_with_no_etag(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "http://localhost/foo/bar", nil)
+	w := httptest.NewRecorder()
+
+	done := CheckPreconditions(w, r, `"some-etag"`)
+
+	assert.False(t, done)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+}
+
+func Test_CheckPreconditions_with_non_matching_etag(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "http://localhost/foo/bar", nil)
+	w := httptest.NewRecorder()
+
+	r.Header.Set("If-None-Match", `"some-etag"`)
+
+	done := CheckPreconditions(w, r, `"some-other-etag"`)
+
+	assert.False(t, done)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+}
 
 func Test_checkIfNoneMatch(t *testing.T) {
 	var tests = []struct {
