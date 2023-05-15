@@ -167,16 +167,16 @@ func ListenAndServe() (*Servers, error) {
 //	- It forces the IPv4/IPv6 dual stack mode for `localhost` by
 //	  remplacing this entry by `["127.0.0.1", "::1]`
 type Servers struct {
-	servers   map[string]*http.Server
-	listeners map[string]net.Listener
-	errs      chan error
+	serversByName   map[string]*http.Server
+	listenersByName map[string]net.Listener
+	errs            chan error
 }
 
 func NewServers() *Servers {
 	return &Servers{
-		servers:   map[string]*http.Server{},
-		listeners: map[string]net.Listener{},
-		errs:      make(chan error),
+		serversByName:   map[string]*http.Server{},
+		listenersByName: map[string]net.Listener{},
+		errs:            make(chan error),
 	}
 }
 
@@ -223,8 +223,8 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 			ReadHeaderTimeout: ReadHeaderTimeout,
 		}
 
-		s.servers[name] = server
-		s.listeners[name] = l
+		s.serversByName[name] = server
+		s.listenersByName[name] = l
 
 		go func(server *http.Server) {
 			s.errs <- server.Serve(l)
@@ -239,7 +239,7 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 // This endpoint is mostly used when we use dynamic port attribution
 // like when we don't specify a port
 func (s *Servers) GetAddr(name string) net.Addr {
-	l, ok := s.listeners[name]
+	l, ok := s.listenersByName[name]
 	if !ok {
 		return nil
 	}
@@ -256,7 +256,7 @@ func (s *Servers) Wait() <-chan error {
 func (s *Servers) Shutdown(ctx context.Context) error {
 	shutdowners := []utils.Shutdowner{}
 
-	for _, server := range s.servers {
+	for _, server := range s.serversByName {
 		shutdowners = append(shutdowners, server)
 	}
 

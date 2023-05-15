@@ -54,7 +54,7 @@ func TestServers_handle_ipv4_ipv6_on_localhost(t *testing.T) {
 	// Need some time to start the goroutines.
 	time.Sleep(50 * time.Millisecond)
 
-	// Call the first host on IPv4
+	// Call the host on IPv4
 	res, err := http.Get("http://127.0.0.1:38423/ping")
 	require.NoError(t, err)
 
@@ -63,7 +63,7 @@ func TestServers_handle_ipv4_ipv6_on_localhost(t *testing.T) {
 
 	assert.Equal(t, "pong major", string(raw))
 
-	// Call the second host on :5875
+	// Call the host on IPv6
 	res, err = http.Get("http://::1:38423/ping")
 	require.NoError(t, err)
 	defer res.Body.Close()
