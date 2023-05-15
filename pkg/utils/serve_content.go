@@ -31,7 +31,10 @@ func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (do
 	inm := r.Header.Get("If-None-Match")
 
 	if inm != "" && etag != "" && checkIfNoneMatch(inm, etag) {
-		writeNotModified(w)
+		h := w.Header()
+		delete(h, "Content-Type")
+		delete(h, "Content-Length")
+		w.WriteHeader(http.StatusNotModified)
 		return true
 	}
 
@@ -95,11 +98,4 @@ func scanETag(s string) (etag string, remain string) {
 		}
 	}
 	return "", ""
-}
-
-func writeNotModified(w http.ResponseWriter) {
-	h := w.Header()
-	delete(h, "Content-Type")
-	delete(h, "Content-Length")
-	w.WriteHeader(http.StatusNotModified)
 }
