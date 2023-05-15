@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-NODE_OPTS="--dns-result-order=ipv4first"
 NODE_BIN="/usr/bin/nodejs"
 if ! [ -x "${NODE_BIN}" ]; then
   NODE_BIN="/usr/bin/node"
@@ -17,4 +16,4 @@ if [ ! -f "${arg}" ] && [ ! -d "${arg}" ]; then
   exit 1
 fi
 
-${NODE_BIN} ${NODE_OPTS} "${arg}"
+${NODE_BIN} "${arg}"
