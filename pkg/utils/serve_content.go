@@ -28,19 +28,18 @@ func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, si
 // CheckPreconditions evaluates request preconditions based only on the Etag
 // values.
 func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (done bool) {
-	if etag != "" && checkIfNoneMatch(w, r, etag) {
+	inm := r.Header.Get("If-None-Match")
+
+	if inm != "" && etag != "" && checkIfNoneMatch(inm, etag) {
 		writeNotModified(w)
 		return true
 	}
+
 	return false
 }
 
-func checkIfNoneMatch(w http.ResponseWriter, r *http.Request, definedETag string) (match bool) {
-	inm := r.Header.Get("If-None-Match")
-	if inm == "" {
-		return false
-	}
-	buf := inm
+func checkIfNoneMatch(ifNoneMatch, definedETag string) (match bool) {
+	buf := ifNoneMatch
 	for {
 		buf = textproto.TrimString(buf)
 		if len(buf) == 0 {
@@ -66,6 +65,7 @@ func checkIfNoneMatch(w http.ResponseWriter, r *http.Request, definedETag string
 
 // etagWeakMatch reports whether a and b match using weak ETag comparison.
 // Assumes a and b are valid ETags.
+// More at: https://www.rfc-editor.org/rfc/rfc9110#name-comparison-2
 func etagWeakMatch(a, b string) bool {
 	return strings.TrimPrefix(a, "W/") == strings.TrimPrefix(b, "W/")
 }
