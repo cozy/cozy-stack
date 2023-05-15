@@ -121,6 +121,12 @@ func Test_checkIfNoneMatch(t *testing.T) {
 			Match:       true,
 		},
 		{
+			Name:        "inm with some invalid content is discarded",
+			IfNoneMatch: "\"secon\fd-etag\"",
+			Etag:        "\"secon\fd-etag\"",
+			Match:       false,
+		},
+		{
 			Name:        "multiple inm values not matching etag",
 			IfNoneMatch: `"first-etag","second-etag`,
 			Etag:        `"third-etag"`,
