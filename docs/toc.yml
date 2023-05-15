@@ -11,6 +11,7 @@
   - "Using the HTTP API": ./http-api.md
   - "Develop a client-side app": ./client-app-dev.md
   - "Running and building Docker images": ./docker.md
+  - "Running a konnector locally": ./konnectors-dev.md
   - "Adding a new doctype": ./doctype.md
   - "Working with the stack assets": ./assets.md
   - "Build a release": ./release.md
