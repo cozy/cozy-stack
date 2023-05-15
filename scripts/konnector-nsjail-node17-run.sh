@@ -22,8 +22,6 @@ else
   exit 1
 fi
 
-NODE_OPTS="--dns-resolution-order=ipv4first"
-
 if [ -z "${COZY_JOB_ID}" ]; then
   COZY_JOB_ID="unknown"
 fi
@@ -150,7 +148,7 @@ nsjail \
   -R /dev/urandom \
   -R /etc/resolv.conf \
   -R /etc/ssl/certs \
-  -- /usr/bin/nodejs ${NODE_OPTS} "${runfile}"
+  -- /usr/bin/nodejs "${runfile}"
 
 # Via a chroot with nodejs installed inside
 # nsjail \
@@ -173,4 +171,4 @@ nsjail \
 #   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
 #   -E "COZY_LOCALE=${COZY_LOCALE}" \
 #   -R "${rundir}:/usr/src/konnector/" \
-#   -- /usr/bin/nodejs ${NODE_OPTS} "${runfile}"
+#   -- /usr/bin/nodejs "${runfile}"
