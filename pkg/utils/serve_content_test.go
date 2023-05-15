@@ -37,17 +37,15 @@ func Test_checkIfNoneMatch(t *testing.T) {
 			Etag:        `"second-etag"`,
 			Match:       true,
 		},
-		// TODO: This doesn't pass with the current implem, propose a new implem
-		// with working with this case.
-		// {
-		// 	Name:        "multiple inm values are trimmed",
-		// 	IfNoneMatch: `"first-etag" , "second-etag"`,
-		// 	Etag:        `"second-etag"`,
-		// 	Match:       true,
-		// },
+		{
+			Name:        "multiple inm values are trimmed",
+			IfNoneMatch: `"first-etag" , "second-etag"`,
+			Etag:        `"second-etag"`,
+			Match:       true,
+		},
 		{
 			Name:        "inm is trimmed",
-			IfNoneMatch: `  "second-etag"\t`,
+			IfNoneMatch: "  \"second-etag\"\t",
 			Etag:        `"second-etag"`,
 			Match:       true,
 		},

@@ -31,75 +31,48 @@ func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (do
 	inm := r.Header.Get("If-None-Match")
 
 	if inm != "" && etag != "" && checkIfNoneMatch(inm, etag) {
-		writeNotModified(w)
+		h := w.Header()
+		delete(h, "Content-Type")
+		delete(h, "Content-Length")
+		w.WriteHeader(http.StatusNotModified)
 		return true
 	}
 
 	return false
 }
 
-func checkIfNoneMatch(ifNoneMatch, definedETag string) (match bool) {
-	buf := ifNoneMatch
-	for {
-		buf = textproto.TrimString(buf)
-		if len(buf) == 0 {
-			break
-		}
-		if buf[0] == ',' {
-			buf = buf[1:]
-		}
-		if buf[0] == '*' {
+func checkIfNoneMatch(ifNoneMatch, definedETag string) bool {
+	values := strings.Split(ifNoneMatch, ",")
+
+	for _, val := range values {
+		val = textproto.TrimString(val)
+
+		if val == "*" {
 			return true
 		}
-		etag, remain := scanETag(buf)
-		if etag == "" {
-			break
+
+		val = strings.TrimPrefix(val, "W/")
+
+		if !strings.HasPrefix(val, `"`) || !strings.HasSuffix(val, `"`) {
+			return false
 		}
-		if etagWeakMatch(etag, definedETag) {
+
+		// Remove the `"`
+		etagContent := val[1 : len(val)-1]
+
+		// Check that we have only valid runes.
+		invalidRunIdx := strings.IndexFunc(etagContent, func(r rune) bool {
+			return !(r == 0x21 || r >= 0x23 && r <= 0x7E || r >= 0x80)
+		})
+
+		if invalidRunIdx != -1 {
+			return false
+		}
+
+		if val == strings.TrimPrefix(definedETag, "W/") {
 			return true
 		}
-		buf = remain
 	}
+
 	return false
-}
-
-// etagWeakMatch reports whether a and b match using weak ETag comparison.
-// Assumes a and b are valid ETags.
-// More at: https://www.rfc-editor.org/rfc/rfc9110#name-comparison-2
-func etagWeakMatch(a, b string) bool {
-	return strings.TrimPrefix(a, "W/") == strings.TrimPrefix(b, "W/")
-}
-
-// scanETag determines if a syntactically valid ETag is present at s. If so,
-// the ETag and remaining text after consuming ETag is returned. Otherwise,
-// it returns "", "".
-func scanETag(s string) (etag string, remain string) {
-	start := 0
-	if len(s) >= 2 && s[0] == 'W' && s[1] == '/' {
-		start = 2
-	}
-	if len(s[start:]) < 2 || s[start] != '"' {
-		return "", ""
-	}
-	// ETag is either W/"text" or "text".
-	// See RFC 7232 2.3.
-	for i := start + 1; i < len(s); i++ {
-		c := s[i]
-		switch {
-		// Character values allowed in ETags.
-		case c == 0x21 || c >= 0x23 && c <= 0x7E || c >= 0x80:
-		case c == '"':
-			return s[:i+1], s[i+1:]
-		default:
-			return "", ""
-		}
-	}
-	return "", ""
-}
-
-func writeNotModified(w http.ResponseWriter) {
-	h := w.Header()
-	delete(h, "Content-Type")
-	delete(h, "Content-Length")
-	w.WriteHeader(http.StatusNotModified)
 }
