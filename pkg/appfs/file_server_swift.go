@@ -18,23 +18,23 @@ import (
 	"github.com/ncw/swift/v2"
 )
 
-type swiftServer struct {
+// SwiftServer is a [FileServer] implementation based on the Swift protocol.
+type SwiftServer struct {
 	c         *swift.Connection
 	container string
 	ctx       context.Context
 }
 
-// NewSwiftFileServer returns provides the apps.FileServer implementation
-// using the swift backend as file server.
-func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileServer {
-	return &swiftServer{
+// NewSwiftFileServer instantiate a new [SwiftServer] with the giver conn as backend.
+func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) *SwiftServer {
+	return &SwiftServer{
 		c:         conn,
 		container: containerName(appsType),
 		ctx:       context.Background(),
 	}
 }
 
-func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
+func (s *SwiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
 	objName := s.makeObjectName(slug, version, shasum, file)
 	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	return f, nil
 }
 
-func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
+func (s *SwiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
 	objName := s.makeObjectName(slug, version, shasum, file)
 	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	return serveContent(w, req, contentType, size, r)
 }
 
-func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
+func (s *SwiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
 	objName := path.Join(slug, version)
 	if shasum != "" {
 		objName += "-" + shasum
@@ -139,7 +139,7 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 	return serveContent(w, req, contentType, int64(buf.Len()), buf)
 }
 
-func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
+func (s *SwiftServer) makeObjectName(slug, version, shasum, file string) string {
 	basepath := path.Join(slug, version)
 	if shasum != "" {
 		basepath += "-" + shasum
@@ -147,7 +147,7 @@ func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string 
 	return path.Join(basepath, file)
 }
 
-func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) {
+func (s *SwiftServer) FilesList(slug, version, shasum string) ([]string, error) {
 	prefix := s.makeObjectName(slug, version, shasum, "") + "/"
 	names, err := s.c.ObjectNamesAll(s.ctx, s.container, &swift.ObjectsOpts{
 		Prefix: prefix,
