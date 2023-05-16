@@ -178,7 +178,7 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
-	web_utils.ServeContent(w, req, contentType, size, r)
+	serveContent(w, req, contentType, size, r)
 	return nil
 }
 
@@ -195,7 +195,7 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 		contentLength := h["Content-Length"]
 		contentType := h["Content-Type"]
 		size, _ := strconv.ParseInt(contentLength, 10, 64)
-		web_utils.ServeContent(w, req, contentType, size, f)
+		serveContent(w, req, contentType, size, f)
 		return nil
 	}
 
@@ -211,7 +211,7 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 		_ = file.Close()
 	}
 
-	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
+	serveContent(w, req, contentType, int64(buf.Len()), buf)
 	return nil
 }
 
@@ -378,7 +378,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(path.Ext(filepath))
-	web_utils.ServeContent(w, req, contentType, size, content)
+	serveContent(w, req, contentType, size, content)
 	return nil
 }
 
@@ -389,7 +389,7 @@ func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(".gz")
-	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
+	serveContent(w, req, contentType, int64(buf.Len()), buf)
 	return nil
 }
 
@@ -491,4 +491,21 @@ func prepareTarball(s FileServer, slug, version, shasum string) (*bytes.Buffer, 
 		return nil, err
 	}
 	return buf, nil
+}
+
+// serveContent replies to the request using the content in the provided
+// reader. The Content-Length and Content-Type headers are added with the
+// provided values.
+func serveContent(w http.ResponseWriter, r *http.Request, contentType string, size int64, content io.Reader) {
+	h := w.Header()
+	if size > 0 {
+		h.Set("Content-Length", strconv.FormatInt(size, 10))
+	}
+	if contentType != "" {
+		h.Set("Content-Type", contentType)
+	}
+	w.WriteHeader(http.StatusOK)
+	if r.Method != "HEAD" {
+		_, _ = io.Copy(w, content)
+	}
 }

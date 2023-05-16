@@ -1,29 +1,10 @@
 package utils
 
 import (
-	"io"
 	"net/http"
 	"net/textproto"
-	"strconv"
 	"strings"
 )
-
-// ServeContent replies to the request using the content in the provided
-// reader. The Content-Length and Content-Type headers are added with the
-// provided values.
-func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, size int64, content io.Reader) {
-	h := w.Header()
-	if size > 0 {
-		h.Set("Content-Length", strconv.FormatInt(size, 10))
-	}
-	if contentType != "" {
-		h.Set("Content-Type", contentType)
-	}
-	w.WriteHeader(http.StatusOK)
-	if r.Method != "HEAD" {
-		_, _ = io.Copy(w, content)
-	}
-}
 
 // CheckPreconditions evaluates request preconditions based only on the Etag
 // values.
