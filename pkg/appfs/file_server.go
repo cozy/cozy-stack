@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -35,12 +34,6 @@ type FileServer interface {
 		slug, version, shasum, file string) error
 	ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 		slug, version, shasum string) error
-}
-
-type swiftServer struct {
-	c         *swift.Connection
-	container string
-	ctx       context.Context
 }
 
 type aferoServer struct {
@@ -97,148 +90,6 @@ func (g gzipReadCloser) Close() error {
 		return err2
 	}
 	return nil
-}
-
-// NewSwiftFileServer returns provides the apps.FileServer implementation
-// using the swift backend as file server.
-func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileServer {
-	return &swiftServer{
-		c:         conn,
-		container: containerName(appsType),
-		ctx:       context.Background(),
-	}
-}
-
-func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
-	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
-	if err != nil {
-		return nil, wrapSwiftErr(err)
-	}
-	o := h.ObjectMetadata()
-	contentEncoding := o["content-encoding"]
-	if contentEncoding == "br" {
-		return newBrotliReadCloser(f)
-	} else if contentEncoding == "gzip" {
-		return newGzipReadCloser(f)
-	}
-	return f, nil
-}
-
-func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
-	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
-	if err != nil {
-		return wrapSwiftErr(err)
-	}
-	defer f.Close()
-
-	if checkETag := req.Header.Get("Cache-Control") == ""; checkETag {
-		etag := fmt.Sprintf(`"%s"`, h["Etag"][:10])
-		if web_utils.CheckPreconditions(w, req, etag) {
-			return nil
-		}
-		w.Header().Set("Etag", etag)
-	}
-
-	var r io.Reader = f
-	contentLength := h["Content-Length"]
-	contentType := h["Content-Type"]
-	o := h.ObjectMetadata()
-	contentEncoding := o["content-encoding"]
-	if contentEncoding == "br" {
-		if acceptBrotliEncoding(req) {
-			w.Header().Set(echo.HeaderContentEncoding, "br")
-		} else {
-			contentLength = o["original-content-length"]
-			r = brotli.NewReader(f)
-		}
-	} else if contentEncoding == "gzip" {
-		if acceptGzipEncoding(req) {
-			w.Header().Set(echo.HeaderContentEncoding, "gzip")
-		} else {
-			contentLength = o["original-content-length"]
-			var gr *gzip.Reader
-			gr, err = gzip.NewReader(f)
-			if err != nil {
-				return err
-			}
-			defer gr.Close()
-			r = gr
-		}
-	}
-
-	ext := path.Ext(file)
-	if contentType == "" {
-		contentType = mime.TypeByExtension(ext)
-	}
-	if contentType == "text/xml" && ext == ".svg" {
-		// override for files with text/xml content because of leading <?xml tag
-		contentType = "image/svg+xml"
-	}
-
-	size, _ := strconv.ParseInt(contentLength, 10, 64)
-	web_utils.ServeContent(w, req, contentType, size, r)
-	return nil
-}
-
-func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
-	objName := path.Join(slug, version)
-	if shasum != "" {
-		objName += "-" + shasum
-	}
-	objName += ".tgz"
-
-	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
-	if err == nil {
-		defer f.Close()
-		contentLength := h["Content-Length"]
-		contentType := h["Content-Type"]
-		size, _ := strconv.ParseInt(contentLength, 10, 64)
-		web_utils.ServeContent(w, req, contentType, size, f)
-		return nil
-	}
-
-	buf, err := prepareTarball(s, slug, version, shasum)
-	if err != nil {
-		return err
-	}
-	contentType := mime.TypeByExtension(".gz")
-
-	file, err := s.c.ObjectCreate(s.ctx, s.container, objName, true, "", contentType, nil)
-	if err == nil {
-		_, _ = io.Copy(file, buf)
-		_ = file.Close()
-	}
-
-	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
-	return nil
-}
-
-func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
-	basepath := path.Join(slug, version)
-	if shasum != "" {
-		basepath += "-" + shasum
-	}
-	return path.Join(basepath, file)
-}
-
-func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) {
-	prefix := s.makeObjectName(slug, version, shasum, "") + "/"
-	names, err := s.c.ObjectNamesAll(s.ctx, s.container, &swift.ObjectsOpts{
-		Prefix: prefix,
-	})
-	if err != nil {
-		return nil, err
-	}
-	filtered := names[:0]
-	for _, n := range names {
-		n = strings.TrimPrefix(n, prefix)
-		if n != "" {
-			filtered = append(filtered, n)
-		}
-	}
-	return filtered, nil
 }
 
 // NewAferoFileServer returns a simple wrapper of the afero.Fs interface that
@@ -378,8 +229,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(path.Ext(filepath))
-	web_utils.ServeContent(w, req, contentType, size, content)
-	return nil
+	return serveContent(w, req, contentType, size, content)
 }
 
 func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
@@ -389,8 +239,8 @@ func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(".gz")
-	web_utils.ServeContent(w, req, contentType, int64(buf.Len()), buf)
-	return nil
+
+	return serveContent(w, req, contentType, int64(buf.Len()), buf)
 }
 
 func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) {
@@ -491,4 +341,25 @@ func prepareTarball(s FileServer, slug, version, shasum string) (*bytes.Buffer, 
 		return nil, err
 	}
 	return buf, nil
+}
+
+// serveContent replies to the request using the content in the provided
+// reader. The Content-Length and Content-Type headers are added with the
+// provided values.
+func serveContent(w http.ResponseWriter, r *http.Request, contentType string, size int64, content io.Reader) error {
+	var err error
+
+	h := w.Header()
+	if size > 0 {
+		h.Set("Content-Length", strconv.FormatInt(size, 10))
+	}
+	if contentType != "" {
+		h.Set("Content-Type", contentType)
+	}
+	w.WriteHeader(http.StatusOK)
+	if r.Method != "HEAD" {
+		_, err = io.Copy(w, content)
+	}
+
+	return err
 }
