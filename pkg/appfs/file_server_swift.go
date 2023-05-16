@@ -42,12 +42,15 @@ func (s *SwiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	}
 	o := h.ObjectMetadata()
 	contentEncoding := o["content-encoding"]
-	if contentEncoding == "br" {
+
+	switch contentEncoding {
+	case "br":
 		return newBrotliReadCloser(f)
-	} else if contentEncoding == "gzip" {
+	case "gzip":
 		return newGzipReadCloser(f)
+	default:
+		return f, nil
 	}
-	return f, nil
 }
 
 func (s *SwiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
@@ -71,14 +74,17 @@ func (s *SwiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	contentType := h["Content-Type"]
 	o := h.ObjectMetadata()
 	contentEncoding := o["content-encoding"]
-	if contentEncoding == "br" {
+
+	switch contentEncoding {
+	case "br":
 		if acceptBrotliEncoding(req) {
 			w.Header().Set(echo.HeaderContentEncoding, "br")
 		} else {
 			contentLength = o["original-content-length"]
 			r = brotli.NewReader(f)
 		}
-	} else if contentEncoding == "gzip" {
+
+	case "gzip":
 		if acceptGzipEncoding(req) {
 			w.Header().Set(echo.HeaderContentEncoding, "gzip")
 		} else {
