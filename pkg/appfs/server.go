@@ -178,8 +178,8 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
-	serveContent(w, req, contentType, size, r)
-	return nil
+
+	return serveContent(w, req, contentType, size, r)
 }
 
 func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
@@ -195,8 +195,8 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 		contentLength := h["Content-Length"]
 		contentType := h["Content-Type"]
 		size, _ := strconv.ParseInt(contentLength, 10, 64)
-		serveContent(w, req, contentType, size, f)
-		return nil
+
+		return serveContent(w, req, contentType, size, f)
 	}
 
 	buf, err := prepareTarball(s, slug, version, shasum)
@@ -211,8 +211,7 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 		_ = file.Close()
 	}
 
-	serveContent(w, req, contentType, int64(buf.Len()), buf)
-	return nil
+	return serveContent(w, req, contentType, int64(buf.Len()), buf)
 }
 
 func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
@@ -378,8 +377,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(path.Ext(filepath))
-	serveContent(w, req, contentType, size, content)
-	return nil
+	return serveContent(w, req, contentType, size, content)
 }
 
 func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request, slug, version, shasum string) error {
@@ -389,8 +387,8 @@ func (s *aferoServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := mime.TypeByExtension(".gz")
-	serveContent(w, req, contentType, int64(buf.Len()), buf)
-	return nil
+
+	return serveContent(w, req, contentType, int64(buf.Len()), buf)
 }
 
 func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) {
@@ -496,7 +494,9 @@ func prepareTarball(s FileServer, slug, version, shasum string) (*bytes.Buffer, 
 // serveContent replies to the request using the content in the provided
 // reader. The Content-Length and Content-Type headers are added with the
 // provided values.
-func serveContent(w http.ResponseWriter, r *http.Request, contentType string, size int64, content io.Reader) {
+func serveContent(w http.ResponseWriter, r *http.Request, contentType string, size int64, content io.Reader) error {
+	var err error
+
 	h := w.Header()
 	if size > 0 {
 		h.Set("Content-Length", strconv.FormatInt(size, 10))
@@ -506,6 +506,8 @@ func serveContent(w http.ResponseWriter, r *http.Request, contentType string, si
 	}
 	w.WriteHeader(http.StatusOK)
 	if r.Method != "HEAD" {
-		_, _ = io.Copy(w, content)
+		_, err = io.Copy(w, content)
 	}
+
+	return err
 }
