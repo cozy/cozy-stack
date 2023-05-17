@@ -305,12 +305,12 @@ func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) error {
 			return err
 		}
 
-		logrus.AddHook(hook)
-		logrus.SetOutput(io.Discard)
+		logger.AddHook(hook)
+		logger.SetOutput(io.Discard)
 	}
 
 	if build.IsDevRelease() && lvl == logrus.DebugLevel {
-		formatter := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
+		formatter := logger.Formatter.(*logrus.TextFormatter)
 		formatter.TimestampFormat = time.RFC3339Nano
 	}
 
