@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+    <link rel="preload" href="/assets/icons/check.svg" as="image">
+  </head>
+  <body class="cirrus theme-inverted">
+    <h1>{{t "Install New App Title"}}</h1>
+    <p>{{t "Install App Unavailable" .AppName}}</p>
+    {{if .OS == "Iphone"}}
+    <p>{{t "Install New Iphone App Description"}}</p>
+    {{else if .OS == "Android"}}
+    <p>{{t "Install New Android App Description"}}</p>
+    {{else}}
+    <p>{{t "Install New Generic App Description"}}</p>
+    {{end}}
+
+    <button href={{.StoreURL}} class="btn btn-primary btn-md-lg w-100 mb-3" type="submit">
+      {{t "Install New App Store Btn"}}
+    </button>
+  </body>
+</html>

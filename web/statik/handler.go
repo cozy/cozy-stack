@@ -52,6 +52,7 @@ var (
 		"passphrase_reset.html",
 		"sharing_discovery.html",
 		"twofactor.html",
+		"new_app_available.html",
 	}
 )
 
