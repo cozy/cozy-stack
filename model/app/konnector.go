@@ -400,7 +400,7 @@ func GetKonnectorBySlugAndUpdate(in *instance.Instance, slug string, copier appf
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(in, man, copier, registries).(*KonnManifest), nil
+	return DoLazyUpdate(in, man, copier, registries, consts.KonnectorType).(*KonnManifest), nil
 }
 
 // ListKonnectorsWithPagination returns the list of installed konnectors with a

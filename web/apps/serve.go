@@ -68,7 +68,7 @@ func Serve(c echo.Context) error {
 	}
 
 	if file == "" || file == route.Index {
-		webapp = app.DoLazyUpdate(i, webapp, app.Copier(consts.WebappType, i), i.Registries()).(*app.WebappManifest)
+		webapp = app.DoLazyUpdate(i, webapp, app.Copier(consts.WebappType, i), i.Registries(), consts.WebappType).(*app.WebappManifest)
 	}
 
 	switch webapp.State() {

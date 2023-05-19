@@ -619,7 +619,7 @@ func (i *Installer) ManifestChannel() chan Manifest {
 }
 
 // DoLazyUpdate tries to update an application before using it
-func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, registries []*url.URL) Manifest {
+func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, registries []*url.URL, appType consts.AppType) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
@@ -666,6 +666,7 @@ func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, regi
 		Manifest:   man,
 		Registries: registries,
 		SourceURL:  src.String(),
+		Type:       appType,
 	})
 	if err != nil {
 		return man

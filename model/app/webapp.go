@@ -609,7 +609,7 @@ func GetWebappBySlugAndUpdate(in *instance.Instance, slug string, copier appfs.C
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(in, man, copier, registries).(*WebappManifest), nil
+	return DoLazyUpdate(in, man, copier, registries, consts.WebappType).(*WebappManifest), nil
 }
 
 // ListWebappsWithPagination returns the list of installed web applications with
