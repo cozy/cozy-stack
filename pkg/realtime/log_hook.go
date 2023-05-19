@@ -42,14 +42,7 @@ func LogHook(db prefixer.Prefixer, hub Hub, parentDocType, documentID string) lo
 }
 
 func (r *logHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.DebugLevel,
-		logrus.InfoLevel,
-		logrus.WarnLevel,
-		logrus.ErrorLevel,
-		logrus.FatalLevel,
-		logrus.PanicLevel,
-	}
+	return logrus.AllLevels
 }
 
 func (r *logHook) Fire(entry *logrus.Entry) error {
