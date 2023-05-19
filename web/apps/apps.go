@@ -107,10 +107,13 @@ func getHandler(appType consts.AppType) echo.HandlerFunc {
 		if err := middlewares.Allow(c, permission.GET, man); err != nil {
 			return err
 		}
+
+		registries := instance.Registries()
+		copier := app.Copier(man.AppType(), instance)
+		man = app.DoLazyUpdate(instance, man, copier, registries)
+
 		if appType == consts.WebappType {
-			registries := instance.Registries()
-			copier := app.Copier(consts.WebappType, instance)
-			man = app.DoLazyUpdate(instance, man, copier, registries)
+			// TODO: Check is this line is really necessary
 			man.(*app.WebappManifest).Instance = instance
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
