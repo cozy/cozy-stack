@@ -10,6 +10,8 @@ import (
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
-func syslogHook() (logrus.Hook, error) {
+// SyslogHook return a [logrus.Hook] sending all the logs to
+// a local syslog server via a socket.
+func SyslogHook() (logrus.Hook, error) {
 	return logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	stdlog "log"
 	"net"
 	"net/http"
@@ -122,7 +123,6 @@ type Config struct {
 	Move           Move
 	Notifications  Notifications
 	Flagship       Flagship
-	Logger         logger.Options
 
 	Lock                lock.Getter
 	Limiter             *limits.RateLimiter
@@ -821,11 +821,6 @@ func UseViper(v *viper.Viper) error {
 		OauthStateStorage: oauthStateRedis,
 		Realtime:          realtimeRedis,
 		CacheStorage:      cacheStorage,
-		Logger: logger.Options{
-			Level:  v.GetString("log.level"),
-			Syslog: v.GetBool("log.syslog"),
-			Redis:  loggerRedis.Client(),
-		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
 			Port:                      v.GetInt("mail.port"),
@@ -861,7 +856,23 @@ func UseViper(v *viper.Viper) error {
 		config.RemoteAllowCustomPort = true
 	}
 
-	if err = logger.Init(config.Logger); err != nil {
+	loggerOpts := logger.Options{
+		Level: v.GetString("log.level"),
+		Redis: loggerRedis.Client(),
+	}
+
+	if v.GetBool("log.syslog") {
+		syslogHook, err := logger.SyslogHook()
+		if err != nil {
+			return fmt.Errorf("failed to setup the syslog hook: %w", err)
+		}
+
+		// Redirect all the logs to the syslog hook and don't log to STDIO
+		loggerOpts.Hooks = append(loggerOpts.Hooks, syslogHook)
+		loggerOpts.Output = io.Discard
+	}
+
+	if err = logger.Init(loggerOpts); err != nil {
 		return err
 	}
 
