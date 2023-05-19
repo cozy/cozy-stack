@@ -530,6 +530,8 @@ Content-Type: application/vnd.api+json
 
 ### GET /apps/:slug
 
+This route is used to retrieve informations about an application installed on the cozy. By calling this route, the application will be updated synchronously.
+
 #### Request
 
 ```http
