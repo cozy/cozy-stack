@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -125,4 +126,12 @@ func TestFindIntent(t *testing.T) {
 	}
 	found = man.FindIntent("PICK", "io.cozy.files")
 	assert.Nil(t, found)
+}
+
+func Test_GetBySlug(t *testing.T) {
+	t.Run("with an invalid appType", func(t *testing.T) {
+		man, err := GetBySlug(nil, "some-slug", consts.AppType(0))
+		assert.Nil(t, man)
+		assert.ErrorIs(t, err, ErrInvalidAppType)
+	})
 }
