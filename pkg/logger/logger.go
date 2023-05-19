@@ -27,7 +27,8 @@ var domains = new(sync.Map)
 
 // Options contains the configuration values of the logger system
 type Options struct {
-	Syslog bool
+	Hooks  []logrus.Hook
+	Output io.Writer
 	Level  string
 	Redis  redis.UniversalClient
 }
@@ -44,17 +45,11 @@ func Init(opt Options) error {
 	}
 
 	// Setup the global logger in case of someone call the global functions.
-	err = setupLogger(logrus.StandardLogger(), logLevel, opt)
-	if err != nil {
-		return fmt.Errorf("failed to setup the global logger: %w", err)
-	}
+	setupLogger(logrus.StandardLogger(), logLevel, opt)
 
 	// Setup the debug logger used for the the domains in debug mode.
 	debugLogger = logrus.New()
-	err = setupLogger(debugLogger, logrus.DebugLevel, opt)
-	if err != nil {
-		return fmt.Errorf("failed to setup the debug logger: %w", err)
-	}
+	setupLogger(debugLogger, logrus.DebugLevel, opt)
 
 	if cli := opt.Redis; cli != nil {
 		ctx := context.Background()
@@ -169,9 +164,10 @@ func (e *Entry) Log(level logrus.Level, msg string) {
 			// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
 			// to debug
 			debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
+			return
 
 		case ok && now.After(expiration.(time.Time)):
-			// The domain is listed in the debu domains but the ttl is no more valid, remove
+			// The domain is listed in the debug domains but the ttl is no more valid, remove
 			// it from the list and do nothing to the log.
 			err := RemoveDebugDomain(domain.(string))
 			if err != nil {
@@ -296,23 +292,25 @@ func (e *Entry) IsDebug() bool {
 	return e.entry.Logger.Level == logrus.DebugLevel
 }
 
-func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) error {
+func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
 	logger.SetLevel(lvl)
 
-	if opt.Syslog {
-		hook, err := syslogHook()
-		if err != nil {
-			return err
-		}
+	if opt.Output != nil {
+		logger.SetOutput(opt.Output)
+	}
 
+	// We need to reset the hooks to avoid the accumulation of hooks for
+	// the global loggers in case of several calls to `Init`.
+	//
+	// This is the case for `logrus.StandardLogger()` and the tests for example.
+	logger.Hooks = logrus.LevelHooks{}
+
+	for _, hook := range opt.Hooks {
 		logger.AddHook(hook)
-		logger.SetOutput(io.Discard)
 	}
 
 	if build.IsDevRelease() && lvl == logrus.DebugLevel {
 		formatter := logger.Formatter.(*logrus.TextFormatter)
 		formatter.TimestampFormat = time.RFC3339Nano
 	}
-
-	return nil
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func syslogHook() (logrus.Hook, error) {
+// SyslogHook return a [logrus.Hook] sending all the logs to
+// a local syslog server via a socket.
+func SyslogHook() (logrus.Hook, error) {
 	return nil, errors.New("Syslog is not available on Windows")
 }
