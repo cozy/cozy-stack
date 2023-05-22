@@ -17,7 +17,6 @@ func TestInitialsPNG(t *testing.T) {
 
 	client, err := NewPNGInitials("convert")
 	require.NoError(t, err)
-	defer os.RemoveAll(client.tempDir)
 
 	ctx := context.Background()
 

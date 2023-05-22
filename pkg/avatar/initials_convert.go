@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -30,18 +29,15 @@ func NewPNGInitials(cmd string) (*PNGInitials, error) {
 		return nil, ErrInvalidCmd
 	}
 
-	initials := &PNGInitials{
-		tempDir: "",
-		env:     []string{},
-		cmd:     cmd,
-	}
-
-	err := initials.changeTempDir()
+	tempDir, err := os.MkdirTemp("", "magick")
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup the tempdir: %w", err)
+		return nil, fmt.Errorf("failed to create the tempdir: %w", err)
 	}
 
-	return initials, nil
+	envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+	env := []string{envTempDir}
+
+	return &PNGInitials{tempDir, env, cmd}, nil
 }
 
 // ContentType return the generated avatar content-type.
@@ -89,37 +85,4 @@ func (a *PNGInitials) Generate(ctx context.Context, initials, color string) ([]b
 		return nil, fmt.Errorf("failed to run the cmd %q: %w", a.cmd, err)
 	}
 	return stdout.Bytes(), nil
-}
-
-// RunCleanJob will start a job used to replace the temporary
-// folder by a new one and removing the old one.
-func (a *PNGInitials) RunCleanJob() error {
-	for {
-		time.Sleep(time.Hour)
-
-		oldPath := a.tempDir
-
-		err := a.changeTempDir()
-		if err != nil {
-			logger.WithNamespace("initials").Errorf("failed to update the tempdir: %s", err)
-			continue
-		}
-
-		err = os.RemoveAll(oldPath)
-		if err != nil {
-			logger.WithNamespace("initials").Errorf("failed to remove the old tempdir: %s", err)
-		}
-	}
-}
-
-func (a *PNGInitials) changeTempDir() error {
-	tempDir, err := os.MkdirTemp("", "magick")
-	if err != nil {
-		return err
-	}
-
-	a.tempDir = tempDir
-	a.env = []string{fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)}
-
-	return nil
 }
