@@ -162,14 +162,13 @@ func EndInitial(c echo.Context) error {
 
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
-	group := router.Group("", checkSharingPermissions)
-	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingWritePermissions)
-	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingWritePermissions)
-	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingReadPermissions)
-	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingWritePermissions)
-	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingWritePermissions)
-	group.POST("/:sharing-id/reupload", ReuploadHandler, checkSharingReadPermissions)
-	group.DELETE("/:sharing-id/initial", EndInitial, checkSharingWritePermissions)
+	router.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingPermissions, checkSharingWritePermissions)
+	router.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingPermissions, checkSharingWritePermissions)
+	router.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingPermissions, checkSharingReadPermissions)
+	router.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingPermissions, checkSharingWritePermissions)
+	router.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingPermissions, checkSharingWritePermissions)
+	router.POST("/:sharing-id/reupload", ReuploadHandler, checkSharingPermissions, checkSharingReadPermissions)
+	router.DELETE("/:sharing-id/initial", EndInitial, checkSharingPermissions, checkSharingWritePermissions)
 }
 
 func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {

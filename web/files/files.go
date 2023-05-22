@@ -1838,9 +1838,9 @@ func Routes(router *echo.Group) {
 
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
-	router.PATCH("/", ModifyMetadataByIDInBatchHandler)
+	router.PATCH("", ModifyMetadataByIDInBatchHandler)
 
-	router.POST("/", CreationHandler)
+	router.POST("", CreationHandler)
 	router.POST("/:file-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 	router.POST("/upload/metadata", UploadMetadataHandler)

@@ -22,6 +22,4 @@ func Compat(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", Compat)
 	router.HEAD("", Compat)
-	router.GET("/", Compat)
-	router.HEAD("/", Compat)
 }

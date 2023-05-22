@@ -125,7 +125,7 @@ func TestAuth(t *testing.T) {
 	t.Run("HomeWhenNotLoggedIn", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		e.GET("/").
+		e.GET("").
 			WithHost(domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(303).
@@ -135,7 +135,7 @@ func TestAuth(t *testing.T) {
 	t.Run("HomeWhenNotLoggedInWithJWT", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		e.GET("/").WithQuery("jwt", "foobar").
+		e.GET("").WithQuery("jwt", "foobar").
 			WithHost(domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(303).
@@ -320,7 +320,7 @@ func TestAuth(t *testing.T) {
 	t.Run("HomeWhenLoggedIn", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		e.GET("/").
+		e.GET("").
 			WithHost(domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			WithCookie(session.CookieName(testInstance), sessionID).
@@ -1896,7 +1896,7 @@ func TestAuth(t *testing.T) {
 		require.False(t, inst.OnboardingFinished)
 
 		// Should redirect to /auth/passphrase
-		e.GET("/").
+		e.GET("").
 			WithQuery("registerToken", hex.EncodeToString(inst.RegisterToken)).
 			WithHost(inst.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -1914,7 +1914,7 @@ func TestAuth(t *testing.T) {
 
 		inst.OnboardingFinished = true
 
-		e.GET("/").
+		e.GET("").
 			WithQuery("registerToken", hex.EncodeToString(inst.RegisterToken)).
 			WithHost(domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).

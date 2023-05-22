@@ -334,6 +334,6 @@ func Notify(c echo.Context) error {
 
 // Routes set the routing for the realtime service
 func Routes(router *echo.Group) {
-	router.GET("/", Ws)
+	router.GET("", Ws)
 	router.POST("/:doctype/:id", Notify)
 }

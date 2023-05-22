@@ -716,7 +716,7 @@ func localAvatar(c echo.Context, m sharing.Member) error {
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	// Create a sharing
-	router.POST("/", CreateSharing)        // On the sharer
+	router.POST("", CreateSharing)         // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)

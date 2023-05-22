@@ -116,6 +116,7 @@ func checkExists(filepath string) error {
 // them.
 func ListenAndServe() (*Servers, error) {
 	e := echo.New()
+	e.Pre(middleware.RemoveTrailingSlash())
 	e.HideBanner = true
 	e.HidePort = true
 
@@ -138,6 +139,7 @@ func ListenAndServe() (*Servers, error) {
 	}
 
 	admin := echo.New()
+	e.Pre(middleware.RemoveTrailingSlash())
 	admin.HideBanner = true
 	admin.HidePort = true
 
