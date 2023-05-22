@@ -36,3 +36,20 @@ func initDebugger(client redis.UniversalClient) error {
 
 	return nil
 }
+
+// AddDebugDomain adds the specified domain to the debug list.
+func AddDebugDomain(domain string, ttl time.Duration) error {
+	return debugger.AddDomain(domain, ttl)
+}
+
+// RemoveDebugDomain removes the specified domain from the debug list.
+func RemoveDebugDomain(domain string) error {
+	return debugger.RemoveDomain(domain)
+}
+
+// DebugExpiration returns the expiration date for the debug mode for the
+// instance logger of the given domain (or nil if the debug mode is not
+// activated).
+func DebugExpiration(domain string) *time.Time {
+	return debugger.ExpiresAt(domain)
+}

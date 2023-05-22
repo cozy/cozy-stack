@@ -1,11 +1,8 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"strings"
-	"sync"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -13,11 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var opts Options
-
 var debugLogger *logrus.Logger
-
-var domains = new(sync.Map)
 
 // Options contains the configuration values of the logger system
 type Options struct {
@@ -45,32 +38,10 @@ func Init(opt Options) error {
 	debugLogger = logrus.New()
 	setupLogger(debugLogger, logrus.DebugLevel, opt)
 
-	if cli := opt.Redis; cli != nil {
-		ctx := context.Background()
-		go subscribeLoggersDebug(ctx, cli)
-		go loadDebug(ctx, cli)
+	err = initDebugger(opt.Redis)
+	if err != nil {
+		return err
 	}
-	opts = opt
-	return nil
-}
-
-// AddDebugDomain adds the specified domain to the debug list.
-func AddDebugDomain(domain string, ttl time.Duration) error {
-	if cli := opts.Redis; cli != nil {
-		ctx := context.Background()
-		return publishDebug(ctx, cli, debugRedisAddChannel, domain, ttl)
-	}
-	addDebugDomain(domain, ttl)
-	return nil
-}
-
-// RemoveDebugDomain removes the specified domain from the debug list.
-func RemoveDebugDomain(domain string) error {
-	if cli := opts.Redis; cli != nil {
-		ctx := context.Background()
-		return publishDebug(ctx, cli, debugRedisRmvChannel, domain, 0)
-	}
-	removeDebugDomain(domain)
 	return nil
 }
 
@@ -149,28 +120,11 @@ func (e *Entry) Log(level logrus.Level, msg string) {
 
 	domain, haveDomain := e.entry.Data["domain"]
 
-	if haveDomain && level == logrus.DebugLevel {
-		now := time.Now()
-		expiration, ok := domains.Load(domain)
-
-		switch {
-		case ok && now.Before(expiration.(time.Time)):
-			// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
-			// to debug
-			debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
-			return
-
-		case ok && now.After(expiration.(time.Time)):
-			// The domain is listed in the debug domains but the ttl is no more valid, remove
-			// it from the list and do nothing to the log.
-			err := RemoveDebugDomain(domain.(string))
-			if err != nil {
-				e.entry.Logger.Errorf("failed to remove debug domain %q: %s", domain, err)
-			}
-
-		default:
-			// Log with the default logger
-		}
+	if haveDomain && level == logrus.DebugLevel && debugger.ExpiresAt(domain.(string)) != nil {
+		// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
+		// to debug
+		debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
+		return
 	}
 
 	e.entry.Log(level, msg)
@@ -210,75 +164,6 @@ func (e *Entry) Errorf(format string, args ...interface{}) {
 
 func (e *Entry) Writer() *io.PipeWriter {
 	return e.entry.Writer()
-}
-
-func addDebugDomain(domain string, ttl time.Duration) {
-	domains.Store(domain, time.Now().Add(ttl))
-}
-
-func removeDebugDomain(domain string) {
-	domains.Delete(domain)
-}
-
-func subscribeLoggersDebug(ctx context.Context, cli redis.UniversalClient) {
-	sub := cli.Subscribe(ctx, debugRedisAddChannel, debugRedisRmvChannel)
-	for msg := range sub.Channel() {
-		parts := strings.Split(msg.Payload, "/")
-		domain := parts[0]
-		switch msg.Channel {
-		case debugRedisAddChannel:
-			var ttl time.Duration
-			if len(parts) >= 2 {
-				ttl, _ = time.ParseDuration(parts[1])
-			}
-			addDebugDomain(domain, ttl)
-		case debugRedisRmvChannel:
-			removeDebugDomain(domain)
-		}
-	}
-}
-
-func loadDebug(ctx context.Context, cli redis.UniversalClient) {
-	keys, err := cli.Keys(ctx, debugRedisPrefix+"*").Result()
-	if err != nil {
-		return
-	}
-	for _, key := range keys {
-		ttl, err := cli.TTL(ctx, key).Result()
-		if err != nil {
-			continue
-		}
-		domain := strings.TrimPrefix(key, debugRedisPrefix)
-		addDebugDomain(domain, ttl)
-	}
-}
-
-func publishDebug(ctx context.Context, cli redis.UniversalClient, channel, domain string, ttl time.Duration) error {
-	err := cli.Publish(ctx, channel, domain+"/"+ttl.String()).Err()
-	if err != nil {
-		return err
-	}
-	key := debugRedisPrefix + domain
-	if channel == debugRedisAddChannel {
-		err = cli.Set(ctx, key, 0, ttl).Err()
-	} else {
-		err = cli.Del(ctx, key).Err()
-	}
-	return err
-}
-
-// DebugExpiration returns the expiration date for the debug mode for the
-// instance logger of the given domain (or nil if the debug mode is not
-// activated).
-func DebugExpiration(domain string) *time.Time {
-	res, ok := domains.Load(domain)
-	if !ok {
-		return nil
-	}
-
-	t := res.(time.Time)
-
-	return &t
 }
 
 // IsDebug returns whether or not the debug mode is activated.

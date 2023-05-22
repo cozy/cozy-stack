@@ -32,7 +32,6 @@ func TestLogger_RedisDebugger(t *testing.T) {
 
 		expirationDate := dbg.ExpiresAt(domain)
 		assert.NotNil(t, expirationDate)
-
 	})
 
 	t.Run("a new domain is propagated across instances", func(t *testing.T) {
