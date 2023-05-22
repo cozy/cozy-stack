@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -24,7 +25,10 @@ var (
 	errCannotDecrypt = errors.New("accounts: cannot decrypt credentials")
 	errCannotEncrypt = errors.New("accounts: cannot encrypt credentials")
 	// ErrBadCredentials is used when an account credentials cannot be decrypted
-	ErrBadCredentials = errors.New("accounts: bad credentials")
+	ErrBadCredentials     = errors.New("accounts: bad credentials")
+	ErrKeyringUnavailable = errors.New("keyring unavailable")
+	ErrExpectedObjet      = errors.New("invalid field format: expected an object")
+	ErrExpectedString     = errors.New("invalid field format: expected a string")
 )
 
 // EncryptCredentialsWithKey takes a login / password and encrypts their values using
@@ -218,11 +222,12 @@ func DecryptBufferWithKey(decryptorKey *keyring.NACLKey, encryptedBuffer []byte)
 
 // Encrypts sensitive fields inside the account. The document
 // is modified in place.
-func Encrypt(doc couchdb.JSONDoc) bool {
-	if config.GetKeyring().CredentialsEncryptorKey() != nil {
-		return encryptMap(doc.M)
+func Encrypt(doc couchdb.JSONDoc) error {
+	if config.GetKeyring().CredentialsEncryptorKey() == nil {
+		return ErrKeyringUnavailable
 	}
-	return false
+
+	return encryptMap(doc.M)
 }
 
 // Decrypts sensitive fields inside the account. The document
@@ -234,28 +239,34 @@ func Decrypt(doc couchdb.JSONDoc) bool {
 	return false
 }
 
-func encryptMap(m map[string]interface{}) (encrypted bool) {
+func encryptMap(m map[string]interface{}) error {
+	var err error
+	var encKeys []string
+
 	auth, ok := m["auth"].(map[string]interface{})
 	if !ok {
-		return
+		return fmt.Errorf("invalid field \"auth\": %w", ErrExpectedObjet)
 	}
-	login, _ := auth["login"].(string)
+
 	cloned := make(map[string]interface{}, len(auth))
-	var encKeys []string
 	for k, v := range auth {
-		var err error
 		switch k {
 		case "password":
-			password, _ := v.(string)
-			cloned["credentials_encrypted"], err = EncryptCredentials(login, password)
-			if err == nil {
-				encrypted = true
+			login, ok := auth["login"].(string)
+			if !ok {
+				return fmt.Errorf("invalid field \"login\": %w", ErrExpectedString)
 			}
+
+			password, ok := v.(string)
+			if !ok {
+				return fmt.Errorf("invalid field \"password\": %w", ErrExpectedString)
+			}
+
+			cloned["credentials_encrypted"], err = EncryptCredentials(login, password)
+
 		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret", "session":
 			cloned[k+"_encrypted"], err = EncryptCredentialsData(v)
-			if err == nil {
-				encrypted = true
-			}
+
 		default:
 			if strings.HasSuffix(k, "_encrypted") {
 				encKeys = append(encKeys, k)
@@ -263,19 +274,34 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 				cloned[k] = v
 			}
 		}
+
+		if err != nil {
+			return fmt.Errorf("failed to encrypt field %q: %w", k, err)
+		}
 	}
+
+	// Override the new version with the already encrypted fields.
 	for _, key := range encKeys {
 		if _, ok := cloned[key]; !ok {
 			cloned[key] = auth[key]
 		}
 	}
+
 	m["auth"] = cloned
-	if data, ok := m["data"].(map[string]interface{}); ok {
-		if encryptMap(data) && !encrypted {
-			encrypted = true
+
+	if m["data"] != nil {
+		data, ok := m["data"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid field \"data\": %w", ErrExpectedObjet)
+		}
+
+		err = encryptMap(data)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt the \"data\" field content: %w", err)
 		}
 	}
-	return
+
+	return nil
 }
 
 func decryptMap(m map[string]interface{}) (decrypted bool) {

@@ -17,6 +17,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDecryptPreviouslyEncryptedField(t *testing.T) {
+	// This test ensure us that futur changes don't break the current format.
+	config.UseTestFile()
+
+	encrypted := "bmFjbM8JkLhGm9Op3b6VWzc2u5FxYsjiJn3xlFDQxKWrFSTyEODustNyiao1ZNVZG62PhKlyNGxIdinJB2ReiJj+FaJkvDXPKy3qd4A="
+
+	login, password, err := DecryptCredentials(encrypted)
+	require.NoError(t, err)
+
+	assert.Equal(t, "me@mycozy.cloud", login)
+	assert.Equal(t, "fzEE6HFWsSp8jP", password)
+}
+
 func TestEncryptDecrytCredentials(t *testing.T) {
 	config.UseTestFile()
 
@@ -244,7 +257,7 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 }
 `)
 
-	var encrypted, decrypted bool
+	var decrypted bool
 	var m1 map[string]interface{} // original
 	var m2 map[string]interface{} // encrypted
 	var m3 map[string]interface{} // decrypted
@@ -252,8 +265,8 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(v, &m2))
 	assert.NoError(t, json.Unmarshal(v, &m3))
 
-	encrypted = encryptMap(m2)
-	assert.True(t, encrypted)
+	err := encryptMap(m2)
+	require.NoError(t, err)
 
 	{
 		auth1 := m2["auth"].(map[string]interface{})
@@ -272,9 +285,10 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 		}
 	}
 
-	encrypted = encryptMap(m3)
+	err = encryptMap(m3)
+	require.NoError(t, err)
+
 	decrypted = decryptMap(m3)
-	assert.True(t, encrypted)
 	assert.True(t, decrypted)
 	assert.EqualValues(t, m1, m3)
 
