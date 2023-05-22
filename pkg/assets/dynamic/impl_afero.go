@@ -85,7 +85,7 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 			}
 			if !info.IsDir() {
 				assetName := strings.Replace(path, ctxName, "", 1)
-				asset, err := GetAsset(ctxName, assetName)
+				asset, err := getAsset(a, ctxName, assetName)
 				if err != nil {
 					return err
 				}
