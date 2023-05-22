@@ -72,17 +72,20 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
-	entries, err := os.ReadDir("/")
+	entries, err := afero.ReadDir(a.fs, "/")
 	if err != nil {
 		return nil, err
 	}
 	for _, context := range entries {
 		ctxName := context.Name()
 
-		err := filepath.Walk(ctxName, func(path string, info os.FileInfo, err error) error {
+		err := afero.Walk(a.fs, ctxName, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 			if !info.IsDir() {
 				assetName := strings.Replace(path, ctxName, "", 1)
-				asset, err := GetAsset(ctxName, assetName)
+				asset, err := getAsset(a, ctxName, assetName)
 				if err != nil {
 					return err
 				}
