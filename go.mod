@@ -50,7 +50,7 @@ require (
 	golang.org/x/image v0.6.0
 	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.6.0
-	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.2.0
 	golang.org/x/text v0.9.0
 )
 
