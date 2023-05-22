@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -21,6 +22,7 @@ type PNGInitials struct {
 	tempDir string
 	env     []string
 	cmd     string
+	dirLock *sync.RWMutex
 }
 
 // NewPNGInitials instantiate a new [PNGInitials].
@@ -36,8 +38,9 @@ func NewPNGInitials(cmd string) (*PNGInitials, error) {
 
 	envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
 	env := []string{envTempDir}
+	lock := new(sync.RWMutex)
 
-	return &PNGInitials{tempDir, env, cmd}, nil
+	return &PNGInitials{tempDir, env, cmd, lock}, nil
 }
 
 // ContentType return the generated avatar content-type.
@@ -47,6 +50,9 @@ func (a *PNGInitials) ContentType() string {
 
 // Generate will create a new avatar with the given initials and color.
 func (a *PNGInitials) Generate(ctx context.Context, initials, color string) ([]byte, error) {
+	a.dirLock.RLock()
+	defer a.dirLock.RUnlock()
+
 	// convert -size 128x128 null: -fill blue -draw 'circle 64,64 0,64' -fill white -font Lato-Regular
 	// -pointsize 64 -gravity center -annotate "+0,+0" "AM" foo.png
 	args := []string{
@@ -85,4 +91,11 @@ func (a *PNGInitials) Generate(ctx context.Context, initials, color string) ([]b
 		return nil, fmt.Errorf("failed to run the cmd %q: %w", a.cmd, err)
 	}
 	return stdout.Bytes(), nil
+}
+
+func (a *PNGInitials) Shutdown(ctx context.Context) error {
+	a.dirLock.Lock()
+	defer a.dirLock.Unlock()
+
+	return os.RemoveAll(a.tempDir)
 }
