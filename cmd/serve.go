@@ -104,7 +104,7 @@ example), you can use the --appdir flag like this:
 			return err
 		}
 
-		group := utils.NewGroupShutdown(servers, processes)
+		group := utils.NewGroupShutdown(servers, processes, config.Avatars())
 
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, os.Interrupt)
