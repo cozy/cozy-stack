@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/cozy/cozy-stack/pkg/cache"
+	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 // Options can be used to give options for the generated image
@@ -27,6 +28,7 @@ type Initials interface {
 	// Generate will create a new avatar with the given initials and color.
 	Generate(ctx context.Context, initials, color string) ([]byte, error)
 	ContentType() string
+	utils.Shutdowner
 }
 
 // Service handle all the interactions with the initials images.
@@ -45,8 +47,6 @@ func NewService(cache cache.Cache, cmd string) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the PNG initials implem: %w", err)
 	}
-
-	go initials.RunCleanJob()
 
 	return &Service{cache, initials}, nil
 }
@@ -73,6 +73,10 @@ func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, 
 	}
 	s.cache.Set(key, bytes, cacheTTL)
 	return bytes, s.initials.ContentType(), nil
+}
+
+func (s *Service) Shutdown(ctx context.Context) error {
+	return s.initials.Shutdown(ctx)
 }
 
 // See https://github.com/cozy/cozy-ui/blob/master/react/Avatar/index.jsx#L9-L26

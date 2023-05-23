@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
+	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -22,6 +22,7 @@ type PNGInitials struct {
 	tempDir string
 	env     []string
 	cmd     string
+	dirLock *sync.RWMutex
 }
 
 // NewPNGInitials instantiate a new [PNGInitials].
@@ -30,18 +31,16 @@ func NewPNGInitials(cmd string) (*PNGInitials, error) {
 		return nil, ErrInvalidCmd
 	}
 
-	initials := &PNGInitials{
-		tempDir: "",
-		env:     []string{},
-		cmd:     cmd,
-	}
-
-	err := initials.changeTempDir()
+	tempDir, err := os.MkdirTemp("", "magick")
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup the tempdir: %w", err)
+		return nil, fmt.Errorf("failed to create the tempdir: %w", err)
 	}
 
-	return initials, nil
+	envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+	env := []string{envTempDir}
+	lock := new(sync.RWMutex)
+
+	return &PNGInitials{tempDir, env, cmd, lock}, nil
 }
 
 // ContentType return the generated avatar content-type.
@@ -51,6 +50,9 @@ func (a *PNGInitials) ContentType() string {
 
 // Generate will create a new avatar with the given initials and color.
 func (a *PNGInitials) Generate(ctx context.Context, initials, color string) ([]byte, error) {
+	a.dirLock.RLock()
+	defer a.dirLock.RUnlock()
+
 	// convert -size 128x128 null: -fill blue -draw 'circle 64,64 0,64' -fill white -font Lato-Regular
 	// -pointsize 64 -gravity center -annotate "+0,+0" "AM" foo.png
 	args := []string{
@@ -91,35 +93,9 @@ func (a *PNGInitials) Generate(ctx context.Context, initials, color string) ([]b
 	return stdout.Bytes(), nil
 }
 
-// RunCleanJob will start a job used to replace the temporary
-// folder by a new one and removing the old one.
-func (a *PNGInitials) RunCleanJob() error {
-	for {
-		time.Sleep(time.Hour)
+func (a *PNGInitials) Shutdown(ctx context.Context) error {
+	a.dirLock.Lock()
+	defer a.dirLock.Unlock()
 
-		oldPath := a.tempDir
-
-		err := a.changeTempDir()
-		if err != nil {
-			logger.WithNamespace("initials").Errorf("failed to update the tempdir: %s", err)
-			continue
-		}
-
-		err = os.RemoveAll(oldPath)
-		if err != nil {
-			logger.WithNamespace("initials").Errorf("failed to remove the old tempdir: %s", err)
-		}
-	}
-}
-
-func (a *PNGInitials) changeTempDir() error {
-	tempDir, err := os.MkdirTemp("", "magick")
-	if err != nil {
-		return err
-	}
-
-	a.tempDir = tempDir
-	a.env = []string{fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)}
-
-	return nil
+	return os.RemoveAll(a.tempDir)
 }

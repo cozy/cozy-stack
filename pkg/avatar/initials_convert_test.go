@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitialsPNG(t *testing.T) {
+func Test_Initials_PNG(t *testing.T) {
 	if testing.Short() {
 		t.Skipf("this test require the \"convert\" binary, skip it due to the \"--short\" flag")
 	}
 
 	client, err := NewPNGInitials("convert")
 	require.NoError(t, err)
-	defer os.RemoveAll(client.tempDir)
+	defer client.Shutdown(context.Background())
 
 	ctx := context.Background()
 
