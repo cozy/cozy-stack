@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -50,6 +51,10 @@ const (
 // KonnectorArchiveName is the name of the archive created to store the
 // konnectors sources.
 const KonnectorArchiveName = "app.tar"
+
+var (
+	ErrInvalidAppType = errors.New("invalid app type")
+)
 
 // SubDomainer is an interface with a single method to build an URL from a slug
 type SubDomainer interface {
@@ -102,6 +107,8 @@ func GetBySlug(db prefixer.Prefixer, slug string, appType consts.AppType) (Manif
 		man, err = GetWebappBySlug(db, slug)
 	case consts.KonnectorType:
 		man, err = GetKonnectorBySlug(db, slug)
+	default:
+		return nil, fmt.Errorf("%s, %w", appType, ErrInvalidAppType)
 	}
 	if err != nil {
 		return nil, err

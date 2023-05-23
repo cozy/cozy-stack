@@ -662,10 +662,13 @@ func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, regi
 		return man
 	}
 	inst, err := NewInstaller(in, copier, &InstallerOptions{
-		Operation:  Update,
-		Manifest:   man,
-		Registries: registries,
-		SourceURL:  src.String(),
+		Operation:        Update,
+		Manifest:         man,
+		Registries:       registries,
+		SourceURL:        src.String(),
+		Type:             man.AppType(),
+		Slug:             man.Slug(),
+		PermissionsAcked: false,
 	})
 	if err != nil {
 		return man

@@ -279,6 +279,9 @@ Content-Type: application/vnd.api+json
 
 ### GET /konnectors/:slug
 
+This route is used to retrieve informations about a konnector installed on the cozy. By calling this route, the konnector will be updated synchronously.
+
+
 #### Request
 
 ```http
