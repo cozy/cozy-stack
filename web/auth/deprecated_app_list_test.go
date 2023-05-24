@@ -16,13 +16,15 @@ import (
 
 func Test_DeprecatedAppList(t *testing.T) {
 	t.Run("IsDeprecated", func(t *testing.T) {
-		list := NewDeprecatedAppList([]DeprecatedApp{
-			{
-				SoftwareID: "github.com/cozy/super-app",
-				Name:       "Super App",
-				StoreURLs: map[string]string{
-					"Android": "https://some-android/url",
-					"Iphone":  "https://some-IOS/url",
+		list := NewDeprecatedAppList(config.DeprecatedAppsCfg{
+			Apps: []config.DeprecatedApp{
+				{
+					SoftwareID: "github.com/cozy/super-app",
+					Name:       "Super App",
+					StoreURLs: map[string]string{
+						"Android": "https://some-android/url",
+						"Iphone":  "https://some-IOS/url",
+					},
 				},
 			},
 		})
@@ -67,13 +69,15 @@ func Test_DeprecatedAppList(t *testing.T) {
 			Locale:      "en",
 		}
 
-		list := NewDeprecatedAppList([]DeprecatedApp{
-			{
-				SoftwareID: "github.com/cozy/super-app",
-				Name:       "Super App",
-				StoreURLs: map[string]string{
-					"Android": "https://some-android/url",
-					"Iphone":  "https://some-IOS/url",
+		list := NewDeprecatedAppList(config.DeprecatedAppsCfg{
+			Apps: []config.DeprecatedApp{
+				{
+					SoftwareID: "github.com/cozy/super-app",
+					Name:       "Super App",
+					StoreURLs: map[string]string{
+						"Android": "https://some-android/url",
+						"Iphone":  "https://some-IOS/url",
+					},
 				},
 			},
 		})
@@ -89,5 +93,19 @@ func Test_DeprecatedAppList(t *testing.T) {
 			"OS":          "Android",
 			"StoreURL":    "https://some-android/url",
 		}, args)
+	})
+
+	t.Run("NewDeprecatedAppList with an empty object", func(t *testing.T) {
+		list := NewDeprecatedAppList(config.DeprecatedAppsCfg{})
+
+		assert.False(t, list.IsDeprecated(&oauth.Client{}))
+	})
+
+	t.Run("NewDeprecatedAppList with an nil Apps", func(t *testing.T) {
+		list := NewDeprecatedAppList(config.DeprecatedAppsCfg{
+			Apps: nil,
+		})
+
+		assert.False(t, list.IsDeprecated(&oauth.Client{}))
 	})
 }

@@ -1149,3 +1149,21 @@ msgstr "https://help.cozy.io/article/274-ie-11-not-supported"
 
 msgid "File copy Suffix"
 msgstr "copy"
+
+msgid "Install New App Title"
+msgstr "Install the new Cozy app!"
+
+msgid "Install App Unavailable"
+msgstr "This version of %s is not supported anymore."
+
+msgid "Install New Iphone App Description"
+msgstr "Please install the new Cozy application from the App Store to keep benefiting from all its features."
+
+msgid "Install New Android App Description"
+msgstr "Please install the new Cozy application from the Play Store to keep benefiting from all its features."
+
+msgid "Install New Generic App Description"
+msgstr "Please install the new Cozy application from your favorite store to keep benefiting from all its features."
+
+msgid "Install New App Store Btn"
+msgstr "Install"

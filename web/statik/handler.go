@@ -46,13 +46,13 @@ var (
 		"move_link.html",
 		"move_vault.html",
 		"need_onboarding.html",
+		"new_app_available.html",
 		"oidc_login.html",
 		"oidc_twofactor.html",
 		"passphrase_choose.html",
 		"passphrase_reset.html",
 		"sharing_discovery.html",
 		"twofactor.html",
-		"new_app_available.html",
 	}
 )
 

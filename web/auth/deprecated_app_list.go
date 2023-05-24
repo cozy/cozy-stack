@@ -3,33 +3,24 @@ package auth
 import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/mssola/user_agent"
 )
 
 const DefaultStoreURL = "https://cozy.io/fr/download/"
-const DefaultStoreName = "Your store"
-
-type DeprecatedApp struct {
-	// SoftwareID found inside the oauth client.
-	SoftwareID string
-	// Name as printed to the user.
-	Name string
-
-	StoreURLs map[string]string
-}
 
 // DeprecatedAppList lists and detects the deprecated apps.
 type DeprecatedAppList struct {
-	apps []DeprecatedApp
+	apps []config.DeprecatedApp
 }
 
 // NewDeprecatedAppList instantiates a new [DeprecatedAppList].
-func NewDeprecatedAppList(apps []DeprecatedApp) *DeprecatedAppList {
-	return &DeprecatedAppList{apps}
+func NewDeprecatedAppList(cfg config.DeprecatedAppsCfg) *DeprecatedAppList {
+	return &DeprecatedAppList{apps: cfg.Apps}
 }
 
-// IsDeprecated returns true if the givent client is marked as deprectated.
+// IsDeprecated returns true if the given client is marked as deprectated.
 func (d *DeprecatedAppList) IsDeprecated(client *oauth.Client) bool {
 	for _, app := range d.apps {
 		if client.SoftwareID == app.SoftwareID {
@@ -41,7 +32,7 @@ func (d *DeprecatedAppList) IsDeprecated(client *oauth.Client) bool {
 }
 
 func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Instance) map[string]interface{} {
-	var app DeprecatedApp
+	var app config.DeprecatedApp
 
 	for _, a := range d.apps {
 		if client.SoftwareID == a.SoftwareID {

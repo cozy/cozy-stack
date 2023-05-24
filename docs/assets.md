@@ -79,6 +79,7 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/templates/move_link.html?Link=https://jane.mycozy.cloud/&Illustration=no
 * http://cozy.localhost:8080/dev/templates/move_vault.html
 * http://cozy.localhost:8080/dev/templates/need_onboarding.html
+* http://cozy.localhost:8080/dev/templates/new_app_available.html
 * http://cozy.localhost:8080/dev/templates/oidc_login.html
 * http://cozy.localhost:8080/dev/templates/oidc_twofactor.html
 * http://cozy.localhost:8080/dev/templates/passphrase_choose.html
