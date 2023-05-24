@@ -104,7 +104,14 @@ func getDoc(c echo.Context) error {
 	}
 
 	if err := middlewares.Allow(c, permission.GET, &out); err != nil {
-		return err
+		// Allow to read the bitwarden settings document with only a permission
+		// bitwarden organizations doctype
+		if doctype == consts.Settings && docid == consts.BitwardenSettingsID {
+			err = middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	return c.JSON(http.StatusOK, out.ToMapWithType())
