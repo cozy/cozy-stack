@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -74,7 +75,7 @@ func Favicon(i *instance.Instance) template.HTML {
 		"Dev":         build.IsDevRelease(),
 	})
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to generate the favicon: %s", err))
 	}
 	return template.HTML(buf.String())
 }

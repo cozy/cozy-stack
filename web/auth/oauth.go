@@ -53,6 +53,27 @@ type authorizeParams struct {
 	webapp          *webappParams
 }
 
+type AuthorizeHTTPHandler struct {
+	deprecatedApps *DeprecatedAppList
+}
+
+// NewAuthorizeHandler instantiates a new [AuthHTTPHandler].
+func NewAuthorizeHandler(deprecatedAppsCfg config.DeprecatedAppsCfg) *AuthorizeHTTPHandler {
+	return &AuthorizeHTTPHandler{
+		deprecatedApps: NewDeprecatedAppList(deprecatedAppsCfg),
+	}
+}
+
+func (a *AuthorizeHTTPHandler) Register(router *echo.Group) {
+	router.GET("", a.authorizeForm)
+	router.POST("", a.authorize)
+	router.GET("/sharing", a.authorizeSharingForm)
+	router.POST("/sharing", a.authorizeSharing)
+	router.GET("/sharing/:sharing-id/cancel", a.cancelAuthorizeSharing)
+	router.GET("/move", a.authorizeMoveForm)
+	router.POST("/move", a.authorizeMove)
+}
+
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, renderError(c, http.StatusBadRequest, "Error No state parameter")
@@ -141,7 +162,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	return false, nil
 }
 
-func authorizeForm(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
 		instance:        instance,
@@ -177,6 +198,10 @@ func authorizeForm(c echo.Context) error {
 
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
+	}
+
+	if a.deprecatedApps.IsDeprecated(params.client) {
+		return c.Render(http.StatusOK, "new_app_available.html", a.deprecatedApps.RenderArgs(params.client, instance))
 	}
 
 	if !isLoggedIn {
@@ -299,7 +324,7 @@ func authorizeForm(c echo.Context) error {
 	})
 }
 
-func authorize(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorize(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
 		instance:        instance,
@@ -448,7 +473,7 @@ func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams)
 	return false, nil
 }
 
-func authorizeSharingForm(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeSharingParams{
 		instance:  instance,
@@ -511,7 +536,7 @@ func authorizeSharingForm(c echo.Context) error {
 	})
 }
 
-func authorizeSharing(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorizeSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeSharingParams{
 		instance:  instance,
@@ -554,7 +579,7 @@ func authorizeSharing(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
-func cancelAuthorizeSharing(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) cancelAuthorizeSharing(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 	}
@@ -572,7 +597,7 @@ func cancelAuthorizeSharing(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, previewURL)
 }
 
-func authorizeMoveForm(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorizeMoveForm(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	state := c.QueryParam("state")
 	if state == "" {
@@ -654,7 +679,7 @@ func authorizeMoveForm(c echo.Context) error {
 	})
 }
 
-func authorizeMove(c echo.Context) error {
+func (a *AuthorizeHTTPHandler) authorizeMove(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if inst.HasForcedOIDC() {
 		if !middlewares.IsLoggedIn(c) {

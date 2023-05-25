@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+  </head>
+  <body class="cirrus modal-open">
+    <div class="modal d-block theme-inverted" tabindex="-1" aria-modal="true" role="dialog">
+      <div class="modal-dialog modal-dialog-centered">
+        <main role="application" class="modal-content">
+          <div class="modal-icon">
+            <span class="icon icon-cozy"></span>
+          </div>
+          <div class="modal-body mt-4 mt-md-1 p-md-5">
+            <h1 class="h4 h2-md mt-3 mb-2 text-center">{{t "Install New App Title"}}</h1>
+            <p class="mb-4 text-center">
+              {{t "Install App Unavailable" .AppName}}<br/>
+              {{if (eq .OS "Iphone")}}
+              {{t "Install New Iphone App Description"}}
+              {{else if (eq .OS "Android")}}
+              {{t "Install New Android App Description"}}
+              {{else}}
+              {{t "Install New Generic App Description"}}
+              {{end}}
+            </p>
+            <a href="{{.StoreURL}}" class="btn btn-primary btn-md-lg w-100">
+              {{t "Install New App Store Btn"}}
+            </a>
+          </div>
+          <a href="{{.CloseURI}}" class="btn btn-icon position-absolute top-0 end-0 cancel" aria-label="Close">
+            <span class="icon icon-cross"></span>
+          </a>
+        </main>
+      </div>
+    </div>
+    <div class="modal-backdrop show"></div>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+  </body>
+</html>

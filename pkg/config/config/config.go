@@ -110,7 +110,8 @@ type Config struct {
 	GeoDB                 string
 	PasswordResetInterval time.Duration
 
-	RemoteAssets map[string]string
+	RemoteAssets   map[string]string
+	DeprecatedApps DeprecatedAppsCfg
 
 	Avatars        *avatar.Service
 	Fs             Fs
@@ -245,6 +246,24 @@ type SMS struct {
 	Provider string
 	URL      string
 	Token    string
+}
+
+// DeprecatedCfg describes the config used to setup [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList].
+//
+// XXX: Move this struct next to [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList]
+// once the circling dependency issue is fixed.
+type DeprecatedAppsCfg struct {
+	Apps []DeprecatedApp `mapstructure:"apps"`
+}
+
+// DeprecatedApp describes a list deprecated app and the links used to replace them.
+type DeprecatedApp struct {
+	// SoftwareID found inside the oauth client.
+	SoftwareID string `mapstructure:"software_id"`
+	// Name as printed to the user.
+	Name string `mapstructure:"name"`
+
+	StoreURLs map[string]string `mapstructure:"store_urls"`
 }
 
 // Worker contains the configuration fields for a specific worker type.
@@ -841,6 +860,11 @@ func UseViper(v *viper.Viper) error {
 
 		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
+	}
+
+	err = v.UnmarshalKey("deprecated_apps", &config.DeprecatedApps)
+	if err != nil {
+		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
 	}
 
 	// For compatibility

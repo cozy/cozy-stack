@@ -46,6 +46,7 @@ var (
 		"move_link.html",
 		"move_vault.html",
 		"need_onboarding.html",
+		"new_app_available.html",
 		"oidc_login.html",
 		"oidc_twofactor.html",
 		"passphrase_choose.html",

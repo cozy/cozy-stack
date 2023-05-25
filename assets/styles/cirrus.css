@@ -434,3 +434,6 @@ button.card-intent:hover {
 :not(.expanded) + .collapse {
   display: none;
 }
+.modal-icon .icon-cozy {
+  background: url(../icons/cozy-app-square.svg);
+}

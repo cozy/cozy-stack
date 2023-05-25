@@ -1265,3 +1265,21 @@ msgstr ""
 
 msgid "File copy Suffix"
 msgstr "copie"
+
+msgid "Install New App Title"
+msgstr "Installez la nouvelle app Cozy !"
+
+msgid "Install App Unavailable"
+msgstr "Cette version de %s n'est désormais plus prise en charge."
+
+msgid "Install New Iphone App Description"
+msgstr "Merci d'installer la nouvelle application Cozy depuis l'App Store pour continuer à profiter de toutes ses fonctionnalités."
+
+msgid "Install New Android App Description"
+msgstr "Merci d'installer la nouvelle application Cozy depuis le Play Store pour continuer à profiter de toutes ses fonctionnalités."
+
+msgid "Install New Generic App Description"
+msgstr "Merci d'installer la nouvelle application Cozy depuis votre store pour continuer à profiter de toutes ses fonctionnalités."
+
+msgid "Install New App Store Btn"
+msgstr "Installer"

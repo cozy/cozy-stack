@@ -609,14 +609,8 @@ func Routes(router *echo.Group) {
 	router.POST("/clients/:client-id/flagship", confirmFlagship)
 
 	// OAuth flow
-	authorizeGroup := router.Group("/authorize", noCSRF)
-	authorizeGroup.GET("", authorizeForm)
-	authorizeGroup.POST("", authorize)
-	authorizeGroup.GET("/sharing", authorizeSharingForm)
-	authorizeGroup.POST("/sharing", authorizeSharing)
-	authorizeGroup.GET("/sharing/:sharing-id/cancel", cancelAuthorizeSharing)
-	authorizeGroup.GET("/move", authorizeMoveForm)
-	authorizeGroup.POST("/move", authorizeMove)
+	authHandler := NewAuthorizeHandler(config.GetConfig().DeprecatedApps)
+	authHandler.Register(router.Group("/authorize", noCSRF))
 
 	router.POST("/access_token", accessToken)
 	router.POST("/secret_exchange", secretExchange)
