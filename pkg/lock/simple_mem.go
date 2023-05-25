@@ -24,7 +24,8 @@ func (i *InMemoryLockGetter) ReadWrite(_ prefixer.Prefixer, name string) ErrorRW
 // the lock in redis to avoid its automatic expiration.
 func (i *InMemoryLockGetter) LongOperation(db prefixer.Prefixer, name string) ErrorLocker {
 	return &longOperation{
-		lock: i.ReadWrite(db, name),
+		lock:    i.ReadWrite(db, name),
+		timeout: LockTimeout,
 	}
 }
 
