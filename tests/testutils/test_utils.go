@@ -7,8 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"path"
@@ -240,51 +238,6 @@ func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group)
 	c.t.Cleanup(ts.Close)
 	c.ts = ts
 	return ts
-}
-
-// CookieJar is a http.CookieJar which always returns all cookies.
-// NOTE golang stdlib uses cookies for the URL (ie the testserver),
-// not for the host (ie the instance), so we do it manually
-type CookieJar struct {
-	Jar *cookiejar.Jar
-	URL *url.URL
-}
-
-// Cookies implements http.CookieJar interface
-func (j *CookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.Jar.Cookies(j.URL)
-}
-
-// SetCookies implements http.CookieJar interface
-func (j *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.Jar.SetCookies(j.URL, cookies)
-}
-
-// Reset clears all the cookie
-func (j *CookieJar) Reset() error {
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return err
-	}
-	j.Jar = jar
-	return nil
-}
-
-// GetCookieJar returns a cookie jar valable for test
-// the jar discard the url passed to Cookies and SetCookies and always use
-// the setup instance URL instead.
-func (c *TestSetup) GetCookieJar() *CookieJar {
-	instance := c.GetTestInstance()
-	instanceURL, err := url.Parse("https://" + instance.Domain + "/auth")
-	require.NoError(c.t, err, "Cant create cookie jar url")
-
-	j, err := cookiejar.New(nil)
-	require.NoError(c.t, err, "Cant create cookie jar url")
-
-	return &CookieJar{
-		Jar: j,
-		URL: instanceURL,
-	}
 }
 
 func (c *TestSetup) InstallMiniApp() (string, error) {
