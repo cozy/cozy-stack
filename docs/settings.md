@@ -493,7 +493,8 @@ Cookie: sessionid=xxxx
             "email": "alice@example.com",
             "public_name": "Alice Martin",
             "auth_mode": "basic",
-            "default_redirection": "drive/#/folder"
+            "default_redirection": "drive/#/folder",
+            "context": "dev"
         }
     }
 }
