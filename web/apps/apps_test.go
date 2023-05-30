@@ -97,9 +97,6 @@ func TestApps(t *testing.T) {
 	})
 	t.Cleanup(ts.Close)
 
-	jar := setup.GetCookieJar()
-	client := &http.Client{Jar: jar}
-
 	// Login
 	cozysessID := testutils.CreateTestClient(t, ts.URL).POST("/login").
 		WithHost(testInstance.Domain).
@@ -337,13 +334,13 @@ func TestApps(t *testing.T) {
 	})
 
 	t.Run("DownloadApp", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/download", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Host = testInstance.Domain
-		res, err := client.Do(req)
-		require.NoError(t, err)
-		defer res.Body.Close()
-		require.Equal(t, 200, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		res := e.GET("/apps/mini/download").
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Raw()
 
 		mimeType, reader := filetype.FromReader(res.Body)
 		require.Equal(t, "application/gzip", mimeType)
@@ -365,13 +362,13 @@ func TestApps(t *testing.T) {
 	})
 
 	t.Run("DownloadKonnectorVersion", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", ts.URL+"/konnectors/mini/download/1.0.0", nil)
-		req.Header.Add("Authorization", "Bearer "+token)
-		req.Host = testInstance.Domain
-		res, err := client.Do(req)
-		require.NoError(t, err)
-		defer res.Body.Close()
-		require.Equal(t, 200, res.StatusCode)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		res := e.GET("/konnectors/mini/download/1.0.0").
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			Raw()
 
 		mimeType, reader := filetype.FromReader(res.Body)
 		require.Equal(t, "application/gzip", mimeType)
