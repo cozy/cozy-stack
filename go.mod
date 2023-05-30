@@ -43,7 +43,7 @@ require (
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	github.com/ugorji/go/codec v1.2.11
 	github.com/yuin/goldmark v1.5.4
 	golang.org/x/crypto v0.9.0
