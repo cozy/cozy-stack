@@ -521,10 +521,12 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrash
 		inst.Logger().WithNamespace("sharing").
 			Warnf("RevokeRecipientBySelf failed to remove shared refs (%s)': %s", s.ID(), err)
 	}
-	if !sharingDirTrashed && s.FirstFilesRule() != nil {
-		if err := s.RemoveSharingDir(inst); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
+	if !sharingDirTrashed {
+		if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
+			if err := s.RemoveSharingDir(inst); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("RevokeRecipientBySelf failed to delete dir %s: %s", s.ID(), err)
+			}
 		}
 	}
 	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
@@ -606,7 +608,7 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
 	}
-	if s.FirstFilesRule() != nil {
+	if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
 		if err := s.RemoveSharingDir(inst); err != nil {
 			return err
 		}
