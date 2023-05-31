@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/app"
@@ -52,17 +51,13 @@ func listMaintenance(c echo.Context) error {
 		if !ok {
 			registries = contexts[config.DefaultInstanceContext]
 		}
-		apps, err := registry.ProxyMaintenance(registries)
+		apps, err := registry.ListMaintenance(registries)
 		if err != nil {
 			return err
 		}
 		for _, app := range apps {
-			var doc couchdb.JSONDoc
-			if err := json.Unmarshal(app, &doc); err != nil {
-				return err
-			}
-			doc.M["level"] = "registry"
-			objs = append(objs, &apiMaintenance{doc})
+			app.M["level"] = "registry"
+			objs = append(objs, &apiMaintenance{app})
 		}
 	}
 

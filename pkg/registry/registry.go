@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/httpcache"
 	"github.com/labstack/echo/v4"
@@ -158,11 +159,31 @@ func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.
 	return resp, nil
 }
 
-// ProxyMaintenance will proxy the given request to the registries to fetch all
-// the apps in maintenance.
-func ProxyMaintenance(registries []*url.URL) ([]json.RawMessage, error) {
-	apps := make([]json.RawMessage, 0)
-	for _, r := range registries {
+// ListMaintenance will proxy the given request to the registries to fetch all
+// the apps in maintenance. It takes care to ignore maintenance for apps
+// present in another registry space with higher priority.
+func ListMaintenance(registries []*url.URL) ([]couchdb.JSONDoc, error) {
+	var maskedSlugs map[string]struct{}
+	apps := make([]couchdb.JSONDoc, 0)
+	for i, r := range registries {
+		if i != 0 {
+			prev := registries[i-1]
+			ref := &url.URL{Path: "/registry/slugs"}
+			resp, ok, err := fetch(maintenanceClient, prev, ref, WithCache)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				var slugs []string
+				if err = json.NewDecoder(resp.Body).Decode(&slugs); err != nil {
+					return nil, err
+				}
+				for _, slug := range slugs {
+					maskedSlugs[slug] = struct{}{}
+				}
+			}
+		}
+
 		ref := &url.URL{Path: "/registry/maintenance"}
 		resp, ok, err := fetch(maintenanceClient, r, ref, WithCache)
 		if err != nil {
@@ -171,11 +192,16 @@ func ProxyMaintenance(registries []*url.URL) ([]json.RawMessage, error) {
 		if !ok {
 			continue
 		}
-		var docs []json.RawMessage
+		var docs []couchdb.JSONDoc
 		if err = json.NewDecoder(resp.Body).Decode(&docs); err != nil {
 			return nil, err
 		}
-		apps = append(apps, docs...)
+		for _, doc := range docs {
+			slug, _ := doc.M["slug"].(string)
+			if _, masked := maskedSlugs[slug]; !masked {
+				apps = append(apps, doc)
+			}
+		}
 	}
 	return apps, nil
 }

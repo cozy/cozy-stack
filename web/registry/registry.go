@@ -137,7 +137,7 @@ func proxyMaintenanceReq(c echo.Context) error {
 	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeOauth {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	apps, err := registry.ProxyMaintenance(i.Registries())
+	apps, err := registry.ListMaintenance(i.Registries())
 	if err != nil {
 		return err
 	}
