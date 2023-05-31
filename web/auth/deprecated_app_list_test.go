@@ -22,8 +22,8 @@ func Test_DeprecatedAppList(t *testing.T) {
 					SoftwareID: "github.com/cozy/super-app",
 					Name:       "Super App",
 					StoreURLs: map[string]string{
-						"Android": "https://some-android/url",
-						"Iphone":  "https://some-IOS/url",
+						"android": "https://some-android/url",
+						"iphone":  "https://some-IOS/url",
 					},
 				},
 			},
@@ -59,8 +59,7 @@ func Test_DeprecatedAppList(t *testing.T) {
 			ClientName:   "Super App",
 			ClientKind:   "mobile",
 			SoftwareID:   "github.com/cozy/super-app",
-			// User on Android Firefox
-			ClientOS: "Mozilla/5.0 (Android; Mobile; rv:17.0) Gecko/17.0 Firefox/17.0",
+			ClientOS:     "Android",
 		}
 
 		inst := &instance.Instance{
@@ -75,8 +74,8 @@ func Test_DeprecatedAppList(t *testing.T) {
 					SoftwareID: "github.com/cozy/super-app",
 					Name:       "Super App",
 					StoreURLs: map[string]string{
-						"Android": "https://some-android/url",
-						"Iphone":  "https://some-IOS/url",
+						"android": "https://some-android/url",
+						"iphone":  "https://some-IOS/url",
 					},
 				},
 			},
@@ -90,7 +89,7 @@ func Test_DeprecatedAppList(t *testing.T) {
 			"Title":       instance.DefaultTemplateTitle,
 			"Favicon":     middlewares.Favicon(inst),
 			"AppName":     "Super App",
-			"OS":          "Android",
+			"OS":          "android",
 			"StoreURL":    "https://some-android/url",
 		}, args)
 	})

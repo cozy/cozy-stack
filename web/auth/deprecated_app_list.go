@@ -1,11 +1,12 @@
 package auth
 
 import (
+	"strings"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/mssola/user_agent"
 )
 
 const DefaultStoreURL = "https://cozy.io/fr/download/"
@@ -41,7 +42,7 @@ func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Inst
 		}
 	}
 
-	os := user_agent.New(client.ClientOS).OS()
+	os := strings.ToLower(client.ClientOS)
 
 	storeURL := DefaultStoreURL
 	if url, ok := app.StoreURLs[os]; ok {
