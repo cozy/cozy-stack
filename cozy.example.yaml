@@ -301,13 +301,15 @@ clouderies:
 # All the deprecated apps listed here will see their OAUTH2 Authorization
 # flow interupted and redirected to a page proposing to move to the new
 # cozy application.
+#
+# The keys for `store_urls` can be: iphone/android/other
 deprecated_apps:
   apps:
 #     - software_id: "github.com/cozy/some-app"
 #       name: "some-app"
 #       store_urls: 
-#         Iphone: https://some-apple-store-url
-#         Android: https://some-android-store-url
+#         iphone: https://some-apple-store-url
+#         android: https://some-android-store-url
 
 notifications:
   # Activate development APIs (iOS only)
