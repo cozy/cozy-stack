@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/mssola/user_agent"
 )
 
 const DefaultStoreURL = "https://cozy.io/fr/download/"
@@ -37,7 +38,9 @@ func (d *DeprecatedAppList) IsDeprecated(client *oauth.Client) bool {
 	return false
 }
 
-func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Instance) map[string]interface{} {
+func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Instance, uaStr string) map[string]interface{} {
+	ua := user_agent.New(uaStr)
+
 	var app config.DeprecatedApp
 
 	for _, a := range d.apps {
@@ -47,15 +50,30 @@ func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Inst
 		}
 	}
 
-	os := strings.ToLower(client.ClientOS)
+	platform := strings.ToLower(ua.Platform())
+
+	if strings.Contains(strings.ToLower(ua.OS()), "android") ||
+		strings.Contains(strings.ToLower(uaStr), "android") {
+		platform = "android"
+	}
+
+	if strings.Contains(strings.ToLower(ua.OS()), "iphone") ||
+		strings.Contains(strings.ToLower(uaStr), "iphone") ||
+		platform == "ipad" {
+		platform = "iphone"
+	}
+
+	if platform != "iphone" && platform != "android" {
+		platform = "other"
+	}
 
 	storeURL := DefaultStoreURL
-	if url, ok := app.StoreURLs[os]; ok {
+	if url, ok := app.StoreURLs[platform]; ok {
 		storeURL = url
 	}
 
 	d.logger.WithDomain(inst.Domain).
-		WithField("os", os).
+		WithField("platform", platform).
 		WithField("app", app.Name).
 		Info("Deprecated app detected, stop authentication")
 
@@ -66,7 +84,7 @@ func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Inst
 		"Title":       inst.TemplateTitle(),
 		"Favicon":     middlewares.Favicon(inst),
 		"AppName":     app.Name,
-		"OS":          os,
+		"Platform":    platform,
 		"StoreURL":    storeURL,
 	}
 

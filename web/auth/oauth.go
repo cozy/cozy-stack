@@ -200,13 +200,8 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		return err
 	}
 
-	// Fill the client_os of the OAuth client
-	rawUserAgent := c.Request().UserAgent()
-	ua := user_agent.New(rawUserAgent)
-	params.client.ClientOS = ua.OS()
-
 	if a.deprecatedApps.IsDeprecated(params.client) {
-		return c.Render(http.StatusOK, "new_app_available.html", a.deprecatedApps.RenderArgs(params.client, instance))
+		return c.Render(http.StatusOK, "new_app_available.html", a.deprecatedApps.RenderArgs(params.client, instance, c.Request().UserAgent()))
 	}
 
 	if !isLoggedIn {
