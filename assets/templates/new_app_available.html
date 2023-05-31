@@ -22,9 +22,9 @@
             <h1 class="h4 h2-md mt-3 mb-2 text-center">{{t "Install New App Title"}}</h1>
             <p class="mb-4 text-center">
               {{t "Install App Unavailable" .AppName}}<br/>
-              {{if (eq .OS "iphone")}}
+              {{if (eq .Platform "iphone")}}
               {{t "Install New Iphone App Description"}}
-              {{else if (eq .OS "android")}}
+              {{else if (eq .Platform "android")}}
               {{t "Install New Android App Description"}}
               {{else}}
               {{t "Install New Generic App Description"}}
