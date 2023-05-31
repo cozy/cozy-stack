@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 )
 
@@ -13,12 +14,16 @@ const DefaultStoreURL = "https://cozy.io/fr/download/"
 
 // DeprecatedAppList lists and detects the deprecated apps.
 type DeprecatedAppList struct {
-	apps []config.DeprecatedApp
+	apps   []config.DeprecatedApp
+	logger *logger.Entry
 }
 
 // NewDeprecatedAppList instantiates a new [DeprecatedAppList].
 func NewDeprecatedAppList(cfg config.DeprecatedAppsCfg) *DeprecatedAppList {
-	return &DeprecatedAppList{apps: cfg.Apps}
+	return &DeprecatedAppList{
+		apps:   cfg.Apps,
+		logger: logger.WithNamespace("deprecated"),
+	}
 }
 
 // IsDeprecated returns true if the given client is marked as deprectated.
@@ -48,6 +53,11 @@ func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Inst
 	if url, ok := app.StoreURLs[os]; ok {
 		storeURL = url
 	}
+
+	d.logger.WithDomain(inst.Domain).
+		WithField("os", os).
+		WithField("app", app.Name).
+		Info("Deprecated app detected, stop authentication")
 
 	res := map[string]interface{}{
 		"Domain":      inst.ContextualDomain(),
