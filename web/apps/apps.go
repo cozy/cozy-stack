@@ -665,7 +665,6 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 				fs = app.AppsFileServer(instance)
 			}
 		case consts.KonnectorType:
-			a := a.(*app.KonnManifest)
 			filepath = path.Join("/", a.Icon())
 			fs = app.KonnectorsFileServer(instance)
 		}
