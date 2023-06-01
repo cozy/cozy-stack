@@ -25,7 +25,7 @@ func TestCsrf(t *testing.T) {
 	config.GetConfig().Assets = "../../assets"
 	setup := testutils.NewSetup(t, t.Name())
 
-	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
+	setup.SetupSwiftTest()
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
 	t.Run("CSRF", func(t *testing.T) {

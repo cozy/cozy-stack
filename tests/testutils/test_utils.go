@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"net/http/httptest"
 	"net/url"
@@ -120,11 +119,9 @@ func NewSetup(t testing.TB, name string) *TestSetup {
 }
 
 // SetupSwiftTest can be used to start an in-memory Swift server for tests.
-func (c *TestSetup) SetupSwiftTest() error {
+func (c *TestSetup) SetupSwiftTest() {
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
-	if err != nil {
-		fmt.Printf("failed to create swift server %s", err)
-	}
+	require.NoError(c.t, err, "failed to create swift server")
 
 	viper.Set("swift.username", "swifttest")
 	viper.Set("swift.api_key", "swifttest")
@@ -145,8 +142,6 @@ func (c *TestSetup) SetupSwiftTest() error {
 	ctx := context.Background()
 	err = config.GetSwiftConnection().ContainerCreate(ctx, dynamic.DynamicAssetsContainerName, nil)
 	require.NoError(c.t, err, "Could not create dynamic container.")
-
-	return nil
 }
 
 // GetTestInstance creates an instance with a random host
