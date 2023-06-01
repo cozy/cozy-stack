@@ -1,4 +1,4 @@
-#j This file contain an example of cozy-stack configuration file.
+# This file contain an example of cozy-stack configuration file.
 # It provides a description for all available fields to configure the stack.
 #
 # It is possible to pass environnment variable to this configuration using the
