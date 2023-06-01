@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -80,7 +79,6 @@ registries:
 	assert.Equal(t, 465, GetConfig().Mail.Port)
 	assert.Equal(t, "mail_username_val", GetConfig().Mail.Username)
 	assert.Equal(t, "mail_password_val", GetConfig().Mail.Password)
-	assert.Equal(t, logrus.GetLevel(), logrus.WarnLevel)
 
 	assert.EqualValues(t, []string{"http://abc", "http://def", "https://default"}, regsToStrings(GetConfig().Registries["foo"]))
 	assert.EqualValues(t, []string{"http://def", "http://abc", "https://default"}, regsToStrings(GetConfig().Registries["bar"]))

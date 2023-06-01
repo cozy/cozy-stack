@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -68,9 +67,7 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
-	w := logger.WithNamespace("go-redis").Writer()
-	l := log.New(w, "", 0)
-	redis.SetLogger(&contextPrint{l})
+	redis.SetLogger(&contextPrint{logger.WithNamespace("go-redis")})
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
@@ -144,9 +141,9 @@ security features. Please do not use this binary as your production server.
 }
 
 type contextPrint struct {
-	l *log.Logger
+	l *logger.Entry
 }
 
 func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
-	c.l.Printf(format, args...)
+	c.l.Infof(format, args...)
 }
