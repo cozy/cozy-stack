@@ -23,6 +23,7 @@ var BitwardenScope = strings.Join([]string{
 	consts.Konnectors,
 	consts.AppsSuggestion,
 	consts.Support,
+	consts.Settings,
 }, " ")
 
 // oldBitwardenScope is here to help the transition of bitwarden tokens, as the
