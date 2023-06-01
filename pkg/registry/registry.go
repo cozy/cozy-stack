@@ -163,7 +163,7 @@ func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.
 // the apps in maintenance. It takes care to ignore maintenance for apps
 // present in another registry space with higher priority.
 func ListMaintenance(registries []*url.URL) ([]couchdb.JSONDoc, error) {
-	var maskedSlugs map[string]struct{}
+	maskedSlugs := make(map[string]struct{})
 	apps := make([]couchdb.JSONDoc, 0)
 	for i, r := range registries {
 		if i != 0 {
