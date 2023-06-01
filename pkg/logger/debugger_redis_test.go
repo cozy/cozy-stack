@@ -72,6 +72,15 @@ func TestLogger_RedisDebugger(t *testing.T) {
 		err = dbg.AddDomain("foo/bar", time.Second)
 		assert.ErrorIs(t, err, ErrInvalidDomainFormat)
 	})
+
+	t.Run("Start with an invalid redis client", func(t *testing.T) {
+		badOpt, err := redis.ParseURL("redis://invalid:6379/0")
+		require.NoError(t, err)
+
+		dbg, err := NewRedisDebugger(redis.NewClient(badOpt))
+		assert.Nil(t, dbg)
+		require.ErrorContains(t, err, "bootstrap failed")
+	})
 }
 
 func createValidName(t *testing.T) string {
