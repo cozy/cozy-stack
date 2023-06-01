@@ -24,9 +24,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// HTTPHandler handle all the http request concerning the notes.
+type HTTPHandler struct {
+}
+
+// NewHTTPHandler instantiate a new [HTTPHandler].
+func NewHTTPHandler() *HTTPHandler {
+	return &HTTPHandler{}
+}
+
 // CreateNote is the API handler for POST /notes. It creates a note, aka a file
 // with a set of metadata to enable collaborative edition.
-func CreateNote(c echo.Context) error {
+func (h *HTTPHandler) CreateNote(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	doc := &note.Document{}
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
@@ -74,7 +83,7 @@ func CreateNote(c echo.Context) error {
 
 // ListNotes is the API handler for GET /notes. It returns the list of the
 // notes.
-func ListNotes(c echo.Context) error {
+func (h *HTTPHandler) ListNotes(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
 	}
@@ -104,7 +113,7 @@ func ListNotes(c echo.Context) error {
 // GetNote is the API handler for GET /notes/:id. It fetches the file with the
 // given id, and also includes the changes in the content that have been
 // accepted by the stack but not yet persisted on the file.
-func GetNote(c echo.Context) error {
+func (h *HTTPHandler) GetNote(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -128,7 +137,7 @@ func GetNote(c echo.Context) error {
 // the steps since the given version. If the version is too old, and the steps
 // are no longer available, it returns a 412 response with the whole document
 // for the note.
-func GetSteps(c echo.Context) error {
+func (h *HTTPHandler) GetSteps(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -166,7 +175,7 @@ func GetSteps(c echo.Context) error {
 
 // PatchNote is the API handler for PATCH /notes/:id. It applies some steps on
 // the note document.
-func PatchNote(c echo.Context) error {
+func (h *HTTPHandler) PatchNote(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -202,7 +211,7 @@ func PatchNote(c echo.Context) error {
 
 // ChangeTitle is the API handler for PUT /notes/:id/title. It updates the
 // title and renames the file.
-func ChangeTitle(c echo.Context) error {
+func (h *HTTPHandler) ChangeTitle(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -230,7 +239,7 @@ func ChangeTitle(c echo.Context) error {
 
 // PutTelepointer is the API handler for PUT /notes/:id/telepointer. It updates
 // the position of a pointer.
-func PutTelepointer(c echo.Context) error {
+func (h *HTTPHandler) PutTelepointer(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -257,7 +266,7 @@ func PutTelepointer(c echo.Context) error {
 
 // ForceNoteSync is the API handler for POST /notes/:id/sync. It forces writing
 // the note to the VFS
-func ForceNoteSync(c echo.Context) error {
+func (h *HTTPHandler) ForceNoteSync(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	file, err := inst.VFS().FileByID(fileID)
@@ -278,7 +287,7 @@ func ForceNoteSync(c echo.Context) error {
 
 // OpenNoteURL is the API handler for GET /notes/:id/open. It returns the
 // parameters to build the URL where the note can be opened.
-func OpenNoteURL(c echo.Context) error {
+func (h *HTTPHandler) OpenNoteURL(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
 	open, err := note.Open(inst, fileID)
@@ -316,7 +325,7 @@ func OpenNoteURL(c echo.Context) error {
 
 // UpdateNoteSchema is the API handler for PUT /notes/:id:/schema. It updates
 // the schema of the note and invalidates the previous steps.
-func UpdateNoteSchema(c echo.Context) error {
+func (h *HTTPHandler) UpdateNoteSchema(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	doc := &note.Document{}
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
@@ -343,7 +352,7 @@ func UpdateNoteSchema(c echo.Context) error {
 
 // UploadImage is the API handler for POST /notes/:id/images. It uploads an
 // image for the note.
-func UploadImage(c echo.Context) error {
+func (h *HTTPHandler) UploadImage(c echo.Context) error {
 	// Check permission
 	inst := middlewares.GetInstance(c)
 	doc, err := inst.VFS().FileByID(c.Param("id"))
@@ -404,7 +413,7 @@ func UploadImage(c echo.Context) error {
 }
 
 // GetImage returns the image for a note, possibly resized.
-func GetImage(c echo.Context) error {
+func (h *HTTPHandler) GetImage(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	_, err := inst.VFS().FileByID(c.Param("id"))
 	if err != nil {
@@ -424,20 +433,20 @@ func GetImage(c echo.Context) error {
 	return inst.ThumbsFS().ServeNoteThumbContent(c.Response(), c.Request(), imageID)
 }
 
-// Routes sets the routing for the collaborative edition of notes.
-func Routes(router *echo.Group) {
-	router.POST("", CreateNote)
-	router.GET("", ListNotes)
-	router.GET("/:id", GetNote)
-	router.GET("/:id/steps", GetSteps)
-	router.PATCH("/:id", PatchNote)
-	router.PUT("/:id/title", ChangeTitle)
-	router.PUT("/:id/telepointer", PutTelepointer)
-	router.POST("/:id/sync", ForceNoteSync)
-	router.GET("/:id/open", OpenNoteURL)
-	router.PUT("/:id/schema", UpdateNoteSchema)
-	router.POST("/:id/images", UploadImage)
-	router.GET("/:id/images/:image-id/:secret", GetImage)
+// Register all the notes routes into the given router.
+func (h *HTTPHandler) Register(router *echo.Group) {
+	router.POST("", h.CreateNote)
+	router.GET("", h.ListNotes)
+	router.GET("/:id", h.GetNote)
+	router.GET("/:id/steps", h.GetSteps)
+	router.PATCH("/:id", h.PatchNote)
+	router.PUT("/:id/title", h.ChangeTitle)
+	router.PUT("/:id/telepointer", h.PutTelepointer)
+	router.POST("/:id/sync", h.ForceNoteSync)
+	router.GET("/:id/open", h.OpenNoteURL)
+	router.PUT("/:id/schema", h.UpdateNoteSchema)
+	router.POST("/:id/images", h.UploadImage)
+	router.GET("/:id/images/:image-id/:secret", h.GetImage)
 }
 
 func wrapError(err error) *jsonapi.Error {
