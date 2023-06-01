@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sync"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -14,8 +13,6 @@ import (
 )
 
 var debugLogger *logrus.Logger
-
-var domains = new(sync.Map)
 
 // Fields type, used to pass to [Logger.WithFields].
 type Fields map[string]interface{}
