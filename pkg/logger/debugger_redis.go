@@ -46,11 +46,7 @@ func NewRedisDebugger(client redis.UniversalClient) (*RedisDebugger, error) {
 		sub:    client.Subscribe(ctx, debugRedisAddChannel, debugRedisRmvChannel),
 	}
 
-	err := dbg.bootstrap(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	go dbg.bootstrap(ctx)
 	go dbg.subscribeEvents()
 
 	return dbg, nil
@@ -132,10 +128,10 @@ func (r *RedisDebugger) Close() error {
 	return nil
 }
 
-func (r *RedisDebugger) bootstrap(ctx context.Context) error {
+func (r *RedisDebugger) bootstrap(ctx context.Context) {
 	keys, err := r.client.Keys(ctx, debugRedisPrefix+"*").Result()
 	if err != nil {
-		return fmt.Errorf("bootstrap failed: %w", err)
+		return
 	}
 
 	for _, key := range keys {
@@ -147,6 +143,4 @@ func (r *RedisDebugger) bootstrap(ctx context.Context) error {
 		domain := strings.TrimPrefix(key, debugRedisPrefix)
 		r.store.AddDomain(domain, ttl)
 	}
-
-	return nil
 }
