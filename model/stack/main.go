@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -12,7 +13,9 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
@@ -59,6 +62,15 @@ security features. Please do not use this binary as your production server.
 	var shutdowners []utils.Shutdowner
 
 	ctx := context.Background()
+	cfg := config.GetConfig()
+
+	if err = logger.Init(cfg.Logger); err != nil {
+		return
+	}
+
+	w := logger.WithNamespace("go-redis").Writer()
+	l := log.New(w, "", 0)
+	redis.SetLogger(&contextPrint{l})
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
@@ -101,7 +113,7 @@ security features. Please do not use this binary as your production server.
 
 	var broker job.Broker
 	var schder job.Scheduler
-	jobsConfig := config.GetConfig().Jobs
+	jobsConfig := cfg.Jobs
 	if cli := jobsConfig.Client(); cli != nil {
 		broker = job.NewRedisBroker(cli)
 		schder = job.NewRedisScheduler(cli)
@@ -129,4 +141,12 @@ security features. Please do not use this binary as your production server.
 	// Global shutdowner that composes all the running processes of the stack
 	processes = utils.NewGroupShutdown(shutdowners...)
 	return
+}
+
+type contextPrint struct {
+	l *log.Logger
+}
+
+func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
+	c.l.Printf(format, args...)
 }

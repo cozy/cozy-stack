@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var debugger Debugger
+var debugger Debugger = NewMemDebugger()
 
 // Debugger manage the list of domains with the debug mode.
 //
