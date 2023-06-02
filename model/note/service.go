@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/hashicorp/go-multierror"
 )
@@ -48,6 +49,7 @@ type Service interface {
 
 type Note struct {
 	lock lock.Getter
+	log  *logger.Entry
 }
 
 // Create the file in the VFS for this note.
@@ -59,7 +61,7 @@ func (s *Note) Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, err
 	defer lock.Unlock()
 
 	doc.Version = 0
-	content, err := initialContent(inst, doc)
+	content, err := s.initialContent(inst, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -75,25 +77,22 @@ func (s *Note) Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, err
 	return file, nil
 }
 
-func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
+func (s *Note) initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
 	schema, err := doc.Schema()
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("Cannot instantiate the schema: %s", err)
+		s.log.WithDomain(inst.Domain).Infof("Cannot instantiate the schema: %s", err)
 		return nil, ErrInvalidSchema
 	}
 
 	// Create an empty document that matches the schema constraints.
 	typ, err := schema.NodeType(schema.Spec.TopNode)
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("The schema is invalid: %s", err)
+		s.log.WithDomain(inst.Domain).Infof("The schema is invalid: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	node, err := typ.CreateAndFill()
 	if err != nil {
-		inst.Logger().WithNamespace("notes").
-			Infof("The topNode cannot be created: %s", err)
+		s.log.WithDomain(inst.Domain).Infof("The topNode cannot be created: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	return node, nil
@@ -626,7 +625,7 @@ func (s *Note) UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema m
 				}
 				stack := make([]byte, 4<<10) // 4 KB
 				length := runtime.Stack(stack, false)
-				log := inst.Logger().WithField("panic", true).WithNamespace("note")
+				log := s.log.WithDomain(inst.Domain).WithField("panic", true)
 				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 			}
 		}()
