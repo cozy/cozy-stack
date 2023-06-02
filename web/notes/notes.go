@@ -26,11 +26,12 @@ import (
 
 // HTTPHandler handle all the http request concerning the notes.
 type HTTPHandler struct {
+	service note.Service
 }
 
 // NewHTTPHandler instantiate a new [HTTPHandler].
-func NewHTTPHandler() *HTTPHandler {
-	return &HTTPHandler{}
+func NewHTTPHandler(service note.Service) *HTTPHandler {
+	return &HTTPHandler{service}
 }
 
 // CreateNote is the API handler for POST /notes. It creates a note, aka a file
@@ -73,7 +74,7 @@ func (h *HTTPHandler) CreateNote(c echo.Context) error {
 		}
 	}
 
-	file, err := note.Create(inst, doc)
+	file, err := h.service.Create(inst, doc)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -90,7 +91,7 @@ func (h *HTTPHandler) ListNotes(c echo.Context) error {
 
 	inst := middlewares.GetInstance(c)
 	bookmark := c.QueryParam("page[cursor]")
-	docs, bookmark, err := note.List(inst, bookmark)
+	docs, bookmark, err := h.service.List(inst, bookmark)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -125,7 +126,7 @@ func (h *HTTPHandler) GetNote(c echo.Context) error {
 		return err
 	}
 
-	file, err = note.GetFile(inst, file)
+	file, err = h.service.GetFile(inst, file)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -155,7 +156,7 @@ func (h *HTTPHandler) GetSteps(c echo.Context) error {
 	}
 	steps, err := note.GetSteps(inst, file.DocID, rev)
 	if errors.Is(err, note.ErrTooOld) {
-		file, err = note.GetFile(inst, file)
+		file, err = h.service.GetFile(inst, file)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -230,7 +231,7 @@ func (h *HTTPHandler) ChangeTitle(c echo.Context) error {
 
 	title, _ := event["title"].(string)
 	sessID, _ := event["sessionID"].(string)
-	if file, err = note.UpdateTitle(inst, file, title, sessID); err != nil {
+	if file, err = h.service.UpdateTitle(inst, file, title, sessID); err != nil {
 		return wrapError(err)
 	}
 
@@ -278,7 +279,7 @@ func (h *HTTPHandler) ForceNoteSync(c echo.Context) error {
 		return err
 	}
 
-	if err := note.Update(inst, file.ID()); err != nil {
+	if err := h.service.Update(inst, file.ID()); err != nil {
 		return wrapError(err)
 	}
 
@@ -342,7 +343,7 @@ func (h *HTTPHandler) UpdateNoteSchema(c echo.Context) error {
 		return err
 	}
 
-	file, err = note.UpdateSchema(inst, file, doc.SchemaSpec)
+	file, err = h.service.UpdateSchema(inst, file, doc.SchemaSpec)
 	if err != nil {
 		return wrapError(err)
 	}

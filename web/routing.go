@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/note"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -227,7 +228,11 @@ func SetupRoutes(router *echo.Echo) error {
 		move.Routes(router.Group("/move", mws...))
 		permissions.Routes(router.Group("/permissions", mws...))
 		realtime.Routes(router.Group("/realtime", mws...))
-		notes.Routes(router.Group("/notes", mws...))
+
+		noteSvc := note.Init()
+		noteHTTPHandler := notes.NewHTTPHandler(noteSvc)
+		noteHTTPHandler.Register(router.Group("/notes", mws...))
+
 		office.Routes(router.Group("/office", mws...))
 		remote.Routes(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))

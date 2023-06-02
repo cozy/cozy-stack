@@ -32,8 +32,27 @@ const (
 	cleanStepsAfter    = 24 * time.Hour
 )
 
+// Service represente the possible interactions with note.
+type Service interface {
+	Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error)
+	List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, error)
+	UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc)
+	GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error)
+	UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error)
+	Update(inst *instance.Instance, fileID string) error
+	UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]interface{}) (*vfs.FileDoc, error)
+	FlushPendings(inst *instance.Instance) error
+}
+
+type Note struct {
+}
+
+func NewNote() *Note {
+	return &Note{}
+}
+
 // Create the file in the VFS for this note.
-func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
+func (s *Note) Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
@@ -350,7 +369,7 @@ func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, 
 
 // List returns a list of notes sorted by descending updated_at. It uses
 // pagination via a mango bookmark.
-func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, error) {
+func (s *Note) List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, "", err
@@ -378,13 +397,13 @@ func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, err
 		return nil, "", err
 	}
 
-	UpdateMetadataFromCache(inst, docs)
+	s.UpdateMetadataFromCache(inst, docs)
 	return docs, res.Bookmark, nil
 }
 
 // UpdateMetadataFromCache update the metadata for a file/note with the
 // information in cache.
-func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
+func (s *Note) UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 	keys := make([]string, len(docs))
 	for i, doc := range docs {
 		keys[i] = cacheKey(inst, doc.ID())
@@ -404,7 +423,7 @@ func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 
 // GetFile takes a file from the VFS as a note and returns its last version. It
 // is useful when some changes have not yet been persisted to the VFS.
-func GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error) {
+func (s *Note) GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
@@ -518,7 +537,7 @@ func getListFromCache(inst *instance.Instance) []string {
 }
 
 // UpdateTitle changes the title of a note and renames the associated file.
-func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error) {
+func (s *Note) UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
@@ -543,7 +562,7 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID st
 }
 
 // Update is used to persist changes on a note to its file in the VFS.
-func Update(inst *instance.Instance, fileID string) error {
+func (s *Note) Update(inst *instance.Instance, fileID string) error {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return err
@@ -576,7 +595,7 @@ func Update(inst *instance.Instance, fileID string) error {
 }
 
 // UpdateSchema updates the schema of a note, and invalidates the previous steps.
-func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]interface{}) (*vfs.FileDoc, error) {
+func (s *Note) UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]interface{}) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
@@ -619,11 +638,11 @@ func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]
 }
 
 // FlushPendings is used to persist all the notes before an export.
-func FlushPendings(inst *instance.Instance) error {
+func (s *Note) FlushPendings(inst *instance.Instance) error {
 	var errm error
 	list := getListFromCache(inst)
 	for _, fileID := range list {
-		if err := Update(inst, fileID); err != nil {
+		if err := s.Update(inst, fileID); err != nil {
 			errm = multierror.Append(errm, err)
 		}
 	}
