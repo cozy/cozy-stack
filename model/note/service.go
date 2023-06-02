@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/prosemirror-go/model"
 	"github.com/hashicorp/go-multierror"
 )
@@ -30,6 +31,7 @@ const (
 	persistenceDebouce = "3m"
 	cacheDuration      = 30 * time.Minute
 	cleanStepsAfter    = 24 * time.Hour
+	lockNamespace      = "notes"
 )
 
 // Service represente the possible interactions with note.
@@ -45,15 +47,12 @@ type Service interface {
 }
 
 type Note struct {
-}
-
-func NewNote() *Note {
-	return &Note{}
+	lock lock.Getter
 }
 
 // Create the file in the VFS for this note.
 func (s *Note) Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return nil, err
 	}
@@ -370,7 +369,7 @@ func buildArchive(inst *instance.Instance, md []byte, images []*Image) ([]byte, 
 // List returns a list of notes sorted by descending updated_at. It uses
 // pagination via a mango bookmark.
 func (s *Note) List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, error) {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return nil, "", err
 	}
@@ -424,7 +423,7 @@ func (s *Note) UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.File
 // GetFile takes a file from the VFS as a note and returns its last version. It
 // is useful when some changes have not yet been persisted to the VFS.
 func (s *Note) GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error) {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return nil, err
 	}
@@ -538,7 +537,7 @@ func getListFromCache(inst *instance.Instance) []string {
 
 // UpdateTitle changes the title of a note and renames the associated file.
 func (s *Note) UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error) {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return nil, err
 	}
@@ -563,7 +562,7 @@ func (s *Note) UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, se
 
 // Update is used to persist changes on a note to its file in the VFS.
 func (s *Note) Update(inst *instance.Instance, fileID string) error {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return err
 	}
@@ -596,7 +595,7 @@ func (s *Note) Update(inst *instance.Instance, fileID string) error {
 
 // UpdateSchema updates the schema of a note, and invalidates the previous steps.
 func (s *Note) UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]interface{}) (*vfs.FileDoc, error) {
-	lock := inst.NotesLock()
+	lock := s.lock.ReadWrite(inst, lockNamespace)
 	if err := lock.Lock(); err != nil {
 		return nil, err
 	}

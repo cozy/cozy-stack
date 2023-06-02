@@ -1,14 +1,20 @@
 package note
 
-import "github.com/cozy/cozy-stack/model/instance"
+import (
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+)
 
 var globalSvc *Note
 
 func Init() *Note {
-	svc := NewNote()
-	globalSvc = svc
+	svc := Note{
+		lock: config.Lock(),
+	}
 
-	return svc
+	globalSvc = &svc
+
+	return &svc
 }
 
 // Update is a global wrapper around [Service.Update].
