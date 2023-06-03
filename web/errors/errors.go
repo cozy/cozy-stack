@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,10 +22,6 @@ import (
 
 // ErrorHandler is the default error handler of our APIs.
 func ErrorHandler(err error, c echo.Context) {
-	var je *jsonapi.Error
-	var ce *couchdb.Error
-
-	res := c.Response()
 	req := c.Request()
 
 	if build.IsDevRelease() {
@@ -38,41 +35,47 @@ func ErrorHandler(err error, c echo.Context) {
 		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
 
-	if res.Committed {
+	if c.Response().Committed {
 		return
 	}
 
-	var ok bool
-	if _, ok = err.(*echo.HTTPError); ok {
-		// nothing to do
-	} else if os.IsExist(err) {
-		je = jsonapi.Conflict(err)
-	} else if os.IsNotExist(err) {
-		je = jsonapi.NotFound(err)
-	} else if ce, ok = err.(*couchdb.Error); ok {
-		je = &jsonapi.Error{
-			Status: ce.StatusCode,
-			Title:  ce.Name,
-			Detail: ce.Reason,
+	var couchError *couchdb.Error
+	var httpError *echo.HTTPError
+	var jsonError *jsonapi.Error
+
+	switch {
+	case errors.As(err, &httpError):
+		HTMLErrorHandler(err, c)
+		return
+	case errors.As(err, &couchError):
+		jsonError = &jsonapi.Error{
+			Status: couchError.StatusCode,
+			Title:  couchError.Name,
+			Detail: couchError.Reason,
 		}
-	} else if je, ok = err.(*jsonapi.Error); !ok {
-		je = &jsonapi.Error{
+
+	case errors.As(err, &jsonError):
+		// jsonError is already filled
+	case errors.Is(err, os.ErrExist):
+		jsonError = jsonapi.Conflict(err)
+	case errors.Is(err, os.ErrNotExist):
+		jsonError = jsonapi.NotFound(err)
+
+	default:
+		// All the unhandled error ends up in 500.
+		jsonError = &jsonapi.Error{
 			Status: http.StatusInternalServerError,
 			Title:  "Unqualified error",
 			Detail: err.Error(),
 		}
 	}
 
-	if je != nil {
-		if req.Method == http.MethodHead {
-			_ = c.NoContent(je.Status)
-			return
-		}
-		_ = jsonapi.DataError(c, je)
+	if req.Method == http.MethodHead {
+		_ = c.NoContent(jsonError.Status)
 		return
 	}
 
-	HTMLErrorHandler(err, c)
+	_ = jsonapi.DataError(c, jsonError)
 }
 
 // HTMLErrorHandler is the default fallback error handler for error rendered in
