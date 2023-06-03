@@ -27,6 +27,21 @@ func ErrorHandler(err error, c echo.Context) {
 	res := c.Response()
 	req := c.Request()
 
+	if build.IsDevRelease() {
+		var log *logger.Entry
+		inst, ok := middlewares.GetInstanceSafe(c)
+		if ok {
+			log = inst.Logger().WithNamespace("http")
+		} else {
+			log = logger.WithNamespace("http")
+		}
+		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
+	}
+
+	if res.Committed {
+		return
+	}
+
 	var ok bool
 	if _, ok = err.(*echo.HTTPError); ok {
 		// nothing to do
@@ -46,21 +61,6 @@ func ErrorHandler(err error, c echo.Context) {
 			Title:  "Unqualified error",
 			Detail: err.Error(),
 		}
-	}
-
-	if build.IsDevRelease() {
-		var log *logger.Entry
-		inst, ok := middlewares.GetInstanceSafe(c)
-		if ok {
-			log = inst.Logger().WithNamespace("http")
-		} else {
-			log = logger.WithNamespace("http")
-		}
-		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
-	}
-
-	if res.Committed {
-		return
 	}
 
 	if je != nil {
