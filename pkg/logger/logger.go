@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -21,6 +23,9 @@ type Options struct {
 }
 
 // Init initializes the logger module with the specified options.
+//
+// It also setup the global logger for go-redis. Thoses are at
+// Info level.
 func Init(opt Options) error {
 	level := opt.Level
 	if level == "" {
@@ -37,6 +42,10 @@ func Init(opt Options) error {
 	// Setup the debug logger used for the the domains in debug mode.
 	debugLogger = logrus.New()
 	setupLogger(debugLogger, logrus.DebugLevel, opt)
+
+	w := WithNamespace("go-redis").Writer()
+	l := log.New(w, "", 0)
+	redis.SetLogger(&contextPrint{l})
 
 	err = initDebugger(opt.Redis)
 	if err != nil {
@@ -192,4 +201,12 @@ func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
 		formatter := logger.Formatter.(*logrus.TextFormatter)
 		formatter.TimestampFormat = time.RFC3339Nano
 	}
+}
+
+type contextPrint struct {
+	l *log.Logger
+}
+
+func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
+	c.l.Printf(format, args...)
 }

@@ -2,11 +2,9 @@ package config
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
-	stdlog "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -900,18 +898,7 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
-	w := logger.WithNamespace("go-redis").Writer()
-	l := stdlog.New(w, "", 0)
-	redis.SetLogger(&contextPrint{l})
 	return nil
-}
-
-type contextPrint struct {
-	l *stdlog.Logger
-}
-
-func (c contextPrint) Printf(ctx context.Context, format string, args ...interface{}) {
-	c.l.Printf(format, args...)
 }
 
 func makeCouch(v *viper.Viper) (CouchDB, error) {
