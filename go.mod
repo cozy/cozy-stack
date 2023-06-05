@@ -36,7 +36,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.15.1
-	github.com/redis/go-redis/v9 v9.0.4
+	github.com/redis/go-redis/v9 v9.0.5
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.23.0
 	github.com/sirupsen/logrus v1.9.3
