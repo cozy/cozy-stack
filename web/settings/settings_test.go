@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
@@ -48,8 +48,18 @@ func TestSettings(t *testing.T) {
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
 
-	ts := setup.GetTestServer("/settings", Routes)
-	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", testInstance)
+			return next(context)
+		}
+	})
+
+	NewHTTPHandler().Register(group)
+
+	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
 	t.Run("GetContext", func(t *testing.T) {
@@ -860,17 +870,21 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 		ContextName: "test-context",
 	})
 
-	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			auth.Routes(g)
-		},
-		"/settings": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			Routes(g)
-		},
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", testInstance)
+			sess, _ := session.New(testInstance, session.LongRun)
+			context.Set("session", sess)
+			return next(context)
+		}
 	})
-	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	NewHTTPHandler().Register(group)
+	auth.Routes(group)
+
+	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
 	e := httpexpect.Default(t, ts.URL)
@@ -927,27 +941,40 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 	}
 
 	setupFlagship := testutils.NewSetup(t, t.Name())
-	testInstanceFlagship := setupFlagship.GetTestInstance(&lifecycle.Options{
+	testInstance := setupFlagship.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
 		Timezone:    "Europe/Berlin",
 		Email:       "alice2@example.com",
 		ContextName: "test-context",
 	})
-	ts := setupFlagship.GetTestServer("/settings", Routes)
-	t.Cleanup(ts.Close)
-	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
-	require.Nil(t, oauthClient.Create(testInstanceFlagship))
-	client, err := oauth.FindClient(testInstanceFlagship, oauthClient.ClientID)
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", testInstance)
+			sess, _ := session.New(testInstance, session.LongRun)
+			context.Set("session", sess)
+			return next(context)
+		}
+	})
+
+	NewHTTPHandler().Register(group)
+
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	require.Nil(t, oauthClient.Create(testInstance))
+	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
 	require.NoError(t, err)
-	require.NoError(t, client.SetFlagship(testInstanceFlagship))
+	require.NoError(t, client.SetFlagship(testInstance))
 
 	e := httpexpect.Default(t, ts.URL)
 	obj := e.POST("/settings/passphrase/flagship").
 		WithJSON(map[string]interface{}{
 			"passphrase":     "MyFirstPassphrase",
 			"iterations":     5000,
-			"register_token": hex.EncodeToString(testInstanceFlagship.RegisterToken),
+			"register_token": hex.EncodeToString(testInstance.RegisterToken),
 			"key":            "xxx-key-xxx",
 			"public_key":     "xxx-public-key-xxx",
 			"private_key":    "xxx-private-key-xxx",
@@ -961,13 +988,4 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 	obj.Value("refresh_token").String().NotEmpty()
 	obj.ValueEqual("scope", "*")
 	obj.ValueEqual("token_type", "bearer")
-}
-
-func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		instance := c.Get("instance").(*instance.Instance)
-		sess, _ := session.New(instance, session.LongRun)
-		c.Set("session", sess)
-		return next(c)
-	}
 }

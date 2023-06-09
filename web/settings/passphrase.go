@@ -45,7 +45,7 @@ func (p *apiPassphraseParameters) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/settings/passphrase"}
 }
 
-func getPassphraseParameters(c echo.Context) error {
+func (h *HTTPHandler) getPassphraseParameters(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Settings); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ type passphraseRegistrationParameters struct {
 	ClientSecret string `json:"client_secret"`
 }
 
-func registerPassphrase(c echo.Context) error {
+func (h *HTTPHandler) registerPassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	accept := c.Request().Header.Get(echo.HeaderAccept)
@@ -136,7 +136,7 @@ func registerPassphrase(c echo.Context) error {
 	return finishOnboarding(c, args.Redirection, acceptHTML)
 }
 
-func registerPassphraseFlagship(c echo.Context) error {
+func (h *HTTPHandler) registerPassphraseFlagship(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	var args passphraseRegistrationParameters
@@ -232,7 +232,7 @@ func registerPassphraseFlagship(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-func updatePassphrase(c echo.Context) error {
+func (h *HTTPHandler) updatePassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	currentSession, hasSession := middlewares.GetSession(c)
 
@@ -356,7 +356,7 @@ func updatePassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func checkPassphrase(c echo.Context) error {
+func (h *HTTPHandler) checkPassphrase(c echo.Context) error {
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
@@ -380,7 +380,7 @@ func checkPassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func getHint(c echo.Context) error {
+func (h *HTTPHandler) getHint(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Settings); err != nil {
@@ -399,7 +399,7 @@ func getHint(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func updateHint(c echo.Context) error {
+func (h *HTTPHandler) updateHint(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {

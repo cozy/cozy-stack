@@ -33,7 +33,7 @@ func (f *apiFlags) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/settings/flags"}
 }
 
-func getFlags(c echo.Context) error {
+func (h *HTTPHandler) getFlags(c echo.Context) error {
 	// Any request with a token can ask for the context (no permissions are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)

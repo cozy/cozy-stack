@@ -52,7 +52,7 @@ func checkAccessToDiskUsage(c echo.Context, result *apiDiskUsage) error {
 	return middlewares.CanWriteToAnyDirectory(c)
 }
 
-func diskUsage(c echo.Context) error {
+func (h *HTTPHandler) diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var result apiDiskUsage
 

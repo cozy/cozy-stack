@@ -63,7 +63,7 @@ func NewCapabilities(inst *instance.Instance) jsonapi.Object {
 	}
 }
 
-func getCapabilities(c echo.Context) error {
+func (h *HTTPHandler) getCapabilities(c echo.Context) error {
 	// Any request with a token can ask for the capabilities (no permissions
 	// are required)
 	if _, err := middlewares.GetPermission(c); err != nil {

@@ -37,7 +37,7 @@ func (i *apiInstance) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.doc)
 }
 
-func getInstance(c echo.Context) error {
+func (h *HTTPHandler) getInstance(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	doc, err := inst.SettingsDocument()
@@ -70,7 +70,7 @@ func getInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
-func updateInstance(c echo.Context) error {
+func (h *HTTPHandler) updateInstance(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	doc := &couchdb.JSONDoc{}
@@ -114,7 +114,7 @@ func updateInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
-func updateInstanceTOS(c echo.Context) error {
+func (h *HTTPHandler) updateInstanceTOS(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Allow any request from OAuth tokens to use this route
@@ -133,7 +133,7 @@ func updateInstanceTOS(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func updateInstanceAuthMode(c echo.Context) error {
+func (h *HTTPHandler) updateInstanceAuthMode(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
@@ -178,7 +178,7 @@ func updateInstanceAuthMode(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func askInstanceDeletion(c echo.Context) error {
+func (h *HTTPHandler) askInstanceDeletion(c echo.Context) error {
 	if err := middlewares.RequireSettingsApp(c); err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func askInstanceDeletion(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func clearMovedFrom(c echo.Context) error {
+func (h *HTTPHandler) clearMovedFrom(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}

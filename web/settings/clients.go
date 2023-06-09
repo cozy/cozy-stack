@@ -41,7 +41,7 @@ func (c *apiOauthClient) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
 }
 
-func listClients(c echo.Context) error {
+func (h *HTTPHandler) listClients(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.OAuthClients); err != nil {
@@ -75,7 +75,7 @@ func listClients(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
-func revokeClient(c echo.Context) error {
+func (h *HTTPHandler) revokeClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.OAuthClients); err != nil {
@@ -93,7 +93,7 @@ func revokeClient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func synchronized(c echo.Context) error {
+func (h *HTTPHandler) synchronized(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	tok := middlewares.GetRequestToken(c)
