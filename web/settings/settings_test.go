@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
@@ -18,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
@@ -27,6 +27,27 @@ import (
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
+
+func setupRouter(t *testing.T, inst *instance.Instance) string {
+	t.Helper()
+
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", inst)
+			sess, _ := session.New(inst, session.LongRun)
+			context.Set("session", sess)
+			return next(context)
+		}
+	})
+
+	NewHTTPHandler().Register(group)
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	return ts.URL
+}
 
 func TestSettings(t *testing.T) {
 	if testing.Short() {
@@ -48,22 +69,10 @@ func TestSettings(t *testing.T) {
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
 
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(context echo.Context) error {
-			context.Set("instance", testInstance)
-			return next(context)
-		}
-	})
-
-	NewHTTPHandler().Register(group)
-
-	ts := httptest.NewServer(handler)
-	t.Cleanup(ts.Close)
+	tsURL := setupRouter(t, testInstance)
 
 	t.Run("GetContext", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/context").
 			WithHeader("Accept", "application/vnd.api+json").
@@ -72,7 +81,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -100,7 +109,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRev", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are going to patch an instance with newer values, but with a totally
 		// random rev
@@ -128,7 +137,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevNoChanges", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are defining a random rev, but make no changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -155,7 +164,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevAndChanges", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are defining a random rev, but make changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -182,7 +191,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("DiskUsage", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/disk-usage").
 			WithHeader("Authorization", "Bearer "+token).
@@ -204,7 +213,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseWrongToken", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.POST("/settings/passphrase").
 			WithHeader("Content-Type", "application/json").
@@ -226,7 +235,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseCorrectToken", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.POST("/settings/passphrase").
 			WithJSON(map[string]interface{}{
@@ -242,7 +251,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithWrongPassphrase", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -256,7 +265,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseSuccess", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -273,7 +282,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithForce", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -302,7 +311,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("CheckPassphrase", func(t *testing.T) {
 		t.Run("invalid", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -314,7 +323,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("valid", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -328,7 +337,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetHint", func(t *testing.T) {
 		t.Run("WithNoHint", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.GET("/settings/hint").
 				WithHeader("Authorization", "Bearer "+token).
@@ -336,7 +345,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("WithHint", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			setting, err := settings.Get(testInstance)
 			assert.NoError(t, err)
@@ -351,7 +360,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateHint", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/hint").
 			WithHeader("Authorization", "Bearer "+token).
@@ -367,7 +376,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetPassphraseParameters", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -386,7 +395,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetCapabilities", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -409,7 +418,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -443,7 +452,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.PUT("/settings/instance").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -481,7 +490,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetUpdatedInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/instance").
 			WithHeader("Authorization", "Bearer "+token).
@@ -505,7 +514,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithTwoFactorAuth", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/instance/auth_mode").
 			WithHeader("Authorization", "Bearer "+token).
@@ -554,7 +563,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("ListClients", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/clients").
 			Expect().Status(401)
@@ -605,7 +614,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RevokeClient", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.DELETE("/settings/clients/" + oauthClientID).
 			Expect().Status(401)
@@ -625,7 +634,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -660,7 +669,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceChangeParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -695,7 +704,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceAddParam", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -731,7 +740,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceRemoveParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -765,7 +774,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("FeatureFlags", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		_ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings)
 		t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings) })
@@ -870,24 +879,9 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 		ContextName: "test-context",
 	})
 
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(context echo.Context) error {
-			context.Set("instance", testInstance)
-			sess, _ := session.New(testInstance, session.LongRun)
-			context.Set("session", sess)
-			return next(context)
-		}
-	})
+	tsURL := setupRouter(t, testInstance)
 
-	NewHTTPHandler().Register(group)
-	auth.Routes(group)
-
-	ts := httptest.NewServer(handler)
-	t.Cleanup(ts.Close)
-
-	e := httpexpect.Default(t, ts.URL)
+	e := testutils.CreateTestClient(t, tsURL)
 
 	// Without onboarding
 	e.GET("/settings/onboarded").
@@ -948,28 +942,14 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 		ContextName: "test-context",
 	})
 
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(context echo.Context) error {
-			context.Set("instance", testInstance)
-			sess, _ := session.New(testInstance, session.LongRun)
-			context.Set("session", sess)
-			return next(context)
-		}
-	})
-
-	NewHTTPHandler().Register(group)
-
-	ts := httptest.NewServer(handler)
-	t.Cleanup(ts.Close)
+	tsURL := setupRouter(t, testInstance)
 
 	require.Nil(t, oauthClient.Create(testInstance))
 	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
 	require.NoError(t, err)
 	require.NoError(t, client.SetFlagship(testInstance))
 
-	e := httpexpect.Default(t, ts.URL)
+	e := httpexpect.Default(t, tsURL)
 	obj := e.POST("/settings/passphrase/flagship").
 		WithJSON(map[string]interface{}{
 			"passphrase":     "MyFirstPassphrase",
