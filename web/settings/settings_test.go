@@ -52,30 +52,6 @@ func TestSettings(t *testing.T) {
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 
-	tsB := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			auth.Routes(g)
-		},
-		"/settings": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			Routes(g)
-		},
-	})
-	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(tsB.Close)
-
-	setupFlagship := testutils.NewSetup(t, t.Name())
-	testInstanceFlagship := setupFlagship.GetTestInstance(&lifecycle.Options{
-		Locale:      "en",
-		Timezone:    "Europe/Berlin",
-		Email:       "alice2@example.com",
-		ContextName: "test-context",
-	})
-	tsC := setupFlagship.GetTestServer("/settings", Routes)
-	t.Cleanup(tsC.Close)
-	tsC.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -253,43 +229,6 @@ func TestSettings(t *testing.T) {
 
 		res.Cookies().Length().Equal(1)
 		res.Cookie("cozysessid").Value().NotEmpty()
-	})
-
-	t.Run("RegisterPassphraseForFlagshipApp", func(t *testing.T) {
-		oauthClient := &oauth.Client{
-			RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
-			ClientName:      "Cozy-desktop on my-new-laptop",
-			ClientKind:      "desktop",
-			ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
-			LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
-			PolicyURI:       "https://cozy.io/policy",
-			SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
-			SoftwareVersion: "0.16.0",
-		}
-		require.Nil(t, oauthClient.Create(testInstanceFlagship))
-		client, err := oauth.FindClient(testInstanceFlagship, oauthClient.ClientID)
-		require.NoError(t, err)
-		require.NoError(t, client.SetFlagship(testInstanceFlagship))
-
-		e := httpexpect.Default(t, tsC.URL)
-		obj := e.POST("/settings/passphrase/flagship").
-			WithJSON(map[string]interface{}{
-				"passphrase":     "MyFirstPassphrase",
-				"iterations":     5000,
-				"register_token": hex.EncodeToString(testInstanceFlagship.RegisterToken),
-				"key":            "xxx-key-xxx",
-				"public_key":     "xxx-public-key-xxx",
-				"private_key":    "xxx-private-key-xxx",
-				"client_id":      client.CouchID,
-				"client_secret":  client.ClientSecret,
-			}).
-			Expect().Status(200).
-			JSON().Object()
-
-		obj.Value("access_token").String().NotEmpty()
-		obj.Value("refresh_token").String().NotEmpty()
-		obj.ValueEqual("scope", "*")
-		obj.ValueEqual("token_type", "bearer")
 	})
 
 	t.Run("UpdatePassphraseWithWrongPassphrase", func(t *testing.T) {
@@ -675,41 +614,6 @@ func TestSettings(t *testing.T) {
 		data.Length().Equal(1)
 	})
 
-	t.Run("RedirectOnboardingSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, tsB.URL)
-
-		// Without onboarding
-		e.GET("/settings/onboarded").
-			WithRedirectPolicy(httpexpect.DontFollowRedirects).
-			Expect().Status(303).
-			Header("Location").Equal(testInstance.OnboardedRedirection().String())
-
-		// With onboarding
-		deeplink := "cozydrive://testinstance.com"
-		oauthClient := &oauth.Client{
-			RedirectURIs:     []string{deeplink},
-			ClientName:       "CozyTest",
-			SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
-			OnboardingSecret: "foobar",
-			OnboardingApp:    "test",
-		}
-
-		oauthClient.Create(testInstance)
-
-		redirectURL := e.GET("/settings/onboarded").
-			WithRedirectPolicy(httpexpect.DontFollowRedirects).
-			Expect().Status(303).
-			Header("Location").
-			NotEqual(testInstance.OnboardedRedirection().String()).
-			Contains("/auth/authorize").Raw()
-
-		u, err := url.Parse(redirectURL)
-		require.NoError(t, err)
-
-		values := u.Query()
-		assert.Equal(t, values.Get("redirect_uri"), deeplink)
-	})
-
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -939,6 +843,124 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("ratio_0.999999", "context")
 		attrs.ValueEqual("ratio_1", "context")
 	})
+}
+
+func TestRedirectOnboardingSecret(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance(&lifecycle.Options{
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice@example.com",
+		ContextName: "test-context",
+	})
+
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(fakeAuthentication)
+			auth.Routes(g)
+		},
+		"/settings": func(g *echo.Group) {
+			g.Use(fakeAuthentication)
+			Routes(g)
+		},
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	e := httpexpect.Default(t, ts.URL)
+
+	// Without onboarding
+	e.GET("/settings/onboarded").
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").Equal(testInstance.OnboardedRedirection().String())
+
+	// With onboarding
+	deeplink := "cozydrive://testinstance.com"
+	oauthClient := &oauth.Client{
+		RedirectURIs:     []string{deeplink},
+		ClientName:       "CozyTest",
+		SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
+		OnboardingSecret: "foobar",
+		OnboardingApp:    "test",
+	}
+
+	oauthClient.Create(testInstance)
+
+	redirectURL := e.GET("/settings/onboarded").
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").
+		NotEqual(testInstance.OnboardedRedirection().String()).
+		Contains("/auth/authorize").Raw()
+
+	u, err := url.Parse(redirectURL)
+	require.NoError(t, err)
+
+	values := u.Query()
+	assert.Equal(t, values.Get("redirect_uri"), deeplink)
+}
+
+func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb(t)
+
+	oauthClient := &oauth.Client{
+		RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
+		ClientName:      "Cozy-desktop on my-new-laptop",
+		ClientKind:      "desktop",
+		ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
+		LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+		PolicyURI:       "https://cozy.io/policy",
+		SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
+		SoftwareVersion: "0.16.0",
+	}
+
+	setupFlagship := testutils.NewSetup(t, t.Name())
+	testInstanceFlagship := setupFlagship.GetTestInstance(&lifecycle.Options{
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice2@example.com",
+		ContextName: "test-context",
+	})
+	ts := setupFlagship.GetTestServer("/settings", Routes)
+	t.Cleanup(ts.Close)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	require.Nil(t, oauthClient.Create(testInstanceFlagship))
+	client, err := oauth.FindClient(testInstanceFlagship, oauthClient.ClientID)
+	require.NoError(t, err)
+	require.NoError(t, client.SetFlagship(testInstanceFlagship))
+
+	e := httpexpect.Default(t, ts.URL)
+	obj := e.POST("/settings/passphrase/flagship").
+		WithJSON(map[string]interface{}{
+			"passphrase":     "MyFirstPassphrase",
+			"iterations":     5000,
+			"register_token": hex.EncodeToString(testInstanceFlagship.RegisterToken),
+			"key":            "xxx-key-xxx",
+			"public_key":     "xxx-public-key-xxx",
+			"private_key":    "xxx-private-key-xxx",
+			"client_id":      client.CouchID,
+			"client_secret":  client.ClientSecret,
+		}).
+		Expect().Status(200).
+		JSON().Object()
+
+	obj.Value("access_token").String().NotEmpty()
+	obj.Value("refresh_token").String().NotEmpty()
+	obj.ValueEqual("scope", "*")
+	obj.ValueEqual("token_type", "bearer")
 }
 
 func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
