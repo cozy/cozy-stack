@@ -76,7 +76,7 @@ func destroyWithoutHooks(domain string) error {
 		return instance.ErrDeletionAlreadyRequested
 	}
 	inst.Deleting = true
-	if err := inst.Update(); err != nil {
+	if err := instance.Update(inst); err != nil {
 		return err
 	}
 
@@ -94,7 +94,7 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 	inst.Deleting = false
-	_ = inst.Update()
+	_ = instance.Update(inst)
 
 	removeTriggers(inst)
 

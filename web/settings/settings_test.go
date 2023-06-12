@@ -874,7 +874,7 @@ func TestSettings(t *testing.T) {
 			"json_object":          map[string]interface{}{"foo": "bar"},
 		}
 		testInstance.FeatureSets = []string{"set1", "set2"}
-		require.NoError(t, testInstance.Update())
+		require.NoError(t, instance.Update(testInstance))
 
 		cache := config.GetConfig().CacheStorage
 

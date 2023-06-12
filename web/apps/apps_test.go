@@ -18,6 +18,7 @@ import (
 	"time"
 
 	apps "github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -75,7 +76,7 @@ func TestApps(t *testing.T) {
 	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass), params)
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
-	_ = testInstance.Update()
+	_ = instance.Update(testInstance)
 
 	slug, err := setup.InstallMiniApp()
 	require.NoError(t, err, "Could not install mini app")

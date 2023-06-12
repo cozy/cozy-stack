@@ -26,3 +26,10 @@ func Get(domain string) (*Instance, error) {
 func GetFromCouch(domain string) (*Instance, error) {
 	return service.GetFromCouch(domain)
 }
+
+// Update saves the changes in CouchDB.
+//
+// Deprecated: Use [InstanceService.Update] instead.
+func Update(inst *Instance) error {
+	return service.Update(inst)
+}

@@ -83,6 +83,19 @@ func (s *InstanceService) GetFromCouch(domain string) (*Instance, error) {
 	return inst, nil
 }
 
+// Update saves the changes in CouchDB.
+func (s *InstanceService) Update(inst *Instance) error {
+	if err := couchdb.UpdateDoc(prefixer.GlobalPrefixer, inst); err != nil {
+		return err
+	}
+
+	if data, err := json.Marshal(inst); err == nil {
+		s.cache.Set(inst.cacheKey(), data, cacheTTL)
+	}
+
+	return nil
+}
+
 func cacheKey(inst *Instance) string {
 	return cachePrefix + inst.Domain
 }
