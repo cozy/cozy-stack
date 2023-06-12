@@ -72,7 +72,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("GetInstanceNoDB", func(t *testing.T) {
-		res, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
+		res, err := instance.Get("no.instance.cozycloud.cc")
 		if assert.Error(t, err, "An error is expected") {
 			assert.Nil(t, res)
 			assert.ErrorIs(t, err, instance.ErrNotFound)
@@ -172,7 +172,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("GetWrongInstance", func(t *testing.T) {
-		res, err := lifecycle.GetInstance("no.instance.cozycloud.cc")
+		res, err := instance.Get("no.instance.cozycloud.cc")
 		if assert.Error(t, err, "An error is expected") {
 			assert.Nil(t, res)
 			assert.ErrorIs(t, err, instance.ErrNotFound)
@@ -180,7 +180,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("GetCorrectInstance", func(t *testing.T) {
-		instance, err := lifecycle.GetInstance("test.cozycloud.cc")
+		instance, err := instance.Get("test.cozycloud.cc")
 		if assert.NoError(t, err) {
 			assert.NotNil(t, instance)
 			assert.Equal(t, instance.Domain, "test.cozycloud.cc")
@@ -188,7 +188,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("InstancehasOAuthSecret", func(t *testing.T) {
-		i, err := lifecycle.GetInstance("test.cozycloud.cc")
+		i, err := instance.Get("test.cozycloud.cc")
 		if assert.NoError(t, err) {
 			assert.NotNil(t, i)
 			assert.NotNil(t, i.OAuthSecret)
@@ -215,7 +215,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphrase", func(t *testing.T) {
-		i, err := lifecycle.GetInstance("test.cozycloud.cc")
+		i, err := instance.Get("test.cozycloud.cc")
 		if !assert.NoError(t, err, "cant fetch i") {
 			return
 		}
@@ -265,7 +265,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphrase", func(t *testing.T) {
-		i, err := lifecycle.GetInstance("test.cozycloud.cc")
+		i, err := instance.Get("test.cozycloud.cc")
 		if !assert.NoError(t, err, "cant fetch i") {
 			return
 		}
@@ -402,7 +402,7 @@ func TestLifecycle(t *testing.T) {
 	})
 
 	t.Run("CheckPassphrase", func(t *testing.T) {
-		inst, err := lifecycle.GetInstance("test.cozycloud.cc")
+		inst, err := instance.Get("test.cozycloud.cc")
 		if !assert.NoError(t, err, "cant fetch instance") {
 			return
 		}
@@ -512,7 +512,7 @@ func cleanInstance() {
 }
 
 func getDB(t *testing.T, domain string) prefixer.Prefixer {
-	instance, err := lifecycle.GetInstance(domain)
+	instance, err := instance.Get(domain)
 	if !assert.NoError(t, err, "Should get instance %v", domain) {
 		t.FailNow()
 	}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -90,7 +89,7 @@ func Worker(ctx *job.WorkerContext) error {
 		return UpdateAll(ctx, &opts)
 	}
 	if opts.Domain != "" {
-		inst, err := lifecycle.GetInstance(opts.Domain)
+		inst, err := instance.Get(opts.Domain)
 		if err != nil {
 			return err
 		}

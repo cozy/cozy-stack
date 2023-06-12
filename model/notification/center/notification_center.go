@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -41,7 +40,7 @@ var (
 
 func init() {
 	vfs.RegisterDiskQuotaAlertCallback(func(domain string, exceeded bool) {
-		i, err := lifecycle.GetInstance(domain)
+		i, err := instance.Get(domain)
 		if err != nil {
 			return
 		}
@@ -63,7 +62,7 @@ func init() {
 
 // PushStack creates and sends a new notification where the source is the stack.
 func PushStack(domain string, category string, n *notification.Notification) error {
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}

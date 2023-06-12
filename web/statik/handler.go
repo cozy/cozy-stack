@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
@@ -294,7 +294,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		name = nameWithContextSplit[1]
 	} else {
 		name = strings.TrimPrefix(r.URL.Path, assetsPrefix)
-		if inst, err := lifecycle.GetInstance(r.Host); err == nil {
+		if inst, err := instance.Get(r.Host); err == nil {
 			context = inst.ContextName
 		}
 	}

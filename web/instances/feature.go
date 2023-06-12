@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/cozy/cozy-stack/model/feature"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -16,7 +16,7 @@ import (
 )
 
 func getFeatureFlags(c echo.Context) error {
-	inst, err := lifecycle.GetInstance(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return wrapError(err)
 	}
@@ -24,7 +24,7 @@ func getFeatureFlags(c echo.Context) error {
 }
 
 func patchFeatureFlags(c echo.Context) error {
-	inst, err := lifecycle.GetInstance(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return wrapError(err)
 	}
@@ -49,7 +49,7 @@ func patchFeatureFlags(c echo.Context) error {
 }
 
 func getFeatureSets(c echo.Context) error {
-	inst, err := lifecycle.GetInstance(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return wrapError(err)
 	}
@@ -57,7 +57,7 @@ func getFeatureSets(c echo.Context) error {
 }
 
 func putFeatureSets(c echo.Context) error {
-	inst, err := lifecycle.GetInstance(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return wrapError(err)
 	}

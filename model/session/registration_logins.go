@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -211,7 +211,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 }
 
 func sendRegistrationNotification(entry *registrationEntry, registrationNotification bool) error {
-	i, err := lifecycle.GetInstance(entry.Domain)
+	i, err := instance.Get(entry.Domain)
 	if err != nil {
 		return err
 	}

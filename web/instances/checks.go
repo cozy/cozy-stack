@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -16,7 +16,7 @@ import (
 
 func fsckHandler(c echo.Context) (err error) {
 	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
+	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -85,7 +85,7 @@ func fsckHandler(c echo.Context) (err error) {
 
 func checkTriggers(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -203,7 +203,7 @@ func checkTriggers(c echo.Context) error {
 
 func checkShared(c echo.Context) error {
 	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
+	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -227,7 +227,7 @@ func checkShared(c echo.Context) error {
 
 func checkSharings(c echo.Context) error {
 	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
+	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}

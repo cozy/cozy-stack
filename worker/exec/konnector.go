@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -138,7 +137,7 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
 			return false, nil
 		}
-		inst, err := lifecycle.GetInstance(j.DomainName())
+		inst, err := instance.Get(j.DomainName())
 		if err != nil {
 			return false, err
 		}

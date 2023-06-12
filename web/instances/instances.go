@@ -139,7 +139,7 @@ func createHandler(c echo.Context) error {
 
 func showHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	in, err := lifecycle.GetInstance(domain)
+	in, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -194,7 +194,7 @@ func modifyHandler(c echo.Context) error {
 	if from, err := strconv.ParseBool(c.QueryParam("FromCloudery")); err == nil {
 		opts.FromCloudery = from
 	}
-	i, err := lifecycle.GetInstance(domain)
+	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -313,7 +313,7 @@ func updatesHandler(c echo.Context) error {
 
 func setAuthMode(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func setAuthMode(c echo.Context) error {
 
 func createMagicLink(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ func createMagicLink(c echo.Context) error {
 
 func createSessionCode(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -412,7 +412,7 @@ func createSessionCode(c echo.Context) error {
 
 func cleanSessions(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -427,7 +427,7 @@ func cleanSessions(c echo.Context) error {
 }
 
 func lastActivity(c echo.Context) error {
-	inst, err := instance.GetFromCouch(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}
@@ -496,7 +496,7 @@ func lastActivity(c echo.Context) error {
 }
 
 func unxorID(c echo.Context) error {
-	inst, err := instance.GetFromCouch(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}
@@ -529,7 +529,7 @@ type diskUsageResult struct {
 
 func diskUsage(c echo.Context) error {
 	domain := c.Param("domain")
-	instance, err := lifecycle.GetInstance(domain)
+	instance, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -571,7 +571,7 @@ func diskUsage(c echo.Context) error {
 func showPrefix(c echo.Context) error {
 	domain := c.Param("domain")
 
-	instance, err := lifecycle.GetInstance(domain)
+	instance, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -582,7 +582,7 @@ func showPrefix(c echo.Context) error {
 func getSwiftBucketName(c echo.Context) error {
 	domain := c.Param("domain")
 
-	instance, err := lifecycle.GetInstance(domain)
+	instance, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}

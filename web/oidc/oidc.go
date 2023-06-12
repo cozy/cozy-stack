@@ -95,7 +95,7 @@ func Redirect(c echo.Context) error {
 			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
 		}
 	}
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
 	}

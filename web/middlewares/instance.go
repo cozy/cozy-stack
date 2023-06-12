@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/assets"
@@ -26,7 +25,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		i, err := lifecycle.GetInstance(host)
+		i, err := instance.Get(host)
 		if err != nil {
 			var errHTTP *echo.HTTPError
 			switch err {

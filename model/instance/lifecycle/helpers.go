@@ -9,12 +9,10 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
-	"golang.org/x/net/idna"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -50,18 +48,6 @@ func DefineViewsAndIndex(inst *instance.Instance) error {
 	couchdb.DefineIndexes(g, inst, couchdb.Indexes)
 	couchdb.DefineViews(g, inst, couchdb.Views)
 	if err := g.Wait(); err != nil {
-		return err
-	}
-	inst.IndexViewsVersion = couchdb.IndexViewsVersion
-	return nil
-}
-
-// UpdateViewsAndIndex can be used to ensure that the CouchDB views and indexes
-// used by the stack are correctly set. It has the same effect as
-// DefineViewsAndIndex, but it expect most index/views already exist.
-func UpdateViewsAndIndex(inst *instance.Instance) error {
-	err := couchdb.UpdateIndexesAndViews(inst, couchdb.Indexes, couchdb.Views)
-	if err != nil {
 		return err
 	}
 	inst.IndexViewsVersion = couchdb.IndexViewsVersion
@@ -139,14 +125,14 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 		if alias == "" {
 			continue
 		}
-		alias, err := validateDomain(alias)
+		alias, err := instance.ValidateDomain(alias)
 		if err != nil {
 			return nil, err
 		}
 		if alias == inst.Domain {
 			return nil, instance.ErrExists
 		}
-		other, err := instance.GetFromCouch(alias)
+		other, err := instance.Get(alias)
 		if !errors.Is(err, instance.ErrNotFound) {
 			if err != nil {
 				return nil, err
@@ -158,32 +144,4 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 		kept = append(kept, alias)
 	}
 	return kept, nil
-}
-
-const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
-const illegalFirstChars = "0123456789."
-
-func validateDomain(domain string) (string, error) {
-	var err error
-	if domain, err = idna.ToUnicode(domain); err != nil {
-		return "", instance.ErrIllegalDomain
-	}
-	domain = strings.TrimSpace(domain)
-	if domain == "" || domain == ".." || domain == "." {
-		return "", instance.ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain, illegalChars) {
-		return "", instance.ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain[:1], illegalFirstChars) {
-		return "", instance.ErrIllegalDomain
-	}
-	domain = strings.ToLower(domain)
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		parts := strings.SplitN(domain, ".", 2)
-		if strings.Contains(parts[0], "-") {
-			return "", instance.ErrIllegalDomain
-		}
-	}
-	return domain, nil
 }

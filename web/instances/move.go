@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -21,7 +21,7 @@ func exporter(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -50,7 +50,7 @@ func dataExporter(c echo.Context) error {
 	domain := c.Param("domain")
 	exportID := c.Param("export-id")
 
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -86,7 +86,7 @@ func dataExporter(c echo.Context) error {
 
 func importer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/mail"
@@ -81,7 +81,7 @@ func devData(c echo.Context) echo.Map {
 	data["Domain"] = c.Request().Host
 	data["ContextName"] = config.DefaultInstanceContext
 	data["Illustration"] = "/images/generic-error.svg"
-	if i, err := lifecycle.GetInstance(c.Request().Host); err == nil {
+	if i, err := instance.Get(c.Request().Host); err == nil {
 		data["Domain"] = i.ContextualDomain()
 		data["ContextName"] = i.ContextName
 		data["Locale"] = i.Locale

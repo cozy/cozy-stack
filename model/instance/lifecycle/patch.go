@@ -37,7 +37,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 	for {
 		var err error
 		if i == nil {
-			i, err = GetInstance(opts.Domain)
+			i, err = instance.Get(opts.Domain)
 			if err != nil {
 				return err
 			}

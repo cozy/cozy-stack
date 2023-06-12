@@ -74,7 +74,7 @@ func (opts *Options) trace(name string, do func()) {
 
 // Create builds an instance and initializes it
 func Create(opts *Options) (*instance.Instance, error) {
-	domain, err := validateDomain(opts.Domain)
+	domain, err := instance.ValidateDomain(opts.Domain)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +93,13 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	domain := opts.Domain
 	var err error
 	opts.trace("validate domain", func() {
-		domain, err = validateDomain(domain)
+		domain, err = instance.ValidateDomain(domain)
 	})
 	if err != nil {
 		return nil, err
 	}
 	opts.trace("check if instance already exist", func() {
-		_, err = instance.GetFromCouch(domain)
+		_, err = instance.Get(domain)
 	})
 	if !errors.Is(err, instance.ErrNotFound) {
 		if err == nil {

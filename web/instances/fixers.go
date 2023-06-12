@@ -45,7 +45,7 @@ type resStruct struct {
 // contentMismatchFixer fixes the 64k bug
 func contentMismatchFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return fmt.Errorf("Cannot find instance %s", domain)
 	}
@@ -208,7 +208,7 @@ func fixFile(content map[string]interface{}, contentMismatch *mismatchStruct, in
 
 func passwordDefinedFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func passwordDefinedFixer(c echo.Context) error {
 
 func orphanAccountFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -345,7 +345,7 @@ type serviceMessage struct {
 
 func serviceTriggersFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -494,7 +494,7 @@ func fixTriggerName(inst *instance.Instance, trigger job.Trigger, msg serviceMes
 
 func indexesFixer(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}

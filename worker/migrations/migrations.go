@@ -113,7 +113,7 @@ func pushTrashJob(fs vfs.VFS) func(vfs.TrashJournal) error {
 }
 
 func removeUnwantedFolders(domain string) error {
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func removeUnwantedFolders(domain string) error {
 }
 
 func migrateNotesMimeType(domain string) error {
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func migrateNotesMimeType(domain string) error {
 
 func migrateToSwiftV3(domain string) error {
 	c := config.GetSwiftConnection()
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func migrateToSwiftV3(domain string) error {
 
 	meta := &swift.Metadata{"cozy-migrated-from": migratedFrom}
 	_ = c.ContainerUpdate(ctx, dstContainer, meta.ContainerHeaders())
-	if in, err := instance.GetFromCouch(domain); err == nil {
+	if in, err := instance.Get(domain); err == nil {
 		inst = in
 	}
 	inst.SwiftLayout = 2

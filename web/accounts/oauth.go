@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -103,7 +102,7 @@ func redirect(c echo.Context) error {
 	accessToken := c.QueryParam("access_token")
 	accountTypeID := c.Param("accountType")
 
-	i, _ := lifecycle.GetInstance(c.Request().Host)
+	i, _ := instance.Get(c.Request().Host)
 	var clientState, connID, connDeleted, slug string
 	var acc *account.Account
 
@@ -132,7 +131,7 @@ func redirect(c echo.Context) error {
 		}
 		if i == nil {
 			var err error
-			i, err = lifecycle.GetInstance(state.InstanceDomain)
+			i, err = instance.Get(state.InstanceDomain)
 			if err != nil {
 				return errors.New("bad state")
 			}

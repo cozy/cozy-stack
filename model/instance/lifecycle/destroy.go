@@ -54,7 +54,7 @@ func AskDeletion(inst *instance.Instance) error {
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
 func Destroy(domain string) error {
-	domain, err := validateDomain(domain)
+	domain, err := instance.ValidateDomain(domain)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func Destroy(domain string) error {
 // destroyWithoutHooks is used to remove the instance. The difference with
 // Destroy is that scripts hooks are not executed for this function.
 func destroyWithoutHooks(domain string) error {
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func destroyWithoutHooks(domain string) error {
 
 	// Reload the instance, it can have been updated in CouchDB if the instance
 	// had at least one account and was not up-to-date for its indexes/views.
-	inst, err = instance.GetFromCouch(domain)
+	inst, err = instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func destroyWithoutHooks(domain string) error {
 		// this document when we have concurrent updates for indexes/views
 		// version and deleting flag.
 		time.Sleep(3 * time.Second)
-		inst, errg := instance.GetFromCouch(domain)
+		inst, errg := instance.Get(domain)
 		if couchdb.IsNotFoundError(errg) {
 			err = nil
 		} else if inst != nil {

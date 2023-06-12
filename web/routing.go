@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -342,7 +342,7 @@ func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerF
 		}
 
 		if parent, slug, _ := config.SplitCozyHost(host); slug != "" {
-			if i, err := lifecycle.GetInstance(parent); err == nil {
+			if i, err := instance.Get(parent); err == nil {
 				c.Set("instance", i.WithContextualDomain(parent))
 				c.Set("slug", slug)
 				return appsHandler(c)
