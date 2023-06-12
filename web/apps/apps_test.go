@@ -51,7 +51,7 @@ func TestApps(t *testing.T) {
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
-	require.NoError(t, setup.SetupSwiftTest(), "Could not init Swift test")
+	setup.SetupSwiftTest()
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 	tempdir := t.TempDir()
