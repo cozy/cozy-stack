@@ -49,6 +49,8 @@ func TestLock(t *testing.T) {
 
 		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
 		l := client.ReadWrite(db, "test-redis")
+		l.(*redisLock).timeout = time.Second
+		l.(*redisLock).waitRetry = 100 * time.Millisecond
 
 		hammerRW(t, l)
 
@@ -62,7 +64,7 @@ func TestLock(t *testing.T) {
 
 		other := client.ReadWrite(db, "test-redis").(*redisLock)
 		assert.NoError(t, l.Lock())
-		assert.Error(t, other.LockWithTimeout(1*time.Second))
+		assert.Error(t, other.LockWithTimeout(100*time.Millisecond))
 
 		l.Unlock()
 	})
@@ -79,9 +81,18 @@ func TestLock(t *testing.T) {
 		db := prefixer.NewPrefixer(0, "cozy.local", "cozy.local")
 		long := client.LongOperation(db, "test-long")
 
-		l := client.ReadWrite(db, "test-long").(*redisLock)
+		// Reduce the default timeout duration.
+		long.(*longOperation).timeout = 50 * time.Millisecond
+
+		l := client.ReadWrite(db, "test-long")
+		l.(*redisLock).timeout = 200 * time.Millisecond
+		l.(*redisLock).waitRetry = 10 * time.Millisecond
+
+		// Take the lock and refresh it every 20ms without
+		// losing the lock
 		assert.NoError(t, long.Lock())
 
+		// Try a second lock. It should fail after 100ms so after 4 long lock refresh.
 		err = l.Lock()
 		assert.Error(t, err)
 		assert.Equal(t, ErrTooManyRetries, err)

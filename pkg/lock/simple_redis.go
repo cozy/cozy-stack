@@ -55,7 +55,9 @@ type redisLock struct {
 	token  string
 	// readers is the number of readers when the lock is acquired for reading
 	// or 0 when it is unlocked, or -1 when it is locked for writing.
-	readers int
+	readers   int
+	timeout   time.Duration
+	waitRetry time.Duration
 }
 
 func (rl *redisLock) extends() (bool, error) {
@@ -80,7 +82,7 @@ func (rl *redisLock) extends() (bool, error) {
 
 func (rl *redisLock) obtains(writing bool, token string) (bool, error) {
 	// Try to obtain a lock
-	ok, err := rl.client.SetNX(rl.ctx, rl.key, token, LockTimeout).Result()
+	ok, err := rl.client.SetNX(rl.ctx, rl.key, token, rl.timeout).Result()
 	if err != nil {
 		return false, err // most probably redis connectivity error
 	}
@@ -114,17 +116,17 @@ func (rl *redisLock) LockWithTimeout(timeout time.Duration) error {
 		if err != nil || ok {
 			return err
 		}
-		if time.Now().Add(WaitRetry).After(stop) {
+		if time.Now().Add(rl.waitRetry).After(stop) {
 			break
 		}
-		time.Sleep(WaitRetry)
+		time.Sleep(rl.waitRetry)
 	}
 
 	return ErrTooManyRetries
 }
 
 func (rl *redisLock) Lock() error {
-	return rl.LockWithTimeout(LockTimeout)
+	return rl.LockWithTimeout(rl.timeout)
 }
 
 func (rl *redisLock) extendsOrObtainsReading(token string) (bool, error) {
@@ -137,7 +139,7 @@ func (rl *redisLock) extendsOrObtainsReading(token string) (bool, error) {
 }
 
 func (rl *redisLock) RLock() error {
-	stop := time.Now().Add(LockTimeout)
+	stop := time.Now().Add(rl.timeout)
 	redislocksMu.Lock()
 	token := utils.RandomStringFast(redisRng, lockTokenSize)
 	redislocksMu.Unlock()
@@ -146,10 +148,10 @@ func (rl *redisLock) RLock() error {
 		if err != nil || ok {
 			return err
 		}
-		if time.Now().Add(WaitRetry).After(stop) {
+		if time.Now().Add(rl.waitRetry).After(stop) {
 			break
 		}
-		time.Sleep(WaitRetry)
+		time.Sleep(rl.waitRetry)
 	}
 
 	return ErrTooManyRetries
@@ -214,9 +216,11 @@ func NewRedisLockGetter(client redis.UniversalClient) *RedisLockGetter {
 func (r *RedisLockGetter) ReadWrite(db prefixer.Prefixer, name string) ErrorRWLocker {
 	ns := db.DBPrefix() + "/" + name
 	lock, _ := r.locks.LoadOrStore(ns, &redisLock{
-		client: r.client,
-		ctx:    context.Background(),
-		key:    basicLockNS + ns,
+		client:    r.client,
+		ctx:       context.Background(),
+		key:       basicLockNS + ns,
+		timeout:   LockTimeout,
+		waitRetry: WaitRetry,
 	})
 
 	return lock.(*redisLock)
@@ -226,6 +230,7 @@ func (r *RedisLockGetter) ReadWrite(db prefixer.Prefixer, name string) ErrorRWLo
 // the lock in redis to avoid its automatic expiration.
 func (r *RedisLockGetter) LongOperation(db prefixer.Prefixer, name string) ErrorLocker {
 	return &longOperation{
-		lock: r.ReadWrite(db, name),
+		lock:    r.ReadWrite(db, name),
+		timeout: LockTimeout,
 	}
 }

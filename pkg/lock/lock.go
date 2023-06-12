@@ -42,16 +42,17 @@ type ErrorRWLocker interface {
 }
 
 type longOperation struct {
-	lock ErrorLocker
-	mu   sync.Mutex
-	tick *time.Ticker
+	lock    ErrorLocker
+	mu      sync.Mutex
+	tick    *time.Ticker
+	timeout time.Duration
 }
 
 func (l *longOperation) Lock() error {
 	if err := l.lock.Lock(); err != nil {
 		return err
 	}
-	l.tick = time.NewTicker(LockTimeout / 3)
+	l.tick = time.NewTicker(l.timeout / 3)
 	go func() {
 		for {
 			l.mu.Lock()
