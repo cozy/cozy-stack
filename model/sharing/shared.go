@@ -358,6 +358,9 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		if ref.Rev() == "" {
 			return nil
 		}
+		if wasRemoved {
+			return nil
+		}
 		ref.Infos[msg.SharingID] = SharedInfo{
 			Rule:    ruleIndex,
 			Removed: true,
