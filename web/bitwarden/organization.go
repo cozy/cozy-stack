@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
@@ -29,7 +30,7 @@ type organizationRequest struct {
 func (r *organizationRequest) toOrganization(inst *instance.Instance) *bitwarden.Organization {
 	md := metadata.New()
 	md.DocTypeVersion = bitwarden.DocTypeVersion
-	settings, err := inst.SettingsDocument()
+	settings, err := setting.SettingsDocument(inst)
 	if err != nil {
 		settings = &couchdb.JSONDoc{M: map[string]interface{}{}}
 	}

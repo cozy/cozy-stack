@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -308,7 +309,7 @@ func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, er
 		settings = opts.SettingsObj
 	} else {
 		var err error
-		settings, err = inst.SettingsDocument()
+		settings, err = setting.SettingsDocument(inst)
 		if err != nil {
 			return nil, err
 		}

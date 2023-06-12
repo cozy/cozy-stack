@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -119,7 +120,7 @@ func SendMail(ctx *job.WorkerContext) error {
 }
 
 func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
-	doc, err := i.SettingsDocument()
+	doc, err := setting.SettingsDocument(i)
 	if err != nil {
 		return nil, err
 	}

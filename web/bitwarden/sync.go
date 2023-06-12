@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
+	csetting "github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -31,7 +32,7 @@ type profileResponse struct {
 }
 
 func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*profileResponse, error) {
-	doc, err := inst.SettingsDocument()
+	doc, err := csetting.SettingsDocument(inst)
 	if err != nil {
 		return nil, err
 	}

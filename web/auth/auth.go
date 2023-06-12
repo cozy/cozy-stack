@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/setting"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -494,7 +495,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 
 	// If the Cozy was moved from another address and the owner had a vault,
 	// we will show them instructions about how to import their vault.
-	settings, err := instance.SettingsDocument()
+	settings, err := setting.SettingsDocument(instance)
 	if err == nil && settings.M["import_vault"] == true {
 		u := url.URL{
 			Scheme: instance.Scheme(),

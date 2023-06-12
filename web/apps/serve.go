@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
@@ -232,7 +233,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	}
 
 	if !isLoggedIn {
-		doc, err := i.SettingsDocument()
+		doc, err := setting.SettingsDocument(i)
 		if err == nil {
 			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
 				subdomainType, _ := doc.M["moved_to_subdomain_type"].(string)
@@ -302,7 +303,7 @@ func buildServeParams(
 ) serveParams {
 	token := getServeToken(c, inst, webapp, isLoggedIn, sessID)
 	tracking := false
-	settings, err := inst.SettingsDocument()
+	settings, err := setting.SettingsDocument(inst)
 	if err == nil {
 		if t, ok := settings.M["tracking"].(string); ok {
 			tracking = t == "true"

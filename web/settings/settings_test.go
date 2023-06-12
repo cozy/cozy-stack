@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -88,7 +89,7 @@ func TestSettings(t *testing.T) {
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		doc1, err := testInstance.SettingsDocument()
+		doc1, err := setting.SettingsDocument(testInstance)
 		require.NoError(t, err)
 
 		// We are going to patch an instance with newer values, and give the good rev
@@ -713,7 +714,7 @@ func TestSettings(t *testing.T) {
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		doc1, err := testInstance.SettingsDocument()
+		doc1, err := setting.SettingsDocument(testInstance)
 		require.NoError(t, err)
 
 		e.PUT("/settings/instance").
@@ -738,7 +739,7 @@ func TestSettings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().NotEmpty()
 
-		doc2, err := testInstance.SettingsDocument()
+		doc2, err := setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 
 		// Assert no changes
@@ -748,7 +749,7 @@ func TestSettings(t *testing.T) {
 	t.Run("PatchInstanceChangeParams", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		doc, err := testInstance.SettingsDocument()
+		doc, err := setting.SettingsDocument(testInstance)
 		require.NoError(t, err)
 
 		e.PUT("/settings/instance").
@@ -773,7 +774,7 @@ func TestSettings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().NotEmpty()
 
-		doc, err = testInstance.SettingsDocument()
+		doc, err = setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "Antarctica/McMurdo", doc.M["tz"].(string))
@@ -783,7 +784,7 @@ func TestSettings(t *testing.T) {
 	t.Run("PatchInstanceAddParam", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		doc1, err := testInstance.SettingsDocument()
+		doc1, err := setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 
 		e.PUT("/settings/instance").
@@ -808,7 +809,7 @@ func TestSettings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().NotEmpty()
 
-		doc2, err := testInstance.SettingsDocument()
+		doc2, err := setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 		assert.NotEqual(t, doc1.Rev(), doc2.Rev())
 		assert.Equal(t, "42", doc2.M["how_old_are_you"].(string))
@@ -819,7 +820,7 @@ func TestSettings(t *testing.T) {
 	t.Run("PatchInstanceRemoveParams", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		doc1, err := testInstance.SettingsDocument()
+		doc1, err := setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 
 		e.PUT("/settings/instance").
@@ -842,7 +843,7 @@ func TestSettings(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().NotEmpty()
 
-		doc2, err := testInstance.SettingsDocument()
+		doc2, err := setting.SettingsDocument(testInstance)
 		assert.NoError(t, err)
 		assert.NotEqual(t, doc1.Rev(), doc2.Rev())
 		assert.Equal(t, "Europe/Berlin", doc2.M["tz"].(string))

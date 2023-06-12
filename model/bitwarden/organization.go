@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	csetting "github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -143,7 +144,7 @@ func GetCozyOrganization(inst *instance.Instance, setting *settings.Settings) (*
 		return nil, err
 	}
 
-	settings, err := inst.SettingsDocument()
+	settings, err := csetting.SettingsDocument(inst)
 	if err != nil {
 		return nil, err
 	}

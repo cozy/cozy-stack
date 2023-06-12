@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
@@ -275,21 +276,10 @@ func (i *Instance) NotesLock() lock.ErrorRWLocker {
 	return config.Lock().ReadWrite(i, "notes")
 }
 
-// SettingsDocument returns the document with the settings of this instance
-func (i *Instance) SettingsDocument() (*couchdb.JSONDoc, error) {
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
-	if err != nil {
-		return nil, err
-	}
-	doc.Type = consts.Settings
-	return doc, nil
-}
-
 // SettingsEMail returns the email address defined in the settings of this
 // instance.
 func (i *Instance) SettingsEMail() (string, error) {
-	settings, err := i.SettingsDocument()
+	settings, err := setting.SettingsDocument(i)
 	if err != nil {
 		return "", err
 	}
@@ -300,7 +290,7 @@ func (i *Instance) SettingsEMail() (string, error) {
 // SettingsPublicName returns the public name defined in the settings of this
 // instance.
 func (i *Instance) SettingsPublicName() (string, error) {
-	settings, err := i.SettingsDocument()
+	settings, err := setting.SettingsDocument(i)
 	if err != nil {
 		return "", err
 	}
@@ -518,7 +508,7 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 
 // PublicName returns the settings' public name or a default one if missing
 func (i *Instance) PublicName() (string, error) {
-	doc, err := i.SettingsDocument()
+	doc, err := setting.SettingsDocument(i)
 	if err != nil {
 		return "", err
 	}
@@ -573,7 +563,7 @@ func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 // DefaultRedirection returns the URL where to redirect the user afer login
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
-	if doc, err := i.SettingsDocument(); err == nil {
+	if doc, err := setting.SettingsDocument(i); err == nil {
 		// XXX we had a bug where the default_redirection was filled by a full URL
 		// instead of slug+path, and we should ignore the bad format here.
 		if redirect, ok := doc.M["default_redirection"].(string); ok && !strings.HasPrefix(redirect, "http") {
@@ -723,7 +713,7 @@ func (i *Instance) MovedError() *jsonapi.Error {
 		Code:   "moved",
 		Detail: i.Translate("The Cozy has been moved to a new address"),
 	}
-	doc, err := i.SettingsDocument()
+	doc, err := setting.SettingsDocument(i)
 	if err == nil {
 		if to, ok := doc.M["moved_to"].(string); ok {
 			jerr.Links = &jsonapi.LinksList{Related: to}

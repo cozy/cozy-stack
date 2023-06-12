@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -102,7 +103,7 @@ func TestLifecycle(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, inst.Domain, "test2.cozycloud.cc")
-		doc, err := inst.SettingsDocument()
+		doc, err := setting.SettingsDocument(inst)
 		assert.NoError(t, err)
 		assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
 		assert.Equal(t, "alice@example.com", doc.M["email"].(string))
@@ -136,7 +137,7 @@ func TestLifecycle(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, inst.Domain, "test3.cozycloud.cc")
-		doc, err := inst.SettingsDocument()
+		doc, err := setting.SettingsDocument(inst)
 		assert.NoError(t, err)
 		assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
 		assert.Equal(t, "alice@example.com", doc.M["email"].(string))

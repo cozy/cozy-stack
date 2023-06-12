@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -74,7 +75,7 @@ func ScheduleImport(inst *instance.Instance, options ImportOptions) error {
 		return err
 	}
 
-	settings, err := inst.SettingsDocument()
+	settings, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return nil
 	}
@@ -132,7 +133,7 @@ func fetchManifest(manifestURL string) (*ExportDoc, error) {
 // not been installed.
 func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 	defer func() {
-		settings, err := inst.SettingsDocument()
+		settings, err := setting.SettingsDocument(inst)
 		if err == nil {
 			delete(settings.M, "importing")
 			_ = couchdb.UpdateDoc(inst, settings)
@@ -183,7 +184,7 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 
 // ImportIsFinished returns true unless an import is running
 func ImportIsFinished(inst *instance.Instance) bool {
-	settings, err := inst.SettingsDocument()
+	settings, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return false
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -233,7 +234,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
 
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err == nil {
 		doc.M["moved_to"] = req.Target
 		_ = couchdb.UpdateDoc(inst, doc)
@@ -302,7 +303,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 			Warnf("Cannot finalize: code=%d", res.StatusCode)
 	}
 
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err == nil {
 		doc.M["moved_from"] = u.Host
 		if vault {
@@ -345,7 +346,7 @@ func Finalize(inst *instance.Instance, subdomainType string) error {
 		errm = multierror.Append(errm, err)
 	}
 
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err == nil {
 		doc.M["moved_to_subdomain_type"] = subdomainType
 		err = couchdb.UpdateDoc(inst, doc)

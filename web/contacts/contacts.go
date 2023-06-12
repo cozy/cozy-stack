@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -30,7 +31,7 @@ func MyselfHandler(c echo.Context) error {
 	myself, err := contact.GetMyself(inst)
 	if errors.Is(err, contact.ErrNotFound) {
 		var settings *couchdb.JSONDoc
-		settings, err = inst.SettingsDocument()
+		settings, err = setting.SettingsDocument(inst)
 		if err == nil {
 			myself, err = contact.CreateMyself(inst, settings)
 		}

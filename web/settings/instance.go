@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -40,7 +41,7 @@ func (i *apiInstance) MarshalJSON() ([]byte, error) {
 func getInstance(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return err
 	}
@@ -196,7 +197,7 @@ func clearMovedFrom(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return err
 	}

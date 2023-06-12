@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"golang.org/x/sync/errgroup"
@@ -14,7 +15,7 @@ import (
 // Reset will clean all the data from the instances, and most apps. It should
 // be used only just before an import.
 func Reset(inst *instance.Instance) error {
-	instanceSettings, err := inst.SettingsDocument()
+	instanceSettings, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return err
 	}

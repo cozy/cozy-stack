@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
@@ -226,7 +227,7 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 // needsSettingsUpdate compares the old instance io.cozy.settings with the new
 // bunch of settings and tells if it needs an update
 func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interface{}) bool {
-	oldSettings, err := inst.SettingsDocument()
+	oldSettings, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return false
 	}

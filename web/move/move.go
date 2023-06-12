@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/setting"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -166,7 +167,7 @@ func blockForImport(c echo.Context) error {
 	time.Sleep(100 * time.Millisecond)
 
 	if source := c.QueryParam("source"); source != "" {
-		doc, err := inst.SettingsDocument()
+		doc, err := setting.SettingsDocument(inst)
 		if err != nil {
 			return err
 		}
@@ -191,7 +192,7 @@ func waitImportHasFinished(c echo.Context) error {
 	if inst.BlockingReason == instance.BlockedMoving.Code {
 		template = "move_in_progress.html"
 		title = "Move in progress Title"
-		doc, err := inst.SettingsDocument()
+		doc, err := setting.SettingsDocument(inst)
 		if err == nil {
 			if from, ok := doc.M["moved_from"].(string); ok {
 				source = from
@@ -496,7 +497,7 @@ func importVault(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	doc, err := inst.SettingsDocument()
+	doc, err := setting.SettingsDocument(inst)
 	if err != nil {
 		return err
 	}
