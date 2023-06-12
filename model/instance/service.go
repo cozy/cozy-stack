@@ -7,7 +7,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -15,14 +14,12 @@ const cacheTTL = 5 * time.Minute
 const cachePrefix = "i:"
 
 type InstanceService struct {
-	cache  cache.Cache
-	logger *logger.Entry
+	cache cache.Cache
 }
 
 func NewService(cache cache.Cache, lock lock.Getter) *InstanceService {
 	return &InstanceService{
-		cache:  cache,
-		logger: logger.WithNamespace("instance"),
+		cache: cache,
 	}
 }
 
@@ -90,10 +87,19 @@ func (s *InstanceService) Update(inst *Instance) error {
 	}
 
 	if data, err := json.Marshal(inst); err == nil {
-		s.cache.Set(inst.cacheKey(), data, cacheTTL)
+		s.cache.Set(cacheKey(inst), data, cacheTTL)
 	}
 
 	return nil
+}
+
+// Delete removes the instance document in CouchDB.
+func (s *InstanceService) Delete(inst *Instance) error {
+	err := couchdb.DeleteDoc(prefixer.GlobalPrefixer, inst)
+
+	s.cache.Clear(cacheKey(inst))
+
+	return err
 }
 
 func cacheKey(inst *Instance) string {

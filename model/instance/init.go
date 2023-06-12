@@ -33,3 +33,10 @@ func GetFromCouch(domain string) (*Instance, error) {
 func Update(inst *Instance) error {
 	return service.Update(inst)
 }
+
+// Delete removes the instance document in CouchDB.
+//
+// Deprecated: Use [InstanceService.Delete] instead.
+func Delete(inst *Instance) error {
+	return service.Delete(inst)
+}
