@@ -39,18 +39,19 @@ type File struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Type       string    `json:"type"`
-		Name       string    `json:"name"`
-		DirID      string    `json:"dir_id"`
-		CreatedAt  time.Time `json:"created_at"`
-		UpdatedAt  time.Time `json:"updated_at"`
-		Size       int64     `json:"size,string"`
-		MD5Sum     []byte    `json:"md5sum"`
-		Mime       string    `json:"mime"`
-		Class      string    `json:"class"`
-		Executable bool      `json:"executable"`
-		Encrypted  bool      `json:"encrypted"`
-		Tags       []string  `json:"tags"`
+		Type       string                 `json:"type"`
+		Name       string                 `json:"name"`
+		DirID      string                 `json:"dir_id"`
+		CreatedAt  time.Time              `json:"created_at"`
+		UpdatedAt  time.Time              `json:"updated_at"`
+		Size       int64                  `json:"size,string"`
+		MD5Sum     []byte                 `json:"md5sum"`
+		Mime       string                 `json:"mime"`
+		Class      string                 `json:"class"`
+		Executable bool                   `json:"executable"`
+		Encrypted  bool                   `json:"encrypted"`
+		Tags       []string               `json:"tags"`
+		Metadata   map[string]interface{} `json:"metadata"`
 	} `json:"attributes"`
 }
 
@@ -59,13 +60,14 @@ type Dir struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Type      string    `json:"type"`
-		Name      string    `json:"name"`
-		DirID     string    `json:"dir_id"`
-		Fullpath  string    `json:"path"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Tags      []string  `json:"tags"`
+		Type      string                 `json:"type"`
+		Name      string                 `json:"name"`
+		DirID     string                 `json:"dir_id"`
+		Fullpath  string                 `json:"path"`
+		CreatedAt time.Time              `json:"created_at"`
+		UpdatedAt time.Time              `json:"updated_at"`
+		Tags      []string               `json:"tags"`
+		Metadata  map[string]interface{} `json:"metadata"`
 	} `json:"attributes"`
 }
 

@@ -181,6 +181,28 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		}
 	}
 
+	if secret := c.QueryParam("MetadataID"); secret != "" {
+		instance := middlewares.GetInstance(c)
+		meta, err := vfs.GetStore().GetMetadata(instance, secret)
+		if err != nil {
+			return nil, err
+		}
+		doc.Metadata = *meta
+	}
+
+	if len(doc.Metadata) > 0 {
+		if _, ok := doc.Metadata[consts.CarbonCopyKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedCarbonCopy); err != nil {
+				delete(doc.Metadata, consts.CarbonCopyKey)
+			}
+		}
+		if _, ok := doc.Metadata[consts.ElectronicSafeKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedElectronicSafe); err != nil {
+				delete(doc.Metadata, consts.ElectronicSafeKey)
+			}
+		}
+	}
+
 	doc.CozyMetadata, _ = CozyMetadataFromClaims(c, false)
 
 	err = checkPerm(c, "POST", doc, nil)

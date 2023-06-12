@@ -340,15 +340,14 @@ type DirOrFileDoc struct {
 	*DirDoc
 
 	// fields from FileDoc not contained in DirDoc
-	ByteSize   int64    `json:"size,string"`
-	MD5Sum     []byte   `json:"md5sum,omitempty"`
-	Mime       string   `json:"mime,omitempty"`
-	Class      string   `json:"class,omitempty"`
-	Executable bool     `json:"executable,omitempty"`
-	Trashed    bool     `json:"trashed,omitempty"`
-	Encrypted  bool     `json:"encrypted,omitempty"`
-	Metadata   Metadata `json:"metadata,omitempty"`
-	InternalID string   `json:"internal_vfs_id,omitempty"`
+	ByteSize   int64  `json:"size,string"`
+	MD5Sum     []byte `json:"md5sum,omitempty"`
+	Mime       string `json:"mime,omitempty"`
+	Class      string `json:"class,omitempty"`
+	Executable bool   `json:"executable,omitempty"`
+	Trashed    bool   `json:"trashed,omitempty"`
+	Encrypted  bool   `json:"encrypted,omitempty"`
+	InternalID string `json:"internal_vfs_id,omitempty"`
 }
 
 // Clone is part of the couchdb.Doc interface

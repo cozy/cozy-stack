@@ -41,6 +41,7 @@ type DirDoc struct {
 	ReferencedBy      []couchdb.DocReference `json:"referenced_by,omitempty"`
 	NotSynchronizedOn []couchdb.DocReference `json:"not_synchronized_on,omitempty"`
 
+	Metadata     Metadata           `json:"metadata,omitempty"`
 	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
@@ -62,6 +63,10 @@ func (d *DirDoc) Clone() couchdb.Doc {
 	copy(cloned.ReferencedBy, d.ReferencedBy)
 	cloned.NotSynchronizedOn = make([]couchdb.DocReference, len(d.NotSynchronizedOn))
 	copy(cloned.NotSynchronizedOn, d.NotSynchronizedOn)
+	cloned.Metadata = make(Metadata, len(d.Metadata))
+	for k, v := range d.Metadata {
+		cloned.Metadata[k] = v
+	}
 	if d.CozyMetadata != nil {
 		cloned.CozyMetadata = d.CozyMetadata.Clone()
 	}
@@ -253,6 +258,7 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.NotSynchronizedOn = olddoc.NotSynchronizedOn
+	newdoc.Metadata = olddoc.Metadata
 	newdoc.CozyMetadata = olddoc.CozyMetadata
 
 	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {

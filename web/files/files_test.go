@@ -134,7 +134,7 @@ func TestFiles(t *testing.T) {
 		}).
 			NotNull()
 
-			// Check if we can fine the trashed "/foo/qux"
+		// Check if we can fine the trashed "/foo/qux"
 		results.Find(func(_ int, value *httpexpect.Value) bool {
 			doc := value.Object().Value("doc").Object()
 			doc.ValueEqual("type", "directory")
@@ -361,6 +361,74 @@ func TestFiles(t *testing.T) {
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(422)
+	})
+
+	t.Run("CreateDirWithMetadata", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/upload/metadata").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+            "type": "io.cozy.files.metadata",
+            "attributes": {
+                "device-id": "123456789"
+            }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", consts.FilesMetadata)
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("device-id", "123456789")
+		secret := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.POST("/files/").
+			WithQuery("Name", "dir-with-metadata").
+			WithQuery("Type", "directory").
+			WithQuery("MetadataID", secret).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		dirID := obj.Path("$.data.id").String().NotEmpty().Raw()
+		meta := obj.Path("$.data.attributes.metadata").Object()
+		meta.ValueEqual("device-id", "123456789")
+
+		// Check that the metadata are still here after an update
+		obj = e.PATCH("/files/"+dirID).
+			WithQuery("Path", "/dir-with-metadata").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + dirID + `",
+          "attributes": {
+            "name": "new-name-for-dir-with-metadata"
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta = obj.Path("$.data.attributes.metadata").Object()
+		meta.ValueEqual("device-id", "123456789")
+
+		obj = e.GET("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta = obj.Path("$.data.attributes.metadata").Object()
+		meta.ValueEqual("device-id", "123456789")
 	})
 
 	t.Run("CreateDirConcurrently", func(t *testing.T) {

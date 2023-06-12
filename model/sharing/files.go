@@ -697,6 +697,10 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 		}
 	}
 
+	if meta, ok := target["metadata"].(map[string]interface{}); ok {
+		dir.Metadata = vfs.Metadata(meta).RemoveCertifiedMetadata()
+	}
+
 	if meta, ok := target["cozyMetadata"].(map[string]interface{}); ok {
 		dir.CozyMetadata = &vfs.FilesCozyMetadata{}
 		if version, ok := meta["doctypeVersion"].(string); ok {
@@ -1265,6 +1269,9 @@ func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
 	}
 	if dir.RestorePath != "" {
 		doc.M["restore_path"] = dir.RestorePath
+	}
+	if len(dir.Metadata) > 0 {
+		doc.M["metadata"] = dir.Metadata.RemoveCertifiedMetadata()
 	}
 	fcm := dir.CozyMetadata
 	if fcm == nil {

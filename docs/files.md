@@ -29,12 +29,13 @@ the directory is created at the root of the virtual file system.
 
 #### Query-String
 
-| Parameter | Description        |
-| --------- | ------------------ |
-| Type      | `directory`        |
-| Name      | the directory name |
-| Tags      | an array of tags   |
-| CreatedAt | the creation date  |
+| Parameter  | Description                         |
+| ---------- | ----------------------------------- |
+| Type       | `directory`                         |
+| Name       | the directory name                  |
+| Tags       | an array of tags                    |
+| CreatedAt  | the creation date                   |
+| MetadataID | the identifier of a metadata object |
 
 #### HTTP headers
 
@@ -779,8 +780,8 @@ more informations about the references field.
 
 ### POST /files/upload/metadata
 
-Send a metadata object that can be associated to a file uploaded after that,
-via the `MetadataID` query parameter.
+Send a metadata object that can be associated to a file (or directory) uploaded
+after that, via the `MetadataID` query parameter.
 
 **Note:** a special permission on `io.cozy.certified.carbon_copy` is required
 to send a request with `carbonCopy` as key in the `attributes` map. Same for
