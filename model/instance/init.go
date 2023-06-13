@@ -1,6 +1,9 @@
 package instance
 
-import "github.com/cozy/cozy-stack/pkg/config/config"
+import (
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
+)
 
 var service *InstanceService
 
@@ -14,12 +17,13 @@ type Service interface {
 	GetWithoutCache(domain string) (*Instance, error)
 	Update(inst *Instance) error
 	Delete(inst *Instance) error
+	CheckPassphrase(inst *Instance, pass []byte) error
 }
 
 func Init() *InstanceService {
 	service = NewService(
 		config.GetConfig().CacheStorage,
-		config.Lock(),
+		logger.WithNamespace("instance"),
 	)
 
 	return service
@@ -51,4 +55,11 @@ func Update(inst *Instance) error {
 // Deprecated: Use [InstanceService.Delete] instead.
 func Delete(inst *Instance) error {
 	return service.Delete(inst)
+}
+
+// CheckPassphrase confirm an instance password
+//
+// Deprecated: Use [InstanceService.CheckPassphrase] instead.
+func CheckPassphrase(inst *Instance, pass []byte) error {
+	return service.CheckPassphrase(inst, pass)
 }

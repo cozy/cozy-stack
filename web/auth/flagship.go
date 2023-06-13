@@ -92,7 +92,7 @@ func canCreateSessionCode(c echo.Context, inst *instance.Instance) canCreateSess
 	if err := c.Bind(&args); err != nil {
 		return cannotCreateSessionCode
 	}
-	if err := lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)); err != nil {
+	if err := instance.CheckPassphrase(inst, []byte(args.Passphrase)); err != nil {
 		return cannotCreateSessionCode
 	}
 
@@ -191,7 +191,7 @@ func loginFlagship(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+	if instance.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
 			if err = LoginRateExceeded(inst); err != nil {

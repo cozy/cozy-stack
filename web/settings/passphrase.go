@@ -312,7 +312,7 @@ func (h *HTTPHandler) updatePassphrase(c echo.Context) error {
 
 	// Else, we keep going on the standard checks (2FA, current passphrase, ...)
 	if inst.HasAuthMode(instance.TwoFactorMail) && len(args.TwoFactorToken) == 0 {
-		if lifecycle.CheckPassphrase(inst, currentPassphrase) == nil {
+		if instance.CheckPassphrase(inst, currentPassphrase) == nil {
 			var twoFactorToken []byte
 			twoFactorToken, err = lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
@@ -373,7 +373,7 @@ func (h *HTTPHandler) checkPassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+	if instance.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
 		return jsonapi.Forbidden(instance.ErrInvalidPassphrase)
 	}
 

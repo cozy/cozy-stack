@@ -6,7 +6,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -14,12 +15,14 @@ const cacheTTL = 5 * time.Minute
 const cachePrefix = "i:"
 
 type InstanceService struct {
-	cache cache.Cache
+	cache  cache.Cache
+	logger logger.Logger
 }
 
-func NewService(cache cache.Cache, lock lock.Getter) *InstanceService {
+func NewService(cache cache.Cache, logger logger.Logger) *InstanceService {
 	return &InstanceService{
-		cache: cache,
+		cache:  cache,
+		logger: logger,
 	}
 }
 
@@ -100,6 +103,33 @@ func (s *InstanceService) Delete(inst *Instance) error {
 	s.cache.Clear(cacheKey(inst))
 
 	return err
+}
+
+// CheckPassphrase confirm an instance password
+func (s *InstanceService) CheckPassphrase(inst *Instance, pass []byte) error {
+	if len(pass) == 0 {
+		return ErrMissingPassphrase
+	}
+
+	needUpdate, err := crypto.CompareHashAndPassphrase(inst.PassphraseHash, pass)
+	if err != nil {
+		return err
+	}
+
+	if !needUpdate {
+		return nil
+	}
+
+	newHash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+
+	inst.PassphraseHash = newHash
+	if err = s.Update(inst); err != nil {
+		s.logger.WithDomain(inst.Domain).Errorf("Failed to update hash in db: %s", err)
+	}
+	return nil
 }
 
 func cacheKey(inst *Instance) string {

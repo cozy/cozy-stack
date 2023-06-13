@@ -51,3 +51,8 @@ func (m *Mock) Update(inst *Instance) error {
 func (m *Mock) Delete(inst *Instance) error {
 	return m.Called(inst).Error(1)
 }
+
+// CheckPassphrase mock method.
+func (m *Mock) CheckPassphrase(inst *Instance, pass []byte) error {
+	return m.Called(inst, pass).Error(0)
+}

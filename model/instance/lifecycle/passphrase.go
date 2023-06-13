@@ -343,40 +343,13 @@ func CreateKeyPair(symKey []byte) (string, string, error) {
 	return pubKey, encrypted, nil
 }
 
-// CheckPassphrase confirm an instance password
-func CheckPassphrase(inst *instance.Instance, pass []byte) error {
-	if len(pass) == 0 {
-		return instance.ErrMissingPassphrase
-	}
-
-	needUpdate, err := crypto.CompareHashAndPassphrase(inst.PassphraseHash, pass)
-	if err != nil {
-		return err
-	}
-
-	if !needUpdate {
-		return nil
-	}
-
-	newHash, err := crypto.GenerateFromPassphrase(pass)
-	if err != nil {
-		return err
-	}
-
-	inst.PassphraseHash = newHash
-	if err = update(inst); err != nil {
-		inst.Logger().Errorf("Failed to update hash in db: %s", err)
-	}
-	return nil
-}
-
 // CheckHint returns true if the hint is valid, ie it is not
 // the same as the password.
 func CheckHint(inst *instance.Instance, setting *settings.Settings, hint string) error {
 	salt := inst.PassphraseSalt()
 	iterations := setting.PassphraseKdfIterations
 	hashed, _ := crypto.HashPassWithPBKDF2([]byte(hint), salt, iterations)
-	if err := CheckPassphrase(inst, hashed); err == nil {
+	if err := instance.CheckPassphrase(inst, hashed); err == nil {
 		return ErrHintSameAsPassword
 	}
 	return nil
