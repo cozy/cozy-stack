@@ -11,7 +11,7 @@ var service *InstanceService
 // - [Mock] with a mock implementation
 type Service interface {
 	Get(domain string) (*Instance, error)
-	GetFromCouch(domain string) (*Instance, error)
+	GetWithoutCache(domain string) (*Instance, error)
 	Update(inst *Instance) error
 	Delete(inst *Instance) error
 }
