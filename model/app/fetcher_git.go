@@ -37,10 +37,10 @@ var (
 
 type gitFetcher struct {
 	manFilename string
-	log         *logger.Entry
+	log         logger.Logger
 }
 
-func newGitFetcher(manFilename string, log *logger.Entry) *gitFetcher {
+func newGitFetcher(manFilename string, log logger.Logger) *gitFetcher {
 	return &gitFetcher{
 		manFilename: manFilename,
 		log:         log,

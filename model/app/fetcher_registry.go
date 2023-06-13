@@ -14,12 +14,12 @@ import (
 )
 
 type registryFetcher struct {
-	log        *logger.Entry
+	log        logger.Logger
 	registries []*url.URL
 	version    *registry.Version
 }
 
-func newRegistryFetcher(registries []*url.URL, log *logger.Entry) Fetcher {
+func newRegistryFetcher(registries []*url.URL, log logger.Logger) Fetcher {
 	return &registryFetcher{log: log, registries: registries}
 }
 

@@ -1001,7 +1001,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			}
 			stack := make([]byte, 4<<10) // 4 KB
 			length := runtime.Stack(stack, false)
-			log := inst.Logger().WithField("panic", true).WithNamespace("sharing")
+			log := inst.Logger().WithNamespace("sharing").WithField("panic", true)
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()

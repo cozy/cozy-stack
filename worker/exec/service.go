@@ -195,7 +195,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 	return
 }
 
-func (w *serviceWorker) Logger(ctx *job.WorkerContext) *logger.Entry {
+func (w *serviceWorker) Logger(ctx *job.WorkerContext) logger.Logger {
 	log := ctx.Logger().WithField("slug", w.Slug())
 	if w.name != "" {
 		log = log.WithField("name", w.name)

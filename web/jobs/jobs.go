@@ -634,10 +634,12 @@ func patchJob(c echo.Context) error {
 	}
 
 	log := inst.Logger().
+		WithNamespace("jobs").
 		WithField("job_id", j.ID()).
-		WithField("worker_id", "client").
-		WithNamespace("jobs")
+		WithField("worker_id", "client")
+
 	msg := &exec.KonnectorMessage{}
+
 	if err := j.Message.Unmarshal(&msg); err == nil {
 		log = log.
 			WithField("slug", msg.Konnector).

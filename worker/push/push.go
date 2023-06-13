@@ -22,7 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/sirupsen/logrus"
 
 	fcm "github.com/appleboy/go-fcm"
 
@@ -144,7 +143,7 @@ func Worker(ctx *job.WorkerContext) error {
 			}
 		} else {
 			ctx.Logger().
-				WithFields(logrus.Fields{
+				WithFields(logger.Fields{
 					"device_id":       c.ID(),
 					"device_platform": c.NotificationPlatform,
 				}).
@@ -177,7 +176,7 @@ func Worker(ctx *job.WorkerContext) error {
 			}
 		} else {
 			ctx.Logger().
-				WithFields(logrus.Fields{
+				WithFields(logger.Fields{
 					"device_id":       c.ID(),
 					"device_platform": c.NotificationPlatform,
 				}).
