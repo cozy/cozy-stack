@@ -324,7 +324,7 @@ func login(c echo.Context) error {
 	sess, ok := middlewares.GetSession(c)
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
-	} else if lifecycle.CheckPassphrase(inst, passphrase) == nil {
+	} else if instance.CheckPassphrase(inst, passphrase) == nil {
 		ua := user_agent.New(c.Request().UserAgent())
 		browser, _ := ua.Browser()
 		iterations := crypto.DefaultPBKDF2Iterations

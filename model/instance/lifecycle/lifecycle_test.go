@@ -410,10 +410,10 @@ func TestLifecycle(t *testing.T) {
 		assert.Empty(t, inst.RegisterToken, "changes have been saved in db")
 		assert.NotEmpty(t, inst.PassphraseHash, "changes have been saved in db")
 
-		err = lifecycle.CheckPassphrase(inst, []byte("not-passphrase"))
+		err = instance.CheckPassphrase(inst, []byte("not-passphrase"))
 		assert.Error(t, err)
 
-		err = lifecycle.CheckPassphrase(inst, []byte("new-passphrase"))
+		err = instance.CheckPassphrase(inst, []byte("new-passphrase"))
 		assert.NoError(t, err)
 	})
 

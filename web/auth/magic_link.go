@@ -113,7 +113,7 @@ func loginWithMagicLinkAndPassword(c echo.Context) error {
 
 	// Check passphrase
 	passphrase := []byte(c.FormValue("passphrase"))
-	if lifecycle.CheckPassphrase(inst, passphrase) != nil {
+	if instance.CheckPassphrase(inst, passphrase) != nil {
 		errorMessage := inst.Translate(CredentialsErrorKey)
 		err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 		if limits.IsLimitReachedOrExceeded(err) {
@@ -165,7 +165,7 @@ func magicLinkFlagship(c echo.Context) error {
 	}
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
-		if lifecycle.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
+		if instance.CheckPassphrase(inst, []byte(args.Passphrase)) != nil {
 			err := config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 			if limits.IsLimitReachedOrExceeded(err) {
 				if err = LoginRateExceeded(inst); err != nil {

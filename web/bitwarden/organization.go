@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -284,7 +283,7 @@ func DeleteOrganization(c echo.Context) error {
 			"error": "invalid JSON",
 		})
 	}
-	if err := lifecycle.CheckPassphrase(inst, []byte(verification.Hash)); err != nil {
+	if err := instance.CheckPassphrase(inst, []byte(verification.Hash)); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid password",
 		})

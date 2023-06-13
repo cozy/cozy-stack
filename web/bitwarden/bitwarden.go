@@ -167,7 +167,7 @@ func ChangeSecurityStamp(c echo.Context) error {
 		})
 	}
 
-	if err := lifecycle.CheckPassphrase(inst, []byte(data.Hashed)); err != nil {
+	if err := instance.CheckPassphrase(inst, []byte(data.Hashed)); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid masterPasswordHash",
 		})
@@ -246,7 +246,7 @@ func getInitialCredentials(c echo.Context) error {
 	pass := []byte(c.FormValue("password"))
 
 	// Authentication
-	if err := lifecycle.CheckPassphrase(inst, pass); err != nil {
+	if err := instance.CheckPassphrase(inst, pass); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid password",
 		})
