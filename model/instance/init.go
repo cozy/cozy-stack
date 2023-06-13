@@ -34,9 +34,9 @@ func Get(domain string) (*Instance, error) {
 
 // GetFromCouch finds an instance in CouchDB from its domain.
 //
-// Deprecated: Use [InstanceService.GetFromCouch] instead.
+// Deprecated: Use [InstanceService.GetWithoutCache] instead.
 func GetFromCouch(domain string) (*Instance, error) {
-	return service.GetFromCouch(domain)
+	return service.GetWithoutCache(domain)
 }
 
 // Update saves the changes in CouchDB.

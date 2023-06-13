@@ -31,8 +31,8 @@ func (m *Mock) Get(domain string) (*Instance, error) {
 	return args.Get(0).(*Instance), args.Error(1)
 }
 
-// GetFromCouch mock method.
-func (m *Mock) GetFromCouch(domain string) (*Instance, error) {
+// GetWithoutCache mock method.
+func (m *Mock) GetWithoutCache(domain string) (*Instance, error) {
 	args := m.Called(domain)
 
 	if args.Get(0) == nil {
