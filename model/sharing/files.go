@@ -1135,6 +1135,7 @@ func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.Dir
 	var ref SharedRef
 	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err == nil {
 		if s.Owner {
+			ref.Revisions.Add(olddoc.Rev())
 			ref.Infos[s.SID] = SharedInfo{
 				Rule:        ref.Infos[s.SID].Rule,
 				Binary:      false,
@@ -1240,6 +1241,7 @@ func (s *Sharing) dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.Fi
 	if !s.Owner {
 		return couchdb.DeleteDoc(inst, &ref)
 	}
+	ref.Revisions.Add(olddoc.Rev())
 	ref.Infos[s.SID] = SharedInfo{
 		Rule:        ref.Infos[s.SID].Rule,
 		Binary:      false,
