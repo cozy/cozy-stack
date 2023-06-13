@@ -2,6 +2,7 @@ package couchdb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -85,100 +86,122 @@ func (e *Error) JSON() map[string]interface{} {
 	return jsonMap
 }
 
-// IsCouchError returns whether or not the given error is of type
-// couchdb.Error.
+// IsCouchError returns whether or not one error from the error
+// tree is of type couchdb.Error.
 func IsCouchError(err error) (*Error, bool) {
-	if err == nil {
-		return nil, false
-	}
-	couchErr, isCouchErr := err.(*Error)
+	var couchErr *Error
+
+	isCouchErr := errors.As(err, &couchErr)
+
 	return couchErr, isCouchErr
 }
 
-// IsInternalServerError checks if CouchDB has returned a 5xx code
+// IsInternalServerError checks if an error from the error tree
+// contains a CouchDB error with a 5xx code
 func IsInternalServerError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.StatusCode/100 == 5
 }
 
-// IsNoDatabaseError checks if the given error is a couch no_db_file
-// error
+// IsNoDatabaseError checks if an error from the error tree
+// contains a CouchDB a "no_db_file" error.
 func IsNoDatabaseError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.Reason == "no_db_file" ||
 		couchErr.Reason == "Database does not exist."
 }
 
-// IsNotFoundError checks if the given error is a couch not_found
-// error
+// IsNotFoundError checks if an error from the error tree
+// contains a CouchDB a "not_found" error.
 func IsNotFoundError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return (couchErr.Name == "not_found" ||
 		couchErr.Reason == "no_db_file" ||
 		couchErr.Reason == "Database does not exist.")
 }
 
-// IsDeletedError checks if the given error is a couch not_found
-// error, with the deleted reason. It means that a document has existed but is
+// IsDeletedError  checks if an error from the error tree
+// contains a CouchDB a "not_found" error with the "deleted"
+// reason. It means that a document has existed but is
 // now deleted.
 func IsDeletedError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.Name == "not_found" && couchErr.Reason == "deleted"
 }
 
-// IsFileExists checks if the given error is a couch conflict error
+// IsFileExists checks if an error from the error tree
+// contains a CouchDB a "file_exists" error.
 func IsFileExists(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.Name == "file_exists"
 }
 
-// IsConflictError checks if the given error is a couch conflict error
+// IsConflictError checks if an error from the error tree
+// contains a CouchDB 409 (Conflict) status code.
 func IsConflictError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.StatusCode == http.StatusConflict
 }
 
-// IsNoUsableIndexError checks if the given error is an error form couch, for
-// an invalid request on an index that is not usable.
+// IsNoUsableIndexError checks if an error from the error tree
+// contains a "no_usable_index" error.
 func IsNoUsableIndexError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return couchErr.Name == "no_usable_index"
 }
 
 func isIndexError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return strings.Contains(couchErr.Reason, "mango_idx")
 }
 
 func isBadArgError(err error) bool {
-	couchErr, isCouchErr := IsCouchError(err)
-	if !isCouchErr {
+	var couchErr *Error
+
+	if ok := errors.As(err, &couchErr); !ok {
 		return false
 	}
+
 	return strings.Contains(couchErr.Reason, "badarg")
 }
 
