@@ -64,6 +64,9 @@ func getInstance(c echo.Context) error {
 	}
 
 	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
+		// Allow bitwarden clients to read the instance settings, even if they
+		// don't have a permission for it
+		err = middlewares.AllowWholeType(c, permission.GET, consts.Support)
 		return err
 	}
 
