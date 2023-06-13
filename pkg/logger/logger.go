@@ -29,9 +29,13 @@ type Logger interface {
 	Warn(msg string)
 	Error(msg string)
 
+	// Generic field operations
 	WithField(fn string, fv interface{}) Logger
 	WithFields(fields Fields) Logger
+
+	// Business specific field operations.
 	WithTime(t time.Time) Logger
+	WithDomain(s string) Logger
 
 	Log(level Level, msg string)
 }
@@ -102,7 +106,7 @@ func (e *Entry) WithNamespace(nspace string) *Entry {
 }
 
 // WithDomain add a domain field.
-func (e *Entry) WithDomain(domain string) *Entry {
+func (e *Entry) WithDomain(domain string) Logger {
 	entry := e.entry.WithField("domain", domain)
 	return &Entry{entry}
 }

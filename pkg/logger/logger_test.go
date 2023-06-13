@@ -35,6 +35,10 @@ func (m *hookMock) Fire(entry *logrus.Entry) error {
 	return m.Called(entry.String()).Error(0)
 }
 
+func TestImplementation(t *testing.T) {
+	assert.Implements(t, (*Logger)(nil), new(Entry))
+}
+
 func TestLogger(t *testing.T) {
 	t.Run("DebugDomain", func(t *testing.T) {
 		buf := new(bytes.Buffer)
