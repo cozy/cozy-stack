@@ -4,6 +4,18 @@ import "github.com/cozy/cozy-stack/pkg/config/config"
 
 var service *InstanceService
 
+// Service handle all the interactions with the "instance" domain.
+//
+// This interface has several implementations:
+// - [InstanceService] with the business logic
+// - [Mock] with a mock implementation
+type Service interface {
+	Get(domain string) (*Instance, error)
+	GetFromCouch(domain string) (*Instance, error)
+	Update(inst *Instance) error
+	Delete(inst *Instance) error
+}
+
 func Init() *InstanceService {
 	service = NewService(
 		config.GetConfig().CacheStorage,
