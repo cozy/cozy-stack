@@ -41,6 +41,9 @@ type (
 	// Broker interface is used to represent a job broker associated to a
 	// particular domain. A broker can be used to create jobs that are pushed in
 	// the job system.
+	//
+	// This interface is matched by several implementations:
+	// - [BrokerMock] a mock implementation used for the tests.
 	Broker interface {
 		StartWorkers(workersList WorkersList) error
 		ShutdownWorkers(ctx context.Context) error

@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBrokerImplems(t *testing.T) {
+	assert.Implements(t, (*job.Broker)(nil), new(job.BrokerMock))
+}
+
 func TestBroker(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
