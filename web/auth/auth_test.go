@@ -91,7 +91,7 @@ func TestAuth(t *testing.T) {
 
 		// Block the instance
 		testInstance.Blocked = true
-		require.NoError(t, testInstance.Update())
+		require.NoError(t, instance.Update(testInstance))
 
 		e.GET("/auth/login").
 			WithHost(testInstance.Domain).
@@ -109,7 +109,7 @@ func TestAuth(t *testing.T) {
 
 		// Unblock the instance
 		testInstance.Blocked = false
-		_ = testInstance.Update()
+		_ = instance.Update(testInstance)
 	})
 
 	t.Run("IsLoggedInWhenNotLoggedIn", func(t *testing.T) {

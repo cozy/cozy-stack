@@ -228,7 +228,7 @@ func passwordDefinedFixer(c echo.Context) error {
 		}
 	}
 	inst.PasswordDefined = &defined
-	if err := inst.Update(); err != nil {
+	if err := instance.Update(inst); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})

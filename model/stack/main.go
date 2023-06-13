@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -59,6 +60,8 @@ security features. Please do not use this binary as your production server.
 	var shutdowners []utils.Shutdowner
 
 	ctx := context.Background()
+
+	_ = instance.Init()
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})

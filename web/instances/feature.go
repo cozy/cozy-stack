@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/cozy/cozy-stack/model/feature"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -42,7 +43,7 @@ func patchFeatureFlags(c echo.Context) error {
 			inst.FeatureFlags[k] = v
 		}
 	}
-	if err := inst.Update(); err != nil {
+	if err := instance.Update(inst); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureFlags)
@@ -67,7 +68,7 @@ func putFeatureSets(c echo.Context) error {
 	}
 	sort.Strings(list)
 	inst.FeatureSets = list
-	if err := inst.Update(); err != nil {
+	if err := instance.Update(inst); err != nil {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureSets)
