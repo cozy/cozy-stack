@@ -30,7 +30,16 @@ func (s *apiSession) Included() []jsonapi.Object             { return nil }
 func (s *apiSession) Links() *jsonapi.LinksList              { return nil }
 func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marshal(s.s) }
 
-func getSessions(c echo.Context) error {
+// HTTPHandler handle all the `/settings` routes.
+type HTTPHandler struct {
+}
+
+// NewHTTPHandler instantiates a new [HTTPHandler].
+func NewHTTPHandler() *HTTPHandler {
+	return &HTTPHandler{}
+}
+
+func (h *HTTPHandler) getSessions(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Sessions); err != nil {
@@ -50,7 +59,7 @@ func getSessions(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-func warnings(c echo.Context) error {
+func (h *HTTPHandler) warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Any request with a token can ask for the context (no permissions are required)
@@ -80,35 +89,35 @@ func isMovedError(err error) bool {
 	return ok && j.Code == "moved"
 }
 
-// Routes sets the routing for the settings service
-func Routes(router *echo.Group) {
-	router.GET("/disk-usage", diskUsage)
+// Register all the `/settings` routes to the given router.
+func (h *HTTPHandler) Register(router *echo.Group) {
+	router.GET("/disk-usage", h.diskUsage)
 
-	router.GET("/passphrase", getPassphraseParameters)
-	router.POST("/passphrase", registerPassphrase)
-	router.POST("/passphrase/flagship", registerPassphraseFlagship)
-	router.PUT("/passphrase", updatePassphrase)
-	router.POST("/passphrase/check", checkPassphrase)
-	router.GET("/hint", getHint)
-	router.PUT("/hint", updateHint)
+	router.GET("/passphrase", h.getPassphraseParameters)
+	router.POST("/passphrase", h.registerPassphrase)
+	router.POST("/passphrase/flagship", h.registerPassphraseFlagship)
+	router.PUT("/passphrase", h.updatePassphrase)
+	router.POST("/passphrase/check", h.checkPassphrase)
+	router.GET("/hint", h.getHint)
+	router.PUT("/hint", h.updateHint)
 
-	router.GET("/capabilities", getCapabilities)
-	router.GET("/instance", getInstance)
-	router.PUT("/instance", updateInstance)
-	router.POST("/instance/deletion", askInstanceDeletion)
-	router.PUT("/instance/auth_mode", updateInstanceAuthMode)
-	router.PUT("/instance/sign_tos", updateInstanceTOS)
-	router.DELETE("/instance/moved_from", clearMovedFrom)
+	router.GET("/capabilities", h.getCapabilities)
+	router.GET("/instance", h.getInstance)
+	router.PUT("/instance", h.updateInstance)
+	router.POST("/instance/deletion", h.askInstanceDeletion)
+	router.PUT("/instance/auth_mode", h.updateInstanceAuthMode)
+	router.PUT("/instance/sign_tos", h.updateInstanceTOS)
+	router.DELETE("/instance/moved_from", h.clearMovedFrom)
 
-	router.GET("/flags", getFlags)
+	router.GET("/flags", h.getFlags)
 
-	router.GET("/sessions", getSessions)
+	router.GET("/sessions", h.getSessions)
 
-	router.GET("/clients", listClients)
-	router.DELETE("/clients/:id", revokeClient)
-	router.POST("/synchronized", synchronized)
+	router.GET("/clients", h.listClients)
+	router.DELETE("/clients/:id", h.revokeClient)
+	router.POST("/synchronized", h.synchronized)
 
-	router.GET("/onboarded", onboarded)
-	router.GET("/context", context)
-	router.GET("/warnings", warnings)
+	router.GET("/onboarded", h.onboarded)
+	router.GET("/context", h.context)
+	router.GET("/warnings", h.warnings)
 }

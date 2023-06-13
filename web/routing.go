@@ -237,7 +237,8 @@ func SetupRoutes(router *echo.Echo) error {
 		// The settings routes needs not to be blocked
 		apps.WebappsRoutes(router.Group("/apps", mwsNotBlocked...))
 		apps.KonnectorRoutes(router.Group("/konnectors", mwsNotBlocked...))
-		settings.Routes(router.Group("/settings", mwsNotBlocked...))
+
+		settings.NewHTTPHandler().Register(router.Group("/settings", mwsNotBlocked...))
 		compat.Routes(router.Group("/compat", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not

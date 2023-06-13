@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
@@ -27,6 +27,27 @@ import (
 
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
+
+func setupRouter(t *testing.T, inst *instance.Instance) string {
+	t.Helper()
+
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", inst)
+			sess, _ := session.New(inst, session.LongRun)
+			context.Set("session", sess)
+			return next(context)
+		}
+	})
+
+	NewHTTPHandler().Register(group)
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	return ts.URL
+}
 
 func TestSettings(t *testing.T) {
 	if testing.Short() {
@@ -48,36 +69,10 @@ func TestSettings(t *testing.T) {
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
 
-	ts := setup.GetTestServer("/settings", Routes)
-	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(ts.Close)
-
-	tsB := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			auth.Routes(g)
-		},
-		"/settings": func(g *echo.Group) {
-			g.Use(fakeAuthentication)
-			Routes(g)
-		},
-	})
-	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(tsB.Close)
-
-	setupFlagship := testutils.NewSetup(t, t.Name())
-	testInstanceFlagship := setupFlagship.GetTestInstance(&lifecycle.Options{
-		Locale:      "en",
-		Timezone:    "Europe/Berlin",
-		Email:       "alice2@example.com",
-		ContextName: "test-context",
-	})
-	tsC := setupFlagship.GetTestServer("/settings", Routes)
-	t.Cleanup(tsC.Close)
-	tsC.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	tsURL := setupRouter(t, testInstance)
 
 	t.Run("GetContext", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/context").
 			WithHeader("Accept", "application/vnd.api+json").
@@ -86,7 +81,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -114,7 +109,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRev", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are going to patch an instance with newer values, but with a totally
 		// random rev
@@ -142,7 +137,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevNoChanges", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are defining a random rev, but make no changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -169,7 +164,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchWithBadRevAndChanges", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		// We are defining a random rev, but make changes in the instance values
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
@@ -196,7 +191,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("DiskUsage", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/disk-usage").
 			WithHeader("Authorization", "Bearer "+token).
@@ -218,7 +213,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseWrongToken", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.POST("/settings/passphrase").
 			WithHeader("Content-Type", "application/json").
@@ -240,7 +235,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RegisterPassphraseCorrectToken", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.POST("/settings/passphrase").
 			WithJSON(map[string]interface{}{
@@ -255,45 +250,8 @@ func TestSettings(t *testing.T) {
 		res.Cookie("cozysessid").Value().NotEmpty()
 	})
 
-	t.Run("RegisterPassphraseForFlagshipApp", func(t *testing.T) {
-		oauthClient := &oauth.Client{
-			RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
-			ClientName:      "Cozy-desktop on my-new-laptop",
-			ClientKind:      "desktop",
-			ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
-			LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
-			PolicyURI:       "https://cozy.io/policy",
-			SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
-			SoftwareVersion: "0.16.0",
-		}
-		require.Nil(t, oauthClient.Create(testInstanceFlagship))
-		client, err := oauth.FindClient(testInstanceFlagship, oauthClient.ClientID)
-		require.NoError(t, err)
-		require.NoError(t, client.SetFlagship(testInstanceFlagship))
-
-		e := httpexpect.Default(t, tsC.URL)
-		obj := e.POST("/settings/passphrase/flagship").
-			WithJSON(map[string]interface{}{
-				"passphrase":     "MyFirstPassphrase",
-				"iterations":     5000,
-				"register_token": hex.EncodeToString(testInstanceFlagship.RegisterToken),
-				"key":            "xxx-key-xxx",
-				"public_key":     "xxx-public-key-xxx",
-				"private_key":    "xxx-private-key-xxx",
-				"client_id":      client.CouchID,
-				"client_secret":  client.ClientSecret,
-			}).
-			Expect().Status(200).
-			JSON().Object()
-
-		obj.Value("access_token").String().NotEmpty()
-		obj.Value("refresh_token").String().NotEmpty()
-		obj.ValueEqual("scope", "*")
-		obj.ValueEqual("token_type", "bearer")
-	})
-
 	t.Run("UpdatePassphraseWithWrongPassphrase", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -307,7 +265,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseSuccess", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -324,7 +282,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithForce", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -353,7 +311,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("CheckPassphrase", func(t *testing.T) {
 		t.Run("invalid", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -365,7 +323,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("valid", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
 				WithHeader("Authorization", "Bearer "+token).
@@ -379,7 +337,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetHint", func(t *testing.T) {
 		t.Run("WithNoHint", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			e.GET("/settings/hint").
 				WithHeader("Authorization", "Bearer "+token).
@@ -387,7 +345,7 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("WithHint", func(t *testing.T) {
-			e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, tsURL)
 
 			setting, err := settings.Get(testInstance)
 			assert.NoError(t, err)
@@ -402,7 +360,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateHint", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/hint").
 			WithHeader("Authorization", "Bearer "+token).
@@ -418,7 +376,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetPassphraseParameters", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/passphrase").
 			WithHeader("Authorization", "Bearer "+token).
@@ -437,7 +395,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetCapabilities", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -460,7 +418,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
 			Expect().Status(401)
@@ -494,7 +452,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.PUT("/settings/instance").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -532,7 +490,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("GetUpdatedInstance", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/instance").
 			WithHeader("Authorization", "Bearer "+token).
@@ -556,7 +514,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("UpdatePassphraseWithTwoFactorAuth", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/instance/auth_mode").
 			WithHeader("Authorization", "Bearer "+token).
@@ -605,7 +563,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("ListClients", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/clients").
 			Expect().Status(401)
@@ -656,7 +614,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("RevokeClient", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		e.DELETE("/settings/clients/" + oauthClientID).
 			Expect().Status(401)
@@ -675,43 +633,8 @@ func TestSettings(t *testing.T) {
 		data.Length().Equal(1)
 	})
 
-	t.Run("RedirectOnboardingSecret", func(t *testing.T) {
-		e := httpexpect.Default(t, tsB.URL)
-
-		// Without onboarding
-		e.GET("/settings/onboarded").
-			WithRedirectPolicy(httpexpect.DontFollowRedirects).
-			Expect().Status(303).
-			Header("Location").Equal(testInstance.OnboardedRedirection().String())
-
-		// With onboarding
-		deeplink := "cozydrive://testinstance.com"
-		oauthClient := &oauth.Client{
-			RedirectURIs:     []string{deeplink},
-			ClientName:       "CozyTest",
-			SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
-			OnboardingSecret: "foobar",
-			OnboardingApp:    "test",
-		}
-
-		oauthClient.Create(testInstance)
-
-		redirectURL := e.GET("/settings/onboarded").
-			WithRedirectPolicy(httpexpect.DontFollowRedirects).
-			Expect().Status(303).
-			Header("Location").
-			NotEqual(testInstance.OnboardedRedirection().String()).
-			Contains("/auth/authorize").Raw()
-
-		u, err := url.Parse(redirectURL)
-		require.NoError(t, err)
-
-		values := u.Query()
-		assert.Equal(t, values.Get("redirect_uri"), deeplink)
-	})
-
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -746,7 +669,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceChangeParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc, err := testInstance.SettingsDocument()
 		require.NoError(t, err)
@@ -781,7 +704,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceAddParam", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -817,7 +740,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("PatchInstanceRemoveParams", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		doc1, err := testInstance.SettingsDocument()
 		assert.NoError(t, err)
@@ -851,7 +774,7 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("FeatureFlags", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
+		e := testutils.CreateTestClient(t, tsURL)
 
 		_ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings)
 		t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings) })
@@ -941,11 +864,108 @@ func TestSettings(t *testing.T) {
 	})
 }
 
-func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		instance := c.Get("instance").(*instance.Instance)
-		sess, _ := session.New(instance, session.LongRun)
-		c.Set("session", sess)
-		return next(c)
+func TestRedirectOnboardingSecret(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb(t)
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance(&lifecycle.Options{
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice@example.com",
+		ContextName: "test-context",
+	})
+
+	tsURL := setupRouter(t, testInstance)
+
+	e := testutils.CreateTestClient(t, tsURL)
+
+	// Without onboarding
+	e.GET("/settings/onboarded").
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").Equal(testInstance.OnboardedRedirection().String())
+
+	// With onboarding
+	deeplink := "cozydrive://testinstance.com"
+	oauthClient := &oauth.Client{
+		RedirectURIs:     []string{deeplink},
+		ClientName:       "CozyTest",
+		SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
+		OnboardingSecret: "foobar",
+		OnboardingApp:    "test",
+	}
+
+	oauthClient.Create(testInstance)
+
+	redirectURL := e.GET("/settings/onboarded").
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").
+		NotEqual(testInstance.OnboardedRedirection().String()).
+		Contains("/auth/authorize").Raw()
+
+	u, err := url.Parse(redirectURL)
+	require.NoError(t, err)
+
+	values := u.Query()
+	assert.Equal(t, values.Get("redirect_uri"), deeplink)
+}
+
+func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile()
+	testutils.NeedCouchdb(t)
+
+	oauthClient := &oauth.Client{
+		RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
+		ClientName:      "Cozy-desktop on my-new-laptop",
+		ClientKind:      "desktop",
+		ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
+		LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+		PolicyURI:       "https://cozy.io/policy",
+		SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
+		SoftwareVersion: "0.16.0",
+	}
+
+	setupFlagship := testutils.NewSetup(t, t.Name())
+	testInstance := setupFlagship.GetTestInstance(&lifecycle.Options{
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice2@example.com",
+		ContextName: "test-context",
+	})
+
+	tsURL := setupRouter(t, testInstance)
+
+	require.Nil(t, oauthClient.Create(testInstance))
+	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
+	require.NoError(t, err)
+	require.NoError(t, client.SetFlagship(testInstance))
+
+	e := httpexpect.Default(t, tsURL)
+	obj := e.POST("/settings/passphrase/flagship").
+		WithJSON(map[string]interface{}{
+			"passphrase":     "MyFirstPassphrase",
+			"iterations":     5000,
+			"register_token": hex.EncodeToString(testInstance.RegisterToken),
+			"key":            "xxx-key-xxx",
+			"public_key":     "xxx-public-key-xxx",
+			"private_key":    "xxx-private-key-xxx",
+			"client_id":      client.CouchID,
+			"client_secret":  client.ClientSecret,
+		}).
+		Expect().Status(200).
+		JSON().Object()
+
+	obj.Value("access_token").String().NotEmpty()
+	obj.Value("refresh_token").String().NotEmpty()
+	obj.ValueEqual("scope", "*")
+	obj.ValueEqual("token_type", "bearer")
 }

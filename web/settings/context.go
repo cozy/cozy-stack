@@ -37,7 +37,7 @@ func (c *apiContext) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.doc)
 }
 
-func onboarded(c echo.Context) error {
+func (h *HTTPHandler) onboarded(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	if !middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
@@ -106,7 +106,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 	return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 }
 
-func context(c echo.Context) error {
+func (h *HTTPHandler) context(c echo.Context) error {
 	// Any request with a token can ask for the context (no permissions are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
