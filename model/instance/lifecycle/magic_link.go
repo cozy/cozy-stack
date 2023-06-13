@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 )
 
 // ErrMagicLinkNotAvailable is used when requesting a magic link on a Cozy
@@ -26,7 +27,7 @@ func SendMagicLink(inst *instance.Instance, redirect string) error {
 		"redirect": []string{redirect},
 	})
 	publicName, _ := inst.PublicName()
-	return SendMail(inst, &Mail{
+	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName: "magic_link",
 		TemplateValues: map[string]interface{}{
 			"MagicLink":  link,
