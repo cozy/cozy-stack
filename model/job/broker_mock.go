@@ -16,6 +16,7 @@ type BrokerMock struct {
 func NewBrokerMock(t *testing.T) *BrokerMock {
 	m := new(BrokerMock)
 
+	m.Test(t)
 	t.Cleanup(func() { m.AssertExpectations(t) })
 
 	return m
