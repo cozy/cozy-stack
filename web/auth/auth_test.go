@@ -59,6 +59,19 @@ func TestAuth(t *testing.T) {
 	config.UseTestFile()
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
+	conf.DeprecatedApps = config.DeprecatedAppsCfg{
+		Apps: []config.DeprecatedApp{
+			{
+				SoftwareID: "github.com/some-deprecated-app",
+				Name:       "some-deprecated-app",
+				StoreURLs: map[string]string{
+					// Must test "market://" url
+					"android": "market://some-market-url",
+					"iphone":  "https://some-basic-url",
+				},
+			},
+		},
+	}
 
 	conf.Authentication = make(map[string]interface{})
 	confAuth := make(map[string]interface{})
@@ -549,6 +562,36 @@ func TestAuth(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+altRegistrationToken).
 			Expect().Status(401).
 			Body().NotContains(clientSecret)
+	})
+
+	t.Run("DeprecatedApp", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		deprecatedClientID := e.POST("/auth/register").
+			WithHost(domain).
+			WithHeader("Accept", "application/json").
+			WithJSON(map[string]interface{}{
+				"redirect_uris": []string{"https://example.org/oauth/callback"},
+				"client_name":   "cozy-test",
+				"software_id":   "github.com/some-deprecated-app",
+			}).
+			Expect().Status(201).
+			JSON().Object().
+			Value("client_id").String().NotEmpty().NotEqual("ignored").Raw()
+
+		body := e.GET("/auth/authorize").
+			WithHeader("User-Agent", "Mozilla/5.0 (Linux; U; Android 1.5; de-; HTC Magic Build/PLAT-RC33) AppleWebKit/528.5+ (KHTML, like Gecko) Version/3.1.2 Mobile Safari/525.20.1").
+			WithQuery("response_type", "code").
+			WithQuery("state", "123456").
+			WithQuery("scope", "files:read").
+			WithQuery("redirect_uri", "https://example.org/oauth/callback").
+			WithQuery("client_id", deprecatedClientID).
+			WithHost(domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			Body()
+
+		body.Contains(`href="market://some-market-url"`)
 	})
 
 	t.Run("ReadClientInvalidClientID", func(t *testing.T) {
