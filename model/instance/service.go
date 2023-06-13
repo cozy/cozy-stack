@@ -33,7 +33,7 @@ func (s *InstanceService) Get(domain string) (*Instance, error) {
 		}
 	}
 
-	inst, err := s.GetFromCouch(domain)
+	inst, err := s.GetWithoutCache(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +44,11 @@ func (s *InstanceService) Get(domain string) (*Instance, error) {
 	return inst, nil
 }
 
-// GetFromCouch finds an instance in CouchDB from its domain.
+// GetWithoutCache finds an instance in CouchDB from its domain.
 //
 // NOTE: You should probably use [InstanceService.Get] instead. This method
 // is only useful if you want to bypass the cache.
-func (s *InstanceService) GetFromCouch(domain string) (*Instance, error) {
+func (s *InstanceService) GetWithoutCache(domain string) (*Instance, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(prefixer.GlobalPrefixer, couchdb.DomainAndAliasesView, &couchdb.ViewRequest{
 		Key:         domain,
