@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"html/template"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -85,7 +86,11 @@ func (d *DeprecatedAppList) RenderArgs(client *oauth.Client, inst *instance.Inst
 		"Favicon":     middlewares.Favicon(inst),
 		"AppName":     app.Name,
 		"Platform":    platform,
-		"StoreURL":    storeURL,
+		// template.URL is used in order to avoid the discard of url starting
+		// by `market://` (the url is replaced by "#ZgotmplZ" in case of discard).
+		//
+		// More details at https://github.com/golang/go/blob/bce7aec3cdca8580585095007e9b7cea11a8812f/src/html/template/url.go#L19
+		"StoreURL": template.URL(storeURL),
 	}
 
 	return res

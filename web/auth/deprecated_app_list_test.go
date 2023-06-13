@@ -129,7 +129,7 @@ func Test_DeprecatedAppList(t *testing.T) {
 					"Favicon":     middlewares.Favicon(inst),
 					"AppName":     "Super App",
 					"Platform":    test.ExpectedPlatform,
-					"StoreURL":    test.ExpectedURL,
+					"StoreURL":    template.URL(test.ExpectedURL),
 				}, args)
 			})
 		}
