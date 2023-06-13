@@ -9,9 +9,9 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/gofrs/uuid"
 )
 
@@ -80,7 +80,7 @@ func SendHint(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return SendMail(inst, &Mail{
+	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName: "passphrase_hint",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":    inst.PageURL("/", nil),
@@ -123,7 +123,7 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return SendMail(inst, &Mail{
+	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName: "passphrase_reset",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":             inst.PageURL("/", nil),
@@ -132,29 +132,6 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 			"CozyPass":            inst.HasForcedOIDC(),
 		},
 	})
-}
-
-// Mail contains the informations to send a mail for the instance owner.
-type Mail struct {
-	TemplateName   string
-	TemplateValues map[string]interface{}
-}
-
-// SendMail send a mail to the instance owner.
-func SendMail(inst *instance.Instance, m *Mail) error {
-	msg, err := job.NewMessage(map[string]interface{}{
-		"mode":            "noreply",
-		"template_name":   m.TemplateName,
-		"template_values": m.TemplateValues,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
 }
 
 // CheckPassphraseRenewToken checks whether the given token is good to use for

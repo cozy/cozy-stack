@@ -13,6 +13,7 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -60,8 +61,6 @@ security features. Please do not use this binary as your production server.
 	var shutdowners []utils.Shutdowner
 
 	ctx := context.Background()
-
-	_ = instance.Init()
 
 	if !hasOptions(NoGops, opts) {
 		err = agent.Listen(agent.Options{})
@@ -117,6 +116,9 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 	shutdowners = append(shutdowners, job.System())
+
+	_ = emailer.Init()
+	_ = instance.Init()
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
 	if !hasOptions(NoDynAssets, opts) {

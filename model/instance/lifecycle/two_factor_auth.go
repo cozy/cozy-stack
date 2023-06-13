@@ -1,6 +1,9 @@
 package lifecycle
 
-import "github.com/cozy/cozy-stack/model/instance"
+import (
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/pkg/emailer"
+)
 
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
 // the instance. It returns the generated token.
@@ -9,7 +12,7 @@ func SendTwoFactorPasscode(inst *instance.Instance) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = SendMail(inst, &Mail{
+	err = emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName:   "two_factor",
 		TemplateValues: map[string]interface{}{"TwoFactorPasscode": passcode},
 	})
@@ -26,7 +29,7 @@ func SendMailConfirmationCode(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return SendMail(inst, &Mail{
+	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName:   "two_factor_mail_confirmation",
 		TemplateValues: map[string]interface{}{"TwoFactorActivationPasscode": passcode},
 	})
