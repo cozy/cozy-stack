@@ -611,6 +611,7 @@ func (sfs *swiftVFSV3) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 // UdpdateDirDoc calls the indexer UdpdateDirDoc function and adds a few checks
 // before actually calling this method:
 //   - locks the filesystem for writing
+//   - checks that we don't move a directory to one of its descendant
 //   - checks in case we have a move operation that the new path is available
 //
 // @override Indexer.UpdateDirDoc
@@ -620,6 +621,9 @@ func (sfs *swiftVFSV3) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
+		if strings.HasPrefix(newdoc.Fullpath, olddoc.Fullpath+"/") {
+			return vfs.ErrForbiddenDocMove
+		}
 		exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
 		if err != nil {
 			return err
