@@ -23,6 +23,13 @@ func NewMock(t *testing.T) *Mock {
 	return m
 }
 
+// PublicName mock method.
+func (m *Mock) PublicName(db prefixer.Prefixer) (string, error) {
+	args := m.Called(db)
+
+	return args.String(0), args.Error(1)
+}
+
 // GetInstanceSettings mock method.
 func (m *Mock) GetInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error) {
 	args := m.Called(inst)

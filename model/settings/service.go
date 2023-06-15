@@ -2,6 +2,7 @@ package settings
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -24,6 +25,21 @@ type SettingsService struct {
 // NewService instantiates a new [SettingsService].
 func NewService() *SettingsService {
 	return &SettingsService{}
+}
+
+// PublicName returns the settings' public name or a default one if missing
+func (s *SettingsService) PublicName(db prefixer.Prefixer) (string, error) {
+	doc, err := s.GetInstanceSettings(db)
+	if err != nil {
+		return "", err
+	}
+	publicName, _ := doc.M["public_name"].(string)
+	// if the public name is not defined, use the instance's domain
+	if publicName == "" {
+		split := strings.Split(db.DomainName(), ".")
+		publicName = split[0]
+	}
+	return publicName, nil
 }
 
 func (s *SettingsService) GetInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error) {

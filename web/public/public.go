@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -23,7 +24,7 @@ func Avatar(c echo.Context) error {
 	case "404":
 		// Nothing
 	case "initials":
-		publicName, err := inst.PublicName()
+		publicName, err := csettings.PublicName(inst)
 		if err != nil {
 			publicName = strings.Split(inst.Domain, ".")[0]
 		}
@@ -46,7 +47,7 @@ func Avatar(c echo.Context) error {
 // in the flagship app).
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	publicName, err := inst.PublicName()
+	publicName, err := csettings.PublicName(inst)
 	if err != nil {
 		publicName = ""
 	}

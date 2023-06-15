@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -35,7 +36,7 @@ func SendConfirmFlagshipCode(inst *instance.Instance, clientID string) ([]byte, 
 		return nil, err
 	}
 
-	publicName, _ := inst.PublicName()
+	publicName, _ := settings.PublicName(inst)
 	msg, err := job.NewMessage(map[string]interface{}{
 		"mode":          "noreply",
 		"template_name": "confirm_flagship",

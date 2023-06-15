@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -644,7 +645,7 @@ func (a *AuthorizeHTTPHandler) authorizeMoveForm(c echo.Context) error {
 		})
 	}
 
-	publicName, err := inst.PublicName()
+	publicName, err := csettings.PublicName(inst)
 	if err != nil {
 		publicName = ""
 	}

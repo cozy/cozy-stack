@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/emailer"
 )
@@ -26,7 +27,7 @@ func SendMagicLink(inst *instance.Instance, redirect string) error {
 		"code":     []string{code},
 		"redirect": []string{redirect},
 	})
-	publicName, _ := inst.PublicName()
+	publicName, _ := csettings.PublicName(inst)
 	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
 		TemplateName: "magic_link",
 		TemplateValues: map[string]interface{}{

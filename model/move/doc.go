@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -127,7 +128,7 @@ func (e *ExportDoc) MarksAsFinished(i *instance.Instance, size int64, err error)
 // the export tarballs.
 func (e *ExportDoc) SendExportMail(inst *instance.Instance) error {
 	link := e.GenerateLink(inst)
-	publicName, _ := inst.PublicName()
+	publicName, _ := csettings.PublicName(inst)
 	mail := mail.Options{
 		Mode:         mail.ModeFromStack,
 		TemplateName: "archiver",

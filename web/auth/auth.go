@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -157,7 +158,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 	hasFranceConnect := i.FranceConnectID != ""
 
-	publicName, err := i.PublicName()
+	publicName, err := csettings.PublicName(i)
 	if err != nil {
 		publicName = ""
 	}
