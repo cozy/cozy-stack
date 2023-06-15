@@ -8,12 +8,15 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	websettings "github.com/cozy/cozy-stack/web/settings"
 
 	"github.com/google/gops/agent"
 )
@@ -98,8 +101,11 @@ security features. Please do not use this binary as your production server.
 	}
 	shutdowners = append(shutdowners, job.System())
 
-	_ = emailer.Init()
-	_ = instance.Init()
+	tokenSvc := token.NewService(config.GetConfig().CacheStorage)
+	emailerSvc := emailer.Init()
+	instanceSvc := instance.Init()
+	settingsSvc := settings.Init(emailerSvc, instanceSvc, tokenSvc)
+	websettings.Init(settingsSvc)
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
 	if !hasOptions(NoDynAssets, opts) {

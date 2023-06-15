@@ -15,7 +15,7 @@ type Mock struct {
 // NewMock instantiates a new [Mock].
 func NewMock(t *testing.T) *Mock {
 	m := new(Mock)
-
+	m.Test(t)
 	t.Cleanup(func() { m.AssertExpectations(t) })
 
 	return m

@@ -7,9 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	msettings "github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/token"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/web/accounts"
@@ -238,7 +242,14 @@ func SetupRoutes(router *echo.Echo) error {
 		apps.WebappsRoutes(router.Group("/apps", mwsNotBlocked...))
 		apps.KonnectorRoutes(router.Group("/konnectors", mwsNotBlocked...))
 
-		settings.NewHTTPHandler().Register(router.Group("/settings", mwsNotBlocked...))
+		// TODO: An init refacto will soon be required
+		tokenSvc := token.NewService(config.GetConfig().CacheStorage)
+		emailer := emailer.Init()
+		instanceSvc := instance.Init()
+
+		settingsSvc := msettings.Init(emailer, instanceSvc, tokenSvc)
+		settings.NewHTTPHandler(settingsSvc).Register(router.Group("/settings", mwsNotBlocked...))
+
 		compat.Routes(router.Group("/compat", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not

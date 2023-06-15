@@ -1,0 +1,6 @@
+{{t "Mail Update Email Intro 1" .PublicName}}
+{{t "Mail Update Email Intro 2"}}
+
+{{t "Mail Reset Passphrase Button instruction"}}
+{{.EmailUpdateLink}}
+

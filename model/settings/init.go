@@ -1,7 +1,10 @@
 package settings
 
 import (
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -11,10 +14,17 @@ type Service interface {
 	PublicName(db prefixer.Prefixer) (string, error)
 	GetInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error)
 	SetInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
+	StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error
 }
 
-func Init() *SettingsService {
-	service = NewService()
+func Init(
+	emailer emailer.Emailer,
+	instance instance.Service,
+	token token.Service,
+) *SettingsService {
+	storage := NewCouchdbStorage()
+
+	service = NewService(emailer, instance, token, storage)
 
 	return service
 }

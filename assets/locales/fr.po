@@ -841,6 +841,23 @@ msgstr ""
 " votre mot de passe. Si vous n’êtes pas à l’origine de cette demande, "
 "contactez-nous en réponse à cet email."
 
+msgid "Mail Update Email Subject"
+msgstr "Mise a jour de l'email"
+
+msgid "Mail Update Email Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Update Email Intro 2"
+msgstr ""
+"Vous avez demandé à changer votre adresse email. Si ce n'est pas le cas, "
+"contactez-nous en réponse à ce mail."
+
+msgid "Mail Update Email Button instruction"
+msgstr "Cliquez sur ce bouton pour valider votre changement d'email."
+
+msgid "Mail Update Email Button text"
+msgstr "Je confirme mon adresse email"
+
 msgid "Mail Reset Passphrase Subject"
 msgstr "Ré-initialisation du mot de passe"
 

@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -89,6 +90,9 @@ func TestAuth(t *testing.T) {
 		KdfIterations: 5000,
 		Key:           "xxx",
 	})
+
+	_, err := stack.Start()
+	require.NoError(t, err)
 
 	ts := setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
 		handler, err := web.CreateSubdomainProxy(r, apps.Serve)
