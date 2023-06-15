@@ -837,8 +837,8 @@ msgstr ""
 
 msgid "Mail Hint Outro"
 msgstr ""
-"En dernier recours la page mot de passe oublié vous permet de ré-initialiser"
-" votre mot de passeSi vous n’êtes pas à l’origine de cette demande, "
+"En dernier recours, la page mot de passe oublié vous permet de ré-initialiser"
+" votre mot de passe. Si vous n’êtes pas à l’origine de cette demande, "
 "contactez-nous en réponse à cet email."
 
 msgid "Mail Reset Passphrase Subject"
