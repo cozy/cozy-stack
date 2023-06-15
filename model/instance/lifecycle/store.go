@@ -11,6 +11,8 @@ import (
 )
 
 // Store is an object to store and retrieve magic link codes.
+//
+// TODO: Move to [token.Service] with [token.MagicLink] namespace.
 type Store interface {
 	SaveMagicLinkCode(db prefixer.Prefixer, code string) error
 	CheckMagicLinkCode(db prefixer.Prefixer, code string) bool
