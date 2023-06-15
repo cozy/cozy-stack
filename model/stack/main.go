@@ -14,10 +14,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
-	"github.com/sirupsen/logrus"
 )
 
 // Options can be used to give options when starting the stack.
@@ -80,7 +80,7 @@ security features. Please do not use this binary as your production server.
 		}
 		err = fmt.Errorf("could not reach Couchdb database: %s", err.Error())
 		if i < attempts-1 {
-			logrus.Warnf("%s, retrying in %v", err, attemptsSpacing)
+			logger.WithNamespace("stack").Warnf("%s, retrying in %v", err, attemptsSpacing)
 			time.Sleep(attemptsSpacing)
 		}
 	}

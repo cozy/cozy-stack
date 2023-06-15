@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -185,7 +186,6 @@ func NewServers() *Servers {
 // The 'addrs' arguments must be in the format `"host:port"`. If the host
 // is not a valid IPv4/IPv6/hostname or if the port not present an error is
 // returned.
-
 func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 	addrs := []string{}
 
@@ -217,10 +217,13 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 			return err
 		}
 
+		writer := logger.WithNamespace("stack").Writer()
+		logger := log.New(writer, "", 0)
 		server := &http.Server{
 			Addr:              addr,
 			Handler:           handler,
 			ReadHeaderTimeout: ReadHeaderTimeout,
+			ErrorLog:          logger,
 		}
 
 		s.serversByName[name] = server
