@@ -291,7 +291,7 @@ func NewRedisConfig(u string) (conf RedisConfig, err error) {
 }
 
 // GetRedisConfig returns a
-func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (conf RedisConfig, err error) {
+func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key string) (conf RedisConfig, err error) {
 	redisKey := fmt.Sprintf("redis.databases.%s", key)
 
 	if mainOpt != nil {
@@ -593,41 +593,41 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	jobsRedis, err := GetRedisConfig(v, redisOptions, "jobs", "url")
+	jobsRedis, err := GetRedisConfig(v, redisOptions, "jobs")
 	if err != nil {
 		return err
 	}
-	lockRedis, err := GetRedisConfig(v, redisOptions, "lock", "url")
+	lockRedis, err := GetRedisConfig(v, redisOptions, "lock")
 	if err != nil {
 		return err
 	}
-	sessionsRedis, err := GetRedisConfig(v, redisOptions, "sessions", "url")
+	sessionsRedis, err := GetRedisConfig(v, redisOptions, "sessions")
 	if err != nil {
 		return err
 	}
-	downloadRedis, err := GetRedisConfig(v, redisOptions, "downloads", "url")
+	downloadRedis, err := GetRedisConfig(v, redisOptions, "downloads")
 	if err != nil {
 		return err
 	}
-	rateLimitingRedis, err := GetRedisConfig(v, redisOptions, "rate_limiting", "url")
+	rateLimitingRedis, err := GetRedisConfig(v, redisOptions, "rate_limiting")
 	if err != nil {
 		return err
 	}
-	oauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors", "oauthstate")
+	oauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors")
 	if err != nil {
 		return err
 	}
-	realtimeRedis, err := GetRedisConfig(v, redisOptions, "realtime", "url")
+	realtimeRedis, err := GetRedisConfig(v, redisOptions, "realtime")
 	if err != nil {
 		return err
 	}
-	loggerRedis, err := GetRedisConfig(v, redisOptions, "log", "redis")
+	loggerRedis, err := GetRedisConfig(v, redisOptions, "log")
 	if err != nil {
 		return err
 	}
 
 	// cache entry is optional
-	cacheRedis, _ := GetRedisConfig(v, redisOptions, "cache", "url")
+	cacheRedis, _ := GetRedisConfig(v, redisOptions, "cache")
 
 	adminSecretFile := v.GetString("admin.secret_filename")
 	if adminSecretFile == "" {
