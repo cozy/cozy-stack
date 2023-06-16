@@ -722,7 +722,7 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	cacheStorage := cache.New(cacheRedis)
+	cacheStorage := cache.Init(cacheRedis)
 
 	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
 	if err != nil {
