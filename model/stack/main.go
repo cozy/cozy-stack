@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -13,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -47,7 +49,7 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 }
 
 // Start is used to initialize all the
-func Start(opts ...Options) (processes utils.Shutdowner, err error) {
+func Start(opts ...Options) (utils.Shutdowner, error) {
 	if build.IsDevRelease() {
 		fmt.Print(`                           !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
@@ -57,6 +59,7 @@ security features. Please do not use this binary as your production server.
 	}
 
 	var shutdowners []utils.Shutdowner
+	var err error
 
 	ctx := context.Background()
 
@@ -68,18 +71,35 @@ security features. Please do not use this binary as your production server.
 		shutdowners = append(shutdowners, gopAgent{})
 	}
 
-	if err = couchdb.InitGlobalDB(ctx); err != nil {
-		return
+	// Check that we can properly reach CouchDB.
+	attempts := 8
+	attemptsSpacing := 1 * time.Second
+	for i := 0; i < attempts; i++ {
+		_, err = couchdb.CheckStatus(ctx)
+		if err == nil {
+			break
+		}
+		err = fmt.Errorf("could not reach Couchdb database: %s", err.Error())
+		if i < attempts-1 {
+			logger.WithNamespace("stack").Warnf("%s, retrying in %v", err, attemptsSpacing)
+			time.Sleep(attemptsSpacing)
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to couchdb: %w", err)
+	}
+	if err = couchdb.InitGlobalDB(); err != nil {
+		return nil, fmt.Errorf("failed to init the global db: %w", err)
 	}
 
 	// Init the main global connection to the swift server
 	if err = config.InitDefaultSwiftConnection(); err != nil {
-		return
+		return nil, fmt.Errorf("failed to init the swift connection: %w", err)
 	}
 
 	workersList, err := job.GetWorkersList()
 	if err != nil {
-		return
+		return nil, fmt.Errorf("failed to get the workers list: %w", err)
 	}
 
 	var broker job.Broker
@@ -94,7 +114,7 @@ security features. Please do not use this binary as your production server.
 	}
 
 	if err = job.SystemStart(broker, schder, workersList); err != nil {
-		return
+		return nil, fmt.Errorf("failed to start the jobs: %w", err)
 	}
 	shutdowners = append(shutdowners, job.System())
 
@@ -105,7 +125,7 @@ security features. Please do not use this binary as your production server.
 	if !hasOptions(NoDynAssets, opts) {
 		err = dynamic.InitDynamicAssetFS(config.FsURL().String())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to init the dynamic asset fs: %w", err)
 		}
 	}
 
@@ -113,6 +133,7 @@ security features. Please do not use this binary as your production server.
 	shutdowners = append(shutdowners, sessionSweeper)
 
 	// Global shutdowner that composes all the running processes of the stack
-	processes = utils.NewGroupShutdown(shutdowners...)
-	return
+	processes := utils.NewGroupShutdown(shutdowners...)
+
+	return processes, nil
 }
