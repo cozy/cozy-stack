@@ -2,9 +2,12 @@ package couchdb
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"golang.org/x/sync/errgroup"
 )
@@ -334,11 +337,34 @@ var globalViews = []*View{
 
 // InitGlobalDB defines views and indexes on the global databases. It is called
 // on every startup of the stack.
-func InitGlobalDB() error {
+func InitGlobalDB(ctx context.Context) error {
+	var err error
+	// Check that we can properly reach CouchDB.
+	attempts := 8
+	attemptsSpacing := 1 * time.Second
+	for i := 0; i < attempts; i++ {
+		_, err = CheckStatus(ctx)
+		if err == nil {
+			break
+		}
+
+		err = fmt.Errorf("could not reach Couchdb database: %w", err)
+		if i < attempts-1 {
+			logger.WithNamespace("stack").Warnf("%s, retrying in %v", err, attemptsSpacing)
+			time.Sleep(attemptsSpacing)
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed contact couchdb: %w", err)
+	}
+
 	g, _ := errgroup.WithContext(context.Background())
+
 	DefineIndexes(g, prefixer.SecretsPrefixer, secretIndexes)
 	DefineIndexes(g, prefixer.GlobalPrefixer, globalIndexes)
 	DefineViews(g, prefixer.GlobalPrefixer, globalViews)
+
 	return g.Wait()
 }
 

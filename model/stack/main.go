@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -14,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -70,25 +68,8 @@ security features. Please do not use this binary as your production server.
 		shutdowners = append(shutdowners, gopAgent{})
 	}
 
-	// Check that we can properly reach CouchDB.
-	attempts := 8
-	attemptsSpacing := 1 * time.Second
-	for i := 0; i < attempts; i++ {
-		_, err = couchdb.CheckStatus(ctx)
-		if err == nil {
-			break
-		}
-		err = fmt.Errorf("could not reach Couchdb database: %s", err.Error())
-		if i < attempts-1 {
-			logger.WithNamespace("stack").Warnf("%s, retrying in %v", err, attemptsSpacing)
-			time.Sleep(attemptsSpacing)
-		}
-	}
-	if err != nil {
-		return
-	}
-	if err = couchdb.InitGlobalDB(); err != nil {
-		return
+	if err = couchdb.InitGlobalDB(ctx); err != nil {
+		return nil, fmt.Errorf("failed to init the global db: %w", err)
 	}
 
 	// Init the main global connection to the swift server
