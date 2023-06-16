@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -353,7 +354,6 @@ func getInitialCredentials(c echo.Context) error {
 
 // checkTwoFactor returns true if the request has a valid 2FA code.
 func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
-	cache := config.GetConfig().CacheStorage
 	key := "bw-2fa:" + inst.Domain
 
 	if passcode := c.FormValue("twoFactorToken"); passcode != "" {

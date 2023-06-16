@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -537,7 +537,6 @@ func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 	for i, doc := range docs {
 		keys[i] = cacheKey(inst, doc.ID())
 	}
-	cache := config.GetConfig().CacheStorage
 	bufs := cache.MultiGet(keys)
 	for i, buf := range bufs {
 		if len(buf) == 0 {
@@ -628,7 +627,6 @@ func fromMetadata(file *vfs.FileDoc) (*Document, error) {
 }
 
 func getFromCache(inst *instance.Instance, noteID string) *Document {
-	cache := config.GetConfig().CacheStorage
 	buf, ok := cache.Get(cacheKey(inst, noteID))
 	if !ok {
 		return nil
@@ -645,7 +643,6 @@ func cacheKey(inst *instance.Instance, noteID string) string {
 }
 
 func saveToCache(inst *instance.Instance, doc *Document) error {
-	cache := config.GetConfig().CacheStorage
 	buf, err := json.Marshal(doc)
 	if err != nil {
 		return err
@@ -655,7 +652,6 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 }
 
 func getListFromCache(inst *instance.Instance) []string {
-	cache := config.GetConfig().CacheStorage
 	prefix := fmt.Sprintf("note:%s:", inst.Domain)
 	keys := cache.Keys(prefix)
 	fileIDs := make([]string, len(keys))

@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -57,7 +58,6 @@ func Head(name, context string) (*model.Asset, bool) {
 		context = config.DefaultInstanceContext
 	}
 	key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
-	cache := config.GetConfig().CacheStorage
 	if data, ok := cache.Get(key); ok {
 		asset := &model.Asset{}
 		if err := json.Unmarshal(data, asset); err == nil {
@@ -78,7 +78,6 @@ func Head(name, context string) (*model.Asset, bool) {
 func Add(options []model.AssetOption) error {
 	err := dynamic.RegisterCustomExternals(options, 0)
 	if err == nil {
-		cache := config.GetConfig().CacheStorage
 		for _, opt := range options {
 			key := fmt.Sprintf("dyn-assets:%s/%s", opt.Context, opt.Name)
 			cache.Clear(key)
@@ -93,7 +92,6 @@ func Remove(name, context string) error {
 	err := dynamic.RemoveAsset(context, name)
 	if err == nil {
 		key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
-		cache := config.GetConfig().CacheStorage
 		cache.Clear(key)
 	}
 	return err

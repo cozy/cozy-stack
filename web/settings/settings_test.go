@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -802,7 +803,7 @@ func TestSettings(t *testing.T) {
 		testInstance.FeatureSets = []string{"set1", "set2"}
 		require.NoError(t, instance.Update(testInstance))
 
-		cache := config.GetConfig().CacheStorage
+		cache := cache.NewInMemory()
 
 		cacheKey := fmt.Sprintf("flags:%s:%v", testInstance.ContextName, testInstance.FeatureSets)
 		buf, err := json.Marshal(map[string]interface{}{

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -147,7 +147,6 @@ var (
 )
 
 func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error) {
-	cache := config.GetConfig().CacheStorage
 	cacheKey := fmt.Sprintf("flags:%s:%v", inst.ContextName, inst.FeatureSets)
 	var flags map[string]interface{}
 	if buf, ok := cache.Get(cacheKey); ok {

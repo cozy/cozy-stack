@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/html"
@@ -40,7 +40,6 @@ func GetIcon(domain string) (*Icon, error) {
 		return nil, err
 	}
 
-	cache := config.GetConfig().CacheStorage
 	key := "bw-icons:" + domain
 	if data, ok := cache.Get(key); ok {
 		if len(data) == 0 {

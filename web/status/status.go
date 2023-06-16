@@ -7,14 +7,14 @@ import (
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
 )
 
 // Status responds with the status of the service
 func Status(c echo.Context) error {
-	cache := "healthy"
+	cacheState := "healthy"
 	couch := "healthy"
 	fs := "healthy"
 
@@ -26,13 +26,12 @@ func Status(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	go func() {
-		cfg := config.GetConfig()
-		if lat, err := cfg.CacheStorage.CheckStatus(ctx); err == nil {
+		if lat, err := cache.CheckStatus(ctx); err == nil {
 			mu.Lock()
 			latencies["cache"] = lat.String()
 			mu.Unlock()
 		} else {
-			cache = err.Error()
+			cacheState = err.Error()
 		}
 		wg.Done()
 	}()
@@ -62,13 +61,13 @@ func Status(c echo.Context) error {
 	wg.Wait()
 	code := http.StatusOK
 	status := "OK"
-	if cache != "healthy" || couch != "healthy" || fs != "healthy" {
+	if cacheState != "healthy" || couch != "healthy" || fs != "healthy" {
 		code = http.StatusBadGateway
 		status = "KO"
 	}
 
 	return c.JSON(code, echo.Map{
-		"cache":   cache,
+		"cache":   cacheState,
 		"couchdb": couch,
 		"fs":      fs,
 		"status":  status,

@@ -28,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -1796,7 +1797,6 @@ func (filter *changesFilter) Close() error {
 
 func fsckHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	cacheStorage := config.GetConfig().CacheStorage
 
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
@@ -1805,7 +1805,7 @@ func fsckHandler(c echo.Context) error {
 	noCache, _ := strconv.ParseBool(c.QueryParam("NoCache"))
 	key := "fsck:" + instance.DBPrefix()
 	if !noCache {
-		if r, ok := cacheStorage.GetCompressed(key); ok {
+		if r, ok := cache.GetCompressed(key); ok {
 			return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
 		}
 	}
@@ -1827,7 +1827,7 @@ func fsckHandler(c echo.Context) error {
 
 	if !noCache {
 		expiration := utils.DurationFuzzing(3*30*24*time.Hour, 0.10)
-		cacheStorage.SetCompressed(key, logsData, expiration)
+		cache.SetCompressed(key, logsData, expiration)
 	}
 
 	return c.JSONBlob(http.StatusOK, logsData)

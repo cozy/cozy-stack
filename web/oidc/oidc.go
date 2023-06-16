@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -731,7 +732,6 @@ var keysClient = &http.Client{
 // GetIDTokenKeys returns the keys that can be used to verify that an OIDC
 // id_token is valid.
 func GetIDTokenKeys(keyURL string) ([]*jwKey, error) {
-	cache := config.GetConfig().CacheStorage
 	cacheKey := "oidc-jwk:" + keyURL
 
 	data, ok := cache.Get(cacheKey)
