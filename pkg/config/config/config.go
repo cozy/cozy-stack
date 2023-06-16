@@ -292,26 +292,7 @@ func NewRedisConfig(u string) (conf RedisConfig, err error) {
 
 // GetRedisConfig returns a
 func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (conf RedisConfig, err error) {
-	var localOpt *redis.Options
-
-	localKey := fmt.Sprintf("%s.%s", key, ptr)
 	redisKey := fmt.Sprintf("redis.databases.%s", key)
-
-	if u := v.GetString(localKey); u != "" {
-		localOpt, err = redis.ParseURL(u)
-		if err != nil {
-			err = fmt.Errorf("config: can't parse redis URL(%s): %s", u, err)
-			return
-		}
-	}
-
-	if mainOpt != nil && localOpt != nil {
-		err = fmt.Errorf("config: ambiguous configuration: the key %q is now "+
-			"deprecated and should be removed in favor of %q",
-			localKey,
-			redisKey)
-		return
-	}
 
 	if mainOpt != nil {
 		opts := *mainOpt
@@ -327,8 +308,6 @@ func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr st
 			return
 		}
 		conf.cli = redis.NewUniversalClient(&opts)
-	} else if localOpt != nil {
-		conf.cli = redis.NewClient(localOpt)
 	}
 
 	return
