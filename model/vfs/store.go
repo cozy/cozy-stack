@@ -47,7 +47,7 @@ func GetStore() Store {
 	if globalStore != nil {
 		return globalStore
 	}
-	cli := config.GetConfig().DownloadStorage.Client()
+	cli := config.GetConfig().DownloadStorage
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
