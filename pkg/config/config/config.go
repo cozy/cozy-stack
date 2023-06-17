@@ -184,7 +184,7 @@ type CouchDB struct {
 // Jobs contains the configuration values for the jobs and triggers
 // synchronization
 type Jobs struct {
-	RedisConfig
+	Client                redis.UniversalClient
 	NoWorkers             bool
 	AllowList             bool
 	Workers               []Worker
@@ -656,7 +656,7 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	jobs := Jobs{
-		RedisConfig:           jobsRedis,
+		Client:                jobsRedis.Client(),
 		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
 		DefaultDurationToKeep: v.GetString("jobs.defaultDurationToKeep"),
 	}
