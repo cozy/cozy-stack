@@ -291,8 +291,10 @@ func NewRedisConfig(u string) (conf RedisConfig, err error) {
 }
 
 // GetRedisConfig returns a
-func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (conf RedisConfig, err error) {
+func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (RedisConfig, error) {
 	var localOpt *redis.Options
+	var conf RedisConfig
+	var err error
 
 	localKey := fmt.Sprintf("%s.%s", key, ptr)
 	redisKey := fmt.Sprintf("redis.databases.%s", key)
@@ -300,38 +302,33 @@ func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr st
 	if u := v.GetString(localKey); u != "" {
 		localOpt, err = redis.ParseURL(u)
 		if err != nil {
-			err = fmt.Errorf("config: can't parse redis URL(%s): %s", u, err)
-			return
+			return conf, fmt.Errorf("config: can't parse redis URL(%s): %s", u, err)
 		}
 	}
 
 	if mainOpt != nil && localOpt != nil {
-		err = fmt.Errorf("config: ambiguous configuration: the key %q is now "+
+		return conf, fmt.Errorf("config: ambiguous configuration: the key %q is now "+
 			"deprecated and should be removed in favor of %q",
 			localKey,
 			redisKey)
-		return
 	}
 
 	if mainOpt != nil {
 		opts := *mainOpt
 		dbNumber := v.GetString(redisKey)
 		if dbNumber == "" {
-			err = fmt.Errorf("config: missing DB number for database %q "+
-				"in the field %q", key, redisKey)
-			return
+			return conf, fmt.Errorf("config: missing DB number for database %q "+"in the field %q", key, redisKey)
 		}
 		opts.DB, err = strconv.Atoi(dbNumber)
 		if err != nil {
-			err = fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
-			return
+			return conf, fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
 		}
 		conf.cli = redis.NewUniversalClient(&opts)
 	} else if localOpt != nil {
 		conf.cli = redis.NewClient(localOpt)
 	}
 
-	return
+	return conf, nil
 }
 
 // FsURL returns a copy of the filesystem URL
