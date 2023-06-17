@@ -140,7 +140,7 @@ func getStorage() stateStorage {
 	if globalStorage != nil {
 		return globalStorage
 	}
-	cli := config.GetConfig().OauthStateStorage.Client()
+	cli := config.GetConfig().OauthStateStorage
 	if cli == nil {
 		globalStorage = &memStateStorage{
 			states: make(map[string]*stateHolder),

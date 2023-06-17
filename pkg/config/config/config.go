@@ -127,7 +127,7 @@ type Config struct {
 	Limiter             *limits.RateLimiter
 	SessionStorage      redis.UniversalClient
 	DownloadStorage     redis.UniversalClient
-	OauthStateStorage   RedisConfig
+	OauthStateStorage   redis.UniversalClient
 	RateLimitingStorage RedisConfig
 	Realtime            RedisConfig
 
@@ -814,7 +814,7 @@ func UseViper(v *viper.Viper) error {
 		SessionStorage:    sessionsRedis.Client(),
 		DownloadStorage:   downloadRedis.Client(),
 		Limiter:           limits.NewRateLimiter(rateLimitingRedis.Client()),
-		OauthStateStorage: oauthStateRedis,
+		OauthStateStorage: oauthStateRedis.Client(),
 		Realtime:          realtimeRedis,
 		CacheStorage:      cacheStorage,
 		Mail: &gomail.DialerOptions{
