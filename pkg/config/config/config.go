@@ -123,13 +123,12 @@ type Config struct {
 	Notifications  Notifications
 	Flagship       Flagship
 
-	Lock                lock.Getter
-	Limiter             *limits.RateLimiter
-	SessionStorage      redis.UniversalClient
-	DownloadStorage     redis.UniversalClient
-	OauthStateStorage   redis.UniversalClient
-	RateLimitingStorage RedisConfig
-	Realtime            redis.UniversalClient
+	Lock              lock.Getter
+	Limiter           *limits.RateLimiter
+	SessionStorage    redis.UniversalClient
+	DownloadStorage   redis.UniversalClient
+	OauthStateStorage redis.UniversalClient
+	Realtime          redis.UniversalClient
 
 	CacheStorage cache.Cache
 
