@@ -233,7 +233,7 @@ func TestAddMissingRevsToChain(t *testing.T) {
 		t.Skip("a redis is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()

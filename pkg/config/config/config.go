@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"testing"
 	"text/template"
 	"time"
 
@@ -1082,7 +1083,9 @@ func createTestViper() *viper.Viper {
 // UseTestFile can be used in a test file to inject a configuration
 // from a cozy.test.* file. If it can not find this file in your
 // $HOME/.cozy directory it will use the default one.
-func UseTestFile() {
+func UseTestFile(t *testing.T) {
+	t.Helper()
+
 	build.BuildMode = build.ModeProd
 	v := createTestViper()
 
@@ -1090,12 +1093,12 @@ func UseTestFile() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			v = createTestViper()
 		} else {
-			panic(fmt.Errorf("fatal error test config file: %s", err))
+			t.Fatalf("fatal error test config file: %s", err)
 		}
 	}
 
 	if err := UseViper(v); err != nil {
-		panic(fmt.Errorf("fatal error test config file: %s", err))
+		t.Fatalf("fatal error test config file: %s", err)
 	}
 }
 

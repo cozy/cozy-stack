@@ -42,7 +42,7 @@ func TestRedisScheduler(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance()
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	t.Cleanup(func() {

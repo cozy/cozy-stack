@@ -28,7 +28,7 @@ func TestOidc(t *testing.T) {
 
 	var redirectURL *url.URL
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())

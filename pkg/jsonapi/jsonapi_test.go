@@ -14,7 +14,7 @@ import (
 )
 
 func TestJsonapi(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	router := echo.New()
 	router.GET("/foos/courge", func(c echo.Context) error {

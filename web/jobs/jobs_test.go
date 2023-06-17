@@ -22,7 +22,7 @@ func TestJobs(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 

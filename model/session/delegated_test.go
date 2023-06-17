@@ -21,7 +21,7 @@ func TestDelegated(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	conf := config.GetConfig()
 	conf.Authentication = make(map[string]interface{})
 	confAuth := make(map[string]interface{})

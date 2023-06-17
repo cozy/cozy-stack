@@ -24,7 +24,7 @@ func TestIntents(t *testing.T) {
 	var err error
 	var intentID string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	ins := setup.GetTestInstance(&lifecycle.Options{

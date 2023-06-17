@@ -11,7 +11,7 @@ import (
 )
 
 func TestInstance(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	t.Run("Subdomain", func(t *testing.T) {
 		inst := &instance.Instance{

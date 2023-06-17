@@ -37,7 +37,7 @@ func TestCouchdb(t *testing.T) {
 		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	if _, err := CheckStatus(context.Background()); err != nil {
 		require.NoError(t, err, "This test need couchdb to run.")

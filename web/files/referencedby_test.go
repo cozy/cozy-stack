@@ -23,7 +23,7 @@ func TestReferencedby(t *testing.T) {
 	var fileID1, fileID2 string
 	var fileData1, fileData2 *httpexpect.Object
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
 	testutils.NeedCouchdb(t)

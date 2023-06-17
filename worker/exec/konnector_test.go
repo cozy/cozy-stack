@@ -33,7 +33,7 @@ func TestExecKonnector(t *testing.T) {
 		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
 	setup := testutils.NewSetup(t, t.Name())

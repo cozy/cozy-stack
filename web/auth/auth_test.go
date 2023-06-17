@@ -56,7 +56,7 @@ func TestAuth(t *testing.T) {
 	var code string
 	var refreshToken string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
 	conf.DeprecatedApps = config.DeprecatedAppsCfg{

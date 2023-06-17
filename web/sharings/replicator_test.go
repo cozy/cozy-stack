@@ -44,7 +44,7 @@ func TestReplicator(t *testing.T) {
 
 	const replDoctype = "io.cozy.replicator.tests"
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
 	config.GetConfig().Assets = "../../assets"
 	_ = web.LoadSupportedLocales()

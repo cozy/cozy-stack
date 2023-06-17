@@ -11,7 +11,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	t.Run("StoreInMemory", func(t *testing.T) {
 		wasStoreTTL := storeTTL

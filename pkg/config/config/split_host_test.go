@@ -7,7 +7,7 @@ import (
 )
 
 func TestSplitHost(t *testing.T) {
-	UseTestFile()
+	UseTestFile(t)
 	cfg := GetConfig()
 	was := cfg.Subdomains
 	defer func() { cfg.Subdomains = was }()

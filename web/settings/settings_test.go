@@ -57,7 +57,7 @@ func TestSettings(t *testing.T) {
 	var instanceRev string
 	var oauthClientID string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
@@ -869,7 +869,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
@@ -920,7 +920,7 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
 	oauthClient := &oauth.Client{
