@@ -94,7 +94,7 @@ func PushLoginRegistration(db prefixer.Prefixer, login *LoginEntry, clientID str
 		Expire:       time.Now(),
 	}
 
-	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
+	if cli := config.GetConfig().SessionStorage; cli != nil {
 		b, err := json.Marshal(entry)
 		if err != nil {
 			return err
@@ -116,7 +116,7 @@ func PushLoginRegistration(db prefixer.Prefixer, login *LoginEntry, clientID str
 func RemoveLoginRegistration(domain, clientID string) error {
 	var entryPtr *registrationEntry
 	key := domain + "|" + clientID
-	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
+	if cli := config.GetConfig().SessionStorage; cli != nil {
 		ctx := context.Background()
 		b, err := cli.HGet(ctx, redisRegistationKey, key).Result()
 		if err != nil {
@@ -149,7 +149,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 	var expiredLogins []registrationEntry
 
 	now := time.Now()
-	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
+	if cli := config.GetConfig().SessionStorage; cli != nil {
 		ctx := context.Background()
 		var vals map[string]string
 		vals, err = cli.HGetAll(ctx, redisRegistationKey).Result()
