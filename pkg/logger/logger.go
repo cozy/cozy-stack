@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -40,40 +41,52 @@ type Logger interface {
 	Log(level Level, msg string)
 }
 
-// Options contains the configuration values of the logger system
-type Options struct {
-	Hooks  []logrus.Hook
-	Output io.Writer
-	Level  string
-	Redis  redis.UniversalClient
+// Config contains the configuration values of the logger system
+type Config struct {
+	Level  string `mapstructure:"level"`
+	Syslog bool   `mapstructure:"syslog"`
 }
 
 // Init initializes the logger module with the specified options.
 //
 // It also setup the global logger for go-redis. Thoses are at
 // Info level.
-func Init(opt Options) error {
-	level := opt.Level
+func Init(cfg Config, redisClient redis.UniversalClient) error {
+	level := cfg.Level
 	if level == "" {
 		level = "info"
 	}
+
 	logLevel, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
 	}
 
+	hooks := []logrus.Hook{}
+	var output io.Writer = os.Stderr
+
+	if cfg.Syslog {
+		syslogHook, err := SyslogHook()
+		if err != nil {
+			return fmt.Errorf("failed to setup the syslog hook: %w", err)
+		}
+
+		hooks = append(hooks, syslogHook)
+		output = io.Discard
+	}
+
 	// Setup the global logger in case of someone call the global functions.
-	setupLogger(logrus.StandardLogger(), logLevel, opt)
+	setupLogger(logrus.StandardLogger(), logLevel, hooks, output)
 
 	// Setup the debug logger used for the the domains in debug mode.
 	debugLogger = logrus.New()
-	setupLogger(debugLogger, logrus.DebugLevel, opt)
+	setupLogger(debugLogger, logrus.DebugLevel, hooks, output)
 
 	w := WithNamespace("go-redis").Writer()
 	l := log.New(w, "", 0)
 	redis.SetLogger(&contextPrint{l})
 
-	err = initDebugger(opt.Redis)
+	err = initDebugger(redisClient)
 	if err != nil {
 		return err
 	}
@@ -209,12 +222,10 @@ func (e *Entry) IsDebug() bool {
 	return e.entry.Logger.Level == logrus.DebugLevel
 }
 
-func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
+func setupLogger(logger *logrus.Logger, lvl logrus.Level, hooks []logrus.Hook, output io.Writer) {
 	logger.SetLevel(lvl)
 
-	if opt.Output != nil {
-		logger.SetOutput(opt.Output)
-	}
+	logger.SetOutput(output)
 
 	// We need to reset the hooks to avoid the accumulation of hooks for
 	// the global loggers in case of several calls to `Init`.
@@ -222,7 +233,7 @@ func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
 	// This is the case for `logrus.StandardLogger()` and the tests for example.
 	logger.Hooks = logrus.LevelHooks{}
 
-	for _, hook := range opt.Hooks {
+	for _, hook := range hooks {
 		logger.AddHook(hook)
 	}
 

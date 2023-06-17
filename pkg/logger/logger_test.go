@@ -3,7 +3,6 @@ package logger
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -41,13 +40,11 @@ func TestImplementation(t *testing.T) {
 
 func TestLogger(t *testing.T) {
 	t.Run("DebugDomain", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-		err := Init(Options{
-			Level:  "info",
-			Output: buf,
-		})
+		err := Init(Config{Level: "info"}, nil)
 		assert.NoError(t, err)
 
+		buf := new(bytes.Buffer)
+		debugLogger.SetOutput(buf)
 		debugLogger.SetFormatter(&logrus.TextFormatter{
 			DisableColors:    true,
 			DisableTimestamp: true,
@@ -70,14 +67,11 @@ func TestLogger(t *testing.T) {
 	})
 
 	t.Run("DebugDomain with expired debug", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-
-		err := Init(Options{
-			Level:  "info",
-			Output: buf,
-		})
+		err := Init(Config{Level: "info"}, nil)
 		assert.NoError(t, err)
 
+		buf := new(bytes.Buffer)
+		debugLogger.SetOutput(buf)
 		debugLogger.SetFormatter(&logrus.TextFormatter{
 			DisableColors:    true,
 			DisableTimestamp: true,
@@ -107,18 +101,15 @@ func TestLogger(t *testing.T) {
 
 		opt, err := redis.ParseURL("redis://localhost:6379/0")
 		assert.NoError(t, err)
-		err = Init(Options{
-			Level: "info",
-			Redis: redis.NewClient(opt),
-		})
+		err = Init(Config{Level: "info"}, redis.NewClient(opt))
 		assert.NoError(t, err)
 
 		buf := new(bytes.Buffer)
+		debugLogger.SetOutput(buf)
 		debugLogger.SetFormatter(&logrus.TextFormatter{
 			DisableColors:    true,
 			DisableTimestamp: true,
 		})
-		debugLogger.SetOutput(buf)
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -144,13 +135,15 @@ func TestLogger(t *testing.T) {
 	t.Run("Hooks are triggered", func(t *testing.T) {
 		hook := newHookMock(t)
 
-		err := Init(Options{
-			Level:  "info",
-			Hooks:  []logrus.Hook{hook},
-			Output: io.Discard,
-		})
+		err := Init(Config{Level: "info", Syslog: true}, nil)
 		require.NoError(t, err)
 
+		// Check that the syslog hook have been registered for all level and replace
+		// it by the mock.
+		assert.Equal(t, len(logrus.AllLevels), len(logrus.StandardLogger().Hooks))
+
+		logrus.StandardLogger().Hooks = logrus.LevelHooks{}
+		logrus.StandardLogger().AddHook(hook)
 		logrus.StandardLogger().SetFormatter(&logrus.TextFormatter{
 			DisableColors:    true,
 			DisableTimestamp: true,
@@ -162,27 +155,25 @@ func TestLogger(t *testing.T) {
 	})
 
 	t.Run("Fallback to Info if level is not set", func(t *testing.T) {
-		err := Init(Options{})
+		err := Init(Config{}, nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, logrus.InfoLevel, logrus.StandardLogger().Level)
 	})
 
 	t.Run("Init fail in case of an invalid level", func(t *testing.T) {
-		err := Init(Options{Level: "invalid level"})
+		err := Init(Config{Level: "invalid level"}, nil)
 
 		require.EqualError(t, err, "not a valid logrus Level: \"invalid level\"")
 	})
 
 	t.Run("Truncate log line if too long", func(t *testing.T) {
-		buf := new(bytes.Buffer)
-
-		err := Init(Options{
-			Level:  "info",
-			Output: buf,
-		})
+		err := Init(Config{Level: "info"}, nil)
 		require.NoError(t, err)
 
+		buf := new(bytes.Buffer)
+		logrus.StandardLogger().SetOutput(buf)
+		debugLogger.SetOutput(buf)
 		debugLogger.SetFormatter(&logrus.TextFormatter{
 			DisableColors:    true,
 			DisableTimestamp: true,

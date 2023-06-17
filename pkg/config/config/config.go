@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -108,6 +107,7 @@ type Config struct {
 	GeoDB                 string
 	PasswordResetInterval time.Duration
 
+	Logger         logger.Config
 	RemoteAssets   map[string]string
 	DeprecatedApps DeprecatedAppsCfg
 
@@ -878,24 +878,13 @@ func UseViper(v *viper.Viper) error {
 		config.RemoteAllowCustomPort = true
 	}
 
-	loggerOpts := logger.Options{
-		Level: v.GetString("log.level"),
-		Redis: loggerRedis.Client(),
+	err = v.UnmarshalKey("log", &config.Logger)
+	if err != nil {
+		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
 	}
 
-	if v.GetBool("log.syslog") {
-		syslogHook, err := logger.SyslogHook()
-		if err != nil {
-			return fmt.Errorf("failed to setup the syslog hook: %w", err)
-		}
-
-		// Redirect all the logs to the syslog hook and don't log to STDIO
-		loggerOpts.Hooks = append(loggerOpts.Hooks, syslogHook)
-		loggerOpts.Output = io.Discard
-	}
-
-	if err = logger.Init(loggerOpts); err != nil {
-		return err
+	if err = logger.Init(config.Logger, loggerRedis.Client()); err != nil {
+		return fmt.Errorf("failed to init the logger: %w", err)
 	}
 
 	return nil
