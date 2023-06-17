@@ -25,10 +25,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/redis"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
-	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
 
@@ -125,10 +125,10 @@ type Config struct {
 
 	Lock              lock.Getter
 	Limiter           *limits.RateLimiter
-	SessionStorage    redis.UniversalClient
-	DownloadStorage   redis.UniversalClient
-	OauthStateStorage redis.UniversalClient
-	Realtime          redis.UniversalClient
+	SessionStorage    redis.Client
+	DownloadStorage   redis.Client
+	OauthStateStorage redis.Client
+	Realtime          redis.Client
 
 	CacheStorage cache.Cache
 
@@ -183,7 +183,7 @@ type CouchDB struct {
 // Jobs contains the configuration values for the jobs and triggers
 // synchronization
 type Jobs struct {
-	Client                redis.UniversalClient
+	Client                redis.Client
 	NoWorkers             bool
 	AllowList             bool
 	Workers               []Worker
@@ -269,29 +269,6 @@ type Worker struct {
 	Concurrency  *int
 	MaxExecCount *int
 	Timeout      *time.Duration
-}
-
-// GetRedis returns a [redis.UniversalClient] for the given db.
-func GetRedis(v *viper.Viper, mainOpt *redis.UniversalOptions, db string) (redis.UniversalClient, error) {
-	var err error
-
-	if mainOpt == nil {
-		return nil, nil
-	}
-
-	redisKey := fmt.Sprintf("redis.databases.%s", db)
-
-	opts := *mainOpt
-	dbNumber := v.GetString(redisKey)
-	if dbNumber == "" {
-		return nil, fmt.Errorf("config: missing DB number for database %q "+"in the field %q", db, redisKey)
-	}
-	opts.DB, err = strconv.Atoi(dbNumber)
-	if err != nil {
-		return nil, fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
-	}
-
-	return redis.NewUniversalClient(&opts), nil
 }
 
 // FsURL returns a copy of the filesystem URL
@@ -464,14 +441,6 @@ func envMap() map[string]string {
 	return env
 }
 
-// math.Max() is a float64 function, so we define int function here
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
 	fsURL, err := url.Parse(v.GetString("fs.url"))
@@ -532,78 +501,13 @@ func UseViper(v *viper.Viper) error {
 		subdomains = NestedSubdomains
 	}
 
-	var redisOptions *redis.UniversalOptions
-	if v.GetString("redis.addrs") != "" {
-		// Default go-redis pool size is 10 * runtime.NumCPU() which is
-		// too short on a single-cpu server, we consume at leat 19 connections,
-		// so we enforce a minimum of 25, keeping the default 10 * runtime*NumCPU()
-		// if larger
-		redisPoolSize := v.GetInt("redis.pool_size")
-		if redisPoolSize < 25 {
-			if redisPoolSize != 0 {
-				log.Warnf("Redis pool size set smaller than 25. Using default value.")
-			}
-			redisPoolSize = max(25, 10*runtime.NumCPU())
-		}
+	var redisCfg redis.Config
+	v.UnmarshalKey("redis", &redisCfg)
 
-		redisOptions = &redis.UniversalOptions{
-			// Either a single address or a seed list of host:port addresses
-			// of cluster/sentinel nodes.
-			Addrs: v.GetStringSlice("redis.addrs"),
-
-			// The sentinel master name.
-			// Only failover clients.
-			MasterName: v.GetString("redis.master"),
-
-			// Enables read only queries on slave nodes.
-			ReadOnly: v.GetBool("redis.read_only_slave"),
-
-			MaxRetries:      v.GetInt("redis.max_retries"),
-			Password:        v.GetString("redis.password"),
-			DialTimeout:     v.GetDuration("redis.dial_timeout"),
-			ReadTimeout:     v.GetDuration("redis.read_timeout"),
-			WriteTimeout:    v.GetDuration("redis.write_timeout"),
-			PoolSize:        redisPoolSize,
-			PoolTimeout:     v.GetDuration("redis.pool_timeout"),
-			ConnMaxIdleTime: v.GetDuration("redis.idle_timeout"),
-		}
-	}
-
-	jobsRedis, err := GetRedis(v, redisOptions, "jobs")
+	err = redis.Init(&redisCfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("faile to init the redis client: %w", err)
 	}
-	lockRedis, err := GetRedis(v, redisOptions, "lock")
-	if err != nil {
-		return err
-	}
-	sessionsRedis, err := GetRedis(v, redisOptions, "sessions")
-	if err != nil {
-		return err
-	}
-	downloadRedis, err := GetRedis(v, redisOptions, "downloads")
-	if err != nil {
-		return err
-	}
-	rateLimitingRedis, err := GetRedis(v, redisOptions, "rate_limiting")
-	if err != nil {
-		return err
-	}
-	oauthStateRedis, err := GetRedis(v, redisOptions, "konnectors")
-	if err != nil {
-		return err
-	}
-	realtimeRedis, err := GetRedis(v, redisOptions, "realtime")
-	if err != nil {
-		return err
-	}
-	loggerRedis, err := GetRedis(v, redisOptions, "log")
-	if err != nil {
-		return err
-	}
-
-	// cache entry is optional
-	cacheRedis, _ := GetRedis(v, redisOptions, "cache")
 
 	adminSecretFile := v.GetString("admin.secret_filename")
 	if adminSecretFile == "" {
@@ -611,7 +515,7 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	jobs := Jobs{
-		Client:                jobsRedis,
+		Client:                redis.GetDB(redis.Jobs),
 		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
 		DefaultDurationToKeep: v.GetString("jobs.defaultDurationToKeep"),
 	}
@@ -703,7 +607,7 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	cacheStorage := cache.New(cacheRedis)
+	cacheStorage := cache.New(redis.GetDB(redis.Cache))
 
 	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
 	if err != nil {
@@ -786,12 +690,12 @@ func UseViper(v *viper.Viper) error {
 			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
 		},
-		Lock:              lock.New(lockRedis),
-		SessionStorage:    sessionsRedis,
-		DownloadStorage:   downloadRedis,
-		Limiter:           limits.NewRateLimiter(rateLimitingRedis),
-		OauthStateStorage: oauthStateRedis,
-		Realtime:          realtimeRedis,
+		Lock:              lock.New(redis.GetDB(redis.Lock)),
+		SessionStorage:    redis.GetDB(redis.Sessions),
+		DownloadStorage:   redis.GetDB(redis.Downloads),
+		Limiter:           limits.NewRateLimiter(redis.GetDB(redis.RateLimiting)),
+		OauthStateStorage: redis.GetDB(redis.Konnectors),
+		Realtime:          redis.GetDB(redis.Realtime),
 		CacheStorage:      cacheStorage,
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
@@ -835,7 +739,7 @@ func UseViper(v *viper.Viper) error {
 
 	loggerOpts := logger.Options{
 		Level: v.GetString("log.level"),
-		Redis: loggerRedis,
+		Redis: redis.GetDB(redis.Log),
 	}
 
 	if v.GetBool("log.syslog") {
