@@ -272,63 +272,45 @@ type Worker struct {
 	Timeout      *time.Duration
 }
 
-// RedisConfig contains the configuration values for a redis system
-type RedisConfig struct {
-	cli redis.UniversalClient
-}
-
-// NewRedisConfig creates a redis configuration and its associated client.
-func NewRedisConfig(u string) (conf RedisConfig, err error) {
-	if u == "" {
-		return
-	}
-	opt, err := redis.ParseURL(u)
-	if err != nil {
-		return
-	}
-	conf.cli = redis.NewClient(opt)
-	return
-}
-
-// GetRedisConfig returns a
-func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (RedisConfig, error) {
+// GetRedis returns a [redis.UniversalClient] for the given db.
+func GetRedis(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (redis.UniversalClient, error) {
 	var localOpt *redis.Options
-	var conf RedisConfig
 	var err error
 
 	localKey := fmt.Sprintf("%s.%s", key, ptr)
-	redisKey := fmt.Sprintf("redis.databases.%s", key)
 
 	if u := v.GetString(localKey); u != "" {
 		localOpt, err = redis.ParseURL(u)
 		if err != nil {
-			return conf, fmt.Errorf("config: can't parse redis URL(%s): %s", u, err)
+			return nil, fmt.Errorf("config: can't parse redis URL(%s): %s", u, err)
 		}
+	}
+
+	if mainOpt == nil && localOpt == nil {
+		return nil, nil
 	}
 
 	if mainOpt != nil && localOpt != nil {
-		return conf, fmt.Errorf("config: ambiguous configuration: the key %q is now "+
-			"deprecated and should be removed in favor of %q",
-			localKey,
-			redisKey)
+		return nil, fmt.Errorf("config: ambiguous configuration between the cli and the config")
 	}
 
-	if mainOpt != nil {
-		opts := *mainOpt
-		dbNumber := v.GetString(redisKey)
-		if dbNumber == "" {
-			return conf, fmt.Errorf("config: missing DB number for database %q "+"in the field %q", key, redisKey)
-		}
-		opts.DB, err = strconv.Atoi(dbNumber)
-		if err != nil {
-			return conf, fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
-		}
-		conf.cli = redis.NewUniversalClient(&opts)
-	} else if localOpt != nil {
-		conf.cli = redis.NewClient(localOpt)
+	if localOpt != nil {
+		return redis.NewClient(localOpt), nil
 	}
 
-	return conf, nil
+	redisKey := fmt.Sprintf("redis.databases.%s", key)
+
+	opts := *mainOpt
+	dbNumber := v.GetString(redisKey)
+	if dbNumber == "" {
+		return nil, fmt.Errorf("config: missing DB number for database %q "+"in the field %q", key, redisKey)
+	}
+	opts.DB, err = strconv.Atoi(dbNumber)
+	if err != nil {
+		return nil, fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
+	}
+
+	return redis.NewUniversalClient(&opts), nil
 }
 
 // FsURL returns a copy of the filesystem URL
@@ -363,11 +345,6 @@ func CouchClient() *http.Client {
 // Lock return the lock getter.
 func Lock() lock.Getter {
 	return config.Lock
-}
-
-// Client returns the redis.Client for a RedisConfig
-func (rc *RedisConfig) Client() redis.UniversalClient {
-	return rc.cli
 }
 
 // GetConfig returns the configured instance of Config
@@ -611,41 +588,41 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	jobsRedis, err := GetRedisConfig(v, redisOptions, "jobs", "url")
+	jobsRedis, err := GetRedis(v, redisOptions, "jobs", "url")
 	if err != nil {
 		return err
 	}
-	lockRedis, err := GetRedisConfig(v, redisOptions, "lock", "url")
+	lockRedis, err := GetRedis(v, redisOptions, "lock", "url")
 	if err != nil {
 		return err
 	}
-	sessionsRedis, err := GetRedisConfig(v, redisOptions, "sessions", "url")
+	sessionsRedis, err := GetRedis(v, redisOptions, "sessions", "url")
 	if err != nil {
 		return err
 	}
-	downloadRedis, err := GetRedisConfig(v, redisOptions, "downloads", "url")
+	downloadRedis, err := GetRedis(v, redisOptions, "downloads", "url")
 	if err != nil {
 		return err
 	}
-	rateLimitingRedis, err := GetRedisConfig(v, redisOptions, "rate_limiting", "url")
+	rateLimitingRedis, err := GetRedis(v, redisOptions, "rate_limiting", "url")
 	if err != nil {
 		return err
 	}
-	oauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors", "oauthstate")
+	oauthStateRedis, err := GetRedis(v, redisOptions, "konnectors", "oauthstate")
 	if err != nil {
 		return err
 	}
-	realtimeRedis, err := GetRedisConfig(v, redisOptions, "realtime", "url")
+	realtimeRedis, err := GetRedis(v, redisOptions, "realtime", "url")
 	if err != nil {
 		return err
 	}
-	loggerRedis, err := GetRedisConfig(v, redisOptions, "log", "redis")
+	loggerRedis, err := GetRedis(v, redisOptions, "log", "redis")
 	if err != nil {
 		return err
 	}
 
 	// cache entry is optional
-	cacheRedis, _ := GetRedisConfig(v, redisOptions, "cache", "url")
+	cacheRedis, _ := GetRedis(v, redisOptions, "cache", "url")
 
 	adminSecretFile := v.GetString("admin.secret_filename")
 	if adminSecretFile == "" {
@@ -653,7 +630,7 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	jobs := Jobs{
-		Client:                jobsRedis.Client(),
+		Client:                jobsRedis,
 		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
 		DefaultDurationToKeep: v.GetString("jobs.defaultDurationToKeep"),
 	}
@@ -745,7 +722,7 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
-	cacheStorage := cache.New(cacheRedis.Client())
+	cacheStorage := cache.New(cacheRedis)
 
 	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
 	if err != nil {
@@ -828,12 +805,12 @@ func UseViper(v *viper.Viper) error {
 			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
 		},
-		Lock:              lock.New(lockRedis.Client()),
-		SessionStorage:    sessionsRedis.Client(),
-		DownloadStorage:   downloadRedis.Client(),
-		Limiter:           limits.NewRateLimiter(rateLimitingRedis.Client()),
-		OauthStateStorage: oauthStateRedis.Client(),
-		Realtime:          realtimeRedis.Client(),
+		Lock:              lock.New(lockRedis),
+		SessionStorage:    sessionsRedis,
+		DownloadStorage:   downloadRedis,
+		Limiter:           limits.NewRateLimiter(rateLimitingRedis),
+		OauthStateStorage: oauthStateRedis,
+		Realtime:          realtimeRedis,
 		CacheStorage:      cacheStorage,
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
@@ -877,7 +854,7 @@ func UseViper(v *viper.Viper) error {
 
 	loggerOpts := logger.Options{
 		Level: v.GetString("log.level"),
-		Redis: loggerRedis.Client(),
+		Redis: loggerRedis,
 	}
 
 	if v.GetBool("log.syslog") {
