@@ -215,20 +215,20 @@ type Office struct {
 // Notifications contains the configuration for the mobile push-notification
 // center, for Android and iOS
 type Notifications struct {
-	Development bool
+	Development bool `mapstructure:"development"`
 
-	AndroidAPIKey string
-	FCMServer     string
+	AndroidAPIKey string `mapstructure:"android_api_key"`
+	FCMServer     string `mapstructure:"fcm_server"`
 
-	IOSCertificateKeyPath  string
-	IOSCertificatePassword string
-	IOSKeyID               string
-	IOSTeamID              string
+	IOSCertificateKeyPath  string `mapstructure:"ios_certificate_key_path"`
+	IOSCertificatePassword string `mapstructure:"ios_certificate_password"`
+	IOSKeyID               string `mapstructure:"ios_key_id"`
+	IOSTeamID              string `mapstructure:"ios_team_id"`
 
-	HuaweiGetTokenURL     string
-	HuaweiSendMessagesURL string
+	HuaweiGetTokenURL     string `mapstructure:"huawei_get_token"`
+	HuaweiSendMessagesURL string `mapstucture:"huawei_send_message"`
 
-	Contexts map[string]SMS
+	Contexts map[string]SMS `mapstructure:"contexts"`
 }
 
 // Flagship contains the configuration for the flagship app.
@@ -241,9 +241,9 @@ type Flagship struct {
 
 // SMS contains the configuration to send notifications by SMS.
 type SMS struct {
-	Provider string
-	URL      string
-	Token    string
+	Provider string `mapstructure:"provider"`
+	URL      string `mapstructure:"url"`
+	Token    string `mapstructur:"token"`
 }
 
 // DeprecatedCfg describes the config used to setup [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList].
@@ -809,22 +809,6 @@ func UseViper(v *viper.Viper) error {
 		Move: Move{
 			URL: v.GetString("move.url"),
 		},
-		Notifications: Notifications{
-			Development: v.GetBool("notifications.development"),
-
-			FCMServer:     v.GetString("notifications.fcm_server"),
-			AndroidAPIKey: v.GetString("notifications.android_api_key"),
-
-			IOSCertificateKeyPath:  v.GetString("notifications.ios_certificate_key_path"),
-			IOSCertificatePassword: v.GetString("notifications.ios_certificate_password"),
-			IOSKeyID:               v.GetString("notifications.ios_key_id"),
-			IOSTeamID:              v.GetString("notifications.ios_team_id"),
-
-			HuaweiGetTokenURL:     v.GetString("notifications.huawei_get_token"),
-			HuaweiSendMessagesURL: v.GetString("notifications.huawei_send_message"),
-
-			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
-		},
 		Flagship: Flagship{
 			Contexts:              v.GetStringMap("flagship.contexts"),
 			APKPackageNames:       v.GetStringSlice("flagship.apk_package_names"),
@@ -863,6 +847,11 @@ func UseViper(v *viper.Viper) error {
 	err = v.UnmarshalKey("deprecated_apps", &config.DeprecatedApps)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
+	}
+
+	err = v.UnmarshalKey("notifications", &config.Notifications)
+	if err != nil {
+		return fmt.Errorf(`failed to parse the config for "notifications": %w`, err)
 	}
 
 	// For compatibility
@@ -1039,24 +1028,6 @@ func makeOffice(v *viper.Viper) (map[string]Office, error) {
 	}
 
 	return office, nil
-}
-
-func makeSMS(raw map[string]interface{}) map[string]SMS {
-	sms := make(map[string]SMS)
-	for name, val := range raw {
-		entry, ok := val.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		provider, _ := entry["provider"].(string)
-		if provider == "" {
-			continue
-		}
-		url, _ := entry["url"].(string)
-		token, _ := entry["token"].(string)
-		sms[name] = SMS{Provider: provider, URL: url, Token: token}
-	}
-	return sms
 }
 
 func createTestViper() *viper.Viper {
