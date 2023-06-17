@@ -126,8 +126,8 @@ type Config struct {
 
 	Lock                lock.Getter
 	Limiter             *limits.RateLimiter
-	SessionStorage      RedisConfig
-	DownloadStorage     RedisConfig
+	SessionStorage      redis.UniversalClient
+	DownloadStorage     redis.UniversalClient
 	OauthStateStorage   RedisConfig
 	RateLimitingStorage RedisConfig
 	Realtime            RedisConfig
@@ -833,8 +833,8 @@ func UseViper(v *viper.Viper) error {
 			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
 		},
 		Lock:              lock.New(lockRedis.Client()),
-		SessionStorage:    sessionsRedis,
-		DownloadStorage:   downloadRedis,
+		SessionStorage:    sessionsRedis.Client(),
+		DownloadStorage:   downloadRedis.Client(),
 		Limiter:           limits.NewRateLimiter(rateLimitingRedis.Client()),
 		OauthStateStorage: oauthStateRedis,
 		Realtime:          realtimeRedis,
