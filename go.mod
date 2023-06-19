@@ -33,7 +33,7 @@ require (
 	github.com/ncw/swift/v2 v2.0.1
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.18.7
-	github.com/oschwald/maxminddb-golang v1.10.0
+	github.com/oschwald/maxminddb-golang v1.11.0
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/redis/go-redis/v9 v9.0.5
@@ -105,7 +105,7 @@ require (
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
 	github.com/yudai/gojsondiff v1.0.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
