@@ -38927,9 +38927,9 @@ kzgTcwauU13J3+k05jrxY/AvZfcc
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /styles/theme.css
-Size: 36
+Size: 39
 
-GyMA6I2Uq/VkqfIiVgp5MJEDhwJrl6cUUFb5zFS0yk6ACw==
+GyYA6I2Uq/VkrfISJKYVQNzywAYcOBRoMug55RR0sU5DRqz0BhgC
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /templates/authorize.html
