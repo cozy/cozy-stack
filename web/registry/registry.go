@@ -149,8 +149,12 @@ func proxyMaintenanceReq(c echo.Context) error {
 	for _, item := range maintenance {
 		list = append(list, item)
 	}
-	for _, item := range apps {
-		list = append(list, item)
+	for _, doc := range apps {
+		item, err := doc.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		list = append(list, json.RawMessage(item))
 	}
 	return c.JSON(http.StatusOK, list)
 }
