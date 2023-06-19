@@ -95,6 +95,10 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 		Email      string `json:"email"`
 	}
 
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
+		return err
+	}
+
 	var args body
 	err := c.Bind(&args)
 	if err != nil {
