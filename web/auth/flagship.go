@@ -204,7 +204,7 @@ func loginFlagship(c echo.Context) error {
 	}
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
-		if len(args.TwoFactorPasscode) == 0 || len(args.TwoFactorToken) == 0 {
+		if len(args.TwoFactorToken) == 0 {
 			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
 				return err
