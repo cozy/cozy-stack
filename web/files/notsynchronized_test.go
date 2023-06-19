@@ -22,7 +22,7 @@ func TestNotsynchronized(t *testing.T) {
 
 	var dirID, dirID2 string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	require.NoError(t, loadLocale(), "Could not load default locale translations")
 
 	testutils.NeedCouchdb(t)

@@ -17,7 +17,7 @@ func TestPush(t *testing.T) {
 		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
 	t.Run("get firebase client", func(t *testing.T) {

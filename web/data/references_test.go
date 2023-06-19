@@ -24,7 +24,7 @@ func TestReferences(t *testing.T) {
 	const Type = "io.cozy.events"
 	const ID = "4521C325F6478E45"
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance()

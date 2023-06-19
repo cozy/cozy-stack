@@ -30,7 +30,7 @@ func TestOauth(t *testing.T) {
 
 	var testInstance *instance.Instance
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
 	testutils.NeedCouchdb(t)
 

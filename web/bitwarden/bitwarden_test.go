@@ -32,7 +32,7 @@ func TestBitwarden(t *testing.T) {
 
 	var token, collID, orgaID, folderID, cipherID string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance(&lifecycle.Options{

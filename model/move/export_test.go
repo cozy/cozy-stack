@@ -29,7 +29,7 @@ func TestExport(t *testing.T) {
 	seed := time.Now().UTC().Unix()
 	t.Logf("seed = %d\n", seed)
 	rand.Seed(seed)
-	config.UseTestFile()
+	config.UseTestFile(t)
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()
 

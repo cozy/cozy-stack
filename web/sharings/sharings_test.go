@@ -48,7 +48,7 @@ func TestSharings(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
 	config.GetConfig().Assets = "../../assets"
 	_ = web.LoadSupportedLocales()

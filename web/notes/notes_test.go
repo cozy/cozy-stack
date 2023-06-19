@@ -32,7 +32,7 @@ func TestNotes(t *testing.T) {
 	var noteID string
 	var version int64
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance()

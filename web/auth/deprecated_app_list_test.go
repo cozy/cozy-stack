@@ -81,7 +81,7 @@ func Test_DeprecatedAppList(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.Name, func(t *testing.T) {
-				config.UseTestFile()
+				config.UseTestFile(t)
 				middlewares.FuncsMap = template.FuncMap{
 					"t":         fmt.Sprintf,
 					"tHTML":     fmt.Sprintf,

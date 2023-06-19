@@ -18,7 +18,7 @@ import (
 const doctype = "org.example.request"
 
 func TestParseRawRequest(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	raw := `GET`
 	_, err := ParseRawRequest(doctype, raw)
@@ -77,7 +77,7 @@ two={{two}}`, r2.Body)
 }
 
 func TestExtractVariablesGET(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	u, err := url.Parse("https://example.org/foo?one=un&two=deux")
 	assert.NoError(t, err)
@@ -89,7 +89,7 @@ func TestExtractVariablesGET(t *testing.T) {
 }
 
 func TestExtractVariablesPOST(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	body := bytes.NewReader([]byte(`{"one": "un", "two": "deux"}`))
 	in := httptest.NewRequest("POST", "https://example.com/bar", body)
@@ -105,7 +105,7 @@ func TestExtractVariablesPOST(t *testing.T) {
 }
 
 func TestInjectVariables(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	raw := `POST https://example.org/foo/{{bar}}?q={{q}}
 Content-Type: {{contentType}}
@@ -149,7 +149,7 @@ func TestInjectSecret(t *testing.T) {
 		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	doctype := "cc.cozycloud.foobar"
 	doc := couchdb.JSONDoc{

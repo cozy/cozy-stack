@@ -20,7 +20,7 @@ func TestSecure(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	config.GetConfig().Assets = "../../assets"
 	setup := testutils.NewSetup(t, t.Name())
 

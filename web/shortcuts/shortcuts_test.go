@@ -19,7 +19,7 @@ func TestShortcuts(t *testing.T) {
 
 	var shortcutID string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
 	// _ = setup.GetTestInstance()

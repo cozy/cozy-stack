@@ -18,7 +18,7 @@ import (
 )
 
 func TestEncryptDecrytCredentials(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	encryptedCreds1, err := EncryptCredentials("me@mycozy.cloud", "fzEE6HFWsSp8jP")
 	require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestEncryptDecrytCredentials(t *testing.T) {
 }
 
 func TestEncryptDecrytUTF8Credentials(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 1024; i++ {
@@ -88,7 +88,7 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 }
 
 func TestDecryptCredentialsRandom(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 1024; i++ {
@@ -107,7 +107,7 @@ func TestDecryptCredentialsRandom(t *testing.T) {
 }
 
 func TestRandomBitFlipsCredentials(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	original, err := EncryptCredentials("toto@titi.com", "X3hVYLJLRiUyCs")
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestRandomBitFlipsCredentials(t *testing.T) {
 }
 
 func TestEncryptDecryptData(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	var data interface{}
 	err := json.Unmarshal([]byte(`{"foo":"bar","baz":{"quz": "quuz"}}`), &data)
@@ -170,7 +170,7 @@ func TestEncryptDecryptData(t *testing.T) {
 }
 
 func TestRandomBitFlipsBuffer(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	plainBuffer := make([]byte, 256)
 	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
@@ -217,7 +217,7 @@ func TestRandomBitFlipsBuffer(t *testing.T) {
 }
 
 func TestAccountsEncryptDecrypt(t *testing.T) {
-	config.UseTestFile()
+	config.UseTestFile(t)
 
 	v := []byte(`
 {

@@ -31,7 +31,7 @@ func TestOffice(t *testing.T) {
 
 	var key string
 
-	config.UseTestFile()
+	config.UseTestFile(t)
 	ooURL := fakeOOServer()
 	config.GetConfig().Office = map[string]config.Office{
 		"default": {OnlyOfficeURL: ooURL},
