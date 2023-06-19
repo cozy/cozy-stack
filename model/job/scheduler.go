@@ -184,18 +184,21 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 		tmp := *t.Options
 		cloned.Options = &tmp
 	}
+
 	if t.Message != nil {
-		tmp := t.Message
-		t.Message = make([]byte, len(tmp))
-		copy(t.Message[:], tmp)
+		cloned.Message = make([]byte, len(t.Message))
+		copy(cloned.Message, t.Message)
 	}
+
 	if t.CurrentState != nil {
 		tmp := *t.CurrentState
 		cloned.CurrentState = &tmp
 	}
+
 	if t.Metadata != nil {
 		cloned.Metadata = t.Metadata.Clone()
 	}
+
 	return &cloned
 }
 
