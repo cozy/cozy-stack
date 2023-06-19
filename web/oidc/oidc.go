@@ -309,7 +309,7 @@ func AccessToken(c echo.Context) error {
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
 		token := []byte(reqBody.TwoFactorToken)
-		if len(reqBody.TwoFactorCode) == 0 || len(reqBody.TwoFactorToken) == 0 {
+		if len(token) == 0 {
 			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
 				return err
