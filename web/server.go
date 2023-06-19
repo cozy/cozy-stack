@@ -25,7 +25,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/apps"
-	"github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -114,12 +113,24 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-// ListenAndServe creates and setups all the necessary http endpoints and start
-// them.
-func ListenAndServe(services *stack.Services) (*Servers, error) {
+func newHTTPServer() *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
+
+	if build.IsDevRelease() {
+		e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
+		}))
+	}
+
+	return e
+}
+
+// ListenAndServe creates and setups all the necessary http endpoints and start
+// them.
+func ListenAndServe(services *stack.Services) (*Servers, error) {
+	e := newHTTPServer()
 
 	major, err := CreateSubdomainProxy(e, services, apps.Serve)
 	if err != nil {
@@ -127,16 +138,6 @@ func ListenAndServe(services *stack.Services) (*Servers, error) {
 	}
 	if err = LoadSupportedLocales(); err != nil {
 		return nil, err
-	}
-
-	if build.IsDevRelease() {
-		timeFormat := "time_rfc3339"
-		if logrus.GetLevel() == logrus.DebugLevel {
-			timeFormat = "time_rfc3339_nano"
-		}
-		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-			Format: "time=${" + timeFormat + "}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
-		}))
 	}
 
 	admin := echo.New()

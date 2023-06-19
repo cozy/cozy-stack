@@ -48,7 +48,6 @@ import (
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/cozy/cozy-stack/web/wellknown"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/idna"
 )
@@ -284,24 +283,17 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
 func SetupAdminRoutes(router *echo.Echo) error {
-	var mws []echo.MiddlewareFunc
-	if build.IsDevRelease() {
-		mws = append(mws, middleware.LoggerWithConfig(middleware.LoggerConfig{
-			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
-		}))
-	} else {
-		mws = append(mws, middlewares.BasicAuth(config.GetConfig().AdminSecretFileName))
-	}
+	basicAuth := middlewares.BasicAuth(config.GetConfig().AdminSecretFileName)
 
-	instances.Routes(router.Group("/instances", mws...))
-	apps.AdminRoutes(router.Group("/konnectors", mws...))
-	version.Routes(router.Group("/version", mws...))
-	metrics.Routes(router.Group("/metrics", mws...))
-	oauth.Routes(router.Group("/oauth", mws...))
-	oidc.AdminRoutes(router.Group("/oidc", mws...))
-	realtime.Routes(router.Group("/realtime", mws...))
-	swift.Routes(router.Group("/swift", mws...))
-	tools.Routes(router.Group("/tools", mws...))
+	instances.Routes(router.Group("/instances", basicAuth))
+	apps.AdminRoutes(router.Group("/konnectors", basicAuth))
+	version.Routes(router.Group("/version", basicAuth))
+	metrics.Routes(router.Group("/metrics", basicAuth))
+	oauth.Routes(router.Group("/oauth", basicAuth))
+	oidc.AdminRoutes(router.Group("/oidc", basicAuth))
+	realtime.Routes(router.Group("/realtime", basicAuth))
+	swift.Routes(router.Group("/swift", basicAuth))
+	tools.Routes(router.Group("/tools", basicAuth))
 
 	setupRecover(router)
 
