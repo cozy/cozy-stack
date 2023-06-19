@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -118,10 +119,19 @@ func newHTTPServer() *echo.Echo {
 	e.HideBanner = true
 	e.HidePort = true
 
+	// Logger middleware, only in dev for now
 	if build.IsDevRelease() {
 		e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
+	}
+
+	// Recover middleware
+	if !build.IsDevRelease() {
+		recoverMiddleware := middlewares.RecoverWithConfig(middlewares.RecoverConfig{
+			StackSize: 10 << 10, // 10KB
+		})
+		e.Use(recoverMiddleware)
 	}
 
 	return e
@@ -140,9 +150,7 @@ func ListenAndServe(services *stack.Services) (*Servers, error) {
 		return nil, err
 	}
 
-	admin := echo.New()
-	admin.HideBanner = true
-	admin.HidePort = true
+	admin := newHTTPServer()
 
 	if err = SetupAdminRoutes(admin); err != nil {
 		return nil, err

@@ -263,7 +263,6 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		router.GET("/dev/templates/:name", devTemplatesHandler)
 	}
 
-	setupRecover(router)
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
 }
@@ -294,8 +293,6 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	realtime.Routes(router.Group("/realtime", basicAuth))
 	swift.Routes(router.Group("/swift", basicAuth))
 	tools.Routes(router.Group("/tools", basicAuth))
-
-	setupRecover(router)
 
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
@@ -347,15 +344,5 @@ func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerF
 
 		router.ServeHTTP(c.Response(), c.Request())
 		return nil
-	}
-}
-
-// setupRecover sets a recovering strategy of panics happening in handlers
-func setupRecover(router *echo.Echo) {
-	if !build.IsDevRelease() {
-		recoverMiddleware := middlewares.RecoverWithConfig(middlewares.RecoverConfig{
-			StackSize: 10 << 10, // 10KB
-		})
-		router.Use(recoverMiddleware)
 	}
 }
