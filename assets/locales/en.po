@@ -763,6 +763,23 @@ msgstr ""
 "As a last resort, you can reset your password in the “forgot your password” section of your Cozy. "
 "If you did not initiate this request, contact us by replying directly to this email."
 
+msgid "Mail Update Email Subject"
+msgstr "Confirm your email"
+
+msgid "Mail Update Email Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Update Email Intro 2"
+msgstr ""
+"You asked to change your password for Cozy Pass. "
+"If you didn't initiate this request, please contact us by replying directly to this email."
+
+msgid "Mail Update Email Button instruction"
+msgstr "Click on the this button to confirm the new email."
+
+msgid "Mail Update Email Button text"
+msgstr "Confirm my email"
+
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reset your password"
 
