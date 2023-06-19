@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.COZYBOT_ACCESS_TOKEN }}
       - name: Install Go
         uses: actions/setup-go@v4
         with:
