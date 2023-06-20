@@ -813,6 +813,76 @@ func TestNotes(t *testing.T) {
 		data.ValueEqual("id", fileID)
 		data.Path("$.attributes.instance").Equal(inst.Domain)
 	})
+
+	t.Run("CreateNote with a content", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/notes").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "title": "A note with some content",
+            "schema": {
+              "nodes": [
+                ["doc", { "content": "block+" }],
+                ["paragraph", { "content": "inline*", "group": "block" }],
+                ["text", { "group": "inline" }],
+                ["bullet_list", { "content": "list_item+", "group": "block" }],
+                ["list_item", { "content": "paragraph block*" }]
+              ],
+              "marks": [
+                ["em", {}],
+                ["strong", {}]
+              ],
+              "topNode": "doc"
+            },
+            "content": {
+              "content": [
+                {
+                  "content": [{ "text": "Hello world", "type": "text" }],
+                  "type": "paragraph"
+                }
+              ],
+              "type": "doc"
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+
+		data.ValueEqual("type", "io.cozy.files")
+		data.Value("id").String().NotEmpty()
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("type", "file")
+		attrs.ValueEqual("name", "A note with some content.cozy-note")
+		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+
+		meta := attrs.Value("metadata").Object()
+		meta.ValueEqual("title", "A note with some content")
+		meta.ValueEqual("version", 0)
+		meta.Value("schema").Object().NotEmpty()
+
+		expected := map[string]interface{}{
+			"content": []interface{}{
+				map[string]interface{}{
+					"content": []interface{}{
+						map[string]interface{}{"text": "Hello world", "type": "text"},
+					},
+					"type": "paragraph",
+				},
+			},
+			"type": "doc",
+		}
+		meta.Value("content").Object().IsEqual(expected)
+	})
 }
 
 func assertInitialNote(t *testing.T, obj *httpexpect.Object) {

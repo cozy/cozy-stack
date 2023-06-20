@@ -33,6 +33,7 @@ It creates a note: it creates a files with the right metadata for collaborative 
 | title     | The title of the note, that will also be used for the filename            |
 | dir_id    | The identifier of the directory where the file will be created (optional) |
 | schema    | The schema for prosemirror (with OrderedMap transformed as arrays)        |
+| content   | The initial content of the note (optional)                                |
 
 **Note:** if the `dir_id` is not given, the file will be created in a `Notes`
 directory (and this directory will have a referenced_by on the notes apps to

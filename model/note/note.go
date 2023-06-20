@@ -181,11 +181,19 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	defer lock.Unlock()
 
 	doc.Version = 0
-	content, err := initialContent(inst, doc)
-	if err != nil {
-		return nil, err
+	if len(doc.RawContent) > 0 {
+		// Check that the content satisfies the schema
+		_, err := doc.Content()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		content, err := initialContent(inst, doc)
+		if err != nil {
+			return nil, err
+		}
+		doc.SetContent(content)
 	}
-	doc.SetContent(content)
 
 	file, err := writeFile(inst, doc, nil)
 	if err != nil {
