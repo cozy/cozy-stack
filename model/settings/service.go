@@ -107,6 +107,11 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 		return fmt.Errorf("failed to generate and save the confirmation token: %w", err)
 	}
 
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
+	}
+
 	link := inst.PageURL("/settings/email/confirm", url.Values{
 		"token": []string{token},
 	})

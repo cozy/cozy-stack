@@ -41,6 +41,13 @@ func Test_StartEmailUpdate_success(t *testing.T) {
 	tokenSvc.On("GenerateAndSave", &inst, token.EmailUpdate, "some@email.com", TokenExpiration).
 		Return("some-token", nil).Once()
 
+	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name":   "Jane Doe",
+			"pending_email": "some@email.com",
+		},
+	}).Return(nil).Once()
+
 	emailerSvc.On("SendEmail", &inst, &emailer.SendEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
@@ -102,6 +109,13 @@ func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
 
 	tokenSvc.On("GenerateAndSave", &inst, token.EmailUpdate, "some@email.com", TokenExpiration).
 		Return("some-token", nil).Once()
+
+	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
+		M: map[string]interface{}{
+			// There is no public name
+			"pending_email": "some@email.com",
+		},
+	}).Return(nil).Once()
 
 	emailerSvc.On("SendEmail", &inst, &emailer.SendEmailCmd{
 		TemplateName: "update_email",
