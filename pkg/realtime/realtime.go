@@ -92,7 +92,7 @@ func GetHub() Hub {
 	if globalHub != nil {
 		return globalHub
 	}
-	cli := config.GetConfig().Realtime.Client()
+	cli := config.GetConfig().Realtime
 	if cli == nil {
 		globalHub = newMemHub()
 	} else {

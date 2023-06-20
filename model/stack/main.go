@@ -85,9 +85,9 @@ security features. Please do not use this binary as your production server.
 	var broker job.Broker
 	var schder job.Scheduler
 	jobsConfig := config.GetConfig().Jobs
-	if cli := jobsConfig.Client(); cli != nil {
-		broker = job.NewRedisBroker(cli)
-		schder = job.NewRedisScheduler(cli)
+	if jobsConfig.Client != nil {
+		broker = job.NewRedisBroker(jobsConfig.Client)
+		schder = job.NewRedisScheduler(jobsConfig.Client)
 	} else {
 		broker = job.NewMemBroker()
 		schder = job.NewMemScheduler()

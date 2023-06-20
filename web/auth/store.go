@@ -35,7 +35,7 @@ func GetStore() Store {
 	if globalStore != nil {
 		return globalStore
 	}
-	cli := config.GetConfig().SessionStorage.Client()
+	cli := config.GetConfig().SessionStorage
 	if cli == nil {
 		globalStore = newMemStore()
 	} else {
