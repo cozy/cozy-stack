@@ -764,21 +764,21 @@ msgstr ""
 "If you did not initiate this request, contact us by replying directly to this email."
 
 msgid "Mail Update Email Subject"
-msgstr "Confirm your email"
+msgstr "Confirm your email address"
 
 msgid "Mail Update Email Intro 1"
 msgstr "Hello %s,"
 
 msgid "Mail Update Email Intro 2"
 msgstr ""
-"You asked to change your password for Cozy Pass. "
+"You asked to change your email address. "
 "If you didn't initiate this request, please contact us by replying directly to this email."
 
 msgid "Mail Update Email Button instruction"
-msgstr "Click on the this button to confirm the new email."
+msgstr "Click on the following button to confirm the new address."
 
 msgid "Mail Update Email Button text"
-msgstr "Confirm my email"
+msgstr "Confirm my new address"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reset your password"

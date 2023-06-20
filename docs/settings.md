@@ -51,9 +51,10 @@ Content-Type: application/vnd.api+json
 
 ### POST /settings/email
 
-The email update process starts with this call. The password is required in order to make
-a strong authentication. This endpoint will send a confirmation email to the new adress
-with a link. Once clicked this link will redirect the user to the second endpoint.
+The email adress update process starts with this call. The password is required
+in order to make a strong authentication. This endpoint will send a confirmation
+email to the new address with a link. Once clicked, this link will redirect the
+user to the second endpoint.
 
 #### Request
 
