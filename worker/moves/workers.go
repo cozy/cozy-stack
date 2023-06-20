@@ -23,7 +23,7 @@ func init() {
 		WorkerType:   "import",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
-		Timeout:      1 * time.Hour,
+		Timeout:      3 * time.Hour,
 		WorkerFunc:   ImportWorker,
 	})
 }
