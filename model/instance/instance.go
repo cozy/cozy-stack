@@ -332,12 +332,7 @@ func (i *Instance) GetFromContexts(contexts map[string]interface{}) (interface{}
 // SettingsContext returns the map from the config that matches the context of
 // this instance
 func (i *Instance) SettingsContext() (map[string]interface{}, bool) {
-	cfg := config.GetConfig()
-	if cfg == nil {
-		return nil, false
-	}
-
-	contexts := cfg.Contexts
+	contexts := config.GetConfig().Contexts
 	context, ok := i.GetFromContexts(contexts)
 	if !ok {
 		return nil, false
