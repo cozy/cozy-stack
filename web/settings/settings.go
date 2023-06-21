@@ -123,6 +123,24 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 	}
 }
 
+func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
+	token := c.QueryParam("token")
+	inst := middlewares.GetInstance(c)
+
+	err := h.svc.ConfirmEmailUpdate(inst, token)
+	switch {
+	case err == nil:
+		// Redirect to the setting page
+		c.Redirect(http.StatusTemporaryRedirect, inst.SubDomain("settings").String())
+	case errors.Is(err, csettings.ErrNoPendingEmail), errors.Is(err, instance.ErrInvalidToken):
+		return jsonapi.BadRequest(errors.New("invalid token"))
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+
+	return nil
+}
+
 func isMovedError(err error) bool {
 	j, ok := err.(*jsonapi.Error)
 	return ok && j.Code == "moved"
@@ -133,6 +151,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
 
 	router.POST("/email", h.postEmail)
+	router.GET("/email/confirm", h.getEmailConfirmation)
 
 	router.GET("/passphrase", h.getPassphraseParameters)
 	router.POST("/passphrase", h.registerPassphrase)
