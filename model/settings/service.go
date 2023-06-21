@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -16,8 +17,9 @@ import (
 const TokenExpiration = 7 * 24 * time.Hour
 
 var (
-	ErrInvalidType = fmt.Errorf("invalid type")
-	ErrInvalidID   = fmt.Errorf("invalid id")
+	ErrInvalidType    = errors.New("invalid type")
+	ErrInvalidID      = errors.New("invalid id")
+	ErrNoPendingEmail = errors.New("no pending email")
 )
 
 // Storage used to persiste and fetch settings data.
@@ -80,10 +82,9 @@ type UpdateEmailCmd struct {
 
 // StartEmailUpdate will start the email updating process.
 //
-// This process consists of:
-// - Validating the user with a password
-// - Sending a validation email to the new address with a validation link
-// - Confirm the new address when the validation link is called
+// This process consists of validating the user with a password and sending
+// a validation email to the new address with a validation link. This link
+// will allow the user to confirm its email.
 func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error {
 	err := s.instance.CheckPassphrase(inst, cmd.Passphrase)
 	if err != nil {
@@ -92,7 +93,7 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 
 	settings, err := s.storage.getInstanceSettings(inst)
 	if err != nil {
-		return fmt.Errorf("failed to fetch the instance: %w", err)
+		return fmt.Errorf("failed to fetch the settings: %w", err)
 	}
 
 	publicName, err := s.PublicName(inst)
@@ -125,6 +126,36 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send the email: %w", err)
+	}
+
+	return nil
+}
+
+// ConfirmEmailUpdate is the second step to the email update process.
+//
+// This step consiste to make the email change effectif.
+func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the settings: %w", err)
+	}
+
+	pendingEmail, ok := settings.M["pending_email"].(string)
+	if !ok {
+		return ErrNoPendingEmail
+	}
+
+	err = s.token.Validate(inst, token.EmailUpdate, pendingEmail, tok)
+	if err != nil {
+		return fmt.Errorf("failed to validate the token: %w", err)
+	}
+
+	settings.M["email"] = pendingEmail
+	delete(settings.M, "pending_email")
+
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
 	}
 
 	return nil

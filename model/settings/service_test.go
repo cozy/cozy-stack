@@ -128,3 +128,88 @@ func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
 	err := svc.StartEmailUpdate(&inst, cmd)
 	assert.NoError(t, err)
 }
+
+func TestConfirmEmailUpdate_success(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name":   "Jane Doe",
+			"email":         "foo@bar.baz",
+			"pending_email": "some@email.com",
+		},
+	}, nil).Once()
+
+	tokenSvc.On("Validate", &inst, token.EmailUpdate, "some@email.com", "some-token").
+		Return(nil).Once()
+
+	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name": "Jane Doe",
+			"email":       "some@email.com",
+		},
+	}).Return(nil).Once()
+
+	err := svc.ConfirmEmailUpdate(&inst, "some-token")
+	assert.NoError(t, err)
+}
+
+func TestConfirmEmailUpdate_with_an_invalid_token(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name":   "Jane Doe",
+			"email":         "foo@bar.baz",
+			"pending_email": "some@email.com",
+		},
+	}, nil).Once()
+
+	tokenSvc.On("Validate", &inst, token.EmailUpdate, "some@email.com", "some-invalid-token").
+		Return(token.ErrInvalidToken).Once()
+
+	err := svc.ConfirmEmailUpdate(&inst, "some-invalid-token")
+	assert.ErrorIs(t, err, token.ErrInvalidToken)
+}
+
+func TestConfirmEmailUpdate_without_a_pending_email(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name": "Jane Doe",
+			"email":       "foo@bar.baz",
+			// There is no pending_email
+		},
+	}, nil).Once()
+
+	err := svc.ConfirmEmailUpdate(&inst, "some-token")
+	assert.ErrorIs(t, err, ErrNoPendingEmail)
+}
