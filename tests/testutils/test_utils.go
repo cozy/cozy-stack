@@ -152,7 +152,7 @@ func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instan
 	}
 	var err error
 	if !stackStarted {
-		_, err = stack.Start(stack.NoGops, stack.NoDynAssets)
+		_, _, err = stack.Start(stack.NoGops, stack.NoDynAssets)
 		require.NoError(c.t, err, "Error while starting job system")
 		stackStarted = true
 	}

@@ -23,7 +23,7 @@ func TestWebapp(t *testing.T) {
 	testutils.NeedCouchdb(t)
 
 	if !stackStarted {
-		_, err := stack.Start()
+		_, _, err := stack.Start()
 		if err != nil {
 			require.NoError(t, err, "Error while starting job system")
 		}

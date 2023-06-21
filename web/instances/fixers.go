@@ -284,7 +284,7 @@ func orphanAccountFixer(c echo.Context) error {
 		return nil
 	}
 
-	if _, err = stack.Start(); err != nil {
+	if _, _, err = stack.Start(); err != nil {
 		return err
 	}
 	jobsSystem := job.System()

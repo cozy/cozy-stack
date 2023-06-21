@@ -30,7 +30,7 @@ func TestExecCommand(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	_, err := stack.Start()
+	_, _, err := stack.Start()
 	require.NoError(t, err)
 
 	tempDir := t.TempDir()
@@ -41,7 +41,7 @@ func TestExecCommand(t *testing.T) {
 		Path:   tempDir,
 	}
 	server := echo.New()
-	require.NoError(t, web.SetupRoutes(server))
+	require.NoError(t, web.SetupRoutes(server, &stack.Services{}))
 
 	ts := httptest.NewServer(server)
 	t.Cleanup(ts.Close)

@@ -89,16 +89,16 @@ example), you can use the --appdir flag like this:
 			cfg.Mail.Port = 1025
 		}
 
-		processes, err := stack.Start()
+		processes, services, err := stack.Start()
 		if err != nil {
 			return err
 		}
 
 		var servers *web.Servers
 		if apps != nil {
-			servers, err = web.ListenAndServeWithAppDir(apps)
+			servers, err = web.ListenAndServeWithAppDir(apps, services)
 		} else {
-			servers, err = web.ListenAndServe()
+			servers, err = web.ListenAndServe(services)
 		}
 		if err != nil {
 			return err
