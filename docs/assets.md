@@ -59,6 +59,7 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/mails/support_request
 * http://cozy.localhost:8080/dev/mails/two_factor?TwoFactorPasscode=123456
 * http://cozy.localhost:8080/dev/mails/two_factor_mail_confirmation
+* http://cozy.localhost:8080/dev/mails/update_email
 
 ### HTML pages
 

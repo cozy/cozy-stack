@@ -8,6 +8,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -46,8 +48,12 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+type Services struct {
+	Settings settings.Service
+}
+
 // Start is used to initialize all the
-func Start(opts ...Options) (utils.Shutdowner, error) {
+func Start(opts ...Options) (utils.Shutdowner, *Services, error) {
 	if build.IsDevRelease() {
 		fmt.Print(`                           !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
@@ -69,17 +75,17 @@ security features. Please do not use this binary as your production server.
 	}
 
 	if err := couchdb.InitGlobalDB(ctx); err != nil {
-		return nil, fmt.Errorf("failed to init the global db: %w", err)
+		return nil, nil, fmt.Errorf("failed to init the global db: %w", err)
 	}
 
 	// Init the main global connection to the swift server
 	if err := config.InitDefaultSwiftConnection(); err != nil {
-		return nil, fmt.Errorf("failed to init the swift connection: %w", err)
+		return nil, nil, fmt.Errorf("failed to init the swift connection: %w", err)
 	}
 
 	workersList, err := job.GetWorkersList()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the workers list: %w", err)
+		return nil, nil, fmt.Errorf("failed to get the workers list: %w", err)
 	}
 
 	var broker job.Broker
@@ -94,18 +100,23 @@ security features. Please do not use this binary as your production server.
 	}
 
 	if err = job.SystemStart(broker, schder, workersList); err != nil {
-		return nil, fmt.Errorf("failed to start the jobs: %w", err)
+		return nil, nil, fmt.Errorf("failed to start the jobs: %w", err)
 	}
 	shutdowners = append(shutdowners, job.System())
 
-	_ = emailer.Init()
-	_ = instance.Init()
+	tokenSvc := token.NewService(config.GetConfig().CacheStorage)
+	emailerSvc := emailer.Init()
+	instanceSvc := instance.Init()
+
+	services := Services{
+		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc),
+	}
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
 	if !hasOptions(NoDynAssets, opts) {
 		err = dynamic.InitDynamicAssetFS(config.FsURL().String())
 		if err != nil {
-			return nil, fmt.Errorf("failed to init the dynamic asset fs: %w", err)
+			return nil, nil, fmt.Errorf("failed to init the dynamic asset fs: %w", err)
 		}
 	}
 
@@ -115,5 +126,5 @@ security features. Please do not use this binary as your production server.
 	// Global shutdowner that composes all the running processes of the stack
 	processes := utils.NewGroupShutdown(shutdowners...)
 
-	return processes, nil
+	return processes, &services, nil
 }

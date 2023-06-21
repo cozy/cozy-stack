@@ -4,6 +4,7 @@
 
 ## Disk usage
 
+
 ### GET /settings/disk-usage
 
 Says how many bytes are available and used to store files. When not limited the
@@ -45,6 +46,37 @@ Content-Type: application/vnd.api+json
     }
 }
 ```
+
+## Email update
+
+### POST /settings/email
+
+The email adress update process starts with this call. The password is required
+in order to make a strong authentication. This endpoint will send a confirmation
+email to the new address with a link. Once clicked, this link will redirect the
+user to the second endpoint.
+
+#### Request
+
+```http
+POST /settings/email HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+    "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "email": "alice@example.com"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 
 ## Passphrase
 

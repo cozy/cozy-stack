@@ -1,4 +1,4 @@
-package settings
+package settings_test
 
 import (
 	"encoding/hex"
@@ -14,12 +14,14 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	websettings "github.com/cozy/cozy-stack/web/settings"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +30,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
-func setupRouter(t *testing.T, inst *instance.Instance) string {
+func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) string {
 	t.Helper()
 
 	handler := echo.New()
@@ -42,7 +44,7 @@ func setupRouter(t *testing.T, inst *instance.Instance) string {
 		}
 	})
 
-	NewHTTPHandler().Register(group)
+	websettings.NewHTTPHandler(svc).Register(group)
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
@@ -69,7 +71,8 @@ func TestSettings(t *testing.T) {
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
 
-	tsURL := setupRouter(t, testInstance)
+	svc := csettings.NewServiceMock(t)
+	tsURL := setupRouter(t, testInstance, svc)
 
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
@@ -879,7 +882,8 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 		ContextName: "test-context",
 	})
 
-	tsURL := setupRouter(t, testInstance)
+	svc := csettings.NewServiceMock(t)
+	tsURL := setupRouter(t, testInstance, svc)
 
 	e := testutils.CreateTestClient(t, tsURL)
 
@@ -942,7 +946,8 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 		ContextName: "test-context",
 	})
 
-	tsURL := setupRouter(t, testInstance)
+	svc := csettings.NewServiceMock(t)
+	tsURL := setupRouter(t, testInstance, svc)
 
 	require.Nil(t, oauthClient.Create(testInstance))
 	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)

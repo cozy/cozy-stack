@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/avatar"
@@ -441,7 +442,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 }
 
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
-	publicName, _ := inst.PublicName()
+	publicName, _ := settings.PublicName(inst)
 	fqdn := strings.TrimPrefix(m.Instance, "https://")
 	slug, domain := "", consts.KnownFlatDomains[0]
 	if context, ok := inst.SettingsContext(); ok {

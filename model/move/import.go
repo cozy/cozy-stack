@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -217,7 +218,7 @@ func SendImportDoneMail(inst *instance.Instance, status Status, notInstalled []s
 		if status == StatusMoveSuccess {
 			tmpl = "move_success"
 		}
-		publicName, _ := inst.PublicName()
+		publicName, _ := csettings.PublicName(inst)
 		link := inst.SubDomain(consts.HomeSlug)
 		email = mail.Options{
 			Mode:         mail.ModeFromStack,

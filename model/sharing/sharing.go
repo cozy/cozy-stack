@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -161,7 +162,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = s.CreatedAt
 
-	name, err := inst.PublicName()
+	name, err := csettings.PublicName(inst)
 	if err != nil {
 		return err
 	}

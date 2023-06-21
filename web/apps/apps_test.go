@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -92,7 +93,7 @@ func TestApps(t *testing.T) {
 			return c.HTML(http.StatusOK, "OK")
 		})
 		r.POST("/auth/session_code", auth.CreateSessionCode)
-		router, err := web.CreateSubdomainProxy(r, webApps.Serve)
+		router, err := web.CreateSubdomainProxy(r, &stack.Services{}, webApps.Serve)
 		require.NoError(t, err, "Cant start subdoman proxy")
 		return router
 	})

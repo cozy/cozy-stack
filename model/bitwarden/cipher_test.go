@@ -25,7 +25,7 @@ func TestCipher(t *testing.T) {
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
-	_, err := stack.Start()
+	_, _, err := stack.Start()
 	require.NoError(t, err, "Error while starting the job system")
 
 	t.Run("DeleteUnrecoverableCiphers", func(t *testing.T) {

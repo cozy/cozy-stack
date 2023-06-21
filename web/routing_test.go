@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -105,7 +106,7 @@ func TestRouting(t *testing.T) {
 
 	t.Run("SetupRoutes", func(t *testing.T) {
 		router := echo.New()
-		err := SetupRoutes(router)
+		err := SetupRoutes(router, &stack.Services{})
 		require.NoError(t, err)
 
 		ts := httptest.NewServer(router)
@@ -125,7 +126,7 @@ func TestRouting(t *testing.T) {
 			return c.String(http.StatusOK, "OK")
 		}, middlewares.NeedInstance)
 
-		router, err := CreateSubdomainProxy(apis, func(c echo.Context) error {
+		router, err := CreateSubdomainProxy(apis, &stack.Services{}, func(c echo.Context) error {
 			slug := c.Get("slug").(string)
 			return c.String(200, "OK:"+slug)
 		})

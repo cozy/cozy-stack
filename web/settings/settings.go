@@ -4,10 +4,13 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -32,11 +35,12 @@ func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marsh
 
 // HTTPHandler handle all the `/settings` routes.
 type HTTPHandler struct {
+	svc csettings.Service
 }
 
 // NewHTTPHandler instantiates a new [HTTPHandler].
-func NewHTTPHandler() *HTTPHandler {
-	return &HTTPHandler{}
+func NewHTTPHandler(svc csettings.Service) *HTTPHandler {
+	return &HTTPHandler{svc}
 }
 
 func (h *HTTPHandler) getSessions(c echo.Context) error {
@@ -84,6 +88,41 @@ func (h *HTTPHandler) warnings(c echo.Context) error {
 	return jsonapi.DataErrorList(c, warnings...)
 }
 
+// postEmail handle POST /settings/email
+func (h *HTTPHandler) postEmail(c echo.Context) error {
+	type body struct {
+		Passphrase string `json:"passphrase"`
+		Email      string `json:"email"`
+	}
+
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
+		return err
+	}
+
+	var args body
+	err := c.Bind(&args)
+	if err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	inst := middlewares.GetInstance(c)
+
+	err = h.svc.StartEmailUpdate(inst, &csettings.UpdateEmailCmd{
+		Passphrase: []byte(args.Passphrase),
+		Email:      args.Email,
+	})
+
+	switch {
+	case err == nil:
+		c.NoContent(http.StatusNoContent)
+		return nil
+	case errors.Is(err, instance.ErrInvalidPassphrase):
+		return jsonapi.BadRequest(instance.ErrInvalidPassphrase)
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+}
+
 func isMovedError(err error) bool {
 	j, ok := err.(*jsonapi.Error)
 	return ok && j.Code == "moved"
@@ -92,6 +131,8 @@ func isMovedError(err error) bool {
 // Register all the `/settings` routes to the given router.
 func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
+
+	router.POST("/email", h.postEmail)
 
 	router.GET("/passphrase", h.getPassphraseParameters)
 	router.POST("/passphrase", h.registerPassphrase)

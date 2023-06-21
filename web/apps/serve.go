@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
@@ -377,7 +378,7 @@ func getServeToken(
 }
 
 func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType string) error {
-	name, _ := i.PublicName()
+	name, _ := csettings.PublicName(i)
 	link := *c.Request().URL
 	if u, err := url.Parse(to); err == nil {
 		parts := strings.SplitN(c.Request().Host, ".", 2)

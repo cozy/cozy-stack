@@ -3,6 +3,7 @@ package note
 import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -71,7 +72,7 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 
 	// Enforce DocID and PublicName with local values
 	result.DocID = o.File.ID()
-	if name, err := o.Inst.PublicName(); err == nil {
+	if name, err := settings.PublicName(o.Inst); err == nil {
 		result.PublicName = name
 	}
 	return result, nil

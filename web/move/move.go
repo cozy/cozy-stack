@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -405,7 +406,7 @@ func requestMove(c echo.Context) error {
 		})
 	}
 
-	publicName, _ := inst.PublicName()
+	publicName, _ := csettings.PublicName(inst)
 	mail := mail.Options{
 		Mode:         mail.ModeFromStack,
 		TemplateName: "move_confirm",

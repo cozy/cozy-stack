@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -231,7 +232,7 @@ func contactSupport(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	name, _ := inst.PublicName()
+	name, _ := settings.PublicName(inst)
 	msg, err := job.NewMessage(mail.Options{
 		Mode:         mail.ModeSupport,
 		TemplateName: "support_request",

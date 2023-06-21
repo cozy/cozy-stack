@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -77,7 +78,7 @@ func LoadSupportedLocales() error {
 // In order to serve the application, the specified directory should provide
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
-func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
+func ListenAndServeWithAppDir(appsdir map[string]string, services *stack.Services) (*Servers, error) {
 	for slug, dir := range appsdir {
 		dir = utils.AbsPath(dir)
 		appsdir[slug] = dir
@@ -98,7 +99,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 	}
 
 	app.SetupAppsDir(appsdir)
-	return ListenAndServe()
+	return ListenAndServe(services)
 }
 
 func checkExists(filepath string) error {
@@ -115,12 +116,12 @@ func checkExists(filepath string) error {
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
-func ListenAndServe() (*Servers, error) {
+func ListenAndServe(services *stack.Services) (*Servers, error) {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 
-	major, err := CreateSubdomainProxy(e, apps.Serve)
+	major, err := CreateSubdomainProxy(e, services, apps.Serve)
 	if err != nil {
 		return nil, err
 	}

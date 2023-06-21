@@ -2,16 +2,29 @@ package settings
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
 
-	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+const TokenExpiration = 7 * 24 * time.Hour
 
 var (
 	ErrInvalidType = fmt.Errorf("invalid type")
 	ErrInvalidID   = fmt.Errorf("invalid id")
 )
+
+// Storage used to persiste and fetch settings data.
+type Storage interface {
+	setInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
+	getInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error)
+}
 
 // SettingsService handle the business logic around "settings".
 //
@@ -19,36 +32,100 @@ var (
 // - The "instance settings" ([consts.InstanceSettingsID])
 // - The "bitwarden settings" ([consts.BitwardenSettingsID]) (#TODO)
 type SettingsService struct {
+	emailer  emailer.Emailer
+	instance instance.Service
+	token    token.Service
+	storage  Storage
 }
 
 // NewService instantiates a new [SettingsService].
-func NewService() *SettingsService {
-	return &SettingsService{}
+func NewService(
+	emailer emailer.Emailer,
+	instance instance.Service,
+	token token.Service,
+	storage Storage,
+) *SettingsService {
+	return &SettingsService{emailer, instance, token, storage}
 }
 
-func (s *SettingsService) GetInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error) {
-	doc := &couchdb.JSONDoc{}
-
-	err := couchdb.GetDoc(inst, consts.Settings, consts.InstanceSettingsID, doc)
+// PublicName returns the settings' public name or a default one if missing
+func (s *SettingsService) PublicName(db prefixer.Prefixer) (string, error) {
+	doc, err := s.storage.getInstanceSettings(db)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	doc.Type = consts.Settings
-
-	return doc, nil
+	publicName, _ := doc.M["public_name"].(string)
+	// if the public name is not defined, use the instance's domain
+	if publicName == "" {
+		split := strings.Split(db.DomainName(), ".")
+		publicName = split[0]
+	}
+	return publicName, nil
 }
 
-func (s *SettingsService) SetInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error {
-	// TODO: Validate input
+// GetInstanceSettings allows for fetch directly the [consts.InstanceSettingsID] couchdb document.
+func (s *SettingsService) GetInstanceSettings(db prefixer.Prefixer) (*couchdb.JSONDoc, error) {
+	return s.storage.getInstanceSettings(db)
+}
 
-	if doc.DocType() != consts.Settings {
-		return ErrInvalidType
+// SetInstanceSettings allows a set directly the [consts.InstanceSettingsID] couchdb document.
+func (s *SettingsService) SetInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) error {
+	return s.storage.setInstanceSettings(db, doc)
+}
+
+type UpdateEmailCmd struct {
+	Passphrase []byte
+	Email      string
+}
+
+// StartEmailUpdate will start the email updating process.
+//
+// This process consists of:
+// - Validating the user with a password
+// - Sending a validation email to the new address with a validation link
+// - Confirm the new address when the validation link is called
+func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error {
+	err := s.instance.CheckPassphrase(inst, cmd.Passphrase)
+	if err != nil {
+		return fmt.Errorf("failed to check passphrase: %w", err)
 	}
 
-	if doc.ID() != consts.InstanceSettingsID {
-		return fmt.Errorf("%w: have %q, expected %q", ErrInvalidID, doc.ID(), consts.InstanceSettingsID)
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the instance: %w", err)
 	}
 
-	return couchdb.UpdateDoc(inst, doc)
+	publicName, err := s.PublicName(inst)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve the instance settings: %w", err)
+	}
+
+	settings.M["pending_email"] = cmd.Email
+
+	token, err := s.token.GenerateAndSave(inst, token.EmailUpdate, cmd.Email, TokenExpiration)
+	if err != nil {
+		return fmt.Errorf("failed to generate and save the confirmation token: %w", err)
+	}
+
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
+	}
+
+	link := inst.PageURL("/settings/email/confirm", url.Values{
+		"token": []string{token},
+	})
+
+	err = s.emailer.SendEmail(inst, &emailer.SendEmailCmd{
+		TemplateName: "update_email",
+		TemplateValues: map[string]interface{}{
+			"PublicName":      publicName,
+			"EmailUpdateLink": link,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send the email: %w", err)
+	}
+
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -175,7 +176,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot add doc to store: %s", err)
 		return nil, ErrInternalServerError
 	}
-	publicName, _ := o.Inst.PublicName()
+	publicName, _ := settings.PublicName(o.Inst)
 	doc.PublicName = publicName
 	doc.OO = &onlyOffice{
 		URL:  cfg.OnlyOfficeURL,
@@ -235,7 +236,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
 		return nil, err
 	}
-	publicName, _ := o.Inst.PublicName()
+	publicName, _ := settings.PublicName(o.Inst)
 	doc.PublicName = publicName
 	doc.OO = nil
 	return &doc, nil

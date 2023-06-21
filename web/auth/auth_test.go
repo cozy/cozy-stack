@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -91,7 +92,7 @@ func TestAuth(t *testing.T) {
 	})
 
 	ts := setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
-		handler, err := web.CreateSubdomainProxy(r, apps.Serve)
+		handler, err := web.CreateSubdomainProxy(r, &stack.Services{}, apps.Serve)
 		require.NoError(t, err, "Cant start subdomain proxy")
 		return handler
 	})

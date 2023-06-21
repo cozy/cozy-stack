@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -126,7 +127,7 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 }
 
 func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, string) {
-	sharer, _ := inst.PublicName()
+	sharer, _ := csettings.PublicName(inst)
 	if sharer == "" {
 		sharer = inst.Translate("Sharing Empty name")
 	}

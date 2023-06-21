@@ -31,7 +31,7 @@ func TestLifecycle(t *testing.T) {
 
 	testutils.NeedCouchdb(t)
 
-	_, err := stack.Start()
+	_, _, err := stack.Start()
 	require.NoError(t, err)
 
 	t.Cleanup(cleanInstance)

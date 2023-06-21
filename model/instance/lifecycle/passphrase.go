@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/emailer"
@@ -72,7 +73,7 @@ func SendHint(inst *instance.Instance) error {
 		inst.Logger().Info("Send hint ignored: not registered")
 		return nil
 	}
-	publicName, err := inst.PublicName()
+	publicName, err := csettings.PublicName(inst)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 	resetURL := inst.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(inst.PassphraseResetToken)},
 	})
-	publicName, err := inst.PublicName()
+	publicName, err := csettings.PublicName(inst)
 	if err != nil {
 		return err
 	}

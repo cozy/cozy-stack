@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -1176,7 +1177,7 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 }
 
 func (s *Sharing) sendContactConfirmationMail(inst *instance.Instance, m *Member) error {
-	publicName, _ := inst.PublicName()
+	publicName, _ := csettings.PublicName(inst)
 	link := inst.SubDomain(s.AppSlug)
 	msg, err := job.NewMessage(&mail.Options{
 		Mode:         mail.ModeFromStack,

@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -371,7 +372,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
-	name, err := inst.PublicName()
+	name, err := csettings.PublicName(inst)
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Infof("No name for instance %v", inst)
