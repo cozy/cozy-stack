@@ -137,7 +137,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 		return false, ErrInvalidSharing
 	}
 
-	lastSeq, err := s.getLastSeqNumber(inst, m, "upload")
+	lastSeq, err := s.GetLastSeqNumber(inst, m, "upload")
 	if err != nil {
 		return false, err
 	}
@@ -432,13 +432,13 @@ func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.
 // updateFileMetadata updates a file document when only some metadata has
 // changed, but not the content.
 func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, ref *SharedRef) error {
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       target.DocRev,
 		Revisions: target.Revisions,
 	}, ref)
 
-	chain := revsStructToChain(target.Revisions)
-	conflict := detectConflict(newdoc.DocRev, chain)
+	chain := RevsStructToChain(target.Revisions)
+	conflict := DetectConflict(newdoc.DocRev, chain)
 	switch conflict {
 	case LostConflict:
 		return nil
@@ -522,7 +522,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
 	}
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	}, &ref)
@@ -683,7 +683,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		}
 		return err
 	}
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	}, &ref)
@@ -705,8 +705,8 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	newdoc.ByteSize = target.ByteSize
 	newdoc.MD5Sum = target.MD5Sum
 
-	chain := revsStructToChain(target.Revisions)
-	conflict := detectConflict(newdoc.DocRev, chain)
+	chain := RevsStructToChain(target.Revisions)
+	conflict := DetectConflict(newdoc.DocRev, chain)
 	switch conflict {
 	case LostConflict:
 		return s.uploadLostConflict(inst, target, newdoc, body)
@@ -768,12 +768,12 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
 	rev := target.Rev()
 	inst.Logger().WithNamespace("upload").Debugf("uploadLostConflict %s", rev)
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       rev,
-		Revisions: revsChainToStruct([]string{rev}),
+		Revisions: RevsChainToStruct([]string{rev}),
 	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
-	newdoc.DocID = conflictID(newdoc.DocID, rev)
+	newdoc.DocID = ConflictID(newdoc.DocID, rev)
 	if _, err := fs.FileByID(newdoc.DocID); !errors.Is(err, os.ErrNotExist) {
 		if err != nil {
 			return err
@@ -797,13 +797,13 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
 	rev := src.Rev()
 	inst.Logger().WithNamespace("upload").Debugf("uploadWonConflict %s", rev)
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       rev,
-		Revisions: revsChainToStruct([]string{rev}),
+		Revisions: RevsChainToStruct([]string{rev}),
 	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	dst := src.Clone().(*vfs.FileDoc)
-	dst.DocID = conflictID(dst.DocID, rev)
+	dst.DocID = ConflictID(dst.DocID, rev)
 	if _, err := fs.FileByID(dst.DocID); !errors.Is(err, os.ErrNotExist) {
 		return err
 	}

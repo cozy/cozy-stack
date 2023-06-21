@@ -1,4 +1,4 @@
-package middlewares
+package middlewares_test
 
 import (
 	"net/http"
@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestCors(t *testing.T) {
 		req.Header.Set("Origin", "fakecozy.local")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		h := CORS(CORSOptions{})(echo.NotFoundHandler)
+		h := middlewares.CORS(middlewares.CORSOptions{})(echo.NotFoundHandler)
 		_ = h(c)
 		assert.Equal(t, "fakecozy.local", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 	})
@@ -43,7 +44,7 @@ func TestCors(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetPath(req.URL.Path)
-		h := CORS(CORSOptions{BlockList: []string{"/auth/"}})(echo.NotFoundHandler)
+		h := middlewares.CORS(middlewares.CORSOptions{BlockList: []string{"/auth/"}})(echo.NotFoundHandler)
 		_ = h(c)
 		assert.Equal(t, "", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 	})

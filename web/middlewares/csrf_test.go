@@ -1,4 +1,4 @@
-package middlewares
+package middlewares_test
 
 import (
 	"net/http"
@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func TestCsrf(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		csrf := CSRFWithConfig(CSRFConfig{
+		csrf := middlewares.CSRFWithConfig(middlewares.CSRFConfig{
 			TokenLength: 16,
 		})
 		h := csrf(func(c echo.Context) error {
@@ -73,11 +74,11 @@ func TestCsrf(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(f.Encode()))
 		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 		c := e.NewContext(req, nil)
-		token, err := csrfTokenFromForm("csrf")(c)
+		token, err := middlewares.CSRFTokenFromForm("csrf")(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, "token", token)
 		}
-		_, err = csrfTokenFromForm("invalid")(c)
+		_, err = middlewares.CSRFTokenFromForm("invalid")(c)
 		assert.Error(t, err)
 	})
 
@@ -89,12 +90,12 @@ func TestCsrf(t *testing.T) {
 		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 		req.URL.RawQuery = q.Encode()
 		c := e.NewContext(req, nil)
-		token, err := csrfTokenFromQuery("csrf")(c)
+		token, err := middlewares.CSRFTokenFromQuery("csrf")(c)
 		if assert.NoError(t, err) {
 			assert.Equal(t, "token", token)
 		}
-		_, err = csrfTokenFromQuery("invalid")(c)
+		_, err = middlewares.CSRFTokenFromQuery("invalid")(c)
 		assert.Error(t, err)
-		csrfTokenFromQuery("csrf")
+		middlewares.CSRFTokenFromQuery("csrf")
 	})
 }

@@ -1,4 +1,4 @@
-package move
+package move_test
 
 import (
 	"math/rand"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -38,7 +39,7 @@ func TestExport(t *testing.T) {
 
 		// The partsSize is voluntary really small to have a lot of parts,
 		// which can help to test the edge cases
-		exportDoc := &ExportDoc{
+		exportDoc := &move.ExportDoc{
 			PartsSize: 10,
 		}
 
@@ -79,16 +80,16 @@ func TestExport(t *testing.T) {
 		// t.Logf("nb files = %d\n", nbFiles)
 
 		// Build the cursors
-		_, err = exportFiles(inst, exportDoc, nil)
+		_, err = move.ExportFiles(inst, exportDoc, nil)
 		assert.NoError(t, err)
 
 		// Check files
 		cursors := append(exportDoc.PartsCursors, "")
 		fileIDs := map[string]bool{}
 		for _, c := range cursors {
-			cursor, err := ParseCursor(exportDoc, c)
+			cursor, err := move.ParseCursor(exportDoc, c)
 			assert.NoError(t, err)
-			list, err := listFilesFromCursor(inst, exportDoc, cursor)
+			list, err := move.ListFilesFromCursor(inst, exportDoc, cursor)
 			assert.NoError(t, err)
 			for _, f := range list {
 				assert.False(t, fileIDs[f.DocID])
@@ -100,9 +101,9 @@ func TestExport(t *testing.T) {
 		// Check file versions
 		versionsIDs := map[string]bool{}
 		for _, c := range cursors {
-			cursor, err := ParseCursor(exportDoc, c)
+			cursor, err := move.ParseCursor(exportDoc, c)
 			assert.NoError(t, err)
-			list, err := listVersionsFromCursor(inst, exportDoc, cursor)
+			list, err := move.ListVersionsFromCursor(inst, exportDoc, cursor)
 			assert.NoError(t, err)
 			for _, v := range list {
 				assert.False(t, versionsIDs[v.DocID])

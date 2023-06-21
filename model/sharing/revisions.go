@@ -230,9 +230,9 @@ func revsMapToStruct(revs interface{}) *RevsStruct {
 	}
 }
 
-// revsChainToStruct transforms revisions from on format to another:
+// RevsChainToStruct transforms revisions from on format to another:
 // ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
-func revsChainToStruct(revs []string) RevsStruct {
+func RevsChainToStruct(revs []string) RevsStruct {
 	s := RevsStruct{
 		IDs: make([]string, len(revs)),
 	}
@@ -246,9 +246,9 @@ func revsChainToStruct(revs []string) RevsStruct {
 	return s
 }
 
-// revsStructToChain is the reverse of revsChainToStruct:
+// RevsStructToChain is the reverse of revsChainToStruct:
 // { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
-func revsStructToChain(revs RevsStruct) []string {
+func RevsStructToChain(revs RevsStruct) []string {
 	start := revs.Start
 	ids := revs.IDs
 	chain := make([]string, len(ids))
@@ -260,10 +260,10 @@ func revsStructToChain(revs RevsStruct) []string {
 	return chain
 }
 
-// detectConflict says if there is a conflict (ie rev is not in the revisions
+// DetectConflict says if there is a conflict (ie rev is not in the revisions
 // chain), and if it is the case, if the update should be made (WonConflict) or
 // aborted (LostConflict)
-func detectConflict(rev string, chain []string) conflictStatus {
+func DetectConflict(rev string, chain []string) conflictStatus {
 	if len(chain) == 0 {
 		return LostConflict
 	}
@@ -304,12 +304,12 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 	return mixed
 }
 
-// addMissingRevsToChain includes the missing doc revisions to the chain, i.e.
+// AddMissingRevsToChain includes the missing doc revisions to the chain, i.e.
 // all the doc revisions between the highest revision saved in the
 // revisions tree, and the lowest revision of the chain.
 // This can occur when both local and remote updates are made to the same doc,
 // with the remote ones saved before the local ones.
-func addMissingRevsToChain(db prefixer.Prefixer, ref *SharedRef, chain []string) ([]string, error) {
+func AddMissingRevsToChain(db prefixer.Prefixer, ref *SharedRef, chain []string) ([]string, error) {
 	refHighestGen := ref.Revisions.Generation()
 	chainLowestGen := revision.Generation(chain[0])
 	if refHighestGen >= chainLowestGen-1 {
@@ -366,9 +366,9 @@ func conflictName(indexer vfs.Indexer, dirID, name string, isFile bool) string {
 	return fmt.Sprintf("%s (%d)%s", base, i, ext)
 }
 
-// conflictID generates a new ID for a file/folder that has a conflict between
+// ConflictID generates a new ID for a file/folder that has a conflict between
 // two versions of its content.
-func conflictID(id, rev string) string {
+func ConflictID(id, rev string) string {
 	parts := strings.SplitN(rev, "-", 2)
 	key := []byte(parts[1])
 	for i, c := range key {

@@ -410,7 +410,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				ref.Revisions.Add(rev)
 			}
 		} else {
-			chain, err := addMissingRevsToChain(inst, &ref, []string{rev})
+			chain, err := AddMissingRevsToChain(inst, &ref, []string{rev})
 			if err != nil {
 				return err
 			}
@@ -437,13 +437,13 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 // UpdateFileShared creates or updates the io.cozy.shared for a file with
 // possibly multiple revisions.
 func UpdateFileShared(db prefixer.Prefixer, ref *SharedRef, revs RevsStruct) error {
-	chain := revsStructToChain(revs)
+	chain := RevsStructToChain(revs)
 	if ref.Rev() == "" {
 		ref.Revisions = &RevsTree{Rev: chain[0]}
 		ref.Revisions.InsertChain(chain)
 		return couchdb.CreateNamedDoc(db, ref)
 	}
-	chain, err := addMissingRevsToChain(db, ref, chain)
+	chain, err := AddMissingRevsToChain(db, ref, chain)
 	if err != nil {
 		return err
 	}

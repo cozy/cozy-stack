@@ -582,7 +582,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		} else if ref != nil && infos.Removed && !infos.Dissociated {
 			continue
 		} else if dir == nil {
-			err = s.CreateDir(inst, target, delayResolution)
+			err = s.CreateDir(inst, target, DelayResolution)
 			if errors.Is(err, os.ErrExist) {
 				retries = append(retries, retryOp{
 					target: target,
@@ -598,7 +598,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			// UpdateDir function and retrying the operation won't work with
 			// the modified doc
 			cloned := dir.Clone().(*vfs.DirDoc)
-			err = s.UpdateDir(inst, target, dir, ref, delayResolution)
+			err = s.UpdateDir(inst, target, dir, ref, DelayResolution)
 			if errors.Is(err, os.ErrExist) {
 				retries = append(retries, retryOp{
 					target: target,
@@ -618,9 +618,9 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 	for _, op := range retries {
 		var err error
 		if op.dir == nil {
-			err = s.CreateDir(inst, op.target, resolveResolution)
+			err = s.CreateDir(inst, op.target, ResolveResolution)
 		} else {
-			err = s.UpdateDir(inst, op.target, op.dir, op.ref, resolveResolution)
+			err = s.UpdateDir(inst, op.target, op.dir, op.ref, ResolveResolution)
 		}
 		if err != nil {
 			inst.Logger().WithNamespace("replicator").
@@ -900,7 +900,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 
 // extractNameAndIndexer takes a target document, extracts the name and creates
 // a sharing indexer with _rev and _revisions
-func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}, ref *SharedRef) (string, *sharingIndexer, error) {
+func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}, ref *SharedRef) (string, *SharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithNamespace("replicator").
@@ -919,7 +919,7 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 			Warnf("Invalid _revisions for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
-	indexer := newSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &BulkRevs{
 		Rev:       rev,
 		Revisions: *revs,
 	}, ref)
@@ -929,8 +929,8 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 type nameConflictResolution int
 
 const (
-	delayResolution nameConflictResolution = iota
-	resolveResolution
+	DelayResolution nameConflictResolution = iota
+	ResolveResolution
 )
 
 // CreateDir creates a directory on this cozy to reflect a change on another
@@ -980,7 +980,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
-	if errors.Is(err, os.ErrExist) && resolution == resolveResolution {
+	if errors.Is(err, os.ErrExist) && resolution == ResolveResolution {
 		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
 			return errr
@@ -1048,8 +1048,8 @@ func (s *Sharing) UpdateDir(
 		return err
 	}
 
-	chain := revsStructToChain(indexer.bulkRevs.Revisions)
-	conflict := detectConflict(dir.DocRev, chain)
+	chain := RevsStructToChain(indexer.BulkRevs.Revisions)
+	conflict := DetectConflict(dir.DocRev, chain)
 	switch conflict {
 	case LostConflict:
 		return nil
@@ -1069,7 +1069,7 @@ func (s *Sharing) UpdateDir(
 	copySafeFieldsToDir(target, dir)
 
 	err = fs.UpdateDirDoc(oldDoc, dir)
-	if errors.Is(err, os.ErrExist) && resolution == resolveResolution {
+	if errors.Is(err, os.ErrExist) && resolution == ResolveResolution {
 		name, errb := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errb != nil {
 			return errb

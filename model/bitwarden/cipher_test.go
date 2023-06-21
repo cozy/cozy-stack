@@ -1,10 +1,11 @@
-package bitwarden
+package bitwarden_test
 
 import (
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/stack"
@@ -46,9 +47,9 @@ func TestCipher(t *testing.T) {
 
 		for i := 0; i < 5; i++ {
 			md := metadata.New()
-			md.DocTypeVersion = DocTypeVersion
-			cipher := &Cipher{
-				Type:           SecureNoteType,
+			md.DocTypeVersion = bitwarden.DocTypeVersion
+			cipher := &bitwarden.Cipher{
+				Type:           bitwarden.SecureNoteType,
 				SharedWithCozy: i%2 == 0,
 				Favorite:       i%3 == 0,
 				Name:           fmt.Sprintf("2.%d|%d|%d", i, i, i),
@@ -57,8 +58,8 @@ func TestCipher(t *testing.T) {
 			assert.NoError(t, couchdb.CreateDoc(inst, cipher))
 		}
 
-		assert.NoError(t, DeleteUnrecoverableCiphers(inst))
-		var ciphers []*Cipher
+		assert.NoError(t, bitwarden.DeleteUnrecoverableCiphers(inst))
+		var ciphers []*bitwarden.Cipher
 		err = couchdb.GetAllDocs(inst, consts.BitwardenCiphers, nil, &ciphers)
 		assert.NoError(t, err)
 		assert.Len(t, ciphers, 3)

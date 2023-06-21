@@ -116,12 +116,12 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 
 	// Initialize
 	parts := strings.Split(config.TokenLookup, ":")
-	extractor := csrfTokenFromHeader(parts[1])
+	extractor := CSRFTokenFromHeader(parts[1])
 	switch parts[0] {
 	case "form":
-		extractor = csrfTokenFromForm(parts[1])
+		extractor = CSRFTokenFromForm(parts[1])
 	case "query":
-		extractor = csrfTokenFromQuery(parts[1])
+		extractor = CSRFTokenFromQuery(parts[1])
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -182,17 +182,17 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 	}
 }
 
-// csrfTokenFromForm returns a `csrfTokenExtractor` that extracts token from the
+// CSRFTokenFromHeader returns a `csrfTokenExtractor` that extracts token from the
 // provided request header.
-func csrfTokenFromHeader(header string) csrfTokenExtractor {
+func CSRFTokenFromHeader(header string) csrfTokenExtractor {
 	return func(c echo.Context) (string, error) {
 		return c.Request().Header.Get(header), nil
 	}
 }
 
-// csrfTokenFromForm returns a `csrfTokenExtractor` that extracts token from the
+// CSRFTokenFromForm returns a `csrfTokenExtractor` that extracts token from the
 // provided form parameter.
-func csrfTokenFromForm(param string) csrfTokenExtractor {
+func CSRFTokenFromForm(param string) csrfTokenExtractor {
 	return func(c echo.Context) (string, error) {
 		token := c.FormValue(param)
 		if token == "" {
@@ -202,9 +202,9 @@ func csrfTokenFromForm(param string) csrfTokenExtractor {
 	}
 }
 
-// csrfTokenFromQuery returns a `csrfTokenExtractor` that extracts token from the
+// CSRFTokenFromQuery returns a `csrfTokenExtractor` that extracts token from the
 // provided query parameter.
-func csrfTokenFromQuery(param string) csrfTokenExtractor {
+func CSRFTokenFromQuery(param string) csrfTokenExtractor {
 	return func(c echo.Context) (string, error) {
 		token := c.QueryParam(param)
 		if token == "" {

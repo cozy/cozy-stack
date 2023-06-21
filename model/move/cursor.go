@@ -66,7 +66,7 @@ func splitFiles(partsSize, remaining int64, sizesByID map[string]int64, doctype 
 	return cursors, remaining
 }
 
-func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.FileDoc, error) {
+func ListFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.FileDoc, error) {
 	if start.Doctype != consts.Files {
 		return []*vfs.FileDoc{}, nil
 	}
@@ -112,7 +112,7 @@ func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cu
 	return files, nil
 }
 
-func listVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.Version, error) {
+func ListVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.Version, error) {
 	var end Cursor
 	if start.Number < len(exportDoc.PartsCursors) {
 		c, err := parseCursor(start.Number+1, exportDoc.PartsCursors[start.Number])

@@ -152,7 +152,7 @@ func copyJSONData(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc,
 }
 
 func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cursor Cursor) error {
-	files, err := listFilesFromCursor(inst, exportDoc, cursor)
+	files, err := ListFilesFromCursor(inst, exportDoc, cursor)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 }
 
 func copyVersions(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cursor Cursor) error {
-	versions, err := listVersionsFromCursor(inst, exportDoc, cursor)
+	versions, err := ListVersionsFromCursor(inst, exportDoc, cursor)
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func writeDocuments(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) 
 	size += n
 
 	if exportDoc.AcceptDoctype(consts.Files) {
-		n, err := exportFiles(i, exportDoc, tw)
+		n, err := ExportFiles(i, exportDoc, tw)
 		if err != nil {
 			return 0, err
 		}
@@ -365,7 +365,7 @@ func writeDocuments(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) 
 	return size, nil
 }
 
-func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (int64, error) {
+func ExportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (int64, error) {
 	_ = note.FlushPendings(i)
 
 	var size int64

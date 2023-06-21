@@ -86,7 +86,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			UpdatedAt:   s.UpdatedAt,
 			Rules:       rules,
 			Members:     members,
-			NbFiles:     s.countFiles(inst),
+			NbFiles:     s.CountFiles(inst),
 		},
 		nil,
 		nil,
@@ -122,9 +122,9 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	return nil
 }
 
-// countFiles returns the number of files that should be uploaded on the
+// CountFiles returns the number of files that should be uploaded on the
 // initial synchronisation.
-func (s *Sharing) countFiles(inst *instance.Instance) int {
+func (s *Sharing) CountFiles(inst *instance.Instance) int {
 	count := 0
 	for _, rule := range s.Rules {
 		if rule.DocType != consts.Files || rule.Local || len(rule.Values) == 0 {

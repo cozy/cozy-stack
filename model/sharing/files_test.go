@@ -1,9 +1,10 @@
-package sharing
+package sharing_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -24,7 +25,7 @@ func TestFiles(t *testing.T) {
 	inst := setup.GetTestInstance()
 
 	t.Run("MakeXorKey", func(t *testing.T) {
-		key := MakeXorKey()
+		key := sharing.MakeXorKey()
 		assert.Len(t, key, 16)
 		for _, k := range key {
 			assert.True(t, k < 16)
@@ -33,13 +34,13 @@ func TestFiles(t *testing.T) {
 
 	t.Run("XorID", func(t *testing.T) {
 		id := "12345678-abcd-90ef-1337-cafebee54321"
-		assert.Equal(t, id, XorID(id, []byte{0}))
-		assert.Equal(t, id, XorID(id, []byte{0, 0, 0, 0}))
+		assert.Equal(t, id, sharing.XorID(id, []byte{0}))
+		assert.Equal(t, id, sharing.XorID(id, []byte{0, 0, 0, 0}))
 
-		key := MakeXorKey()
-		xored := XorID(id, key)
+		key := sharing.MakeXorKey()
+		xored := sharing.XorID(id, key)
 		assert.NotEqual(t, id, xored)
-		assert.Equal(t, id, XorID(xored, key))
+		assert.Equal(t, id, sharing.XorID(xored, key))
 		for _, c := range xored {
 			switch {
 			case '0' <= c && c <= '9':
@@ -50,14 +51,14 @@ func TestFiles(t *testing.T) {
 		}
 
 		expected := "03254769-badc-81fe-0226-dbefaff45230"
-		assert.Equal(t, expected, XorID(id, []byte{1}))
+		assert.Equal(t, expected, sharing.XorID(id, []byte{1}))
 
 		expected = "133b5777-bb3d-9fee-e327-cbf1bfea422e"
-		assert.Equal(t, expected, XorID(id, []byte{0, 1, 0, 15}))
+		assert.Equal(t, expected, sharing.XorID(id, []byte{0, 1, 0, 15}))
 	})
 
 	t.Run("SortFilesToSent", func(t *testing.T) {
-		s := &Sharing{}
+		s := &sharing.Sharing{}
 		foo := map[string]interface{}{"type": "directory", "name": "foo", "path": "/foo"}
 		foobar := map[string]interface{}{"type": "directory", "name": "bar", "path": "/foo/bar"}
 		foobarbaz := map[string]interface{}{"type": "directory", "name": "baz", "path": "/foo/bar/baz"}
@@ -73,9 +74,9 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("SharingDir", func(t *testing.T) {
-		s := Sharing{
+		s := sharing.Sharing{
 			SID: uuidv4(),
-			Rules: []Rule{
+			Rules: []sharing.Rule{
 				{
 					Title:   "Test sharing dir",
 					DocType: consts.Files,
@@ -114,9 +115,9 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("CreateDir", func(t *testing.T) {
-		s := Sharing{
+		s := sharing.Sharing{
 			SID: uuidv4(),
-			Rules: []Rule{
+			Rules: []sharing.Rule{
 				{
 					Title:   "Test create dir",
 					DocType: consts.Files,
@@ -137,7 +138,7 @@ func TestFiles(t *testing.T) {
 			},
 			"name": "Foo",
 		}
-		assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
+		assert.NoError(t, s.CreateDir(inst, target, sharing.ResolveResolution))
 		dir, err := inst.VFS().DirByID(idFoo)
 		assert.NoError(t, err)
 		if assert.NotNil(t, dir) {
@@ -164,7 +165,7 @@ func TestFiles(t *testing.T) {
 			"updated_at": "2018-04-13T15:08:32.581420274+01:00",
 			"tags":       []interface{}{"qux", "courge"},
 		}
-		assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
+		assert.NoError(t, s.CreateDir(inst, target, sharing.ResolveResolution))
 		dir, err = inst.VFS().DirByID(idBar)
 		assert.NoError(t, err)
 		if assert.NotNil(t, dir) {
@@ -179,9 +180,9 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("UpdateDir", func(t *testing.T) {
-		s := Sharing{
+		s := sharing.Sharing{
 			SID: uuidv4(),
-			Rules: []Rule{
+			Rules: []sharing.Rule{
 				{
 					Title:   "Test update dir",
 					DocType: consts.Files,
@@ -205,7 +206,7 @@ func TestFiles(t *testing.T) {
 			"updated_at": "2018-04-13T15:08:32.581420274+01:00",
 			"tags":       []interface{}{"qux", "courge"},
 		}
-		assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
+		assert.NoError(t, s.CreateDir(inst, target, sharing.ResolveResolution))
 		dir, err := inst.VFS().DirByID(idFoo)
 		assert.NoError(t, err)
 		if assert.NotNil(t, dir) {
@@ -230,10 +231,10 @@ func TestFiles(t *testing.T) {
 			"updated_at": "2018-04-13T15:10:57.364765745+01:00",
 			"tags":       []interface{}{"quux", "courge"},
 		}
-		var ref SharedRef
+		var ref sharing.SharedRef
 		err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+idFoo, &ref)
 		assert.NoError(t, err)
-		assert.NoError(t, s.UpdateDir(inst, target, dir, &ref, resolveResolution))
+		assert.NoError(t, s.UpdateDir(inst, target, dir, &ref, sharing.ResolveResolution))
 		dir, err = inst.VFS().DirByID(idFoo)
 		assert.NoError(t, err)
 		if assert.NotNil(t, dir) {
@@ -274,9 +275,9 @@ func TestFiles(t *testing.T) {
 		}
 		dir := createTree(t, inst.VFS(), tree, consts.RootDirID)
 
-		s := Sharing{
+		s := sharing.Sharing{
 			SID: uuidv4(),
-			Rules: []Rule{
+			Rules: []sharing.Rule{
 				{
 					Title:   "Test countFiles",
 					DocType: consts.Files,
@@ -284,7 +285,7 @@ func TestFiles(t *testing.T) {
 				},
 			},
 		}
-		assert.Equal(t, 8, s.countFiles(inst))
+		assert.Equal(t, 8, s.CountFiles(inst))
 	})
 }
 

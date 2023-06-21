@@ -154,13 +154,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		return false, ErrInvalidSharing
 	}
 
-	lastSeq, err := s.getLastSeqNumber(inst, m, "replicator")
+	lastSeq, err := s.GetLastSeqNumber(inst, m, "replicator")
 	if err != nil {
 		return false, err
 	}
 	inst.Logger().WithNamespace("replicator").Debugf("lastSeq = %s", lastSeq)
 
-	feed, err := s.callChangesFeed(inst, lastSeq)
+	feed, err := s.CallChangesFeed(inst, lastSeq)
 	if err != nil {
 		if errors.Is(err, errRevokeSharing) {
 			if s.Owner {
@@ -189,7 +189,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		inst.Logger().WithNamespace("replicator").Debugf("missings = %#v", missings)
 
-		docs, errb := s.getMissingDocs(inst, missings, changes)
+		docs, errb := s.GetMissingDocs(inst, missings, changes)
 		if errb != nil {
 			return false, errb
 		}
@@ -205,10 +205,10 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	return feed.Pending, err
 }
 
-// getLastSeqNumber returns the last sequence number of the previous
+// GetLastSeqNumber returns the last sequence number of the previous
 // replication to this member
-func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member, worker string) (string, error) {
-	id, err := s.replicationID(m)
+func (s *Sharing) GetLastSeqNumber(inst *instance.Instance, m *Member, worker string) (string, error) {
+	id, err := s.ReplicationID(m)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +226,7 @@ func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member, worker st
 // UpdateLastSequenceNumber updates the last sequence number for this
 // replication if it's superior to the number in CouchDB
 func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, worker, seq string) error {
-	id, err := s.replicationID(m)
+	id, err := s.ReplicationID(m)
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (s *Sharing) ClearLastSequenceNumbers(inst *instance.Instance, m *Member) e
 
 // clearLastSequenceNumber removes a last sequence number for a member on a given worker
 func (s *Sharing) clearLastSequenceNumber(inst *instance.Instance, m *Member, worker string) error {
-	id, err := s.replicationID(m)
+	id, err := s.ReplicationID(m)
 	if err != nil {
 		return err
 	}
@@ -270,8 +270,8 @@ func (s *Sharing) clearLastSequenceNumber(inst *instance.Instance, m *Member, wo
 	return err
 }
 
-// replicationID gives an identifier for this replicator
-func (s *Sharing) replicationID(m *Member) (string, error) {
+// ReplicationID gives an identifier for this replicator
+func (s *Sharing) ReplicationID(m *Member) (string, error) {
 	for i := range s.Members {
 		if &s.Members[i] == m {
 			id := fmt.Sprintf("sharing-%s-%d", s.SID, i)
@@ -349,9 +349,9 @@ type changesResponse struct {
 // for this error, and it is the case, it should revoke the sharing.
 var errRevokeSharing = errors.New("Sharing must be revoked")
 
-// callChangesFeed fetches the last changes from the changes feed
+// CallChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/stable/api/database/changes.html
-func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
+func (s *Sharing) CallChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
@@ -538,9 +538,9 @@ type DocsList []map[string]interface{}
 // DocsByDoctype is a map of doctype -> slice of documents of this doctype
 type DocsByDoctype map[string]DocsList
 
-// getMissingDocs fetches the documents in bulk, partitionned by their doctype.
+// GetMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
-func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, changes *Changes) (*DocsByDoctype, error) {
+func (s *Sharing) GetMissingDocs(inst *instance.Instance, missings *Missings, changes *Changes) (*DocsByDoctype, error) {
 	docs := make(DocsByDoctype)
 	queries := make(map[string][]couchdb.IDRev) // doctype -> payload for _bulk_get
 	for key, missing := range *missings {
@@ -554,7 +554,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, ch
 			docs[doctype] = append(docs[doctype], map[string]interface{}{
 				"_id":        parts[1],
 				"_rev":       revisions[len(revisions)-1],
-				"_revisions": revsChainToStruct(revisions),
+				"_revisions": RevsChainToStruct(revisions),
 				"_deleted":   true,
 			})
 			continue
@@ -800,7 +800,7 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 				if sub, _ := refs[i].Revisions.Find(rev); sub == nil {
 					revs := revsMapToStruct(doc["_revisions"])
 					if revs != nil && len(revs.IDs) > 0 {
-						chain := revsStructToChain(*revs)
+						chain := RevsStructToChain(*revs)
 						refs[i].Revisions.InsertChain(chain)
 					}
 				}

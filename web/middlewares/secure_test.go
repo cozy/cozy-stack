@@ -1,4 +1,4 @@
-package middlewares
+package middlewares_test
 
 import (
 	"net/http"
@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestSecure(t *testing.T) {
 		req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		h := Secure(&SecureConfig{
+		h := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge: 3600 * time.Second,
 		})(echo.NotFoundHandler)
 		_ = h(c)
@@ -44,7 +45,7 @@ func TestSecure(t *testing.T) {
 		req1, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
 		rec1 := httptest.NewRecorder()
 		c1 := e1.NewContext(req1, rec1)
-		h1 := Secure(&SecureConfig{
+		h1 := middlewares.Secure(&middlewares.SecureConfig{
 			CSPConnectSrc: nil,
 			CSPFrameSrc:   nil,
 			CSPScriptSrc:  nil,
@@ -55,10 +56,10 @@ func TestSecure(t *testing.T) {
 		req2, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
 		rec2 := httptest.NewRecorder()
 		c2 := e2.NewContext(req2, rec2)
-		h2 := Secure(&SecureConfig{
+		h2 := middlewares.Secure(&middlewares.SecureConfig{
 			CSPConnectSrc: nil,
-			CSPFrameSrc:   []CSPSource{CSPSrcAny},
-			CSPScriptSrc:  []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcAny},
+			CSPScriptSrc:  []middlewares.CSPSource{middlewares.CSPSrcSelf},
 		})(echo.NotFoundHandler)
 		_ = h2(c2)
 
@@ -66,10 +67,10 @@ func TestSecure(t *testing.T) {
 		req3, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
 		rec3 := httptest.NewRecorder()
 		c3 := e3.NewContext(req3, rec3)
-		h3 := Secure(&SecureConfig{
-			CSPConnectSrc: []CSPSource{CSPSrcParent, CSPSrcSelf},
-			CSPFrameSrc:   []CSPSource{CSPSrcAny},
-			CSPScriptSrc:  []CSPSource{CSPSrcSiblings},
+		h3 := middlewares.Secure(&middlewares.SecureConfig{
+			CSPConnectSrc: []middlewares.CSPSource{middlewares.CSPSrcParent, middlewares.CSPSrcSelf},
+			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcAny},
+			CSPScriptSrc:  []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 		})(echo.NotFoundHandler)
 		_ = h3(c3)
 
@@ -78,10 +79,10 @@ func TestSecure(t *testing.T) {
 		rec4 := httptest.NewRecorder()
 		c4 := e4.NewContext(req4, rec4)
 		c4.Set("instance", &instance.Instance{ContextName: "test"})
-		h4 := Secure(&SecureConfig{
+		h4 := middlewares.Secure(&middlewares.SecureConfig{
 			CSPConnectSrc: nil,
-			CSPFrameSrc:   []CSPSource{CSPSrcAny},
-			CSPScriptSrc:  []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcAny},
+			CSPScriptSrc:  []middlewares.CSPSource{middlewares.CSPSrcSelf},
 			CSPPerContext: map[string]map[string]string{
 				"test": {
 					"frame":   "https://example.net",
@@ -95,31 +96,5 @@ func TestSecure(t *testing.T) {
 		assert.Equal(t, "script-src 'self';frame-src *;", rec2.Header().Get(echo.HeaderContentSecurityPolicy))
 		assert.Equal(t, "script-src https://*.cozy.local;frame-src *;connect-src https://cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
 		assert.Equal(t, "script-src 'self';frame-src * https://example.net;connect-src https://example.com;", rec4.Header().Get(echo.HeaderContentSecurityPolicy))
-	})
-
-	t.Run("AppendCSPRule", func(t *testing.T) {
-		r := appendCSPRule("", "frame-ancestors", "new-rule")
-		assert.Equal(t, "frame-ancestors new-rule;", r)
-
-		r = appendCSPRule("frame-ancestors;", "frame-ancestors", "new-rule")
-		assert.Equal(t, "frame-ancestors new-rule;", r)
-
-		r = appendCSPRule("frame-ancestors 1 2 3 ;", "frame-ancestors", "new-rule")
-		assert.Equal(t, "frame-ancestors 1 2 3 new-rule;", r)
-
-		r = appendCSPRule("frame-ancestors 1 2 3 ;", "frame-ancestors", "new-rule", "new-rule-2")
-		assert.Equal(t, "frame-ancestors 1 2 3 new-rule new-rule-2;", r)
-
-		r = appendCSPRule("frame-ancestors 'none';", "frame-ancestors", "new-rule")
-		assert.Equal(t, "frame-ancestors new-rule;", r)
-
-		r = appendCSPRule("script '*'; frame-ancestors 'self';", "frame-ancestors", "new-rule")
-		assert.Equal(t, "script '*'; frame-ancestors 'self' new-rule;", r)
-
-		r = appendCSPRule("script '*'; frame-ancestors 'self'; plop plop;", "frame-ancestors", "new-rule")
-		assert.Equal(t, "script '*'; frame-ancestors 'self' new-rule; plop plop;", r)
-
-		r = appendCSPRule("script '*'; toto;", "frame-ancestors", "new-rule")
-		assert.Equal(t, "script '*'; toto;frame-ancestors new-rule;", r)
 	})
 }
