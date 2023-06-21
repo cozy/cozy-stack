@@ -91,9 +91,6 @@ func TestAuth(t *testing.T) {
 		Key:           "xxx",
 	})
 
-	_, _, err := stack.Start()
-	require.NoError(t, err)
-
 	ts := setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
 		handler, err := web.CreateSubdomainProxy(r, &stack.Services{}, apps.Serve)
 		require.NoError(t, err, "Cant start subdomain proxy")
