@@ -17,7 +17,7 @@ func NewCouchdbStorage() *CouchdbStorage {
 	return &CouchdbStorage{}
 }
 
-func (s *CouchdbStorage) setInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error {
+func (s *CouchdbStorage) setInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) error {
 	if doc.DocType() != consts.Settings {
 		return ErrInvalidType
 	}
@@ -26,13 +26,13 @@ func (s *CouchdbStorage) setInstanceSettings(inst prefixer.Prefixer, doc *couchd
 		return fmt.Errorf("%w: have %q, expected %q", ErrInvalidID, doc.ID(), consts.InstanceSettingsID)
 	}
 
-	return couchdb.UpdateDoc(inst, doc)
+	return couchdb.UpdateDoc(db, doc)
 }
 
-func (s *CouchdbStorage) getInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error) {
+func (s *CouchdbStorage) getInstanceSettings(db prefixer.Prefixer) (*couchdb.JSONDoc, error) {
 	doc := &couchdb.JSONDoc{}
 
-	err := couchdb.GetDoc(inst, consts.Settings, consts.InstanceSettingsID, doc)
+	err := couchdb.GetDoc(db, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return nil, err
 	}

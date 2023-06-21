@@ -22,8 +22,8 @@ var (
 
 // Storage used to persiste and fetch settings data.
 type Storage interface {
-	setInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
-	getInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error)
+	setInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) error
+	getInstanceSettings(db prefixer.Prefixer) (*couchdb.JSONDoc, error)
 }
 
 // SettingsService handle the business logic around "settings".
