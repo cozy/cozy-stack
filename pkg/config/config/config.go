@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/avatar"
@@ -425,40 +423,14 @@ func Setup(cfgFile string) (err error) {
 
 	log.Debugf("Using config files: %s", cfgFiles)
 
+	viper.SetConfigType("yaml")
 	for _, cfgFile = range cfgFiles {
-		tmplName := filepath.Base(cfgFile)
-		tmpl := template.New(tmplName)
-		tmpl = tmpl.Option("missingkey=zero")
-		tmpl, err = tmpl.Funcs(numericFuncsMap).ParseFiles(cfgFile)
-		if err != nil {
-			return fmt.Errorf("Unable to open and parse configuration file "+
-				"template %s: %s", cfgFile, err)
-		}
-
-		dest := new(bytes.Buffer)
-		ctxt := &struct {
-			Env    map[string]string
-			NumCPU int
-		}{
-			Env:    envMap(),
-			NumCPU: runtime.NumCPU(),
-		}
-		err = tmpl.ExecuteTemplate(dest, tmplName, ctxt)
-		if err != nil {
-			return fmt.Errorf("Template error for config files %s: %s", cfgFile, err)
-		}
-
 		cfgFile = regexp.MustCompile(`\.local$`).ReplaceAllString(cfgFile, "")
-		if ext := filepath.Ext(cfgFile); len(ext) > 0 {
-			viper.SetConfigType(ext[1:])
-		}
-		if err := viper.MergeConfig(dest); err != nil {
-			if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
-				log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
-				log.Errorf(dest.String())
-				return err
-			}
-		}
+		viper.AddConfigPath(cfgFile)
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("cfg: %w", err)
 	}
 
 	return UseViper(viper.GetViper())
