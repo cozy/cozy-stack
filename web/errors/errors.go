@@ -24,6 +24,10 @@ import (
 func ErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
+	if err == nil {
+		return
+	}
+
 	if build.IsDevRelease() {
 		var log *logger.Entry
 		inst, ok := middlewares.GetInstanceSafe(c)

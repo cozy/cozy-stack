@@ -71,6 +71,20 @@ func TestErrors_JSONAPI(t *testing.T) {
 	}
 }
 
+func TestErrors_with_no_a_nil_error(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	c := e.NewContext(req, rec)
+
+	ErrorHandler(nil, c)
+
+	// ErrorHandler have nil so it does nothing
+	assert.Equal(t, 200, rec.Code)
+	assert.Empty(t, rec.Body.String())
+}
+
 func TestErrors_JSONAPI_With_HEAD_method(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodHead, "/", nil)
