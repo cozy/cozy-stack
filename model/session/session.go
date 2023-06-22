@@ -116,6 +116,12 @@ func New(i *instance.Instance, duration Duration) (*Session, error) {
 	return s, nil
 }
 
+func lockSession(inst *instance.Instance, sessionID string) func() {
+	mu := config.Lock().ReadWrite(inst, "sessions/"+sessionID)
+	_ = mu.Lock()
+	return mu.Unlock
+}
+
 // Get fetches the session
 func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	s := &Session{}
@@ -131,6 +137,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	// If the session is older than the session max age, it has expired and
 	// should be deleted.
 	if s.OlderThan(SessionMaxAge) {
+		defer lockSession(i, sessionID)()
 		err := couchdb.DeleteDoc(i, s)
 		if err != nil {
 			i.Logger().WithNamespace("loginaudit").
@@ -146,6 +153,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	// update period of one day for the `last_seen` date, which is a good enough
 	// granularity.
 	if s.OlderThan(24 * time.Hour) {
+		defer lockSession(i, sessionID)()
 		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, s)
