@@ -537,6 +537,16 @@ Cookie: sessionid=xxxx
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `GET`.
 
+#### Note about `password_defined`
+
+There are a few fields that are persisted on the instance its-self, not on its
+settings document. When they are updated, it won't be reflected in the realtime
+when listening on the `io.cozy.settings.instance` document.
+
+For `password_defined`, it is possible to be notified when the password is
+defined by watching a synthetic document with the doctype `io.cozy.settings`,
+and the id `io.cozy.settings.passphrase`.
+
 ### POST /settings/instance/deletion
 
 The settings application can use this route if the user wants to delete their

@@ -286,8 +286,7 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Setti
 	if params.PublicKey != "" && params.PrivateKey != "" {
 		_ = settings.SetKeyPair(inst, params.PublicKey, params.PrivateKey)
 	}
-	passwordDefined := true
-	inst.PasswordDefined = &passwordDefined
+	inst.SetPasswordDefined(true)
 }
 
 // CreatePassphraseKey creates an encryption key for Bitwarden. It returns in

@@ -198,17 +198,23 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			continue
 		}
 		permType := cmd.Payload.Type
+		permID := cmd.Payload.ID
 		// XXX: thumbnails is a synthetic doctype, listening to its events
 		// requires a permissions on io.cozy.files. Same for note events.
 		if permType == consts.Thumbnails || permType == consts.NotesEvents {
 			permType = consts.Files
+		}
+		// XXX: the passphrase settings document is synthetic, and a
+		// permission on the instance settings is enough to watch it.
+		if permType == consts.Settings && permID == consts.PassphraseParametersID {
+			permID = consts.InstanceSettingsID
 		}
 		// XXX: no permissions are required for io.cozy.sharings.initial_sync
 		// and io.cozy.auth.confirmations
 		if withAuthentication &&
 			cmd.Payload.Type != consts.SharingsInitialSync &&
 			cmd.Payload.Type != consts.AuthConfirmations {
-			if !authorized(i, pdoc.Permissions, permType, cmd.Payload.ID) {
+			if !authorized(i, pdoc.Permissions, permType, permID) {
 				sendErr(ctx, errc, forbidden(cmd))
 				continue
 			}
