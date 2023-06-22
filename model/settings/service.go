@@ -160,3 +160,27 @@ func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string
 
 	return nil
 }
+
+// CancelEmailUpdate cancel any ongoing email update process
+//
+// If no process is ongoin it's a no-op.
+func (s *SettingsService) CancelEmailUpdate(inst *instance.Instance) error {
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the settings: %w", err)
+	}
+
+	_, ok := settings.M["pending_email"].(string)
+	if !ok {
+		return nil
+	}
+
+	delete(settings.M, "pending_email")
+
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
+	}
+
+	return nil
+}

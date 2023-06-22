@@ -16,6 +16,7 @@ type Service interface {
 	SetInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
 	StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error
 	ConfirmEmailUpdate(inst *instance.Instance, tok string) error
+	CancelEmailUpdate(inst *instance.Instance) error
 }
 
 func Init(

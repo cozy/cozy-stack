@@ -213,3 +213,57 @@ func TestConfirmEmailUpdate_without_a_pending_email(t *testing.T) {
 	err := svc.ConfirmEmailUpdate(&inst, "some-token")
 	assert.ErrorIs(t, err, ErrNoPendingEmail)
 }
+
+func Test_CancelEmailUpdate_success(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name":   "Jane Doe",
+			"email":         "foo@bar.baz",
+			"pending_email": "some@email.com",
+		},
+	}, nil).Once()
+
+	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name": "Jane Doe",
+			"email":       "foo@bar.baz",
+		},
+	}).Return(nil).Once()
+
+	err := svc.CancelEmailUpdate(&inst)
+	assert.NoError(t, err)
+}
+
+func Test_CancelEmailUpdate_without_pending_email(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name": "Jane Doe",
+			"email":       "foo@bar.baz",
+		},
+	}, nil).Once()
+
+	err := svc.CancelEmailUpdate(&inst)
+	assert.NoError(t, err)
+}
