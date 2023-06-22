@@ -240,7 +240,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.OnboardingFinished = true
 	}
 
-	i.PasswordDefined = &passwordDefined
+	i.SetPasswordDefined(passwordDefined)
 	if onboardingFinished := opts.OnboardingFinished; onboardingFinished != nil {
 		i.OnboardingFinished = *onboardingFinished
 	}

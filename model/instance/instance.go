@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/spf13/afero"
 )
 
@@ -273,6 +274,18 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 // NotesLock returns a mutex for the notes on this instance.
 func (i *Instance) NotesLock() lock.ErrorRWLocker {
 	return config.Lock().ReadWrite(i, "notes")
+}
+
+func (i *Instance) SetPasswordDefined(defined bool) {
+	if (i.PasswordDefined == nil || !*i.PasswordDefined) && defined {
+		doc := couchdb.JSONDoc{
+			Type: consts.Settings,
+			M:    map[string]interface{}{"_id": consts.PassphraseParametersID},
+		}
+		realtime.GetHub().Publish(i, realtime.EventCreate, &doc, nil)
+	}
+
+	i.PasswordDefined = &defined
 }
 
 // SettingsDocument returns the document with the settings of this instance
