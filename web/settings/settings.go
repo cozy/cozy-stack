@@ -124,6 +124,24 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 	}
 }
 
+// deleteEmail handle DELETE /settings/email
+func (h *HTTPHandler) deleteEmail(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+
+	err := h.svc.CancelEmailUpdate(inst)
+	switch {
+	case err == nil:
+		c.NoContent(http.StatusNoContent)
+		return nil
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+}
+
 func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
 	tok := c.QueryParam("token")
 	inst := middlewares.GetInstance(c)
@@ -164,6 +182,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
 
 	router.POST("/email", h.postEmail)
+	router.DELETE("/email", h.deleteEmail)
 	router.GET("/email/confirm", h.getEmailConfirmation)
 
 	router.GET("/passphrase", h.getPassphraseParameters)
