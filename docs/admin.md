@@ -83,6 +83,27 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /instances/count
+
+Returns the count of all instances.
+
+#### Request
+
+```http
+GET /instances/count HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{"count":259}
+```
+
 ### GET /instances/:domain/last-activity
 
 It returns an approximate date of when the instance was last used by their
