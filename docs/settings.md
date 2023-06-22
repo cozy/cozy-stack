@@ -103,6 +103,26 @@ Location: http://alice-settings.cozy.localhost:8080
 ```
 
 
+### DELETE /settings/email
+
+This endpoints allows to cancel the ongoin email adress update process.
+
+#### Request
+
+```http
+DELETE /settings/email HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+
 ## Passphrase
 
 The master password, known by the cozy owner, is used for two things: to allow
