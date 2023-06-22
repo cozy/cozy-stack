@@ -429,6 +429,15 @@ msgstr "Address of this Cozy does not exist"
 msgid "Error Instance not found Message"
 msgstr "You may have entered a wrong address from a typing mistake. To make sure, please check the address of your Cozy sent to you by e-mail during its creation."
 
+msgid "Error InvalidToken Title"
+msgstr "Invalid link"
+
+msgid "Error InvalidToken Message"
+msgstr "Your link is either expired or invalid"
+
+msgid "Error InvalidToken Link"
+msgstr "Go back to the settings"
+
 msgid "Error Application not installed Title"
 msgstr "Application not yet available"
 

@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -124,21 +125,33 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 }
 
 func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
-	token := c.QueryParam("token")
+	tok := c.QueryParam("token")
 	inst := middlewares.GetInstance(c)
 
-	err := h.svc.ConfirmEmailUpdate(inst, token)
+	settingsURL := inst.SubDomain("settings").String()
+
+	err := h.svc.ConfirmEmailUpdate(inst, tok)
 	switch {
 	case err == nil:
 		// Redirect to the setting page
-		c.Redirect(http.StatusTemporaryRedirect, inst.SubDomain("settings").String())
-	case errors.Is(err, csettings.ErrNoPendingEmail), errors.Is(err, instance.ErrInvalidToken):
-		return jsonapi.BadRequest(errors.New("invalid token"))
+		return c.Redirect(http.StatusTemporaryRedirect, settingsURL)
+	case errors.Is(err, csettings.ErrNoPendingEmail), errors.Is(err, token.ErrInvalidToken):
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain":       inst.ContextualDomain(),
+			"ContextName":  inst.ContextName,
+			"Locale":       inst.Locale,
+			"Title":        inst.TemplateTitle(),
+			"Favicon":      middlewares.Favicon(inst),
+			"Illustration": "/images/generic-error.svg",
+			"ErrorTitle":   "Error InvalidToken Title",
+			"Error":        "Error InvalidToken Message",
+			"Link":         "Error InvalidToken Link",
+			"LinkURL":      settingsURL,
+			"SupportEmail": inst.SupportEmailAddress(),
+		})
 	default:
-		return jsonapi.InternalServerError(err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
-
-	return nil
 }
 
 func isMovedError(err error) bool {
