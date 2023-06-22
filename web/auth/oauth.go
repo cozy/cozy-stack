@@ -814,6 +814,12 @@ type AccessTokenReponse struct {
 	Refresh string `json:"refresh_token,omitempty"`
 }
 
+func lockOAuthClient(inst *instance.Instance, clientID string) func() {
+	mu := config.Lock().ReadWrite(inst, "oauth/"+clientID)
+	_ = mu.Lock()
+	return mu.Unlock
+}
+
 func accessToken(c echo.Context) error {
 	grant := c.FormValue("grant_type")
 	clientID := c.FormValue("client_id")
@@ -836,6 +842,7 @@ func accessToken(c echo.Context) error {
 			"error": "the client_secret parameter is mandatory",
 		})
 	}
+	defer lockOAuthClient(instance, clientID)()
 
 	client, err := oauth.FindClient(instance, clientID)
 	if err != nil {
