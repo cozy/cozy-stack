@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -37,6 +38,7 @@ type SettingsService struct {
 	emailer  emailer.Emailer
 	instance instance.Service
 	token    token.Service
+	cloudery cloudery.Service
 	storage  Storage
 }
 
@@ -45,9 +47,10 @@ func NewService(
 	emailer emailer.Emailer,
 	instance instance.Service,
 	token token.Service,
+	cloudery cloudery.Service,
 	storage Storage,
 ) *SettingsService {
-	return &SettingsService{emailer, instance, token, storage}
+	return &SettingsService{emailer, instance, token, cloudery, storage}
 }
 
 // PublicName returns the settings' public name or a default one if missing
@@ -133,7 +136,8 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 
 // ConfirmEmailUpdate is the second step to the email update process.
 //
-// This step consiste to make the email change effectif.
+// This step consiste to make the email change effectif and relay the change
+// into the cloudery.
 func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
 	settings, err := s.storage.getInstanceSettings(inst)
 	if err != nil {
@@ -156,6 +160,15 @@ func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string
 	err = s.storage.setInstanceSettings(inst, settings)
 	if err != nil {
 		return fmt.Errorf("failed to save the settings changes: %w", err)
+	}
+
+	err = s.cloudery.SaveInstance(inst, &cloudery.SaveCmd{
+		Locale:     inst.Locale,
+		Email:      settings.M["email"].(string),
+		PublicName: settings.M["public_name"].(string),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update the cloudery: %w", err)
 	}
 
 	return nil

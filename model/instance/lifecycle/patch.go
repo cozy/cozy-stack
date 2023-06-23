@@ -189,7 +189,6 @@ func Patch(i *instance.Instance, opts *Options) error {
 			})
 			if err != nil {
 				i.Logger().Errorf("Error during cloudery settings update %s", err)
-
 			}
 		}
 	}

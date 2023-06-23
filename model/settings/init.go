@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -23,10 +24,11 @@ func Init(
 	emailer emailer.Emailer,
 	instance instance.Service,
 	token token.Service,
+	cloudery cloudery.Service,
 ) *SettingsService {
 	storage := NewCouchdbStorage()
 
-	service = NewService(emailer, instance, token, storage)
+	service = NewService(emailer, instance, token, cloudery, storage)
 
 	return service
 }

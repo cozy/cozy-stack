@@ -3,6 +3,7 @@ package settings
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -19,9 +20,10 @@ func Test_StartEmailUpdate_success(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -64,9 +66,10 @@ func Test_StartEmailUpdate_with_an_invalid_password(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -87,9 +90,10 @@ func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -133,12 +137,14 @@ func TestConfirmEmailUpdate_success(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
+		Locale: "fr/FR",
 	}
 
 	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
@@ -159,6 +165,12 @@ func TestConfirmEmailUpdate_success(t *testing.T) {
 		},
 	}).Return(nil).Once()
 
+	clouderySvc.On("SaveInstance", &inst, &cloudery.SaveCmd{
+		Locale:     "fr/FR",
+		Email:      "some@email.com",
+		PublicName: "Jane Doe",
+	}).Return(nil).Once()
+
 	err := svc.ConfirmEmailUpdate(&inst, "some-token")
 	assert.NoError(t, err)
 }
@@ -167,9 +179,10 @@ func TestConfirmEmailUpdate_with_an_invalid_token(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -194,9 +207,10 @@ func TestConfirmEmailUpdate_without_a_pending_email(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -218,9 +232,10 @@ func Test_CancelEmailUpdate_success(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -249,9 +264,10 @@ func Test_CancelEmailUpdate_without_pending_email(t *testing.T) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, storage)
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",

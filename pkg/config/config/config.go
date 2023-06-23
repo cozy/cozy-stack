@@ -848,7 +848,7 @@ func UseViper(v *viper.Viper) error {
 
 	err = v.UnmarshalKey("clouderies", &config.Clouderies)
 	if err != nil {
-		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
+		return fmt.Errorf(`failed to parse the config for "clouderies": %w`, err)
 	}
 
 	// For compatibility

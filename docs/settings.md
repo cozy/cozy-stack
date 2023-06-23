@@ -105,7 +105,7 @@ Location: http://alice-settings.cozy.localhost:8080
 
 ### DELETE /settings/email
 
-This endpoints allows to cancel the ongoin email adress update process.
+This endpoints allows to cancel the ongoing email adress update process.
 
 #### Request
 

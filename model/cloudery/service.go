@@ -51,7 +51,7 @@ func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) er
 
 	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, map[string]interface{}{
-		"local":       cmd.Locale,
+		"locale":      cmd.Locale,
 		"email":       cmd.Email,
 		"public_name": cmd.PublicName,
 	}); err != nil {
