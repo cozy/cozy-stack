@@ -106,7 +106,7 @@ security features. Please do not use this binary as your production server.
 
 	tokenSvc := token.NewService(config.GetConfig().CacheStorage)
 	emailerSvc := emailer.Init()
-	instanceSvc := instance.Init()
+	instanceSvc := instance.Init(config.GetConfig().CacheStorage)
 
 	services := Services{
 		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc),

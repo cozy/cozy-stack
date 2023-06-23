@@ -1,7 +1,6 @@
 package lifecycle
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -32,8 +32,6 @@ func Patch(i *instance.Instance, opts *Options) error {
 		return err
 	}
 
-	clouderyChanges := make(map[string]interface{})
-
 	for {
 		var err error
 		if i == nil {
@@ -48,7 +46,6 @@ func Patch(i *instance.Instance, opts *Options) error {
 
 		if opts.Locale != "" && opts.Locale != i.Locale {
 			i.Locale = opts.Locale
-			clouderyChanges["locale"] = i.Locale
 			needUpdate = true
 		}
 
@@ -180,10 +177,19 @@ func Patch(i *instance.Instance, opts *Options) error {
 		if err := couchdb.UpdateDoc(i, settings); err != nil {
 			return err
 		}
-		clouderyUpdateKeys := []string{"email", "public_name"}
-		for _, key := range clouderyUpdateKeys {
-			if v, ok := settings.M[key]; ok {
-				clouderyChanges[key] = v
+
+		if !opts.FromCloudery {
+			email, _ := settings.M["email"].(string)
+			publicName, _ := settings.M["public_name"].(string)
+
+			err = cloudery.SaveInstance(i, &cloudery.SaveCmd{
+				Locale:     i.Locale,
+				Email:      email,
+				PublicName: publicName,
+			})
+			if err != nil {
+				i.Logger().Errorf("Error during cloudery settings update %s", err)
+
 			}
 		}
 	}
@@ -200,27 +206,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 	}
 
-	if !opts.FromCloudery {
-		managerUpdateSettings(i, clouderyChanges)
-	}
-
 	return nil
-}
-
-func managerUpdateSettings(inst *instance.Instance, changes map[string]interface{}) {
-	if inst.UUID == "" || len(changes) == 0 {
-		return
-	}
-
-	client := instance.APIManagerClient(inst)
-	if client == nil {
-		return
-	}
-
-	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
-	if err := client.Put(url, changes); err != nil {
-		inst.Logger().Errorf("Error during cloudery settings update %s", err)
-	}
 }
 
 // needsSettingsUpdate compares the old instance io.cozy.settings with the new

@@ -137,7 +137,7 @@ type Config struct {
 	Authentication map[string]interface{}
 	Office         map[string]Office
 	Registries     map[string][]*url.URL
-	Clouderies     map[string]interface{}
+	Clouderies     map[string]ClouderyConfig
 
 	RemoteAllowCustomPort bool
 
@@ -147,6 +147,14 @@ type Config struct {
 
 	AssetsPollingDisabled bool
 	AssetsPollingInterval time.Duration
+}
+
+// ClouderyConfig for [cloudery.ClouderyService].
+type ClouderyConfig struct {
+	API struct {
+		URL   string `mapstructure:"url"`
+		Token string `mapstructure:"token"`
+	} `mapstructure:"api"`
 }
 
 // Fs contains the configuration values of the file-system
@@ -825,7 +833,6 @@ func UseViper(v *viper.Viper) error {
 		Authentication: v.GetStringMap("authentication"),
 		Office:         office,
 		Registries:     regs,
-		Clouderies:     v.GetStringMap("clouderies"),
 
 		CSPAllowList:  cspAllowList,
 		CSPPerContext: cspPerContext,
@@ -835,6 +842,11 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	err = v.UnmarshalKey("deprecated_apps", &config.DeprecatedApps)
+	if err != nil {
+		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
+	}
+
+	err = v.UnmarshalKey("clouderies", &config.Clouderies)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "deprecated_apps": %w`, err)
 	}
