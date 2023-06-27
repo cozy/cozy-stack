@@ -53,15 +53,13 @@ func getContextAPI(contextName string, cfg map[string]interface{}) contextAPI {
 
 	// Clouderies
 	var clouderyEndpoint string
-	var cloudery interface{}
+	var cloudery config.ClouderyConfig
 	cloudery, ok := clouderies[contextName]
 	if !ok {
 		cloudery = clouderies[config.DefaultInstanceContext]
 	}
-	if cloudery != nil {
-		api := cloudery.(map[string]interface{})["api"]
-		clouderyEndpoint = api.(map[string]interface{})["url"].(string)
-	}
+
+	clouderyEndpoint = cloudery.API.URL
 
 	// Office
 	var office *contextOffice
