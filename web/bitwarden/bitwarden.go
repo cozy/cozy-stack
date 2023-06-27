@@ -518,6 +518,7 @@ func Routes(router *echo.Group) {
 	ciphers.POST("", CreateCipher)
 	ciphers.POST("/create", CreateSharedCipher)
 	ciphers.GET("/:id", GetCipher)
+	ciphers.GET("/:id/details", GetCipher)
 	ciphers.POST("/:id", UpdateCipher)
 	ciphers.PUT("/:id", UpdateCipher)
 	ciphers.POST("/import", ImportCiphers)

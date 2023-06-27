@@ -720,7 +720,7 @@ Content-Type: application/json
 }
 ```
 
-### GET /bitwarden/api/ciphers/:id
+### GET /bitwarden/api/ciphers/:id and /bitwarden/api/ciphers/:id/details
 
 #### Request
 
