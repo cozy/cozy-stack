@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -123,6 +124,54 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 	}
 }
 
+// deleteEmail handle DELETE /settings/email
+func (h *HTTPHandler) deleteEmail(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+
+	err := h.svc.CancelEmailUpdate(inst)
+	switch {
+	case err == nil:
+		c.NoContent(http.StatusNoContent)
+		return nil
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+}
+
+func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
+	tok := c.QueryParam("token")
+	inst := middlewares.GetInstance(c)
+
+	settingsURL := inst.SubDomain("settings").String()
+
+	err := h.svc.ConfirmEmailUpdate(inst, tok)
+	switch {
+	case err == nil:
+		// Redirect to the setting page
+		return c.Redirect(http.StatusTemporaryRedirect, settingsURL)
+	case errors.Is(err, csettings.ErrNoPendingEmail), errors.Is(err, token.ErrInvalidToken):
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain":       inst.ContextualDomain(),
+			"ContextName":  inst.ContextName,
+			"Locale":       inst.Locale,
+			"Title":        inst.TemplateTitle(),
+			"Favicon":      middlewares.Favicon(inst),
+			"Illustration": "/images/generic-error.svg",
+			"ErrorTitle":   "Error InvalidToken Title",
+			"Error":        "Error InvalidToken Message",
+			"Link":         "Error InvalidToken Link",
+			"LinkURL":      settingsURL,
+			"SupportEmail": inst.SupportEmailAddress(),
+		})
+	default:
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
+}
+
 func isMovedError(err error) bool {
 	j, ok := err.(*jsonapi.Error)
 	return ok && j.Code == "moved"
@@ -133,6 +182,8 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
 
 	router.POST("/email", h.postEmail)
+	router.DELETE("/email", h.deleteEmail)
+	router.GET("/email/confirm", h.getEmailConfirmation)
 
 	router.GET("/passphrase", h.getPassphraseParameters)
 	router.POST("/passphrase", h.registerPassphrase)

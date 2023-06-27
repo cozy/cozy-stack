@@ -62,6 +62,7 @@ user to the second endpoint.
 POST /settings/email HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
+Authorization: Bearer ...
 ```
 
 ```json
@@ -69,6 +70,50 @@ Content-Type: application/json
     "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
     "email": "alice@example.com"
 }
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### GET /settings/email/confirm
+
+This is the second part of the email update process. The user have received a
+confirmation email with a link on its new email adress. When he click on the link
+he ends up on this endpoint. The url contains a token used to authenticate the user
+and the action.
+
+#### Request
+
+```http
+GET /settings/email/confirm?token=XXXXXXX HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+In case of success the user will be redirected to its setting page. In case of error
+an HTML error page will appears.
+
+```http
+HTTP/1.1 307 Temporary Redirect
+Location: http://alice-settings.cozy.localhost:8080 
+```
+
+
+### DELETE /settings/email
+
+This endpoints allows to cancel the ongoing email adress update process.
+
+#### Request
+
+```http
+DELETE /settings/email HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Authorization: Bearer ...
 ```
 
 #### Response

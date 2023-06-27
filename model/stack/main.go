@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
@@ -106,10 +107,11 @@ security features. Please do not use this binary as your production server.
 
 	tokenSvc := token.NewService(config.GetConfig().CacheStorage)
 	emailerSvc := emailer.Init()
-	instanceSvc := instance.Init()
+	instanceSvc := instance.Init(config.GetConfig().CacheStorage)
+	clouderySvc := cloudery.Init(config.GetConfig().Clouderies)
 
 	services := Services{
-		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc),
+		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc, clouderySvc),
 	}
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift

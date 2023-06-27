@@ -50,3 +50,13 @@ func (m *Mock) SetInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) e
 func (m *Mock) StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }
+
+// ConfirmEmailUpdate mock method.
+func (m *Mock) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
+	return m.Called(inst, tok).Error(0)
+}
+
+// CancelEmailUpdate mock method.
+func (m *Mock) CancelEmailUpdate(inst *instance.Instance) error {
+	return m.Called(inst).Error(0)
+}

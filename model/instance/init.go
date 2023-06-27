@@ -1,7 +1,7 @@
 package instance
 
 import (
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -20,11 +20,8 @@ type Service interface {
 	CheckPassphrase(inst *Instance, pass []byte) error
 }
 
-func Init() *InstanceService {
-	service = NewService(
-		config.GetConfig().CacheStorage,
-		logger.WithNamespace("instance"),
-	)
+func Init(c cache.Cache) *InstanceService {
+	service = NewService(c, logger.WithNamespace("instance"))
 
 	return service
 }

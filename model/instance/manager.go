@@ -70,7 +70,14 @@ type managerConfig struct {
 // APIManagerClient returns a client to talk to the manager via its API.
 func APIManagerClient(inst *Instance) *manager.APIClient {
 	contexts := config.GetConfig().Clouderies
-	context, ok := inst.GetFromContexts(contexts)
+	if contexts == nil {
+		return nil
+	}
+
+	context, ok := contexts[inst.ContextName]
+	if !ok {
+		context, ok = contexts[config.DefaultInstanceContext]
+	}
 	if !ok {
 		return nil
 	}

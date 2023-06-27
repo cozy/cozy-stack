@@ -1,11 +1,13 @@
 package settings
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -16,14 +18,15 @@ import (
 const TokenExpiration = 7 * 24 * time.Hour
 
 var (
-	ErrInvalidType = fmt.Errorf("invalid type")
-	ErrInvalidID   = fmt.Errorf("invalid id")
+	ErrInvalidType    = errors.New("invalid type")
+	ErrInvalidID      = errors.New("invalid id")
+	ErrNoPendingEmail = errors.New("no pending email")
 )
 
 // Storage used to persiste and fetch settings data.
 type Storage interface {
-	setInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
-	getInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error)
+	setInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) error
+	getInstanceSettings(db prefixer.Prefixer) (*couchdb.JSONDoc, error)
 }
 
 // SettingsService handle the business logic around "settings".
@@ -35,6 +38,7 @@ type SettingsService struct {
 	emailer  emailer.Emailer
 	instance instance.Service
 	token    token.Service
+	cloudery cloudery.Service
 	storage  Storage
 }
 
@@ -43,9 +47,10 @@ func NewService(
 	emailer emailer.Emailer,
 	instance instance.Service,
 	token token.Service,
+	cloudery cloudery.Service,
 	storage Storage,
 ) *SettingsService {
-	return &SettingsService{emailer, instance, token, storage}
+	return &SettingsService{emailer, instance, token, cloudery, storage}
 }
 
 // PublicName returns the settings' public name or a default one if missing
@@ -80,10 +85,9 @@ type UpdateEmailCmd struct {
 
 // StartEmailUpdate will start the email updating process.
 //
-// This process consists of:
-// - Validating the user with a password
-// - Sending a validation email to the new address with a validation link
-// - Confirm the new address when the validation link is called
+// This process consists of validating the user with a password and sending
+// a validation email to the new address with a validation link. This link
+// will allow the user to confirm its email.
 func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error {
 	err := s.instance.CheckPassphrase(inst, cmd.Passphrase)
 	if err != nil {
@@ -92,7 +96,7 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 
 	settings, err := s.storage.getInstanceSettings(inst)
 	if err != nil {
-		return fmt.Errorf("failed to fetch the instance: %w", err)
+		return fmt.Errorf("failed to fetch the settings: %w", err)
 	}
 
 	publicName, err := s.PublicName(inst)
@@ -125,6 +129,70 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send the email: %w", err)
+	}
+
+	return nil
+}
+
+// ConfirmEmailUpdate is the second step to the email update process.
+//
+// This step consiste to make the email change effectif and relay the change
+// into the cloudery.
+func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the settings: %w", err)
+	}
+
+	pendingEmail, ok := settings.M["pending_email"].(string)
+	if !ok {
+		return ErrNoPendingEmail
+	}
+
+	err = s.token.Validate(inst, token.EmailUpdate, pendingEmail, tok)
+	if err != nil {
+		return fmt.Errorf("failed to validate the token: %w", err)
+	}
+
+	settings.M["email"] = pendingEmail
+	delete(settings.M, "pending_email")
+
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
+	}
+
+	err = s.cloudery.SaveInstance(inst, &cloudery.SaveCmd{
+		Locale:     inst.Locale,
+		Email:      settings.M["email"].(string),
+		PublicName: settings.M["public_name"].(string),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update the cloudery: %w", err)
+	}
+
+	return nil
+}
+
+// CancelEmailUpdate cancel any ongoing email update process
+//
+// If no process is ongoin it's a no-op.
+func (s *SettingsService) CancelEmailUpdate(inst *instance.Instance) error {
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the settings: %w", err)
+	}
+
+	_, ok := settings.M["pending_email"].(string)
+	if !ok {
+		return nil
+	}
+
+	delete(settings.M, "pending_email")
+
+	err = s.storage.setInstanceSettings(inst, settings)
+	if err != nil {
+		return fmt.Errorf("failed to save the settings changes: %w", err)
 	}
 
 	return nil

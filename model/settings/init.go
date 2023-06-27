@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -15,16 +16,19 @@ type Service interface {
 	GetInstanceSettings(inst prefixer.Prefixer) (*couchdb.JSONDoc, error)
 	SetInstanceSettings(inst prefixer.Prefixer, doc *couchdb.JSONDoc) error
 	StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) error
+	ConfirmEmailUpdate(inst *instance.Instance, tok string) error
+	CancelEmailUpdate(inst *instance.Instance) error
 }
 
 func Init(
 	emailer emailer.Emailer,
 	instance instance.Service,
 	token token.Service,
+	cloudery cloudery.Service,
 ) *SettingsService {
 	storage := NewCouchdbStorage()
 
-	service = NewService(emailer, instance, token, storage)
+	service = NewService(emailer, instance, token, cloudery, storage)
 
 	return service
 }
