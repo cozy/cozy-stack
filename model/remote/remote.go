@@ -186,6 +186,12 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 	return &remote, nil
 }
 
+func lockDoctype(inst *instance.Instance, docID string) func() {
+	mu := config.Lock().ReadWrite(inst, docID)
+	_ = mu.Lock()
+	return mu.Unlock
+}
+
 // Find finds the request defined for the given doctype
 func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 	var raw string
@@ -194,6 +200,7 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 		dt := Doctype{
 			DocID: consts.Doctypes + "/" + doctype,
 		}
+		defer lockDoctype(ins, dt.DocID)()
 		err := couchdb.GetDoc(ins, consts.Doctypes, dt.DocID, &dt)
 		if err != nil || dt.UpdatedAt.Add(24*time.Hour).Before(time.Now()) {
 			rev := dt.Rev()
