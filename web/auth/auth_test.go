@@ -684,8 +684,8 @@ func TestAuth(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+registrationToken).
 			WithJSON(map[string]interface{}{
 				"client_id":        clientID,
+				"client_name":      "cozy-test-new-name",
 				"redirect_uris":    []string{"https://example.org/oauth/callback"},
-				"client_name":      "cozy-test",
 				"software_id":      "github.com/cozy/cozy-test",
 				"software_version": "v0.1.3",
 			}).
@@ -699,7 +699,7 @@ func TestAuth(t *testing.T) {
 		obj.ValueEqual("redirect_uris", []string{"https://example.org/oauth/callback"})
 		obj.ValueEqual("grant_types", []string{"authorization_code", "refresh_token"})
 		obj.ValueEqual("response_types", []string{"code"})
-		obj.ValueEqual("client_name", "cozy-test")
+		obj.ValueEqual("client_name", "cozy-test-new-name")
 		obj.ValueEqual("software_id", "github.com/cozy/cozy-test")
 		obj.ValueEqual("software_version", "v0.1.3")
 	})

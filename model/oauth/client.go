@@ -376,15 +376,7 @@ func hasOptions(needle CreateOptions, haystack []CreateOptions) bool {
 	return false
 }
 
-// Create is a function that sets some fields, and then save it in Couch.
-func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegistrationError {
-	if err := c.checkMandatoryFields(i); err != nil {
-		return err
-	}
-	if err := c.CheckSoftwareID(i); err != nil {
-		return err
-	}
-
+func (c *Client) ensureClientNameUnicity(i *instance.Instance) error {
 	var results []*Client
 	req := &couchdb.FindRequest{
 		UseIndex: "by-client-name",
@@ -395,10 +387,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		i.Logger().WithNamespace("oauth").
 			Warnf("Cannot find clients by name: %s", err)
-		return &ClientRegistrationError{
-			Code:  http.StatusInternalServerError,
-			Error: "internal_server_error",
-		}
+		return err
 	}
 
 	// Find the correct suffix to apply to the client name in case it is already
@@ -431,6 +420,25 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		c.ClientName = c.ClientName + "-" + suffix
 	}
 
+	return nil
+}
+
+// Create is a function that sets some fields, and then save it in Couch.
+func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegistrationError {
+	if err := c.checkMandatoryFields(i); err != nil {
+		return err
+	}
+	if err := c.CheckSoftwareID(i); err != nil {
+		return err
+	}
+
+	if err := c.ensureClientNameUnicity(i); err != nil {
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+
 	if !hasOptions(NotPending, opts) {
 		c.Pending = true
 	}
@@ -453,7 +461,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	md.DocTypeVersion = DocTypeVersion
 	c.Metadata = md
 
-	if err = couchdb.CreateDoc(i, c); err != nil {
+	if err := couchdb.CreateDoc(i, c); err != nil {
 		i.Logger().WithNamespace("oauth").
 			Warnf("Cannot create client: %s", err)
 		return &ClientRegistrationError{
@@ -469,6 +477,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		}
 	}
 
+	var err error
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, crypto.StandardClaims{
 		Audience: consts.RegistrationTokenAudience,
 		Issuer:   i.Domain,
@@ -532,7 +541,6 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 
 	c.CouchID = old.CouchID
 	c.CouchRev = old.CouchRev
-	c.ClientName = old.ClientName
 	c.ClientID = ""
 	c.SecretExpiresAt = 0
 	c.RegistrationToken = ""
@@ -543,6 +551,15 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.OnboardingApp = ""
 	c.OnboardingPermissions = ""
 	c.OnboardingState = ""
+
+	if c.ClientName != old.ClientName {
+		if err := c.ensureClientNameUnicity(i); err != nil {
+			return &ClientRegistrationError{
+				Code:  http.StatusInternalServerError,
+				Error: "internal_server_error",
+			}
+		}
+	}
 
 	c.Flagship = old.Flagship
 	c.CertifiedFromStore = old.CertifiedFromStore
