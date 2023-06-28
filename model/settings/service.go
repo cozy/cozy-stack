@@ -134,6 +134,46 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 	return nil
 }
 
+// ResendEmailUpdate will resend the validation email.
+func (s *SettingsService) ResendEmailUpdate(inst *instance.Instance) error {
+	settings, err := s.storage.getInstanceSettings(inst)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the settings: %w", err)
+	}
+
+	publicName, err := s.PublicName(inst)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve the instance settings: %w", err)
+	}
+
+	pendingEmail, ok := settings.M["pending_email"].(string)
+	if !ok {
+		return ErrNoPendingEmail
+	}
+
+	token, err := s.token.GenerateAndSave(inst, token.EmailUpdate, pendingEmail, TokenExpiration)
+	if err != nil {
+		return fmt.Errorf("failed to generate and save the confirmation token: %w", err)
+	}
+
+	link := inst.PageURL("/settings/email/confirm", url.Values{
+		"token": []string{token},
+	})
+
+	err = s.emailer.SendEmail(inst, &emailer.SendEmailCmd{
+		TemplateName: "update_email",
+		TemplateValues: map[string]interface{}{
+			"PublicName":      publicName,
+			"EmailUpdateLink": link,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send the email: %w", err)
+	}
+
+	return nil
+}
+
 // ConfirmEmailUpdate is the second step to the email update process.
 //
 // This step consiste to make the email change effectif and relay the change

@@ -78,6 +78,26 @@ Authorization: Bearer ...
 HTTP/1.1 204 No Content
 ```
 
+### POST /settings/email/resend
+
+Once the email process is started, it's possible to resend an email in order to ensure
+the link delivery.
+
+#### Request
+
+```http
+POST /settings/email HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### GET /settings/email/confirm
 
 This is the second part of the email update process. The user have received a
