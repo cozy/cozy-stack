@@ -6,7 +6,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/manager"
-	"github.com/mitchellh/mapstructure"
 )
 
 // ManagerURLKind is an enum type for the different kinds of manager URLs.
@@ -60,35 +59,23 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 	return baseURL.String(), nil
 }
 
-type managerConfig struct {
-	API struct {
-		URL   string
-		Token string
-	}
-}
-
 // APIManagerClient returns a client to talk to the manager via its API.
 func APIManagerClient(inst *Instance) *manager.APIClient {
-	contexts := config.GetConfig().Clouderies
-	if contexts == nil {
+	clouderies := config.GetConfig().Clouderies
+	if clouderies == nil {
 		return nil
 	}
 
-	context, ok := contexts[inst.ContextName]
+	var cloudery config.ClouderyConfig
+	cloudery, ok := clouderies[inst.ContextName]
 	if !ok {
-		context, ok = contexts[config.DefaultInstanceContext]
+		cloudery, ok = clouderies[config.DefaultInstanceContext]
 	}
 	if !ok {
 		return nil
 	}
 
-	var config managerConfig
-	err := mapstructure.Decode(context, &config)
-	if err != nil {
-		return nil
-	}
-
-	api := config.API
+	api := cloudery.API
 	if api.URL == "" || api.Token == "" {
 		return nil
 	}

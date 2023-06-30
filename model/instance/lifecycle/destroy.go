@@ -21,17 +21,15 @@ import (
 
 func AskDeletion(inst *instance.Instance) error {
 	clouderies := config.GetConfig().Clouderies
-	var cloudery interface{}
+	var cloudery config.ClouderyConfig
 	cloudery, ok := clouderies[inst.ContextName]
 	if !ok {
 		cloudery = clouderies[config.DefaultInstanceContext]
 	}
-	if cloudery == nil {
-		return nil
-	}
-	api := cloudery.(map[string]interface{})["api"]
-	clouderyURL, _ := api.(map[string]interface{})["url"].(string)
-	clouderyToken, _ := api.(map[string]interface{})["token"].(string)
+
+	api := cloudery.API
+	clouderyURL := api.URL
+	clouderyToken := api.Token
 
 	u, err := url.Parse(clouderyURL)
 	if err != nil {
