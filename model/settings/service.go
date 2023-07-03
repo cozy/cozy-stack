@@ -195,7 +195,7 @@ func (s *SettingsService) ConfirmEmailUpdate(inst *instance.Instance, tok string
 	}
 
 	settings.M["email"] = pendingEmail
-	delete(settings.M, "pending_email")
+	settings.M["pending_email"] = nil
 
 	err = s.storage.setInstanceSettings(inst, settings)
 	if err != nil {
@@ -228,7 +228,7 @@ func (s *SettingsService) CancelEmailUpdate(inst *instance.Instance) error {
 		return nil
 	}
 
-	delete(settings.M, "pending_email")
+	settings.M["pending_email"] = nil
 
 	err = s.storage.setInstanceSettings(inst, settings)
 	if err != nil {
