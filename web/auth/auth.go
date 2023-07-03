@@ -603,7 +603,7 @@ func Routes(router *echo.Group) {
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
-	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
+	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.DELETE("/register/:client-id", deleteClient)
 	router.POST("/clients/:client-id/challenge", postChallenge, checkRegistrationToken)
 	router.POST("/clients/:client-id/attestation", postAttestation)

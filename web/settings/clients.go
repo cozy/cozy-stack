@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -82,7 +83,10 @@ func (h *HTTPHandler) revokeClient(c echo.Context) error {
 		return err
 	}
 
-	client, err := oauth.FindClient(instance, c.Param("id"))
+	clientID := c.Param("id")
+	defer auth.LockOAuthClient(instance, clientID)()
+
+	client, err := oauth.FindClient(instance, clientID)
 	if err != nil {
 		return err
 	}
@@ -105,6 +109,8 @@ func (h *HTTPHandler) synchronized(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	defer auth.LockOAuthClient(instance, claims.Subject)()
 
 	client, err := oauth.FindClient(instance, claims.Subject)
 	if err != nil {
