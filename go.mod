@@ -28,7 +28,6 @@ require (
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/leonelquinteros/gotext v1.5.2
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mssola/user_agent v0.6.0
 	github.com/ncw/swift/v2 v2.0.2
 	github.com/nightlyone/lockfile v1.0.0
@@ -48,7 +47,7 @@ require (
 	github.com/yuin/goldmark v1.5.4
 	golang.org/x/crypto v0.10.0
 	golang.org/x/image v0.7.0
-	golang.org/x/net v0.10.0
+	golang.org/x/net v0.11.0
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/sync v0.2.0
 	golang.org/x/text v0.10.0
@@ -81,6 +80,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.18.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
