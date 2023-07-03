@@ -160,8 +160,9 @@ func TestConfirmEmailUpdate_success(t *testing.T) {
 
 	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
 		M: map[string]interface{}{
-			"public_name": "Jane Doe",
-			"email":       "some@email.com",
+			"public_name":   "Jane Doe",
+			"email":         "some@email.com",
+			"pending_email": nil,
 		},
 	}).Return(nil).Once()
 
@@ -251,8 +252,9 @@ func Test_CancelEmailUpdate_success(t *testing.T) {
 
 	storage.On("setInstanceSettings", &inst, &couchdb.JSONDoc{
 		M: map[string]interface{}{
-			"public_name": "Jane Doe",
-			"email":       "foo@bar.baz",
+			"public_name":   "Jane Doe",
+			"email":         "foo@bar.baz",
+			"pending_email": nil,
 		},
 	}).Return(nil).Once()
 
