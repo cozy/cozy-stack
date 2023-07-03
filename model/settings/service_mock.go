@@ -51,6 +51,11 @@ func (m *Mock) StartEmailUpdate(inst *instance.Instance, cmd *UpdateEmailCmd) er
 	return m.Called(inst, cmd).Error(0)
 }
 
+// ResendEmailUpdate mock method.
+func (m *Mock) ResendEmailUpdate(inst *instance.Instance) error {
+	return m.Called(inst).Error(0)
+}
+
 // ConfirmEmailUpdate mock method.
 func (m *Mock) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
 	return m.Called(inst, tok).Error(0)

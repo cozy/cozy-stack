@@ -124,6 +124,27 @@ func (h *HTTPHandler) postEmail(c echo.Context) error {
 	}
 }
 
+// postEmailResend handle POST /settings/email/resend
+func (h *HTTPHandler) postEmailResend(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+
+	err := h.svc.ResendEmailUpdate(inst)
+
+	switch {
+	case err == nil:
+		c.NoContent(http.StatusNoContent)
+		return nil
+	case errors.Is(err, instance.ErrInvalidPassphrase):
+		return jsonapi.BadRequest(instance.ErrInvalidPassphrase)
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+}
+
 // deleteEmail handle DELETE /settings/email
 func (h *HTTPHandler) deleteEmail(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.Settings); err != nil {
@@ -137,6 +158,8 @@ func (h *HTTPHandler) deleteEmail(c echo.Context) error {
 	case err == nil:
 		c.NoContent(http.StatusNoContent)
 		return nil
+	case errors.Is(err, csettings.ErrNoPendingEmail):
+		return jsonapi.BadRequest(csettings.ErrNoPendingEmail)
 	default:
 		return jsonapi.InternalServerError(err)
 	}
@@ -182,6 +205,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
 
 	router.POST("/email", h.postEmail)
+	router.POST("/email/resend", h.postEmailResend)
 	router.DELETE("/email", h.deleteEmail)
 	router.GET("/email/confirm", h.getEmailConfirmation)
 

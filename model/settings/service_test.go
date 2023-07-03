@@ -283,3 +283,62 @@ func Test_CancelEmailUpdate_without_pending_email(t *testing.T) {
 	err := svc.CancelEmailUpdate(&inst)
 	assert.NoError(t, err)
 }
+
+func Test_ResendEmailUpdate_success(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name":   "Jane Doe",
+			"pending_email": "foo.mycozy.cloud",
+		},
+	}, nil).Twice()
+
+	tokenSvc.On("GenerateAndSave", &inst, token.EmailUpdate, "foo.mycozy.cloud", TokenExpiration).
+		Return("some-token", nil).Once()
+
+	emailerSvc.On("SendEmail", &inst, &emailer.SendEmailCmd{
+		TemplateName: "update_email",
+		TemplateValues: map[string]interface{}{
+			"PublicName":      "Jane Doe",
+			"EmailUpdateLink": "http://foo.mycozy.cloud/settings/email/confirm?token=some-token",
+		},
+	}).Return(nil).Once()
+
+	err := svc.ResendEmailUpdate(&inst)
+	assert.NoError(t, err)
+}
+
+func Test_ResendEmailUpdate_with_no_pending_email(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	storage.On("getInstanceSettings", &inst).Return(&couchdb.JSONDoc{
+		M: map[string]interface{}{
+			"public_name": "Jane Doe",
+			// no pendin_email
+		},
+	}, nil).Twice()
+
+	err := svc.ResendEmailUpdate(&inst)
+	assert.ErrorIs(t, err, ErrNoPendingEmail)
+}
