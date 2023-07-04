@@ -97,9 +97,10 @@ func TestBitwarden(t *testing.T) {
 		obj.Value("Kdf").Number()
 		obj.Value("KdfIterations").Number()
 
-		assert.NotZero(t, len(testLogger.Entries))
+		entries := testLogger.AllEntries()
+		assert.NotZero(t, len(entries))
 		orgKeyDoesNotExist := false
-		for _, entry := range testLogger.Entries {
+		for _, entry := range entries {
 			if entry.Message == "Organization key does not exist" {
 				orgKeyDoesNotExist = true
 			}
