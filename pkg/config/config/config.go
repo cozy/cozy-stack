@@ -151,10 +151,12 @@ type Config struct {
 
 // ClouderyConfig for [cloudery.ClouderyService].
 type ClouderyConfig struct {
-	API struct {
-		URL   string `mapstructure:"url"`
-		Token string `mapstructure:"token"`
-	} `mapstructure:"api"`
+	API ClouderyAPI `mapstructure:"api"`
+}
+
+type ClouderyAPI struct {
+	URL   string `mapstructure:"url"`
+	Token string `mapstructure:"token"`
 }
 
 // Fs contains the configuration values of the file-system

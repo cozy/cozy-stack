@@ -157,11 +157,11 @@ func TestConfigUnmarshal(t *testing.T) {
 	}, cfg.Registries)
 
 	// Clouderies
-	assert.EqualValues(t, map[string]interface{}{
-		"default": map[string]interface{}{
-			"api": map[string]interface{}{
-				"url":   "https://some-url",
-				"token": "some-token",
+	assert.EqualValues(t, map[string]ClouderyConfig{
+		"default": {
+			API: ClouderyAPI{
+				URL:   "https://some-url",
+				Token: "some-token",
 			},
 		},
 	}, cfg.Clouderies)
