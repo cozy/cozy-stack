@@ -1,0 +1,170 @@
+host: 0.0.0.0
+port: 8080
+
+subdomains: flat
+
+admin:
+  host: 127.0.0.1
+
+vault:
+  #  credentials_encryptor_key: /some/key.enc
+  # credentials_decryptor_key: /some/key.dec
+
+assets: "some/assets/path"
+assets_polling_disabled: true
+assets_polling_interval: 1h
+
+fs:
+  url: https://some-url
+    # root_ca: /some/ca.crt
+  EndpointType: internal
+  can_query_info: true
+  default_layout: 2 
+  versioning:
+    max_number_of_versions_to_keep: 4
+    min_delay_between_two_versions: 1m
+
+couchdb:
+  url: https://some-couchdb-url
+    #root_ca: /some/ca/path.crt
+
+redis:
+  addrs: url-1:12 url2:23 url3:34
+  master: some-name
+  password: some-password
+  databases:
+    jobs: 0
+    cache: 1
+    lock: 2
+    sessions: 3
+    downloads: 4
+    konnectors: 5
+    realtime: 6
+    log: 7
+    rate_limiting: 8
+  pool_size: 60
+
+jobs:
+  whitelist: true
+  defaultDurationToKeep: 1H
+  imagemagick_convert_cmd: some-cmd
+  workers:
+    updates:
+      concurrency: 1
+      max_exec_count: 1
+      timeout: 1h
+
+mail:
+  noreply_address: foo@bar.baz
+  noreply_name: My Cozy
+  alert_address: foo2@bar.baz
+  reply_to: support@cozycloud.cc
+  contexts:
+    my-context:
+      host: '-'
+  host: localhost
+  username: some-username
+  password: some-password
+  port: 25
+  disable_tls: true
+  skip_certificate_validation: true
+
+geodb: /geo/db/path
+
+move:
+  url: http://some-url
+
+konnectors:
+  cmd: some-cmd
+
+registries:
+  default: []
+  example:
+  - https://registry-url-1
+  - https://registry-url-2
+
+office:
+  foo:
+    onlyoffice_url: https://onlyoffice-url
+    onlyoffice_inbox_secret: inbox_secret 
+    onlyoffice_outbox_secret: outbox_secret
+
+clouderies:
+  default:
+    api:
+      url: https://some-url
+      token: some-token
+
+password_reset_interval: 1h
+
+authentication:
+  example_oidc:
+    disable_password_authentication: True
+    oidc:
+      client_id: some-id
+      client_secret: some-secret
+      scope: openid
+      redirect_uri: https://some-redirect-uri
+      authorize_url: https://some-authorize-url
+      token_url: https://some-token-url
+      userinfo_url: https://some-user-info-url
+      logout_url: https://some-logout-url
+      userinfo_instance_field: instance-field
+
+remote_assets:
+  bank_classifier: https://some-remote-assets-url
+
+flagship:
+
+notifications:
+  development: true
+  fcm_server: http://some-server
+  android_api_key: some-api-key
+  ios_certificate_key_path: cert-key-path
+  ios_certificate_password: cert-password
+  ios_key_id: key-id
+  ios_team_id: team-id
+  huawei_get_token: huawei-token
+  huawei_send_message: huawei-message
+  contexts:
+    my-context:
+      provider: notif-provider
+      url: https://some-notif-url
+      token: some-token
+
+disable_csp: true
+csp_allowlist:
+  connect: https://url-1 https://url-2
+  font: https://fonts.gstatic.com/
+  style: https://fonts.googleapis.com/
+  contexts:
+    my-context:
+      img: https://img-url
+      script: https://script-url
+      frame: https://frame-url
+      connect: https://connect-url
+
+log:
+  level: info
+  syslog: true
+
+contexts:
+  my-context:
+    manager_url: https://manager-url
+    onboarded_redirection: home/intro
+    default_redirection: home/
+    help_link: https://cozy.io/fr/support
+    enable_premium_links: false
+    claudy_actions:
+    - desktop
+    - support
+    additional_platform_apps:
+    - some-app
+    features:
+    - hide_konnector_errors: true
+    - home.konnectors.hide-errors: true
+    - home_hidden_apps:
+      - foobar
+    home_logos:
+      /logos/1.png: 'Title 1'
+      /logos/2.png: 'Title 2'
