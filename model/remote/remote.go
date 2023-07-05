@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/httpcache"
@@ -461,6 +462,10 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 		return ErrRemoteAssetNotFound
 	}
 
+	if build.IsDevRelease() && strings.HasPrefix(assetURL, "file:") {
+		return serveLocalRemoteAsset(assetURL, w)
+	}
+
 	req, err := http.NewRequest(http.MethodGet, assetURL, nil)
 	if err != nil {
 		return err
@@ -478,6 +483,27 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 	w.WriteHeader(res.StatusCode)
 
 	_, err = io.Copy(w, res.Body)
+	return err
+}
+
+func serveLocalRemoteAsset(assetURL string, w http.ResponseWriter) error {
+	u, err := url.Parse(assetURL)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(u.Path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	ext := path.Ext(u.Path)
+	mimetype := filetype.ByExtension(ext)
+	w.Header().Set(echo.HeaderContentType, mimetype)
+	w.WriteHeader(http.StatusOK)
+
+	_, err = io.Copy(w, f)
 	return err
 }
 
