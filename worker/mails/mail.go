@@ -84,6 +84,17 @@ func SendMail(ctx *job.WorkerContext) error {
 			opts.ReplyTo = &mail.Address{Name: name, Email: replyTo}
 		}
 		opts.RecipientName = toAddr.Name
+	case mail.ModePendingEmail:
+		toAddr, err := pendingAddress(ctx.Instance)
+		if err != nil {
+			return err
+		}
+		opts.To = []*mail.Address{toAddr}
+		opts.From = &mail.Address{Name: name, Email: from}
+		if replyTo != "" {
+			opts.ReplyTo = &mail.Address{Name: name, Email: replyTo}
+		}
+		opts.RecipientName = toAddr.Name
 	case mail.ModeFromUser:
 		sender, err := addressFromInstance(ctx.Instance)
 		if err != nil {
@@ -116,6 +127,22 @@ func SendMail(ctx *job.WorkerContext) error {
 		ctx.Logger().Warnf("sendmail has failed: %s", err)
 	}
 	return err
+}
+
+func pendingAddress(i *instance.Instance) (*mail.Address, error) {
+	doc, err := i.SettingsDocument()
+	if err != nil {
+		return nil, err
+	}
+	email, ok := doc.M["pending_email"].(string)
+	if !ok {
+		return nil, fmt.Errorf("Domain %s has no pending email in its settings", i.Domain)
+	}
+	publicName, _ := doc.M["public_name"].(string)
+	return &mail.Address{
+		Name:  publicName,
+		Email: email,
+	}, nil
 }
 
 func addressFromInstance(i *instance.Instance) (*mail.Address, error) {

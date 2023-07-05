@@ -190,6 +190,7 @@ file at the root of this repository.
 
 -   `mode`: string specifying the mode of the send:
     -   `noreply` to send a notification mail to the user
+    -   `pending` to send a mail to the user to confirm their new email address
     -   `from` to send a mail from the user
     -   `support` to send both an email to the support and a confirmation to
         the user
