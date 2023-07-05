@@ -22,6 +22,17 @@ import (
 
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	if !instance.OnboardingFinished {
+		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+			"Domain":       instance.ContextualDomain(),
+			"ContextName":  instance.ContextName,
+			"Locale":       instance.Locale,
+			"Title":        instance.TemplateTitle(),
+			"Favicon":      middlewares.Favicon(instance),
+			"SupportEmail": instance.SupportEmailAddress(),
+		})
+	}
+
 	hasHint := false
 	if setting, err := settings.Get(instance); err == nil {
 		hasHint = setting.PassphraseHint != ""
@@ -65,7 +76,7 @@ func passphraseForm(c echo.Context) error {
 			"Locale":       inst.Locale,
 			"Title":        inst.TemplateTitle(),
 			"Favicon":      middlewares.Favicon(inst),
-			"SupportEmail": "contact@cozycloud.cc",
+			"SupportEmail": inst.SupportEmailAddress(),
 		})
 	}
 
