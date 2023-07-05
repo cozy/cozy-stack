@@ -30,23 +30,27 @@ func passphraseResetForm(c echo.Context) error {
 	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
 	}
-	showBackButton := true
-	if c.QueryParam("hideBackButton") == "true" {
-		showBackButton = false
+	backButton := ""
+	from := c.QueryParam("from")
+	if from != "" {
+		backButton = instance.SubDomain(from).String()
+	} else if c.QueryParam("hideBackButton") != "true" {
+		backButton = instance.PageURL("/auth/login", nil)
 	}
 	forcedOIDC := instance.HasForcedOIDC()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"Domain":         instance.ContextualDomain(),
-		"ContextName":    instance.ContextName,
-		"Locale":         instance.Locale,
-		"Title":          instance.TemplateTitle(),
-		"Favicon":        middlewares.Favicon(instance),
-		"CSRF":           c.Get("csrf"),
-		"Redirect":       c.QueryParam("redirect"),
-		"HasHint":        hasHint,
-		"HasCiphers":     hasCiphers,
-		"CozyPass":       forcedOIDC,
-		"ShowBackButton": showBackButton,
+		"Domain":      instance.ContextualDomain(),
+		"ContextName": instance.ContextName,
+		"Locale":      instance.Locale,
+		"Title":       instance.TemplateTitle(),
+		"Favicon":     middlewares.Favicon(instance),
+		"CSRF":        c.Get("csrf"),
+		"Redirect":    c.QueryParam("redirect"),
+		"HasHint":     hasHint,
+		"HasCiphers":  hasCiphers,
+		"CozyPass":    forcedOIDC,
+		"From":        from,
+		"BackButton":  backButton,
 	})
 }
 
@@ -119,7 +123,8 @@ func sendHint(c echo.Context) error {
 
 func passphraseReset(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	if err := lifecycle.RequestPassphraseReset(i); err != nil && !errors.Is(err, instance.ErrResetAlreadyRequested) {
+	from := c.FormValue("from")
+	if err := lifecycle.RequestPassphraseReset(i, from); err != nil && !errors.Is(err, instance.ErrResetAlreadyRequested) {
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -186,6 +191,7 @@ func passphraseRenewForm(c echo.Context) error {
 		"Title":          inst.TemplateTitle(),
 		"Favicon":        middlewares.Favicon(inst),
 		"Action":         "/auth/passphrase_renew",
+		"From":           c.QueryParam("from"),
 		"Iterations":     iterations,
 		"Salt":           string(inst.PassphraseSalt()),
 		"ResetToken":     hex.EncodeToString(token),
@@ -241,6 +247,11 @@ func passphraseRenew(c echo.Context) error {
 	}
 
 	redirect := inst.PageURL("/auth/login", nil)
+	if c.FormValue("from") == consts.SettingsSlug {
+		u := inst.SubDomain(consts.SettingsSlug)
+		u.Fragment = "/profile/email"
+		redirect = u.String()
+	}
 	if wantsJSON(c) {
 		return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 	}

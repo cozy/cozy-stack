@@ -6,6 +6,7 @@
   const passInput = d.getElementById('password')
   const hintField = d.getElementById('hint-field')
   const hintInput = d.getElementById('hint')
+  const fromInput = d.getElementById('from')
   const strength = d.getElementById('password-strength')
   const submit = form.querySelector('[type=submit]')
   const iterationsInput = d.getElementById('iterations')
@@ -71,6 +72,9 @@
         }
         if (resetTokenInput) {
           data.append('passphrase_reset_token', resetTokenInput.value)
+        }
+        if (fromInput) {
+          data.append('from', fromInput.value)
         }
         if (csrfTokenInput) {
           data.append('csrf_token', csrfTokenInput.value)
