@@ -733,11 +733,7 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	cacheStorage := cache.New(cacheRedis)
-
-	avatars, err := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
-	if err != nil {
-		return fmt.Errorf("failed to create the avatar service: %w", err)
-	}
+	avatars := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
 
 	// Setup keyring
 	var keyringCfg keyring.Config
