@@ -2,7 +2,6 @@ package avatar
 
 import (
 	"bytes"
-	"context"
 	"image/png"
 	"os"
 	"testing"
@@ -15,13 +14,8 @@ func Test_Initials_PNG(t *testing.T) {
 		t.Skipf("this test require the \"convert\" binary, skip it due to the \"--short\" flag")
 	}
 
-	client, err := NewPNGInitials("convert")
-	require.NoError(t, err)
-	defer client.Shutdown(context.Background())
-
-	ctx := context.Background()
-
-	rawRes, err := client.Generate(ctx, "JD", "#FF7F1B")
+	client := NewPNGInitials("convert")
+	rawRes, err := client.Generate("JD", "#FF7F1B")
 	require.NoError(t, err)
 
 	rawExpected, err := os.ReadFile("./testdata/initials-convert.png")
