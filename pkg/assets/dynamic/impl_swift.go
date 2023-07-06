@@ -73,7 +73,8 @@ func (s *SwiftFS) Remove(context, name string) error {
 func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
-	objNames, err := s.swiftConn.ObjectNamesAll(s.ctx, DynamicAssetsContainerName, nil)
+	opts := &swift.ObjectsOpts{Limit: 10_000}
+	objNames, err := s.swiftConn.ObjectNamesAll(s.ctx, DynamicAssetsContainerName, opts)
 	if err != nil {
 		return nil, err
 	}

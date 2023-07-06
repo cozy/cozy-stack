@@ -225,6 +225,7 @@ func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string 
 func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) {
 	prefix := s.makeObjectName(slug, version, shasum, "") + "/"
 	names, err := s.c.ObjectNamesAll(s.ctx, s.container, &swift.ObjectsOpts{
+		Limit:  10_000,
 		Prefix: prefix,
 	})
 	if err != nil {
