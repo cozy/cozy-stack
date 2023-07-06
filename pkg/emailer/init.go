@@ -14,6 +14,7 @@ var service *EmailerService
 // - [Mock] with a mock implementation
 type Emailer interface {
 	SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error
+	SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error
 }
 
 // Init the emailer package by setting up a service based on the

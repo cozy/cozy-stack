@@ -25,3 +25,8 @@ func NewMock(t *testing.T) *Mock {
 func (m *Mock) SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }
+
+// SendPendingEmail mock method.
+func (m *Mock) SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
+	return m.Called(inst, cmd).Error(0)
+}

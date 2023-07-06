@@ -23,10 +23,31 @@ type SendEmailCmd struct {
 	TemplateValues map[string]interface{}
 }
 
-// SendMail send a mail to the instance owner.
+// SendMail sends a mail to the instance owner.
 func (s *EmailerService) SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
 	msg, err := job.NewMessage(map[string]interface{}{
 		"mode":            "noreply",
+		"template_name":   cmd.TemplateName,
+		"template_values": cmd.TemplateValues,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = s.jobBroker.PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+
+	return err
+}
+
+// SendPendingMail sends a mail to the instance owner on their new pending
+// email address. It is used to confirm that they can receive emails on the new
+// email address.
+func (s *EmailerService) SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
+	msg, err := job.NewMessage(map[string]interface{}{
+		"mode":            "pending",
 		"template_name":   cmd.TemplateName,
 		"template_values": cmd.TemplateValues,
 	})
