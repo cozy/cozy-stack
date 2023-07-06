@@ -14,8 +14,8 @@
   <body class="cirrus theme-inverted">
     <main class="wrapper">
       <header class="wrapper-top d-flex flex-row align-items-center">
-        {{if .ShowBackButton}}
-        <a href="/auth/login" class="btn btn-icon" aria-label="{{t "Back icon label"}}">
+        {{if .BackButton}}
+        <a href="{{.BackButton}}" class="btn btn-icon" aria-label="{{t "Back icon label"}}">
           <span class="icon icon-back"></span>
         </a>
         <div class="vertical-separator d-sm-none" role="separator"></div>
@@ -51,6 +51,7 @@
         <form method="POST" action="/auth/passphrase_reset" class="d-contents">
           <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
           <input type="hidden" name="redirect" value="{{.Redirect}}" />
+          <input type="hidden" name="from" value="{{.From}}" />
           <button type="submit" class="alert d-flex align-items-center w-100 {{if .HasCiphers}}card-intent{{else}}alert-info{{end}}">
             <div class="me-3 flex-grow-1">
               <p class="text-start text-primary mb-2">

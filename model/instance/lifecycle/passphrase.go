@@ -94,7 +94,7 @@ func SendHint(inst *instance.Instance) error {
 
 // RequestPassphraseReset generates a new registration token for the user to
 // renew its password.
-func RequestPassphraseReset(inst *instance.Instance) error {
+func RequestPassphraseReset(inst *instance.Instance, from string) error {
 	// If a registration token is set, we do not generate another token than the
 	// registration one, and bail.
 	if inst.RegisterToken != nil {
@@ -119,6 +119,7 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 	// passphrase.
 	resetURL := inst.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(inst.PassphraseResetToken)},
+		"from":  {from},
 	})
 	publicName, err := csettings.PublicName(inst)
 	if err != nil {

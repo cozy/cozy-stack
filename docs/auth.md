@@ -382,8 +382,13 @@ be directly redirected to his cozy.
 This endpoint accepts a `hideBackButton` parameter. If this parameter is present
 and set to `true` then the passphrase reset page won't display any button to go
 back to the login page.
-This is useful when this page is opened in a different context from the one in 
+This is useful when this page is opened in a different context from the one in
 which the login page was opened (e.g. a browser vs a mobile native application).
+
+It is also possible to use `from=settings` parameter in the query-string, to go
+back to the settings app after the password has been reset. It is useful when
+the user wants to change their email address, as the process for changing this
+address requires the password.
 
 ```http
 GET /auth/passphrase_reset?hideBackButton=true HTTP/1.1

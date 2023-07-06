@@ -314,7 +314,7 @@ func TestLifecycle(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = lifecycle.RequestPassphraseReset(in)
+		err = lifecycle.RequestPassphraseReset(in, "")
 		require.NoError(t, err)
 
 		// token should not have been generated since we have not set a passphrase
@@ -328,7 +328,7 @@ func TestLifecycle(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = lifecycle.RequestPassphraseReset(in)
+		err = lifecycle.RequestPassphraseReset(in, "")
 		require.NoError(t, err)
 
 		regToken := in.PassphraseResetToken
@@ -336,7 +336,7 @@ func TestLifecycle(t *testing.T) {
 		assert.NotNil(t, in.PassphraseResetToken)
 		assert.True(t, !in.PassphraseResetTime.Before(time.Now().UTC()))
 
-		err = lifecycle.RequestPassphraseReset(in)
+		err = lifecycle.RequestPassphraseReset(in, "")
 		assert.Equal(t, instance.ErrResetAlreadyRequested, err)
 		assert.EqualValues(t, regToken, in.PassphraseResetToken)
 		assert.EqualValues(t, regTime, in.PassphraseResetTime)
@@ -364,7 +364,7 @@ func TestLifecycle(t *testing.T) {
 		})
 		require.Error(t, err)
 
-		err = lifecycle.RequestPassphraseReset(in)
+		err = lifecycle.RequestPassphraseReset(in, "")
 		require.NoError(t, err)
 
 		err = lifecycle.PassphraseRenew(in, []byte("token"), lifecycle.PassParameters{
