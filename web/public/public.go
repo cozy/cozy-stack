@@ -47,6 +47,12 @@ func Avatar(c echo.Context) error {
 // in the flagship app).
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	if !inst.OnboardingFinished {
+		return c.JSON(http.StatusPreconditionFailed, echo.Map{
+			"error": "the instance has not been onboarded",
+		})
+	}
+
 	publicName, err := csettings.PublicName(inst)
 	if err != nil {
 		publicName = ""
