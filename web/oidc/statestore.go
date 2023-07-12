@@ -36,8 +36,8 @@ const (
 )
 
 func newStateHolder(domain, redirect, confirm string, provider ProviderOIDC) *stateHolder {
-	id := hex.EncodeToString(crypto.GenerateRandomBytes(16))
-	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(16))
+	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
+	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	return &stateHolder{
 		id:       id,
 		Provider: provider,

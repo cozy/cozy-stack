@@ -112,6 +112,9 @@ func Redirect(c echo.Context) error {
 	}
 	if state.Provider == FranceConnectProvider {
 		u.Add("franceconnect", "true")
+		if c.QueryParam("nonce") != state.Nonce {
+			return renderError(c, nil, http.StatusBadRequest, "Sorry, an error occurred.")
+		}
 	}
 	redirect := inst.PageURL("/oidc/login", u)
 	return c.Redirect(http.StatusSeeOther, redirect)
