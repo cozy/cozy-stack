@@ -61,25 +61,26 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 			// 15 = Android (amazon variant)
 			// 16 = UWP
 			return "mobile", "github.com/bitwarden/mobile"
-		case 5, 6, 7:
-			// 5 = Windows
-			// 6 = macOS
-			// 7 = Linux
+		case 6, 7, 8:
+			// 6 = Windows
+			// 7 = macOS
+			// 8 = Linux
 			return "desktop", "github.com/bitwarden/desktop"
-		case 2, 3, 4, 19, 20:
+		case 2, 3, 4, 5, 19, 20:
 			// 2 = Chrome extension
 			// 3 = Firefox extension
-			// 4 = Edge extension
+			// 4 = Opera extension
+			// 5 = Edge extension
 			// 19 = Vivaldi extension
 			// 20 = Safari extension
 			return "browser", "github.com/bitwarden/browser"
-		case 8, 9, 10, 11, 12, 13, 14, 17, 18:
-			// 8 = Chrome
-			// 9 = Firefox
-			// 10 = Opera
-			// 11 = Edge
-			// 12 = Internet Explorer
-			// 13 = Unknown browser
+		case 9, 10, 11, 12, 13, 14, 17, 18:
+			// 9 = Chrome
+			// 10 = Firefox
+			// 11 = Opera
+			// 12 = Edge
+			// 13 = Internet Explorer
+			// 14 = Unknown browser
 			// 17 = Safari
 			// 18 = Vivaldi
 			return "web", "github.com/bitwarden/web"
