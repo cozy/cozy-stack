@@ -2,7 +2,6 @@ package swift
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -167,17 +166,10 @@ func ListObjects(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	sc := config.GetSwiftConnection()
 	container := swiftContainer(i)
-
-	outNames := []string{}
-
 	ctx := c.Request().Context()
-	err := sc.ObjectsWalk(ctx, container, nil, func(ctx context.Context, opts *swift.ObjectsOpts) (interface{}, error) {
-		names, err := sc.ObjectNames(ctx, container, opts)
-		if err == nil {
-			outNames = append(outNames, names...)
-		}
-		return names, err
-	})
+	opts := &swift.ObjectsOpts{Limit: 10_000}
+
+	names, err := sc.ObjectNamesAll(ctx, container, opts)
 	if err != nil {
 		return err
 	}
@@ -185,7 +177,7 @@ func ListObjects(c echo.Context) error {
 	out := struct {
 		ObjectNameList []string `json:"objects_names"`
 	}{
-		outNames,
+		names,
 	}
 	return c.JSON(http.StatusOK, out)
 }

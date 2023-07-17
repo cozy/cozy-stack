@@ -84,7 +84,8 @@ func (sfs *swiftVFSV3) checkFiles(
 		fileIDs[f.DocID] = struct{}{}
 	}
 
-	err = sfs.c.ObjectsWalk(sfs.ctx, sfs.container, nil, func(ctx context.Context, opts *swift.ObjectsOpts) (interface{}, error) {
+	opts := &swift.ObjectsOpts{Limit: 10_000}
+	err = sfs.c.ObjectsWalk(sfs.ctx, sfs.container, opts, func(ctx context.Context, opts *swift.ObjectsOpts) (interface{}, error) {
 		objs, err := sfs.c.Objects(sfs.ctx, sfs.container, opts)
 		if err != nil {
 			return nil, err
