@@ -6,7 +6,7 @@
   "license": "AGPLv3",
   "dependencies": {
     "eslint": "8.45.0",
-    "prettier": "2.8.8",
+    "prettier": "3.0.0",
     "svgo": "3.0.2"
   }
 }
