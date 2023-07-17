@@ -1484,7 +1484,10 @@ func FindFilesMango(c echo.Context) error {
 		for _, v := range reqFields {
 			v := v.(string)
 			if v == "path" {
+				// path is not stored in database, but added by the stack, and
+				// it requires the dir_id
 				includePath = true
+				fields = append(fields, "dir_id")
 			}
 			fields = append(fields, v)
 		}
@@ -1574,6 +1577,9 @@ func FindFilesMango(c echo.Context) error {
 		} else {
 			if ok {
 				file := newFindFile(f, fields, instance)
+				if includePath {
+					file.IncludePath(fp)
+				}
 				if secret, ok := secrets[f.ID()]; ok {
 					file.SetThumbSecret(secret)
 				}
