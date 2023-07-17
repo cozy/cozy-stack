@@ -5,17 +5,13 @@ require 'pry-rescue/minitest' unless ENV['CI']
 def setup_ciphers(override_account_attrs = {})
   inst = Instance.create name: "Alice"
 
-  bw = Bitwarden.new inst
-  bw.login
-  assert_equal bw.sync, "Syncing complete."
-
   source_url = "file://" + File.expand_path("../konnector", __dir__)
   inst.install_konnector "bankone", source_url
 
   account_attrs = {
     type: "bankone",
     name: "Bank one",
-    auth: {login: "Isabelle", zipcode: "64000"}
+    auth: { login: "Isabelle", zipcode: "64000" }
   }
 
   account_attrs = account_attrs.merge(override_account_attrs)
@@ -30,14 +26,17 @@ def setup_ciphers(override_account_attrs = {})
     message: { konnector: "bankone", account: account.couch_id }
   )
 
-  job = inst.run_job "migrations", {:type => "accounts-to-organization"}
+  # We execute manually the job to be sure to wait that it has finished
+  job = inst.run_job "migrations", { type: "accounts-to-organization" }
   10.times do
     sleep 1
     done = job.done?(inst)
     break if done
   end
 
-  bw.sync
+  bw = Bitwarden.new inst
+  bw.login
+  assert_equal bw.sync, "Syncing complete."
 
   return {
     :bw => bw,
