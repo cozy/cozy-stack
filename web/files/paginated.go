@@ -444,9 +444,11 @@ type findFile struct {
 	file *file
 	// We may want to hide some fields from the JSON response if the fields has
 	// not been requested to CouchDB, as they are blank
+	Fullpath   string     `json:"path,omitempty"`
 	CreatedAt  *time.Time `json:"created_at,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
+	Encrypted  *bool      `json:"encrypted,omitempty"`
 	// Hide the internal_vfs_id and referenced_by
 	InternalID   *interface{} `json:"internal_vfs_id,omitempty"`
 	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
@@ -459,7 +461,7 @@ func (f *findFile) Links() *jsonapi.LinksList              { return f.file.Links
 
 func newFindFile(doc *vfs.FileDoc, fields []string, i *instance.Instance) *findFile {
 	f := NewFile(doc, i)
-	ff := &findFile{doc, f, nil, nil, nil, nil, nil}
+	ff := &findFile{doc, f, "", nil, nil, nil, nil, nil, nil}
 	if hasField(fields, "created_at") {
 		ff.CreatedAt = &doc.CreatedAt
 	}
@@ -468,6 +470,9 @@ func newFindFile(doc *vfs.FileDoc, fields []string, i *instance.Instance) *findF
 	}
 	if hasField(fields, "executable") {
 		ff.Executable = &doc.Executable
+	}
+	if hasField(fields, "encrypted") {
+		ff.Encrypted = &doc.Encrypted
 	}
 	return ff
 }
@@ -479,4 +484,8 @@ func hasField(fields []string, field string) bool {
 		}
 	}
 	return false
+}
+
+func (f *findFile) IncludePath(fp vfs.FilePather) {
+	f.Fullpath, _ = f.Path(fp)
 }

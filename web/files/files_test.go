@@ -3404,13 +3404,39 @@ func TestFiles(t *testing.T) {
 		attrs.Value("type").String().NotEmpty()
 		attrs.Value("size").String().AsNumber(10)
 		attrs.ValueEqual("trashed", false)
-		attrs.ValueEqual("encrypted", false)
+		attrs.NotContainsKey("encrypted")
 		attrs.NotContainsKey("created_at")
 		attrs.NotContainsKey("updated_at")
 		attrs.NotContainsKey("tags")
 		attrs.NotContainsKey("executable")
 		attrs.NotContainsKey("dir_id")
 		attrs.NotContainsKey("path")
+
+		obj = e.POST("/files/_find").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+				"selector": {
+					"type": "file"
+				},
+				"fields": ["type", "path"],
+				"limit": 1
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Array()
+		data.Length().Equal(1)
+
+		attrs = data.First().Object().Value("attributes").Object()
+		attrs.Value("path").String().NotEmpty()
+		attrs.Value("type").String().NotEmpty()
+		attrs.NotContainsKey("name")
+		attrs.NotContainsKey("created_at")
+		attrs.NotContainsKey("updated_at")
+		attrs.NotContainsKey("tags")
+		attrs.NotContainsKey("executable")
 
 		// Create dir "/aDirectoryWithReferencedBy"
 		dirID := e.POST("/files/").
