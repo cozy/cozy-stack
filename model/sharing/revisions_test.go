@@ -81,6 +81,15 @@ func TestRevsTreeAdd(t *testing.T) {
 	assert.Len(t, sub.Branches, 0)
 
 	tree = &RevsTree{Rev: "2-bbb"}
+	ret = tree.Add("1-aaa")
+	assert.Equal(t, "1-aaa", ret.Rev)
+	assert.Equal(t, "1-aaa", tree.Rev)
+	require.Len(t, tree.Branches, 1)
+	sub = tree.Branches[0]
+	assert.Equal(t, "2-bbb", sub.Rev)
+	require.Len(t, sub.Branches, 0)
+
+	tree = &RevsTree{Rev: "2-bbb"}
 	ret = tree.Add("3-ccc")
 	assert.Equal(t, "3-ccc", ret.Rev)
 	ret = tree.Add("1-aaa")

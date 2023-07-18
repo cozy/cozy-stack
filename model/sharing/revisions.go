@@ -117,21 +117,24 @@ func (rt *RevsTree) Add(rev string) *RevsTree {
 	if rev == rt.Rev {
 		return rt
 	}
+
+	if revision.Generation(rev) < revision.Generation(rt.Rev) {
+		rt.Branches = []RevsTree{
+			{Rev: rt.Rev, Branches: rt.Branches},
+		}
+		rt.Rev = rev
+		return rt
+	}
+
 	if len(rt.Branches) > 0 {
 		// XXX This condition shouldn't be true, but it can help to limit
 		// damage in case bugs happen.
 		if rt.Branches[0].Rev == rev {
 			return &rt.Branches[0]
 		}
-		if revision.Generation(rev) < revision.Generation(rt.Branches[0].Rev) {
-			rt.Branches = []RevsTree{
-				{Rev: rt.Rev, Branches: rt.Branches},
-			}
-			rt.Rev = rev
-			return rt
-		}
 		return rt.Branches[0].Add(rev)
 	}
+
 	rt.Branches = []RevsTree{
 		{Rev: rev},
 	}
