@@ -52,6 +52,14 @@ func TestLock(t *testing.T) {
 		l.(*redisLock).timeout = time.Second
 		l.(*redisLock).waitRetry = 100 * time.Millisecond
 
+		require.NoError(t, l.RLock())
+		require.NoError(t, l.RLock())
+		l.RUnlock()
+		require.Error(t, l.Lock())
+		l.RUnlock()
+		require.NoError(t, l.Lock())
+		l.Unlock()
+
 		hammerRW(t, l)
 
 		done := make(chan bool)
@@ -62,9 +70,9 @@ func TestLock(t *testing.T) {
 			<-done
 		}
 
-		other := client.ReadWrite(db, "test-redis").(*redisLock)
+		other := client.ReadWrite(db, "test-redis")
 		assert.NoError(t, l.Lock())
-		assert.Error(t, other.LockWithTimeout(100*time.Millisecond))
+		assert.Error(t, other.Lock())
 
 		l.Unlock()
 	})
@@ -92,11 +100,16 @@ func TestLock(t *testing.T) {
 		// losing the lock
 		assert.NoError(t, long.Lock())
 
-		// Try a second lock. It should fail after 100ms so after 4 long lock refresh.
+		// Try a second lock. It should fail after 200ms, and the long lock
+		// will have been extended a few times in this span of time.
 		err = l.Lock()
 		assert.Error(t, err)
 		assert.Equal(t, ErrTooManyRetries, err)
-		l.Unlock()
+		long.Unlock()
+
+		// Check that a long lock can be reused
+		assert.NoError(t, long.Lock())
+		long.Unlock()
 	})
 }
 
