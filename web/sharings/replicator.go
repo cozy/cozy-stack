@@ -58,7 +58,7 @@ func BulkDocs(c echo.Context) error {
 	}
 	err = s.ApplyBulkDocs(inst, docs)
 	if err != nil {
-		inst.Logger().WithNamespace("replicator").Infof("Error on apply: %s", err)
+		inst.Logger().WithNamespace("replicator").Warnf("Error on apply: %s", err)
 		return wrapErrors(err)
 	}
 	return c.JSON(http.StatusOK, []interface{}{})
