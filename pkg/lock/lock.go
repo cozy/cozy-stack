@@ -41,8 +41,13 @@ type ErrorRWLocker interface {
 	RUnlock()
 }
 
+type longOperationLocker interface {
+	ErrorLocker
+	Extend()
+}
+
 type longOperation struct {
-	lock    ErrorLocker
+	lock    longOperationLocker
 	mu      sync.Mutex
 	tick    *time.Ticker
 	timeout time.Duration
@@ -54,6 +59,7 @@ func (l *longOperation) Lock() error {
 	}
 	l.tick = time.NewTicker(l.timeout / 3)
 	go func() {
+		defer l.mu.Unlock()
 		for {
 			l.mu.Lock()
 			if l.tick == nil {
@@ -66,7 +72,7 @@ func (l *longOperation) Lock() error {
 			if l.tick == nil {
 				return
 			}
-			_ = l.lock.Lock()
+			l.lock.Extend()
 			l.mu.Unlock()
 		}
 	}()
