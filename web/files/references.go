@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -59,7 +60,9 @@ func ListReferencesHandler(c echo.Context) error {
 		return err
 	}
 
-	defer lockVFS(instance)()
+	mu := config.Lock().ReadWrite(instance, "vfs")
+	_ = mu.RLock()
+	defer mu.RUnlock()
 
 	key := []string{doctype, id}
 	reqCount := &couchdb.ViewRequest{Key: key, Reduce: true}
