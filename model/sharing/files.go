@@ -611,7 +611,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		if err != nil {
 			inst.Logger().WithNamespace("replicator").
 				Debugf("Error on apply bulk file: %s (%#v - %#v)", err, target, ref)
-			errm = multierror.Append(errm, err)
+			errm = multierror.Append(errm, fmt.Errorf("%s - %w", id, err))
 		}
 	}
 
@@ -629,10 +629,6 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 
-	if errm != nil {
-		inst.Logger().WithNamespace("replicator").
-			Warnf("Error on apply bulk files: %s", errm)
-	}
 	return errm
 }
 
@@ -868,7 +864,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 		Debugf("Recreate parent dirID=%s", dirID)
 	doc, err := s.getDirDocFromNetwork(inst, dirID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("recreateParent: %w", err)
 	}
 	fs := inst.VFS()
 	var parent *vfs.DirDoc
@@ -893,7 +889,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 		if errors.Is(err, os.ErrExist) {
 			return fs.DirByID(dirID)
 		}
-		return nil, err
+		return nil, fmt.Errorf("recreateParent: %w", err)
 	}
 	return doc, nil
 }
@@ -1108,14 +1104,17 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	fs := inst.VFS()
 	exists, err := fs.DirChildExists(newdir.DirID, newdir.DocName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Sharing.TrashDir: %w", err)
 	}
 	if exists {
 		newdir.DocName = conflictName(fs, newdir.DirID, newdir.DocName, true)
 	}
 	newdir.Fullpath = path.Join(vfs.TrashDirName, newdir.DocName)
 	newdir.RestorePath = path.Dir(dir.Fullpath)
-	return s.dissociateDir(inst, dir, newdir)
+	if err := s.dissociateDir(inst, dir, newdir); err != nil {
+		return fmt.Errorf("Sharing.TrashDir: %w", err)
+	}
+	return nil
 }
 
 func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
@@ -1195,7 +1194,10 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	removeReferencesFromRule(file, rule)
 	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
 		// Do not move/trash photos removed from an album for the owner
-		return s.dissociateFile(inst, olddoc, file)
+		if err := s.dissociateFile(inst, olddoc, file); err != nil {
+			return fmt.Errorf("Sharing.TrashFile: %w", err)
+		}
+		return nil
 	}
 	if len(file.ReferencedBy) == 0 {
 		oldpath, err := olddoc.Path(inst.VFS())
@@ -1206,15 +1208,21 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		file.Trashed = true
 		file.DirID = consts.TrashDirID
 		file.ResetFullpath()
-		return s.dissociateFile(inst, olddoc, file)
+		if err := s.dissociateFile(inst, olddoc, file); err != nil {
+			return fmt.Errorf("Sharing.TrashFile: %w", err)
+		}
+		return nil
 	}
 	parent, err := s.GetNoLongerSharedDir(inst)
 	if err != nil {
-		return err
+		return fmt.Errorf("Sharing.TrashFile: %w", err)
 	}
 	file.DirID = parent.DocID
 	file.ResetFullpath()
-	return s.dissociateFile(inst, olddoc, file)
+	if err := s.dissociateFile(inst, olddoc, file); err != nil {
+		return fmt.Errorf("Sharing.TrashFile: %w", err)
+	}
+	return nil
 }
 
 func (s *Sharing) dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {

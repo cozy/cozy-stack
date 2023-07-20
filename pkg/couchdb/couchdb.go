@@ -571,8 +571,14 @@ func UpdateDoc(db prefixer.Prefixer, doc Doc) error {
 		return err
 	}
 	doctype := doc.DocType()
-	if id == "" || doc.Rev() == "" || doctype == "" {
-		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+	if doctype == "" {
+		return fmt.Errorf("UpdateDoc: doctype is missing")
+	}
+	if id == "" {
+		return fmt.Errorf("UpdateDoc: id is missing")
+	}
+	if doc.Rev() == "" {
+		return fmt.Errorf("UpdateDoc: rev is missing")
 	}
 
 	url := url.PathEscape(id)
@@ -601,8 +607,14 @@ func UpdateDocWithOld(db prefixer.Prefixer, doc, oldDoc Doc) error {
 		return err
 	}
 	doctype := doc.DocType()
-	if id == "" || doc.Rev() == "" || doctype == "" {
-		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+	if doctype == "" {
+		return fmt.Errorf("UpdateDocWithOld: doctype is missing")
+	}
+	if id == "" {
+		return fmt.Errorf("UpdateDocWithOld: id is missing")
+	}
+	if doc.Rev() == "" {
+		return fmt.Errorf("UpdateDocWithOld: rev is missing")
 	}
 
 	url := url.PathEscape(id)
@@ -626,9 +638,16 @@ func CreateNamedDoc(db prefixer.Prefixer, doc Doc) error {
 		return err
 	}
 	doctype := doc.DocType()
-	if doc.Rev() != "" || id == "" || doctype == "" {
-		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
+	if doctype == "" {
+		return fmt.Errorf("CreateNamedDoc: doctype is missing")
 	}
+	if id == "" {
+		return fmt.Errorf("CreateNamedDoc: id is missing")
+	}
+	if doc.Rev() != "" {
+		return fmt.Errorf("CreateNamedDoc: no rev should be given")
+	}
+
 	var res UpdateResponse
 	err = makeRequest(db, doctype, http.MethodPut, url.PathEscape(id), doc, &res)
 	if err != nil {
