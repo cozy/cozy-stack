@@ -44,6 +44,7 @@ Content-Type: application/json
   "KdfIterations": 100000,
   "OIDC": false,
   "FranceConnect": false,
+  "locale": "en",
   "magic_link": false,
   "name": "Claude"
 }
