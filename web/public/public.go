@@ -69,6 +69,7 @@ func Prelogin(c echo.Context) error {
 		"OIDC":          oidc,
 		"FranceConnect": franceConnect,
 		"magic_link":    inst.MagicLink,
+		"locale":        inst.Locale,
 		"name":          publicName,
 	})
 }
