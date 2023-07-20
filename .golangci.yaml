@@ -2,7 +2,7 @@
 run:
   # Timeout for analysis, e.g. 30s, 5m.
   # Default: 1m
-  timeout: 2m
+  timeout: 3m
   # Exit code when at least one issue was found.
   # Default: 1
   issues-exit-code: 1
