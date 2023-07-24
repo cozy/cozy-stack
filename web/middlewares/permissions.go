@@ -3,6 +3,7 @@ package middlewares
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -152,7 +153,6 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 
 	if err != nil {
 		logger.WithNamespace("permissions").Debugf("invalid token: %s", err)
-		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
@@ -160,14 +160,11 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	if claims.Issuer != instance.Domain {
 		logger.WithNamespace("permissions").
 			Debugf("invalid token: bad domain %s != %s", claims.Issuer, instance.Domain)
-		c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 		return nil, permission.ErrInvalidToken
 	}
 
 	if claims.Expired() {
 		logger.WithNamespace("permissions").Debugf("invalid token: expired")
-		c.Response().Header().Set(echo.HeaderWWWAuthenticate,
-			`Bearer error="invalid_token" error_description="The access token expired"`)
 		return nil, permission.ErrExpiredToken
 	}
 
@@ -183,7 +180,6 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 				logger.WithNamespace("permissions").
 					Debugf("invalid token: no session")
 			}
-			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 	}
@@ -200,7 +196,6 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 				logger.WithNamespace("permissions").
 					Debugf("invalid token: bad security stamp %s != %s", claims.SStamp, settings.SecurityStamp)
 			}
-			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
 			return nil, permission.ErrInvalidToken
 		}
 	}
@@ -226,6 +221,12 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 
 	claims, err := ExtractClaims(c, instance, token)
 	if err != nil {
+		if errors.Is(err, permission.ErrExpiredToken) {
+			c.Response().Header().Set(echo.HeaderWWWAuthenticate,
+				`Bearer error="invalid_token" error_description="The access token expired"`)
+		} else {
+			c.Response().Header().Set(echo.HeaderWWWAuthenticate, `Bearer error="invalid_token"`)
+		}
 		return nil, err
 	}
 
@@ -309,6 +310,38 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	default:
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "Unrecognized token audience "+claims.Audience)
 	}
+}
+
+// GetCLIPermission tries to extract a CLI permission from the echo context
+// without tampering with the response headers in case the token is invalid.
+func GetCLIPermission(c echo.Context) (*permission.Permission, bool) {
+	var err error
+
+	pdoc, ok := c.Get(contextPermissionDoc).(*permission.Permission)
+	if ok && pdoc != nil && pdoc.Type == permission.TypeCLI {
+		return pdoc, true
+	}
+
+	instance := GetInstance(c)
+
+	token := GetRequestToken(c)
+	if token == "" {
+		return nil, false
+	}
+
+	claims, err := ExtractClaims(c, instance, token)
+	if err != nil {
+		return nil, false
+	}
+
+	if claims.Audience == consts.CLIAudience {
+		if pdoc, err := permission.GetForCLI(claims); err != nil {
+			c.Set(contextPermissionDoc, pdoc)
+			return pdoc, true
+		}
+	}
+
+	return nil, false
 }
 
 // GetPermission extracts the permission from the echo context and checks their validity

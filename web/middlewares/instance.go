@@ -65,8 +65,7 @@ func CheckInstanceDeleting(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
-		pdoc, err := GetPermission(c)
-		if err == nil && pdoc.Type == permission.TypeCLI {
+		if _, ok := GetCLIPermission(c); ok {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
@@ -197,8 +196,7 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
-		pdoc, err := GetPermission(c)
-		if err == nil && pdoc.Type == permission.TypeCLI {
+		if _, ok := GetCLIPermission(c); ok {
 			return next(c)
 		}
 
