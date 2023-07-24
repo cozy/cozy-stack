@@ -266,8 +266,7 @@ func (h *HTTPHandler) updatePassphrase(c echo.Context) error {
 		canForce := false
 
 		// CLI can force the passphrase
-		p, err := middlewares.GetPermission(c)
-		if err == nil && p.Type == permission.TypeCLI {
+		if _, ok := middlewares.GetCLIPermission(c); ok {
 			canForce = true
 		}
 

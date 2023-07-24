@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -29,8 +28,7 @@ func registerClient(c echo.Context) error {
 	// We do not allow the creation of clients allowed to have an empty scope
 	// ("login" scope), except via the CLI.
 	if client.AllowLoginScope {
-		perm, err := middlewares.GetPermission(c)
-		if err != nil || perm.Type != permission.TypeCLI {
+		if _, ok := middlewares.GetCLIPermission(c); !ok {
 			return echo.NewHTTPError(http.StatusUnauthorized,
 				"Not authorized to create client with given parameters")
 		}
