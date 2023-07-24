@@ -23,7 +23,7 @@ jobs:
         run: |
           cd ./scripts
           yarn install
-      - uses: sibiraj-s/action-eslint@v2
+      - uses: sibiraj-s/action-eslint@v3
         with:
           eslint-args: '--config scripts/eslintrc.json --ignore-path=.gitignore --quiet'
           extensions: 'js,jsx,ts,tsx'
