@@ -155,7 +155,7 @@ func (d *Document) GetDirID(inst *instance.Instance) (string, error) {
 func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDoc {
 	now := time.Now()
 	file := old.Clone().(*vfs.FileDoc)
-	file.Metadata = d.Metadata()
+	vfs.MergeMetadata(file, d.Metadata())
 	file.Mime = consts.NoteMimeType
 	file.MD5Sum = nil // Let the VFS compute the md5sum
 
@@ -554,7 +554,7 @@ func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 		}
 		var note Document
 		if err := json.Unmarshal(buf, &note); err == nil {
-			docs[i].Metadata = note.Metadata()
+			vfs.MergeMetadata(docs[i], note.Metadata())
 		}
 	}
 }
