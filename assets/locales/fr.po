@@ -1225,6 +1225,18 @@ msgstr "Découvrez Cozy maintenant !"
 msgid "Sharing Forgotten URL"
 msgstr "J'ai oublié mon adresse"
 
+msgid "Notifications Disk Quota Close Title"
+msgstr "Quota de stockage supérieur à 90%"
+
+msgid "Notifications Disk Quota Close Message"
+msgstr "Supprimez des fichiers ou changez d'offre pour obtenir plus d'espace de stockage."
+
+msgid "Notifications Disk Quota Reached Title"
+msgstr "Le stockage de votre Cozy est plein"
+
+msgid "Notifications Disk Quota Reached Message"
+msgstr "Supprimez des fichiers ou changez d'offre pour obtenir plus d'espace de stockage."
+
 msgid "Notifications Disk Quota Subject"
 msgstr "Vous avez atteint 90% de votre espace de stockage."
 

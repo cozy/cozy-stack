@@ -45,17 +45,36 @@ func init() {
 		if err != nil {
 			return
 		}
+
+		title := i.Translate("Notifications Disk Quota Close Title")
+		message := i.Translate("Notifications Disk Quota Close Message")
+		if exceeded {
+			title = i.Translate("Notifications Disk Quota Reached Title")
+			message = i.Translate("Notifications Disk Quota Reached Message")
+		}
+
 		offersLink, err := i.ManagerURL(instance.ManagerPremiumURL)
 		if err != nil {
 			return
 		}
 		cozyDriveLink := i.SubDomain(consts.DriveSlug)
+
+		redirectLink := consts.SettingsSlug + "/#/storage"
+
 		n := &notification.Notification{
-			State: exceeded,
+			Title:   title,
+			Message: message,
+			Slug:    consts.SettingsSlug,
+			State:   exceeded,
 			Data: map[string]interface{}{
+				// For email notification
 				"OffersLink":    offersLink,
 				"CozyDriveLink": cozyDriveLink.String(),
+
+				// For mobile push notification
+				"redirectLink": redirectLink,
 			},
+			PreferredChannels: []string{"mobile"},
 		}
 		_ = PushStack(domain, NotificationDiskQuota, n)
 	})
