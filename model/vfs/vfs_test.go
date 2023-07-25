@@ -685,7 +685,7 @@ func TestVfs(t *testing.T) {
 					require.NoError(t, err)
 					_, _, _, err = vfs.CheckAvailableDiskSpace(fs, doc)
 					assert.Error(t, err)
-					assert.Equal(t, vfs.ErrFileTooBig, err)
+					assert.Equal(t, vfs.ErrMaxFileSize, err)
 				}
 			})
 		})

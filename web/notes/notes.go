@@ -389,7 +389,7 @@ func UploadImage(c echo.Context) error {
 			return jsonapi.InvalidParameter(echo.HeaderContentLength, err)
 		}
 		if size > note.MaxImageWeight {
-			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrFileTooBig)
+			return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", vfs.ErrMaxFileSize)
 		}
 		used, err := inst.VFS().FilesUsage()
 		if err != nil {
@@ -472,7 +472,7 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.Conflict(err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
-	case vfs.ErrFileTooBig:
+	case vfs.ErrFileTooBig, vfs.ErrMaxFileSize:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case sharing.ErrMemberNotFound:
 		return jsonapi.NotFound(err)
