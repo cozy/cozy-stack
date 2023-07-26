@@ -159,7 +159,9 @@ func Worker(ctx *job.WorkerContext) error {
 	if str, ok := msg.Data["appName"].(string); ok {
 		name = str
 	}
-	msg.Title = fmt.Sprintf("%s - %s", name, msg.Title)
+	if name != "" {
+		msg.Title = fmt.Sprintf("%s - %s", name, msg.Title)
+	}
 	for _, c := range cs {
 		if _, ok := seen[c.NotificationDeviceToken]; ok {
 			continue
