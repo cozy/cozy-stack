@@ -226,7 +226,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		}
 		if results[0]["_deleted"] == true {
 			inst.Logger().WithNamespace("upload").
-				Warnf("cannot upload file %v", results[0])
+				Warnf("cannot upload _deleted file %v", results[0])
 			return nil, 0, since, ErrInternalServerError
 		}
 		return results[0], int(idx), since, nil
