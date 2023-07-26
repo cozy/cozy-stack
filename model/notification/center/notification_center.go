@@ -72,6 +72,7 @@ func init() {
 				"CozyDriveLink": cozyDriveLink.String(),
 
 				// For mobile push notification
+				"appName":      "",
 				"redirectLink": redirectLink,
 			},
 			PreferredChannels: []string{"mobile"},
