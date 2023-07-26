@@ -115,6 +115,9 @@ token, the stack will then try to send the notification to the flagship apps.
 If it fails again, the stack then fallbacks on email.
 
 If the notification is sent to the flagship app, the title is modified to
-preprend the application name. The name is taken from the `appName` field of
-the additional parameters (`data`). It allows the user to have more context
-when reading the notification on their mobile.
+preprend the application name. By default, the notification `slug` is used but,
+if present, the name is taken from the `appName` field of the additional
+parameters (`data`). It allows the user to have more context when reading the
+notification on their mobile. The `data.appName` field can also be used to
+completely remove the application name from the notification title if set to an
+empty string.
