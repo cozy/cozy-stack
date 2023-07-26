@@ -44,6 +44,8 @@ var (
 	ErrWrongCouchdbState = errors.New("Wrong couchdb reduce value")
 	// ErrFileTooBig is used when there is no more space left on the filesystem
 	ErrFileTooBig = errors.New("The file is too big and exceeds the disk quota")
+	// ErrMaxFileSize is used when a file is larger than the filesystem's maximum file size
+	ErrMaxFileSize = errors.New("The file is too big and exceeds the filesystem maximum file size")
 	// ErrFsckFailFast is used when the FSCK is stopped by the fail-fast option
 	ErrFsckFailFast = errors.New("FSCK has been stopped on first failure")
 	// ErrWrongToken is used when a key is not found on the store

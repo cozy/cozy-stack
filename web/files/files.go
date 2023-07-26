@@ -1946,7 +1946,7 @@ func wrapVfsError(err error) *jsonapi.Error {
 	case vfs.ErrFileInTrash, vfs.ErrNonAbsolutePath,
 		vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
-	case vfs.ErrFileTooBig:
+	case vfs.ErrFileTooBig, vfs.ErrMaxFileSize:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case vfs.ErrWrongToken:
 		return jsonapi.BadRequest(err)

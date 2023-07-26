@@ -1708,7 +1708,7 @@ func isFileTooBigForInstance(inst *instance.Instance, doc couchdb.JSONDoc) bool 
 	}
 
 	_, _, _, err = vfs.CheckAvailableDiskSpace(inst.VFS(), file)
-	return errors.Is(err, vfs.ErrFileTooBig)
+	return errors.Is(err, vfs.ErrFileTooBig) || errors.Is(err, vfs.ErrMaxFileSize)
 }
 
 // wasUpdatedRecently returns true if the given document's latest update, given

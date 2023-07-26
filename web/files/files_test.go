@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -593,6 +594,30 @@ func TestFiles(t *testing.T) {
 		buf, err := readFile(storage, "/goodhash")
 		assert.NoError(t, err)
 		assert.Equal(t, "foo", string(buf))
+	})
+
+	t.Run("UploadExceedingQuota", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		lifecycle.Patch(testInstance, &lifecycle.Options{DiskQuota: 3})
+
+		e.POST("/files/").
+			WithQuery("Type", "file").
+			WithQuery("Name", "too-large").
+			WithQuery("Size", 3).
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Authorization", "Bearer "+token).
+			WithTransformer(func(r *http.Request) { r.ContentLength = -1 }).
+			WithBytes([]byte("baz")).
+			Expect().
+			Status(413).
+			Body().Contains(vfs.ErrFileTooBig.Error())
+
+		storage := testInstance.VFS()
+		_, err := readFile(storage, "/toolarge")
+		assert.Error(t, err)
+
+		lifecycle.Patch(testInstance, &lifecycle.Options{DiskQuota: -1})
 	})
 
 	t.Run("UploadImage", func(t *testing.T) {

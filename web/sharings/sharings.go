@@ -904,7 +904,7 @@ func wrapErrors(err error) error {
 		return jsonapi.PreconditionFailed("Content-Length", err)
 	case vfs.ErrConflict:
 		return jsonapi.Conflict(err)
-	case vfs.ErrFileTooBig:
+	case vfs.ErrFileTooBig, vfs.ErrMaxFileSize:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case permission.ErrExpiredToken:
 		return jsonapi.BadRequest(err)

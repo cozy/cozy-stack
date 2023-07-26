@@ -197,7 +197,7 @@ func wrapError(err error) *jsonapi.Error {
 	switch err {
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
-	case vfs.ErrFileTooBig:
+	case vfs.ErrFileTooBig, vfs.ErrMaxFileSize:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case shortcut.ErrInvalidShortcut:
 		return jsonapi.BadRequest(err)

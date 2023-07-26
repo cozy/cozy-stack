@@ -908,7 +908,7 @@ func CheckAvailableDiskSpace(fs VFS, doc *FileDoc) (newsize, maxsize, capsize in
 
 	maxsize = fs.MaxFileSize()
 	if maxsize > 0 && newsize > maxsize {
-		return 0, 0, 0, ErrFileTooBig
+		return 0, 0, 0, ErrMaxFileSize
 	}
 
 	diskQuota := fs.DiskQuota()

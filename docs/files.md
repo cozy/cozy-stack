@@ -622,7 +622,8 @@ Hello world!
 - 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to
   the md5sum computed by the server
 - 413 Payload Too Large, when there is not enough available space on the cozy
-  to upload the file
+  to upload the file or the file is larger than the server's filesystem maximum
+  file size
 - 422 Unprocessable Entity, when the sent data is invalid (for example, the
   parent doesn't exist, `Type` or `Name` parameter is missing or invalid,
   etc.)
@@ -901,15 +902,21 @@ The `updated_at` field will be the first value in this list:
 - the `Date` HTTP header
 - the current time from the server.
 
+/!\ If the `updated_at` field is older than the `created_at` one, then the
+`updated_at` will be set with the value of the `created_at`.
+
 #### Query-String
 
-| Parameter  | Description                                        |
-| ---------- | -------------------------------------------------- |
-| Tags       | an array of tags                                   |
-| Executable | `true` if the file is executable (UNIX permission) |
-| Encrypted  | `true` if the file is client-side encrypted        |
-| MetadataID | the identifier of a metadata object                |
-| UpdatedAt  | the modification date of the file                  |
+| Parameter               | Description                                                    |
+| ----------------------- | -------------------------------------------------------------- |
+| Size                    | the file size (when `Content-Length` can't be used)            |
+| Tags                    | an array of tags                                               |
+| Executable              | `true` if the file is executable (UNIX permission)             |
+| Encrypted               | `true` if the file is client-side encrypted                    |
+| MetadataID              | the identifier of a metadata object                            |
+| UpdatedAt               | the modification date of the file                              |
+| SourceAccount           | the id of the source account used by a konnector               |
+| SourceAccountIdentifier | the unique identifier of the account targeted by the connector |
 
 #### HTTP headers
 
@@ -935,6 +942,9 @@ HELLO WORLD!
 - 404 Not Found, when the file wasn't existing
 - 412 Precondition Failed, when the `If-Match` header is set and doesn't match
   the last revision of the file
+- 413 Payload Too Large, when there is not enough available space on the cozy
+  to upload the file or the file is larger than the server's filesystem maximum
+  file size
 
 #### Response
 
