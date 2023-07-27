@@ -40,7 +40,7 @@ var (
 )
 
 func init() {
-	vfs.RegisterDiskQuotaAlertCallback(func(domain string, exceeded bool) {
+	vfs.RegisterDiskQuotaAlertCallback(func(domain string, capsizeExceeded bool) {
 		i, err := lifecycle.GetInstance(domain)
 		if err != nil {
 			return
@@ -48,24 +48,18 @@ func init() {
 
 		title := i.Translate("Notifications Disk Quota Close Title")
 		message := i.Translate("Notifications Disk Quota Close Message")
-		if exceeded {
-			title = i.Translate("Notifications Disk Quota Reached Title")
-			message = i.Translate("Notifications Disk Quota Reached Message")
-		}
-
 		offersLink, err := i.ManagerURL(instance.ManagerPremiumURL)
 		if err != nil {
 			return
 		}
 		cozyDriveLink := i.SubDomain(consts.DriveSlug)
-
 		redirectLink := consts.SettingsSlug + "/#/storage"
 
 		n := &notification.Notification{
 			Title:   title,
 			Message: message,
 			Slug:    consts.SettingsSlug,
-			State:   exceeded,
+			State:   capsizeExceeded,
 			Data: map[string]interface{}{
 				// For email notification
 				"OffersLink":    offersLink,

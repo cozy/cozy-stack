@@ -1045,12 +1045,6 @@ msgstr "You've reached 90% of your storage"
 msgid "Notifications Disk Quota Close Message"
 msgstr "You are using over 90% of your storage. Please delete files, or upgrade your offer to get more space."
 
-msgid "Notifications Disk Quota Reached Title"
-msgstr "Your Cozy is full"
-
-msgid "Notifications Disk Quota Reached Message"
-msgstr "You've reached the limit of your storage. Please delete files, or upgrade your offer to get more space."
-
 msgid "Notifications Disk Quota Subject"
 msgstr "Je hebt momenteel 90% van je beschikbare opslagruimte verbruikt."
 
