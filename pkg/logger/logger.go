@@ -226,9 +226,11 @@ func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
 		logger.AddHook(hook)
 	}
 
+	formatter := logger.Formatter.(*logrus.TextFormatter)
 	if build.IsDevRelease() && lvl == logrus.DebugLevel {
-		formatter := logger.Formatter.(*logrus.TextFormatter)
-		formatter.TimestampFormat = time.RFC3339Nano
+		formatter.TimestampFormat = time.RFC3339Nano // Nanoseconds formatter
+	} else {
+		formatter.TimestampFormat = "2006-01-02T15:04:05.000Z07:00" // Milliseconds formatter
 	}
 }
 

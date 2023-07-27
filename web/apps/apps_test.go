@@ -564,7 +564,7 @@ func TestApps(t *testing.T) {
 			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
 			Expect().Status(204)
 
-		assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
 
 		// Send logs for a webapp
 		testOutput.Reset()
@@ -574,7 +574,7 @@ func TestApps(t *testing.T) {
 			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
 			Expect().Status(204)
 
-		assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
 	})
 
 	t.Run("SendKonnectorLogsFromKonnector", func(t *testing.T) {
@@ -594,7 +594,7 @@ func TestApps(t *testing.T) {
 			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
 			Expect().Status(204)
 
-		assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
 
 		// Sending logs for a webapp should fail
 		e.POST("/apps/"+slug+"/logs").
@@ -621,7 +621,7 @@ func TestApps(t *testing.T) {
 			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
 			Expect().Status(204)
 
-		assert.Equal(t, `time="2022-10-27T17:13:38Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
 
 		// Sending logs for a konnector should fail
 		e.POST("/konnectors/"+slug+"/logs").
