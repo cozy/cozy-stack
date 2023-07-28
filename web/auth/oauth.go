@@ -16,6 +16,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/move"
@@ -164,9 +165,9 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 }
 
 func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	params := authorizeParams{
-		instance:        instance,
+		instance:        inst,
 		state:           c.QueryParam("state"),
 		clientID:        c.QueryParam("client_id"),
 		redirectURI:     c.QueryParam("redirect_uri"),
@@ -181,12 +182,12 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		// XXX we should always clear the session code to avoid it being
 		// reused, even if the user is already logged in and we don't want to
 		// create a new session
-		if checked := instance.CheckAndClearSessionCode(code); checked && !isLoggedIn {
+		if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
 			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
 			req := c.Request()
 			if err == nil {
-				if err = session.StoreNewLoginEntry(instance, sessionID, "", req, "session_code", false); err != nil {
-					instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 				}
 			}
 			redirect := req.URL
@@ -202,12 +203,12 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 	}
 
 	if a.deprecatedApps.IsDeprecated(params.client) {
-		return c.Render(http.StatusOK, "new_app_available.html", a.deprecatedApps.RenderArgs(params.client, instance, c.Request().UserAgent()))
+		return c.Render(http.StatusOK, "new_app_available.html", a.deprecatedApps.RenderArgs(params.client, inst, c.Request().UserAgent()))
 	}
 
 	if !isLoggedIn {
-		u := instance.PageURL("/auth/login", url.Values{
-			"redirect": {instance.FromURL(c.Request().URL)},
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
 		})
 		return c.Redirect(http.StatusSeeOther, u)
 	}
@@ -238,9 +239,56 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		return c.Redirect(http.StatusFound, u.String()+"#")
 	}
 
+	if !params.client.Flagship {
+		flags, err := feature.GetFlags(inst)
+		if err != nil {
+			return err
+		}
+
+		if clientsLimit, ok := flags.M["cozy.oauthclients.max"].(float64); ok && clientsLimit >= 0 {
+			limit := int(clientsLimit)
+
+			clients, _, err := oauth.GetConnectedUserClients(inst, 100, "")
+			if err != nil {
+				return fmt.Errorf("Could not get user OAuth clients: %w", err)
+			}
+			count := len(clients)
+
+			if count >= limit {
+				var manageDevicesURL, premiumURL string
+
+				connectedDevicesURL := inst.SubDomain(consts.SettingsSlug)
+				connectedDevicesURL.Fragment = "/connectedDevices"
+				manageDevicesURL = connectedDevicesURL.String()
+
+				if enablePremiumLinks, ok := flags.M["enable_premium_links"].(bool); ok && enablePremiumLinks {
+					if premiumURL, err = inst.ManagerURL(instance.ManagerPremiumURL); err != nil {
+						return fmt.Errorf("Could not get Premium Manager URL for instance %s: %w", inst.DomainName(), err)
+					}
+				}
+
+				sess, _ := middlewares.GetSession(c)
+				settingsToken := inst.BuildAppToken(consts.SettingsSlug, sess.ID())
+
+				return c.Render(http.StatusOK, "oauth_clients_limit_exceeded.html", echo.Map{
+					"Domain":           inst.ContextualDomain(),
+					"ContextName":      inst.ContextName,
+					"Locale":           inst.Locale,
+					"Title":            inst.TemplateTitle(),
+					"Favicon":          middlewares.Favicon(inst),
+					"ClientsCount":     strconv.Itoa(count),
+					"ClientsLimit":     strconv.Itoa(limit),
+					"ManageDevicesURL": manageDevicesURL,
+					"PremiumURL":       premiumURL,
+					"SettingsToken":    settingsToken,
+				})
+			}
+		}
+	}
+
 	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
-		context := instance.ContextName
+		context := inst.ContextName
 		if context == "" {
 			context = config.DefaultInstanceContext
 		}
@@ -298,15 +346,15 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		}
 	}
 
-	slugname, instanceDomain := instance.SlugAndDomain()
+	slugname, instanceDomain := inst.SlugAndDomain()
 
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Domain":           instance.ContextualDomain(),
-		"ContextName":      instance.ContextName,
-		"Locale":           instance.Locale,
-		"Title":            instance.TemplateTitle(),
-		"Favicon":          middlewares.Favicon(instance),
+		"Domain":           inst.ContextualDomain(),
+		"ContextName":      inst.ContextName,
+		"Locale":           inst.Locale,
+		"Title":            inst.TemplateTitle(),
+		"Favicon":          middlewares.Favicon(inst),
 		"InstanceSlugName": slugname,
 		"InstanceDomain":   instanceDomain,
 		"ClientDomain":     clientDomain,
