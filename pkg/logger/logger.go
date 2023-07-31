@@ -156,9 +156,7 @@ func (e *Entry) Log(level Level, msg string) {
 		msg = msg[:maxLineWidth-12] + " [TRUNCATED]"
 	}
 
-	domain, haveDomain := e.entry.Data["domain"]
-
-	if haveDomain && level == DebugLevel && debugger.ExpiresAt(domain.(string)) != nil {
+	if level == DebugLevel && e.IsDebug() {
 		// The domain is listed in the debug domains and the ttl is valid, use the debuglogger
 		// to debug
 		debugLogger.WithFields(e.entry.Data).Log(logrus.DebugLevel, msg)
@@ -206,7 +204,12 @@ func (e *Entry) Writer() *io.PipeWriter {
 
 // IsDebug returns whether or not the debug mode is activated.
 func (e *Entry) IsDebug() bool {
-	return e.entry.Logger.Level == logrus.DebugLevel
+	if e.entry.Logger.Level == logrus.DebugLevel {
+		return true
+	}
+
+	domain, haveDomain := e.entry.Data["domain"].(string)
+	return haveDomain && debugger.ExpiresAt(domain) != nil
 }
 
 func setupLogger(logger *logrus.Logger, lvl logrus.Level, opt Options) {
