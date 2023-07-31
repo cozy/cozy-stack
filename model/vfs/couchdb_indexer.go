@@ -636,6 +636,9 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 		if err = json.Unmarshal(row.Doc, &doc); err != nil {
 			return false, err
 		}
+		if doc.DirDoc == nil {
+			return false, ErrWrongCouchdbState
+		}
 		if doc.DocName == name {
 			return true, nil
 		}
