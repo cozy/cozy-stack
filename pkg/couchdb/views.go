@@ -156,6 +156,9 @@ func UpdateIndexesAndViews(db prefixer.Prefixer, indexes []*mango.Index, views [
 		}
 		exists := false
 		for _, old := range ddocsByDoctype[index.Doctype] {
+			if old == nil {
+				continue
+			}
 			name := "undefined"
 			for key := range old.Views {
 				name = key
