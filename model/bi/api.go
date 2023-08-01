@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 )
@@ -58,7 +59,7 @@ type connectionsResponse struct {
 	Total int `json:"total"`
 }
 
-func (c *apiClient) getNumberOfConnections(token string) (int, error) {
+func (c *apiClient) getNumberOfConnections(inst *instance.Instance, token string) (int, error) {
 	res, err := c.get("/users/me/connections", token)
 	if err != nil {
 		return 0, err
@@ -80,11 +81,29 @@ func (c *apiClient) getNumberOfConnections(token string) (int, error) {
 		if len(msg) > 200 {
 			msg = msg[0:198] + "..."
 		}
-		logger.WithNamespace("bi").
-			Warnf("getNumberOfConnections [%d] cannot parse JSON %s: %s", res.StatusCode, msg, err)
+		log := inst.Logger().WithNamespace("bi")
+		log.Warnf("getNumberOfConnections [%d] cannot parse JSON %s: %s", res.StatusCode, msg, err)
+		if log.IsDebug() {
+			log.Debugf("getNumberOfConnections called with token %s", token)
+			logFullHTML(log, string(body))
+		}
 		return 0, err
 	}
 	return data.Total, nil
+}
+
+func logFullHTML(log *logger.Entry, msg string) {
+	i := 0
+	for len(msg) > 0 {
+		idx := len(msg)
+		if idx > 1800 {
+			idx = 1800
+		}
+		part := msg[:idx]
+		log.Debugf("getNumberOfConnections %d: %s", i, part)
+		i++
+		msg = msg[idx:]
+	}
 }
 
 func (c *apiClient) deleteUser(token string) error {
