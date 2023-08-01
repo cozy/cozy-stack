@@ -244,7 +244,7 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 	if err != nil {
 		return err
 	}
-	nb, err := api.getNumberOfConnections(c.Token)
+	nb, err := api.getNumberOfConnections(c.Instance, c.Token)
 	if err != nil {
 		return fmt.Errorf("getNumberOfConnections: %s", err)
 	}
