@@ -16,9 +16,9 @@ func TestIndexMarshaling(t *testing.T) {
 	})
 
 	t.Run("WithFieldsAndPartialFilter", func(t *testing.T) {
-		def := MakeIndex("io.cozy.foo", "my-index", IndexDef{Fields: []string{"dir_id", "name"}, PartialFilter: Exists("trashed")})
+		def := MakeIndex("io.cozy.foo", "my-index", IndexDef{Fields: []string{"dir_id", "name"}, PartialFilter: And(Exists("trashed"), In("name", []interface{}{"file1", "file2"}))})
 		jsonbytes, _ := json.Marshal(def.Request)
-		expected := `{"ddoc":"my-index","index":{"fields":["dir_id","name"],"partial_filter_selector":{"trashed":{"$exists":true}}}}`
+		expected := `{"ddoc":"my-index","index":{"fields":["dir_id","name"],"partial_filter_selector":{"$and":[{"trashed":{"$exists":true}},{"name":{"$in":["file1","file2"]}}]}}}`
 		assert.Equal(t, expected, string(jsonbytes), "index should MarshalJSON properly")
 	})
 }

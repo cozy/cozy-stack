@@ -32,6 +32,9 @@ const lte ValueOperator = "$lte"
 // exists ($exists) checks that the field exists (or is missing)
 const exists ValueOperator = "$exists"
 
+// in ($in) checks that the field value equals one of the values
+const in ValueOperator = "$in"
+
 // LogicOperator is an operator between two filters
 type LogicOperator string
 
@@ -132,6 +135,8 @@ func Or(filters ...Filter) Filter { return logicFilter{or, filters} }
 // Nor returns a filter combining several filters
 func Nor(filters ...Filter) Filter { return logicFilter{nor, filters} }
 
+// In returns a filter that checks if the field is equal to one of the values
+func In(field string, values []interface{}) Filter { return &valueFilter{field, in, values} }
 // Not returns a filter inversing another filter
 func Not(filter Filter) Filter { return logicFilter{not, []Filter{filter}} }
 
