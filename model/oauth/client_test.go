@@ -137,6 +137,63 @@ func TestClient(t *testing.T) {
 		}
 	})
 
+	t.Run("GetConnectedUserClients", func(t *testing.T) {
+		browser := &oauth.Client{
+			ClientName:   "browser",
+			ClientKind:   "browser",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, browser.Create(testInstance, oauth.NotPending))
+
+		desktop := &oauth.Client{
+			ClientName:   "desktop",
+			ClientKind:   "desktop",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, desktop.Create(testInstance, oauth.NotPending))
+
+		mobile := &oauth.Client{
+			ClientName:   "mobile",
+			ClientKind:   "mobile",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, mobile.Create(testInstance, oauth.NotPending))
+
+		pending := &oauth.Client{
+			ClientName:   "pending",
+			ClientKind:   "desktop",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, pending.Create(testInstance))
+
+		sharing := &oauth.Client{
+			ClientName:   "sharing",
+			ClientKind:   "sharing",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, sharing.Create(testInstance, oauth.NotPending))
+
+		incomplete := &oauth.Client{
+			ClientName:   "incomplete",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, incomplete.Create(testInstance, oauth.NotPending))
+
+		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
+		require.NoError(t, err)
+
+		assert.Len(t, clients, 3)
+		assert.Equal(t, clients[0].ClientName, "browser")
+		assert.Equal(t, clients[1].ClientName, "desktop")
+		assert.Equal(t, clients[2].ClientName, "mobile")
+	})
+
 	t.Run("ParseJWTInvalidIssuer", func(t *testing.T) {
 		other := &instance.Instance{
 			OAuthSecret: testInstance.OAuthSecret,

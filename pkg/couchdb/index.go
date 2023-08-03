@@ -14,7 +14,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 35
+const IndexViewsVersion int = 36
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -45,6 +45,13 @@ var Indexes = []*mango.Index{
 	// Used to lookup oauth clients by name
 	mango.MakeIndex(consts.OAuthClients, "by-client-name", mango.IndexDef{Fields: []string{"client_name"}}),
 	mango.MakeIndex(consts.OAuthClients, "by-notification-platform", mango.IndexDef{Fields: []string{"notification_platform"}}),
+	mango.MakeIndex(consts.OAuthClients, "connected-user-clients", mango.IndexDef{
+		Fields: []string{"client_kind", "client_name"},
+		PartialFilter: mango.And(
+			mango.In("client_kind", []interface{}{"browser", "desktop", "mobile"}),
+			mango.NotExists("pending"),
+		),
+	}),
 
 	// Used to lookup login history by OS, browser, and IP
 	mango.MakeIndex(consts.SessionsLogins, "by-os-browser-ip", mango.IndexDef{Fields: []string{"os", "browser", "ip"}}),
