@@ -189,6 +189,9 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, par
 		if id := params.Get("id_connector"); id != "" {
 			vv.Add("connector_ids", id)
 		}
+		if id := params.Get("connector_uuids"); id != "" {
+			vv.Add("connector_uuids", id)
+		}
 	case BIWebauth, BIWebauthAndSecret:
 		vv.Add("client_id", at.ClientID)
 		vv.Add("token", params.Get("token"))
