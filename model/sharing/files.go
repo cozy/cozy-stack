@@ -335,7 +335,7 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 // GetSharingDir returns the directory used by this sharing for putting files
 // and folders that have no dir_id.
 func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
-	// When we can, find the sharding dir by its ID
+	// When we can, find the sharing dir by its ID
 	fs := inst.VFS()
 	rule := s.FirstFilesRule()
 	if rule != nil {
