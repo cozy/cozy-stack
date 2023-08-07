@@ -335,6 +335,17 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 // GetSharingDir returns the directory used by this sharing for putting files
 // and folders that have no dir_id.
 func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
+	// When we can, find the sharing dir by its ID
+	fs := inst.VFS()
+	rule := s.FirstFilesRule()
+	if rule != nil {
+		dir, _ := fs.DirByID(rule.Values[0])
+		if dir != nil {
+			return dir, nil
+		}
+	}
+
+	// Else, try to find it by a reference
 	key := []string{consts.Sharings, s.SID}
 	end := []string{key[0], key[1], couchdb.MaxString}
 	req := &couchdb.ViewRequest{
@@ -351,7 +362,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 	var parentID string
 	if len(res.Rows) > 0 {
-		dir, file, err := inst.VFS().DirOrFileByID(res.Rows[0].ID)
+		dir, file, err := fs.DirOrFileByID(res.Rows[0].ID)
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("GetSharingDir failed to find dir: %s", err)
@@ -362,7 +373,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		}
 		// file is a shortcut
 		parentID = file.DirID
-		if err := inst.VFS().DestroyFile(file); err != nil {
+		if err := fs.DestroyFile(file); err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("GetSharingDir failed to delete shortcut: %s", err)
 			return nil, err
@@ -370,12 +381,12 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		s.ShortcutID = ""
 		_ = couchdb.UpdateDoc(inst, s)
 	}
-	rule := s.FirstFilesRule()
 	if rule == nil {
 		inst.Logger().WithNamespace("sharing").
 			Errorf("no first rule for: %#v", s)
 		return nil, ErrInternalServerError
 	}
+	// And, we may have to create it in last resort
 	return s.CreateDirForSharing(inst, rule, parentID)
 }
 
