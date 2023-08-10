@@ -35,6 +35,7 @@ import (
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/gavv/httpexpect/v2"
+	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 
@@ -64,6 +65,7 @@ func TestApps(t *testing.T) {
 		Host:   "localhost",
 		Path:   tempdir,
 	}
+	cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
 	was := cfg.Subdomains
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
@@ -142,6 +144,62 @@ func TestApps(t *testing.T) {
 			Body().
 			Contains(`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`).
 			Contains(`<script src="//cozywithapps.example.net/assets/js/cozy-bar`)
+	})
+
+	t.Run("Warnings", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Moved instance warning
+
+		testInstance.Moved = true
+		require.NoError(t, instance.Update(testInstance))
+
+		e.GET("/foo/").
+			WithHost(slug+"."+testInstance.Domain).
+			WithCookie("cozysessid", cozysessID).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains(`<meta name="user-action-required" data-title="Cozy has been moved" data-code="moved" data-detail="The Cozy has been moved to a new address"`)
+
+		testInstance.Moved = false
+		require.NoError(t, instance.Update(testInstance))
+
+		// TOS not signed warning
+
+		tosSigned := testInstance.TOSSigned
+		tosLatest := testInstance.TOSLatest
+
+		uuid, err := uuid.NewV4()
+		require.NoError(t, err)
+		tomorrow := time.Now().Add(24 * time.Hour)
+
+		testInstance.UUID = uuid.String()
+		testInstance.TOSSigned = "1.0.0-20170901"
+		testInstance.TOSLatest = "2.0.0-" + tomorrow.Format("20060102")
+		require.NoError(t, instance.Update(testInstance))
+
+		notSigned, deadline := testInstance.CheckTOSNotSignedAndDeadline()
+		require.True(t, notSigned)
+		require.Equal(t, deadline, instance.TOSWarning)
+
+		tosLink, err := testInstance.ManagerURL(instance.ManagerTOSURL)
+		require.NoError(t, err)
+		require.NotEmpty(t, tosLink)
+
+		e.GET("/foo/").
+			WithHost(slug+"."+testInstance.Domain).
+			WithCookie("cozysessid", cozysessID).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains(`<meta name="user-action-required" data-title="TOS Updated" data-code="tos-updated" data-detail="Terms of services have been updated" data-links="` + tosLink + `"`)
+
+		testInstance.TOSSigned = tosSigned
+		testInstance.TOSLatest = tosLatest
+		require.NoError(t, instance.Update(testInstance))
 	})
 
 	t.Run("ServeWithAnIntents", func(t *testing.T) {
@@ -428,6 +486,7 @@ func TestApps(t *testing.T) {
 		attrs.Value("Cookie").String().Contains("HttpOnly")
 		attrs.Value("Token").String().NotEmpty()
 		attrs.ValueEqual("Flags", "{}")
+		attrs.ContainsKey("Warnings")
 
 		links := data.Value("links").Object()
 		links.ValueEqual("self", "/apps/mini/open")

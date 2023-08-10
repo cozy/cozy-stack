@@ -320,7 +320,7 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = createFile(instance, appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a> {{.Favicon}}`)
+	err = createFile(instance, appdir, "index.html", `<html><body>this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a> {{.Favicon}}</body></html>`)
 	if err != nil {
 		return "", err
 	}

@@ -747,6 +747,7 @@ func (o *apiOpenParams) MarshalJSON() ([]byte, error) {
 	data["ThemeCSS"] = o.params.ThemeCSS()
 	data["Favicon"] = o.params.Favicon()
 	data["DefaultWallpaper"] = o.params.DefaultWallpaper()
+	data["Warnings"], _ = o.params.Warnings()
 	return json.Marshal(data)
 }
 
