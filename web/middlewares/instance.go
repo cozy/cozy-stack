@@ -158,7 +158,7 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 }
 
 func warningOrBlocked(i *instance.Instance, returnCode int) []*jsonapi.Error {
-	warnings := i.Warnings()
+	warnings := ListWarnings(i)
 	if len(warnings) == 0 {
 		warnings = []*jsonapi.Error{
 			{
@@ -212,7 +212,7 @@ func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 		if notSigned && deadline == instance.TOSBlocked {
 			switch AcceptedContentType(c) {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
-				return c.JSON(http.StatusPaymentRequired, i.Warnings())
+				return c.JSON(http.StatusPaymentRequired, ListWarnings(i))
 			default:
 				return c.Redirect(http.StatusFound, redirect)
 			}

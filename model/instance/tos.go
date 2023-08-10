@@ -1,12 +1,9 @@
 package instance
 
 import (
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
 // BlockingReason structs holds a reason why an instance had been blocked
@@ -27,25 +24,6 @@ var (
 	// BlockedUnknown is used when an instance is blocked but the reason is unknown
 	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
 )
-
-// Warnings returns a list of possible warnings associated with the instance.
-func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
-	if err := i.MovedError(); err != nil {
-		warnings = append(warnings, err)
-	}
-	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
-	if notSigned && deadline >= TOSWarning {
-		tosLink, _ := i.ManagerURL(ManagerTOSURL)
-		warnings = append(warnings, &jsonapi.Error{
-			Status: http.StatusPaymentRequired,
-			Title:  "TOS Updated",
-			Code:   "tos-updated",
-			Detail: i.Translate("Terms of services have been updated"),
-			Links:  &jsonapi.LinksList{Self: tosLink},
-		})
-	}
-	return
-}
 
 // TOSDeadline represent the state for reaching the TOS deadline.
 type TOSDeadline int

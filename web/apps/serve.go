@@ -579,7 +579,7 @@ func cozybar(i *instance.Instance, loggedIn bool) (template.HTML, error) {
 	buf := new(bytes.Buffer)
 	err := barTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
-		"Warnings":    i.Warnings(),
+		"Warnings":    middlewares.ListWarnings(i),
 		"ContextName": i.ContextName,
 		"LoggedIn":    loggedIn,
 	})
