@@ -65,6 +65,11 @@ func TestSettings(t *testing.T) {
 	config.UseTestFile(t)
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
+	was := conf.Subdomains
+	conf.Subdomains = config.NestedSubdomains
+	defer func() { conf.Subdomains = was }()
+
 	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
@@ -876,6 +881,99 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("ratio_0.000001", "defaults")
 		attrs.ValueEqual("ratio_0.999999", "context")
 		attrs.ValueEqual("ratio_1", "context")
+	})
+
+	t.Run("ClientsLimitExceededWithoutLimit", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(testInstance.DefaultRedirection().String())
+
+		redirect := "cozy://my-app"
+		e.GET("/settings/clients/limit-exceeded").
+			WithQuery("redirect", redirect).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(redirect)
+	})
+
+	t.Run("ClientsLimitExceededWithLimitExceeded", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		var limit float64
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		// Create the OAuth client for the flagship app
+		flagship := oauth.Client{
+			RedirectURIs: []string{"cozy://flagship"},
+			ClientName:   "flagship-app",
+			ClientKind:   "mobile",
+			SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+			Flagship:     true,
+		}
+		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+		defer flagship.Delete(testInstance)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			NotContains("http://manager.example.org")
+
+		testutils.WithManager(t, testInstance)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			Contains("http://manager.example.org")
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithQuery("isFlagship", true).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			NotContains("http://manager.example.org")
+	})
+
+	t.Run("ClientsLimitExceededWithLimitReached", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
+		require.NoError(t, err)
+
+		limit := float64(len(clients))
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(testInstance.DefaultRedirection().String())
 	})
 }
 

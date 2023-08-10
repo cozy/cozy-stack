@@ -133,6 +133,41 @@ func TestApps(t *testing.T) {
 		assertInternalServerError(e, slug, testInstance.Domain, "/invalid")
 	})
 
+	t.Run("ServeWithClientsLimitExceeded", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Create the OAuth client for the flagship app
+		flagship := oauth.Client{
+			RedirectURIs: []string{"cozy://flagship"},
+			ClientName:   "flagship-app",
+			ClientKind:   "mobile",
+			SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+			Flagship:     true,
+		}
+		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+		var limit float64
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		e = e.Builder(func(r *httpexpect.Request) {
+			r.WithCookie("cozysessid", cozysessID)
+		})
+
+		assertAuthGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
+		assertAnonGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
+
+		redirect := testInstance.SubDomain(slug)
+		redirect.Path = "/foo"
+		location := testInstance.PageURL("/settings/clients/limit-exceeded", url.Values{"redirect": {redirect.String()}})
+		assertRedirect(e, slug, testInstance.Domain, "/foo", 303, location)
+
+		assertAuthGet(e, slug, testInstance.Domain, "/foo/hello.html", "text/html", "utf-8", "world {{.Token}}")
+
+		testInstance.FeatureFlags = map[string]interface{}{}
+		require.NoError(t, instance.Update(testInstance))
+	})
+
 	t.Run("CozyBar", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -729,4 +764,12 @@ func assertInternalServerError(e *httpexpect.Expect, slug, domain, path string) 
 	e.GET(path).
 		WithHost(slug + "." + domain).
 		Expect().Status(500)
+}
+
+func assertRedirect(e *httpexpect.Expect, slug, domain, path string, code int, location string) {
+	e.GET(path).
+		WithHost(slug + "." + domain).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(code).
+		Header("Location").Equal(location)
 }

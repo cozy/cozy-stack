@@ -217,7 +217,8 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		}
 		mws := append(mwsNotBlocked,
 			middlewares.CheckInstanceBlocked,
-			middlewares.CheckTOSDeadlineExpired)
+			middlewares.CheckTOSDeadlineExpired,
+		)
 		registry.Routes(router.Group("/registry", mws...))
 		data.Routes(router.Group("/data", mws...))
 		files.Routes(router.Group("/files", mws...))

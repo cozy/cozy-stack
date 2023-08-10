@@ -228,6 +228,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 
 	router.GET("/clients", h.listClients)
 	router.DELETE("/clients/:id", h.revokeClient)
+	router.GET("/clients/limit-exceeded", h.limitExceeded)
 	router.POST("/synchronized", h.synchronized)
 
 	router.GET("/onboarded", h.onboarded)

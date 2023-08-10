@@ -905,6 +905,32 @@ HTTP/1.1 204 No Content
 To use this endpoint, an application needs a permission on the type
 `io.cozy.oauth.clients` for the verb `DELETE` (only client-side apps).
 
+### GET /settings/clients/limit-exceeded
+
+Get an OAuth clients limit exceeded page if the instance has more connected
+OAuth clients than its limit allows or redirect the request to the `redirect`
+parameter's value.
+The `redirect` parameter is optional. By default, its value
+is the instance's default redirection.
+
+The page will auto-refresh every 20 seconds or when an OAuth client deletion is
+detected.
+
+#### Query-String
+
+| Parameter  | Description                                          |
+| ---------- | ---------------------------------------------------- |
+| redirect   | URL where to redirect when the limit is not exceeded |
+
+#### Request
+
+```http
+GET /settings/clients/limit-exceeded?redirect=https%3A%2F%2Falice-home.example.com%2F HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Cookie: sessionid=xxxx
+```
+
 ### POST /settings/synchronized
 
 Any OAuth2 client can make a request to this endpoint with its token, no

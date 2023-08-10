@@ -69,6 +69,12 @@ func Serve(c echo.Context) error {
 	}
 
 	if file == "" || file == route.Index {
+		if !route.Public {
+			if handled, err := middlewares.CheckOAuthClientsLimitExceeded(c); handled {
+				return err
+			}
+		}
+
 		webapp = app.DoLazyUpdate(i, webapp, app.Copier(consts.WebappType, i), i.Registries()).(*app.WebappManifest)
 	}
 
