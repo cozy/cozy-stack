@@ -31,7 +31,7 @@ require (
 	github.com/mssola/user_agent v0.6.0
 	github.com/ncw/swift/v2 v2.0.2
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/ohler55/ojg v1.19.1
+	github.com/ohler55/ojg v1.19.2
 	github.com/oschwald/maxminddb-golang v1.11.0
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.16.0
