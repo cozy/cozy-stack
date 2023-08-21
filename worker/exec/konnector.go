@@ -269,7 +269,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		if fileExecPath == "" {
 			return "", cleanDir, job.ErrAbort
 		}
-		workDir = path.Join(workDir, fileExecPath)
+		return path.Join(workDir, fileExecPath), cleanDir, nil
 	}
 
 	return workDir, cleanDir, nil
