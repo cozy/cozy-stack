@@ -11,7 +11,7 @@ require (
 	github.com/cozy/goexif2 v1.2.0
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
-	github.com/cozy/prosemirror-go v0.5.2
+	github.com/cozy/prosemirror-go v0.5.3
 	github.com/dhowden/tag v0.0.0-20230630033851-978a0926ee25
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.15.0
