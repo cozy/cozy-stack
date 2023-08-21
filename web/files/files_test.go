@@ -614,7 +614,7 @@ func TestFiles(t *testing.T) {
 			Body().Contains(vfs.ErrFileTooBig.Error())
 
 		storage := testInstance.VFS()
-		_, err := readFile(storage, "/toolarge")
+		_, err := readFile(storage, "/too-large")
 		assert.Error(t, err)
 
 		lifecycle.Patch(testInstance, &lifecycle.Options{DiskQuota: -1})
