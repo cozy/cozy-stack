@@ -369,21 +369,12 @@ func markdownNodeMapper() markdown.NodeMapper {
 					ts, _ := node.AttributeString("ts")
 					attrs = map[string]interface{}{"timestamp": ts}
 				case "center", "right":
-					if !entering {
-						return nil
-					}
+					markType = "alignment"
 					align := "center"
 					if class == "right" {
 						align = "end"
 					}
 					attrs = map[string]interface{}{"align": align}
-					typ, err := state.Schema.MarkType("alignment")
-					if err != nil {
-						return err
-					}
-					mark := typ.Create(attrs)
-					state.AddParentMark(mark)
-					return nil
 				}
 			}
 
