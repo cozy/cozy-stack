@@ -36,11 +36,30 @@ func markdownSerializer(images []*Image) *markdown.Serializer {
 		"bulletList":  vanilla.Nodes["bullet_list"],
 		"orderedList": vanilla.Nodes["ordered_list"],
 		"listItem":    vanilla.Nodes["list_item"],
-		"heading":     vanilla.Nodes["heading"],
-		"blockquote":  vanilla.Nodes["blockquote"],
-		"rule":        vanilla.Nodes["horizontal_rule"],
-		"hardBreak":   vanilla.Nodes["hard_break"],
-		"image":       vanilla.Nodes["image"],
+		"decisionList": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			if node.Attrs == nil {
+				node.Attrs = map[string]interface{}{}
+			}
+			node.Attrs["tight"] = true
+			state.RenderList(node, "  ", func(_ int) string { return "✍ " })
+		},
+		"decisionItem": vanilla.Nodes["list_item"],
+		"taskList": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderList(node, "  ", func(_ int) string { return "- " })
+		},
+		"taskItem": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			if node.Attrs["state"] == "DONE" {
+				state.Write("[X] ")
+			} else {
+				state.Write("[ ] ")
+			}
+			state.RenderContent(node)
+		},
+		"heading":    vanilla.Nodes["heading"],
+		"blockquote": vanilla.Nodes["blockquote"],
+		"rule":       vanilla.Nodes["horizontal_rule"],
+		"hardBreak":  vanilla.Nodes["hard_break"],
+		"image":      vanilla.Nodes["image"],
 		"codeBlock": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			lang, _ := node.Attrs["language"].(string)
 			state.Write("```" + lang + "\n")
@@ -193,16 +212,98 @@ func markdownNodeMapper() markdown.NodeMapper {
 	vanilla := markdown.DefaultNodeMapper
 	return markdown.NodeMapper{
 		// Blocks
-		ast.KindDocument:        vanilla[ast.KindDocument],
-		ast.KindParagraph:       vanilla[ast.KindParagraph],
-		ast.KindHeading:         vanilla[ast.KindHeading],
-		ast.KindList:            vanilla[ast.KindList],
-		ast.KindListItem:        vanilla[ast.KindListItem],
+		ast.KindDocument:  vanilla[ast.KindDocument],
+		ast.KindParagraph: vanilla[ast.KindParagraph],
+		ast.KindHeading:   vanilla[ast.KindHeading],
+		ast.KindList: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				isATaskList := false
+				listItem := node.FirstChild()
+				if listItem != nil {
+					isATaskList = true
+					for listItem != nil {
+						para := listItem.FirstChild()
+						if para == nil {
+							isATaskList = false
+							break
+						}
+						checkbox := para.FirstChild()
+						if checkbox == nil || checkbox.Kind() != extensionast.KindTaskCheckBox {
+							isATaskList = false
+							break
+						}
+						listItem = listItem.NextSibling()
+					}
+				}
+				if isATaskList {
+					typ, err := state.Schema.NodeType("taskList")
+					if err != nil {
+						return err
+					}
+					state.OpenNode(typ, nil)
+					return nil
+				}
+				return vanilla[ast.KindList](state, node, entering)
+			}
+			_, err := state.CloseNode()
+			return err
+		},
+		ast.KindListItem: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
+			inTaskList := false
+			for _, item := range state.Stack {
+				if item.Type.Name == "taskList" {
+					inTaskList = true
+				}
+			}
+			if inTaskList {
+				if entering {
+					typ, err := state.Schema.NodeType("taskItem")
+					if err != nil {
+						return err
+					}
+					state.OpenNode(typ, nil)
+					return nil
+				} else {
+					// taskItem have their content directly inside them, no paragraphs
+					item := state.Top()
+					paragraphs := item.Content
+					item.Content = nil
+					for _, paragraph := range paragraphs {
+						item.Content = append(item.Content, paragraph.Content.Content...)
+					}
+					_, err := state.CloseNode()
+					return err
+				}
+			}
+			return vanilla[ast.KindListItem](state, node, entering)
+		},
 		ast.KindTextBlock:       vanilla[ast.KindTextBlock],
 		ast.KindBlockquote:      vanilla[ast.KindBlockquote],
 		ast.KindCodeBlock:       vanilla[ast.KindCodeBlock],
 		ast.KindFencedCodeBlock: vanilla[ast.KindFencedCodeBlock],
 		ast.KindThematicBreak:   vanilla[ast.KindThematicBreak],
+		custom.KindDecisionList: markdown.GenericBlockHandler("decisionList"),
+		custom.KindDecisionItem: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				typ, err := state.Schema.NodeType("decisionItem")
+				if err != nil {
+					return err
+				}
+				state.OpenNode(typ, nil)
+			} else {
+				// decisionItem have their content directly inside them, no paragraphs
+				item := state.Top()
+				paragraphs := item.Content
+				item.Content = nil
+				for _, paragraph := range paragraphs {
+					item.Content = append(item.Content, paragraph.Content.Content...)
+				}
+				if _, err := state.CloseNode(); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 		custom.KindPanel: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			if entering {
 				typ, err := state.Schema.NodeType("panel")
@@ -334,6 +435,26 @@ func markdownNodeMapper() markdown.NodeMapper {
 		ast.KindCodeSpan:               vanilla[ast.KindCodeSpan],
 		ast.KindEmphasis:               vanilla[ast.KindEmphasis],
 		extensionast.KindStrikethrough: vanilla[extensionast.KindStrikethrough],
+		extensionast.KindTaskCheckBox: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
+			if entering {
+				if len(state.Stack) <= 2 {
+					return nil
+				}
+				grandparent := state.Stack[len(state.Stack)-2]
+				if grandparent.Type.Name == "taskItem" {
+					s := "TODO"
+					n := node.(*extensionast.TaskCheckBox)
+					if n.IsChecked {
+						s = "DONE"
+					}
+					if grandparent.Attrs == nil {
+						grandparent.Attrs = map[string]interface{}{}
+					}
+					grandparent.Attrs["state"] = s
+				}
+			}
+			return nil
+		},
 		custom.KindSpan: func(state *markdown.MarkdownParseState, node ast.Node, entering bool) error {
 			text := node.(*custom.Span).Value
 
@@ -420,7 +541,9 @@ func markdownParser() parser.Parser {
 			util.Prioritized(parser.NewSetextHeadingParser(), 100),
 			util.Prioritized(parser.NewThematicBreakParser(), 200),
 			util.Prioritized(parser.NewListParser(), 300),
-			util.Prioritized(parser.NewListItemParser(), 400),
+			util.Prioritized(parser.NewListItemParser(), 350),
+			util.Prioritized(custom.NewDecisionListParser(), 400),
+			util.Prioritized(custom.NewDecisionItemParser(), 450),
 			util.Prioritized(parser.NewCodeBlockParser(), 500),
 			util.Prioritized(parser.NewATXHeadingParser(), 600),
 			util.Prioritized(parser.NewFencedCodeBlockParser(), 700),
@@ -429,6 +552,7 @@ func markdownParser() parser.Parser {
 			util.Prioritized(parser.NewParagraphParser(), 1000),
 		),
 		parser.WithInlineParsers(
+			util.Prioritized(extension.NewTaskCheckBoxParser(), 0),
 			util.Prioritized(custom.NewSpanParser(), 50),
 			util.Prioritized(parser.NewCodeSpanParser(), 100),
 			util.Prioritized(parser.NewLinkParser(), 200),

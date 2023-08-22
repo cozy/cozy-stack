@@ -39,7 +39,7 @@ const defaultSchemaString = `
             "tag": "[data-block-link]"
           },
           {
-            "context": "paragraph/|heading/|mediaSingle/",
+            "context": "paragraph/|heading/|mediaSingle/|taskItem/|decisionItem/",
             "tag": "a[href]"
           },
           {
@@ -303,7 +303,7 @@ const defaultSchemaString = `
             "default": ""
           },
           "localId": {
-            "default": "adf1f61a-da02-4a41-a6c3-183fdcac102d"
+            "default": "dfab1003-a025-425f-869b-4592431ae618"
           },
           "style": {
             "default": ""
@@ -736,7 +736,7 @@ const defaultSchemaString = `
             "default": 1
           }
         },
-        "content": "(paragraph | panel | blockquote | orderedList | bulletList | rule | heading | codeBlock | mediaSingle )+",
+        "content": "(paragraph | panel | blockquote | orderedList | bulletList | rule | heading | codeBlock | mediaSingle | decisionList | taskList )+",
         "isolating": true,
         "marks": "link alignment unsupportedMark unsupportedNodeAttribute",
         "parseDOM": [
@@ -746,6 +746,27 @@ const defaultSchemaString = `
         ],
         "selectable": false,
         "tableRole": "header_cell"
+      }
+    ],
+    [
+      "decisionList",
+      {
+        "attrs": {
+          "localId": {
+            "default": ""
+          }
+        },
+        "content": "decisionItem+",
+        "defining": true,
+        "group": "block",
+        "marks": "unsupportedMark unsupportedNodeAttribute",
+        "parseDOM": [
+          {
+            "priority": 100,
+            "tag": "ol[data-node-type=\"decisionList\"]"
+          }
+        ],
+        "selectable": false
       }
     ],
     [
@@ -760,6 +781,28 @@ const defaultSchemaString = `
         ],
         "selectable": false,
         "tableRole": "row"
+      }
+    ],
+    [
+      "decisionItem",
+      {
+        "attrs": {
+          "localId": {
+            "default": ""
+          },
+          "state": {
+            "default": "DECIDED"
+          }
+        },
+        "content": "inline*",
+        "defining": true,
+        "marks": "_",
+        "parseDOM": [
+          {
+            "priority": 100,
+            "tag": "li[data-decision-local-id]"
+          }
+        ]
       }
     ],
     [
@@ -779,7 +822,7 @@ const defaultSchemaString = `
             "default": 1
           }
         },
-        "content": "(paragraph | panel | blockquote | orderedList | bulletList | rule | heading | codeBlock | mediaSingle | unsupportedBlock)+",
+        "content": "(paragraph | panel | blockquote | orderedList | bulletList | rule | heading | codeBlock | mediaSingle | decisionList | taskList  | unsupportedBlock)+",
         "isolating": true,
         "marks": "link alignment unsupportedMark unsupportedNodeAttribute",
         "parseDOM": [
@@ -794,8 +837,52 @@ const defaultSchemaString = `
         "selectable": false,
         "tableRole": "cell"
       }
+    ],
+    [
+      "taskList",
+      {
+        "attrs": {
+          "localId": {
+            "default": ""
+          }
+        },
+        "content": "taskItem+ (taskItem|taskList)*",
+        "defining": true,
+        "group": "block",
+        "marks": "unsupportedMark unsupportedNodeAttribute",
+        "parseDOM": [
+          {
+            "priority": 100,
+            "tag": "div[data-node-type=\"actionList\"]"
+          }
+        ],
+        "selectable": false
+      }
+    ],
+    [
+      "taskItem",
+      {
+        "attrs": {
+          "localId": {
+            "default": ""
+          },
+          "state": {
+            "default": "TODO"
+          }
+        },
+        "content": "inline*",
+        "defining": true,
+        "marks": "_",
+        "parseDOM": [
+          {
+            "priority": 100,
+            "tag": "div[data-task-local-id]"
+          }
+        ],
+        "selectable": false
+      }
     ]
   ],
-  "version": 3
+  "version": 4
 }
 `
