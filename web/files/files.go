@@ -1950,6 +1950,8 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case vfs.ErrWrongToken:
 		return jsonapi.BadRequest(err)
+	case vfs.ErrInvalidMetadataID:
+		return jsonapi.InvalidParameter("MetadataID", err)
 	}
 	if _, ok := err.(*jsonapi.Error); !ok {
 		logger.WithNamespace("files").Warnf("Not wrapped error: %s", err)

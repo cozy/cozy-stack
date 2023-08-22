@@ -50,4 +50,6 @@ var (
 	ErrFsckFailFast = errors.New("FSCK has been stopped on first failure")
 	// ErrWrongToken is used when a key is not found on the store
 	ErrWrongToken = errors.New("Wrong download token")
+	// ErrInvalidMetadataID is used when the metadata cannot be found from a MetadatID parameter
+	ErrInvalidMetadataID = errors.New("Invalid or expired MetadataID")
 )
