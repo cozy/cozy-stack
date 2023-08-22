@@ -56,8 +56,8 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 - 201 Created, when the directory has been successfully created
 - 404 Not Found, when the parent directory does not exist
 - 409 Conflict, when a directory with the same name already exists
-- 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
-  invalid
+- 422 Unprocessable Entity, when the `Type`, `Name`, or `MetadataID` parameter
+  is missing or invalid
 
 #### Response
 
@@ -625,8 +625,8 @@ Hello world!
   to upload the file or the file is larger than the server's filesystem maximum
   file size
 - 422 Unprocessable Entity, when the sent data is invalid (for example, the
-  parent doesn't exist, `Type` or `Name` parameter is missing or invalid,
-  etc.)
+  parent doesn't exist, `Type`, `Name`, or `MetadataID` parameter is missing or
+  invalid, etc.)
 
 #### Response
 
@@ -782,7 +782,8 @@ more informations about the references field.
 ### POST /files/upload/metadata
 
 Send a metadata object that can be associated to a file (or directory) uploaded
-after that, via the `MetadataID` query parameter.
+after that, via the `MetadataID` query parameter. The `MetadataID` parameter is
+only valid for 10 minutes, and will expire after that.
 
 **Note:** a special permission on `io.cozy.certified.carbon_copy` is required
 to send a request with `carbonCopy` as key in the `attributes` map. Same for
@@ -945,6 +946,8 @@ HELLO WORLD!
 - 413 Payload Too Large, when there is not enough available space on the cozy
   to upload the file or the file is larger than the server's filesystem maximum
   file size
+- 422 Unprocessable Entity, when the sent data is invalid (for example, the
+  `MetadataID` parameter has expired)
 
 #### Response
 

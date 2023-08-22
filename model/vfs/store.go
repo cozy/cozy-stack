@@ -232,15 +232,15 @@ func (s *memStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, err
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return nil, ErrWrongToken
+		return nil, ErrInvalidMetadataID
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return nil, ErrWrongToken
+		return nil, ErrInvalidMetadataID
 	}
 	m, ok := ref.val.(*Metadata)
 	if !ok {
-		return nil, ErrWrongToken
+		return nil, ErrInvalidMetadataID
 	}
 	return m, nil
 }
@@ -368,7 +368,7 @@ func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, err
 func (s *redisStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error) {
 	b, err := s.c.Get(s.ctx, db.DBPrefix()+":"+key).Bytes()
 	if errors.Is(err, redis.Nil) {
-		return nil, ErrWrongToken
+		return nil, ErrInvalidMetadataID
 	}
 	if err != nil {
 		return nil, err
