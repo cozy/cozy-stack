@@ -27,6 +27,18 @@ func textSerializer() *markdown.Serializer {
 		"listItem": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			state.RenderContent(node)
 		},
+		"taskList": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderList(node, "", func(_ int) string { return "- " })
+		},
+		"taskItem": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderContent(node)
+		},
+		"decisionList": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderList(node, "", func(_ int) string { return "" })
+		},
+		"decisionItem": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			state.RenderContent(node)
+		},
 		"heading": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
 			state.RenderInline(node)
 			state.CloseBlock(node)

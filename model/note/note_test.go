@@ -14,7 +14,14 @@ func TestMarkdown(t *testing.T) {
 
 foobar **bold**
 
-:info: this is a panel`
+:info: this is a panel
+
+✍ this is a decision
+✍ and another decision
+
+- [ ] a todo task
+
+- [X] a done task`
 
 	schemaSpecs := DefaultSchemaSpecs()
 	specs := model.SchemaSpecFromJSON(schemaSpecs)
@@ -36,7 +43,12 @@ hello **world**
 - foo
 - bar
 - baz
-`
+
+✍ This is a decision
+✍ and another decision
+
+- [ ] A todo task
+- [X] a done task`
 
 	expected := `My title
 
@@ -46,7 +58,15 @@ hello world
 
 - bar
 
-- baz`
+- baz
+
+This is a decision
+
+and another decision
+
+- A todo task
+
+- a done task`
 
 	schemaSpecs := DefaultSchemaSpecs()
 	specs := model.SchemaSpecFromJSON(schemaSpecs)
