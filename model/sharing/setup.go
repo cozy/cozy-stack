@@ -292,7 +292,7 @@ func FindMatchingDocs(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, er
 		} else {
 			// Create index based on selector to retrieve documents to share
 			name := "by-" + rule.Selector
-			idx := mango.IndexOnFields(rule.DocType, name, []string{rule.Selector})
+			idx := mango.MakeIndex(rule.DocType, name, mango.IndexDef{Fields: []string{rule.Selector}})
 			if err := couchdb.DefineIndex(inst, idx); err != nil {
 				return nil, err
 			}

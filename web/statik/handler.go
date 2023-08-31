@@ -50,6 +50,7 @@ var (
 		"passphrase_choose.html",
 		"passphrase_reset.html",
 		"sharing_discovery.html",
+		"oauth_clients_limit_exceeded.html",
 		"twofactor.html",
 	}
 )

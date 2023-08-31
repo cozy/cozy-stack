@@ -912,3 +912,21 @@ msgstr "https://help.cozy.io/article/274-ie-11-not-supported"
 
 msgid "File copy Suffix"
 msgstr "Kopie"
+
+msgid "Too Many OAuth Clients Title"
+msgstr "%s/%s connected devices"
+
+msgid "Too Many OAuth Clients Intro"
+msgstr "Your current offer allows you to connect %s devices at the same time."
+
+msgid "Too Many OAuth Clients Available Actions"
+msgstr "Disconnect one of your devices or change your Cozy offer to access your Cozy from this device."
+
+msgid "Too Many OAuth Clients Offers Btn"
+msgstr "See offers"
+
+msgid "Too Many OAuth Clients Settings Btn"
+msgstr "Manage my connected devices"
+
+msgid "Too Many OAuth Clients Refresh Btn"
+msgstr "Refresh"

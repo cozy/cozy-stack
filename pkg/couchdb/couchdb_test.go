@@ -190,11 +190,20 @@ func TestCouchdb(t *testing.T) {
 	})
 
 	t.Run("DefineIndex", func(t *testing.T) {
-		err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
+		err := DefineIndex(TestPrefix, mango.MakeIndex(TestDoctype, "my-index", mango.IndexDef{Fields: []string{"fieldA", "fieldB"}}))
 		assert.NoError(t, err)
 
 		// if I try to define the same index several time
-		err2 := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
+		err2 := DefineIndex(TestPrefix, mango.MakeIndex(TestDoctype, "my-index", mango.IndexDef{Fields: []string{"fieldA", "fieldB"}}))
+		assert.NoError(t, err2)
+	})
+
+	t.Run("DefineIndexWithPartialFilter", func(t *testing.T) {
+		err := DefineIndex(TestPrefix, mango.MakeIndex(TestDoctype, "my-index-with-partial-filter", mango.IndexDef{Fields: []string{"fieldA"}, PartialFilter: mango.NotExists("fieldB")}))
+		assert.NoError(t, err)
+
+		// if I try to define the same index several time
+		err2 := DefineIndex(TestPrefix, mango.MakeIndex(TestDoctype, "my-index-with-partial-filter", mango.IndexDef{Fields: []string{"fieldA"}, PartialFilter: mango.NotExists("fieldB")}))
 		assert.NoError(t, err2)
 	})
 
@@ -214,7 +223,7 @@ func TestCouchdb(t *testing.T) {
 			}
 		}
 
-		err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
+		err := DefineIndex(TestPrefix, mango.MakeIndex(TestDoctype, "my-index", mango.IndexDef{Fields: []string{"fieldA", "fieldB"}}))
 		if !assert.NoError(t, err) {
 			t.FailNow()
 			return

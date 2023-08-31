@@ -86,6 +86,7 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/templates/passphrase_choose.html
 * http://cozy.localhost:8080/dev/templates/passphrase_reset.html?ShowBackButton=true&HasCiphers=true&HasHint=true
 * http://cozy.localhost:8080/dev/templates/sharing_discovery.html?PublicName=Jane&RecipientDomain=mycozy.cloud&NotEmailError=true
+* http://cozy.localhost:8080/dev/templates/oauth_clients_limit_exceeded.html
 * http://cozy.localhost:8080/dev/templates/twofactor.html?TrustedDeviceCheckBox=true
 
 ## In production

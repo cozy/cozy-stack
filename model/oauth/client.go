@@ -194,6 +194,27 @@ func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 	return clients, nil
 }
 
+func GetConnectedUserClients(i *instance.Instance, limit int, bookmark string) ([]*Client, string, error) {
+	// Return clients with client_kind mobile, browser and desktop
+	var clients []*Client
+	req := &couchdb.FindRequest{
+		UseIndex: "connected-user-clients",
+		Selector: mango.And(mango.Gt("client_kind", ""), mango.Gt("client_name", "")),
+		Bookmark: bookmark,
+		Limit:    limit,
+	}
+	res, err := couchdb.FindDocsRaw(i, consts.OAuthClients, req, &clients)
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, client := range clients {
+		client.ClientSecret = ""
+	}
+
+	return clients, res.Bookmark, nil
+}
+
 func SortClientsByCreatedAtDesc(clients []*Client) {
 	sort.SliceStable(clients, func(i, j int) bool {
 		a := clients[i]

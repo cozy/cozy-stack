@@ -838,6 +838,13 @@ When an OAuth2 client wants to get access to the data of the cozy owner, it
 starts the OAuth2 dance with this step. The user is shown what the client asks
 and has an accept button if she is OK with that.
 
+In case a limit has been set on the Cozy to the number of user-connected OAuth
+clients, and this limit has been reached already, the user will be presented a
+screen requesting to either remove some existing clients or, if enabled,
+increase the limit (e.g. by subscribing to a plan with a greater limit). Once
+the number of connected clients is brought back under the limit, the OAuth flow
+will resume and the permissions screen will be displayed.
+
 The parameters are:
 
 -   `client_id`, that identify the client

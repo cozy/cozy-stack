@@ -1199,3 +1199,21 @@ msgstr "Please install the new Cozy application from your favorite store to keep
 
 msgid "Install New App Store Btn"
 msgstr "Install"
+
+msgid "Too Many OAuth Clients Title"
+msgstr "%s/%s connected devices"
+
+msgid "Too Many OAuth Clients Intro"
+msgstr "Your current offer allows you to connect %s devices at the same time."
+
+msgid "Too Many OAuth Clients Available Actions"
+msgstr "Disconnect one of your devices or change your Cozy offer to access your Cozy from this device."
+
+msgid "Too Many OAuth Clients Offers Btn"
+msgstr "See offers"
+
+msgid "Too Many OAuth Clients Settings Btn"
+msgstr "Manage my connected devices"
+
+msgid "Too Many OAuth Clients Refresh Btn"
+msgstr "Refresh"
