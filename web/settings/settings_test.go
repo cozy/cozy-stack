@@ -20,8 +20,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	websettings "github.com/cozy/cozy-stack/web/settings"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +33,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
-func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) string {
+func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) *httptest.Server {
 	t.Helper()
 
 	handler := echo.New()
@@ -48,7 +51,7 @@ func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) s
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
-	return ts.URL
+	return ts
 }
 
 func TestSettings(t *testing.T) {
@@ -60,8 +63,14 @@ func TestSettings(t *testing.T) {
 	var oauthClientID string
 
 	config.UseTestFile(t)
+	conf := config.GetConfig()
+	conf.Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
 		Timezone:    "Europe/Berlin",
@@ -72,7 +81,10 @@ func TestSettings(t *testing.T) {
 	_, token := setup.GetTestClient(scope)
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	ts := setupRouter(t, testInstance, svc)
+	ts.Config.Handler.(*echo.Echo).Renderer = render
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	tsURL := ts.URL
 
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
@@ -883,7 +895,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 	})
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	tsURL := setupRouter(t, testInstance, svc).URL
 
 	e := testutils.CreateTestClient(t, tsURL)
 
@@ -947,7 +959,7 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 	})
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	tsURL := setupRouter(t, testInstance, svc).URL
 
 	require.Nil(t, oauthClient.Create(testInstance))
 	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)
