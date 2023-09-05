@@ -106,7 +106,7 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 		return err
 	}
 	c := s.FindCredentials(m)
-	if c == nil {
+	if c == nil || c.AccessToken == nil {
 		return ErrInvalidSharing
 	}
 	opts := &request.Options{
