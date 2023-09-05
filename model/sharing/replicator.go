@@ -32,7 +32,8 @@ const MaxRetries = 5
 // (each next retry will wait 4 times longer than its previous retry)
 const InitialBackoffPeriod = 1 * time.Minute
 
-// BatchSize is the maximal number of documents mainpulated at once by the replicator
+// BatchSize is the maximal number of documents mainpulated at once by the
+// replicator
 const BatchSize = 100
 
 // ReplicateMsg is used for jobs on the share-replicate worker.
