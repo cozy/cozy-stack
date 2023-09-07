@@ -264,12 +264,13 @@ func AccessToken(c echo.Context) error {
 
 	if reqBody.Code != "" {
 		sub := getStorage().GetSub(reqBody.Code)
-		invalidSub := sub == ""
-		if sub != inst.OIDCID && sub != inst.FranceConnectID {
-			invalidSub = true
+		invalidCode := sub == ""
+		if sub != inst.OIDCID && sub != inst.FranceConnectID && sub != inst.Domain {
+			invalidCode = true
 		}
-		if invalidSub {
-			inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid sub: %s (%s - %s)", sub, inst.OIDCID, inst.FranceConnectID)
+		if invalidCode {
+			inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid code: %s (%s - %s - %s)",
+				sub, inst.OIDCID, inst.FranceConnectID, inst.Domain)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
@@ -880,13 +881,25 @@ func GetDelegatedCode(c echo.Context) error {
 		return err
 	}
 
-	sub, ok := params["sub"].(string)
-	if !ok {
-		logger.WithNamespace("oidc").Errorf("Missing sub")
-		return ErrAuthenticationFailed
+	var s string
+	if conf.AllowCustomInstance {
+		sub, ok := params["sub"].(string)
+		if !ok {
+			logger.WithNamespace("oidc").Errorf("Missing sub")
+			return ErrAuthenticationFailed
+		}
+		s = sub
+	} else {
+		domain, err := extractDomain(conf, params)
+		if err != nil {
+			logger.WithNamespace("oidc").Warnf("Cannot extract domain: %s", err)
+			return err
+		}
+		s = domain
 	}
-	logger.WithNamespace("oidc").Infof("GetDelegatedCode for %s", sub)
-	params["delegated_code"] = getStorage().CreateCode(sub)
+
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode for %s", s)
+	params["delegated_code"] = getStorage().CreateCode(s)
 	return c.JSON(http.StatusOK, params)
 }
 
