@@ -885,6 +885,7 @@ func GetDelegatedCode(c echo.Context) error {
 		logger.WithNamespace("oidc").Errorf("Missing sub")
 		return ErrAuthenticationFailed
 	}
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode for %s", sub)
 	params["delegated_code"] = getStorage().CreateCode(sub)
 	return c.JSON(http.StatusOK, params)
 }
