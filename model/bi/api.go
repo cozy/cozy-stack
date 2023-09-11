@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -15,7 +16,8 @@ import (
 )
 
 type apiClient struct {
-	host string
+	host     string
+	basePath string
 }
 
 func newApiClient(rawURL string) (*apiClient, error) {
@@ -26,14 +28,14 @@ func newApiClient(rawURL string) (*apiClient, error) {
 	if strings.Contains(u.Host, ":") {
 		return nil, errors.New("port not allowed in BI url")
 	}
-	return &apiClient{host: u.Host}, nil
+	return &apiClient{host: u.Host, basePath: u.Path}, nil
 }
 
-func (c *apiClient) makeRequest(verb, path, token string, body io.Reader) (*http.Response, error) {
+func (c *apiClient) makeRequest(verb, endpointPath, token string, body io.Reader) (*http.Response, error) {
 	u := &url.URL{
 		Scheme: "https",
 		Host:   c.host,
-		Path:   path,
+		Path:   path.Join(c.basePath, endpointPath),
 	}
 	req, err := http.NewRequest(verb, u.String(), body)
 	if err != nil {
