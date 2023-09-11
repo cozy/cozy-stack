@@ -995,6 +995,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		if name != "" {
 			indexer.IncrementRevision()
 			dir.DocName = name
+			dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
 		}
 		err = fs.CreateDir(dir)
 	}
@@ -1084,6 +1085,7 @@ func (s *Sharing) UpdateDir(
 		if name != "" {
 			indexer.IncrementRevision()
 			dir.DocName = name
+			dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
 		}
 		err = fs.UpdateDirDoc(oldDoc, dir)
 	}

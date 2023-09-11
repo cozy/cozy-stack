@@ -478,6 +478,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		if name != "" {
 			indexer.IncrementRevision()
 			newdoc.DocName = name
+			newdoc.ResetFullpath()
 		}
 		err = fs.UpdateFileDoc(olddoc, newdoc)
 	}
@@ -762,6 +763,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		if name != "" {
 			indexer.IncrementRevision()
 			newdoc.DocName = name
+			newdoc.ResetFullpath()
 		}
 		err = fs.UpdateFileDoc(tmpdoc, newdoc)
 	}
