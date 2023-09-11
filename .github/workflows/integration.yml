@@ -47,7 +47,7 @@ jobs:
         with:
           ruby-version: '2.7'
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
