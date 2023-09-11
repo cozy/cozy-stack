@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/gavv/httpexpect/v2"
+	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/spf13/viper"
@@ -403,4 +404,48 @@ func compress(content string) []byte {
 	_, _ = bw.Write([]byte(content))
 	_ = bw.Close()
 	return buf.Bytes()
+}
+
+func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) {
+	if inst.UUID == "" {
+		uuid, err := uuid.NewV4()
+		require.NoError(t, err, "Could not enable test instance manager")
+		inst.UUID = uuid.String()
+		shouldRemoveUUID = true
+	}
+
+	config, ok := inst.SettingsContext()
+	require.True(t, ok, "Could not enable test instance manager: could not fetch test instance settings context")
+
+	managerURL, ok := config["manager_url"].(string)
+	require.True(t, ok, "Could not enable test instance manager: manager_url config is required")
+	require.NotEmpty(t, managerURL, "Could not enable test instance manager: manager_url config is required")
+
+	if inst.FeatureFlags == nil {
+		inst.FeatureFlags = map[string]interface{}{}
+	}
+	inst.FeatureFlags["enable_premium_links"] = true
+
+	t.Cleanup(func() {
+		err := DisableManager(inst, shouldRemoveUUID)
+		require.NoError(t, err)
+	})
+
+	err := instance.Update(inst)
+	require.NoError(t, err, "Could not enable test instance manager")
+
+	return shouldRemoveUUID
+}
+
+func DisableManager(inst *instance.Instance, shouldRemoveUUID bool) error {
+	if inst.FeatureFlags == nil {
+		inst.FeatureFlags = map[string]interface{}{}
+	}
+	inst.FeatureFlags["enable_premium_links"] = false
+
+	if shouldRemoveUUID {
+		inst.UUID = ""
+	}
+
+	return instance.Update(inst)
 }

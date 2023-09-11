@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	apps "github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
@@ -35,7 +37,6 @@ import (
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/gavv/httpexpect/v2"
-	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 
@@ -168,14 +169,11 @@ func TestApps(t *testing.T) {
 
 		// TOS not signed warning
 
+		testutils.WithManager(t, testInstance)
+
 		tosSigned := testInstance.TOSSigned
 		tosLatest := testInstance.TOSLatest
-
-		uuid, err := uuid.NewV4()
-		require.NoError(t, err)
 		tomorrow := time.Now().Add(24 * time.Hour)
-
-		testInstance.UUID = uuid.String()
 		testInstance.TOSSigned = "1.0.0-20170901"
 		testInstance.TOSLatest = "2.0.0-" + tomorrow.Format("20060102")
 		require.NoError(t, instance.Update(testInstance))
@@ -452,6 +450,11 @@ func TestApps(t *testing.T) {
 	t.Run("OpenWebapp", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
+		// Expected flags since they can be modified by other tests
+		flags, err := feature.GetFlags(testInstance)
+		require.NoError(t, err)
+		flagsStr, err := json.Marshal(flags)
+
 		// Create the OAuth client for the flagship app
 		flagship := oauth.Client{
 			RedirectURIs: []string{"cozy://flagship"},
@@ -485,7 +488,7 @@ func TestApps(t *testing.T) {
 		attrs.ValueEqual("SubDomain", "flat")
 		attrs.Value("Cookie").String().Contains("HttpOnly")
 		attrs.Value("Token").String().NotEmpty()
-		attrs.ValueEqual("Flags", "{}")
+		attrs.ValueEqual("Flags", string(flagsStr))
 		attrs.ContainsKey("Warnings")
 
 		links := data.Value("links").Object()
