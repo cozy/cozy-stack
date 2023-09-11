@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -253,5 +254,41 @@ func TestClient(t *testing.T) {
 		assert.Equal(t, "c", clients[2].CouchID)
 		assert.Equal(t, "d", clients[3].CouchID)
 		assert.Equal(t, "e", clients[4].CouchID)
+	})
+
+	t.Run("CheckOAuthClientsLimitReached", func(t *testing.T) {
+		require.NoError(t, couchdb.ResetDB(testInstance, consts.OAuthClients))
+
+		// Create the OAuth client for the flagship app
+		flagship := oauth.Client{
+			RedirectURIs: []string{"cozy://flagship"},
+			ClientName:   "flagship-app",
+			ClientKind:   "mobile",
+			SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+			Flagship:     true,
+		}
+		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
+		require.NoError(t, err)
+		require.Equal(t, len(clients), 1)
+
+		var reached, exceeded bool
+
+		reached, exceeded = oauth.CheckOAuthClientsLimitReached(testInstance, 0)
+		require.True(t, reached)
+		require.True(t, exceeded)
+
+		reached, exceeded = oauth.CheckOAuthClientsLimitReached(testInstance, 1)
+		require.True(t, reached)
+		require.False(t, exceeded)
+
+		reached, exceeded = oauth.CheckOAuthClientsLimitReached(testInstance, 2)
+		require.False(t, reached)
+		require.False(t, exceeded)
+
+		reached, exceeded = oauth.CheckOAuthClientsLimitReached(testInstance, -1)
+		require.False(t, reached)
+		require.False(t, exceeded)
 	})
 }

@@ -1,15 +1,20 @@
 package middlewares
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/move"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/net/idna"
@@ -158,7 +163,7 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 }
 
 func warningOrBlocked(i *instance.Instance, returnCode int) []*jsonapi.Error {
-	warnings := i.Warnings()
+	warnings := ListWarnings(i)
 	if len(warnings) == 0 {
 		warnings = []*jsonapi.Error{
 			{
@@ -212,13 +217,48 @@ func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 		if notSigned && deadline == instance.TOSBlocked {
 			switch AcceptedContentType(c) {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
-				return c.JSON(http.StatusPaymentRequired, i.Warnings())
+				return c.JSON(http.StatusPaymentRequired, ListWarnings(i))
 			default:
 				return c.Redirect(http.StatusFound, redirect)
 			}
 		}
 		return next(c)
 	}
+}
+
+// CheckOAuthClientsLimitExceeded checks if there are more OAuth clients
+// connected by the user than what their plan allows
+func CheckOAuthClientsLimitExceeded(c echo.Context) (bool, error) {
+	i := GetInstance(c)
+	if _, ok := GetCLIPermission(c); ok {
+		return false, nil
+	}
+
+	slug := c.Get("slug").(string)
+	if slug == consts.SettingsSlug {
+		return false, nil
+	}
+
+	flags, err := feature.GetFlags(i)
+	if err != nil {
+		return true, echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("Could not get flags: %w", err))
+	}
+
+	if clientsLimit, ok := flags.M["cozy.oauthclients.max"].(float64); ok && clientsLimit >= 0 {
+		_, exceeded := oauth.CheckOAuthClientsLimitReached(i, int(clientsLimit))
+		if exceeded {
+			reqURL := c.Request().URL
+			subdomain := i.SubDomain(slug)
+			subdomain.Path = reqURL.Path
+			subdomain.RawQuery = reqURL.RawQuery
+			subdomain.Fragment = reqURL.Fragment
+			q := url.Values{"redirect": {subdomain.String()}}
+
+			return true, c.Redirect(http.StatusSeeOther, i.PageURL("/settings/clients/limit-exceeded", q))
+		}
+	}
+
+	return false, nil
 }
 
 // GetInstance will return the instance linked to the given echo

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/feature"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -122,4 +124,62 @@ func (h *HTTPHandler) synchronized(c echo.Context) error {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *HTTPHandler) limitExceeded(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	redirect := c.QueryParam("redirect")
+	if redirect == "" {
+		redirect = inst.DefaultRedirection().String()
+	}
+
+	flags, err := feature.GetFlags(inst)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("Could not get flags: %w", err))
+	}
+
+	if clientsLimit, ok := flags.M["cozy.oauthclients.max"].(float64); ok && clientsLimit >= 0 {
+		limit := int(clientsLimit)
+
+		clients, _, err := oauth.GetConnectedUserClients(inst, 100, "")
+		if err != nil {
+			return fmt.Errorf("Could not fetch connected OAuth clients: %s", err)
+		}
+		count := len(clients)
+
+		if count > limit {
+			connectedDevicesURL := inst.SubDomain(consts.SettingsSlug)
+			connectedDevicesURL.Fragment = "/connectedDevices"
+
+			var premiumURL string
+			if enablePremiumLinks, ok := flags.M["enable_premium_links"].(bool); ok && enablePremiumLinks {
+				isFlagship, _ := strconv.ParseBool(c.QueryParam("isFlagship"))
+				iapEnabled, _ := flags.M["flagship.iap.enabled"].(bool)
+				if !isFlagship || iapEnabled {
+					var err error
+					if premiumURL, err = inst.ManagerURL(instance.ManagerPremiumURL); err != nil {
+						return fmt.Errorf("Could not get Premium Manager URL for instance %s: %w", inst.DomainName(), err)
+					}
+				}
+			}
+
+			sess, _ := middlewares.GetSession(c)
+			settingsToken := inst.BuildAppToken(consts.SettingsSlug, sess.ID())
+			return c.Render(http.StatusOK, "oauth_clients_limit_exceeded.html", echo.Map{
+				"Domain":           inst.ContextualDomain(),
+				"ContextName":      inst.ContextName,
+				"Locale":           inst.Locale,
+				"Title":            inst.TemplateTitle(),
+				"Favicon":          middlewares.Favicon(inst),
+				"ClientsCount":     strconv.Itoa(count),
+				"ClientsLimit":     strconv.Itoa(limit),
+				"ManageDevicesURL": connectedDevicesURL.String(),
+				"PremiumURL":       premiumURL,
+				"SettingsToken":    settingsToken,
+			})
+		}
+	}
+
+	return c.Redirect(http.StatusFound, redirect)
 }

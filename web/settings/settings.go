@@ -64,7 +64,7 @@ func (h *HTTPHandler) getSessions(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-func (h *HTTPHandler) warnings(c echo.Context) error {
+func (h *HTTPHandler) listWarnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Any request with a token can ask for the context (no permissions are required)
@@ -72,12 +72,9 @@ func (h *HTTPHandler) warnings(c echo.Context) error {
 		return err
 	}
 
-	warnings := inst.Warnings()
-	if warnings == nil {
-		warnings = []*jsonapi.Error{}
-	}
+	w := middlewares.ListWarnings(inst)
 
-	if len(warnings) == 0 {
+	if len(w) == 0 {
 		// Sends a 404 when there is no warnings
 		resp := c.Response()
 		resp.Header().Set(echo.HeaderContentType, jsonapi.ContentType)
@@ -86,7 +83,7 @@ func (h *HTTPHandler) warnings(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.DataErrorList(c, warnings...)
+	return jsonapi.DataErrorList(c, w...)
 }
 
 // postEmail handle POST /settings/email
@@ -231,9 +228,10 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 
 	router.GET("/clients", h.listClients)
 	router.DELETE("/clients/:id", h.revokeClient)
+	router.GET("/clients/limit-exceeded", h.limitExceeded)
 	router.POST("/synchronized", h.synchronized)
 
 	router.GET("/onboarded", h.onboarded)
 	router.GET("/context", h.context)
-	router.GET("/warnings", h.warnings)
+	router.GET("/warnings", h.listWarnings)
 }

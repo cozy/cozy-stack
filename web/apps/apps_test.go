@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	apps "github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/intent"
@@ -64,6 +66,7 @@ func TestApps(t *testing.T) {
 		Host:   "localhost",
 		Path:   tempdir,
 	}
+	cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
 	was := cfg.Subdomains
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
@@ -130,6 +133,41 @@ func TestApps(t *testing.T) {
 		assertInternalServerError(e, slug, testInstance.Domain, "/invalid")
 	})
 
+	t.Run("ServeWithClientsLimitExceeded", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Create the OAuth client for the flagship app
+		flagship := oauth.Client{
+			RedirectURIs: []string{"cozy://flagship"},
+			ClientName:   "flagship-app",
+			ClientKind:   "mobile",
+			SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+			Flagship:     true,
+		}
+		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+
+		var limit float64
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		e = e.Builder(func(r *httpexpect.Request) {
+			r.WithCookie("cozysessid", cozysessID)
+		})
+
+		assertAuthGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
+		assertAnonGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
+
+		redirect := testInstance.SubDomain(slug)
+		redirect.Path = "/foo"
+		location := testInstance.PageURL("/settings/clients/limit-exceeded", url.Values{"redirect": {redirect.String()}})
+		assertRedirect(e, slug, testInstance.Domain, "/foo", 303, location)
+
+		assertAuthGet(e, slug, testInstance.Domain, "/foo/hello.html", "text/html", "utf-8", "world {{.Token}}")
+
+		testInstance.FeatureFlags = map[string]interface{}{}
+		require.NoError(t, instance.Update(testInstance))
+	})
+
 	t.Run("CozyBar", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -142,6 +180,59 @@ func TestApps(t *testing.T) {
 			Body().
 			Contains(`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`).
 			Contains(`<script src="//cozywithapps.example.net/assets/js/cozy-bar`)
+	})
+
+	t.Run("Warnings", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Moved instance warning
+
+		testInstance.Moved = true
+		require.NoError(t, instance.Update(testInstance))
+
+		e.GET("/foo/").
+			WithHost(slug+"."+testInstance.Domain).
+			WithCookie("cozysessid", cozysessID).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains(`<meta name="user-action-required" data-title="Cozy has been moved" data-code="moved" data-detail="The Cozy has been moved to a new address"`)
+
+		testInstance.Moved = false
+		require.NoError(t, instance.Update(testInstance))
+
+		// TOS not signed warning
+
+		testutils.WithManager(t, testInstance)
+
+		tosSigned := testInstance.TOSSigned
+		tosLatest := testInstance.TOSLatest
+		tomorrow := time.Now().Add(24 * time.Hour)
+		testInstance.TOSSigned = "1.0.0-20170901"
+		testInstance.TOSLatest = "2.0.0-" + tomorrow.Format("20060102")
+		require.NoError(t, instance.Update(testInstance))
+
+		notSigned, deadline := testInstance.CheckTOSNotSignedAndDeadline()
+		require.True(t, notSigned)
+		require.Equal(t, deadline, instance.TOSWarning)
+
+		tosLink, err := testInstance.ManagerURL(instance.ManagerTOSURL)
+		require.NoError(t, err)
+		require.NotEmpty(t, tosLink)
+
+		e.GET("/foo/").
+			WithHost(slug+"."+testInstance.Domain).
+			WithCookie("cozysessid", cozysessID).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains(`<meta name="user-action-required" data-title="TOS Updated" data-code="tos-updated" data-detail="Terms of services have been updated" data-links="` + tosLink + `"`)
+
+		testInstance.TOSSigned = tosSigned
+		testInstance.TOSLatest = tosLatest
+		require.NoError(t, instance.Update(testInstance))
 	})
 
 	t.Run("ServeWithAnIntents", func(t *testing.T) {
@@ -394,6 +485,11 @@ func TestApps(t *testing.T) {
 	t.Run("OpenWebapp", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
+		// Expected flags since they can be modified by other tests
+		flags, err := feature.GetFlags(testInstance)
+		require.NoError(t, err)
+		flagsStr, err := json.Marshal(flags)
+
 		// Create the OAuth client for the flagship app
 		flagship := oauth.Client{
 			RedirectURIs: []string{"cozy://flagship"},
@@ -427,7 +523,8 @@ func TestApps(t *testing.T) {
 		attrs.ValueEqual("SubDomain", "flat")
 		attrs.Value("Cookie").String().Contains("HttpOnly")
 		attrs.Value("Token").String().NotEmpty()
-		attrs.ValueEqual("Flags", "{}")
+		attrs.ValueEqual("Flags", string(flagsStr))
+		attrs.ContainsKey("Warnings")
 
 		links := data.Value("links").Object()
 		links.ValueEqual("self", "/apps/mini/open")
@@ -667,4 +764,12 @@ func assertInternalServerError(e *httpexpect.Expect, slug, domain, path string) 
 	e.GET(path).
 		WithHost(slug + "." + domain).
 		Expect().Status(500)
+}
+
+func assertRedirect(e *httpexpect.Expect, slug, domain, path string, code int, location string) {
+	e.GET(path).
+		WithHost(slug + "." + domain).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(code).
+		Header("Location").Equal(location)
 }

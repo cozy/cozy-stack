@@ -20,8 +20,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	websettings "github.com/cozy/cozy-stack/web/settings"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +33,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
-func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) string {
+func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) *httptest.Server {
 	t.Helper()
 
 	handler := echo.New()
@@ -48,7 +51,7 @@ func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) s
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
-	return ts.URL
+	return ts
 }
 
 func TestSettings(t *testing.T) {
@@ -60,8 +63,19 @@ func TestSettings(t *testing.T) {
 	var oauthClientID string
 
 	config.UseTestFile(t)
+	conf := config.GetConfig()
+	conf.Assets = "../../assets"
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
+	was := conf.Subdomains
+	conf.Subdomains = config.NestedSubdomains
+	defer func() { conf.Subdomains = was }()
+
+	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
 		Timezone:    "Europe/Berlin",
@@ -72,7 +86,10 @@ func TestSettings(t *testing.T) {
 	_, token := setup.GetTestClient(scope)
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	ts := setupRouter(t, testInstance, svc)
+	ts.Config.Handler.(*echo.Echo).Renderer = render
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	tsURL := ts.URL
 
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
@@ -865,6 +882,99 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("ratio_0.999999", "context")
 		attrs.ValueEqual("ratio_1", "context")
 	})
+
+	t.Run("ClientsLimitExceededWithoutLimit", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(testInstance.DefaultRedirection().String())
+
+		redirect := "cozy://my-app"
+		e.GET("/settings/clients/limit-exceeded").
+			WithQuery("redirect", redirect).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(redirect)
+	})
+
+	t.Run("ClientsLimitExceededWithLimitExceeded", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		var limit float64
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		// Create the OAuth client for the flagship app
+		flagship := oauth.Client{
+			RedirectURIs: []string{"cozy://flagship"},
+			ClientName:   "flagship-app",
+			ClientKind:   "mobile",
+			SoftwareID:   "github.com/cozy/cozy-stack/testing/flagship",
+			Flagship:     true,
+		}
+		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
+		defer flagship.Delete(testInstance)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			NotContains("http://manager.example.org")
+
+		testutils.WithManager(t, testInstance)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			Contains("http://manager.example.org")
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithQuery("isFlagship", true).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			ContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			NotContains("http://manager.example.org")
+	})
+
+	t.Run("ClientsLimitExceededWithLimitReached", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
+		require.NoError(t, err)
+
+		limit := float64(len(clients))
+		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
+		require.NoError(t, instance.Update(testInstance))
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(302).
+			Header("location").IsEqual(testInstance.DefaultRedirection().String())
+	})
 }
 
 func TestRedirectOnboardingSecret(t *testing.T) {
@@ -883,7 +993,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 	})
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	tsURL := setupRouter(t, testInstance, svc).URL
 
 	e := testutils.CreateTestClient(t, tsURL)
 
@@ -947,7 +1057,7 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 	})
 
 	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc)
+	tsURL := setupRouter(t, testInstance, svc).URL
 
 	require.Nil(t, oauthClient.Create(testInstance))
 	client, err := oauth.FindClient(testInstance, oauthClient.ClientID)

@@ -814,4 +814,21 @@ func BuildLinkedAppScope(slug string) string {
 	return fmt.Sprintf("@%s/%s", consts.Apps, slug)
 }
 
+func CheckOAuthClientsLimitReached(i *instance.Instance, limit int) (reached, exceeded bool) {
+	if limit == -1 {
+		return
+	}
+
+	clients, _, err := GetConnectedUserClients(i, 100, "")
+	if err != nil {
+		i.Logger().Errorf("Could not fetch connected OAuth clients: %s", err)
+		return
+	}
+	count := len(clients)
+
+	reached = count >= limit
+	exceeded = count > limit
+	return
+}
+
 var _ couchdb.Doc = &Client{}
