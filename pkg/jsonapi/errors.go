@@ -59,7 +59,7 @@ func NotFound(err error) *Error {
 func BadRequest(err error) *Error {
 	return &Error{
 		Status: http.StatusBadRequest,
-		Title:  "Bad request",
+		Title:  "Bad Request",
 		Detail: err.Error(),
 	}
 }
@@ -69,7 +69,7 @@ func BadRequest(err error) *Error {
 func BadJSON() *Error {
 	return &Error{
 		Status: http.StatusBadRequest,
-		Title:  "Bad request",
+		Title:  "Bad Request",
 		Detail: "JSON input is malformed or is missing mandatory fields",
 	}
 }

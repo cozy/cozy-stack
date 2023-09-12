@@ -1785,7 +1785,7 @@ func TestAuth(t *testing.T) {
 			"detail": "Missing secret",
 			"source": map[string]interface{}{},
 			"status": "400",
-			"title":  "Bad request",
+			"title":  "Bad Request",
 		})
 	})
 
