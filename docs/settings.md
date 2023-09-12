@@ -36,7 +36,6 @@ Content-Type: application/vnd.api+json
         "type": "io.cozy.settings",
         "id": "io.cozy.settings.disk-usage",
         "attributes": {
-            "is_limited": true,
             "quota": "123456789",
             "used": "12345678",
             "files": "10305070",
@@ -46,6 +45,46 @@ Content-Type: application/vnd.api+json
     }
 }
 ```
+
+## OAuth clients usage
+
+### GET /settings/clients-usage
+
+This endpoint returns the number of user-connected OAuth clients, the limit set
+on the Cozy and if this limit has been reached or even exceeded.
+If there is no limit, the `limit` attribute won't be present in the response.
+
+#### Request
+
+```
+GET /settings/clients-usage HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.clients-usage",
+        "attributes": {
+          "limit": 3,
+          "count": 3,
+          "limitReached": true,
+          "limitExceeded": false
+        }
+    }
+}
+```
+
 
 ## Email update
 

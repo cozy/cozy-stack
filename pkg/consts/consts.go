@@ -23,6 +23,8 @@ const (
 	BitwardenSettingsID = "io.cozy.settings.bitwarden"
 	// ContextSettingsID is the id of the settings JSON-API response for the context
 	ContextSettingsID = "io.cozy.settings.context"
+	// ClientsUsageID is the id of the settings JSON-API response for clients-usage
+	ClientsUsageID = "io.cozy.settings.clients-usage"
 	// DiskUsageID is the id of the settings JSON-API response for disk-usage
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance

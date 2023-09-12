@@ -200,6 +200,7 @@ func isMovedError(err error) bool {
 // Register all the `/settings` routes to the given router.
 func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
+	router.GET("/clients-usage", h.clientsUsage)
 
 	router.POST("/email", h.postEmail)
 	router.POST("/email/resend", h.postEmailResend)
