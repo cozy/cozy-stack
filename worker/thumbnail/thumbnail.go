@@ -68,11 +68,18 @@ func Worker(ctx *job.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
+	log := ctx.Logger()
 
 	if msg.NoteImage != nil {
 		return resizeNoteImage(ctx, msg.NoteImage)
 	}
 	if msg.File != nil {
+		mutex := config.Lock().ReadWrite(ctx.Instance, "thumbnails/"+msg.File.ID())
+		if err := mutex.Lock(); err != nil {
+			return err
+		}
+		defer mutex.Unlock()
+		log.Debugf("%s %s", msg.File.ID(), msg.Format)
 		if _, ok := formats[msg.Format]; !ok {
 			return errors.New("invalid format")
 		}
@@ -90,8 +97,13 @@ func Worker(ctx *job.WorkerContext) error {
 		return nil
 	}
 
-	log := ctx.Logger()
+	mutex := config.Lock().ReadWrite(ctx.Instance, "thumbnails/"+img.Doc.ID())
+	if err := mutex.Lock(); err != nil {
+		return err
+	}
+	defer mutex.Unlock()
 	log.Debugf("%s %s", img.Verb, img.Doc.ID())
+
 	switch img.Verb {
 	case "CREATED":
 		return generateThumbnails(ctx, &img.Doc)
@@ -211,8 +223,16 @@ func generateSingleThumbnail(ctx *job.WorkerContext, img *vfs.FileDoc, format st
 	}
 
 	fs := ctx.Instance.ThumbsFS()
+	exists, err := fs.ThumbExists(img, format)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
 	var in io.Reader
-	in, err := ctx.Instance.VFS().OpenFile(img)
+	in, err = ctx.Instance.VFS().OpenFile(img)
 	if err != nil {
 		return err
 	}
@@ -267,6 +287,14 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	exists, err := fs.ThumbExists(img, "tiny")
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
 	}
 	_, err = recGenerateThumb(ctx, in, fs, img, "tiny", env, true)
 	return err
