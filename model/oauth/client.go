@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
@@ -515,6 +516,25 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	}
 
 	c.TransformIDAndRev()
+
+	if !c.Pending {
+		flags, err := feature.GetFlags(i)
+		if err != nil {
+			i.Logger().WithNamespace("oauth").
+				Errorf("Failed to get the OAuth clients limit: %s", err)
+			return nil
+		}
+		limit := -1
+		if clientsLimit, ok := flags.M["cozy.oauthclients.max"].(float64); ok && clientsLimit >= 0 {
+			limit = int(clientsLimit)
+		}
+		_, exceeded := CheckOAuthClientsLimitReached(i, limit)
+		if exceeded {
+			enablePremiumLinks, _ := flags.M["enable_premium_links"].(bool)
+			PushClientsLimitAlert(i, c.ClientName, limit, enablePremiumLinks)
+		}
+		return nil
+	}
 	return nil
 }
 
@@ -829,6 +849,22 @@ func CheckOAuthClientsLimitReached(i *instance.Instance, limit int) (reached, ex
 	reached = count >= limit
 	exceeded = count > limit
 	return
+}
+
+var cbClientsLimitAlert func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool)
+
+// RegisterClientsLimitAlertCallback allows to register a callback function
+// called when the connected OAuth clients limit (if present) is exceeded.
+func RegisterClientsLimitAlertCallback(cb func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool)) {
+	cbClientsLimitAlert = cb
+}
+
+// PushClientsLimitAlert can be used to notify when the connected OAuth clients
+// limit (if present) is exceeded.
+func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool) {
+	if cbClientsLimitAlert != nil {
+		cbClientsLimitAlert(i, clientName, clientsLimit, enablePremiumLinks)
+	}
 }
 
 var _ couchdb.Doc = &Client{}

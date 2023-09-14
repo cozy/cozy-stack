@@ -25,6 +25,9 @@ const (
 	// NotificationDiskQuota category for sending alert when reaching 90% of disk
 	// usage quota.
 	NotificationDiskQuota = "disk-quota"
+	// NotificationOAuthClients category for sending alert when exceeding the
+	// connected OAuth clients limit.
+	NotificationOAuthClients = "oauth-clients"
 )
 
 var (
@@ -35,6 +38,12 @@ var (
 			Stateful:     true,
 			MailTemplate: "notifications_diskquota",
 			MinInterval:  7 * 24 * time.Hour,
+		},
+		NotificationOAuthClients: {
+			Description:  "Warn about the connected OAuth clients count exceeding the offer limit",
+			Collapsible:  false,
+			Stateful:     false,
+			MailTemplate: "notifications_oauthclients",
 		},
 	}
 )
@@ -72,6 +81,33 @@ func init() {
 			PreferredChannels: []string{"mobile"},
 		}
 		_ = PushStack(domain, NotificationDiskQuota, n)
+	})
+
+	oauth.RegisterClientsLimitAlertCallback(func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool) {
+		devicesLink := i.SubDomain(consts.SettingsSlug)
+		devicesLink.Fragment = "/connectedDevices"
+
+		var offersLink string
+		if enablePremiumLinks {
+			var err error
+			offersLink, err = i.ManagerURL(instance.ManagerPremiumURL)
+			if err != nil {
+				return
+			}
+		}
+
+		n := &notification.Notification{
+			Title: i.Translate("Notifications OAuth Clients Subject"),
+			Slug:  consts.SettingsSlug,
+			Data: map[string]interface{}{
+				"ClientName":   clientName,
+				"ClientsLimit": clientsLimit,
+				"OffersLink":   offersLink,
+				"DevicesLink":  devicesLink.String(),
+			},
+			PreferredChannels: []string{"mail"},
+		}
+		PushStack(i.DomainName(), NotificationOAuthClients, n)
 	})
 }
 

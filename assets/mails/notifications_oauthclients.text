@@ -1,0 +1,14 @@
+{{t "Notifications OAuth Clients Title"}}
+---
+
+{{t "Notifications OAuth Clients Greeting"}}
+
+{{t "Notifications OAuth Clients Reason Device" .ClientName}}
+{{t "Notifications OAuth Clients Reason Limit" .ClientsLimit}}
+
+{{if .OffersLink}}
+{{t "Notifications OAuth Clients Increase Limit"}}
+
+{{t "Notifications OAuth Clients Offers Text"}}: {{.OffersLink}}
+{{end}}
+{{t "Notifications OAuth Clients Devices Text"}}: {{.DevicesLink}}

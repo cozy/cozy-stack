@@ -691,6 +691,30 @@ msgstr ""
 msgid "Notifications Disk Quota free text"
 msgstr "記憶容量を解放する"
 
+msgid "Notifications OAuth Clients Subject"
+msgstr "You've exceeded the maximum number of devices allowed in your plan"
+
+msgid "Notifications OAuth Clients Title"
+msgstr "Important information: maximum number of devices exceeded"
+
+msgid "Notifications OAuth Clients Greeting"
+msgstr "Hello,"
+
+msgid "Notifications OAuth Clients Reason Device"
+msgstr "**You've exceeded the maximum number of devices allowed** when connecting **%s** to your Cozy."
+
+msgid "Notifications OAuth Clients Reason Limit"
+msgstr "Your plan allows you to connect up to **%.0f devices**."
+
+msgid "Notifications OAuth Clients Increase Limit"
+msgstr "To upgrade your Cozy, or simply support us, you can change your Cozy plan."
+
+msgid "Notifications OAuth Clients Offers Text"
+msgstr "Check our plans"
+
+msgid "Notifications OAuth Clients Devices Text"
+msgstr "Manage my devices"
+
 msgid "Terms of services have been updated"
 msgstr "GDPR を遵守するため、Cozy Cloud は2018年5月25日に施行された利用規約を更新しました"
 

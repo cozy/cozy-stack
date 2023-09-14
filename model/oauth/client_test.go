@@ -1,19 +1,25 @@
 package oauth_test
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	_ "github.com/cozy/cozy-stack/model/notification/center"
+	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
 var c = &oauth.Client{
@@ -26,6 +32,8 @@ func TestClient(t *testing.T) {
 	}
 
 	config.UseTestFile(t)
+	conf := config.GetConfig()
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance()
 
@@ -136,6 +144,70 @@ func TestClient(t *testing.T) {
 			client.NotificationPlatform = "unknown"
 			assert.NotNil(t, client.Update(testInstance, goodClient))
 		}
+	})
+
+	t.Run("CreateClientWithClientsLimit", func(t *testing.T) {
+		var pending, notPending, notificationWithoutPremium, notificationWithPremium *oauth.Client
+		t.Cleanup(func() {
+			// Delete created clients
+			pending, err := oauth.FindClient(testInstance, pending.ClientID)
+			require.NoError(t, err)
+			require.Nil(t, pending.Delete(testInstance))
+
+			notPending, err := oauth.FindClient(testInstance, notPending.ClientID)
+			require.NoError(t, err)
+			require.Nil(t, notPending.Delete(testInstance))
+
+			notificationWithoutPremium, err := oauth.FindClient(testInstance, notificationWithoutPremium.ClientID)
+			require.NoError(t, err)
+			require.Nil(t, notificationWithoutPremium.Delete(testInstance))
+
+			notificationWithPremium, err := oauth.FindClient(testInstance, notificationWithPremium.ClientID)
+			require.NoError(t, err)
+			require.Nil(t, notificationWithPremium.Delete(testInstance))
+		})
+
+		pending = &oauth.Client{
+			ClientName:   "pending",
+			ClientKind:   "mobile",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, pending.Create(testInstance))
+		assertClientsLimitAlertMailWasNotSent(t, testInstance)
+
+		notPending = &oauth.Client{
+			ClientName:   "notPending",
+			ClientKind:   "mobile",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, notPending.Create(testInstance, oauth.NotPending))
+		assertClientsLimitAlertMailWasNotSent(t, testInstance)
+
+		testutils.WithOAuthClientsLimit(t, testInstance, 1)
+
+		notificationWithoutPremium = &oauth.Client{
+			ClientName:   "notificationWithoutPremium",
+			ClientKind:   "mobile",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, notificationWithoutPremium.Create(testInstance, oauth.NotPending))
+		premiumLink := assertClientsLimitAlertMailWasSent(t, testInstance, "notificationWithoutPremium", 1)
+		assert.Empty(t, premiumLink)
+
+		testutils.WithManager(t, testInstance)
+
+		notificationWithPremium = &oauth.Client{
+			ClientName:   "notificationWithPremium",
+			ClientKind:   "mobile",
+			RedirectURIs: []string{"https://foobar"},
+			SoftwareID:   "bar",
+		}
+		require.Nil(t, notificationWithPremium.Create(testInstance, oauth.NotPending))
+		premiumLink = assertClientsLimitAlertMailWasSent(t, testInstance, "notificationWithPremium", 1)
+		assert.NotEmpty(t, premiumLink)
 	})
 
 	t.Run("GetConnectedUserClients", func(t *testing.T) {
@@ -291,4 +363,55 @@ func TestClient(t *testing.T) {
 		require.False(t, reached)
 		require.False(t, exceeded)
 	})
+}
+
+func assertClientsLimitAlertMailWasNotSent(t *testing.T, instance *instance.Instance) {
+	var jobs []job.Job
+	couchReq := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-state",
+		Selector: mango.And(
+			mango.Equal("worker", "sendmail"),
+			mango.Exists("state"),
+		),
+		Sort: mango.SortBy{
+			mango.SortByField{Field: "worker", Direction: "desc"},
+		},
+		Limit: 1,
+	}
+	err := couchdb.FindDocs(instance, consts.Jobs, couchReq, &jobs)
+	assert.NoError(t, err)
+
+	// Mail sent for the device connection
+	assert.Len(t, jobs, 0)
+}
+
+func assertClientsLimitAlertMailWasSent(t *testing.T, instance *instance.Instance, clientName string, clientsLimit int) string {
+	var jobs []job.Job
+	couchReq := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-state",
+		Selector: mango.And(
+			mango.Equal("worker", "sendmail"),
+			mango.Exists("state"),
+		),
+		Sort: mango.SortBy{
+			mango.SortByField{Field: "worker", Direction: "desc"},
+		},
+		Limit: 1,
+	}
+	err := couchdb.FindDocs(instance, consts.Jobs, couchReq, &jobs)
+	assert.NoError(t, err)
+	assert.Len(t, jobs, 1)
+
+	var msg map[string]interface{}
+	err = json.Unmarshal(jobs[0].Message, &msg)
+	assert.NoError(t, err)
+
+	assert.Equal(t, msg["mode"], "noreply")
+	assert.Equal(t, msg["template_name"], "notifications_oauthclients")
+
+	values := msg["template_values"].(map[string]interface{})
+	assert.Equal(t, values["ClientName"], clientName)
+	assert.Equal(t, values["ClientsLimit"], float64(clientsLimit))
+
+	return values["OffersLink"].(string)
 }
