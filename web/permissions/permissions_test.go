@@ -787,6 +787,34 @@ func TestPermissions(t *testing.T) {
 		obj.Path("$.links.next").String().NotEmpty()
 	})
 
+	t.Run("ShowPermissions", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		id, _, _ := createTestSubPermissions(e, token, "alice")
+
+		obj := e.GET("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		perms := obj.Path("$.data.attributes.permissions").Object()
+
+		for _, r := range perms.Iter() {
+			r.Object().ValueEqual("type", "io.cozy.files")
+			r.Object().ValueEqual("verbs", []interface{}{"GET"})
+		}
+	})
+
+	t.Run("ShowPermissionsFail", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		id, _, _ := createTestSubPermissions(e, token, "alice")
+		_, otherToken := setup.GetTestClient("io.cozy.tags")
+
+		e.GET("/permissions/"+id).
+			WithHeader("Authorization", "Bearer "+otherToken).
+			Expect().Status(403)
+	})
+
 	t.Run("CreatePermissionWithoutMetadata", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
