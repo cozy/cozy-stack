@@ -1126,3 +1126,6 @@ msgstr "Manage my connected devices"
 
 msgid "Too Many OAuth Clients Refresh Btn"
 msgstr "Refresh"
+
+msgid "Asset not found"
+msgstr "Asset not found"

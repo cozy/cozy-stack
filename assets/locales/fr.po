@@ -1333,3 +1333,6 @@ msgstr "Gérer les appareils connectés"
 
 msgid "Too Many OAuth Clients Refresh Btn"
 msgstr "Actualiser"
+
+msgid "Asset not found"
+msgstr "Élément not trouvé"
