@@ -906,9 +906,7 @@ func TestSettings(t *testing.T) {
 	t.Run("ClientsLimitExceededWithLimitExceeded", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
-		var limit float64
-		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
-		require.NoError(t, instance.Update(testInstance))
+		testutils.WithOAuthClientsLimit(t, testInstance, 0)
 
 		// Create the OAuth client for the flagship app
 		flagship := oauth.Client{
@@ -964,9 +962,7 @@ func TestSettings(t *testing.T) {
 		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
 		require.NoError(t, err)
 
-		limit := float64(len(clients))
-		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
-		require.NoError(t, instance.Update(testInstance))
+		testutils.WithOAuthClientsLimit(t, testInstance, float64(len(clients)))
 
 		e.GET("/settings/clients/limit-exceeded").
 			WithHeader("Authorization", "Bearer "+token).

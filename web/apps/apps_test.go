@@ -146,9 +146,7 @@ func TestApps(t *testing.T) {
 		}
 		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
 
-		var limit float64
-		testInstance.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
-		require.NoError(t, instance.Update(testInstance))
+		testutils.WithOAuthClientsLimit(t, testInstance, 0)
 
 		e = e.Builder(func(r *httpexpect.Request) {
 			r.WithCookie("cozysessid", cozysessID)

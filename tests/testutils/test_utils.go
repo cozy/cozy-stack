@@ -449,3 +449,23 @@ func DisableManager(inst *instance.Instance, shouldRemoveUUID bool) error {
 
 	return instance.Update(inst)
 }
+
+func WithOAuthClientsLimit(t *testing.T, inst *instance.Instance, limit float64) {
+	flags := inst.FeatureFlags
+	if flags == nil {
+		flags = map[string]interface{}{}
+	}
+
+	was := flags["cozy.oauthclients.max"]
+
+	flags["cozy.oauthclients.max"] = limit
+	inst.FeatureFlags = flags
+	err := instance.Update(inst)
+	require.NoError(t, err, "Could not set OAuth clients limit")
+
+	t.Cleanup(func() {
+		flags["cozy.oauthclients.max"] = was
+		inst.FeatureFlags = flags
+		require.NoError(t, instance.Update(inst))
+	})
+}

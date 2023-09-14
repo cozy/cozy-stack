@@ -3,7 +3,6 @@ package settings_test
 import (
 	"testing"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	csettings "github.com/cozy/cozy-stack/model/settings"
@@ -13,11 +12,6 @@ import (
 	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/require"
 )
-
-func setClientsLimit(t *testing.T, inst *instance.Instance, limit float64) {
-	inst.FeatureFlags = map[string]interface{}{"cozy.oauthclients.max": limit}
-	require.NoError(t, instance.Update(inst))
-}
 
 func TestClientsUsage(t *testing.T) {
 	config.UseTestFile(t)
@@ -45,7 +39,7 @@ func TestClientsUsage(t *testing.T) {
 	require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
 
 	t.Run("WithoutLimit", func(t *testing.T) {
-		setClientsLimit(t, testInstance, -1)
+		testutils.WithOAuthClientsLimit(t, testInstance, -1)
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -66,7 +60,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitNotReached", func(t *testing.T) {
-		setClientsLimit(t, testInstance, 2)
+		testutils.WithOAuthClientsLimit(t, testInstance, 2)
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -87,7 +81,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitReached", func(t *testing.T) {
-		setClientsLimit(t, testInstance, 1)
+		testutils.WithOAuthClientsLimit(t, testInstance, 1)
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -108,7 +102,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitExceeded", func(t *testing.T) {
-		setClientsLimit(t, testInstance, 0)
+		testutils.WithOAuthClientsLimit(t, testInstance, 0)
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
