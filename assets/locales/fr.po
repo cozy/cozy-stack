@@ -1251,6 +1251,30 @@ msgstr ""
 msgid "Notifications Disk Quota free text"
 msgstr "Libérer de l'espace"
 
+msgid "Notifications OAuth Clients Subject"
+msgstr "Vous avez dépassé le nombre maximum d'appareils connectés inclus dans votre offre"
+
+msgid "Notifications OAuth Clients Title"
+msgstr "Information importante : nombre maximum d'appareils dépassé"
+
+msgid "Notifications OAuth Clients Greeting"
+msgstr "Bonjour,"
+
+msgid "Notifications OAuth Clients Reason Device"
+msgstr "**Vous avez dépassé le nombre d'appareils autorisés** en connectant **%s** à votre Cozy."
+
+msgid "Notifications OAuth Clients Reason Limit"
+msgstr "Votre offre vous permet de connecter jusqu'à **%.0f appareils** simultanément."
+
+msgid "Notifications OAuth Clients Increase Limit"
+msgstr "Pour augmenter cette limite, ou simplement nous soutenir, vous pouvez modifier l'offre de votre Cozy."
+
+msgid "Notifications OAuth Clients Offers Text"
+msgstr "Voir les offres"
+
+msgid "Notifications OAuth Clients Devices Text"
+msgstr "Gérer mes appareils"
+
 msgid "Terms of services have been updated"
 msgstr ""
 "Dans le cadre du RGPD, Cozy Cloud met à jour ses Conditions Générales "

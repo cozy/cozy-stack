@@ -1,0 +1,24 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://files.cozycloud.cc/email-assets/stack/icon-archive.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Notifications OAuth Clients Title"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Notifications OAuth Clients Greeting"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{tHTML "Notifications OAuth Clients Reason Device" .ClientName}}<br />
+	{{tHTML "Notifications OAuth Clients Reason Limit" .ClientsLimit}}
+</mj-text>
+{{if .OffersLink}}
+<mj-text mj-class="content-medium">
+	{{t "Notifications OAuth Clients Increase Limit"}}
+</mj-text>
+<mj-button href="{{.OffersLink}}" align="left" mj-class="primary-button content-large">
+	{{t "Notifications OAuth Clients Offers Text"}}
+</mj-button>
+{{end}}
+<mj-button href="{{.DevicesLink}}" align="left" mj-class="primary-button content-large">
+	{{t "Notifications OAuth Clients Devices Text"}}
+</mj-button>
+{{end}}
