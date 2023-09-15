@@ -83,16 +83,16 @@ func init() {
 		_ = PushStack(domain, NotificationDiskQuota, n)
 	})
 
-	oauth.RegisterClientsLimitAlertCallback(func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool) {
+	oauth.RegisterClientsLimitAlertCallback(func(i *instance.Instance, clientName string, clientsLimit int) {
 		devicesLink := i.SubDomain(consts.SettingsSlug)
 		devicesLink.Fragment = "/connectedDevices"
 
 		var offersLink string
-		if enablePremiumLinks {
+		if i.HasPremiumLinksEnabled() {
 			var err error
 			offersLink, err = i.ManagerURL(instance.ManagerPremiumURL)
 			if err != nil {
-				return
+				i.Logger().Errorf("Could not get instance Premium Manager URL: %s", err.Error())
 			}
 		}
 

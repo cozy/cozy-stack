@@ -524,14 +524,14 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 				Errorf("Failed to get the OAuth clients limit: %s", err)
 			return nil
 		}
+
 		limit := -1
 		if clientsLimit, ok := flags.M["cozy.oauthclients.max"].(float64); ok && clientsLimit >= 0 {
 			limit = int(clientsLimit)
 		}
 		_, exceeded := CheckOAuthClientsLimitReached(i, limit)
 		if exceeded {
-			enablePremiumLinks, _ := flags.M["enable_premium_links"].(bool)
-			PushClientsLimitAlert(i, c.ClientName, limit, enablePremiumLinks)
+			PushClientsLimitAlert(i, c.ClientName, limit)
 		}
 		return nil
 	}
@@ -851,19 +851,19 @@ func CheckOAuthClientsLimitReached(i *instance.Instance, limit int) (reached, ex
 	return
 }
 
-var cbClientsLimitAlert func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool)
+var cbClientsLimitAlert func(i *instance.Instance, clientName string, clientsLimit int)
 
 // RegisterClientsLimitAlertCallback allows to register a callback function
 // called when the connected OAuth clients limit (if present) is exceeded.
-func RegisterClientsLimitAlertCallback(cb func(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool)) {
+func RegisterClientsLimitAlertCallback(cb func(i *instance.Instance, clientName string, clientsLimit int)) {
 	cbClientsLimitAlert = cb
 }
 
 // PushClientsLimitAlert can be used to notify when the connected OAuth clients
 // limit (if present) is exceeded.
-func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit int, enablePremiumLinks bool) {
+func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit int) {
 	if cbClientsLimitAlert != nil {
-		cbClientsLimitAlert(i, clientName, clientsLimit, enablePremiumLinks)
+		cbClientsLimitAlert(i, clientName, clientsLimit)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"net/http/httptest"
 	"net/url"
@@ -421,14 +422,16 @@ func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) 
 	require.True(t, ok, "Could not enable test instance manager: manager_url config is required")
 	require.NotEmpty(t, managerURL, "Could not enable test instance manager: manager_url config is required")
 
-	if inst.FeatureFlags == nil {
-		inst.FeatureFlags = map[string]interface{}{}
-	}
-	inst.FeatureFlags["enable_premium_links"] = true
+	was := config["enable_premium_links"]
+	config["enable_premium_links"] = true
 
 	t.Cleanup(func() {
-		err := DisableManager(inst, shouldRemoveUUID)
-		require.NoError(t, err)
+		config["enable_premium_links"] = was
+
+		if shouldRemoveUUID {
+			inst.UUID = ""
+			require.NoError(t, instance.Update(inst))
+		}
 	})
 
 	err := instance.Update(inst)
@@ -438,16 +441,18 @@ func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) 
 }
 
 func DisableManager(inst *instance.Instance, shouldRemoveUUID bool) error {
-	if inst.FeatureFlags == nil {
-		inst.FeatureFlags = map[string]interface{}{}
+	config, ok := inst.SettingsContext()
+	if !ok {
+		return fmt.Errorf("Could not disable test instance manager: could not fetch test instance settings context")
 	}
-	inst.FeatureFlags["enable_premium_links"] = false
+
+	config["enable_premium_links"] = false
 
 	if shouldRemoveUUID {
 		inst.UUID = ""
+		return instance.Update(inst)
 	}
-
-	return instance.Update(inst)
+	return nil
 }
 
 func WithOAuthClientsLimit(t *testing.T, inst *instance.Instance, limit float64) {
