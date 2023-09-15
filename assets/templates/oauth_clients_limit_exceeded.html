@@ -26,14 +26,14 @@
               {{t "Too Many OAuth Clients Available Actions"}}
             </p>
             {{if .PremiumURL}}
-            <a href="{{.PremiumURL}}" target="_blank" class="btn btn-primary btn-md-lg w-100 mb-2">
+            <a href="{{.PremiumURL}}" {{if .OpenLinksInNewTab}}target="_blank"{{end}} class="btn btn-primary btn-md-lg w-100 mb-2">
               {{t "Too Many OAuth Clients Offers Btn"}}
             </a>
-            <a href="{{.ManageDevicesURL}}" target="_blank" class="btn btn-outline-info btn-md-lg w-100">
+            <a href="{{.ManageDevicesURL}}" {{if .OpenLinksInNewTab}}target="_blank"{{end}} class="btn btn-outline-info btn-md-lg w-100">
               {{t "Too Many OAuth Clients Settings Btn"}}
             </a>
             {{else}}
-            <a href="{{.ManageDevicesURL}}" target="_blank" class="btn btn-primary btn-md-lg w-100">
+            <a href="{{.ManageDevicesURL}}" {{if .OpenLinksInNewTab}}target="_blank"{{end}} class="btn btn-primary btn-md-lg w-100">
               {{t "Too Many OAuth Clients Settings Btn"}}
             </a>
             {{end}}
