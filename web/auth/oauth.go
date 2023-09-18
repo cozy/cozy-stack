@@ -271,16 +271,17 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 				settingsToken := inst.BuildAppToken(consts.SettingsSlug, sess.ID())
 
 				return c.Render(http.StatusOK, "oauth_clients_limit_exceeded.html", echo.Map{
-					"Domain":           inst.ContextualDomain(),
-					"ContextName":      inst.ContextName,
-					"Locale":           inst.Locale,
-					"Title":            inst.TemplateTitle(),
-					"Favicon":          middlewares.Favicon(inst),
-					"ClientsCount":     strconv.Itoa(count),
-					"ClientsLimit":     strconv.Itoa(limit),
-					"ManageDevicesURL": manageDevicesURL,
-					"PremiumURL":       premiumURL,
-					"SettingsToken":    settingsToken,
+					"Domain":            inst.ContextualDomain(),
+					"ContextName":       inst.ContextName,
+					"Locale":            inst.Locale,
+					"Title":             inst.TemplateTitle(),
+					"Favicon":           middlewares.Favicon(inst),
+					"ClientsCount":      strconv.Itoa(count),
+					"ClientsLimit":      strconv.Itoa(limit),
+					"OpenLinksInNewTab": true,
+					"ManageDevicesURL":  manageDevicesURL,
+					"PremiumURL":        premiumURL,
+					"SettingsToken":     settingsToken,
 				})
 			}
 		}
