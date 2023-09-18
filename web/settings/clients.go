@@ -153,13 +153,13 @@ func (h *HTTPHandler) limitExceeded(c echo.Context) error {
 			connectedDevicesURL.Fragment = "/connectedDevices"
 
 			var premiumURL string
-			if enablePremiumLinks, ok := flags.M["enable_premium_links"].(bool); ok && enablePremiumLinks {
+			if inst.HasPremiumLinksEnabled() {
 				isFlagship, _ := strconv.ParseBool(c.QueryParam("isFlagship"))
 				iapEnabled, _ := flags.M["flagship.iap.enabled"].(bool)
 				if !isFlagship || iapEnabled {
 					var err error
 					if premiumURL, err = inst.ManagerURL(instance.ManagerPremiumURL); err != nil {
-						return fmt.Errorf("Could not get Premium Manager URL for instance %s: %w", inst.DomainName(), err)
+						inst.Logger().Errorf("Could not get instance Premium Manager URL: %s", err.Error())
 					}
 				}
 			}

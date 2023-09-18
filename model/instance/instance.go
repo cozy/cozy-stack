@@ -730,6 +730,15 @@ func (i *Instance) MovedError() *jsonapi.Error {
 	return &jerr
 }
 
+func (i *Instance) HasPremiumLinksEnabled() bool {
+	if ctxSettings, ok := i.SettingsContext(); ok {
+		if enabled, ok := ctxSettings["enable_premium_links"].(bool); ok {
+			return enabled
+		}
+	}
+	return false
+}
+
 // ensure Instance implements couchdb.Doc
 var (
 	_ couchdb.Doc = &Instance{}
