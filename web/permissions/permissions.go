@@ -299,6 +299,31 @@ func listPermissions(c echo.Context) error {
 	return json.NewEncoder(resp).Encode(doc)
 }
 
+func showPermissions(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	current, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+
+	doc, err := permission.GetByID(inst, c.Param("permdocid"))
+	if err != nil {
+		return err
+	}
+
+	if doc.ID() != current.ID() && doc.SourceID != current.SourceID {
+		if err := middlewares.AllowMaximal(c); err != nil {
+			return middlewares.ErrForbidden
+		}
+	}
+
+	// XXX hides the codes in the response
+	doc.Codes = nil
+	doc.ShortCodes = nil
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{Permission: doc}, nil)
+}
+
 func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
@@ -399,6 +424,7 @@ func Routes(router *echo.Group) {
 	router.POST("", createPermission)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
+	router.GET("/:permdocid", showPermissions)
 	router.PATCH("/:permdocid", patchPermission(permission.GetByID, "permdocid"))
 	router.DELETE("/:permdocid", revokePermission)
 
