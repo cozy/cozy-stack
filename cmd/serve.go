@@ -184,13 +184,13 @@ func init() {
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))
 
-	flags.StringSlice("flagship-apk-package-names", []string{"io.cozy.drive.mobile", "io.cozy.flagship.mobile"}, "Package name for the flagship app on android")
+	flags.StringSlice("flagship-apk-package-names", []string{"io.cozy.drive.mobile", "io.cozy.flagship.mobile", "io.cozy.flagship.mobile.mabulle"}, "Package name for the flagship app on android")
 	checkNoErr(viper.BindPFlag("flagship.apk_package_names", flags.Lookup("flagship-apk-package-names")))
 
-	flags.StringSlice("flagship-apk-certificate-digests", []string{"u2eUUnfB4Y7k7eqQL7u2jiYDJeVBwZoSV3PZSs8pttc="}, "SHA-256 hash (base64 encoded) of the flagship app's signing certificate on android")
+	flags.StringSlice("flagship-apk-certificate-digests", []string{"u2eUUnfB4Y7k7eqQL7u2jiYDJeVBwZoSV3PZSs8pttc=", "xay9CTu3gSxR+0eG690lpahEx+5Hpg37mgTgFq2PL38="}, "SHA-256 hash (base64 encoded) of the flagship app's signing certificate on android")
 	checkNoErr(viper.BindPFlag("flagship.apk_certificate_digests", flags.Lookup("flagship-apk-certificate-digests")))
 
-	flags.StringSlice("flagship-apple-app-ids", []string{"3AKXFMV43J.io.cozy.drive.mobile", "3AKXFMV43J.io.cozy.flagship.mobile"}, "App ID of the flagship app on iOS")
+	flags.StringSlice("flagship-apple-app-ids", []string{"3AKXFMV43J.io.cozy.drive.mobile", "3AKXFMV43J.io.cozy.flagship.mobile", "3AKXFMV43J.io.cozy.flagship.mobile.mabulle"}, "App ID of the flagship app on iOS")
 	checkNoErr(viper.BindPFlag("flagship.apple_app_ids", flags.Lookup("flagship-apple-app-ids")))
 
 	flags.String("hooks", ".", "define the directory used for hook scripts")
