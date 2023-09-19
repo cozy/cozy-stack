@@ -103,17 +103,15 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 
 func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img.ID(), format)
-	infos, headers, err := t.c.Object(t.ctx, t.container, name)
+	_, headers, err := t.c.Object(t.ctx, t.container, name)
 	if errors.Is(err, swift.ObjectNotFound) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	if infos.Bytes == 0 {
-		return false, nil
-	}
-	if md5 := headers["file-md5"]; md5 != "" {
+	meta := headers.ObjectMetadata()
+	if md5 := meta["file-md5"]; md5 != "" {
 		var md5sum []byte
 		md5sum, err = hex.DecodeString(md5)
 		if err == nil && !bytes.Equal(md5sum, img.MD5Sum) {
