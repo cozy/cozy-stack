@@ -22,7 +22,9 @@
           <div class="modal-body mt-4 mt-md-1 p-md-5">
             <h1 class="h4 h2-md mb-4 text-center">{{t "Too Many OAuth Clients Title" .ClientsCount .ClientsLimit}}</h1>
             <p class="mb-4 text-center">
-              {{t "Too Many OAuth Clients Intro" .ClientsLimit}}<br/>
+              {{t "Too Many OAuth Clients Intro" .ClientsLimit}}
+            </p>
+            <p>
               {{t "Too Many OAuth Clients Available Actions"}}
             </p>
             {{if .PremiumURL}}
