@@ -1344,7 +1344,7 @@ msgid "Too Many OAuth Clients Title"
 msgstr "%s/%s appareils connectés"
 
 msgid "Too Many OAuth Clients Intro"
-msgstr "Votre offre actuelle vous permet de connecter simultanément %s appareils."
+msgstr "Votre offre actuelle vous permet de connecter simultanément %s appareils."
 
 msgid "Too Many OAuth Clients Available Actions"
 msgstr "Déconnectez un appareil ou modifiez l'offre de votre Cozy pour accéder à votre Cozy depuis cet appareil."
