@@ -145,6 +145,15 @@ func (s *memScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, err
 	return t, nil
 }
 
+// UpdateMessage changes the message for the given trigger.
+func (s *memScheduler) UpdateMessage(db prefixer.Prefixer, trigger Trigger, message json.RawMessage) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	infos := trigger.Infos()
+	infos.Message = Message(message)
+	return couchdb.UpdateDoc(db, infos)
+}
+
 // UpdateCron will change the frequency of execution for the given trigger.
 func (s *memScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error {
 	s.mu.RLock()

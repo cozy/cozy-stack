@@ -359,7 +359,7 @@ func TestJobs(t *testing.T) {
 			attrs.ValueEqual("worker", "print")
 		})
 
-		t.Run("PatchSuccess", func(t *testing.T) {
+		t.Run("PatchArgumentsSuccess", func(t *testing.T) {
 			e := testutils.CreateTestClient(t, ts.URL)
 
 			e.PATCH("/jobs/triggers/"+triggerID).
@@ -369,6 +369,24 @@ func TestJobs(t *testing.T) {
         "data": {
           "attributes": { 
             "arguments": "0 0 0 * * 1"
+          }
+        }
+      }`)).
+				Expect().Status(200)
+		})
+
+		t.Run("PatchMessageSuccess", func(t *testing.T) {
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			e.PATCH("/jobs/triggers/"+triggerID).
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+			"message": {
+			  "folder_to_save": "123"
+			}
           }
         }
       }`)).

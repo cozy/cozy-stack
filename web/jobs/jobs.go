@@ -413,13 +413,22 @@ func patchTrigger(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
-	if req.Arguments == "" {
-		return jsonapi.BadRequest(errors.New("Only arguments can be patched"))
+	if req.Arguments == "" && len(req.Message) == 0 {
+		return jsonapi.BadRequest(errors.New("Only arguments and message can be patched"))
 	}
 
-	if err := sched.UpdateCron(inst, t, req.Arguments); err != nil {
-		return wrapJobsError(err)
+	if len(req.Message) > 0 {
+		if err := sched.UpdateMessage(inst, t, req.Message); err != nil {
+			return wrapJobsError(err)
+		}
 	}
+
+	if req.Arguments != "" {
+		if err := sched.UpdateCron(inst, t, req.Arguments); err != nil {
+			return wrapJobsError(err)
+		}
+	}
+
 	return jsonapi.Data(c, http.StatusOK, apiTrigger{infos, inst}, nil)
 }
 

@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -48,6 +49,7 @@ type (
 		PollScheduler(now int64) error
 		AddTrigger(trigger Trigger) error
 		GetTrigger(db prefixer.Prefixer, id string) (Trigger, error)
+		UpdateMessage(db prefixer.Prefixer, trigger Trigger, message json.RawMessage) error
 		UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error
 		DeleteTrigger(db prefixer.Prefixer, id string) error
 		GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
