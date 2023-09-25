@@ -4,9 +4,13 @@ on:
     branches:
       - master
     paths:
+      - 'scripts/eslintrc.json'
+      - 'scripts/package.json'
       - '**.js'
   pull_request:
     paths:
+      - 'scripts/eslintrc.json'
+      - 'scripts/package.json'
       - '**.js'
 permissions:
   contents: read

@@ -4,9 +4,13 @@ on:
     branches:
       - master
     paths:
+      - '.golangci.yaml'
+      - 'Makefile'
       - '**.go'
   pull_request:
     paths:
+      - '.golangci.yaml'
+      - 'Makefile'
       - '**.go'
 permissions:
   contents: read
