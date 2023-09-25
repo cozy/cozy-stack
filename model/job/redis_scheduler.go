@@ -425,6 +425,13 @@ func (s *redisScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, e
 	return t, nil
 }
 
+// UpdateMessage changes the message for the given trigger.
+func (s *redisScheduler) UpdateMessage(db prefixer.Prefixer, trigger Trigger, message json.RawMessage) error {
+	infos := trigger.Infos()
+	infos.Message = Message(message)
+	return couchdb.UpdateDoc(db, infos)
+}
+
 // UpdateCron will change the frequency of execution for the given trigger.
 func (s *redisScheduler) UpdateCron(db prefixer.Prefixer, trigger Trigger, arguments string) error {
 	if trigger.Type() != "@cron" {

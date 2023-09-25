@@ -795,7 +795,7 @@ Accept: application/vnd.api+json
 ### PATCH /jobs/triggers/:trigger-id
 
 This route can be used to change the frequency of execution of a `@cron`
-trigger.
+trigger, or the message of any trigger.
 
 #### Request
 
