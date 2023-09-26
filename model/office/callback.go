@@ -28,6 +28,10 @@ const (
 	StatusForceSaveRequested = 6
 )
 
+// OOSlug is the slug for uploadedBy field of the CozyMetadata when a file has
+// been modified in the online OnlyOffice.
+const OOSlug = "onlyoffice-server"
+
 // CallbackParameters is a struct for the parameters sent by the document
 // server to the stack.
 // Cf https://api.onlyoffice.com/editors/callback
@@ -148,6 +152,7 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	newfile.UpdatedAt = time.Now()
 	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
 	newfile.CozyMetadata.UploadedAt = &newfile.UpdatedAt
+	newfile.CozyMetadata.UploadedBy = &vfs.UploadedByEntry{Slug: OOSlug}
 
 	// If the file was renamed while OO editor was opened, the revision has
 	// been changed, but we still should avoid creating a conflict if the

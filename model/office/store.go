@@ -29,7 +29,7 @@ type Store interface {
 }
 
 // storeTTL is the time an entry stay alive
-var storeTTL = 24 * time.Hour
+var storeTTL = 30 * 24 * time.Hour
 
 // storeCleanInterval is the time interval between each cleanup.
 var storeCleanInterval = 1 * time.Hour
