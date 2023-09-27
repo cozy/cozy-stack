@@ -935,6 +935,14 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("ratio_1", "context")
 	})
 
+	t.Run("ClientsLimitExceededWithoutSession", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(401)
+	})
+
 	t.Run("ClientsLimitExceededWithoutLimit", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
