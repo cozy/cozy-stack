@@ -129,6 +129,10 @@ func (h *HTTPHandler) synchronized(c echo.Context) error {
 func (h *HTTPHandler) limitExceeded(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Error Must be authenticated")
+	}
+
 	redirect := c.QueryParam("redirect")
 	if redirect == "" {
 		redirect = inst.DefaultRedirection().String()

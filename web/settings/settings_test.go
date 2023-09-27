@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -41,8 +42,16 @@ func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) *
 	group := handler.Group("/settings", func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(context echo.Context) error {
 			context.Set("instance", inst)
-			sess, _ := session.New(inst, session.LongRun)
-			context.Set("session", sess)
+
+			cookie, err := context.Request().Cookie(session.CookieName(inst))
+			if err != http.ErrNoCookie {
+				require.NoError(t, err, "Could not get session cookie")
+				if cookie.Value == "connected" {
+					sess, _ := session.New(inst, session.LongRun)
+					context.Set("session", sess)
+				}
+			}
+
 			return next(context)
 		}
 	})
@@ -84,6 +93,7 @@ func TestSettings(t *testing.T) {
 	})
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
+	sessCookie := session.CookieName(testInstance)
 
 	svc := csettings.NewServiceMock(t)
 	ts := setupRouter(t, testInstance, svc)
@@ -95,6 +105,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/context").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200)
@@ -108,6 +119,7 @@ func TestSettings(t *testing.T) {
 
 		// We are going to patch an instance with newer values, and give the good rev
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
@@ -136,6 +148,7 @@ func TestSettings(t *testing.T) {
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
@@ -163,6 +176,7 @@ func TestSettings(t *testing.T) {
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
@@ -190,6 +204,7 @@ func TestSettings(t *testing.T) {
 		rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
@@ -214,12 +229,14 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/disk-usage").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
 		e.GET("/settings/disk-usage").
+			WithCookie(sessCookie, "connected").
 			Expect().Status(401)
 
 		data := obj.Value("data").Object()
@@ -236,6 +253,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.POST("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "passphrase":     "MyFirstPassphrase",
@@ -245,6 +263,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(400)
 
 		e.POST("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
         "passphrase":     "MyFirstPassphrase",
@@ -258,6 +277,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.POST("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithJSON(map[string]interface{}{
 				"passphrase":     "MyFirstPassphrase",
 				"iterations":     5000,
@@ -274,6 +294,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
@@ -288,6 +309,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		res := e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
@@ -305,6 +327,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
@@ -318,6 +341,7 @@ func TestSettings(t *testing.T) {
 		testInstance.PasswordDefined = &passwordDefined
 
 		e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithQuery("Force", true).
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
@@ -334,6 +358,7 @@ func TestSettings(t *testing.T) {
 			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
+				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				WithHeader("Content-Type", "application/json").
 				WithBytes([]byte(`{
@@ -346,6 +371,7 @@ func TestSettings(t *testing.T) {
 			e := testutils.CreateTestClient(t, tsURL)
 
 			e.POST("/settings/passphrase/check").
+				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				WithHeader("Content-Type", "application/json").
 				WithBytes([]byte(`{
@@ -360,6 +386,7 @@ func TestSettings(t *testing.T) {
 			e := testutils.CreateTestClient(t, tsURL)
 
 			e.GET("/settings/hint").
+				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				Expect().Status(404)
 		})
@@ -374,6 +401,7 @@ func TestSettings(t *testing.T) {
 			assert.NoError(t, err)
 
 			e.GET("/settings/hint").
+				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				Expect().Status(204)
 		})
@@ -383,6 +411,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/hint").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
@@ -399,6 +428,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -418,9 +448,11 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			Expect().Status(401)
 
 		obj := e.GET("/settings/capabilities").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -441,17 +473,20 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			Expect().Status(401)
 
 		testInstance.RegisterToken = []byte("test")
 
 		e.GET("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithQuery("registerToken", "74657374").
 			Expect().Status(200)
 
 		testInstance.RegisterToken = []byte{}
 
 		obj := e.GET("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -475,6 +510,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
@@ -513,6 +549,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		obj := e.GET("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -537,6 +574,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.PUT("/settings/instance/auth_mode").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/json").
 			WithHeader("Content-Type", "application/json").
@@ -549,6 +587,7 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 
 		e.PUT("/settings/instance/auth_mode").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/json").
 			WithHeader("Content-Type", "application/json").
@@ -559,6 +598,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(204)
 
 		obj := e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
@@ -573,6 +613,7 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 
 		e.PUT("/settings/passphrase").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithJSON(map[string]interface{}{
 				"new_passphrase":      "MyLastPassphrase",
@@ -586,6 +627,7 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/clients").
+			WithCookie(sessCookie, "connected").
 			Expect().Status(401)
 
 		client := &oauth.Client{
@@ -603,6 +645,7 @@ func TestSettings(t *testing.T) {
 		oauthClientID = client.ClientID
 
 		obj := e.GET("/settings/clients").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -636,14 +679,17 @@ func TestSettings(t *testing.T) {
 	t.Run("RevokeClient", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
-		e.DELETE("/settings/clients/" + oauthClientID).
+		e.DELETE("/settings/clients/"+oauthClientID).
+			WithCookie(sessCookie, "connected").
 			Expect().Status(401)
 
 		e.DELETE("/settings/clients/"+oauthClientID).
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(204)
 
 		obj := e.GET("/settings/clients").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -660,6 +706,7 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -695,6 +742,7 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -730,6 +778,7 @@ func TestSettings(t *testing.T) {
 		assert.NoError(t, err)
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -766,6 +815,7 @@ func TestSettings(t *testing.T) {
 		assert.NoError(t, err)
 
 		e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -800,6 +850,7 @@ func TestSettings(t *testing.T) {
 		t.Cleanup(func() { _ = couchdb.DeleteDB(prefixer.GlobalPrefixer, consts.Settings) })
 
 		obj := e.GET("/settings/flags").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -862,6 +913,7 @@ func TestSettings(t *testing.T) {
 		assert.NoError(t, err)
 
 		obj = e.GET("/settings/flags").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -883,10 +935,19 @@ func TestSettings(t *testing.T) {
 		attrs.ValueEqual("ratio_1", "context")
 	})
 
+	t.Run("ClientsLimitExceededWithoutSession", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(401)
+	})
+
 	t.Run("ClientsLimitExceededWithoutLimit", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -895,6 +956,7 @@ func TestSettings(t *testing.T) {
 
 		redirect := "cozy://my-app"
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithQuery("redirect", redirect).
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
@@ -920,6 +982,7 @@ func TestSettings(t *testing.T) {
 		defer flagship.Delete(testInstance)
 
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -933,6 +996,7 @@ func TestSettings(t *testing.T) {
 		testutils.WithManager(t, testInstance)
 
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -944,6 +1008,7 @@ func TestSettings(t *testing.T) {
 			Contains("http://manager.example.org")
 
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithQuery("isFlagship", true).
 			WithHeader("Authorization", "Bearer "+token).
 			WithHost(testInstance.Domain).
@@ -965,6 +1030,7 @@ func TestSettings(t *testing.T) {
 		testutils.WithOAuthClientsLimit(t, testInstance, float64(len(clients)))
 
 		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -981,12 +1047,14 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 	setup := testutils.NewSetup(t, t.Name())
+
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
 		Locale:      "en",
 		Timezone:    "Europe/Berlin",
 		Email:       "alice@example.com",
 		ContextName: "test-context",
 	})
+	sessCookie := session.CookieName(testInstance)
 
 	svc := csettings.NewServiceMock(t)
 	tsURL := setupRouter(t, testInstance, svc).URL
@@ -995,6 +1063,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 
 	// Without onboarding
 	e.GET("/settings/onboarded").
+		WithCookie(sessCookie, "connected").
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(303).
 		Header("Location").Equal(testInstance.OnboardedRedirection().String())
@@ -1012,6 +1081,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 	oauthClient.Create(testInstance)
 
 	redirectURL := e.GET("/settings/onboarded").
+		WithCookie(sessCookie, "connected").
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(303).
 		Header("Location").
