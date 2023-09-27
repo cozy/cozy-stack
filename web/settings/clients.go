@@ -153,12 +153,13 @@ func (h *HTTPHandler) limitExceeded(c echo.Context) error {
 		count := len(clients)
 
 		if count > limit {
+			isFlagship, _ := strconv.ParseBool(c.QueryParam("isFlagship"))
+
 			connectedDevicesURL := inst.SubDomain(consts.SettingsSlug)
 			connectedDevicesURL.Fragment = "/connectedDevices"
 
 			var premiumURL string
 			if inst.HasPremiumLinksEnabled() {
-				isFlagship, _ := strconv.ParseBool(c.QueryParam("isFlagship"))
 				iapEnabled, _ := flags.M["flagship.iap.enabled"].(bool)
 				if !isFlagship || iapEnabled {
 					var err error
@@ -171,16 +172,17 @@ func (h *HTTPHandler) limitExceeded(c echo.Context) error {
 			sess, _ := middlewares.GetSession(c)
 			settingsToken := inst.BuildAppToken(consts.SettingsSlug, sess.ID())
 			return c.Render(http.StatusOK, "oauth_clients_limit_exceeded.html", echo.Map{
-				"Domain":           inst.ContextualDomain(),
-				"ContextName":      inst.ContextName,
-				"Locale":           inst.Locale,
-				"Title":            inst.TemplateTitle(),
-				"Favicon":          middlewares.Favicon(inst),
-				"ClientsCount":     strconv.Itoa(count),
-				"ClientsLimit":     strconv.Itoa(limit),
-				"ManageDevicesURL": connectedDevicesURL.String(),
-				"PremiumURL":       premiumURL,
-				"SettingsToken":    settingsToken,
+				"Domain":            inst.ContextualDomain(),
+				"ContextName":       inst.ContextName,
+				"Locale":            inst.Locale,
+				"Title":             inst.TemplateTitle(),
+				"Favicon":           middlewares.Favicon(inst),
+				"ClientsCount":      strconv.Itoa(count),
+				"ClientsLimit":      strconv.Itoa(limit),
+				"OpenLinksInNewTab": isFlagship,
+				"ManageDevicesURL":  connectedDevicesURL.String(),
+				"PremiumURL":        premiumURL,
+				"SettingsToken":     settingsToken,
 			})
 		}
 	}
