@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -162,15 +165,24 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 		file = nil
 		newfile.SetID("")
 		newfile.SetRev("")
-		newfile.DocName = fmt.Sprintf("%s - conflict - %d", newfile.DocName, time.Now().Unix())
+	}
+
+	basename := newfile.DocName
+	var f vfs.File
+	for i := 2; i < 100; i++ {
+		f, err = fs.CreateFile(newfile, file)
+		if err == nil {
+			break
+		} else if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+		ext := path.Ext(basename)
+		filename := strings.TrimSuffix(path.Base(basename), ext)
+		newfile.DocName = fmt.Sprintf("%s (%d)%s", filename, i, ext)
 		newfile.ResetFullpath()
 		_, _ = newfile.Path(inst.VFS()) // Prefill the fullpath
 	}
 
-	f, err := fs.CreateFile(newfile, file)
-	if err != nil {
-		return nil, err
-	}
 	_, err = io.Copy(f, res.Body)
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
