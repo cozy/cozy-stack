@@ -71,8 +71,8 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
-github.com/cozy/goexif2 v1.2.0 h1:cBPS+7niEtwehOYBcDBSyvo+x6LPcaFVvm7Nsu6fxeM=
-github.com/cozy/goexif2 v1.2.0/go.mod h1:mBLIra4pwtUmAakLxbwF8v94QD5PdluAW1i7pisBk3w=
+github.com/cozy/goexif2 v1.3.1 h1:wgUyVBJ55xWOohHkF5N9LwTbkKAheZXdw6S6Oci687c=
+github.com/cozy/goexif2 v1.3.1/go.mod h1:mBLIra4pwtUmAakLxbwF8v94QD5PdluAW1i7pisBk3w=
 github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0 h1:bQVNaGvnUI7m8J8k3hklFVXRT1F+WJcIV6hYHIgjKHE=
 github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0/go.mod h1:DlX8Rq7OKA0F9I1e0tz6+PCOXkKZ/l6aD+bWxCC6Qfo=
 github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945 h1:EfeD2CzaZclMHyFxSuaA1BTfqVTLaFwqlASiNNil4nE=
