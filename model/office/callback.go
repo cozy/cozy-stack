@@ -101,7 +101,7 @@ func checkToken(cfg *config.Office, params CallbackParameters) error {
 func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("invalid key")
+		return ErrInvalidKey
 	}
 
 	_, err = saveFile(inst, *detector, downloadURL)
@@ -114,7 +114,7 @@ func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("invalid key")
+		return ErrInvalidKey
 	}
 
 	updated, err := saveFile(inst, *detector, downloadURL)

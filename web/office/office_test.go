@@ -132,7 +132,7 @@ func TestOffice(t *testing.T) {
 	t.Run("Conflict after an upload", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
-		// If a user opens an office document
+		// When a user opens an office document
 		obj := e.GET("/office/"+fileID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
@@ -144,10 +144,53 @@ func TestOffice(t *testing.T) {
 		document := oo.Value("document").Object()
 		key = document.Value("key").String().NotEmpty().Raw()
 
-		// And an upload is made that changes the content of this document
-		updateFile(t, inst, fileID)
+		// the key is associated to this file
+		obj = e.GET("/office/keys/"+key).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		data = obj.Value("data").Object()
+		docID := data.Value("id").String().NotEmpty().Raw()
+		assert.Equal(t, fileID, docID)
+		attrs = data.Value("attributes").Object()
+		name := attrs.Value("name").String().NotEmpty().Raw()
+		assert.Equal(t, "letter.docx", name)
 
-		// If another user opens the document, a new key is given
+		// When an upload is made that changes the content of this document,
+		// the key will now be associated to a conflict file
+		updateFile(t, inst, fileID)
+		obj = e.GET("/office/keys/"+key).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		data = obj.Value("data").Object()
+		conflictID := data.Value("id").String().NotEmpty().Raw()
+		assert.NotEqual(t, fileID, conflictID)
+		meta := data.Value("meta").Object()
+		conflictRev := meta.Value("rev").String().NotEmpty().Raw()
+		attrs = data.Value("attributes").Object()
+		conflictName := attrs.Value("name").String().NotEmpty().Raw()
+		assert.Equal(t, "letter (2).docx", conflictName)
+
+		// When another user uses the same key, they obtains the same file
+		obj = e.GET("/office/keys/"+key).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		data = obj.Value("data").Object()
+		anotherID := data.Value("id").String().NotEmpty().Raw()
+		assert.Equal(t, conflictID, anotherID)
+		meta = data.Value("meta").Object()
+		anotherRev := meta.Value("rev").String().NotEmpty().Raw()
+		assert.Equal(t, conflictRev, anotherRev)
+		attrs = data.Value("attributes").Object()
+		anotherName := attrs.Value("name").String().NotEmpty().Raw()
+		assert.Equal(t, conflictName, anotherName)
+
+		// When another user opens the document, a new key is given
 		obj = e.GET("/office/"+fileID+"/open").
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
@@ -160,7 +203,8 @@ func TestOffice(t *testing.T) {
 		newkey := document.Value("key").String().NotEmpty().Raw()
 		assert.NotEqual(t, key, newkey)
 
-		// And if the document is saved (first key), a new file is created
+		// When the document is saved with the first key, it's written to the
+		// conflict file
 		e.POST("/office/callback").
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(fmt.Sprintf(`{
@@ -171,9 +215,11 @@ func TestOffice(t *testing.T) {
       "users": ["6d5a81d0"]
     }`, key, ooURL+"/dl"))).
 			Expect().Status(200)
-		conflict, err := inst.VFS().FileByPath("/letter (2).docx")
+		conflict, err := inst.VFS().FileByID(conflictID)
 		require.NoError(t, err)
+		assert.Equal(t, "letter (2).docx", conflict.DocName)
 		assert.Equal(t, "onlyoffice-server", conflict.CozyMetadata.UploadedBy.Slug)
+		assert.NotEqual(t, conflictRev, conflict.Rev())
 	})
 }
 

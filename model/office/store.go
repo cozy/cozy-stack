@@ -23,6 +23,7 @@ type conflictDetector struct {
 // Store is an object to store and retrieve document server keys <-> id,rev
 type Store interface {
 	GetSecretByID(db prefixer.Prefixer, id string) (string, error)
+	UpdateSecret(db prefixer.Prefixer, secret, oldID, newID string) error
 	AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error)
 	GetDoc(db prefixer.Prefixer, secret string) (*conflictDetector, error)
 	UpdateDoc(db prefixer.Prefixer, secret string, payload conflictDetector) error
@@ -97,6 +98,14 @@ func (s *memStore) GetSecretByID(db prefixer.Prefixer, id string) (string, error
 	return s.byID[id], nil
 }
 
+func (s *memStore) UpdateSecret(db prefixer.Prefixer, secret, oldID, newID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.byID, oldID)
+	s.byID[newID] = secret
+	return nil
+}
+
 func (s *memStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -160,6 +169,12 @@ type redisStore struct {
 func (s *redisStore) GetSecretByID(db prefixer.Prefixer, id string) (string, error) {
 	idKey := docKey(db, id)
 	return s.c.Get(s.ctx, idKey).Result()
+}
+
+func (s *redisStore) UpdateSecret(db prefixer.Prefixer, secret, oldID, newID string) error {
+	_ = s.c.Del(s.ctx, docKey(db, oldID))
+	idKey := docKey(db, newID)
+	return s.c.Set(s.ctx, idKey, secret, storeTTL).Err()
 }
 
 func (s *redisStore) AddDoc(db prefixer.Prefixer, payload conflictDetector) (string, error) {

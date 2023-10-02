@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -60,6 +61,19 @@ func Open(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
+func GetFileByKey(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	file, err := office.GetFileByKey(inst, c.Param("key"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+		return err
+	}
+	doc := files.NewFile(file, inst)
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
+}
+
 // Callback is the handler for OnlyOffice callback requests.
 // Cf https://api.onlyoffice.com/editors/callback
 func Callback(c echo.Context) error {
@@ -88,6 +102,7 @@ func Callback(c echo.Context) error {
 // Routes sets the routing for the collaborative edition of office documents.
 func Routes(router *echo.Group) {
 	router.GET("/:id/open", Open)
+	router.GET("/keys/:key", GetFileByKey)
 	router.POST("/callback", Callback)
 }
 
@@ -97,6 +112,8 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.NotFound(err)
 	case office.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)
+	case office.ErrInvalidKey:
+		return jsonapi.NotFound(err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case sharing.ErrMemberNotFound:
