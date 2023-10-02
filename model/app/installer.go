@@ -28,7 +28,9 @@ import (
 
 var slugReg = regexp.MustCompile(`^[a-z0-9\-]+$`)
 
-var ErrInvalidManifestTypes = errors.New("manifest types are not the sames")
+var ErrInvalidManifestTypes = errors.New("Manifest type is unknown")
+var ErrInvalidManifestForWebapp = errors.New("Manifest type is not valid for a webapp. Maybe you want to install a konnector?")
+var ErrInvalidManifestForKonnector = errors.New("Manifest type is not valid for a konnector. Maybe you want to install a webapp?")
 
 // Operation is the type of operation the installer is created for.
 type Operation int
@@ -608,7 +610,16 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	appTypesMismatch := i.man.AppType() != newManifestAppType
 
 	if !appTypesEmpty && appTypesMismatch {
-		return nil, fmt.Errorf("%w: expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", ErrInvalidManifestTypes, i.man.AppType(), newManifestAppType, i.man.Slug())
+		var typeError error
+		switch i.man.AppType() {
+		case consts.KonnectorType:
+			typeError = ErrInvalidManifestForKonnector
+		case consts.WebappType:
+			typeError = ErrInvalidManifestForWebapp
+		default:
+			typeError = ErrInvalidManifestTypes
+		}
+		return nil, fmt.Errorf("[%s] %w", i.man.Slug(), typeError)
 	}
 	return newManifest, nil
 }

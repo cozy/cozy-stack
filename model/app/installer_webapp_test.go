@@ -1121,7 +1121,7 @@ func TestInstallerWebApp(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = inst.RunSync()
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, app.ErrInvalidManifestTypes)
+		assert.ErrorIs(t, err, app.ErrInvalidManifestForWebapp)
 	})
 }
 
