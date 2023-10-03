@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,8 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/errgroup"
 )
 
 // UploadMsg is used for jobs on the share-upload worker.
@@ -52,25 +53,30 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	}
 
 	lastTry := errors+1 == MaxRetries
-	for i := 0; i < BatchSize; i++ {
-		if len(members) == 0 {
-			break
-		}
-		m := members[0]
-		members = members[1:]
-		more, err := s.UploadTo(inst, m, lastTry)
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
-		if more {
-			members = append(members, m)
-		}
+	done := true
+	g, _ := errgroup.WithContext(context.Background())
+	for i := range members {
+		m := members[i]
+		g.Go(func() error {
+			for i := 0; i < BatchSize; i++ {
+				more, err := s.UploadTo(inst, m, lastTry)
+				if err != nil {
+					return err
+				}
+				if !more {
+					return nil
+				}
+			}
+			done = false
+			return nil
+		})
 	}
+	err := g.Wait()
 
-	if errm != nil {
+	if err != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		inst.Logger().WithNamespace("upload").Infof("errm=%s\n", errm)
-	} else if len(members) > 0 {
+		inst.Logger().WithNamespace("upload").Infof("err=%s\n", err)
+	} else if !done {
 		s.pushJob(inst, "share-upload")
 	}
 	return errm
