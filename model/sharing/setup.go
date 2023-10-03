@@ -110,7 +110,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	}
 	if s.Triggers.ReplicateID == "" {
 		for i, rule := range s.Rules {
-			if err := s.InitialCopy(inst, rule, i); err != nil {
+			if err := s.InitialIndex(inst, rule, i); err != nil {
 				inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
 			}
 		}
@@ -208,9 +208,9 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	return couchdb.UpdateDoc(inst, s)
 }
 
-// InitialCopy lists the shared documents and put a reference in the
+// InitialIndex lists the shared documents and put a reference in the
 // io.cozy.shared database
-func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
+func (s *Sharing) InitialIndex(inst *instance.Instance, rule Rule, r int) error {
 	if rule.Local || len(rule.Values) == 0 {
 		return nil
 	}
