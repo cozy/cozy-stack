@@ -1,4 +1,4 @@
-# Tools for integration tests
+# Tools for system tests
 
 ## Install
 
@@ -7,7 +7,7 @@ apt install ruby ruby-dev
 gem install bundler
 cd cozy-stack
 go install
-cd tests/integration
+cd tests/system
 bundle install
 npm install -g @bitwarden/cli@1.16.0
 ```
@@ -74,7 +74,7 @@ it with swifttest:
 
 ```sh
 $ go run ./tests/swift
-$ cd tests/integration
+$ cd tests/system
 $ export COZY_SWIFTTEST=1
 $ bundle exec ruby tests/sharing_push_folder.rb
 ```

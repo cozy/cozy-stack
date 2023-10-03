@@ -5,10 +5,10 @@ encrypt a payload in RSA
 ### Synopsis
 
 
-This command is used by integration tests to encrypt bitwarden organization
-keys. It takes the public or private key of the user and the payload (= the
-organization key) as inputs (both encoded in base64), and print on stdout the
-encrypted data (encoded as base64 too).
+This command is used by system tests to encrypt bitwarden organization keys. It
+takes the public or private key of the user and the payload (= the organization
+key) as inputs (both encoded in base64), and print on stdout the encrypted data
+(encoded as base64 too).
 
 
 ```

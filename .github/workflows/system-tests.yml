@@ -1,4 +1,4 @@
-name: Integration tests
+name: System tests
 on:
   push:
     branches:
@@ -9,7 +9,7 @@ on:
     paths-ignore:
       - 'docs/**'
 jobs:
-  integration:
+  system:
     runs-on: ubuntu-22.04
     services:
       mailhog:
@@ -54,4 +54,4 @@ jobs:
           go install
       - name: Test
         run: |
-          make integration-tests
+          make system-tests

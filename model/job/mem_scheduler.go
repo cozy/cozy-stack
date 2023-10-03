@@ -53,11 +53,11 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	go s.thumb.Schedule()
 
 	// XXX The memory scheduler loads the triggers from CouchDB when the stack
-	// is started. This can cause some stability issues when running
-	// integration tests in parallel. To avoid that, an env variable
+	// is started. This can cause some stability issues when running system
+	// tests in parallel. To avoid that, an env variable
 	// COZY_SKIP_LOADING_TRIGGERS can be set to skip loading the triggers from
-	// CouchDB. It is correct for integration tests, as instances are created
-	// and destroyed by the same process. But, it should not be used elsewhere.
+	// CouchDB. It is correct for system tests, as instances are created and
+	// destroyed by the same process. But, it should not be used elsewhere.
 	for _, env := range os.Environ() {
 		if strings.HasPrefix(env, "COZY_SKIP_LOADING_TRIGGERS=") {
 			return nil
