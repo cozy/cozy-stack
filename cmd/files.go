@@ -391,7 +391,7 @@ func mvCmd(c *client.Client, from, to string) error {
 
 func rmCmd(c *client.Client, name string, force, recur bool) error {
 	if force {
-		return fmt.Errorf("not implemented")
+		return c.PermanentDeleteByPath(name)
 	}
 	return c.TrashByPath(name)
 }

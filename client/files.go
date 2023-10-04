@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -355,6 +356,28 @@ func (c *Client) RestoreByPath(name string) error {
 		return err
 	}
 	return c.RestoreByID(doc.ID)
+}
+
+// PermanentDeleteByID is used to delete a file or directory specified by its
+// ID, not just putting it in the trash
+func (c *Client) PermanentDeleteByID(id string) error {
+	_, err := c.Req(&request.Options{
+		Method:     "PATCH",
+		Path:       "/files/" + url.PathEscape(id),
+		Body:       strings.NewReader(`{"data": {"attributes": {"permanent_delete": true}}}`),
+		NoResponse: true,
+	})
+	return err
+}
+
+// PermanentDeleteByPath is used to delete a file or directory specified by its
+// path, not just putting it in the trash
+func (c *Client) PermanentDeleteByPath(name string) error {
+	doc, err := c.GetDirOrFileByPath(name)
+	if err != nil {
+		return err
+	}
+	return c.PermanentDeleteByID(doc.ID)
 }
 
 // WalkFn is the function type used by the walk function.
