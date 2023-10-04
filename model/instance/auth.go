@@ -25,8 +25,8 @@ const (
 )
 
 var twoFactorTOTPOptions = totp.ValidateOpts{
-	Period:    30, // 30s
-	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]
+	Period:    60, // 60s
+	Skew:      14, // 60s +- 14*60s = [-13min; 15min]
 	Digits:    otp.DigitsSix,
 	Algorithm: otp.AlgorithmSHA256,
 }
