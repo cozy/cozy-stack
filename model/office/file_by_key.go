@@ -7,7 +7,12 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 )
 
-func GetFileByKey(inst *instance.Instance, key string) (*vfs.FileDoc, error) {
+// EnsureFileForKey returns the file that will be written when OnlyOffice will
+// save a document with the given key. The general case is that is the file
+// that has been opened. But, it can also be a new file if a conflict has
+// happened because a new version has been uploaded for this file (by the
+// desktop client for example).
+func EnsureFileForKey(inst *instance.Instance, key string) (*vfs.FileDoc, error) {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil {
 		return nil, err

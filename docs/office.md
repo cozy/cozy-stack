@@ -121,7 +121,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### GET /office/keys/:key
+### POST /office/keys/:key
 
 If a document is being edited while a new version is uploaded (via the desktop
 for example), the OO webapp should call this endpoint if the user chooses to
@@ -131,7 +131,7 @@ created, so that no work is lost.
 #### Request
 
 ```http
-GET /office/keys/7c7ccc2e7137ba774b7e44de HTTP/1.1
+POST /office/keys/7c7ccc2e7137ba774b7e44de HTTP/1.1
 Host: bob.cozy.example
 ```
 

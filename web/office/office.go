@@ -61,9 +61,9 @@ func Open(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-func GetFileByKey(c echo.Context) error {
+func FileByKey(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	file, err := office.GetFileByKey(inst, c.Param("key"))
+	file, err := office.EnsureFileForKey(inst, c.Param("key"))
 	if err != nil {
 		return wrapError(err)
 	}
@@ -102,7 +102,7 @@ func Callback(c echo.Context) error {
 // Routes sets the routing for the collaborative edition of office documents.
 func Routes(router *echo.Group) {
 	router.GET("/:id/open", Open)
-	router.GET("/keys/:key", GetFileByKey)
+	router.POST("/keys/:key", FileByKey)
 	router.POST("/callback", Callback)
 }
 

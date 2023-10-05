@@ -145,7 +145,7 @@ func TestOffice(t *testing.T) {
 		key = document.Value("key").String().NotEmpty().Raw()
 
 		// the key is associated to this file
-		obj = e.GET("/office/keys/"+key).
+		obj = e.POST("/office/keys/"+key).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -160,7 +160,7 @@ func TestOffice(t *testing.T) {
 		// When an upload is made that changes the content of this document,
 		// the key will now be associated to a conflict file
 		updateFile(t, inst, fileID)
-		obj = e.GET("/office/keys/"+key).
+		obj = e.POST("/office/keys/"+key).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
@@ -175,7 +175,7 @@ func TestOffice(t *testing.T) {
 		assert.Equal(t, "letter (2).docx", conflictName)
 
 		// When another user uses the same key, they obtains the same file
-		obj = e.GET("/office/keys/"+key).
+		obj = e.POST("/office/keys/"+key).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
