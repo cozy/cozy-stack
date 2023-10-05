@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -ev
 
-cd tests/integration
+cd tests/system
 sudo npm install -g @bitwarden/cli@1.16.0
 
 bundle install --jobs=3 --retry=3

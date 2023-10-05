@@ -30,7 +30,7 @@ scripts/golangci-lint: Makefile
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
-	@scripts/node_modules/.bin/eslint -c scripts/eslintrc.json "assets/scripts/**" tests/integration/konnector/*.js
+	@scripts/node_modules/.bin/eslint -c scripts/eslintrc.json "assets/scripts/**" tests/system/konnector/*.js
 .PHONY: jslint
 
 ## pretty: make the assets prettier
@@ -74,10 +74,10 @@ unit-tests:
 	@go test -p 1 -timeout 2m -short ./...
 .PHONY: unit-tests
 
-## integration-tests: run the tests
-integration-tests:
-	@scripts/integration-test.sh
-.PHONY: integration-tests
+## system-tests: run the tests
+system-tests:
+	@scripts/system-test.sh
+.PHONY: system-tests
 
 ## clean: clean the generated files and directories
 clean:

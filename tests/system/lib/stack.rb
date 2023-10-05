@@ -156,7 +156,7 @@ class Stack
   def generate_client_id(inst)
     cmd = ["cozy-stack", "instances", "client-oauth", inst.domain,
            "--admin-port", @admin,
-           "http://localhost", "test-sharing", "github.com/cozy/cozy-stack/tests/integration"]
+           "http://localhost", "test-sharing", "github.com/cozy/cozy-stack/tests/system"]
     puts cmd.join(" ").green
     `#{cmd.join(" ")}`.chomp
   end

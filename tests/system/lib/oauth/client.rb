@@ -6,7 +6,7 @@ module OAuth
       body = {
         redirect_uris: ["cozy://"],
         client_name: "test_#{Faker::Internet.slug}",
-        software_id: "github.com/cozy/cozy-stack/tests/integration"
+        software_id: "github.com/cozy/cozy-stack/tests/system"
       }
       opts = { content_type: :json, accept: :json }
       res = inst.client["/auth/register"].post body.to_json, opts
