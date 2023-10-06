@@ -429,3 +429,10 @@ contexts:
     # permissions have changed
     additional_platform_apps:
       - superapp
+    # Displays a footer with logos on the home page
+    # Naming the asset with the prefix main_ will make it the main logo
+    # The others will be secondary and can be ordered with a numeric prefix
+    home_logos:
+      - /logos/main_cozy.png: Cozy Cloud
+      - /logos/1_partner.png: Partner n°1
+      - /logos/2_partner.png: Partner n°2
