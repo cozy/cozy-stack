@@ -312,6 +312,9 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if len(doc.ReferencedBy) > 0 {
 		docs[0][couchdb.SelectorReferencedBy] = doc.ReferencedBy
 	}
+	if len(doc.NotSynchronizedOn) > 0 {
+		docs[0]["not_synchronized_on"] = doc.NotSynchronizedOn
+	}
 	if doc.Metadata != nil {
 		docs[0]["metadata"] = doc.Metadata
 	}
