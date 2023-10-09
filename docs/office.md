@@ -121,6 +121,66 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /office/keys/:key
+
+If a document is being edited while a new version is uploaded (via the desktop
+for example), the OO webapp should call this endpoint if the user chooses to
+continue editing the version on which they were working. A conflict file is
+created, so that no work is lost.
+
+#### Request
+
+```http
+POST /office/keys/7c7ccc2e7137ba774b7e44de HTTP/1.1
+Host: bob.cozy.example
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "32e07d806f9b0139c541543d7eb8149c",
+    "meta": {
+      "rev": "3-18c04daba326"
+    },
+    "attributes": {
+      "type": "file",
+      "name": "slideshow (2).pptx",
+      "trashed": false,
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+      "created_at": "2023-09-30T21:42:05Z",
+      "updated_at": "2023-09-30T22:38:04Z",
+      "tags": [],
+      "metadata": {},
+      "size": 12345,
+      "executable": false,
+      "class": "slide",
+      "mime": "application/vnd.ms-powerpoint",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2023-09-30T21:42:05Z",
+        "createdByApp": "drive",
+        "createdOn": "https://bob.cozy.example/",
+        "updatedAt": "2023-09-30T22:38:04Z",
+        "uploadedAt": "2023-09-30T22:38:04Z",
+        "uploadedOn": "https://bob.cozy.example/",
+        "uploadedBy": {
+          "slug": "onlyoffice-server"
+        }
+      }
+    }
+  }
+}
+```
+
 ### POST /office/callback
 
 This is the callback handler for OnlyOffice. It is called when the document

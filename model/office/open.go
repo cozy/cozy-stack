@@ -1,6 +1,7 @@
 package office
 
 import (
+	"bytes"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -169,8 +170,27 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
-	detector := conflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
-	key, err := GetStore().AddDoc(o.Inst, detector)
+	key, err := GetStore().GetSecretByID(o.Inst, o.File.ID())
+	if err != nil {
+		o.Inst.Logger().WithNamespace("office").
+			Infof("Cannot get secret from store: %s", err)
+		return nil, ErrInternalServerError
+	}
+	if key != "" {
+		doc, err := GetStore().GetDoc(o.Inst, key)
+		if err != nil {
+			o.Inst.Logger().WithNamespace("office").
+				Infof("Cannot get doc from store: %s", err)
+			return nil, ErrInternalServerError
+		}
+		if shouldOpenANewVersion(o.File, doc) {
+			key = ""
+		}
+	}
+	if key == "" {
+		detector := conflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
+		key, err = GetStore().AddDoc(o.Inst, detector)
+	}
 	if err != nil {
 		o.Inst.Logger().WithNamespace("office").
 			Infof("Cannot add doc to store: %s", err)
@@ -295,4 +315,18 @@ func getConfig(contextName string) *config.Office {
 		return &c
 	}
 	return nil
+}
+
+func shouldOpenANewVersion(file *vfs.FileDoc, detector *conflictDetector) bool {
+	if detector == nil {
+		return true
+	}
+	cm := file.CozyMetadata
+	if cm != nil && cm.UploadedBy != nil && cm.UploadedBy.Slug == OOSlug {
+		return false
+	}
+	if bytes.Equal(file.MD5Sum, detector.MD5Sum) {
+		return false
+	}
+	return true
 }

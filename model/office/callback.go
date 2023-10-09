@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -27,6 +30,10 @@ const (
 	// by users.
 	StatusForceSaveRequested = 6
 )
+
+// OOSlug is the slug for uploadedBy field of the CozyMetadata when a file has
+// been modified in the online OnlyOffice.
+const OOSlug = "onlyoffice-server"
 
 // CallbackParameters is a struct for the parameters sent by the document
 // server to the stack.
@@ -94,7 +101,7 @@ func checkToken(cfg *config.Office, params CallbackParameters) error {
 func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("invalid key")
+		return ErrInvalidKey
 	}
 
 	_, err = saveFile(inst, *detector, downloadURL)
@@ -107,7 +114,7 @@ func finalSaveFile(inst *instance.Instance, key, downloadURL string) error {
 func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
 	detector, err := GetStore().GetDoc(inst, key)
 	if err != nil || detector == nil || detector.ID == "" || detector.Rev == "" {
-		return errors.New("invalid key")
+		return ErrInvalidKey
 	}
 
 	updated, err := saveFile(inst, *detector, downloadURL)
@@ -148,6 +155,7 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	newfile.UpdatedAt = time.Now()
 	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
 	newfile.CozyMetadata.UploadedAt = &newfile.UpdatedAt
+	newfile.CozyMetadata.UploadedBy = &vfs.UploadedByEntry{Slug: OOSlug}
 
 	// If the file was renamed while OO editor was opened, the revision has
 	// been changed, but we still should avoid creating a conflict if the
@@ -157,15 +165,24 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 		file = nil
 		newfile.SetID("")
 		newfile.SetRev("")
-		newfile.DocName = fmt.Sprintf("%s - conflict - %d", newfile.DocName, time.Now().Unix())
+	}
+
+	basename := newfile.DocName
+	var f vfs.File
+	for i := 2; i < 100; i++ {
+		f, err = fs.CreateFile(newfile, file)
+		if err == nil {
+			break
+		} else if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+		ext := path.Ext(basename)
+		filename := strings.TrimSuffix(path.Base(basename), ext)
+		newfile.DocName = fmt.Sprintf("%s (%d)%s", filename, i, ext)
 		newfile.ResetFullpath()
 		_, _ = newfile.Path(inst.VFS()) // Prefill the fullpath
 	}
 
-	f, err := fs.CreateFile(newfile, file)
-	if err != nil {
-		return nil, err
-	}
 	_, err = io.Copy(f, res.Body)
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr

@@ -11,4 +11,6 @@ var (
 	// ErrInternalServerError is used when something goes wrong (like no
 	// connection to redis)
 	ErrInternalServerError = errors.New("Internal server error")
+	// ErrInvalidKey is used when the key is not found in the store
+	ErrInvalidKey = errors.New("invalid key")
 )
