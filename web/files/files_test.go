@@ -1392,8 +1392,9 @@ func TestFiles(t *testing.T) {
 			Object()
 
 		data1 := obj.Value("data").Object()
-		attrs1 := data1.Value("attributes").Object()
 		file1ID := data1.Value("id").String().NotEmpty().Raw()
+		attrs1 := data1.Value("attributes").Object()
+		uploadedAt1 := attrs1.Path("$.cozyMetadata.uploadedAt").String().NotEmpty().Raw()
 
 		buf, err := readFile(storage, "/willbemodified")
 		assert.NoError(t, err)
@@ -1435,6 +1436,7 @@ func TestFiles(t *testing.T) {
 		attrs.ValueEqual("class", "audio")
 		attrs.ValueEqual("mime", "audio/mp3")
 		attrs.ValueEqual("executable", false)
+		attrs.Path("$.cozyMetadata.uploadedAt").NotEqual(uploadedAt1)
 
 		buf, err = readFile(storage, "/willbemodified")
 		assert.NoError(t, err)

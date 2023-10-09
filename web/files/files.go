@@ -2198,6 +2198,11 @@ func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields b
 		if len(fcm.UpdatedByApps) > 0 {
 			file.CozyMetadata.UpdatedByApp(fcm.UpdatedByApps[0])
 		}
+		if setUploadFields {
+			file.CozyMetadata.UploadedAt = fcm.UploadedAt
+			file.CozyMetadata.UploadedBy = fcm.UploadedBy
+			file.CozyMetadata.UploadedOn = fcm.UploadedOn
+		}
 	}
 
 	if setUploadFields {
