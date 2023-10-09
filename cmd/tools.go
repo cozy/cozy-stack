@@ -81,7 +81,7 @@ owner's instance.
 		if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 			return err
 		}
-		fmt.Printf("ID: %q\n", data["id"])
+		fmt.Fprintf(os.Stdout, "ID: %q\n", data["id"])
 		return nil
 	},
 }
@@ -117,7 +117,7 @@ key) as inputs (both encoded in base64), and print on stdout the encrypted data
 		if err != nil {
 			return err
 		}
-		fmt.Printf("4.%s", base64.StdEncoding.EncodeToString(encrypted))
+		fmt.Fprintf(os.Stdout, "4.%s", base64.StdEncoding.EncodeToString(encrypted))
 		return nil
 	},
 }

@@ -47,6 +47,7 @@ linters:
     - bidichk 
     - exportloopref 
     - errname
+    - forbidigo
     - gocritic
     - gofmt
     - govet
@@ -60,6 +61,11 @@ linters:
   # Default: false
   fast: false
 linters-settings:
+  forbidigo:
+    # Forbid fmt.Printf, as they are often used for debugging and they should
+    # not be commited. The good cases can be written fmt.Fprintf(os.Stdout, ).
+    forbid:
+      - fmt.Printf
   gocritic:
     disabled-checks:
       - appendAssign

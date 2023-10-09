@@ -170,7 +170,7 @@ $ bmFjbNFjY+XZkS26YtVPUIKKm/JdnAGwG30n6A4ypS1p1dHev8hOtaRbW+lGneoO7PS9JCW8U5GSXh
 			return err
 		}
 		data := base64.StdEncoding.EncodeToString(dataEncrypted)
-		fmt.Printf("%s\n", data)
+		fmt.Fprintf(os.Stdout, "%s\n", data)
 
 		return nil
 	},
@@ -198,7 +198,7 @@ var decryptCredentialsDataCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("%s\n", decrypted)
+		fmt.Fprintf(os.Stdout, "%s\n", decrypted)
 
 		return nil
 	},
@@ -222,7 +222,7 @@ var encryptCredentialsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Encrypted credentials: %s\n", encryptedCreds)
+		fmt.Fprintf(os.Stdout, "Encrypted credentials: %s\n", encryptedCreds)
 		return nil
 	},
 }
@@ -251,10 +251,11 @@ var decryptCredentialsCmd = &cobra.Command{
 			return fmt.Errorf("Could not decrypt cipher text: %s", err)
 		}
 
-		fmt.Printf(`Decrypted credentials:
+		fmt.Fprintf(os.Stdout, `Decrypted credentials:
 login:    %q
 password: %q
 `, login, password)
+
 		return nil
 	},
 }

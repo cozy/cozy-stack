@@ -340,12 +340,12 @@ func downloadExternals(filename string, currentAssets []*asset) (newAssets []*as
 		if a, ok := currentAssetsMap[externalAsset.name]; ok && bytes.Equal(a.sha256, externalAsset.sha256) {
 			newAsset = a
 		} else {
-			fmt.Printf("downloading %q... ", externalAsset.name)
+			fmt.Fprintf(os.Stdout, "downloading %q... ", externalAsset.name)
 			newAsset, err = downloadExternal(externalAsset)
 			if err != nil {
 				return
 			}
-			fmt.Printf("ok (%s)\n", humanize.Bytes(uint64(newAsset.size)))
+			fmt.Fprintf(os.Stdout, "ok (%s)\n", humanize.Bytes(uint64(newAsset.size)))
 		}
 		newAssets = append(newAssets, newAsset)
 	}

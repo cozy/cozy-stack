@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -69,7 +70,7 @@ func printSettings(obj map[string]interface{}) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Printf("- %s: %v\n", k, attrs[k])
+		fmt.Fprintf(os.Stdout, "- %s: %v\n", k, attrs[k])
 	}
 }
 

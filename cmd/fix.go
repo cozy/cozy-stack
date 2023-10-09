@@ -55,7 +55,7 @@ var mimeFixerCmd = &cobra.Command{
 			if class == attrs.Class {
 				return nil
 			}
-			fmt.Printf("Fix %s: %s -> %s\n", attrs.Name, attrs.Class, class)
+			fmt.Fprintf(os.Stdout, "Fix %s: %s -> %s\n", attrs.Name, attrs.Class, class)
 			_, err = c.UpdateAttrsByID(doc.ID, &client.FilePatch{
 				Rev: doc.Rev,
 				Attrs: client.FilePatchAttrs{
@@ -91,7 +91,7 @@ var jobsFixer = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("Cleaned %d jobs on %s\n", result.Deleted, args[0])
+		fmt.Fprintf(os.Stdout, "Cleaned %d jobs on %s\n", result.Deleted, args[0])
 		return nil
 	},
 }
@@ -227,11 +227,11 @@ var contactEmailsFixer = &cobra.Command{
 						address = strings.TrimSpace(address)
 						_, err := mail.ParseAddress(address)
 						if err == nil {
-							fmt.Printf("    Email fixed: \"%s\" → \"%s\"\n", old, address)
+							fmt.Fprintf(os.Stdout, "    Email fixed: \"%s\" → \"%s\"\n", old, address)
 							changed = true
 							email["address"] = address
 						} else {
-							fmt.Printf("    Invalid email: \"%s\" → \"%s\"\n", old, address)
+							fmt.Fprintf(os.Stdout, "    Invalid email: \"%s\" → \"%s\"\n", old, address)
 						}
 					}
 				}

@@ -138,7 +138,7 @@ It will also show the couch_cluster if it is not the default one.
 			fmt.Println(couchdb.EscapeCouchdbName(in.Attrs.Domain))
 		}
 		if in.Attrs.CouchCluster != 0 {
-			fmt.Printf("couch_cluster: %d\n", in.Attrs.CouchCluster)
+			fmt.Fprintf(os.Stdout, "couch_cluster: %d\n", in.Attrs.CouchCluster)
 		}
 		return nil
 	},
@@ -206,14 +206,14 @@ be used as the error message.
 			return err
 		}
 
-		fmt.Printf("Instance created with success for domain %s\n", in.Attrs.Domain)
+		fmt.Fprintf(os.Stdout, "Instance created with success for domain %s\n", in.Attrs.Domain)
 		myProtocol := "https"
 		if build.IsDevRelease() {
 			myProtocol = "http"
 		}
 		if in.Attrs.RegisterToken != nil {
-			fmt.Printf("Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
-			fmt.Printf("Define your password by visiting %s://%s/?registerToken=%s\n", myProtocol, in.Attrs.Domain, hex.EncodeToString(in.Attrs.RegisterToken))
+			fmt.Fprintf(os.Stdout, "Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
+			fmt.Fprintf(os.Stdout, "Define your password by visiting %s://%s/?registerToken=%s\n", myProtocol, in.Attrs.Domain, hex.EncodeToString(in.Attrs.RegisterToken))
 		}
 		if len(flagApps) == 0 {
 			return nil
@@ -229,7 +229,7 @@ be used as the error message.
 					}
 				}
 				if !found {
-					fmt.Printf("/!\\ Application %s has not been installed\n", slug)
+					fmt.Fprintf(os.Stdout, "/!\\ Application %s has not been installed\n", slug)
 				}
 			}
 		}
@@ -424,9 +424,9 @@ specific domain.
 			debug = false
 		}
 		if debug {
-			fmt.Printf("Debug is enabled on %s\n", domain)
+			fmt.Fprintf(os.Stdout, "Debug is enabled on %s\n", domain)
 		} else {
-			fmt.Printf("Debug is disabled on %s\n", domain)
+			fmt.Fprintf(os.Stdout, "Debug is disabled on %s\n", domain)
 		}
 		return err
 	},
@@ -443,9 +443,9 @@ var countInstanceCmd = &cobra.Command{
 			return err
 		}
 		if count == 1 {
-			fmt.Printf("%d instance\n", count)
+			fmt.Fprintf(os.Stdout, "%d instance\n", count)
 		} else {
-			fmt.Printf("%d instances\n", count)
+			fmt.Fprintf(os.Stdout, "%d instances\n", count)
 		}
 		return nil
 	},
@@ -635,14 +635,14 @@ and all its data.
 			return err
 		}
 
-		fmt.Printf("Instance for domain %s has been destroyed with success\n", domain)
+		fmt.Fprintf(os.Stdout, "Instance for domain %s has been destroyed with success\n", domain)
 		return nil
 	},
 }
 
 func confirmDomain(action, domain string) error {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf(`Are you sure you want to %s instance for domain %s?
+	fmt.Fprintf(os.Stdout, `Are you sure you want to %s instance for domain %s?
 All data associated with this domain will be permanently lost.
 Type again the domain to confirm: `, action, domain)
 
@@ -885,11 +885,11 @@ updated.`,
 			logs := make(chan *client.JobLog)
 			go func() {
 				for log := range logs {
-					fmt.Printf("[%s][time:%s]", log.Level, log.Time.Format(time.RFC3339))
+					fmt.Fprintf(os.Stdout, "[%s][time:%s]", log.Level, log.Time.Format(time.RFC3339))
 					for k, v := range log.Data {
-						fmt.Printf("[%s:%s]", k, v)
+						fmt.Fprintf(os.Stdout, "[%s:%s]", k, v)
 					}
-					fmt.Printf(" %s\n", log.Message)
+					fmt.Fprintf(os.Stdout, " %s\n", log.Message)
 				}
 			}()
 			return ac.Updates(&client.UpdatesOptions{
@@ -1061,7 +1061,7 @@ var setAuthModeCmd = &cobra.Command{
 			return err
 		}
 		if res.StatusCode == http.StatusNoContent {
-			fmt.Printf("Auth mode has been changed for %s\n", domain)
+			fmt.Fprintf(os.Stdout, "Auth mode has been changed for %s\n", domain)
 		} else {
 			resBody, err := io.ReadAll(res.Body)
 			if err != nil {

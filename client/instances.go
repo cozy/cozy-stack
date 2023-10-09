@@ -548,7 +548,7 @@ func (ac *AdminClient) Export(opts *ExportOptions) error {
 						filename = params["filename"]
 					}
 
-					fmt.Printf("Exporting archive %d/%d (%s)... ", i+1, partsCount, filename)
+					fmt.Fprintf(os.Stdout, "Exporting archive %d/%d (%s)... ", i+1, partsCount, filename)
 
 					filepath := path.Join(opts.LocalPath, filename)
 					f, err := os.OpenFile(filepath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)

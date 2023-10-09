@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -58,14 +59,14 @@ cozy-stack feature show displays the feature flags that are shown by apps.
 			return err
 		}
 		for k, v := range obj.Data.Attributes {
-			fmt.Printf("- %s: %s\n", k, string(v))
+			fmt.Fprintf(os.Stdout, "- %s: %s\n", k, string(v))
 		}
 		if len(obj.Included) > 0 {
-			fmt.Printf("\nSources:\n")
+			fmt.Fprintf(os.Stdout, "\nSources:\n")
 			for _, source := range obj.Included {
-				fmt.Printf("- %s\n", source.ID)
+				fmt.Fprintf(os.Stdout, "- %s\n", source.ID)
 				for k, v := range source.Attributes {
-					fmt.Printf("\t- %s: %s\n", k, string(v))
+					fmt.Fprintf(os.Stdout, "\t- %s: %s\n", k, string(v))
 				}
 			}
 		}
@@ -109,7 +110,7 @@ If you give a null value, the flag will be removed.
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %s\n", k, string(v))
+			fmt.Fprintf(os.Stdout, "- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
@@ -159,7 +160,7 @@ All the sets can be removed by setting an empty list ('').
 			return err
 		}
 		for _, set := range sets {
-			fmt.Printf("- %v\n", set)
+			fmt.Fprintf(os.Stdout, "- %v\n", set)
 		}
 		return nil
 	},
@@ -200,7 +201,7 @@ To remove a flag, set it to an empty array (or null).
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %s\n", k, string(v))
+			fmt.Fprintf(os.Stdout, "- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
@@ -234,7 +235,7 @@ These flags are read only and can only be updated by changing configuration and 
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %s\n", k, string(v))
+			fmt.Fprintf(os.Stdout, "- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
@@ -271,7 +272,7 @@ If you give a null value, the flag will be removed.
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %s\n", k, string(v))
+			fmt.Fprintf(os.Stdout, "- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
