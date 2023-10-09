@@ -119,14 +119,14 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
-	if pending, err := s.ReplicateTo(inst, m, true); err != nil {
+	if err := s.InitialReplication(inst, m); err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
 		s.retryWorker(inst, "share-replicate", 0)
-	} else {
-		if pending {
-			s.pushJob(inst, "share-replicate")
+		if s.FirstFilesRule() != nil {
+			s.retryWorker(inst, "share-upload", 1) // 1, so that it will start after share-replicate
 		}
+	} else {
 		if s.FirstFilesRule() == nil {
 			return
 		}
@@ -141,7 +141,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}
 
-	go s.NotifyRecipients(inst, m)
+	s.NotifyRecipients(inst, m)
 }
 
 // AddTrackTriggers creates the share-track triggers for each rule of the

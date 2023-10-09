@@ -143,6 +143,19 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 	}
 }
 
+func (s *Sharing) InitialReplication(inst *instance.Instance, m *Member) error {
+	for i := 0; i < 1000; i++ {
+		pending, err := s.ReplicateTo(inst, m, true)
+		if err != nil {
+			return err
+		}
+		if !pending {
+			return nil
+		}
+	}
+	return ErrInternalServerError
+}
+
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/stable/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
