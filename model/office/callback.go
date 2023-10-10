@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 
 	jwt "github.com/golang-jwt/jwt/v4"
 )
@@ -146,13 +147,19 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 		_ = res.Body.Close()
 	}()
 
+	instanceURL := inst.PageURL("/", nil)
 	newfile := file.Clone().(*vfs.FileDoc)
 	newfile.MD5Sum = nil // Let the VFS compute the new md5sum
 	newfile.ByteSize = res.ContentLength
 	if newfile.CozyMetadata == nil {
-		newfile.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+		newfile.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
 	}
 	newfile.UpdatedAt = time.Now()
+	newfile.CozyMetadata.UpdatedByApp(&metadata.UpdatedByAppEntry{
+		Slug:     OOSlug,
+		Date:     newfile.UpdatedAt,
+		Instance: instanceURL,
+	})
 	newfile.CozyMetadata.UpdatedAt = newfile.UpdatedAt
 	newfile.CozyMetadata.UploadedAt = &newfile.UpdatedAt
 	newfile.CozyMetadata.UploadedBy = &vfs.UploadedByEntry{Slug: OOSlug}
