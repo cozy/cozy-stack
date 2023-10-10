@@ -111,7 +111,8 @@ class Folder
       accept: "application/vnd.api+json",
       authorization: "Bearer #{inst.token_for doctype}"
     }
-    res = inst.client["/files/#{dir_id}?Type=directory&Name=#{name}"].post nil, opts
+    encoded_name = URI.encode_www_form_component(name)
+    res = inst.client["/files/#{dir_id}?Type=directory&Name=#{encoded_name}"].post nil, opts
     j = JSON.parse(res.body)["data"]
     @couch_id = j["id"]
     @couch_rev = j["rev"]

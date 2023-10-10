@@ -149,10 +149,10 @@ func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 
 func (c *couchdbIndexer) DirSize(doc *DirDoc) (int64, error) {
 	start := doc.Fullpath + "/"
-	stop := doc.Fullpath + "0" // 0 is the next ascii character after /
+	stop := doc.Fullpath + "/\ufff0"
 	if doc.DocID == consts.RootDirID {
 		start = "/"
-		stop = "0"
+		stop = "/\ufff0"
 	}
 
 	// Find the subdirectories
@@ -362,7 +362,7 @@ func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
 	// We limit the stack to 128 bulk updates to avoid infinite loops, as we
 	// had a case in the past.
 	start := oldpath + "/"
-	stop := oldpath + "0" // 0 is the next ascii character after /
+	stop := oldpath + "/\ufff0"
 	for i := 0; i < 128; i++ {
 		// The simple selector mango.StartWith can have some issues when
 		// renaming a folder to the same name, but with a different unicode
