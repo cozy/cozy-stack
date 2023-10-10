@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -215,13 +216,22 @@ func TestFiles(t *testing.T) {
 			assert.Equal(t, "/Tree Shared with me/Test update dir/Foo", dir.Fullpath)
 		}
 
+		// Exclude dir from synchronization on a Desktop client
+		dir.NotSynchronizedOn = append(dir.NotSynchronizedOn,
+			couchdb.DocReference{ID: "ea24f891a41bf1f433460d20706d22c9", Type: "io.cozy.oauth.clients"},
+		)
+		err = couchdb.UpdateDoc(inst, dir)
+		require.NoError(t, err)
+		newTargetRev := strings.SplitN(dir.Rev(), "-", 2)[1]
+
 		target = map[string]interface{}{
 			"_id":  idFoo,
-			"_rev": "2-96c72d35f3ad802484a61df501b0f1bb",
+			"_rev": "3-96c72d35f3ad802484a61df501b0f1bb",
 			"_revisions": map[string]interface{}{
-				"start": float64(2),
+				"start": float64(3),
 				"ids": []interface{}{
 					"96c72d35f3ad802484a61df501b0f1bb",
+					newTargetRev,
 					"4fff5291a41bf1f493460d2070694c5a",
 				},
 			},
@@ -244,6 +254,7 @@ func TestFiles(t *testing.T) {
 			assert.Equal(t, "2018-04-13 15:06:00.012345678 +0100 +0100", dir.CreatedAt.String())
 			assert.Equal(t, "2018-04-13 15:10:57.364765745 +0100 +0100", dir.UpdatedAt.String())
 			assert.Equal(t, []string{"quux", "courge"}, dir.Tags)
+			assert.Equal(t, []couchdb.DocReference{{ID: "ea24f891a41bf1f433460d20706d22c9", Type: "io.cozy.oauth.clients"}}, dir.NotSynchronizedOn)
 		}
 	})
 
