@@ -219,6 +219,7 @@ func TestOffice(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "letter (2).docx", conflict.DocName)
 		assert.Equal(t, "onlyoffice-server", conflict.CozyMetadata.UploadedBy.Slug)
+		assert.Equal(t, "onlyoffice-server", conflict.CozyMetadata.UpdatedByApps[0].Slug)
 		assert.NotEqual(t, conflictRev, conflict.Rev())
 	})
 }
