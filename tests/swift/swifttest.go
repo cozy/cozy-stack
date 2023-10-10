@@ -24,7 +24,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("cozy-stack serve '--fs-url=swift://%s%s?UserName=swifttest&Password=swifttest&AuthURL=%s'\n",
+	fmt.Fprintf(os.Stdout,
+		"cozy-stack serve '--fs-url=swift://%s%s?UserName=swifttest&Password=swifttest&AuthURL=%s'\n",
 		u.Host, u.Path, srv.AuthURL)
 
 	// Wait for CTRL-C

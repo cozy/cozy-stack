@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -49,14 +50,14 @@ var jobsRunCmd = &cobra.Command{
 			o.Logs = make(chan *client.JobLog)
 			go func() {
 				for log := range o.Logs {
-					fmt.Printf("[%s]", log.Level)
+					fmt.Fprintf(os.Stdout, "[%s]", log.Level)
 					if flagJobPrintLogsVerbose {
-						fmt.Printf("[time:%s]", log.Time.Format(time.RFC3339))
+						fmt.Fprintf(os.Stdout, "[time:%s]", log.Time.Format(time.RFC3339))
 						for k, v := range log.Data {
-							fmt.Printf("[%s:%s]", k, v)
+							fmt.Fprintf(os.Stdout, "[%s:%s]", k, v)
 						}
 					}
-					fmt.Printf(" %s\n", log.Message)
+					fmt.Fprintf(os.Stdout, " %s\n", log.Message)
 				}
 			}()
 		}

@@ -127,7 +127,7 @@ triggers of the same type, for the same worker, and with the same arguments.
 		if len(result) > 0 {
 			for _, r := range result {
 				j, _ := json.Marshal(r)
-				fmt.Printf("%s\n", j)
+				fmt.Fprintf(os.Stdout, "%s\n", j)
 			}
 			os.Exit(1)
 		}
@@ -167,7 +167,7 @@ generation smaller than their generation.
 		if len(result) > 0 {
 			for _, r := range result {
 				j, _ := json.Marshal(r)
-				fmt.Printf("%s\n", j)
+				fmt.Fprintf(os.Stdout, "%s\n", j)
 			}
 			os.Exit(1)
 		}
@@ -220,7 +220,7 @@ check via the flags.
 		if len(result) > 0 {
 			for _, r := range result {
 				j, _ := json.Marshal(r)
-				fmt.Printf("%s\n", j)
+				fmt.Fprintf(os.Stdout, "%s\n", j)
 			}
 			os.Exit(1)
 		}

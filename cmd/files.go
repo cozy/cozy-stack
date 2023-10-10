@@ -121,29 +121,29 @@ var usageFilesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Usage: %v\n", info["used"])
+		fmt.Fprintf(os.Stdout, "Usage: %v\n", info["used"])
 
 		if files, ok := info["files"]; ok {
-			fmt.Printf("  Including latest version of files: %v\n", files)
+			fmt.Fprintf(os.Stdout, "  Including latest version of files: %v\n", files)
 		}
 		if versions, ok := info["versions"]; ok {
-			fmt.Printf("  Including older versions of files: %v\n", versions)
+			fmt.Fprintf(os.Stdout, "  Including older versions of files: %v\n", versions)
 		}
 
 		if flagIncludeTrash {
 			if trashed, ok := info["trashed"]; ok {
-				fmt.Printf("  Including trashed files: %v\n", trashed)
+				fmt.Fprintf(os.Stdout, "  Including trashed files: %v\n", trashed)
 			}
 		}
 
 		if quota, ok := info["quota"]; ok {
-			fmt.Printf("Quota: %v\n", quota)
+			fmt.Fprintf(os.Stdout, "Quota: %v\n", quota)
 		}
 		if count, ok := info["doc_count"]; ok {
-			fmt.Printf("Documents count: %v\n", count)
+			fmt.Fprintf(os.Stdout, "Documents count: %v\n", count)
 		}
 		if count, ok := info["versions_count"]; ok {
-			fmt.Printf("Versions Documents count: %v\n", count)
+			fmt.Fprintf(os.Stdout, "Versions Documents count: %v\n", count)
 		}
 		return nil
 	},
@@ -338,7 +338,7 @@ func treeCmd(c *client.Client, root string, w io.Writer, verbose bool) error {
 			return err
 		}
 		if verbose {
-			fmt.Printf("%s ", doc.ID)
+			fmt.Fprintf(os.Stdout, "%s ", doc.ID)
 		}
 
 		attrs := doc.Attrs
@@ -461,11 +461,11 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 		return err
 	}
 	if !fromInfos.IsDir() {
-		fmt.Printf("Importing file %s to cozy://%s\n", from, to)
+		fmt.Fprintf(os.Stdout, "Importing file %s to cozy://%s\n", from, to)
 		return i.upload(from, to)
 	}
 
-	fmt.Printf("Importing from %s to cozy://%s\n", from, to)
+	fmt.Fprintf(os.Stdout, "Importing from %s to cozy://%s\n", from, to)
 
 	return filepath.Walk(from, func(localname string, f os.FileInfo, err error) error {
 		if err != nil {
@@ -485,14 +485,14 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 
 		distname := path.Join(to, strings.TrimPrefix(localname, from))
 		if f.IsDir() {
-			fmt.Printf("create dir %s\n", distname)
+			fmt.Fprintf(os.Stdout, "create dir %s\n", distname)
 			if !flagImportDryRun {
 				if _, err = i.mkdir(distname); err != nil {
 					return err
 				}
 			}
 		} else {
-			fmt.Printf("copying file %s to %s\n", localname, distname)
+			fmt.Fprintf(os.Stdout, "copying file %s to %s\n", localname, distname)
 			if !flagImportDryRun {
 				return i.upload(localname, distname)
 			}

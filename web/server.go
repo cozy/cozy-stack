@@ -203,7 +203,7 @@ func (s *Servers) Start(handler http.Handler, name string, addr string) error {
 		return err
 	}
 
-	fmt.Printf("http server %s started on %q\n", name, addr)
+	fmt.Fprintf(os.Stdout, "http server %s started on %q\n", name, addr)
 	switch host {
 	case "localhost":
 		addrs = append(addrs, net.JoinHostPort("127.0.0.1", port))

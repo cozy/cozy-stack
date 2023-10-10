@@ -310,7 +310,7 @@ var activateMaintenanceKonnectorsCmd = &cobra.Command{
 				break
 			}
 			if len(locale) > 5 {
-				fmt.Printf("Invalid locale name: %q\n", locale)
+				fmt.Fprintf(os.Stdout, "Invalid locale name: %q\n", locale)
 				continue
 			}
 			shortMessage := prompt("Short message:")
@@ -366,7 +366,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 				}
 				return err
 			}
-			fmt.Printf("Application installed successfully on %s\n", in.Attrs.Domain)
+			fmt.Fprintf(os.Stdout, "Application installed successfully on %s\n", in.Attrs.Domain)
 			return nil
 		})
 	}
@@ -393,7 +393,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s (%s) has been installed on %s\n", slug, manifest.Attrs.Version, flagDomain)
+	fmt.Fprintf(os.Stdout, "%s (%s) has been installed on %s\n", slug, manifest.Attrs.Version, flagDomain)
 
 	return nil
 }
@@ -420,7 +420,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 				}
 				return err
 			}
-			fmt.Printf("Application updated successfully on %s\n", in.Attrs.Domain)
+			fmt.Fprintf(os.Stdout, "Application updated successfully on %s\n", in.Attrs.Domain)
 			return nil
 		})
 	}
@@ -457,7 +457,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	} else if app.IsMoreRecent(newManifest.Attrs.Version, manifest.Attrs.Version) {
 		msg = "%s has been downgraded to %s\n"
 	}
-	fmt.Printf(msg, args[0], newManifest.Attrs.Version)
+	fmt.Fprintf(os.Stdout, msg, args[0], newManifest.Attrs.Version)
 
 	return nil
 }
@@ -478,7 +478,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s has been uninstalled\n", manifest.Attrs.Slug)
+	fmt.Fprintf(os.Stdout, "%s has been uninstalled\n", manifest.Attrs.Slug)
 	return nil
 }
 
@@ -525,7 +525,7 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 
 	var triggerIDs []string
 	if manifest.Attrs.Services == nil {
-		fmt.Printf("No triggers\n")
+		fmt.Fprintf(os.Stdout, "No triggers\n")
 		return nil
 	}
 	for _, service := range *manifest.Attrs.Services {
