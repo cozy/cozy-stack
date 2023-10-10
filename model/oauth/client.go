@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/registry"
 
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 const (
@@ -500,10 +500,10 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	}
 
 	var err error
-	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, crypto.StandardClaims{
-		Audience: consts.RegistrationTokenAudience,
+	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.RegisteredClaims{
+		Audience: jwt.ClaimStrings{consts.RegistrationTokenAudience},
 		Issuer:   i.Domain,
-		IssuedAt: time.Now().Unix(),
+		IssuedAt: jwt.NewNumericDate(time.Now()),
 		Subject:  c.CouchID,
 	})
 	if err != nil {
@@ -730,10 +730,10 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
-		StandardClaims: crypto.StandardClaims{
-			Audience: audience,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{audience},
 			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Subject:  c.CouchID,
 		},
 		Scope: scope,
@@ -764,9 +764,9 @@ func validToken(i *instance.Instance, audience, token string) (permission.Claims
 		return claims, false
 	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
-	if claims.Audience != audience {
+	if claims.AudienceString() != audience {
 		i.Logger().WithNamespace("oauth").
-			Errorf("Unexpected audience for %s token: %s", audience, claims.Audience)
+			Errorf("Unexpected audience for %s token: %v", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain {

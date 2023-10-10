@@ -29,7 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gavv/httpexpect/v2"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1309,10 +1309,10 @@ func TestAuth(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
 		claims := permission.Claims{
-			StandardClaims: crypto.StandardClaims{
-				Audience: consts.RefreshTokenAudience,
+			RegisteredClaims: jwt.RegisteredClaims{
+				Audience: jwt.ClaimStrings{consts.RefreshTokenAudience},
 				Issuer:   domain,
-				IssuedAt: crypto.Timestamp(),
+				IssuedAt: jwt.NewNumericDate(time.Now()),
 				Subject:  clientID,
 			},
 			Scope: "files:write",
@@ -2046,7 +2046,7 @@ func TestAuth(t *testing.T) {
 				return testInstance.SessionSecret(), nil
 			}, &claims)
 			assert.NoError(t, err)
-			assert.Equal(t, consts.KonnectorAudience, claims.Audience)
+			assert.Equal(t, consts.KonnectorAudience, claims.Audience[0])
 			assert.Equal(t, domain, claims.Issuer)
 			assert.Equal(t, konnSlug, claims.Subject)
 			assert.Equal(t, "", claims.Scope)
@@ -2209,7 +2209,7 @@ func assertValidToken(t *testing.T, testInstance *instance.Instance, token, audi
 		return testInstance.OAuthSecret, nil
 	}, &claims)
 	assert.NoError(t, err)
-	assert.Equal(t, audience, claims.Audience)
+	assert.Equal(t, audience, claims.Audience[0])
 	assert.Equal(t, domain, claims.Issuer)
 	assert.Equal(t, subject, claims.Subject)
 	assert.Equal(t, scope, claims.Scope)

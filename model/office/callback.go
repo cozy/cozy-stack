@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 // Status list is described on https://api.onlyoffice.com/editors/callback#status
@@ -58,8 +58,12 @@ type callbackClaims struct {
 	} `json:"payload"`
 }
 
-// Valid is part of the jwt.Claims interface
-func (c *callbackClaims) Valid() error { return nil }
+func (c *callbackClaims) GetExpirationTime() (*jwt.NumericDate, error) { return nil, nil }
+func (c *callbackClaims) GetIssuedAt() (*jwt.NumericDate, error)       { return nil, nil }
+func (c *callbackClaims) GetNotBefore() (*jwt.NumericDate, error)      { return nil, nil }
+func (c *callbackClaims) GetIssuer() (string, error)                   { return "", nil }
+func (c *callbackClaims) GetSubject() (string, error)                  { return "", nil }
+func (c *callbackClaims) GetAudience() (jwt.ClaimStrings, error)       { return nil, nil }
 
 // Callback will manage the callback from the document server.
 func Callback(inst *instance.Instance, params CallbackParameters) error {

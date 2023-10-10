@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -51,7 +51,7 @@ func TestClient(t *testing.T) {
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		assert.True(t, ok, "Claims can be parsed as standard claims")
-		assert.Equal(t, "test", claims["aud"])
+		assert.Equal(t, []interface{}{"test"}, claims["aud"])
 		assert.Equal(t, testInstance.Domain, claims["iss"])
 		assert.Equal(t, "my-client-id", claims["sub"])
 		assert.Equal(t, "foo:read", claims["scope"])
@@ -63,7 +63,7 @@ func TestClient(t *testing.T) {
 
 		claims, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
 		assert.True(t, ok, "The token must be valid")
-		assert.Equal(t, "refresh", claims.Audience)
+		assert.Equal(t, jwt.ClaimStrings{"refresh"}, claims.Audience)
 		assert.Equal(t, testInstance.Domain, claims.Issuer)
 		assert.Equal(t, "my-client-id", claims.Subject)
 		assert.Equal(t, "foo:read", claims.Scope)

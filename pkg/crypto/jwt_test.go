@@ -2,22 +2,23 @@ package crypto
 
 import (
 	"testing"
+	"time"
 
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
 
 type Claims struct {
-	StandardClaims
+	jwt.RegisteredClaims
 	Foo string `json:"foo"`
 }
 
 func TestNewJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
-	tokenString, err := NewJWT(secret, StandardClaims{
-		Audience: "test",
+	tokenString, err := NewJWT(secret, jwt.RegisteredClaims{
+		Audience: jwt.ClaimStrings{"test"},
 		Issuer:   "example.org",
-		IssuedAt: Timestamp(),
+		IssuedAt: jwt.NewNumericDate(time.Now()),
 		Subject:  "cozy.io",
 	})
 	assert.NoError(t, err)
@@ -32,7 +33,7 @@ func TestNewJWT(t *testing.T) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	assert.True(t, ok, "Claims can be parsed as standard claims")
-	assert.Equal(t, "test", claims["aud"])
+	assert.Equal(t, []interface{}{"test"}, claims["aud"])
 	assert.Equal(t, "example.org", claims["iss"])
 	assert.Equal(t, "cozy.io", claims["sub"])
 }
@@ -40,10 +41,10 @@ func TestNewJWT(t *testing.T) {
 func TestParseJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, Claims{
-		StandardClaims{
-			Audience: "test",
+		jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{"test"},
 			Issuer:   "example.org",
-			IssuedAt: Timestamp(),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Subject:  "cozy.io",
 		},
 		"bar",
@@ -55,7 +56,7 @@ func TestParseJWT(t *testing.T) {
 		return secret, nil
 	}, &claims)
 	assert.NoError(t, err)
-	assert.Equal(t, "test", claims.Audience)
+	assert.Equal(t, jwt.ClaimStrings{"test"}, claims.Audience)
 	assert.Equal(t, "example.org", claims.Issuer)
 	assert.Equal(t, "cozy.io", claims.Subject)
 	assert.Equal(t, "bar", claims.Foo)
@@ -64,10 +65,10 @@ func TestParseJWT(t *testing.T) {
 func TestParseInvalidJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, Claims{
-		StandardClaims{
-			Audience: "test",
+		jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{"test"},
 			Issuer:   "example.org",
-			IssuedAt: Timestamp(),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Subject:  "cozy.io",
 		},
 		"bar",

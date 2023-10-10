@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -10,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
@@ -93,7 +95,7 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 // apps. It is an access token, with some additional custom fields.
 // See https://github.com/bitwarden/jslib/blob/master/common/src/services/token.service.ts
 func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
-	now := crypto.Timestamp()
+	now := time.Now()
 	name, err := i.SettingsPublicName()
 	if err != nil || name == "" {
 		name = "Anonymous"
@@ -104,12 +106,12 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.BitwardenClaims{
 		Claims: permission.Claims{
-			StandardClaims: crypto.StandardClaims{
-				Audience:  consts.AccessTokenAudience,
+			RegisteredClaims: jwt.RegisteredClaims{
+				Audience:  jwt.ClaimStrings{consts.AccessTokenAudience},
 				Issuer:    i.Domain,
-				NotBefore: now - 60,
-				IssuedAt:  now,
-				ExpiresAt: now + int64(consts.AccessTokenValidityDuration.Seconds()),
+				NotBefore: jwt.NewNumericDate(now.Add(-60 * time.Second)),
+				IssuedAt:  jwt.NewNumericDate(now),
+				ExpiresAt: jwt.NewNumericDate(now.Add(consts.AccessTokenValidityDuration)),
 				Subject:   i.ID(),
 			},
 			SStamp: stamp,
@@ -136,10 +138,10 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 		stamp = settings.SecurityStamp
 	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
-		StandardClaims: crypto.StandardClaims{
-			Audience: consts.RefreshTokenAudience,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{consts.RefreshTokenAudience},
 			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
+			IssuedAt: jwt.NewNumericDate(time.Now()),
 			Subject:  c.CouchID,
 		},
 		SStamp: stamp,

@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
 type Claims struct {
-	crypto.StandardClaims
+	jwt.RegisteredClaims
 	Scope     string `json:"scope,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
 	SStamp    string `json:"stamp,omitempty"`
@@ -18,13 +18,25 @@ type Claims struct {
 // IssuedAtUTC returns a time.Time struct of the IssuedAt field in UTC
 // location.
 func (claims *Claims) IssuedAtUTC() time.Time {
-	return time.Unix(claims.IssuedAt, 0).UTC()
+	return claims.IssuedAt.Time.UTC()
+}
+
+// AudienceString returns the audience as a string.
+func (claims *Claims) AudienceString() string {
+	if len(claims.Audience) == 0 {
+		return ""
+	}
+	return claims.Audience[0]
 }
 
 // Expired returns true if a Claim is expired
 func (claims *Claims) Expired() bool {
+	if len(claims.Audience) != 1 {
+		return true
+	}
+
 	var validityDuration time.Duration
-	switch claims.Audience {
+	switch claims.Audience[0] {
 	case consts.AppAudience:
 		if claims.SessionID == "" {
 			// an app token with no session association is used for services which
