@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,8 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/errgroup"
 )
 
 // UploadMsg is used for jobs on the share-upload worker.
@@ -52,25 +53,27 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	}
 
 	lastTry := errors+1 == MaxRetries
-	for i := 0; i < BatchSize; i++ {
-		if len(members) == 0 {
-			break
-		}
-		m := members[0]
-		members = members[1:]
-		more, err := s.UploadTo(inst, m, lastTry)
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
-		if more {
-			members = append(members, m)
-		}
+	done := true
+	g, _ := errgroup.WithContext(context.Background())
+	for i := range members {
+		m := members[i]
+		g.Go(func() error {
+			more, err := s.UploadBatchTo(inst, m, lastTry)
+			if err != nil {
+				return err
+			}
+			if more {
+				done = false
+			}
+			return nil
+		})
 	}
+	err := g.Wait()
 
-	if errm != nil {
+	if err != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		inst.Logger().WithNamespace("upload").Infof("errm=%s\n", errm)
-	} else if len(members) > 0 {
+		inst.Logger().WithNamespace("upload").Infof("err=%s\n", err)
+	} else if !done {
 		s.pushJob(inst, "share-upload")
 	}
 	return errm
@@ -84,14 +87,12 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	}
 	defer mu.Unlock()
 
-	for i := 0; i < BatchSize; i++ {
-		more, err := s.UploadTo(inst, m, false)
-		if err != nil {
-			return err
-		}
-		if !more {
-			return s.sendInitialEndNotif(inst, m)
-		}
+	more, err := s.UploadBatchTo(inst, m, false)
+	if err != nil {
+		return err
+	}
+	if !more {
+		return s.sendInitialEndNotif(inst, m)
 	}
 
 	s.pushJob(inst, "share-upload")
@@ -126,9 +127,9 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 	return nil
 }
 
-// UploadTo uploads one file to the given member. It returns false if there
-// are no more files to upload to this member currently.
-func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bool, error) {
+// UploadBatchTo uploads a batch of files to the given member. It returns false
+// if there are no more files to upload to this member currently.
+func (s *Sharing) UploadBatchTo(inst *instance.Instance, m *Member, lastTry bool) (bool, error) {
 	if m.Instance == "" {
 		return false, ErrInvalidURL
 	}
@@ -143,58 +144,71 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bo
 	}
 	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
 
-	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
-	if errors.Is(err, ErrInternalServerError) {
-		// Retrying is useless in this case, let's skip this file
-		if seq != lastSeq {
-			_ = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+	batch := &batchUpload{
+		Sharing:  s,
+		Instance: inst,
+		Seq:      lastSeq,
+	}
+	defer func() {
+		if batch.Seq != lastSeq {
+			_ = s.UpdateLastSequenceNumber(inst, m, "upload", batch.Seq)
 		}
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	if file == nil {
-		if seq != lastSeq {
-			err = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
-		}
-		return false, err
-	}
+	}()
 
-	if err = s.uploadFile(inst, m, file, ruleIndex); err != nil {
-		if lastTry {
-			_ = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+	for i := 0; i < BatchSize; i++ {
+		file, ruleIndex, err := batch.findNextFileToUpload()
+		if err != nil {
+			return false, err
 		}
-		return false, err
+		if file == nil {
+			return false, nil
+		}
+		if err = s.uploadFile(inst, m, file, ruleIndex); err != nil {
+			return false, err
+		}
 	}
+	return true, nil
+}
 
-	return true, s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+type batchUpload struct {
+	Sharing  *Sharing
+	Instance *instance.Instance
+	Seq      string
+
+	// changes is used to batch calls to the changes feed and improves
+	// performances.
+	changes []couchdb.Change
 }
 
 // findNextFileToUpload uses the changes feed to find the next file that needs
 // to be uploaded. It returns a file document if there is one file to upload,
-// and the sequence number where it is in the changes feed.
-func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (map[string]interface{}, int, string, error) {
+// and the index of the sharing rule that applies to this file.
+func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error) {
 	for {
-		response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
-			DocType:     consts.Shared,
-			IncludeDocs: true,
-			Since:       since,
-			Limit:       1,
-		})
-		if err != nil {
-			return nil, 0, since, err
+		seq := b.Seq
+		if len(b.changes) == 0 {
+			response, err := couchdb.GetChanges(b.Instance, &couchdb.ChangesRequest{
+				DocType:     consts.Shared,
+				IncludeDocs: true,
+				Since:       seq,
+				Limit:       BatchSize,
+			})
+			if err != nil {
+				return nil, 0, err
+			}
+			if len(response.Results) == 0 {
+				return nil, 0, nil
+			}
+			b.changes = response.Results
 		}
-		since = response.LastSeq
-		if len(response.Results) == 0 {
-			break
-		}
-		r := response.Results[0]
-		infos, ok := r.Doc.Get("infos").(map[string]interface{})
+		change := b.changes[0]
+		b.changes = b.changes[1:]
+		b.Seq = change.Seq
+		infos, ok := change.Doc.Get("infos").(map[string]interface{})
 		if !ok {
 			continue
 		}
-		info, ok := infos[s.SID].(map[string]interface{})
+		info, ok := infos[b.Sharing.SID].(map[string]interface{})
 		if !ok {
 			continue
 		}
@@ -208,30 +222,30 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		if !ok {
 			continue
 		}
-		rev := extractLastRevision(r.Doc)
+		rev := extractLastRevision(change.Doc)
 		if rev == "" {
 			continue
 		}
-		docID := strings.SplitN(r.DocID, "/", 2)[1]
+		docID := strings.SplitN(change.DocID, "/", 2)[1]
 		ir := couchdb.IDRev{ID: docID, Rev: rev}
 		query := []couchdb.IDRev{ir}
-		results, err := couchdb.BulkGetDocs(inst, consts.Files, query)
+		results, err := couchdb.BulkGetDocs(b.Instance, consts.Files, query)
 		if err != nil {
-			return nil, 0, since, err
+			b.Seq = seq
+			return nil, 0, err
 		}
 		if len(results) == 0 {
-			inst.Logger().WithNamespace("upload").
+			b.Instance.Logger().WithNamespace("upload").
 				Warnf("missing results for bulk get %v", query)
-			return nil, 0, since, ErrInternalServerError
+			return nil, 0, ErrInternalServerError
 		}
 		if results[0]["_deleted"] == true {
-			inst.Logger().WithNamespace("upload").
+			b.Instance.Logger().WithNamespace("upload").
 				Warnf("cannot upload _deleted file %v", results[0])
-			return nil, 0, since, ErrInternalServerError
+			return nil, 0, ErrInternalServerError
 		}
-		return results[0], int(idx), since, nil
+		return results[0], int(idx), nil
 	}
-	return nil, 0, since, nil
 }
 
 // uploadFile uploads one file to the given member. It first try to just send

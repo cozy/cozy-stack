@@ -77,7 +77,7 @@ func TestReplicator(t *testing.T) {
 		assert.Equal(t, feed.Seq, seq3)
 	})
 
-	t.Run("InitialCopy", func(t *testing.T) {
+	t.Run("InitialIndex", func(t *testing.T) {
 		// Start with an empty io.cozy.shared database
 		_ = couchdb.DeleteDB(inst, consts.Shared)
 		if err := couchdb.CreateDB(inst, consts.Shared); err != nil {
@@ -102,7 +102,7 @@ func TestReplicator(t *testing.T) {
 			Values:  []string{settingsDocID},
 			Local:   true,
 		})
-		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
+		assert.NoError(t, s.InitialIndex(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared := 0
 		assertNbSharedRef(t, inst, nbShared)
 
@@ -114,7 +114,7 @@ func TestReplicator(t *testing.T) {
 			DocType: testDoctype,
 			Values:  []string{oneID},
 		})
-		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
+		assert.NoError(t, s.InitialIndex(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared++
 		assertNbSharedRef(t, inst, nbShared)
 		oneRef := getSharedRef(t, inst, testDoctype, oneID)
@@ -135,7 +135,7 @@ func TestReplicator(t *testing.T) {
 			Selector: "foo",
 			Values:   []string{"bar"},
 		})
-		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
+		assert.NoError(t, s.InitialIndex(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared += len(twoIDs)
 		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range twoIDs {
@@ -160,7 +160,7 @@ func TestReplicator(t *testing.T) {
 			Selector: "foo",
 			Values:   []string{"qux", "quux", "quuux"},
 		})
-		assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
+		assert.NoError(t, s.InitialIndex(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 		nbShared += len(threeIDs)
 		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range threeIDs {
@@ -172,7 +172,7 @@ func TestReplicator(t *testing.T) {
 
 		// Another member accepts the sharing
 		for r, rule := range s.Rules {
-			assert.NoError(t, s.InitialCopy(inst, rule, r))
+			assert.NoError(t, s.InitialIndex(inst, rule, r))
 		}
 		assertNbSharedRef(t, inst, nbShared)
 
@@ -189,7 +189,7 @@ func TestReplicator(t *testing.T) {
 
 		// A third member accepts the sharing
 		for r, rule := range s.Rules {
-			assert.NoError(t, s.InitialCopy(inst, rule, r))
+			assert.NoError(t, s.InitialIndex(inst, rule, r))
 		}
 		nbShared++
 		assertNbSharedRef(t, inst, nbShared)
@@ -212,7 +212,7 @@ func TestReplicator(t *testing.T) {
 			Selector: "foo",
 			Values:   []string{"qux", "quux", "quuux"},
 		})
-		assert.NoError(t, s2.InitialCopy(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1))
+		assert.NoError(t, s2.InitialIndex(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1))
 		assertNbSharedRef(t, inst, nbShared)
 		for _, id := range threeIDs {
 			threeRef := getSharedRef(t, inst, testDoctype, id)

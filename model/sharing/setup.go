@@ -110,7 +110,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	}
 	if s.Triggers.ReplicateID == "" {
 		for i, rule := range s.Rules {
-			if err := s.InitialCopy(inst, rule, i); err != nil {
+			if err := s.InitialIndex(inst, rule, i); err != nil {
 				inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
 			}
 		}
@@ -119,14 +119,14 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
-	if pending, err := s.ReplicateTo(inst, m, true); err != nil {
+	if err := s.InitialReplication(inst, m); err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
 		s.retryWorker(inst, "share-replicate", 0)
-	} else {
-		if pending {
-			s.pushJob(inst, "share-replicate")
+		if s.FirstFilesRule() != nil {
+			s.retryWorker(inst, "share-upload", 1) // 1, so that it will start after share-replicate
 		}
+	} else {
 		if s.FirstFilesRule() == nil {
 			return
 		}
@@ -141,7 +141,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}
 
-	go s.NotifyRecipients(inst, m)
+	s.NotifyRecipients(inst, m)
 }
 
 // AddTrackTriggers creates the share-track triggers for each rule of the
@@ -208,9 +208,9 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	return couchdb.UpdateDoc(inst, s)
 }
 
-// InitialCopy lists the shared documents and put a reference in the
+// InitialIndex lists the shared documents and put a reference in the
 // io.cozy.shared database
-func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
+func (s *Sharing) InitialIndex(inst *instance.Instance, rule Rule, r int) error {
 	if rule.Local || len(rule.Values) == 0 {
 		return nil
 	}
