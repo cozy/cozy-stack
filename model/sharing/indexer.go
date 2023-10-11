@@ -239,6 +239,22 @@ func (s *sharingIndexer) setDirOrFileRevisions(oldDocDir *vfs.DirDoc, oldDocFile
 }
 
 func (s *sharingIndexer) bulkForceUpdateDoc(olddoc, doc *vfs.FileDoc) error {
+	// XXX We need to check that the file has not been updated between it has
+	// been loaded and the call to BulkUpdateDocs, as the VFS lock has been
+	// acquired after the file has been loaded, and CouchDB can create a
+	// conflict in the database if it happens (because of the new_edit: false
+	// option).
+	if olddoc != nil {
+		var current couchdb.JSONDoc
+		err := couchdb.GetDoc(s.db, consts.Files, doc.ID(), &current)
+		if err != nil {
+			return err
+		}
+		if current.Rev() != olddoc.Rev() {
+			return ErrInternalServerError
+		}
+	}
+
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
