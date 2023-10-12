@@ -397,29 +397,34 @@ func computeFolderPath(inst *instance.Instance, slug string, acc *account.Accoun
 // files in the folder referenced by the konnector, and adds the permission if
 // needed.
 func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
-	perms, err := permission.GetForKonnector(inst, w.slug)
-	if err != nil {
-		return err
-	}
-	value := consts.Konnectors + "/" + w.slug
-	for _, rule := range perms.Permissions {
-		if rule.Type == consts.Files && rule.Selector == couchdb.SelectorReferencedBy {
-			for _, val := range rule.Values {
-				if val == value {
-					return nil
+	for {
+		perms, err := permission.GetForKonnector(inst, w.slug)
+		if err != nil {
+			return err
+		}
+		value := consts.Konnectors + "/" + w.slug
+		for _, rule := range perms.Permissions {
+			if rule.Type == consts.Files && rule.Selector == couchdb.SelectorReferencedBy {
+				for _, val := range rule.Values {
+					if val == value {
+						return nil
+					}
 				}
 			}
 		}
+		rule := permission.Rule{
+			Type:        consts.Files,
+			Title:       "referenced folders",
+			Description: "folders referenced by the konnector",
+			Selector:    couchdb.SelectorReferencedBy,
+			Values:      []string{value},
+		}
+		perms.Permissions = append(perms.Permissions, rule)
+		err = couchdb.UpdateDoc(inst, perms)
+		if !couchdb.IsConflictError(err) {
+			return err
+		}
 	}
-	rule := permission.Rule{
-		Type:        consts.Files,
-		Title:       "referenced folders",
-		Description: "folders referenced by the konnector",
-		Selector:    couchdb.SelectorReferencedBy,
-		Values:      []string{value},
-	}
-	perms.Permissions = append(perms.Permissions, rule)
-	return couchdb.UpdateDoc(inst, perms)
 }
 
 func copyFiles(workFS afero.Fs, fileServer appfs.FileServer, slug, version, shasum string) error {
