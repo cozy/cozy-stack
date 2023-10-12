@@ -1,0 +1,96 @@
+#!/bin/sh
+set -e
+. /usr/share/debconf/confmodule
+
+case $1 in
+configure)
+	db_get cozy-stack/couchdb/address && COUCH_ADDRESS="${RET}"
+	db_get cozy-stack/couchdb/cozy/user && COUCH_USER="${RET}"
+	db_get cozy-stack/couchdb/cozy/password && COUCH_PASS="${RET}"
+	db_get cozy-stack/address && ADDRESS="${RET}"
+	db_get cozy-stack/port && PORT="${RET}"
+	db_get cozy-stack/admin/address && ADMIN_ADDRESS="${RET}"
+	db_get cozy-stack/admin/port && ADMIN_PORT="${RET}"
+	COUCH_URL="http://${COUCH_USER}:${COUCH_PASS}@${COUCH_ADDRESS}/"
+
+	if [ -z "$2" ]; then
+		getent group cozy >/dev/null 2>&1 || \
+			addgroup --quiet --system cozy
+		getent passwd cozy-stack >/dev/null 2>&1 || \
+			adduser --quiet --system \
+			--home /var/lib/cozy --no-create-home \
+			--shell /usr/sbin/nologin --ingroup cozy cozy-stack
+
+		[ -d /var/log/cozy ] || \
+			install -o root -g cozy -m u=rwX,g=rwX,o= -d /var/log/cozy
+
+		db_get cozy-stack/couchdb/nodename && COUCH_NODE="${RET}"
+		db_get cozy-stack/couchdb/admin/user && COUCH_ADMIN_USER="${RET}"
+		db_get cozy-stack/couchdb/admin/password && COUCH_ADMIN_PASS="${RET}"
+		ENCODED_COUCH_ADMIN_USER=$(echo "${COUCH_ADMIN_USER}" | sed -e 's/:/%3A/g')
+		curl -fsX PUT -u "${ENCODED_COUCH_ADMIN_USER}:${COUCH_ADMIN_PASS}" "${COUCH_ADDRESS}/_node/${COUCH_NODE}/_config/admins/${COUCH_USER}" -d "\"${COUCH_PASS}\"" >/dev/null || \
+		(
+			echo "=====================" >&2
+			echo "Unable to create cozy user in couchdb" >&2
+			echo "Check that you provided the correct couchdb admin user, password and address" >&2
+			echo "You can try again by purging and reinstalling the cozy-stack package" >&2
+			echo "apt-get purge cozy-stack; apt-get install cozy-stack" >&2
+			echo "=====================" >&2
+		)
+
+		if [ ! -f /etc/cozy/cozy-admin-passphrase ]; then
+			db_get cozy-stack/cozy/password && COZY_PASS="${RET}"
+			COZY_ADMIN_PASSPHRASE="${COZY_PASS}" cozy-stack config passwd /etc/cozy/cozy-admin-passphrase
+			printf "%s" "${COZY_PASS}" > /etc/cozy/.cozy-admin-passphrase
+			chmod u=rw,og= /etc/cozy/.cozy-admin-passphrase
+		fi
+
+		chown cozy-stack: /etc/cozy/cozy.yml
+		chown cozy-stack: /etc/cozy/cozy-admin-passphrase
+		chown -R cozy-stack: /usr/share/cozy
+
+		install -o cozy-stack -g cozy -m u=rwX,g=rwX,o= -d /var/lib/cozy
+
+		[ -f /usr/sbin/rsyslogd ] && systemctl restart rsyslog
+		[ -f /usr/sbin/nginx ] && systemctl reload nginx
+	else
+		if [ ! -f /etc/cozy/.cozy-admin-passphrase ]; then
+			db_input critical cozy-stack/admin/passphrase
+			db_go
+			db_get cozy-stack/admin/passphrase && COZY_PASS="${RET}"
+			echo "${COZY_PASS}" > /etc/cozy/.cozy-admin-passphrase
+			chmod u=rw,og= /etc/cozy/.cozy-admin-passphrase
+		fi
+
+		if dpkg --compare-versions "${2}" lt 2:1.2.0-1; then
+			/usr/share/cozy/uninstall-onboarding.sh
+		fi
+	fi
+
+	if [ ! -f /etc/cozy/cozy.yml.local ]; then
+		cat > /etc/cozy/cozy.yml.local <<-EOF
+			host: ${ADDRESS}
+			port: ${PORT}
+
+			admin:
+			  host: ${ADMIN_ADDRESS}
+			  port: ${ADMIN_PORT}
+
+			couchdb:
+			  url: ${COUCH_URL}
+		EOF
+		chown cozy-stack: /etc/cozy/cozy.yml.local
+		chmod u=rw,og= /etc/cozy/cozy.yml.local
+	fi
+
+	if [ ! -f /etc/cozy/vault.enc ] || [ ! -f /etc/cozy/vault.dec ]; then
+		cozy-stack config gen-keys /etc/cozy/vault
+		chown cozy-stack: /etc/cozy/vault.enc /etc/cozy/vault.dec
+		chmod u=rw,og= /etc/cozy/vault.enc /etc/cozy/vault.dec
+	fi
+
+	systemctl restart cozy-stack
+;;
+esac
+
+#DEBHELPER#

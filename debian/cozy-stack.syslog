@@ -1,0 +1,7 @@
+if $programname == 'cozy' then {
+	if $syslogseverity <= '6' then /var/log/cozy/stack.log
+	/var/log/cozy/stack.debug.log
+}
+if $programname == 'cozy-stack' then {
+	/var/log/cozy/stack.log
+}

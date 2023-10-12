@@ -1,0 +1,8 @@
+#!/usr/bin/dh-exec
+bin/cozy-stack usr/bin/
+scripts/konnector-node16-run.sh => usr/share/cozy/konnector-run.sh
+
+debian/cozy.yml etc/cozy/
+debian/cozy-stack.syslog => etc/rsyslog.d/cozy.conf
+debian/uninstall-onboarding.sh usr/share/cozy/
+debian/websocket.conf etc/nginx/conf.d/

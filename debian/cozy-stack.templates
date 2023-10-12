@@ -1,0 +1,119 @@
+Template: cozy-stack/couchdb/address
+Type: string
+Default: 127.0.0.1:5984
+Description: CouchDB address:
+ Please enter the CouchDB address to use
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/nodename
+Type: string
+Default: couchdb@127.0.0.1
+Description: CouchDB nodename:
+ Please enter the CouchDB nodename
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/admin/user
+Type: string
+Default: admin
+Description: CouchDB admin user:
+ Please enter the CouchDB admin user
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/admin/password
+Type: password
+Default: admin
+Description: CouchDB admin password:
+ Please enter the CouchDB admin password
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/admin/password_again
+Type: password
+Default: admin
+Description: CouchDB admin password (confirmation):
+ Please confirm the CouchDB admin password
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/admin/password_mismatch
+Type: error
+Description: Password input error:
+ The two passwords you entered were not the same. Please try again.
+
+Template: cozy-stack/couchdb/cozy/user
+Type: string
+Default: cozy
+Description: CouchDB cozy user:
+ Please enter the CouchDB cozy username
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/cozy/password
+Type: password
+Default: cozy
+Description: CouchDB cozy password:
+ Please enter the CouchDB cozy password
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/cozy/password_again
+Type: password
+Default: cozy
+Description: CouchDB cozy password (confirmation):
+ Please confirm the CouchDB cozy password
+ .
+ This will be used to create a Cozy administrator on the cluster
+
+Template: cozy-stack/couchdb/cozy/password_mismatch
+Type: error
+Description: Password input error:
+ The two passwords you entered were not the same. Please try again.
+
+Template: cozy-stack/cozy/password
+Type: password
+Default: admin
+Description: Cozy stack admin password:
+ Please enter the Cozy admin password
+
+Template: cozy-stack/cozy/password_again
+Type: password
+Default: admin
+Description: Cozy stack admin password:
+ Please confirm the Cozy admin password
+
+Template: cozy-stack/cozy/password_mismatch
+Type: error
+Description: Password input error:
+ The two passwords you entered were not the same. Please try again.
+
+Template: cozy-stack/address
+Type: string
+Default: 127.0.0.1
+Description: Cozy stack bind address:
+ Your cozy stack will listen on this address
+
+Template: cozy-stack/port
+Type: string
+Default: 8080
+Description: Cozy stack bind port:
+ Your cozy stack will listen on this port
+
+Template: cozy-stack/admin/address
+Type: string
+Default: 127.0.0.1
+Description: Cozy stack admin bind address:
+ Your cozy stack admin API will listen on this address
+
+Template: cozy-stack/admin/port
+Type: string
+Default: 6060
+Description: Cozy stack admin bind port:
+ Your cozy stack admin API will listen on this port
+
+Template: cozy-stack/admin/passphrase
+Type: password
+Description: Cozy stack admin passphrase:
+ Please enter your Cozy admin passphrase

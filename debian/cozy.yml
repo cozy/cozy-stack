@@ -1,0 +1,20 @@
+fs:
+  url: file:///var/lib/cozy
+
+vault:
+  credentials_encryptor_key: /etc/cozy/vault.enc
+  credentials_decryptor_key: /etc/cozy/vault.dec
+
+konnectors:
+  cmd: /usr/share/cozy/konnector-run.sh
+
+log:
+  level: info
+  syslog: true
+
+registries:
+  default:
+    - https://apps-registry.cozycloud.cc/selfhosted
+    - https://apps-registry.cozycloud.cc/mespapiers
+    - https://apps-registry.cozycloud.cc/banks
+    - https://apps-registry.cozycloud.cc/

@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+DESTDIR := $(CURDIR)/debian/cozy-stack
+export DEBIAN_VERSION := $(shell dpkg-parsechangelog -S Version)
+export UPSTREAM_VERSION := $(shell echo $(DEBIAN_VERSION) | awk -F- '{print $$1}')
+export BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+%:
+	dh $@ --with=systemd
+
+override_dh_auto_build:
+	go build -o $(CURDIR)/bin/cozy-stack -ldflags "\
+		-X github.com/cozy/cozy-stack/pkg/config.Version=$(UPSTREAM_VERSION) \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=$(BUILD_TIME) \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=production"
+
+override_dh_clean:
+	dh_clean
+	./scripts/build.sh clean
+
+#override_dh_auto_test:
+#ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+#	go get -u -v github.com/stretchr/testify
+#	go test $(DH_GOPKG)/...
+#endif

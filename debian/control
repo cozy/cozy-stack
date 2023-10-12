@@ -1,0 +1,24 @@
+Source: cozy-stack
+Section: devel
+Priority: extra
+Maintainer: Cozycloud Packaging Team <debian@cozycloud.cc>
+Build-Depends: debhelper (>= 9), dh-exec
+Standards-Version: 3.9.8
+Homepage: https://github.com/cozy/cozy-stack
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/cozy-stack.git
+Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/cozy-stack.git
+XS-Go-Import-Path: github.com/cozy/cozy-stack
+
+Package: cozy-stack
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends},
+			adduser, members, curl, sed,
+			git, imagemagick, libprotobuf-c1, fonts-lato
+Recommends: couchdb (>= 2.3), nginx,
+			debootstrap, lsb-release,
+			mail-transport-agent, nodejs (>= 16)
+Description: Cozy: Simple, Versatile, Yours
+ Cozy (https://cozy.io) is a platform that brings all your web services
+ in the same private space.
+ .
+ This package installs the cozy stack.
