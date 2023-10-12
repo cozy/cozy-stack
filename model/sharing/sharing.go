@@ -1568,6 +1568,7 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 						"member":    m.Domain,
 						"ownerDoc":  ownerDoc,
 						"memberRev": memberDoc.Rev(),
+						"memberID":  memberDoc.ID(),
 					})
 				}
 			} else {
@@ -1581,6 +1582,8 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 						"member":     m.Domain,
 						"ownerDoc":   ownerDoc,
 						"memberName": memberDoc.M["name"],
+						"memberRev":  memberDoc.Rev(),
+						"memberID":   memberDoc.ID(),
 					})
 				}
 
@@ -1591,6 +1594,8 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 						"member":         m.Domain,
 						"ownerDoc":       ownerDoc,
 						"memberChecksum": memberDoc.M["checksum"],
+						"memberRev":      memberDoc.Rev(),
+						"memberID":       memberDoc.ID(),
 					})
 				}
 
@@ -1613,6 +1618,8 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 							"member":       m.Domain,
 							"ownerDoc":     ownerDoc,
 							"memberParent": memberDirID,
+							"memberRev":    memberDoc.Rev(),
+							"memberID":     memberDoc.ID(),
 						})
 					}
 				}
