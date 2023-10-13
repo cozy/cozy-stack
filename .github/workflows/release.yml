@@ -2,7 +2,7 @@ name: Create releases
 on:
   push:
     tags:
-    - '*.*.*' # Matching a version number like 1.4.19
+      - "*.*.*" # Matching a version number like 1.4.19
 jobs:
   publish_on_release:
     runs-on: ubuntu-22.04
@@ -10,8 +10,8 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21.x'
-      - name: Check code
+          go-version: "1.21.x"
+      - name: Checkout code
         uses: actions/checkout@v4
       - name: Build the binaries
         run: |
@@ -31,3 +31,30 @@ jobs:
           password: ${{ secrets.DOCKERHUB_SECRET }}
       - name: Build and publish the cozy-app-dev image
         run: scripts/release.sh
+  build_deb_packages:
+    strategy:
+      matrix:
+        os: [debian-10, debian-11, debian-12, ubuntu-20.04, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    needs: publish_on_release
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21.x"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install requirements
+        env:
+          SKIP_GO: "true"
+        run: |
+          scripts/packaging/installrequirements.sh
+      - name: Build package
+        run: |
+          scripts/packaging/buildpackage.sh
+      - name: Upload package to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag_name="${GITHUB_REF##*/}"
+          gh release upload "$tag_name" packages/*.deb
