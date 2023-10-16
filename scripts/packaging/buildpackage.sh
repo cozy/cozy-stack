@@ -37,5 +37,6 @@ if [ -z "${RELEASE:-}" ]; then
 fi
 DEBEMAIL="Cozycloud Packaging Team <debian@cozycloud.cc>" dch --create --package cozy-stack --no-auto-nmu --force-distribution -D "${DISTRO}" -v "${EPOCH}:${VERSION}-${RELEASE}~${DISTRO}" --vendor cozy "release ${TAG_DESC} for ${DISTRO}"
 dpkg-buildpackage -us -uc -ui -i -I.git -b
+[ ! -d packages ] && mkdir packages
 mv ../cozy-stack_* packages/
 rm -f debian/changelog
