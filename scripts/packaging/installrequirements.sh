@@ -17,7 +17,7 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --yes devscripts lsb-release binutils fakeroot quilt devscripts dpkg-dev libdistro-info-perl equivs aptitude wget build-essential git --no-install-recommends --no-install-suggests
 dpkg-checkbuilddeps || (yes y | mk-build-deps debian/control -ir) || true
 
-if [ -z "${SKIP_GO}" ]; then
+if [ -z "${SKIP_GO:-}" ]; then
   echo "=========="
   echo "Install GO"
   echo "=========="
