@@ -2,10 +2,14 @@
 
 set -euo pipefail
 
-export GOROOT="${GOROOT:-/tmp/go}"
-export GOPATH="${GOPATH:-/tmp/goroot}"
-export PATH="${GOPATH}/bin:$GOROOT/bin:${PATH}"
-
+if command -v go > /dev/null; then 
+  eval "$(go env)"
+  export GOROOT GOPATH
+else
+  export GOROOT="${GOROOT:-/tmp/go}"
+  export GOPATH="${GOPATH:-/tmp/goroot}"
+  export PATH="${GOPATH}/bin:$GOROOT/bin:${PATH}"
+fi
 
 cd "$(dirname $0)/../.."
 if [ -f debian/changelog ]; then
