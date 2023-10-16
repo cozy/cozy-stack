@@ -4,7 +4,7 @@
 
 
 # Multi-stage image: this step builds cozy-stack (and mailhog)
-FROM golang:1.21 as build
+FROM golang:1.21-bullseye as build
 WORKDIR /app
 
 # MailHog
@@ -26,60 +26,46 @@ RUN ./scripts/build.sh dev
 
 
 # Multi-stage image: the main image
-FROM debian:stretch-slim
+FROM debian:bullseye-slim
 
 # cozy-stack
 ENV COZY_STACK_HOST=cozy.localhost \
 	COZY_STACK_PORT=8080 \
 	COZY_STACK_PATH=cozy-stack \
-	COUCHDB_SRC_URL=https://dist.apache.org/repos/dist/release/couchdb/source/2.3.1/apache-couchdb-2.3.1.tar.gz \
-	COUCHDB_SRC_SHA256=43eb8cec41eb52871bf22d35f3e2c2ce5b806ebdbce3594cf6b0438f2534227d \
-	PATH="$PATH:/usr/local/couchdb/bin"
+	PATH="$PATH:/opt/couchdb/bin"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN set -eux; apt-get update \
   && apt-get install -y --no-install-recommends \
-    build-essential \
     ca-certificates \
     curl \
-    libicu57 \
-    libmozjs185-1.0 \
-    erlang-nox \
-    erlang-reltool \
-    erlang-dev \
-    libicu-dev \
-    libmozjs185-dev \
+    apt-transport-https \
+    gnupg \
     openssl \
-	fonts-lato \
+    fonts-lato \
     imagemagick \
     git \
+  && curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor > /usr/share/keyrings/couchdb-archive-keyring.gpg \
+  && echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ bullseye main" > /etc/apt/sources.list.d/couchdb.list \
+  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor > /usr/share/keyrings/nodesource.gpg \
+  && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+  && apt update \
+  && echo "couchdb couchdb/mode select standalone" | debconf-set-selections \
+  && echo "couchdb couchdb/mode seen true" | debconf-set-selections \
+  && echo "couchdb couchdb/bindaddress string 0.0.0.0" | debconf-set-selections \
+  && echo "couchdb couchdb/bindaddress seen true" | debconf-set-selections \
+  && echo "couchdb couchdb/adminpass password password" | debconf-set-selections \
+  && echo "couchdb couchdb/adminpass seen true" | debconf-set-selections \
+  && echo "couchdb couchdb/adminpass_again password password" | debconf-set-selections \
+  && echo "couchdb couchdb/adminpass_again seen true" | debconf-set-selections \
+  && echo "couchdb couchdb/cookie string elmo" | debconf-set-selections \
+  && echo "couchdb couchdb/cookie seen true" | debconf-set-selections \
+  && apt install -y --no-install-recommends couchdb=3.2.2* nodejs \
   && rm -rf /var/lib/apt/lists/* \
-  && mkdir /usr/src/couchdb \
-  && curl -fsSL "$COUCHDB_SRC_URL" -o couchdb.tar.gz \
-  && echo "$COUCHDB_SRC_SHA256  couchdb.tar.gz" | sha256sum -c - \
-  && tar -xzf couchdb.tar.gz -C /usr/src/couchdb --strip-components=1 \
-  && rm couchdb.tar.gz \
-  && cd /usr/src/couchdb \
-  && ./configure --disable-docs \
-  && make release \
-  && mv ./rel/couchdb /usr/local \
-  && cd / \
-  && rm -rf /usr/src/couchdb \
-  && curl -fsSL https://nodejs.org/dist/v12.9.1/node-v12.9.1-linux-x64.tar.xz -o node-v12.9.1-linux-x64.tar.xz \
-  && tar -xJf "node-v12.9.1-linux-x64.tar.xz" -C /usr/local --strip-components=1 --no-same-owner \
-  && rm "node-v12.9.1-linux-x64.tar.xz" \
   && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
   && node --version \
   # Cleanup
-  && apt-get purge -y \
-    build-essential \
-    erlang-dev \
-    libicu-dev \
-    libmozjs185-dev \
-    make \
-  && printf "[chttpd]\\nbind_address = 0.0.0.0\\n" \
-    > /usr/local/couchdb/etc/local.ini \
   && apt-get autoremove -y && apt-get clean \
   && mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
@@ -88,7 +74,7 @@ COPY --from=build \
   /app/cozy-stack \
   /app/scripts/docker-entrypoint.sh \
   /app/scripts/cozy-app-dev.sh \
-  /app/scripts/konnector-node-run.sh \
+  /app/scripts/konnector-node16-run.sh \
   /app/MailHog \
   /usr/bin/
 

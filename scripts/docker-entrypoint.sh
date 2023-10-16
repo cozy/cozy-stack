@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-couchdb 2> /dev/null 1> /dev/null &
+/opt/couchdb/bin/couchdb 2> /dev/null 1> /dev/null &
 MailHog 2> /dev/null 1> /dev/null &
 
 if [ -f "/data/cozy-app/manifest.webapp" ]; then
@@ -26,6 +26,9 @@ else
 	fi
 fi
 
-COZY_KONNECTORS_CMD="/usr/bin/konnector-node-run.sh" /usr/bin/cozy-app-dev.sh \
+COZY_KONNECTORS_CMD="/usr/bin/konnector-node16-run.sh" \
+COZY_ADMIN_HOST="127.0.0.1" \
+COUCHDB_URL="http://admin:password@localhost:5984/" \
+/usr/bin/cozy-app-dev.sh \
 	-d "${appdir}" \
 	-f /data/cozy-storage
