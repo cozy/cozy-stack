@@ -3,7 +3,6 @@
 /.assets
 /.cozy
 /cozy-stack*
-/debian
 /debug-assets
 node_modules
 /scripts/cozy-stack*
@@ -14,3 +13,16 @@ tmp
 *.log
 *.enc
 *.dec
+
+# Debian packaging stuff / temporary files
+/.pc/
+/bin
+/packages
+/debian/changelog
+/debian/*.debhelper
+/debian/*.log
+/debian/*.substvars
+/debian/files
+/debian/cozy/
+/debian/cozy-stack/
+/debian/tmp/

@@ -3,3 +3,10 @@
 
 # These owners will be the default owners for everything in the repo.
 *       @cozy/back
+
+# Order is important; the last matching pattern takes the most
+# precedence. When someone opens a pull request that only
+# impact debian packaging files, only sblaisot and not the global
+# owner(s) will be requested for a review.
+debian/*               @sblaisot
+scripts/packaging/*    @sblaisot

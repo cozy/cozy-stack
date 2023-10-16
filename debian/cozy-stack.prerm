@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+#DEBHELPER#
+
+case $1 in
+remove)
+	#rm -rf /var/lib/cozy
+	rm -f /etc/cozy/cozy-admin-passphrase
+
+	getent passwd cozy-stack 2>&1 >/dev/null && deluser --quiet cozy-stack
+	members cozy &>/dev/null || delgroup cozy
+;;
+esac
