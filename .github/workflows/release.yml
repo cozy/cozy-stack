@@ -43,7 +43,7 @@ jobs:
             "ubuntu:22.04",
           ]
     runs-on: ubuntu-latest
-    needs: create_release
+    needs: publish_on_release
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
