@@ -22,8 +22,9 @@ if [ -z "${SKIP_GO:-}" ]; then
   echo "Install GO"
   echo "=========="
   export GOROOT="${GOROOT:-/tmp/goroot}"
-  [ ! -d "/tmp/goroot" ] && mkdir -p "/tmp/goroot"
+  [ ! -d "${GOROOT}" ] && mkdir -p "${GOROOT}"
   export GOPATH="${GOPATH:-/tmp/go}"
+  [ ! -d "${GOPATH}" ] && mkdir -p "${GOPATH}"
   if [ ! -x "${GOROOT}/bin/go" ]; then
     echo ". download go archive"
     [ -f "go.tar.gz" ] || wget --quiet https://dl.google.com/go/go${GOVERSION}.linux-amd64.tar.gz -O /tmp/go.tar.gz
@@ -32,5 +33,5 @@ if [ -z "${SKIP_GO:-}" ]; then
     tar xf /tmp/go.tar.gz -C "${GOROOT}" --strip-components=1
     rm -rf /tmp/go.tar.gz
   fi
-  export PATH="${GOPATH}/bin:$GOROOT/bin:${PATH}"
+  export PATH="${GOPATH}/bin:${GOROOT}/bin:${PATH}"
 fi

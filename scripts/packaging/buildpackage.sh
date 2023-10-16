@@ -6,9 +6,9 @@ if command -v go > /dev/null; then
   eval "$(go env)"
   export GOROOT GOPATH
 else
-  export GOROOT="${GOROOT:-/tmp/go}"
-  export GOPATH="${GOPATH:-/tmp/goroot}"
-  export PATH="${GOPATH}/bin:$GOROOT/bin:${PATH}"
+  export GOROOT="${GOROOT:-/tmp/goroot}"
+  export GOPATH="${GOPATH:-/tmp/go}"
+  export PATH="${GOPATH}/bin:${GOROOT}/bin:${PATH}"
 fi
 
 cd "$(dirname $0)/../.."

@@ -16,21 +16,21 @@ jobs:
       - name: Build the binaries
         run: |
           GOOS=linux   GOARCH=amd64 ./scripts/build.sh release
-          GOOS=linux   GOARCH=arm   ./scripts/build.sh release
-          GOOS=freebsd GOARCH=amd64 ./scripts/build.sh release
+        # GOOS=linux   GOARCH=arm   ./scripts/build.sh release
+        # GOOS=freebsd GOARCH=amd64 ./scripts/build.sh release
       - name: Create the release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag_name="${GITHUB_REF##*/}"
           gh release create "$tag_name" cozy-stack-* --target "$GITHUB_SHA"
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_SECRET }}
-      - name: Build and publish the cozy-app-dev image
-        run: scripts/release.sh
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_SECRET }}
+      # - name: Build and publish the cozy-app-dev image
+      #   run: scripts/release.sh
   build_deb_packages:
     strategy:
       matrix:
