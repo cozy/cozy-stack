@@ -34,24 +34,30 @@ jobs:
   build_deb_packages:
     strategy:
       matrix:
-        os: [debian-10, debian-11, debian-12, ubuntu-20.04, ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
-    needs: publish_on_release
+        os:
+          [
+            "debian:10",
+            "debian:11",
+            "debian:12",
+            "ubuntu:20.04",
+            "ubuntu:22.04",
+          ]
+    runs-on: ubuntu-latest
+    needs: create_release
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.21.x"
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install requirements
-        env:
-          SKIP_GO: "true"
-        run: |
-          sudo scripts/packaging/installrequirements.sh
       - name: Build package
-        run: |
-          sudo scripts/packaging/buildpackage.sh
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.os }}
+          options: -v ${{ github.workspace }}:/build -e GOVERSION=1.21.3
+          run: |
+            echo "[safe]" > /root/.gitconfig
+            echo "        directory = /build" >> /root/.gitconfig
+            cd /build
+            scripts/packaging/installrequirements.sh
+            scripts/packaging/buildpackage.sh
       - name: Upload package to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
