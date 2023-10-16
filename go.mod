@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/adrg/xdg v0.4.0
-	github.com/andybalholm/brotli v1.0.5
+	github.com/andybalholm/brotli v1.0.6
 	github.com/appleboy/go-fcm v0.1.5
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
 	github.com/cozy/goexif2 v1.3.1
