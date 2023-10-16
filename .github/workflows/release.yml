@@ -48,10 +48,10 @@ jobs:
         env:
           SKIP_GO: "true"
         run: |
-          scripts/packaging/installrequirements.sh
+          sudo scripts/packaging/installrequirements.sh
       - name: Build package
         run: |
-          scripts/packaging/buildpackage.sh
+          sudo scripts/packaging/buildpackage.sh
       - name: Upload package to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
