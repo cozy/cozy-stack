@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/gofrs/uuid/v5"
 )
 
 // DocTypeVersion represents the doctype version. Each time this document
@@ -103,16 +104,18 @@ func (s *Settings) EnsureCozyOrganization(inst *instance.Instance) error {
 		}
 	}
 	if s.OrganizationID == "" {
-		s.OrganizationID, err = couchdb.UUID(inst)
+		uid, err := uuid.NewV7()
 		if err != nil {
 			return err
 		}
+		s.OrganizationID = uid.String()
 	}
 	if s.CollectionID == "" {
-		s.CollectionID, err = couchdb.UUID(inst)
+		uid, err := uuid.NewV7()
 		if err != nil {
 			return err
 		}
+		s.CollectionID = uid.String()
 	}
 	return nil
 }

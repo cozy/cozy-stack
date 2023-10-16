@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	t.Run("DetectVersionsToClean", func(t *testing.T) {
-		fileID := uuidv4()
+		fileID := uuidv7()
 		now := time.Now()
 		genVersion := func(timeAgo time.Duration) Version {
 			v := Version{
@@ -93,7 +93,6 @@ func TestVersion(t *testing.T) {
 	})
 }
 
-func uuidv4() string {
-	id, _ := uuid.NewV4()
-	return id.String()
+func uuidv7() string {
+	return uuid.Must(uuid.NewV7()).String()
 }

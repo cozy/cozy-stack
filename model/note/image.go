@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 // MaxWidth is the maximal width of an image for a note. If larger, the image
@@ -73,8 +73,8 @@ type ImageUpload struct {
 
 // NewImageUpload can be used to manage uploading a new image for a note.
 func NewImageUpload(inst *instance.Instance, note *vfs.FileDoc, name, mime string) (*ImageUpload, error) {
-	uuidv4, _ := uuid.NewV4()
-	id := note.ID() + "/" + uuidv4.String()
+	uuidv7, _ := uuid.NewV7()
+	id := note.ID() + "/" + uuidv7.String()
 	md := metadata.New()
 	md.CreatedByApp = consts.NotesSlug
 	img := &Image{DocID: id, Name: name, Mime: mime, Metadata: *md, originalName: name}

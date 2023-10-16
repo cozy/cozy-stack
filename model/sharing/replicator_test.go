@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +36,7 @@ func TestReplicator(t *testing.T) {
 		_ = couchdb.DeleteDB(inst, consts.Shared)
 		_ = couchdb.CreateDB(inst, consts.Shared)
 
-		s := &Sharing{SID: uuidv4(), Members: []Member{
+		s := &Sharing{SID: uuidv7(), Members: []Member{
 			{Status: MemberStatusOwner, Name: "Alice"},
 			{Status: MemberStatusReady, Name: "Bob"},
 		}}
@@ -87,14 +87,14 @@ func TestReplicator(t *testing.T) {
 
 		// Create some documents that are not shared
 		for i := 0; i < 10; i++ {
-			id := uuidv4()
+			id := uuidv7()
 			createDoc(t, inst, testDoctype, id, map[string]interface{}{"foo": id})
 		}
 
-		s := Sharing{SID: uuidv4()}
+		s := Sharing{SID: uuidv7()}
 
 		// Rule 0 is local => no copy of documents
-		settingsDocID := uuidv4()
+		settingsDocID := uuidv7()
 		createDoc(t, inst, consts.Settings, settingsDocID, map[string]interface{}{"foo": settingsDocID})
 		s.Rules = append(s.Rules, Rule{
 			Title:   "A local rule",
@@ -107,7 +107,7 @@ func TestReplicator(t *testing.T) {
 		assertNbSharedRef(t, inst, nbShared)
 
 		// Rule 1 is a unique shared document
-		oneID := uuidv4()
+		oneID := uuidv7()
 		oneDoc := createDoc(t, inst, testDoctype, oneID, map[string]interface{}{"foo": "quuuuux"})
 		s.Rules = append(s.Rules, Rule{
 			Title:   "A unique document",
@@ -125,7 +125,7 @@ func TestReplicator(t *testing.T) {
 		assert.Equal(t, 1, oneRef.Infos[s.SID].Rule)
 
 		// Rule 2 is with a selector
-		twoIDs := []string{uuidv4(), uuidv4(), uuidv4()}
+		twoIDs := []string{uuidv7(), uuidv7(), uuidv7()}
 		for _, id := range twoIDs {
 			createDoc(t, inst, testDoctype, id, map[string]interface{}{"foo": "bar"})
 		}
@@ -146,7 +146,7 @@ func TestReplicator(t *testing.T) {
 		}
 
 		// Rule 3 is another rule with a selector
-		threeIDs := []string{uuidv4(), uuidv4(), uuidv4()}
+		threeIDs := []string{uuidv7(), uuidv7(), uuidv7()}
 		for i, id := range threeIDs {
 			u := "u"
 			for j := 0; j < i; j++ {
@@ -177,7 +177,7 @@ func TestReplicator(t *testing.T) {
 		assertNbSharedRef(t, inst, nbShared)
 
 		// A document is added
-		addID := uuidv4()
+		addID := uuidv7()
 		twoIDs = append(twoIDs, addID)
 		createDoc(t, inst, testDoctype, addID, map[string]interface{}{"foo": "bar"})
 
@@ -205,7 +205,7 @@ func TestReplicator(t *testing.T) {
 		}
 
 		// Another sharing
-		s2 := Sharing{SID: uuidv4()}
+		s2 := Sharing{SID: uuidv7()}
 		s2.Rules = append(s2.Rules, Rule{
 			Title:    "the foo: baz documents",
 			DocType:  testDoctype,
@@ -230,10 +230,10 @@ func TestReplicator(t *testing.T) {
 		_ = couchdb.CreateDB(inst, consts.Shared)
 
 		foobars := "io.cozy.tests.foobars"
-		id1 := uuidv4()
-		id2 := uuidv4()
+		id1 := uuidv7()
+		id2 := uuidv7()
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "foobars rule",
@@ -280,16 +280,16 @@ func TestReplicator(t *testing.T) {
 		hellos := "io.cozy.tests.hellos"
 		_ = couchdb.CreateDB(inst, hellos)
 
-		id1 := uuidv4()
+		id1 := uuidv7()
 		doc1 := createDoc(t, inst, hellos, id1, map[string]interface{}{"hello": id1})
-		id2 := uuidv4()
+		id2 := uuidv7()
 		doc2 := createDoc(t, inst, hellos, id2, map[string]interface{}{"hello": id2})
 		doc2b := updateDoc(t, inst, hellos, id2, doc2.Rev(), map[string]interface{}{"hello": id2, "bis": true})
-		id3 := uuidv4()
+		id3 := uuidv7()
 		doc3 := createDoc(t, inst, hellos, id3, map[string]interface{}{"hello": id3})
 		doc3b := updateDoc(t, inst, hellos, id3, doc3.Rev(), map[string]interface{}{"hello": id3, "bis": true})
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "hellos rule",
@@ -369,7 +369,7 @@ func TestReplicator(t *testing.T) {
 		_ = couchdb.CreateDB(inst, foos)
 
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:    "foos rule",
@@ -392,7 +392,7 @@ func TestReplicator(t *testing.T) {
 			},
 		}
 		s2 := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:    "bars rule",
@@ -404,7 +404,7 @@ func TestReplicator(t *testing.T) {
 		}
 
 		// Add a new document
-		fooOneID := uuidv4()
+		fooOneID := uuidv7()
 		payload := DocsByDoctype{
 			foos: DocsList{
 				{
@@ -464,7 +464,7 @@ func TestReplicator(t *testing.T) {
 		assert.Equal(t, 0, ref.Infos[s.SID].Rule)
 
 		// Create a reference for another sharing, on a database that does not exist
-		barZeroID := uuidv4()
+		barZeroID := uuidv7()
 		payload = DocsByDoctype{
 			bars: DocsList{
 				{
@@ -492,9 +492,9 @@ func TestReplicator(t *testing.T) {
 		assert.Equal(t, 0, ref.Infos[s2.SID].Rule)
 
 		// Add documents for two doctypes at the same time
-		barTwoID := uuidv4()
-		bazThreeID := uuidv4()
-		bazFourID := uuidv4()
+		barTwoID := uuidv7()
+		bazThreeID := uuidv7()
+		bazFourID := uuidv7()
 		payload = DocsByDoctype{
 			bars: DocsList{
 				{
@@ -558,10 +558,10 @@ func TestReplicator(t *testing.T) {
 		assert.Equal(t, 2, ref.Infos[s.SID].Rule)
 
 		// And a mix of all cases
-		fooFiveID := uuidv4()
-		barSixID := uuidv4()
-		barSevenID := uuidv4()
-		barEightID := uuidv4()
+		fooFiveID := uuidv7()
+		barSixID := uuidv7()
+		barSevenID := uuidv7()
+		barEightID := uuidv7()
 		barEightRev := createDoc(t, inst, bars, barEightID, map[string]interface{}{"hello": "world", "number": "8"}).Rev()
 		payload = DocsByDoctype{
 			foos: DocsList{
@@ -711,14 +711,13 @@ func TestReplicator(t *testing.T) {
 	})
 }
 
-func uuidv4() string {
-	id, _ := uuid.NewV4()
-	return id.String()
+func uuidv7() string {
+	return uuid.Must(uuid.NewV7()).String()
 }
 
 func createASharedRef(t *testing.T, inst *instance.Instance, id string) {
 	ref := SharedRef{
-		SID:       testDoctype + "/" + uuidv4(),
+		SID:       testDoctype + "/" + uuidv7(),
 		Revisions: &RevsTree{Rev: "1-aaa"},
 		Infos: map[string]SharedInfo{
 			id: {Rule: 0},

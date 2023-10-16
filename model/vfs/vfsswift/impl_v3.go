@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/gofrs/uuid/v5"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift/v2"
 )
@@ -221,9 +222,11 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	}
 
 	if newdoc.DocID == "" {
-		if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {
+		uid, err := uuid.NewV7()
+		if err != nil {
 			return nil, err
 		}
+		newdoc.DocID = uid.String()
 	}
 
 	newdoc.InternalID = NewInternalID()
@@ -260,9 +263,11 @@ func (sfs *swiftVFSV3) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
 		return err
 	}
 
-	if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {
+	uid, err := uuid.NewV7()
+	if err != nil {
 		return err
 	}
+	newdoc.DocID = uid.String()
 	newdoc.InternalID = NewInternalID()
 
 	// Copy the file
@@ -304,11 +309,11 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 		}
 	}
 
-	uuid, err := couchdb.UUID(sfs)
+	uid, err := uuid.NewV7()
 	if err != nil {
 		return err
 	}
-	dst.DocID = uuid
+	dst.DocID = uid.String()
 
 	// Copy the file
 	srcName := MakeObjectNameV3(src.DocID, src.InternalID)

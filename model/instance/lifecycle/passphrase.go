@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/emailer"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 // ErrHintSameAsPassword is used when trying to set an hint that is the same as
@@ -335,6 +335,5 @@ func CheckHint(inst *instance.Instance, setting *settings.Settings, hint string)
 
 // NewSecurityStamp returns a new UUID that can be used as a security stamp.
 func NewSecurityStamp() string {
-	id, _ := uuid.NewV4()
-	return id.String()
+	return uuid.Must(uuid.NewV7()).String()
 }

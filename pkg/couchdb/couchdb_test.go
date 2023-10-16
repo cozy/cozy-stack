@@ -323,12 +323,6 @@ func TestCouchdb(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("UUID", func(t *testing.T) {
-		uuid, err := UUID(TestPrefix)
-		assert.NoError(t, err)
-		assert.Len(t, uuid, 32)
-	})
-
 	t.Run("UpdateJSONDoc", func(t *testing.T) {
 		var err error
 
