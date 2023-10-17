@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 )
 
 // MaxMarkdownSize is the maximal size of a markdown that can be parsed.
@@ -31,8 +31,8 @@ func ImportFile(inst *instance.Instance, newdoc, olddoc *vfs.FileDoc, body io.Re
 
 	// We need a fileID for saving images
 	if newdoc.ID() == "" {
-		uuidv4, _ := uuid.NewV4()
-		newdoc.SetID(uuidv4.String())
+		uuidv7, _ := uuid.NewV7()
+		newdoc.SetID(uuidv7.String())
 	}
 	images, _ := getImages(inst, newdoc.ID())
 

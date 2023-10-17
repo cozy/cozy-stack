@@ -6,18 +6,17 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/assert"
 )
 
-func uuidv4() string {
-	id, _ := uuid.NewV4()
-	return id.String()
+func uuidv7() string {
+	return uuid.Must(uuid.NewV7()).String()
 }
 
 func TestFeatureFlagRatio(t *testing.T) {
 	inst := instance.Instance{
-		DocID:       uuidv4(),
+		DocID:       uuidv7(),
 		ContextName: "testing",
 	}
 	var data []interface{}

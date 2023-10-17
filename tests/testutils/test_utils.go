@@ -27,7 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/gavv/httpexpect/v2"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2/swifttest"
 	"github.com/spf13/viper"
@@ -409,7 +409,7 @@ func compress(content string) []byte {
 
 func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) {
 	if inst.UUID == "" {
-		uuid, err := uuid.NewV4()
+		uuid, err := uuid.NewV7()
 		require.NoError(t, err, "Could not enable test instance manager")
 		inst.UUID = uuid.String()
 		shouldRemoveUUID = true

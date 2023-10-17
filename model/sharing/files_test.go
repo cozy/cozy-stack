@@ -75,12 +75,12 @@ func TestFiles(t *testing.T) {
 
 	t.Run("SharingDir", func(t *testing.T) {
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "Test sharing dir",
 					DocType: consts.Files,
-					Values:  []string{uuidv4()},
+					Values:  []string{uuidv7()},
 				},
 			},
 		}
@@ -116,17 +116,17 @@ func TestFiles(t *testing.T) {
 
 	t.Run("CreateDir", func(t *testing.T) {
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "Test create dir",
 					DocType: consts.Files,
-					Values:  []string{uuidv4()},
+					Values:  []string{uuidv7()},
 				},
 			},
 		}
 
-		idFoo := uuidv4()
+		idFoo := uuidv7()
 		target := map[string]interface{}{
 			"_id":  idFoo,
 			"_rev": "1-6b501ca58928b02b90c430fd730e8b17",
@@ -148,7 +148,7 @@ func TestFiles(t *testing.T) {
 			assert.Equal(t, "/Tree Shared with me/Test create dir/Foo", dir.Fullpath)
 		}
 
-		idBar := uuidv4()
+		idBar := uuidv7()
 		target = map[string]interface{}{
 			"_id":  idBar,
 			"_rev": "4-2ee767305024673cfb3f5af037cd2729",
@@ -181,17 +181,17 @@ func TestFiles(t *testing.T) {
 
 	t.Run("UpdateDir", func(t *testing.T) {
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "Test update dir",
 					DocType: consts.Files,
-					Values:  []string{uuidv4()},
+					Values:  []string{uuidv7()},
 				},
 			},
 		}
 
-		idFoo := uuidv4()
+		idFoo := uuidv7()
 		target := map[string]interface{}{
 			"_id":  idFoo,
 			"_rev": "1-4fff5291a41bf1f493460d2070694c5a",
@@ -286,7 +286,7 @@ func TestFiles(t *testing.T) {
 		dir := createTree(t, inst.VFS(), tree, consts.RootDirID)
 
 		s := Sharing{
-			SID: uuidv4(),
+			SID: uuidv7(),
 			Rules: []Rule{
 				{
 					Title:   "Test countFiles",

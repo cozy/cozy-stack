@@ -15,7 +15,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20230630033851-978a0926ee25
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.16.0
-	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/gofrs/uuid/v5 v5.0.0
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f
 	github.com/goodsign/monday v1.0.1

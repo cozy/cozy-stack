@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gofrs/uuid/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -171,13 +172,13 @@ func CreateOrganization(c echo.Context) error {
 	}
 
 	org := req.toOrganization(inst)
-	collID, err := couchdb.UUID(inst)
+	collID, err := uuid.NewV7()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
-	org.Collection.DocID = collID
+	org.Collection.DocID = collID.String()
 	if err := couchdb.CreateDoc(inst, org); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
