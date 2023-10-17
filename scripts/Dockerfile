@@ -74,7 +74,7 @@ COPY --from=build \
   /app/cozy-stack \
   /app/scripts/docker-entrypoint.sh \
   /app/scripts/cozy-app-dev.sh \
-  /app/scripts/konnector-node16-run.sh \
+  /app/scripts/konnector-node-run.sh \
   /app/MailHog \
   /usr/bin/
 

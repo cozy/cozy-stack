@@ -32,7 +32,7 @@ class Stack
   end
 
   def konnectors_cmd
-    File.expand_path "../../../scripts/konnector-node17-run.sh", __dir__
+    File.expand_path "../../../scripts/konnector-node-run.sh", __dir__
   end
 
   def start

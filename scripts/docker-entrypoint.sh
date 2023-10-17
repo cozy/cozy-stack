@@ -26,7 +26,7 @@ else
 	fi
 fi
 
-COZY_KONNECTORS_CMD="/usr/bin/konnector-node16-run.sh" \
+COZY_KONNECTORS_CMD="/usr/bin/konnector-node-run.sh" \
 COZY_ADMIN_HOST="127.0.0.1" \
 COUCHDB_URL="http://admin:password@localhost:5984/" \
 /usr/bin/cozy-app-dev.sh \
