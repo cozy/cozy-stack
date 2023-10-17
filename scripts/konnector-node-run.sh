@@ -7,8 +7,8 @@ if [ -z "${NODE_BIN}" ]; then
 fi
 
 if ! [ -x "${NODE_BIN}" ]; then
-  >&2 echo "Unable to find nodejs binary, exiting..."
-  exit 1
+  >&2 echo "Unable to find nodejs binary at ${NODE_BIN}, exiting..."
+  exit 99
 fi
 
 NODE_VERSION="$(${NODE_BIN} --version)"
