@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-NODE_BIN="$(command -v nodejs)"
+NODE_BIN="$(command -v nodejs || true)"
 if [ -z "${NODE_BIN}" ]; then
-  NODE_BIN="$(command -v node)"
+  NODE_BIN="$(command -v node || true)"
 fi
 
 if ! [ -x "${NODE_BIN}" ]; then
