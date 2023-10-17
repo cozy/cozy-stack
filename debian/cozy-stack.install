@@ -1,6 +1,6 @@
 #!/usr/bin/dh-exec
 bin/cozy-stack usr/bin/
-scripts/konnector-node16-run.sh => usr/share/cozy/konnector-run.sh
+scripts/konnector-node-run.sh => usr/share/cozy/konnector-run.sh
 
 debian/cozy.yml etc/cozy/
 debian/cozy-stack.syslog => etc/rsyslog.d/cozy.conf
