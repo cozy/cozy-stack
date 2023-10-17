@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 NODE_BIN="$(command -v nodejs)"
 if [ -z "${NODE_BIN}" ]; then
