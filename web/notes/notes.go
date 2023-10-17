@@ -482,7 +482,7 @@ func wrapError(err error) *jsonapi.Error {
 
 func getCreatedBy(c echo.Context) string {
 	if claims, ok := c.Get("claims").(permission.Claims); ok {
-		switch claims.Audience {
+		switch claims.Audience[0] {
 		case consts.AppAudience, consts.KonnectorAudience:
 			return claims.Subject
 		}

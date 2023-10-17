@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type apiOfficeURL struct {
@@ -93,8 +93,12 @@ func (o *apiOfficeURL) sign(cfg *config.Office) (string, error) {
 	return token.SignedString([]byte(cfg.InboxSecret))
 }
 
-// Valid is a method of the jwt.Claims interface
-func (o *onlyOffice) Valid() error { return nil }
+func (o *onlyOffice) GetExpirationTime() (*jwt.NumericDate, error) { return nil, nil }
+func (o *onlyOffice) GetIssuedAt() (*jwt.NumericDate, error)       { return nil, nil }
+func (o *onlyOffice) GetNotBefore() (*jwt.NumericDate, error)      { return nil, nil }
+func (o *onlyOffice) GetIssuer() (string, error)                   { return "", nil }
+func (o *onlyOffice) GetSubject() (string, error)                  { return "", nil }
+func (o *onlyOffice) GetAudience() (jwt.ClaimStrings, error)       { return nil, nil }
 
 // Opener can be used to find the parameters for opening an office document.
 type Opener struct {

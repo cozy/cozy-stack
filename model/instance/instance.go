@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/afero"
 )
 
@@ -667,10 +668,10 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 		return "", err
 	}
 	return crypto.NewJWT(secret, permission.Claims{
-		StandardClaims: crypto.StandardClaims{
-			Audience: audience,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{audience},
 			Issuer:   i.Domain,
-			IssuedAt: issuedAt.Unix(),
+			IssuedAt: jwt.NewNumericDate(issuedAt),
 			Subject:  subject,
 		},
 		Scope:     scope,

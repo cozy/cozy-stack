@@ -21,7 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -139,7 +139,11 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	var audience string
 
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
-		audience = token.Claims.(*permission.BitwardenClaims).Claims.Audience
+		audiences := token.Claims.(*permission.BitwardenClaims).Claims.Audience
+		if len(audiences) != 1 {
+			return nil, permission.ErrInvalidAudience
+		}
+		audience = audiences[0]
 		return instance.PickKey(audience)
 	}, &fullClaims)
 
@@ -230,7 +234,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		return nil, err
 	}
 
-	switch claims.Audience {
+	switch claims.AudienceString() {
 	case consts.AccessTokenAudience:
 		if err := instance.MovedError(); err != nil {
 			return nil, err
@@ -308,7 +312,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		return pdoc, nil
 
 	default:
-		return nil, echo.NewHTTPError(http.StatusBadRequest, "Unrecognized token audience "+claims.Audience)
+		return nil, echo.NewHTTPError(http.StatusBadRequest,
+			fmt.Sprintf("Unrecognized token audience %v", claims.Audience))
 	}
 }
 
@@ -334,7 +339,7 @@ func GetCLIPermission(c echo.Context) (*permission.Permission, bool) {
 		return nil, false
 	}
 
-	if claims.Audience == consts.CLIAudience {
+	if claims.AudienceString() == consts.CLIAudience {
 		if pdoc, err := permission.GetForCLI(claims); err != nil {
 			c.Set(contextPermissionDoc, pdoc)
 			return pdoc, true

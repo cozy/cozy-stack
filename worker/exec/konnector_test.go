@@ -22,7 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -176,10 +176,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 			token := msg1[len(cozyURL):]
 			var claims permission.Claims
 			err2 := crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
-				return inst.PickKey(t.Claims.(*permission.Claims).Audience)
+				return inst.PickKey(t.Claims.(*permission.Claims).Audience[0])
 			}, &claims)
 			assert.NoError(t, err2)
-			assert.Equal(t, consts.KonnectorAudience, claims.Audience)
+			assert.Equal(t, consts.KonnectorAudience, claims.Audience[0])
 			wg.Done()
 		}()
 

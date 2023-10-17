@@ -6,7 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +47,7 @@ func TestInstance(t *testing.T) {
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		assert.True(t, ok, "Claims can be parsed as standard claims")
-		assert.Equal(t, "app", claims["aud"])
+		assert.Equal(t, []interface{}{"app"}, claims["aud"])
 		assert.Equal(t, "test-ctx-token.example.com", claims["iss"])
 		assert.Equal(t, "my-app", claims["sub"])
 	})
