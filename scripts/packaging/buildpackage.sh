@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-if command -v go > /dev/null; then 
+if command -v go > /dev/null; then
   eval "$(go env)"
   export GOROOT GOPATH
 else
