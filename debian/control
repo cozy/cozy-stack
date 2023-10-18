@@ -14,8 +14,7 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
 			adduser, members, curl, sed,
 			git, imagemagick, libprotobuf-c1, fonts-lato
-Recommends: couchdb (>= 2.3), nginx,
-			debootstrap, lsb-release,
+Recommends: nginx, debootstrap, lsb-release,
 			mail-transport-agent, nodejs (>= 16)
 Description: Cozy: Simple, Versatile, Yours
  Cozy (https://cozy.io) is a platform that brings all your web services
