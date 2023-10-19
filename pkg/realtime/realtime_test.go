@@ -195,6 +195,26 @@ func TestWatch(t *testing.T) {
 	c1.Close()
 }
 
+func TestSubscribeWatchUnwatch(t *testing.T) {
+	h := newMemHub()
+	sub := h.Subscriber(testingDB)
+	defer sub.Close()
+
+	sub.Subscribe("io.cozy.testobject")
+	time.Sleep(1 * time.Millisecond)
+	sub.Watch("io.cozy.testobject", "id1")
+	time.Sleep(1 * time.Millisecond)
+	sub.Unwatch("io.cozy.testobject", "id1")
+	time.Sleep(1 * time.Millisecond)
+
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id2",
+	}, nil)
+	e := <-sub.Channel
+	assert.Equal(t, "id2", e.Doc.ID())
+}
+
 func TestRedisRealtime(t *testing.T) {
 	if testing.Short() {
 		t.Skip("a redis is required for this test: test skipped due to the use of --short flag")

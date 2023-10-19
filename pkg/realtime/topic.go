@@ -90,7 +90,7 @@ func (t *topic) doUnsubscribe(w *toWatch) {
 				ids = append(ids, id)
 			}
 		}
-		if len(ids) == 0 {
+		if len(ids) == 0 && !f.whole {
 			delete(t.subs, w.sub)
 		} else {
 			f.ids = ids
