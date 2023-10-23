@@ -168,7 +168,11 @@ type redisStore struct {
 
 func (s *redisStore) GetSecretByID(db prefixer.Prefixer, id string) (string, error) {
 	idKey := docKey(db, id)
-	return s.c.Get(s.ctx, idKey).Result()
+	res, err := s.c.Get(s.ctx, idKey).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", nil
+	}
+	return res, err
 }
 
 func (s *redisStore) UpdateSecret(db prefixer.Prefixer, secret, oldID, newID string) error {
