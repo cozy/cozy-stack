@@ -189,7 +189,7 @@ func CozyMetadataFromClaims(c echo.Context) *metadata.CozyMetadata {
 	var slug, version string
 	if claims := c.Get("claims"); claims != nil {
 		cl := claims.(permission.Claims)
-		switch cl.Audience[0] {
+		switch cl.AudienceString() {
 		case consts.AppAudience, consts.KonnectorAudience:
 			slug = cl.Subject
 		case consts.AccessTokenAudience:
