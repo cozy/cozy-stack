@@ -22,7 +22,22 @@ else
   exit 1
 fi
 
-NODE_OPTS=""
+NODE_BIN="$(command -v nodejs || true)"
+if [ -z "${NODE_BIN}" ]; then
+  NODE_BIN="$(command -v node || true)"
+fi
+
+if ! [ -x "${NODE_BIN}" ]; then
+  >&2 echo "Unable to find nodejs binary, exiting..."
+  exit 1
+fi
+
+NODE_VERSION="$(${NODE_BIN} --version)"
+if [ "${NODE_VERSION%%.*}" = "v12" ]; then
+  NODE_OPTS="--max-http-header-size=16384 --tls-min-v1.0 --http-parser=legacy"
+else
+  NODE_OPTS=""
+fi
 
 if [ -z "${COZY_JOB_ID}" ]; then
   COZY_JOB_ID="unknown"
@@ -146,11 +161,11 @@ nsjail \
   -R /lib \
   -R /lib64 \
   -R /usr/lib \
-  -R /usr/bin/nodejs \
+  -R ${NODE_BIN} \
   -R /dev/urandom \
   -R /etc/resolv.conf \
   -R /etc/ssl/certs \
-  -- /usr/bin/nodejs ${NODE_OPTS} "${runfile}"
+  -- ${NODE_BIN} ${NODE_OPTS} "${runfile}"
 
 # Via a chroot with nodejs installed inside
 # nsjail \
