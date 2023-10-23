@@ -2,6 +2,10 @@
 bin/cozy-stack usr/bin/
 scripts/konnector-node-run.sh => usr/share/cozy/konnector-run.sh
 
+scripts/completion/cozy-stack.bash => /etc/bash_completion.d/cozy-stack
+scripts/completion/cozy-stack.fish => /etc/fish/completions/cozy-stack.fish
+scripts/completion/cozy-stack.zsh => /usr/share/zsh/vendor-completions/_cozy-stack
+
 debian/cozy.yml etc/cozy/
 debian/cozy-stack.syslog => etc/rsyslog.d/cozy.conf
 debian/uninstall-onboarding.sh usr/share/cozy/
