@@ -16,11 +16,13 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift/v2"
 	"github.com/spf13/afero"
@@ -99,9 +101,24 @@ func (g gzipReadCloser) Close() error {
 	return nil
 }
 
+type cacheEntry struct {
+	content []byte
+	headers swift.Headers
+}
+
+var cache *lru.Cache[string, cacheEntry]
+var initCacheOnce sync.Once
+
 // NewSwiftFileServer returns provides the apps.FileServer implementation
 // using the swift backend as file server.
 func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileServer {
+	initCacheOnce.Do(func() {
+		c, err := lru.New[string, cacheEntry](128)
+		if err != nil {
+			panic(err)
+		}
+		cache = c
+	})
 	return &swiftServer{
 		c:         conn,
 		container: containerName(appsType),
@@ -109,9 +126,27 @@ func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileSer
 	}
 }
 
+func (s *swiftServer) openWithCache(objName string) (io.ReadCloser, swift.Headers, error) {
+	entry, ok := cache.Get(objName)
+	if !ok {
+		f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
+		if err != nil {
+			return f, h, err
+		}
+		entry.headers = h
+		entry.content, err = io.ReadAll(f)
+		if err != nil {
+			return nil, h, err
+		}
+		cache.Add(objName, entry)
+	}
+	f := io.NopCloser(bytes.NewReader(entry.content))
+	return f, entry.headers, nil
+}
+
 func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
 	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
+	f, h, err := s.openWithCache(objName)
 	if err != nil {
 		return nil, wrapSwiftErr(err)
 	}
@@ -127,7 +162,7 @@ func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 
 func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
 	objName := s.makeObjectName(slug, version, shasum, file)
-	f, h, err := s.c.ObjectOpen(s.ctx, s.container, objName, false, nil)
+	f, h, err := s.openWithCache(objName)
 	if err != nil {
 		return wrapSwiftErr(err)
 	}
