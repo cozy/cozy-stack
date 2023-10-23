@@ -7,7 +7,17 @@ Output shell completion code for the specified shell
 
 Output shell completion code for the specified shell (bash, zsh, or fish). The
 shell code must be evalutated to provide interactive completion of cozy-stack
-commands.  This can be done by sourcing it from the .bash_profile.
+commands.
+
+Bash:
+
+  $ source <(cozy-stack completion bash)
+
+  # To load completions for each session, execute once:
+  # Linux:
+  $ cozy-stack completion bash > /etc/bash_completion.d/cozy-stack
+  # macOS:
+  $ cozy-stack completion bash > $(brew --prefix)/etc/bash_completion.d/cozy-stack
 
 Note: this requires the bash-completion framework, which is not installed by
 default on Mac.  This can be installed by using homebrew:
@@ -19,14 +29,28 @@ following line to the .bash_profile
 
     $ source $(brew --prefix)/etc/bash_completion
 
+Zsh:
+
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+  # To load completions for each session, execute once:
+  $ cozy-stack completion zsh > "${fpath[1]}/_cozy-stack"
+
+  # You will need to start a new shell for this setup to take effect.
+
+fish:
+
+  $ cozy-stack completion fish | source
+
+  # To load completions for each session, execute once:
+  $ cozy-stack completion fish > /etc/fish/completions/cozy-stack.fish
+
+
 ```
 cozy-stack completion <shell> [flags]
-```
-
-### Examples
-
-```
-# cozy-stack completion bash > /etc/bash_completion.d/cozy-stack
 ```
 
 ### Options
