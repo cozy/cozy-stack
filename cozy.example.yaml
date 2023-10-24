@@ -224,9 +224,6 @@ mail:
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}
       password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
 
-# directory with the hooks scripts - flags: --hooks
-hooks: ./scripts/hooks
-
 # location of the database for IP -> City lookups - flags: --geodb
 # See https://dev.maxmind.com/geoip/geoip2/geolite2/
 geodb: ""

@@ -193,9 +193,6 @@ func init() {
 	flags.StringSlice("flagship-apple-app-ids", []string{"3AKXFMV43J.io.cozy.drive.mobile", "3AKXFMV43J.io.cozy.flagship.mobile"}, "App ID of the flagship app on iOS")
 	checkNoErr(viper.BindPFlag("flagship.apple_app_ids", flags.Lookup("flagship-apple-app-ids")))
 
-	flags.String("hooks", ".", "define the directory used for hook scripts")
-	checkNoErr(viper.BindPFlag("hooks", flags.Lookup("hooks")))
-
 	flags.String("geodb", ".", "define the location of the database for IP -> City lookups")
 	checkNoErr(viper.BindPFlag("geodb", flags.Lookup("geodb")))
 
