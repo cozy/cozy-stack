@@ -53,7 +53,7 @@ func TestVfs(t *testing.T) {
 	testutils.NeedCouchdb(t)
 
 	aferoFS := makeAferoFS(t)
-	swiftFS := makeSwiftFS(t, 2)
+	swiftFS := makeSwiftFS(t)
 
 	var tests = []struct {
 		name string
@@ -819,7 +819,7 @@ func makeAferoFS(t *testing.T) vfs.VFS {
 	return aferoFs
 }
 
-func makeSwiftFS(t *testing.T, layout int) vfs.VFS {
+func makeSwiftFS(t *testing.T) vfs.VFS {
 	t.Helper()
 
 	db := &contexter{0, "io.cozy.vfs.test", "io.cozy.vfs.test", "cozy_beta"}
@@ -836,18 +836,8 @@ func makeSwiftFS(t *testing.T, layout int) vfs.VFS {
 		},
 	}))
 
-	var swiftFs vfs.VFS
-	switch layout {
-	case 0:
-		mutex = config.Lock().ReadWrite(db, "vfs-swift-test")
-		swiftFs, err = vfsswift.New(db, index, &diskImpl{}, mutex)
-	case 1:
-		mutex = config.Lock().ReadWrite(db, "vfs-swiftv2-test")
-		swiftFs, err = vfsswift.NewV2(db, index, &diskImpl{}, mutex)
-	case 2:
-		mutex = config.Lock().ReadWrite(db, "vfs-swiftv3-test")
-		swiftFs, err = vfsswift.NewV3(db, index, &diskImpl{}, mutex)
-	}
+	mutex = config.Lock().ReadWrite(db, "vfs-swiftv3-test")
+	swiftFs, err := vfsswift.NewV3(db, index, &diskImpl{}, mutex)
 	require.NoError(t, err)
 
 	require.NoError(t, couchdb.ResetDB(db, consts.Files))

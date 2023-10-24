@@ -22,7 +22,7 @@ func TestPermissions(t *testing.T) {
 	testutils.NeedCouchdb(t)
 
 	aferoFS := makeAferoFS(t)
-	swiftFS := makeSwiftFS(t, 2)
+	swiftFS := makeSwiftFS(t)
 
 	var tests = []struct {
 		name string

@@ -229,10 +229,6 @@ func (i *Instance) MakeVFS() error {
 		i.vfs, err = vfsafero.New(i, index, disk, mutex, fsURL, i.DirName())
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		switch i.SwiftLayout {
-		case 0:
-			i.vfs, err = vfsswift.New(i, index, disk, mutex)
-		case 1:
-			i.vfs, err = vfsswift.NewV2(i, index, disk, mutex)
 		case 2:
 			i.vfs, err = vfsswift.NewV3(i, index, disk, mutex)
 		default:
@@ -258,10 +254,6 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		switch i.SwiftLayout {
-		case 0:
-			return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
-		case 1:
-			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
 		case 2:
 			return vfsswift.NewThumbsFsV3(config.GetSwiftConnection(), i)
 		default:

@@ -21,31 +21,19 @@ import (
 
 var unixEpochZero = time.Time{}
 
-// NewThumbsFsV2 creates a new thumb filesystem base on swift.
-//
-// This version stores the thumbnails in the same container as the main data
-// container.
-func NewThumbsFsV2(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
-	return &thumbsV2{
-		c:         c,
-		container: swiftV2ContainerPrefixData + db.DBPrefix(),
-		ctx:       context.Background(),
-	}
-}
-
 // NewThumbsFsV3 creates a new thumb filesystem base on swift.
 //
 // This version stores the thumbnails in the same container as the main data
 // container.
 func NewThumbsFsV3(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
-	return &thumbsV2{
+	return &thumbsV3{
 		c:         c,
 		container: swiftV3ContainerPrefix + db.DBPrefix(),
 		ctx:       context.Background(),
 	}
 }
 
-type thumbsV2 struct {
+type thumbsV3 struct {
 	c         *swift.Connection
 	container string
 	ctx       context.Context
@@ -77,7 +65,7 @@ func (t *thumb) Commit() error {
 	return t.WriteCloser.Close()
 }
 
-func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
+func (t *thumbsV3) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
 	name := t.makeName(img.ID(), format)
 	objMeta := swift.Metadata{
 		"file-md5": hex.EncodeToString(img.MD5Sum),
@@ -101,7 +89,7 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 	return th, nil
 }
 
-func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
+func (t *thumbsV3) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img.ID(), format)
 	_, headers, err := t.c.Object(t.ctx, t.container, name)
 	if errors.Is(err, swift.ObjectNotFound) {
@@ -121,7 +109,7 @@ func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	return true, nil
 }
 
-func (t *thumbsV2) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
+func (t *thumbsV3) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 	objNames := make([]string, len(formats))
 	for i, format := range formats {
 		objNames[i] = t.makeName(img.ID(), format)
@@ -130,7 +118,7 @@ func (t *thumbsV2) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 	return err
 }
 
-func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {
+func (t *thumbsV3) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {
 	name := t.makeName(img.ID(), format)
 	f, o, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if err != nil {
@@ -157,7 +145,7 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 	return nil
 }
 
-func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
+func (t *thumbsV3) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, error) {
 	name := t.makeName(id, format)
 	obj, err := t.c.ObjectCreate(t.ctx, t.container, name, true, "", mime, nil)
 	if err != nil {
@@ -178,7 +166,7 @@ func (t *thumbsV2) CreateNoteThumb(id, mime, format string) (vfs.ThumbFiler, err
 	return th, nil
 }
 
-func (t *thumbsV2) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
+func (t *thumbsV3) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	name := t.makeName(id, format)
 	obj, _, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if errors.Is(err, swift.ObjectNotFound) {
@@ -190,7 +178,7 @@ func (t *thumbsV2) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	return obj, nil
 }
 
-func (t *thumbsV2) RemoveNoteThumb(id string, formats []string) error {
+func (t *thumbsV3) RemoveNoteThumb(id string, formats []string) error {
 	objNames := make([]string, len(formats))
 	for i, format := range formats {
 		objNames[i] = t.makeName(id, format)
@@ -202,7 +190,7 @@ func (t *thumbsV2) RemoveNoteThumb(id string, formats []string) error {
 	return err
 }
 
-func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
+func (t *thumbsV3) ServeNoteThumbContent(w http.ResponseWriter, req *http.Request, id string) error {
 	name := t.makeName(id, consts.NoteImageThumbFormat)
 	f, o, err := t.c.ObjectOpen(t.ctx, t.container, name, false, nil)
 	if err != nil {
@@ -220,6 +208,39 @@ func (t *thumbsV2) ServeNoteThumbContent(w http.ResponseWriter, req *http.Reques
 	return nil
 }
 
-func (t *thumbsV2) makeName(imgID string, format string) string {
+func (t *thumbsV3) makeName(imgID string, format string) string {
 	return fmt.Sprintf("thumbs/%s-%s", MakeObjectName(imgID), format)
+}
+
+// MakeObjectName build the swift object name for a given file document.It
+// creates a virtual subfolder by splitting the document ID, which should be 32
+// bytes long, on the 27nth byte. This avoid having a flat hierarchy in swift
+// with no bound
+func MakeObjectName(docID string) string {
+	if len(docID) != 32 {
+		return docID
+	}
+	return docID[:22] + "/" + docID[22:27] + "/" + docID[27:]
+}
+
+func makeDocID(objName string) string {
+	if len(objName) != 34 {
+		return objName
+	}
+	return objName[:22] + objName[23:28] + objName[29:]
+}
+
+func wrapSwiftErr(err error) error {
+	if errors.Is(err, swift.ObjectNotFound) || errors.Is(err, swift.ContainerNotFound) {
+		return os.ErrNotExist
+	}
+	return err
+}
+
+type backgroundSeeker struct {
+	*swift.ObjectOpenFile
+}
+
+func (f *backgroundSeeker) Seek(offset int64, whence int) (int64, error) {
+	return f.ObjectOpenFile.Seek(context.Background(), offset, whence)
 }
