@@ -154,7 +154,6 @@ jobs:
   #   - "trash-files":       async deletion of files in the trash
   #   - "clean-old-trashed": deletion of old files and directories after some time
   #   - "unzip":             unzipping tarball
-  #   - "updates":           run updates for installed applications (deprecated)
   #   - "zip":               creating a zip tarball
   #
   # When no configuration is given for a worker, a default configuration is

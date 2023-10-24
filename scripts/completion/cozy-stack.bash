@@ -3274,52 +3274,6 @@ _cozy-stack_instances_token-oauth()
     noun_aliases=()
 }
 
-_cozy-stack_instances_update()
-{
-    last_command="cozy-stack_instances_update"
-
-    command_aliases=()
-
-    commands=()
-
-    flags=()
-    two_word_flags=()
-    local_nonpersistent_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--all-domains")
-    local_nonpersistent_flags+=("--all-domains")
-    flags+=("--context-name=")
-    two_word_flags+=("--context-name")
-    local_nonpersistent_flags+=("--context-name")
-    local_nonpersistent_flags+=("--context-name=")
-    flags+=("--domain=")
-    two_word_flags+=("--domain")
-    local_nonpersistent_flags+=("--domain")
-    local_nonpersistent_flags+=("--domain=")
-    flags+=("--force-registry")
-    local_nonpersistent_flags+=("--force-registry")
-    flags+=("--only-registry")
-    local_nonpersistent_flags+=("--only-registry")
-    flags+=("--admin-host=")
-    two_word_flags+=("--admin-host")
-    flags+=("--admin-port=")
-    two_word_flags+=("--admin-port")
-    flags+=("--config=")
-    two_word_flags+=("--config")
-    two_word_flags+=("-c")
-    flags+=("--host=")
-    two_word_flags+=("--host")
-    flags+=("--port=")
-    two_word_flags+=("--port")
-    two_word_flags+=("-p")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-    noun_aliases=()
-}
-
 _cozy-stack_instances()
 {
     last_command="cozy-stack_instances"
@@ -3367,11 +3321,6 @@ _cozy-stack_instances()
     commands+=("token-cli")
     commands+=("token-konnector")
     commands+=("token-oauth")
-    commands+=("update")
-    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
-        command_aliases+=("updates")
-        aliashash["updates"]="update"
-    fi
 
     flags=()
     two_word_flags=()

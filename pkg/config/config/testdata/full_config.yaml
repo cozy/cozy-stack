@@ -49,7 +49,7 @@ jobs:
   defaultDurationToKeep: 1H
   imagemagick_convert_cmd: some-cmd
   workers:
-    updates:
+    zip:
       concurrency: 1
       max_exec_count: 1
       timeout: 1h

@@ -56,7 +56,7 @@ func TestConfigUnmarshal(t *testing.T) {
 	assert.Equal(t, true, cfg.Jobs.AllowList)
 	assert.EqualValues(t, []Worker{
 		{
-			WorkerType:   "updates",
+			WorkerType:   "zip",
 			Concurrency:  &one,
 			MaxExecCount: &one,
 			Timeout:      &oneHour,

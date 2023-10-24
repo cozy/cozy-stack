@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -22,7 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/worker/updates"
 	"github.com/labstack/echo/v4"
 )
 
@@ -280,35 +278,6 @@ func deleteHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
-}
-
-func updatesHandler(c echo.Context) error {
-	slugs := utils.SplitTrimString(c.QueryParam("Slugs"), ",")
-	domain := c.QueryParam("Domain")
-	domainsWithContext := c.QueryParam("DomainsWithContext")
-	forceRegistry, _ := strconv.ParseBool(c.QueryParam("ForceRegistry"))
-	onlyRegistry, _ := strconv.ParseBool(c.QueryParam("OnlyRegistry"))
-	msg, err := job.NewMessage(&updates.Options{
-		Slugs:              slugs,
-		Force:              true,
-		ForceRegistry:      forceRegistry,
-		OnlyRegistry:       onlyRegistry,
-		Domain:             domain,
-		DomainsWithContext: domainsWithContext,
-		AllDomains:         domain == "",
-	})
-	if err != nil {
-		return err
-	}
-	j, err := job.System().PushJob(prefixer.GlobalPrefixer, &job.JobRequest{
-		WorkerType:  "updates",
-		Message:     msg,
-		ForwardLogs: true,
-	})
-	if err != nil {
-		return wrapError(err)
-	}
-	return c.JSON(http.StatusOK, j)
 }
 
 func setAuthMode(c echo.Context) error {
@@ -684,7 +653,6 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:domain/sessions", cleanSessions)
 
 	// Advanced features for instances
-	router.POST("/updates", updatesHandler)
 	router.GET("/:domain/last-activity", lastActivity)
 	router.POST("/:domain/export", exporter)
 	router.GET("/:domain/exports/:export-id/data", dataExporter)
