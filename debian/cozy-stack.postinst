@@ -40,7 +40,7 @@ configure)
 
 		if [ ! -f /etc/cozy/cozy-admin-passphrase ]; then
 			db_get cozy-stack/cozy/password && COZY_PASS="${RET}"
-			COZY_ADMIN_PASSPHRASE="${COZY_PASS}" cozy-stack config passwd /etc/cozy/cozy-admin-passphrase
+			COZY_ADMIN_PASSPHRASE="${COZY_PASS}" cozy-stack -c /dev/null config passwd /etc/cozy/cozy-admin-passphrase
 			printf "%s" "${COZY_PASS}" > /etc/cozy/.cozy-admin-passphrase
 			chmod u=rw,og= /etc/cozy/.cozy-admin-passphrase
 		fi
@@ -84,7 +84,7 @@ configure)
 	fi
 
 	if [ ! -f /etc/cozy/vault.enc ] || [ ! -f /etc/cozy/vault.dec ]; then
-		cozy-stack config gen-keys /etc/cozy/vault
+		cozy-stack -c /dev/null config gen-keys /etc/cozy/vault
 		chown cozy-stack: /etc/cozy/vault.enc /etc/cozy/vault.dec
 		chmod u=rw,og= /etc/cozy/vault.enc /etc/cozy/vault.dec
 	fi
