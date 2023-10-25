@@ -26,7 +26,7 @@ var swiftCmdGroup = &cobra.Command{
 
 var lsLayoutsCmd = &cobra.Command{
 	Use:     "ls-layouts",
-	Short:   `Count layouts by types (v1, v2a, v2b, v3a, v3b)`,
+	Short:   `Count layouts by types (v3a, v3b, unknown)`,
 	Example: "$ cozy-stack swift ls-layouts",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ac := newAdminClient()

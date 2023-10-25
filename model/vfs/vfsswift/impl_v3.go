@@ -36,6 +36,7 @@ type swiftVFSV3 struct {
 }
 
 const swiftV3ContainerPrefix = "cozy-v3-"
+const maxFileSize = 5 << (3 * 10) // 5 GiB
 
 // NewV3 returns a vfs.VFS instance associated with the specified indexer and
 // the swift storage url.
@@ -332,7 +333,7 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	}
 
 	// Remove the source
-	thumbsFS := &thumbsV2{
+	thumbsFS := &thumbsV3{
 		c:         sfs.c,
 		container: sfs.container,
 		ctx:       context.Background(),

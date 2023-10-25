@@ -2,7 +2,6 @@ package swift
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,7 +20,7 @@ func ListLayouts(c echo.Context) error {
 		Counter int      `json:"counter"`
 		Domains []string `json:"domains,omitempty"`
 	}
-	var layoutV1, layoutV2a, layoutV2b, layoutUnknown, layoutV3a, layoutV3b layout
+	var layoutUnknown, layoutV3a, layoutV3b layout
 
 	flagShowDomains := false
 	flagParam := c.QueryParam("show_domains")
@@ -35,29 +34,6 @@ func ListLayouts(c echo.Context) error {
 	}
 	for _, inst := range instances {
 		switch inst.SwiftLayout {
-		case 0:
-			layoutV1.Counter++
-			if flagShowDomains {
-				layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
-			}
-		case 1:
-			switch inst.DBPrefix() {
-			case inst.Domain:
-				layoutV2a.Counter++
-				if flagShowDomains {
-					layoutV2a.Domains = append(layoutV2a.Domains, inst.Domain)
-				}
-			case inst.Prefix:
-				layoutV2b.Counter++
-				if flagShowDomains {
-					layoutV2b.Domains = append(layoutV2b.Domains, inst.Domain)
-				}
-			default:
-				layoutUnknown.Counter++
-				if flagShowDomains {
-					layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
-				}
-			}
 		case 2:
 			switch inst.DBPrefix() {
 			case inst.Domain:
@@ -85,13 +61,10 @@ func ListLayouts(c echo.Context) error {
 	}
 
 	output := make(map[string]interface{})
-	output["v1"] = layoutV1
-	output["v2a"] = layoutV2a
-	output["v2b"] = layoutV2b
 	output["unknown"] = layoutUnknown
 	output["v3a"] = layoutV3a
 	output["v3b"] = layoutV3b
-	output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter + layoutV3a.Counter + layoutV3b.Counter
+	output["total"] = layoutUnknown.Counter + layoutV3a.Counter + layoutV3b.Counter
 
 	return c.JSON(http.StatusOK, output)
 }
@@ -204,14 +177,5 @@ func checkSwift(next echo.HandlerFunc) echo.HandlerFunc {
 
 // swiftContainer returns the container name for an instance
 func swiftContainer(i *instance.Instance) string {
-	switch i.SwiftLayout {
-	case 0:
-		return "cozy-" + i.DBPrefix()
-	case 1:
-		return "cozy-v2-" + i.DBPrefix()
-	case 2:
-		return "cozy-v3-" + i.DBPrefix()
-	default:
-		panic(errors.New("Unknown Swift layout"))
-	}
+	return "cozy-v3-" + i.DBPrefix()
 }
