@@ -23,7 +23,6 @@ import (
 var (
 	dryRunFlag       bool
 	withMetadataFlag bool
-	noDryRunFlag     bool
 )
 
 var fixerCmdGroup = &cobra.Command{
@@ -271,47 +270,6 @@ var contactEmailsFixer = &cobra.Command{
 	},
 }
 
-var contentMismatch64Kfixer = &cobra.Command{
-	Use:   "content-mismatch <domain>",
-	Short: "Fix the content mismatch differences for 64K issue",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Usage()
-		}
-
-		domain := args[0]
-
-		buf := new(bytes.Buffer)
-		body := struct {
-			DryRun bool `json:"dry_run"`
-		}{
-			DryRun: !noDryRunFlag,
-		}
-
-		if err := json.NewEncoder(buf).Encode(body); err != nil {
-			return err
-		}
-
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
-			Method: "POST",
-			Path:   "/instances/" + url.PathEscape(domain) + "/fixers/content-mismatch",
-			Body:   bytes.NewReader(buf.Bytes()),
-		})
-		if err != nil {
-			return err
-		}
-
-		out, err := io.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(out))
-
-		return nil
-	},
-}
-
 var passwordDefinedFixer = &cobra.Command{
 	Use:   "password-defined <domain>",
 	Short: "Set the password_defined setting",
@@ -417,14 +375,12 @@ this instance are correctly set.
 func init() {
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
 	thumbnailsFixer.Flags().BoolVar(&withMetadataFlag, "with-metadata", false, "Recalculate images metadata")
-	contentMismatch64Kfixer.Flags().BoolVar(&noDryRunFlag, "no-dry-run", false, "Do not dry run")
 
 	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
-	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
 	fixerCmdGroup.AddCommand(passwordDefinedFixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 	fixerCmdGroup.AddCommand(serviceTriggersFixer)
