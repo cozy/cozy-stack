@@ -53,7 +53,6 @@ example), you can use the --appdir flag like this:
       --fs-url string                              filesystem url (default "file:///home/runner/work/cozy-stack/cozy-stack/storage")
       --geodb string                               define the location of the database for IP -> City lookups (default ".")
   -h, --help                                       help for serve
-      --hooks string                               define the directory used for hook scripts (default ".")
       --jobs-url string                            URL for the jobs system synchronization, redis or in-memory
       --konnectors-cmd string                      konnectors command to be executed
       --konnectors-oauthstate string               URL for the storage of OAuth state for konnectors, redis or in-memory
