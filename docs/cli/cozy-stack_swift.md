@@ -27,7 +27,7 @@ cozy-stack swift <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack swift get](cozy-stack_swift_get.md)	 - 
 * [cozy-stack swift ls](cozy-stack_swift_ls.md)	 - 
-* [cozy-stack swift ls-layouts](cozy-stack_swift_ls-layouts.md)	 - Count layouts by types (v1, v2a, v2b, v3a, v3b)
+* [cozy-stack swift ls-layouts](cozy-stack_swift_ls-layouts.md)	 - Count layouts by types (v3a, v3b, unknown)
 * [cozy-stack swift put](cozy-stack_swift_put.md)	 - 
 * [cozy-stack swift rm](cozy-stack_swift_rm.md)	 - 
 
