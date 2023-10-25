@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/labstack/echo/v4"
@@ -56,14 +55,6 @@ func Destroy(domain string) error {
 	if err != nil {
 		return err
 	}
-	return hooks.Execute("remove-instance", []string{domain}, func() error {
-		return destroyWithoutHooks(domain)
-	})
-}
-
-// destroyWithoutHooks is used to remove the instance. The difference with
-// Destroy is that scripts hooks are not executed for this function.
-func destroyWithoutHooks(domain string) error {
 	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err

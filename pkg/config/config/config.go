@@ -105,7 +105,6 @@ type Config struct {
 	NoReplyAddr           string
 	NoReplyName           string
 	ReplyTo               string
-	Hooks                 string
 	GeoDB                 string
 	PasswordResetInterval time.Duration
 
@@ -761,7 +760,6 @@ func UseViper(v *viper.Viper) error {
 		NoReplyAddr:           v.GetString("mail.noreply_address"),
 		NoReplyName:           v.GetString("mail.noreply_name"),
 		ReplyTo:               v.GetString("mail.reply_to"),
-		Hooks:                 v.GetString("hooks"),
 		GeoDB:                 v.GetString("geodb"),
 		PasswordResetInterval: v.GetDuration("password_reset_interval"),
 

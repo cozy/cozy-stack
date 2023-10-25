@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -309,23 +308,20 @@ func (i *Installer) run() (err error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() error {
-	args := []string{i.db.DomainName(), i.slug}
-	return hooks.Execute("install-app", args, func() error {
-		newManifest, err := i.ReadManifest(Installing)
-		if err != nil {
-			i.log.Debugf("Could not read manifest")
-			return err
-		}
-		i.man = newManifest
-		i.sendRealtimeEvent()
-		i.notifyChannel()
-		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
-			i.log.Debugf("Could not fetch tarball")
-			return err
-		}
-		i.man.SetState(i.endState)
-		return i.man.Create(i.db)
-	})
+	newManifest, err := i.ReadManifest(Installing)
+	if err != nil {
+		i.log.Debugf("Could not read manifest")
+		return err
+	}
+	i.man = newManifest
+	i.sendRealtimeEvent()
+	i.notifyChannel()
+	if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
+		i.log.Debugf("Could not fetch tarball")
+		return err
+	}
+	i.man.SetState(i.endState)
+	return i.man.Create(i.db)
 }
 
 // checkSkipPermissions checks if the instance contexts is configured to skip
@@ -535,10 +531,7 @@ func (i *Installer) delete() error {
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
-	args := []string{i.db.DomainName(), i.slug}
-	return hooks.Execute("uninstall-app", args, func() error {
-		return i.man.Delete(i.db)
-	})
+	return i.man.Delete(i.db)
 }
 
 // checkState returns whether or not the manifest is in the right state to

@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -74,22 +73,6 @@ func (opts *Options) trace(name string, do func()) {
 
 // Create builds an instance and initializes it
 func Create(opts *Options) (*instance.Instance, error) {
-	domain, err := validateDomain(opts.Domain)
-	if err != nil {
-		return nil, err
-	}
-	var inst *instance.Instance
-	err = hooks.Execute("add-instance", []string{domain}, func() error {
-		var err2 error
-		inst, err2 = CreateWithoutHooks(opts)
-		return err2
-	})
-	return inst, err
-}
-
-// CreateWithoutHooks builds an instance and initializes it. The difference
-// with Create is that script hooks are not executed for this function.
-func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	domain := opts.Domain
 	var err error
 	opts.trace("validate domain", func() {
