@@ -395,10 +395,3 @@ It can be launched from command-line with:
 ```sh
 $ cozy-stack jobs run migrations --domain example.mycozy.cloud --json '{"type": "to-swift-v3"}'
 ```
-
-## Deprecated workers
-
-### updates
-
-The `updates` worker was used for updating applications when there were no
-auto-update mechanism.

@@ -42,8 +42,6 @@ var flagTrace bool
 var flagPassphrase string
 var flagForce bool
 var flagJSON bool
-var flagForceRegistry bool
-var flagOnlyRegistry bool
 var flagSwiftLayout int
 var flagCouchCluster int
 var flagUUID string
@@ -871,47 +869,6 @@ var findOauthClientCmd = &cobra.Command{
 	},
 }
 
-var updateCmd = &cobra.Command{
-	Use:   "update [slugs...]",
-	Short: "Start the updates for the specified domain instance.",
-	Long: `Start the updates for the specified domain instance. Use whether the --domain
-flag to specify the instance or the --all-domains flags to updates all domains.
-The slugs arguments can be used to select which applications should be
-updated.`,
-	Aliases: []string{"updates"},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ac := newAdminClient()
-		if flagAllDomains {
-			logs := make(chan *client.JobLog)
-			go func() {
-				for log := range logs {
-					fmt.Fprintf(os.Stdout, "[%s][time:%s]", log.Level, log.Time.Format(time.RFC3339))
-					for k, v := range log.Data {
-						fmt.Fprintf(os.Stdout, "[%s:%s]", k, v)
-					}
-					fmt.Fprintf(os.Stdout, " %s\n", log.Message)
-				}
-			}()
-			return ac.Updates(&client.UpdatesOptions{
-				Slugs:         args,
-				ForceRegistry: flagForceRegistry,
-				OnlyRegistry:  flagOnlyRegistry,
-				Logs:          logs,
-			})
-		}
-		if flagDomain == "" {
-			return errMissingDomain
-		}
-		return ac.Updates(&client.UpdatesOptions{
-			Domain:             flagDomain,
-			DomainsWithContext: flagContextName,
-			Slugs:              args,
-			ForceRegistry:      flagForceRegistry,
-			OnlyRegistry:       flagOnlyRegistry,
-		})
-	},
-}
-
 var exportCmd = &cobra.Command{
 	Use:   "export",
 	Short: "Export an instance",
@@ -1105,7 +1062,6 @@ func init() {
 	instanceCmdGroup.AddCommand(oauthRefreshTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	instanceCmdGroup.AddCommand(findOauthClientCmd)
-	instanceCmdGroup.AddCommand(updateCmd)
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
 	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
@@ -1168,11 +1124,6 @@ func init() {
 	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")
 	lsInstanceCmd.Flags().StringSliceVar(&flagListFields, "fields", nil, "Arguments shown for each line in the list")
 	lsInstanceCmd.Flags().BoolVar(&flagAvailableFields, "available-fields", false, "List available fields for --fields option")
-	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iteratively")
-	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
-	updateCmd.Flags().StringVar(&flagContextName, "context-name", "", "Work only on the instances with the given context name")
-	updateCmd.Flags().BoolVar(&flagForceRegistry, "force-registry", false, "Force to update all applications sources from git to the registry")
-	updateCmd.Flags().BoolVar(&flagOnlyRegistry, "only-registry", false, "Only update applications installed from the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	exportCmd.Flags().StringVar(&flagPath, "path", "", "Specify the local path where to store the export archive")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")

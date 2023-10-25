@@ -106,16 +106,6 @@ type OAuthClientOptions struct {
 	OnboardingState       string
 }
 
-// UpdatesOptions is a struct holding all the options to launch an update.
-type UpdatesOptions struct {
-	Domain             string
-	DomainsWithContext string
-	Slugs              []string
-	ForceRegistry      bool
-	OnlyRegistry       bool
-	Logs               chan *JobLog
-}
-
 type ExportOptions struct {
 	Domain    string
 	LocalPath string
@@ -405,72 +395,6 @@ func (ac *AdminClient) RegisterOAuthClient(opts *OAuthClientOptions) (map[string
 		return nil, err
 	}
 	return client, nil
-}
-
-// Updates launch the updating process of the applications. When no Domain is
-// specified, the updates are launched for all the existing instances.
-func (ac *AdminClient) Updates(opts *UpdatesOptions) error {
-	q := url.Values{
-		"Domain":             {opts.Domain},
-		"DomainsWithContext": {opts.DomainsWithContext},
-		"Slugs":              {strings.Join(opts.Slugs, ",")},
-		"ForceRegistry":      {strconv.FormatBool(opts.ForceRegistry)},
-		"OnlyRegistry":       {strconv.FormatBool(opts.OnlyRegistry)},
-	}
-	channel, err := ac.RealtimeClient(RealtimeOptions{
-		DocTypes: []string{"io.cozy.jobs", "io.cozy.jobs.logs"},
-	})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if opts.Logs != nil {
-			close(opts.Logs)
-		}
-		channel.Close()
-	}()
-	res, err := ac.Req(&request.Options{
-		Method:  "POST",
-		Path:    "/instances/updates",
-		Queries: q,
-	})
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	var job job.Job
-	if err = json.NewDecoder(res.Body).Decode(&job); err != nil {
-		return err
-	}
-	for evt := range channel.Channel() {
-		if evt.Event == "error" {
-			return fmt.Errorf("realtime: %s", evt.Payload.Title)
-		}
-		if evt.Payload.ID != job.ID() {
-			continue
-		}
-		switch evt.Payload.Type {
-		case "io.cozy.jobs":
-			if err = json.Unmarshal(evt.Payload.Doc, &job); err != nil {
-				return err
-			}
-			if job.State == "errored" {
-				return fmt.Errorf("error executing updates: %s", job.Error)
-			}
-			if job.State == "done" {
-				return nil
-			}
-		case "io.cozy.jobs.logs":
-			if opts.Logs != nil {
-				var log JobLog
-				if err = json.Unmarshal(evt.Payload.Doc, &log); err != nil {
-					return err
-				}
-				opts.Logs <- &log
-			}
-		}
-	}
-	return err
 }
 
 // Export launch the creation of a tarball to export data from an instance.

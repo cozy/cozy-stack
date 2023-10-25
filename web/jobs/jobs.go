@@ -41,7 +41,6 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/sms"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 	_ "github.com/cozy/cozy-stack/worker/trash"
-	_ "github.com/cozy/cozy-stack/worker/updates"
 )
 
 type (
