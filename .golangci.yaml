@@ -3,12 +3,6 @@ run:
   # Timeout for analysis, e.g. 30s, 5m.
   # Default: 1m
   timeout: 3m
-  # Exit code when at least one issue was found.
-  # Default: 1
-  issues-exit-code: 1
-  # Include test files or not.
-  # Default: true
-  tests: true
   # Which dirs to skip: issues from them won't be reported.
   # Can use regexp here: `generated.*`, regexp is applied on full path.
   # Default value is empty list,
@@ -30,13 +24,6 @@ run:
   skip-files:
     # - ".*\\.my\\.go$"
     # - lib/bad.go
-  # Allow multiple parallel golangci-lint instances running.
-  # If false (default) - golangci-lint acquires file lock on start.
-  allow-parallel-runners: false
-  # Define the Go version limit.
-  # Mainly related to generics support since go1.18.
-  # Default: use Go version from the go.mod file, fallback on the env var `GOVERSION`, fallback on 1.18
-  go: '1.18'
 linters:
   # Disable all linters.
   # Default: false
