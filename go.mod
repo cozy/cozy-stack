@@ -45,7 +45,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/ugorji/go/codec v1.2.11
-	github.com/yuin/goldmark v1.5.6
+	github.com/yuin/goldmark v1.6.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/image v0.13.0
 	golang.org/x/net v0.17.0
