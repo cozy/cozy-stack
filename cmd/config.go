@@ -15,8 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keyring"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var configCmdGroup = &cobra.Command{
@@ -30,9 +30,13 @@ var adminPasswdCmd = &cobra.Command{
 	Aliases: []string{"password", "passphrase", "pass"},
 	Short:   "Generate an admin passphrase",
 	Long: `
-cozy-stack instances passphrase generate a passphrase hash and save it to the specified file. If no file is specified, it is directly printed in standard output. This passphrase is the one used to authenticate accesses to the administration API.
+cozy-stack config passwd generates a passphrase hash and save it to the
+specified file. If no file is specified, it is directly printed in standard
+output. This passphrase is the one used to authenticate accesses to the
+administration API.
 
-The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphrase if needed.
+The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the
+passphrase if needed.
 `,
 	Example: "$ cozy-stack config passwd ~/.cozy/cozy-admin-passphrase",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,13 +59,15 @@ The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphr
 		passphrase := []byte(os.Getenv("COZY_ADMIN_PASSPHRASE"))
 		if len(passphrase) == 0 {
 			errPrintf("Passphrase: ")
-			pass1, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
+			pass1, err := term.ReadPassword(int(os.Stdin.Fd()))
+			errPrintfln("")
 			if err != nil {
 				return err
 			}
 
 			errPrintf("Confirmation: ")
-			pass2, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
+			pass2, err := term.ReadPassword(int(os.Stdin.Fd()))
+			errPrintfln("")
 			if err != nil {
 				return err
 			}

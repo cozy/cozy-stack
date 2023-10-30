@@ -14,9 +14,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
-	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 // DefaultStorageDir is the default directory name in which data
@@ -101,7 +101,8 @@ func newAdminClient() *client.AdminClient {
 		if len(pass) == 0 {
 			var err error
 			fmt.Fprintf(os.Stdout, "Password:")
-			pass, err = gopass.GetPasswdMasked()
+			pass, err = term.ReadPassword(int(os.Stdin.Fd()))
+			fmt.Fprintln(os.Stdout, "")
 			if err != nil {
 				errFatalf("Could not get password from standard input: %s\n", err)
 			}
