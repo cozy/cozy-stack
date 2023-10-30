@@ -89,6 +89,11 @@ configure)
 		chmod u=rw,og= /etc/cozy/vault.enc /etc/cozy/vault.dec
 	fi
 
+	# Ensure imagemagick policy allow thumbnail generation from PDF
+	if [ -f /etc/ImageMagick-6/policy.xml ]; then
+	    sed -ie 's,^  \(<policy domain="coder" rights="none" pattern="PDF" />\)$,  <!-- \1 -->,g' /etc/ImageMagick-6/policy.xml
+	fi
+
 	systemctl restart cozy-stack
 ;;
 esac
