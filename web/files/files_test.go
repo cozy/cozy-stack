@@ -135,7 +135,7 @@ func TestFiles(t *testing.T) {
 		}).
 			NotNull()
 
-		// Check if we can fine the trashed "/foo/qux"
+		// Check if we can find the trashed "/foo/qux"
 		results.Find(func(_ int, value *httpexpect.Value) bool {
 			doc := value.Object().Value("doc").Object()
 			doc.ValueEqual("type", "directory")
@@ -200,7 +200,7 @@ func TestFiles(t *testing.T) {
 			return true
 		})
 
-		// Check if we can fine a trashed file
+		// Check if we can find a trashed file
 		results.NotFind(func(_ int, value *httpexpect.Value) bool {
 			doc := value.Object().Value("doc").Object()
 			doc.Value("path").String().HasPrefix("/.cozy_trash")
