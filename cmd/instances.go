@@ -176,6 +176,7 @@ be used as the error message.
 		}
 
 		domain := args[0]
+		fmt.Fprintf(os.Stdout, "Creating instance for domain \"%s\": please wait...\n", domain)
 		ac := newAdminClient()
 		in, err := ac.CreateInstance(&client.InstanceOptions{
 			Domain:          domain,
