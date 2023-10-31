@@ -72,6 +72,7 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/templates/confirm_flagship.html?Email=jane@example.com
 * http://cozy.localhost:8080/dev/templates/error.html?Error=oops&Button=Click%20me&ButtonURL=https://cozy.io/
 * http://cozy.localhost:8080/dev/templates/import.html
+* http://cozy.localhost:8080/dev/templates/install_flagship_app.html
 * http://cozy.localhost:8080/dev/templates/instance_blocked.html?Reason=test
 * http://cozy.localhost:8080/dev/templates/login.html
 * http://cozy.localhost:8080/dev/templates/magic_link_twofactor.html

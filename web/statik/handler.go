@@ -35,6 +35,7 @@ var (
 		"confirm_flagship.html",
 		"error.html",
 		"import.html",
+		"install_flagship_app.html",
 		"instance_blocked.html",
 		"login.html",
 		"magic_link_twofactor.html",

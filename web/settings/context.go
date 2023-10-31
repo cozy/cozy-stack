@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 )
 
 type apiContext struct {
@@ -59,6 +60,12 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 		if u, err := auth.AppRedirection(i, redirection); err == nil {
 			redirect = u.String()
 		}
+	}
+
+	rawUserAgent := c.Request().UserAgent()
+	ua := user_agent.New(rawUserAgent)
+	if ua.Mobile() {
+		redirect = i.PageURL("/settings/install_app", nil)
 	}
 
 	// Retreiving client

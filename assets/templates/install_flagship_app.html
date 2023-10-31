@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fff">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/css/cozy-bs.min.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/cirrus.css" .ContextName}}">
+    {{.Favicon}}
+  </head>
+  <body class="cirrus theme-inverted">
+    <main class="wrapper">
+      <header class="wrapper-top">
+        <a href="https://cozy.io/" class="btn p-2 d-sm-none">
+          <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
+        </a>
+      </header>
+
+      <div class="d-flex flex-column align-items-center mb-md-3">
+        <img src="{{asset .Domain "/images/install-app.svg"}}" alt="" class="illustration big mb-3" />
+        <h1 class="h4 h2-md mb-3 text-center">{{t "Install flagship app Title"}}</h1>
+        <div class="mb-3 w-100 text-center">
+          {{t "Install flagship app Description" }}
+        </div>
+      </div>
+
+      <footer>
+        <a href="{{.StoreLink}}" class="btn btn-primary mb-2 w-100">{{t "Install flagship app Install"}}</a>
+        <a href="{{.SkipLink}}" class="btn btn-outline-info mb-2 w-100">{{t "Install flagship app Skip"}}</a>
+      </footer>
+    </main>
+    <script src="{{asset .Domain "/scripts/cirrus.js"}}"></script>
+  </body>
+</html>
