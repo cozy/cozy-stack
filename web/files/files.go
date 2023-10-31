@@ -1681,9 +1681,13 @@ func ChangesFeed(c echo.Context) error {
 	}
 
 	filter.Reject(results)
-	filter.AddPathIfAsked(inst, results)
-
-	return c.JSON(http.StatusOK, results)
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	c.Response().WriteHeader(http.StatusOK)
+	if err := filter.Stream(c.Response(), inst, results); err != nil {
+		inst.Logger().WithNamespace("files").Warnf("error on _changes: %s", err)
+		return err
+	}
+	return nil
 }
 
 type changesFilter struct {
@@ -1736,14 +1740,19 @@ func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
 	results.Results = changes
 }
 
-func (filter *changesFilter) AddPathIfAsked(inst *instance.Instance, results *couchdb.ChangesResponse) {
-	if !filter.IncludePath {
-		return
+func (filter *changesFilter) Stream(
+	w io.Writer,
+	inst *instance.Instance,
+	results *couchdb.ChangesResponse,
+) error {
+	first := fmt.Sprintf(`{"last_seq": %q, "pending": %d, "results": [`, results.LastSeq, results.Pending)
+	if _, err := w.Write([]byte(first)); err != nil {
+		return err
 	}
 
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
-	for _, result := range results.Results {
-		if result.Doc.M != nil && result.Doc.M["type"] == "file" {
+	for i, result := range results.Results {
+		if filter.IncludePath && result.Doc.M != nil && result.Doc.M["type"] == "file" {
 			dirID, _ := result.Doc.M["dir_id"].(string)
 			name, _ := result.Doc.M["name"].(string)
 			doc := &vfs.FileDoc{DirID: dirID, DocName: name}
@@ -1751,7 +1760,20 @@ func (filter *changesFilter) AddPathIfAsked(inst *instance.Instance, results *co
 				result.Doc.M["path"] = pth
 			}
 		}
+		buf, err := json.Marshal(&result)
+		if err != nil {
+			return err
+		}
+		if i != len(results.Results)-1 {
+			buf = append(buf, ',')
+		}
+		if _, err := w.Write(buf); err != nil {
+			return err
+		}
 	}
+
+	_, err := w.Write([]byte("]}"))
+	return err
 }
 
 func (filter *changesFilter) Body() []byte {
