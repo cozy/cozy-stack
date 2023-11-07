@@ -52,7 +52,9 @@ configure)
 		install -o cozy-stack -g cozy -m u=rwX,g=rwX,o= -d /var/lib/cozy
 
 		[ -f /usr/sbin/rsyslogd ] && systemctl restart rsyslog
-		[ -f /usr/sbin/nginx ] && systemctl reload nginx
+		if systemctl -q is-active nginx; then
+		  systemctl reload nginx
+		fi
 	else
 		if [ ! -f /etc/cozy/.cozy-admin-passphrase ]; then
 			db_input critical cozy-stack/admin/passphrase
