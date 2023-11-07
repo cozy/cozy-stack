@@ -33,7 +33,6 @@ func showContext(c echo.Context) error {
 
 func lsContexts(c echo.Context) error {
 	contexts := config.GetConfig().Contexts
-
 	result := []contextAPI{}
 	for contextName, ctx := range contexts {
 		cfg, ok := ctx.(map[string]interface{})
@@ -41,6 +40,11 @@ func lsContexts(c echo.Context) error {
 			cfg = map[string]interface{}{}
 		}
 		result = append(result, getContextAPI(contextName, cfg))
+	}
+	for contextName := range config.GetConfig().Registries {
+		if _, ok := contexts[contextName]; !ok {
+			result = append(result, getContextAPI(contextName, nil))
+		}
 	}
 	return c.JSON(http.StatusOK, result)
 }
