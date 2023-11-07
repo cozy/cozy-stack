@@ -26,14 +26,17 @@ func showContext(c echo.Context) error {
 	contexts := config.GetConfig().Contexts
 	cfg, ok := contexts[contextName].(map[string]interface{})
 	if !ok {
-		return c.NoContent(http.StatusNotFound)
+		registries := config.GetConfig().Registries
+		_, ok := registries[contextName]
+		if !ok {
+			return c.NoContent(http.StatusNotFound)
+		}
 	}
 	return c.JSON(http.StatusOK, getContextAPI(contextName, cfg))
 }
 
 func lsContexts(c echo.Context) error {
 	contexts := config.GetConfig().Contexts
-
 	result := []contextAPI{}
 	for contextName, ctx := range contexts {
 		cfg, ok := ctx.(map[string]interface{})
@@ -41,6 +44,11 @@ func lsContexts(c echo.Context) error {
 			cfg = map[string]interface{}{}
 		}
 		result = append(result, getContextAPI(contextName, cfg))
+	}
+	for contextName := range config.GetConfig().Registries {
+		if _, ok := contexts[contextName]; !ok {
+			result = append(result, getContextAPI(contextName, nil))
+		}
 	}
 	return c.JSON(http.StatusOK, result)
 }
