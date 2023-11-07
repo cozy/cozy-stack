@@ -26,7 +26,11 @@ func showContext(c echo.Context) error {
 	contexts := config.GetConfig().Contexts
 	cfg, ok := contexts[contextName].(map[string]interface{})
 	if !ok {
-		return c.NoContent(http.StatusNotFound)
+		registries := config.GetConfig().Registries
+		_, ok := registries[contextName]
+		if !ok {
+			return c.NoContent(http.StatusNotFound)
+		}
 	}
 	return c.JSON(http.StatusOK, getContextAPI(contextName, cfg))
 }
