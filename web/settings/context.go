@@ -65,7 +65,7 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 	rawUserAgent := c.Request().UserAgent()
 	ua := user_agent.New(rawUserAgent)
 	if ua.Mobile() {
-		redirect = i.PageURL("/settings/install_app", nil)
+		redirect = i.PageURL("/settings/install_flagship_app", nil)
 	}
 
 	// Retreiving client
