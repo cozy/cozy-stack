@@ -1360,3 +1360,15 @@ msgstr "Actualiser"
 
 msgid "Asset not found"
 msgstr "Élément non trouvé"
+
+msgid "Install flagship app Title"
+msgstr "Installer l'application pour terminer"
+
+msgid "Install flagship app Description"
+msgstr "Votre Cozy a bien été créé, installez l'application pour en profiter dès maintenant !"
+
+msgid "Install flagship app Install"
+msgstr "Installer l'app Cozy"
+
+msgid "Install flagship app Skip"
+msgstr "Continuer dans mon navigateur"

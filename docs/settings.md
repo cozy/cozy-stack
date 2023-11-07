@@ -998,6 +998,12 @@ It redirects the user to an application after the onboarding. The application is
 selected according to the context of the instance and the configuration of the
 stack.
 
+### GET /settings/install_flagship_app
+
+At the end of an onboarding, just after the password has been chosen, if the
+user is in a mobile browser, the stack will show a page to push them to install
+the flagship app.
+
 ### GET /settings/context
 
 It gives the keys/values from the config for the context of the instance.

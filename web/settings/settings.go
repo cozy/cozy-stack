@@ -5,8 +5,11 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
@@ -17,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 )
 
 type apiSession struct {
@@ -192,6 +196,42 @@ func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
 	}
 }
 
+func (h *HTTPHandler) installFlagshipApp(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	rawUserAgent := c.Request().UserAgent()
+	ua := user_agent.New(rawUserAgent)
+	platform := strings.ToLower(ua.Platform())
+	flags, err := feature.GetFlags(inst)
+	if err != nil {
+		return err
+	}
+
+	storeLink := "https://cozy.io/" + inst.Locale + "/download"
+	if strings.Contains(platform, "iphone") || strings.Contains(platform, "ipad") {
+		id, ok := flags.M["flagship.appstore_id"].(string)
+		if !ok {
+			id = "id1600636174"
+		}
+		storeLink = fmt.Sprintf("https://apps.apple.com/%s/app/%s", inst.Locale, id)
+	} else if strings.Contains(platform, "android") {
+		id, ok := flags.M["flagship.playstore_id"].(string)
+		if !ok {
+			id = "io.cozy.flagship.mobile"
+		}
+		storeLink = fmt.Sprintf("https://play.google.com/store/apps/details?id=%s&hl=%s", id, inst.Locale)
+	}
+
+	return c.Render(http.StatusOK, "install_flagship_app.html", echo.Map{
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Locale":      inst.Locale,
+		"Title":       inst.TemplateTitle(),
+		"Favicon":     middlewares.Favicon(inst),
+		"StoreLink":   storeLink,
+		"SkipLink":    inst.OnboardedRedirection().String(),
+	})
+}
+
 func isMovedError(err error) bool {
 	j, ok := err.(*jsonapi.Error)
 	return ok && j.Code == "moved"
@@ -233,6 +273,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.POST("/synchronized", h.synchronized)
 
 	router.GET("/onboarded", h.onboarded)
+	router.GET("/install_flagship_app", h.installFlagshipApp)
 	router.GET("/context", h.context)
 	router.GET("/warnings", h.listWarnings)
 }

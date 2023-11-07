@@ -957,3 +957,15 @@ msgstr "Refresh"
 
 msgid "Asset not found"
 msgstr "Asset not found"
+
+msgid "Install flagship app Title"
+msgstr "Install the application to finish"
+
+msgid "Install flagship app Description"
+msgstr "Your Cozy has been successfully created, install the application to use it right now!"
+
+msgid "Install flagship app Install"
+msgstr "Install the Cozy app"
+
+msgid "Install flagship app Skip"
+msgstr "Continue in the browser"
