@@ -436,10 +436,28 @@ contexts:
     # permissions have changed
     additional_platform_apps:
       - superapp
-    # Displays a footer with logos on the home page
-    # Naming the asset with the prefix main_ will make it the main logo
-    # The others will be secondary and can be ordered with a numeric prefix
-    home_logos:
-      - /logos/main_cozy.png: Cozy Cloud
-      - /logos/1_partner.png: Partner n°1
-      - /logos/2_partner.png: Partner n°2
+    # Provides custom logo used in some cozy app (e.g. Home footer)
+    # Use type key if you want defined a logo as main
+    logos:
+      coachco2:
+        light:
+          - src: /logos/main_cozy.png
+            alt: Cozy Cloud
+        dark:
+          - src: /logos/main_cozy.png
+            alt: Cozy Cloud
+      home:
+        light:
+          - src: /logos/main_cozy.png
+            alt: Cozy Cloud
+            type: main
+          - src: /logos/1_partner.png
+            alt: Partner n°1
+            type: secondary
+        dark:
+          - src: /logos/main_cozy.png
+            alt: Cozy Cloud
+            type: main
+          - src: /logos/1_partner.png
+            alt: Partner n°1
+            type: secondary
