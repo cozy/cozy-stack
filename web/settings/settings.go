@@ -201,6 +201,7 @@ func (h *HTTPHandler) installFlagshipApp(c echo.Context) error {
 	rawUserAgent := c.Request().UserAgent()
 	ua := user_agent.New(rawUserAgent)
 	platform := strings.ToLower(ua.Platform())
+	os := strings.ToLower(ua.OS())
 	flags, err := feature.GetFlags(inst)
 	if err != nil {
 		return err
@@ -213,7 +214,7 @@ func (h *HTTPHandler) installFlagshipApp(c echo.Context) error {
 			id = "id1600636174"
 		}
 		storeLink = fmt.Sprintf("https://apps.apple.com/%s/app/%s", inst.Locale, id)
-	} else if strings.Contains(platform, "android") {
+	} else if strings.Contains(platform, "android") || strings.Contains(os, "android") {
 		id, ok := flags.M["flagship.playstore_id"].(string)
 		if !ok {
 			id = "io.cozy.flagship.mobile"
