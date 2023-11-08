@@ -60,15 +60,19 @@ func SendMail(ctx *job.WorkerContext) error {
 			port, _ := ctxConfig["port"].(int)
 			username, _ := ctxConfig["username"].(string)
 			password, _ := ctxConfig["username"].(string)
+			UseSSL, _ := ctxConfig["use_ssl"].(bool)
 			disableTLS, _ := ctxConfig["disable_tls"].(bool)
 			skipCertValid, _ := ctxConfig["skip_certificate_validation"].(bool)
+			LocalName, _ := ctxConfig["local_name"].(string)
 			opts.Dialer = &gomail.DialerOptions{
 				Host:                      host,
 				Port:                      port,
 				Username:                  username,
 				Password:                  password,
+				NativeTLS:                 UseSSL,
 				DisableTLS:                disableTLS,
 				SkipCertificateValidation: skipCertValid,
+				LocalName:                 LocalName,
 			}
 		}
 	}

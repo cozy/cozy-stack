@@ -205,21 +205,32 @@ mail:
   # mail smtp host - flags: --mail-host
   host: smtp.home
   # mail smtp port - flags: --mail-port
-  port: 465
+  port: 587
   # mail smtp username - flags: --mail-username
   username: {{.Env.COZY_MAIL_USERNAME}}
   # mail smtp password - flags: --mail-password
   password: {{.Env.COZY_MAIL_PASSWORD}}
-  # disable mail tls - flags: --mail-disable-tls
+  # Use SSL connection (SMTPS)
+  # Means no STARTTLS
+  # flags: --mail-use-ssl
+  use_ssl: false
+  # disable mail STARTTLS
+  # Means using plain unencrypted SMTP
+  # flags: --mail-disable-tls
   disable_tls: false
   # skip the certificate validation (may be useful on localhost)
   skip_certificate_validation: false
+  # Local Name
+  # The hostname sent to the SMTP server with the HELO command
+  # Defaults to localhost
+  # flags: --mail-local-name
+  local_name: cozy.domain.example
   # It is also possible to override the mail server per context.
   contexts:
     beta:
       # If the host is set to "-", no mail will be sent on this context
       host: smtp.cozy.beta
-      port: 465
+      port: 587
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}
       password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
 
@@ -303,7 +314,7 @@ deprecated_apps:
   apps:
 #     - software_id: "github.com/cozy/some-app"
 #       name: "some-app"
-#       store_urls: 
+#       store_urls:
 #         iphone: https://some-apple-store-url
 #         android: https://some-android-store-url
 
