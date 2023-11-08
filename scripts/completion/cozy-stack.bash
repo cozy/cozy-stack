@@ -49,7 +49,7 @@ __cozy-stack_handle_go_custom_completion()
     local out requestComp lastParam lastChar comp directive args
 
     # Prepare the command to request completions for the program.
-    # Calling ${words[0]} instead of directly cozy-stack allows to handle aliases
+    # Calling ${words[0]} instead of directly cozy-stack allows handling aliases
     args=("${words[@]:1}")
     # Disable ActiveHelp which is not supported for bash completion v1
     requestComp="COZY_STACK_ACTIVE_HELP=0 ${words[0]} __completeNoDesc ${args[*]}"
@@ -3888,6 +3888,8 @@ _cozy-stack_serve()
     flags+=("--mail-disable-tls")
     flags+=("--mail-host=")
     two_word_flags+=("--mail-host")
+    flags+=("--mail-local-name=")
+    two_word_flags+=("--mail-local-name")
     flags+=("--mail-noreply-address=")
     two_word_flags+=("--mail-noreply-address")
     flags+=("--mail-noreply-name=")
@@ -3898,6 +3900,7 @@ _cozy-stack_serve()
     two_word_flags+=("--mail-port")
     flags+=("--mail-reply-to=")
     two_word_flags+=("--mail-reply-to")
+    flags+=("--mail-use-ssl")
     flags+=("--mail-username=")
     two_word_flags+=("--mail-username")
     flags+=("--mailhog")

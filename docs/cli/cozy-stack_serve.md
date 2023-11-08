@@ -60,13 +60,15 @@ example), you can use the --appdir flag like this:
       --log-level string                           define the log level (default "info")
       --log-syslog                                 use the local syslog for logging
       --mail-alert-address string                  mail address used for alerts (instance deletion failure for example)
-      --mail-disable-tls                           disable smtp over tls
+      --mail-disable-tls                           disable starttls on smtp
       --mail-host string                           mail smtp host (default "localhost")
+      --mail-local-name string                     hostname sent to the smtp server with the HELO command (default "localhost")
       --mail-noreply-address string                mail address used for sending mail as a noreply (forgot passwords for example)
       --mail-noreply-name string                   mail name used for sending mail as a noreply (forgot passwords for example)
       --mail-password string                       mail smtp password
       --mail-port int                              mail smtp port (default 465)
       --mail-reply-to string                       mail address used to the reply-to (support for example)
+      --mail-use-ssl                               use ssl for mail sending (smtps)
       --mail-username string                       mail smtp username
       --mailhog                                    Alias of --mail-disable-tls --mail-port 1025, useful for MailHog
       --move-url string                            URL for the move wizard (default "https://move.cozycloud.cc/")

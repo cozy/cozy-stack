@@ -79,7 +79,7 @@ function __cozy_stack_clear_perform_completion_once_result
     __cozy_stack_debug ""
     __cozy_stack_debug "========= clearing previously set __cozy_stack_perform_completion_once_result variable =========="
     set --erase __cozy_stack_perform_completion_once_result
-    __cozy_stack_debug "Succesfully erased the variable __cozy_stack_perform_completion_once_result"
+    __cozy_stack_debug "Successfully erased the variable __cozy_stack_perform_completion_once_result"
 end
 
 function __cozy_stack_requires_order_preservation
