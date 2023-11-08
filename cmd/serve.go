@@ -85,6 +85,7 @@ example), you can use the --appdir flag like this:
 
 		if flagMailhog {
 			cfg := config.GetConfig()
+			cfg.Mail.NativeTLS = false
 			cfg.Mail.DisableTLS = true
 			cfg.Mail.Port = 1025
 		}
@@ -220,8 +221,14 @@ func init() {
 	flags.String("mail-password", "", "mail smtp password")
 	checkNoErr(viper.BindPFlag("mail.password", flags.Lookup("mail-password")))
 
-	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
+	flags.Bool("mail-use-ssl", false, "use ssl for mail sending (smtps)")
+	checkNoErr(viper.BindPFlag("mail.use_ssl", flags.Lookup("mail-use-ssl")))
+
+	flags.Bool("mail-disable-tls", false, "disable starttls on smtp")
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
+
+	flags.String("mail-local-name", "localhost", "hostname sent to the smtp server with the HELO command")
+	checkNoErr(viper.BindPFlag("mail.local_name", flags.Lookup("mail-local-name")))
 
 	flags.String("move-url", "https://move.cozycloud.cc/", "URL for the move wizard")
 	checkNoErr(viper.BindPFlag("move.url", flags.Lookup("move-url")))

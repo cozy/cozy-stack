@@ -7,7 +7,7 @@ admin:
   host: 127.0.0.1
 
 vault:
-  #  credentials_encryptor_key: /some/key.enc
+  # credentials_encryptor_key: /some/key.enc
   # credentials_decryptor_key: /some/key.dec
 
 assets: "some/assets/path"
@@ -16,17 +16,17 @@ assets_polling_interval: 1h
 
 fs:
   url: https://some-url
-    # root_ca: /some/ca.crt
+  # root_ca: /some/ca.crt
   EndpointType: internal
   can_query_info: true
-  default_layout: 2 
+  default_layout: 2
   versioning:
     max_number_of_versions_to_keep: 4
     min_delay_between_two_versions: 1m
 
 couchdb:
   url: https://some-couchdb-url
-    #root_ca: /some/ca/path.crt
+  # root_ca: /some/ca/path.crt
 
 redis:
   addrs: url-1:12 url2:23 url3:34
@@ -61,13 +61,15 @@ mail:
   reply_to: support@cozycloud.cc
   contexts:
     my-context:
-      host: '-'
+      host: "-"
   host: localhost
   username: some-username
   password: some-password
   port: 25
+  use_ssl: false
   disable_tls: true
   skip_certificate_validation: true
+  local_name: some.host
 
 geodb: /geo/db/path
 
@@ -80,13 +82,13 @@ konnectors:
 registries:
   default: []
   example:
-  - https://registry-url-1
-  - https://registry-url-2
+    - https://registry-url-1
+    - https://registry-url-2
 
 office:
   foo:
     onlyoffice_url: https://onlyoffice-url
-    onlyoffice_inbox_secret: inbox_secret 
+    onlyoffice_inbox_secret: inbox_secret
     onlyoffice_outbox_secret: outbox_secret
 
 clouderies:
@@ -156,15 +158,15 @@ contexts:
     help_link: https://cozy.io/fr/support
     enable_premium_links: false
     claudy_actions:
-    - desktop
-    - support
+      - desktop
+      - support
     additional_platform_apps:
-    - some-app
+      - some-app
     features:
-    - hide_konnector_errors: true
-    - home.konnectors.hide-errors: true
-    - home_hidden_apps:
-      - foobar
+      - hide_konnector_errors: true
+      - home.konnectors.hide-errors: true
+      - home_hidden_apps:
+          - foobar
     home_logos:
-      /logos/1.png: 'Title 1'
-      /logos/2.png: 'Title 2'
+      /logos/1.png: "Title 1"
+      /logos/2.png: "Title 2"

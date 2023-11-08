@@ -92,8 +92,10 @@ func TestConfigUnmarshal(t *testing.T) {
 		Port:                      25,
 		Username:                  "some-username",
 		Password:                  "some-password",
+		NativeTLS:                 false,
 		DisableTLS:                true,
 		SkipCertificateValidation: true,
+		LocalName:                 "some.host",
 	}, cfg.Mail)
 	assert.EqualValues(t, map[string]interface{}{
 		"my-context": map[string]interface{}{"host": "-"},
