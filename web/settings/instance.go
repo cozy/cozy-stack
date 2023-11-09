@@ -84,6 +84,10 @@ func (h *HTTPHandler) updateInstance(c echo.Context) error {
 		return err
 	}
 
+	if doc.M == nil {
+		return jsonapi.BadJSON()
+	}
+
 	doc.Type = consts.Settings
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
