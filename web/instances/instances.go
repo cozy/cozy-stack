@@ -379,6 +379,40 @@ func createSessionCode(c echo.Context) error {
 	})
 }
 
+func createEmailVerifiedCode(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	if !inst.HasAuthMode(instance.TwoFactorMail) {
+		return jsonapi.BadRequest(errors.New("2FA by email is not enabled on this instance"))
+	}
+
+	code, err := inst.CreateEmailVerifiedCode()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	req := c.Request()
+	var ip string
+	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
+		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
+	}
+	if ip == "" {
+		ip = strings.Split(req.RemoteAddr, ":")[0]
+	}
+	inst.Logger().WithField("nspace", "loginaudit").
+		Infof("New email_verified_code created from %s at %s", ip, time.Now())
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"email_verified_code": code,
+	})
+}
+
 func cleanSessions(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := lifecycle.GetInstance(domain)
@@ -650,6 +684,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/auth-mode", setAuthMode)
 	router.POST("/:domain/magic_link", createMagicLink)
 	router.POST("/:domain/session_code", createSessionCode)
+	router.POST("/:domain/email_verified_code", createEmailVerifiedCode)
 	router.DELETE("/:domain/sessions", cleanSessions)
 
 	// Advanced features for instances

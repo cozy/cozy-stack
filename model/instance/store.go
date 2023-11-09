@@ -13,11 +13,16 @@ import (
 // Store is an object to store and retrieve session codes.
 type Store interface {
 	SaveSessionCode(db prefixer.Prefixer, code string) error
+	SaveEmailVerfiedCode(db prefixer.Prefixer, code string) error
 	CheckAndClearSessionCode(db prefixer.Prefixer, code string) bool
+	CheckEmailVerifiedCode(db prefixer.Prefixer, code string) bool
 }
 
-// storeTTL is the time an entry stay alive (1 week)
-var storeTTL = 7 * 24 * time.Hour
+// sessionCodeTTL is the time an entry for a session_code stays alive (1 week)
+var sessionCodeTTL = 7 * 24 * time.Hour
+
+// emailVerifiedCodeTTL is the time an entry for an email_verified_code stays alive
+var emailVerifiedCodeTTL = 15 * time.Minute
 
 // storeCleanInterval is the time interval between each cleanup.
 var storeCleanInterval = 1 * time.Hour
@@ -67,19 +72,44 @@ func (s *memStore) cleaner() {
 func (s *memStore) SaveSessionCode(db prefixer.Prefixer, code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[code] = time.Now().Add(storeTTL)
+	key := sessionCodeKey(db, code)
+	s.vals[key] = time.Now().Add(sessionCodeTTL)
+	return nil
+}
+
+func (s *memStore) SaveEmailVerfiedCode(db prefixer.Prefixer, code string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := emailVerifiedCodeKey(db, code)
+	s.vals[key] = time.Now().Add(emailVerifiedCodeTTL)
 	return nil
 }
 
 func (s *memStore) CheckAndClearSessionCode(db prefixer.Prefixer, code string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	exp, ok := s.vals[code]
+	key := sessionCodeKey(db, code)
+	exp, ok := s.vals[key]
 	if !ok {
 		return false
 	}
-	delete(s.vals, code)
+	delete(s.vals, key)
 	return time.Now().Before(exp)
+}
+
+func (s *memStore) CheckEmailVerifiedCode(db prefixer.Prefixer, code string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := emailVerifiedCodeKey(db, code)
+	exp, ok := s.vals[key]
+	if !ok {
+		return false
+	}
+	if time.Now().After(exp) {
+		delete(s.vals, key)
+		return false
+	}
+	return true
 }
 
 type redisStore struct {
@@ -89,7 +119,12 @@ type redisStore struct {
 
 func (s *redisStore) SaveSessionCode(db prefixer.Prefixer, code string) error {
 	key := sessionCodeKey(db, code)
-	return s.c.Set(s.ctx, key, "1", storeTTL).Err()
+	return s.c.Set(s.ctx, key, "1", sessionCodeTTL).Err()
+}
+
+func (s *redisStore) SaveEmailVerfiedCode(db prefixer.Prefixer, code string) error {
+	key := emailVerifiedCodeKey(db, code)
+	return s.c.Set(s.ctx, key, "1", emailVerifiedCodeTTL).Err()
 }
 
 func (s *redisStore) CheckAndClearSessionCode(db prefixer.Prefixer, code string) bool {
@@ -98,6 +133,16 @@ func (s *redisStore) CheckAndClearSessionCode(db prefixer.Prefixer, code string)
 	return err == nil && n > 0
 }
 
+func (s *redisStore) CheckEmailVerifiedCode(db prefixer.Prefixer, code string) bool {
+	key := emailVerifiedCodeKey(db, code)
+	n, err := s.c.Exists(s.ctx, key).Result()
+	return err == nil && n > 0
+}
+
 func sessionCodeKey(db prefixer.Prefixer, suffix string) string {
 	return db.DBPrefix() + ":sessioncode:" + suffix
+}
+
+func emailVerifiedCodeKey(db prefixer.Prefixer, suffix string) string {
+	return db.DBPrefix() + ":emailverifiedcode:" + suffix
 }

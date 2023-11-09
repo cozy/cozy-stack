@@ -95,9 +95,12 @@ func Home(c echo.Context) error {
 		}
 	}
 
-	var params url.Values
+	params := make(url.Values)
 	if jwt := c.QueryParam("jwt"); jwt != "" {
-		params = url.Values{"jwt": {jwt}}
+		params.Add("jwt", jwt)
+	}
+	if code := c.QueryParam("email_verified_code"); code != "" {
+		params.Add("email_verified_code", code)
 	}
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
 }
@@ -121,6 +124,13 @@ func SetCookieForNewSession(c echo.Context, duration session.Duration) (string, 
 func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
 	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
 	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
+}
+
+// hasEmailVerified checks if the email has already been verified, and if it is
+// the case, the stack can skip the 2FA by email.
+func hasEmailVerified(c echo.Context, inst *instance.Instance) bool {
+	code := c.FormValue("email_verified_code")
+	return inst.CheckEmailVerifiedCode(code)
 }
 
 func getLogoutURL(context string) string {
@@ -196,23 +206,24 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	return c.Render(code, "login.html", echo.Map{
-		"TemplateTitle":    i.TemplateTitle(),
-		"Domain":           i.ContextualDomain(),
-		"ContextName":      i.ContextName,
-		"Locale":           i.Locale,
-		"Favicon":          middlewares.Favicon(i),
-		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
-		"BottomNavBar":     middlewares.BottomNavigationBar(c),
-		"Iterations":       iterations,
-		"Salt":             string(i.PassphraseSalt()),
-		"Title":            title,
-		"PasswordHelp":     help,
-		"CredentialsError": credsErrors,
-		"Redirect":         redirectStr,
-		"CSRF":             c.Get("csrf"),
-		"MagicLink":        i.MagicLink,
-		"OAuth":            hasOAuth,
-		"FranceConnect":    hasFranceConnect,
+		"TemplateTitle":     i.TemplateTitle(),
+		"Domain":            i.ContextualDomain(),
+		"ContextName":       i.ContextName,
+		"Locale":            i.Locale,
+		"Favicon":           middlewares.Favicon(i),
+		"CryptoPolyfill":    middlewares.CryptoPolyfill(c),
+		"BottomNavBar":      middlewares.BottomNavigationBar(c),
+		"Iterations":        iterations,
+		"Salt":              string(i.PassphraseSalt()),
+		"Title":             title,
+		"PasswordHelp":      help,
+		"CredentialsError":  credsErrors,
+		"Redirect":          redirectStr,
+		"CSRF":              c.Get("csrf"),
+		"EmailVerifiedCode": c.QueryParam("email_verified_code"),
+		"MagicLink":         i.MagicLink,
+		"OAuth":             hasOAuth,
+		"FranceConnect":     hasFranceConnect,
 	})
 }
 
@@ -342,7 +353,8 @@ func login(c echo.Context) error {
 		// check that the mail has been confirmed. If not, 2FA is not
 		// activated.
 		// If device is trusted, skip the 2FA.
-		if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+		// If the email has already been verified, skip the 2FA too.
+		if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) && !hasEmailVerified(c, inst) {
 			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
 				return err

@@ -19,6 +19,7 @@ const (
 	RegisterTokenLen      = 16
 	PasswordResetTokenLen = 16
 	SessionCodeLen        = 32
+	EmailVerifiedCodeLen  = 32
 	SessionSecretLen      = 64
 	MagicLinkCodeLen      = 32
 	OauthSecretLen        = 128
@@ -203,4 +204,20 @@ func (i *Instance) CreateSessionCode() (string, error) {
 // function.
 func (i *Instance) CheckAndClearSessionCode(code string) bool {
 	return GetStore().CheckAndClearSessionCode(i, code)
+}
+
+// CreateEmailVerifiedCode returns an email_verified_code that can be used to
+// avoid the 2FA by email.
+func (i *Instance) CreateEmailVerifiedCode() (string, error) {
+	code := crypto.GenerateRandomString(EmailVerifiedCodeLen)
+	store := GetStore()
+	if err := store.SaveEmailVerfiedCode(i, code); err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
+// CheckEmailVerifiedCode will return true if the email verified code is valid.
+func (i *Instance) CheckEmailVerifiedCode(code string) bool {
+	return GetStore().CheckEmailVerifiedCode(i, code)
 }
