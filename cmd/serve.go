@@ -203,7 +203,7 @@ func init() {
 	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
 
-	flags.String("mail-noreply-name", "", "mail name used for sending mail as a noreply (forgot passwords for example)")
+	flags.String("mail-noreply-name", "My Cozy", "mail name used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_name", flags.Lookup("mail-noreply-name")))
 
 	flags.String("mail-reply-to", "", "mail address used to the reply-to (support for example)")
@@ -212,7 +212,7 @@ func init() {
 	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
 
-	flags.Int("mail-port", 465, "mail smtp port")
+	flags.Int("mail-port", 25, "mail smtp port")
 	checkNoErr(viper.BindPFlag("mail.port", flags.Lookup("mail-port")))
 
 	flags.String("mail-username", "", "mail smtp username")
@@ -224,7 +224,7 @@ func init() {
 	flags.Bool("mail-use-ssl", false, "use ssl for mail sending (smtps)")
 	checkNoErr(viper.BindPFlag("mail.use_ssl", flags.Lookup("mail-use-ssl")))
 
-	flags.Bool("mail-disable-tls", false, "disable starttls on smtp")
+	flags.Bool("mail-disable-tls", true, "disable starttls on smtp")
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
 	flags.String("mail-local-name", "localhost", "hostname sent to the smtp server with the HELO command")
