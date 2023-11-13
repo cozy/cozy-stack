@@ -52,6 +52,7 @@ var flagTOSSigned string
 var flagTOS string
 var flagTOSLatest string
 var flagContextName string
+var flagSponsors []string
 var flagOnboardingFinished bool
 var flagTTL time.Duration
 var flagExpire time.Duration
@@ -188,6 +189,7 @@ be used as the error message.
 			TOSSigned:       flagTOSSigned,
 			Timezone:        flagTimezone,
 			ContextName:     flagContextName,
+			Sponsors:        flagSponsors,
 			Email:           flagEmail,
 			PublicName:      flagPublicName,
 			Settings:        flagSettings,
@@ -276,6 +278,7 @@ settings for a specified domain.
 			TOSLatest:       flagTOSLatest,
 			Timezone:        flagTimezone,
 			ContextName:     flagContextName,
+			Sponsors:        flagSponsors,
 			Email:           flagEmail,
 			PublicName:      flagPublicName,
 			Settings:        flagSettings,
@@ -1085,6 +1088,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "Context name of the instance")
+	addInstanceCmd.Flags().StringSliceVar(&flagSponsors, "sponsors", nil, "Sponsors of the instance (comma separated list)")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
 	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
@@ -1105,6 +1109,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")
 	modifyInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "New timezone")
 	modifyInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "New context name")
+	modifyInstanceCmd.Flags().StringSliceVar(&flagSponsors, "sponsors", nil, "Sponsors of the instance (comma separated list)")
 	modifyInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "New email")
 	modifyInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "New public name")
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")

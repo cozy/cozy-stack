@@ -41,6 +41,7 @@ $ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,s
       --passphrase string         Register the instance with this passphrase (useful for tests)
       --public-name string        The public name of the owner
       --settings string           A list of settings (eg context:foo,offer:premium)
+      --sponsors strings          Sponsors of the instance (comma separated list)
       --swift-layout int          Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default) (default -1)
       --tos string                The TOS version signed
       --trace                     Show where time is spent

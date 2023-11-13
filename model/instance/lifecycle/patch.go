@@ -92,6 +92,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if len(opts.Sponsors) != 0 {
+			i.Sponsors = opts.Sponsors
+			needUpdate = true
+		}
+
 		if opts.AuthMode != "" {
 			var authMode instance.AuthMode
 			authMode, err = instance.StringToAuthMode(opts.AuthMode)

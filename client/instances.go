@@ -35,6 +35,7 @@ type Instance struct {
 		UUID                 string    `json:"uuid,omitempty"`
 		OIDCID               string    `json:"oidc_id,omitempty"`
 		ContextName          string    `json:"context,omitempty"`
+		Sponsors             []string  `json:"sponsors,omitempty"`
 		TOSSigned            string    `json:"tos,omitempty"`
 		TOSLatest            string    `json:"tos_latest,omitempty"`
 		AuthMode             int       `json:"auth_mode,omitempty"`
@@ -65,6 +66,7 @@ type InstanceOptions struct {
 	TOSLatest          string
 	Timezone           string
 	ContextName        string
+	Sponsors           []string
 	Email              string
 	PublicName         string
 	Settings           string
@@ -164,6 +166,9 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
 	}
+	if opts.Sponsors != nil {
+		q.Add("Sponsors", strings.Join(opts.Sponsors, ","))
+	}
 	if opts.MagicLink != nil && *opts.MagicLink {
 		q.Add("MagicLink", "true")
 	}
@@ -236,6 +241,9 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
+	}
+	if opts.Sponsors != nil {
+		q.Add("Sponsors", strings.Join(opts.Sponsors, ","))
 	}
 	if opts.MagicLink != nil {
 		q.Add("MagicLink", strconv.FormatBool(*opts.MagicLink))
