@@ -600,8 +600,7 @@ authenticated (webapp token, OAuth token, etc.).
 
 ### GET /settings/instance
 
-If the user is logged in, display all instance settings. If the user is not
-logged in, the register token can be used to read the informations.
+If the user is logged in, display all instance settings.
 
 #### Request
 
@@ -635,11 +634,6 @@ Cookie: sessionid=xxxx
     }
 }
 ```
-
-#### Permissions
-
-To use this endpoint, an application needs a permission on the type
-`io.cozy.settings` for the verb `GET`.
 
 #### Note about `password_defined`
 
