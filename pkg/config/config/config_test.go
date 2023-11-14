@@ -116,9 +116,47 @@ func TestConfigUnmarshal(t *testing.T) {
 				map[string]interface{}{"home.konnectors.hide-errors": true},
 				map[string]interface{}{"home_hidden_apps": []interface{}{"foobar"}},
 			},
-			"home_logos": map[string]interface{}{
-				"/logos/1.png": "Title 1",
-				"/logos/2.png": "Title 2",
+			"logos": map[string]interface{}{
+				"coachco2": map[string]interface{}{
+					"light": []interface{}{
+						map[string]interface{}{
+							"src": "/logos/main_cozy.png",
+							"alt": "Cozy Cloud",
+						},
+					},
+					"dark": []interface{}{
+						map[string]interface{}{
+							"src": "/logos/main_cozy.png",
+							"alt": "Cozy Cloud",
+						},
+					},
+				},
+				"home": map[string]interface{}{
+					"light": []interface{}{
+						map[string]interface{}{
+							"src":  "/logos/main_cozy.png",
+							"alt":  "Cozy Cloud",
+							"type": "main",
+						},
+						map[string]interface{}{
+							"src":  "/logos/1_partner.png",
+							"alt":  "Partner n°1",
+							"type": "secondary",
+						},
+					},
+					"dark": []interface{}{
+						map[string]interface{}{
+							"src":  "/logos/main_cozy.png",
+							"alt":  "Cozy Cloud",
+							"type": "main",
+						},
+						map[string]interface{}{
+							"src":  "/logos/1_partner.png",
+							"alt":  "Partner n°1",
+							"type": "secondary",
+						},
+					},
+				},
 			},
 		},
 	}, cfg.Contexts)
