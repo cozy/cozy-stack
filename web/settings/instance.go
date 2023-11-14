@@ -63,13 +63,9 @@ func (h *HTTPHandler) getInstance(c echo.Context) error {
 		doc.M["default_redirection"] = inst.DefaultAppAndPath()
 	}
 
-	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
-		// Allow bitwarden clients to read the instance settings, even if they
-		// don't have an explicit permission for it
-		err = middlewares.AllowWholeType(c, permission.GET, consts.Support)
-		if err != nil {
-			return err
-		}
+	// Allow any application with a token
+	if _, err = middlewares.GetPermission(c); err != nil {
+		return err
 	}
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
