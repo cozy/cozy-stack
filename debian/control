@@ -12,7 +12,7 @@ XS-Go-Import-Path: github.com/cozy/cozy-stack
 Package: cozy-stack
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
-			adduser, members, curl, sed,
+			adduser, members, curl, sed, ghostscript, librsvg2-bin,
 			git, imagemagick, libprotobuf-c1, fonts-lato
 Recommends: lsb-release, nodejs (>= 16)
 Suggests: nginx, mail-transport-agent
