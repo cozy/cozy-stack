@@ -2,6 +2,7 @@ package thumbnail
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -57,7 +58,7 @@ func init() {
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Reserved:     true,
-		Timeout:      3 * time.Hour,
+		Timeout:      24 * time.Hour,
 		WorkerFunc:   WorkerCheck,
 	})
 }
@@ -383,7 +384,9 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
 	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, convertCmd, args...)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctxWithTimeout, convertCmd, args...)
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out
