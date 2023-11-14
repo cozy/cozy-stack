@@ -72,8 +72,8 @@ RUN set -eux; apt-get update \
 
 COPY --from=build \
   /app/cozy-stack \
-  /app/scripts/docker-entrypoint.sh \
-  /app/scripts/cozy-app-dev.sh \
+  /app/scripts/docker/cozy-app-dev/docker-entrypoint.sh \
+  /app/scripts/docker/cozy-app-dev/cozy-app-dev.sh \
   /app/scripts/konnector-node-run.sh \
   /app/MailHog \
   /usr/bin/

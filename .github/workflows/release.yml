@@ -52,7 +52,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_SECRET }}
       - name: Build and publish the cozy-app-dev image
-        run: scripts/release.sh
+        run: scripts/docker/cozy-app-dev/release.sh
   publish_deb_packages:
     strategy:
       matrix:
