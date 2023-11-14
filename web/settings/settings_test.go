@@ -74,7 +74,16 @@ func TestSettings(t *testing.T) {
 	config.UseTestFile(t)
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
-	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+		"manager_url": "http://manager.example.org",
+		"logos": map[string]interface{}{
+			"home": map[string]interface{}{
+				"light": []interface{}{
+					map[string]interface{}{"src": "/logos/main_cozy.png", "alt": "Cozy Cloud"},
+				},
+			},
+		},
+	}
 	was := conf.Subdomains
 	conf.Subdomains = config.NestedSubdomains
 	defer func() { conf.Subdomains = was }()
@@ -104,11 +113,27 @@ func TestSettings(t *testing.T) {
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
-		e.GET("/settings/context").
+		obj := e.GET("/settings/context").
 			WithCookie(sessCookie, "connected").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
-			Expect().Status(200)
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.settings")
+		data.ValueEqual("id", "io.cozy.settings.context")
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("manager_url", "http://manager.example.org")
+		attrs.ValueEqual("logos", map[string]interface{}{
+			"home": map[string]interface{}{
+				"light": []interface{}{
+					map[string]interface{}{"src": "/logos/main_cozy.png", "alt": "Cozy Cloud"},
+				},
+			},
+		})
 	})
 
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
