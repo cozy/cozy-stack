@@ -22,7 +22,7 @@ configure)
 			--shell /usr/sbin/nologin --ingroup cozy cozy-stack
 
 		[ -d /var/log/cozy ] || \
-			install -o root -g cozy -m u=rwX,g=rwX,o= -d /var/log/cozy
+			install -o root -g adm -m u=rwX,g=rwX,o= -d /var/log/cozy
 
 		db_get cozy-stack/couchdb/nodename && COUCH_NODE="${RET}"
 		db_get cozy-stack/couchdb/admin/user && COUCH_ADMIN_USER="${RET}"
