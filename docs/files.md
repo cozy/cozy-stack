@@ -584,7 +584,7 @@ then the `updated_at` will be set with the value of the `created_at`.
 | Tags                    | an array of tags                                               |
 | Executable              | `true` if the file is executable (UNIX permission)             |
 | Encrypted               | `true` if the file is client-side encrypted                    |
-| Metadata                | a JSON with metadata on this file (_deprecated_)               |
+| Metadata                | a JSON with metadata on this file (_not recommended_)          |
 | MetadataID              | the identifier of a metadata object                            |
 | CreatedAt               | the creation date of the file                                  |
 | UpdatedAt               | the modification date of the file                              |
