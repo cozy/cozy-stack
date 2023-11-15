@@ -2,7 +2,11 @@
 
 # Docker
 
-This page list various operations that can be automated _via_ Docker.
+This page list various operations that can be automated _via_ Docker when
+developing cozy-stack.
+
+For docker usage in production to self-host your cozy instance, please refer
+to our [Self Hosting Documentation](https://docs.cozy.io/en/tutorials/selfhosting/).
 
 ## Running a CouchDB instance
 
@@ -44,7 +48,7 @@ docker run -it --rm --name cozy-stack \
 ## Publishing a new cozy-app-dev image
 
 We publish the cozy-app-dev image when we release a new version of the stack.
-See `scripts/release.sh` for details.
+See `scripts/docker/cozy-app-dev/release.sh` for details.
 
 ## Docker run and url name for cozy-app-dev
 
