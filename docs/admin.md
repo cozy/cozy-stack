@@ -252,6 +252,33 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/:domain/email_verified_code
+
+Creates an email_verified_code that can be used on the given instance to avoid
+the 2FA by email.
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/email_verified_code HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "email_verified_code": "jBPF5Kvpv1oztdaSgdA2315hVpAf6BCd"
+}
+```
+
+Note: if the two factor authentication by email is not enabled on this
+instance, it will return a 400 Bad Request error.
+
 ### DELETE /instances/:domain/sessions
 
 Delete the databases for io.cozy.sessions and io.cozy.sessions.logins.

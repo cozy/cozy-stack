@@ -11,6 +11,7 @@
   const loginField = d.getElementById('login-field')
   const longRunCheckbox = d.getElementById('long-run-session')
   const trustedTokenInput = d.getElementById('trusted-device-token')
+  const emailVerifiedCodeInput = d.getElementById('email_verified_code')
   const magicCodeInput = d.getElementById('magic_code')
 
   // Set the trusted device token from the localstorage in the form if it exists
@@ -44,6 +45,7 @@
         const data = new URLSearchParams()
         data.append('passphrase', pass)
         data.append('trusted-device-token', trustedTokenInput.value)
+        data.append('email_verified_code', emailVerifiedCodeInput.value)
         data.append('long-run-session', longRun)
         data.append('redirect', redirect)
         data.append('csrf_token', csrfTokenInput.value)
