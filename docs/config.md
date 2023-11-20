@@ -79,8 +79,8 @@ generate this file, you can use the `cozy-stack config passwd [filepath]`
 command. This command will ask you for a passphrase and will create the
 `cozy-admin-passphrase` at the specified path.
 
-You can use the `COZY_ADMIN_PASSWORD` env variable if you do not want to type
-the passphrase each time you call `cozy-stack`.
+You can use the `COZY_ADMIN_PASSPHRASE` (or `COZY_ADMIN_PASSWORD`) env variable
+if you do not want to type the passphrase each time you call `cozy-stack`.
 
 ### Example
 

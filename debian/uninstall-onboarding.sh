@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-export COZY_ADMIN_PASSWORD="$(cat /etc/cozy/.cozy-admin-passphrase)"
+export COZY_ADMIN_PASSPHRASE="$(cat /etc/cozy/.cozy-admin-passphrase)"
 
 function app_installed {
 	DOMAIN="${1}"

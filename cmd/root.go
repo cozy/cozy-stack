@@ -96,7 +96,10 @@ func newClient(domain string, scopes ...string) *client.Client {
 }
 
 func newAdminClient() *client.AdminClient {
-	pass := []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
+	pass := []byte(os.Getenv("COZY_ADMIN_PASSPHRASE"))
+	if len(pass) == 0 {
+		pass = []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
+	}
 	if !build.IsDevRelease() {
 		if len(pass) == 0 {
 			var err error
