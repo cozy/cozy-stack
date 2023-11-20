@@ -36,14 +36,23 @@ jobs:
         run: |
           tag_name="${GITHUB_REF##*/}"
           gh release upload "$tag_name" cozy-stack-*
+  publish_cozy-stack_image:
+    runs-on: ubuntu-22.04
+    needs: create_release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_SECRET }}
+      - name: Build and publish the cozy-stack image
+        run: scripts/docker/production/release.sh
   publish_cozy-app-dev_image:
     runs-on: ubuntu-22.04
     needs: create_release
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.21.x"
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Login to Docker Hub
@@ -52,7 +61,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_SECRET }}
       - name: Build and publish the cozy-app-dev image
-        run: scripts/release.sh
+        run: scripts/docker/cozy-app-dev/release.sh
   publish_deb_packages:
     strategy:
       matrix:
