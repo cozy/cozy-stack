@@ -638,6 +638,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 
 	domain, err := extractDomain(conf, params)
 	if err != nil {
+		logger.WithNamespace("oidc").Warnf("Cannot extract domain: %s", err)
 		return err
 	}
 	if domain != inst.Domain {
