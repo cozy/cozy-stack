@@ -7,7 +7,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
-// List returns a list of possible warnings associated with the instance.
+// ListWarnings returns a list of possible warnings associated with the
+// instance.
 func ListWarnings(i *instance.Instance) (warnings []*jsonapi.Error) {
 	if err := i.MovedError(); err != nil {
 		warnings = append(warnings, err)

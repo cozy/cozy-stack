@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// LockGetter return a lock on a resource matching the given `name`.
+// Getter returns a lock on a resource matching the given `name`.
 type Getter interface {
 	// ReadWrite returns the read/write lock for the given name.
 	// By convention, the name should be prefixed by the instance domain on which

@@ -929,7 +929,7 @@ func CheckAvailableDiskSpace(fs VFS, doc *FileDoc) (newsize, maxsize, capsize in
 	return newsize, maxsize, capsize, nil
 }
 
-// conflictName generates a new name for a file/folder in conflict with another
+// ConflictName generates a new name for a file/folder in conflict with another
 // that has the same path. A conflicted file `foo` will be renamed foo (2),
 // then foo (3), etc.
 func ConflictName(fs VFS, dirID, name string, isFile bool) string {

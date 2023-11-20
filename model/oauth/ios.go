@@ -18,9 +18,9 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// APPLE_APP_ATTEST_ROOT_CERT is the certificate coming from
+// AppleAppAttestRootCert is the certificate coming from
 // https://www.apple.com/certificateauthority/Apple_App_Attestation_Root_CA.pem
-const APPLE_APP_ATTEST_ROOT_CERT = `-----BEGIN CERTIFICATE-----
+const AppleAppAttestRootCert = `-----BEGIN CERTIFICATE-----
 MIICITCCAaegAwIBAgIQC/O+DvHN0uD7jG5yH2IXmDAKBggqhkjOPQQDAzBSMSYw
 JAYDVQQDDB1BcHBsZSBBcHAgQXR0ZXN0YXRpb24gUm9vdCBDQTETMBEGA1UECgwK
 QXBwbGUgSW5jLjETMBEGA1UECAwKQ2FsaWZvcm5pYTAeFw0yMDAzMTgxODMyNTNa
@@ -191,7 +191,7 @@ func (obj *appleAttestationObject) checkCertificate(challenge string, keyID []by
 
 func (obj *appleAttestationObject) setupAppleCertificates() (*x509.Certificate, *x509.VerifyOptions, error) {
 	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(APPLE_APP_ATTEST_ROOT_CERT))
+	ok := roots.AppendCertsFromPEM([]byte(AppleAppAttestRootCert))
 	if !ok {
 		return nil, nil, errors.New("error adding root certificate to pool")
 	}
@@ -228,17 +228,17 @@ func (obj *appleAttestationObject) setupAppleCertificates() (*x509.Certificate, 
 
 func extractNonceFromCertificate(credCert *x509.Certificate) ([]byte, error) {
 	credCertOID := asn1.ObjectIdentifier{1, 2, 840, 113635, 100, 8, 2}
-	var credCertId []byte
+	var credCertID []byte
 	for _, extension := range credCert.Extensions {
 		if extension.Id.Equal(credCertOID) {
-			credCertId = extension.Value
+			credCertID = extension.Value
 		}
 	}
-	if len(credCertId) == 0 {
+	if len(credCertID) == 0 {
 		return nil, errors.New("missing credCert extension")
 	}
 	var values []asn1.RawValue
-	_, err := asn1.Unmarshal(credCertId, &values)
+	_, err := asn1.Unmarshal(credCertID, &values)
 	if err != nil || len(values) == 0 {
 		return nil, errors.New("missing credCert value")
 	}

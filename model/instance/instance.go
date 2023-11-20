@@ -34,6 +34,8 @@ const DefaultTemplateTitle = "Cozy"
 
 // PBKDF2_SHA256 is the value of kdf for using PBKDF2 with SHA256 to hash the
 // password on client side.
+//
+//lint:ignore ST1003 we prefer ALL_CAPS here
 const PBKDF2_SHA256 = 0
 
 // An Instance has the informations relatives to the logical cozy instance,

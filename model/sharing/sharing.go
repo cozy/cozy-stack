@@ -1526,15 +1526,15 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 
 	// Build a map of owner docs with their member's counterpart ids
 	ownerKey := ms.Credentials[0].XorKey
-	ownerDocsById := make(map[string]couchdb.JSONDoc)
+	ownerDocsByID := make(map[string]couchdb.JSONDoc)
 	for _, doc := range ownerDocs {
-		ownerDocsById[doc.ID()] = doc
+		ownerDocsByID[doc.ID()] = doc
 	}
 
 	for _, memberDoc := range memberDocs {
 		ownerID := XorID(memberDoc.ID(), ownerKey)
 
-		if ownerDoc, found := ownerDocsById[ownerID]; found {
+		if ownerDoc, found := ownerDocsByID[ownerID]; found {
 			if ownerDoc.Rev() != memberDoc.Rev() {
 				if revision.Generation(ownerDoc.Rev()) < revision.Generation(memberDoc.Rev()) && ms.ReadOnly() {
 					checks = append(checks, map[string]interface{}{
@@ -1625,7 +1625,7 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 				}
 			}
 
-			delete(ownerDocsById, ownerID)
+			delete(ownerDocsByID, ownerID)
 		} else {
 			if ms.ReadOnly() {
 				checks = append(checks, map[string]interface{}{
@@ -1664,7 +1664,7 @@ func (s *Sharing) checkSharingTreesConsistency(inst *instance.Instance, ownerDoc
 	}
 
 	// The only docs left in the map do not exist on the member's instance
-	for _, ownerDoc := range ownerDocsById {
+	for _, ownerDoc := range ownerDocsByID {
 		if wasUpdatedRecently(ownerDoc) {
 			// If the document was created less than 5 minutes ago, we'll
 			// assume the sharing synchronization is still in progress and

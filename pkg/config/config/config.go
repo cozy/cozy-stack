@@ -255,7 +255,7 @@ type SMS struct {
 	Token    string
 }
 
-// DeprecatedCfg describes the config used to setup [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList].
+// DeprecatedAppsCfg describes the config used to setup [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList].
 //
 // XXX: Move this struct next to [github.com/cozy/cozy-stack/web/auth.DeprecatedAppList]
 // once the circling dependency issue is fixed.

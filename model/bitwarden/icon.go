@@ -123,15 +123,19 @@ func getCandidateIcons(domain string, r io.Reader) []string {
 	// Consider only the first 1000 tokens, as the candidates icons must be in
 	// the <head>, and it avoid reading the whole html page.
 	for i := 0; i < 1000; i++ {
+		done := false
 		switch tokenizer.Next() {
 		case html.ErrorToken:
 			// End of the document, we're done
-			break
+			done = true
 		case html.StartTagToken, html.SelfClosingTagToken:
 			t := tokenizer.Token()
 			if u, p := getLinkIcon(domain, t); p >= 0 {
 				candidates[u] = p
 			}
+		}
+		if done {
+			break
 		}
 	}
 

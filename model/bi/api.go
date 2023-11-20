@@ -20,7 +20,7 @@ type apiClient struct {
 	basePath string
 }
 
-func newApiClient(rawURL string) (*apiClient, error) {
+func newAPIClient(rawURL string) (*apiClient, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err

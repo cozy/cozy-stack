@@ -240,7 +240,7 @@ func (c *WebhookCall) handleConnectionDeleted() error {
 
 	// If the user has no longer any connections on BI, we must remove their
 	// data from BI.
-	api, err := newApiClient(c.BIurl)
+	api, err := newAPIClient(c.BIurl)
 	if err != nil {
 		return err
 	}
@@ -413,7 +413,7 @@ func (c *WebhookCall) handleAccountEnabledOrDisabled() error {
 	var trigger job.Trigger
 	account, err := findAccount(c.accounts, connID)
 	if err != nil {
-		api, err := newApiClient(c.BIurl)
+		api, err := newAPIClient(c.BIurl)
 		if err != nil {
 			return err
 		}

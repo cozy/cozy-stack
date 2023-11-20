@@ -129,7 +129,7 @@ func (e *Entry) WithTime(t time.Time) Logger {
 	return &Entry{entry}
 }
 
-// Clone clones a logger entry.
+// AddHook adds a hook on a logger.
 func (e *Entry) AddHook(hook logrus.Hook) {
 	// We need to clone the underlying logger in order to add a specific hook
 	// only on this logger.

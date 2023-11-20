@@ -23,7 +23,7 @@ type SendEmailCmd struct {
 	TemplateValues map[string]interface{}
 }
 
-// SendMail sends a mail to the instance owner.
+// SendEmail sends a mail to the instance owner.
 func (s *EmailerService) SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
 	msg, err := job.NewMessage(map[string]interface{}{
 		"mode":            "noreply",
@@ -42,7 +42,7 @@ func (s *EmailerService) SendEmail(inst *instance.Instance, cmd *SendEmailCmd) e
 	return err
 }
 
-// SendPendingMail sends a mail to the instance owner on their new pending
+// SendPendingEmail sends a mail to the instance owner on their new pending
 // email address. It is used to confirm that they can receive emails on the new
 // email address.
 func (s *EmailerService) SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
