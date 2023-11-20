@@ -313,6 +313,20 @@ or returns with a non-zero status code.
 **Note:** debug and info level are not transmitted to syslog, except if the
 instance is in debug mode. It would be too verbose to do otherwise.
 
+The message can start with a known keyword that could have special meanings
+for `cozy-stack` or for statistical analysis of konnector health.
+Known keywords are listed in the [konnector tutorial](https://docs.cozy.io/en/tutorials/konnector/going-further/#error-handling)
+
+When a connector throw an error of either `LOGIN_FAILED` or any error starting
+with `USER_ACTION_NEEDED` (with the exception of
+`USER_ACTION_NEEDED.CGU_FORM`), meaning that the user needs to execute an
+action on provider's website (either changing its credentials or
+acknowledging something on provider website), then `cozy-stack` will skip all
+subsequent automatic executions to avoid querying the provider site and
+blocking user account. Manual execution by the user will still be possible to
+unlock the konnector/account when the user thinks it is now ready to be run
+again.
+
 ### Account deleted
 
 When an account is deleted, or a konnector is going to be uninstalled, the
