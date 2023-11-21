@@ -252,6 +252,37 @@ Content-Type: application/json
 }
 ```
 
+### POST /instances/:domain/session_code/check
+
+Checks that a session_code is valid for the given instance. Note that the
+session_code will be invalidated after that.
+
+#### Request
+
+```http
+POST /instances/alice.cozy.localhost/session_code/check HTTP/1.1
+Content-Type: application/json
+```
+
+```json
+{
+  "session_code": "L7oJ6BDQtdbLR5Vr5vTxTXLJ1pQzMXcD"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "valid": true
+}
+```
+
 ### POST /instances/:domain/email_verified_code
 
 Creates an email_verified_code that can be used on the given instance to avoid

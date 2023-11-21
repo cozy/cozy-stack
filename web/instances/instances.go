@@ -1,3 +1,6 @@
+// Package instances is used for the admin endpoint to manage instances. It
+// covers a lot of things, from creating an instance to checking the FS
+// integrity.
 package instances
 
 import (
@@ -379,6 +382,30 @@ func createSessionCode(c echo.Context) error {
 	})
 }
 
+type checkSessionCodeArgs struct {
+	Code string `json:"session_code"`
+}
+
+func checkSessionCode(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	var args checkSessionCodeArgs
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	ok := inst.CheckAndClearSessionCode(args.Code)
+	if !ok {
+		return c.JSON(http.StatusForbidden, echo.Map{"valid": false})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"valid": true})
+}
+
 func createEmailVerifiedCode(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := lifecycle.GetInstance(domain)
@@ -684,6 +711,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/auth-mode", setAuthMode)
 	router.POST("/:domain/magic_link", createMagicLink)
 	router.POST("/:domain/session_code", createSessionCode)
+	router.POST("/:domain/session_code/check", checkSessionCode)
 	router.POST("/:domain/email_verified_code", createEmailVerifiedCode)
 	router.DELETE("/:domain/sessions", cleanSessions)
 
