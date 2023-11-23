@@ -27,7 +27,7 @@ func (ac *AdminClient) NewInstanceClient(domain string, scopes ...string) (*Clie
 	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
 		Host:      config.GetConfig().Host,
 		Port:      config.GetConfig().Port,
-		Timeout:   5 * time.Minute,
+		Timeout:   15 * time.Minute,
 		EnvPrefix: "COZY_HOST",
 	})
 	if err != nil {
