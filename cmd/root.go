@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -57,32 +56,7 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	// We may want in the future rely on OAuth to handle the permissions with
 	// more granularity.
 	ac := newAdminClient()
-	token, err := ac.GetToken(&client.TokenOptions{
-		Domain:   domain,
-		Subject:  "CLI",
-		Audience: consts.CLIAudience,
-		Scope:    scopes,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
-		Host:      config.GetConfig().Host,
-		Port:      config.GetConfig().Port,
-		Timeout:   15 * time.Minute,
-		EnvPrefix: "COZY_HOST",
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &client.Client{
-		Scheme:     clientURL.Scheme,
-		Addr:       clientURL.Host,
-		Domain:     domain,
-		Client:     httpClient,
-		Authorizer: &request.BearerAuthorizer{Token: token},
-	}, nil
+	return ac.NewInstanceClient(domain, scopes...)
 }
 
 func newClient(domain string, scopes ...string) *client.Client {
