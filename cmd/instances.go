@@ -217,7 +217,13 @@ be used as the error message.
 		if len(flagApps) == 0 {
 			return nil
 		}
-		apps, err := newClient(domain, consts.Apps).ListApps(consts.Apps)
+		c, err := ac.NewInstanceClient(domain, consts.Apps)
+		if err != nil {
+			errPrintfln("Could not generate access to domain %s", domain)
+			errPrintfln("%s", err)
+			os.Exit(1)
+		}
+		apps, err := c.ListApps(consts.Apps)
 		if err == nil && len(flagApps) != len(apps) {
 			for _, slug := range flagApps {
 				found := false
