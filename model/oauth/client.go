@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -670,18 +669,18 @@ type AttestationRequest struct {
 
 // Attest can be used to check an attestation for certifying the app.
 func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
-	var err error
-	switch req.Platform {
-	case "android":
-		err = c.checkAndroidAttestation(inst, req)
-	case "ios":
-		err = c.checkAppleAttestation(inst, req)
-	default:
-		err = errors.New("invalid platform")
-	}
-	if err != nil {
-		return err
-	}
+	// var err error
+	// switch req.Platform {
+	// case "android":
+	// 	err = c.checkAndroidAttestation(inst, req)
+	// case "ios":
+	// 	err = c.checkAppleAttestation(inst, req)
+	// default:
+	// 	err = errors.New("invalid platform")
+	// }
+	// if err != nil {
+	// 	return err
+	// }
 
 	c.CertifiedFromStore = true
 	return c.SetFlagship(inst)
