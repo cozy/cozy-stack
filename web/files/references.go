@@ -78,7 +78,7 @@ func ListReferencesHandler(c echo.Context) error {
 		count = int(resCount.Rows[0].Value.(float64))
 	}
 
-	// XXX Some references can contains %2f instead of in the id (legacy),
+	// XXX Some references can contain `%2f` instead of `/` in the id (legacy),
 	// and to preserve compatibility, we try to find those documents if no
 	// documents with the correct reference are found.
 	if count == 0 && strings.Contains(id, "/") {
