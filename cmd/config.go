@@ -74,6 +74,9 @@ passphrase if needed.
 			if !bytes.Equal(pass1, pass2) {
 				return fmt.Errorf("Passphrase missmatch")
 			}
+			if len(pass1) == 0 {
+				return fmt.Errorf("Empty password is forbidden")
+			}
 
 			passphrase = pass1
 		}
