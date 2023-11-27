@@ -44,7 +44,7 @@ func TestReferences(t *testing.T) {
 		},
 	})
 
-	t.Run("ListNotSynchronizedOn", func(t *testing.T) {
+	t.Run("ListReferencesHandler", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
 		// Make doc
@@ -230,8 +230,65 @@ func TestReferences(t *testing.T) {
 		obj.Value("data").Array().Length().Equal(1)
 		obj.Path("$.data[0].id").Equal(fdoc.ID())
 
+		// Add dummy references on io.cozy.apps%2ffoobaz and io.cozy.apps%2Ffooqux
+		foobazRef := couchdb.DocReference{
+			ID:   "io.cozy.apps%2ffoobaz",
+			Type: Type,
+		}
+		fooquxRef := couchdb.DocReference{
+			ID:   "io.cozy.apps%2Ffooqux",
+			Type: Type,
+		}
+		fdoc.ReferencedBy = append(fdoc.ReferencedBy, foobazRef, fooquxRef)
+		err = couchdb.UpdateDoc(testInstance, fdoc)
+		assert.NoError(t, err)
+
+		// Check that we can find the reference with %2f
+		obj = e.GET("/data/"+Type+"/io.cozy.apps%2ffoobar/relationships/references").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.meta.count").Equal(1)
+		obj.Value("data").Array().Length().Equal(1)
+		obj.Path("$.data[0].id").Equal(fdoc.ID())
+
+		// Check that we can find the reference with %2F
+		obj = e.GET("/data/"+Type+"/io.cozy.apps%2Ffoobar/relationships/references").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.meta.count").Equal(1)
+		obj.Value("data").Array().Length().Equal(1)
+		obj.Path("$.data[0].id").Equal(fdoc.ID())
+
 		// Remove the reference with a /
 		e.DELETE("/data/"+Type+"/io.cozy.apps%2Ffoobar/relationships/references").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": [
+          {"id": "` + fdoc.ID() + `", "type": "` + consts.Files + `"}
+        ]
+      }`)).
+			Expect().Status(204)
+
+		// Remove the reference with a %2f
+		e.DELETE("/data/"+Type+"/io.cozy.apps%2ffoobaz/relationships/references").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": [
+          {"id": "` + fdoc.ID() + `", "type": "` + consts.Files + `"}
+        ]
+      }`)).
+			Expect().Status(204)
+
+		// Remove the reference with a %2F
+		e.DELETE("/data/"+Type+"/io.cozy.apps%2Ffooqux/relationships/references").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(`{
