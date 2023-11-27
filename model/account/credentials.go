@@ -216,8 +216,8 @@ func DecryptBufferWithKey(decryptorKey *keyring.NACLKey, encryptedBuffer []byte)
 	return plainBuffer, nil
 }
 
-// Encrypts sensitive fields inside the account. The document
-// is modified in place.
+// Encrypt encrypts sensitive fields inside the account. The document is
+// modified in place.
 func Encrypt(doc couchdb.JSONDoc) bool {
 	if config.GetKeyring().CredentialsEncryptorKey() != nil {
 		return encryptMap(doc.M)
@@ -225,8 +225,8 @@ func Encrypt(doc couchdb.JSONDoc) bool {
 	return false
 }
 
-// Decrypts sensitive fields inside the account. The document
-// is modified in place.
+// Decrypt decrypts sensitive fields inside the account. The document is
+// modified in place.
 func Decrypt(doc couchdb.JSONDoc) bool {
 	if config.GetKeyring().CredentialsDecryptorKey() != nil {
 		return decryptMap(doc.M)

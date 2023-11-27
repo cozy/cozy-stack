@@ -487,6 +487,7 @@ func TestApps(t *testing.T) {
 		flags, err := feature.GetFlags(testInstance)
 		require.NoError(t, err)
 		flagsStr, err := json.Marshal(flags)
+		require.NoError(t, err)
 
 		// Create the OAuth client for the flagship app
 		flagship := oauth.Client{

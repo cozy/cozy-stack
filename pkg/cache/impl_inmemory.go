@@ -15,7 +15,7 @@ type InMemory struct {
 	m *sync.Map
 }
 
-// NewRedis instantiate a new in-memory Cache Client.
+// NewInMemory instantiates a new in-memory Cache Client.
 func NewInMemory() *InMemory {
 	return &InMemory{m: new(sync.Map)}
 }

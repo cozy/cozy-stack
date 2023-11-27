@@ -33,7 +33,7 @@ var (
 	ErrInvalidLevel = errors.New("not a valid logging Level")
 )
 
-// Convert the Level to a string. E.g. LevelDebug becomes "debug".
+// String converts the Level to a string. E.g. LevelDebug becomes "debug".
 func (level Level) String() string {
 	if b, err := level.MarshalText(); err == nil {
 		return string(b)
