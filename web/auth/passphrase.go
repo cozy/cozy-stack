@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -252,9 +253,13 @@ func passphraseRenew(c echo.Context) error {
 			"error": "invalid_token",
 		})
 	}
-	if err := bitwarden.DeleteUnrecoverableCiphers(inst); err != nil {
-		inst.Logger().WithNamespace("bitwarden").
-			Warnf("Error on ciphers deletion after password reset: %s", err)
+	// Before deleting the ciphers, it will revoke the sharings to avoid deleting
+	// the ciphers on the Cozy instances of the other members.
+	if err := sharing.RevokeCipherSharings(inst); err == nil {
+		if err := bitwarden.DeleteUnrecoverableCiphers(inst); err != nil {
+			inst.Logger().WithNamespace("bitwarden").
+				Warnf("Error on ciphers deletion after password reset: %s", err)
+		}
 	}
 
 	redirect := inst.PageURL("/auth/login", nil)
