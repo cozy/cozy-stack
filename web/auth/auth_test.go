@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -2099,6 +2100,47 @@ func TestAuth(t *testing.T) {
 				WithHost(domain).
 				Expect().Status(404)
 		})
+	})
+
+	t.Run("Share by link protected by password", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		set := permission.Set{
+			permission.Rule{Type: consts.Files, Title: "files"},
+		}
+		parent := &permission.Permission{
+			Type:        permission.TypeWebapp,
+			Permissions: set,
+		}
+		sourceID := "io.cozy.apps/drive"
+		codes := map[string]string{"email": "123456789123456789"}
+		shortcodes := map[string]string{"email": "123456"}
+		md, err := metadata.NewWithApp("drive", "", permission.DocTypeVersion)
+		require.NoError(t, err)
+		subdoc := permission.Permission{
+			Permissions: set,
+			Password:    "the_password!",
+			Metadata:    md,
+		}
+		perm, err := permission.CreateShareSet(testInstance, parent, sourceID, codes, shortcodes, subdoc, nil)
+		require.NoError(t, err)
+
+		e.POST("/auth/share-by-link/password").
+			WithHeader("Accept", "application/json").
+			WithFormField("perm_id", perm.ID()).
+			WithFormField("password", "bad_password").
+			WithHost(domain).
+			Expect().Status(403)
+
+		res := e.POST("/auth/share-by-link/password").
+			WithHeader("Accept", "application/json").
+			WithFormField("perm_id", perm.ID()).
+			WithFormField("password", "the_password!").
+			WithHost(domain).
+			Expect().Status(200)
+
+		res.Cookies().Length().Equal(1)
+		res.Cookie("pass" + perm.ID()).Value().NotEmpty()
 	})
 
 	t.Run("MagicLink", func(t *testing.T) {

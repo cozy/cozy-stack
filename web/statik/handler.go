@@ -50,6 +50,7 @@ var (
 		"oidc_twofactor.html",
 		"passphrase_choose.html",
 		"passphrase_reset.html",
+		"share_by_link_password.html",
 		"sharing_discovery.html",
 		"oauth_clients_limit_exceeded.html",
 		"twofactor.html",

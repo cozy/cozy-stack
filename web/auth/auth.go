@@ -635,4 +635,7 @@ func Routes(router *echo.Group) {
 	// 2FA
 	router.GET("/twofactor", twoFactorForm)
 	router.POST("/twofactor", twoFactor)
+
+	// Share by link protected by password
+	router.POST("/share-by-link/password", checkPasswordForShareByLink)
 }
