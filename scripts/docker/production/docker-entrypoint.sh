@@ -48,11 +48,6 @@ if echo "$@" | grep -q "cozy-stack "; then
   for db in _users _replicator; do
     curl -s -X PUT "${COUCHDB_PROTOCOL}://${COUCHDB_USER}:${COUCHDB_PASSWORD}@${COUCHDB_HOST}:${COUCHDB_PORT}/${db}"
   done
-
-  # Then run the command itself as applicative user
-  echo "Now running CMD with UID ${USER_ID} and GID ${GROUP_ID}"
-  exec cozy "$@"
-else
-  # Otherwise run the command as root
-  exec "$@"
 fi
+
+exec "$@"
