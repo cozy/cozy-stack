@@ -60,7 +60,8 @@ RUN set -eux \
     && chmod +x /usr/local/bin/*.sh \
     && groupadd -g "${GROUP_ID}" -o cozy \
     && useradd --shell /bin/bash -u "${USER_ID}" -g cozy -o -c "Cozy Stack user" -d /var/lib/cozy -m cozy \
-    && chown -R cozy: /var/lib/cozy
+    && chown -R cozy: /var/lib/cozy \
+    && chown -R cozy: /etc/cozy
 
 WORKDIR /var/lib/cozy
 
