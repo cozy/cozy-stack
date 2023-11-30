@@ -69,5 +69,7 @@ VOLUME /etc/cozy
 
 EXPOSE 6060 8080
 
+USER cozy
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["cozy-stack","serve"]
