@@ -51,7 +51,7 @@ if echo "$@" | grep -q "cozy-stack "; then
 
   # Then run the command itself as applicative user
   echo "Now running CMD with UID ${USER_ID} and GID ${GROUP_ID}"
-  exec gosu cozy "$@"
+  exec cozy "$@"
 else
   # Otherwise run the command as root
   exec "$@"
