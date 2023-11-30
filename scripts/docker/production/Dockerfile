@@ -24,7 +24,9 @@ ENV COUCHDB_PROTOCOL=http \
     COUCHDB_HOST=couchdb \
     COUCHDB_PORT=5984 \
     COUCHDB_USER=cozy \
-    COUCHDB_PASSWORD=cozy
+    COUCHDB_PASSWORD=cozy \
+    USER_ID=3552 \
+    GROUP_ID=3552
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -55,7 +57,10 @@ RUN set -eux \
     && gosu nobody true \
     && apt-get autoremove -y && apt-get clean \
     && rm -rf /tmp/* /var/tmp /var/lib/apt/lists/* /var/cache/apt \
-    && chmod +x /usr/local/bin/*.sh
+    && chmod +x /usr/local/bin/*.sh \
+    && groupadd -g "${GROUP_ID}" -o cozy \
+    && useradd --shell /bin/bash -u "${USER_ID}" -g cozy -o -c "Cozy Stack user" -d /var/lib/cozy -m cozy \
+    && chown -R cozy: /var/lib/cozy
 
 WORKDIR /var/lib/cozy
 

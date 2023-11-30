@@ -7,16 +7,6 @@ echo "==========================================================================
 echo "Starting $0, $(date)"
 echo "=========================================================================="
 
-
-# Prepare stepping down from root to applicative user with chosen UID/GID
-USER_ID=${LOCAL_USER_ID:-3552}
-GROUP_ID=${LOCAL_GROUP_ID:-3552}
-getent group cozy >/dev/null 2>&1 || \
-    groupadd -g "${GROUP_ID}" -o cozy
-getent passwd cozy >/dev/null 2>&1 || \
-    useradd --shell /bin/bash -u "${USER_ID}" -g cozy -o -c "Cozy Stack user" -d /var/lib/cozy -m cozy
-chown -R cozy: /var/lib/cozy
-
 # Generate passphrase if missing
 if [ ! -f /etc/cozy/cozy-admin-passphrase ]; then
   if [ -z "${COZY_ADMIN_PASSPHRASE:-}" ]; then
