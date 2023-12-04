@@ -248,17 +248,17 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 				return renderMovedLink(c, i, to, subdomainType)
 			}
 		}
+	}
 
-		// For share by link, show the password page if it is password protected.
-		code := c.QueryParam("sharecode")
-		token, err := middlewares.TransformShortcodeToJWT(i, code)
-		if err == nil {
-			claims, err := middlewares.ExtractClaims(c, i, token)
-			if err == nil && claims.AudienceString() == consts.ShareAudience {
-				pdoc, err := permission.GetForShareCode(i, token)
-				if err == nil && pdoc.Password != nil && !middlewares.HasCookieForPassword(c, i, pdoc.ID()) {
-					return renderPasswordPage(c, i, pdoc.ID())
-				}
+	// For share by link, show the password page if it is password protected.
+	code := c.QueryParam("sharecode")
+	token, err := middlewares.TransformShortcodeToJWT(i, code)
+	if err == nil {
+		claims, err := middlewares.ExtractClaims(c, i, token)
+		if err == nil && claims.AudienceString() == consts.ShareAudience {
+			pdoc, err := permission.GetForShareCode(i, token)
+			if err == nil && pdoc.Password != nil && !middlewares.HasCookieForPassword(c, i, pdoc.ID()) {
+				return renderPasswordPage(c, i, pdoc.ID())
 			}
 		}
 	}
