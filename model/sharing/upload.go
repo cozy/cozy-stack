@@ -145,13 +145,13 @@ func (s *Sharing) UploadBatchTo(inst *instance.Instance, m *Member, lastTry bool
 	inst.Logger().WithNamespace("upload").Debugf("lastSeq = %s", lastSeq)
 
 	batch := &batchUpload{
-		Sharing:  s,
-		Instance: inst,
-		Seq:      lastSeq,
+		Sharing:     s,
+		Instance:    inst,
+		CommitedSeq: lastSeq,
 	}
 	defer func() {
-		if batch.Seq != lastSeq {
-			_ = s.UpdateLastSequenceNumber(inst, m, "upload", batch.Seq)
+		if batch.CommitedSeq != lastSeq {
+			_ = s.UpdateLastSequenceNumber(inst, m, "upload", batch.CommitedSeq)
 		}
 	}()
 
@@ -166,14 +166,16 @@ func (s *Sharing) UploadBatchTo(inst *instance.Instance, m *Member, lastTry bool
 		if err = s.uploadFile(inst, m, file, ruleIndex); err != nil {
 			return false, err
 		}
+		batch.CommitedSeq = batch.CandidateSeq
 	}
 	return true, nil
 }
 
 type batchUpload struct {
-	Sharing  *Sharing
-	Instance *instance.Instance
-	Seq      string
+	Sharing      *Sharing
+	Instance     *instance.Instance
+	CandidateSeq string // The sequence number for the next file to try to upload
+	CommitedSeq  string // The sequence number for the last successfully uploaded file
 
 	// changes is used to batch calls to the changes feed and improves
 	// performances.
@@ -185,7 +187,7 @@ type batchUpload struct {
 // and the index of the sharing rule that applies to this file.
 func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error) {
 	for {
-		seq := b.Seq
+		seq := b.CommitedSeq
 		if len(b.changes) == 0 {
 			response, err := couchdb.GetChanges(b.Instance, &couchdb.ChangesRequest{
 				DocType:     consts.Shared,
@@ -203,7 +205,7 @@ func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error
 		}
 		change := b.changes[0]
 		b.changes = b.changes[1:]
-		b.Seq = change.Seq
+		b.CandidateSeq = change.Seq
 		infos, ok := change.Doc.Get("infos").(map[string]interface{})
 		if !ok {
 			continue
@@ -231,7 +233,6 @@ func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error
 		query := []couchdb.IDRev{ir}
 		results, err := couchdb.BulkGetDocs(b.Instance, consts.Files, query)
 		if err != nil {
-			b.Seq = seq
 			return nil, 0, err
 		}
 		if len(results) == 0 {
