@@ -139,7 +139,9 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 		return
 	}
 	from := i.SubDomain(parts[1]).String()
-	middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	if !config.GetConfig().CSPDisabled {
+		middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	}
 }
 
 // ServeAppFile will serve the requested file using the specified application
