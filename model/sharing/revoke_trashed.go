@@ -1,8 +1,12 @@
+// Package sharing is where all the magic happen when documents/files are
+// shared between several Cozy instances, from managing the recipients to
+// replicating the changes.
 package sharing
 
 import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -40,4 +44,23 @@ func revokeTrashed(db prefixer.Prefixer, sharingID string) {
 	if err != nil {
 		log.Errorf("revokeTrashed failed for sharing %s: %s", sharingID, err)
 	}
+}
+
+// RevokeCipherSharings revoke all the sharings with the bitwarden ciphers.
+func RevokeCipherSharings(inst *instance.Instance) error {
+	sharings, err := GetSharingsByDocType(inst, consts.BitwardenCiphers)
+	if err != nil {
+		return err
+	}
+	for _, s := range sharings {
+		if s.Owner {
+			err = s.Revoke(inst)
+		} else {
+			err = s.RevokeRecipientBySelf(inst, SharingDirNotTrashed)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

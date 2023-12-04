@@ -1,3 +1,5 @@
+// Package bitwarden is used for managing the ciphers, encrypted on the client
+// side.
 package bitwarden
 
 import (
