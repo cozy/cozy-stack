@@ -2,11 +2,13 @@ package auth
 
 import (
 	"encoding/base64"
+	"errors"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -25,6 +27,9 @@ func checkPasswordForShareByLink(c echo.Context) error {
 	permID := c.FormValue("perm_id")
 	perm, err := permission.GetByID(inst, permID)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) || errors.Is(err, permission.ErrExpiredToken) {
+			return c.JSON(http.StatusNotFound, echo.Map{"error": err.Error()})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
