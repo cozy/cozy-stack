@@ -56,7 +56,7 @@ if echo "$@" | grep -q "cozy-stack "; then
 
   echo "Init CouchDB databases, nothing will happen if they already exists..."
   for db in _users _replicator; do
-    curl -s -X PUT "${COUCHDB_PROTOCOL}://${COUCHDB_USER}:${COUCHDB_PASSWORD}@${COUCHDB_HOST}:${COUCHDB_PORT}/${db}"
+    curl -sSL -X PUT --user "${COUCHDB_USER}:${COUCHDB_PASSWORD}" "${COUCHDB_PROTOCOL}://${COUCHDB_HOST}:${COUCHDB_PORT}/${db}" || ( echo "Failed to create database ${db}"; exit 1 )
   done
 
   # Then run the command itself as applicative user
