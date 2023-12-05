@@ -94,8 +94,10 @@ func exportDataHandler(c echo.Context) error {
 		return err
 	}
 
-	from := inst.SubDomain(consts.SettingsSlug).String()
-	middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	if !config.GetConfig().CSPDisabled {
+		from := inst.SubDomain(consts.SettingsSlug).String()
+		middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	}
 
 	w := c.Response()
 	w.Header().Set(echo.HeaderContentType, "application/zip")

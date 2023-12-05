@@ -1,3 +1,5 @@
+// Package permission is used to store the permissions for each webapp,
+// konnector, sharing, etc.
 package permission
 
 import (
@@ -11,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
@@ -31,6 +34,7 @@ type Permission struct {
 	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
 	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
+	Password    interface{}       `json:"password,omitempty"`
 
 	Client   interface{}            `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
 	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
@@ -505,6 +509,14 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 		ShortCodes:  shortcodes,
 		ExpiresAt:   expiresAt,
 		Metadata:    subdoc.Metadata,
+	}
+
+	if pass, ok := subdoc.Password.(string); ok && len(pass) > 0 {
+		hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+		if err != nil {
+			return nil, err
+		}
+		doc.Password = hash
 	}
 
 	err := couchdb.CreateDoc(db, doc)

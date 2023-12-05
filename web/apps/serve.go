@@ -139,7 +139,9 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 		return
 	}
 	from := i.SubDomain(parts[1]).String()
-	middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	if !config.GetConfig().CSPDisabled {
+		middlewares.AppendCSPRule(c, "frame-ancestors", from)
+	}
 }
 
 // ServeAppFile will serve the requested file using the specified application
@@ -244,6 +246,19 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
 				subdomainType, _ := doc.M["moved_to_subdomain_type"].(string)
 				return renderMovedLink(c, i, to, subdomainType)
+			}
+		}
+	}
+
+	// For share by link, show the password page if it is password protected.
+	code := c.QueryParam("sharecode")
+	token, err := middlewares.TransformShortcodeToJWT(i, code)
+	if err == nil {
+		claims, err := middlewares.ExtractClaims(c, i, token)
+		if err == nil && claims.AudienceString() == consts.ShareAudience {
+			pdoc, err := permission.GetForShareCode(i, token)
+			if err == nil && pdoc.Password != nil && !middlewares.HasCookieForPassword(c, i, pdoc.ID()) {
+				return renderPasswordPage(c, i, pdoc.ID())
 			}
 		}
 	}
@@ -434,6 +449,19 @@ func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType str
 		"ThemeCSS":    middlewares.ThemeCSS(i),
 		"Favicon":     middlewares.Favicon(i),
 		"Link":        link.String(),
+	})
+}
+
+func renderPasswordPage(c echo.Context, inst *instance.Instance, permID string) error {
+	return c.Render(http.StatusUnauthorized, "share_by_link_password.html", echo.Map{
+		"Action":      inst.PageURL("/auth/share-by-link/password", nil),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Locale":      inst.Locale,
+		"Title":       inst.TemplateTitle(),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
+		"PermID":      permID,
 	})
 }
 

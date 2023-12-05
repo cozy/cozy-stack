@@ -50,6 +50,7 @@ var (
 		"oidc_twofactor.html",
 		"passphrase_choose.html",
 		"passphrase_reset.html",
+		"share_by_link_password.html",
 		"sharing_discovery.html",
 		"oauth_clients_limit_exceeded.html",
 		"twofactor.html",
@@ -205,8 +206,10 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	}
 
 	// Add some CSP for rendered web pages
-	middlewares.AppendCSPRule(c, "default-src", "'self'")
-	middlewares.AppendCSPRule(c, "img-src", "'self' data:")
+	if !config.GetConfig().CSPDisabled {
+		middlewares.AppendCSPRule(c, "default-src", "'self'")
+		middlewares.AppendCSPRule(c, "img-src", "'self' data:")
+	}
 
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }

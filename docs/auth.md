@@ -1200,6 +1200,36 @@ Content-Type: application/json
 "OWY0MjNjMGEtOTNmNi0xMWVjLWIyZGItN2I5YjgwNmRjYzBiCg"
 ```
 
+### POST /auth/share-by-link/password
+
+This route is used when a share by link is protected by password. The password
+can be sent to this route to create a cookie that will allow to use the
+sharecode and access the shared page.
+
+#### Request
+
+```http
+POST /auth/clients/share-by-link/password HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/x-www-form-urlencoded
+
+password=HelloWorld!&perm_id=123456789
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: pass123...
+```
+
+```json
+{
+  "password": "ok"
+}
+```
+
 ### FAQ
 
 > What format is used for tokens?

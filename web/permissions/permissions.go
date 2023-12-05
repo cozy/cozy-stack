@@ -1,3 +1,5 @@
+// Package permissions is the HTTP handlers for managing the permissions on a
+// Cozy (creating a share by link for example).
 package permissions
 
 import (
@@ -96,9 +98,12 @@ func displayPermissions(c echo.Context) error {
 		}
 	}
 
-	// XXX hides the codes in the response
+	// XXX hides the codes and password hash in the response
 	doc.Codes = nil
 	doc.ShortCodes = nil
+	if doc.Password != nil {
+		doc.Password = true
+	}
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{doc, included}, nil)
 }
 
@@ -189,6 +194,11 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
+	// Don't send the password hash to the client
+	if pdoc.Password != nil {
+		pdoc.Password = true
+	}
+
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc, nil}, nil)
 }
 
@@ -243,7 +253,11 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 
 	out := make([]jsonapi.Object, len(perms))
 	for i := range perms {
-		out[i] = &APIPermission{&perms[i], nil}
+		perm := &perms[i]
+		if perm.Password != nil {
+			perm.Password = true
+		}
+		out[i] = &APIPermission{perm, nil}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
@@ -318,9 +332,12 @@ func showPermissions(c echo.Context) error {
 		}
 	}
 
-	// XXX hides the codes in the response
+	// XXX hides the codes and password hash in the response
 	doc.Codes = nil
 	doc.ShortCodes = nil
+	if doc.Password != nil {
+		doc.Password = true
+	}
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{Permission: doc}, nil)
 }
 

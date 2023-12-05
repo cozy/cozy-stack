@@ -1,3 +1,6 @@
+// Package middlewares is used for the HTTP middlewares, ie functions that
+// takes an echo context to do stuff like checking permissions or caching
+// requests.
 package middlewares
 
 import (
@@ -207,20 +210,47 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	return &claims, nil
 }
 
+// HasCookieForPassword returns true if a cookie has been set for the
+// permission with a given ID if its password has been given by the user, and a
+// cookie has been put for that.
+func HasCookieForPassword(c echo.Context, inst *instance.Instance, permID string) bool {
+	cookieName := "pass" + permID
+	cookie, err := c.Cookie(cookieName)
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+
+	cfg := crypto.MACConfig{Name: cookieName, MaxLen: 256}
+	id, err := crypto.DecodeAuthMessage(cfg, inst.SessionSecret(), []byte(cookie.Value), nil)
+	if err != nil {
+		return false
+	}
+
+	return string(id) == permID
+}
+
+// TransformShortcodeToJWT takes a token. If it is a short code, it transforms
+// it to a JWT by using the associated permission. Else, it just returns the
+// token.
+func TransformShortcodeToJWT(inst *instance.Instance, token string) (string, error) {
+	if !shortCodeRegexp.MatchString(token) {
+		return token, nil
+	}
+
+	// XXX in theory, the shortcode is exactly 12 characters. But
+	// somethimes, when people shares a public link with this token, they
+	// can put a "." just after the link to finish their sentence, and this
+	// "." can be added to the token. So, it's better to accept a shortcode
+	// with a final ".", and clean it.
+	token = strings.TrimSuffix(token, ".")
+	return permission.GetTokenFromShortcode(inst, token)
+}
+
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
 func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permission.Permission, error) {
-	if shortCodeRegexp.MatchString(token) { // token is a shortcode
-		var err error
-		// XXX in theory, the shortcode is exactly 12 characters. But
-		// somethimes, when people shares a public link with this token, they
-		// can put a "." just after the link to finish their sentence, and this
-		// "." can be added to the token. So, it's better to accept a shortcode
-		// with a final ".", and clean it.
-		token = strings.TrimSuffix(token, ".")
-		token, err = permission.GetTokenFromShortcode(instance, token)
-		if err != nil {
-			return nil, err
-		}
+	token, err := TransformShortcodeToJWT(instance, token)
+	if err != nil {
+		return nil, err
 	}
 
 	claims, err := ExtractClaims(c, instance, token)
@@ -278,6 +308,11 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		pdoc, err := permission.GetForShareCode(instance, token)
 		if err != nil {
 			return nil, err
+		}
+
+		// Check that the password has been given for password protected share by link
+		if pdoc.Password != nil && !HasCookieForPassword(c, instance, pdoc.ID()) {
+			return nil, permission.ErrInvalidToken
 		}
 
 		// A share token is only valid if the user has not been revoked

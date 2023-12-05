@@ -305,6 +305,7 @@ Accept: application/vnd.api+json
         "type": "io.cozy.permissions",
         "attributes": {
             "source_id": "io.cozy.apps/my-awesome-game",
+            "password": "HelloWorld!",
             "permissions": {
                 "images": {
                     "type": "io.cozy.files",
@@ -341,6 +342,7 @@ Content-Type: application/vnd.api+json
                 "jane": "123456aBCdef"
             },
             "expires_at": 1483951978,
+            "password": true,
             "permissions": {
                 "images": {
                     "type": "io.cozy.files",
@@ -390,6 +392,7 @@ Content-Type: application/vnd.api+json
                 "jane": "123456aBCdef"
             },
             "expires_at": 1483951978,
+            "password": true,
             "permissions": {
                 "images": {
                     "type": "io.cozy.files",

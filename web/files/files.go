@@ -1085,7 +1085,9 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 
 	// Forbid extracting autofilled passwords on an HTML page hosted in the Cozy
-	middlewares.AppendCSPRule(c, "form-action", "'none'")
+	if !config.GetConfig().CSPDisabled {
+		middlewares.AppendCSPRule(c, "form-action", "'none'")
+	}
 
 	disposition := "inline"
 	if c.QueryParam("Dl") == "1" {
@@ -1102,6 +1104,9 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 }
 
 func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
+	if config.GetConfig().CSPDisabled {
+		return
+	}
 	// Allow some files to be displayed by the browser in the client-side apps
 	if mime == "text/plain" || class == "image" || class == "audio" || class == "video" || mime == "application/pdf" {
 		middlewares.AppendCSPRule(c, "frame-ancestors", "*")

@@ -980,3 +980,15 @@ msgstr "Install the Cozy app"
 
 msgid "Install flagship app Skip"
 msgstr "Continue in the browser"
+
+msgid "Share by link Password Title"
+msgstr "Enter the password to access the link"
+
+msgid "Share by link Password Field"
+msgstr "Password"
+
+msgid "Share by link Password Submit"
+msgstr "Continue"
+
+msgid "Share by link Password Invalid"
+msgstr "Invalid password"
