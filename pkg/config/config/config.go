@@ -502,7 +502,13 @@ func max(a, b int) int {
 
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
-	fsURL, err := url.Parse(v.GetString("fs.url"))
+	fs_url := v.GetString("fs.url")
+	// Allow for plain directory path as fs.url
+	// file:// is the default implicit scheme
+	if strings.HasPrefix(fs_url, "/") {
+		fs_url = "file://" + fs_url
+	}
+	fsURL, err := url.Parse(fs_url)
 	if err != nil {
 		return err
 	}
