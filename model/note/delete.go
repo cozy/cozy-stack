@@ -1,10 +1,14 @@
 package note
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -14,19 +18,34 @@ func init() {
 
 func deleteNote(db prefixer.Prefixer, noteID string) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch r := r.(type) {
+				case error:
+					err = r
+				default:
+					err = fmt.Errorf("%v", r)
+				}
+				stack := make([]byte, 4<<10) // 4 KB
+				length := runtime.Stack(stack, false)
+				log := logger.WithNamespace("note").WithField("panic", true)
+				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+			}
+		}()
+
 		images, err := getImages(db, noteID)
-		if err == nil {
+		if err == nil && len(images) > 0 {
 			formats := []string{
 				consts.NoteImageOriginalFormat,
 				consts.NoteImageThumbFormat,
 			}
-			for _, img := range images {
-				inst := &instance.Instance{
-					Domain: db.DomainName(),
-					Prefix: db.DBPrefix(),
+			inst, err := instance.Get(db.DomainName())
+			if err == nil {
+				for _, img := range images {
+					_ = inst.ThumbsFS().RemoveNoteThumb(img.ID(), formats)
+					_ = couchdb.DeleteDoc(db, img)
 				}
-				_ = inst.ThumbsFS().RemoveNoteThumb(img.ID(), formats)
-				_ = couchdb.DeleteDoc(db, img)
 			}
 		}
 
