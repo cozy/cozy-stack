@@ -758,12 +758,11 @@ func (f *swiftFileCreationV3) Write(p []byte) (int, error) {
 func (f *swiftFileCreationV3) Close() (err error) {
 	defer func() {
 		if err != nil {
-			// remove the temporary file if an error occurred
+			// Remove the temporary file from Swift if an error occurred
 			_ = f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, f.name)
-			// If an error has occurred that is not due to the index update, we should
-			// delete the file from the index.
-			_, isCouchErr := couchdb.IsCouchError(err)
-			if !isCouchErr && f.olddoc == nil {
+			// If an error has occurred when creating a new file, we should
+			// also delete the file from the index.
+			if f.olddoc == nil {
 				_ = f.fs.Indexer.DeleteFileDoc(f.newdoc)
 			}
 		}
