@@ -45,10 +45,13 @@
         const data = new URLSearchParams()
         data.append('passphrase', pass)
         data.append('trusted-device-token', trustedTokenInput.value)
-        data.append('email_verified_code', emailVerifiedCodeInput.value)
         data.append('long-run-session', longRun)
         data.append('redirect', redirect)
         data.append('csrf_token', csrfTokenInput.value)
+
+        if (emailVerifiedCodeInput) {
+          data.append('email_verified_code', emailVerifiedCodeInput.value)
+        }
 
         // For the /auth/authorize/move && /auth/confirm pages
         if (stateInput) {

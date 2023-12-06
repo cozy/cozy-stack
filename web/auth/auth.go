@@ -205,6 +205,14 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		iterations = settings.PassphraseKdfIterations
 	}
 
+	// When we have an email_verified_code, we need to ask the user their
+	// password, not send them an email with a magic link
+	emailVerifiedCode := c.QueryParam("email_verified_code")
+	magicLink := i.MagicLink
+	if emailVerifiedCode != "" {
+		magicLink = false
+	}
+
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":     i.TemplateTitle(),
 		"Domain":            i.ContextualDomain(),
@@ -220,8 +228,8 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CredentialsError":  credsErrors,
 		"Redirect":          redirectStr,
 		"CSRF":              c.Get("csrf"),
-		"EmailVerifiedCode": c.QueryParam("email_verified_code"),
-		"MagicLink":         i.MagicLink,
+		"EmailVerifiedCode": emailVerifiedCode,
+		"MagicLink":         magicLink,
 		"OAuth":             hasOAuth,
 		"FranceConnect":     hasFranceConnect,
 	})
