@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/lock"
 
@@ -772,14 +771,12 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 func (f *aferoFileCreation) Close() (err error) {
 	defer func() {
 		if err != nil {
-			// remove the temporary file if an error occurred
+			// Remove the temporary file if an error occurred
 			_ = f.afs.fs.Remove(f.tmppath)
-			// If an error has occurred that is not due to the index update, we should
-			// delete the file from the index.
+			// If an error has occurred when creating a new file, we should
+			// also delete the file from the index.
 			if f.olddoc == nil {
-				if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
-					_ = f.afs.Indexer.DeleteFileDoc(f.newdoc)
-				}
+				_ = f.afs.Indexer.DeleteFileDoc(f.newdoc)
 			}
 		}
 	}()
