@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -15,7 +16,7 @@ import (
 // if it is not the case.
 func CheckStatus(ctx context.Context) (time.Duration, error) {
 	couch := config.CouchCluster(prefixer.GlobalCouchCluster)
-	u := couch.URL.String() + "/_up"
+	u := strings.TrimRight(couch.URL.String(), "/") + "/_up"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return 0, err
