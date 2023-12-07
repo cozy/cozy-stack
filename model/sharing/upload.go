@@ -186,8 +186,8 @@ type batchUpload struct {
 // to be uploaded. It returns a file document if there is one file to upload,
 // and the index of the sharing rule that applies to this file.
 func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error) {
+	seq := b.CommitedSeq
 	for {
-		seq := b.CommitedSeq
 		if len(b.changes) == 0 {
 			response, err := couchdb.GetChanges(b.Instance, &couchdb.ChangesRequest{
 				DocType:     consts.Shared,
@@ -206,6 +206,7 @@ func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error
 		change := b.changes[0]
 		b.changes = b.changes[1:]
 		b.CandidateSeq = change.Seq
+		seq = change.Seq
 		infos, ok := change.Doc.Get("infos").(map[string]interface{})
 		if !ok {
 			continue
