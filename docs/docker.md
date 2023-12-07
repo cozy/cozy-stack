@@ -10,8 +10,8 @@ to our [Self Hosting Documentation](https://docs.cozy.io/en/tutorials/selfhostin
 
 ## Running a CouchDB instance
 
-This will run a new instance of CouchDB in `single` mode (no cluster) and in
-`admin-party-mode` (no user). This command exposes couchdb on the port `5984`.
+This will run a new instance of CouchDB in `single` mode (no cluster). This
+command exposes couchdb on the port `5984`.
 
 ```bash
 $ docker run -d \
@@ -20,7 +20,7 @@ $ docker run -d \
     -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
     couchdb:3.3
-$ curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
+$ curl -X PUT http://admin:password@127.0.0.1:5984/{_users,_replicator}
 ```
 
 Verify your installation at: http://127.0.0.1:5984/_utils/#verifyinstall.
