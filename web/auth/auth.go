@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/mssola/user_agent"
 )
 
 const (
@@ -345,12 +344,7 @@ func login(c echo.Context) error {
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
 	} else if instance.CheckPassphrase(inst, passphrase) == nil {
-		ua := user_agent.New(c.Request().UserAgent())
-		browser, _ := ua.Browser()
 		iterations := crypto.DefaultPBKDF2Iterations
-		if browser == "Edge" {
-			iterations = crypto.EdgePBKDF2Iterations
-		}
 		settings, err := settings.Get(inst)
 		// If the passphrase was not yet hashed on the client side, migrate it
 		if err == nil && settings.PassphraseKdfIterations == 0 {

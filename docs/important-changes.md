@@ -4,6 +4,10 @@
 
 This section will list important changes to the stack or its usage, and migration procedures if any is needed.
 
+## December 2023: Iterations for PBKDF2 increased
+
+We have increased the number of PBKDF2 iterations for new users to 650_000, and removed the exception for Edge as it now supports PBKDF2 via the subtle crypto API.
+
 ## December 2020: Jobs permissions
 
 We used to have a specific permission logic for jobs, in order to allow apps to direclty manage konnectors. More specifically, an app had the right to access a trigger state or remove it, if there was a doctype in common between the app permissions and the konnector manifest.
