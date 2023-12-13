@@ -1,3 +1,5 @@
+// Package exec is for the exec worker, which covers both konnector and service
+// execution.
 package exec
 
 import (
@@ -110,8 +112,7 @@ func jobHookErrorCheckerKonnector(err error) bool {
 
 	lastError := err.Error()
 	if strings.HasPrefix(lastError, konnErrorLoginFailed) ||
-		strings.HasPrefix(lastError, konnErrorUserActionNeeded) &&
-			lastError != konnErrorUserActionNeededCgu {
+		strings.HasPrefix(lastError, konnErrorUserActionNeeded) {
 		return false
 	}
 	return true
@@ -167,8 +168,13 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 		return false, err
 	}
 	if state.Status == job.Errored {
-		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
-			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
+		ignore :=
+			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) &&
+				state.LastError != konnErrorUserActionNeededCgu
+		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) {
+			ignore = true
+		}
+		if ignore {
 			j.Logger().
 				WithField("account_id", msg.Account).
 				WithField("slug", slug).
