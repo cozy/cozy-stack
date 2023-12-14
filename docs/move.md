@@ -115,7 +115,8 @@ one time for each cursor in `parts_cursors`.
 ### POST /move/imports/precheck
 
 This endpoint can be use to check that an export can be imported from the given
-URL, before doing the real import.
+URL, before doing the real import. It is called from the settings application,
+not from the cozy-move wizard.
 
 #### Request
 
