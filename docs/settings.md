@@ -630,7 +630,7 @@ Cookie: sessionid=xxxx
             "auth_mode": "basic",
             "default_redirection": "drive/#/folder",
             "context": "dev",
-            "sponsors": ["springfield"]
+            "sponsorships": ["springfield"]
         }
     }
 }

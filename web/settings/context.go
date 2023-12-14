@@ -120,6 +120,6 @@ func (h *HTTPHandler) context(c echo.Context) error {
 	}
 
 	i := middlewares.GetInstance(c)
-	doc := &apiContext{i.GetContextWithSponsors()}
+	doc := &apiContext{i.GetContextWithSponsorships()}
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }

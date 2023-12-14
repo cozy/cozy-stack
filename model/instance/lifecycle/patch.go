@@ -92,8 +92,8 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
-		if len(opts.Sponsors) != 0 {
-			i.Sponsors = opts.Sponsors
+		if len(opts.Sponsorships) != 0 {
+			i.Sponsorships = opts.Sponsorships
 			needUpdate = true
 		}
 

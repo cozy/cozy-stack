@@ -54,7 +54,7 @@ func TestInstance(t *testing.T) {
 		assert.Equal(t, "my-app", claims["sub"])
 	})
 
-	t.Run("GetContextWithSponsors", func(t *testing.T) {
+	t.Run("GetContextWithSponsorships", func(t *testing.T) {
 		cfg := config.GetConfig()
 		was := cfg.Contexts
 		defer func() { cfg.Contexts = was }()
@@ -121,11 +121,11 @@ func TestInstance(t *testing.T) {
 		}
 
 		inst := &instance.Instance{
-			Domain:      "foo.example.com",
-			ContextName: "context",
-			Sponsors:    []string{"sponsor1", "sponsor2"},
+			Domain:       "foo.example.com",
+			ContextName:  "context",
+			Sponsorships: []string{"sponsor1", "sponsor2"},
 		}
-		result := inst.GetContextWithSponsors()
+		result := inst.GetContextWithSponsorships()
 		bytes, err := json.MarshalIndent(result, "", "  ")
 		require.NoError(t, err)
 		expected := `{

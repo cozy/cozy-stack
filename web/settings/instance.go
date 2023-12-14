@@ -57,8 +57,8 @@ func (h *HTTPHandler) getInstance(c echo.Context) error {
 	doc.M["uuid"] = inst.UUID
 	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["context"] = inst.ContextName
-	if len(inst.Sponsors) > 0 {
-		doc.M["sponsors"] = inst.Sponsors
+	if len(inst.Sponsorships) > 0 {
+		doc.M["sponsorships"] = inst.Sponsorships
 	}
 	// XXX we had a bug where the default_redirection was filled by a full URL
 	// instead of slug+path, and we fix it when this endpoint is called.
@@ -102,7 +102,7 @@ func (h *HTTPHandler) updateInstance(c echo.Context) error {
 		delete(doc.M, "tos_latest")
 		delete(doc.M, "uuid")
 		delete(doc.M, "context")
-		delete(doc.M, "sponsors")
+		delete(doc.M, "sponsorships")
 		delete(doc.M, "oidc_id")
 	}
 

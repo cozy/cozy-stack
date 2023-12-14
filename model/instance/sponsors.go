@@ -17,12 +17,12 @@ type LogoItem struct {
 	Type string `json:"type,omitempty"`
 }
 
-func (inst *Instance) GetContextWithSponsors() map[string]interface{} {
-	context, ok := inst.SettingsContext()
+func (i *Instance) GetContextWithSponsorships() map[string]interface{} {
+	context, ok := i.SettingsContext()
 	if !ok {
 		context = map[string]interface{}{}
 	}
-	if len(inst.Sponsors) == 0 {
+	if len(i.Sponsorships) == 0 {
 		return context
 	}
 
@@ -42,7 +42,7 @@ func (inst *Instance) GetContextWithSponsors() map[string]interface{} {
 	if contexts == nil {
 		return context
 	}
-	for _, sponsor := range inst.Sponsors {
+	for _, sponsor := range i.Sponsorships {
 		if sponsorCtx, ok := contexts[sponsor].(map[string]interface{}); ok {
 			addHomeLogosForSponsor(context, sponsorCtx, sponsor)
 		}
