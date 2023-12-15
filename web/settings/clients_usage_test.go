@@ -39,7 +39,7 @@ func TestClientsUsage(t *testing.T) {
 	require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
 
 	t.Run("WithoutLimit", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, -1)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(-1))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -60,7 +60,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitNotReached", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 2)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(2))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -81,7 +81,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitReached", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 1)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(1))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -102,7 +102,7 @@ func TestClientsUsage(t *testing.T) {
 	})
 
 	t.Run("WithLimitExceeded", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 0)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(0))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").

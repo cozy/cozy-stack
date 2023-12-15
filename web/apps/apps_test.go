@@ -146,7 +146,7 @@ func TestApps(t *testing.T) {
 		}
 		require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
 
-		testutils.WithOAuthClientsLimit(t, testInstance, 0)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(0))
 
 		e = e.Builder(func(r *httpexpect.Request) {
 			r.WithCookie("cozysessid", cozysessID)
