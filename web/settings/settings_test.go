@@ -1046,6 +1046,20 @@ func TestSettings(t *testing.T) {
 			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
 			Contains("/#/connectedDevices").
 			NotContains("http://manager.example.org")
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
+			WithQuery("isFlagship", true).
+			WithQuery("isIapAvailable", true).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			HasContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			Contains("http://manager.example.org")
 	})
 
 	t.Run("ClientsLimitExceededWithLimitReached", func(t *testing.T) {
