@@ -403,6 +403,53 @@ func (c *TestSetup) InstallMiniKonnector() (string, error) {
 	return slug, err
 }
 
+func (c *TestSetup) InstallMiniClientSideKonnector() (string, error) {
+	slug := "mini-client-side-konnector"
+	instance := c.GetTestInstance()
+	c.t.Cleanup(func() { _ = permission.DestroyKonnector(instance, slug) })
+
+	permissions := permission.Set{
+		permission.Rule{
+			Type:  "io.cozy.apps.logs",
+			Verbs: permission.Verbs(permission.POST),
+		},
+	}
+	version := "1.0.0"
+	manifest := &couchdb.JSONDoc{
+		Type: consts.Konnectors,
+		M: map[string]interface{}{
+			"_id":         consts.Konnectors + "/" + slug,
+			"name":        "Mini",
+			"icon":        "icon.svg",
+			"slug":        slug,
+			"source":      "git://github.com/cozy/mini.git",
+			"state":       apps.Ready,
+			"permissions": permissions,
+			"version":     version,
+			"clientSide":  true,
+		},
+	}
+
+	err := couchdb.CreateNamedDoc(instance, manifest)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = permission.CreateKonnectorSet(instance, slug, permissions, version)
+	if err != nil {
+		return "", err
+	}
+
+	konnDir := path.Join(vfs.KonnectorsDirName, slug, version)
+	_, err = vfs.MkdirAll(instance.VFS(), konnDir)
+	if err != nil {
+		return "", err
+	}
+
+	err = createFile(instance, konnDir, "icon.svg", "<svg>...</svg>")
+	return slug, err
+}
+
 func createFile(instance *instance.Instance, dir, filename, content string) error {
 	abs := path.Join(dir, filename+".br")
 	file, err := vfs.Create(instance.VFS(), abs)
