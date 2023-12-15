@@ -174,7 +174,7 @@ func TestApps(t *testing.T) {
 			WithCookie("cozysessid", cozysessID).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains(`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`).
 			Contains(`<script src="//cozywithapps.example.net/assets/js/cozy-bar`)
@@ -193,7 +193,7 @@ func TestApps(t *testing.T) {
 			WithCookie("cozysessid", cozysessID).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains(`<meta name="user-action-required" data-title="Cozy has been moved" data-code="moved" data-detail="The Cozy has been moved to a new address"`)
 
@@ -224,7 +224,7 @@ func TestApps(t *testing.T) {
 			WithCookie("cozysessid", cozysessID).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains(`<meta name="user-action-required" data-title="TOS Updated" data-code="tos-updated" data-detail="Terms of services have been updated" data-links="` + tosLink + `"`)
 
@@ -398,20 +398,20 @@ func TestApps(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Array()
-		data.Length().Equal(1)
+		data.Length().IsEqual(1)
 
-		elem := data.First().Object()
+		elem := data.Value(0).Object()
 		elem.Value("id").String().NotEmpty()
-		elem.ValueEqual("type", "io.cozy.apps")
+		elem.HasValue("type", "io.cozy.apps")
 
 		attrs := elem.Value("attributes").Object()
-		attrs.ValueEqual("name", "Mini")
-		attrs.ValueEqual("slug", "mini")
+		attrs.HasValue("name", "Mini")
+		attrs.HasValue("slug", "mini")
 
 		links := elem.Value("links").Object()
-		links.ValueEqual("self", "/apps/mini")
-		links.ValueEqual("related", "https://cozywithapps-mini.example.net/")
-		links.ValueEqual("icon", "/apps/mini/icon/1.0.0")
+		links.HasValue("self", "/apps/mini")
+		links.HasValue("related", "https://cozywithapps-mini.example.net/")
+		links.HasValue("icon", "/apps/mini/icon/1.0.0")
 	})
 
 	t.Run("IconForApp", func(t *testing.T) {
@@ -421,7 +421,7 @@ func TestApps(t *testing.T) {
 			WithHost(testInstance.Domain).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
-			Body().Equal("<svg>...</svg>")
+			Body().IsEqual("<svg>...</svg>")
 	})
 
 	t.Run("DownloadApp", func(t *testing.T) {
@@ -512,21 +512,21 @@ func TestApps(t *testing.T) {
 
 		data := obj.Value("data").Object()
 		data.Value("id").String().NotEmpty()
-		data.ValueEqual("type", "io.cozy.apps.open")
+		data.HasValue("type", "io.cozy.apps.open")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("AppName", "Mini")
-		attrs.ValueEqual("AppSlug", "mini")
-		attrs.ValueEqual("IconPath", "icon.svg")
-		attrs.ValueEqual("Tracking", "false")
-		attrs.ValueEqual("SubDomain", "flat")
+		attrs.HasValue("AppName", "Mini")
+		attrs.HasValue("AppSlug", "mini")
+		attrs.HasValue("IconPath", "icon.svg")
+		attrs.HasValue("Tracking", "false")
+		attrs.HasValue("SubDomain", "flat")
 		attrs.Value("Cookie").String().Contains("HttpOnly")
 		attrs.Value("Token").String().NotEmpty()
-		attrs.ValueEqual("Flags", string(flagsStr))
+		attrs.HasValue("Flags", string(flagsStr))
 		attrs.ContainsKey("Warnings")
 
 		links := data.Value("links").Object()
-		links.ValueEqual("self", "/apps/mini/open")
+		links.HasValue("self", "/apps/mini/open")
 	})
 
 	t.Run("UninstallAppWithLinkedClient", func(t *testing.T) {
@@ -732,7 +732,7 @@ func assertAuthGet(e *httpexpect.Expect, slug, domain, path, contentType, charse
 	e.GET(path).
 		WithHost(slug+"."+domain).
 		Expect().Status(200).
-		ContentType(contentType, charset).
+		HasContentType(contentType, charset).
 		Body().Contains(content)
 }
 
@@ -740,7 +740,7 @@ func assertAnonGet(e *httpexpect.Expect, slug, domain, path, contentType, charse
 	e.GET(path).
 		WithHost(slug+"."+domain).
 		Expect().Status(200).
-		ContentType(contentType, charset).
+		HasContentType(contentType, charset).
 		Body().Contains(content)
 }
 
@@ -749,7 +749,7 @@ func assertNotPublic(e *httpexpect.Expect, slug, domain, path string, code int, 
 		WithHost(slug + "." + domain).
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(code).
-		Header("Location").Equal(location)
+		Header("Location").IsEqual(location)
 }
 
 func assertNotFound(e *httpexpect.Expect, slug, domain, path string) {
@@ -770,5 +770,5 @@ func assertRedirect(e *httpexpect.Expect, slug, domain, path string, code int, l
 		WithHost(slug + "." + domain).
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(code).
-		Header("Location").Equal(location)
+		Header("Location").IsEqual(location)
 }

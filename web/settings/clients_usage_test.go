@@ -49,14 +49,14 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
 		attrs.NotContainsKey("limit")
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", false)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", false)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitNotReached", func(t *testing.T) {
@@ -70,14 +70,14 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 2)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", false)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("limit", 2)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", false)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitReached", func(t *testing.T) {
@@ -91,14 +91,14 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 1)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", true)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("limit", 1)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", true)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitExceeded", func(t *testing.T) {
@@ -112,13 +112,13 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 0)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", true)
-		attrs.ValueEqual("limitExceeded", true)
+		attrs.HasValue("limit", 0)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", true)
+		attrs.HasValue("limitExceeded", true)
 	})
 }
