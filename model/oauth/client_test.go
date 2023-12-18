@@ -185,7 +185,7 @@ func TestClient(t *testing.T) {
 		require.Nil(t, notPending.Create(testInstance, oauth.NotPending))
 		assertClientsLimitAlertMailWasNotSent(t, testInstance)
 
-		testutils.WithOAuthClientsLimit(t, testInstance, 1)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(1))
 
 		notificationWithoutPremium = &oauth.Client{
 			ClientName:   "notificationWithoutPremium",
