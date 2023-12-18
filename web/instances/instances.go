@@ -73,6 +73,9 @@ func createHandler(c echo.Context) error {
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
 	}
+	if sponsorships := c.QueryParam("sponsorships"); sponsorships != "" {
+		opts.Sponsorships = strings.Split(sponsorships, ",")
+	}
 	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
 		b, err := strconv.ParseBool(autoUpdate)
 		if err != nil {
@@ -170,6 +173,9 @@ func modifyHandler(c echo.Context) error {
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
+	}
+	if sponsorships := c.QueryParam("Sponsorships"); sponsorships != "" {
+		opts.Sponsorships = strings.Split(sponsorships, ",")
 	}
 	if quota := c.QueryParam("DiskQuota"); quota != "" {
 		i, err := strconv.ParseInt(quota, 10, 64)

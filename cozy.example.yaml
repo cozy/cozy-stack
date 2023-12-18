@@ -428,7 +428,7 @@ contexts:
     # Change the limit on the number of members for a sharing
     max_members_per_sharing: 50
     # Use a different wizard for moving a Cozy
-    move_url: htts://move.cozy.beta/
+    move_url: https://move.cozy.beta/
     # Feature flags
     features:
       - hide_konnector_errors

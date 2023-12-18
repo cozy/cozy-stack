@@ -629,7 +629,8 @@ Cookie: sessionid=xxxx
             "public_name": "Alice Martin",
             "auth_mode": "basic",
             "default_redirection": "drive/#/folder",
-            "context": "dev"
+            "context": "dev",
+            "sponsorships": ["springfield"]
         }
     }
 }
