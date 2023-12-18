@@ -39,7 +39,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=3.3.2*
           echo "COZY_COUCHDB_URL=http://admin:password@127.0.0.1:5984/" >> $GITHUB_ENV
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21.x'
       - name: Install Ruby
