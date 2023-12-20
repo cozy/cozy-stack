@@ -1170,6 +1170,31 @@ msgstr "Check our plans"
 msgid "Notifications OAuth Clients Devices Text"
 msgstr "Manage my devices"
 
+msgid "Notifications Plan Changed Title"
+msgstr "Your plan change has been validated!"
+
+msgid "Notifications Plan Changed Message"
+msgstr "Click here to reload the app and apply the changes."
+
+msgid "Notifications Plan Changed Greeting"
+msgstr "Hello,"
+
+msgid "Notifications Plan Changed Intro"
+msgstr ""
+"We are pleased to confirm that your plan change has been validated.\n"
+"Here are our recommendations to make the most of it:"
+
+msgid "Notifications Plan Changed Recommendation 1"
+msgstr "On your computer: refresh the page if your Cozy is open."
+
+msgid "Notifications Plan Changed Recommendation 2"
+msgstr "On your smartphone (Cozy app): close and relaunch the app."
+
+msgid "Notifications Plan Changed Outro"
+msgstr ""
+"Don't hesitate to contact us if you have any questions about subscriptions or using your Cozy.\n"
+"Claude will be delighted to help you with all your questions!"
+
 msgid "Terms of services have been updated"
 msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that have taken effect on May 25, 2018"
 

@@ -737,6 +737,15 @@ func (i *Instance) HasPremiumLinksEnabled() bool {
 	return false
 }
 
+func (i *Instance) HasFeatureSet(set string) bool {
+	for _, s := range i.FeatureSets {
+		if set == s {
+			return true
+		}
+	}
+	return false
+}
+
 // ensure Instance implements couchdb.Doc
 var (
 	_ couchdb.Doc = &Instance{}
