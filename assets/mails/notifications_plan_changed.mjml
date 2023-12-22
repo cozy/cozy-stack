@@ -1,0 +1,18 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://files.cozycloud.cc/email-assets/stack/icon-check-circle.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Notifications Plan Changed Title"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{tHTML "Notifications Plan Changed Intro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	<ul style="margin: 0">
+		<li>{{t "Notifications Plan Changed Recommendation 1"}}</li>
+		<li>{{t "Notifications Plan Changed Recommendation 2"}}</li>
+	</ul>
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{tHTML "Notifications Plan Changed Outro"}}
+</mj-text>
+{{end}}

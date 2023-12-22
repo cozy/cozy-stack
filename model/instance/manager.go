@@ -82,3 +82,19 @@ func APIManagerClient(inst *Instance) *manager.APIClient {
 
 	return manager.NewAPIClient(api.URL, api.Token)
 }
+
+var cbPlanChanged func(i *Instance)
+
+// RegisterPlanChangeCallback registers the given callback, called whenever
+// PushPlanChangeNotification is called.
+func RegisterPlanChangeCallback(cb func(*Instance)) {
+	cbPlanChanged = cb
+}
+
+// PushPlanChangeNotification calls the plan change callback for the given instance if
+// it was registered.
+func PushPlanChangeNotification(inst *Instance) {
+	if cbPlanChanged != nil {
+		cbPlanChanged(inst)
+	}
+}
