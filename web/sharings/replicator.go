@@ -3,9 +3,11 @@ package sharings
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -127,7 +129,20 @@ func FileHandler(c echo.Context) error {
 		inst.Logger().WithNamespace("replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
-	if err := s.HandleFileUpload(inst, c.Param("id"), c.Request().Body); err != nil {
+
+	create := func(fs vfs.VFS, newdoc, olddoc *vfs.FileDoc) error {
+		file, err := fs.CreateFile(newdoc, olddoc)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(file, c.Request().Body)
+		if cerr := file.Close(); cerr != nil && err == nil {
+			return cerr
+		}
+		return err
+	}
+
+	if err := s.HandleFileUpload(inst, c.Param("id"), create); err != nil {
 		inst.Logger().WithNamespace("replicator").Infof("Error on file upload: %s", err)
 		return wrapErrors(err)
 	}

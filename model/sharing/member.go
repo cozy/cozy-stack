@@ -79,6 +79,16 @@ func (m *Member) PrimaryName() string {
 	return m.Email
 }
 
+// InstanceHost returns the domain part of the Cozy URL of the member, which
+// can be used to find the instance in CouchDB. It may includes the port.
+func (m *Member) InstanceHost() string {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return ""
+	}
+	return u.Host
+}
+
 // Credentials is the struct with the secret stuff used for authentication &
 // authorization.
 type Credentials struct {

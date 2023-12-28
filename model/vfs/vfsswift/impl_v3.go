@@ -1,3 +1,6 @@
+// Package vfsswift is the implementation of the Virtual File System by using
+// Swift from the OpenStack project. The file contents are saved in the object
+// storage (Swift), and the metadata are indexed in CouchDB.
 package vfsswift
 
 import (
@@ -589,6 +592,101 @@ func (sfs *swiftVFSV3) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version)
 	}
 
 	return sfs.Indexer.DeleteVersion(version)
+}
+
+func (sfs *swiftVFSV3) CopyFileFromOtherFS(
+	newdoc, olddoc *vfs.FileDoc,
+	srcFS vfs.Fs,
+	srcDoc *vfs.FileDoc,
+) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(sfs, newdoc)
+	if err != nil {
+		return err
+	}
+	if newsize > maxsize {
+		return vfs.ErrFileTooBig
+	}
+
+	newpath, err := sfs.Indexer.FilePath(newdoc)
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
+		return vfs.ErrParentInTrash
+	}
+
+	if olddoc == nil {
+		var exists bool
+		exists, err = sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+	}
+
+	if newdoc.DocID == "" {
+		uid, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		newdoc.DocID = uid.String()
+	}
+
+	newdoc.InternalID = NewInternalID()
+
+	srcName := MakeObjectNameV3(srcDoc.DocID, srcDoc.InternalID)
+	dstName := MakeObjectNameV3(newdoc.DocID, newdoc.InternalID)
+	srcContainer := srcFS.(*swiftVFSV3).container
+	if _, err := sfs.c.ObjectCopy(sfs.ctx, srcContainer, srcName, sfs.container, dstName, nil); err != nil {
+		return err
+	}
+
+	var v *vfs.Version
+	if olddoc != nil {
+		v = vfs.NewVersion(olddoc)
+		err = sfs.Indexer.UpdateFileDoc(olddoc, newdoc)
+	} else {
+		err = sfs.Indexer.CreateNamedFileDoc(newdoc)
+	}
+	if err != nil {
+		return err
+	}
+
+	if v != nil {
+		actionV, toClean, _ := vfs.FindVersionsToClean(sfs, newdoc.DocID, v)
+		if bytes.Equal(newdoc.MD5Sum, olddoc.MD5Sum) {
+			actionV = vfs.CleanCandidateVersion
+		}
+		if actionV == vfs.KeepCandidateVersion {
+			if errv := sfs.Indexer.CreateVersion(v); errv != nil {
+				actionV = vfs.CleanCandidateVersion
+			}
+		}
+		if actionV == vfs.CleanCandidateVersion {
+			internalID := v.DocID
+			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+				internalID = parts[1]
+			}
+			objName := MakeObjectNameV3(newdoc.DocID, internalID)
+			_ = sfs.c.ObjectDelete(sfs.ctx, sfs.container, objName)
+		}
+		for _, old := range toClean {
+			_ = cleanOldVersion(sfs, newdoc.DocID, old)
+		}
+	}
+
+	if capsize > 0 && newsize >= capsize {
+		vfs.PushDiskQuotaAlert(sfs, true)
+	}
+
+	return nil
 }
 
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks

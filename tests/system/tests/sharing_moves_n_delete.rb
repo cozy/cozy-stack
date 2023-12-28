@@ -7,18 +7,21 @@ describe "A shared directory" do
     Helpers.scenario "moves_n_delete"
     Helpers.start_mailhog
 
-    # Create the instance
+    # Create the instances
     inst = Instance.create name: "Alice"
     inst_bob = Instance.create name: "Bob"
-    inst_charlie = Instance.create name: "Charlie"
+    inst_charlie = Instance.create name: "Charlie", port: inst.stack.port
 
     # Create hierarchy
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
     subdir = Folder.create inst, dir_id: folder.couch_id
-    child1 = Folder.create inst, dir_id: subdir.couch_id
-    child2 = Folder.create inst, dir_id: subdir.couch_id
-    child3 = Folder.create inst, dir_id: subdir.couch_id
+    childname1 = "c_#{Faker::Internet.slug}1"
+    childname2 = "c_#{Faker::Internet.slug}1"
+    childname3 = "c_#{Faker::Internet.slug}1"
+    child1 = Folder.create inst, dir_id: subdir.couch_id, name: childname1
+    child2 = Folder.create inst, dir_id: subdir.couch_id, name: childname2
+    child3 = Folder.create inst, dir_id: subdir.couch_id, name: childname3
     filename1 = "#{Faker::Internet.slug}1.txt"
     filename2 = "#{Faker::Internet.slug}2.txt"
     filename3 = "#{Faker::Internet.slug}3.txt"
