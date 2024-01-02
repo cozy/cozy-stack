@@ -1275,31 +1275,6 @@ msgstr "Voir les offres"
 msgid "Notifications OAuth Clients Devices Text"
 msgstr "Gérer mes appareils"
 
-msgid "Notifications Plan Changed Title"
-msgstr "Votre changement d’offre a été validé !"
-
-msgid "Notifications Plan Changed Message"
-msgstr "Cliquez ici pour relancer l’app, et appliquer les modifications."
-
-msgid "Notifications Plan Changed Greeting"
-msgstr "Bonjour,"
-
-msgid "Notifications Plan Changed Intro"
-msgstr ""
-"Nous avons le plaisir de vous confirmer que votre changement d’offre a bien été validé.\n"
-"Voici nos recommendations pour en profiter au mieux :"
-
-msgid "Notifications Plan Changed Recommendation 1"
-msgstr "Sur votre ordinateur : actualiser la page si votre Cozy est ouvert."
-
-msgid "Notifications Plan Changed Recommendation 2"
-msgstr "Sur votre smartphone (app Cozy) : fermer et relancer l’app."
-
-msgid "Notifications Plan Changed Outro"
-msgstr ""
-"N’hésitez pas à nous contacter pour toute question en lien avec les abonnements, ou l’utilisation de votre Cozy.\n"
-"Claude se fera un plaisir de vous accompagner sur tous vos sujets !"
-
 msgid "Terms of services have been updated"
 msgstr ""
 "Dans le cadre du RGPD, Cozy Cloud met à jour ses Conditions Générales "

@@ -28,9 +28,6 @@ const (
 	// NotificationOAuthClients category for sending alert when exceeding the
 	// connected OAuth clients limit.
 	NotificationOAuthClients = "oauth-clients"
-	// NotificationsPlanChanged category for sending alert when a we receive a
-	// request for a feature set (i.e. plan) change.
-	NotificationsPlanChanged = "plan-changed"
 )
 
 var (
@@ -47,12 +44,6 @@ var (
 			Collapsible:  false,
 			Stateful:     false,
 			MailTemplate: "notifications_oauthclients",
-		},
-		NotificationsPlanChanged: {
-			Description:  "Invite the user to reload their app to reload the flags after a plan change",
-			Collapsible:  false,
-			Stateful:     false,
-			MailTemplate: "notifications_plan_changed",
 		},
 	}
 )
@@ -117,20 +108,6 @@ func init() {
 			PreferredChannels: []string{"mail"},
 		}
 		PushStack(i.DomainName(), NotificationOAuthClients, n)
-	})
-
-	instance.RegisterPlanChangeCallback(func(i *instance.Instance) {
-		n := &notification.Notification{
-			Title:   i.Translate("Notifications Plan Changed Title"),
-			Message: i.Translate("Notifications Plan Changed Message"),
-			Slug:    consts.SettingsSlug,
-			Data: map[string]interface{}{
-				// For mobile push notification
-				"refresh": "true",
-			},
-			PreferredChannels: []string{"mobile"},
-		}
-		PushStack(i.DomainName(), NotificationsPlanChanged, n)
 	})
 }
 
