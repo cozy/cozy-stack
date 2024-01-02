@@ -53,7 +53,6 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/mails/notifications_diskquota
 * http://cozy.localhost:8080/dev/mails/notifications_oauthclients
 * http://cozy.localhost:8080/dev/mails/notifications_sharing
-* http://cozy.localhost:8080/dev/mails/notifications_plan_changed
 * http://cozy.localhost:8080/dev/mails/passphrase_hint
 * http://cozy.localhost:8080/dev/mails/passphrase_reset
 * http://cozy.localhost:8080/dev/mails/sharing_request

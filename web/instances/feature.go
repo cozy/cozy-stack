@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
 
 	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -68,29 +67,10 @@ func putFeatureSets(c echo.Context) error {
 		return wrapError(err)
 	}
 	sort.Strings(list)
-
-	hasNewPlan := false
-	for _, newSet := range list {
-		// Skip sponsorship sets
-		if strings.HasPrefix(newSet, "s-") {
-			continue
-		}
-
-		if !inst.HasFeatureSet(newSet) {
-			hasNewPlan = true
-			break
-		}
-	}
-
 	inst.FeatureSets = list
 	if err := instance.Update(inst); err != nil {
 		return wrapError(err)
 	}
-
-	if hasNewPlan {
-		instance.PushPlanChangeNotification(inst)
-	}
-
 	return c.JSON(http.StatusOK, inst.FeatureSets)
 }
 
