@@ -3,8 +3,10 @@
 package status
 
 import (
+	"context"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -23,7 +25,8 @@ func Status(c echo.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	ctx := c.Request().Context()
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
 
 	go func() {
 		cfg := config.GetConfig()
