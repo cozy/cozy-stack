@@ -15,6 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/notification"
+	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -604,6 +606,34 @@ func diskUsage(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+func sendNotification(c echo.Context) error {
+	domain := c.Param("domain")
+	instance, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	m := map[string]json.RawMessage{}
+	if err := json.NewDecoder(c.Request().Body).Decode(&m); err != nil {
+		return err
+	}
+
+	p := &notification.Properties{}
+	if err := json.Unmarshal(m["properties"], &p); err != nil {
+		return err
+	}
+
+	n := &notification.Notification{}
+	if err := json.Unmarshal(m["notification"], &n); err != nil {
+		return err
+	}
+
+	if err := center.PushCLI(instance.DomainName(), p, n); err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, n)
+}
+
 func showPrefix(c echo.Context) error {
 	domain := c.Param("domain")
 
@@ -730,6 +760,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.GET("/:domain/sharings/:sharing-id/unxor/:doc-id", unxorID)
+	router.POST("/:domain/notifications", sendNotification)
 
 	// Config
 	router.POST("/redis", rebuildRedis)
