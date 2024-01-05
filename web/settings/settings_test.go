@@ -74,7 +74,16 @@ func TestSettings(t *testing.T) {
 	config.UseTestFile(t)
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
-	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+		"manager_url": "http://manager.example.org",
+		"logos": map[string]interface{}{
+			"home": map[string]interface{}{
+				"light": []interface{}{
+					map[string]interface{}{"src": "/logos/main_cozy.png", "alt": "Cozy Cloud"},
+				},
+			},
+		},
+	}
 	was := conf.Subdomains
 	conf.Subdomains = config.NestedSubdomains
 	defer func() { conf.Subdomains = was }()
@@ -104,11 +113,27 @@ func TestSettings(t *testing.T) {
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
-		e.GET("/settings/context").
+		obj := e.GET("/settings/context").
 			WithCookie(sessCookie, "connected").
 			WithHeader("Accept", "application/vnd.api+json").
 			WithHeader("Authorization", "Bearer "+token).
-			Expect().Status(200)
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.ValueEqual("type", "io.cozy.settings")
+		data.ValueEqual("id", "io.cozy.settings.context")
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("manager_url", "http://manager.example.org")
+		attrs.ValueEqual("logos", map[string]interface{}{
+			"home": map[string]interface{}{
+				"light": []interface{}{
+					map[string]interface{}{"src": "/logos/main_cozy.png", "alt": "Cozy Cloud"},
+				},
+			},
+		})
 	})
 
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
@@ -240,13 +265,13 @@ func TestSettings(t *testing.T) {
 			Expect().Status(401)
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.disk-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.disk-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("used", "0")
-		attrs.ValueEqual("files", "0")
-		attrs.ValueEqual("versions", "0")
+		attrs.HasValue("used", "0")
+		attrs.HasValue("files", "0")
+		attrs.HasValue("versions", "0")
 	})
 
 	t.Run("RegisterPassphraseWrongToken", func(t *testing.T) {
@@ -286,7 +311,7 @@ func TestSettings(t *testing.T) {
 			}).
 			Expect().Status(200)
 
-		res.Cookies().Length().Equal(1)
+		res.Cookies().Length().IsEqual(1)
 		res.Cookie("cozysessid").Value().NotEmpty()
 	})
 
@@ -319,7 +344,7 @@ func TestSettings(t *testing.T) {
       }`)).
 			Expect().Status(204)
 
-		res.Cookies().Length().Equal(1)
+		res.Cookies().Length().IsEqual(1)
 		res.Cookie("cozysessid").Value().NotEmpty()
 	})
 
@@ -435,13 +460,13 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.passphrase")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.passphrase")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("salt", "me@"+testInstance.Domain)
-		attrs.ValueEqual("kdf", 0.0)
-		attrs.ValueEqual("iterations", 50000)
+		attrs.HasValue("salt", "me@"+testInstance.Domain)
+		attrs.HasValue("kdf", 0.0)
+		attrs.HasValue("iterations", 50000)
 	})
 
 	t.Run("GetCapabilities", func(t *testing.T) {
@@ -459,14 +484,14 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.capabilities")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.capabilities")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("file_versioning", true)
-		attrs.ValueEqual("can_auth_with_password", true)
-		attrs.ValueEqual("can_auth_with_magic_links", false)
-		attrs.ValueEqual("can_auth_with_oidc", false)
+		attrs.HasValue("file_versioning", true)
+		attrs.HasValue("can_auth_with_password", true)
+		attrs.HasValue("can_auth_with_magic_links", false)
+		attrs.HasValue("can_auth_with_oidc", false)
 	})
 
 	t.Run("GetInstance", func(t *testing.T) {
@@ -493,17 +518,17 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.instance")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.instance")
 
 		meta := data.Value("meta").Object()
 		instanceRev = meta.Value("rev").String().NotEmpty().Raw()
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("email", "alice@example.org")
-		attrs.ValueEqual("tz", "Europe/London")
-		attrs.ValueEqual("locale", "en")
-		attrs.ValueEqual("password_defined", true)
+		attrs.HasValue("email", "alice@example.org")
+		attrs.HasValue("tz", "Europe/London")
+		attrs.HasValue("locale", "en")
+		attrs.HasValue("password_defined", true)
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
@@ -533,16 +558,16 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.instance")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.instance")
 
 		meta := data.Value("meta").Object()
 		instanceRev = meta.Value("rev").String().NotEmpty().NotEqual(instanceRev).Raw()
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("email", "alice@example.net")
-		attrs.ValueEqual("tz", "Europe/Paris")
-		attrs.ValueEqual("locale", "fr")
+		attrs.HasValue("email", "alice@example.net")
+		attrs.HasValue("tz", "Europe/Paris")
+		attrs.HasValue("locale", "fr")
 	})
 
 	t.Run("GetUpdatedInstance", func(t *testing.T) {
@@ -558,16 +583,16 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.instance")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.instance")
 
 		meta := data.Value("meta").Object()
-		meta.ValueEqual("rev", instanceRev)
+		meta.HasValue("rev", instanceRev)
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("email", "alice@example.net")
-		attrs.ValueEqual("tz", "Europe/Paris")
-		attrs.ValueEqual("locale", "fr")
+		attrs.HasValue("email", "alice@example.net")
+		attrs.HasValue("tz", "Europe/Paris")
+		attrs.HasValue("locale", "fr")
 	})
 
 	t.Run("UpdatePassphraseWithTwoFactorAuth", func(t *testing.T) {
@@ -652,28 +677,28 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Array()
-		data.Length().Equal(2)
+		data.Length().IsEqual(2)
 
-		el := data.Element(1).Object()
-		el.ValueEqual("type", "io.cozy.oauth.clients")
-		el.ValueEqual("id", client.ClientID)
+		el := data.Value(1).Object()
+		el.HasValue("type", "io.cozy.oauth.clients")
+		el.HasValue("id", client.ClientID)
 
 		links := el.Value("links").Object()
-		links.ValueEqual("self", "/settings/clients/"+client.ClientID)
+		links.HasValue("self", "/settings/clients/"+client.ClientID)
 
 		attrs := el.Value("attributes").Object()
-		attrs.ValueEqual("client_name", client.ClientName)
-		attrs.ValueEqual("client_kind", client.ClientKind)
-		attrs.ValueEqual("client_uri", client.ClientURI)
-		attrs.ValueEqual("logo_uri", client.LogoURI)
-		attrs.ValueEqual("policy_uri", client.PolicyURI)
-		attrs.ValueEqual("software_id", client.SoftwareID)
-		attrs.ValueEqual("software_version", client.SoftwareVersion)
+		attrs.HasValue("client_name", client.ClientName)
+		attrs.HasValue("client_kind", client.ClientKind)
+		attrs.HasValue("client_uri", client.ClientURI)
+		attrs.HasValue("logo_uri", client.LogoURI)
+		attrs.HasValue("policy_uri", client.PolicyURI)
+		attrs.HasValue("software_id", client.SoftwareID)
+		attrs.HasValue("software_version", client.SoftwareVersion)
 		attrs.NotContainsKey("client_secret")
 
 		redirectURIs := attrs.Value("redirect_uris").Array()
-		redirectURIs.Length().Equal(1)
-		redirectURIs.First().String().Equal(client.RedirectURIs[0])
+		redirectURIs.Length().IsEqual(1)
+		redirectURIs.Value(0).String().IsEqual(client.RedirectURIs[0])
 	})
 
 	t.Run("RevokeClient", func(t *testing.T) {
@@ -696,7 +721,7 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Array()
-		data.Length().Equal(1)
+		data.Length().IsEqual(1)
 	})
 
 	t.Run("PatchInstanceSameParams", func(t *testing.T) {
@@ -857,10 +882,10 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.flags")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.flags")
 
-		data.Value("attributes").Object().Empty()
+		data.Value("attributes").Object().IsEmpty()
 
 		testInstance.FeatureFlags = map[string]interface{}{
 			"from_instance_flag":   true,
@@ -920,19 +945,19 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data = obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.flags")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.flags")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("from_instance_flag", true)
-		attrs.ValueEqual("from_feature_sets", true)
-		attrs.ValueEqual("from_defaults", true)
-		attrs.ValueEqual("json_object", testInstance.FeatureFlags["json_object"])
-		attrs.ValueEqual("from_multiple_source", "instance_flag")
-		attrs.ValueEqual("ratio_0", "defaults")
-		attrs.ValueEqual("ratio_0.000001", "defaults")
-		attrs.ValueEqual("ratio_0.999999", "context")
-		attrs.ValueEqual("ratio_1", "context")
+		attrs.HasValue("from_instance_flag", true)
+		attrs.HasValue("from_feature_sets", true)
+		attrs.HasValue("from_defaults", true)
+		attrs.HasValue("json_object", testInstance.FeatureFlags["json_object"])
+		attrs.HasValue("from_multiple_source", "instance_flag")
+		attrs.HasValue("ratio_0", "defaults")
+		attrs.HasValue("ratio_0.000001", "defaults")
+		attrs.HasValue("ratio_0.999999", "context")
+		attrs.HasValue("ratio_1", "context")
 	})
 
 	t.Run("ClientsLimitExceededWithoutSession", func(t *testing.T) {
@@ -968,7 +993,7 @@ func TestSettings(t *testing.T) {
 	t.Run("ClientsLimitExceededWithLimitExceeded", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
-		testutils.WithOAuthClientsLimit(t, testInstance, 0)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(0))
 
 		// Create the OAuth client for the flagship app
 		flagship := oauth.Client{
@@ -987,7 +1012,7 @@ func TestSettings(t *testing.T) {
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
 			Contains("/#/connectedDevices").
@@ -1001,11 +1026,13 @@ func TestSettings(t *testing.T) {
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
 			Contains("/#/connectedDevices").
 			Contains("http://manager.example.org")
+
+		testutils.WithFlag(t, testInstance, "flagship.iap.enabled", true)
 
 		e.GET("/settings/clients/limit-exceeded").
 			WithCookie(sessCookie, "connected").
@@ -1014,11 +1041,25 @@ func TestSettings(t *testing.T) {
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
 			Contains("/#/connectedDevices").
 			NotContains("http://manager.example.org")
+
+		e.GET("/settings/clients/limit-exceeded").
+			WithCookie(sessCookie, "connected").
+			WithQuery("isFlagship", true).
+			WithQuery("isIapAvailable", true).
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(200).
+			HasContentType("text/html", "utf-8").
+			Body().
+			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("/#/connectedDevices").
+			Contains("http://manager.example.org")
 	})
 
 	t.Run("ClientsLimitExceededWithLimitReached", func(t *testing.T) {
@@ -1027,7 +1068,7 @@ func TestSettings(t *testing.T) {
 		clients, _, err := oauth.GetConnectedUserClients(testInstance, 100, "")
 		require.NoError(t, err)
 
-		testutils.WithOAuthClientsLimit(t, testInstance, float64(len(clients)))
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(len(clients)))
 
 		e.GET("/settings/clients/limit-exceeded").
 			WithCookie(sessCookie, "connected").
@@ -1066,7 +1107,7 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 		WithCookie(sessCookie, "connected").
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(303).
-		Header("Location").Equal(testInstance.OnboardedRedirection().String())
+		Header("Location").IsEqual(testInstance.OnboardedRedirection().String())
 
 	// With onboarding
 	deeplink := "cozydrive://testinstance.com"
@@ -1147,6 +1188,6 @@ func TestRegisterPassphraseForFlagshipApp(t *testing.T) {
 
 	obj.Value("access_token").String().NotEmpty()
 	obj.Value("refresh_token").String().NotEmpty()
-	obj.ValueEqual("scope", "*")
-	obj.ValueEqual("token_type", "bearer")
+	obj.HasValue("scope", "*")
+	obj.HasValue("token_type", "bearer")
 }

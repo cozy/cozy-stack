@@ -34,6 +34,7 @@ func Translator(locale, contextName string) func(key string, vars ...interface{}
 }
 
 var boldRegexp = regexp.MustCompile(`\*\*(.*?)\*\*`)
+var newlineRegexp = regexp.MustCompile(`(\n)`)
 
 // TranslatorHTML returns a translation function of the locale specified, which
 // allow simple markup like **bold**.
@@ -42,6 +43,7 @@ func TranslatorHTML(locale, contextName string) func(key string, vars ...interfa
 		translated := Translate(key, locale, contextName, vars...)
 		escaped := template.HTMLEscapeString(translated)
 		replaced := boldRegexp.ReplaceAllString(escaped, "<strong>$1</strong>")
+		replaced = newlineRegexp.ReplaceAllString(replaced, "<br />")
 		return template.HTML(replaced)
 	}
 }

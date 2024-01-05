@@ -9,4 +9,5 @@
 # impact debian packaging files, only sblaisot and not the global
 # owner(s) will be requested for a review.
 debian/*               @sblaisot
+scripts/docker/*       @sblaisot
 scripts/packaging/*    @sblaisot

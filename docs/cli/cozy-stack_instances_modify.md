@@ -31,6 +31,7 @@ cozy-stack instances modify <domain> [flags]
       --onboarding-finished         Force the finishing of the onboarding
       --public-name string          New public name
       --settings string             New list of settings (eg offer:premium)
+      --sponsorships strings        Sponsorships of the instance (comma separated list)
       --tos string                  Update the TOS version signed
       --tos-latest string           Update the latest TOS version
       --tz string                   New timezone

@@ -14,7 +14,7 @@ jobs:
         with:
           token: ${{ secrets.COZYBOT_ACCESS_TOKEN }}
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21.x'
       - name: Install

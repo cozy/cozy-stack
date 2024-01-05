@@ -484,6 +484,70 @@ Content-Type: application/zip
 Content-Disposition: attachment; filename="alice.cozy.localhost - part001.zip"
 ```
 
+### POST /instances/:domain/notifications
+
+This endpoint allows to send a notification via the notification center. Both
+the notification declaration and its properties need to be passed in the body.
+These notifications cannot use templates defined in cozy-stack though so their
+e-mail content must be provided directly (at least in HTML).
+
+When the request is successful, the generated notification object is returned.
+
+```http
+POST /instances/alice.cozy.localhost/notifications HTTP/1.1
+Authorization: Bearer ...
+Content-Type: application/json
+```
+
+```json
+{
+    "notification": {
+        "category": "account-balance",
+        "category_id": "my-bank",
+        "title": "Your account balance is not OK",
+        "message": "Warning: we have detected a negative balance in your my-bank",
+        "priority": "high",
+        "state": "-1",
+        "preferred_channels": ["mobile"],
+        "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
+        "content_html": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
+    },
+    "properties": {
+        "description": "Alert the user when its account balance is negative",
+        "collapsible": true,
+        "multiple": true,
+        "stateful": true,
+        "default_priority": "high"
+    }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+    "_id": "c57a548c-7602-11e7-933b-6f27603d27da",
+    "_rev": "1-1f2903f9a867",
+    "source_id": "cozy/cli//account-balance/my-bank",
+    "originator": "cli",
+    "category": "account-balance",
+    "category_id": "my-bank",
+    "created_at": "2024-01-04T15:23:01.832Z",
+    "last_sent": "2024-01-04T15:23:01.832Z",
+    "title": "Your account balance is not OK",
+    "message": "Warning: we have detected a negative balance in your my-bank",
+    "priority": "high",
+    "state": "-1",
+    "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
+    "contentHTML": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
+}
+```
+
 ## Contexts
 
 ### GET /instances/contexts

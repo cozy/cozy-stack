@@ -1,3 +1,5 @@
+// Package instance is for the instance model, with domain, locale, settings,
+// etc.
 package instance
 
 import (
@@ -52,6 +54,7 @@ type Instance struct {
 	OIDCID          string   `json:"oidc_id,omitempty"`          // An identifier to check authentication from OIDC
 	FranceConnectID string   `json:"franceconnect_id,omitempty"` // An identifier to check authentication from FranceConnect
 	ContextName     string   `json:"context,omitempty"`          // The context attached to the instance
+	Sponsorships    []string `json:"sponsorships,omitempty"`     // The list of sponsorships for the instance
 	TOSSigned       string   `json:"tos,omitempty"`              // Terms of Service signed version
 	TOSLatest       string   `json:"tos_latest,omitempty"`       // Terms of Service latest version
 	AuthMode        AuthMode `json:"auth_mode,omitempty"`        // 2 factor authentication

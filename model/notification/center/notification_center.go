@@ -126,6 +126,17 @@ func PushStack(domain string, category string, n *notification.Notification) err
 	return makePush(inst, p, n)
 }
 
+// PushCLI creates and sends a new notification where the source is a CLI
+// client which provides both the notification content and its properties.
+func PushCLI(domain string, p *notification.Properties, n *notification.Notification) error {
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+	n.Originator = "cli"
+	return makePush(inst, p, n)
+}
+
 // Push creates and sends a new notification in database. This method verifies
 // the permissions associated with this creation in order to check that it is
 // granted to create a notification and to extract its source.

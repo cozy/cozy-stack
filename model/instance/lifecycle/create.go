@@ -35,6 +35,7 @@ type Options struct {
 	TOSLatest          string
 	Timezone           string
 	ContextName        string
+	Sponsorships       []string
 	Email              string
 	PublicName         string
 	Settings           string
@@ -119,6 +120,7 @@ func Create(opts *Options) (*instance.Instance, error) {
 	i.TOSSigned = opts.TOSSigned
 	i.TOSLatest = opts.TOSLatest
 	i.ContextName = opts.ContextName
+	i.Sponsorships = opts.Sponsorships
 	i.BytesDiskQuota = opts.DiskQuota
 	i.IndexViewsVersion = couchdb.IndexViewsVersion
 	opts.trace("generate secrets", func() {
@@ -310,6 +312,10 @@ func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, er
 	if contextName, ok := settings.M["context"].(string); ok {
 		opts.ContextName = contextName
 		delete(settings.M, "context")
+	}
+	if sponsorships, ok := settings.M["sponsorships"].([]string); ok {
+		opts.Sponsorships = sponsorships
+		delete(settings.M, "sponsorships")
 	}
 	if locale, ok := settings.M["locale"].(string); ok {
 		opts.Locale = locale

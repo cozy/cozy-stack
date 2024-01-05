@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -28,6 +29,10 @@ type UploadMsg struct {
 	SharingID string `json:"sharing_id"`
 	Errors    int    `json:"errors"`
 }
+
+// fileCreatorWithContent is a function that can be used to create a file in
+// the given VFS. The content comes from the function closure.
+type fileCreatorWithContent func(fs vfs.VFS, newdoc, olddoc *vfs.FileDoc) error
 
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
@@ -318,6 +323,17 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
+
+	dstInstance, err := lifecycle.GetInstance(m.InstanceHost())
+	if err == nil && onSameStack(inst, dstInstance) {
+		err := s.optimizedUploadFile(inst, dstInstance, m, fileDoc, file, resBody)
+		if err != nil {
+			inst.Logger().WithNamespace("upload").
+				Warnf("optimizedUploadFile failed to upload %s to %s (%s): %s", origFileID, m.Instance, s.ID(), err)
+		}
+		return err
+	}
+
 	content, err := fs.OpenFile(fileDoc)
 	if err != nil {
 		return err
@@ -348,6 +364,43 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	res2.Body.Close()
 	return nil
+}
+
+func onSameStack(src, dst *instance.Instance) bool {
+	var srcPort, dstPort string
+	parts := strings.SplitN(src.Domain, ":", 2)
+	if len(parts) > 1 {
+		srcPort = parts[1]
+	}
+	parts = strings.SplitN(dst.Domain, ":", 2)
+	if len(parts) > 1 {
+		dstPort = parts[1]
+	}
+	return srcPort == dstPort
+}
+
+func (s *Sharing) optimizedUploadFile(
+	srcInstance, dstInstance *instance.Instance,
+	m *Member,
+	srcFile *vfs.FileDoc,
+	dstFile map[string]interface{},
+	key KeyToUpload,
+) error {
+	srcInstance.Logger().WithNamespace("upload").
+		Debugf("optimizedUploadFile %s to %s (%s)", srcFile.ID(), m.Instance, s.ID())
+
+	create := func(fs vfs.VFS, newdoc, olddoc *vfs.FileDoc) error {
+		return fs.CopyFileFromOtherFS(newdoc, olddoc, srcInstance.VFS(), srcFile)
+	}
+
+	dstSharing, err := FindSharing(dstInstance, s.ID())
+	if err != nil {
+		return err
+	}
+	if !dstSharing.Active {
+		return ErrInvalidSharing
+	}
+	return dstSharing.HandleFileUpload(dstInstance, key.Key, create)
 }
 
 // FileDocWithRevisions is the struct of the payload for synchronizing a file
@@ -508,8 +561,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
 // the metadata was not enough.
-func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
-	defer body.Close()
+func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, create fileCreatorWithContent) error {
 	target, err := getStore().Get(inst, key)
 	if err != nil {
 		return err
@@ -533,13 +585,17 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	}
 
 	if current == nil {
-		return s.UploadNewFile(inst, target, body)
+		return s.UploadNewFile(inst, target, create)
 	}
-	return s.UploadExistingFile(inst, target, current, body)
+	return s.UploadExistingFile(inst, target, current, create)
 }
 
 // UploadNewFile is used to receive a new file.
-func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
+func (s *Sharing) UploadNewFile(
+	inst *instance.Instance,
+	target *FileDocWithRevisions,
+	create fileCreatorWithContent,
+) error {
 	inst.Logger().WithNamespace("upload").Debugf("UploadNewFile")
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
@@ -617,7 +673,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		newdoc.ReferencedBy = append(newdoc.ReferencedBy, ref)
 	}
 
-	file, err := fs.CreateFile(newdoc, nil)
+	err = create(fs, newdoc, nil)
 	if errors.Is(err, os.ErrExist) {
 		pth, errp := newdoc.Path(fs)
 		if errp != nil {
@@ -632,7 +688,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 			newdoc.DocName = name
 			newdoc.ResetFullpath()
 		}
-		file, err = fs.CreateFile(newdoc, nil)
+		err = create(fs, newdoc, nil)
 	}
 	if err != nil {
 		inst.Logger().WithNamespace("upload").
@@ -640,9 +696,9 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		return err
 	}
 	if s.NbFiles > 0 {
-		defer s.countReceivedFiles(inst)
+		s.countReceivedFiles(inst)
 	}
-	return copyFileContent(inst, file, body)
+	return nil
 }
 
 // countReceivedFiles counts the number of files received during the initial
@@ -695,7 +751,12 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 // than on content: a conflict on different content is resolved by a copy of
 // the file (which is not what we want), a conflict of name+dir_id, the higher
 // revision wins and it should be the good one in our case.
-func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+func (s *Sharing) UploadExistingFile(
+	inst *instance.Instance,
+	target *FileDocWithRevisions,
+	newdoc *vfs.FileDoc,
+	create fileCreatorWithContent,
+) error {
 	inst.Logger().WithNamespace("upload").Debugf("UploadExistingFile")
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
@@ -731,7 +792,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	conflict := detectConflict(newdoc.DocRev, chain)
 	switch conflict {
 	case LostConflict:
-		return s.uploadLostConflict(inst, target, newdoc, body)
+		return s.uploadLostConflict(inst, target, newdoc, create)
 	case WonConflict:
 		if err = s.uploadWonConflict(inst, olddoc); err != nil {
 			return err
@@ -743,11 +804,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 
 	// Easy case: only the content has changed, not its path
 	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
-		file, errf := fs.CreateFile(newdoc, olddoc)
-		if errf != nil {
-			return errf
-		}
-		return copyFileContent(inst, file, body)
+		return create(fs, newdoc, olddoc)
 	}
 
 	stash := indexer.StashRevision(false)
@@ -755,11 +812,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	tmpdoc.DocName = olddoc.DocName
 	tmpdoc.DirID = olddoc.DirID
 	tmpdoc.ResetFullpath()
-	file, err := fs.CreateFile(tmpdoc, olddoc)
-	if err != nil {
-		return err
-	}
-	if err = copyFileContent(inst, file, body); err != nil {
+	if err := create(fs, tmpdoc, olddoc); err != nil {
 		return err
 	}
 
@@ -788,7 +841,12 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 
 // uploadLostConflict manages an upload where a file is in conflict, and the
 // uploaded file version goes to a new file.
-func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+func (s *Sharing) uploadLostConflict(
+	inst *instance.Instance,
+	target *FileDocWithRevisions,
+	newdoc *vfs.FileDoc,
+	create fileCreatorWithContent,
+) error {
 	rev := target.Rev()
 	inst.Logger().WithNamespace("upload").Debugf("uploadLostConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
@@ -798,21 +856,16 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)
 	if _, err := fs.FileByID(newdoc.DocID); !errors.Is(err, os.ErrNotExist) {
-		if err != nil {
-			return err
-		}
-		body.Close()
-		return nil
+		return err
 	}
 	newdoc.DocName = conflictName(indexer, newdoc.DirID, newdoc.DocName, true)
 	newdoc.DocRev = ""
 	newdoc.ResetFullpath()
-	file, err := fs.CreateFile(newdoc, nil)
-	if err != nil {
+	if err := create(fs, newdoc, nil); err != nil {
+		inst.Logger().WithNamespace("upload").Debugf("1. loser = %#v", newdoc)
 		return err
 	}
-	inst.Logger().WithNamespace("upload").Debugf("1. loser = %#v", newdoc)
-	return copyFileContent(inst, file, body)
+	return nil
 }
 
 // uploadWonConflict manages an upload where a file is in conflict, and the

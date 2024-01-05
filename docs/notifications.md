@@ -100,7 +100,7 @@ This endpoint can be used to push a new notification to the user.
 Notifications fields are:
 
 -   `category` (string): name of the notification category
--   `category_id` (string): category name if the category is multiple
+-   `category_id` (string): name of the notification sub-category if relevant (optional)
 -   `title` (string): title of the notification
 -   `message` (string): message of of the notification (optional)
 -   `priority` (string): priority of the notification (`high` or `normal`), sent

@@ -1,3 +1,6 @@
+// Package vfsafero is the implementation of the Virtual File System by using
+// afero. Afero is a library for manipulating files and directory on the local
+// file system.
 package vfsafero
 
 import (
@@ -570,6 +573,30 @@ func (afs *aferoVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) e
 	}
 
 	return nil
+}
+
+func (afs *aferoVFS) CopyFileFromOtherFS(
+	newdoc, olddoc *vfs.FileDoc,
+	srcFS vfs.Fs,
+	srcDoc *vfs.FileDoc,
+) error {
+	content, err := srcFS.OpenFile(srcDoc)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+
+	fd, err := afs.CreateFile(newdoc, olddoc)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(fd, content)
+	errc := fd.Close()
+	if err != nil {
+		return err
+	}
+	return errc
 }
 
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence

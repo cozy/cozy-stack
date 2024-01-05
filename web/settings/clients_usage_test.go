@@ -39,7 +39,7 @@ func TestClientsUsage(t *testing.T) {
 	require.Nil(t, flagship.Create(testInstance, oauth.NotPending))
 
 	t.Run("WithoutLimit", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, -1)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(-1))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -49,18 +49,18 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
 		attrs.NotContainsKey("limit")
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", false)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", false)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitNotReached", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 2)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(2))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -70,18 +70,18 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 2)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", false)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("limit", 2)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", false)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitReached", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 1)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(1))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -91,18 +91,18 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 1)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", true)
-		attrs.ValueEqual("limitExceeded", false)
+		attrs.HasValue("limit", 1)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", true)
+		attrs.HasValue("limitExceeded", false)
 	})
 
 	t.Run("WithLimitExceeded", func(t *testing.T) {
-		testutils.WithOAuthClientsLimit(t, testInstance, 0)
+		testutils.WithFlag(t, testInstance, "cozy.oauthclients.max", float64(0))
 
 		e := testutils.CreateTestClient(t, ts.URL)
 		obj := e.GET("/settings/clients-usage").
@@ -112,13 +112,13 @@ func TestClientsUsage(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.clients-usage")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.clients-usage")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("limit", 0)
-		attrs.ValueEqual("count", 1)
-		attrs.ValueEqual("limitReached", true)
-		attrs.ValueEqual("limitExceeded", true)
+		attrs.HasValue("limit", 0)
+		attrs.HasValue("count", 1)
+		attrs.HasValue("limitReached", true)
+		attrs.HasValue("limitExceeded", true)
 	})
 }

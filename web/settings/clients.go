@@ -161,7 +161,9 @@ func (h *HTTPHandler) limitExceeded(c echo.Context) error {
 			var premiumURL string
 			if inst.HasPremiumLinksEnabled() {
 				iapEnabled, _ := flags.M["flagship.iap.enabled"].(bool)
-				if !isFlagship || iapEnabled {
+				isIapAvailable, _ := strconv.ParseBool(c.QueryParam("isIapAvailable"))
+
+				if !isFlagship || (iapEnabled && isIapAvailable) {
 					var err error
 					if premiumURL, err = inst.ManagerURL(instance.ManagerPremiumURL); err != nil {
 						inst.Logger().Errorf("Could not get instance Premium Manager URL: %s", err.Error())
