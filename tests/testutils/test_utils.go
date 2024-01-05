@@ -194,6 +194,21 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 	return &client, token
 }
 
+// GetTestAdminClient creates an oauth client and associated token with access to admin routes
+func (c *TestSetup) GetTestAdminClient() (*oauth.Client, string) {
+	inst := c.GetTestInstance()
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "client-" + c.host,
+		SoftwareID:   "github.com/cozy/cozy-stack/testing/" + c.name,
+	}
+	client.Create(inst, oauth.NotPending)
+	token, err := c.inst.MakeJWT(consts.CLIAudience, client.ClientID, "*", "", time.Now())
+	require.NoError(c.t, err, "Cannot create oauth token")
+
+	return &client, token
+}
+
 // stupidRenderer is a renderer for echo that does nothing.
 // It is used just to avoid the error "Renderer not registered" for rendering
 // error pages.

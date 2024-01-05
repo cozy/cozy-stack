@@ -36,6 +36,7 @@ type Instance struct {
 		OIDCID               string    `json:"oidc_id,omitempty"`
 		ContextName          string    `json:"context,omitempty"`
 		Sponsorships         []string  `json:"sponsorships,omitempty"`
+		FeatureSets          []string  `json:"feature_sets,omitempty"`
 		TOSSigned            string    `json:"tos,omitempty"`
 		TOSLatest            string    `json:"tos_latest,omitempty"`
 		AuthMode             int       `json:"auth_mode,omitempty"`
