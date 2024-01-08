@@ -78,6 +78,9 @@ func createHandler(c echo.Context) error {
 	if sponsorships := c.QueryParam("sponsorships"); sponsorships != "" {
 		opts.Sponsorships = strings.Split(sponsorships, ",")
 	}
+	if featureSets := c.QueryParam("feature_sets"); featureSets != "" {
+		opts.FeatureSets = strings.Split(featureSets, ",")
+	}
 	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
 		b, err := strconv.ParseBool(autoUpdate)
 		if err != nil {
