@@ -29,7 +29,7 @@ func TestNotes(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	var noteID string
+	var noteID, otherNoteID string
 	var version int64
 
 	config.UseTestFile(t)
@@ -684,6 +684,76 @@ func TestNotes(t *testing.T) {
 		assert.EqualValues(t, file.Metadata["version"], vers5)
 	})
 
+	t.Run("CreateNote with a content", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/notes").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "io.cozy.notes.documents",
+          "attributes": {
+            "title": "A note with some content",
+            "schema": {
+              "nodes": [
+                ["doc", { "content": "block+" }],
+                ["paragraph", { "content": "inline*", "group": "block" }],
+                ["text", { "group": "inline" }],
+                ["bullet_list", { "content": "list_item+", "group": "block" }],
+                ["list_item", { "content": "paragraph block*" }]
+              ],
+              "marks": [
+                ["em", {}],
+                ["strong", {}]
+              ],
+              "topNode": "doc"
+            },
+            "content": {
+              "content": [
+                {
+                  "content": [{ "text": "Hello world", "type": "text" }],
+                  "type": "paragraph"
+                }
+              ],
+              "type": "doc"
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+
+		data.ValueEqual("type", "io.cozy.files")
+		otherNoteID = data.Value("id").String().NotEmpty().Raw()
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("type", "file")
+		attrs.ValueEqual("name", "A note with some content.cozy-note")
+		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+
+		meta := attrs.Value("metadata").Object()
+		meta.ValueEqual("title", "A note with some content")
+		meta.ValueEqual("version", 0)
+		meta.Value("schema").Object().NotEmpty()
+
+		expected := map[string]interface{}{
+			"content": []interface{}{
+				map[string]interface{}{
+					"content": []interface{}{
+						map[string]interface{}{"text": "Hello world", "type": "text"},
+					},
+					"type": "paragraph",
+				},
+			},
+			"type": "doc",
+		}
+		meta.Value("content").Object().IsEqual(expected)
+	})
+
 	t.Run("UploadImage", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -719,6 +789,47 @@ func TestNotes(t *testing.T) {
 
 			data.Path("$.links.self").String().NotEmpty()
 		}
+	})
+
+	t.Run("CopyImage", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		rawFile, err := os.ReadFile("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+		require.NoError(t, err)
+
+		obj := e.POST("/notes/"+noteID+"/images").
+			WithQuery("Name", "tobecopied.jpg").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "image/jpeg").
+			WithBytes(rawFile).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		imgID := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.POST("/notes/"+imgID+"/copy").
+			WithQuery("To", otherNoteID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.ValueEqual("type", consts.NotesImages)
+		data.Value("id").String().NotEmpty().NotEqual(imgID)
+		data.Value("meta").Object().NotEmpty()
+
+		attrs := data.Value("attributes").Object()
+		attrs.ValueEqual("name", "tobecopied.jpg")
+
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.ValueEqual("mime", "image/jpeg")
+		attrs.ValueEqual("width", 440)
+		attrs.ValueEqual("height", 294)
+
+		data.Path("$.links.self").String().NotEmpty()
 	})
 
 	t.Run("GetImage", func(t *testing.T) {
@@ -812,76 +923,6 @@ func TestNotes(t *testing.T) {
 		data = obj.Value("data").Object()
 		data.ValueEqual("id", fileID)
 		data.Path("$.attributes.instance").Equal(inst.Domain)
-	})
-
-	t.Run("CreateNote with a content", func(t *testing.T) {
-		e := testutils.CreateTestClient(t, ts.URL)
-
-		obj := e.POST("/notes").
-			WithHeader("Authorization", "Bearer "+token).
-			WithHeader("Content-Type", "application/json").
-			WithBytes([]byte(`{
-        "data": {
-          "type": "io.cozy.notes.documents",
-          "attributes": {
-            "title": "A note with some content",
-            "schema": {
-              "nodes": [
-                ["doc", { "content": "block+" }],
-                ["paragraph", { "content": "inline*", "group": "block" }],
-                ["text", { "group": "inline" }],
-                ["bullet_list", { "content": "list_item+", "group": "block" }],
-                ["list_item", { "content": "paragraph block*" }]
-              ],
-              "marks": [
-                ["em", {}],
-                ["strong", {}]
-              ],
-              "topNode": "doc"
-            },
-            "content": {
-              "content": [
-                {
-                  "content": [{ "text": "Hello world", "type": "text" }],
-                  "type": "paragraph"
-                }
-              ],
-              "type": "doc"
-            }
-          }
-        }
-      }`)).
-			Expect().Status(201).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object()
-
-		data := obj.Value("data").Object()
-
-		data.ValueEqual("type", "io.cozy.files")
-		data.Value("id").String().NotEmpty()
-
-		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("type", "file")
-		attrs.ValueEqual("name", "A note with some content.cozy-note")
-		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
-
-		meta := attrs.Value("metadata").Object()
-		meta.ValueEqual("title", "A note with some content")
-		meta.ValueEqual("version", 0)
-		meta.Value("schema").Object().NotEmpty()
-
-		expected := map[string]interface{}{
-			"content": []interface{}{
-				map[string]interface{}{
-					"content": []interface{}{
-						map[string]interface{}{"text": "Hello world", "type": "text"},
-					},
-					"type": "paragraph",
-				},
-			},
-			"type": "doc",
-		}
-		meta.Value("content").Object().IsEqual(expected)
 	})
 }
 
