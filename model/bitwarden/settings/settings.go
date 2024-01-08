@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -170,6 +171,22 @@ func UpdateRevisionDate(inst *instance.Instance, settings *Settings) error {
 		inst.Logger().WithNamespace("bitwarden").
 			Infof("Cannot update revision date: %s", err)
 	}
+	return err
+}
+
+// MigrateAccountsToCiphers creates a job to copy the konnectors accounts
+// inside the bitwarden vault (and set the extension_installed flag).
+func MigrateAccountsToCiphers(inst *instance.Instance) error {
+	msg, err := job.NewMessage(map[string]interface{}{
+		"type": "accounts-to-organization",
+	})
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "migrations",
+		Message:    msg,
+	})
 	return err
 }
 

@@ -539,6 +539,25 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### POST /settings/vault
+
+This route can be used to ensure the vault is initialized. If it is not the
+case, it will migrate the accounts from the konnectors accounts to the vault
+and will set the `extension_installed` flag.
+
+#### Request
+
+```http
+POST /settings/vault HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Instance
 
 ### GET /settings/capabilities

@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
@@ -23,20 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
-
-func migrateAccountsToCiphers(inst *instance.Instance) error {
-	msg, err := job.NewMessage(map[string]interface{}{
-		"type": "accounts-to-organization",
-	})
-	if err != nil {
-		return err
-	}
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "migrations",
-		Message:    msg,
-	})
-	return err
-}
 
 // Prelogin tells to the client how many KDF iterations it must apply when
 // hashing the master password.
@@ -318,7 +303,7 @@ func getInitialCredentials(c echo.Context) error {
 		// This is the first time the bitwarden extension is installed: make sure
 		// the user gets the existing accounts into the vault.
 		// ClientKind is "web" for web apps, e.g. Settings
-		if err := migrateAccountsToCiphers(inst); err != nil {
+		if err := settings.MigrateAccountsToCiphers(inst); err != nil {
 			log.Errorf("Cannot push job for ciphers migration: %s", err)
 		}
 	}

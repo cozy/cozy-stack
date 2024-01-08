@@ -255,6 +255,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.POST("/passphrase/check", h.checkPassphrase)
 	router.GET("/hint", h.getHint)
 	router.PUT("/hint", h.updateHint)
+	router.POST("/vault", h.createVault)
 
 	router.GET("/capabilities", h.getCapabilities)
 	router.GET("/instance", h.getInstance)
