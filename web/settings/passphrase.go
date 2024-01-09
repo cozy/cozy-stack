@@ -426,3 +426,23 @@ func (h *HTTPHandler) updateHint(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusNoContent)
 }
+
+func (h *HTTPHandler) createVault(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
+		return err
+	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+
+	if !setting.ExtensionInstalled {
+		if err := settings.MigrateAccountsToCiphers(inst); err != nil {
+			return jsonapi.InternalServerError(err)
+		}
+	}
+	return c.NoContent(http.StatusNoContent)
+}
