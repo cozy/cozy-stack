@@ -498,7 +498,9 @@ func lastActivity(c echo.Context) error {
 		}
 		return nil
 	})
-	if err != nil {
+	// If the instance has not yet been onboarded, the io.cozy.sessions
+	// database will not exist.
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return err
 	}
 
