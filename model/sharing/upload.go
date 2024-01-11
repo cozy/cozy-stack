@@ -442,9 +442,23 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		return nil, err
 	}
 	defer mu.Unlock()
+	var ref SharedRef
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
+			// XXX Even if the file does not exist, it may have existed in the
+			// past and have been disociated. In that case, we need to check
+			// that what we received is not just the echo, or we will recreate
+			// a deleted file for no reason.
+			err = couchdb.GetDoc(inst, consts.Shared, sid, &ref)
+			if err == nil {
+				if sub, _ := ref.Revisions.Find(target.DocRev); sub != nil {
+					// It's just the echo, there is nothing to do
+					return nil, nil
+				}
+			} else if !couchdb.IsNotFoundError(err) {
+				return nil, err
+			}
 			if rule, _ := s.findRuleForNewFile(target.FileDoc); rule == nil {
 				return nil, ErrSafety
 			}
@@ -452,7 +466,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
-	var ref SharedRef
+
 	err = couchdb.GetDoc(inst, consts.Shared, sid, &ref)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
