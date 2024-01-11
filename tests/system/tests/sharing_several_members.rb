@@ -43,7 +43,19 @@ describe "A sharing with several members" do
     dir_bob = Folder.find_by_path inst_bob, dir_path
     opts = CozyFile.options_from_fixture(content_path, dir_id: dir_bob.couch_id)
     f2_bob = CozyFile.create inst_bob, opts
-    sleep 23
+    sleep 17
+
+    f1_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{f1.name}"
+    f1_bob = CozyFile.find_by_path inst_bob, f1_path
+    f1_bob.overwrite inst_bob
+
+    dir_charlie = Folder.find_by_path inst_charlie, dir_path
+    opts = CozyFile.options_from_fixture(content_path, dir_id: dir_charlie.couch_id, name: "conflict.txt")
+    CozyFile.create inst_charlie, opts
+    dir_dave = Folder.find_by_path inst_dave, dir_path
+    opts = CozyFile.options_from_fixture(content_path, dir_id: dir_dave.couch_id, name: "conflict.txt")
+    CozyFile.create inst_dave, opts
+    sleep 6
 
     f2_bob.remove inst_bob
     sleep 21
