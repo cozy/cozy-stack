@@ -32,11 +32,18 @@ if ! [ -x "${NODE_BIN}" ]; then
   exit 1
 fi
 
+RLIMIT_AS=4096
+NODE_OPTS=""
+
 NODE_VERSION="$(${NODE_BIN} --version)"
-if [ "${NODE_VERSION%%.*}" = "v12" ]; then
+NODE_VERSION=${NODE_VERSION%%.*}
+NODE_VERSION=${NODE_VERSION##v}
+if [ ${NODE_VERSION} -ge 20 ]; then
+  # Node 20 built-in "fetch" instanciate a wasm engine that require more than 10GB of RAM address space
+  # and nsjail limit memory by limiting the address space so we need to increase it by 10 GB
+  RLIMIT_AS=14336
+elif [ "${NODE_VERSION}" = "12" ]; then
   NODE_OPTS="--max-http-header-size=16384 --tls-min-v1.0 --http-parser=legacy"
-else
-  NODE_OPTS=""
 fi
 
 if [ -z "${COZY_JOB_ID}" ]; then
@@ -137,7 +144,7 @@ EOM
 nsjail \
   --quiet \
   --mode o \
-  --rlimit_as 2048 \
+  --rlimit_as ${RLIMIT_AS} \
   --rlimit_cpu 1000 \
   --rlimit_fsize 1024 \
   --rlimit_nofile 128 \
@@ -171,7 +178,7 @@ nsjail \
 # nsjail \
 #   --quiet \
 #   --chroot /chrootdir \
-#   --rlimit_as 2048 \
+#   --rlimit_as ${RLIMIT_AS} \
 #   --rlimit_cpu 1000 \
 #   --rlimit_fsize 1024 \
 #   --rlimit_nofile 128 \
