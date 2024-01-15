@@ -339,6 +339,11 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	rule := s.FirstFilesRule()
 	if rule != nil {
+		if rule.Mime != "" {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("GetSharingDir called for only one file: %s", s.SID)
+			return nil, ErrInternalServerError
+		}
 		dir, _ := fs.DirByID(rule.Values[0])
 		if dir != nil {
 			return dir, nil

@@ -800,7 +800,7 @@ func (s *Sharing) EndInitial(inst *instance.Instance) error {
 		M:    map[string]interface{}{"_id": s.SID},
 	}
 	realtime.GetHub().Publish(inst, realtime.EventDelete, &doc, nil)
-	if s.FirstFilesRule() != nil {
+	if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
 		if _, err := s.GetSharingDir(inst); err != nil {
 			return err
 		}
