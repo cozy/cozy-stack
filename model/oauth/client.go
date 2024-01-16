@@ -1,3 +1,6 @@
+// Package oauth declares the OAuth client, and things related to them, from
+// the certification of the flagship app to the creation of the access codes in
+// the OAuth2 flow.
 package oauth
 
 import (
@@ -663,6 +666,7 @@ func (c *Client) CreateChallenge(inst *instance.Instance) (string, error) {
 // flagship app.
 type AttestationRequest struct {
 	Platform    string `json:"platform"`
+	Issuer      string `json:"issuer"`
 	Challenge   string `json:"challenge"`
 	Attestation string `json:"attestation"`
 	KeyID       []byte `json:"keyId"`
@@ -673,7 +677,11 @@ func (c *Client) Attest(inst *instance.Instance, req AttestationRequest) error {
 	var err error
 	switch req.Platform {
 	case "android":
-		err = c.checkAndroidAttestation(inst, req)
+		if req.Issuer == "playintegrity" {
+			err = c.checkPlayIntegrityAttestation(inst, req)
+		} else {
+			err = c.checkSafetyNetAttestation(inst, req)
+		}
 	case "ios":
 		err = c.checkAppleAttestation(inst, req)
 	default:

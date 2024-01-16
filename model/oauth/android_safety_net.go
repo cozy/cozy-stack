@@ -13,15 +13,15 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-// checkAndroidAttestation will check an attestation made by the SafetyNet API.
+// checkSafetyNetAttestation will check an attestation made by the SafetyNet API.
 // Cf https://developer.android.com/training/safetynet/attestation#use-response-server
-func (c *Client) checkAndroidAttestation(inst *instance.Instance, req AttestationRequest) error {
+func (c *Client) checkSafetyNetAttestation(inst *instance.Instance, req AttestationRequest) error {
 	store := GetStore()
 	if ok := store.CheckAndClearChallenge(inst, c.ID(), req.Challenge); !ok {
 		return errors.New("invalid challenge")
 	}
 
-	token, err := jwt.Parse(req.Attestation, androidKeyFunc)
+	token, err := jwt.Parse(req.Attestation, safetyNetKeyFunc)
 	if err != nil {
 		return fmt.Errorf("cannot parse attestation: %s", err)
 	}
@@ -29,7 +29,7 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, req Attestatio
 	if !ok {
 		return errors.New("invalid claims type")
 	}
-	inst.Logger().Debugf("checkAndroidAttestation claims = %#v", claims)
+	inst.Logger().Debugf("checkSafetyNetAttestation claims = %#v", claims)
 
 	nonce, ok := claims["nonce"].(string)
 	if !ok || len(nonce) == 0 {
@@ -39,16 +39,16 @@ func (c *Client) checkAndroidAttestation(inst *instance.Instance, req Attestatio
 		return errors.New("invalid nonce")
 	}
 
-	if err := checkPackageName(claims); err != nil {
+	if err := checkSafetyNetPackageName(claims); err != nil {
 		return err
 	}
-	if err := checkCertificateDigest(claims); err != nil {
+	if err := checkSafetyNetCertificateDigest(claims); err != nil {
 		return err
 	}
 	return nil
 }
 
-func checkPackageName(claims jwt.MapClaims) error {
+func checkSafetyNetPackageName(claims jwt.MapClaims) error {
 	packageName, ok := claims["apkPackageName"].(string)
 	if !ok || len(packageName) == 0 {
 		return errors.New("missing apkPackageName")
@@ -62,7 +62,7 @@ func checkPackageName(claims jwt.MapClaims) error {
 	return fmt.Errorf("%s is not the package name of the flagship app", packageName)
 }
 
-func checkCertificateDigest(claims jwt.MapClaims) error {
+func checkSafetyNetCertificateDigest(claims jwt.MapClaims) error {
 	certDigest, ok := claims["apkCertificateDigestSha256"].([]interface{})
 	if !ok || len(certDigest) == 0 {
 		return errors.New("missing apkCertificateDigestSha256")
@@ -78,7 +78,7 @@ func checkCertificateDigest(claims jwt.MapClaims) error {
 	return errors.New("invalid certificate digest")
 }
 
-func androidKeyFunc(token *jwt.Token) (interface{}, error) {
+func safetyNetKeyFunc(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}

@@ -1,3 +1,6 @@
+// Package config is where the configuration from the configuration files, the
+// command line parameters, and the environment variables is used to fill some
+// structs, and initializes connections (to Swift for example).
 package config
 
 import (
@@ -242,10 +245,12 @@ type Notifications struct {
 
 // Flagship contains the configuration for the flagship app.
 type Flagship struct {
-	Contexts              map[string]interface{}
-	APKPackageNames       []string
-	APKCertificateDigests []string
-	AppleAppIDs           []string
+	Contexts                      map[string]interface{}
+	APKPackageNames               []string
+	APKCertificateDigests         []string
+	PlayIntegrityDecryptionKeys   []string
+	PlayIntegrityVerificationKeys []string
+	AppleAppIDs                   []string
 }
 
 // SMS contains the configuration to send notifications by SMS.
@@ -810,10 +815,12 @@ func UseViper(v *viper.Viper) error {
 			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
 		},
 		Flagship: Flagship{
-			Contexts:              v.GetStringMap("flagship.contexts"),
-			APKPackageNames:       v.GetStringSlice("flagship.apk_package_names"),
-			APKCertificateDigests: v.GetStringSlice("flagship.apk_certificate_digests"),
-			AppleAppIDs:           v.GetStringSlice("flagship.apple_app_ids"),
+			Contexts:                      v.GetStringMap("flagship.contexts"),
+			APKPackageNames:               v.GetStringSlice("flagship.apk_package_names"),
+			APKCertificateDigests:         v.GetStringSlice("flagship.apk_certificate_digests"),
+			PlayIntegrityDecryptionKeys:   v.GetStringSlice("flagship.play_integrity_decryption_keys"),
+			PlayIntegrityVerificationKeys: v.GetStringSlice("flagship.play_integrity_verification_keys"),
+			AppleAppIDs:                   v.GetStringSlice("flagship.apple_app_ids"),
 		},
 		Lock:              lock.New(lockRedis),
 		SessionStorage:    sessionsRedis,

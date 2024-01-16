@@ -40,10 +40,11 @@ routes from the stack:
 3. `POST /auth/clients/:client-id/attestation`
 
 Between 2 and 3, the app will ask the mobile OS to certify that this is really
-the flagship app. It is done via the [SafetyNet attestation
-API](https://developer.android.com/training/safetynet/attestation) on Android,
-and the [AppAttest API](https://developer.apple.com/documentation/devicecheck)
-on iOS.
+the flagship app. It is done via the [Play Integrity
+API](https://developer.android.com/google/play/integrity) (or [SafetyNet
+attestation API](https://developer.android.com/training/safetynet/attestation))
+on Android, and the [AppAttest
+API](https://developer.apple.com/documentation/devicecheck) on iOS.
 
 ## New Cozy instance
 
