@@ -1,3 +1,4 @@
+// Package cmd is where the CLI commands and options are defined.
 package cmd
 
 import (
@@ -190,6 +191,12 @@ func init() {
 
 	flags.StringSlice("flagship-apk-certificate-digests", []string{"u2eUUnfB4Y7k7eqQL7u2jiYDJeVBwZoSV3PZSs8pttc="}, "SHA-256 hash (base64 encoded) of the flagship app's signing certificate on android")
 	checkNoErr(viper.BindPFlag("flagship.apk_certificate_digests", flags.Lookup("flagship-apk-certificate-digests")))
+
+	flags.StringSlice("flagship-play-integrity-decryption-keys", []string{"bVcBAv0eO64NKIvDoRHpnTOZVxAkhMuFwRHrTEMr23U="}, "Decryption key for the Google Play Integrity API")
+	checkNoErr(viper.BindPFlag("flagship.play_integrity_decryption_keys", flags.Lookup("flagship-play-integrity-decryption-keys")))
+
+	flags.StringSlice("flagship-play-integrity-verification-keys", []string{"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElTF2uARN7oxfoDWyERYMe6QutI2NqS+CAtVmsPDIRjBBxF96fYojFVXRRsMb86PjkE21Ol+sO1YuspY+YuDRMw=="}, "Verification key for the Google Play Integrity API")
+	checkNoErr(viper.BindPFlag("flagship.play_integrity_verification_keys", flags.Lookup("flagship-play-integrity-verification-keys")))
 
 	flags.StringSlice("flagship-apple-app-ids", []string{"3AKXFMV43J.io.cozy.drive.mobile", "3AKXFMV43J.io.cozy.flagship.mobile"}, "App ID of the flagship app on iOS")
 	checkNoErr(viper.BindPFlag("flagship.apple_app_ids", flags.Lookup("flagship-apple-app-ids")))

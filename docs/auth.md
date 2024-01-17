@@ -766,8 +766,9 @@ HTTP/1.1 204 No Content
 ### POST /auth/clients/:client-id/challenge
 
 This route can be used to start the process for certifying that an app is
-really what it tells to be by using the android/iOS APIs (SafetyNet). It
-returns a nonce that must be used in the certificate.
+really what it tells to be by using the android/iOS APIs
+(PlayIntegrity/SafetyNet/AppleAttestation). It returns a nonce that must be
+used in the certificate.
 
 The client must send its registration access token to use this endpoint.
 
@@ -791,8 +792,8 @@ Content-Type: application/json
 ### POST /auth/clients/:client-id/attestation
 
 This route can be used to finish the process for certifying that an app is
-really what it tells to be by using the android/iOS APIs (SafetyNet). The
-client can send its attestation.
+really what it tells to be by using the android/iOS APIs. The client can send
+its attestation.
 
 ```http
 POST /auth/clients/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3/attestation HTTP/1.1
@@ -809,7 +810,8 @@ Content-Type: application/json
 ```
 
 Note: the `platform` parameter can be `"android"` or `"ios"`. For `ios`, a
-`"keyId"` parameter is also required.
+`"keyId"` parameter is also required. For `android`, the `"issuer"` can be
+`"playintegrity"` to use the Play Integrity API instead of the SafetyNet API.
 
 ```http
 HTTP/1.1 204 No Content

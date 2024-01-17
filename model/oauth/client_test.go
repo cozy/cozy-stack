@@ -363,6 +363,20 @@ func TestClient(t *testing.T) {
 		require.False(t, reached)
 		require.False(t, exceeded)
 	})
+
+	t.Run("checkPlayIntegrityAttestation", func(t *testing.T) {
+		config := config.GetConfig()
+		config.Flagship.PlayIntegrityDecryptionKeys = []string{"bVcBAv0eO64NKIvDoRHpnTOZVxAkhMuFwRHrTEMr23U="}
+		config.Flagship.PlayIntegrityVerificationKeys = []string{"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElTF2uARN7oxfoDWyERYMe6QutI2NqS+CAtVmsPDIRjBBxF96fYojFVXRRsMb86PjkE21Ol+sO1YuspY+YuDRMw=="}
+
+		req := oauth.AttestationRequest{
+			Platform:    "android",
+			Issuer:      "playintegrity",
+			Challenge:   "testtesttesttesttesttesttest",
+			Attestation: "eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMjU2R0NNIn0.MZIbC3rTckzCtg4rdAatQObifb3hkgJSq7-_XYTLItiCjkOyEjORlQ.-Z-6QJyEx4Bf4fNp.4vFq2XQvgQESouc5fF-oSixpYwWL2FBDzHfw1ay8nHmCXAgYfJ1yRPJm09dvJWJ5Iez4-HvfRWkwstZ4gtGYr4SX42h7L0vWkcv8yJ-12X9kUAFM_7ylpBLWiDEHnd0SeqpSeiAut_XXD81A_SncaenicMzDi0QKqeD6bdAkY67h46hnuyektYU4AsK9nVRPStaEfNiREJ017PuRVP3JQZVk4vAvg0jMfdY3BnaQ3AiEMb6uredrgP29gIIs0mGwcvc7ONyVRZ4_gSDSmfqKBjG-7HuC_rmC9CL2cUoz_JRxY0njvJi7isyfoTVZMyI4TKbUQckTKvv1Ysv11FxlTVsQqmOkVKtHOemS-G9ji23rq-LcGHG1DyriNqd3aFjMD6s1p5tFpxg7Eyc3pEm4f1Ig4S-sOC6BsTjqM_cNyqCuNbfwtQSE1pnh7yI7pcsfLPRisoODng0wTYXAqA4mvATf60eKSrPGb6vD47owlV-CbxLkG3PpVhjIpLIGknFSJnkzeIdgTR5XWUsQKVJ6ppW4mq8tO_C4KNHNISKimUhmFekG1w1rZ_suAvaC5Oz6NKn4iVMXpNm3N8nuBCkwbenN_A7334rSMHS12Ye1QRiH54VuUksUmzeUiFxaubkEJGVHwxYDN_lwQZ7bzSZbMfW46_-rK98SC3JNkif4Ucdl52fWY8Mpaf41PYGv6H7QAnY94wkAZGJPmaCzicDs5UbAiCI.fqVFSJEaY7GiqCga4-CMuw",
+		}
+		require.NoError(t, oauth.CheckPlayIntegrityAttestationForTestingPurpose(req))
+	})
 }
 
 func assertClientsLimitAlertMailWasNotSent(t *testing.T, instance *instance.Instance) {

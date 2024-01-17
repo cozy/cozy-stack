@@ -353,6 +353,10 @@ flagship:
     - io.cozy.flagship.mobile
   apk_certificate_digests:
     - 'xNnH7T1BSDh6erMzNysfakBVLLacbSbOMxVk8jEPgdU='
+  play_integrity_decryption_keys:
+    - 'bVcBAv0eO64NKIvDoRHpnTOZVxAkhMuFwRHrTEMr23U='
+  play_integrity_verification_keys:
+    - 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElTF2uARN7oxfoDWyERYMe6QutI2NqS+CAtVmsPDIRjBBxF96fYojFVXRRsMb86PjkE21Ol+sO1YuspY+YuDRMw=='
   apple_app_ids:
     - 3AKXFMV43J.io.cozy.drive.mobile
     - 3AKXFMV43J.io.cozy.flagship.mobile
