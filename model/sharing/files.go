@@ -265,13 +265,13 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 		return nil, err
 	}
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
-	parts := strings.Split(rule.Values[0], "/")
-	dir.DocID = parts[len(parts)-1]
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("CreateDirForSharing failed to make dir: %s", err)
 		return nil, err
 	}
+	parts := strings.Split(rule.Values[0], "/")
+	dir.DocID = parts[len(parts)-1]
 	dir.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
 		Type: consts.Sharings,
