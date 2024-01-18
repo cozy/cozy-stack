@@ -1381,6 +1381,10 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 			continue
 		}
 
+		if !s.Owner && m.Instance == "" {
+			continue
+		}
+
 		u, err := url.ParseRequestURI(m.Instance)
 		if err != nil {
 			checks = append(checks, map[string]interface{}{
