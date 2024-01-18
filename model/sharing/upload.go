@@ -239,6 +239,9 @@ func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error
 		query := []couchdb.IDRev{ir}
 		results, err := couchdb.BulkGetDocs(b.Instance, consts.Files, query)
 		if err != nil {
+			if couchdb.IsDeletedError(err) {
+				continue
+			}
 			return nil, 0, err
 		}
 		if len(results) == 0 {
