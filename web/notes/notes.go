@@ -422,6 +422,38 @@ func UploadImage(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, image, nil)
 }
 
+// CopyImage is the API handler for POST /notes/:id/:image-id/copy. It copies
+// an existing image to another note.
+func CopyImage(c echo.Context) error {
+	// Check permission
+	inst := middlewares.GetInstance(c)
+	srcDoc, err := inst.VFS().FileByID(c.Param("id"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.POST, srcDoc); err != nil {
+		return err
+	}
+
+	dstDoc, err := inst.VFS().FileByID(c.QueryParam("To"))
+	if err != nil {
+		return wrapError(err)
+	}
+	if err := middlewares.AllowVFS(c, permission.POST, dstDoc); err != nil {
+		return err
+	}
+
+	imageID := c.Param("id") + "/" + c.Param("image-id")
+	image, err := note.CopyImageToAnotherNote(inst, imageID, dstDoc)
+	if err != nil {
+		inst.Logger().WithNamespace("notes").Infof("Image copy has failed: %s", err)
+		return wrapError(err)
+	}
+
+	apiImage := files.NewNoteImage(inst, image)
+	return jsonapi.Data(c, http.StatusCreated, apiImage, nil)
+}
+
 // GetImage returns the image for a note, possibly resized.
 func GetImage(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -457,6 +489,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:id/open", OpenNoteURL)
 	router.PUT("/:id/schema", UpdateNoteSchema)
 	router.POST("/:id/images", UploadImage)
+	router.POST("/:id/:image-id/copy", CopyImage)
 	router.GET("/:id/images/:image-id/:secret", GetImage)
 }
 

@@ -1243,6 +1243,71 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /notes/:id/:image-id/copy
+
+Copy an existing image to another note. It is similar to `POST
+/notes/:id/images` as creating an image, but can be useful to avoid downloading
+and then reuploading the image content when the user makes a copy/paste.
+
+The `:id` and `:image-id` path parameters identify the source image. The
+destination note will be specified in the query-string, as `To`.
+
+#### Query-String
+
+| Parameter  | Description                                       |
+| ---------- | ------------------------------------------------- |
+| To         | the ID of the note where the image will be copied |
+
+#### Request
+
+```http
+POST /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/e57d2ec0-d281-0139-2bed-543d7eb8149c/copy?To=76ddf590-905e-013c-5ff2-18c04daba326 HTTP/1.1
+Accept: application/vnd.api+json
+Host: cozy.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.notes.images",
+    "id": "76ddf590-905e-013c-5ff2-18c04daba326/8d146530-905e-013c-5ff3-98b45e10905e",
+    "meta": {
+      "rev": "1-18c04dab"
+    },
+    "attributes": {
+      "name": "diagram.jpg",
+      "mime": "image/jpeg",
+      "width": 1000,
+      "height": 1000,
+      "willBeResized": true,
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2024-01-08T15:18:00Z",
+        "createdByApp": "notes",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2024-01-08T15:18:00Z",
+        "uploadedAt": "2024-01-08T15:18:00Z",
+        "uploadedOn": "https://cozy.example.com/",
+        "uploadedBy": {
+          "slug": "notes"
+        }
+      }
+    },
+    "links": {
+      "self": "/notes/76ddf590-905e-013c-5ff2-18c04daba326/images/8d146530-905e-013c-5ff3-98b45e10905e/d251f620d98e1740"
+    }
+  }
+}
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for a document with the

@@ -178,6 +178,37 @@ func (u *ImageUpload) Close() error {
 	return nil
 }
 
+// CopyImageToAnotherNote makes a copy of an image from one note to be used in
+// another note.
+func CopyImageToAnotherNote(inst *instance.Instance, imageID string, dstDoc *vfs.FileDoc) (*Image, error) {
+	// Open the existing image
+	var image Image
+	if err := couchdb.GetDoc(inst, consts.NotesImages, imageID, &image); err != nil {
+		return nil, err
+	}
+	thumb, err := inst.ThumbsFS().OpenNoteThumb(imageID, consts.NoteImageOriginalFormat)
+	if err != nil {
+		return nil, err
+	}
+	defer thumb.Close()
+
+	// Prepare the new image document
+	upload, err := NewImageUpload(inst, dstDoc, image.Name, image.Mime)
+	if err != nil {
+		return nil, err
+	}
+
+	// Copy the content
+	_, err = io.Copy(upload, thumb)
+	if cerr := upload.Close(); cerr != nil && (err == nil || errors.Is(err, io.ErrUnexpectedEOF)) {
+		err = cerr
+	}
+	if err != nil {
+		return nil, err
+	}
+	return upload.Image, nil
+}
+
 func contains(haystack []string, needle string) bool {
 	for _, v := range haystack {
 		if needle == v {
