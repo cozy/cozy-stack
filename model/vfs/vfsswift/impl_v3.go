@@ -979,10 +979,14 @@ func (f *swiftFileCreationV3) Close() (err error) {
 				internalID = parts[1]
 			}
 			objName := MakeObjectNameV3(newdoc.DocID, internalID)
-			_ = f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, objName)
+			if err := f.fs.c.ObjectDelete(f.fs.ctx, f.fs.container, objName); err != nil {
+				f.fs.log.Warnf("Could not delete previous version %q: %s", objName, err.Error())
+			}
 		}
 		for _, old := range toClean {
-			_ = cleanOldVersion(f.fs, newdoc.DocID, old)
+			if err := cleanOldVersion(f.fs, newdoc.DocID, old); err != nil {
+				f.fs.log.Warnf("Could not delete old versions for %s: %s", newdoc.DocID, err.Error())
+			}
 		}
 	}
 
