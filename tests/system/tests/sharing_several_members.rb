@@ -13,11 +13,15 @@ describe "A sharing with several members" do
     inst_charlie = Instance.create name: "Charlie"
     inst_dave = Instance.create name: "Dave"
     inst_emily = Instance.create name: "Emily"
+    inst_fred = Instance.create name: "Fred"
 
     # Create the hierarchy
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
+    sub = Folder.create inst, dir_id: folder.couch_id
     content_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(content_path, dir_id: sub.couch_id)
+    fsub = CozyFile.create inst, opts
     opts = CozyFile.options_from_fixture(content_path, dir_id: folder.couch_id)
     f1 = CozyFile.create inst, opts
 
@@ -75,16 +79,63 @@ describe "A sharing with several members" do
     Helpers.fsdiff(da, dd).must_be_empty
     Helpers.fsdiff(da, de).must_be_empty
 
+    # Create another sharing
+    folder = Folder.create inst, name: "Second"
+    folder.couch_id.wont_be_empty
+    contact_fred = Contact.create inst, given_name: "Fred"
+    sharing = Sharing.new
+    sharing.rules << Rule.sync(folder)
+    sharing.members << inst << contact_bob << contact_charlie << contact_fred
+    inst.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_bob.accept sharing
+    inst_charlie.accept sharing
+    inst_fred.accept sharing
+    sleep 12
+
+    # Move the sub folder from one sharing to another
+    sub.move_to inst, Folder::ROOT_DIR
+    sleep 1
+    sub.rename inst, "sub2"
+    sleep 1
+    fsub.rename inst, "fsub2"
+    sleep 1
+    opts = CozyFile.options_from_fixture(content_path, dir_id: sub.couch_id)
+    other = CozyFile.create inst, opts
+    other.rename inst, "other"
+    sleep 1
+    sub.move_to inst, folder.couch_id
+    sleep 12
+
+    sub.rename inst, "sub3"
+    sleep 12
+
+    # Check that the files are the same on disk
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_bob.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    dc = File.join Helpers.current_dir, inst_charlie.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    df = File.join Helpers.current_dir, inst_fred.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    Helpers.fsdiff(da, db).must_be_empty
+    Helpers.fsdiff(da, dc).must_be_empty
+    Helpers.fsdiff(da, df).must_be_empty
+
     assert_equal inst.check, []
     assert_equal inst_bob.check, []
     assert_equal inst_charlie.check, []
     assert_equal inst_dave.check, []
     assert_equal inst_emily.check, []
+    assert_equal inst_fred.check, []
 
     inst.remove
     inst_bob.remove
     inst_charlie.remove
     inst_dave.remove
     inst_emily.remove
+    inst_fred.remove
   end
 end
