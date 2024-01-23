@@ -15,6 +15,7 @@ var service Service
 // - [Mock] for the tests
 type Service interface {
 	SaveInstance(inst *instance.Instance, cmd *SaveCmd) error
+	HasBlockingSubscription(inst *instance.Instance) (bool, error)
 }
 
 func Init(contexts map[string]config.ClouderyConfig) Service {

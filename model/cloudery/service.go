@@ -38,16 +38,10 @@ type SaveCmd struct {
 
 // SaveInstance data into the cloudery matching the instance context.
 func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error {
-	cfg, ok := s.contexts[inst.ContextName]
-	if !ok {
-		cfg, ok = s.contexts[config.DefaultInstanceContext]
+	client, err := s.getClient(inst)
+	if err != nil {
+		return err
 	}
-
-	if !ok {
-		return fmt.Errorf("%w: tried %q and %q", ErrInvalidContext, inst.ContextName, config.DefaultInstanceContext)
-	}
-
-	client := manager.NewAPIClient(cfg.API.URL, cfg.API.Token)
 
 	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, map[string]interface{}{
@@ -59,4 +53,38 @@ func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) er
 	}
 
 	return nil
+}
+
+func (s *ClouderyService) HasBlockingSubscription(inst *instance.Instance) (bool, error) {
+	client, err := s.getClient(inst)
+	if err != nil {
+		return false, err
+	}
+
+	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
+	res, err := client.Get(url)
+	if err != nil {
+		return false, fmt.Errorf("request failed: %w", err)
+	}
+
+	return hasBlockingSubscription(res), nil
+}
+
+func hasBlockingSubscription(clouderyInstance map[string]interface{}) bool {
+	return clouderyInstance["has_blocking_subscription"] == true
+}
+
+func (s *ClouderyService) getClient(inst *instance.Instance) (*manager.APIClient, error) {
+	cfg, ok := s.contexts[inst.ContextName]
+	if !ok {
+		cfg, ok = s.contexts[config.DefaultInstanceContext]
+	}
+
+	if !ok {
+		return nil, fmt.Errorf("%w: tried %q and %q", ErrInvalidContext, inst.ContextName, config.DefaultInstanceContext)
+	}
+
+	client := manager.NewAPIClient(cfg.API.URL, cfg.API.Token)
+
+	return client, nil
 }

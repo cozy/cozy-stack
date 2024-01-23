@@ -19,6 +19,7 @@ type Service interface {
 	ResendEmailUpdate(inst *instance.Instance) error
 	ConfirmEmailUpdate(inst *instance.Instance, tok string) error
 	CancelEmailUpdate(inst *instance.Instance) error
+	GetExternalTies(inst *instance.Instance) (*ExternalTies, error)
 }
 
 func Init(

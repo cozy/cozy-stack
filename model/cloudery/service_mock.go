@@ -25,3 +25,9 @@ func NewMock(t *testing.T) *Mock {
 func (m *Mock) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }
+
+func (m *Mock) HasBlockingSubscription(inst *instance.Instance) (bool, error) {
+	args := m.Called(inst)
+
+	return args.Bool(0), args.Error(1)
+}

@@ -23,6 +23,10 @@ var (
 	ErrNoPendingEmail = errors.New("no pending email")
 )
 
+type ExternalTies struct {
+	HasBlockingSubscription bool `json:"has_blocking_subscription"`
+}
+
 // Storage used to persiste and fetch settings data.
 type Storage interface {
 	setInstanceSettings(db prefixer.Prefixer, doc *couchdb.JSONDoc) error
@@ -243,4 +247,16 @@ func (s *SettingsService) CancelEmailUpdate(inst *instance.Instance) error {
 	}
 
 	return nil
+}
+
+func (s *SettingsService) GetExternalTies(inst *instance.Instance) (*ExternalTies, error) {
+	hasBlockingSubscription, err := s.cloudery.HasBlockingSubscription(inst)
+	if err != nil {
+		return nil, err
+	}
+
+	ties := ExternalTies{
+		HasBlockingSubscription: hasBlockingSubscription,
+	}
+	return &ties, nil
 }

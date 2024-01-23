@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/cloudery"
@@ -343,4 +344,43 @@ func Test_ResendEmailUpdate_with_no_pending_email(t *testing.T) {
 
 	err := svc.ResendEmailUpdate(&inst)
 	assert.ErrorIs(t, err, ErrNoPendingEmail)
+}
+
+func Test_GetExternalTies(t *testing.T) {
+	emailerSvc := emailer.NewMock(t)
+	instSvc := instance.NewMock(t)
+	tokenSvc := token.NewMock(t)
+	clouderySvc := cloudery.NewMock(t)
+	storage := newStorageMock(t)
+
+	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	t.Run("with blocking subscription", func(t *testing.T) {
+		clouderySvc.On("HasBlockingSubscription", &inst).Return(true, nil).Once()
+
+		ties, err := svc.GetExternalTies(&inst)
+		assert.NoError(t, err)
+		assert.EqualExportedValues(t, *ties, ExternalTies{HasBlockingSubscription: true})
+	})
+
+	t.Run("without blocking subscription", func(t *testing.T) {
+		clouderySvc.On("HasBlockingSubscription", &inst).Return(false, nil).Once()
+
+		ties, err := svc.GetExternalTies(&inst)
+		assert.NoError(t, err)
+		assert.EqualExportedValues(t, *ties, ExternalTies{HasBlockingSubscription: false})
+	})
+
+	t.Run("with error from cloudery", func(t *testing.T) {
+		unauthorizedError := errors.New("unauthorized")
+		clouderySvc.On("HasBlockingSubscription", &inst).Return(false, unauthorizedError).Once()
+
+		ties, err := svc.GetExternalTies(&inst)
+		assert.ErrorIs(t, err, unauthorizedError)
+		assert.Nil(t, ties)
+	})
 }

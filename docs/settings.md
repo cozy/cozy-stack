@@ -617,6 +617,47 @@ Accept: application/vnd.api+json
 No permissions are required to access this route, but the request needs to be
 authenticated (webapp token, OAuth token, etc.).
 
+### GET /settings/external-ties
+
+List ties between the instance and external services such as a subscription
+vendor (e.g. mobile app stores).
+The current possible ties are:
+
+- `has_blocking_subscription` is true when the instance is linked to a premium
+  subscription paid via a third-party vendor that does not let us cancel the
+  subscription ourselves and requires it to be cancelled by the customer
+  themselves.
+
+#### Request
+
+```http
+GET /settings/external-ties HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.external-ties",
+        "attributes": {
+            "has_blocking_subscription": false
+        },
+        "links": {
+            "self": "/settings/external-ties"
+        }
+    }
+}
+```
+
+#### Permissions
+
+No permissions are required to access this route, but the request needs to be
+made from an authenticated Web session or Webapp.
+
 ### GET /settings/instance
 
 If the user is logged in, display all instance settings.
