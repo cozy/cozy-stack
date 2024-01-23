@@ -430,7 +430,7 @@ func (h *HTTPHandler) updateHint(c echo.Context) error {
 func (h *HTTPHandler) createVault(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenCiphers); err != nil {
 		return err
 	}
 
