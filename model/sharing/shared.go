@@ -301,6 +301,11 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 			rev := file.Rev()
 			if ref.Rev() == "" {
 				ref.Revisions = &RevsTree{Rev: rev}
+			} else if !removed {
+				chain, err := addMissingRevsToChain(inst, &ref, []string{rev})
+				if err == nil {
+					ref.Revisions.InsertChain(chain)
+				}
 			}
 			docs = append(docs, ref)
 		}
