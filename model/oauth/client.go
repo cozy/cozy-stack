@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/registry"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -648,6 +649,29 @@ func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
 			Error: "internal_server_error",
 		}
 	}
+
+	var last *time.Time
+	if at, ok := c.LastRefreshedAt.(string); ok {
+		if t, err := time.Parse(time.RFC3339Nano, at); err == nil {
+			last = &t
+		}
+	}
+	if at, ok := c.SynchronizedAt.(string); ok {
+		if t, err := time.Parse(time.RFC3339Nano, at); err == nil {
+			if last == nil || last.Before(t) {
+				last = &t
+			}
+		}
+	}
+	if last != nil {
+		if i.LastActivityFromDeletedOAuthClients == nil || i.LastActivityFromDeletedOAuthClients.Before(*last) {
+			i.LastActivityFromDeletedOAuthClients = last
+			if err := couchdb.UpdateDoc(prefixer.GlobalPrefixer, i); err != nil {
+				i.Logger().Warnf("Cannot update last activity for %q: %s", i.Domain, err)
+			}
+		}
+	}
+
 	return nil
 }
 

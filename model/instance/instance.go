@@ -108,6 +108,10 @@ type Instance struct {
 	// FeatureSets is a list of feature sets from the manager
 	FeatureSets []string `json:"feature_sets,omitempty"`
 
+	// LastActivityFromDeletedOAuthClients is the date of the last activity for
+	// OAuth clients that have been deleted
+	LastActivityFromDeletedOAuthClients *time.Time `json:"last_activity_from_deleted_oauth_clients,omitempty"`
+
 	vfs              vfs.VFS
 	contextualDomain string
 }
