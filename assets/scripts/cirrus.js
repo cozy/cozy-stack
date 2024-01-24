@@ -1,7 +1,7 @@
-(function (w, d) {
+;(function (w, d) {
   // On android, change the address bar color to match the page background
   const paperColor = getComputedStyle(d.body).getPropertyValue(
-    '--paperBackgroundColor'
+    '--paperBackgroundColor',
   )
   if (paperColor) {
     const themeColor = d.querySelector('meta[name=theme-color]')
@@ -57,10 +57,10 @@
       event.preventDefault()
       expand.classList.toggle('expanded')
 
-      if (expand.getAttribute("aria-expanded") === "true") {
-        expand.setAttribute("aria-expanded", "false")
+      if (expand.getAttribute('aria-expanded') === 'true') {
+        expand.setAttribute('aria-expanded', 'false')
       } else {
-        expand.setAttribute("aria-expanded", "true")
+        expand.setAttribute('aria-expanded', 'true')
       }
     })
   }

@@ -1,4 +1,4 @@
-(function (w, d) {
+;(function (w, d) {
   if (!w.fetch || !w.Headers) return
 
   const twofaForm = d.getElementById('two-factor-form')
@@ -64,7 +64,7 @@
             ) {
               storage.setItem(
                 'trusted-device-token',
-                body.two_factor_trusted_device_token
+                body.two_factor_trusted_device_token,
               )
             }
             const tooltip = twofaField.querySelector('.invalid-tooltip')

@@ -1,4 +1,4 @@
-(function (w, d) {
+;(function (w, d) {
   const form = d.getElementsByTagName('form')[0]
   const passInput = d.getElementById('password')
   const passTip = d.getElementById('password-tooltip')
@@ -12,12 +12,12 @@
       indicator.setAttribute('aria-valuenow', pct)
       indicator.setAttribute(
         'class',
-        `progress-bar w-${pct} pass-${strength.label}`
+        `progress-bar w-${pct} pass-${strength.label}`,
       )
       passInput.classList.remove('is-invalid')
       passTip && passTip.classList.remove('text-error')
     },
-    false
+    false,
   )
 
   form.addEventListener('submit', function (event) {

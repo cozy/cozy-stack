@@ -12,7 +12,10 @@ function listenToRealtimeOAuthClientsUpdates(w, d) {
   socket.onopen = () => {
     const authMsg = JSON.stringify({ method: 'AUTH', payload: token })
     socket.send(authMsg)
-    const subscribeMsg = JSON.stringify({ method: 'SUBSCRIBE', payload: { type: 'io.cozy.oauth.clients' } })
+    const subscribeMsg = JSON.stringify({
+      method: 'SUBSCRIBE',
+      payload: { type: 'io.cozy.oauth.clients' },
+    })
     socket.send(subscribeMsg)
   }
   socket.onerror = (err) => {
@@ -27,7 +30,7 @@ function listenToRealtimeOAuthClientsUpdates(w, d) {
   }
 }
 
-(function (w, d) {
+;(function (w, d) {
   listenToRealtimeOAuthClientsUpdates(w, d)
 
   const refreshBtn = d.querySelector('#refresh-btn')

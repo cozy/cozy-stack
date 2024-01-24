@@ -1,4 +1,4 @@
-(function (d) {
+;(function (d) {
   var visible = false
   var input = d.getElementById('password')
   var button = d.getElementById('password-visibility-button')
@@ -22,7 +22,7 @@
       'title',
       visible
         ? button.getAttribute('data-hide')
-        : button.getAttribute('data-show')
+        : button.getAttribute('data-show'),
     )
 
     input.focus()

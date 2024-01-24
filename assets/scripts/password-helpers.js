@@ -1,4 +1,4 @@
-(function (w) {
+;(function (w) {
   // Return given password strength as an object {percentage, label}
   function getStrength(password) {
     if (!password && password !== '') {
@@ -149,7 +149,7 @@
     return subtle
       .importKey('raw', masterKey, { name: 'AES-CBC' }, false, ['encrypt'])
       .then((impKey) =>
-        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, encKey)
+        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, encKey),
       )
       .then((encrypted) => {
         const iv64 = fromBufferToB64(iv)
@@ -192,7 +192,7 @@
         ])
       })
       .then((impKey) =>
-        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, privateKey)
+        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, privateKey),
       )
       .then((encrypted) => {
         encryptedKey = encrypted

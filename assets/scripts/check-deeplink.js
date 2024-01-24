@@ -90,7 +90,7 @@ function check(uri, failCb) {
   }
 }
 
-(function (window) {
+;(function (window) {
   let params = new URLSearchParams(document.location.search.substring(1))
 
   const fallbackUri = params.get('fallback_uri')
