@@ -473,6 +473,9 @@ func lastActivity(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 	last := time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC)
+	if inst.LastActivityFromDeletedOAuthClients != nil {
+		last = *inst.LastActivityFromDeletedOAuthClients
+	}
 
 	err = couchdb.ForeachDocs(inst, consts.SessionsLogins, func(_ string, data json.RawMessage) error {
 		var entry session.LoginEntry
