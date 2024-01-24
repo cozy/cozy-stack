@@ -65,3 +65,13 @@ func (m *Mock) ConfirmEmailUpdate(inst *instance.Instance, tok string) error {
 func (m *Mock) CancelEmailUpdate(inst *instance.Instance) error {
 	return m.Called(inst).Error(0)
 }
+
+func (m *Mock) GetExternalTies(inst *instance.Instance) (*ExternalTies, error) {
+	args := m.Called(inst)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).(*ExternalTies), args.Error(1)
+}
