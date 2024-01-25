@@ -5,5 +5,7 @@
     "node": true
   },
   "extends": "eslint:recommended",
-  "rules": {}
+  "rules": {
+    "no-extra-semi": 0
+  }
 }
