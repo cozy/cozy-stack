@@ -119,6 +119,12 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
+	if s.FirstFilesRule() != nil {
+		if err := s.AddUploadTrigger(inst); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
+		}
+	}
 	if err := s.InitialReplication(inst, m); err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
@@ -126,14 +132,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		if s.FirstFilesRule() != nil {
 			s.retryWorker(inst, "share-upload", 1) // 1, so that it will start after share-replicate
 		}
-	} else {
-		if s.FirstFilesRule() == nil {
-			return
-		}
-		if err := s.AddUploadTrigger(inst); err != nil {
-			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
-		}
+	} else if s.FirstFilesRule() != nil {
 		if err := s.InitialUpload(inst, m); err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on initial upload (%s): %s", s.SID, err)
