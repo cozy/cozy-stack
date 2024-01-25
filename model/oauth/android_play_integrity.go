@@ -203,9 +203,17 @@ func checkPlayIntegrityCertificateDigest(claims jwt.MapClaims) error {
 		if digest == certDigest[0] {
 			return nil
 		}
+		// XXX Google was using standard base64 for SafetyNet, but the safe-URL
+		// variant for Play Integrity...
+		urlSafeDigest := strings.TrimRight(digest, "=")
+		urlSafeDigest = strings.ReplaceAll(urlSafeDigest, "+", "-")
+		urlSafeDigest = strings.ReplaceAll(urlSafeDigest, "/", "_")
+		if urlSafeDigest == certDigest[0] {
+			return nil
+		}
 	}
 	logger.WithNamespace("oauth").
-		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest)
+		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest[0])
 	return errors.New("invalid certificate digest")
 }
 

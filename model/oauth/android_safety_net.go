@@ -74,7 +74,7 @@ func checkSafetyNetCertificateDigest(claims jwt.MapClaims) error {
 		}
 	}
 	logger.WithNamespace("oauth").
-		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest)
+		Debugf("Invalid certificate digest, expected %s, got %s", digests[0], certDigest[0])
 	return errors.New("invalid certificate digest")
 }
 
