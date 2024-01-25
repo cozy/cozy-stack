@@ -340,7 +340,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		}
 
 		// Delete the trigger associated with the job (if any) when we receive a
-		// ErrBadTrigger.
+		// BadTriggerError.
 		if job.TriggerID != "" && globalJobSystem != nil {
 			if _, ok := errRun.(BadTriggerError); ok {
 				_ = globalJobSystem.DeleteTrigger(job, job.TriggerID)
