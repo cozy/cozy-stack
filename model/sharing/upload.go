@@ -472,10 +472,19 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 
 	err = couchdb.GetDoc(inst, consts.Shared, sid, &ref)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
+		if !couchdb.IsNotFoundError(err) {
+			return nil, err
+		}
+		// XXX It happens that the job for creating the io.cozy.shared has
+		// been lost (stack restart for example), and we need to do
+		// something to avoid having the sharing stuck. The most efficient
+		// way to do that is to check that the file is actually in the
+		// sharing directory, and if it is the case, to create the missing
+		// io.cozy.shared.
+		ref, err = s.fixMissingShared(inst, current)
+		if err != nil {
 			return nil, ErrSafety
 		}
-		return nil, err
 	}
 	if infos, ok := ref.Infos[s.SID]; !ok || (infos.Removed && !infos.Dissociated) {
 		return nil, ErrSafety

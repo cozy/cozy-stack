@@ -95,6 +95,13 @@ describe "A folder" do
     child1_charlie = Folder.find inst_charlie, child1_charlie_id
     assert_equal child1_charlie.name, child1_bob.name
 
+    # Check that the stack is not stuck when an io.cozy.shared has not been created
+    shared_bob = Helpers.couch.get_doc inst_bob.domain, "io.cozy.shared", "io.cozy.files%2f#{file_bob.couch_id}"
+    shared_bob["_deleted"] = true
+    Helpers.couch.update_doc inst_bob.domain, "io.cozy.shared", shared_bob
+    file.overwrite inst_alice
+    sleep 12
+
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst_alice.domain, folder.name
     db = File.join Helpers.current_dir, inst_bob.domain,
