@@ -247,7 +247,7 @@ func (b *batchUpload) findNextFileToUpload() (map[string]interface{}, int, error
 		if len(results) == 0 {
 			b.Instance.Logger().WithNamespace("upload").
 				Warnf("missing results for bulk get %v", query)
-			return nil, 0, ErrInternalServerError
+			continue
 		}
 		if results[0]["_deleted"] == true {
 			b.Instance.Logger().WithNamespace("upload").
