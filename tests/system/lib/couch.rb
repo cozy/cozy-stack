@@ -49,7 +49,7 @@ class Couch
     opts = {
       content_type: "application/json"
     }
-    id = doc["_id"]
+    id = doc["_id"].gsub("/", "%2F")
     doctype = doctype.gsub(/\W/, '-')
     @client["/#{prefix domain}%2F#{doctype}/#{id}"].put(doc.to_json, opts)
   end

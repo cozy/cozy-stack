@@ -552,6 +552,38 @@ func extractDocReferenceFromID(id string) *couchdb.DocReference {
 	return &ref
 }
 
+func (s *Sharing) fixMissingShared(inst *instance.Instance, fileDoc *vfs.FileDoc) (SharedRef, error) {
+	var ref SharedRef
+	ref.SID = consts.Files + "/" + fileDoc.ID()
+	ref.Revisions = &RevsTree{Rev: fileDoc.Rev()}
+
+	rule, ruleIndex := s.findRuleForNewFile(fileDoc)
+	if rule == nil {
+		return ref, ErrSafety
+	}
+
+	sharingDir, err := s.GetSharingDir(inst)
+	if err != nil {
+		return ref, err
+	}
+	fs := inst.VFS()
+	pth, err := fileDoc.Path(fs)
+	if err != nil || !strings.HasPrefix(pth, sharingDir.Fullpath+"/") {
+		return ref, ErrSafety
+	}
+
+	ref.Infos = map[string]SharedInfo{
+		s.SID: {
+			Rule:    ruleIndex,
+			Binary:  true,
+			Removed: false,
+		},
+	}
+
+	err = couchdb.CreateNamedDoc(inst, &ref)
+	return ref, err
+}
+
 // CheckShared will scan all the io.cozy.shared documents and check their
 // revision tree for inconsistencies.
 func CheckShared(inst *instance.Instance) ([]*CheckSharedError, error) {
