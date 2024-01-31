@@ -14,7 +14,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag_name="${GITHUB_REF##*/}"
-          gh release create "$tag_name" --target "$GITHUB_SHA"
+          gh release create "$tag_name" --target "$GITHUB_SHA"  --title "$tag_name" --notes "Release $tag_name"
   publish_binaries:
     runs-on: ubuntu-22.04
     needs: create_release
