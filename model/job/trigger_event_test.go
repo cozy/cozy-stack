@@ -36,7 +36,7 @@ func TestTrigger(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					defer wg.Done()
 					var msg string
 					if err := ctx.UnmarshalMessage(&msg); err != nil {

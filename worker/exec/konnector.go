@@ -185,7 +185,7 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 	return true, nil
 }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (string, func(), error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *job.TaskContext, i *instance.Instance) (string, func(), error) {
 	cleanDir := func() {}
 
 	// Reset the errors from previous runs on retries
@@ -283,7 +283,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 
 // ensureFolderToSave tries hard to give a folder to the konnector where it can
 // write its files if it needs to do so.
-func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *instance.Instance, acc *account.Account) error {
+func (w *konnectorWorker) ensureFolderToSave(ctx *job.TaskContext, inst *instance.Instance, acc *account.Account) error {
 	fs := inst.VFS()
 	msg := w.msg
 
@@ -533,7 +533,7 @@ func (w *konnectorWorker) Slug() string {
 	return w.slug
 }
 
-func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
+func (w *konnectorWorker) PrepareCmdEnv(ctx *job.TaskContext, i *instance.Instance) (cmd string, env []string, err error) {
 	parameters := w.man.Parameters()
 
 	accountTypes, err := account.FindAccountTypesBySlug(w.slug, i.ContextName)
@@ -589,11 +589,11 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	return
 }
 
-func (w *konnectorWorker) Logger(ctx *job.WorkerContext) logger.Logger {
+func (w *konnectorWorker) Logger(ctx *job.TaskContext) logger.Logger {
 	return ctx.Logger().WithField("slug", w.slug)
 }
 
-func (w *konnectorWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error {
+func (w *konnectorWorker) ScanOutput(ctx *job.TaskContext, i *instance.Instance, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -648,7 +648,7 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *konnectorWorker) Commit(ctx *job.WorkerContext, errjob error) error {
+func (w *konnectorWorker) Commit(ctx *job.TaskContext, errjob error) error {
 	log := w.Logger(ctx)
 	if w.msg != nil {
 		log = log.WithField("account_id", w.msg.Account)

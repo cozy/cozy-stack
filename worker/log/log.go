@@ -18,7 +18,7 @@ func init() {
 }
 
 // Worker is the worker that just logs its message (useful for debugging)
-func Worker(ctx *job.WorkerContext) error {
+func Worker(ctx *job.TaskContext) error {
 	var msg string
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err

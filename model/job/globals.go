@@ -1,3 +1,6 @@
+// Package job is for the scheduling and execution of asynchronous jobs via the
+// workers. The scheduling is done via the triggers. The jobs are put in queues
+// before being processed by a worker.
 package job
 
 import (

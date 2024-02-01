@@ -38,7 +38,8 @@ func devMailsHandler(c echo.Context) error {
 	data := devData(c)
 	j := &job.Job{JobID: "1", Domain: data["Domain"].(string)}
 	inst := middlewares.GetInstance(c)
-	ctx := job.NewWorkerContext("0", j, inst)
+	ctx, cancel := job.NewTaskContext("0", j, inst)
+	defer cancel()
 	_, parts, err := mails.RenderMail(ctx, name, layout, locale, recipientName, data)
 	if err != nil {
 		return err

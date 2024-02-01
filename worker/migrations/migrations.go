@@ -62,7 +62,7 @@ type message struct {
 	Type string `json:"type"`
 }
 
-func worker(ctx *job.WorkerContext) error {
+func worker(ctx *job.TaskContext) error {
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -87,7 +87,7 @@ func worker(ctx *job.WorkerContext) error {
 	}
 }
 
-func commit(ctx *job.WorkerContext, err error) error {
+func commit(ctx *job.TaskContext, err error) error {
 	var msg message
 	var migrationType string
 
