@@ -246,7 +246,7 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 		if err != nil {
 			return err
 		}
-		if n == root {
+		if n == root && doc.Attrs.Type == consts.DirType {
 			return nil
 		}
 
