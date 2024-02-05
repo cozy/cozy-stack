@@ -287,6 +287,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		return err
 	}
 	origFileID := file["_id"].(string)
+	origFileRev := file["_rev"].(string)
 	s.TransformFileToSent(file, creds.XorKey, ruleIndex)
 	xoredFileID := file["_id"].(string)
 	body, err := json.Marshal(file)
@@ -334,6 +335,12 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	fileDoc, err := fs.FileByID(origFileID)
 	if err != nil {
 		return err
+	}
+	// If the wrong revision is returned, we should abort and retry later. It
+	// can be caused by CouchDB eventual consistency, or by a change between
+	// when the changes feed was fetched and when the file is loaded.
+	if fileDoc.Rev() != origFileRev {
+		return ErrInternalServerError
 	}
 
 	dstInstance, err := lifecycle.GetInstance(m.InstanceHost())
