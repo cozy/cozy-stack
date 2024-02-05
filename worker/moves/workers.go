@@ -30,7 +30,7 @@ func init() {
 
 // ExportWorker is the worker responsible for creating an export of the
 // instance.
-func ExportWorker(c *job.WorkerContext) error {
+func ExportWorker(c *job.TaskContext) error {
 	var opts move.ExportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err
@@ -67,7 +67,7 @@ func ExportWorker(c *job.WorkerContext) error {
 
 // ImportWorker is the worker responsible for inserting the data from an export
 // inside an instance.
-func ImportWorker(c *job.WorkerContext) error {
+func ImportWorker(c *job.TaskContext) error {
 	var opts move.ImportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err

@@ -30,7 +30,7 @@ var mailTemplater MailTemplater
 var sendMail = doSendMail
 
 // SendMail is the sendmail worker function.
-func SendMail(ctx *job.WorkerContext) error {
+func SendMail(ctx *job.TaskContext) error {
 	opts := mail.Options{}
 	err := ctx.UnmarshalMessage(&opts)
 	if err != nil {
@@ -165,7 +165,7 @@ func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
 	}, nil
 }
 
-func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
+func doSendMail(ctx *job.TaskContext, opts *mail.Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
@@ -263,7 +263,7 @@ func addPart(mail *gomail.Message, part *mail.Part) error {
 	return nil
 }
 
-func sendSupportMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
+func sendSupportMail(ctx *job.TaskContext, opts *mail.Options, domain string) error {
 	email := gomail.NewMessage()
 	dialerOptions := opts.Dialer
 	if dialerOptions == nil {

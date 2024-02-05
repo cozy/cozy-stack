@@ -84,7 +84,7 @@ func TestMemBroker(t *testing.T) {
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					if !assert.NoError(t, err) {
@@ -161,7 +161,7 @@ func TestMemBroker(t *testing.T) {
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					assert.Error(t, err)
@@ -192,7 +192,7 @@ func TestMemBroker(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					<-ctx.Done()
 					w.Done()
 					return ctx.Err()
@@ -224,7 +224,7 @@ func TestMemBroker(t *testing.T) {
 				MaxExecCount: maxExecCount,
 				Timeout:      1 * time.Millisecond,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					<-ctx.Done()
 					w.Done()
 					count++
@@ -258,7 +258,7 @@ func TestMemBroker(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: maxExecCount,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					w.Done()
 					panic("oops")
 				},
@@ -288,7 +288,7 @@ func TestMemBroker(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: 1,
 				RetryDelay:   1 * time.Millisecond,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					var i int
 					if err := ctx.UnmarshalMessage(&i); err != nil {
 						return err
@@ -319,7 +319,7 @@ func TestMemBroker(t *testing.T) {
 			{
 				WorkerType:  "thumbnail",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					return nil
 				},
 			},

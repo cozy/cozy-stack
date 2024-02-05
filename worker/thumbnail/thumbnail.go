@@ -64,7 +64,7 @@ func init() {
 }
 
 // Worker is a worker that creates thumbnails for photos and images.
-func Worker(ctx *job.WorkerContext) error {
+func Worker(ctx *job.TaskContext) error {
 	var msg ImageMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -139,7 +139,7 @@ type thumbnailMsg struct {
 
 // WorkerCheck is a worker function that checks all the images to generate
 // missing thumbnails.
-func WorkerCheck(ctx *job.WorkerContext) error {
+func WorkerCheck(ctx *job.TaskContext) error {
 	var msg thumbnailMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -218,7 +218,7 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 	return &meta, nil
 }
 
-func generateSingleThumbnail(ctx *job.WorkerContext, img *vfs.FileDoc, format string) error {
+func generateSingleThumbnail(ctx *job.TaskContext, img *vfs.FileDoc, format string) error {
 	if ok := checkByteSize(img); !ok {
 		return nil
 	}
@@ -252,7 +252,7 @@ func generateSingleThumbnail(ctx *job.WorkerContext, img *vfs.FileDoc, format st
 	return err
 }
 
-func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
+func generateThumbnails(ctx *job.TaskContext, img *vfs.FileDoc) error {
 	if ok := checkByteSize(img); !ok {
 		return nil
 	}
@@ -311,7 +311,7 @@ func checkByteSize(img *vfs.FileDoc) bool {
 	return img.ByteSize < limit
 }
 
-func recGenerateThumb(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
+func recGenerateThumb(ctx *job.TaskContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
@@ -360,7 +360,7 @@ func recGenerateThumb(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID string, format string, env []string) error {
+func generateThumb(ctx *job.TaskContext, in io.Reader, out io.Writer, fileID string, format string, env []string) error {
 	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
 	if convertCmd == "" {
 		convertCmd = "convert"
@@ -410,7 +410,7 @@ func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
 	return i.ThumbsFS().RemoveThumbs(img, vfs.ThumbnailFormatNames)
 }
 
-func resizeNoteImage(ctx *job.WorkerContext, img *note.Image) error {
+func resizeNoteImage(ctx *job.TaskContext, img *note.Image) error {
 	fs := ctx.Instance.ThumbsFS()
 	in, err := fs.OpenNoteThumb(img.ID(), consts.NoteImageOriginalFormat)
 	if err != nil {

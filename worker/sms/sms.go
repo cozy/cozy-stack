@@ -31,7 +31,7 @@ func init() {
 }
 
 // Worker is the worker that send SMS.
-func Worker(ctx *job.WorkerContext) error {
+func Worker(ctx *job.TaskContext) error {
 	var msg center.SMS
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -45,7 +45,7 @@ func Worker(ctx *job.WorkerContext) error {
 	return err
 }
 
-func sendSMS(ctx *job.WorkerContext, msg *center.SMS) error {
+func sendSMS(ctx *job.TaskContext, msg *center.SMS) error {
 	inst := ctx.Instance
 	cfg, err := getConfig(inst)
 	if err != nil {

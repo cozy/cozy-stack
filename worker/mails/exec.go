@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {
+func execMjml(ctx *job.TaskContext, template []byte) ([]byte, error) {
 	log := ctx.Logger()
 
 	workDir, cleanDir, err := prepareWorkDir()
@@ -72,7 +72,7 @@ func prepareWorkDir() (string, func(), error) {
 	return workDir, cleanDir, err
 }
 
-func prepareCmdEnv(ctx *job.WorkerContext) (string, []string) {
+func prepareCmdEnv(ctx *job.TaskContext) (string, []string) {
 	cmd := config.GetConfig().Konnectors.Cmd
 	env := []string{
 		"COZY_URL=" + ctx.Instance.PageURL("/", nil),

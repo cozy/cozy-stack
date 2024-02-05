@@ -16,7 +16,7 @@ type zipMessage struct {
 }
 
 // WorkerZip is a worker that creates zip archives.
-func WorkerZip(ctx *job.WorkerContext) error {
+func WorkerZip(ctx *job.TaskContext) error {
 	msg := &zipMessage{}
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err

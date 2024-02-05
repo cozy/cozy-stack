@@ -25,7 +25,7 @@ var defaultTimeout = 300 * time.Second
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType: "konnector",
-		WorkerStart: func(ctx *job.WorkerContext) (*job.WorkerContext, error) {
+		WorkerStart: func(ctx *job.TaskContext) (*job.TaskContext, error) {
 			return ctx.WithCookie(&konnectorWorker{}), nil
 		},
 		BeforeHook:   beforeHookKonnector,
@@ -39,7 +39,7 @@ func init() {
 
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType: "service",
-		WorkerStart: func(ctx *job.WorkerContext) (*job.WorkerContext, error) {
+		WorkerStart: func(ctx *job.TaskContext) (*job.TaskContext, error) {
 			return ctx.WithCookie(&serviceWorker{}), nil
 		},
 		WorkerFunc:   worker,
@@ -52,15 +52,15 @@ func init() {
 
 type execWorker interface {
 	Slug() string
-	PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, cleanDir func(), err error)
-	PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
-	ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error
+	PrepareWorkDir(ctx *job.TaskContext, i *instance.Instance) (workDir string, cleanDir func(), err error)
+	PrepareCmdEnv(ctx *job.TaskContext, i *instance.Instance) (cmd string, env []string, err error)
+	ScanOutput(ctx *job.TaskContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
-	Logger(ctx *job.WorkerContext) logger.Logger
-	Commit(ctx *job.WorkerContext, errjob error) error
+	Logger(ctx *job.TaskContext) logger.Logger
+	Commit(ctx *job.TaskContext, errjob error) error
 }
 
-func worker(ctx *job.WorkerContext) (err error) {
+func worker(ctx *job.TaskContext) (err error) {
 	worker := ctx.Cookie().(execWorker)
 
 	if ctx.Instance == nil {
@@ -146,11 +146,11 @@ func worker(ctx *job.WorkerContext) (err error) {
 	return worker.Error(ctx.Instance, err)
 }
 
-func commit(ctx *job.WorkerContext, errjob error) error {
+func commit(ctx *job.TaskContext, errjob error) error {
 	return ctx.Cookie().(execWorker).Commit(ctx, errjob)
 }
 
-func ctxToTimeLimit(ctx *job.WorkerContext) string {
+func ctxToTimeLimit(ctx *job.TaskContext) string {
 	var limit float64
 	if deadline, ok := ctx.Deadline(); ok {
 		limit = time.Until(deadline).Seconds()
@@ -177,7 +177,7 @@ const MaxPayloadSizeInEnvVar = 100000
 
 const payloadFilename = "cozy_payload.json"
 
-func preparePayload(ctx *job.WorkerContext, workDir string) (string, error) {
+func preparePayload(ctx *job.TaskContext, workDir string) (string, error) {
 	var payload string
 	if p, err := ctx.UnmarshalPayload(); err == nil {
 		marshaled, err := json.Marshal(p)

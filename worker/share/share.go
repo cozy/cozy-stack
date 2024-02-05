@@ -45,7 +45,7 @@ func init() {
 
 // WorkerTrack is used to update the io.cozy.shared database when a document
 // that matches a sharing rule is created/updated/remove
-func WorkerTrack(ctx *job.WorkerContext) error {
+func WorkerTrack(ctx *job.TaskContext) error {
 	var msg sharing.TrackMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -61,7 +61,7 @@ func WorkerTrack(ctx *job.WorkerContext) error {
 
 // WorkerReplicate is used for the replication of documents to the other
 // members of a sharing.
-func WorkerReplicate(ctx *job.WorkerContext) error {
+func WorkerReplicate(ctx *job.TaskContext) error {
 	var msg sharing.ReplicateMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -79,7 +79,7 @@ func WorkerReplicate(ctx *job.WorkerContext) error {
 }
 
 // WorkerUpload is used to upload files for a sharing
-func WorkerUpload(ctx *job.WorkerContext) error {
+func WorkerUpload(ctx *job.TaskContext) error {
 	var msg sharing.UploadMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -93,5 +93,5 @@ func WorkerUpload(ctx *job.WorkerContext) error {
 	if !s.Active {
 		return nil
 	}
-	return s.Upload(ctx.Instance, msg.Errors)
+	return s.Upload(ctx.Instance, ctx.Context, msg.Errors)
 }

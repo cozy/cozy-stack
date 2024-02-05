@@ -19,7 +19,7 @@ type unzipMessage struct {
 }
 
 // WorkerUnzip is a worker that unzip a file.
-func WorkerUnzip(ctx *job.WorkerContext) error {
+func WorkerUnzip(ctx *job.TaskContext) error {
 	msg := &unzipMessage{}
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err

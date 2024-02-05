@@ -113,7 +113,7 @@ func Init() (err error) {
 }
 
 // Worker is the worker that send push messages.
-func Worker(ctx *job.WorkerContext) error {
+func Worker(ctx *job.TaskContext) error {
 	var msg center.PushMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -194,7 +194,7 @@ func Worker(ctx *job.WorkerContext) error {
 	return nil
 }
 
-func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func push(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
 	switch c.NotificationPlatform {
 	case oauth.PlatformFirebase, "android", "ios":
 		return pushToFirebase(ctx, c, msg)
@@ -209,7 +209,7 @@ func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) erro
 
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
-func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func pushToFirebase(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
 	slug := msg.Slug()
 	if c.Flagship {
 		slug = ""
@@ -306,7 +306,7 @@ func getFirebaseClient(slug, contextName string) *fcm.Client {
 	return fcmClient
 }
 
-func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func pushToAPNS(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
 	if iosClient == nil {
 		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil
@@ -348,7 +348,7 @@ func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage
 	return nil
 }
 
-func pushToHuawei(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func pushToHuawei(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
 	if huaweiClient == nil {
 		ctx.Logger().Warn("Could not send Huawei notification: not configured")
 		return nil

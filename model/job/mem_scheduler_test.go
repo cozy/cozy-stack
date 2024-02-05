@@ -56,7 +56,7 @@ func TestMemScheduler(t *testing.T) {
 				Concurrency:  1,
 				MaxExecCount: 1,
 				Timeout:      1 * time.Millisecond,
-				WorkerFunc: func(_ *job.WorkerContext) error {
+				WorkerFunc: func(_ *job.TaskContext) error {
 					atomic.AddInt32(&called, 1)
 					return nil
 				},

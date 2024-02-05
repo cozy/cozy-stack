@@ -51,8 +51,9 @@ func TestExecKonnector(t *testing.T) {
 			Message:    msg,
 			WorkerType: "konnector",
 		})
-		ctx := job.NewWorkerContext("id", j, nil).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, nil)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		assert.Error(t, err)
 		assert.Equal(t, "Instance not found", err.Error())
@@ -67,8 +68,9 @@ func TestExecKonnector(t *testing.T) {
 			Message:    msg,
 			WorkerType: "konnector",
 		})
-		ctx := job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		assert.Error(t, err)
 		assert.Equal(t, "Application is not installed", err.Error())
@@ -102,8 +104,9 @@ func TestExecKonnector(t *testing.T) {
 		})
 
 		config.GetConfig().Konnectors.Cmd = ""
-		ctx := job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "exec")
@@ -196,8 +199,9 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		})
 
 		config.GetConfig().Konnectors.Cmd = tmpScript
-		ctx := job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		assert.NoError(t, err)
 
@@ -282,8 +286,9 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		})
 
 		config.GetConfig().Konnectors.Cmd = tmpScript
-		ctx := job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		assert.NoError(t, err)
 
@@ -373,8 +378,9 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		})
 
 		config.GetConfig().Konnectors.Cmd = tmpScript
-		ctx := job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel := job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		require.NoError(t, err)
 
@@ -412,8 +418,9 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		config.GetConfig().Konnectors.Cmd = tmpScript
 		defer func() { config.GetConfig().Konnectors.Cmd = origCmd }()
 
-		ctx = job.NewWorkerContext("id", j, inst).
-			WithCookie(&konnectorWorker{})
+		ctx, cancel = job.NewTaskContext("id", j, inst)
+		defer cancel()
+		ctx = ctx.WithCookie(&konnectorWorker{})
 		err = worker(ctx)
 		require.NoError(t, err)
 

@@ -21,7 +21,7 @@ func init() {
 }
 
 // WorkerClean is used to clean unused OAuth clients.
-func WorkerClean(ctx *job.WorkerContext) error {
+func WorkerClean(ctx *job.TaskContext) error {
 	var msg oauth.CleanMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err

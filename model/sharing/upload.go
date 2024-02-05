@@ -35,7 +35,7 @@ type UploadMsg struct {
 type fileCreatorWithContent func(fs vfs.VFS, newdoc, olddoc *vfs.FileDoc) error
 
 // Upload starts uploading files for this sharing
-func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
+func (s *Sharing) Upload(inst *instance.Instance, ctx context.Context, errors int) error {
 	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID+"/upload")
 	if err := mu.Lock(); err != nil {
 		return err
@@ -63,7 +63,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	for i := range members {
 		m := members[i]
 		g.Go(func() error {
-			more, err := s.UploadBatchTo(inst, m, lastTry)
+			more, err := s.UploadBatchTo(inst, ctx, m, lastTry)
 			if err != nil {
 				return err
 			}
@@ -92,7 +92,8 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	}
 	defer mu.Unlock()
 
-	more, err := s.UploadBatchTo(inst, m, false)
+	ctx := context.Background()
+	more, err := s.UploadBatchTo(inst, ctx, m, false)
 	if err != nil {
 		return err
 	}
@@ -134,7 +135,12 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 
 // UploadBatchTo uploads a batch of files to the given member. It returns false
 // if there are no more files to upload to this member currently.
-func (s *Sharing) UploadBatchTo(inst *instance.Instance, m *Member, lastTry bool) (bool, error) {
+func (s *Sharing) UploadBatchTo(
+	inst *instance.Instance,
+	ctx context.Context,
+	m *Member,
+	lastTry bool,
+) (bool, error) {
 	if m.Instance == "" {
 		return false, ErrInvalidURL
 	}
@@ -161,6 +167,9 @@ func (s *Sharing) UploadBatchTo(inst *instance.Instance, m *Member, lastTry bool
 	}()
 
 	for i := 0; i < BatchSize; i++ {
+		if ctx.Err() == context.Canceled {
+			return true, nil
+		}
 		file, ruleIndex, err := batch.findNextFileToUpload()
 		if err != nil {
 			return false, err

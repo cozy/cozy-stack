@@ -38,7 +38,7 @@ func init() {
 // WorkerTrashFiles is a worker to remove files in Swift after they have been
 // removed from CouchDB. It is used when cleaning the trash, as removing a lot
 // of files from Swift can take some time.
-func WorkerTrashFiles(ctx *job.WorkerContext) error {
+func WorkerTrashFiles(ctx *job.TaskContext) error {
 	opts := vfs.TrashJournal{}
 	if err := ctx.UnmarshalMessage(&opts); err != nil {
 		return err
@@ -56,7 +56,7 @@ func WorkerTrashFiles(ctx *job.WorkerContext) error {
 // directories that are in the trash for too long. The threshold for deletion
 // is configurable per context in the config file, via the
 // fs.auto_clean_trashed_after parameter.
-func WorkerCleanOldTrashed(ctx *job.WorkerContext) error {
+func WorkerCleanOldTrashed(ctx *job.TaskContext) error {
 	cfg := config.GetConfig().Fs.AutoCleanTrashedAfter
 	after, ok := cfg[ctx.Instance.ContextName]
 	if !ok || after == "" {

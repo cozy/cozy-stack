@@ -35,14 +35,14 @@ type (
 
 	// WorkerStartFunc is optionally called at the beginning of the each job
 	// process and can produce a context value.
-	WorkerStartFunc func(ctx *WorkerContext) (*WorkerContext, error)
+	WorkerStartFunc func(ctx *TaskContext) (*TaskContext, error)
 
 	// WorkerFunc represent the work function that a worker should implement.
-	WorkerFunc func(ctx *WorkerContext) error
+	WorkerFunc func(ctx *TaskContext) error
 
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
-	WorkerCommit func(ctx *WorkerContext, errjob error) error
+	WorkerCommit func(ctx *TaskContext, errjob error) error
 
 	// WorkerBeforeHook is an optional method that is always called before the
 	// job is being pushed into the queue. It can be useful to skip the job
@@ -79,12 +79,13 @@ type (
 		Conf    *WorkerConfig
 		jobs    chan *Job
 		running uint32
+		closing chan struct{}
 		closed  chan struct{}
 	}
 
-	// WorkerContext is a context.Context passed to the worker for each job
+	// TaskContext is a context.Context passed to the worker for each task
 	// execution and contains specific values from the job.
-	WorkerContext struct {
+	TaskContext struct {
 		context.Context
 		Instance *instance.Instance
 		job      *Job
@@ -110,9 +111,9 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 	return &cloned
 }
 
-// NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *WorkerContext {
-	ctx := context.Background()
+// NewTaskContext returns a context.Context usable by a worker.
+func NewTaskContext(workerID string, job *Job, inst *instance.Instance) (*TaskContext, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.Background())
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
 	entry := logger.WithDomain(job.Domain).WithNamespace("jobs")
 
@@ -125,17 +126,17 @@ func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *Worke
 		WithField("job_id", job.ID()).
 		WithField("worker_id", workerID)
 
-	return &WorkerContext{
+	return &TaskContext{
 		Context:  ctx,
 		Instance: inst,
 		job:      job,
 		log:      log,
 		id:       id,
-	}
+	}, cancel
 }
 
 // WithTimeout returns a clone of the context with a different deadline.
-func (c *WorkerContext) WithTimeout(timeout time.Duration) (*WorkerContext, context.CancelFunc) {
+func (c *TaskContext) WithTimeout(timeout time.Duration) (*TaskContext, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(c.Context, timeout)
 	newCtx := c.clone()
 	newCtx.Context = ctx
@@ -143,24 +144,24 @@ func (c *WorkerContext) WithTimeout(timeout time.Duration) (*WorkerContext, cont
 }
 
 // WithCookie returns a clone of the context with a new cookie value.
-func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
+func (c *TaskContext) WithCookie(cookie interface{}) *TaskContext {
 	newCtx := c.clone()
 	newCtx.cookie = cookie
 	return newCtx
 }
 
 // SetNoRetry set the no-retry flag to prevent a retry on the next execution.
-func (c *WorkerContext) SetNoRetry() {
+func (c *TaskContext) SetNoRetry() {
 	c.noRetry = true
 }
 
 // NoRetry returns the no-retry flag.
-func (c *WorkerContext) NoRetry() bool {
+func (c *TaskContext) NoRetry() bool {
 	return c.noRetry
 }
 
-func (c *WorkerContext) clone() *WorkerContext {
-	return &WorkerContext{
+func (c *TaskContext) clone() *TaskContext {
+	return &TaskContext{
 		Context:  c.Context,
 		Instance: c.Instance,
 		job:      c.job,
@@ -171,22 +172,22 @@ func (c *WorkerContext) clone() *WorkerContext {
 }
 
 // ID returns a unique identifier for the worker context.
-func (c *WorkerContext) ID() string {
+func (c *TaskContext) ID() string {
 	return c.id
 }
 
 // Logger return the logger associated with the worker context.
-func (c *WorkerContext) Logger() logger.Logger {
+func (c *TaskContext) Logger() logger.Logger {
 	return c.log
 }
 
 // UnmarshalMessage unmarshals the message contained in the worker context.
-func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
+func (c *TaskContext) UnmarshalMessage(v interface{}) error {
 	return c.job.Message.Unmarshal(v)
 }
 
 // UnmarshalEvent unmarshals the event contained in the worker context.
-func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
+func (c *TaskContext) UnmarshalEvent(v interface{}) error {
 	if c.job == nil || c.job.Event == nil {
 		return errors.New("jobs: does not have an event associated")
 	}
@@ -194,7 +195,7 @@ func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 }
 
 // UnmarshalPayload unmarshals the payload contained in the worker context.
-func (c *WorkerContext) UnmarshalPayload() (map[string]interface{}, error) {
+func (c *TaskContext) UnmarshalPayload() (map[string]interface{}, error) {
 	var payload map[string]interface{}
 	if err := c.job.Payload.Unmarshal(&payload); err != nil {
 		return nil, err
@@ -204,18 +205,18 @@ func (c *WorkerContext) UnmarshalPayload() (map[string]interface{}, error) {
 
 // TriggerID returns the possible trigger identifier responsible for launching
 // the job.
-func (c *WorkerContext) TriggerID() (string, bool) {
+func (c *TaskContext) TriggerID() (string, bool) {
 	triggerID := c.job.TriggerID
 	return triggerID, triggerID != ""
 }
 
 // Cookie returns the cookie associated with the worker context.
-func (c *WorkerContext) Cookie() interface{} {
+func (c *TaskContext) Cookie() interface{} {
 	return c.cookie
 }
 
 // Manual returns if the job was started manually
-func (c *WorkerContext) Manual() bool {
+func (c *TaskContext) Manual() bool {
 	return c.job.Manual
 }
 
@@ -233,6 +234,7 @@ func (w *Worker) Start(jobs chan *Job) error {
 		return ErrClosed
 	}
 	w.jobs = jobs
+	w.closing = make(chan struct{}, w.Conf.Concurrency)
 	w.closed = make(chan struct{})
 	if w.Conf.WorkerInit != nil {
 		if err := w.Conf.WorkerInit(); err != nil {
@@ -242,7 +244,7 @@ func (w *Worker) Start(jobs chan *Job) error {
 	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		joblog.Debugf("Start worker %s", name)
-		go w.work(name, w.closed)
+		go w.work(name)
 	}
 	return nil
 }
@@ -254,6 +256,9 @@ func (w *Worker) Shutdown(ctx context.Context) error {
 	}
 	close(w.jobs)
 	for i := 0; i < w.Conf.Concurrency; i++ {
+		w.closing <- struct{}{}
+	}
+	for i := 0; i < w.Conf.Concurrency; i++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -263,7 +268,7 @@ func (w *Worker) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (w *Worker) work(workerID string, closed chan<- struct{}) {
+func (w *Worker) work(workerID string) {
 	for job := range w.jobs {
 		domain := job.Domain
 		if domain == "" {
@@ -291,64 +296,83 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 				}
 			}
 		}
-		parentCtx := NewWorkerContext(workerID, job, inst)
-		if err := job.AckConsumed(); err != nil {
-			parentCtx.Logger().Errorf("error acking consume job: %s",
-				err.Error())
-			continue
-		}
-		t := &task{
-			w:    w,
-			ctx:  parentCtx,
-			job:  job,
-			conf: w.defaultedConf(job.Options),
-		}
-		var runResultLabel string
-		var errAck error
+		w.runTask(inst, workerID, job)
+	}
+	joblog.Debugf("%s: worker shut down", workerID)
+	w.closed <- struct{}{}
+}
+
+func (w *Worker) runTask(inst *instance.Instance, workerID string, job *Job) {
+	taskCtx, cancel := NewTaskContext(workerID, job, inst)
+	defer cancel()
+	if err := job.AckConsumed(); err != nil {
+		taskCtx.Logger().Errorf("error acking consume job: %s",
+			err.Error())
+		return
+	}
+	t := &task{
+		w:    w,
+		ctx:  taskCtx,
+		job:  job,
+		conf: w.defaultedConf(job.Options),
+	}
+
+	ch := make(chan error)
+	go func() {
 		errRun := t.run()
 		if errRun == ErrAbort {
 			errRun = nil
 		}
-		if errRun != nil {
-			parentCtx.Logger().Errorf("error while performing job: %s",
-				errRun.Error())
-			runResultLabel = metrics.WorkerExecResultErrored
-			errAck = job.Nack(errRun.Error())
-		} else {
-			runResultLabel = metrics.WorkerExecResultSuccess
-			errAck = job.Ack()
-		}
+		ch <- errRun
+	}()
 
-		// Distinguish classic job execution and konnector/account deletion
-		msg := struct {
-			Account        string `json:"account"`
-			AccountRev     string `json:"account_rev"`
-			Konnector      string `json:"konnector"`
-			AccountDeleted bool   `json:"account_deleted"`
-		}{}
-		err := json.Unmarshal(job.Message, &msg)
+	var errRun error
+	select {
+	case <-w.closing:
+		cancel()
+		errRun = <-ch
+	case errRun = <-ch:
+	}
 
-		if err == nil && w.Type == "konnector" && msg.AccountDeleted {
-			metrics.WorkerKonnectorExecDeleteCounter.WithLabelValues(w.Type, runResultLabel).Inc()
-		} else {
-			metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
-		}
+	var runResultLabel string
+	var errAck error
+	if errRun != nil {
+		taskCtx.Logger().Errorf("error while performing job: %s",
+			errRun.Error())
+		runResultLabel = metrics.WorkerExecResultErrored
+		errAck = job.Nack(errRun.Error())
+	} else {
+		runResultLabel = metrics.WorkerExecResultSuccess
+		errAck = job.Ack()
+	}
 
-		if errAck != nil {
-			parentCtx.Logger().Errorf("error while acking job done: %s",
-				errAck.Error())
-		}
+	// Distinguish classic job execution and konnector/account deletion
+	msg := struct {
+		Account        string `json:"account"`
+		AccountRev     string `json:"account_rev"`
+		Konnector      string `json:"konnector"`
+		AccountDeleted bool   `json:"account_deleted"`
+	}{}
+	err := json.Unmarshal(job.Message, &msg)
 
-		// Delete the trigger associated with the job (if any) when we receive a
-		// BadTriggerError.
-		if job.TriggerID != "" && globalJobSystem != nil {
-			if _, ok := errRun.(BadTriggerError); ok {
-				_ = globalJobSystem.DeleteTrigger(job, job.TriggerID)
-			}
+	if err == nil && w.Type == "konnector" && msg.AccountDeleted {
+		metrics.WorkerKonnectorExecDeleteCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+	} else {
+		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+	}
+
+	if errAck != nil {
+		taskCtx.Logger().Errorf("error while acking job done: %s",
+			errAck.Error())
+	}
+
+	// Delete the trigger associated with the job (if any) when we receive a
+	// BadTriggerError.
+	if job.TriggerID != "" && globalJobSystem != nil {
+		if _, ok := errRun.(BadTriggerError); ok {
+			_ = globalJobSystem.DeleteTrigger(job, job.TriggerID)
 		}
 	}
-	joblog.Debugf("%s: worker shut down", workerID)
-	closed <- struct{}{}
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
@@ -379,7 +403,7 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 
 type task struct {
 	w    *Worker
-	ctx  *WorkerContext
+	ctx  *TaskContext
 	conf *WorkerConfig
 	job  *Job
 
@@ -489,7 +513,7 @@ func (t *task) run() (err error) {
 	return
 }
 
-func (t *task) exec(ctx *WorkerContext) (err error) {
+func (t *task) exec(ctx *TaskContext) (err error) {
 	var slot struct{}
 	if slots != nil {
 		slot = <-slots

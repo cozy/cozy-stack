@@ -47,7 +47,7 @@ func TestRedisBroker(t *testing.T) {
 			{
 				WorkerType:  "test",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					var msg string
 					err := ctx.UnmarshalMessage(&msg)
 					if !assert.NoError(t, err) {
@@ -127,7 +127,7 @@ func TestRedisBroker(t *testing.T) {
 			{
 				WorkerType:  "thumbnail",
 				Concurrency: 4,
-				WorkerFunc: func(ctx *job.WorkerContext) error {
+				WorkerFunc: func(ctx *job.TaskContext) error {
 					return nil
 				},
 			},

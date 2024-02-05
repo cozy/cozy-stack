@@ -39,7 +39,7 @@ func TestOidc(t *testing.T) {
 	wl := &job.WorkerConfig{
 		WorkerType:  "sendmail",
 		Concurrency: 4,
-		WorkerFunc: func(ctx *job.WorkerContext) error {
+		WorkerFunc: func(ctx *job.TaskContext) error {
 			return nil
 		},
 	}

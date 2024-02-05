@@ -22,7 +22,7 @@ func init() {
 // WorkerPersist is used to persist a note to its file in the VFS. The changes
 // (title and steps) on a notes can happen with a high frequency, and
 // debouncing them allows to not make too many calls to Swift.
-func WorkerPersist(ctx *job.WorkerContext) error {
+func WorkerPersist(ctx *job.TaskContext) error {
 	var msg note.DebounceMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
