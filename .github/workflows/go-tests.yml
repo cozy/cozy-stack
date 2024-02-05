@@ -67,4 +67,4 @@ jobs:
         run: go test -p 1 -timeout 5m -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
