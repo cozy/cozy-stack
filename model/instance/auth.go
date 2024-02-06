@@ -219,5 +219,8 @@ func (i *Instance) CreateEmailVerifiedCode() (string, error) {
 
 // CheckEmailVerifiedCode will return true if the email verified code is valid.
 func (i *Instance) CheckEmailVerifiedCode(code string) bool {
+	if code == "" {
+		return false
+	}
 	return GetStore().CheckEmailVerifiedCode(i, code)
 }

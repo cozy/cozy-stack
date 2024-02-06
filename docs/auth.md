@@ -228,6 +228,20 @@ Then, the client can retry by sending the two-factor token and code:
 }
 ```
 
+**Note:** if the two-factor authentication is enabled, and the cloudery has
+already verified the email address, a parameter `email_verified_code` can be sent
+to skip another 2FA code sent by mail.
+
+
+```json
+{
+  "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "email_verified_code": "987456321"
+}
+```
+
 **Note:** if the OAuth client has not been certified as the flagship app,
 this request will return:
 
