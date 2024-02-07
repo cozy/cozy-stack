@@ -1,13 +1,16 @@
 package jobs
 
 import (
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -16,6 +19,35 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func setupRouter(t *testing.T, inst *instance.Instance, emailer emailer.Emailer) *httptest.Server {
+	t.Helper()
+
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	group := handler.Group("/jobs", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(context echo.Context) error {
+			context.Set("instance", inst)
+
+			tok := middlewares.GetRequestToken(context)
+			// Forcing the token parsing to have the "claims" parameter in the
+			// context (in production, it is done via
+			// middlewares.CheckInstanceBlocked)
+			_, err := middlewares.ParseJWT(context, inst, tok)
+			if err != nil {
+				return err
+			}
+
+			return next(context)
+		}
+	})
+
+	NewHTTPHandler(emailer).Register(group)
+	ts := httptest.NewServer(handler)
+	t.Cleanup(ts.Close)
+
+	return ts
+}
 
 func TestJobs(t *testing.T) {
 	if testing.Short() {
@@ -50,22 +82,8 @@ func TestJobs(t *testing.T) {
 	token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
-	ts := setup.GetTestServer("/jobs", Routes, func(r *echo.Echo) *echo.Echo {
-		r.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-			return func(c echo.Context) error {
-				tok := middlewares.GetRequestToken(c)
-				// Forcing the token parsing to have the "claims" parameter in the
-				// context (in production, it is done via
-				// middlewares.CheckInstanceBlocked)
-				_, err := middlewares.ParseJWT(c, testInstance, tok)
-				if err != nil {
-					return err
-				}
-				return next(c)
-			}
-		})
-		return r
-	})
+	emailer := emailer.NewMock(t)
+	ts := setupRouter(t, testInstance, emailer)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 

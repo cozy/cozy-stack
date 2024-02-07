@@ -224,7 +224,7 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		files.Routes(router.Group("/files", mws...))
 		contacts.Routes(router.Group("/contacts", mws...))
 		intents.Routes(router.Group("/intents", mws...))
-		jobs.Routes(router.Group("/jobs", mws...))
+		jobs.NewHTTPHandler(services.Emailer).Register(router.Group("/jobs", mws...))
 		notifications.Routes(router.Group("/notifications", mws...))
 		move.Routes(router.Group("/move", mws...))
 		permissions.Routes(router.Group("/permissions", mws...))
