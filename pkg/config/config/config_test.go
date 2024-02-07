@@ -101,6 +101,20 @@ func TestConfigUnmarshal(t *testing.T) {
 		"my-context": map[string]interface{}{"host": "-"},
 	}, cfg.MailPerContext)
 
+	assert.EqualValues(t, &gomail.DialerOptions{
+		Host:                      "smtp.localhost",
+		Port:                      57,
+		Username:                  "campaign-username",
+		Password:                  "campaign-password",
+		NativeTLS:                 true,
+		DisableTLS:                false,
+		SkipCertificateValidation: false,
+		LocalName:                 "smtp.localhost",
+	}, cfg.CampaignMail)
+	assert.EqualValues(t, map[string]interface{}{
+		"my-context": map[string]interface{}{"host": "-"},
+	}, cfg.CampaignMailPerContext)
+
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
 		"my-context": map[string]interface{}{

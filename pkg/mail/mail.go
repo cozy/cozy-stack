@@ -19,6 +19,8 @@ const (
 	// ModeSupport is used to send both a request to the support and a
 	// confirmation to the user.
 	ModeSupport = "support"
+	// ModeCampaign is used to send a non transactional email to the user
+	ModeCampaign = "campaign"
 
 	// DefaultLayout defines the default MJML layout to use
 	DefaultLayout = "layout"

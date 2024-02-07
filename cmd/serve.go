@@ -89,6 +89,9 @@ example), you can use the --appdir flag like this:
 			cfg.Mail.NativeTLS = false
 			cfg.Mail.DisableTLS = true
 			cfg.Mail.Port = 1025
+			cfg.CampaignMail.NativeTLS = false
+			cfg.CampaignMail.DisableTLS = true
+			cfg.CampaignMail.Port = 1025
 		}
 
 		processes, services, err := stack.Start()

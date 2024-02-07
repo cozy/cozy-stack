@@ -194,6 +194,11 @@ file at the root of this repository.
     -   `from` to send a mail from the user
     -   `support` to send both an email to the support and a confirmation to
         the user
+    -   `campaign` to send a non transactional email to the user via an SMTP
+        server using the following configurations, in order of priority:
+        1. `campaign_mail.contexts.<context name>` if defined
+        2. `campaign_mail` otherwise
+        3. `mail` as the final fallback
 -   `to`: list of object `{name, email}` representing the addresses of the
     recipients. (should not be used in `noreply` mode)
 -   `subject`: string specifying the subject of the mail
