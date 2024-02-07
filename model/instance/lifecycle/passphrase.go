@@ -81,7 +81,7 @@ func SendHint(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
+	return emailer.SendEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "passphrase_hint",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":    inst.PageURL("/", nil),
@@ -125,7 +125,7 @@ func RequestPassphraseReset(inst *instance.Instance, from string) error {
 	if err != nil {
 		return err
 	}
-	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
+	return emailer.SendEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "passphrase_reset",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":             inst.PageURL("/", nil),
