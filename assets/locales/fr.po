@@ -857,9 +857,7 @@ msgid "Mail Update Email Intro 1"
 msgstr "Bonjour %s,"
 
 msgid "Mail Update Email Intro 2"
-msgstr ""
-"Vous avez demandé à changer votre adresse email. Si ce n'est pas le cas, "
-"contactez-nous en réponse à cet email."
+msgstr "Vous avez demandé à changer l'adresse email de votre Cozy."
 
 msgid "Mail Update Email Button instruction"
 msgstr "Cliquez sur le bouton suivant pour valider votre changement d'adresse email."

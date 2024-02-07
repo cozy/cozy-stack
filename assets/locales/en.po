@@ -779,9 +779,7 @@ msgid "Mail Update Email Intro 1"
 msgstr "Hello %s,"
 
 msgid "Mail Update Email Intro 2"
-msgstr ""
-"You asked to change your email address. "
-"If you didn't initiate this request, please contact us by replying directly to this email."
+msgstr "You asked to change the email address of your Cozy."
 
 msgid "Mail Update Email Button instruction"
 msgstr "Click on the following button to confirm the new address."
