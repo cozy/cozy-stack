@@ -5,6 +5,8 @@
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Update Email Intro 1" .PublicName}}<br />
+</mj-text>
+<mj-text mj-class="content-medium">
 	{{t "Mail Update Email Intro 2"}}
 </mj-text>
 <mj-text mj-class="content-medium">

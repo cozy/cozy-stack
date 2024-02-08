@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/feature"
@@ -167,9 +168,15 @@ func (h *HTTPHandler) deleteEmail(c echo.Context) error {
 }
 
 func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
-	tok := c.QueryParam("token")
 	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
 
+	tok := c.QueryParam("token")
 	settingsURL := inst.SubDomain("settings").String()
 
 	err := h.svc.ConfirmEmailUpdate(inst, tok)
