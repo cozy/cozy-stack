@@ -61,6 +61,13 @@ type (
 	apiSupport struct {
 		Arguments map[string]string `json:"arguments"`
 	}
+	apiCampaign struct {
+		Arguments apiCampaignArgs `json:"arguments"`
+	}
+	apiCampaignArgs struct {
+		Subject string      `json:"subject"`
+		Parts   []mail.Part `json:"parts"`
+	}
 	apiQueue struct {
 		workerType string
 	}
@@ -267,6 +274,29 @@ func (h *HTTPHandler) contactSupport(c echo.Context) error {
 	if _, err = job.System().PushJob(inst, jr); err != nil {
 		return wrapJobsError(err)
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *HTTPHandler) sendCampaignEmail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.Allow(c, permission.POST, &job.JobRequest{WorkerType: "sendmail"}); err != nil {
+		return err
+	}
+
+	req := apiCampaign{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+
+	err := h.emailer.SendCampaignEmail(inst, &emailer.CampaignEmailCmd{
+		Subject: req.Arguments.Subject,
+		Parts:   req.Arguments.Parts,
+	})
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -823,6 +853,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/queue/:worker-type", h.getQueue)
 	router.POST("/queue/:worker-type", h.pushJob)
 	router.POST("/support", h.contactSupport)
+	router.POST("/campaign-emails", h.sendCampaignEmail)
 
 	router.POST("/triggers", h.newTrigger)
 	router.GET("/triggers", h.getAllTriggers)
@@ -851,7 +882,9 @@ func wrapJobsError(err error) error {
 	case job.ErrUnknownTrigger,
 		job.ErrNotCronTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
-	case limits.ErrRateLimitReached,
+	case emailer.ErrMissingSubject,
+		emailer.ErrMissingContent,
+		limits.ErrRateLimitReached,
 		limits.ErrRateLimitExceeded:
 		return jsonapi.BadRequest(err)
 	}

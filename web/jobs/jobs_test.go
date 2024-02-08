@@ -11,16 +11,18 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/emailer"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func setupRouter(t *testing.T, inst *instance.Instance, emailer emailer.Emailer) *httptest.Server {
+func setupRouter(t *testing.T, inst *instance.Instance, emailerSvc emailer.Emailer) *httptest.Server {
 	t.Helper()
 
 	handler := echo.New()
@@ -42,7 +44,7 @@ func setupRouter(t *testing.T, inst *instance.Instance, emailer emailer.Emailer)
 		}
 	})
 
-	NewHTTPHandler(emailer).Register(group)
+	NewHTTPHandler(emailerSvc).Register(group)
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
@@ -82,8 +84,8 @@ func TestJobs(t *testing.T) {
 	token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
-	emailer := emailer.NewMock(t)
-	ts := setupRouter(t, testInstance, emailer)
+	emailerSvc := emailer.NewMock(t)
+	ts := setupRouter(t, testInstance, emailerSvc)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 
@@ -680,6 +682,100 @@ func TestJobs(t *testing.T) {
 			attrs.Value("queued_at").String().AsDateTime(time.RFC3339)
 			attrs.Value("started_at").String().AsDateTime(time.RFC3339)
 			attrs.Value("finished_at").String().AsDateTime(time.RFC3339)
+		})
+	})
+
+	t.Run("SendCampaignEmail", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		t.Run("WithoutPermissions", func(t *testing.T) {
+			e.POST("/jobs/campaign-emails").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+			"arguments": {
+			  "subject": "Some subject",
+			  "parts": [
+				{ "body": "Some content", "type": "text/plain" }
+			  ]
+			}
+		  }
+        }
+      }`)).Expect().Status(403)
+
+			emailerSvc.AssertNumberOfCalls(t, "SendCampaignEmail", 0)
+		})
+
+		t.Run("WithProperArguments", func(t *testing.T) {
+			emailerSvc.
+				On("SendCampaignEmail", testInstance, mock.Anything).
+				Return(nil).
+				Once()
+
+			scope := strings.Join([]string{
+				consts.Jobs + ":ALL:sendmail:worker",
+			}, " ")
+			token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
+				"", time.Now())
+
+			e.POST("/jobs/campaign-emails").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+			"arguments": {
+			  "subject": "Some subject",
+			  "parts": [
+				{ "body": "Some content", "type": "text/plain" }
+			  ]
+			}
+		  }
+        }
+      }`)).Expect().Status(204)
+
+			emailerSvc.AssertCalled(t, "SendCampaignEmail", testInstance, &emailer.CampaignEmailCmd{
+				Subject: "Some subject",
+				Parts: []mail.Part{
+					{Body: "Some content", Type: "text/plain"},
+				},
+			})
+		})
+
+		t.Run("WithMissingSubject", func(t *testing.T) {
+			emailerSvc.
+				On("SendCampaignEmail", testInstance, mock.Anything).
+				Return(emailer.ErrMissingSubject).
+				Once()
+
+			scope := strings.Join([]string{
+				consts.Jobs + ":ALL:sendmail:worker",
+			}, " ")
+			token, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
+				"", time.Now())
+
+			e.POST("/jobs/campaign-emails").
+				WithHeader("Authorization", "Bearer "+token).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+        "data": {
+          "attributes": { 
+			"arguments": {
+			  "parts": [
+				{ "body": "Some content", "type": "text/plain" }
+			  ]
+			}
+		  }
+        }
+      }`)).Expect().Status(400)
+
+			emailerSvc.AssertCalled(t, "SendCampaignEmail", testInstance, &emailer.CampaignEmailCmd{
+				Parts: []mail.Part{
+					{Body: "Some content", Type: "text/plain"},
+				},
+			})
 		})
 	})
 }
