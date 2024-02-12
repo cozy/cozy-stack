@@ -3,11 +3,8 @@ package settings
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -68,45 +65,6 @@ func finishOnboarding(c echo.Context, redirection string, acceptHTML bool) error
 		redirect = i.PageURL("/settings/install_flagship_app", nil)
 	}
 
-	// Retreiving client
-	// If there is no onboarding client, we keep going
-	client, err := oauth.FindOnboardingClient(i)
-
-	// Redirect to permissions screen if we are in a mobile onboarding
-	if err == nil && client.OnboardingSecret != "" {
-		redirectURI := ""
-		if len(client.RedirectURIs) > 0 {
-			redirectURI = client.RedirectURIs[0]
-		}
-
-		// Create and adding a fallbackURI in case of no-supporting custom
-		// protocol cozy<app>://
-		// Basically, it parses the app slug and computes the web app url
-		// Example: cozydrive:// => http://drive.alice.cozy.localhost:8080/
-		r, err := url.Parse(redirectURI)
-		if err != nil {
-			return err
-		}
-		// If the redirectURI scheme is not starting with cozy<app>://, it means
-		// that we probably are on a recent mobile, handling universal/android
-		// links. We won't provide a fallbackURI because the redirectURI should
-		// be enough to handle the redirection on the mobile-side
-		var fallbackURI string
-		if strings.HasPrefix(r.Scheme, "cozy") {
-			appSlug := strings.TrimPrefix(client.SoftwareID, "registry://")
-			fallbackURI = i.SubDomain(appSlug).String()
-		}
-		// Redirection
-		queryParams := url.Values{
-			"client_id":     {client.CouchID},
-			"redirect_uri":  {redirectURI},
-			"state":         {client.OnboardingState},
-			"fallback_uri":  {fallbackURI},
-			"response_type": {"code"},
-			"scope":         {client.OnboardingPermissions},
-		}
-		redirect = i.PageURL("/auth/authorize", queryParams)
-	}
 	if acceptHTML {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
