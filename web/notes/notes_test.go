@@ -924,6 +924,93 @@ func TestNotes(t *testing.T) {
 		data.HasValue("id", fileID)
 		data.Path("$.attributes.instance").IsEqual(inst.Domain)
 	})
+
+	t.Run("CopyNoteWithAnImage", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		toImport, err := os.ReadFile("../../tests/fixtures/note-with-an-image.cozy-note")
+		require.NoError(t, err)
+
+		obj := e.POST("/files/io.cozy.files.root-dir").
+			WithQuery("Type", "file").
+			WithQuery("Name", "Note with an image.cozy-note").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes(toImport).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.HasValue("type", "io.cozy.files")
+		srcID := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.GET("/files/"+srcID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		image := obj.Value("included").Array().
+			Find(func(_ int, value *httpexpect.Value) bool {
+				value.Object().NotHasValue("type", consts.FilesVersions)
+				return true
+			}).
+			Object()
+
+		image.HasValue("type", consts.NotesImages)
+		image.Value("id").String().NotEmpty()
+		image.Value("meta").Object().NotEmpty()
+
+		attrs := image.Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.HasValue("mime", "image/png")
+
+		link := data.Path("$.links.self").String().NotEmpty().Raw()
+
+		e.GET(link).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		obj = e.POST("/files/"+srcID+"/copy").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.HasValue("type", "io.cozy.files")
+		dstID := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.GET("/files/"+dstID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		image = obj.Value("included").Array().
+			Find(func(_ int, value *httpexpect.Value) bool {
+				value.Object().NotHasValue("type", consts.FilesVersions)
+				return true
+			}).
+			Object()
+
+		image.HasValue("type", consts.NotesImages)
+		image.Value("id").String().NotEmpty()
+		image.Value("meta").Object().NotEmpty()
+
+		attrs = image.Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.HasValue("mime", "image/png")
+
+		link = data.Path("$.links.self").String().NotEmpty().Raw()
+
+		e.GET(link).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+	})
 }
 
 func assertInitialNote(t *testing.T, obj *httpexpect.Object) {
