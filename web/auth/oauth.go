@@ -29,7 +29,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -349,7 +348,6 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 
 	slugname, instanceDomain := inst.SlugAndDomain()
 
-	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
 		"Domain":           inst.ContextualDomain(),
 		"ContextName":      inst.ContextName,
@@ -369,7 +367,6 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		"Permissions":      permissions,
 		"ReadOnly":         readOnly,
 		"CSRF":             c.Get("csrf"),
-		"HasFallback":      hasFallback,
 		"Webapp":           params.webapp,
 	})
 }
@@ -439,9 +436,6 @@ func (a *AuthorizeHTTPHandler) authorize(c echo.Context) error {
 
 func createAccessCode(c echo.Context, params authorizeParams, u *url.URL, q url.Values) error {
 	q.Set("state", params.state)
-	if params.client.OnboardingSecret != "" {
-		q.Set("cozy_url", params.instance.Domain)
-	}
 
 	access, err := oauth.CreateAccessCode(params.instance, params.client, params.scope, params.challenge)
 	if err != nil {
@@ -1012,36 +1006,6 @@ func buildKonnectorToken(c echo.Context) error {
 	token := inst.BuildKonnectorToken(slug)
 
 	return c.JSON(http.StatusCreated, token)
-}
-
-// Used to trade a secret for OAuth client informations
-func secretExchange(c echo.Context) error {
-	type exchange struct {
-		Secret string `json:"secret"`
-	}
-	e := new(exchange)
-
-	instance := middlewares.GetInstance(c)
-	err := json.NewDecoder(c.Request().Body).Decode(&e)
-	if err != nil {
-		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
-	}
-
-	if e.Secret == "" {
-		return jsonapi.BadRequest(errors.New("Missing secret"))
-	}
-
-	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
-	if err != nil {
-		return jsonapi.NotFound(err)
-	}
-
-	if doc.OnboardingSecret == "" || doc.OnboardingSecret != e.Secret {
-		return jsonapi.InvalidAttribute("secret", errors.New("Invalid secret"))
-	}
-
-	doc.TransformIDAndRev()
-	return c.JSON(http.StatusOK, doc)
 }
 
 // CheckLinkedAppInstalled checks if a linked webapp has been installed to the

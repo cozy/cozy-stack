@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
@@ -1078,62 +1077,6 @@ func TestSettings(t *testing.T) {
 			Expect().Status(302).
 			Header("location").IsEqual(testInstance.DefaultRedirection().String())
 	})
-}
-
-func TestRedirectOnboardingSecret(t *testing.T) {
-	if testing.Short() {
-		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
-	}
-
-	config.UseTestFile(t)
-	testutils.NeedCouchdb(t)
-	setup := testutils.NewSetup(t, t.Name())
-
-	testInstance := setup.GetTestInstance(&lifecycle.Options{
-		Locale:      "en",
-		Timezone:    "Europe/Berlin",
-		Email:       "alice@example.com",
-		ContextName: "test-context",
-	})
-	sessCookie := session.CookieName(testInstance)
-
-	svc := csettings.NewServiceMock(t)
-	tsURL := setupRouter(t, testInstance, svc).URL
-
-	e := testutils.CreateTestClient(t, tsURL)
-
-	// Without onboarding
-	e.GET("/settings/onboarded").
-		WithCookie(sessCookie, "connected").
-		WithRedirectPolicy(httpexpect.DontFollowRedirects).
-		Expect().Status(303).
-		Header("Location").IsEqual(testInstance.OnboardedRedirection().String())
-
-	// With onboarding
-	deeplink := "cozydrive://testinstance.com"
-	oauthClient := &oauth.Client{
-		RedirectURIs:     []string{deeplink},
-		ClientName:       "CozyTest",
-		SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
-		OnboardingSecret: "foobar",
-		OnboardingApp:    "test",
-	}
-
-	oauthClient.Create(testInstance)
-
-	redirectURL := e.GET("/settings/onboarded").
-		WithCookie(sessCookie, "connected").
-		WithRedirectPolicy(httpexpect.DontFollowRedirects).
-		Expect().Status(303).
-		Header("Location").
-		NotEqual(testInstance.OnboardedRedirection().String()).
-		Contains("/auth/authorize").Raw()
-
-	u, err := url.Parse(redirectURL)
-	require.NoError(t, err)
-
-	values := u.Query()
-	assert.Equal(t, values.Get("redirect_uri"), deeplink)
 }
 
 func TestRegisterPassphraseForFlagshipApp(t *testing.T) {

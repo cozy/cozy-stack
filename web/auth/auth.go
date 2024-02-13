@@ -628,7 +628,6 @@ func Routes(router *echo.Group) {
 	authHandler.Register(router.Group("/authorize", noCSRF))
 
 	router.POST("/access_token", accessToken)
-	router.POST("/secret_exchange", secretExchange)
 
 	// Flagship app
 	router.POST("/session_code", CreateSessionCode)

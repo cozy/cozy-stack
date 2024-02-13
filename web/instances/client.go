@@ -95,14 +95,10 @@ func registerClient(c echo.Context) error {
 	}
 
 	client := oauth.Client{
-		RedirectURIs:          []string{c.QueryParam("RedirectURI")},
-		ClientName:            c.QueryParam("ClientName"),
-		SoftwareID:            c.QueryParam("SoftwareID"),
-		AllowLoginScope:       allowLoginScope,
-		OnboardingSecret:      c.QueryParam("OnboardingSecret"),
-		OnboardingApp:         c.QueryParam("OnboardingApp"),
-		OnboardingPermissions: c.QueryParam("OnboardingPermissions"),
-		OnboardingState:       c.QueryParam("OnboardingState"),
+		RedirectURIs:    []string{c.QueryParam("RedirectURI")},
+		ClientName:      c.QueryParam("ClientName"),
+		SoftwareID:      c.QueryParam("SoftwareID"),
+		AllowLoginScope: allowLoginScope,
 	}
 	if regErr := client.Create(in, oauth.NotPending); regErr != nil {
 		return c.String(http.StatusBadRequest, regErr.Description)

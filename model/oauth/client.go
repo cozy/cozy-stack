@@ -105,11 +105,6 @@ type Client struct {
 	CertifiedFromStore  bool `json:"certified_from_store,omitempty"`
 	CreatedAtOnboarding bool `json:"created_at_onboarding,omitempty"`
 
-	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
-	OnboardingApp         string `json:"onboarding_app,omitempty"`
-	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`
-	OnboardingState       string `json:"onboarding_state,omitempty"`
-
 	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
@@ -592,10 +587,6 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
 	c.AllowLoginScope = old.AllowLoginScope
-	c.OnboardingSecret = ""
-	c.OnboardingApp = ""
-	c.OnboardingPermissions = ""
-	c.OnboardingState = ""
 
 	if c.ClientName != old.ClientName {
 		if err := c.ensureClientNameUnicity(i); err != nil {
