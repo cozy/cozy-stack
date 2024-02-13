@@ -234,6 +234,45 @@ mail:
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}
       password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
 
+# campaign mail service parameters for sending campaign emails via SMTP
+# If campaign_mail.host is empty, the default mail config will be used.
+campaign_mail:
+  # SMTP server host
+  # Defaults to empty string
+  host: smtp.home
+  # SMTP server port
+  # Defaults to 25
+  port: 587
+  # SMTP server username
+  # Defaults to empty string
+  username: {{.Env.COZY_MAIL_USERNAME}}
+  # SMTP server password
+  # Defaults to empty string
+  password: {{.Env.COZY_MAIL_PASSWORD}}
+  # Use SSL connection (SMTPS)
+  # Means no STARTTLS
+  # Defaults to false
+  use_ssl: false
+  # Disable STARTTLS for SMTP server
+  # Means using plain unencrypted SMTP
+  # Defaults to true
+  disable_tls: false
+  # Skip the certificate validation (may be useful on localhost)
+  # Defaults to false
+  skip_certificate_validation: false
+  # Local Name
+  # The hostname sent to the SMTP server with the HELO command
+  # Defaults to empty string
+  local_name: cozy.domain.example
+  # It is also possible to override the campaign mail config per context.
+  contexts:
+    beta:
+      # If the host is set to "-", no mail will be sent on this context
+      host: smtp.cozy.beta
+      port: 587
+      username: {{.Env.COZY_BETA_MAIL_USERNAME}}
+      password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
+
 # location of the database for IP -> City lookups - flags: --geodb
 # See https://dev.maxmind.com/geoip/geoip2/geolite2/
 geodb: ""

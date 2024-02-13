@@ -458,6 +458,66 @@ Content-Type: application/vnd.api+json
 HTTP/1.1 204 No Content
 ```
 
+### POST /jobs/campaign-emails
+
+Send a non transactional (or campaign) email to the user via the dedicated
+campaign mail server (configured via `campaign_mail` attributes in the config
+file, or overwritten by context with `campaign_mail.contexts.<name>`
+attributes).
+
+Both the subject and at least one part are required.
+
+#### Request
+
+```http
+POST /jobs/campaign-emails HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "arguments": {
+        "subject": "Checkout the new cool stuff!",
+        "parts": [
+          {
+            "body": "So many new features to check out!",
+            "type": "text/plain"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.jobs` for the verb `POST` and the `sendmail` worker.
+This can be defined like so:
+
+```json
+{
+  "permissions": {
+    "campaign-emails": {
+      "description": "Required to send campaign emails to the user",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
+  }
+}
+```
+
 ### GET /jobs/queue/:worker-type
 
 List the jobs in the queue.

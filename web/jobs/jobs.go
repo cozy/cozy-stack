@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/mail"
@@ -59,6 +60,13 @@ type (
 	}
 	apiSupport struct {
 		Arguments map[string]string `json:"arguments"`
+	}
+	apiCampaign struct {
+		Arguments apiCampaignArgs `json:"arguments"`
+	}
+	apiCampaignArgs struct {
+		Subject string      `json:"subject"`
+		Parts   []mail.Part `json:"parts"`
 	}
 	apiQueue struct {
 		workerType string
@@ -153,7 +161,17 @@ func (t apiTriggerState) MarshalJSON() ([]byte, error) {
 
 const bearerAuthScheme = "Bearer "
 
-func getQueue(c echo.Context) error {
+// HTTPHandler handle all the `/jobs` routes.
+type HTTPHandler struct {
+	emailer emailer.Emailer
+}
+
+// NewHTTPHandler instantiates a new [HTTPHandler].
+func NewHTTPHandler(emailer emailer.Emailer) *HTTPHandler {
+	return &HTTPHandler{emailer}
+}
+
+func (h *HTTPHandler) getQueue(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
 
@@ -175,7 +193,7 @@ func getQueue(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-func pushJob(c echo.Context) error {
+func (h *HTTPHandler) pushJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	req := apiJobRequest{}
@@ -223,7 +241,7 @@ func pushJob(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusAccepted, apiJob{j}, nil)
 }
 
-func contactSupport(c echo.Context) error {
+func (h *HTTPHandler) contactSupport(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	req := apiSupport{}
@@ -259,7 +277,30 @@ func contactSupport(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func newTrigger(c echo.Context) error {
+func (h *HTTPHandler) sendCampaignEmail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.Allow(c, permission.POST, &job.JobRequest{WorkerType: "sendmail"}); err != nil {
+		return err
+	}
+
+	req := apiCampaign{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+
+	err := h.emailer.SendCampaignEmail(inst, &emailer.CampaignEmailCmd{
+		Subject: req.Arguments.Subject,
+		Parts:   req.Arguments.Parts,
+	})
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *HTTPHandler) newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := job.System()
 	req := apiTriggerRequest{}
@@ -318,7 +359,7 @@ func newTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, apiTrigger{t.Infos(), instance}, nil)
 }
 
-func getTrigger(c echo.Context) error {
+func (h *HTTPHandler) getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
@@ -338,7 +379,7 @@ func getTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, apiTrigger{infos, instance}, nil)
 }
 
-func getTriggerState(c echo.Context) error {
+func (h *HTTPHandler) getTriggerState(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
@@ -359,7 +400,7 @@ func getTriggerState(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: infos, s: state}, nil)
 }
 
-func getTriggerJobs(c echo.Context) error {
+func (h *HTTPHandler) getTriggerJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	var err error
@@ -394,7 +435,7 @@ func getTriggerJobs(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-func patchTrigger(c echo.Context) error {
+func (h *HTTPHandler) patchTrigger(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sched := job.System()
 	t, err := sched.GetTrigger(inst, c.Param("trigger-id"))
@@ -431,7 +472,7 @@ func patchTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, apiTrigger{infos, inst}, nil)
 }
 
-func launchTrigger(c echo.Context) error {
+func (h *HTTPHandler) launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	t, err := job.System().GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
@@ -454,7 +495,7 @@ func launchTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, apiJob{j}, nil)
 }
 
-func deleteTrigger(c echo.Context) error {
+func (h *HTTPHandler) deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
@@ -473,7 +514,7 @@ func deleteTrigger(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func fireBIWebhook(c echo.Context) error {
+func (h *HTTPHandler) fireBIWebhook(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	err := config.GetRateLimiter().CheckRateLimit(inst, limits.WebhookTriggerType)
 	if limits.IsLimitReachedOrExceeded(err) {
@@ -517,7 +558,7 @@ func fireBIWebhook(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func fireWebhook(c echo.Context) error {
+func (h *HTTPHandler) fireWebhook(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	err := config.GetRateLimiter().CheckRateLimit(inst, limits.WebhookTriggerType)
 	if limits.IsLimitReachedOrExceeded(err) {
@@ -546,7 +587,7 @@ func fireWebhook(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func getAllTriggers(c echo.Context) error {
+func (h *HTTPHandler) getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	var workerTypes, triggerTypes []string
@@ -612,7 +653,7 @@ func hasType(infos *job.TriggerInfos, triggerTypes []string) bool {
 	return false
 }
 
-func getJob(c echo.Context) error {
+func (h *HTTPHandler) getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	j, err := job.Get(instance, c.Param("job-id"))
 	if err != nil {
@@ -624,7 +665,7 @@ func getJob(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
 }
 
-func patchJob(c echo.Context) error {
+func (h *HTTPHandler) patchJob(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	j, err := job.Get(inst, c.Param("job-id"))
 	if err != nil {
@@ -674,7 +715,7 @@ func patchJob(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
 }
 
-func cleanJobs(c echo.Context) error {
+func (h *HTTPHandler) cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.Jobs); err != nil {
 		return err
@@ -710,7 +751,7 @@ func cleanJobs(c echo.Context) error {
 	return c.JSON(200, map[string]int{"deleted": len(ups)})
 }
 
-func purgeJobs(c echo.Context) error {
+func (h *HTTPHandler) purgeJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Jobs); err != nil {
 		return err
@@ -807,28 +848,29 @@ func purgeJobs(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]int{"deleted": len(jobsToDelete)})
 }
 
-// Routes sets the routing for the jobs service
-func Routes(router *echo.Group) {
-	router.GET("/queue/:worker-type", getQueue)
-	router.POST("/queue/:worker-type", pushJob)
-	router.POST("/support", contactSupport)
+// Register all the `/jobs` routes to the given router
+func (h *HTTPHandler) Register(router *echo.Group) {
+	router.GET("/queue/:worker-type", h.getQueue)
+	router.POST("/queue/:worker-type", h.pushJob)
+	router.POST("/support", h.contactSupport)
+	router.POST("/campaign-emails", h.sendCampaignEmail)
 
-	router.POST("/triggers", newTrigger)
-	router.GET("/triggers", getAllTriggers)
-	router.GET("/triggers/:trigger-id", getTrigger)
-	router.GET("/triggers/:trigger-id/state", getTriggerState)
-	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
-	router.PATCH("/triggers/:trigger-id", patchTrigger)
-	router.POST("/triggers/:trigger-id/launch", launchTrigger)
-	router.DELETE("/triggers/:trigger-id", deleteTrigger)
+	router.POST("/triggers", h.newTrigger)
+	router.GET("/triggers", h.getAllTriggers)
+	router.GET("/triggers/:trigger-id", h.getTrigger)
+	router.GET("/triggers/:trigger-id/state", h.getTriggerState)
+	router.GET("/triggers/:trigger-id/jobs", h.getTriggerJobs)
+	router.PATCH("/triggers/:trigger-id", h.patchTrigger)
+	router.POST("/triggers/:trigger-id/launch", h.launchTrigger)
+	router.DELETE("/triggers/:trigger-id", h.deleteTrigger)
 
-	router.POST("/webhooks/bi", fireBIWebhook)
-	router.POST("/webhooks/:trigger-id", fireWebhook)
+	router.POST("/webhooks/bi", h.fireBIWebhook)
+	router.POST("/webhooks/:trigger-id", h.fireWebhook)
 
-	router.POST("/clean", cleanJobs)
-	router.DELETE("/purge", purgeJobs)
-	router.GET("/:job-id", getJob)
-	router.PATCH("/:job-id", patchJob)
+	router.POST("/clean", h.cleanJobs)
+	router.DELETE("/purge", h.purgeJobs)
+	router.GET("/:job-id", h.getJob)
+	router.PATCH("/:job-id", h.patchJob)
 }
 
 func wrapJobsError(err error) error {
@@ -840,7 +882,9 @@ func wrapJobsError(err error) error {
 	case job.ErrUnknownTrigger,
 		job.ErrNotCronTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
-	case limits.ErrRateLimitReached,
+	case emailer.ErrMissingSubject,
+		emailer.ErrMissingContent,
+		limits.ErrRateLimitReached,
 		limits.ErrRateLimitExceeded:
 		return jsonapi.BadRequest(err)
 	}

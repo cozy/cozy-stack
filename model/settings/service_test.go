@@ -51,7 +51,7 @@ func Test_StartEmailUpdate_success(t *testing.T) {
 		},
 	}).Return(nil).Once()
 
-	emailerSvc.On("SendPendingEmail", &inst, &emailer.SendEmailCmd{
+	emailerSvc.On("SendPendingEmail", &inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
 			"PublicName":      "Jane Doe",
@@ -122,7 +122,7 @@ func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
 		},
 	}).Return(nil).Once()
 
-	emailerSvc.On("SendPendingEmail", &inst, &emailer.SendEmailCmd{
+	emailerSvc.On("SendPendingEmail", &inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
 			"PublicName":      "foo", // Change here
@@ -310,7 +310,7 @@ func Test_ResendEmailUpdate_success(t *testing.T) {
 	tokenSvc.On("GenerateAndSave", &inst, token.EmailUpdate, "foo.mycozy.cloud", TokenExpiration).
 		Return("some-token", nil).Once()
 
-	emailerSvc.On("SendPendingEmail", &inst, &emailer.SendEmailCmd{
+	emailerSvc.On("SendPendingEmail", &inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
 			"PublicName":      "Jane Doe",

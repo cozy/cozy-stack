@@ -12,7 +12,7 @@ func SendTwoFactorPasscode(inst *instance.Instance) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = emailer.SendEmail(inst, &emailer.SendEmailCmd{
+	err = emailer.SendEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName:   "two_factor",
 		TemplateValues: map[string]interface{}{"TwoFactorPasscode": passcode},
 	})
@@ -29,7 +29,7 @@ func SendMailConfirmationCode(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
+	return emailer.SendEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName:   "two_factor_mail_confirmation",
 		TemplateValues: map[string]interface{}{"TwoFactorActivationPasscode": passcode},
 	})

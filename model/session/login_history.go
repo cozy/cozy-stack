@@ -226,7 +226,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		"ActivateTwoFALink":    activateTwoFALink,
 	}
 
-	return emailer.SendEmail(i, &emailer.SendEmailCmd{
+	return emailer.SendEmail(i, &emailer.TransactionalEmailCmd{
 		TemplateName:   "new_connection",
 		TemplateValues: templateValues,
 	})
@@ -244,7 +244,7 @@ func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID 
 		"RevokeLink":  revokeLink.String(),
 	}
 
-	return emailer.SendEmail(i, &emailer.SendEmailCmd{
+	return emailer.SendEmail(i, &emailer.TransactionalEmailCmd{
 		TemplateName:   "new_registration",
 		TemplateValues: templateValues,
 	})

@@ -13,8 +13,9 @@ var service *EmailerService
 // - [EmailerService] sending email via an async job
 // - [Mock] with a mock implementation
 type Emailer interface {
-	SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error
-	SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error
+	SendEmail(inst *instance.Instance, cmd *TransactionalEmailCmd) error
+	SendPendingEmail(inst *instance.Instance, cmd *TransactionalEmailCmd) error
+	SendCampaignEmail(inst *instance.Instance, cmd *CampaignEmailCmd) error
 }
 
 // Init the emailer package by setting up a service based on the
@@ -28,6 +29,6 @@ func Init() *EmailerService {
 // SendEmail send a mail to the instance owner.
 //
 // Deprecated: use [EmailerService.SendEmail] instead.
-func SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
+func SendEmail(inst *instance.Instance, cmd *TransactionalEmailCmd) error {
 	return service.SendEmail(inst, cmd)
 }

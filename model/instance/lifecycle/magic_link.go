@@ -28,7 +28,7 @@ func SendMagicLink(inst *instance.Instance, redirect string) error {
 		"redirect": []string{redirect},
 	})
 	publicName, _ := csettings.PublicName(inst)
-	return emailer.SendEmail(inst, &emailer.SendEmailCmd{
+	return emailer.SendEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "magic_link",
 		TemplateValues: map[string]interface{}{
 			"MagicLink":  link,

@@ -71,6 +71,19 @@ mail:
   skip_certificate_validation: true
   local_name: some.host
 
+campaign_mail:
+  contexts:
+    my-context:
+      host: "-"
+  host: smtp.localhost
+  username: campaign-username
+  password: campaign-password
+  port: 57
+  use_ssl: true
+  disable_tls: false
+  skip_certificate_validation: false
+  local_name: smtp.localhost
+
 geodb: /geo/db/path
 
 move:

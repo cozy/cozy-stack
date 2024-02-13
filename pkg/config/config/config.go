@@ -114,17 +114,19 @@ type Config struct {
 	RemoteAssets   map[string]string
 	DeprecatedApps DeprecatedAppsCfg
 
-	Avatars        *avatar.Service
-	Fs             Fs
-	Keyring        keyring.Keyring
-	CouchDB        CouchDB
-	Jobs           Jobs
-	Konnectors     Konnectors
-	Mail           *gomail.DialerOptions
-	MailPerContext map[string]interface{}
-	Move           Move
-	Notifications  Notifications
-	Flagship       Flagship
+	Avatars                *avatar.Service
+	Fs                     Fs
+	Keyring                keyring.Keyring
+	CouchDB                CouchDB
+	Jobs                   Jobs
+	Konnectors             Konnectors
+	Mail                   *gomail.DialerOptions
+	MailPerContext         map[string]interface{}
+	CampaignMail           *gomail.DialerOptions
+	CampaignMailPerContext map[string]interface{}
+	Move                   Move
+	Notifications          Notifications
+	Flagship               Flagship
 
 	Lock              lock.Getter
 	Limiter           *limits.RateLimiter
@@ -756,6 +758,47 @@ func UseViper(v *viper.Viper) error {
 		return fmt.Errorf("failed to setup the keyring: %w", err)
 	}
 
+	// Setup default SMTP server
+	mail := &gomail.DialerOptions{
+		Host:                      v.GetString("mail.host"),
+		Port:                      v.GetInt("mail.port"),
+		Username:                  v.GetString("mail.username"),
+		Password:                  v.GetString("mail.password"),
+		NativeTLS:                 v.GetBool("mail.use_ssl"),
+		DisableTLS:                v.GetBool("mail.disable_tls"),
+		SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
+		LocalName:                 v.GetString("mail.local_name"),
+	}
+
+	// Setup campaign mail SMTP server
+	var campaignMail *gomail.DialerOptions
+	if host := v.GetString("campaign_mail.host"); host != "" {
+		viper.SetDefault("campaign_mail.port", 25)
+		viper.SetDefault("campaign_mail.disable_tls", true)
+
+		campaignMail = &gomail.DialerOptions{
+			Host:                      host,
+			Port:                      v.GetInt("campaign_mail.port"),
+			Username:                  v.GetString("campaign_mail.username"),
+			Password:                  v.GetString("campaign_mail.password"),
+			NativeTLS:                 v.GetBool("campaign_mail.use_ssl"),
+			DisableTLS:                v.GetBool("campaign_mail.disable_tls"),
+			SkipCertificateValidation: v.GetBool("campaign_mail.skip_certificate_validation"),
+			LocalName:                 v.GetString("campaign_mail.local_name"),
+		}
+	} else {
+		campaignMail = &gomail.DialerOptions{
+			Host:                      mail.Host,
+			Port:                      mail.Port,
+			Username:                  mail.Username,
+			Password:                  mail.Password,
+			NativeTLS:                 mail.NativeTLS,
+			DisableTLS:                mail.DisableTLS,
+			SkipCertificateValidation: mail.SkipCertificateValidation,
+			LocalName:                 mail.LocalName,
+		}
+	}
+
 	config = &Config{
 		Host: v.GetString("host"),
 		Port: v.GetInt("port"),
@@ -822,28 +865,21 @@ func UseViper(v *viper.Viper) error {
 			PlayIntegrityVerificationKeys: v.GetStringSlice("flagship.play_integrity_verification_keys"),
 			AppleAppIDs:                   v.GetStringSlice("flagship.apple_app_ids"),
 		},
-		Lock:              lock.New(lockRedis),
-		SessionStorage:    sessionsRedis,
-		DownloadStorage:   downloadRedis,
-		Limiter:           limits.NewRateLimiter(rateLimitingRedis),
-		OauthStateStorage: oauthStateRedis,
-		Realtime:          realtimeRedis,
-		CacheStorage:      cacheStorage,
-		Mail: &gomail.DialerOptions{
-			Host:                      v.GetString("mail.host"),
-			Port:                      v.GetInt("mail.port"),
-			Username:                  v.GetString("mail.username"),
-			Password:                  v.GetString("mail.password"),
-			NativeTLS:                 v.GetBool("mail.use_ssl"),
-			DisableTLS:                v.GetBool("mail.disable_tls"),
-			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
-			LocalName:                 v.GetString("mail.local_name"),
-		},
-		MailPerContext: v.GetStringMap("mail.contexts"),
-		Contexts:       v.GetStringMap("contexts"),
-		Authentication: v.GetStringMap("authentication"),
-		Office:         office,
-		Registries:     regs,
+		Lock:                   lock.New(lockRedis),
+		SessionStorage:         sessionsRedis,
+		DownloadStorage:        downloadRedis,
+		Limiter:                limits.NewRateLimiter(rateLimitingRedis),
+		OauthStateStorage:      oauthStateRedis,
+		Realtime:               realtimeRedis,
+		CacheStorage:           cacheStorage,
+		Mail:                   mail,
+		MailPerContext:         v.GetStringMap("mail.contexts"),
+		CampaignMail:           campaignMail,
+		CampaignMailPerContext: v.GetStringMap("campaign_mail.contexts"),
+		Contexts:               v.GetStringMap("contexts"),
+		Authentication:         v.GetStringMap("authentication"),
+		Office:                 office,
+		Registries:             regs,
 
 		CSPAllowList:  cspAllowList,
 		CSPPerContext: cspPerContext,

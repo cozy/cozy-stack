@@ -36,6 +36,7 @@ func SendMail(ctx *job.TaskContext) error {
 	if err != nil {
 		return err
 	}
+
 	from := config.GetConfig().NoReplyAddr
 	name := config.GetConfig().NoReplyName
 	replyTo := config.GetConfig().ReplyTo
@@ -53,8 +54,15 @@ func SendMail(ctx *job.TaskContext) error {
 			replyTo = reply
 		}
 	}
+
+	var cfgPerContext map[string]interface{}
+	if opts.Mode == mail.ModeCampaign {
+		cfgPerContext = config.GetConfig().CampaignMailPerContext
+	} else {
+		cfgPerContext = config.GetConfig().MailPerContext
+	}
+
 	ctxName := ctx.Instance.ContextName
-	cfgPerContext := config.GetConfig().MailPerContext
 	if ctxConfig, ok := cfgPerContext[ctxName].(map[string]interface{}); ok {
 		if host, ok := ctxConfig["host"].(string); ok && host != "" {
 			port, _ := ctxConfig["port"].(int)
@@ -64,6 +72,7 @@ func SendMail(ctx *job.TaskContext) error {
 			disableTLS, _ := ctxConfig["disable_tls"].(bool)
 			skipCertValid, _ := ctxConfig["skip_certificate_validation"].(bool)
 			LocalName, _ := ctxConfig["local_name"].(string)
+
 			opts.Dialer = &gomail.DialerOptions{
 				Host:                      host,
 				Port:                      port,
@@ -76,8 +85,9 @@ func SendMail(ctx *job.TaskContext) error {
 			}
 		}
 	}
+
 	switch opts.Mode {
-	case mail.ModeFromStack:
+	case mail.ModeFromStack, mail.ModeCampaign:
 		toAddr, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
@@ -178,7 +188,11 @@ func doSendMail(ctx *job.TaskContext, opts *mail.Options, domain string) error {
 	email := gomail.NewMessage()
 	dialerOptions := opts.Dialer
 	if dialerOptions == nil {
-		dialerOptions = config.GetConfig().Mail
+		if opts.Mode == mail.ModeCampaign {
+			dialerOptions = config.GetConfig().CampaignMail
+		} else {
+			dialerOptions = config.GetConfig().Mail
+		}
 	}
 	if dialerOptions.Host == "-" {
 		return nil

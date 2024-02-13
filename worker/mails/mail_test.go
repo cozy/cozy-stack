@@ -269,6 +269,42 @@ QUIT
 			assert.Equal(t, "yes", err.Error())
 		}
 	})
+
+	t.Run("send campaign email", func(t *testing.T) {
+		sendMail = func(_ *job.TaskContext, opts *mail.Options, domain string) error {
+			assert.NotNil(t, opts.From)
+			assert.NotNil(t, opts.To)
+			assert.Len(t, opts.To, 1)
+			assert.Equal(t, "me@me", opts.To[0].Email)
+			assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
+			assert.Equal(t, inst.Domain, domain)
+			return errors.New("yes")
+		}
+		defer func() {
+			sendMail = doSendMail
+		}()
+		msg, _ := job.NewMessage(mail.Options{
+			Mode:    mail.ModeCampaign,
+			Subject: "Awesome content",
+			Parts: []*mail.Part{
+				{
+					Type: "text/plain",
+					Body: "foo",
+				},
+			},
+			Locale: "en",
+		})
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "sendmail",
+		})
+		ctx, cancel := job.NewTaskContext("123", j, inst)
+		defer cancel()
+		err := SendMail(ctx)
+		if assert.Error(t, err) {
+			assert.Equal(t, "yes", err.Error())
+		}
+	})
 }
 
 func mailServer(t *testing.T, serverString string, clientStrings []string, expectedHeader map[string]string, send func(string, int) error) {

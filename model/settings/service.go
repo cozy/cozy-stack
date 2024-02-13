@@ -124,7 +124,7 @@ func (s *SettingsService) StartEmailUpdate(inst *instance.Instance, cmd *UpdateE
 		"token": []string{token},
 	})
 
-	err = s.emailer.SendPendingEmail(inst, &emailer.SendEmailCmd{
+	err = s.emailer.SendPendingEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
 			"PublicName":      publicName,
@@ -164,7 +164,7 @@ func (s *SettingsService) ResendEmailUpdate(inst *instance.Instance) error {
 		"token": []string{token},
 	})
 
-	err = s.emailer.SendPendingEmail(inst, &emailer.SendEmailCmd{
+	err = s.emailer.SendPendingEmail(inst, &emailer.TransactionalEmailCmd{
 		TemplateName: "update_email",
 		TemplateValues: map[string]interface{}{
 			"PublicName":      publicName,

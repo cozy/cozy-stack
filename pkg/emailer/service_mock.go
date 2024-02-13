@@ -22,11 +22,16 @@ func NewMock(t *testing.T) *Mock {
 }
 
 // SendEmail mock method.
-func (m *Mock) SendEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
+func (m *Mock) SendEmail(inst *instance.Instance, cmd *TransactionalEmailCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }
 
 // SendPendingEmail mock method.
-func (m *Mock) SendPendingEmail(inst *instance.Instance, cmd *SendEmailCmd) error {
+func (m *Mock) SendPendingEmail(inst *instance.Instance, cmd *TransactionalEmailCmd) error {
+	return m.Called(inst, cmd).Error(0)
+}
+
+// SendCampaignEmail mock method
+func (m *Mock) SendCampaignEmail(inst *instance.Instance, cmd *CampaignEmailCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }

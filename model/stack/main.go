@@ -50,6 +50,7 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 }
 
 type Services struct {
+	Emailer  emailer.Emailer
 	Settings settings.Service
 }
 
@@ -111,6 +112,7 @@ security features. Please do not use this binary as your production server.
 	clouderySvc := cloudery.Init(config.GetConfig().Clouderies)
 
 	services := Services{
+		Emailer:  emailerSvc,
 		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc, clouderySvc),
 	}
 
