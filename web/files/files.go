@@ -357,7 +357,12 @@ func FileCopyHandler(c echo.Context) error {
 	newdoc.ResetFullpath()
 	updateFileCozyMetadata(c, newdoc, true)
 
-	err = fs.CopyFile(olddoc, newdoc)
+	if olddoc.Mime == consts.NoteMimeType {
+		// We need a special copy for notes because of their images
+		err = note.CopyFile(inst, olddoc, newdoc)
+	} else {
+		err = fs.CopyFile(olddoc, newdoc)
+	}
 	if err != nil {
 		return WrapVfsError(err)
 	}

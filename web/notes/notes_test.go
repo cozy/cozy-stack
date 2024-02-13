@@ -135,14 +135,14 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", consts.NotesURL)
-		data.ValueEqual("id", noteID)
+		data.HasValue("type", consts.NotesURL)
+		data.HasValue("id", noteID)
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("note_id", noteID)
-		attrs.ValueEqual("subdomain", "nested")
-		attrs.ValueEqual("protocol", "https")
-		attrs.ValueEqual("instance", inst.Domain)
+		attrs.HasValue("note_id", noteID)
+		attrs.HasValue("subdomain", "nested")
+		attrs.HasValue("protocol", "https")
+		attrs.HasValue("instance", inst.Domain)
 		attrs.Value("public_name").String().NotEmpty()
 	})
 
@@ -166,14 +166,14 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.files")
-		data.ValueEqual("id", noteID)
+		data.HasValue("type", "io.cozy.files")
+		data.HasValue("id", noteID)
 
 		attrs := data.Value("attributes").Object()
 		meta := attrs.Value("metadata").Object()
 
-		meta.ValueEqual("title", "A new title")
-		meta.ValueEqual("version", 0)
+		meta.HasValue("title", "A new title")
+		meta.HasValue("version", 0)
 		meta.Value("schema").Object().NotEmpty()
 		meta.Value("content").Object().NotEmpty()
 
@@ -190,15 +190,15 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data = obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.files")
-		data.ValueEqual("id", noteID)
+		data.HasValue("type", "io.cozy.files")
+		data.HasValue("id", noteID)
 
 		attrs = data.Value("attributes").Object()
-		attrs.ValueEqual("name", "A new title.cozy-note")
+		attrs.HasValue("name", "A new title.cozy-note")
 
 		meta = attrs.Value("metadata").Object()
-		meta.ValueEqual("title", "A new title")
-		meta.ValueEqual("version", 0)
+		meta.HasValue("title", "A new title")
+		meta.HasValue("version", 0)
 		meta.Value("schema").Object().NotEmpty()
 		meta.Value("content").Object().NotEmpty()
 	})
@@ -229,20 +229,20 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Array()
-		data.Length().Equal(1)
+		data.Length().IsEqual(1)
 
-		doc := data.First().Object()
-		doc.ValueEqual("type", "io.cozy.files")
-		doc.ValueEqual("id", noteID)
+		doc := data.Value(0).Object()
+		doc.HasValue("type", "io.cozy.files")
+		doc.HasValue("id", noteID)
 
 		attrs := doc.Value("attributes").Object()
-		attrs.ValueEqual("name", "A new title.cozy-note")
+		attrs.HasValue("name", "A new title.cozy-note")
 		attrs.Value("path").String().HasSuffix("/A new title.cozy-note")
-		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+		attrs.HasValue("mime", "text/vnd.cozy.note+markdown")
 
 		meta := attrs.Value("metadata").Object()
-		meta.ValueEqual("title", "A title in cache")
-		meta.ValueEqual("version", 0)
+		meta.HasValue("title", "A title in cache")
+		meta.HasValue("version", 0)
 		meta.Value("schema").Object().NotEmpty()
 		meta.Value("content").Object().NotEmpty()
 	})
@@ -287,8 +287,8 @@ func TestNotes(t *testing.T) {
 				Object()
 
 			data := obj.Value("data").Object()
-			data.ValueEqual("type", "io.cozy.files")
-			data.ValueEqual("id", noteID)
+			data.HasValue("type", "io.cozy.files")
+			data.HasValue("id", noteID)
 
 			attrs := data.Value("attributes").Object()
 			meta := attrs.Value("metadata").Object()
@@ -367,28 +367,28 @@ func TestNotes(t *testing.T) {
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object()
 
-			obj.Path("$.meta.count").Number().Equal(2)
-			obj.Path("$.data").Array().Length().Equal(2)
+			obj.Path("$.meta.count").Number().IsEqual(2)
+			obj.Path("$.data").Array().Length().IsEqual(2)
 
 			first := obj.Path("$.data[0]").Object()
 			first.Value("id").String().NotEmpty()
 
 			attrs := first.Value("attributes").Object()
-			attrs.ValueEqual("sessionID", "543781490137")
-			attrs.ValueEqual("stepType", "replace")
-			attrs.ValueEqual("from", 6)
-			attrs.ValueEqual("to", 6)
+			attrs.HasValue("sessionID", "543781490137")
+			attrs.HasValue("stepType", "replace")
+			attrs.HasValue("from", 6)
+			attrs.HasValue("to", 6)
 			attrs.Value("version").Number()
 
 			second := obj.Path("$.data[1]").Object()
 			second.Value("id").String().NotEmpty()
 
 			attrs = second.Value("attributes").Object()
-			attrs.ValueEqual("sessionID", "543781490137")
-			attrs.ValueEqual("stepType", "replace")
-			attrs.ValueEqual("from", 7)
-			attrs.ValueEqual("to", 7)
-			attrs.ValueEqual("version", lastVersion)
+			attrs.HasValue("sessionID", "543781490137")
+			attrs.HasValue("stepType", "replace")
+			attrs.HasValue("from", 7)
+			attrs.HasValue("to", 7)
+			attrs.HasValue("version", lastVersion)
 		})
 
 		t.Run("GetStepsFromLastVersion", func(t *testing.T) {
@@ -404,8 +404,8 @@ func TestNotes(t *testing.T) {
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object()
 
-			obj.Path("$.meta.count").Number().Equal(0)
-			obj.Path("$.data").Array().Empty()
+			obj.Path("$.meta.count").Number().IsEqual(0)
+			obj.Path("$.data").Array().IsEmpty()
 
 			version = int64(lastVersion)
 		})
@@ -482,12 +482,12 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.files")
-		data.ValueEqual("id", noteID)
+		data.HasValue("type", "io.cozy.files")
+		data.HasValue("id", noteID)
 
 		schema := obj.Path("$.data.attributes.metadata.schema").Object()
-		schema.ValueEqual("version", 2)
-		schema.Path("$.nodes[1][0]").Equal("panel")
+		schema.HasValue("version", 2)
+		schema.Path("$.nodes[1][0]").IsEqual("panel")
 
 		// TODO: add an explanation why we need this sleep period
 		time.Sleep(1 * time.Second)
@@ -597,17 +597,17 @@ func TestNotes(t *testing.T) {
 		obj := ws.Expect().TextMessage().
 			JSON().Object()
 
-		obj.ValueEqual("event", "UPDATED")
+		obj.HasValue("event", "UPDATED")
 		payload := obj.Value("payload").Object()
-		payload.ValueEqual("id", noteID)
-		payload.ValueEqual("type", "io.cozy.notes.events")
+		payload.HasValue("id", noteID)
+		payload.HasValue("type", "io.cozy.notes.events")
 
 		doc := payload.Value("doc").Object()
-		doc.ValueEqual("doctype", "io.cozy.notes.telepointers")
-		doc.ValueEqual("sessionID", "543781490137")
-		doc.ValueEqual("anchor", 7)
-		doc.ValueEqual("head", 12)
-		doc.ValueEqual("type", "textSelection")
+		doc.HasValue("doctype", "io.cozy.notes.telepointers")
+		doc.HasValue("sessionID", "543781490137")
+		doc.HasValue("anchor", 7)
+		doc.HasValue("head", 12)
+		doc.HasValue("type", "textSelection")
 
 		file, err := inst.VFS().FileByID(noteID)
 		require.NoError(t, err)
@@ -617,15 +617,15 @@ func TestNotes(t *testing.T) {
 		obj = ws.Expect().TextMessage().
 			JSON().Object()
 
-		obj.ValueEqual("event", "UPDATED")
+		obj.HasValue("event", "UPDATED")
 		payload = obj.Value("payload").Object()
-		payload.ValueEqual("id", noteID)
-		payload.ValueEqual("type", "io.cozy.notes.events")
+		payload.HasValue("id", noteID)
+		payload.HasValue("type", "io.cozy.notes.events")
 
 		doc = payload.Value("doc").Object()
-		doc.ValueEqual("doctype", "io.cozy.notes.documents")
-		doc.ValueEqual("title", "A very new title")
-		doc.ValueEqual("sessionID", "543781490137")
+		doc.HasValue("doctype", "io.cozy.notes.documents")
+		doc.HasValue("title", "A very new title")
+		doc.HasValue("sessionID", "543781490137")
 
 		slice := map[string]interface{}{
 			"content": []interface{}{
@@ -642,20 +642,20 @@ func TestNotes(t *testing.T) {
 		obj = ws.Expect().TextMessage().
 			JSON().Object()
 
-		obj.ValueEqual("event", "UPDATED")
+		obj.HasValue("event", "UPDATED")
 		payload = obj.Value("payload").Object()
-		payload.ValueEqual("id", noteID)
-		payload.ValueEqual("type", "io.cozy.notes.events")
+		payload.HasValue("id", noteID)
+		payload.HasValue("type", "io.cozy.notes.events")
 
 		doc4 := payload.Value("doc").Object()
 
 		obj = ws.Expect().TextMessage().
 			JSON().Object()
 
-		obj.ValueEqual("event", "UPDATED")
+		obj.HasValue("event", "UPDATED")
 		payload = obj.Value("payload").Object()
-		payload.ValueEqual("id", noteID)
-		payload.ValueEqual("type", "io.cozy.notes.events")
+		payload.HasValue("id", noteID)
+		payload.HasValue("type", "io.cozy.notes.events")
 		doc5 := payload.Value("doc").Object()
 
 		// // In some cases, the steps can be received in the bad order because of the
@@ -664,18 +664,18 @@ func TestNotes(t *testing.T) {
 			doc4, doc5 = doc5, doc4
 		}
 
-		doc4.ValueEqual("doctype", "io.cozy.notes.steps")
-		doc4.ValueEqual("sessionID", "543781490137")
-		doc4.ValueEqual("stepType", "replace")
-		doc4.ValueEqual("from", 2)
-		doc4.ValueEqual("to", 2)
+		doc4.HasValue("doctype", "io.cozy.notes.steps")
+		doc4.HasValue("sessionID", "543781490137")
+		doc4.HasValue("stepType", "replace")
+		doc4.HasValue("from", 2)
+		doc4.HasValue("to", 2)
 		vers4 := int(doc4.Value("version").Number().Gt(0).Raw())
 
-		doc5.ValueEqual("doctype", "io.cozy.notes.steps")
-		doc5.ValueEqual("sessionID", "543781490137")
-		doc5.ValueEqual("stepType", "replace")
-		doc5.ValueEqual("from", 3)
-		doc5.ValueEqual("to", 3)
+		doc5.HasValue("doctype", "io.cozy.notes.steps")
+		doc5.HasValue("sessionID", "543781490137")
+		doc5.HasValue("stepType", "replace")
+		doc5.HasValue("from", 3)
+		doc5.HasValue("to", 3)
 		vers5 := int(doc5.Value("version").Number().
 			NotEqual(0).
 			NotEqual(vers4).
@@ -727,17 +727,17 @@ func TestNotes(t *testing.T) {
 
 		data := obj.Value("data").Object()
 
-		data.ValueEqual("type", "io.cozy.files")
+		data.HasValue("type", "io.cozy.files")
 		otherNoteID = data.Value("id").String().NotEmpty().Raw()
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("type", "file")
-		attrs.ValueEqual("name", "A note with some content.cozy-note")
-		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+		attrs.HasValue("type", "file")
+		attrs.HasValue("name", "A note with some content.cozy-note")
+		attrs.HasValue("mime", "text/vnd.cozy.note+markdown")
 
 		meta := attrs.Value("metadata").Object()
-		meta.ValueEqual("title", "A note with some content")
-		meta.ValueEqual("version", 0)
+		meta.HasValue("title", "A note with some content")
+		meta.HasValue("version", 0)
 		meta.Value("schema").Object().NotEmpty()
 
 		expected := map[string]interface{}{
@@ -771,21 +771,21 @@ func TestNotes(t *testing.T) {
 				Object()
 
 			data := obj.Value("data").Object()
-			data.ValueEqual("type", consts.NotesImages)
+			data.HasValue("type", consts.NotesImages)
 			data.Value("id").String().NotEmpty()
 			data.Value("meta").Object().NotEmpty()
 
 			attrs := data.Value("attributes").Object()
 			if i == 0 {
-				attrs.ValueEqual("name", "wet.jpg")
+				attrs.HasValue("name", "wet.jpg")
 			} else {
-				attrs.ValueEqual("name", fmt.Sprintf("wet (%d).jpg", i+1))
+				attrs.HasValue("name", fmt.Sprintf("wet (%d).jpg", i+1))
 			}
 
 			attrs.Value("cozyMetadata").Object().NotEmpty()
-			attrs.ValueEqual("mime", "image/jpeg")
-			attrs.ValueEqual("width", 440)
-			attrs.ValueEqual("height", 294)
+			attrs.HasValue("mime", "image/jpeg")
+			attrs.HasValue("width", 440)
+			attrs.HasValue("height", 294)
 
 			data.Path("$.links.self").String().NotEmpty()
 		}
@@ -817,17 +817,17 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data = obj.Value("data").Object()
-		data.ValueEqual("type", consts.NotesImages)
+		data.HasValue("type", consts.NotesImages)
 		data.Value("id").String().NotEmpty().NotEqual(imgID)
 		data.Value("meta").Object().NotEmpty()
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("name", "tobecopied.jpg")
+		attrs.HasValue("name", "tobecopied.jpg")
 
 		attrs.Value("cozyMetadata").Object().NotEmpty()
-		attrs.ValueEqual("mime", "image/jpeg")
-		attrs.ValueEqual("width", 440)
-		attrs.ValueEqual("height", 294)
+		attrs.HasValue("mime", "image/jpeg")
+		attrs.HasValue("width", 440)
+		attrs.HasValue("height", 294)
 
 		data.Path("$.links.self").String().NotEmpty()
 	})
@@ -848,7 +848,7 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", consts.NotesImages)
+		data.HasValue("type", consts.NotesImages)
 		data.Value("id").String().NotEmpty()
 		data.Value("meta").Object().NotEmpty()
 
@@ -856,7 +856,7 @@ func TestNotes(t *testing.T) {
 
 		e.GET(link).
 			Expect().Status(200).
-			Body().Equal(string(rawFile))
+			Body().IsEqual(string(rawFile))
 
 		obj = e.GET("/files/"+noteID).
 			WithHeader("Authorization", "Bearer "+token).
@@ -866,19 +866,19 @@ func TestNotes(t *testing.T) {
 
 		image := obj.Value("included").Array().
 			Find(func(_ int, value *httpexpect.Value) bool {
-				value.Object().ValueNotEqual("type", consts.FilesVersions)
+				value.Object().NotHasValue("type", consts.FilesVersions)
 				return true
 			}).
 			Object()
 
-		image.ValueEqual("type", consts.NotesImages)
+		image.HasValue("type", consts.NotesImages)
 		image.Value("id").String().NotEmpty()
 		image.Value("meta").Object().NotEmpty()
 
 		attrs := image.Value("attributes").Object()
 		attrs.Value("name").String().NotEmpty()
 		attrs.Value("cozyMetadata").Object().NotEmpty()
-		attrs.ValueEqual("mime", "image/jpeg")
+		attrs.HasValue("mime", "image/jpeg")
 
 		data.Path("$.links.self").String().NotEmpty()
 	})
@@ -901,16 +901,16 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.files")
+		data.HasValue("type", "io.cozy.files")
 		fileID := data.Value("id").String().NotEmpty().Raw()
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("type", "file")
-		attrs.ValueEqual("name", "An imported note.cozy-note")
-		attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+		attrs.HasValue("type", "file")
+		attrs.HasValue("name", "An imported note.cozy-note")
+		attrs.HasValue("mime", "text/vnd.cozy.note+markdown")
 
 		meta := attrs.Value("metadata").Object()
-		meta.ValueEqual("title", "An imported note")
+		meta.HasValue("title", "An imported note")
 		meta.Value("schema").Object().NotEmpty()
 		meta.Value("content").Object().NotEmpty()
 
@@ -921,29 +921,116 @@ func TestNotes(t *testing.T) {
 			Object()
 
 		data = obj.Value("data").Object()
-		data.ValueEqual("id", fileID)
-		data.Path("$.attributes.instance").Equal(inst.Domain)
+		data.HasValue("id", fileID)
+		data.Path("$.attributes.instance").IsEqual(inst.Domain)
+	})
+
+	t.Run("CopyNoteWithAnImage", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		toImport, err := os.ReadFile("../../tests/fixtures/note-with-an-image.cozy-note")
+		require.NoError(t, err)
+
+		obj := e.POST("/files/io.cozy.files.root-dir").
+			WithQuery("Type", "file").
+			WithQuery("Name", "Note with an image.cozy-note").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes(toImport).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.HasValue("type", "io.cozy.files")
+		srcID := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.GET("/files/"+srcID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		image := obj.Value("included").Array().
+			Find(func(_ int, value *httpexpect.Value) bool {
+				value.Object().NotHasValue("type", consts.FilesVersions)
+				return true
+			}).
+			Object()
+
+		image.HasValue("type", consts.NotesImages)
+		image.Value("id").String().NotEmpty()
+		image.Value("meta").Object().NotEmpty()
+
+		attrs := image.Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.HasValue("mime", "image/png")
+
+		link := data.Path("$.links.self").String().NotEmpty().Raw()
+
+		e.GET(link).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		obj = e.POST("/files/"+srcID+"/copy").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.HasValue("type", "io.cozy.files")
+		dstID := data.Value("id").String().NotEmpty().Raw()
+
+		obj = e.GET("/files/"+dstID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		image = obj.Value("included").Array().
+			Find(func(_ int, value *httpexpect.Value) bool {
+				value.Object().NotHasValue("type", consts.FilesVersions)
+				return true
+			}).
+			Object()
+
+		image.HasValue("type", consts.NotesImages)
+		image.Value("id").String().NotEmpty()
+		image.Value("meta").Object().NotEmpty()
+
+		attrs = image.Value("attributes").Object()
+		attrs.Value("name").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().NotEmpty()
+		attrs.HasValue("mime", "image/png")
+
+		link = data.Path("$.links.self").String().NotEmpty().Raw()
+
+		e.GET(link).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
 	})
 }
 
 func assertInitialNote(t *testing.T, obj *httpexpect.Object) {
 	data := obj.Value("data").Object()
 
-	data.ValueEqual("type", "io.cozy.files")
+	data.HasValue("type", "io.cozy.files")
 	data.Value("id").String().NotEmpty()
 
 	attrs := data.Value("attributes").Object()
-	attrs.ValueEqual("type", "file")
-	attrs.ValueEqual("name", "A super note.cozy-note")
-	attrs.ValueEqual("mime", "text/vnd.cozy.note+markdown")
+	attrs.HasValue("type", "file")
+	attrs.HasValue("name", "A super note.cozy-note")
+	attrs.HasValue("mime", "text/vnd.cozy.note+markdown")
 
 	fcm := attrs.Value("cozyMetadata").Object()
-	fcm.Value("createdAt").String().DateTime(time.RFC3339)
+	fcm.Value("createdAt").String().AsDateTime(time.RFC3339)
 	fcm.Value("createdOn").String().NotEmpty()
 
 	meta := attrs.Value("metadata").Object()
-	meta.ValueEqual("title", "A super note")
-	meta.ValueEqual("version", 0)
+	meta.HasValue("title", "A super note")
+	meta.HasValue("version", 0)
 	meta.Value("schema").Object().NotEmpty()
 	meta.Value("content").Object().NotEmpty()
 }
