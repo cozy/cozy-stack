@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 )
 
 type AppLogos struct {
