@@ -10,6 +10,12 @@ import (
 // CopyFile is an overloaded version of Fs.CopyFile that take care of also
 // copying the images in the note.
 func CopyFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
+	// Check available disk space
+	_, _, _, err := vfs.CheckAvailableDiskSpace(inst.VFS(), newdoc)
+	if err != nil {
+		return err
+	}
+
 	// Load data from the source note
 	noteDoc, err := get(inst, olddoc)
 	if err != nil {
