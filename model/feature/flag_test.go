@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/gofrs/uuid/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func uuidv7() string {
@@ -37,4 +38,41 @@ func TestFeatureFlagRatio(t *testing.T) {
 	assert.InDelta(t, 2000, results[float64(2)], 100)
 	assert.InDelta(t, 4000, results[float64(4)], 100)
 	assert.InDelta(t, 3000, results[nil], 100)
+}
+
+func TestFeatureFlagList(t *testing.T) {
+	var flags Flags
+	err := json.Unmarshal(
+		[]byte(`{
+		  "flag1": { "list": ["other", "val"] },
+		  "flag2": { "list": ["other"] },
+		  "flag3": { "list": [] },
+		  "flag4": ["val"],
+		  "flag5": "val"
+		}`),
+		&flags,
+	)
+	require.NoError(t, err)
+
+	// GetList
+	list, err := flags.GetList("flag1")
+	require.NoError(t, err)
+	assert.EqualValues(t, []interface{}{"other", "val"}, list)
+	_, err = flags.GetList("flag4")
+	assert.Error(t, err)
+	_, err = flags.GetList("flag5")
+	assert.Error(t, err)
+
+	// HasListItem
+	hasVal, err := flags.HasListItem("flag1", "val")
+	require.NoError(t, err)
+	assert.True(t, hasVal)
+	hasVal, _ = flags.HasListItem("flag2", "val")
+	assert.False(t, hasVal)
+	hasVal, _ = flags.HasListItem("flag3", "val")
+	assert.False(t, hasVal)
+	_, err = flags.HasListItem("flag4", "val")
+	assert.Error(t, err)
+	_, err = flags.HasListItem("flag5", "val")
+	assert.Error(t, err)
 }

@@ -71,6 +71,38 @@ func (f *Flags) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+func (f *Flags) GetList(name string) ([]interface{}, error) {
+	if f.M[name] == nil {
+		return []interface{}{}, nil
+	}
+
+	value, ok := f.M[name].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Flag %s is not a list flag", name)
+	}
+
+	list, ok := value["list"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Flag %s is not a list flag", name)
+	}
+
+	return list, nil
+}
+
+func (f *Flags) HasListItem(name, item string) (bool, error) {
+	list, err := f.GetList(name)
+	if err != nil {
+		return false, err
+	}
+
+	for _, i := range list {
+		if i == item {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // GetFlags returns the list of feature flags for the given instance.
 func GetFlags(inst *instance.Instance) (*Flags, error) {
 	sources := make([]*Flags, 0)
