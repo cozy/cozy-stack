@@ -1,3 +1,5 @@
+// Package office is for interactions with an OnlyOffice server to allow users
+// to view/edit their office documents online.
 package office
 
 import (
@@ -135,9 +137,6 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	file, err := fs.FileByID(detector.ID)
 	if err != nil {
 		return nil, err
-	}
-	if !isOfficeDocument(file) {
-		return nil, ErrInvalidFile
 	}
 
 	res, err := docserverClient.Get(downloadURL)
