@@ -107,10 +107,15 @@ type Credentials struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
-// AddContacts adds a list of contacts on the sharer cozy
-func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
-	for id, ro := range contactIDs {
-		if err := s.AddContact(inst, id, ro); err != nil {
+// AddGroupsAndContacts adds a list of contacts on the sharer cozy
+func (s *Sharing) AddGroupsAndContacts(inst *instance.Instance, groupIDs, contactIDs []string, readOnly bool) error {
+	for _, id := range contactIDs {
+		if err := s.AddContact(inst, id, readOnly); err != nil {
+			return err
+		}
+	}
+	for _, id := range groupIDs {
+		if err := s.AddGroup(inst, id, readOnly); err != nil {
 			return err
 		}
 	}

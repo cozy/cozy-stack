@@ -307,15 +307,26 @@ func ChangeCozyAddress(c echo.Context) error {
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
-		ids := make(map[string]bool)
-		for _, ref := range data {
-			if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-				ids[id] = readOnly
-			}
-		}
 		if s.Owner {
-			err = s.AddContacts(inst, ids)
+			var contactIDs, groupIDs []string
+			for _, ref := range data {
+				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+					if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
+						groupIDs = append(groupIDs, id)
+					} else {
+						contactIDs = append(contactIDs, id)
+					}
+				}
+			}
+			err = s.AddGroupsAndContacts(inst, groupIDs, contactIDs, readOnly)
 		} else {
+			// TODO groups
+			ids := make(map[string]bool)
+			for _, ref := range data {
+				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+					ids[id] = readOnly
+				}
+			}
 			err = s.DelegateAddContacts(inst, ids)
 		}
 	}

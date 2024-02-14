@@ -450,10 +450,17 @@ func TestSharings(t *testing.T) {
 	})
 
 	t.Run("AddRecipient", func(t *testing.T) {
-		assert.NotEmpty(t, aliceAppToken)
-		assert.NotNil(t, charlieContact)
+		require.NotEmpty(t, aliceAppToken)
+		require.NotNil(t, charlieContact)
 
 		eA := httpexpect.Default(t, tsA.URL)
+
+		brothers := createGroup(t, aliceInstance, "brothers")
+		require.NotNil(t, brothers)
+		hugoContact := addContactToGroup(t, aliceInstance, brothers, "Hugo")
+		require.NotNil(t, hugoContact)
+		idrisContact := addContactToGroup(t, aliceInstance, brothers, "Idris")
+		require.NotNil(t, idrisContact)
 
 		obj := eA.POST("/sharings/"+sharingID+"/recipients").
 			WithHeader("Authorization", "Bearer "+aliceAppToken).
@@ -463,7 +470,10 @@ func TestSharings(t *testing.T) {
           "type": "` + consts.Sharings + `",
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + charlieContact.ID() + `", "type": "` + charlieContact.DocType() + `"}]
+              "data": [
+			    {"id": "` + charlieContact.ID() + `", "type": "` + consts.Contacts + `"},
+			    {"id": "` + brothers.ID() + `", "type": "` + consts.Groups + `"}
+		      ]
             }
           }
         }
@@ -476,7 +486,7 @@ func TestSharings(t *testing.T) {
 		attrs := data.Value("attributes").Object()
 		members := attrs.Value("members").Array()
 
-		members.Length().IsEqual(4)
+		members.Length().IsEqual(6)
 		owner := members.Value(0).Object()
 		owner.HasValue("status", "owner")
 		owner.HasValue("public_name", "Alice")
@@ -498,6 +508,24 @@ func TestSharings(t *testing.T) {
 		charlie.HasValue("status", "pending")
 		charlie.HasValue("name", "Charlie")
 		charlie.HasValue("email", "charlie@example.net")
+
+		hugo := members.Value(4).Object()
+		hugo.HasValue("status", "pending")
+		hugo.HasValue("name", "Hugo")
+		hugo.HasValue("email", "hugo@example.net")
+
+		idris := members.Value(5).Object()
+		idris.HasValue("status", "pending")
+		idris.HasValue("name", "Idris")
+		idris.HasValue("email", "idris@example.net")
+
+		groups := attrs.Value("groups").Array()
+		groups.Length().IsEqual(1)
+		g := groups.Value(0).Object()
+		g.HasValue("id", brothers.ID())
+		g.HasValue("name", "brothers")
+		g.HasValue("members", []int{4, 5})
+		g.HasValue("addedBy", 0)
 	})
 
 	t.Run("RevokedSharingWithPreview", func(t *testing.T) {

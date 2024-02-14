@@ -485,7 +485,7 @@ func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
 
 // RevokeRecipient revoke only one recipient on the sharer. After that, if the
 // sharing has still at least one active member, we keep it as is. Else, we
-// desactive the sharing.
+// desactivate the sharing.
 func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing

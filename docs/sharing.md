@@ -763,9 +763,9 @@ HTTP/1.1 204 No Content
 
 ### POST /sharings/:sharing-id/recipients
 
-This route allows the sharer to add new recipients to a sharing. It can also be
-used by a recipient when the sharing has `open_sharing` set to true if the
-recipient doesn't have the `read_only` flag
+This route allows the sharer to add new recipients (and groups of recipients)
+to a sharing. It can also be used by a recipient when the sharing has
+`open_sharing` set to true if the recipient doesn't have the `read_only` flag.
 
 #### Request
 
