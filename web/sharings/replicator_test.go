@@ -181,16 +181,16 @@ func TestReplicator(t *testing.T) {
 		obj.NotContainsKey(sid2)
 
 		// sid3 was updated on the source
-		obj.Value(sid3).Object().Value("missing").Array().Equal([]string{"5-3b"})
+		obj.Value(sid3).Object().Value("missing").Array().IsEqual([]string{"5-3b"})
 
 		// sid4 is a conflict
-		obj.Value(sid4).Object().Value("missing").Array().Equal([]string{"2-4b", "2-4c", "4-4d"})
+		obj.Value(sid4).Object().Value("missing").Array().IsEqual([]string{"2-4b", "2-4c", "4-4d"})
 
 		// sid5 has been created on the target
 		obj.NotContainsKey(sid5)
 
 		// sid6 has been created on the source
-		obj.Value(sid6).Object().Value("missing").Array().Equal([]string{"1-6b"})
+		obj.Value(sid6).Object().Value("missing").Array().IsEqual([]string{"1-6b"})
 	})
 
 	t.Run("BulkDocs", func(t *testing.T) {
@@ -368,13 +368,13 @@ func TestReplicator(t *testing.T) {
 			Expect().Status(200).
 			JSON().Object()
 
-		obj.ValueEqual("_id", xoredID)
-		obj.ValueEqual("_rev", folder.DocRev)
-		obj.ValueEqual("type", "directory")
-		obj.ValueEqual("name", "zorglub")
+		obj.HasValue("_id", xoredID)
+		obj.HasValue("_rev", folder.DocRev)
+		obj.HasValue("type", "directory")
+		obj.HasValue("name", "zorglub")
 		obj.NotContainsKey("dir_id")
-		obj.Value("created_at").String().DateTime(time.RFC3339)
-		obj.Value("updated_at").String().DateTime(time.RFC3339)
+		obj.Value("created_at").String().AsDateTime(time.RFC3339)
+		obj.Value("updated_at").String().AsDateTime(time.RFC3339)
 	})
 }
 

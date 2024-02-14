@@ -1,3 +1,8 @@
+// Package sharings is the HTTP routes for the sharing. We have two types of
+// routes, some routes are used by the clients to create, list, revoke sharings
+// and add/remove recipients, and other routes are reserved for an internal
+// usage, mostly to synchronize the documents between the Cozys of the members
+// of the sharings.
 package sharings
 
 import (
