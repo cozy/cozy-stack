@@ -340,12 +340,14 @@ func TestSharings(t *testing.T) {
 		recipient.HasValue("status", "pending")
 		recipient.HasValue("name", "Fiona")
 		recipient.HasValue("email", "fiona@example.net")
+		recipient.HasValue("groups", []int{0})
 		recipient.NotContainsKey("read_only")
 
 		recipient = members.Value(2).Object()
 		recipient.HasValue("status", "pending")
 		recipient.HasValue("name", "Gaby")
 		recipient.HasValue("email", "gaby@example.net")
+		recipient.HasValue("groups", []int{0})
 		recipient.NotContainsKey("read_only")
 
 		groups := attrs.Value("groups").Array()
@@ -353,7 +355,6 @@ func TestSharings(t *testing.T) {
 		g := groups.Value(0).Object()
 		g.HasValue("id", group.ID())
 		g.HasValue("name", "friends")
-		g.HasValue("members", []int{1, 2})
 		g.HasValue("addedBy", 0)
 	})
 
@@ -513,18 +514,19 @@ func TestSharings(t *testing.T) {
 		hugo.HasValue("status", "pending")
 		hugo.HasValue("name", "Hugo")
 		hugo.HasValue("email", "hugo@example.net")
+		hugo.HasValue("groups", []int{0})
 
 		idris := members.Value(5).Object()
 		idris.HasValue("status", "pending")
 		idris.HasValue("name", "Idris")
 		idris.HasValue("email", "idris@example.net")
+		idris.HasValue("groups", []int{0})
 
 		groups := attrs.Value("groups").Array()
 		groups.Length().IsEqual(1)
 		g := groups.Value(0).Object()
 		g.HasValue("id", brothers.ID())
 		g.HasValue("name", "brothers")
-		g.HasValue("members", []int{4, 5})
 		g.HasValue("addedBy", 0)
 	})
 

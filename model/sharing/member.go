@@ -66,6 +66,7 @@ type Member struct {
 	Email      string `json:"email,omitempty"`
 	Instance   string `json:"instance,omitempty"`
 	ReadOnly   bool   `json:"read_only,omitempty"`
+	Groups     []int  `json:"groups,omitempty"` // The indexes of the groups
 }
 
 // PrimaryName returns the main name of this member
@@ -87,6 +88,14 @@ func (m *Member) InstanceHost() string {
 		return ""
 	}
 	return u.Host
+}
+
+// Same returns true if the two members are the same.
+func (m *Member) Same(other Member) bool {
+	return m.Name == other.Name &&
+		m.PublicName == other.PublicName &&
+		m.Email == other.Email &&
+		m.Instance == other.Instance
 }
 
 // Credentials is the struct with the secret stuff used for authentication &
@@ -587,14 +596,14 @@ func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) 
 func (s *Sharing) FindCredentials(m *Member) *Credentials {
 	if s.Owner {
 		for i, member := range s.Members {
-			if i > 0 && *m == member {
+			if i > 0 && m.Same(member) {
 				return &s.Credentials[i-1]
 			}
 		}
 		return nil
 	}
 
-	if *m == s.Members[0] {
+	if m.Same(s.Members[0]) {
 		return &s.Credentials[0]
 	}
 	return nil
