@@ -3,6 +3,7 @@ package sharing
 import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // Group contains the information about a group of members of the sharing.
@@ -10,6 +11,7 @@ type Group struct {
 	ID      string `json:"id,omitempty"` // Only present on the instance where the group was added
 	Name    string `json:"name"`
 	AddedBy int    `json:"addedBy"` // The index of the member who have added the group
+	Removed bool   `json:"removed,omitempty"`
 }
 
 // AddGroup adds a group of contacts identified by its ID to the members of the
@@ -41,4 +43,44 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	g := Group{ID: groupID, Name: group.Name(), AddedBy: 0}
 	s.Groups = append(s.Groups, g)
 	return nil
+}
+
+// RevokeGroup revoke a group of members on the sharer Cozy. After that, the
+// sharing is desactivated if there are no longer any active recipient.
+func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
+	if !s.Owner {
+		return ErrInvalidSharing
+	}
+
+	for i, m := range s.Members {
+		if !m.OnlyInGroups {
+			continue
+		}
+		inGroup := false
+		for _, idx := range m.Groups {
+			if idx == index {
+				inGroup = true
+			}
+		}
+		if !inGroup {
+			continue
+		}
+		if len(m.Groups) == 1 {
+			s.Members[i].Groups = nil
+			if err := s.RevokeRecipient(inst, i); err != nil {
+				return err
+			}
+		} else {
+			var groups []int
+			for _, idx := range m.Groups {
+				if idx != index {
+					groups = append(groups, idx)
+				}
+			}
+			s.Members[i].Groups = groups
+		}
+	}
+
+	s.Groups[index].Removed = true
+	return couchdb.UpdateDoc(inst, s)
 }

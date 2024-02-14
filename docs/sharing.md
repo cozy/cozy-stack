@@ -1155,6 +1155,27 @@ Host: alice.example.net
 HTTP/1.1 204 No Content
 ```
 
+### DELETE /sharings/:sharing-id/groups/:index
+
+This route can be only be called on the cozy instance of the sharer to revoke a
+group of the sharing. The parameter is the index of this recipient in the
+`groups` array of the sharing. The `removed` property for this group will be
+set to `true`, and it will revoke the members of this group unless they are
+still part of the sharing via another group.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/groups/0 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### DELETE /sharings/:sharing-id/recipients/self
 
 This route can be used by an application in the cozy of a recipient to remove it

@@ -759,6 +759,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id/recipients", PutRecipients)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)          // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient) // On the sharer
+	router.DELETE("/:sharing-id/groups/:index", RevokeGroup)         // On the sharer
 	router.POST("/:sharing-id/recipients/self/moved", ChangeCozyAddress)
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
 	router.POST("/:sharing-id/recipients/self/readonly", DowngradeToReadOnly, checkSharingWritePermissions)  // On the recipient
