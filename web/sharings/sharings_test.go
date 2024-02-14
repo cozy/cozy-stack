@@ -342,6 +342,7 @@ func TestSharings(t *testing.T) {
 		recipient.HasValue("email", "fiona@example.net")
 		recipient.HasValue("groups", []int{0})
 		recipient.NotContainsKey("read_only")
+		recipient.HasValue("only_in_groups", true)
 
 		recipient = members.Value(2).Object()
 		recipient.HasValue("status", "pending")
@@ -349,6 +350,7 @@ func TestSharings(t *testing.T) {
 		recipient.HasValue("email", "gaby@example.net")
 		recipient.HasValue("groups", []int{0})
 		recipient.NotContainsKey("read_only")
+		recipient.HasValue("only_in_groups", true)
 
 		groups := attrs.Value("groups").Array()
 		groups.Length().IsEqual(1)
@@ -498,29 +500,34 @@ func TestSharings(t *testing.T) {
 		bob.HasValue("status", "pending")
 		bob.HasValue("name", "Bob")
 		bob.HasValue("email", "bob@example.net")
+		bob.NotContainsKey("only_in_groups")
 
 		dave := members.Value(2).Object()
 		dave.HasValue("status", "pending")
 		dave.HasValue("name", "Dave")
 		dave.HasValue("email", "dave@example.net")
 		dave.HasValue("read_only", true)
+		dave.NotContainsKey("only_in_groups")
 
 		charlie := members.Value(3).Object()
 		charlie.HasValue("status", "pending")
 		charlie.HasValue("name", "Charlie")
 		charlie.HasValue("email", "charlie@example.net")
+		charlie.NotContainsKey("only_in_groups")
 
 		hugo := members.Value(4).Object()
 		hugo.HasValue("status", "pending")
 		hugo.HasValue("name", "Hugo")
 		hugo.HasValue("email", "hugo@example.net")
 		hugo.HasValue("groups", []int{0})
+		hugo.HasValue("only_in_groups", true)
 
 		idris := members.Value(5).Object()
 		idris.HasValue("status", "pending")
 		idris.HasValue("name", "Idris")
 		idris.HasValue("email", "idris@example.net")
 		idris.HasValue("groups", []int{0})
+		idris.HasValue("only_in_groups", true)
 
 		groups := attrs.Value("groups").Array()
 		groups.Length().IsEqual(1)

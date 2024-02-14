@@ -60,13 +60,14 @@ func maxNumberOfMembers(inst *instance.Instance) int {
 
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
-	Status     string `json:"status"`
-	Name       string `json:"name,omitempty"`
-	PublicName string `json:"public_name,omitempty"`
-	Email      string `json:"email,omitempty"`
-	Instance   string `json:"instance,omitempty"`
-	ReadOnly   bool   `json:"read_only,omitempty"`
-	Groups     []int  `json:"groups,omitempty"` // The indexes of the groups
+	Status       string `json:"status"`
+	Name         string `json:"name,omitempty"`
+	PublicName   string `json:"public_name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Instance     string `json:"instance,omitempty"`
+	ReadOnly     bool   `json:"read_only,omitempty"`
+	OnlyInGroups bool   `json:"only_in_groups,omitempty"` // False if the member as been added as an io.cozy.contacts
+	Groups       []int  `json:"groups,omitempty"`         // The indexes of the groups
 }
 
 // PrimaryName returns the main name of this member

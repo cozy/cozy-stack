@@ -30,6 +30,7 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 		if err != nil {
 			return err
 		}
+		m.OnlyInGroups = true
 		_, idx, err := s.addMember(inst, m)
 		if err != nil {
 			return err

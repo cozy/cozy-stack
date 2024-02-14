@@ -144,14 +144,16 @@ Content-Type: application/vnd.api+json
         {
           "status": "mail-not-sent",
           "name": "Gaby",
-          "email": "gaby@example.net"
+          "email": "gaby@example.net",
+          "only_in_groups": true,
+          "groups": [0]
         }
       ],
       "groups": [
         {
           "id": "51bbc980acb0013cb5f618c04daba326",
           "name": "G. people",
-          "members": [2]
+          "addedBy": 0
         }
       ],
       "rules": [
