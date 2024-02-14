@@ -122,10 +122,10 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             },
             "read_only_recipients": {
-                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+                "data": [{"id": "` + daveContact.ID() + `", "type": "` + daveContact.DocType() + `"}]
             }
           }
         }
@@ -252,7 +252,7 @@ func TestSharings(t *testing.T) {
           "type": "` + consts.Sharings + `",
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + edwardContact.ID() + `", "doctype": "` + edwardContact.DocType() + `"}]
+              "data": [{"id": "` + edwardContact.ID() + `", "type": "` + edwardContact.DocType() + `"}]
             }
           }
         }
@@ -286,6 +286,77 @@ func TestSharings(t *testing.T) {
 		edward.HasValue("email", "edward@example.net")
 	})
 
+	t.Run("CreateSharingWithGroup", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		require.NotEmpty(t, aliceAppToken)
+
+		group := createGroup(t, aliceInstance, "friends")
+		require.NotNil(t, group)
+		fionaContact := addContactToGroup(t, aliceInstance, group, "Fiona")
+		require.NotNil(t, fionaContact)
+		gabyContact := addContactToGroup(t, aliceInstance, group, "Gaby")
+		require.NotNil(t, gabyContact)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "this is a test with a group",
+            "open_sharing": true,
+            "rules": [{
+                "title": "test group",
+                "doctype": "` + iocozytests + `",
+                "values": ["000001"],
+                "add": "sync"
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + group.ID() + `", "type": "` + consts.Groups + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		attrs.HasValue("description", "this is a test with a group")
+		members := attrs.Value("members").Array()
+		members.Length().IsEqual(3)
+
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+		owner.HasValue("email", "alice@example.net")
+		owner.HasValue("instance", "http://"+aliceInstance.Domain)
+
+		recipient := members.Value(1).Object()
+		recipient.HasValue("status", "pending")
+		recipient.HasValue("name", "Fiona")
+		recipient.HasValue("email", "fiona@example.net")
+		recipient.NotContainsKey("read_only")
+
+		recipient = members.Value(2).Object()
+		recipient.HasValue("status", "pending")
+		recipient.HasValue("name", "Gaby")
+		recipient.HasValue("email", "gaby@example.net")
+		recipient.NotContainsKey("read_only")
+
+		groups := attrs.Value("groups").Array()
+		groups.Length().IsEqual(1)
+		g := groups.Value(0).Object()
+		g.HasValue("id", group.ID())
+		g.HasValue("name", "friends")
+		g.HasValue("members", []int{1, 2})
+		g.HasValue("addedBy", 0)
+	})
+
 	t.Run("CreateSharingWithPreview", func(t *testing.T) {
 		bobContact := createBobContact(t, aliceInstance)
 		require.NotEmpty(t, aliceAppToken)
@@ -310,10 +381,10 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             },
             "read_only_recipients": {
-                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+                "data": [{"id": "` + daveContact.ID() + `", "type": "` + daveContact.DocType() + `"}]
             }
           }
         }
@@ -392,7 +463,7 @@ func TestSharings(t *testing.T) {
           "type": "` + consts.Sharings + `",
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + charlieContact.ID() + `", "doctype": "` + charlieContact.DocType() + `"}]
+              "data": [{"id": "` + charlieContact.ID() + `", "type": "` + charlieContact.DocType() + `"}]
             }
           }
         }
@@ -530,7 +601,7 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             }
           }
         }
@@ -1036,14 +1107,40 @@ func createBobContact(t *testing.T, instance *instance.Instance) *contact.Contac
 
 func createContact(t *testing.T, inst *instance.Instance, name, email string) *contact.Contact {
 	t.Helper()
-
 	mail := map[string]interface{}{"address": email}
 	c := contact.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
-
 	require.NoError(t, couchdb.CreateDoc(inst, c))
+	return c
+}
 
+func createGroup(t *testing.T, inst *instance.Instance, name string) *contact.Group {
+	t.Helper()
+	g := contact.NewGroup()
+	g.M["name"] = name
+	require.NoError(t, couchdb.CreateDoc(inst, g))
+	return g
+}
+
+func addContactToGroup(t *testing.T, inst *instance.Instance, g *contact.Group, contactName string) *contact.Contact {
+	t.Helper()
+	email := strings.ToLower(contactName) + "@example.net"
+	mail := map[string]interface{}{"address": email}
+	c := contact.New()
+	c.M["fullname"] = contactName
+	c.M["email"] = []interface{}{mail}
+	c.M["relationships"] = map[string]interface{}{
+		"groups": map[string]interface{}{
+			"data": []interface{}{
+				map[string]interface{}{
+					"_id":   g.ID(),
+					"_type": consts.Groups,
+				},
+			},
+		},
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, c))
 	return c
 }
 

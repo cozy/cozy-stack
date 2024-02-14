@@ -70,6 +70,8 @@ const (
 	Permissions = "io.cozy.permissions"
 	// Contacts doc type for sharing
 	Contacts = "io.cozy.contacts"
+	// Groups of contacts doc type for sharing
+	Groups = "io.cozy.contacts.groups"
 	// RemoteRequests doc type for logging requests to remote websites
 	RemoteRequests = "io.cozy.remote.requests"
 	// RemoteSecrets doc type for secrets used by remote doctypes

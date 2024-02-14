@@ -136,6 +136,15 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	if err != nil {
 		return err
 	}
+	m, err := buildMemberFromContact(c, readOnly)
+	if err != nil {
+		return err
+	}
+	_, _, err = s.addMember(inst, m)
+	return err
+}
+
+func buildMemberFromContact(c *contact.Contact, readOnly bool) (Member, error) {
 	var name, email string
 	cozyURL := c.PrimaryCozyURL()
 	addr, err := c.ToMailAddress()
@@ -144,22 +153,23 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		email = addr.Email
 	} else {
 		if cozyURL == "" {
-			return err
+			return Member{}, err
 		}
 		name = c.PrimaryName()
 	}
-	m := Member{
+	return Member{
 		Status:   MemberStatusMailNotSent,
 		Name:     name,
 		Email:    email,
 		Instance: cozyURL,
 		ReadOnly: readOnly,
-	}
-	_, err = s.addMember(inst, m)
-	return err
+	}, nil
 }
 
-func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
+// addMember adds a member to the members of the sharing if they are not yet in
+// this list, and also adds credentials for them. It returns the state
+// parameter of the credentials if added, and the index of the member.
+func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, error) {
 	idx := -1
 	for i, member := range s.Members {
 		if i == 0 {
@@ -175,7 +185,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 			continue
 		}
 		if member.Status == MemberStatusReady {
-			return "", nil
+			return "", i, nil
 		}
 		idx = i
 		s.Members[i].Status = m.Status
@@ -186,7 +196,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	}
 	if idx < 1 {
 		if len(s.Members) >= maxNumberOfMembers(inst) {
-			return "", ErrTooManyMembers
+			return "", -1, ErrTooManyMembers
 		}
 		s.Members = append(s.Members, m)
 	}
@@ -197,10 +207,11 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	}
 	if idx < 1 {
 		s.Credentials = append(s.Credentials, creds)
+		idx = len(s.Credentials)
 	} else {
 		s.Credentials[idx-1] = creds
 	}
-	return creds.State, nil
+	return creds.State, idx, nil
 }
 
 // APIDelegateAddContacts is used to serialize a request to add contacts to
@@ -381,7 +392,7 @@ func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceUR
 		Instance: instanceURL,
 		ReadOnly: readOnly,
 	}
-	state, err := s.addMember(inst, m)
+	state, _, err := s.addMember(inst, m)
 	if err != nil {
 		return "", err
 	}

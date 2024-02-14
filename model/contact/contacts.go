@@ -1,3 +1,5 @@
+// Package contact is for managing the io.cozy.contacts documents and their
+// groups.
 package contact
 
 import (
@@ -80,6 +82,20 @@ func (c *Contact) PrimaryName() string {
 		primary += family
 	}
 	return primary
+}
+
+// ByFamilyNameGivenNameEmailCozyURL returns a string that can be used for
+// sorting the contacts like in the contacts app.
+func (c *Contact) ByFamilyNameGivenNameEmailCozyURL() string {
+	indexes, ok := c.Get("indexes").(map[string]interface{})
+	if !ok {
+		return c.PrimaryName()
+	}
+	str, ok := indexes["byFamilyNameGivenNameEmailCozyUrl"].(string)
+	if !ok {
+		return c.PrimaryName()
+	}
+	return str
 }
 
 // PrimaryPhoneNumber returns the preferred phone number,

@@ -95,6 +95,10 @@ Content-Type: application/vnd.api+json
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts"
+          },
+          {
+            "id": "51bbc980acb0013cb5f618c04daba326",
+            "type": "io.cozy.contacts.groups"
           }
         ]
       }
@@ -136,6 +140,18 @@ Content-Type: application/vnd.api+json
           "status": "mail-not-sent",
           "name": "Bob",
           "email": "bob@example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Gaby",
+          "email": "gaby@example.net"
+        }
+      ],
+      "groups": [
+        {
+          "id": "51bbc980acb0013cb5f618c04daba326",
+          "name": "G. people",
+          "members": [2]
         }
       ],
       "rules": [
