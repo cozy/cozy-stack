@@ -65,6 +65,7 @@ $ git checkout -b my-branch -t origin/master
 
 #### Step 3: Code
 
+
 Well, I think you know how to do that. Just be sure to follow the coding
 guidelines from the Go community (gofmt,
 [Effective Go](https://golang.org/doc/effective_go.html), comment the code,
@@ -74,9 +75,17 @@ We are using [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) to
 format code, and [golangci-lint](https://github.com/golangci/golangci-lint) to
 detect code smells.
 
+```
+$ make lint
+```
+
 We are using [eslint](https://eslint.org/) to lint JavaScript code. The linting
 rules are based on
 [cozy-app](https://github.com/cozy/cozy-libs/tree/master/packages/eslint-config-cozy-app)
+
+```
+$ make jslint
+```
 
 #### Step 4: Test
 
