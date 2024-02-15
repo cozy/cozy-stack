@@ -442,6 +442,43 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 	})
 }
 
+func TestBeforeHookKonnector(t *testing.T) {
+	if testing.Short() {
+		t.Skip("a couchdb is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	require.NoError(t, loadLocale(), "Could not load default locale translations")
+
+	setup := testutils.NewSetup(t, t.Name())
+	slug, err := setup.InstallMiniKonnector()
+	require.NoError(t, err)
+
+	inst := setup.GetTestInstance()
+
+	t.Run("stack maintenance", func(t *testing.T) {
+		err := app.ActivateMaintenance(slug, nil)
+		require.NoError(t, err)
+
+		msg, err := job.NewMessage(map[string]interface{}{
+			"konnector": slug,
+		})
+		require.NoError(t, err)
+
+		j := job.NewJob(inst, &job.JobRequest{
+			Message:    msg,
+			WorkerType: "konnector",
+		})
+
+		shouldExec, err := beforeHookKonnector(j)
+		assert.False(t, shouldExec)
+
+		testutils.WithFlag(t, inst, "harvest.skip-maintenance-for", map[string]interface{}{"list": []string{slug}})
+		shouldExec, err = beforeHookKonnector(j)
+		assert.True(t, shouldExec)
+	})
+}
+
 func loadLocale() error {
 	locale := consts.DefaultLocale
 	assetsPath := config.GetConfig().Assets

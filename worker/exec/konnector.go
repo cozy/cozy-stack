@@ -15,6 +15,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
@@ -126,6 +127,21 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 
 	if err := json.Unmarshal(j.Message, &msg); err == nil {
 		slug = msg.Konnector
+
+		inst, err := lifecycle.GetInstance(j.DomainName())
+		if err != nil {
+			return false, err
+		}
+
+		flags, err := feature.GetFlags(inst)
+		if err != nil {
+			return false, err
+		}
+		skipMaintenance, err := flags.HasListItem("harvest.skip-maintenance-for", slug)
+		if err != nil {
+			return false, err
+		}
+
 		doc, err := app.GetMaintenanceOptions(slug)
 		if err != nil {
 			j.Logger().Warnf("konnector %q could not get local maintenance status", slug)
@@ -136,13 +152,16 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 					return true, nil
 				}
 			}
-			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
-			return false, nil
+
+			if skipMaintenance {
+				j.Logger().Infof("skipping konnector %q's maintenance", slug)
+				return true, nil
+			} else {
+				j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
+				return false, nil
+			}
 		}
-		inst, err := lifecycle.GetInstance(j.DomainName())
-		if err != nil {
-			return false, err
-		}
+
 		app, err := registry.GetApplication(slug, inst.Registries())
 		if err != nil {
 			j.Logger().Warnf("konnector %q could not get application to fetch maintenance status", slug)
@@ -150,8 +169,14 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 			if j.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
 				return true, nil
 			}
-			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
-			return false, nil
+
+			if skipMaintenance {
+				j.Logger().Infof("skipping konnector %q's maintenance", slug)
+				return true, nil
+			} else {
+				j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", slug)
+				return false, nil
+			}
 		}
 
 		if msg.BIWebhook {
