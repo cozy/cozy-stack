@@ -53,9 +53,6 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 	}
 
 	for i, m := range s.Members {
-		if !m.OnlyInGroups {
-			continue
-		}
 		inGroup := false
 		for _, idx := range m.Groups {
 			if idx == index {
@@ -67,9 +64,6 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 		}
 		if len(m.Groups) == 1 {
 			s.Members[i].Groups = nil
-			if err := s.RevokeRecipient(inst, i); err != nil {
-				return err
-			}
 		} else {
 			var groups []int
 			for _, idx := range m.Groups {
@@ -78,6 +72,11 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 				}
 			}
 			s.Members[i].Groups = groups
+		}
+		if m.OnlyInGroups && len(s.Members[i].Groups) == 0 {
+			if err := s.RevokeRecipient(inst, i); err != nil {
+				return err
+			}
 		}
 	}
 

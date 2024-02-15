@@ -853,6 +853,95 @@ func TestSharings(t *testing.T) {
 		assertLastRecipientIsRevoked(t, s, sharedRefs, aliceInstance)
 	})
 
+	t.Run("RevokeGroup", func(t *testing.T) {
+		sharedDocs := []string{"forgroup1"}
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
+
+		group := createGroup(t, aliceInstance, "friends")
+		require.NotNil(t, group)
+		fionaContact := addContactToGroup(t, aliceInstance, group, "Fiona")
+		require.NotNil(t, fionaContact)
+		gabyContact := addContactToGroup(t, aliceInstance, group, "Gaby")
+		require.NotNil(t, gabyContact)
+
+		eA := httpexpect.Default(t, tsA.URL)
+
+		obj := eA.POST("/sharings/"+s.ID()+"/recipients").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "relationships": {
+            "recipients": {
+              "data": [
+			    {"id": "` + group.ID() + `", "type": "` + consts.Groups + `"}
+		      ]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		members := attrs.Value("members").Array()
+		members.Length().IsEqual(4)
+
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+
+		bob := members.Value(1).Object()
+		bob.HasValue("name", "Bob")
+
+		fiona := members.Value(2).Object()
+		fiona.HasValue("status", "pending")
+		fiona.HasValue("name", "Fiona")
+		fiona.HasValue("groups", []int{0})
+		fiona.HasValue("only_in_groups", true)
+
+		gaby := members.Value(3).Object()
+		gaby.HasValue("status", "pending")
+		gaby.HasValue("name", "Gaby")
+		gaby.HasValue("groups", []int{0})
+		gaby.HasValue("only_in_groups", true)
+
+		eA.DELETE("/sharings/"+s.ID()+"/groups/0").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
+		obj = eA.GET("/sharings/"+s.ID()).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		attrs = data.Value("attributes").Object()
+		members = attrs.Value("members").Array()
+		members.Length().IsEqual(4)
+
+		owner = members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+
+		bob = members.Value(1).Object()
+		bob.HasValue("name", "Bob")
+
+		fiona = members.Value(2).Object()
+		fiona.HasValue("status", "revoked")
+		fiona.HasValue("name", "Fiona")
+
+		gaby = members.Value(3).Object()
+		gaby.HasValue("status", "revoked")
+		gaby.HasValue("name", "Gaby")
+	})
+
 	t.Run("RevocationFromRecipient", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid5", "mygreatid6"}
 		sharedRefs := []*sharing.SharedRef{}
