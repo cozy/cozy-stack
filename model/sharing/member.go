@@ -1125,6 +1125,16 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 		return nil
 	}
 
+	org := &bitwarden.Organization{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, rule.Values[0], org); err != nil {
+		return err
+	}
+	domain := m.Instance
+	if u, err := url.Parse(m.Instance); err == nil {
+		domain = u.Host
+	}
+	orgKey := org.Members[domain].OrgKey
+
 	if bw.PublicKey != "" {
 		contact := &bitwarden.Contact{}
 		err := couchdb.GetDoc(inst, consts.BitwardenContacts, bw.UserID, contact)
@@ -1149,18 +1159,11 @@ func (s *Sharing) SaveBitwarden(inst *instance.Instance, m *Member, bw *APIBitwa
 			if err := couchdb.UpdateDoc(inst, contact); err != nil {
 				return err
 			}
+			// The organization key was encrypted with the wrong key and must be discarded
+			orgKey = ""
 		}
 	}
 
-	org := &bitwarden.Organization{}
-	if err := couchdb.GetDoc(inst, consts.BitwardenOrganizations, rule.Values[0], org); err != nil {
-		return err
-	}
-	domain := m.Instance
-	if u, err := url.Parse(m.Instance); err == nil {
-		domain = u.Host
-	}
-	orgKey := org.Members[domain].OrgKey
 	status := bitwarden.OrgMemberInvited
 	if bw.PublicKey != "" {
 		status = bitwarden.OrgMemberAccepted
