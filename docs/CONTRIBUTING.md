@@ -46,9 +46,6 @@ there.
 
 Fork the project on GitHub and check out your copy locally:
 
-⚠️ Be sure to clone outside the `$GOPATH` otherwise gomodules will not work (or
-use the `GO111MODULE=on` env variable to force the usage of go modules).
-
 ```
 $ git clone https://github.com/cozy/cozy-stack.git
 $ cd cozy-stack
@@ -89,9 +86,11 @@ $ make jslint
 
 #### Step 4: Test
 
-Don't forget to add tests and be sure they are green:
+Don't forget to add tests and be sure they are green. You need CouchDB
+installed, with an account, and configuring the stack to use this account:
 
 ```
+$ export COZY_COUCHDB_URL=http://admin:password@localhost:5984
 $ make unit-tests
 ```
 
@@ -156,8 +155,8 @@ as `package oauth_test`.
 The cozy-stack serve some assets for the client application. In particular,
 cozy-client-js and cozy-bar assets are listed in `assets/.externals`. To update
 them, you can open a pull request for this file. When a maintainer will accept
-this pull request, he will also run `scripts/build.sh assets` to transform them
-in go code (to make the repository go gettable).
+this pull request, he will also run `make assets` to transform them in go code
+(to make the repository go gettable).
 
 ## Useful commands
 
@@ -166,6 +165,7 @@ cozy-stack:
 
 ```bash
 cd cozy-stack
+make help               # Show the commands that can be launched via make
 go build                # Build the stack, also takes care of updating dependencies through gomodules
 go install              # Installs the `cozy-stack` binary
 go test -v ./...        # To launch the tests
