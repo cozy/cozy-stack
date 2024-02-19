@@ -146,7 +146,8 @@ jobs:
   #   - "push":              sending push notifications
   #   - "sms":               sending SMS notifications
   #   - "sendmail":          sending mails
-  #   - "share-replicate":   for cozy to cozy sharing
+  #   - "share-group":       for cozy to cozy sharing
+  #   - "share-replicate":   idem
   #   - "share-track":       idem
   #   - "share-upload":      idem
   #   - "thumbnail":         creatings and deleting thumbnails for images

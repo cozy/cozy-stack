@@ -720,6 +720,21 @@ func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error)
 	return res, nil
 }
 
+// FindActive returns the list of active sharings.
+func FindActive(db prefixer.Prefixer) ([]*Sharing, error) {
+	req := &couchdb.FindRequest{
+		UseIndex: "active",
+		Selector: mango.Equal("active", true),
+		Limit:    1000,
+	}
+	var res []*Sharing
+	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // GetSharingsByDocType returns all the sharings for the given doctype
 func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
 	req := &couchdb.ViewRequest{

@@ -94,6 +94,83 @@ func TestGroups(t *testing.T) {
 		assert.True(t, s.Groups[0].Removed)
 		assert.True(t, s.Groups[1].Removed)
 	})
+
+	t.Run("UpdateGroups", func(t *testing.T) {
+		now := time.Now()
+		friends := createGroup(t, inst, "Friends")
+		football := createGroup(t, inst, "Football")
+		_ = createContactInGroups(t, inst, "Bob", []string{friends.ID()})
+		charlie := createContactInGroups(t, inst, "Charlie", []string{football.ID()})
+
+		s := &Sharing{
+			Active:      true,
+			Owner:       true,
+			Description: "Just testing groups",
+			Members: []Member{
+				{Status: MemberStatusOwner, Name: "Alice", Email: "alice@cozy.tools"},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		require.NoError(t, couchdb.CreateDoc(inst, s))
+		require.NoError(t, s.AddGroup(inst, friends.ID(), false))
+		require.NoError(t, s.AddGroup(inst, football.ID(), false))
+		require.NoError(t, couchdb.UpdateDoc(inst, s))
+		sid := s.ID()
+
+		require.Len(t, s.Members, 3)
+		require.Equal(t, s.Members[0].Name, "Alice")
+		require.Equal(t, s.Members[1].Name, "Bob")
+		assert.True(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, s.Members[1].Groups, []int{0})
+		require.Equal(t, s.Members[2].Name, "Charlie")
+		assert.True(t, s.Members[2].OnlyInGroups)
+		assert.Equal(t, s.Members[2].Groups, []int{1})
+
+		require.Len(t, s.Groups, 2)
+		require.Equal(t, s.Groups[0].Name, "Friends")
+		assert.False(t, s.Groups[0].Removed)
+		require.Equal(t, s.Groups[1].Name, "Football")
+		assert.False(t, s.Groups[1].Removed)
+
+		// Charlie is added to the friends group
+		msg1 := GroupMessage{
+			ContactID:   charlie.ID(),
+			GroupsAdded: []string{friends.ID()},
+		}
+		require.NoError(t, UpdateGroups(inst, msg1))
+
+		s = &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, s))
+
+		require.Len(t, s.Members, 3)
+		require.Equal(t, s.Members[0].Name, "Alice")
+		require.Equal(t, s.Members[1].Name, "Bob")
+		assert.True(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, s.Members[1].Groups, []int{0})
+		require.Equal(t, s.Members[2].Name, "Charlie")
+		assert.True(t, s.Members[2].OnlyInGroups)
+		assert.Equal(t, s.Members[2].Groups, []int{0, 1})
+
+		// Charlie is removed of the football group
+		msg2 := GroupMessage{
+			ContactID:     charlie.ID(),
+			GroupsRemoved: []string{football.ID()},
+		}
+		require.NoError(t, UpdateGroups(inst, msg2))
+
+		s = &Sharing{}
+		require.NoError(t, couchdb.GetDoc(inst, consts.Sharings, sid, s))
+
+		require.Len(t, s.Members, 3)
+		require.Equal(t, s.Members[0].Name, "Alice")
+		require.Equal(t, s.Members[1].Name, "Bob")
+		assert.True(t, s.Members[1].OnlyInGroups)
+		assert.Equal(t, s.Members[1].Groups, []int{0})
+		require.Equal(t, s.Members[2].Name, "Charlie")
+		assert.True(t, s.Members[2].OnlyInGroups)
+		assert.Equal(t, s.Members[2].Groups, []int{0})
+	})
 }
 
 func createGroup(t *testing.T, inst *instance.Instance, name string) *contact.Group {
