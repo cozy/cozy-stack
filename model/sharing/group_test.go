@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -134,7 +135,7 @@ func TestGroups(t *testing.T) {
 		assert.False(t, s.Groups[1].Removed)
 
 		// Charlie is added to the friends group
-		msg1 := GroupMessage{
+		msg1 := job.ShareGroupMessage{
 			ContactID:   charlie.ID(),
 			GroupsAdded: []string{friends.ID()},
 		}
@@ -153,7 +154,7 @@ func TestGroups(t *testing.T) {
 		assert.Equal(t, s.Members[2].Groups, []int{0, 1})
 
 		// Charlie is removed of the football group
-		msg2 := GroupMessage{
+		msg2 := job.ShareGroupMessage{
 			ContactID:     charlie.ID(),
 			GroupsRemoved: []string{football.ID()},
 		}

@@ -56,7 +56,7 @@ func init() {
 // WorkerGroup is used to update the list of members of sharings for a group
 // when someone is added or removed to this group.
 func WorkerGroup(ctx *job.TaskContext) error {
-	var msg sharing.GroupMessage
+	var msg job.ShareGroupMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}

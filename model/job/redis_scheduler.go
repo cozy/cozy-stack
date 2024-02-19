@@ -59,6 +59,7 @@ type redisScheduler struct {
 	client  redis.UniversalClient
 	ctx     context.Context
 	thumb   *ThumbnailTrigger
+	share   *ShareGroupTrigger
 	closed  chan struct{}
 	stopped chan struct{}
 	log     *logger.Entry
@@ -99,6 +100,8 @@ func (s *redisScheduler) StartScheduler(b Broker) error {
 	s.startEventDispatcher()
 	s.thumb = NewThumbnailTrigger(s.broker)
 	go s.thumb.Schedule()
+	s.share = NewShareGroupTrigger(s.broker)
+	go s.share.Schedule()
 	go s.pollLoop()
 	return nil
 }
@@ -252,6 +255,7 @@ func (s *redisScheduler) ShutdownScheduler(ctx context.Context) error {
 	fmt.Print("  shutting down redis scheduler...")
 	close(s.closed)
 	s.thumb.Unschedule()
+	s.share.Unschedule()
 	select {
 	case <-ctx.Done():
 		fmt.Println("failed: ", ctx.Err())

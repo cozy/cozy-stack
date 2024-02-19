@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -16,13 +17,6 @@ type Group struct {
 	AddedBy  int    `json:"addedBy"` // The index of the member who have added the group
 	ReadOnly bool   `json:"read_only"`
 	Removed  bool   `json:"removed,omitempty"`
-}
-
-// GroupMessage is used for jobs on the share-group worker.
-type GroupMessage struct {
-	ContactID     string   `json:"contact_id"`
-	GroupsAdded   []string `json:"added"`
-	GroupsRemoved []string `json:"removed"`
 }
 
 // AddGroup adds a group of contacts identified by its ID to the members of the
@@ -99,7 +93,7 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 // UpdateGroups is called when a contact is added or removed to a group. It
 // finds the sharings for this group, and adds or removes the member to those
 // sharings.
-func UpdateGroups(inst *instance.Instance, msg GroupMessage) error {
+func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 	sharings, err := FindActive(inst)
 	if err != nil {
 		return err
