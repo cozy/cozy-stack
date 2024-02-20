@@ -155,6 +155,9 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	if err != nil {
 		return err
 	}
+	if m.Email == "" && m.Instance == "" {
+		return contact.ErrNoMailAddress
+	}
 	_, _, err = s.addMember(inst, m)
 	return err
 }
@@ -167,9 +170,6 @@ func buildMemberFromContact(c *contact.Contact, readOnly bool) (Member, error) {
 		name = addr.Name
 		email = addr.Email
 	} else {
-		if cozyURL == "" {
-			return Member{}, err
-		}
 		name = c.PrimaryName()
 	}
 	return Member{
@@ -191,10 +191,10 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 			continue // Skip the owner
 		}
 		var found bool
-		if m.Email == "" {
-			found = m.Instance == member.Instance
-		} else {
+		if m.Email != "" {
 			found = m.Email == member.Email
+		} else if m.Instance != "" {
+			found = m.Instance == member.Instance
 		}
 		if !found {
 			continue

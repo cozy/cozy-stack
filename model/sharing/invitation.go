@@ -46,6 +46,9 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 				}
 			}
 			if m.Email == "" {
+				if len(m.Groups) > 0 {
+					return nil
+				}
 				return ErrInvitationNotSent
 			}
 			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
