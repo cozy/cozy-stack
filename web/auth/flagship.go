@@ -181,6 +181,7 @@ type loginFlagshipParameters struct {
 	Passphrase        string `json:"passphrase"`
 	TwoFactorPasscode string `json:"two_factor_passcode"`
 	TwoFactorToken    string `json:"two_factor_token"`
+	EmailVerifiedCode string `json:"email_verified_code"`
 }
 
 func loginFlagship(c echo.Context) error {
@@ -203,7 +204,7 @@ func loginFlagship(c echo.Context) error {
 		})
 	}
 
-	if inst.HasAuthMode(instance.TwoFactorMail) {
+	if inst.HasAuthMode(instance.TwoFactorMail) && !inst.CheckEmailVerifiedCode(args.EmailVerifiedCode) {
 		if len(args.TwoFactorToken) == 0 {
 			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
