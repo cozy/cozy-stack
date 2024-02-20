@@ -1,6 +1,7 @@
 package job
 
 import (
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -55,11 +56,13 @@ func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
 	if !ok {
 		return nil
 	}
-	newgroups := extractGroupIDs(newdoc)
+	newContact := &contact.Contact{JSONDoc: *newdoc}
+	newgroups := newContact.GroupIDs()
 
 	var oldgroups []string
 	if olddoc, ok := e.OldDoc.(*couchdb.JSONDoc); ok {
-		oldgroups = extractGroupIDs(olddoc)
+		oldContact := &contact.Contact{JSONDoc: *olddoc}
+		oldgroups = oldContact.GroupIDs()
 	}
 
 	added := diffGroupIDs(newgroups, oldgroups)
@@ -74,30 +77,6 @@ func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
 		GroupsAdded:   added,
 		GroupsRemoved: removed,
 	}
-}
-
-func extractGroupIDs(doc *couchdb.JSONDoc) []string {
-	var groupIDs []string
-
-	if rels, ok := doc.Get("relationships").(map[string]interface{}); ok {
-		for _, groups := range rels {
-			if groups, ok := groups.(map[string]interface{}); ok {
-				if data, ok := groups["data"].([]interface{}); ok {
-					for _, item := range data {
-						if item, ok := item.(map[string]interface{}); ok {
-							if item["_type"] == consts.Groups {
-								if id, ok := item["_id"].(string); ok {
-									groupIDs = append(groupIDs, id)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return groupIDs
 }
 
 func diffGroupIDs(as, bs []string) []string {

@@ -155,6 +155,34 @@ func (c *Contact) PrimaryCozyURL() string {
 	return url
 }
 
+// GroupIDs returns the list of the group identifiers that this contact belongs to.
+func (c *Contact) GroupIDs() []string {
+	rels, ok := c.Get("relationships").(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var groupIDs []string
+
+	for _, groups := range rels {
+		if groups, ok := groups.(map[string]interface{}); ok {
+			if data, ok := groups["data"].([]interface{}); ok {
+				for _, item := range data {
+					if item, ok := item.(map[string]interface{}); ok {
+						if item["_type"] == consts.Groups {
+							if id, ok := item["_id"].(string); ok {
+								groupIDs = append(groupIDs, id)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return groupIDs
+}
+
 // AddNameIfMissing can be used to add a name if there was none. We need the
 // email address to ignore it if the displayName was updated with it by a
 // service of the contacts application.
