@@ -16,9 +16,10 @@ type ShareGroupTrigger struct {
 
 // ShareGroupMessage is used for jobs on the share-group worker.
 type ShareGroupMessage struct {
-	ContactID     string   `json:"contact_id"`
-	GroupsAdded   []string `json:"added"`
-	GroupsRemoved []string `json:"removed"`
+	ContactID       string   `json:"contact_id"`
+	GroupsAdded     []string `json:"added"`
+	GroupsRemoved   []string `json:"removed"`
+	BecomeInvitable bool     `json:"invitable"`
 }
 
 func NewShareGroupTrigger(broker Broker) *ShareGroupTrigger {
@@ -60,22 +61,25 @@ func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
 	newgroups := newContact.GroupIDs()
 
 	var oldgroups []string
+	invitable := false
 	if olddoc, ok := e.OldDoc.(*couchdb.JSONDoc); ok {
 		oldContact := &contact.Contact{JSONDoc: *olddoc}
 		oldgroups = oldContact.GroupIDs()
+		invitable = contactIsNowInvitable(oldContact, newContact)
 	}
 
 	added := diffGroupIDs(newgroups, oldgroups)
 	removed := diffGroupIDs(oldgroups, newgroups)
 
-	if len(added) == 0 && len(removed) == 0 {
+	if len(added) == 0 && len(removed) == 0 && !invitable {
 		return nil
 	}
 
 	return &ShareGroupMessage{
-		ContactID:     e.Doc.ID(),
-		GroupsAdded:   added,
-		GroupsRemoved: removed,
+		ContactID:       e.Doc.ID(),
+		GroupsAdded:     added,
+		GroupsRemoved:   removed,
+		BecomeInvitable: invitable,
 	}
 }
 
@@ -93,6 +97,22 @@ func diffGroupIDs(as, bs []string) []string {
 		}
 	}
 	return diff
+}
+
+func contactIsNowInvitable(oldContact, newContact *contact.Contact) bool {
+	if oldURL := oldContact.PrimaryCozyURL(); oldURL != "" {
+		return false
+	}
+	if oldAddr, err := oldContact.ToMailAddress(); err == nil && oldAddr.Email != "" {
+		return false
+	}
+	if newURL := newContact.PrimaryCozyURL(); newURL != "" {
+		return true
+	}
+	if newAddr, err := newContact.ToMailAddress(); err == nil && newAddr.Email != "" {
+		return true
+	}
+	return false
 }
 
 func (t *ShareGroupTrigger) pushJob(e *realtime.Event, msg *ShareGroupMessage) {
