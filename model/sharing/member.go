@@ -462,9 +462,9 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	return success["redirect"], nil
 }
 
-// UpdateRecipients updates the list of recipients
-func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) error {
-	for i, m := range members {
+// UpdateRecipients updates the lists of members and groups.
+func (s *Sharing) UpdateRecipients(inst *instance.Instance, params PutRecipientsParams) error {
+	for i, m := range params.Members {
 		if i >= len(s.Members) {
 			s.Members = append(s.Members, Member{})
 		}
@@ -478,6 +478,7 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Status = m.Status
 		s.Members[i].ReadOnly = m.ReadOnly
 	}
+	s.Groups = params.Groups
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -1016,6 +1017,13 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	return nil
 }
 
+// PutRecipientsParams is the body of the request for updating the list of
+// members and groups on the active recipients of a sharing.
+type PutRecipientsParams struct {
+	Members []Member `json:"data"`
+	Groups  []Group  `json:"included"`
+}
+
 // NotifyRecipients will push the updated list of members of the sharing to the
 // active recipients. It is meant to be used in a goroutine, errors are just
 // logged (nothing critical here).
@@ -1057,12 +1065,10 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 		return
 	}
 
-	var members struct {
-		Members []Member `json:"data"`
-	}
-	members.Members = make([]Member, len(s.Members))
+	var params PutRecipientsParams
+	params.Members = make([]Member, len(s.Members))
 	for i, m := range s.Members {
-		members.Members[i] = Member{
+		params.Members[i] = Member{
 			Status:     m.Status,
 			PublicName: m.PublicName,
 			Email:      m.Email,
@@ -1070,7 +1076,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			// Instance and name are private
 		}
 	}
-	body, err := json.Marshal(members)
+	params.Groups = make([]Group, len(s.Groups))
+	copy(params.Groups, s.Groups)
+	body, err := json.Marshal(params)
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Can't serialize the updated members list for %s: %s", s.SID, err)

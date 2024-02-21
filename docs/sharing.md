@@ -931,10 +931,11 @@ Content-Type: application/json
 
 ### PUT /sharings/:sharing-id/recipients
 
-This internal route is used to update the list of members, their states, emails
-and names, on the recipients cozy. The token used for this route can be the
-access token for a sharing where synchronization is active, or the sharecode
-for a member who has only a shortcut to the sharing on their Cozy instance.
+This internal route is used to update the list of members (their states, emails
+and names) and the list of groups on the recipients cozy. The token used for
+this route can be the access token for a sharing where synchronization is
+active, or the sharecode for a member who has only a shortcut to the sharing on
+their Cozy instance.
 
 #### Request
 
@@ -970,6 +971,13 @@ Content-Type: application/vnd.api+json
       "name": "Dave",
       "email": "dave@example.net",
       "read_only": true
+    }
+  ],
+  "included": [
+    {
+      "id": "51bbc980acb0013cb5f618c04daba326",
+      "name": "G. people",
+      "addedBy": 0
     }
   ]
 }

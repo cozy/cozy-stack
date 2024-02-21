@@ -446,13 +446,11 @@ func PutRecipients(c echo.Context) error {
 		}
 	}
 
-	var body struct {
-		Members []sharing.Member `json:"data"`
-	}
-	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+	var params sharing.PutRecipientsParams
+	if err = json.NewDecoder(c.Request().Body).Decode(&params); err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.UpdateRecipients(inst, body.Members); err != nil {
+	if err = s.UpdateRecipients(inst, params); err != nil {
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
