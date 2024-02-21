@@ -559,7 +559,8 @@ func TestSharings(t *testing.T) {
 		sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
 		require.NoError(t, err)
 
-		_, err = sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
+		m := sharing.Member{Email: newMemberMail, ReadOnly: true}
+		_, err = sharingDoc.AddDelegatedContact(aliceInstance, m)
 		require.NoError(t, err)
 		perms, err := permission.GetForSharePreview(aliceInstance, sharingID)
 		require.NoError(t, err)

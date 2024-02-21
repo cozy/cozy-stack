@@ -307,27 +307,20 @@ func ChangeCozyAddress(c echo.Context) error {
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
-		if s.Owner {
-			var contactIDs, groupIDs []string
-			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
-						groupIDs = append(groupIDs, id)
-					} else {
-						contactIDs = append(contactIDs, id)
-					}
+		var contactIDs, groupIDs []string
+		for _, ref := range data {
+			if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+				if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
+					groupIDs = append(groupIDs, id)
+				} else {
+					contactIDs = append(contactIDs, id)
 				}
 			}
+		}
+		if s.Owner {
 			err = s.AddGroupsAndContacts(inst, groupIDs, contactIDs, readOnly)
 		} else {
-			// TODO groups
-			ids := make(map[string]bool)
-			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					ids[id] = readOnly
-				}
-			}
-			err = s.DelegateAddContacts(inst, ids)
+			err = s.DelegateAddContactsAndGroups(inst, groupIDs, contactIDs, readOnly)
 		}
 	}
 	return err
@@ -362,8 +355,8 @@ func AddRecipients(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
-// AddRecipientsDelegated is used to add a member to a sharing on the owner's cozy
-// when it's the recipient's cozy that sends the mail invitation.
+// AddRecipientsDelegated is used to add members and groups to a sharing on the
+// owner's cozy when it's the recipient's cozy that sends the mail invitation.
 func AddRecipientsDelegated(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
@@ -374,50 +367,74 @@ func AddRecipientsDelegated(c echo.Context) error {
 	if !s.Owner || !s.Open {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	var body sharing.Sharing
-	obj, err := jsonapi.Bind(c.Request().Body, &body)
+	member, err := requestMember(c, s)
 	if err != nil {
-		return jsonapi.BadJSON()
+		return wrapErrors(err)
 	}
-	states := make(map[string]string)
-	if rel, ok := obj.GetRelationship("recipients"); ok {
-		if data, ok := rel.Data.([]interface{}); ok {
-			for _, ref := range data {
-				contact, _ := ref.(map[string]interface{})
-				email, _ := contact["email"].(string)
-				cozy, _ := contact["instance"].(string)
-				ro, _ := contact["read_only"].(bool)
-				state, err := s.AddDelegatedContact(inst, email, cozy, ro)
-				if err != nil {
-					return wrapErrors(err)
-				}
-				if email == "" {
-					states[cozy] = state
-				} else {
-					states[email] = state
-				}
-
-				// If we have an URL for the Cozy, we can create a shortcut as an invitation
-				if cozy != "" {
-					var perms *permission.Permission
-					if s.PreviewPath != "" {
-						if perms, err = s.CreatePreviewPermissions(inst); err != nil {
-							return wrapErrors(err)
-						}
-					}
-					if err = s.SendInvitations(inst, perms); err != nil {
-						return wrapErrors(err)
-					}
-				}
-			}
-
-			if err := couchdb.UpdateDoc(inst, s); err != nil {
-				return wrapErrors(err)
-			}
-			cloned := s.Clone().(*sharing.Sharing)
-			go cloned.NotifyRecipients(inst, nil)
+	memberIndex := -1
+	for i, m := range s.Members {
+		if m.Instance == member.Instance {
+			memberIndex = i
 		}
 	}
+	if memberIndex == -1 {
+		return jsonapi.InternalServerError(sharing.ErrInvalidSharing)
+	}
+
+	var body struct {
+		Data struct {
+			Type          string `json:"type"`
+			ID            string `json:"id"`
+			Relationships struct {
+				Groups struct {
+					Data []sharing.Group `json:"data"`
+				} `json:"groups"`
+				Recipients struct {
+					Data []sharing.Member `json:"data"`
+				} `json:"recipients"`
+			} `json:"relationships"`
+		} `json:"data"`
+	}
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	for _, g := range body.Data.Relationships.Groups.Data {
+		g.AddedBy = memberIndex
+		s.Groups = append(s.Groups, g)
+	}
+
+	states := make(map[string]string)
+	for _, m := range body.Data.Relationships.Recipients.Data {
+		state, err := s.AddDelegatedContact(inst, m)
+		if err != nil {
+			if len(m.Groups) > 0 {
+				continue
+			}
+			return wrapErrors(err)
+		}
+		// If we have an URL for the Cozy, we can create a shortcut as an invitation
+		if m.Instance != "" {
+			states[m.Instance] = state
+			var perms *permission.Permission
+			if s.PreviewPath != "" {
+				if perms, err = s.CreatePreviewPermissions(inst); err != nil {
+					return wrapErrors(err)
+				}
+			}
+			if err = s.SendInvitations(inst, perms); err != nil {
+				return wrapErrors(err)
+			}
+		} else if m.Email != "" {
+			states[m.Email] = state
+		}
+	}
+
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return wrapErrors(err)
+	}
+	cloned := s.Clone().(*sharing.Sharing)
+	go cloned.NotifyRecipients(inst, nil)
 	return c.JSON(http.StatusOK, states)
 }
 

@@ -234,6 +234,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 type APIDelegateAddContacts struct {
 	sid     string
 	members []Member
+	groups  []Group
 }
 
 // ID returns the sharing qualified identifier
@@ -268,18 +269,22 @@ func (a *APIDelegateAddContacts) Relationships() jsonapi.RelationshipMap {
 		"recipients": jsonapi.Relationship{
 			Data: a.members,
 		},
+		"groups": jsonapi.Relationship{
+			Data: a.groups,
+		},
 	}
 }
 
 var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
 
-// DelegateAddContacts adds a list of contacts on a recipient cozy. Part of
-// the work is delegated to owner cozy, but the invitation mail is still sent
-// from the recipient cozy.
-func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
+// DelegateAddContactsAndGroups adds a list of contacts and groups on a
+// recipient cozy. Part of the work is delegated to owner cozy, but the
+// invitation mail is still sent from the recipient cozy.
+func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs, contactIDs []string, readOnly bool) error {
 	api := &APIDelegateAddContacts{}
 	api.sid = s.SID
-	for id, ro := range contactIDs {
+
+	for _, id := range contactIDs {
 		c, err := contact.Find(inst, id)
 		if err != nil {
 			return err
@@ -301,10 +306,35 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 			Name:     name,
 			Email:    email,
 			Instance: cozyURL,
-			ReadOnly: ro,
+			ReadOnly: readOnly,
 		}
 		api.members = append(api.members, m)
 	}
+
+	for _, groupID := range groupIDs {
+		group, err := contact.FindGroup(inst, groupID)
+		if err != nil {
+			return err
+		}
+		g := Group{ID: groupID, Name: group.Name(), ReadOnly: readOnly}
+		api.groups = append(api.groups, g)
+
+		contacts, err := group.FindContacts(inst)
+		if err != nil {
+			return err
+		}
+		groupIndex := len(s.Groups)
+		for _, contact := range contacts {
+			m, err := buildMemberFromContact(contact, readOnly)
+			if err != nil {
+				return err
+			}
+			m.Groups = []int{groupIndex}
+			m.OnlyInGroups = true
+			api.members = append(api.members, m)
+		}
+	}
+
 	data, err := jsonapi.MarshalObject(api)
 	if err != nil {
 		return err
@@ -396,16 +426,10 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
-func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
-	status := MemberStatusPendingInvitation
-	if instanceURL != "" {
-		status = MemberStatusMailNotSent
-	}
-	m := Member{
-		Status:   status,
-		Email:    email,
-		Instance: instanceURL,
-		ReadOnly: readOnly,
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, m Member) (string, error) {
+	m.Status = MemberStatusPendingInvitation
+	if m.Instance != "" || m.Email == "" {
+		m.Status = MemberStatusMailNotSent
 	}
 	state, _, err := s.addMember(inst, m)
 	if err != nil {
