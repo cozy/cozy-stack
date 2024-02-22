@@ -335,6 +335,12 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 		}
 	}
 
+	return s.SendDelegated(inst, api)
+}
+
+// SendDelegated calls the delegated endpoint on the sharer to adds
+// contacts/groups.
+func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddContacts) error {
 	data, err := jsonapi.MarshalObject(api)
 	if err != nil {
 		return err

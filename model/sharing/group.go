@@ -110,8 +110,14 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 		for _, added := range msg.GroupsAdded {
 			for idx, group := range s.Groups {
 				if group.ID == added {
-					if err := s.AddMemberToGroup(inst, idx, contact); err != nil {
-						errm = multierror.Append(errm, err)
+					if s.Owner {
+						if err := s.AddMemberToGroup(inst, idx, contact); err != nil {
+							errm = multierror.Append(errm, err)
+						}
+					} else {
+						if err := s.DelegateAddMemberToGroup(inst, idx, contact); err != nil {
+							errm = multierror.Append(errm, err)
+						}
 					}
 				}
 			}
@@ -136,7 +142,7 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 	return errm
 }
 
-// AddMemberToGroup adds a contact to a sharing via a group.
+// AddMemberToGroup adds a contact to a sharing via a group (on the owner).
 func (s *Sharing) AddMemberToGroup(inst *instance.Instance, groupIndex int, contact *contact.Contact) error {
 	readOnly := s.Groups[groupIndex].ReadOnly
 	m, err := buildMemberFromContact(contact, readOnly)
@@ -166,6 +172,22 @@ func (s *Sharing) AddMemberToGroup(inst *instance.Instance, groupIndex int, cont
 	cloned := s.Clone().(*Sharing)
 	go cloned.NotifyRecipients(inst, nil)
 	return nil
+}
+
+// DelegateAddMemberToGroup adds a contact to a sharing via a group (on a recipient).
+func (s *Sharing) DelegateAddMemberToGroup(inst *instance.Instance, groupIndex int, contact *contact.Contact) error {
+	readOnly := s.Groups[groupIndex].ReadOnly
+	m, err := buildMemberFromContact(contact, readOnly)
+	if err != nil {
+		return err
+	}
+	m.OnlyInGroups = true
+	m.Groups = []int{groupIndex}
+	api := &APIDelegateAddContacts{
+		sid:     s.ID(),
+		members: []Member{m},
+	}
+	return s.SendDelegated(inst, api)
 }
 
 // RemoveMemberFromGroup removes a member of a group.
