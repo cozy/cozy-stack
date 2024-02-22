@@ -244,7 +244,7 @@ func getInitialCredentials(c echo.Context) error {
 	}
 
 	// Register the client
-	kind, softwareID := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
+	kind := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
 	clientName := c.FormValue("clientName")
 	if clientName == "" {
 		clientName = "Bitwarden " + c.FormValue("deviceName")
@@ -253,7 +253,7 @@ func getInitialCredentials(c echo.Context) error {
 		RedirectURIs: []string{"https://cozy.io/"},
 		ClientName:   clientName,
 		ClientKind:   kind,
-		SoftwareID:   softwareID,
+		SoftwareID:   "registry://" + consts.PassSlug,
 	}
 	if err := client.Create(inst, oauth.NotPending); err != nil {
 		return c.JSON(err.Code, err)
@@ -407,7 +407,7 @@ func refreshToken(c echo.Context) error {
 
 	// Check the refresh token
 	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
-	if !ok || !bitwarden.IsBitwardenScope(claims.Scope) {
+	if !ok {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
 		})
@@ -421,6 +421,11 @@ func refreshToken(c echo.Context) error {
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
+		})
+	}
+	if !bitwarden.IsBitwardenClient(client, claims.Scope) {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid refresh token",
 		})
 	}
 

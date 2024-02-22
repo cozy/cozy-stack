@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -44,6 +45,21 @@ func TestBitwarden(t *testing.T) {
 
 	ts := setup.GetTestServer("/bitwarden", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+
+	// Install cozy-pass webapp (required for OAuth linked clients)
+	installer, err := app.NewInstaller(inst, app.Copier(consts.WebappType, inst),
+		&app.InstallerOptions{
+			Operation:  app.Install,
+			Type:       consts.WebappType,
+			Slug:       "passwords",
+			SourceURL:  "registry://passwords",
+			Registries: inst.Registries(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = installer.RunSync()
+	require.NoError(t, err)
 
 	t.Run("Prelogin", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)

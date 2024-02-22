@@ -14,8 +14,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
-// needed by the Bitwarden apps.
+// BitwardenScope was the OAuth scope, hard-coded with the doctypes needed by
+// the Bitwarden apps. The new scope is dynamic, taken from the cozy-pass web
+// manifest.
 var BitwardenScope = strings.Join([]string{
 	consts.BitwardenProfiles,
 	consts.BitwardenCiphers,
@@ -27,33 +28,21 @@ var BitwardenScope = strings.Join([]string{
 	consts.Support,
 }, " ")
 
-// oldBitwardenScope is here to help the transition of bitwarden tokens, as the
-// com.bitwarden.contacts doctype has been added to the bitwarden scope.
-var oldBitwardenScope = strings.Join([]string{
-	consts.BitwardenProfiles,
-	consts.BitwardenCiphers,
-	consts.BitwardenFolders,
-	consts.BitwardenOrganizations,
-	consts.Konnectors,
-	consts.AppsSuggestion,
-	consts.Support,
-}, " ")
-
-// IsBitwardenScope returns true if it is the right scope for refreshing a
-// bitwarden token.
-func IsBitwardenScope(scope string) bool {
-	switch scope {
-	case BitwardenScope, oldBitwardenScope:
+// IsBitwardenClient returns true if the client can use the bitwarden refresh
+// endpoint.
+func IsBitwardenClient(client *oauth.Client, scope string) bool {
+	// Help the transition from hard-coded scope
+	if scope == BitwardenScope {
 		return true
-	default:
-		return false
 	}
+
+	return oauth.GetLinkedAppSlug(client.SoftwareID) == consts.PassSlug
 }
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
-// into a client_kind and a software_id (Cozy).
+// into a client_kind (Cozy).
 // See https://github.com/bitwarden/server/blob/f37f33512046707eef69a2cb3944338de819439d/src/Core/Enums/DeviceType.cs
-func ParseBitwardenDeviceType(deviceType string) (string, string) {
+func ParseBitwardenDeviceType(deviceType string) string {
 	device, err := strconv.Atoi(deviceType)
 	if err == nil {
 		switch device {
@@ -62,12 +51,12 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 			// 1 = iOS
 			// 15 = Android (amazon variant)
 			// 16 = UWP
-			return "mobile", "github.com/bitwarden/mobile"
+			return "mobile"
 		case 6, 7, 8:
 			// 6 = Windows
 			// 7 = macOS
 			// 8 = Linux
-			return "desktop", "github.com/bitwarden/desktop"
+			return "desktop"
 		case 2, 3, 4, 5, 19, 20:
 			// 2 = Chrome extension
 			// 3 = Firefox extension
@@ -75,7 +64,7 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 			// 5 = Edge extension
 			// 19 = Vivaldi extension
 			// 20 = Safari extension
-			return "browser", "github.com/bitwarden/browser"
+			return "browser"
 		case 9, 10, 11, 12, 13, 14, 17, 18:
 			// 9 = Chrome
 			// 10 = Firefox
@@ -85,10 +74,10 @@ func ParseBitwardenDeviceType(deviceType string) (string, string) {
 			// 14 = Unknown browser
 			// 17 = Safari
 			// 18 = Vivaldi
-			return "web", "github.com/bitwarden/web"
+			return "web"
 		}
 	}
-	return "unknown", "github.com/bitwarden"
+	return "unknown"
 }
 
 // CreateAccessJWT returns a new JSON Web Token that can be used with Bitwarden
@@ -104,6 +93,10 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	if settings, err := settings.Get(i); err == nil {
 		stamp = settings.SecurityStamp
 	}
+	scope := BitwardenScope
+	if slug := oauth.GetLinkedAppSlug(c.SoftwareID); slug != "" {
+		scope = oauth.BuildLinkedAppScope(slug)
+	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.BitwardenClaims{
 		Claims: permission.Claims{
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -115,7 +108,7 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 				Subject:   i.ID(),
 			},
 			SStamp: stamp,
-			Scope:  BitwardenScope,
+			Scope:  scope,
 		},
 		ClientID: c.CouchID,
 		Name:     name,
@@ -137,6 +130,10 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	if settings, err := settings.Get(i); err == nil {
 		stamp = settings.SecurityStamp
 	}
+	scope := BitwardenScope
+	if slug := oauth.GetLinkedAppSlug(c.SoftwareID); slug != "" {
+		scope = oauth.BuildLinkedAppScope(slug)
+	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience: jwt.ClaimStrings{consts.RefreshTokenAudience},
@@ -145,7 +142,7 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 			Subject:  c.CouchID,
 		},
 		SStamp: stamp,
-		Scope:  BitwardenScope,
+		Scope:  scope,
 	})
 	if err != nil {
 		i.Logger().WithNamespace("oauth").
