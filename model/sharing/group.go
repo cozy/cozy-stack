@@ -1,14 +1,19 @@
 package sharing
 
 import (
+	"fmt"
+	"net/http"
+	"net/url"
 	"sort"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 )
 
 // Group contains the information about a group of members of the sharing.
@@ -34,10 +39,7 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 
 	groupIndex := len(s.Groups)
 	for _, contact := range contacts {
-		m, err := buildMemberFromContact(contact, readOnly)
-		if err != nil {
-			return err
-		}
+		m := buildMemberFromContact(contact, readOnly)
 		m.OnlyInGroups = true
 		_, idx, err := s.addMember(inst, m)
 		if err != nil {
@@ -125,8 +127,14 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 		for _, removed := range msg.GroupsRemoved {
 			for idx, group := range s.Groups {
 				if group.ID == removed {
-					if err := s.RemoveMemberFromGroup(inst, idx, contact); err != nil {
-						errm = multierror.Append(errm, err)
+					if s.Owner {
+						if err := s.RemoveMemberFromGroup(inst, idx, contact); err != nil {
+							errm = multierror.Append(errm, err)
+						}
+					} else {
+						if err := s.DelegateRemoveMemberFromGroup(inst, idx, contact); err != nil {
+							errm = multierror.Append(errm, err)
+						}
 					}
 				}
 			}
@@ -145,10 +153,7 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 // AddMemberToGroup adds a contact to a sharing via a group (on the owner).
 func (s *Sharing) AddMemberToGroup(inst *instance.Instance, groupIndex int, contact *contact.Contact) error {
 	readOnly := s.Groups[groupIndex].ReadOnly
-	m, err := buildMemberFromContact(contact, readOnly)
-	if err != nil {
-		return err
-	}
+	m := buildMemberFromContact(contact, readOnly)
 	m.OnlyInGroups = true
 	_, idx, err := s.addMember(inst, m)
 	if err != nil {
@@ -177,10 +182,7 @@ func (s *Sharing) AddMemberToGroup(inst *instance.Instance, groupIndex int, cont
 // DelegateAddMemberToGroup adds a contact to a sharing via a group (on a recipient).
 func (s *Sharing) DelegateAddMemberToGroup(inst *instance.Instance, groupIndex int, contact *contact.Contact) error {
 	readOnly := s.Groups[groupIndex].ReadOnly
-	m, err := buildMemberFromContact(contact, readOnly)
-	if err != nil {
-		return err
-	}
+	m := buildMemberFromContact(contact, readOnly)
 	m.OnlyInGroups = true
 	m.Groups = []int{groupIndex}
 	api := &APIDelegateAddContacts{
@@ -229,6 +231,74 @@ func (s *Sharing) RemoveMemberFromGroup(inst *instance.Instance, groupIndex int,
 	}
 
 	return nil
+}
+
+// DelegateRemoveMemberFromGroup removes a member from a sharing group (on a recipient).
+func (s *Sharing) DelegateRemoveMemberFromGroup(inst *instance.Instance, groupIndex int, contact *contact.Contact) error {
+	var email string
+	if addr, err := contact.ToMailAddress(); err == nil {
+		email = addr.Email
+	}
+	cozyURL := contact.PrimaryCozyURL()
+
+	for i, m := range s.Members {
+		if m.Email != "" && m.Email == email {
+			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
+		}
+		if m.Instance != "" && m.Instance == cozyURL {
+			return s.SendRemoveMemberFromGroup(inst, groupIndex, i)
+		}
+	}
+	return ErrMemberNotFound
+}
+
+func (s *Sharing) SendRemoveMemberFromGroup(inst *instance.Instance, groupIndex, memberIndex int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/groups/%d/%d", s.SID, groupIndex, memberIndex),
+		Headers: request.Headers{
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+		},
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, nil)
+	}
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusNoContent {
+		return ErrInternalServerError
+	}
+	return nil
+}
+
+func (s *Sharing) DelegatedRemoveMemberFromGroup(inst *instance.Instance, groupIndex, memberIndex int) error {
+	var groups []int
+	for _, idx := range s.Members[memberIndex].Groups {
+		if idx != groupIndex {
+			groups = append(groups, idx)
+		}
+	}
+	s.Members[memberIndex].Groups = groups
+
+	if s.Members[memberIndex].OnlyInGroups && len(s.Members[memberIndex].Groups) == 0 {
+		return s.RevokeRecipient(inst, memberIndex)
+	} else {
+		return couchdb.UpdateDoc(inst, s)
+	}
 }
 
 func (s *Sharing) AddInvitationForContact(inst *instance.Instance, contact *contact.Contact) error {

@@ -151,10 +151,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	if err != nil {
 		return err
 	}
-	m, err := buildMemberFromContact(c, readOnly)
-	if err != nil {
-		return err
-	}
+	m := buildMemberFromContact(c, readOnly)
 	if m.Email == "" && m.Instance == "" {
 		return contact.ErrNoMailAddress
 	}
@@ -162,7 +159,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	return err
 }
 
-func buildMemberFromContact(c *contact.Contact, readOnly bool) (Member, error) {
+func buildMemberFromContact(c *contact.Contact, readOnly bool) Member {
 	var name, email string
 	cozyURL := c.PrimaryCozyURL()
 	addr, err := c.ToMailAddress()
@@ -178,7 +175,7 @@ func buildMemberFromContact(c *contact.Contact, readOnly bool) (Member, error) {
 		Email:    email,
 		Instance: cozyURL,
 		ReadOnly: readOnly,
-	}, nil
+	}
 }
 
 // addMember adds a member to the members of the sharing if they are not yet in
@@ -325,10 +322,7 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 		}
 		groupIndex := len(s.Groups)
 		for _, contact := range contacts {
-			m, err := buildMemberFromContact(contact, readOnly)
-			if err != nil {
-				return err
-			}
+			m := buildMemberFromContact(contact, readOnly)
 			m.Groups = []int{groupIndex}
 			m.OnlyInGroups = true
 			api.members = append(api.members, m)

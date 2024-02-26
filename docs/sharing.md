@@ -938,6 +938,24 @@ Content-Type: application/json
 }
 ```
 
+### DELETE /sharings/:sharings-id/groups/:group-index/:member-index
+
+This is an internal route for the stack. It is called by the recipient cozy on
+the owner cozy to remove a member of a sharing from a group.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/groups/0/1 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### PUT /sharings/:sharing-id/recipients
 
 This internal route is used to update the list of members (their states, emails

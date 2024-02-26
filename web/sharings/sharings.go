@@ -438,6 +438,51 @@ func AddRecipientsDelegated(c echo.Context) error {
 	return c.JSON(http.StatusOK, states)
 }
 
+// RemoveMemberFromGroup is used to remove a member from a group (delegated).
+func RemoveMemberFromGroup(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner || !s.Open {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	member, err := requestMember(c, s)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	addedBy := -1
+	for i, m := range s.Members {
+		if m.Instance == member.Instance {
+			addedBy = i
+		}
+	}
+	if addedBy == -1 {
+		return jsonapi.InternalServerError(sharing.ErrInvalidSharing)
+	}
+
+	groupIndex, err := strconv.Atoi(c.Param("group-index"))
+	if err != nil || groupIndex < 0 || groupIndex >= len(s.Groups) {
+		return jsonapi.InvalidParameter("group-index", errors.New("invalid group-index parameter"))
+	}
+	if s.Groups[groupIndex].AddedBy != addedBy {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	memberIndex, err := strconv.Atoi(c.Param("member-index"))
+	if err != nil || memberIndex < 0 || memberIndex >= len(s.Members) {
+		return jsonapi.InvalidParameter("member-index", errors.New("invalid member-index parameter"))
+	}
+
+	if err := s.DelegatedRemoveMemberFromGroup(inst, groupIndex, memberIndex); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // PutRecipients is used to update the members list on the recipients cozy
 func PutRecipients(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -787,6 +832,7 @@ func Routes(router *echo.Group) {
 
 	// Delegated routes for open sharing
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
+	router.DELETE("/:sharing-id/groups/:group-index/:member-index", RemoveMemberFromGroup)
 
 	// Misc
 	router.GET("/news", CountNewShortcuts)
