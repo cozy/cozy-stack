@@ -15,6 +15,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -645,6 +646,65 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 
+	return errm
+}
+
+func (s *Sharing) GetNotes(inst *instance.Instance) ([]*vfs.FileDoc, error) {
+	rule := s.FirstFilesRule()
+	if rule != nil {
+		if rule.Mime != "" {
+			if rule.Mime == consts.NoteMimeType {
+				var notes []*vfs.FileDoc
+				req := &couchdb.AllDocsRequest{Keys: rule.Values}
+				if err := couchdb.GetAllDocs(inst, consts.Files, req, &notes); err != nil {
+					return nil, fmt.Errorf("failed to fetch notes shared by themselves: %w", err)
+				}
+
+				return notes, nil
+			} else {
+				return nil, nil
+			}
+		}
+
+		sharingDir, err := s.GetSharingDir(inst)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get notes sharing dir: %w", err)
+		}
+
+		var notes []*vfs.FileDoc
+		fs := inst.VFS()
+		iter := fs.DirIterator(sharingDir, nil)
+		for {
+			_, f, err := iter.Next()
+			if errors.Is(err, vfs.ErrIteratorDone) {
+				break
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to get next shared note: %w", err)
+			}
+			if f != nil && f.Mime == consts.NoteMimeType {
+				notes = append(notes, f)
+			}
+		}
+
+		return notes, nil
+	}
+
+	return nil, nil
+}
+
+func (s *Sharing) FixRevokedNotes(inst *instance.Instance) error {
+	docs, err := s.GetNotes(inst)
+	if err != nil {
+		return fmt.Errorf("failed to get revoked sharing notes: %w", err)
+	}
+
+	var errm error
+	for _, doc := range docs {
+		if err := note.ImportImages(inst, doc); err != nil {
+			errm = multierror.Append(errm, fmt.Errorf("failed to import revoked note images: %w", err))
+		}
+	}
 	return errm
 }
 
