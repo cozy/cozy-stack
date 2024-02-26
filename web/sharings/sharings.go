@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
@@ -438,6 +439,74 @@ func AddRecipientsDelegated(c echo.Context) error {
 	return c.JSON(http.StatusOK, states)
 }
 
+// AddInvitationDelegated is when a member has been added to a sharing via a
+// group, but is invited only later (no email or Cozy instance known when they
+// was added).
+func AddInvitationDelegated(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner || !s.Open {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	memberIndex, err := strconv.Atoi(c.Param("member-index"))
+	if err != nil || memberIndex <= 0 || memberIndex >= len(s.Members) {
+		return jsonapi.InvalidParameter("member-index", errors.New("invalid member-index parameter"))
+	}
+
+	var body struct {
+		Data struct {
+			Type   string         `json:"type"`
+			Member sharing.Member `json:"attributes"`
+		}
+	}
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	states := make(map[string]string)
+	m := s.Members[memberIndex]
+	if m.Status == sharing.MemberStatusMailNotSent {
+		m.Instance = body.Data.Member.Instance
+		m.Email = body.Data.Member.Email
+		state64 := crypto.Base64Encode(crypto.GenerateRandomBytes(sharing.StateLen))
+		state := string(state64)
+		creds := sharing.Credentials{
+			State:  state,
+			XorKey: sharing.MakeXorKey(),
+		}
+		s.Credentials[memberIndex-1] = creds
+		s.Members[memberIndex] = m
+		// If we have an URL for the Cozy, we can create a shortcut as an invitation
+		if m.Instance != "" {
+			states[m.Instance] = state
+			var perms *permission.Permission
+			if s.PreviewPath != "" {
+				if perms, err = s.CreatePreviewPermissions(inst); err != nil {
+					return wrapErrors(err)
+				}
+			}
+			if err = s.SendInvitations(inst, perms); err != nil {
+				return wrapErrors(err)
+			}
+		} else if m.Email != "" {
+			states[m.Email] = state
+			s.Members[memberIndex].Status = sharing.MemberStatusReady
+		}
+	}
+
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return wrapErrors(err)
+	}
+	cloned := s.Clone().(*sharing.Sharing)
+	go cloned.NotifyRecipients(inst, nil)
+	return c.JSON(http.StatusOK, states)
+}
+
 // RemoveMemberFromGroup is used to remove a member from a group (delegated).
 func RemoveMemberFromGroup(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -473,7 +542,7 @@ func RemoveMemberFromGroup(c echo.Context) error {
 	}
 
 	memberIndex, err := strconv.Atoi(c.Param("member-index"))
-	if err != nil || memberIndex < 0 || memberIndex >= len(s.Members) {
+	if err != nil || memberIndex <= 0 || memberIndex >= len(s.Members) {
 		return jsonapi.InvalidParameter("member-index", errors.New("invalid member-index parameter"))
 	}
 
@@ -832,7 +901,8 @@ func Routes(router *echo.Group) {
 
 	// Delegated routes for open sharing
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
-	router.DELETE("/:sharing-id/groups/:group-index/:member-index", RemoveMemberFromGroup)
+	router.POST("/:sharing-id/members/:index/invitation", AddInvitationDelegated, checkSharingWritePermissions)
+	router.DELETE("/:sharing-id/groups/:group-index/:member-index", RemoveMemberFromGroup, checkSharingWritePermissions)
 
 	// Misc
 	router.GET("/news", CountNewShortcuts)

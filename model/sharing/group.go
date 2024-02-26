@@ -1,17 +1,22 @@
 package sharing
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"sort"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
@@ -335,6 +340,10 @@ func (s *Sharing) AddInvitationForContact(inst *instance.Instance, contact *cont
 		m.Instance = cozyURL
 		s.Members[i] = m
 
+		if !s.Owner {
+			return s.DelegateAddInvitation(inst, i)
+		}
+
 		// We can ignore the error as we will try again to save the sharing
 		// after sending the invitation.
 		_ = couchdb.UpdateDoc(inst, s)
@@ -354,4 +363,73 @@ func (s *Sharing) AddInvitationForContact(inst *instance.Instance, contact *cont
 	}
 
 	return nil
+}
+
+func (s *Sharing) DelegateAddInvitation(inst *instance.Instance, memberIndex int) error {
+	body, err := json.Marshal(map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       consts.SharingsMembers,
+			"attributes": s.Members[memberIndex],
+		},
+	})
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	if c.AccessToken == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/members/%d/invitation", s.ID(), memberIndex),
+		Headers: request.Headers{
+			echo.HeaderAccept:        echo.MIMEApplicationJSON,
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+		},
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
+	}
+	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, body)
+	}
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return ErrInternalServerError
+	}
+	var states map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&states); err != nil {
+		return err
+	}
+
+	// We can have conflicts when updating the sharing document, so we are
+	// retrying when it is the case.
+	maxRetries := 3
+	i := 0
+	for {
+		s.Members[i].Status = MemberStatusReady
+		if err := couchdb.UpdateDoc(inst, s); err == nil {
+			break
+		}
+		i++
+		if i > maxRetries {
+			return err
+		}
+		time.Sleep(1 * time.Second)
+		s, err = FindSharing(inst, s.SID)
+		if err != nil {
+			return err
+		}
+	}
+	return s.SendInvitationsToMembers(inst, []Member{s.Members[memberIndex]}, states)
 }

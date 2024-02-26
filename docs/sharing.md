@@ -938,7 +938,44 @@ Content-Type: application/json
 }
 ```
 
-### DELETE /sharings/:sharings-id/groups/:group-index/:member-index
+### POST /sharings/:sharing-id/members/:index/invitation
+
+This is an internal route for the stack. It is called by the recipient cozy on
+the owner cozy to send an invitation.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/members/4/invitation HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.members",
+    "attributes": {
+      "email": "diana@example.net"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "diana@example.net": "uS6wN7fTYaLZ-GdC_P6UWA"
+}
+```
+
+### DELETE /sharings/:sharing-id/groups/:group-index/:member-index
 
 This is an internal route for the stack. It is called by the recipient cozy on
 the owner cozy to remove a member of a sharing from a group.
