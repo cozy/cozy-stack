@@ -208,7 +208,7 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := setupTrigger(inst, file.ID()); err != nil {
+	if err := SetupTrigger(inst, file.ID()); err != nil {
 		return nil, err
 	}
 	return file, nil
@@ -341,7 +341,7 @@ type DebounceMessage struct {
 	NoteID string `json:"note_id"`
 }
 
-func setupTrigger(inst *instance.Instance, fileID string) error {
+func SetupTrigger(inst *instance.Instance, fileID string) error {
 	sched := job.System()
 	infos := job.TriggerInfos{
 		Type:       "@event",

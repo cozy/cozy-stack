@@ -1,10 +1,10 @@
-package note
+package sharing
 
 import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/settings"
-	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -31,34 +31,34 @@ func (n *apiNoteURL) Included() []jsonapi.Object             { return nil }
 func (n *apiNoteURL) Links() *jsonapi.LinksList              { return nil }
 func (n *apiNoteURL) Fetch(field string) []string            { return nil }
 
-// Opener can be used to find the parameters for creating the URL where the
+// NoteOpener can be used to find the parameters for creating the URL where the
 // note can be opened.
-type Opener struct {
-	*sharing.FileOpener
+type NoteOpener struct {
+	*FileOpener
 }
 
-// Open will return an Opener for the given file.
-func Open(inst *instance.Instance, fileID string) (*Opener, error) {
+// Open will return an NoteOpener for the given file.
+func OpenNote(inst *instance.Instance, fileID string) (*NoteOpener, error) {
 	file, err := inst.VFS().FileByID(fileID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check that the file is a note
-	if _, err := fromMetadata(file); err != nil {
+	if file, err = note.GetFile(inst, file); err != nil {
 		return nil, err
 	}
 
-	opener, err := sharing.NewFileOpener(inst, file)
+	opener, err := NewFileOpener(inst, file)
 	if err != nil {
 		return nil, err
 	}
-	return &Opener{opener}, nil
+	return &NoteOpener{opener}, nil
 }
 
 // GetResult looks if the note can be opened locally or not, which code can be
 // used in case of a shared note, and other parameters.. and returns the information.
-func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+func (o *NoteOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
 	var result *apiNoteURL
 	var err error
 	if o.ShouldOpenLocally() {
@@ -78,10 +78,10 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 	return result, nil
 }
 
-func (o *Opener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, error) {
+func (o *NoteOpener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, error) {
 	// If the note came from another cozy via a sharing that is now revoked, we
 	// may need to recreate the trigger.
-	_ = setupTrigger(o.Inst, o.File.ID())
+	_ = note.SetupTrigger(o.Inst, o.File.ID())
 
 	code, err := o.GetSharecode(memberIndex, readOnly)
 	if err != nil {
@@ -98,7 +98,7 @@ func (o *Opener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, err
 	return &doc, nil
 }
 
-func (o *Opener) openSharedNote() (*apiNoteURL, error) {
+func (o *NoteOpener) openSharedNote() (*apiNoteURL, error) {
 	prepared, err := o.PrepareRequestForSharedFile()
 	if err != nil {
 		return nil, err
@@ -110,11 +110,11 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 	prepared.Opts.Path = "/notes/" + prepared.XoredID + "/open"
 	res, err := request.Req(prepared.Opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = sharing.RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
+		res, err = RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
 			prepared.Creds, prepared.Opts, nil)
 	}
 	if err != nil {
-		return nil, sharing.ErrInternalServerError
+		return nil, ErrInternalServerError
 	}
 	defer res.Body.Close()
 	var doc apiNoteURL

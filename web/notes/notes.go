@@ -300,7 +300,7 @@ func ForceNoteSync(c echo.Context) error {
 func OpenNoteURL(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
-	open, err := note.Open(inst, fileID)
+	open, err := sharing.OpenNote(inst, fileID)
 	if err != nil {
 		return wrapError(err)
 	}
