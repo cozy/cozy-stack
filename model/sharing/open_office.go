@@ -1,4 +1,4 @@
-package office
+package sharing
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/office"
 	"github.com/cozy/cozy-stack/model/settings"
-	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -100,13 +100,13 @@ func (o *onlyOffice) GetIssuer() (string, error)                   { return "", 
 func (o *onlyOffice) GetSubject() (string, error)                  { return "", nil }
 func (o *onlyOffice) GetAudience() (jwt.ClaimStrings, error)       { return nil, nil }
 
-// Opener can be used to find the parameters for opening an office document.
-type Opener struct {
-	*sharing.FileOpener
+// OfficeOpener can be used to find the parameters for opening an office document.
+type OfficeOpener struct {
+	*FileOpener
 }
 
-// Open will return an Opener for the given file.
-func Open(inst *instance.Instance, fileID string) (*Opener, error) {
+// Open will return an OfficeOpener for the given file.
+func OpenOffice(inst *instance.Instance, fileID string) (*OfficeOpener, error) {
 	file, err := inst.VFS().FileByID(fileID)
 	if err != nil {
 		return nil, err
@@ -114,20 +114,20 @@ func Open(inst *instance.Instance, fileID string) (*Opener, error) {
 
 	// Check that the file is an office document
 	if !isOfficeDocument(file) {
-		return nil, ErrInvalidFile
+		return nil, office.ErrInvalidFile
 	}
 
-	opener, err := sharing.NewFileOpener(inst, file)
+	opener, err := NewFileOpener(inst, file)
 	if err != nil {
 		return nil, err
 	}
-	return &Opener{opener}, nil
+	return &OfficeOpener{opener}, nil
 }
 
 // GetResult looks if the file can be opened locally or not, which code can be
 // used in case of a shared office document, and other parameters.. and returns
 // the information.
-func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
+func (o *OfficeOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, error) {
 	var result *apiOfficeURL
 	var err error
 	if o.ShouldOpenLocally() {
@@ -143,10 +143,10 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 	return result, nil
 }
 
-func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeURL, error) {
-	cfg := getConfig(o.Inst.ContextName)
+func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeURL, error) {
+	cfg := office.GetConfig(o.Inst.ContextName)
 	if cfg == nil || cfg.OnlyOfficeURL == "" {
-		return nil, ErrNoServer
+		return nil, office.ErrNoServer
 	}
 
 	// Create a local result
@@ -174,14 +174,14 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 			Infof("Cannot build download URL: %s", err)
 		return nil, ErrInternalServerError
 	}
-	key, err := GetStore().GetSecretByID(o.Inst, o.File.ID())
+	key, err := office.GetStore().GetSecretByID(o.Inst, o.File.ID())
 	if err != nil {
 		o.Inst.Logger().WithNamespace("office").
 			Infof("Cannot get secret from store: %s", err)
 		return nil, ErrInternalServerError
 	}
 	if key != "" {
-		doc, err := GetStore().GetDoc(o.Inst, key)
+		doc, err := office.GetStore().GetDoc(o.Inst, key)
 		if err != nil {
 			o.Inst.Logger().WithNamespace("office").
 				Infof("Cannot get doc from store: %s", err)
@@ -192,8 +192,8 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 		}
 	}
 	if key == "" {
-		detector := conflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
-		key, err = GetStore().AddDoc(o.Inst, detector)
+		detector := office.ConflictDetector{ID: o.File.ID(), Rev: o.File.Rev(), MD5Sum: o.File.MD5Sum}
+		key, err = office.GetStore().AddDoc(o.Inst, detector)
 	}
 	if err != nil {
 		o.Inst.Logger().WithNamespace("office").
@@ -233,7 +233,7 @@ func (o *Opener) openLocalDocument(memberIndex int, readOnly bool) (*apiOfficeUR
 	return &doc, nil
 }
 
-func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
+func (o *OfficeOpener) openSharedDocument() (*apiOfficeURL, error) {
 	prepared, err := o.PrepareRequestForSharedFile()
 	if err != nil {
 		return nil, err
@@ -245,7 +245,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 	prepared.Opts.Path = "/office/" + prepared.XoredID + "/open"
 	res, err := request.Req(prepared.Opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = sharing.RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
+		res, err = RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
 			prepared.Creds, prepared.Opts, nil)
 	}
 	if res != nil && res.StatusCode == 404 {
@@ -253,7 +253,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 	}
 	if err != nil {
 		o.Inst.Logger().WithNamespace("office").Infof("openSharedDocument error: %s", err)
-		return nil, sharing.ErrInternalServerError
+		return nil, ErrInternalServerError
 	}
 	defer res.Body.Close()
 	var doc apiOfficeURL
@@ -267,7 +267,7 @@ func (o *Opener) openSharedDocument() (*apiOfficeURL, error) {
 }
 
 // downloadURL returns an URL where the Document Server can download the file.
-func (o *Opener) downloadURL() (string, error) {
+func (o *OfficeOpener) downloadURL() (string, error) {
 	path, err := o.File.Path(o.Inst.VFS())
 	if err != nil {
 		return "", err
@@ -311,22 +311,12 @@ func isOfficeDocument(f *vfs.FileDoc) bool {
 	}
 }
 
-func getConfig(contextName string) *config.Office {
-	configuration := config.GetConfig().Office
-	if c, ok := configuration[contextName]; ok {
-		return &c
-	} else if c, ok := configuration[config.DefaultInstanceContext]; ok {
-		return &c
-	}
-	return nil
-}
-
-func shouldOpenANewVersion(file *vfs.FileDoc, detector *conflictDetector) bool {
+func shouldOpenANewVersion(file *vfs.FileDoc, detector *office.ConflictDetector) bool {
 	if detector == nil {
 		return true
 	}
 	cm := file.CozyMetadata
-	if cm != nil && cm.UploadedBy != nil && cm.UploadedBy.Slug == OOSlug {
+	if cm != nil && cm.UploadedBy != nil && cm.UploadedBy.Slug == office.OOSlug {
 		return false
 	}
 	if bytes.Equal(file.MD5Sum, detector.MD5Sum) {
