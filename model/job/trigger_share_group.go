@@ -16,10 +16,11 @@ type ShareGroupTrigger struct {
 
 // ShareGroupMessage is used for jobs on the share-group worker.
 type ShareGroupMessage struct {
-	ContactID       string   `json:"contact_id"`
-	GroupsAdded     []string `json:"added"`
-	GroupsRemoved   []string `json:"removed"`
-	BecomeInvitable bool     `json:"invitable"`
+	ContactID       string           `json:"contact_id"`
+	GroupsAdded     []string         `json:"added"`
+	GroupsRemoved   []string         `json:"removed"`
+	BecomeInvitable bool             `json:"invitable"`
+	DeletedDoc      *couchdb.JSONDoc `json:"deleted_doc,omitempty"`
 }
 
 func NewShareGroupTrigger(broker Broker) *ShareGroupTrigger {
@@ -58,11 +59,15 @@ func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
 		return nil
 	}
 	newContact := &contact.Contact{JSONDoc: *newdoc}
-	newgroups := newContact.GroupIDs()
+	var newgroups []string
+	if e.Verb != realtime.EventDelete {
+		newgroups = newContact.GroupIDs()
+	}
 
 	var oldgroups []string
 	invitable := false
-	if olddoc, ok := e.OldDoc.(*couchdb.JSONDoc); ok {
+	olddoc, ok := e.OldDoc.(*couchdb.JSONDoc)
+	if ok {
 		oldContact := &contact.Contact{JSONDoc: *olddoc}
 		oldgroups = oldContact.GroupIDs()
 		invitable = contactIsNowInvitable(oldContact, newContact)
@@ -75,12 +80,16 @@ func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
 		return nil
 	}
 
-	return &ShareGroupMessage{
+	msg := &ShareGroupMessage{
 		ContactID:       e.Doc.ID(),
 		GroupsAdded:     added,
 		GroupsRemoved:   removed,
 		BecomeInvitable: invitable,
 	}
+	if e.Verb == realtime.EventDelete {
+		msg.DeletedDoc = olddoc
+	}
+	return msg
 }
 
 func diffGroupIDs(as, bs []string) []string {

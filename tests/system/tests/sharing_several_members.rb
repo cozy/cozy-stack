@@ -62,7 +62,7 @@ describe "A sharing with several members" do
     sleep 6
 
     f2_bob.remove inst_bob
-    sleep 10
+    sleep 6
 
     # Check that we can add a group from the owner
     g1 = Group.create inst, name: Faker::Kpop.girl_groups
@@ -84,6 +84,14 @@ describe "A sharing with several members" do
     info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
     members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby, contact_hugo]
     revoked = []
+    check_sharing_has_groups_and_members info, [g1, g2], members, revoked
+
+    # Check that we can remove a member of a group
+    contact_hugo.delete inst_bob
+    sleep 4
+    info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
+    members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby, contact_hugo]
+    revoked = [6]
     check_sharing_has_groups_and_members info, [g1, g2], members, revoked
 
     # Check that we can remove a group

@@ -102,9 +102,15 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 // finds the sharings for this group, and adds or removes the member to those
 // sharings.
 func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
-	contact, err := contact.Find(inst, msg.ContactID)
-	if err != nil {
-		return err
+	var c *contact.Contact
+	if msg.DeletedDoc != nil {
+		c = &contact.Contact{JSONDoc: *msg.DeletedDoc}
+	} else {
+		doc, err := contact.Find(inst, msg.ContactID)
+		if err != nil {
+			return err
+		}
+		c = doc
 	}
 
 	sharings, err := FindActive(inst)
@@ -118,11 +124,11 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 			for idx, group := range s.Groups {
 				if group.ID == added {
 					if s.Owner {
-						if err := s.AddMemberToGroup(inst, idx, contact); err != nil {
+						if err := s.AddMemberToGroup(inst, idx, c); err != nil {
 							errm = multierror.Append(errm, err)
 						}
 					} else {
-						if err := s.DelegateAddMemberToGroup(inst, idx, contact); err != nil {
+						if err := s.DelegateAddMemberToGroup(inst, idx, c); err != nil {
 							errm = multierror.Append(errm, err)
 						}
 					}
@@ -133,11 +139,11 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 			for idx, group := range s.Groups {
 				if group.ID == removed {
 					if s.Owner {
-						if err := s.RemoveMemberFromGroup(inst, idx, contact); err != nil {
+						if err := s.RemoveMemberFromGroup(inst, idx, c); err != nil {
 							errm = multierror.Append(errm, err)
 						}
 					} else {
-						if err := s.DelegateRemoveMemberFromGroup(inst, idx, contact); err != nil {
+						if err := s.DelegateRemoveMemberFromGroup(inst, idx, c); err != nil {
 							errm = multierror.Append(errm, err)
 						}
 					}
@@ -146,7 +152,7 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 		}
 
 		if msg.BecomeInvitable {
-			if err := s.AddInvitationForContact(inst, contact); err != nil {
+			if err := s.AddInvitationForContact(inst, c); err != nil {
 				errm = multierror.Append(errm, err)
 			}
 		}
