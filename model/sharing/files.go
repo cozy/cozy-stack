@@ -701,6 +701,12 @@ func (s *Sharing) FixRevokedNotes(inst *instance.Instance) error {
 
 	var errm error
 	for _, doc := range docs {
+		// If the note came from another cozy via a sharing that is now revoked, we
+		// may need to recreate the trigger.
+		if err := note.SetupTrigger(inst, doc.ID()); err != nil {
+			errm = multierror.Append(errm, fmt.Errorf("failed to setup revoked note trigger: %w", err))
+		}
+
 		if err := note.ImportImages(inst, doc); err != nil {
 			errm = multierror.Append(errm, fmt.Errorf("failed to import revoked note images: %w", err))
 		}

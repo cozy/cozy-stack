@@ -81,6 +81,9 @@ func (o *NoteOpener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, 
 func (o *NoteOpener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, error) {
 	// If the note came from another cozy via a sharing that is now revoked, we
 	// may need to recreate the trigger.
+	// This should be taken care of when revoking the sharing now but we leave
+	// this call to make sure notes from previously revoked sharings will
+	// continue to work.
 	_ = note.SetupTrigger(o.Inst, o.File.ID())
 
 	code, err := o.GetSharecode(memberIndex, readOnly)
