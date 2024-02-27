@@ -62,7 +62,38 @@ describe "A sharing with several members" do
     sleep 6
 
     f2_bob.remove inst_bob
-    sleep 21
+    sleep 10
+
+    # Check that we can add a group from the owner
+    g1 = Group.create inst, name: Faker::Kpop.girl_groups
+    contact_gaby = Contact.create inst, given_name: "Gaby", groups: [g1.couch_id]
+    sleep 1
+    sharing.add_group inst, g1
+    sleep 3
+    info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
+    members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby]
+    revoked = []
+    check_sharing_has_groups_and_members info, [g1], members, revoked
+
+    # Check that we can add a group from a recipient
+    g2 = Group.create inst_bob, name: Faker::Kpop.boy_bands
+    contact_hugo = Contact.create inst_bob, given_name: "Hugo", groups: [g2.couch_id]
+    sleep 1
+    sharing.add_group inst_bob, g2
+    sleep 3
+    info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
+    members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby, contact_hugo]
+    revoked = []
+    check_sharing_has_groups_and_members info, [g1, g2], members, revoked
+
+    # Check that we can remove a group
+    sharing.remove_group inst, 0
+    sleep 4
+    info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
+    members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby, contact_hugo]
+    revoked = [5]
+    assert info.dig("attributes", "groups", 0, "removed")
+    check_sharing_has_groups_and_members info, [g1, g2], members, revoked
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name
@@ -137,5 +168,24 @@ describe "A sharing with several members" do
     inst_dave.remove
     inst_emily.remove
     inst_fred.remove
+  end
+end
+
+def check_sharing_has_groups_and_members(info, groups, contacts, revoked)
+  grps = info.dig("attributes", "groups") || []
+  assert_equal grps.length, groups.length
+  groups.each_with_index do |g, i|
+    assert_equal grps[i]["name"], g.name
+  end
+
+  members = info.dig "attributes", "members"
+  # We have the owner in members but not in contacts
+  assert_equal members.length, contacts.length + 1
+  contacts.each_with_index do |contact, i|
+    assert_equal members[i+1]["name"], contact.fullname
+  end
+
+  revoked.each do |i|
+    assert_equal members[i]["status"], "revoked"
   end
 end

@@ -44,7 +44,7 @@ module Model
 
   def as_reference
     {
-      doctype: doctype,
+      type: doctype,
       id: @couch_id
     }
   end

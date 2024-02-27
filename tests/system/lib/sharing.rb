@@ -49,7 +49,8 @@ class Sharing
     j.dig "relationships", "shared_docs", "data"
   end
 
-  def add_members(inst, contacts, doctype)
+  def add_members(inst, contacts)
+    doctype = @rules[0].doctype
     opts = {
       accept: "application/vnd.api+json",
       content_type: "application/vnd.api+json",
@@ -66,6 +67,36 @@ class Sharing
     }
     body = JSON.generate data
     res = inst.client["/sharings/#{@couch_id}/recipients"].post body, opts
+    res.code
+  end
+
+  def add_group(inst, group)
+    doctype = @rules[0].doctype
+    opts = {
+      accept: "application/vnd.api+json",
+      content_type: "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    data = {
+      data: {
+        relationships: {
+          recipients: {
+            data: [group.as_reference]
+          }
+        }
+      }
+    }
+    body = JSON.generate data
+    res = inst.client["/sharings/#{@couch_id}/recipients"].post body, opts
+    res.code
+  end
+
+  def remove_group(inst, index)
+    doctype = @rules[0].doctype
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/groups/#{index}"].delete opts
     res.code
   end
 

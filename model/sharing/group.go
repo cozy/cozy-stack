@@ -23,7 +23,7 @@ import (
 
 // Group contains the information about a group of members of the sharing.
 type Group struct {
-	ID       string `json:"id,omitempty"` // Only present on the instance where the group was added
+	ID       string `json:"id,omitempty"`
 	Name     string `json:"name"`
 	AddedBy  int    `json:"addedBy"` // The index of the member who have added the group
 	ReadOnly bool   `json:"read_only"`
