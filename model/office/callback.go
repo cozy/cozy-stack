@@ -69,7 +69,7 @@ func (c *callbackClaims) GetAudience() (jwt.ClaimStrings, error)       { return 
 
 // Callback will manage the callback from the document server.
 func Callback(inst *instance.Instance, params CallbackParameters) error {
-	cfg := getConfig(inst.ContextName)
+	cfg := GetConfig(inst.ContextName)
 	if err := checkToken(cfg, params); err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func forceSaveFile(inst *instance.Instance, key, downloadURL string) error {
 }
 
 // saveFile saves the file with content from the given URL and returns the new revision.
-func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL string) (*conflictDetector, error) {
+func saveFile(inst *instance.Instance, detector ConflictDetector, downloadURL string) (*ConflictDetector, error) {
 	fs := inst.VFS()
 	file, err := fs.FileByID(detector.ID)
 	if err != nil {
@@ -197,6 +197,6 @@ func saveFile(inst *instance.Instance, detector conflictDetector, downloadURL st
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
-	updated := conflictDetector{ID: newfile.ID(), Rev: newfile.Rev(), MD5Sum: newfile.MD5Sum}
+	updated := ConflictDetector{ID: newfile.ID(), Rev: newfile.Rev(), MD5Sum: newfile.MD5Sum}
 	return &updated, err
 }

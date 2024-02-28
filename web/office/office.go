@@ -21,7 +21,7 @@ import (
 func Open(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
-	open, err := office.Open(inst, fileID)
+	open, err := sharing.OpenOffice(inst, fileID)
 	if err != nil {
 		return wrapError(err)
 	}
