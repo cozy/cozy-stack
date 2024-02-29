@@ -84,9 +84,9 @@ func (c *Contact) PrimaryName() string {
 	return primary
 }
 
-// ByFamilyNameGivenNameEmailCozyURL returns a string that can be used for
-// sorting the contacts like in the contacts app.
-func (c *Contact) ByFamilyNameGivenNameEmailCozyURL() string {
+// SortingKey returns a string that can be used for sorting the contacts like
+// in the contacts app.
+func (c *Contact) SortingKey() string {
 	indexes, ok := c.Get("indexes").(map[string]interface{})
 	if !ok {
 		return c.PrimaryName()

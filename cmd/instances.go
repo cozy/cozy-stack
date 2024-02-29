@@ -152,7 +152,7 @@ cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 
 If the COZY_DISABLE_INSTANCES_ADD_RM env variable is set, creating and
-destroying instances will be desactivated and the content of this variable will
+destroying instances will be disabled and the content of this variable will
 be used as the error message.
 `,
 	Example: "$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,store cozy.localhost:8080",

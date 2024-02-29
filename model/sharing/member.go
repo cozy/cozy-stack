@@ -66,8 +66,8 @@ type Member struct {
 	Email        string `json:"email,omitempty"`
 	Instance     string `json:"instance,omitempty"`
 	ReadOnly     bool   `json:"read_only,omitempty"`
-	OnlyInGroups bool   `json:"only_in_groups,omitempty"` // False if the member as been added as an io.cozy.contacts
-	Groups       []int  `json:"groups,omitempty"`         // The indexes of the groups
+	OnlyInGroups bool   `json:"only_in_groups,omitempty"` // False if the member has been added as an io.cozy.contacts
+	Groups       []int  `json:"groups,omitempty"`         // The indexes of the groups a member is part of
 }
 
 // PrimaryName returns the main name of this member
@@ -316,7 +316,7 @@ func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs
 		g := Group{ID: groupID, Name: group.Name(), ReadOnly: readOnly}
 		api.groups = append(api.groups, g)
 
-		contacts, err := group.FindContacts(inst)
+		contacts, err := group.GetAllContacts(inst)
 		if err != nil {
 			return err
 		}

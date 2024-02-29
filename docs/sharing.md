@@ -887,8 +887,8 @@ Content-Type: application/vnd.api+json
 
 This is an internal route for the stack. It is called by the recipient cozy on
 the owner cozy to add recipients and groups to the sharing (`open_sharing:
-true` only). It should send an `email` address, but if the email address is not
-known, an `instance` URL can also be used.
+true` only). Data for direct recipients should contain an email address but if
+it is not known, an instance URL can also be provided.
 
 #### Request
 
@@ -1233,7 +1233,7 @@ This route can be only be called on the cozy instance of the sharer to revoke a
 group of the sharing. The parameter is the index of this recipient in the
 `groups` array of the sharing. The `removed` property for this group will be
 set to `true`, and it will revoke the members of this group unless they are
-still part of the sharing via another group.
+still part of the sharing via another group or as direct recipients.
 
 #### Request
 

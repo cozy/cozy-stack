@@ -25,7 +25,7 @@ import (
 type Group struct {
 	ID       string `json:"id,omitempty"`
 	Name     string `json:"name"`
-	AddedBy  int    `json:"addedBy"` // The index of the member who have added the group
+	AddedBy  int    `json:"addedBy"` // The index of the member who added the group
 	ReadOnly bool   `json:"read_only"`
 	Removed  bool   `json:"removed,omitempty"`
 }
@@ -37,7 +37,7 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	if err != nil {
 		return err
 	}
-	contacts, err := group.FindContacts(inst)
+	contacts, err := group.GetAllContacts(inst)
 	if err != nil {
 		return err
 	}
@@ -50,8 +50,11 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 		if err != nil {
 			return err
 		}
-		s.Members[idx].Groups = append(s.Members[idx].Groups, groupIndex)
-		sort.Ints(s.Members[idx].Groups)
+		pos := sort.SearchInts(s.Members[idx].Groups, groupIndex)
+		if pos == len(s.Members[idx].Groups) || s.Members[idx].Groups[pos] != groupIndex {
+			s.Members[idx].Groups = append(s.Members[idx].Groups, groupIndex)
+			sort.Ints(s.Members[idx].Groups)
+		}
 	}
 
 	g := Group{ID: groupID, Name: group.Name(), AddedBy: 0, ReadOnly: readOnly}
@@ -59,13 +62,14 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	return nil
 }
 
-// RevokeGroup revoke a group of members on the sharer Cozy. After that, the
-// sharing is desactivated if there are no longer any active recipient.
+// RevokeGroup revokes a group of members on the sharer Cozy. After that, the
+// sharing is disabled if there are no longer any active recipient.
 func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
 
+	var errm error
 	for i, m := range s.Members {
 		inGroup := false
 		for _, idx := range m.Groups {
@@ -89,13 +93,16 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 		}
 		if m.OnlyInGroups && len(s.Members[i].Groups) == 0 {
 			if err := s.RevokeRecipient(inst, i); err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 		}
 	}
 
 	s.Groups[index].Removed = true
-	return couchdb.UpdateDoc(inst, s)
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+	return errm
 }
 
 // UpdateGroups is called when a contact is added or removed to a group. It

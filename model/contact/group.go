@@ -39,8 +39,8 @@ func FindGroup(db prefixer.Prefixer, groupID string) (*Group, error) {
 	return doc, err
 }
 
-// FindContacts returns the list of contacts inside this group.
-func (g *Group) FindContacts(db prefixer.Prefixer) ([]*Contact, error) {
+// GetAllContacts returns the list of contacts inside this group.
+func (g *Group) GetAllContacts(db prefixer.Prefixer) ([]*Contact, error) {
 	var docs []*Contact
 	req := &couchdb.FindRequest{
 		UseIndex: "by-groups",
@@ -65,8 +65,8 @@ func (g *Group) FindContacts(db prefixer.Prefixer) ([]*Contact, error) {
 
 	// XXX I didn't find a way to make a mango request with the correct sort
 	less := func(i, j int) bool {
-		a := docs[i].ByFamilyNameGivenNameEmailCozyURL()
-		b := docs[j].ByFamilyNameGivenNameEmailCozyURL()
+		a := docs[i].SortingKey()
+		b := docs[j].SortingKey()
 		return a < b
 	}
 	sort.Slice(docs, less)

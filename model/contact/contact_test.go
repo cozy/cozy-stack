@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFindContacts(t *testing.T) {
+func TestGetAllContacts(t *testing.T) {
 	config.UseTestFile(t)
 	instPrefix := prefixer.NewPrefixer(0, "cozy-test", "cozy-test")
 	t.Cleanup(func() { _ = couchdb.DeleteDB(instPrefix, consts.Contacts) })
@@ -76,7 +76,7 @@ func TestFindContacts(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(gaby), &doc.M))
 	require.NoError(t, couchdb.CreateDoc(instPrefix, &doc))
 
-	contacts, err := g.FindContacts(instPrefix)
+	contacts, err := g.GetAllContacts(instPrefix)
 	require.NoError(t, err)
 	require.Len(t, contacts, 1)
 	assert.Equal(t, contacts[0].PrimaryName(), "Gaby")

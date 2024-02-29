@@ -352,9 +352,9 @@ The stack have 4 workers to power the sharings (internal usage only):
 
 ### Share-group
 
-When a contact is added or removed to a group, they should be added to the
-sharings of this group. The message is composed of the contact ID, the list
-of groups added and the list of groups removed.
+When a contact is added to or removed from a group, the change should be
+reflected in the group's sharings' recipients. The message is composed of the
+contact ID, the list of groups added and the list of groups removed.
 
 ### Share-track
 
