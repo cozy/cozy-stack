@@ -892,6 +892,11 @@ Get an image that shows the first page of a PDF (at most 1080x1920).
 Get a thumbnail of a file (for an image & pdf only). `:format` can be `tiny` (96x96)
 `small` (640x480), `medium` (1280x720), or `large` (1920x1080).
 
+This API does not require authentication because the secret acts as a token. 
+This secret is valid for 10 minutes, after which the link will return an error. 
+To retrieve a new functional link, you must query the files API again to obtain
+a new secret.
+
 ### PUT /files/:file-id
 
 Overwrite a file
