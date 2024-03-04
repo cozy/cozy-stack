@@ -4,6 +4,12 @@
 
 This section will list important changes to the stack or its usage, and migration procedures if any is needed.
 
+## Mars 2024: Routes for PDF
+
+The deprecated routes for getting the icon or preview of a PDF file has been removed.
+
+You should use the thumbnails instead.
+
 ## December 2023: Iterations for PBKDF2 increased
 
 We have increased the number of PBKDF2 iterations for new users to 650_000, and removed the exception for Edge as it now supports PBKDF2 via the subtle crypto API.
