@@ -76,9 +76,9 @@ func TestGroups(t *testing.T) {
 
 		require.Len(t, s.Groups, 2)
 		require.Equal(t, s.Groups[0].Name, "Friends")
-		assert.False(t, s.Groups[0].Removed)
+		assert.False(t, s.Groups[0].Revoked)
 		require.Equal(t, s.Groups[1].Name, "Football")
-		assert.False(t, s.Groups[1].Removed)
+		assert.False(t, s.Groups[1].Revoked)
 
 		require.NoError(t, s.RevokeGroup(inst, 1)) // Revoke the football group
 
@@ -91,8 +91,8 @@ func TestGroups(t *testing.T) {
 		assert.Empty(t, s.Members[3].Groups)
 
 		require.Len(t, s.Groups, 2)
-		assert.False(t, s.Groups[0].Removed)
-		assert.True(t, s.Groups[1].Removed)
+		assert.False(t, s.Groups[0].Revoked)
+		assert.True(t, s.Groups[1].Revoked)
 
 		require.NoError(t, s.RevokeGroup(inst, 0)) // Revoke the fiends group
 
@@ -105,8 +105,8 @@ func TestGroups(t *testing.T) {
 		assert.Empty(t, s.Members[3].Groups)
 
 		require.Len(t, s.Groups, 2)
-		assert.True(t, s.Groups[0].Removed)
-		assert.True(t, s.Groups[1].Removed)
+		assert.True(t, s.Groups[0].Revoked)
+		assert.True(t, s.Groups[1].Revoked)
 	})
 
 	t.Run("UpdateGroups", func(t *testing.T) {
@@ -158,9 +158,9 @@ func TestGroups(t *testing.T) {
 
 		require.Len(t, s.Groups, 2)
 		require.Equal(t, s.Groups[0].Name, "Friends")
-		assert.False(t, s.Groups[0].Removed)
+		assert.False(t, s.Groups[0].Revoked)
 		require.Equal(t, s.Groups[1].Name, "Football")
-		assert.False(t, s.Groups[1].Removed)
+		assert.False(t, s.Groups[1].Revoked)
 
 		// Charlie is added to the friends group
 		msg1 := job.ShareGroupMessage{

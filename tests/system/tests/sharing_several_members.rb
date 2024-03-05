@@ -100,7 +100,7 @@ describe "A sharing with several members" do
     info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
     members = [contact_bob, contact_charlie, contact_dave, contact_emily, contact_gaby, contact_hugo]
     revoked = [5]
-    assert info.dig("attributes", "groups", 0, "removed")
+    assert info.dig("attributes", "groups", 0, "revoked")
     check_sharing_has_groups_and_members info, [g1, g2], members, revoked
 
     # Check that the files are the same on disk

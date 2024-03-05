@@ -475,17 +475,17 @@ care of it later.
 -   An identifier (the same for all members of the sharing)
 -   A list of `members`. The first one is the owner. For each member, we have:
     - `status`, a status that can be:
-        -   `owner` for the member that has created the sharing
-        -   `mail-not-sent` for a member that has been added, but its
-            invitation has not yet been sent (often, this status is used only
-            for a few seconds)
-        -   `pending` for a member with an invitation sent, but who has not
-            clicked on the link
-        -   `seen` for a member that has clicked on the invitation link, but
-            has not setup the Cozy to Cozy replication for the sharing
-        -   `ready` for a member where the Cozy to Cozy replication has been
-            set up
-        -   `revoked` for a member who is on longer in the sharing
+        - `owner` for the member that has created the sharing
+        - `mail-not-sent` for a member that has been added, but its
+          invitation has not yet been sent (often, this status is used only
+          for a few seconds)
+        - `pending` for a member with an invitation sent, but who has not
+          clicked on the link
+        - `seen` for a member that has clicked on the invitation link, but
+          has not setup the Cozy to Cozy replication for the sharing
+        - `ready` for a member where the Cozy to Cozy replication has been
+          set up
+        - `revoked` for a member who is on longer in the sharing
     - `name`, a contact name
     - `public_name`, a public name
     - `email`, the email address
@@ -495,10 +495,11 @@ care of it later.
       as a single contact
     - `groups`, a list of indexes of the groups
 -   A list of `groups`, with for each one:
-    -   `id`, the identifier of the io.cozy.contacts.groups
-    -   `name`, the name of the group
-    -   `addedBy`, the index of the member that has added the group
-    -   `removed`, a flag set to true when the group is revoked from the sharing
+    - `id`, the identifier of the io.cozy.contacts.groups
+    - `name`, the name of the group
+    - `addedBy`, the index of the member that has added the group
+    - `read_only`, a flag to tell if the group is restricted to read-only mode
+    - `revoked`, a flag set to true when the group is revoked from the sharing
 -   Some `credentials` to authorize the transfer of data between the owner and
     the recipients
 -   A `description` (one sentence that will help people understand what is

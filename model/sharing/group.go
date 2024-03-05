@@ -27,7 +27,7 @@ type Group struct {
 	Name     string `json:"name"`
 	AddedBy  int    `json:"addedBy"` // The index of the member who added the group
 	ReadOnly bool   `json:"read_only"`
-	Removed  bool   `json:"removed,omitempty"`
+	Revoked  bool   `json:"revoked,omitempty"`
 }
 
 // AddGroup adds a group of contacts identified by its ID to the members of the
@@ -98,7 +98,7 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 		}
 	}
 
-	s.Groups[index].Removed = true
+	s.Groups[index].Revoked = true
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		errm = multierror.Append(errm, err)
 	}
