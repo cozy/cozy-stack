@@ -94,22 +94,20 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.TaskContext, i *instance.Instanc
 	// Check if the trigger is orphan
 	if triggerID, ok := ctx.TriggerID(); ok && service.TriggerID != "" {
 		if triggerID != service.TriggerID {
-			// Check if this is another trigger for the same declared service
+			// Check if this is another trigger for the same declared service.
+			// Note that the trigger may be not found if it was an @at.
 			var tInfos job.TriggerInfos
-			err = couchdb.GetDoc(i, consts.Triggers, triggerID, &tInfos)
-			if err != nil {
-				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q not found", triggerID)}
-				return
-			}
-			var msg ServiceOptions
-			err = json.Unmarshal(tInfos.Message, &msg)
-			if err != nil {
-				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
-				return
-			}
-			if msg.Name != name {
-				err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
-				return
+			if err = couchdb.GetDoc(i, consts.Triggers, triggerID, &tInfos); err == nil {
+				var msg ServiceOptions
+				err = json.Unmarshal(tInfos.Message, &msg)
+				if err != nil {
+					err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
+					return
+				}
+				if msg.Name != name {
+					err = job.BadTriggerError{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
+					return
+				}
 			}
 		}
 	}
