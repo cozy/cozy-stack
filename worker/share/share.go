@@ -1,3 +1,4 @@
+// Package share is where the workers for Cozy to Cozy sharings are defined.
 package share
 
 import (
@@ -9,6 +10,15 @@ import (
 )
 
 func init() {
+	job.AddWorker(&job.WorkerConfig{
+		WorkerType:   "share-group",
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 2,
+		Reserved:     true,
+		Timeout:      30 * time.Second,
+		WorkerFunc:   WorkerGroup,
+	})
+
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "share-track",
 		Concurrency:  runtime.NumCPU(),
@@ -41,6 +51,18 @@ func init() {
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   WorkerUpload,
 	})
+}
+
+// WorkerGroup is used to update the list of members of sharings for a group
+// when someone is added or removed to this group.
+func WorkerGroup(ctx *job.TaskContext) error {
+	var msg job.ShareGroupMessage
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	ctx.Instance.Logger().WithNamespace("share").
+		Debugf("Group %#v", msg)
+	return sharing.UpdateGroups(ctx.Instance, msg)
 }
 
 // WorkerTrack is used to update the io.cozy.shared database when a document

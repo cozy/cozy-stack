@@ -14,7 +14,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 36
+const IndexViewsVersion int = 37
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -66,6 +66,12 @@ var Indexes = []*mango.Index{
 	// Used to lookup the bitwarden ciphers
 	mango.MakeIndex(consts.BitwardenCiphers, "by-folder-id", mango.IndexDef{Fields: []string{"folder_id"}}),
 	mango.MakeIndex(consts.BitwardenCiphers, "by-organization-id", mango.IndexDef{Fields: []string{"organization_id"}}),
+
+	// Used to find the contacts in a group
+	mango.MakeIndex(consts.Contacts, "by-groups", mango.IndexDef{Fields: []string{"relationships.groups.data"}}),
+
+	// Used to find the active sharings
+	mango.MakeIndex(consts.Sharings, "active", mango.IndexDef{Fields: []string{"active"}}),
 }
 
 // DiskUsageView is the view used for computing the disk usage for files

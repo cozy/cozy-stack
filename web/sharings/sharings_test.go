@@ -122,10 +122,10 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             },
             "read_only_recipients": {
-                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+                "data": [{"id": "` + daveContact.ID() + `", "type": "` + daveContact.DocType() + `"}]
             }
           }
         }
@@ -167,7 +167,7 @@ func TestSharings(t *testing.T) {
 		eA.GET(u.Path).
 			WithQuery("state", state).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body().
 			Contains("Connect to your Cozy").
 			Contains(`<input type="hidden" name="state" value="` + state)
@@ -215,7 +215,7 @@ func TestSharings(t *testing.T) {
 			WithQuery("sharing_id", sharingID).
 			WithQuery("state", state).
 			Expect().Status(200).
-			ContentType("text/html", "utf-8").
+			HasContentType("text/html", "utf-8").
 			Body()
 
 		body.Contains("and you can collaborate by editing the document")
@@ -224,7 +224,7 @@ func TestSharings(t *testing.T) {
 		body.Contains(`<span class="filetype-other filetype">`)
 
 		matches := body.Match(`<input type="hidden" name="csrf_token" value="(\w+)"`)
-		matches.Length().Equal(2)
+		matches.Length().IsEqual(2)
 
 		eB.POST("/auth/authorize/sharing").
 			WithFormField("state", state).
@@ -252,7 +252,7 @@ func TestSharings(t *testing.T) {
           "type": "` + consts.Sharings + `",
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + edwardContact.ID() + `", "doctype": "` + edwardContact.DocType() + `"}]
+              "data": [{"id": "` + edwardContact.ID() + `", "type": "` + edwardContact.DocType() + `"}]
             }
           }
         }
@@ -265,25 +265,99 @@ func TestSharings(t *testing.T) {
 		attrs := data.Value("attributes").Object()
 
 		members := attrs.Value("members").Array()
-		members.Length().Equal(4)
+		members.Length().IsEqual(4)
 
-		owner := members.Element(0).Object()
-		owner.ValueEqual("status", "owner")
-		owner.ValueEqual("public_name", "Alice")
-		owner.ValueEqual("email", "alice@example.net")
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+		owner.HasValue("email", "alice@example.net")
 
-		bob := members.Element(1).Object()
-		bob.ValueEqual("status", "ready")
-		bob.ValueEqual("email", "bob@example.net")
+		bob := members.Value(1).Object()
+		bob.HasValue("status", "ready")
+		bob.HasValue("email", "bob@example.net")
 
-		dave := members.Element(2).Object()
-		dave.ValueEqual("status", "pending")
-		dave.ValueEqual("email", "dave@example.net")
-		dave.ValueEqual("read_only", true)
+		dave := members.Value(2).Object()
+		dave.HasValue("status", "pending")
+		dave.HasValue("email", "dave@example.net")
+		dave.HasValue("read_only", true)
 
-		edward := members.Element(3).Object()
-		edward.ValueEqual("name", "Edward")
-		edward.ValueEqual("email", "edward@example.net")
+		edward := members.Value(3).Object()
+		edward.HasValue("name", "Edward")
+		edward.HasValue("email", "edward@example.net")
+	})
+
+	t.Run("CreateSharingWithGroup", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		require.NotEmpty(t, aliceAppToken)
+
+		group := createGroup(t, aliceInstance, "friends")
+		require.NotNil(t, group)
+		fionaContact := addContactToGroup(t, aliceInstance, group, "Fiona")
+		require.NotNil(t, fionaContact)
+		gabyContact := addContactToGroup(t, aliceInstance, group, "Gaby")
+		require.NotNil(t, gabyContact)
+
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "this is a test with a group",
+            "open_sharing": true,
+            "rules": [{
+                "title": "test group",
+                "doctype": "` + iocozytests + `",
+                "values": ["000001"],
+                "add": "sync"
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + group.ID() + `", "type": "` + consts.Groups + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		attrs.HasValue("description", "this is a test with a group")
+		members := attrs.Value("members").Array()
+		members.Length().IsEqual(3)
+
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+		owner.HasValue("email", "alice@example.net")
+		owner.HasValue("instance", "http://"+aliceInstance.Domain)
+
+		recipient := members.Value(1).Object()
+		recipient.HasValue("status", "pending")
+		recipient.HasValue("name", "Fiona")
+		recipient.HasValue("email", "fiona@example.net")
+		recipient.HasValue("groups", []int{0})
+		recipient.NotContainsKey("read_only")
+		recipient.HasValue("only_in_groups", true)
+
+		recipient = members.Value(2).Object()
+		recipient.HasValue("status", "pending")
+		recipient.HasValue("name", "Gaby")
+		recipient.HasValue("email", "gaby@example.net")
+		recipient.HasValue("groups", []int{0})
+		recipient.NotContainsKey("read_only")
+		recipient.HasValue("only_in_groups", true)
+
+		groups := attrs.Value("groups").Array()
+		groups.Length().IsEqual(1)
+		g := groups.Value(0).Object()
+		g.HasValue("id", group.ID())
+		g.HasValue("name", "friends")
+		g.HasValue("addedBy", 0)
 	})
 
 	t.Run("CreateSharingWithPreview", func(t *testing.T) {
@@ -310,10 +384,10 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             },
             "read_only_recipients": {
-                "data": [{"id": "` + daveContact.ID() + `", "doctype": "` + daveContact.DocType() + `"}]
+                "data": [{"id": "` + daveContact.ID() + `", "type": "` + daveContact.DocType() + `"}]
             }
           }
         }
@@ -323,29 +397,29 @@ func TestSharings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", consts.Sharings)
+		data.HasValue("type", consts.Sharings)
 		sharingID = data.Value("id").String().NotEmpty().Raw()
 		data.Value("meta").Object().Value("rev").String().NotEmpty()
-		data.Value("links").Object().ValueEqual("self", "/sharings/"+sharingID)
+		data.Value("links").Object().HasValue("self", "/sharings/"+sharingID)
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("description", "this is a test with preview")
-		attrs.ValueEqual("app_slug", "testapp")
-		attrs.ValueEqual("preview_path", "/preview")
-		attrs.ValueEqual("owner", true)
-		attrs.Value("created_at").String().DateTime(time.RFC3339)
-		attrs.Value("updated_at").String().DateTime(time.RFC3339)
+		attrs.HasValue("description", "this is a test with preview")
+		attrs.HasValue("app_slug", "testapp")
+		attrs.HasValue("preview_path", "/preview")
+		attrs.HasValue("owner", true)
+		attrs.Value("created_at").String().AsDateTime(time.RFC3339)
+		attrs.Value("updated_at").String().AsDateTime(time.RFC3339)
 		attrs.NotContainsKey("credentials")
 
 		members := attrs.Value("members").Array()
 		assertSharingByAliceToBobAndDave(t, members, aliceInstance)
 
 		rules := attrs.Value("rules").Array()
-		rules.Length().Equal(1)
-		rule := rules.First().Object()
-		rule.ValueEqual("title", "test two")
-		rule.ValueEqual("doctype", iocozytests)
-		rule.ValueEqual("values", []string{"foobaz"})
+		rules.Length().IsEqual(1)
+		rule := rules.Value(0).Object()
+		rule.HasValue("title", "test two")
+		rule.HasValue("doctype", iocozytests)
+		rule.HasValue("values", []string{"foobaz"})
 
 		description := assertInvitationMailWasSent(t, aliceInstance)
 		assert.Equal(t, description, "this is a test with preview")
@@ -379,10 +453,17 @@ func TestSharings(t *testing.T) {
 	})
 
 	t.Run("AddRecipient", func(t *testing.T) {
-		assert.NotEmpty(t, aliceAppToken)
-		assert.NotNil(t, charlieContact)
+		require.NotEmpty(t, aliceAppToken)
+		require.NotNil(t, charlieContact)
 
 		eA := httpexpect.Default(t, tsA.URL)
+
+		brothers := createGroup(t, aliceInstance, "brothers")
+		require.NotNil(t, brothers)
+		hugoContact := addContactToGroup(t, aliceInstance, brothers, "Hugo")
+		require.NotNil(t, hugoContact)
+		idrisContact := addContactToGroup(t, aliceInstance, brothers, "Idris")
+		require.NotNil(t, idrisContact)
 
 		obj := eA.POST("/sharings/"+sharingID+"/recipients").
 			WithHeader("Authorization", "Bearer "+aliceAppToken).
@@ -392,7 +473,10 @@ func TestSharings(t *testing.T) {
           "type": "` + consts.Sharings + `",
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + charlieContact.ID() + `", "doctype": "` + charlieContact.DocType() + `"}]
+              "data": [
+			    {"id": "` + charlieContact.ID() + `", "type": "` + consts.Contacts + `"},
+			    {"id": "` + brothers.ID() + `", "type": "` + consts.Groups + `"}
+		      ]
             }
           }
         }
@@ -405,28 +489,52 @@ func TestSharings(t *testing.T) {
 		attrs := data.Value("attributes").Object()
 		members := attrs.Value("members").Array()
 
-		members.Length().Equal(4)
-		owner := members.Element(0).Object()
-		owner.ValueEqual("status", "owner")
-		owner.ValueEqual("public_name", "Alice")
-		owner.ValueEqual("email", "alice@example.net")
-		owner.ValueEqual("instance", "http://"+aliceInstance.Domain)
+		members.Length().IsEqual(6)
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+		owner.HasValue("email", "alice@example.net")
+		owner.HasValue("instance", "http://"+aliceInstance.Domain)
 
-		bob := members.Element(1).Object()
-		bob.ValueEqual("status", "pending")
-		bob.ValueEqual("name", "Bob")
-		bob.ValueEqual("email", "bob@example.net")
+		bob := members.Value(1).Object()
+		bob.HasValue("status", "pending")
+		bob.HasValue("name", "Bob")
+		bob.HasValue("email", "bob@example.net")
+		bob.NotContainsKey("only_in_groups")
 
-		dave := members.Element(2).Object()
-		dave.ValueEqual("status", "pending")
-		dave.ValueEqual("name", "Dave")
-		dave.ValueEqual("email", "dave@example.net")
-		dave.ValueEqual("read_only", true)
+		dave := members.Value(2).Object()
+		dave.HasValue("status", "pending")
+		dave.HasValue("name", "Dave")
+		dave.HasValue("email", "dave@example.net")
+		dave.HasValue("read_only", true)
+		dave.NotContainsKey("only_in_groups")
 
-		charlie := members.Element(3).Object()
-		charlie.ValueEqual("status", "pending")
-		charlie.ValueEqual("name", "Charlie")
-		charlie.ValueEqual("email", "charlie@example.net")
+		charlie := members.Value(3).Object()
+		charlie.HasValue("status", "pending")
+		charlie.HasValue("name", "Charlie")
+		charlie.HasValue("email", "charlie@example.net")
+		charlie.NotContainsKey("only_in_groups")
+
+		hugo := members.Value(4).Object()
+		hugo.HasValue("status", "pending")
+		hugo.HasValue("name", "Hugo")
+		hugo.HasValue("email", "hugo@example.net")
+		hugo.HasValue("groups", []int{0})
+		hugo.HasValue("only_in_groups", true)
+
+		idris := members.Value(5).Object()
+		idris.HasValue("status", "pending")
+		idris.HasValue("name", "Idris")
+		idris.HasValue("email", "idris@example.net")
+		idris.HasValue("groups", []int{0})
+		idris.HasValue("only_in_groups", true)
+
+		groups := attrs.Value("groups").Array()
+		groups.Length().IsEqual(1)
+		g := groups.Value(0).Object()
+		g.HasValue("id", brothers.ID())
+		g.HasValue("name", "brothers")
+		g.HasValue("addedBy", 0)
 	})
 
 	t.Run("RevokedSharingWithPreview", func(t *testing.T) {
@@ -451,7 +559,8 @@ func TestSharings(t *testing.T) {
 		sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
 		require.NoError(t, err)
 
-		_, err = sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
+		m := sharing.Member{Email: newMemberMail, ReadOnly: true}
+		_, err = sharingDoc.AddDelegatedContact(aliceInstance, m)
 		require.NoError(t, err)
 		perms, err := permission.GetForSharePreview(aliceInstance, sharingID)
 		require.NoError(t, err)
@@ -530,7 +639,7 @@ func TestSharings(t *testing.T) {
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + bobContact.ID() + `", "doctype": "` + bobContact.DocType() + `"}]
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
             }
           }
         }
@@ -591,23 +700,23 @@ func TestSharings(t *testing.T) {
 
 		for _, itm := range obj.Value("data").Array().Iter() {
 			data := itm.Object()
-			data.ValueEqual("type", consts.Sharings)
+			data.HasValue("type", consts.Sharings)
 			sharingID = data.Value("id").String().NotEmpty().Raw()
 			rel := data.Value("relationships").Object()
 			sharedDocs := rel.Value("shared_docs").Object()
 
 			if sharingID == s1.ID() {
 				sharedDocsData := sharedDocs.Value("data").Array()
-				sharedDocsData.Element(0).Object().Value("id").Equal("fakeid1")
-				sharedDocsData.Element(1).Object().Value("id").Equal("fakeid2")
-				sharedDocsData.Element(2).Object().Value("id").Equal("fakeid3")
+				sharedDocsData.Value(0).Object().Value("id").IsEqual("fakeid1")
+				sharedDocsData.Value(1).Object().Value("id").IsEqual("fakeid2")
+				sharedDocsData.Value(2).Object().Value("id").IsEqual("fakeid3")
 				s1Found = true
 			}
 
 			if sharingID == s2.ID() {
 				sharedDocsData := sharedDocs.Value("data").Array()
-				sharedDocsData.Element(0).Object().Value("id").Equal("fakeid4")
-				sharedDocsData.Element(1).Object().Value("id").Equal("fakeid5")
+				sharedDocsData.Value(0).Object().Value("id").IsEqual("fakeid4")
+				sharedDocsData.Value(1).Object().Value("id").IsEqual("fakeid5")
 				s2Found = true
 			}
 		}
@@ -745,6 +854,95 @@ func TestSharings(t *testing.T) {
 		assertLastRecipientIsRevoked(t, s, sharedRefs, aliceInstance)
 	})
 
+	t.Run("RevokeGroup", func(t *testing.T) {
+		sharedDocs := []string{"forgroup1"}
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
+
+		group := createGroup(t, aliceInstance, "friends")
+		require.NotNil(t, group)
+		fionaContact := addContactToGroup(t, aliceInstance, group, "Fiona")
+		require.NotNil(t, fionaContact)
+		gabyContact := addContactToGroup(t, aliceInstance, group, "Gaby")
+		require.NotNil(t, gabyContact)
+
+		eA := httpexpect.Default(t, tsA.URL)
+
+		obj := eA.POST("/sharings/"+s.ID()+"/recipients").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "relationships": {
+            "recipients": {
+              "data": [
+			    {"id": "` + group.ID() + `", "type": "` + consts.Groups + `"}
+		      ]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		members := attrs.Value("members").Array()
+		members.Length().IsEqual(4)
+
+		owner := members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+
+		bob := members.Value(1).Object()
+		bob.HasValue("name", "Bob")
+
+		fiona := members.Value(2).Object()
+		fiona.HasValue("status", "pending")
+		fiona.HasValue("name", "Fiona")
+		fiona.HasValue("groups", []int{0})
+		fiona.HasValue("only_in_groups", true)
+
+		gaby := members.Value(3).Object()
+		gaby.HasValue("status", "pending")
+		gaby.HasValue("name", "Gaby")
+		gaby.HasValue("groups", []int{0})
+		gaby.HasValue("only_in_groups", true)
+
+		eA.DELETE("/sharings/"+s.ID()+"/groups/0").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(204)
+
+		obj = eA.GET("/sharings/"+s.ID()).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		attrs = data.Value("attributes").Object()
+		members = attrs.Value("members").Array()
+		members.Length().IsEqual(4)
+
+		owner = members.Value(0).Object()
+		owner.HasValue("status", "owner")
+		owner.HasValue("public_name", "Alice")
+
+		bob = members.Value(1).Object()
+		bob.HasValue("name", "Bob")
+
+		fiona = members.Value(2).Object()
+		fiona.HasValue("status", "revoked")
+		fiona.HasValue("name", "Fiona")
+
+		gaby = members.Value(3).Object()
+		gaby.HasValue("status", "revoked")
+		gaby.HasValue("name", "Gaby")
+	})
+
 	t.Run("RevocationFromRecipient", func(t *testing.T) {
 		sharedDocs := []string{"mygreatid5", "mygreatid6"}
 		sharedRefs := []*sharing.SharedRef{}
@@ -820,25 +1018,25 @@ func TestSharings(t *testing.T) {
 func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array, instance *instance.Instance) {
 	t.Helper()
 
-	obj.Length().Equal(3)
+	obj.Length().IsEqual(3)
 
-	owner := obj.First().Object()
-	owner.ValueEqual("status", "owner")
-	owner.ValueEqual("public_name", "Alice")
-	owner.ValueEqual("email", "alice@example.net")
-	owner.ValueEqual("instance", "http://"+instance.Domain)
+	owner := obj.Value(0).Object()
+	owner.HasValue("status", "owner")
+	owner.HasValue("public_name", "Alice")
+	owner.HasValue("email", "alice@example.net")
+	owner.HasValue("instance", "http://"+instance.Domain)
 
-	recipient := obj.Element(1).Object()
-	recipient.ValueEqual("status", "pending")
-	recipient.ValueEqual("name", "Bob")
-	recipient.ValueEqual("email", "bob@example.net")
+	recipient := obj.Value(1).Object()
+	recipient.HasValue("status", "pending")
+	recipient.HasValue("name", "Bob")
+	recipient.HasValue("email", "bob@example.net")
 	recipient.NotContainsKey("read_only")
 
-	recipient2 := obj.Element(2).Object()
-	recipient2.ValueEqual("status", "pending")
-	recipient2.ValueEqual("name", "Dave")
-	recipient2.ValueEqual("email", "dave@example.net")
-	recipient2.ValueEqual("read_only", true)
+	recipient2 := obj.Value(2).Object()
+	recipient2.HasValue("status", "pending")
+	recipient2.HasValue("name", "Dave")
+	recipient2.HasValue("email", "dave@example.net")
+	recipient2.HasValue("read_only", true)
 }
 
 func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharingID string, instance *instance.Instance) {
@@ -846,26 +1044,26 @@ func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharin
 
 	data := obj.Value("data").Object()
 
-	data.ValueEqual("type", consts.Sharings)
+	data.HasValue("type", consts.Sharings)
 	data.Value("meta").Object().Value("rev").String().NotEmpty()
-	data.Value("links").Object().ValueEqual("self", "/sharings/"+sharingID)
+	data.Value("links").Object().HasValue("self", "/sharings/"+sharingID)
 
 	attrs := data.Value("attributes").Object()
-	attrs.ValueEqual("description", "this is a test")
-	attrs.ValueEqual("app_slug", "testapp")
-	attrs.ValueEqual("owner", true)
-	attrs.Value("created_at").String().DateTime(time.RFC3339)
-	attrs.Value("updated_at").String().DateTime(time.RFC3339)
+	attrs.HasValue("description", "this is a test")
+	attrs.HasValue("app_slug", "testapp")
+	attrs.HasValue("owner", true)
+	attrs.Value("created_at").String().AsDateTime(time.RFC3339)
+	attrs.Value("updated_at").String().AsDateTime(time.RFC3339)
 	attrs.NotContainsKey("credentials")
 
 	assertSharingByAliceToBobAndDave(t, attrs.Value("members").Array(), instance)
 
 	rules := attrs.Value("rules").Array()
-	rules.Length().Equal(1)
-	rule := rules.First().Object()
-	rule.ValueEqual("title", "test one")
-	rule.ValueEqual("doctype", iocozytests)
-	rule.ValueEqual("values", []interface{}{"000000"})
+	rules.Length().IsEqual(1)
+	rule := rules.Value(0).Object()
+	rule.HasValue("title", "test one")
+	rule.HasValue("doctype", iocozytests)
+	rule.HasValue("values", []interface{}{"000000"})
 }
 
 func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) string {
@@ -1036,14 +1234,40 @@ func createBobContact(t *testing.T, instance *instance.Instance) *contact.Contac
 
 func createContact(t *testing.T, inst *instance.Instance, name, email string) *contact.Contact {
 	t.Helper()
-
 	mail := map[string]interface{}{"address": email}
 	c := contact.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
-
 	require.NoError(t, couchdb.CreateDoc(inst, c))
+	return c
+}
 
+func createGroup(t *testing.T, inst *instance.Instance, name string) *contact.Group {
+	t.Helper()
+	g := contact.NewGroup()
+	g.M["name"] = name
+	require.NoError(t, couchdb.CreateDoc(inst, g))
+	return g
+}
+
+func addContactToGroup(t *testing.T, inst *instance.Instance, g *contact.Group, contactName string) *contact.Contact {
+	t.Helper()
+	email := strings.ToLower(contactName) + "@example.net"
+	mail := map[string]interface{}{"address": email}
+	c := contact.New()
+	c.M["fullname"] = contactName
+	c.M["email"] = []interface{}{mail}
+	c.M["relationships"] = map[string]interface{}{
+		"groups": map[string]interface{}{
+			"data": []interface{}{
+				map[string]interface{}{
+					"_id":   g.ID(),
+					"_type": consts.Groups,
+				},
+			},
+		},
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, c))
 	return c
 }
 

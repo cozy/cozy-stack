@@ -1,3 +1,5 @@
+// Package contact is for managing the io.cozy.contacts documents and their
+// groups.
 package contact
 
 import (
@@ -82,6 +84,20 @@ func (c *Contact) PrimaryName() string {
 	return primary
 }
 
+// SortingKey returns a string that can be used for sorting the contacts like
+// in the contacts app.
+func (c *Contact) SortingKey() string {
+	indexes, ok := c.Get("indexes").(map[string]interface{})
+	if !ok {
+		return c.PrimaryName()
+	}
+	str, ok := indexes["byFamilyNameGivenNameEmailCozyUrl"].(string)
+	if !ok {
+		return c.PrimaryName()
+	}
+	return str
+}
+
 // PrimaryPhoneNumber returns the preferred phone number,
 // or a blank string if the contact has no known phone number.
 func (c *Contact) PrimaryPhoneNumber() string {
@@ -137,6 +153,34 @@ func (c *Contact) PrimaryCozyURL() string {
 		url = "https://" + url
 	}
 	return url
+}
+
+// GroupIDs returns the list of the group identifiers that this contact belongs to.
+func (c *Contact) GroupIDs() []string {
+	rels, ok := c.Get("relationships").(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var groupIDs []string
+
+	for _, groups := range rels {
+		if groups, ok := groups.(map[string]interface{}); ok {
+			if data, ok := groups["data"].([]interface{}); ok {
+				for _, item := range data {
+					if item, ok := item.(map[string]interface{}); ok {
+						if item["_type"] == consts.Groups {
+							if id, ok := item["_id"].(string); ok {
+								groupIDs = append(groupIDs, id)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return groupIDs
 }
 
 // AddNameIfMissing can be used to add a name if there was none. We need the

@@ -69,6 +69,7 @@ type Sharing struct {
 
 	// Members[0] is the owner, Members[1...] are the recipients
 	Members []Member `json:"members"`
+	Groups  []Group  `json:"groups,omitempty"`
 
 	// On the owner, credentials[i] is associated to members[i+1]
 	// On a recipient, there is only credentials[0] (for the owner)
@@ -484,7 +485,7 @@ func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
 
 // RevokeRecipient revoke only one recipient on the sharer. After that, if the
 // sharing has still at least one active member, we keep it as is. Else, we
-// desactive the sharing.
+// disable the sharing.
 func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing
@@ -713,6 +714,21 @@ func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error)
 	}
 	var res []*Sharing
 	err := couchdb.GetAllDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// FindActive returns the list of active sharings.
+func FindActive(db prefixer.Prefixer) ([]*Sharing, error) {
+	req := &couchdb.FindRequest{
+		UseIndex: "active",
+		Selector: mango.Equal("active", true),
+		Limit:    1000,
+	}
+	var res []*Sharing
+	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -1378,11 +1394,13 @@ func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validM
 
 	for _, m := range s.Members {
 		if m.Status == MemberStatusMailNotSent {
-			checks = append(checks, map[string]interface{}{
-				"id":     s.SID,
-				"type":   "mail_not_sent",
-				"member": m.Instance,
-			})
+			if len(m.Groups) == 0 {
+				checks = append(checks, map[string]interface{}{
+					"id":     s.SID,
+					"type":   "mail_not_sent",
+					"member": m.Instance,
+				})
+			}
 			continue
 		}
 

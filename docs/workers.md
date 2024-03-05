@@ -343,11 +343,18 @@ in the config file, via the `fs.auto_clean_trashed_after` parameter.
 
 ## share workers
 
-The stack have 3 workers to power the sharings (internal usage only):
+The stack have 4 workers to power the sharings (internal usage only):
 
-1. `share-track`, to update the `io.cozy.shared` database
-2. `share-replicate`, to start a replicator for most documents
-3. `share-upload`, to upload files
+1. `share-group`, to add/remove members to a sharing
+2. `share-track`, to update the `io.cozy.shared` database
+3. `share-replicate`, to start a replicator for most documents
+4. `share-upload`, to upload files
+
+### Share-group
+
+When a contact is added to or removed from a group, the change should be
+reflected in the group's sharings' recipients. The message is composed of the
+contact ID, the list of groups added and the list of groups removed.
 
 ### Share-track
 

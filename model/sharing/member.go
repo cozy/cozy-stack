@@ -60,12 +60,14 @@ func maxNumberOfMembers(inst *instance.Instance) int {
 
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
-	Status     string `json:"status"`
-	Name       string `json:"name,omitempty"`
-	PublicName string `json:"public_name,omitempty"`
-	Email      string `json:"email,omitempty"`
-	Instance   string `json:"instance,omitempty"`
-	ReadOnly   bool   `json:"read_only,omitempty"`
+	Status       string `json:"status"`
+	Name         string `json:"name,omitempty"`
+	PublicName   string `json:"public_name,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Instance     string `json:"instance,omitempty"`
+	ReadOnly     bool   `json:"read_only,omitempty"`
+	OnlyInGroups bool   `json:"only_in_groups,omitempty"` // False if the member has been added as an io.cozy.contacts
+	Groups       []int  `json:"groups,omitempty"`         // The indexes of the groups a member is part of
 }
 
 // PrimaryName returns the main name of this member
@@ -89,6 +91,14 @@ func (m *Member) InstanceHost() string {
 	return u.Host
 }
 
+// Same returns true if the two members are the same.
+func (m *Member) Same(other Member) bool {
+	return m.Name == other.Name &&
+		m.PublicName == other.PublicName &&
+		m.Email == other.Email &&
+		m.Instance == other.Instance
+}
+
 // Credentials is the struct with the secret stuff used for authentication &
 // authorization.
 type Credentials struct {
@@ -107,10 +117,15 @@ type Credentials struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
-// AddContacts adds a list of contacts on the sharer cozy
-func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
-	for id, ro := range contactIDs {
-		if err := s.AddContact(inst, id, ro); err != nil {
+// AddGroupsAndContacts adds a list of contacts on the sharer cozy
+func (s *Sharing) AddGroupsAndContacts(inst *instance.Instance, groupIDs, contactIDs []string, readOnly bool) error {
+	for _, id := range contactIDs {
+		if err := s.AddContact(inst, id, readOnly); err != nil {
+			return err
+		}
+	}
+	for _, id := range groupIDs {
+		if err := s.AddGroup(inst, id, readOnly); err != nil {
 			return err
 		}
 	}
@@ -136,6 +151,15 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	if err != nil {
 		return err
 	}
+	m := buildMemberFromContact(c, readOnly)
+	if m.Email == "" && m.Instance == "" {
+		return contact.ErrNoMailAddress
+	}
+	_, _, err = s.addMember(inst, m)
+	return err
+}
+
+func buildMemberFromContact(c *contact.Contact, readOnly bool) Member {
 	var name, email string
 	cozyURL := c.PrimaryCozyURL()
 	addr, err := c.ToMailAddress()
@@ -143,39 +167,37 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		name = addr.Name
 		email = addr.Email
 	} else {
-		if cozyURL == "" {
-			return err
-		}
 		name = c.PrimaryName()
 	}
-	m := Member{
+	return Member{
 		Status:   MemberStatusMailNotSent,
 		Name:     name,
 		Email:    email,
 		Instance: cozyURL,
 		ReadOnly: readOnly,
 	}
-	_, err = s.addMember(inst, m)
-	return err
 }
 
-func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
+// addMember adds a member to the members of the sharing if they are not yet in
+// this list, and also adds credentials for them. It returns the state
+// parameter of the credentials if added, and the index of the member.
+func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, error) {
 	idx := -1
 	for i, member := range s.Members {
 		if i == 0 {
 			continue // Skip the owner
 		}
 		var found bool
-		if m.Email == "" {
-			found = m.Instance == member.Instance
-		} else {
+		if m.Email != "" {
 			found = m.Email == member.Email
+		} else if m.Instance != "" {
+			found = m.Instance == member.Instance
 		}
 		if !found {
 			continue
 		}
 		if member.Status == MemberStatusReady {
-			return "", nil
+			return "", i, nil
 		}
 		idx = i
 		s.Members[i].Status = m.Status
@@ -186,7 +208,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	}
 	if idx < 1 {
 		if len(s.Members) >= maxNumberOfMembers(inst) {
-			return "", ErrTooManyMembers
+			return "", -1, ErrTooManyMembers
 		}
 		s.Members = append(s.Members, m)
 	}
@@ -197,10 +219,11 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	}
 	if idx < 1 {
 		s.Credentials = append(s.Credentials, creds)
+		idx = len(s.Credentials)
 	} else {
 		s.Credentials[idx-1] = creds
 	}
-	return creds.State, nil
+	return creds.State, idx, nil
 }
 
 // APIDelegateAddContacts is used to serialize a request to add contacts to
@@ -208,6 +231,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 type APIDelegateAddContacts struct {
 	sid     string
 	members []Member
+	groups  []Group
 }
 
 // ID returns the sharing qualified identifier
@@ -242,18 +266,22 @@ func (a *APIDelegateAddContacts) Relationships() jsonapi.RelationshipMap {
 		"recipients": jsonapi.Relationship{
 			Data: a.members,
 		},
+		"groups": jsonapi.Relationship{
+			Data: a.groups,
+		},
 	}
 }
 
 var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
 
-// DelegateAddContacts adds a list of contacts on a recipient cozy. Part of
-// the work is delegated to owner cozy, but the invitation mail is still sent
-// from the recipient cozy.
-func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
+// DelegateAddContactsAndGroups adds a list of contacts and groups on a
+// recipient cozy. Part of the work is delegated to owner cozy, but the
+// invitation mail is still sent from the recipient cozy.
+func (s *Sharing) DelegateAddContactsAndGroups(inst *instance.Instance, groupIDs, contactIDs []string, readOnly bool) error {
 	api := &APIDelegateAddContacts{}
 	api.sid = s.SID
-	for id, ro := range contactIDs {
+
+	for _, id := range contactIDs {
 		c, err := contact.Find(inst, id)
 		if err != nil {
 			return err
@@ -275,10 +303,38 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 			Name:     name,
 			Email:    email,
 			Instance: cozyURL,
-			ReadOnly: ro,
+			ReadOnly: readOnly,
 		}
 		api.members = append(api.members, m)
 	}
+
+	for _, groupID := range groupIDs {
+		group, err := contact.FindGroup(inst, groupID)
+		if err != nil {
+			return err
+		}
+		g := Group{ID: groupID, Name: group.Name(), ReadOnly: readOnly}
+		api.groups = append(api.groups, g)
+
+		contacts, err := group.GetAllContacts(inst)
+		if err != nil {
+			return err
+		}
+		groupIndex := len(s.Groups)
+		for _, contact := range contacts {
+			m := buildMemberFromContact(contact, readOnly)
+			m.Groups = []int{groupIndex}
+			m.OnlyInGroups = true
+			api.members = append(api.members, m)
+		}
+	}
+
+	return s.SendDelegated(inst, api)
+}
+
+// SendDelegated calls the delegated endpoint on the sharer to adds
+// contacts/groups.
+func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddContacts) error {
 	data, err := jsonapi.MarshalObject(api)
 	if err != nil {
 		return err
@@ -370,18 +426,12 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
-func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
-	status := MemberStatusPendingInvitation
-	if instanceURL != "" {
-		status = MemberStatusMailNotSent
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, m Member) (string, error) {
+	m.Status = MemberStatusPendingInvitation
+	if m.Instance != "" || m.Email == "" {
+		m.Status = MemberStatusMailNotSent
 	}
-	m := Member{
-		Status:   status,
-		Email:    email,
-		Instance: instanceURL,
-		ReadOnly: readOnly,
-	}
-	state, err := s.addMember(inst, m)
+	state, _, err := s.addMember(inst, m)
 	if err != nil {
 		return "", err
 	}
@@ -436,9 +486,9 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	return success["redirect"], nil
 }
 
-// UpdateRecipients updates the list of recipients
-func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) error {
-	for i, m := range members {
+// UpdateRecipients updates the lists of members and groups.
+func (s *Sharing) UpdateRecipients(inst *instance.Instance, params PutRecipientsParams) error {
+	for i, m := range params.Members {
 		if i >= len(s.Members) {
 			s.Members = append(s.Members, Member{})
 		}
@@ -452,6 +502,7 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Status = m.Status
 		s.Members[i].ReadOnly = m.ReadOnly
 	}
+	s.Groups = params.Groups
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -571,14 +622,14 @@ func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) 
 func (s *Sharing) FindCredentials(m *Member) *Credentials {
 	if s.Owner {
 		for i, member := range s.Members {
-			if i > 0 && *m == member {
+			if i > 0 && m.Same(member) {
 				return &s.Credentials[i-1]
 			}
 		}
 		return nil
 	}
 
-	if *m == s.Members[0] {
+	if m.Same(s.Members[0]) {
 		return &s.Credentials[0]
 	}
 	return nil
@@ -990,6 +1041,13 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	return nil
 }
 
+// PutRecipientsParams is the body of the request for updating the list of
+// members and groups on the active recipients of a sharing.
+type PutRecipientsParams struct {
+	Members []Member `json:"data"`
+	Groups  []Group  `json:"included"`
+}
+
 // NotifyRecipients will push the updated list of members of the sharing to the
 // active recipients. It is meant to be used in a goroutine, errors are just
 // logged (nothing critical here).
@@ -1031,12 +1089,10 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 		return
 	}
 
-	var members struct {
-		Members []Member `json:"data"`
-	}
-	members.Members = make([]Member, len(s.Members))
+	var params PutRecipientsParams
+	params.Members = make([]Member, len(s.Members))
 	for i, m := range s.Members {
-		members.Members[i] = Member{
+		params.Members[i] = Member{
 			Status:     m.Status,
 			PublicName: m.PublicName,
 			Email:      m.Email,
@@ -1044,7 +1100,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			// Instance and name are private
 		}
 	}
-	body, err := json.Marshal(members)
+	params.Groups = make([]Group, len(s.Groups))
+	copy(params.Groups, s.Groups)
+	body, err := json.Marshal(params)
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Can't serialize the updated members list for %s: %s", s.SID, err)

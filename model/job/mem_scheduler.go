@@ -24,6 +24,7 @@ type memScheduler struct {
 
 	ts    map[string]Trigger
 	thumb *ThumbnailTrigger
+	share *ShareGroupTrigger
 	mu    sync.RWMutex
 	log   *logger.Entry
 }
@@ -51,6 +52,8 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 
 	s.thumb = NewThumbnailTrigger(s.broker)
 	go s.thumb.Schedule()
+	s.share = NewShareGroupTrigger(s.broker)
+	go s.share.Schedule()
 
 	// XXX The memory scheduler loads the triggers from CouchDB when the stack
 	// is started. This can cause some stability issues when running system
@@ -117,6 +120,7 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 		t.Unschedule()
 	}
 	s.thumb.Unschedule()
+	s.share.Unschedule()
 	fmt.Println("ok.")
 	return nil
 }

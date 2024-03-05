@@ -1,7 +1,7 @@
 class Contact
   include Model
 
-  attr_reader :name, :fullname, :emails, :addresses, :phones, :cozy, :me
+  attr_reader :name, :fullname, :emails, :addresses, :phones, :cozy, :me, :group_ids
 
   def self.doctype
     "io.cozy.contacts"
@@ -26,6 +26,7 @@ class Contact
     @phones = [{ number: phone }]
     @cozy = opts[:cozy]
     @me = opts[:me] || false
+    @group_ids = opts[:groups] || []
   end
 
   def self.from_json(j)
@@ -54,7 +55,14 @@ class Contact
       email: @emails,
       cozy: @cozy,
       address: @addresses,
-      phone: @phones
+      phone: @phones,
+      relationships: {
+        groups: {
+          data: @group_ids.map do |id|
+            { "_id": id, "_type": Group.doctype }
+          end
+        }
+      }
     }
   end
 end

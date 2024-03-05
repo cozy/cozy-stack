@@ -95,6 +95,10 @@ Content-Type: application/vnd.api+json
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts"
+          },
+          {
+            "id": "51bbc980acb0013cb5f618c04daba326",
+            "type": "io.cozy.contacts.groups"
           }
         ]
       }
@@ -136,6 +140,20 @@ Content-Type: application/vnd.api+json
           "status": "mail-not-sent",
           "name": "Bob",
           "email": "bob@example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Gaby",
+          "email": "gaby@example.net",
+          "only_in_groups": true,
+          "groups": [0]
+        }
+      ],
+      "groups": [
+        {
+          "id": "51bbc980acb0013cb5f618c04daba326",
+          "name": "G. people",
+          "addedBy": 0
         }
       ],
       "rules": [
@@ -747,9 +765,9 @@ HTTP/1.1 204 No Content
 
 ### POST /sharings/:sharing-id/recipients
 
-This route allows the sharer to add new recipients to a sharing. It can also be
-used by a recipient when the sharing has `open_sharing` set to true if the
-recipient doesn't have the `read_only` flag
+This route allows the sharer to add new recipients (and groups of recipients)
+to a sharing. It can also be used by a recipient when the sharing has
+`open_sharing` set to true if the recipient doesn't have the `read_only` flag.
 
 #### Request
 
@@ -868,9 +886,9 @@ Content-Type: application/vnd.api+json
 ### POST /sharings/:sharing-id/recipients/delegated
 
 This is an internal route for the stack. It is called by the recipient cozy on
-the owner cozy to add recipients to the sharing (`open_sharing: true` only). It
-should send an `email` address, but if the email address is not known, an
-`instance` URL can also be used.
+the owner cozy to add recipients and groups to the sharing (`open_sharing:
+true` only). Data for direct recipients should contain an email address but if
+it is not known, an instance URL can also be provided.
 
 #### Request
 
@@ -892,6 +910,15 @@ Content-Type: application/vnd.api+json
             "email": "dave@example.net"
           }
         ]
+      },
+      "groups": {
+        "data": [
+          {
+            "id": "b57cd790b2f4013c3ced18c04daba326",
+            "name": "Dance",
+            "addedBy": 1
+          }
+        ]
       }
     }
   }
@@ -911,12 +938,68 @@ Content-Type: application/json
 }
 ```
 
+### POST /sharings/:sharing-id/members/:index/invitation
+
+This is an internal route for the stack. It is called by the recipient cozy on
+the owner cozy to send an invitation.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/members/4/invitation HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.members",
+    "attributes": {
+      "email": "diana@example.net"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "diana@example.net": "uS6wN7fTYaLZ-GdC_P6UWA"
+}
+```
+
+### DELETE /sharings/:sharing-id/groups/:group-index/:member-index
+
+This is an internal route for the stack. It is called by the recipient cozy on
+the owner cozy to remove a member of a sharing from a group.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/groups/0/1 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### PUT /sharings/:sharing-id/recipients
 
-This internal route is used to update the list of members, their states, emails
-and names, on the recipients cozy. The token used for this route can be the
-access token for a sharing where synchronization is active, or the sharecode
-for a member who has only a shortcut to the sharing on their Cozy instance.
+This internal route is used to update the list of members (their states, emails
+and names) and the list of groups on the recipients cozy. The token used for
+this route can be the access token for a sharing where synchronization is
+active, or the sharecode for a member who has only a shortcut to the sharing on
+their Cozy instance.
 
 #### Request
 
@@ -952,6 +1035,13 @@ Content-Type: application/vnd.api+json
       "name": "Dave",
       "email": "dave@example.net",
       "read_only": true
+    }
+  ],
+  "included": [
+    {
+      "id": "51bbc980acb0013cb5f618c04daba326",
+      "name": "G. people",
+      "addedBy": 0
     }
   ]
 }
@@ -1128,6 +1218,27 @@ revokation, and the credentials for this cozy will be deleted.
 
 ```http
 DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/1 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/groups/:index
+
+This route can be only be called on the cozy instance of the sharer to revoke a
+group of the sharing. The parameter is the index of this recipient in the
+`groups` array of the sharing. The `removed` property for this group will be
+set to `true`, and it will revoke the members of this group unless they are
+still part of the sharing via another group or as direct recipients.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/groups/0 HTTP/1.1
 Host: alice.example.net
 ```
 

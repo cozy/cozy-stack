@@ -1,3 +1,8 @@
+// Package sharings is the HTTP routes for the sharing. We have two types of
+// routes, some routes are used by the clients to create, list, revoke sharings
+// and add/remove recipients, and other routes are reserved for an internal
+// usage, mostly to synchronize the documents between the Cozys of the members
+// of the sharings.
 package sharings
 
 import (
@@ -19,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
@@ -49,9 +55,17 @@ func CreateSharing(c echo.Context) error {
 	if rel, ok := obj.GetRelationship("recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id, false); err != nil {
-						return err
+				if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
+					if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+						if err = s.AddGroup(inst, id, false); err != nil {
+							return err
+						}
+					}
+				} else {
+					if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+						if err = s.AddContact(inst, id, false); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -61,9 +75,17 @@ func CreateSharing(c echo.Context) error {
 	if rel, ok := obj.GetRelationship("read_only_recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id, true); err != nil {
-						return err
+				if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
+					if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+						if err = s.AddGroup(inst, id, true); err != nil {
+							return err
+						}
+					}
+				} else {
+					if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+						if err = s.AddContact(inst, id, true); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -286,16 +308,20 @@ func ChangeCozyAddress(c echo.Context) error {
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
-		ids := make(map[string]bool)
+		var contactIDs, groupIDs []string
 		for _, ref := range data {
 			if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-				ids[id] = readOnly
+				if t, _ := ref.(map[string]interface{})["type"].(string); t == consts.Groups {
+					groupIDs = append(groupIDs, id)
+				} else {
+					contactIDs = append(contactIDs, id)
+				}
 			}
 		}
 		if s.Owner {
-			err = s.AddContacts(inst, ids)
+			err = s.AddGroupsAndContacts(inst, groupIDs, contactIDs, readOnly)
 		} else {
-			err = s.DelegateAddContacts(inst, ids)
+			err = s.DelegateAddContactsAndGroups(inst, groupIDs, contactIDs, readOnly)
 		}
 	}
 	return err
@@ -330,8 +356,8 @@ func AddRecipients(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
-// AddRecipientsDelegated is used to add a member to a sharing on the owner's cozy
-// when it's the recipient's cozy that sends the mail invitation.
+// AddRecipientsDelegated is used to add members and groups to a sharing on the
+// owner's cozy when it's the recipient's cozy that sends the mail invitation.
 func AddRecipientsDelegated(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
@@ -342,51 +368,188 @@ func AddRecipientsDelegated(c echo.Context) error {
 	if !s.Owner || !s.Open {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	var body sharing.Sharing
-	obj, err := jsonapi.Bind(c.Request().Body, &body)
+	member, err := requestMember(c, s)
 	if err != nil {
-		return jsonapi.BadJSON()
+		return wrapErrors(err)
 	}
-	states := make(map[string]string)
-	if rel, ok := obj.GetRelationship("recipients"); ok {
-		if data, ok := rel.Data.([]interface{}); ok {
-			for _, ref := range data {
-				contact, _ := ref.(map[string]interface{})
-				email, _ := contact["email"].(string)
-				cozy, _ := contact["instance"].(string)
-				ro, _ := contact["read_only"].(bool)
-				state, err := s.AddDelegatedContact(inst, email, cozy, ro)
-				if err != nil {
-					return wrapErrors(err)
-				}
-				if email == "" {
-					states[cozy] = state
-				} else {
-					states[email] = state
-				}
-
-				// If we have an URL for the Cozy, we can create a shortcut as an invitation
-				if cozy != "" {
-					var perms *permission.Permission
-					if s.PreviewPath != "" {
-						if perms, err = s.CreatePreviewPermissions(inst); err != nil {
-							return wrapErrors(err)
-						}
-					}
-					if err = s.SendInvitations(inst, perms); err != nil {
-						return wrapErrors(err)
-					}
-				}
-			}
-
-			if err := couchdb.UpdateDoc(inst, s); err != nil {
-				return wrapErrors(err)
-			}
-			cloned := s.Clone().(*sharing.Sharing)
-			go cloned.NotifyRecipients(inst, nil)
+	memberIndex := -1
+	for i, m := range s.Members {
+		if m.Instance == member.Instance {
+			memberIndex = i
 		}
 	}
+	if memberIndex == -1 {
+		return jsonapi.InternalServerError(sharing.ErrInvalidSharing)
+	}
+
+	var body struct {
+		Data struct {
+			Type          string `json:"type"`
+			ID            string `json:"id"`
+			Relationships struct {
+				Groups struct {
+					Data []sharing.Group `json:"data"`
+				} `json:"groups"`
+				Recipients struct {
+					Data []sharing.Member `json:"data"`
+				} `json:"recipients"`
+			} `json:"relationships"`
+		} `json:"data"`
+	}
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	for _, g := range body.Data.Relationships.Groups.Data {
+		g.AddedBy = memberIndex
+		s.Groups = append(s.Groups, g)
+	}
+
+	states := make(map[string]string)
+	for _, m := range body.Data.Relationships.Recipients.Data {
+		state, err := s.AddDelegatedContact(inst, m)
+		if err != nil {
+			if len(m.Groups) > 0 {
+				continue
+			}
+			return wrapErrors(err)
+		}
+		// If we have an URL for the Cozy, we can create a shortcut as an invitation
+		if m.Instance != "" {
+			states[m.Instance] = state
+			var perms *permission.Permission
+			if s.PreviewPath != "" {
+				if perms, err = s.CreatePreviewPermissions(inst); err != nil {
+					return wrapErrors(err)
+				}
+			}
+			if err = s.SendInvitations(inst, perms); err != nil {
+				return wrapErrors(err)
+			}
+		} else if m.Email != "" {
+			states[m.Email] = state
+		}
+	}
+
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return wrapErrors(err)
+	}
+	cloned := s.Clone().(*sharing.Sharing)
+	go cloned.NotifyRecipients(inst, nil)
 	return c.JSON(http.StatusOK, states)
+}
+
+// AddInvitationDelegated is when a member has been added to a sharing via a
+// group, but is invited only later (no email or Cozy instance known when they
+// was added).
+func AddInvitationDelegated(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner || !s.Open {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	memberIndex, err := strconv.Atoi(c.Param("member-index"))
+	if err != nil || memberIndex <= 0 || memberIndex >= len(s.Members) {
+		return jsonapi.InvalidParameter("member-index", errors.New("invalid member-index parameter"))
+	}
+
+	var body struct {
+		Data struct {
+			Type   string         `json:"type"`
+			Member sharing.Member `json:"attributes"`
+		}
+	}
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	states := make(map[string]string)
+	m := s.Members[memberIndex]
+	if m.Status == sharing.MemberStatusMailNotSent {
+		m.Instance = body.Data.Member.Instance
+		m.Email = body.Data.Member.Email
+		state64 := crypto.Base64Encode(crypto.GenerateRandomBytes(sharing.StateLen))
+		state := string(state64)
+		creds := sharing.Credentials{
+			State:  state,
+			XorKey: sharing.MakeXorKey(),
+		}
+		s.Credentials[memberIndex-1] = creds
+		s.Members[memberIndex] = m
+		// If we have an URL for the Cozy, we can create a shortcut as an invitation
+		if m.Instance != "" {
+			states[m.Instance] = state
+			var perms *permission.Permission
+			if s.PreviewPath != "" {
+				if perms, err = s.CreatePreviewPermissions(inst); err != nil {
+					return wrapErrors(err)
+				}
+			}
+			if err = s.SendInvitations(inst, perms); err != nil {
+				return wrapErrors(err)
+			}
+		} else if m.Email != "" {
+			states[m.Email] = state
+			s.Members[memberIndex].Status = sharing.MemberStatusReady
+		}
+	}
+
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return wrapErrors(err)
+	}
+	cloned := s.Clone().(*sharing.Sharing)
+	go cloned.NotifyRecipients(inst, nil)
+	return c.JSON(http.StatusOK, states)
+}
+
+// RemoveMemberFromGroup is used to remove a member from a group (delegated).
+func RemoveMemberFromGroup(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner || !s.Open {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	member, err := requestMember(c, s)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	addedBy := -1
+	for i, m := range s.Members {
+		if m.Instance == member.Instance {
+			addedBy = i
+		}
+	}
+	if addedBy == -1 {
+		return jsonapi.InternalServerError(sharing.ErrInvalidSharing)
+	}
+
+	groupIndex, err := strconv.Atoi(c.Param("group-index"))
+	if err != nil || groupIndex < 0 || groupIndex >= len(s.Groups) {
+		return jsonapi.InvalidParameter("group-index", errors.New("invalid group-index parameter"))
+	}
+	if s.Groups[groupIndex].AddedBy != addedBy {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	memberIndex, err := strconv.Atoi(c.Param("member-index"))
+	if err != nil || memberIndex <= 0 || memberIndex >= len(s.Members) {
+		return jsonapi.InvalidParameter("member-index", errors.New("invalid member-index parameter"))
+	}
+
+	if err := s.DelegatedRemoveMemberFromGroup(inst, groupIndex, memberIndex); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // PutRecipients is used to update the members list on the recipients cozy
@@ -414,13 +577,11 @@ func PutRecipients(c echo.Context) error {
 		}
 	}
 
-	var body struct {
-		Members []sharing.Member `json:"data"`
-	}
-	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+	var params sharing.PutRecipientsParams
+	if err = json.NewDecoder(c.Request().Body).Decode(&params); err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.UpdateRecipients(inst, body.Members); err != nil {
+	if err = s.UpdateRecipients(inst, params); err != nil {
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -727,6 +888,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id/recipients", PutRecipients)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)          // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient) // On the sharer
+	router.DELETE("/:sharing-id/groups/:index", RevokeGroup)         // On the sharer
 	router.POST("/:sharing-id/recipients/self/moved", ChangeCozyAddress)
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
 	router.POST("/:sharing-id/recipients/self/readonly", DowngradeToReadOnly, checkSharingWritePermissions)  // On the recipient
@@ -739,6 +901,8 @@ func Routes(router *echo.Group) {
 
 	// Delegated routes for open sharing
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
+	router.POST("/:sharing-id/members/:index/invitation", AddInvitationDelegated, checkSharingWritePermissions)
+	router.DELETE("/:sharing-id/groups/:group-index/:member-index", RemoveMemberFromGroup, checkSharingWritePermissions)
 
 	// Misc
 	router.GET("/news", CountNewShortcuts)

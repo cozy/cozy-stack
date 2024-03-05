@@ -55,6 +55,32 @@ func RevokeRecipient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// RevokeGroup is used by the owner to revoke a group
+func RevokeGroup(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	_, err = checkCreatePermissions(c, s)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		return jsonapi.InvalidParameter("index", err)
+	}
+	if index >= len(s.Groups) {
+		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+	}
+	if err = s.RevokeGroup(inst, index); err != nil {
+		return wrapErrors(err)
+	}
+	go s.NotifyRecipients(inst, nil)
+	return c.NoContent(http.StatusNoContent)
+}
+
 // RevocationRecipientNotif is used to inform a recipient that the sharing is revoked
 func RevocationRecipientNotif(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
