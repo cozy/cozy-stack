@@ -18,7 +18,7 @@ RUN ./scripts/build.sh release ./cozy-stack
 
 
 # Multi-stage image: the main image
-FROM node:16-bookworm-slim
+FROM node:20-bookworm-slim
 
 ENV COUCHDB_PROTOCOL=http \
     COUCHDB_HOST=couchdb \
