@@ -1372,7 +1372,7 @@ msgid "Install flagship app Skip"
 msgstr "Continuer dans mon navigateur"
 
 msgid "Share by link Password Title"
-msgstr "Entrer le mot de passe pour acccéder au lien"
+msgstr "Saisissez le mot de passe pour accéder aux données partagées avec vous"
 
 msgid "Share by link Password Field"
 msgstr "Mot de passe"
