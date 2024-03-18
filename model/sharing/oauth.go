@@ -64,10 +64,12 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	for i, m := range s.Members {
 		// Instance and name are private...
 		members[i] = Member{
-			Status:     m.Status,
-			PublicName: m.PublicName,
-			Email:      m.Email,
-			ReadOnly:   m.ReadOnly,
+			Status:       m.Status,
+			PublicName:   m.PublicName,
+			Email:        m.Email,
+			ReadOnly:     m.ReadOnly,
+			OnlyInGroups: m.OnlyInGroups,
+			Groups:       m.Groups,
 		}
 		// ... except for the sharer and the recipient of this request
 		if i == 0 || &s.Credentials[i-1] == c {
