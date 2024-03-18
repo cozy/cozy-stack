@@ -87,6 +87,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			UpdatedAt:   s.UpdatedAt,
 			Rules:       rules,
 			Members:     members,
+			Groups:      s.Groups,
 			NbFiles:     s.countFiles(inst),
 		},
 		nil,
