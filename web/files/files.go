@@ -1978,23 +1978,13 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 
 	var mime, class string
 	contentType := header.Get(echo.HeaderContentType)
-	if contentType == "" {
+	if contentType == "" || contentType == echo.MIMEOctetStream {
 		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
 	} else {
 		ext := strings.ToLower(path.Ext(name))
 		// Force the mime-type for .url files
 		if ext == ".url" {
 			contentType = consts.ShortcutMimeType
-		}
-		// Some browsers may use Mime-Type sniffing and they may sent an
-		// inaccurate Content-Type.
-		if contentType == echo.MIMEOctetStream {
-			switch ext {
-			case ".heif":
-				contentType = "image/heif"
-			case ".heic":
-				contentType = "image/heic"
-			}
 		}
 		if contentType == "text/xml" && ext == "svg" {
 			contentType = "image/svg+xml"
