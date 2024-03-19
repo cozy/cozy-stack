@@ -111,8 +111,9 @@ type Config struct {
 	GeoDB                 string
 	PasswordResetInterval time.Duration
 
-	RemoteAssets   map[string]string
-	DeprecatedApps DeprecatedAppsCfg
+	RemoteAssets         map[string]string
+	DeprecatedApps       DeprecatedAppsCfg
+	AuthorizedForConfirm []string
 
 	Avatars                *avatar.Service
 	Fs                     Fs
@@ -880,6 +881,7 @@ func UseViper(v *viper.Viper) error {
 		Authentication:         v.GetStringMap("authentication"),
 		Office:                 office,
 		Registries:             regs,
+		AuthorizedForConfirm:   v.GetStringSlice("authorized_hosts_for_confirm_auth"),
 
 		CSPAllowList:  cspAllowList,
 		CSPPerContext: cspPerContext,

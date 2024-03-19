@@ -358,6 +358,11 @@ deprecated_apps:
 #         iphone: https://some-apple-store-url
 #         android: https://some-android-store-url
 
+# The list of authorized hosts to redirect to when using the authentication
+# confirm endpoint.
+authorized_hosts_for_confirm_auth:
+  - sometool.cozycloud.cc
+
 notifications:
   # Activate development APIs (iOS only)
   development: false
