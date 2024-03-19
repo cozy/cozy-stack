@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -194,6 +195,24 @@ func GetRevisionDate(c echo.Context) error {
 // sending a hash of the user password. Refresh token is used later to get
 // a new access token by sending the refresh token.
 func GetToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	copier := app.Copier(consts.WebappType, inst)
+	_, err := app.GetWebappBySlugAndUpdate(inst, consts.PassSlug, copier, inst.Registries())
+	if err != nil {
+		installer, err := app.NewInstaller(inst, copier,
+			&app.InstallerOptions{
+				Operation:  app.Install,
+				Type:       consts.WebappType,
+				SourceURL:  "registry://" + consts.PassSlug,
+				Slug:       consts.PassSlug,
+				Registries: inst.Registries(),
+			},
+		)
+		if err == nil {
+			_, _ = installer.RunSync()
+		}
+	}
+
 	switch c.FormValue("grant_type") {
 	case "password":
 		return getInitialCredentials(c)
@@ -244,7 +263,7 @@ func getInitialCredentials(c echo.Context) error {
 	}
 
 	// Register the client
-	kind, softwareID := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
+	kind := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
 	clientName := c.FormValue("clientName")
 	if clientName == "" {
 		clientName = "Bitwarden " + c.FormValue("deviceName")
@@ -253,7 +272,7 @@ func getInitialCredentials(c echo.Context) error {
 		RedirectURIs: []string{"https://cozy.io/"},
 		ClientName:   clientName,
 		ClientKind:   kind,
-		SoftwareID:   softwareID,
+		SoftwareID:   "registry://" + consts.PassSlug,
 	}
 	if err := client.Create(inst, oauth.NotPending); err != nil {
 		return c.JSON(err.Code, err)
@@ -407,7 +426,7 @@ func refreshToken(c echo.Context) error {
 
 	// Check the refresh token
 	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
-	if !ok || !bitwarden.IsBitwardenScope(claims.Scope) {
+	if !ok {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
 		})
@@ -421,6 +440,11 @@ func refreshToken(c echo.Context) error {
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
+		})
+	}
+	if !bitwarden.IsBitwardenClient(client, claims.Scope) {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid refresh token",
 		})
 	}
 

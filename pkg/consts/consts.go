@@ -1,3 +1,5 @@
+// Package consts is only for declaring some constants used by the stack, like
+// some slugs, IDs, doctypes, etc.
 package consts
 
 const (
@@ -16,6 +18,9 @@ const (
 	// referencing a directory that contains the notes with collaborative
 	// edition.
 	NotesSlug = "notes"
+	// PassSlug is the slug of cozy-pass webapp, which is used by the stack for
+	// linking the bitwarden OAuth clients.
+	PassSlug = "passwords"
 )
 
 const (
