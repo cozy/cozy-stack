@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -194,6 +195,24 @@ func GetRevisionDate(c echo.Context) error {
 // sending a hash of the user password. Refresh token is used later to get
 // a new access token by sending the refresh token.
 func GetToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	copier := app.Copier(consts.WebappType, inst)
+	_, err := app.GetWebappBySlugAndUpdate(inst, consts.PassSlug, copier, inst.Registries())
+	if err != nil {
+		installer, err := app.NewInstaller(inst, copier,
+			&app.InstallerOptions{
+				Operation:  app.Install,
+				Type:       consts.WebappType,
+				SourceURL:  "registry://" + consts.PassSlug,
+				Slug:       consts.PassSlug,
+				Registries: inst.Registries(),
+			},
+		)
+		if err == nil {
+			_, _ = installer.RunSync()
+		}
+	}
+
 	switch c.FormValue("grant_type") {
 	case "password":
 		return getInitialCredentials(c)
