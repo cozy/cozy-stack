@@ -461,6 +461,33 @@ This is the content of the note.
 ```
 
 
+### GET /notes/texts
+
+It returns the content of several notes as text with no formatting. The
+identifiers of the notes must be given in the query-string parameter `ids`, as
+a comma-separated list.
+
+#### Request
+
+```http
+GET /notes/texts?ids=bf0dbdb0-e1ed-0137-8548-543d7eb8149c,6bc77a60-c8fe-013c-20a9-18c04daba326 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "bf0dbdb0-e1ed-0137-8548-543d7eb8149c": "This is the content of the note.",
+  "6bc77a60-c8fe-013c-20a9-18c04daba326": "This is the text of another note."
+}
+```
+
 ### GET /notes/:id/steps?Version=xxx
 
 It returns the steps since the given version. If the revision is too old, and

@@ -143,6 +143,29 @@ func GetNoteText(c echo.Context) error {
 	return c.String(http.StatusOK, content)
 }
 
+func GetTexts(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	ids := strings.Split(c.QueryParam("ids"), ",")
+	texts := make(map[string]string)
+
+	for _, id := range ids {
+		file, err := inst.VFS().FileByID(id)
+		if err != nil {
+			return wrapError(err)
+		}
+		if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+			return err
+		}
+		content, err := note.GetText(inst, file)
+		if err != nil {
+			return wrapError(err)
+		}
+		texts[id] = content
+	}
+
+	return c.JSON(http.StatusOK, texts)
+}
+
 // GetSteps is the API handler for GET /notes/:id/steps?Version=xxx. It returns
 // the steps since the given version. If the version is too old, and the steps
 // are no longer available, it returns a 412 response with the whole document
@@ -480,8 +503,9 @@ func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
 	router.GET("", ListNotes)
 	router.GET("/:id", GetNote)
-	router.GET("/:id/text", GetNoteText)
 	router.GET("/:id/steps", GetSteps)
+	router.GET("/:id/text", GetNoteText)
+	router.GET("/texts", GetTexts)
 	router.PATCH("/:id", PatchNote)
 	router.PUT("/:id/title", ChangeTitle)
 	router.PUT("/:id/telepointer", PutTelepointer)
