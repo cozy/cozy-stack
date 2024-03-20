@@ -1182,6 +1182,8 @@ Some specific attributes of the patch can be used:
   trash
 - `permanent_delete` boolean to specify that the files needs to be deleted
   (after being trashed)
+- `cozyMetadata.favorite` boolean attribute to put/remove a file from the
+  favorites
 
 #### HTTP headers
 
@@ -1205,7 +1207,10 @@ Content-Type: application/vnd.api+json
       "type": "file",
       "name": "hi.txt",
       "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
-      "tags": ["poem"]
+      "tags": ["poem"],
+      "cozyMetadata": {
+        "favorite": true
+      }
     }
   }
 }

@@ -1025,7 +1025,10 @@ func TestFiles(t *testing.T) {
             "tags": ["bar", "bar", "baz"],
             "name": "moved",
             "dir_id": "` + dirID + `",
-            "executable": true
+            "executable": true,
+            "cozyMetadata": {
+              "favorite": true
+            }
           }
         }
       }`)).
@@ -1041,6 +1044,7 @@ func TestFiles(t *testing.T) {
 		attrs.ValueEqual("md5sum", "rL0Y20zC+Fzt72VPzMSk2A==")
 		attrs.ValueEqual("executable", true)
 		attrs.ValueEqual("size", "3")
+		attrs.Value("cozyMetadata").Object().ValueEqual("favorite", true)
 	})
 
 	t.Run("ModifyMetadataFileMove", func(t *testing.T) {

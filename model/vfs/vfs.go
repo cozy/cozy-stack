@@ -337,6 +337,14 @@ type DocPatch struct {
 	Executable  *bool      `json:"executable,omitempty"`
 	Encrypted   *bool      `json:"encrypted,omitempty"`
 	Class       *string    `json:"class,omitempty"`
+
+	CozyMetadata CozyMetadataPatch `json:"cozyMetadata"`
+}
+
+// CozyMetadataPatch is a struct containing the modifiable fields for a
+// CozyMetadata.
+type CozyMetadataPatch struct {
+	Favorite *bool `json:"favorite,omitempty"`
 }
 
 // DirOrFileDoc is a union struct of FileDoc and DirDoc. It is useful to
@@ -838,6 +846,10 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 
 	if patch.Encrypted == nil {
 		patch.Encrypted = data.Encrypted
+	}
+
+	if patch.CozyMetadata.Favorite == nil {
+		patch.CozyMetadata.Favorite = data.CozyMetadata.Favorite
 	}
 
 	return patch, nil

@@ -1,3 +1,5 @@
+// Package metadata is used for manipulating the cozyMetadata field of the
+// documents.
 package metadata
 
 import (
@@ -27,6 +29,8 @@ type CozyMetadata struct {
 	DocTypeVersion string `json:"doctypeVersion"`
 	// Version of the cozyMetadata
 	MetadataVersion int `json:"metadataVersion"`
+	// Tell if the document if part of the favorites
+	Favorite bool `json:"favorite,omitempty"`
 	// Creation date of the cozy document
 	CreatedAt time.Time `json:"createdAt"`
 	// Slug of the app or konnector which created the document

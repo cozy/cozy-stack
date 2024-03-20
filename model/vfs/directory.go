@@ -226,14 +226,20 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 		return nil, os.ErrInvalid
 	}
 
+	var oldFavorite *bool
+	if olddoc.CozyMetadata != nil {
+		oldFavorite = &olddoc.CozyMetadata.Favorite
+	}
+
 	var err error
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
-		Name:        &olddoc.DocName,
-		DirID:       &olddoc.DirID,
-		RestorePath: &olddoc.RestorePath,
-		Tags:        &olddoc.Tags,
-		UpdatedAt:   &olddoc.UpdatedAt,
+		Name:         &olddoc.DocName,
+		DirID:        &olddoc.DirID,
+		RestorePath:  &olddoc.RestorePath,
+		Tags:         &olddoc.Tags,
+		UpdatedAt:    &olddoc.UpdatedAt,
+		CozyMetadata: CozyMetadataPatch{Favorite: oldFavorite},
 	}, patch, cdate)
 
 	if err != nil {
@@ -260,6 +266,9 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.NotSynchronizedOn = olddoc.NotSynchronizedOn
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.CozyMetadata = olddoc.CozyMetadata
+	if newdoc.CozyMetadata != nil && patch.CozyMetadata.Favorite != nil {
+		newdoc.CozyMetadata.Favorite = *patch.CozyMetadata.Favorite
+	}
 
 	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {
 		return nil, err
