@@ -263,14 +263,19 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	if patch.RestorePath != nil {
 		trashed = *patch.RestorePath != ""
 	}
+	var oldFavorite *bool
+	if olddoc.CozyMetadata != nil {
+		oldFavorite = &olddoc.CozyMetadata.Favorite
+	}
 	patch, err = normalizeDocPatch(&DocPatch{
-		Name:        &oname,
-		DirID:       &olddoc.DirID,
-		RestorePath: &olddoc.RestorePath,
-		Tags:        &olddoc.Tags,
-		UpdatedAt:   &olddoc.UpdatedAt,
-		Executable:  &olddoc.Executable,
-		Encrypted:   &olddoc.Encrypted,
+		Name:         &oname,
+		DirID:        &olddoc.DirID,
+		RestorePath:  &olddoc.RestorePath,
+		Tags:         &olddoc.Tags,
+		UpdatedAt:    &olddoc.UpdatedAt,
+		Executable:   &olddoc.Executable,
+		Encrypted:    &olddoc.Encrypted,
+		CozyMetadata: CozyMetadataPatch{Favorite: oldFavorite},
 	}, patch, cdate)
 	if err != nil {
 		return nil, err
@@ -315,6 +320,9 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.CozyMetadata = olddoc.CozyMetadata
 	newdoc.InternalID = olddoc.InternalID
+	if newdoc.CozyMetadata != nil && patch.CozyMetadata.Favorite != nil {
+		newdoc.CozyMetadata.Favorite = *patch.CozyMetadata.Favorite
+	}
 
 	if err = fs.UpdateFileDoc(olddoc, newdoc); err != nil {
 		return nil, err
