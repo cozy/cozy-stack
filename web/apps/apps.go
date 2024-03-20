@@ -253,6 +253,15 @@ func logsHandler(appType consts.AppType) echo.HandlerFunc {
 			}
 		}
 
+		clientSide := false
+		if appType == consts.KonnectorType {
+			man, err := app.GetKonnectorBySlug(inst, slug)
+			if err != nil {
+				return wrapAppsError(err)
+			}
+			clientSide = man.ClientSide()
+		}
+
 		var logs []AppLog
 		if err := json.NewDecoder(c.Request().Body).Decode(&logs); err != nil {
 			return jsonapi.BadJSON()
@@ -262,6 +271,9 @@ func logsHandler(appType consts.AppType) echo.HandlerFunc {
 			WithField("slug", slug).
 			WithField("job_id", c.QueryParam("job_id"))
 
+		if clientSide {
+			l = l.WithField("worker_id", "client")
+		}
 		for _, log := range logs {
 			level, err := logger.ParseLevel(log.Level)
 			if err != nil {

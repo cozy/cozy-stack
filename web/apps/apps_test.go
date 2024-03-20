@@ -85,8 +85,11 @@ func TestApps(t *testing.T) {
 	slug, err := setup.InstallMiniApp()
 	require.NoError(t, err, "Could not install mini app")
 
-	_, err = setup.InstallMiniKonnector()
+	konnectorSlug, err := setup.InstallMiniKonnector()
 	require.NoError(t, err, "Could not install mini konnector")
+
+	clientSideSlug, err := setup.InstallMiniClientSideKonnector()
+	require.NoError(t, err, "Could not install miniClientSideKonnector konnector")
 
 	ts := setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
@@ -653,14 +656,24 @@ func TestApps(t *testing.T) {
 		token, err := testInstance.MakeJWT(consts.AccessTokenAudience, flagship.ClientID, "*", "", time.Now())
 		require.NoError(t, err)
 
-		// Send logs for a konnector
-		e.POST("/konnectors/"+slug+"/logs").
+		// Send logs for a client side konnector
+		e.POST("/konnectors/"+clientSideSlug+"/logs").
 			WithHost(testInstance.Domain).
 			WithHeader("Authorization", "Bearer "+token).
 			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
 			Expect().Status(204)
 
-		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+slug+"\n", testOutput.String())
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+clientSideSlug+" worker_id=client\n", testOutput.String())
+
+		// Send logs for a konnector
+		testOutput.Reset()
+		e.POST("/konnectors/"+konnectorSlug+"/logs").
+			WithHost(testInstance.Domain).
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`[ { "timestamp": "2022-10-27T17:13:38.382Z", "level": "error", "msg": "This is an error message" } ]`)).
+			Expect().Status(204)
+
+		assert.Equal(t, `time="2022-10-27T17:13:38.382Z" level=error msg="This is an error message" domain=`+domain+" job_id= nspace=jobs slug="+konnectorSlug+"\n", testOutput.String())
 
 		// Send logs for a webapp
 		testOutput.Reset()

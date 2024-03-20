@@ -39,6 +39,7 @@ type KonnManifest struct {
 		Name            string `json:"name"`
 		Icon            string `json:"icon"`
 		Language        string `json:"language"`
+		ClientSide      bool   `json:"clientSide"`
 		OnDeleteAccount string `json:"on_delete_account"`
 
 		// Fields with complex types
@@ -160,6 +161,11 @@ func (m *KonnManifest) Icon() string { return m.val.Icon }
 // Language returns the programming language used for executing the konnector
 // (only "node" for the moment).
 func (m *KonnManifest) Language() string { return m.val.Language }
+
+// ClientSide returns true for a konnector that runs on the client (flagship
+// app), and false for a konnector that runs on the server (nodejs executed by
+// the stack).
+func (m *KonnManifest) ClientSide() bool { return m.val.ClientSide }
 
 // OnDeleteAccount can be used to specify a file path which will be executed
 // when an account associated with the konnector is deleted.
