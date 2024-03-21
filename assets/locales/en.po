@@ -1266,3 +1266,17 @@ msgstr "Continue"
 
 msgid "Share by link Password Invalid"
 msgstr "Invalid password"
+
+msgid "Onboarding Resend activation mail"
+msgstr "Send again the activation email"
+
+msgid "Onboarding Resend activation Title"
+msgstr "Check your emails!"
+
+msgid "Onboarding Resend activation Body"
+msgstr ""
+"We just sent you an activation link by email."
+
+msgid "Onboarding Resend activation Detail"
+msgstr ""
+"We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."

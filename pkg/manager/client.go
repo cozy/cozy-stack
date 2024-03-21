@@ -1,3 +1,4 @@
+// Package manager is used for interacting with the cloudery.
 package manager
 
 import (
@@ -70,6 +71,21 @@ func (c *APIClient) Get(url string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// Post makes a POST request to the manager API
+func (c *APIClient) Post(url string, body io.Reader) error {
+	res, err := c.Do(http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+	if err := res.Body.Close(); err != nil {
+		return err
+	}
+	if res.StatusCode >= 400 {
+		return errors.New(res.Status)
+	}
+	return nil
 }
 
 // Put makes a PUT request to the manager API

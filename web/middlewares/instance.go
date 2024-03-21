@@ -183,17 +183,24 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
 		if !i.OnboardingFinished {
-			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"Domain":       i.ContextualDomain(),
-				"ContextName":  i.ContextName,
-				"Locale":       i.Locale,
-				"Title":        i.TemplateTitle(),
-				"Favicon":      Favicon(i),
-				"SupportEmail": i.SupportEmailAddress(),
-			})
+			return RenderNeedOnboarding(c, i)
 		}
 		return next(c)
 	}
+}
+
+// RenderNeedOnboarding renders the page that tells the user that they have to
+// confirm their email address and choose a password before using their Cozy.
+func RenderNeedOnboarding(c echo.Context, inst *instance.Instance) error {
+	return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+		"Domain":       inst.ContextualDomain(),
+		"ContextName":  inst.ContextName,
+		"Locale":       inst.Locale,
+		"Title":        inst.TemplateTitle(),
+		"Favicon":      Favicon(inst),
+		"SupportEmail": inst.SupportEmailAddress(),
+		"UUID":         inst.UUID,
+	})
 }
 
 // CheckTOSDeadlineExpired checks if there is not signed ToS and the deadline is

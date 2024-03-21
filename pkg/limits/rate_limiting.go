@@ -75,6 +75,8 @@ const (
 	// MagicLinkType is used when sending emails with a magic link that can
 	// authenticate the user into a Cozy
 	MagicLinkType
+	// ResendOnboardingMailType is used for resending the onboarding link by email
+	ResendOnboardingMailType
 )
 
 type counterConfig struct {
@@ -220,6 +222,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "magic-link",
 		Limit:  30,
+		Period: 1 * time.Hour,
+	},
+	// ResendOnboardingMailType
+	{
+		Prefix: "resend-onboarding-mail",
+		Limit:  2,
 		Period: 1 * time.Hour,
 	},
 }
