@@ -389,6 +389,10 @@ func (f *file) Links() *jsonapi.LinksList {
 			links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/small"
 			links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/medium"
 			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + f.thumbSecret + "/large"
+			if f.doc.Class == "pdf" {
+				links.Icon = "/files/" + f.doc.DocID + "/icon/" + f.thumbSecret
+				links.Preview = "/files/" + f.doc.DocID + "/preview/" + f.thumbSecret
+			}
 		}
 	}
 	return &links
