@@ -15,6 +15,9 @@ msgstr "Photos"
 msgid "Tree Notes"
 msgstr "Notes"
 
+msgid "Tree Shared Drive"
+msgstr "Shared drives"
+
 msgid "Tree Shared with me"
 msgstr "Inbox of sharings"
 

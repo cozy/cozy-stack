@@ -4,9 +4,11 @@ package instance
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -271,6 +273,35 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}
+}
+
+// EnsureSharedDrivesDir returns the Shared Drives directory, and creates it if
+// it doesn't exist
+func (i *Instance) EnsureSharedDrivesDir() (*vfs.DirDoc, error) {
+	fs := i.VFS()
+	dir, err := fs.DirByID(consts.SharedDrivesDirID)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if dir != nil {
+		return dir, nil
+	}
+
+	name := i.Translate("Tree Shared Drives")
+	dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
+	if err != nil {
+		return nil, err
+	}
+	dir.DocID = consts.SharedDrivesDirID
+	dir.CozyMetadata = vfs.NewCozyMetadata(i.PageURL("/", nil))
+	err = fs.CreateDir(dir)
+	if errors.Is(err, os.ErrExist) {
+		dir, err = fs.DirByPath(dir.Fullpath)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return dir, nil
 }
 
 // NotesLock returns a mutex for the notes on this instance.

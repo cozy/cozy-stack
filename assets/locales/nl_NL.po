@@ -22,6 +22,9 @@ msgstr "Foto's"
 msgid "Tree Notes"
 msgstr "Notities"
 
+msgid "Tree Shared Drive"
+msgstr "Shared drives"
+
 msgid "Tree Shared with me"
 msgstr "Gedeeld met mij"
 

@@ -58,6 +58,21 @@ const TagSeparator = ","
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
+// SharedDrivesCreationHandler is the handler for POST /files/drives. It
+// creates the directory where shared and external drives are saved if it
+// doesn't exist, and return information about this directory.
+func SharedDrivesCreationHandler(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+	doc, err := inst.EnsureSharedDrivesDir()
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, newDir(doc), nil)
+}
+
 // CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -1900,6 +1915,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
 	router.PATCH("/", ModifyMetadataByIDInBatchHandler)
 
+	router.POST("/shared-drives", SharedDrivesCreationHandler)
 	router.POST("/", CreationHandler)
 	router.POST("/:file-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
