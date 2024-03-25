@@ -24,14 +24,7 @@ import (
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if !instance.OnboardingFinished {
-		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-			"Domain":       instance.ContextualDomain(),
-			"ContextName":  instance.ContextName,
-			"Locale":       instance.Locale,
-			"Title":        instance.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(instance),
-			"SupportEmail": instance.SupportEmailAddress(),
-		})
+		return middlewares.RenderNeedOnboarding(c, instance)
 	}
 
 	hasHint := false
@@ -75,14 +68,7 @@ func passphraseForm(c echo.Context) error {
 	}
 
 	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
-		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(inst),
-			"SupportEmail": inst.SupportEmailAddress(),
-		})
+		return middlewares.RenderNeedOnboarding(c, inst)
 	}
 
 	cryptoPolyfill := middlewares.CryptoPolyfill(c)

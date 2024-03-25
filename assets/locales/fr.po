@@ -1382,3 +1382,19 @@ msgstr "Continuer"
 
 msgid "Share by link Password Invalid"
 msgstr "Mot de passe incorrect"
+
+msgid "Onboarding Resend activation mail"
+msgstr "Envoyer à nouveau l'email de finalisation d'inscription"
+
+msgid "Onboarding Resend activation Title"
+msgstr "Consultez vos e-mails !"
+
+msgid "Onboarding Resend activation Body"
+msgstr ""
+"Nous vous avons envoyé par email un lien d'activation."
+
+msgid "Onboarding Resend activation Detail"
+msgstr ""
+"Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se"
+" faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. "
+"N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "

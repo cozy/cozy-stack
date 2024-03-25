@@ -2,6 +2,8 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -59,14 +61,7 @@ func Home(c echo.Context) error {
 
 	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
-			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"Domain":       instance.ContextualDomain(),
-				"ContextName":  instance.ContextName,
-				"Locale":       instance.Locale,
-				"Title":        instance.TemplateTitle(),
-				"Favicon":      middlewares.Favicon(instance),
-				"SupportEmail": instance.SupportEmailAddress(),
-			})
+			return middlewares.RenderNeedOnboarding(c, instance)
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))
 	}
@@ -575,6 +570,34 @@ func AppRedirection(inst *instance.Instance, redirect string) (*url.URL, error) 
 	return u, nil
 }
 
+func resendActivationMail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	rate := config.GetRateLimiter()
+	if err := rate.CheckRateLimit(inst, limits.ResendOnboardingMailType); err == nil {
+		client := instance.APIManagerClient(inst)
+		if len(inst.RegisterToken) == 0 || inst.UUID == "" || client == nil {
+			return errors.New("cannot resend activation link")
+		}
+		url := fmt.Sprintf("/api/v1/instances/%s/resend", url.PathEscape(inst.UUID))
+		if err := client.Post(url, nil); err != nil {
+			return errors.New("cannot resend activation link")
+		}
+	}
+	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"Domain":       inst.ContextualDomain(),
+		"ContextName":  inst.ContextName,
+		"Locale":       inst.Locale,
+		"Title":        inst.TemplateTitle(),
+		"Favicon":      middlewares.Favicon(inst),
+		"Inverted":     true,
+		"Illustration": "/images/mail-sent.svg",
+		"ErrorTitle":   "Onboarding Resend activation Title",
+		"Error":        "Onboarding Resend activation Body",
+		"ErrorDetail":  "Onboarding Resend activation Detail",
+		"SupportEmail": inst.SupportEmailAddress(),
+	})
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middlewares.CSRFWithConfig(middlewares.CSRFConfig{
@@ -608,6 +631,7 @@ func Routes(router *echo.Group) {
 	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 	router.GET("/passphrase", passphraseForm, noCSRF)
 	router.POST("/hint", sendHint)
+	router.POST("/onboarding/resend", resendActivationMail)
 
 	// Confirmation by typing
 	router.GET("/confirm", confirmForm, noCSRF)

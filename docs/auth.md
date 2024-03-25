@@ -420,6 +420,15 @@ POST /auth/hint HTTP/1.1
 Host: cozy.example.org
 ```
 
+### POST /auth/onboarding/resend
+
+Resend the activation link by email to finalize the onboarding.
+
+```http
+POST /auth/onboarding/resend HTTP/1.1
+Host: cozy.example.org
+```
+
 ### POST /auth/passphrase_reset
 
 After the user has clicked on the reset button of the passphrase reset form, it
