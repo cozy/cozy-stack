@@ -41,6 +41,10 @@ type CozyMetadata struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
 	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps,omitempty"`
+	// Identifier of the account in io.cozy.accounts (for konnectors)
+	SourceAccount string `json:"sourceAccount,omitempty"`
+	// Identifier unique to the account targeted by the connector (login most of the time)
+	SourceIdentifier string `json:"sourceAccountIdentifier,omitempty"`
 }
 
 // New initializes a new CozyMetadata structure
