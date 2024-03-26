@@ -33,6 +33,12 @@ type Group struct {
 // AddGroup adds a group of contacts identified by its ID to the members of the
 // sharing.
 func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly bool) error {
+	for _, g := range s.Groups {
+		if g.ID == groupID && !g.Revoked {
+			return ErrGroupCannotBeAddedTwice
+		}
+	}
+
 	group, err := contact.FindGroup(inst, groupID)
 	if err != nil {
 		return err
@@ -45,6 +51,7 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	groupIndex := len(s.Groups)
 	for _, contact := range contacts {
 		m := buildMemberFromContact(contact, readOnly)
+		m.Groups = []int{groupIndex}
 		m.OnlyInGroups = true
 		_, idx, err := s.addMember(inst, m)
 		if err != nil {

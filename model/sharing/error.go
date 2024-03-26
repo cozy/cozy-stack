@@ -51,4 +51,14 @@ var (
 	ErrAlreadyAccepted = errors.New("Sharing already accepted by this recipient")
 	// ErrCannotOpenFile is used when opening a file fails
 	ErrCannotOpenFile = errors.New("The file cannot be opened")
+	// ErrGroupCannotBeAddedTwice is used when trying to add a group to a
+	// sharing, but the group is already active for this sharing.
+	ErrGroupCannotBeAddedTwice = errors.New("The group cannot be added twice to the same sharing")
+	// ErrMemberAlreadyAdded is used when trying to add a group with a member
+	// already in the sharing as an individual with different rights (read-only
+	// vs read-write).
+	ErrMemberAlreadyAdded = errors.New("A group member cannot be added as they are already in the sharing")
+	// ErrMemberAlreadyInGroup is used when trying to add a group with a member
+	// already in another group of the sharing with different rights.
+	ErrMemberAlreadyInGroup = errors.New("A group member cannot be added as they are already in another group of the sharing")
 )
