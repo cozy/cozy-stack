@@ -51,4 +51,7 @@ var (
 	ErrAlreadyAccepted = errors.New("Sharing already accepted by this recipient")
 	// ErrCannotOpenFile is used when opening a file fails
 	ErrCannotOpenFile = errors.New("The file cannot be opened")
+	// ErrGroupCannotBeAdded is used when trying to add a group with a member
+	// already in the sharing with different rights (read-only vs read-write).
+	ErrGroupCannotBeAdded = errors.New("The group cannot be added")
 )

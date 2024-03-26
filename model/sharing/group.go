@@ -45,6 +45,7 @@ func (s *Sharing) AddGroup(inst *instance.Instance, groupID string, readOnly boo
 	groupIndex := len(s.Groups)
 	for _, contact := range contacts {
 		m := buildMemberFromContact(contact, readOnly)
+		m.Groups = []int{groupIndex}
 		m.OnlyInGroups = true
 		_, idx, err := s.addMember(inst, m)
 		if err != nil {
