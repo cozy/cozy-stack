@@ -1,7 +1,7 @@
 class Group
   include Model
 
-  attr_reader :name
+  attr_accessor :name
 
   def self.doctype
     "io.cozy.contacts.groups"
@@ -19,8 +19,16 @@ class Group
   end
 
   def as_json
-    {
-      name: @name
-    }
+    if @couch_id && @couch_rev
+      {
+        _id: @couch_id,
+        _rev: @couch_rev,
+        name: @name
+      }
+    else
+      {
+        name: @name
+      }
+    end
   end
 end

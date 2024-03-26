@@ -109,6 +109,10 @@ func (s *Sharing) RevokeGroup(inst *instance.Instance, index int) error {
 // finds the sharings for this group, and adds or removes the member to those
 // sharings.
 func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
+	if msg.RenamedGroup != nil {
+		return updateRenamedGroup(inst, msg.RenamedGroup)
+	}
+
 	var c *contact.Contact
 	if msg.DeletedDoc != nil {
 		c = &contact.Contact{JSONDoc: *msg.DeletedDoc}
@@ -161,6 +165,32 @@ func UpdateGroups(inst *instance.Instance, msg job.ShareGroupMessage) error {
 		if msg.BecomeInvitable {
 			if err := s.AddInvitationForContact(inst, c); err != nil {
 				errm = multierror.Append(errm, err)
+			}
+		}
+	}
+
+	return errm
+}
+
+func updateRenamedGroup(inst *instance.Instance, doc *couchdb.JSONDoc) error {
+	sharings, err := FindActive(inst)
+	if err != nil {
+		return err
+	}
+
+	var errm error
+	for _, s := range sharings {
+		for idx, group := range s.Groups {
+			if group.ID == doc.ID() {
+				if name, ok := doc.M["name"].(string); ok {
+					group.Name = name
+					s.Groups[idx] = group
+					if err := couchdb.UpdateDoc(inst, s); err != nil {
+						errm = multierror.Append(errm, err)
+					}
+					cloned := s.Clone().(*Sharing)
+					go cloned.NotifyRecipients(inst, nil)
+				}
 			}
 		}
 	}

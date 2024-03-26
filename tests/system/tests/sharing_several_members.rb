@@ -103,6 +103,13 @@ describe "A sharing with several members" do
     assert info.dig("attributes", "groups", 0, "revoked")
     check_sharing_has_groups_and_members info, [g1, g2], members, revoked
 
+    # Check that we can rename a group
+    g1.name = Faker::Kpop.solo
+    g1.save inst
+    sleep 1
+    info = Sharing.get_sharing_info inst, sharing.couch_id, Folder.doctype
+    assert_equal g1.name, info.dig("attributes", "groups", 0, "name")
+
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_bob.domain,
