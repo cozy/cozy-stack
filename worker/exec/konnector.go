@@ -326,6 +326,11 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.TaskContext, inst *instanc
 		return err
 	}
 
+	var sourceAccountIdentifier string
+	if acc != nil && acc.Metadata != nil {
+		sourceAccountIdentifier = acc.Metadata.SourceIdentifier
+	}
+
 	// 2. Check if the konnector has a reference to a folder
 	start := []string{consts.Konnectors, consts.Konnectors + "/" + w.slug}
 	end := []string{start[0], start[1], couchdb.MaxString}
@@ -341,10 +346,14 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.TaskContext, inst *instanc
 		for _, row := range res.Rows {
 			dir := &vfs.DirDoc{}
 			if err := couchdb.GetDoc(inst, consts.Files, row.ID, dir); err == nil {
-				if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
-					count++
-					dirID = row.ID
+				if strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+					continue
 				}
+				if !hasCompatibleSourceAccountIdentifier(dir, sourceAccountIdentifier) {
+					continue
+				}
+				count++
+				dirID = row.ID
 			}
 		}
 		if count == 1 {
@@ -383,6 +392,12 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.TaskContext, inst *instanc
 			Type: consts.Konnectors,
 			ID:   consts.Konnectors + "/" + w.slug,
 		})
+		if sourceAccountIdentifier != "" {
+			dir.AddReferencedBy(couchdb.DocReference{
+				Type: consts.SourceAccountIdentifier,
+				ID:   sourceAccountIdentifier,
+			})
+		}
 		instanceURL := inst.PageURL("/", nil)
 		if dir.CozyMetadata == nil {
 			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
@@ -422,6 +437,22 @@ func computeFolderPath(inst *instance.Instance, slug string, acc *account.Accoun
 
 	title := cases.Title(language.Make(inst.Locale)).String(slug)
 	return fmt.Sprintf("/%s/%s/%s", admin, title, accountName)
+}
+
+func hasCompatibleSourceAccountIdentifier(dir *vfs.DirDoc, sourceAccountIdentifier string) bool {
+	if sourceAccountIdentifier == "" {
+		return true
+	}
+	nb := 0
+	for _, ref := range dir.ReferencedBy {
+		if ref.Type == consts.SourceAccountIdentifier {
+			if ref.ID == sourceAccountIdentifier {
+				return true
+			}
+			nb++
+		}
+	}
+	return nb == 0
 }
 
 // ensurePermissions checks that the konnector has the permissions to write

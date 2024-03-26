@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -357,7 +358,11 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		wg.Wait()
 
-		acc := &account.Account{}
+		acc := &account.Account{
+			Metadata: &metadata.CozyMetadata{
+				SourceIdentifier: "identifier1",
+			},
+		}
 
 		// Folder is created from DefaultFolderPath
 		wg.Add(1)
@@ -387,9 +392,12 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		wg.Wait()
 
 		dir, err := fs.DirByPath("/Administrative/toto")
-		assert.NoError(t, err)
-		assert.Len(t, dir.ReferencedBy, 1)
+		require.NoError(t, err)
+		require.Len(t, dir.ReferencedBy, 2)
+		assert.Equal(t, dir.ReferencedBy[0].Type, "io.cozy.konnectors")
 		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
+		assert.Equal(t, dir.ReferencedBy[1].Type, "io.cozy.accounts.sourceAccountIdentifier")
+		assert.Equal(t, dir.ReferencedBy[1].ID, "identifier1")
 		assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
 		assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
 		assert.Len(t, dir.CozyMetadata.UpdatedByApps, 1)
@@ -428,7 +436,11 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 		dir, err = fs.DirByPath("/Administrative/Trainline/account-1")
 		require.NoError(t, err)
-		require.Len(t, dir.ReferencedBy, 1)
+		require.Len(t, dir.ReferencedBy, 2)
+		assert.Equal(t, dir.ReferencedBy[0].Type, "io.cozy.konnectors")
+		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
+		assert.Equal(t, dir.ReferencedBy[1].Type, "io.cozy.accounts.sourceAccountIdentifier")
+		assert.Equal(t, dir.ReferencedBy[1].ID, "identifier1")
 		assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
 		assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
 		assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
@@ -470,11 +482,11 @@ func TestBeforeHookKonnector(t *testing.T) {
 			WorkerType: "konnector",
 		})
 
-		shouldExec, err := beforeHookKonnector(j)
+		shouldExec, _ := beforeHookKonnector(j)
 		assert.False(t, shouldExec)
 
 		testutils.WithFlag(t, inst, "harvest.skip-maintenance-for", map[string]interface{}{"list": []string{slug}})
-		shouldExec, err = beforeHookKonnector(j)
+		shouldExec, _ = beforeHookKonnector(j)
 		assert.True(t, shouldExec)
 	})
 }

@@ -136,4 +136,7 @@ const (
 	// AuthConfirmations doc type used for realtime events when confirming
 	// authentication.
 	AuthConfirmations = "io.cozy.auth.confirmations"
+	// SourceAccountIdentifier doc type is used to link a directory to the
+	// konnector account that imports documents inside it.
+	SourceAccountIdentifier = "io.cozy.accounts.sourceAccountIdentifier"
 )
