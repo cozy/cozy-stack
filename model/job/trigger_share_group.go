@@ -16,11 +16,12 @@ type ShareGroupTrigger struct {
 
 // ShareGroupMessage is used for jobs on the share-group worker.
 type ShareGroupMessage struct {
-	ContactID       string           `json:"contact_id"`
-	GroupsAdded     []string         `json:"added"`
-	GroupsRemoved   []string         `json:"removed"`
-	BecomeInvitable bool             `json:"invitable"`
+	ContactID       string           `json:"contact_id,omitempty"`
+	GroupsAdded     []string         `json:"added,omitempty"`
+	GroupsRemoved   []string         `json:"removed,omitempty"`
+	BecomeInvitable bool             `json:"invitable,omitempty"`
 	DeletedDoc      *couchdb.JSONDoc `json:"deleted_doc,omitempty"`
+	RenamedGroup    *couchdb.JSONDoc `json:"renamed_group,omitempty"`
 }
 
 func NewShareGroupTrigger(broker Broker) *ShareGroupTrigger {
@@ -47,13 +48,37 @@ func (t *ShareGroupTrigger) Schedule() {
 }
 
 func (t *ShareGroupTrigger) match(e *realtime.Event) *ShareGroupMessage {
-	if e.Doc.DocType() != consts.Contacts {
-		return nil
-	}
 	if e.Verb == realtime.EventNotify {
 		return nil
 	}
+	switch e.Doc.DocType() {
+	case consts.Groups:
+		return t.matchGroup(e)
+	case consts.Contacts:
+		return t.matchContact(e)
+	}
+	return nil
+}
 
+func (t *ShareGroupTrigger) matchGroup(e *realtime.Event) *ShareGroupMessage {
+	if e.Verb != realtime.EventUpdate {
+		return nil
+	}
+	newdoc, ok := e.Doc.(*couchdb.JSONDoc)
+	if !ok {
+		return nil
+	}
+	olddoc, ok := e.OldDoc.(*couchdb.JSONDoc)
+	if !ok {
+		return nil
+	}
+	if newdoc.M["name"] == olddoc.M["name"] {
+		return nil
+	}
+	return &ShareGroupMessage{RenamedGroup: newdoc}
+}
+
+func (t *ShareGroupTrigger) matchContact(e *realtime.Event) *ShareGroupMessage {
 	newdoc, ok := e.Doc.(*couchdb.JSONDoc)
 	if !ok {
 		return nil
