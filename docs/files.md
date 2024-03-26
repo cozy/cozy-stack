@@ -123,6 +123,66 @@ Location: https://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 **Note**: see [not synchronized directories](not-synchronized-vfs.md) for
 more informations about the `not_synchronized_on` field.
 
+### POST /files/shared-drives
+
+This endpoint returns the information about the Shared Drives directory. If the
+directory does not exist, it is created.
+
+#### Request
+
+```http
+POST /files/shared-drives
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "io.cozy.files.shared-drives-dir",
+    "meta": {
+      "rev": "1-e4abdb5a"
+    },
+    "attributes": {
+      "type": "directory",
+      "name": "Shared drives",
+      "path": "/Shared drives",
+      "created_at": "2024-03-25T15:22:00Z",
+      "updated_at": "2024-03-25T15:22:00Z",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2024-03-25T15:22:00Z",
+        "createdByApp": "drive",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2024-03-25T15:22:00Z"
+      }
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/io.cozy.files.root-dir"
+        },
+        "data": {
+          "type": "io.cozy.files",
+          "id": "io.cozy.files.root-dir"
+        }
+      }
+    },
+    "links": {
+      "self": "/files/io.cozy.files.shared-drives-dir"
+    }
+  }
+}
+```
+
 ### GET /files/:file-id
 
 Get a directory or a file informations. In the case of a directory, it contains

@@ -18,6 +18,9 @@ const (
 	// NoLongerSharedDirID is the identifier of the directory where the files &
 	// folders removed from a sharing but still used via a reference are put
 	NoLongerSharedDirID = "io.cozy.files.no-longer-shared-dir"
+	// DrivesDirID is the identifier of the directory where the
+	// (shared|external) drives are saved.
+	SharedDrivesDirID = "io.cozy.files.shared-drives-dir"
 )
 
 const (
