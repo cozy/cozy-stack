@@ -19,7 +19,7 @@ msgstr "写真"
 msgid "Tree Notes"
 msgstr "メモ"
 
-msgid "Tree Shared Drive"
+msgid "Tree Shared Drives"
 msgstr "Shared drives"
 
 msgid "Tree Shared with me"
