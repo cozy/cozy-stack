@@ -196,6 +196,9 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		if !found {
 			continue
 		}
+		if len(m.Groups) > 0 && s.Members[i].ReadOnly != m.ReadOnly {
+			return "", -1, ErrGroupCannotBeAdded
+		}
 		if member.Status == MemberStatusReady {
 			return "", i, nil
 		}
