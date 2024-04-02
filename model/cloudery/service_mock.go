@@ -26,8 +26,12 @@ func (m *Mock) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error {
 	return m.Called(inst, cmd).Error(0)
 }
 
-func (m *Mock) HasBlockingSubscription(inst *instance.Instance) (bool, error) {
+func (m *Mock) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
 	args := m.Called(inst)
 
-	return args.Bool(0), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).(*BlockingSubscription), args.Error(1)
 }

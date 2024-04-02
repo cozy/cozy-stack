@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
@@ -28,8 +29,11 @@ func TestExternalTies(t *testing.T) {
 	ts := setupRouter(t, testInstance, svc)
 
 	t.Run("WithBlockingSubscription", func(t *testing.T) {
+		blockingSubscription := cloudery.BlockingSubscription{Vendor: "ios"}
+
 		svc.On("GetExternalTies", testInstance).Return(&csettings.ExternalTies{
 			HasBlockingSubscription: true,
+			BlockingSubscription:    &blockingSubscription,
 		}, nil).Once()
 
 		e := testutils.CreateTestClient(t, ts.URL)
@@ -46,6 +50,27 @@ func TestExternalTies(t *testing.T) {
 
 		attrs := data.Value("attributes").Object()
 		attrs.HasValue("has_blocking_subscription", true)
+		attrs.Value("blocking_subscription").Object().HasValue("vendor", "ios")
+	})
+
+	t.Run("WithoutBlockingSubscription", func(t *testing.T) {
+		svc.On("GetExternalTies", testInstance).Return(&csettings.ExternalTies{}, nil).Once()
+
+		e := testutils.CreateTestClient(t, ts.URL)
+		obj := e.GET("/settings/external-ties").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Accept", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.external-ties")
+
+		attrs := data.Value("attributes").Object()
+		attrs.HasValue("has_blocking_subscription", false)
+		attrs.NotContainsValue("blocking_subscription")
 	})
 
 	t.Run("WithClouderyError", func(t *testing.T) {

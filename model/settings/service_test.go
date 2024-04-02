@@ -360,24 +360,26 @@ func Test_GetExternalTies(t *testing.T) {
 	}
 
 	t.Run("with blocking subscription", func(t *testing.T) {
-		clouderySvc.On("HasBlockingSubscription", &inst).Return(true, nil).Once()
+		blockingSubscription := cloudery.BlockingSubscription{Vendor: "ios"}
+
+		clouderySvc.On("BlockingSubscription", &inst).Return(&blockingSubscription, nil).Once()
 
 		ties, err := svc.GetExternalTies(&inst)
 		assert.NoError(t, err)
-		assert.EqualExportedValues(t, *ties, ExternalTies{HasBlockingSubscription: true})
+		assert.EqualExportedValues(t, ExternalTies{HasBlockingSubscription: true, BlockingSubscription: &blockingSubscription}, *ties)
 	})
 
 	t.Run("without blocking subscription", func(t *testing.T) {
-		clouderySvc.On("HasBlockingSubscription", &inst).Return(false, nil).Once()
+		clouderySvc.On("BlockingSubscription", &inst).Return(nil, nil).Once()
 
 		ties, err := svc.GetExternalTies(&inst)
 		assert.NoError(t, err)
-		assert.EqualExportedValues(t, *ties, ExternalTies{HasBlockingSubscription: false})
+		assert.EqualExportedValues(t, ExternalTies{HasBlockingSubscription: false}, *ties)
 	})
 
 	t.Run("with error from cloudery", func(t *testing.T) {
 		unauthorizedError := errors.New("unauthorized")
-		clouderySvc.On("HasBlockingSubscription", &inst).Return(false, unauthorizedError).Once()
+		clouderySvc.On("BlockingSubscription", &inst).Return(nil, unauthorizedError).Once()
 
 		ties, err := svc.GetExternalTies(&inst)
 		assert.ErrorIs(t, err, unauthorizedError)
