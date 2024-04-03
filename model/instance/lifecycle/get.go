@@ -39,7 +39,7 @@ func GetInstance(domain string) (*instance.Instance, error) {
 			return nil, err
 		}
 
-		i, err = instance.GetFromCouch(domain)
+		i, err = instance.Get(domain)
 		if err != nil {
 			return nil, err
 		}

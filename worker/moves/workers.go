@@ -82,7 +82,7 @@ func ImportWorker(c *job.TaskContext) error {
 	if erru := lifecycle.Unblock(c.Instance); erru != nil {
 		// Try again
 		time.Sleep(10 * time.Second)
-		inst, errg := instance.GetFromCouch(c.Instance.Domain)
+		inst, errg := instance.Get(c.Instance.Domain)
 		if errg == nil {
 			erru = lifecycle.Unblock(inst)
 		}

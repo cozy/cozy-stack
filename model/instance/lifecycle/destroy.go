@@ -55,7 +55,7 @@ func Destroy(domain string) error {
 	if err != nil {
 		return err
 	}
-	inst, err := instance.GetFromCouch(domain)
+	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func Destroy(domain string) error {
 
 	// Reload the instance, it can have been updated in CouchDB if the instance
 	// had at least one account and was not up-to-date for its indexes/views.
-	inst, err = instance.GetFromCouch(domain)
+	inst, err = instance.Get(domain)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func Destroy(domain string) error {
 		// this document when we have concurrent updates for indexes/views
 		// version and deleting flag.
 		time.Sleep(3 * time.Second)
-		inst, errg := instance.GetFromCouch(domain)
+		inst, errg := instance.Get(domain)
 		if couchdb.IsNotFoundError(errg) {
 			err = nil
 		} else if inst != nil {

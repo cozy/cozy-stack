@@ -32,17 +32,6 @@ func (m *Mock) Get(domain string) (*Instance, error) {
 	return args.Get(0).(*Instance), args.Error(1)
 }
 
-// GetWithoutCache mock method.
-func (m *Mock) GetWithoutCache(domain string) (*Instance, error) {
-	args := m.Called(domain)
-
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-
-	return args.Get(0).(*Instance), args.Error(1)
-}
-
 // Update mock method.
 func (m *Mock) Update(inst *Instance) error {
 	return m.Called(inst).Error(1)

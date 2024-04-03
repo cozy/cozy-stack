@@ -1626,7 +1626,7 @@ func TestAuth(t *testing.T) {
 			WithHost(d).
 			Expect().Status(200)
 
-		in2, err := instance.GetFromCouch(d)
+		in2, err := instance.Get(d)
 		require.NoError(t, err)
 
 		e.POST("/auth/passphrase_renew").

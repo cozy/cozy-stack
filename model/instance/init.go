@@ -1,7 +1,6 @@
 package instance
 
 import (
-	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -14,30 +13,22 @@ var service *InstanceService
 // - [Mock] with a mock implementation
 type Service interface {
 	Get(domain string) (*Instance, error)
-	GetWithoutCache(domain string) (*Instance, error)
 	Update(inst *Instance) error
 	Delete(inst *Instance) error
 	CheckPassphrase(inst *Instance, pass []byte) error
 }
 
-func Init(c cache.Cache) *InstanceService {
-	service = NewService(c, logger.WithNamespace("instance"))
+func Init() *InstanceService {
+	service = NewService(logger.WithNamespace("instance"))
 
 	return service
 }
 
-// Get finds an instance from its domain by using CouchDB or the cache.
+// Get finds an instance from its domain by using CouchDB.
 //
 // Deprecated: Use [InstanceService.Get] instead.
 func Get(domain string) (*Instance, error) {
 	return service.Get(domain)
-}
-
-// GetFromCouch finds an instance in CouchDB from its domain.
-//
-// Deprecated: Use [InstanceService.GetWithoutCache] instead.
-func GetFromCouch(domain string) (*Instance, error) {
-	return service.GetWithoutCache(domain)
 }
 
 // Update saves the changes in CouchDB.
