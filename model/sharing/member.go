@@ -210,6 +210,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		s.Members[i].Name = m.Name
 		s.Members[i].Instance = m.Instance
 		s.Members[i].ReadOnly = m.ReadOnly
+		s.Members[i].OnlyInGroups = s.Members[i].OnlyInGroups && m.OnlyInGroups
 		break
 	}
 	if idx < 1 {
