@@ -468,7 +468,7 @@ func cleanSessions(c echo.Context) error {
 }
 
 func lastActivity(c echo.Context) error {
-	inst, err := instance.GetFromCouch(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}
@@ -542,7 +542,7 @@ func lastActivity(c echo.Context) error {
 }
 
 func unxorID(c echo.Context) error {
-	inst, err := instance.GetFromCouch(c.Param("domain"))
+	inst, err := instance.Get(c.Param("domain"))
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}

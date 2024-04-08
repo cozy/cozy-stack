@@ -146,7 +146,7 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 		if alias == inst.Domain {
 			return nil, instance.ErrExists
 		}
-		other, err := instance.GetFromCouch(alias)
+		other, err := instance.Get(alias)
 		if !errors.Is(err, instance.ErrNotFound) {
 			if err != nil {
 				return nil, err

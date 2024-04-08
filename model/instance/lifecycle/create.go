@@ -84,7 +84,7 @@ func Create(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 	opts.trace("check if instance already exist", func() {
-		_, err = instance.GetFromCouch(domain)
+		_, err = instance.Get(domain)
 	})
 	if !errors.Is(err, instance.ErrNotFound) {
 		if err == nil {
