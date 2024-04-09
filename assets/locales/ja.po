@@ -759,7 +759,13 @@ msgid "Too Many OAuth Clients Title"
 msgstr "%s/%s connected devices"
 
 msgid "Too Many OAuth Clients Intro"
-msgstr "Your current offer allows you to connect %s devices at the same time."
+msgstr "Your current offer allows you to connect %s devices at the same time"
+
+msgid "Too Many OAuth Clients More Text"
+msgstr "Learn more"
+
+msgid "Too Many OAuth Clients More Link"
+msgstr "https://help.cozy.io/maximum-number-of-connected-devices-allowed/"
 
 msgid "Too Many OAuth Clients Available Actions"
 msgstr "Disconnect one of your devices or change your Cozy offer to access your Cozy from this device."
