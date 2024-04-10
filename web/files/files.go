@@ -2281,6 +2281,10 @@ func CozyMetadataFromClaims(c echo.Context, setUploadFields bool) (*vfs.FilesCoz
 					if slug == "" && strings.Contains(cli.SoftwareID, "cozy-desktop") {
 						slug = "cozy-desktop"
 					}
+					// Special case for the flagship app
+					if slug == "" && cli.Flagship {
+						slug = "cozy-flagship"
+					}
 					version = cli.SoftwareVersion
 					client = map[string]string{
 						"id":   cli.ID(),
