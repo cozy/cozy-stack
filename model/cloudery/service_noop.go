@@ -12,6 +12,6 @@ func (s *NoopService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error 
 	return nil
 }
 
-func (s *NoopService) HasBlockingSubscription(inst *instance.Instance) (bool, error) {
-	return false, nil
+func (s *NoopService) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
+	return nil, nil
 }
