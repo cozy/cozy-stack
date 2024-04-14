@@ -12,7 +12,7 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.3
-	github.com/dhowden/tag v0.0.0-20240122214204-713ab0e94639
+	github.com/dhowden/tag v0.0.0-20240413230847-dc579f508b6b
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.16.0
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
