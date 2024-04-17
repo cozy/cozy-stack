@@ -85,9 +85,9 @@ func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cu
 
 	var files []*vfs.FileDoc
 	req := couchdb.AllDocsRequest{
-		StartKeyDocID: start.ID,
-		EndKeyDocID:   end.ID,
-		Limit:         1000,
+		StartKey: start.ID,
+		EndKey:   end.ID,
+		Limit:    1000,
 	}
 	for {
 		var results []*vfs.FileDoc
@@ -105,7 +105,7 @@ func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cu
 				files = append(files, res)
 			}
 		}
-		req.StartKeyDocID = results[len(results)-1].DocID
+		req.StartKey = results[len(results)-1].DocID
 		req.Skip = 1 // Do not fetch again the last file from this page
 	}
 
@@ -133,9 +133,9 @@ func listVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start
 
 	var versions []*vfs.Version
 	req := couchdb.AllDocsRequest{
-		StartKeyDocID: start.ID,
-		EndKeyDocID:   end.ID,
-		Limit:         1000,
+		StartKey: start.ID,
+		EndKey:   end.ID,
+		Limit:    1000,
 	}
 	for {
 		var results []*vfs.Version
@@ -151,7 +151,7 @@ func listVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start
 			}
 			versions = append(versions, res)
 		}
-		req.StartKeyDocID = results[len(results)-1].DocID
+		req.StartKey = results[len(results)-1].DocID
 		req.Skip = 1 // Do not fetch again the last file from this page
 	}
 
