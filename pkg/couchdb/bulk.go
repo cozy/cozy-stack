@@ -206,7 +206,7 @@ func ForeachDocsWithCustomPagination(db prefixer.Prefixer, doctype string, limit
 			skip = 1
 		}
 		req := &AllDocsRequest{
-			StartKey: startKey,
+			StartKey: `"` + startKey + `"`,
 			Skip:     skip,
 			Limit:    limit,
 		}
