@@ -3,6 +3,7 @@ package couchdb
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
@@ -260,6 +261,34 @@ func TestCouchdb(t *testing.T) {
 			assert.Equal(t, doc1.ID(), out2[0].ID())
 			assert.Equal(t, doc5.ID(), out2[1].ID())
 		}
+	})
+
+	t.Run("ForeachDocs", func(t *testing.T) {
+		for i := 0; i < 5; i++ {
+			doc := &testDoc{Test: fmt.Sprintf("foreach_%d", i)}
+			require.NoError(t, CreateDoc(TestPrefix, doc))
+		}
+
+		var results []*testDoc
+		err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{}, &results)
+		require.NoError(t, err)
+		var expected []string
+		for _, result := range results {
+			expected = append(expected, result.Test)
+		}
+
+		var keys []string
+		ForeachDocsWithCustomPagination(TestPrefix, TestDoctype, 2, func(id string, raw json.RawMessage) error {
+			var doc testDoc
+			err := json.Unmarshal(raw, &doc)
+			if err != nil {
+				return err
+			}
+			keys = append(keys, doc.Test)
+			return nil
+		})
+
+		assert.Equal(t, expected, keys)
 	})
 
 	t.Run("ChangesSuccess", func(t *testing.T) {
