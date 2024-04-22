@@ -30,7 +30,7 @@ scripts/golangci-lint: Makefile
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
-	@scripts/node_modules/.bin/eslint -c scripts/eslintrc.json "assets/scripts/**" tests/system/konnector/*.js
+	@scripts/node_modules/.bin/eslint -c scripts/eslint.config.js "assets/scripts/**" tests/system/konnector/*.js
 .PHONY: jslint
 
 ## pretty: make the assets prettier
@@ -44,8 +44,8 @@ svgo: scripts/node_modules
 	@scripts/node_modules/.bin/svgo -r -f assets/icons
 	@scripts/node_modules/.bin/svgo -r -f assets/images --exclude relocation-animated.svg
 
-scripts/node_modules: Makefile scripts/package.json scripts/yarn.lock
-	@cd scripts && yarn
+scripts/node_modules: Makefile scripts/package.json scripts/package-lock.json
+	@cd scripts && npm install
 
 ## assets: package the assets as go code
 assets: web/statik/statik.go
