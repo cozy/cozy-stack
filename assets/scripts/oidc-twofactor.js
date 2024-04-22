@@ -8,7 +8,7 @@
     const deviceToken = storage.getItem('trusted-device-token') || ''
     trustedTokenInput.value = deviceToken
   } catch (e) {
-    // do nothing
+    console.log(e) // do nothing
   }
 
   form.submit()
