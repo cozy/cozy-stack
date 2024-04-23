@@ -69,12 +69,6 @@ func Serve(c echo.Context) error {
 	}
 
 	if file == "" || file == route.Index {
-		if !route.Public {
-			if handled, err := middlewares.CheckOAuthClientsLimitExceeded(c); handled {
-				return err
-			}
-		}
-
 		webapp = app.DoLazyUpdate(i, webapp, app.Copier(consts.WebappType, i), i.Registries()).(*app.WebappManifest)
 	}
 
@@ -313,6 +307,14 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	sessID := ""
 	if isLoggedIn {
 		sessID = sess.ID()
+
+		if file == "" || file == route.Index {
+			if !route.Public {
+				if handled, err := middlewares.CheckOAuthClientsLimitExceeded(c); handled {
+					return err
+				}
+			}
+		}
 	}
 	params := buildServeParams(c, i, webapp, isLoggedIn, sessID)
 
