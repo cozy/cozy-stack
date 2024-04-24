@@ -24,7 +24,8 @@ var (
 )
 
 type ExternalTies struct {
-	HasBlockingSubscription bool `json:"has_blocking_subscription"`
+	HasBlockingSubscription bool                           `json:"has_blocking_subscription"`
+	BlockingSubscription    *cloudery.BlockingSubscription `json:"blocking_subscription,omitempty"`
 }
 
 // Storage used to persiste and fetch settings data.
@@ -250,13 +251,18 @@ func (s *SettingsService) CancelEmailUpdate(inst *instance.Instance) error {
 }
 
 func (s *SettingsService) GetExternalTies(inst *instance.Instance) (*ExternalTies, error) {
-	hasBlockingSubscription, err := s.cloudery.HasBlockingSubscription(inst)
+	blockingSubscription, err := s.cloudery.BlockingSubscription(inst)
 	if err != nil {
 		return nil, err
 	}
 
-	ties := ExternalTies{
-		HasBlockingSubscription: hasBlockingSubscription,
+	var ties ExternalTies
+	if blockingSubscription != nil {
+		ties = ExternalTies{
+			HasBlockingSubscription: true,
+			BlockingSubscription:    blockingSubscription,
+		}
 	}
+
 	return &ties, nil
 }

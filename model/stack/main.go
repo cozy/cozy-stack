@@ -108,7 +108,7 @@ security features. Please do not use this binary as your production server.
 
 	tokenSvc := token.NewService(config.GetConfig().CacheStorage)
 	emailerSvc := emailer.Init()
-	instanceSvc := instance.Init(config.GetConfig().CacheStorage)
+	instanceSvc := instance.Init()
 	clouderySvc := cloudery.Init(config.GetConfig().Clouderies)
 
 	services := Services{

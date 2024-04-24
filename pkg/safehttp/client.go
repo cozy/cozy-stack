@@ -77,6 +77,10 @@ func safeControl(network string, address string, conn syscall.RawConn) error {
 		return fmt.Errorf("%s is not a valid IP address", host)
 	}
 
+	if ipaddress.IsUnspecified() || ipaddress.IsLinkLocalUnicast() || ipaddress.IsLinkLocalMulticast() {
+		return fmt.Errorf("%s is not a valid IP address", host)
+	}
+
 	if ipaddress.IsPrivate() {
 		return fmt.Errorf("%s is not a public IP address", ipaddress)
 	}

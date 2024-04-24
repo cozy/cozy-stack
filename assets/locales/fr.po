@@ -29,7 +29,7 @@ msgstr "Photos"
 msgid "Tree Notes"
 msgstr "Notes"
 
-msgid "Tree Shared Drive"
+msgid "Tree Shared Drives"
 msgstr "Drives partagés"
 
 msgid "Tree Shared with me"
@@ -1345,7 +1345,13 @@ msgid "Too Many OAuth Clients Title"
 msgstr "%s/%s appareils connectés"
 
 msgid "Too Many OAuth Clients Intro"
-msgstr "Votre offre actuelle vous permet de connecter simultanément %s appareils."
+msgstr "Votre offre actuelle vous permet de connecter simultanément %s appareils"
+
+msgid "Too Many OAuth Clients More Text"
+msgstr "En savoir plus"
+
+msgid "Too Many OAuth Clients More Link"
+msgstr "https://support.cozy.io/nombre-maximum-dappareils-connectes-autorises/"
 
 msgid "Too Many OAuth Clients Available Actions"
 msgstr "Déconnectez un appareil ou modifiez l'offre de votre Cozy pour accéder à votre Cozy depuis cet appareil."

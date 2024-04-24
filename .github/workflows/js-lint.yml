@@ -22,10 +22,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 16
-      - name: Yarn install
+          node-version: 20
+      - name: Npm install
         run: |
           cd ./scripts
-          yarn install
+          npm install
       - name: Run eslint
         run: make jslint

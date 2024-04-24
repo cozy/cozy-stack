@@ -1072,6 +1072,8 @@ func wrapErrors(err error) error {
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	case permission.ErrExpiredToken:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrGroupCannotBeAddedTwice, sharing.ErrMemberAlreadyAdded, sharing.ErrMemberAlreadyInGroup:
+		return jsonapi.BadRequest(err)
 	}
 	logger.WithNamespace("sharing").Warnf("Not wrapped error: %s", err)
 	return err

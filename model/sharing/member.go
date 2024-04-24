@@ -196,6 +196,13 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		if !found {
 			continue
 		}
+		if s.Members[i].ReadOnly != m.ReadOnly {
+			if s.Members[i].OnlyInGroups {
+				return "", -1, ErrMemberAlreadyInGroup
+			} else if len(m.Groups) > 0 {
+				return "", -1, ErrMemberAlreadyAdded
+			}
+		}
 		if member.Status == MemberStatusReady {
 			return "", i, nil
 		}
@@ -204,6 +211,7 @@ func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, int, err
 		s.Members[i].Name = m.Name
 		s.Members[i].Instance = m.Instance
 		s.Members[i].ReadOnly = m.ReadOnly
+		s.Members[i].OnlyInGroups = s.Members[i].OnlyInGroups && m.OnlyInGroups
 		break
 	}
 	if idx < 1 {

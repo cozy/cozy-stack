@@ -55,23 +55,46 @@ func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) er
 	return nil
 }
 
-func (s *ClouderyService) HasBlockingSubscription(inst *instance.Instance) (bool, error) {
+type BlockingSubscription struct {
+	Vendor string `json:"vendor,omitempty"`
+}
+
+func (s *ClouderyService) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
 	client, err := s.getClient(inst)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
 	res, err := client.Get(url)
 	if err != nil {
-		return false, fmt.Errorf("request failed: %w", err)
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	return hasBlockingSubscription(res), nil
+	if hasBlockingSubscription(res) {
+		vendor, err := blockingSubscriptionVendor(res)
+		if err != nil {
+			return nil, err
+		}
+
+		return &BlockingSubscription{
+			Vendor: vendor,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func hasBlockingSubscription(clouderyInstance map[string]interface{}) bool {
 	return clouderyInstance["has_blocking_subscription"] == true
+}
+
+func blockingSubscriptionVendor(clouderyInstance map[string]interface{}) (string, error) {
+	if vendor, ok := clouderyInstance["blocking_subscription_vendor"].(string); ok {
+		return vendor, nil
+	}
+
+	return "", fmt.Errorf("invalid blocking subscription vendor")
 }
 
 func (s *ClouderyService) getClient(inst *instance.Instance) (*manager.APIClient, error) {
