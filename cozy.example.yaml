@@ -367,10 +367,8 @@ notifications:
   # Activate development APIs (iOS only)
   development: false
 
-  # Firebase Cloud Messaging API Key for Android notifications
-  # android_api_key: ""
-  # Use this key to run end to test with a fake FCM server
-  # fcm_server: "http://localhost:3001"
+  # Firebase Cloud Messaging API
+  fcm_credentials_file: /etc/cozy/fcm_credentials.json
 
   # APNS/2 certificates for iOS notifications
   # ios_certificate_key_path: path/to/certificate.p12

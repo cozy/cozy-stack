@@ -232,6 +232,8 @@ type Office struct {
 type Notifications struct {
 	Development bool
 
+	FCMCredentialsFile string
+
 	AndroidAPIKey string
 	FCMServer     string
 
@@ -844,6 +846,8 @@ func UseViper(v *viper.Viper) error {
 		},
 		Notifications: Notifications{
 			Development: v.GetBool("notifications.development"),
+
+			FCMCredentialsFile: v.GetString("notifications.fcm_credentials_file"),
 
 			FCMServer:     v.GetString("notifications.fcm_server"),
 			AndroidAPIKey: v.GetString("notifications.android_api_key"),
