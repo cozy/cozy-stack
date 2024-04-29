@@ -330,7 +330,6 @@ func pushToLegacyFirebase(ctx *job.TaskContext, c *oauth.Client, msg *center.Pus
 		notification.CollapseKey = hex.EncodeToString(hashedSource)
 	}
 
-	ctx.Logger().Infof("FCM send: %#v", notification)
 	res, err := client.Send(notification)
 	if err != nil {
 		ctx.Logger().Warnf("Error during fcm send: %s", err)
@@ -394,7 +393,23 @@ func prepareLegacyAndroidData(msg *center.PushMessage, hashedSource []byte) map[
 }
 
 func getFirebaseClient(slug, contextName string) *messaging.Client {
-	// TODO allow to override the FCM client per context with an account type
+	if slug == "" {
+		return fcmClient
+	}
+	typ, err := account.TypeInfo(slug, contextName)
+	if err == nil && len(typ.FCMCredentials) > 0 {
+		ctx := context.Background()
+		creds := option.WithCredentialsJSON(typ.FCMCredentials)
+		app, err := firebase.NewApp(ctx, nil, creds)
+		if err != nil {
+			return fcmClient
+		}
+		client, err := app.Messaging(ctx)
+		if err != nil {
+			return fcmClient
+		}
+		return client
+	}
 	return fcmClient
 }
 

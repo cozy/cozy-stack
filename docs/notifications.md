@@ -15,17 +15,17 @@ sent.
 
 The push notifications can be sent via Firebase to smartphones. By default, the
 key used to connect to firebase is set in the configuration file, via the
-`notifications.android_api_key` parameter. But it can be useful to have several
-firebase accounts when there are several applications developed by several
-organizations. In that case, it is possible to tell the stack to use a particular
-key for a given app by creating a CouchDB document inside the
+`notifications.fcm_credentials_file` parameter. But it can be useful to have
+several firebase accounts when there are several applications developed by
+several organizations. In that case, it is possible to tell the stack to use a
+particular key for a given app by creating a CouchDB document inside the
 `secrets/io-cozy-account_types` database, like this:
 
 ```json
 {
     "_id": "myapp",
     "slug": "myapp",
-    "android_api_key": "th3_f1r3b4s3_k3y"
+    "fcm_credentials": {"type": "service_account", "etc.": "..."}
 }
 ```
 
@@ -36,7 +36,7 @@ with the context name and `/`:
 {
     "_id": "mycontext/myapp",
     "slug": "myapp",
-    "android_api_key": "th3_0th3r_f1r3b4s3_k3y"
+    "fcm_credentials": {"type": "service_account", "etc.": "..."}
 }
 ```
 
