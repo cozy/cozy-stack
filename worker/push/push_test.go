@@ -20,16 +20,20 @@ func TestPush(t *testing.T) {
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
+	t.Run("DeprecateLegacyFCM", func(t *testing.T) {
+		testutils.TODO(t, "2024-07-01", "Remove the deprecated calls to the legacy FCM API")
+	})
+
 	t.Run("get firebase client", func(t *testing.T) {
 		contextName := "foo"
 		slug := "bar"
 
-		// Ensure that the global fcmClient is nil for this test, and restore its
+		// Ensure that the global legacyFCMClient is nil for this test, and restore its
 		// old value after the test
-		oldFcmClient := fcmClient
-		fcmClient = nil
+		oldFcmClient := legacyFCMClient
+		legacyFCMClient = nil
 		defer func() {
-			fcmClient = oldFcmClient
+			legacyFCMClient = oldFcmClient
 		}()
 
 		// Create an account type for the test
@@ -45,7 +49,7 @@ func TestPush(t *testing.T) {
 			_ = couchdb.DeleteDoc(prefixer.SecretsPrefixer, &typ)
 		}()
 
-		client := getFirebaseClient(slug, contextName)
+		client := getLegacyFirebaseClient(slug, contextName)
 		assert.NotNil(t, client)
 	})
 }
