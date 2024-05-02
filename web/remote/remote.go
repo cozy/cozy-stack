@@ -1,3 +1,5 @@
+// Package remote is the used for the /remote routes. They are intended for
+// requesting data that is not in the Cozy itself, but in a remote place.
 package remote
 
 import (
@@ -82,6 +84,8 @@ func Routes(router *echo.Group) {
 	router.GET("/:doctype", remoteGet)
 	router.POST("/:doctype", remotePost)
 	router.GET("/assets/:asset-name", remoteAsset)
+
+	nextcloudRoutes(router)
 }
 
 func wrapRemoteErr(err error) error {

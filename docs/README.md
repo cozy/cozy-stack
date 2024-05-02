@@ -98,6 +98,7 @@ designing new services.
 -   `/public` - [Public](public.md)
 -   `/realtime` - [Realtime](realtime.md)
 -   `/remote` - [Proxy for remote data/API](remote.md)
+    -   [NextCloud](nextcloud.md)
 -   `/settings` - [Settings](settings.md)
     -   [Terms of Services](user-action-required.md)
 -   `/sharings` - [Sharing](sharing.md)
