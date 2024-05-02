@@ -139,4 +139,7 @@ const (
 	// SourceAccountIdentifier doc type is used to link a directory to the
 	// konnector account that imports documents inside it.
 	SourceAccountIdentifier = "io.cozy.accounts.sourceAccountIdentifier"
+	// NextCloudFiles doc type is used when listing files from a NextCloud via
+	// WebDAV.
+	NextCloudFiles = "io.cozy.remote.nextcloud.files"
 )
