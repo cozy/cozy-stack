@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGETS="debian:10 debian:11 debian:12 ubuntu:20.04 ubuntu:22.04"
+TARGETS="debian:10 debian:11 debian:12 ubuntu:20.04 ubuntu:22.04 ubuntu:24.04"
 
 if [ $# -ne 0 ]; then
   TARGETS="$@"
