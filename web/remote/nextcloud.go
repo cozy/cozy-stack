@@ -1,9 +1,11 @@
 package remote
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/nextcloud"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -122,11 +124,41 @@ func nextcloudDelete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func nextcloudCopy(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	oldPath := c.Param("*")
+	newPath := oldPath
+	if newName := c.QueryParam("Name"); newName != "" {
+		newPath = filepath.Join(filepath.Dir(oldPath), newName)
+	} else {
+		ext := filepath.Ext(oldPath)
+		base := strings.TrimSuffix(oldPath, ext)
+		suffix := inst.Translate("File copy Suffix")
+		newPath = fmt.Sprintf("%s (%s)%s", base, suffix, ext)
+	}
+
+	if err := nc.Copy(oldPath, newPath); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.JSON(http.StatusCreated, echo.Map{"ok": true})
+}
+
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
 	group.DELETE("/*", nextcloudDelete)
+	group.POST("/copy/*", nextcloudCopy)
 }
 
 func wrapNextcloudErrors(err error) error {

@@ -17,7 +17,7 @@ The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 It is available with the `cozyMetadata.sourceAccount` of the shortcut file for
 example.
 
-The `*path` parameter is the path of the directory on the NextCloud.
+The `*path` parameter is the path of the file/directory on the NextCloud.
 
 **Note:** a permission on `GET io.cozy.files` is required to use this route.
 
@@ -126,7 +126,7 @@ file.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
-The `*path` parameter is the path of the directory on the NextCloud.
+The `*path` parameter is the path of the file/directory on the NextCloud.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 
@@ -190,7 +190,7 @@ This route can be used to put a file or directory in the NextCloud trash.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
-The `*path` parameter is the path of the directory on the NextCloud.
+The `*path` parameter is the path of the file/directory on the NextCloud.
 
 **Note:** a permission on `DELETE io.cozy.files` is required to use this route.
 
@@ -214,3 +214,44 @@ HTTP/1.1 204 No Content
 - 400 Bad Request, when the account is not configured for NextCloud
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+
+## POST /remote/nextcloud/:account/copy/*path
+
+This route can be used to create a copy of a file in the same directory, with a
+copy suffix in its name. The new name can be optionaly given with the `Name`
+parameter in the query-string.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/copy/Documents/wallpaper.jpg HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+  "ok": true
+}
+```
+
+#### Status codes
+
+- 201 Create, when the file has been copied
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+- 409 Conflict, when a file already exists with the new name on the NextCloud.

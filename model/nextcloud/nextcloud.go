@@ -117,6 +117,10 @@ func (nc *NextCloud) Delete(path string) error {
 	return nc.webdav.Delete(path)
 }
 
+func (nc *NextCloud) Copy(oldPath, newPath string) error {
+	return nc.webdav.Copy(oldPath, newPath)
+}
+
 func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	items, err := nc.webdav.List(path)
 	if err != nil {
