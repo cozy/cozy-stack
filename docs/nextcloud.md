@@ -11,6 +11,8 @@ Currently, it supports files operations via WebDAV.
 This route can be used to list the files and subdirectories inside a directory
 of NextCloud.
 
+With `Dl=1` in the query-string, it can also be used to download a file.
+
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 It is available with the `cozyMetadata.sourceAccount` of the shortcut file for
 example.
@@ -19,7 +21,7 @@ The `*path` parameter is the path of the directory on the NextCloud.
 
 **Note:** a permission on `GET io.cozy.files` is required to use this route.
 
-### Request
+### Request (list)
 
 ```http
 GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents HTTP/1.1
@@ -27,7 +29,7 @@ Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
 
-### Response
+### Response (list)
 
 ```http
 HTTP/1.1 200 OK
@@ -89,6 +91,25 @@ Content-Type: application/vnd.api+json
     "count": 5
   }
 }
+```
+
+### Request (download)
+
+```http
+GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Wallpaper.jpg?Dl=1 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response (download)
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Content-Length: 12345
+Content-Disposition: attachment; filename="Wallpaper.jpg"
+
+...
 ```
 
 #### Status codes

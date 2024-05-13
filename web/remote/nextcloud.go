@@ -1,10 +1,14 @@
 package remote
 
 import (
+	"io"
 	"net/http"
+	"path/filepath"
 
 	"github.com/cozy/cozy-stack/model/nextcloud"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/webdav"
@@ -25,11 +29,46 @@ func nextcloudGet(c echo.Context) error {
 	}
 
 	path := c.Param("*")
+	if c.QueryParam("Dl") == "1" {
+		return nextcloudDownload(c, nc, path)
+	}
+
 	files, err := nc.ListFiles(path)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return jsonapi.DataList(c, http.StatusOK, files, nil)
+}
+
+func nextcloudDownload(c echo.Context, nc *nextcloud.NextCloud, path string) error {
+	f, err := nc.Download(path)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	defer f.Content.Close()
+
+	w := c.Response()
+	header := w.Header()
+	filename := filepath.Base(path)
+	disposition := vfs.ContentDisposition("attachment", filename)
+	header.Set(echo.HeaderContentDisposition, disposition)
+	header.Set(echo.HeaderContentType, f.Mime)
+	if f.Length != "" {
+		header.Set(echo.HeaderContentLength, f.Length)
+	}
+	if f.LastModified != "" {
+		header.Set(echo.HeaderLastModified, f.LastModified)
+	}
+	if f.ETag != "" {
+		header.Set("Etag", f.ETag)
+	}
+	if !config.GetConfig().CSPDisabled {
+		middlewares.AppendCSPRule(c, "form-action", "'none'")
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err = io.Copy(w, f.Content)
+	return err
 }
 
 func nextcloudPut(c echo.Context) error {

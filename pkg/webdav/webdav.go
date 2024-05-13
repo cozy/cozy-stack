@@ -14,6 +14,7 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
+	"github.com/labstack/echo/v4"
 )
 
 type Client struct {
@@ -61,6 +62,41 @@ func (c *Client) Delete(path string) error {
 	default:
 		return ErrInternalServerError
 	}
+}
+
+func (c *Client) Get(path string) (*Download, error) {
+	res, err := c.req("GET", path, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == 200 {
+		return &Download{
+			Content:      res.Body,
+			ETag:         res.Header.Get("Etag"),
+			Length:       res.Header.Get(echo.HeaderContentLength),
+			Mime:         res.Header.Get(echo.HeaderContentType),
+			LastModified: res.Header.Get(echo.HeaderLastModified),
+		}, nil
+	}
+
+	defer res.Body.Close()
+	switch res.StatusCode {
+	case 401, 403:
+		return nil, ErrInvalidAuth
+	case 404:
+		return nil, ErrNotFound
+	default:
+		return nil, ErrInternalServerError
+	}
+}
+
+type Download struct {
+	Content      io.ReadCloser
+	ETag         string
+	Length       string
+	Mime         string
+	LastModified string
 }
 
 func (c *Client) List(path string) ([]Item, error) {

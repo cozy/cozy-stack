@@ -96,6 +96,10 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 	return nc, nil
 }
 
+func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
+	return nc.webdav.Get(path)
+}
+
 func (nc *NextCloud) Mkdir(path string) error {
 	return nc.webdav.Mkcol(path)
 }
