@@ -4,6 +4,7 @@ package nextcloud
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/pkg/webdav"
+	"github.com/labstack/echo/v4"
 )
 
 type File struct {
@@ -98,6 +100,13 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 
 func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
 	return nc.webdav.Get(path)
+}
+
+func (nc *NextCloud) Upload(path, mime string, body io.Reader) error {
+	headers := map[string]string{
+		echo.HeaderContentType: mime,
+	}
+	return nc.webdav.Put(path, headers, body)
 }
 
 func (nc *NextCloud) Mkdir(path string) error {

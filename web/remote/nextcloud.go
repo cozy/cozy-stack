@@ -84,7 +84,20 @@ func nextcloudPut(c echo.Context) error {
 	}
 
 	path := c.Param("*")
+	if c.QueryParam("Type") == "file" {
+		return nextcloudUpload(c, nc, path)
+	}
+
 	if err := nc.Mkdir(path); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.JSON(http.StatusCreated, echo.Map{"ok": true})
+}
+
+func nextcloudUpload(c echo.Context, nc *nextcloud.NextCloud, path string) error {
+	req := c.Request()
+	mime := req.Header.Get(echo.HeaderContentType)
+	if err := nc.Upload(path, mime, req.Body); err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return c.JSON(http.StatusCreated, echo.Map{"ok": true})

@@ -64,6 +64,26 @@ func (c *Client) Delete(path string) error {
 	}
 }
 
+func (c *Client) Put(path string, headers map[string]string, body io.Reader) error {
+	res, err := c.req("PUT", path, headers, body)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	switch res.StatusCode {
+	case 201:
+		return nil
+	case 401, 403:
+		return ErrInvalidAuth
+	case 405:
+		return ErrAlreadyExist
+	case 404, 409:
+		return ErrParentNotFound
+	default:
+		return ErrInternalServerError
+	}
+}
+
 func (c *Client) Get(path string) (*Download, error) {
 	res, err := c.req("GET", path, nil, nil)
 	if err != nil {

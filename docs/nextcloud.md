@@ -120,7 +120,9 @@ Content-Disposition: attachment; filename="Wallpaper.jpg"
 
 ## PUT /remote/nextcloud/:account/*path
 
-This route can be used to create a directory on the NextCloud.
+This route can be used to create a directory, or upload a file, on the
+NextCloud. The query-string parameter `Type` should be `file` when uploading a
+file.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -128,15 +130,40 @@ The `*path` parameter is the path of the directory on the NextCloud.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 
-### Request
+### Request (directory)
 
 ```http
-PUT /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/Clouds HTTP/1.1
+PUT /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/Clouds?Type=directory HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
 
-### Response
+### Response (directory)
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+```
+
+```json
+{
+  "ok": true
+}
+```
+
+### Request (file)
+
+```http
+PUT /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/sunset.jpg?Type=file HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+Content-Type: image/jpeg
+Content-Length: 54321
+
+...
+```
+
+### Response (file)
 
 ```http
 HTTP/1.1 201 Created
