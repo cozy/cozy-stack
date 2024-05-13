@@ -45,6 +45,24 @@ func (c *Client) Mkcol(path string) error {
 	}
 }
 
+func (c *Client) Delete(path string) error {
+	res, err := c.req("DELETE", path, nil, nil)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	switch res.StatusCode {
+	case 204:
+		return nil
+	case 401, 403:
+		return ErrInvalidAuth
+	case 404:
+		return ErrNotFound
+	default:
+		return ErrInternalServerError
+	}
+}
+
 func (c *Client) List(path string) ([]Item, error) {
 	path = fixSlashes(path)
 	headers := map[string]string{

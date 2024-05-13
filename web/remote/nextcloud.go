@@ -51,10 +51,30 @@ func nextcloudPut(c echo.Context) error {
 	return c.JSON(http.StatusCreated, echo.Map{"ok": true})
 }
 
+func nextcloudDelete(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	path := c.Param("*")
+	if err := nc.Delete(path); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
+	group.DELETE("/*", nextcloudDelete)
 }
 
 func wrapNextcloudErrors(err error) error {

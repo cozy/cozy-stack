@@ -135,3 +135,34 @@ Content-Type: application/json
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the parent directory is not found on the NextCloud
 - 409 Conflict, when a directory or file already exists at this path on the NextCloud.
+
+## DELETE /remote/nextcloud/:account/*path
+
+This route can be used to put a file or directory in the NextCloud trash.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the directory on the NextCloud.
+
+**Note:** a permission on `DELETE io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/Clouds HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been put in the trash
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
