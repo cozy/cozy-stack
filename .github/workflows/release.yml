@@ -73,6 +73,7 @@ jobs:
             "debian:12",
             "ubuntu:20.04",
             "ubuntu:22.04",
+            "ubuntu:24.04",
           ]
     runs-on: ubuntu-latest
     needs: create_release
