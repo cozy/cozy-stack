@@ -117,6 +117,10 @@ func (nc *NextCloud) Delete(path string) error {
 	return nc.webdav.Delete(path)
 }
 
+func (nc *NextCloud) Move(oldPath, newPath string) error {
+	return nc.webdav.Move(oldPath, newPath)
+}
+
 func (nc *NextCloud) Copy(oldPath, newPath string) error {
 	return nc.webdav.Copy(oldPath, newPath)
 }

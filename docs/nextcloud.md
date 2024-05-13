@@ -211,9 +211,42 @@ HTTP/1.1 204 No Content
 #### Status codes
 
 - 204 No Content, when the file/directory has been put in the trash
+- 400 Bad Request, when the account is not configured for NextCloud, or the `To` parameter is missing
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+
+## POST /remote/nextcloud/:account/move/*path
+
+This route can be used to move or rename a file/directory on the NextCloud.
+The new path must be given with the `To` parameter in the query-string.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/move/Documents/wallpaper.jpg?To=/Wallpaper.jpg HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been moved
 - 400 Bad Request, when the account is not configured for NextCloud
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+- 409 Conflict, when a file already exists with the new name on the NextCloud.
 
 ## POST /remote/nextcloud/:account/copy/*path
 
@@ -250,7 +283,7 @@ Content-Type: application/json
 
 #### Status codes
 
-- 201 Create, when the file has been copied
+- 201 Created, when the file has been copied
 - 400 Bad Request, when the account is not configured for NextCloud
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud

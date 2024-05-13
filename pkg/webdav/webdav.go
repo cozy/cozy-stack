@@ -64,6 +64,36 @@ func (c *Client) Delete(path string) error {
 	}
 }
 
+func (c *Client) Move(oldPath, newPath string) error {
+	u := url.URL{
+		Scheme: c.Scheme,
+		Host:   c.Host,
+		User:   url.UserPassword(c.Username, c.Password),
+		Path:   c.BasePath + fixSlashes(newPath),
+	}
+	headers := map[string]string{
+		"Destination": u.String(),
+		"Overwrite":   "F",
+	}
+	res, err := c.req("MOVE", oldPath, headers, nil)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	switch res.StatusCode {
+	case 201, 204:
+		return nil
+	case 401, 403:
+		return ErrInvalidAuth
+	case 404, 409:
+		return ErrNotFound
+	case 412:
+		return ErrAlreadyExist
+	default:
+		return ErrInternalServerError
+	}
+}
+
 func (c *Client) Copy(oldPath, newPath string) error {
 	u := url.URL{
 		Scheme: c.Scheme,

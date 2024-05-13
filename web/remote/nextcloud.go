@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -124,6 +125,30 @@ func nextcloudDelete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func nextcloudMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	oldPath := c.Param("*")
+	newPath := c.QueryParam("To")
+	if newPath == "" {
+		return jsonapi.BadRequest(errors.New("missing To parameter"))
+	}
+
+	if err := nc.Move(oldPath, newPath); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func nextcloudCopy(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
@@ -158,6 +183,7 @@ func nextcloudRoutes(router *echo.Group) {
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
 	group.DELETE("/*", nextcloudDelete)
+	group.POST("/move/*", nextcloudMove)
 	group.POST("/copy/*", nextcloudCopy)
 }
 
