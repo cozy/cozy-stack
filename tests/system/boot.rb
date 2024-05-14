@@ -10,6 +10,7 @@ require 'open3'
 require 'pbkdf2'
 require 'pry'
 require 'rest-client'
+require 'testcontainers'
 require 'uuid'
 
 AmazingPrint.pry!
