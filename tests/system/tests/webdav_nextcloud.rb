@@ -39,7 +39,7 @@ describe "NextCloud" do
       dir_name = "#{Faker::Superhero.name} ⚡️"
       nextcloud.mkdir "/#{dir_name}"
       list = nextcloud.list "/#{dir_name}"
-      ap list
+      assert_equal 0, list.dig("meta", "count")
     end
 
     container.remove

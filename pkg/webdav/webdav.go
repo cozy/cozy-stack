@@ -217,9 +217,17 @@ func (c *Client) List(path string) ([]Item, error) {
 	var items []Item
 	for _, response := range multistatus.Responses {
 		// We want only the children, not the directory itself
-		if response.Href == c.BasePath+path {
+		parts := strings.Split(strings.TrimPrefix(response.Href, c.BasePath), "/")
+		for i, part := range parts {
+			if p, err := url.PathUnescape(part); err == nil {
+				parts[i] = p
+			}
+		}
+		href := strings.Join(parts, "/")
+		if href == path {
 			continue
 		}
+
 		for _, props := range response.Props {
 			// Only looks for the HTTP/1.1 200 OK status
 			parts := strings.Split(props.Status, " ")

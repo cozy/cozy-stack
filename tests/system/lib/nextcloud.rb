@@ -23,6 +23,6 @@ class Nextcloud
   end
 
   def encode_path(path)
-    path.split("/").map { |s| URI.encode_www_form_component s }.join("/")
+    path.split("/").map { |s| ERB::Util.url_encode s }.join("/")
   end
 end
