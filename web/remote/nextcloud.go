@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/webdav"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -178,6 +179,33 @@ func nextcloudCopy(c echo.Context) error {
 	return c.JSON(http.StatusCreated, echo.Map{"ok": true})
 }
 
+func nextcloudDownstream(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	path := c.Param("*")
+	to := c.QueryParam("To")
+	if to == "" {
+		return jsonapi.BadRequest(errors.New("missing To parameter"))
+	}
+
+	cozyMetadata, _ := files.CozyMetadataFromClaims(c, true)
+	f, err := nc.Downstream(path, to, cozyMetadata)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	obj := files.NewFile(f, inst)
+	return jsonapi.Data(c, http.StatusCreated, obj, nil)
+}
+
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/*", nextcloudGet)
@@ -185,6 +213,7 @@ func nextcloudRoutes(router *echo.Group) {
 	group.DELETE("/*", nextcloudDelete)
 	group.POST("/move/*", nextcloudMove)
 	group.POST("/copy/*", nextcloudCopy)
+	group.POST("/downstream/*", nextcloudDownstream)
 }
 
 func wrapNextcloudErrors(err error) error {

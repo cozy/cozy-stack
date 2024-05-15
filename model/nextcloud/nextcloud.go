@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -150,6 +151,50 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 		files = append(files, file)
 	}
 	return files, nil
+}
+
+func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
+	dl, err := nc.webdav.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	defer dl.Content.Close()
+
+	mime, class := vfs.ExtractMimeAndClass(dl.Mime)
+	doc, err := vfs.NewFileDoc(
+		filepath.Base(path),
+		dirID,
+		0,   // size
+		nil, // md5sum
+		mime,
+		class,
+		time.Now(),
+		false, // executable
+		false, // trashed
+		false, // encrypted
+		nil,   // tags
+	)
+	if err != nil {
+		return nil, err
+	}
+	doc.CozyMetadata = cozyMetadata
+
+	fs := nc.inst.VFS()
+	file, err := fs.CreateFile(doc, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = io.Copy(file, dl.Content)
+	if cerr := file.Close(); err == nil && cerr != nil {
+		return nil, cerr
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	_ = nc.webdav.Delete(path)
+	return doc, nil
 }
 
 func (nc *NextCloud) fillBasePath(accountDoc *couchdb.JSONDoc) error {

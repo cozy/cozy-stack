@@ -288,3 +288,85 @@ Content-Type: application/json
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
 - 409 Conflict, when a file already exists with the new name on the NextCloud.
+
+## POST /remote/nextcloud/:account/downstream/*path
+
+This route can be used to move a file from the NextCloud to the Cozy.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+The `To` parameter in the query-string must be given, as the ID of the
+directory on the Cozy where the file will be put.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request (directory)
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/sunset.jpg?To=b3ecbc00f4ba013c2bf418c04daba326 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response (file)
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "7b41fb7c31e87eeaf13a54bc32001830",
+    "attributes": {
+      "type": "file",
+      "name": "sunset.jpg",
+      "dir_id": "b3ecbc00f4ba013c2bf418c04daba326",
+      "created_at": "2024-05-15T09:24:39.460655706+02:00",
+      "updated_at": "2024-05-15T09:24:39.460655706+02:00",
+      "size": "54321",
+      "md5sum": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "mime": "image/jpeg",
+      "class": "image",
+      "executable": false,
+      "trashed": false,
+      "encrypted": false,
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2024-05-15T09:24:38.971901347+02:00",
+        "updatedAt": "2024-05-15T09:24:38.971901347+02:00",
+        "createdOn": "https://cozy.example.net/",
+        "uploadedAt": "2024-05-15T09:24:38.971901347+02:00",
+        "uploadedOn": "https://cozy.example.net/"
+      }
+    },
+    "meta": {
+      "rev": "1-cfed435c4ad72b911b31ed775e3024df"
+    },
+    "links": {
+      "self": "/files/7b41fb7c31e87eeaf13a54bc32001830"
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/b3ecbc00f4ba013c2bf418c04daba326"
+        },
+        "data": {
+          "id": "b3ecbc00f4ba013c2bf418c04daba326",
+          "type": "io.cozy.files"
+        }
+      },
+      "referenced_by": {
+        "links": {
+          "self": "/files/7b41fb7c31e87eeaf13a54bc32001830/relationships/references"
+        }
+      }
+    }
+  }
+}
+```
