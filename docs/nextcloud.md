@@ -48,7 +48,10 @@ Content-Type: application/vnd.api+json
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c4b91\""
       },
-      "meta": {}
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/files/192172?dir=/Documents"
+      }
     },
     {
       "type": "io.cozy.remote.nextcloud.files",
@@ -62,7 +65,10 @@ Content-Type: application/vnd.api+json
         "updated_at": "Mon, 14 Jan 2019 08:22:21 GMT",
         "etag": "\"dd1a602431671325b7c1538f829248d9\""
       },
-      "meta": {}
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/files/208937?dir=/Documents"
+      }
     },
     {
       "type": "io.cozy.remote.nextcloud.files",
@@ -73,7 +79,10 @@ Content-Type: application/vnd.api+json
         "updated_at": "Thu, 02 May 2024 09:28:37 GMT",
         "etag": "\"66335cc55204b\""
       },
-      "meta": {}
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/files/615827?dir=/Documents"
+      }
     },
     {
       "type": "io.cozy.remote.nextcloud.files",
@@ -84,7 +93,10 @@ Content-Type: application/vnd.api+json
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c2318\""
       },
-      "meta": {}
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/files/615828?dir=/Documents"
+      }
     }
   ],
   "meta": {

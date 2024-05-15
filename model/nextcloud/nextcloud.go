@@ -33,6 +33,7 @@ type File struct {
 	Class     string `json:"class,omitempty"`
 	UpdatedAt string `json:"updated_at,omitempty"`
 	ETag      string `json:"etag,omitempty"`
+	url       string
 }
 
 func (f *File) ID() string                             { return f.DocID }
@@ -43,7 +44,11 @@ func (f *File) SetRev(id string)                       {}
 func (f *File) Clone() couchdb.Doc                     { panic("nextcloud.File should not be cloned") }
 func (f *File) Included() []jsonapi.Object             { return nil }
 func (f *File) Relationships() jsonapi.RelationshipMap { return nil }
-func (f *File) Links() *jsonapi.LinksList              { return nil }
+func (f *File) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{
+		Self: f.url,
+	}
+}
 
 var _ jsonapi.Object = (*File)(nil)
 
@@ -148,6 +153,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 			Class:     class,
 			UpdatedAt: item.LastModified,
 			ETag:      item.ETag,
+			url:       nc.buildURL(item, path),
 		}
 		files = append(files, file)
 	}
@@ -240,6 +246,16 @@ func (nc *NextCloud) fillBasePath(accountDoc *couchdb.JSONDoc) error {
 	account.Encrypt(*accountDoc)
 	_ = couchdb.UpdateDoc(nc.inst, accountDoc)
 	return nil
+}
+
+func (nc *NextCloud) buildURL(item webdav.Item, path string) string {
+	u := &url.URL{
+		Scheme:   nc.webdav.Scheme,
+		Host:     nc.webdav.Host,
+		Path:     "/apps/files/files/" + item.ID,
+		RawQuery: "dir=/" + path,
+	}
+	return u.String()
 }
 
 // https://docs.nextcloud.com/server/latest/developer_manual/client_apis/OCS/ocs-status-api.html#fetch-your-own-status
