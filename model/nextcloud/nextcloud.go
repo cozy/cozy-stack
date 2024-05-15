@@ -142,7 +142,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	for _, item := range items {
 		var mime, class string
 		if item.Type == "file" {
-			mime, class = vfs.ExtractMimeAndClass(item.ContentType)
+			mime, class = vfs.ExtractMimeAndClassFromFilename(item.Name)
 		}
 		file := &File{
 			DocID:     item.ID,

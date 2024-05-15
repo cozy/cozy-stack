@@ -38,8 +38,17 @@ describe "NextCloud" do
       nextcloud = Nextcloud.new inst, account.couch_id
       dir_name = "#{Faker::Superhero.name} ⚡️"
       nextcloud.mkdir "/#{dir_name}"
+
+      file_name = "#{Faker::Science.science}.jpg"
+      file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
+      nextcloud.upload "/#{dir_name}/#{file_name}", file_path
       list = nextcloud.list "/#{dir_name}"
-      assert_equal 0, list.dig("meta", "count")
+      assert_equal 1, list.dig("meta", "count")
+      assert_equal "file", list.dig("data", 0, "attributes", "type")
+      assert_equal file_name, list.dig("data", 0, "attributes", "name")
+      assert_equal File.size(file_path), list.dig("data", 0, "attributes", "size")
+      assert_equal "image/jpeg", list.dig("data", 0, "attributes", "mime")
+      assert_equal "image", list.dig("data", 0, "attributes", "class")
     end
 
     container.remove
