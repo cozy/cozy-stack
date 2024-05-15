@@ -167,11 +167,12 @@ func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyM
 	}
 	defer dl.Content.Close()
 
+	size, _ := strconv.Atoi(dl.Length)
 	mime, class := vfs.ExtractMimeAndClass(dl.Mime)
 	doc, err := vfs.NewFileDoc(
 		filepath.Base(path),
 		dirID,
-		0,   // size
+		int64(size),
 		nil, // md5sum
 		mime,
 		class,
