@@ -302,15 +302,15 @@ directory on the Cozy where the file will be put.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 
-### Request (directory)
+### Request
 
 ```http
-POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/Documents/Images/sunset.jpg?To=b3ecbc00f4ba013c2bf418c04daba326 HTTP/1.1
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/downstream/Documents/Images/sunset.jpg?To=b3ecbc00f4ba013c2bf418c04daba326 HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
 
-### Response (file)
+### Response
 
 ```http
 HTTP/1.1 201 Created
@@ -370,3 +370,44 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+#### Status codes
+
+- 201 Created, when the file has been moved from the NextCloud to the Cozy
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file is not found on the NextCloud
+
+## POST /remote/nextcloud/:account/upstream/*path
+
+This route can be used to move a file from the Cozy to the NextCloud.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+The `From` parameter in the query-string must be given, as the ID of the
+file on the Cozy that will be moved.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/upstream/Documents/Images/sunset2.jpg?From=7b41fb7c31e87eeaf13a54bc32001830 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file has been moved from the Cozy to the NextCloud
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file is not found on the Cozy

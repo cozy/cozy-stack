@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -195,6 +196,29 @@ func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyM
 
 	_ = nc.webdav.Delete(path)
 	return doc, nil
+}
+
+func (nc *NextCloud) Upstream(path, from string) error {
+	fs := nc.inst.VFS()
+	doc, err := fs.FileByID(from)
+	if err != nil {
+		return err
+	}
+	f, err := fs.OpenFile(doc)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	headers := map[string]string{
+		echo.HeaderContentType:   doc.Mime,
+		echo.HeaderContentLength: strconv.Itoa(int(doc.ByteSize)),
+	}
+	if err := nc.webdav.Put(path, headers, f); err != nil {
+		return err
+	}
+	_ = fs.DestroyFile(doc)
+	return nil
 }
 
 func (nc *NextCloud) fillBasePath(accountDoc *couchdb.JSONDoc) error {

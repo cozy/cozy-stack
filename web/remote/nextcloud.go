@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/ncw/swift/v2"
 )
 
 func nextcloudGet(c echo.Context) error {
@@ -206,6 +208,30 @@ func nextcloudDownstream(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
+func nextcloudUpstream(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	path := c.Param("*")
+	from := c.QueryParam("From")
+	if from == "" {
+		return jsonapi.BadRequest(errors.New("missing From parameter"))
+	}
+
+	if err := nc.Upstream(path, from); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/*", nextcloudGet)
@@ -214,6 +240,7 @@ func nextcloudRoutes(router *echo.Group) {
 	group.POST("/move/*", nextcloudMove)
 	group.POST("/copy/*", nextcloudCopy)
 	group.POST("/downstream/*", nextcloudDownstream)
+	group.POST("/upstream/*", nextcloudUpstream)
 }
 
 func wrapNextcloudErrors(err error) error {
@@ -224,11 +251,11 @@ func wrapNextcloudErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case webdav.ErrInvalidAuth:
 		return jsonapi.Unauthorized(err)
-	case webdav.ErrAlreadyExist:
+	case webdav.ErrAlreadyExist, vfs.ErrConflict:
 		return jsonapi.Conflict(err)
 	case webdav.ErrParentNotFound:
 		return jsonapi.NotFound(err)
-	case webdav.ErrNotFound:
+	case webdav.ErrNotFound, os.ErrNotExist, swift.ObjectNotFound:
 		return jsonapi.NotFound(err)
 	case webdav.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)
