@@ -15,6 +15,7 @@ class Account
     @failure = opts[:failure]
     @type = opts[:type]
     @auth = opts[:auth]
+    @webdav_user_id = opts[:webdav_user_id]
   end
 
   def as_json
@@ -25,7 +26,8 @@ class Account
         failure: @failure
       },
       account_type: @type,
-      auth: @auth
+      auth: @auth,
+      webdav_user_id: @webdav_user_id
     }.compact
     if @aggregator
       json[:relationships] = {

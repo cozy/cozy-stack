@@ -49,6 +49,7 @@
   - "/permissions - Permissions": ./permissions.md
   - "/realtime - Realtime": ./realtime.md
   - "/remote - Proxy for remote data/API": ./remote.md
+  - " /remote/nextcloud - NextCloud": ./nextcloud.md
   - "/settings - Settings": ./settings.md
   - " /settings - Terms of Services": ./user-action-required.md
   - "/sharings - Sharing": ./sharing.md

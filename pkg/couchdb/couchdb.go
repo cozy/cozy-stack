@@ -322,7 +322,7 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 		return err
 	}
 	if resbody == nil {
-		// Flush the body, so that the connecion can be reused by keep-alive
+		// Flush the body, so that the connection can be reused by keep-alive
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
