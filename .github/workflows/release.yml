@@ -97,3 +97,14 @@ jobs:
         run: |
           tag_name="${GITHUB_REF##*/}"
           gh release upload "$tag_name" packages/*.deb
+  update_repo:
+    runs-on: ubuntu-latest
+    needs: publish_deb_packages
+    steps:
+      - name: Update deb repo
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_REPO_PUBLISH_JOB: ${{ secrets.JENKINS_REPO_PUBLISH_JOB }}
+          JENKINS_REPO_PUBLISH_TOKEN: ${{ secrets.JENKINS_REPO_PUBLISH_TOKEN }}
+        run: |
+          curl -fsSL --user ${JENKINS_AUTH} https://ci.cozycloud.cc/job/${JENKINS_REPO_PUBLISH_JOB}/buildWithParameters?token=${JENKINS_REPO_PUBLISH_TOKEN} -d "FORCE=false"
