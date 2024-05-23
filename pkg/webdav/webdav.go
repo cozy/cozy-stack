@@ -220,14 +220,9 @@ func (c *Client) List(path string) ([]Item, error) {
 	var items []Item
 	for _, response := range multistatus.Responses {
 		// We want only the children, not the directory itself
-		parts := strings.Split(strings.TrimPrefix(response.Href, c.BasePath), "/")
-		for i, part := range parts {
-			if p, err := url.PathUnescape(part); err == nil {
-				parts[i] = p
-			}
-		}
-		href := strings.Join(parts, "/")
-		if href == path {
+		href := unescapePathParts(strings.TrimPrefix(response.Href, c.BasePath))
+		unescapedPath := unescapePathParts(path)
+		if href == unescapedPath {
 			continue
 		}
 
@@ -342,6 +337,16 @@ func (c *Client) req(
 	}
 	c.Logger.Infof("%s %s %s: %d (%s)", method, c.Host, path, res.StatusCode, elapsed)
 	return res, nil
+}
+
+func unescapePathParts(path string) string {
+	parts := strings.Split(path, "/")
+	for i, part := range parts {
+		if p, err := url.PathUnescape(part); err == nil {
+			parts[i] = p
+		}
+	}
+	return strings.Join(parts, "/")
 }
 
 func fixSlashes(s string) string {
