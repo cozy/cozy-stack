@@ -72,6 +72,7 @@ func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, e
 		}
 		return nil, nil, err
 	}
+	defer f.Close()
 
 	data := &authData{}
 	if err = request.ReadJSON(f, data); err != nil {
