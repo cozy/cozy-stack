@@ -303,6 +303,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	realtime.Routes(router.Group("/realtime", mws...))
 	swift.Routes(router.Group("/swift", mws...))
 	tools.Routes(router.Group("/tools", mws...))
+	conncheck.Routes(router.Group("/connection_check", mws...))
 
 	setupRecover(router)
 
