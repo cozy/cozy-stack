@@ -3,7 +3,7 @@ module github.com/cozy/cozy-stack
 go 1.19
 
 require (
-	firebase.google.com/go/v4 v4.14.0
+	firebase.google.com/go/v4 v4.14.1
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/adrg/xdg v0.4.0
 	github.com/andybalholm/brotli v1.1.0
