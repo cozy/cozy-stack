@@ -392,7 +392,7 @@ Content-Type: application/vnd.api+json
 
 ## POST /remote/nextcloud/:account/upstream/*path
 
-This route can be used to move a file from the Cozy to the NextCloud.
+This route can be used to move/copy a file from the Cozy to the NextCloud.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -400,6 +400,9 @@ The `*path` parameter is the path of the file on the NextCloud.
 
 The `From` parameter in the query-string must be given, as the ID of the
 file on the Cozy that will be moved.
+
+By default, the file will be moved, but using `Copy=true` in the query-string
+will makes a copy.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 

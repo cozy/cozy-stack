@@ -24,6 +24,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type OperationKind int
+
+const (
+	MoveOperation OperationKind = iota
+	CopyOperation
+)
+
 type File struct {
 	DocID     string `json:"id,omitempty"`
 	Type      string `json:"type"`
@@ -205,7 +212,7 @@ func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyM
 	return doc, nil
 }
 
-func (nc *NextCloud) Upstream(path, from string) error {
+func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
 	fs := nc.inst.VFS()
 	doc, err := fs.FileByID(from)
 	if err != nil {
@@ -223,7 +230,9 @@ func (nc *NextCloud) Upstream(path, from string) error {
 	if err := nc.webdav.Put(path, doc.ByteSize, headers, f); err != nil {
 		return err
 	}
-	_ = fs.DestroyFile(doc)
+	if kind == MoveOperation {
+		_ = fs.DestroyFile(doc)
+	}
 	return nil
 }
 

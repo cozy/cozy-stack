@@ -226,7 +226,12 @@ func nextcloudUpstream(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("missing From parameter"))
 	}
 
-	if err := nc.Upstream(path, from); err != nil {
+	kind := nextcloud.MoveOperation
+	if c.QueryParam("Copy") != "" {
+		kind = nextcloud.CopyOperation
+	}
+
+	if err := nc.Upstream(path, from, kind); err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
