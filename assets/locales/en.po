@@ -969,9 +969,6 @@ msgstr "IP Address:"
 msgid "Mail New Connection Browser"
 msgstr "Browser:"
 
-msgid "Mail New Connection OS"
-msgstr "Device:"
-
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
 "If you are behind this new connection, you can ignore this message and enjoy your Cozy.\n"

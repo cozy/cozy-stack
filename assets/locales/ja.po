@@ -580,9 +580,6 @@ msgstr "IP アドレス"
 msgid "Mail New Connection Browser"
 msgstr "ブラウザー"
 
-msgid "Mail New Connection OS"
-msgstr "オペレーティングシステム"
-
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
 "あなたが行いましたか? すばらしいです! 安心しました。 ご不便おかけしてすみません。 "

@@ -221,7 +221,6 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		"Country":              l.Country,
 		"IP":                   l.IP,
 		"Browser":              l.Browser,
-		"OS":                   l.OS,
 		"ChangePassphraseLink": changePassphraseLink,
 		"ActivateTwoFALink":    activateTwoFALink,
 	}
