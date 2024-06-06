@@ -167,7 +167,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	return files, nil
 }
 
-func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
+func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
 	dl, err := nc.webdav.Get(path)
 	if err != nil {
 		return nil, err
@@ -208,7 +208,9 @@ func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyM
 		return nil, err
 	}
 
-	_ = nc.webdav.Delete(path)
+	if kind == MoveOperation {
+		_ = nc.webdav.Delete(path)
+	}
 	return doc, nil
 }
 

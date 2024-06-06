@@ -199,8 +199,13 @@ func nextcloudDownstream(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("missing To parameter"))
 	}
 
+	kind := nextcloud.MoveOperation
+	if c.QueryParam("Copy") != "" {
+		kind = nextcloud.CopyOperation
+	}
+
 	cozyMetadata, _ := files.CozyMetadataFromClaims(c, true)
-	f, err := nc.Downstream(path, to, cozyMetadata)
+	f, err := nc.Downstream(path, to, kind, cozyMetadata)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
