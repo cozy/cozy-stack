@@ -264,7 +264,8 @@ HTTP/1.1 204 No Content
 
 This route can be used to create a copy of a file in the same directory, with a
 copy suffix in its name. The new name can be optionaly given with the `Name`
-parameter in the query-string.
+parameter in the query-string, or the full path can be given with `Path`
+parameter.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -275,7 +276,7 @@ The `*path` parameter is the path of the file on the NextCloud.
 ### Request
 
 ```http
-POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/copy/Documents/wallpaper.jpg HTTP/1.1
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/copy/Documents/wallpaper.jpg?Path=/Images/beach.jpg HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```

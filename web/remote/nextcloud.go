@@ -166,7 +166,9 @@ func nextcloudCopy(c echo.Context) error {
 
 	oldPath := c.Param("*")
 	newPath := oldPath
-	if newName := c.QueryParam("Name"); newName != "" {
+	if p := c.QueryParam("Path"); p != "" {
+		newPath = p
+	} else if newName := c.QueryParam("Name"); newName != "" {
 		newPath = filepath.Join(filepath.Dir(oldPath), newName)
 	} else {
 		ext := filepath.Ext(oldPath)
