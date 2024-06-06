@@ -103,7 +103,7 @@ func nextcloudPut(c echo.Context) error {
 func nextcloudUpload(c echo.Context, nc *nextcloud.NextCloud, path string) error {
 	req := c.Request()
 	mime := req.Header.Get(echo.HeaderContentType)
-	if err := nc.Upload(path, mime, req.Body); err != nil {
+	if err := nc.Upload(path, mime, req.ContentLength, req.Body); err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return c.JSON(http.StatusCreated, echo.Map{"ok": true})

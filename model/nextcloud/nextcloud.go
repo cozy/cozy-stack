@@ -109,11 +109,11 @@ func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
 	return nc.webdav.Get(path)
 }
 
-func (nc *NextCloud) Upload(path, mime string, body io.Reader) error {
+func (nc *NextCloud) Upload(path, mime string, contentLength int64, body io.Reader) error {
 	headers := map[string]string{
 		echo.HeaderContentType: mime,
 	}
-	return nc.webdav.Put(path, headers, body)
+	return nc.webdav.Put(path, contentLength, headers, body)
 }
 
 func (nc *NextCloud) Mkdir(path string) error {
@@ -218,10 +218,9 @@ func (nc *NextCloud) Upstream(path, from string) error {
 	defer f.Close()
 
 	headers := map[string]string{
-		echo.HeaderContentType:   doc.Mime,
-		echo.HeaderContentLength: strconv.Itoa(int(doc.ByteSize)),
+		echo.HeaderContentType: doc.Mime,
 	}
-	if err := nc.webdav.Put(path, headers, f); err != nil {
+	if err := nc.webdav.Put(path, doc.ByteSize, headers, f); err != nil {
 		return err
 	}
 	_ = fs.DestroyFile(doc)
