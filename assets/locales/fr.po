@@ -1065,9 +1065,6 @@ msgstr "Adresse IP :"
 msgid "Mail New Connection Browser"
 msgstr "Navigateur :"
 
-msgid "Mail New Connection OS"
-msgstr "Appareil :"
-
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
 "Vous confirmez en être l’initiateur ? Si oui, profitez de ce nouvel accès !\n"

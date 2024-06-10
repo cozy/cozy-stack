@@ -715,9 +715,6 @@ msgstr "IP Adresse:"
 msgid "Mail New Connection Browser"
 msgstr "Browser:"
 
-msgid "Mail New Connection OS"
-msgstr "Gerät:"
-
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
 "Wenn du hinter dieser neuen Verbindung steckst, kannst du diese Nachricht ignorieren und dein Cozy genießen.\n"

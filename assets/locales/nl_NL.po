@@ -902,9 +902,6 @@ msgstr "IP-adres:"
 msgid "Mail New Connection Browser"
 msgstr "Webbrowser:"
 
-msgid "Mail New Connection OS"
-msgstr "Apparaat:"
-
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
 "Was je dit zelf? Dan kun je dit bericht negeren.\n"
