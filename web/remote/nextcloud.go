@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/nextcloud"
@@ -202,7 +203,7 @@ func nextcloudDownstream(c echo.Context) error {
 	}
 
 	kind := nextcloud.MoveOperation
-	if c.QueryParam("Copy") != "" {
+	if isCopy, _ := strconv.ParseBool(c.QueryParam("Copy")); isCopy {
 		kind = nextcloud.CopyOperation
 	}
 
@@ -234,7 +235,7 @@ func nextcloudUpstream(c echo.Context) error {
 	}
 
 	kind := nextcloud.MoveOperation
-	if c.QueryParam("Copy") != "" {
+	if isCopy, _ := strconv.ParseBool(c.QueryParam("Copy")); isCopy {
 		kind = nextcloud.CopyOperation
 	}
 
