@@ -264,7 +264,8 @@ HTTP/1.1 204 No Content
 
 This route can be used to create a copy of a file in the same directory, with a
 copy suffix in its name. The new name can be optionaly given with the `Name`
-parameter in the query-string.
+parameter in the query-string, or the full path can be given with `Path`
+parameter.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -275,7 +276,7 @@ The `*path` parameter is the path of the file on the NextCloud.
 ### Request
 
 ```http
-POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/copy/Documents/wallpaper.jpg HTTP/1.1
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/copy/Documents/wallpaper.jpg?Path=/Images/beach.jpg HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
@@ -303,7 +304,7 @@ Content-Type: application/json
 
 ## POST /remote/nextcloud/:account/downstream/*path
 
-This route can be used to move a file from the NextCloud to the Cozy.
+This route can be used to move/copy a file from the NextCloud to the Cozy.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -311,6 +312,9 @@ The `*path` parameter is the path of the file on the NextCloud.
 
 The `To` parameter in the query-string must be given, as the ID of the
 directory on the Cozy where the file will be put.
+
+By default, the file will be moved, but using `Copy=true` in the query-string
+will makes a copy.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 
@@ -392,7 +396,7 @@ Content-Type: application/vnd.api+json
 
 ## POST /remote/nextcloud/:account/upstream/*path
 
-This route can be used to move a file from the Cozy to the NextCloud.
+This route can be used to move/copy a file from the Cozy to the NextCloud.
 
 The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
 
@@ -400,6 +404,9 @@ The `*path` parameter is the path of the file on the NextCloud.
 
 The `From` parameter in the query-string must be given, as the ID of the
 file on the Cozy that will be moved.
+
+By default, the file will be moved, but using `Copy=true` in the query-string
+will makes a copy.
 
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 

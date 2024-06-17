@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/nextcloud"
@@ -103,7 +104,7 @@ func nextcloudPut(c echo.Context) error {
 func nextcloudUpload(c echo.Context, nc *nextcloud.NextCloud, path string) error {
 	req := c.Request()
 	mime := req.Header.Get(echo.HeaderContentType)
-	if err := nc.Upload(path, mime, req.Body); err != nil {
+	if err := nc.Upload(path, mime, req.ContentLength, req.Body); err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return c.JSON(http.StatusCreated, echo.Map{"ok": true})
@@ -166,7 +167,9 @@ func nextcloudCopy(c echo.Context) error {
 
 	oldPath := c.Param("*")
 	newPath := oldPath
-	if newName := c.QueryParam("Name"); newName != "" {
+	if p := c.QueryParam("Path"); p != "" {
+		newPath = p
+	} else if newName := c.QueryParam("Name"); newName != "" {
 		newPath = filepath.Join(filepath.Dir(oldPath), newName)
 	} else {
 		ext := filepath.Ext(oldPath)
@@ -199,8 +202,13 @@ func nextcloudDownstream(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("missing To parameter"))
 	}
 
+	kind := nextcloud.MoveOperation
+	if isCopy, _ := strconv.ParseBool(c.QueryParam("Copy")); isCopy {
+		kind = nextcloud.CopyOperation
+	}
+
 	cozyMetadata, _ := files.CozyMetadataFromClaims(c, true)
-	f, err := nc.Downstream(path, to, cozyMetadata)
+	f, err := nc.Downstream(path, to, kind, cozyMetadata)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
@@ -226,7 +234,12 @@ func nextcloudUpstream(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("missing From parameter"))
 	}
 
-	if err := nc.Upstream(path, from); err != nil {
+	kind := nextcloud.MoveOperation
+	if isCopy, _ := strconv.ParseBool(c.QueryParam("Copy")); isCopy {
+		kind = nextcloud.CopyOperation
+	}
+
+	if err := nc.Upstream(path, from, kind); err != nil {
 		return wrapNextcloudErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)

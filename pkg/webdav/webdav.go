@@ -27,7 +27,7 @@ type Client struct {
 }
 
 func (c *Client) Mkcol(path string) error {
-	res, err := c.req("MKCOL", path, nil, nil)
+	res, err := c.req("MKCOL", path, 0, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (c *Client) Mkcol(path string) error {
 }
 
 func (c *Client) Delete(path string) error {
-	res, err := c.req("DELETE", path, nil, nil)
+	res, err := c.req("DELETE", path, 0, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (c *Client) Move(oldPath, newPath string) error {
 		"Destination": u.String(),
 		"Overwrite":   "F",
 	}
-	res, err := c.req("MOVE", oldPath, headers, nil)
+	res, err := c.req("MOVE", oldPath, 0, headers, nil)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (c *Client) Copy(oldPath, newPath string) error {
 		"Destination": u.String(),
 		"Overwrite":   "F",
 	}
-	res, err := c.req("COPY", oldPath, headers, nil)
+	res, err := c.req("COPY", oldPath, 0, headers, nil)
 	if err != nil {
 		return err
 	}
@@ -124,8 +124,13 @@ func (c *Client) Copy(oldPath, newPath string) error {
 	}
 }
 
-func (c *Client) Put(path string, headers map[string]string, body io.Reader) error {
-	res, err := c.req("PUT", path, headers, body)
+func (c *Client) Put(
+	path string,
+	contentLength int64,
+	headers map[string]string,
+	body io.Reader,
+) error {
+	res, err := c.req("PUT", path, contentLength, headers, body)
 	if err != nil {
 		return err
 	}
@@ -145,7 +150,7 @@ func (c *Client) Put(path string, headers map[string]string, body io.Reader) err
 }
 
 func (c *Client) Get(path string) (*Download, error) {
-	res, err := c.req("GET", path, nil, nil)
+	res, err := c.req("GET", path, 0, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +192,7 @@ func (c *Client) List(path string) ([]Item, error) {
 		"Depth":        "1",
 	}
 	payload := strings.NewReader(ListFilesPayload)
-	res, err := c.req("PROPFIND", path, headers, payload)
+	res, err := c.req("PROPFIND", path, 0, headers, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +305,12 @@ const ListFilesPayload = `<?xml version="1.0"?>
 </d:propfind>
 `
 
-func (c *Client) req(method, path string, headers map[string]string, body io.Reader) (*http.Response, error) {
+func (c *Client) req(
+	method, path string,
+	contentLength int64,
+	headers map[string]string,
+	body io.Reader,
+) (*http.Response, error) {
 	path = c.BasePath + fixSlashes(path)
 	u := url.URL{
 		Scheme: c.Scheme,
@@ -315,6 +325,9 @@ func (c *Client) req(method, path string, headers map[string]string, body io.Rea
 	req.Header.Set("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
 	for k, v := range headers {
 		req.Header.Set(k, v)
+	}
+	if contentLength > 0 {
+		req.ContentLength = contentLength
 	}
 	start := time.Now()
 	res, err := safehttp.ClientWithKeepAlive.Do(req)

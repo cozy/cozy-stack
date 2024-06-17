@@ -24,6 +24,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type OperationKind int
+
+const (
+	MoveOperation OperationKind = iota
+	CopyOperation
+)
+
 type File struct {
 	DocID     string `json:"id,omitempty"`
 	Type      string `json:"type"`
@@ -109,11 +116,11 @@ func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
 	return nc.webdav.Get(path)
 }
 
-func (nc *NextCloud) Upload(path, mime string, body io.Reader) error {
+func (nc *NextCloud) Upload(path, mime string, contentLength int64, body io.Reader) error {
 	headers := map[string]string{
 		echo.HeaderContentType: mime,
 	}
-	return nc.webdav.Put(path, headers, body)
+	return nc.webdav.Put(path, contentLength, headers, body)
 }
 
 func (nc *NextCloud) Mkdir(path string) error {
@@ -160,7 +167,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	return files, nil
 }
 
-func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
+func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
 	dl, err := nc.webdav.Get(path)
 	if err != nil {
 		return nil, err
@@ -201,11 +208,13 @@ func (nc *NextCloud) Downstream(path, dirID string, cozyMetadata *vfs.FilesCozyM
 		return nil, err
 	}
 
-	_ = nc.webdav.Delete(path)
+	if kind == MoveOperation {
+		_ = nc.webdav.Delete(path)
+	}
 	return doc, nil
 }
 
-func (nc *NextCloud) Upstream(path, from string) error {
+func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
 	fs := nc.inst.VFS()
 	doc, err := fs.FileByID(from)
 	if err != nil {
@@ -218,13 +227,14 @@ func (nc *NextCloud) Upstream(path, from string) error {
 	defer f.Close()
 
 	headers := map[string]string{
-		echo.HeaderContentType:   doc.Mime,
-		echo.HeaderContentLength: strconv.Itoa(int(doc.ByteSize)),
+		echo.HeaderContentType: doc.Mime,
 	}
-	if err := nc.webdav.Put(path, headers, f); err != nil {
+	if err := nc.webdav.Put(path, doc.ByteSize, headers, f); err != nil {
 		return err
 	}
-	_ = fs.DestroyFile(doc)
+	if kind == MoveOperation {
+		_ = fs.DestroyFile(doc)
+	}
 	return nil
 }
 
