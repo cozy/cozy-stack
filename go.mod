@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/leonelquinteros/gotext v1.6.0
+	github.com/leonelquinteros/gotext v1.6.1
 	github.com/mssola/user_agent v0.6.0
 	github.com/ncw/swift/v2 v2.0.2
 	github.com/nightlyone/lockfile v1.0.0
