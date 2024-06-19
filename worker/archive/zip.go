@@ -1,3 +1,4 @@
+// Package archive is for the archive worker, that can zip and unzip files.
 package archive
 
 import (
@@ -7,12 +8,13 @@ import (
 
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 )
 
 type zipMessage struct {
-	Files    map[string]string `json:"files"` // path -> fileID
-	DirID    string            `json:"dir_id"`
-	Filename string            `json:"filename"`
+	Files    map[string]interface{} `json:"files"` // path -> fileID | {id,page}
+	DirID    string                 `json:"dir_id"`
+	Filename string                 `json:"filename"`
 }
 
 // WorkerZip is a worker that creates zip archives.
@@ -25,7 +27,7 @@ func WorkerZip(ctx *job.TaskContext) error {
 	return createZip(fs, msg.Files, msg.DirID, msg.Filename)
 }
 
-func createZip(fs vfs.VFS, files map[string]string, dirID, filename string) error {
+func createZip(fs vfs.VFS, files map[string]interface{}, dirID, filename string) error {
 	now := time.Now()
 	zipDoc, err := vfs.NewFileDoc(filename, dirID, -1, nil, "application/zip", "zip", now, false, false, false, nil)
 	if err != nil {
@@ -38,8 +40,17 @@ func createZip(fs vfs.VFS, files map[string]string, dirID, filename string) erro
 		return err
 	}
 	w := zip.NewWriter(z)
-	for filePath, fileID := range files {
-		err = addFileToZip(fs, w, fileID, filePath)
+	for filePath, target := range files {
+		var fileID string
+		var page int64
+		switch target := target.(type) {
+		case string:
+			fileID = target
+		case map[string]interface{}:
+			fileID, _ = target["id"].(string)
+			page, _ = target["page"].(int64)
+		}
+		err = addFileToZip(fs, w, fileID, filePath, page)
 		if err != nil {
 			break
 		}
@@ -55,7 +66,7 @@ func createZip(fs vfs.VFS, files map[string]string, dirID, filename string) erro
 	return zerr
 }
 
-func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string) error {
+func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string, page int64) error {
 	file, err := fs.FileByID(fileID)
 	if err != nil {
 		return err
@@ -79,6 +90,15 @@ func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(f, fr)
+
+	if page <= 0 {
+		_, err = io.Copy(f, fr)
+		return err
+	}
+	extracted, err := config.PDF().ExtractPage(fr, int(page))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, extracted)
 	return err
 }

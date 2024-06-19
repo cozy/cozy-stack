@@ -174,15 +174,16 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 				return fmt.Errorf("Can't open file <%s>: %s", name, err)
 			}
 			defer f.Close()
+
 			if entry.Page <= 0 {
 				_, err = io.Copy(ze, f)
-			} else {
-				extracted, err := config.PDF().ExtractPage(f, entry.Page)
-				if err != nil {
-					return err
-				}
-				_, err = io.Copy(ze, extracted)
+				return err
 			}
+			extracted, err := config.PDF().ExtractPage(f, entry.Page)
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(ze, extracted)
 			return err
 		}, 0)
 		if err != nil {

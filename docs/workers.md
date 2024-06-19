@@ -144,6 +144,9 @@ creates a zip archive from files in the VFS. The options are:
 - `dir_id`: the directory identifier where the zip archive will be put
 - `filename`: the name of the zip archive.
 
+**Note:** it is possible to include only a page for a PDF file, by using an
+object with `id` and `page` instead of just the file identifier.
+
 ### Example
 
 ```json
@@ -153,7 +156,9 @@ creates a zip archive from files in the VFS. The options are:
         "selection/two.pdf": "36eb54c8-90fe-11e9-aeca-03ddc3acf91c",
         "selection/three.pdf": "37284586-90fe-11e9-be6d-179f72076e43",
         "selection/four.pdf": "37655462-90fe-11e9-9059-8739e3746720",
-        "selection/five.pdf": "379fedfc-90fe-11e9-849f-0bbe172eba5f"
+        "selection/five.pdf": "379fedfc-90fe-11e9-849f-0bbe172eba5f",
+        "selection/front.pdf": { "id": "49ca9e50-1074-013d-361a-18c04daba326", "page": 1 },
+        "selection/back.pdf":  { "id": "49ca9e50-1074-013d-361a-18c04daba326", "page": 2 }
     },
     "dir_id": "3657ce9c-90fe-11e9-b40b-33baf841bcb8",
     "filename": "selection.zip"
