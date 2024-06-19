@@ -1403,6 +1403,10 @@ sub-directories in the archive.
 It's possible to give a file by its id (in the `ids` array) or by its path (in
 the `files` array).
 
+For PDF files, it's possible to put in the archive a single page, with the
+`pages` argument: it's an array of objects, with `id` the file identifier of
+the PDF file, and `page` the page number (1 is the first page).
+
 The generated archive is temporary and is not persisted.
 
 #### Request
@@ -1423,6 +1427,9 @@ Content-Type: application/vnd.api+json
         "/Documents/bills",
         "/Documents/images/sunset.jpg",
         "/Documents/images/eiffel-tower.jpg"
+      ],
+      "pages": [
+        { "id": "3780caf0-104f-013d-3619-18c04daba326", "page": 1 }
       ]
     }
   }

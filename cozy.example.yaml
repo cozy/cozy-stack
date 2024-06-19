@@ -119,6 +119,9 @@ jobs:
   # path to the imagemagick convert binary
   # imagemagick_convert_cmd: convert
 
+  # path to the ghostscript binary
+  # ghostscript_cmd: gs
+
   # Specify whether the given list of jobs is an allowlist or blocklist. In case
   # of an allowlist, all jobs are deactivated by default and only the listed one
   # are activated.

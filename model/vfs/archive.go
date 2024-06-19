@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
@@ -23,9 +24,15 @@ type Archive struct {
 	Secret string   `json:"-"`
 	IDs    []string `json:"ids"`
 	Files  []string `json:"files"`
+	Pages  []Page   `json:"pages"`
 
 	// archiveEntries cache
 	entries []ArchiveEntry
+}
+
+type Page struct {
+	ID   string `json:"id"`
+	Page int    `json:"page"`
 }
 
 // ArchiveEntry is an utility struct to store a file or doc to be placed
@@ -34,6 +41,7 @@ type ArchiveEntry struct {
 	root string
 	Dir  *DirDoc
 	File *FileDoc
+	Page int
 }
 
 var plusEscaper = strings.NewReplacer("+", "%20")
@@ -66,9 +74,8 @@ func ContentDisposition(disposition, filename string) string {
 // GetEntries returns all files and folders in the archive as ArchiveEntry.
 func (a *Archive) GetEntries(fs VFS) ([]ArchiveEntry, error) {
 	if a.entries == nil {
-		n := len(a.IDs)
-		entries := make([]ArchiveEntry, n+len(a.Files))
-		for i, id := range a.IDs {
+		entries := make([]ArchiveEntry, 0, len(a.IDs)+len(a.Files)+len(a.Pages))
+		for _, id := range a.IDs {
 			d, f, err := fs.DirOrFileByID(id)
 			if err != nil {
 				return nil, err
@@ -82,22 +89,37 @@ func (a *Archive) GetEntries(fs VFS) ([]ArchiveEntry, error) {
 					return nil, err
 				}
 			}
-			entries[i] = ArchiveEntry{
+			entries = append(entries, ArchiveEntry{
 				root: root,
 				Dir:  d,
 				File: f,
-			}
+			})
 		}
-		for i, root := range a.Files {
+		for _, root := range a.Files {
 			d, f, err := fs.DirOrFileByPath(root)
 			if err != nil {
 				return nil, err
 			}
-			entries[n+i] = ArchiveEntry{
+			entries = append(entries, ArchiveEntry{
 				root: root,
 				Dir:  d,
 				File: f,
+			})
+		}
+		for _, page := range a.Pages {
+			f, err := fs.FileByID(page.ID)
+			if err != nil {
+				return nil, err
 			}
+			root, err := f.Path(fs)
+			if err != nil {
+				return nil, err
+			}
+			entries = append(entries, ArchiveEntry{
+				root: root,
+				File: f,
+				Page: page.Page,
+			})
 		}
 
 		a.entries = entries
@@ -140,6 +162,9 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 				Method:   zip.Deflate,
 				Modified: file.UpdatedAt,
 			}
+			if entry.Page >= 0 {
+				header.Name = addPageToName(header.Name, entry.Page)
+			}
 			ze, err := zw.CreateHeader(header)
 			if err != nil {
 				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
@@ -149,7 +174,15 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 				return fmt.Errorf("Can't open file <%s>: %s", name, err)
 			}
 			defer f.Close()
-			_, err = io.Copy(ze, f)
+			if entry.Page <= 0 {
+				_, err = io.Copy(ze, f)
+			} else {
+				extracted, err := config.PDF().ExtractPage(f, entry.Page)
+				if err != nil {
+					return err
+				}
+				_, err = io.Copy(ze, extracted)
+			}
 			return err
 		}, 0)
 		if err != nil {
@@ -189,3 +222,9 @@ func (a *Archive) SetID(_ string) {}
 
 // SetRev makes Archive a jsonapi.Object
 func (a *Archive) SetRev(_ string) {}
+
+func addPageToName(name string, page int) string {
+	ext := filepath.Ext(name)
+	basename := strings.TrimSuffix(name, ext)
+	return fmt.Sprintf("%s (%d)%s", basename, page, ext)
+}
