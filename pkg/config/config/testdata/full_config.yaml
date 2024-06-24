@@ -133,8 +133,6 @@ flagship:
 
 notifications:
   development: true
-  fcm_server: http://some-server
-  android_api_key: some-api-key
   ios_certificate_key_path: cert-key-path
   ios_certificate_password: cert-password
   ios_key_id: key-id
