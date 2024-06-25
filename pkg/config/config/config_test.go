@@ -69,8 +69,6 @@ func TestConfigUnmarshal(t *testing.T) {
 	// Notifications
 	assert.EqualValues(t, Notifications{
 		Development:            true,
-		FCMServer:              "http://some-server",
-		AndroidAPIKey:          "some-api-key",
 		IOSCertificateKeyPath:  "cert-key-path",
 		IOSCertificatePassword: "cert-password",
 		IOSKeyID:               "key-id",

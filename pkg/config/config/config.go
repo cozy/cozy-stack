@@ -236,9 +236,6 @@ type Notifications struct {
 
 	FCMCredentialsFile string
 
-	AndroidAPIKey string
-	FCMServer     string
-
 	IOSCertificateKeyPath  string
 	IOSCertificatePassword string
 	IOSKeyID               string
@@ -858,9 +855,6 @@ func UseViper(v *viper.Viper) error {
 			Development: v.GetBool("notifications.development"),
 
 			FCMCredentialsFile: v.GetString("notifications.fcm_credentials_file"),
-
-			FCMServer:     v.GetString("notifications.fcm_server"),
-			AndroidAPIKey: v.GetString("notifications.android_api_key"),
 
 			IOSCertificateKeyPath:  v.GetString("notifications.ios_certificate_key_path"),
 			IOSCertificatePassword: v.GetString("notifications.ios_certificate_password"),

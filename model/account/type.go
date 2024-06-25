@@ -88,7 +88,6 @@ type AccountType struct {
 	Secret interface{} `json:"secret,omitempty"`
 
 	// For sending notifications via Firebase Cloud Messaging
-	AndroidAPIKey  string          `json:"android_api_key"`
 	FCMCredentials json.RawMessage `json:"fcm_credentials"`
 }
 

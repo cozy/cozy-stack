@@ -28,8 +28,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"google.golang.org/api/option"
 
-	fcm "github.com/appleboy/go-fcm"
-
 	apns "github.com/sideshow/apns2"
 	apns_cert "github.com/sideshow/apns2/certificate"
 	apns_payload "github.com/sideshow/apns2/payload"
@@ -37,10 +35,9 @@ import (
 )
 
 var (
-	fcmClient       *messaging.Client
-	legacyFCMClient *fcm.Client
-	iosClient       *apns.Client
-	huaweiClient    *huawei.Client
+	fcmClient    *messaging.Client
+	iosClient    *apns.Client
+	huaweiClient *huawei.Client
 )
 
 func init() {
@@ -73,19 +70,6 @@ func Init() (err error) {
 		}
 		logger.WithNamespace("push").
 			Infof("Initialized FCM client with credentials file")
-	}
-
-	if conf.AndroidAPIKey != "" {
-		if conf.FCMServer != "" {
-			legacyFCMClient, err = fcm.NewClient(conf.AndroidAPIKey, fcm.WithEndpoint(conf.FCMServer))
-		} else {
-			legacyFCMClient, err = fcm.NewClient(conf.AndroidAPIKey)
-		}
-		logger.WithNamespace("push").Infof("Initialized FCM client with Android API Key")
-		if err != nil {
-			logger.WithNamespace("push").Warnf("%s", err)
-			return
-		}
 	}
 
 	if conf.IOSCertificateKeyPath != "" {
@@ -241,7 +225,8 @@ func pushToFirebase(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessa
 	client := getFirebaseClient(slug, ctx.Instance.ContextName)
 
 	if client == nil {
-		return pushToLegacyFirebase(ctx, c, msg)
+		ctx.Logger().Warn("Could not send android notification: not configured")
+		return nil
 	}
 
 	var priority string
@@ -289,67 +274,6 @@ func pushToFirebase(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessa
 	return nil
 }
 
-func pushToLegacyFirebase(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
-	slug := msg.Slug()
-	if c.Flagship {
-		slug = ""
-	}
-
-	client := getLegacyFirebaseClient(slug, ctx.Instance.ContextName)
-
-	if client == nil {
-		ctx.Logger().Warn("Could not send android notification: not configured")
-		return nil
-	}
-
-	var priority string
-	if msg.Priority == "high" {
-		priority = "high"
-	}
-
-	var hashedSource []byte
-	if msg.Collapsible {
-		hashedSource = hashSource(msg.Source)
-	} else {
-		hashedSource = hashSource(msg.Source + msg.NotificationID)
-	}
-
-	notification := &fcm.Message{
-		To:               c.NotificationDeviceToken,
-		Priority:         priority,
-		ContentAvailable: true,
-		Notification: &fcm.Notification{
-			Sound: msg.Sound,
-			Title: msg.Title,
-			Body:  msg.Message,
-		},
-		Data: prepareLegacyAndroidData(msg, hashedSource),
-	}
-
-	if msg.Collapsible {
-		notification.CollapseKey = hex.EncodeToString(hashedSource)
-	}
-
-	res, err := client.Send(notification)
-	if err != nil {
-		ctx.Logger().Warnf("Error during fcm send: %s", err)
-		return err
-	}
-	if res.Failure == 0 {
-		return nil
-	}
-
-	for _, result := range res.Results {
-		if result.Unregistered() {
-			_ = c.Delete(ctx.Instance)
-		}
-		if err = result.Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func prepareAndroidData(msg *center.PushMessage, hashedSource []byte) map[string]string {
 	// notID should be an integer, we take the first 32bits of the hashed source
 	// value.
@@ -367,27 +291,6 @@ func prepareAndroidData(msg *center.PushMessage, hashedSource []byte) map[string
 	}
 	for k, v := range msg.Data {
 		data[k] = fmt.Sprintf("%v", v)
-	}
-	return data
-}
-
-func prepareLegacyAndroidData(msg *center.PushMessage, hashedSource []byte) map[string]interface{} {
-	// notID should be an integer, we take the first 32bits of the hashed source
-	// value.
-	notID := int32(binary.BigEndian.Uint32(hashedSource[:4]))
-	if notID < 0 {
-		notID = -notID
-	}
-
-	data := map[string]interface{}{
-		// Fields required by phonegap-plugin-push
-		// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
-		"notId": notID,
-		"title": msg.Title,
-		"body":  msg.Message,
-	}
-	for k, v := range msg.Data {
-		data[k] = v
 	}
 	return data
 }
@@ -411,21 +314,6 @@ func getFirebaseClient(slug, contextName string) *messaging.Client {
 		return client
 	}
 	return fcmClient
-}
-
-func getLegacyFirebaseClient(slug, contextName string) *fcm.Client {
-	if slug == "" {
-		return legacyFCMClient
-	}
-	typ, err := account.TypeInfo(slug, contextName)
-	if err == nil && typ.AndroidAPIKey != "" {
-		client, err := fcm.NewClient(typ.AndroidAPIKey)
-		if err != nil {
-			return nil
-		}
-		return client
-	}
-	return legacyFCMClient
 }
 
 func pushToAPNS(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage) error {
@@ -482,7 +370,7 @@ func pushToHuawei(ctx *job.TaskContext, c *oauth.Client, msg *center.PushMessage
 	} else {
 		hashedSource = hashSource(msg.Source + msg.NotificationID)
 	}
-	data := prepareLegacyAndroidData(msg, hashedSource)
+	data := prepareHuaweiData(msg, hashedSource)
 
 	notification := huawei.NewNotification(msg.Title, msg.Message, c.NotificationDeviceToken, data)
 	ctx.Logger().Infof("Huawei Push Kit send: %#v", notification)
@@ -500,6 +388,27 @@ func hashSource(source string) []byte {
 	h := md5.New()
 	_, _ = h.Write([]byte(source))
 	return h.Sum(nil)
+}
+
+func prepareHuaweiData(msg *center.PushMessage, hashedSource []byte) map[string]interface{} {
+	// notID should be an integer, we take the first 32bits of the hashed source
+	// value.
+	notID := int32(binary.BigEndian.Uint32(hashedSource[:4]))
+	if notID < 0 {
+		notID = -notID
+	}
+
+	data := map[string]interface{}{
+		// Fields required by phonegap-plugin-push
+		// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
+		"notId": notID,
+		"title": msg.Title,
+		"body":  msg.Message,
+	}
+	for k, v := range msg.Data {
+		data[k] = v
+	}
+	return data
 }
 
 func sendFallbackMail(inst *instance.Instance, email *mail.Options) {
