@@ -243,6 +243,7 @@ func (c *Client) List(path string) ([]Item, error) {
 				ID:           props.FileID,
 				Type:         "directory",
 				Name:         props.Name,
+				TrashName:    props.TrashName,
 				LastModified: props.LastModified,
 				ETag:         props.ETag,
 			}
@@ -264,6 +265,7 @@ type Item struct {
 	ID           string
 	Type         string
 	Name         string
+	TrashName    string
 	Size         uint64
 	ContentType  string
 	LastModified string
@@ -284,6 +286,7 @@ type props struct {
 	Status       string   `xml:"status"`
 	Type         xml.Name `xml:"prop>resourcetype>collection"`
 	Name         string   `xml:"prop>displayname"`
+	TrashName    string   `xml:"prop>trashbin-filename"`
 	Size         string   `xml:"prop>getcontentlength"`
 	ContentType  string   `xml:"prop>getcontenttype"`
 	LastModified string   `xml:"prop>getlastmodified"`
@@ -301,6 +304,7 @@ const ListFilesPayload = `<?xml version="1.0"?>
         <d:getcontentlength />
         <d:getcontenttype />
         <oc:fileid />
+        <nc:trashbin-filename />
   </d:prop>
 </d:propfind>
 `

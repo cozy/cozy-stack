@@ -62,6 +62,7 @@ var _ jsonapi.Object = (*File)(nil)
 type NextCloud struct {
 	inst      *instance.Instance
 	accountID string
+	userID    string
 	webdav    *webdav.Client
 }
 
@@ -99,6 +100,7 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 		Host:     u.Host,
 		Username: username,
 		Password: password,
+		BasePath: "/remote.php/dav",
 		Logger:   logger,
 	}
 	nc := &NextCloud{
@@ -106,41 +108,46 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 		accountID: accountID,
 		webdav:    webdav,
 	}
-	if err := nc.fillBasePath(&doc); err != nil {
+	if err := nc.fillUserID(&doc); err != nil {
 		return nil, err
 	}
 	return nc, nil
 }
 
 func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
-	return nc.webdav.Get(path)
+	return nc.webdav.Get("/files/" + nc.userID + "/" + path)
 }
 
 func (nc *NextCloud) Upload(path, mime string, contentLength int64, body io.Reader) error {
 	headers := map[string]string{
 		echo.HeaderContentType: mime,
 	}
+	path = "/files/" + nc.userID + "/" + path
 	return nc.webdav.Put(path, contentLength, headers, body)
 }
 
 func (nc *NextCloud) Mkdir(path string) error {
-	return nc.webdav.Mkcol(path)
+	return nc.webdav.Mkcol("/files/" + nc.userID + "/" + path)
 }
 
 func (nc *NextCloud) Delete(path string) error {
-	return nc.webdav.Delete(path)
+	return nc.webdav.Delete("/files/" + nc.userID + "/" + path)
 }
 
 func (nc *NextCloud) Move(oldPath, newPath string) error {
+	oldPath = "/files/" + nc.userID + "/" + oldPath
+	newPath = "/files/" + nc.userID + "/" + newPath
 	return nc.webdav.Move(oldPath, newPath)
 }
 
 func (nc *NextCloud) Copy(oldPath, newPath string) error {
+	oldPath = "/files/" + nc.userID + "/" + oldPath
+	newPath = "/files/" + nc.userID + "/" + newPath
 	return nc.webdav.Copy(oldPath, newPath)
 }
 
 func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
-	items, err := nc.webdav.List(path)
+	items, err := nc.webdav.List("/files/" + nc.userID + "/" + path)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +174,36 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	return files, nil
 }
 
+func (nc *NextCloud) ListTrash(path string) ([]jsonapi.Object, error) {
+	items, err := nc.webdav.List("/trashbin/" + nc.userID + "/trash/" + path)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []jsonapi.Object
+	for _, item := range items {
+		var mime, class string
+		if item.Type == "file" {
+			mime, class = vfs.ExtractMimeAndClassFromFilename(item.TrashName)
+		}
+		file := &File{
+			DocID:     item.ID,
+			Type:      item.Type,
+			Name:      item.TrashName,
+			Size:      item.Size,
+			Mime:      mime,
+			Class:     class,
+			UpdatedAt: item.LastModified,
+			ETag:      item.ETag,
+			url:       nc.buildTrashURL(item, path),
+		}
+		files = append(files, file)
+	}
+	return files, nil
+}
+
 func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
+	path = "/files/" + nc.userID + "/" + path
 	dl, err := nc.webdav.Get(path)
 	if err != nil {
 		return nil, err
@@ -215,6 +251,7 @@ func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMeta
 }
 
 func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
+	path = "/files/" + nc.userID + "/" + path
 	fs := nc.inst.VFS()
 	doc, err := fs.FileByID(from)
 	if err != nil {
@@ -238,10 +275,10 @@ func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
 	return nil
 }
 
-func (nc *NextCloud) fillBasePath(accountDoc *couchdb.JSONDoc) error {
+func (nc *NextCloud) fillUserID(accountDoc *couchdb.JSONDoc) error {
 	userID, _ := accountDoc.M["webdav_user_id"].(string)
 	if userID != "" {
-		nc.webdav.BasePath = "/remote.php/dav/files/" + userID
+		nc.userID = userID
 		return nil
 	}
 
@@ -249,7 +286,7 @@ func (nc *NextCloud) fillBasePath(accountDoc *couchdb.JSONDoc) error {
 	if err != nil {
 		return err
 	}
-	nc.webdav.BasePath = "/remote.php/dav/files/" + userID
+	nc.userID = userID
 
 	// Try to persist the userID to avoid fetching it for every WebDAV request
 	accountDoc.M["webdav_user_id"] = userID
@@ -264,6 +301,16 @@ func (nc *NextCloud) buildURL(item webdav.Item, path string) string {
 		Scheme:   nc.webdav.Scheme,
 		Host:     nc.webdav.Host,
 		Path:     "/apps/files/files/" + item.ID,
+		RawQuery: "dir=/" + path,
+	}
+	return u.String()
+}
+
+func (nc *NextCloud) buildTrashURL(item webdav.Item, path string) string {
+	u := &url.URL{
+		Scheme:   nc.webdav.Scheme,
+		Host:     nc.webdav.Host,
+		Path:     "/apps/files/trashbin/" + item.ID,
 		RawQuery: "dir=/" + path,
 	}
 	return u.String()

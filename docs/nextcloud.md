@@ -430,3 +430,44 @@ HTTP/1.1 204 No Content
 - 400 Bad Request, when the account is not configured for NextCloud
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file is not found on the Cozy
+
+## GET /remote/nextcloud/:account/trash/*
+
+This route can be used to list the files and directories inside the trashbin
+of NextCloud.
+
+### Request (list)
+
+```http
+GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/ HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response (list)
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.remote.nextcloud.files",
+      "id": "613281",
+      "attributes": {
+        "type": "directory",
+        "name": "Old",
+        "updated_at": "Tue, 25 Jun 2024 14:31:44 GMT",
+        "etag": "1719326384"
+      },
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/trashbin/613281?dir=/Old"
+      }
+    }
+  ]
+}
+```

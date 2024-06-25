@@ -23,9 +23,29 @@ import (
 	"github.com/ncw/swift/v2"
 )
 
+func nextcloudGetTrash(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	path := c.Param("*")
+	files, err := nc.ListTrash(path)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return jsonapi.DataList(c, http.StatusOK, files, nil)
+}
+
 func nextcloudGet(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Files); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
 	}
 
@@ -247,6 +267,7 @@ func nextcloudUpstream(c echo.Context) error {
 
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
+	group.GET("/trash/*", nextcloudGetTrash)
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
 	group.DELETE("/*", nextcloudDelete)
