@@ -29,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/pdf"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -116,6 +117,7 @@ type Config struct {
 	AuthorizedForConfirm []string
 
 	Avatars                *avatar.Service
+	PDF                    *pdf.Service
 	Fs                     Fs
 	Keyring                keyring.Keyring
 	CouchDB                CouchDB
@@ -376,6 +378,11 @@ func Avatars() *avatar.Service {
 	return config.Avatars
 }
 
+// PDF return the configured PDF service.
+func PDF() *pdf.Service {
+	return config.PDF
+}
+
 // GetKeyring returns the configured instance of [keyring.Keyring]
 func GetKeyring() keyring.Keyring {
 	return config.Keyring
@@ -485,6 +492,7 @@ func Setup(cfgFile string) (err error) {
 
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
+	v.SetDefault("jobs.ghostscript_cmd", "gs")
 	v.SetDefault("jobs.imagemagick_convert_cmd", "convert")
 	v.SetDefault("jobs.defaultDurationToKeep", "2W")
 	v.SetDefault("assets_polling_disabled", false)
@@ -749,6 +757,7 @@ func UseViper(v *viper.Viper) error {
 
 	cacheStorage := cache.New(cacheRedis)
 	avatars := avatar.NewService(cacheStorage, v.GetString("jobs.imagemagick_convert_cmd"))
+	pdfService := pdf.NewService(v.GetString("jobs.ghostscript_cmd"))
 
 	// Setup keyring
 	var keyringCfg keyring.Config
@@ -823,6 +832,7 @@ func UseViper(v *viper.Viper) error {
 		RemoteAssets: v.GetStringMapString("remote_assets"),
 
 		Avatars: avatars,
+		PDF:     pdfService,
 		Keyring: keyring,
 		Fs: Fs{
 			URL:                   fsURL,

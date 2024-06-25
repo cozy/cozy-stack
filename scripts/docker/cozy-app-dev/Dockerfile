@@ -45,6 +45,7 @@ RUN set -eux; apt-get update \
     openssl \
     fonts-lato \
     imagemagick \
+    ghostscript \
     git \
   && curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor > /usr/share/keyrings/couchdb-archive-keyring.gpg \
   && echo "deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ bullseye main" > /etc/apt/sources.list.d/couchdb.list \

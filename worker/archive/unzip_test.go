@@ -87,7 +87,7 @@ func Test_archive(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, file.Close())
 
-		files := map[string]string{
+		files := map[string]interface{}{
 			"wet-cozy.jpg": one.ID(),
 			"hello.txt":    two.ID(),
 		}
