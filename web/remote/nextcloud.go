@@ -265,6 +265,25 @@ func nextcloudUpstream(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func nextcloudRestore(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	path := c.Param("*")
+	if err := nc.Restore(path); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/trash/*", nextcloudGetTrash)
@@ -275,6 +294,7 @@ func nextcloudRoutes(router *echo.Group) {
 	group.POST("/copy/*", nextcloudCopy)
 	group.POST("/downstream/*", nextcloudDownstream)
 	group.POST("/upstream/*", nextcloudUpstream)
+	group.POST("/restore/*", nextcloudRestore)
 }
 
 func wrapNextcloudErrors(err error) error {

@@ -68,12 +68,11 @@ func (c *Client) Move(oldPath, newPath string) error {
 	u := url.URL{
 		Scheme: c.Scheme,
 		Host:   c.Host,
-		User:   url.UserPassword(c.Username, c.Password),
 		Path:   c.BasePath + fixSlashes(newPath),
 	}
 	headers := map[string]string{
 		"Destination": u.String(),
-		"Overwrite":   "F",
+		"Overwrite":   "T",
 	}
 	res, err := c.req("MOVE", oldPath, 0, headers, nil)
 	if err != nil {
@@ -98,7 +97,6 @@ func (c *Client) Copy(oldPath, newPath string) error {
 	u := url.URL{
 		Scheme: c.Scheme,
 		Host:   c.Host,
-		User:   url.UserPassword(c.Username, c.Password),
 		Path:   c.BasePath + fixSlashes(newPath),
 	}
 	headers := map[string]string{

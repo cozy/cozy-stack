@@ -471,3 +471,42 @@ Content-Type: application/vnd.api+json
   ]
 }
 ```
+
+#### Status codes
+
+- 200 OK, for a success
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the directory is not found on the NextCloud
+
+## POST /remote/nextcloud/:account/restore/*path
+
+This route can be used to restore a file/directory from the trashbin on the
+NextCloud.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/restore/Old HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been restored
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+- 409 Conflict, when a directory or file already exists where the file/directory should be restored on the NextCloud.
