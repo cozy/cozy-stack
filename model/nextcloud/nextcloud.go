@@ -152,6 +152,10 @@ func (nc *NextCloud) Restore(path string) error {
 	return nc.webdav.Move(path, dst)
 }
 
+func (nc *NextCloud) DeleteTrash(path string) error {
+	return nc.webdav.Delete("/trashbin/" + nc.userID + "/" + path)
+}
+
 func (nc *NextCloud) EmptyTrash() error {
 	return nc.webdav.Delete("/trashbin/" + nc.userID + "/trash")
 }

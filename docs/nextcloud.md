@@ -511,6 +511,31 @@ HTTP/1.1 204 No Content
 - 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
 - 409 Conflict, when a directory or file already exists where the file/directory should be restored on the NextCloud.
 
+## DELETE /remote/nextcloud/:account/trash/*
+
+This route can be used to delete a file in the trash.
+
+### Request
+
+```http
+DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/document-v1.docx HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been put in the trash
+- 400 Bad Request, when the account is not configured for NextCloud, or the `To` parameter is missing
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+
 ## DELETE /remote/nextcloud/:account/trash
 
 This route can be used to empty the trash bin on NextCloud.
