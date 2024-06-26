@@ -43,6 +43,24 @@ func nextcloudGetTrash(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, files, nil)
 }
 
+func nextcloudEmptyTrash(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	if err := nc.EmptyTrash(); err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func nextcloudGet(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
@@ -287,6 +305,7 @@ func nextcloudRestore(c echo.Context) error {
 func nextcloudRoutes(router *echo.Group) {
 	group := router.Group("/nextcloud/:account")
 	group.GET("/trash/*", nextcloudGetTrash)
+	group.DELETE("/trash", nextcloudEmptyTrash)
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
 	group.DELETE("/*", nextcloudDelete)
