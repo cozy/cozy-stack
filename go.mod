@@ -7,7 +7,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/adrg/xdg v0.4.0
 	github.com/andybalholm/brotli v1.1.0
-	github.com/appleboy/go-fcm v0.1.6
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
 	github.com/cozy/goexif2 v1.3.1
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
@@ -48,7 +47,7 @@ require (
 	github.com/ugorji/go/codec v1.2.12
 	github.com/yuin/goldmark v1.7.3
 	golang.org/x/crypto v0.24.0
-	golang.org/x/image v0.16.0
+	golang.org/x/image v0.18.0
 	golang.org/x/net v0.26.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.7.0
