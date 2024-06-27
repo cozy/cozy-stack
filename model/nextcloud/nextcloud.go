@@ -35,6 +35,7 @@ type File struct {
 	DocID     string `json:"id,omitempty"`
 	Type      string `json:"type"`
 	Name      string `json:"name"`
+	Path      string `json:"path"`
 	Size      uint64 `json:"size,omitempty"`
 	Mime      string `json:"mime,omitempty"`
 	Class     string `json:"class,omitempty"`
@@ -176,6 +177,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 			DocID:     item.ID,
 			Type:      item.Type,
 			Name:      item.Name,
+			Path:      "/" + filepath.Join(path, filepath.Base(item.Href)),
 			Size:      item.Size,
 			Mime:      mime,
 			Class:     class,
@@ -189,7 +191,8 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 }
 
 func (nc *NextCloud) ListTrash(path string) ([]jsonapi.Object, error) {
-	items, err := nc.webdav.List("/trashbin/" + nc.userID + "/trash/" + path)
+	path = "/trash/" + path
+	items, err := nc.webdav.List("/trashbin/" + nc.userID + path)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +207,7 @@ func (nc *NextCloud) ListTrash(path string) ([]jsonapi.Object, error) {
 			DocID:     item.ID,
 			Type:      item.Type,
 			Name:      item.TrashName,
+			Path:      filepath.Join(path, filepath.Base(item.Href)),
 			Size:      item.Size,
 			Mime:      mime,
 			Class:     class,

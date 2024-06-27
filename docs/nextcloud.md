@@ -45,6 +45,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Images",
+        "path": "/Documents/Images",
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c4b91\""
       },
@@ -59,6 +60,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "file",
         "name": "BugBounty.pdf",
+        "path": "/Documents/BugBounty.pdf",
         "size": 2947,
         "mime": "application/pdf",
         "class": "pdf",
@@ -76,6 +78,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Music",
+        "name": "/Documents/Music",
         "updated_at": "Thu, 02 May 2024 09:28:37 GMT",
         "etag": "\"66335cc55204b\""
       },
@@ -90,6 +93,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Video",
+        "path": "/Documents/Video",
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c2318\""
       },
@@ -460,6 +464,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Old",
+        "path": "/trash/Old.d93571568",
         "updated_at": "Tue, 25 Jun 2024 14:31:44 GMT",
         "etag": "1719326384"
       },
@@ -492,7 +497,7 @@ The `*path` parameter is the path of the file on the NextCloud.
 ### Request
 
 ```http
-POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/restore/Old HTTP/1.1
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/restore/trash/Old.d93571568 HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
@@ -518,7 +523,7 @@ This route can be used to delete a file in the trash.
 ### Request
 
 ```http
-DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/document-v1.docx HTTP/1.1
+DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/document-v1.docx.d64283654 HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```

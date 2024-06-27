@@ -240,6 +240,7 @@ func (c *Client) List(path string) ([]Item, error) {
 			item := Item{
 				ID:           props.FileID,
 				Type:         "directory",
+				Href:         href,
 				Name:         props.Name,
 				TrashName:    props.TrashName,
 				LastModified: props.LastModified,
@@ -262,6 +263,7 @@ func (c *Client) List(path string) ([]Item, error) {
 type Item struct {
 	ID           string
 	Type         string
+	Href         string
 	Name         string
 	TrashName    string
 	Size         uint64
