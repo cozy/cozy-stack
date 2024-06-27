@@ -905,6 +905,9 @@ Download the file content.
 By default the `content-disposition` will be `inline`, but it will be
 `attachment` if the query string contains the parameter `Dl=1`
 
+For a PDF file, it's possible to get only a single page by using the `Page`
+parameter in the query-string (1 is the first page).
+
 #### Request
 
 ```http
@@ -928,6 +931,9 @@ Download the file content from its path.
 
 By default the `content-disposition` will be `inline`, but it will be
 `attachment` if the query string contains the parameter `Dl=1`
+
+For a PDF file, it's possible to get only a single page by using the `Page`
+parameter in the query-string (1 is the first page).
 
 #### Request
 

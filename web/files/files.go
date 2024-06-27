@@ -905,7 +905,16 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
+
+	if page := c.QueryParam("Page"); page != "" {
+		p, errp := strconv.Atoi(page)
+		if errp != nil {
+			return jsonapi.InvalidParameter("Page", errp)
+		}
+		err = vfs.ServePDFPage(instance.VFS(), doc, disposition, p, c.Request(), c.Response())
+	} else {
+		err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
+	}
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1115,7 +1124,16 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	} else if !checkPermission {
 		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
+
+	if page := c.QueryParam("Page"); page != "" {
+		p, errp := strconv.Atoi(page)
+		if errp != nil {
+			return jsonapi.InvalidParameter("Page", errp)
+		}
+		err = vfs.ServePDFPage(instance.VFS(), doc, disposition, p, c.Request(), c.Response())
+	} else {
+		err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
+	}
 	if err != nil {
 		return WrapVfsError(err)
 	}
