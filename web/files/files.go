@@ -1147,7 +1147,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, archive); err != nil {
 		return err
 	}
-	if len(archive.Files) == 0 && len(archive.IDs) == 0 {
+	if len(archive.Files) == 0 && len(archive.IDs) == 0 && len(archive.Pages) == 0 {
 		return c.JSON(http.StatusBadRequest, "Can't create an archive with no files")
 	}
 	if strings.Contains(archive.Name, "/") {
