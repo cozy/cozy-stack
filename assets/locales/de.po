@@ -25,7 +25,7 @@ msgid "Tree Notes"
 msgstr "Notizen"
 
 msgid "Tree Shared Drives"
-msgstr "Shared drives"
+msgstr "Drives"
 
 msgid "Tree Shared with me"
 msgstr "Posteingang der Freigaben"

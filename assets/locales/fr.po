@@ -30,7 +30,7 @@ msgid "Tree Notes"
 msgstr "Notes"
 
 msgid "Tree Shared Drives"
-msgstr "Drives partagés"
+msgstr "Drives"
 
 msgid "Tree Shared with me"
 msgstr "Partages reçus"
