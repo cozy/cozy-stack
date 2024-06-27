@@ -42,13 +42,14 @@ func createZip(fs vfs.VFS, files map[string]interface{}, dirID, filename string)
 	w := zip.NewWriter(z)
 	for filePath, target := range files {
 		var fileID string
-		var page int64
+		var page int
 		switch target := target.(type) {
 		case string:
 			fileID = target
 		case map[string]interface{}:
 			fileID, _ = target["id"].(string)
-			page, _ = target["page"].(int64)
+			page64, _ := target["page"].(float64)
+			page = int(page64)
 		}
 		err = addFileToZip(fs, w, fileID, filePath, page)
 		if err != nil {
@@ -66,7 +67,7 @@ func createZip(fs vfs.VFS, files map[string]interface{}, dirID, filename string)
 	return zerr
 }
 
-func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string, page int64) error {
+func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string, page int) error {
 	file, err := fs.FileByID(fileID)
 	if err != nil {
 		return err
@@ -95,7 +96,7 @@ func addFileToZip(fs vfs.VFS, w *zip.Writer, fileID, filePath string, page int64
 		_, err = io.Copy(f, fr)
 		return err
 	}
-	extracted, err := config.PDF().ExtractPage(fr, int(page))
+	extracted, err := config.PDF().ExtractPage(fr, page)
 	if err != nil {
 		return err
 	}
