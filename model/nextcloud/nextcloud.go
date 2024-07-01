@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -321,6 +322,12 @@ func (nc *NextCloud) buildURL(item webdav.Item, path string) string {
 		Path:     "/apps/files/files/" + item.ID,
 		RawQuery: "dir=/" + path,
 	}
+	if item.Type == "directory" {
+		if !strings.HasSuffix(u.RawQuery, "/") {
+			u.RawQuery += "/"
+		}
+		u.RawQuery += item.Name
+	}
 	return u.String()
 }
 
@@ -329,7 +336,13 @@ func (nc *NextCloud) buildTrashedURL(item webdav.Item, path string) string {
 		Scheme:   nc.webdav.Scheme,
 		Host:     nc.webdav.Host,
 		Path:     "/apps/files/trashbin/" + item.ID,
-		RawQuery: "dir=/" + path,
+		RawQuery: "dir=" + strings.TrimPrefix(path, "/trash"),
+	}
+	if item.Type == "directory" {
+		if !strings.HasSuffix(u.RawQuery, "/") {
+			u.RawQuery += "/"
+		}
+		u.RawQuery += item.TrashedName
 	}
 	return u.String()
 }
