@@ -190,7 +190,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 	return files, nil
 }
 
-func (nc *NextCloud) ListTrash(path string) ([]jsonapi.Object, error) {
+func (nc *NextCloud) ListTrashed(path string) ([]jsonapi.Object, error) {
 	path = "/trash/" + path
 	items, err := nc.webdav.List("/trashbin/" + nc.userID + path)
 	if err != nil {
@@ -201,19 +201,19 @@ func (nc *NextCloud) ListTrash(path string) ([]jsonapi.Object, error) {
 	for _, item := range items {
 		var mime, class string
 		if item.Type == "file" {
-			mime, class = vfs.ExtractMimeAndClassFromFilename(item.TrashName)
+			mime, class = vfs.ExtractMimeAndClassFromFilename(item.TrashedName)
 		}
 		file := &File{
 			DocID:     item.ID,
 			Type:      item.Type,
-			Name:      item.TrashName,
+			Name:      item.TrashedName,
 			Path:      filepath.Join(path, filepath.Base(item.Href)),
 			Size:      item.Size,
 			Mime:      mime,
 			Class:     class,
 			UpdatedAt: item.LastModified,
 			ETag:      item.ETag,
-			url:       nc.buildTrashURL(item, path),
+			url:       nc.buildTrashedURL(item, path),
 		}
 		files = append(files, file)
 	}
@@ -324,7 +324,7 @@ func (nc *NextCloud) buildURL(item webdav.Item, path string) string {
 	return u.String()
 }
 
-func (nc *NextCloud) buildTrashURL(item webdav.Item, path string) string {
+func (nc *NextCloud) buildTrashedURL(item webdav.Item, path string) string {
 	u := &url.URL{
 		Scheme:   nc.webdav.Scheme,
 		Host:     nc.webdav.Host,

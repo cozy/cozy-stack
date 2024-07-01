@@ -36,7 +36,7 @@ func nextcloudGetTrash(c echo.Context) error {
 	}
 
 	path := c.Param("*")
-	files, err := nc.ListTrash(path)
+	files, err := nc.ListTrashed(path)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}

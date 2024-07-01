@@ -242,7 +242,7 @@ func (c *Client) List(path string) ([]Item, error) {
 				Type:         "directory",
 				Href:         href,
 				Name:         props.Name,
-				TrashName:    props.TrashName,
+				TrashedName:  props.TrashedName,
 				LastModified: props.LastModified,
 				ETag:         props.ETag,
 			}
@@ -265,7 +265,7 @@ type Item struct {
 	Type         string
 	Href         string
 	Name         string
-	TrashName    string
+	TrashedName  string
 	Size         uint64
 	ContentType  string
 	LastModified string
@@ -286,7 +286,7 @@ type props struct {
 	Status       string   `xml:"status"`
 	Type         xml.Name `xml:"prop>resourcetype>collection"`
 	Name         string   `xml:"prop>displayname"`
-	TrashName    string   `xml:"prop>trashbin-filename"`
+	TrashedName  string   `xml:"prop>trashbin-filename"`
 	Size         string   `xml:"prop>getcontentlength"`
 	ContentType  string   `xml:"prop>getcontenttype"`
 	LastModified string   `xml:"prop>getlastmodified"`
