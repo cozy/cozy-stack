@@ -9,7 +9,8 @@ cozy-stack fix redis [flags]
 ### Options
 
 ```
-  -h, --help   help for redis
+      --force   Do not ask for confirmation before fixing redis on all instances
+  -h, --help    help for redis
 ```
 
 ### Options inherited from parent commands

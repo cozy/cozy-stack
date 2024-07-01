@@ -2107,6 +2107,8 @@ _cozy-stack_fix_redis()
     flags_with_completion=()
     flags_completion=()
 
+    flags+=("--force")
+    local_nonpersistent_flags+=("--force")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
