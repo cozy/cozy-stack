@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -62,6 +63,11 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 			}
 			m := &s.Members[i]
 			g.Go(func() error {
+				defer func() {
+					if r := recover(); r != nil {
+						inst.Logger().Errorf("[panic] %v: %s", r, debug.Stack())
+					}
+				}()
 				if m.Status == MemberStatusReady {
 					p, err := s.ReplicateTo(inst, m, false)
 					if err != nil {

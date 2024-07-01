@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -63,6 +64,11 @@ func (s *Sharing) Upload(inst *instance.Instance, ctx context.Context, errors in
 	for i := range members {
 		m := members[i]
 		g.Go(func() error {
+			defer func() {
+				if r := recover(); r != nil {
+					inst.Logger().Errorf("[panic] %v: %s", r, debug.Stack())
+				}
+			}()
 			more, err := s.UploadBatchTo(inst, ctx, m, lastTry)
 			if err != nil {
 				return err
