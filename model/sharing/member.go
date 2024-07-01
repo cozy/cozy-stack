@@ -628,6 +628,10 @@ func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) 
 
 // FindCredentials returns the credentials for the given member
 func (s *Sharing) FindCredentials(m *Member) *Credentials {
+	if len(s.Credentials) == 0 {
+		return nil
+	}
+
 	if s.Owner {
 		for i, member := range s.Members {
 			if i > 0 && m.Same(member) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -38,6 +39,12 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 		}
 		state := s.Credentials[i-1].State
 		g.Go(func() error {
+			defer func() {
+				if r := recover(); r != nil {
+					inst.Logger().Errorf("[panic] %v: %s", r, debug.Stack())
+				}
+			}()
+
 			link := m.InvitationLink(inst, s, state, perms)
 			if m.Instance != "" && canSendShortcut {
 				if err := m.SendShortcut(inst, s, link); err == nil {
