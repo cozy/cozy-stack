@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/mail"
@@ -22,6 +24,7 @@ import (
 
 var (
 	dryRunFlag       bool
+	forceFlag        bool
 	withMetadataFlag bool
 )
 
@@ -99,9 +102,33 @@ var redisFixer = &cobra.Command{
 	Use:   "redis",
 	Short: "Rebuild scheduling data strucutures in redis",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !forceFlag {
+			if err := askForConfirmation("Rebuild redis on all instances?"); err != nil {
+				return err
+			}
+		}
 		ac := newAdminClient()
 		return ac.RebuildRedis()
 	},
+}
+
+func askForConfirmation(prompt string) error {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Fprintf(os.Stdout, "%s [y/N]: ", prompt)
+
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	response = strings.ToLower(strings.TrimSpace(response))
+
+	if response != "y" && response != "yes" {
+		return errors.New("Aborted")
+	}
+
+	fmt.Println()
+	return nil
 }
 
 var thumbnailsFixer = &cobra.Command{
@@ -375,6 +402,7 @@ this instance are correctly set.
 func init() {
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
 	thumbnailsFixer.Flags().BoolVar(&withMetadataFlag, "with-metadata", false, "Recalculate images metadata")
+	redisFixer.Flags().BoolVar(&forceFlag, "force", false, "Do not ask for confirmation before fixing redis on all instances")
 
 	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
