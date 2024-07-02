@@ -1,15 +1,18 @@
 package vfs
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"mime"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
@@ -247,6 +250,28 @@ func ServeFileContent(fs VFS, doc *FileDoc, version *Version, filename, disposit
 		return err
 	}
 	defer content.Close()
+
+	http.ServeContent(w, req, filename, doc.UpdatedAt, content)
+	return nil
+}
+
+// ServePDFPage replies to an http request with a single page from a PDF file.
+func ServePDFPage(fs VFS, doc *FileDoc, disposition string, page int, req *http.Request, w http.ResponseWriter) error {
+	ext := filepath.Ext(doc.DocName)
+	basename := strings.TrimSuffix(doc.DocName, ext)
+	filename := fmt.Sprintf("%s (%d)%s", basename, page, ext)
+
+	f, err := fs.OpenFile(doc)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	extracted, err := config.PDF().ExtractPage(f, page)
+	if err != nil {
+		return err
+	}
+	content := bytes.NewReader(extracted.Bytes())
 
 	http.ServeContent(w, req, filename, doc.UpdatedAt, content)
 	return nil
