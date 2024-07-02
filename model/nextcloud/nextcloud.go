@@ -117,53 +117,48 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 }
 
 func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
-	return nc.webdav.Get("/files/" + nc.userID + "/" + path)
+	return nc.webdav.Get(nc.filePath(path))
 }
 
 func (nc *NextCloud) Upload(path, mime string, contentLength int64, body io.Reader) error {
 	headers := map[string]string{
 		echo.HeaderContentType: mime,
 	}
-	path = "/files/" + nc.userID + "/" + path
-	return nc.webdav.Put(path, contentLength, headers, body)
+	return nc.webdav.Put(nc.filePath(path), contentLength, headers, body)
 }
 
 func (nc *NextCloud) Mkdir(path string) error {
-	return nc.webdav.Mkcol("/files/" + nc.userID + "/" + path)
+	return nc.webdav.Mkcol(nc.filePath(path))
 }
 
 func (nc *NextCloud) Delete(path string) error {
-	return nc.webdav.Delete("/files/" + nc.userID + "/" + path)
+	return nc.webdav.Delete(nc.filePath(path))
 }
 
 func (nc *NextCloud) Move(oldPath, newPath string) error {
-	oldPath = "/files/" + nc.userID + "/" + oldPath
-	newPath = "/files/" + nc.userID + "/" + newPath
-	return nc.webdav.Move(oldPath, newPath)
+	return nc.webdav.Move(nc.filePath(oldPath), nc.filePath(newPath))
 }
 
 func (nc *NextCloud) Copy(oldPath, newPath string) error {
-	oldPath = "/files/" + nc.userID + "/" + oldPath
-	newPath = "/files/" + nc.userID + "/" + newPath
-	return nc.webdav.Copy(oldPath, newPath)
+	return nc.webdav.Copy(nc.filePath(oldPath), nc.filePath(newPath))
 }
 
 func (nc *NextCloud) Restore(path string) error {
-	path = "/trashbin/" + nc.userID + "/" + path
-	dst := "/trashbin/" + nc.userID + "/restore/" + filepath.Base(path)
+	path = "/trashbin/" + url.PathEscape(nc.userID) + "/" + path
+	dst := "/trashbin/" + url.PathEscape(nc.userID) + "/restore/" + filepath.Base(path)
 	return nc.webdav.Move(path, dst)
 }
 
 func (nc *NextCloud) DeleteTrash(path string) error {
-	return nc.webdav.Delete("/trashbin/" + nc.userID + "/" + path)
+	return nc.webdav.Delete("/trashbin/" + url.PathEscape(nc.userID) + "/" + path)
 }
 
 func (nc *NextCloud) EmptyTrash() error {
-	return nc.webdav.Delete("/trashbin/" + nc.userID + "/trash")
+	return nc.webdav.Delete("/trashbin/" + url.PathEscape(nc.userID) + "/trash")
 }
 
 func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
-	items, err := nc.webdav.List("/files/" + nc.userID + "/" + path)
+	items, err := nc.webdav.List(nc.filePath(path))
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +188,7 @@ func (nc *NextCloud) ListFiles(path string) ([]jsonapi.Object, error) {
 
 func (nc *NextCloud) ListTrashed(path string) ([]jsonapi.Object, error) {
 	path = "/trash/" + path
-	items, err := nc.webdav.List("/trashbin/" + nc.userID + path)
+	items, err := nc.webdav.List("/trashbin/" + url.PathEscape(nc.userID) + path)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +217,7 @@ func (nc *NextCloud) ListTrashed(path string) ([]jsonapi.Object, error) {
 }
 
 func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
-	path = "/files/" + nc.userID + "/" + path
+	path = nc.filePath(path)
 	dl, err := nc.webdav.Get(path)
 	if err != nil {
 		return nil, err
@@ -270,7 +265,7 @@ func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMeta
 }
 
 func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
-	path = "/files/" + nc.userID + "/" + path
+	path = nc.filePath(path)
 	fs := nc.inst.VFS()
 	doc, err := fs.FileByID(from)
 	if err != nil {
@@ -292,6 +287,10 @@ func (nc *NextCloud) Upstream(path, from string, kind OperationKind) error {
 		_ = fs.DestroyFile(doc)
 	}
 	return nil
+}
+
+func (nc *NextCloud) filePath(path string) string {
+	return "/files/" + url.PathEscape(nc.userID) + "/" + path
 }
 
 func (nc *NextCloud) fillUserID(accountDoc *couchdb.JSONDoc) error {
