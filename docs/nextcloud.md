@@ -45,6 +45,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Images",
+        "path": "/Documents/Images",
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c4b91\""
       },
@@ -59,6 +60,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "file",
         "name": "BugBounty.pdf",
+        "path": "/Documents/BugBounty.pdf",
         "size": 2947,
         "mime": "application/pdf",
         "class": "pdf",
@@ -76,6 +78,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Music",
+        "name": "/Documents/Music",
         "updated_at": "Thu, 02 May 2024 09:28:37 GMT",
         "etag": "\"66335cc55204b\""
       },
@@ -90,6 +93,7 @@ Content-Type: application/vnd.api+json
       "attributes": {
         "type": "directory",
         "name": "Video",
+        "path": "/Documents/Video",
         "updated_at": "Thu, 02 May 2024 09:29:53 GMT",
         "etag": "\"66335d11c2318\""
       },
@@ -430,3 +434,127 @@ HTTP/1.1 204 No Content
 - 400 Bad Request, when the account is not configured for NextCloud
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file is not found on the Cozy
+
+## GET /remote/nextcloud/:account/trash/*
+
+This route can be used to list the files and directories inside the trashbin
+of NextCloud.
+
+### Request (list)
+
+```http
+GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/ HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response (list)
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.remote.nextcloud.files",
+      "id": "613281",
+      "attributes": {
+        "type": "directory",
+        "name": "Old",
+        "path": "/trash/Old.d93571568",
+        "updated_at": "Tue, 25 Jun 2024 14:31:44 GMT",
+        "etag": "1719326384"
+      },
+      "meta": {},
+      "links": {
+        "self": "https://nextcloud.example.net/apps/files/trashbin/613281?dir=/Old"
+      }
+    }
+  ]
+}
+```
+
+#### Status codes
+
+- 200 OK, for a success
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the directory is not found on the NextCloud
+
+## POST /remote/nextcloud/:account/restore/*path
+
+This route can be used to restore a file/directory from the trashbin on the
+NextCloud.
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+The `*path` parameter is the path of the file on the NextCloud.
+
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/restore/trash/Old.d93571568 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been restored
+- 400 Bad Request, when the account is not configured for NextCloud
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+- 409 Conflict, when a directory or file already exists where the file/directory should be restored on the NextCloud.
+
+## DELETE /remote/nextcloud/:account/trash/*
+
+This route can be used to delete a file in the trash.
+
+### Request
+
+```http
+DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash/document-v1.docx.d64283654 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Status codes
+
+- 204 No Content, when the file/directory has been put in the trash
+- 400 Bad Request, when the account is not configured for NextCloud, or the `To` parameter is missing
+- 401 Unauthorized, when authentication to the NextCloud fails
+- 404 Not Found, when the account is not found or the file/directory is not found on the NextCloud
+
+## DELETE /remote/nextcloud/:account/trash
+
+This route can be used to empty the trash bin on NextCloud.
+
+### Request
+
+```http
+DELETE /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/trash HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```

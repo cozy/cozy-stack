@@ -68,12 +68,11 @@ func (c *Client) Move(oldPath, newPath string) error {
 	u := url.URL{
 		Scheme: c.Scheme,
 		Host:   c.Host,
-		User:   url.UserPassword(c.Username, c.Password),
 		Path:   c.BasePath + fixSlashes(newPath),
 	}
 	headers := map[string]string{
 		"Destination": u.String(),
-		"Overwrite":   "F",
+		"Overwrite":   "T",
 	}
 	res, err := c.req("MOVE", oldPath, 0, headers, nil)
 	if err != nil {
@@ -98,7 +97,6 @@ func (c *Client) Copy(oldPath, newPath string) error {
 	u := url.URL{
 		Scheme: c.Scheme,
 		Host:   c.Host,
-		User:   url.UserPassword(c.Username, c.Password),
 		Path:   c.BasePath + fixSlashes(newPath),
 	}
 	headers := map[string]string{
@@ -242,7 +240,9 @@ func (c *Client) List(path string) ([]Item, error) {
 			item := Item{
 				ID:           props.FileID,
 				Type:         "directory",
+				Href:         href,
 				Name:         props.Name,
+				TrashedName:  props.TrashedName,
 				LastModified: props.LastModified,
 				ETag:         props.ETag,
 			}
@@ -263,7 +263,9 @@ func (c *Client) List(path string) ([]Item, error) {
 type Item struct {
 	ID           string
 	Type         string
+	Href         string
 	Name         string
+	TrashedName  string
 	Size         uint64
 	ContentType  string
 	LastModified string
@@ -284,6 +286,7 @@ type props struct {
 	Status       string   `xml:"status"`
 	Type         xml.Name `xml:"prop>resourcetype>collection"`
 	Name         string   `xml:"prop>displayname"`
+	TrashedName  string   `xml:"prop>trashbin-filename"`
 	Size         string   `xml:"prop>getcontentlength"`
 	ContentType  string   `xml:"prop>getcontenttype"`
 	LastModified string   `xml:"prop>getlastmodified"`
@@ -301,6 +304,7 @@ const ListFilesPayload = `<?xml version="1.0"?>
         <d:getcontentlength />
         <d:getcontenttype />
         <oc:fileid />
+        <nc:trashbin-filename />
   </d:prop>
 </d:propfind>
 `
