@@ -3,7 +3,6 @@
 {{t "Mail New Connection Place"}} {{.Country}}
 {{t "Mail New Connection Time"}} {{.Time}}
 {{t "Mail New Connection Browser"}} {{.Browser}}
-{{t "Mail New Connection OS"}} {{.OS}}
 {{t "Mail New Connection IP"}} {{.IP}}
 
 {{t "Mail New Connection Change Passphrase instruction"}}
