@@ -12,7 +12,7 @@ func init() {
 		WorkerType:   "zip",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      30 * time.Second,
+		Timeout:      600 * time.Second,
 		WorkerFunc:   WorkerZip,
 	})
 
@@ -20,7 +20,7 @@ func init() {
 		WorkerType:   "unzip",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      30 * time.Second,
+		Timeout:      600 * time.Second,
 		WorkerFunc:   WorkerUnzip,
 	})
 }
