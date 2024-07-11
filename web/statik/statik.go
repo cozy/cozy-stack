@@ -37877,12 +37877,12 @@ Fad2Ob3Qd8tvUSmaAQ==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_connection.text
-Size: 500
+Size: 461
 
-G/MBAIzDxjHdtLKlR6be61MA+batK/Id3xN0KrBxgiw8dQxXircpQSt6svOEqKmK
-TehsD1FQhMbmNdabR1ys9GLWGvjxkuQqGj+FtzQOvrA2WAglbPohnzr8icACJLBy
-o5uxckTutQreMzLU5uaLrl30FsRvZpyM9W0o4S6ZcAvhMMLstAXEKQg4w7XHTawr
-UJ65TxB+1DMXkVFNbHsMkA==
+G8wBAByFcTPdXDEy/aYKSrH3tn3PEvmeGXgqqHGCDDwFYSvMoLM7y91Sz6Hdd1T6
+liZtgQcHzYMkMEu3CeJdhzUzbFcQ0nCkS5Ir6y+FP5Lt91AEAMxKCYeOzKnDCBdk
+gApTbqQZhSNyd6n4ZOjbzjRAYWYWwNjx1AtFqYxbFFm22WkL2d8CouHaP4kY0cvL
+48l3ftQ9F5FRrVlUABI=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_registration.mjml
