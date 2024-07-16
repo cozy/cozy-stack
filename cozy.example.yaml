@@ -56,9 +56,9 @@ admin:
 # to generate the keys
 vault:
   # the path to the key used to encrypt credentials
-  credentials_encryptor_key: /path/to/key.enc
+  # credentials_encryptor_key: /path/to/key.enc
   # the path to the key used to decrypt credentials
-  credentials_decryptor_key: /path/to/key.dec
+  # credentials_decryptor_key: /path/to/key.dec
 
 # file system parameters
 fs:
@@ -371,7 +371,7 @@ notifications:
   development: false
 
   # Firebase Cloud Messaging API
-  fcm_credentials_file: /etc/cozy/fcm_credentials.json
+  # fcm_credentials_file: /etc/cozy/fcm_credentials.json
 
   # APNS/2 certificates for iOS notifications
   # ios_certificate_key_path: path/to/certificate.p12
