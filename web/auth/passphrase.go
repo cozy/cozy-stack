@@ -156,10 +156,6 @@ func passphraseReset(c echo.Context) error {
 
 func passphraseRenewForm(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if middlewares.IsLoggedIn(c) {
-		redirect := inst.DefaultRedirection().String()
-		return c.Redirect(http.StatusSeeOther, redirect)
-	}
 
 	// Check that the token is actually defined and well encoded. The actual
 	// token value checking is also done on the passphraseRenew handler.
@@ -200,13 +196,6 @@ func passphraseRenewForm(c echo.Context) error {
 
 func passphraseRenew(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if middlewares.IsLoggedIn(c) {
-		redirect := inst.DefaultRedirection().String()
-		if wantsJSON(c) {
-			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
-		}
-		return c.Redirect(http.StatusSeeOther, redirect)
-	}
 	pass := []byte(c.FormValue("passphrase"))
 	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
