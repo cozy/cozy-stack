@@ -6,7 +6,7 @@
   "license": "AGPLv3",
   "type": "module",
   "dependencies": {
-    "prettier": "3.3.2",
+    "prettier": "3.3.3",
     "svgo": "3.3.2"
   },
   "devDependencies": {
