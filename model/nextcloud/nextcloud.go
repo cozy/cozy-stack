@@ -33,16 +33,17 @@ const (
 )
 
 type File struct {
-	DocID     string `json:"id,omitempty"`
-	Type      string `json:"type"`
-	Name      string `json:"name"`
-	Path      string `json:"path"`
-	Size      uint64 `json:"size,omitempty"`
-	Mime      string `json:"mime,omitempty"`
-	Class     string `json:"class,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
-	ETag      string `json:"etag,omitempty"`
-	url       string
+	DocID       string `json:"id,omitempty"`
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Size        uint64 `json:"size,omitempty"`
+	Mime        string `json:"mime,omitempty"`
+	Class       string `json:"class,omitempty"`
+	UpdatedAt   string `json:"updated_at,omitempty"`
+	ETag        string `json:"etag,omitempty"`
+	RestorePath string `json:"restore_path,omitempty"`
+	url         string
 }
 
 func (f *File) ID() string                             { return f.DocID }
@@ -205,16 +206,17 @@ func (nc *NextCloud) ListTrashed(path string) ([]jsonapi.Object, error) {
 			mime, class = vfs.ExtractMimeAndClassFromFilename(item.TrashedName)
 		}
 		file := &File{
-			DocID:     item.ID,
-			Type:      item.Type,
-			Name:      item.TrashedName,
-			Path:      filepath.Join(path, filepath.Base(item.Href)),
-			Size:      item.Size,
-			Mime:      mime,
-			Class:     class,
-			UpdatedAt: item.LastModified,
-			ETag:      item.ETag,
-			url:       nc.buildTrashedURL(item, path),
+			DocID:       item.ID,
+			Type:        item.Type,
+			Name:        item.TrashedName,
+			Path:        filepath.Join(path, filepath.Base(item.Href)),
+			Size:        item.Size,
+			Mime:        mime,
+			Class:       class,
+			UpdatedAt:   item.LastModified,
+			ETag:        item.ETag,
+			RestorePath: item.RestorePath,
+			url:         nc.buildTrashedURL(item, path),
 		}
 		files = append(files, file)
 	}

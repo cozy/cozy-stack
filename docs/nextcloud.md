@@ -466,7 +466,8 @@ Content-Type: application/vnd.api+json
         "name": "Old",
         "path": "/trash/Old.d93571568",
         "updated_at": "Tue, 25 Jun 2024 14:31:44 GMT",
-        "etag": "1719326384"
+        "etag": "1719326384",
+        "restore_path": "/Old"
       },
       "meta": {},
       "links": {
