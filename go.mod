@@ -5,7 +5,7 @@ go 1.19
 require (
 	firebase.google.com/go/v4 v4.14.1
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/adrg/xdg v0.4.0
+	github.com/adrg/xdg v0.5.0
 	github.com/andybalholm/brotli v1.1.0
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
 	github.com/cozy/goexif2 v1.3.1
@@ -138,7 +138,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/appengine/v2 v2.0.2 // indirect
 	google.golang.org/genproto v0.0.0-20240401170217-c3f982113cda // indirect
