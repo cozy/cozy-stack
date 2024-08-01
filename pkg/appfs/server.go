@@ -238,15 +238,19 @@ func (s *swiftServer) ServeCodeTarball(w http.ResponseWriter, req *http.Request,
 	if err != nil {
 		return err
 	}
+	content, err := io.ReadAll(buf)
+	if err != nil {
+		return err
+	}
 	contentType := mime.TypeByExtension(".gz")
 
 	file, err := s.c.ObjectCreate(s.ctx, s.container, objName, true, "", contentType, nil)
 	if err == nil {
-		_, _ = io.Copy(file, buf)
+		_, _ = io.Copy(file, bytes.NewReader(content))
 		_ = file.Close()
 	}
 
-	return serveContent(w, req, contentType, int64(buf.Len()), buf)
+	return serveContent(w, req, contentType, int64(len(content)), bytes.NewReader(content))
 }
 
 func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
