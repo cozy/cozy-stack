@@ -1,6 +1,8 @@
 module github.com/cozy/cozy-stack
 
-go 1.19
+go 1.21
+
+toolchain go1.22.5
 
 require (
 	firebase.google.com/go/v4 v4.14.1
@@ -33,7 +35,7 @@ require (
 	github.com/ncw/swift/v2 v2.0.2
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.20.3
-	github.com/oschwald/maxminddb-golang v1.12.0
+	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/redis/go-redis/v9 v9.4.0
