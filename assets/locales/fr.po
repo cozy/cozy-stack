@@ -709,6 +709,9 @@ msgstr "Groupes de récurrence bancaire"
 msgid "Permissions io.cozy.bills"
 msgstr "Factures"
 
+msgid "Permissions io.cozy.calendar"
+msgstr "Calendrier"
+
 msgid "Permissions io.cozy.coachco2.settings"
 msgstr "Paramètres de l'application"
 
@@ -747,6 +750,9 @@ msgstr "Tags"
 
 msgid "Permissions io.cozy.timeseries.geojson"
 msgstr "Déplacements"
+
+msgid "Permissions io.cozy.timeseries.grades"
+msgstr "Notes"
 
 msgid "Permissions io.cozy.settings"
 msgstr "Paramètres"

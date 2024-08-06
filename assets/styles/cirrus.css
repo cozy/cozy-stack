@@ -328,6 +328,10 @@
   -webkit-mask-image: url("../icons/doctypes/profile.svg");
   mask-image: url("../icons/doctypes/profile.svg");
 }
+.perm[class^="io-cozy-calendar"] {
+  -webkit-mask-image: url("../icons/doctypes/calendar.svg");
+  mask-image: url("../icons/doctypes/calendar.svg");
+}
 .perm[class^="io-cozy-contacts-groups"] {
   -webkit-mask-image: url("../icons/doctypes/team.svg");
   mask-image: url("../icons/doctypes/team.svg");
@@ -377,6 +381,10 @@
 .perm[class^="io-cozy-timeseries-geojson"] {
   -webkit-mask-image: url("../icons/doctypes/location.svg");
   mask-image: url("../icons/doctypes/location.svg");
+}
+.perm[class^="io-cozy-timeseries-grades"] {
+  -webkit-mask-image: url("../icons/doctypes/school.svg");
+  mask-image: url("../icons/doctypes/school.svg");
 }
 .perm[class^="io-cozy-jobs"] {
   -webkit-mask-image: url("../icons/doctypes/email.svg");
