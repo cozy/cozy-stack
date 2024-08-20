@@ -478,7 +478,7 @@ func Setup(cfgFile string) (err error) {
 		if err := viper.MergeConfig(dest); err != nil {
 			if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
 				log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
-				log.Errorf(dest.String())
+				log.Errorf("%s", dest.String())
 				return err
 			}
 		}

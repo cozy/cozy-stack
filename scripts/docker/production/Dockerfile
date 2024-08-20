@@ -3,7 +3,7 @@
 
 
 # Multi-stage image: this step builds cozy-stack
-FROM golang:1.22-bookworm as build
+FROM golang:1.23-bookworm as build
 WORKDIR /app
 
 # Use docker layer caching to avoid redownloading go modules if the code has
