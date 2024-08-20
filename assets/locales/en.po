@@ -644,6 +644,9 @@ msgstr "Groups of contacts"
 msgid "Permissions io.cozy.files"
 msgstr "Files"
 
+msgid "Permissions io.cozy.calendar"
+msgstr "Calendar"
+
 msgid "Permissions io.cozy.certified.carbon_copy"
 msgstr "Carbon copy"
 
@@ -673,6 +676,9 @@ msgstr "Tags"
 
 msgid "Permissions io.cozy.timeseries.geojson"
 msgstr "Trips"
+
+msgid "Permissions io.cozy.timeseries.grades"
+msgstr "Grades"
 
 msgid "Permissions io.cozy.settings"
 msgstr "Settings"
