@@ -102,7 +102,11 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 		if doc.CozyMetadata != nil {
 			instance = doc.CozyMetadata.CreatedOn
 		}
-		e = NewShortcutExtractor(instance)
+		var target map[string]interface{}
+		if doc.Metadata != nil {
+			target, _ = doc.Metadata["target"].(map[string]interface{})
+		}
+		e = NewShortcutExtractor(instance, target)
 	}
 	if e != nil {
 		return &e
@@ -453,12 +457,14 @@ type ShortcutExtractor struct {
 	r        *io.PipeReader
 	ch       chan interface{}
 	instance string
+	target   map[string]interface{}
 }
 
 // NewShortcutExtractor returns an extractor for .url files
-func NewShortcutExtractor(instance string) *ShortcutExtractor {
+func NewShortcutExtractor(instance string, target map[string]interface{}) *ShortcutExtractor {
 	e := &ShortcutExtractor{}
 	e.instance = instance
+	e.target = target
 	e.r, e.w = io.Pipe()
 	e.ch = make(chan interface{})
 	go e.Start()
@@ -512,10 +518,12 @@ func (e *ShortcutExtractor) Result() Metadata {
 	if link, ok := link.(shortcut.Result); ok {
 		cozy, app := extractCozyLink(link, e.instance)
 		if cozy != "" {
-			target := map[string]interface{}{
-				"cozyMetadata": map[string]interface{}{
-					"instance": cozy,
-				},
+			target := e.target
+			if target == nil {
+				target = map[string]interface{}{}
+			}
+			target["cozyMetadata"] = map[string]interface{}{
+				"instance": cozy,
 			}
 			if app != "" {
 				target["app"] = app
