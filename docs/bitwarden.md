@@ -28,6 +28,42 @@ to `https://<instance>/bitwarden`.
 
 ## Routes for accounts and connect
 
+### GET /bitwarden/api/config
+
+Bitwarden clients require this route, even if the information could be guessed
+without it in Cozy case.
+
+#### Request
+
+```http
+GET /bitwarden/api/config HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "version": "2024.0.0",
+  "gitHash": null,
+  "server": null,
+  "environment": {
+    "cloudRegion": "EU",
+    "vault": "https://alice.example.com",
+    "api": "https://alice.example.com",
+    "identity": "https://alice.example.com",
+    "notifications": "https://alice.example.com"
+  },
+  "featureStates": {},
+  "object": "config"
+}
+```
+
 ### POST /bitwarden/api/accounts/prelogin & POST /bitwarden/identity/accounts/prelogin
 
 It allows the client to know the number of KDF iterations to apply when hashing

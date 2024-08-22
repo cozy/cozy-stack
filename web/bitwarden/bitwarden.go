@@ -24,6 +24,30 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// GetConfig is the handler for GET /bitwarden/api/config.
+func GetConfig(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	// The "cipher key encryption" feature was introduced in 2024.2.0, and we
+	// don't support it. So, we need a version number before that.
+	version := "2024.0.0"
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"version": version,
+		"gitHash": nil,
+		"server":  nil,
+		"environment": map[string]interface{}{
+			"cloudRegion":   "EU",
+			"vault":         inst.PageURL("", nil),
+			"api":           inst.PageURL("", nil),
+			"identity":      inst.PageURL("", nil),
+			"notifications": inst.PageURL("", nil),
+		},
+		"featureStates": map[string]interface{}{},
+		"object":        "config",
+	})
+}
+
 // Prelogin tells to the client how many KDF iterations it must apply when
 // hashing the master password.
 func Prelogin(c echo.Context) error {
@@ -515,6 +539,7 @@ func Routes(router *echo.Group) {
 	identity.POST("/accounts/prelogin", Prelogin)
 
 	api := router.Group("/api")
+	api.GET("/config", GetConfig)
 	api.GET("/sync", Sync)
 
 	accounts := api.Group("/accounts")
