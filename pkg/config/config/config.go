@@ -123,6 +123,7 @@ type Config struct {
 	CouchDB                CouchDB
 	Jobs                   Jobs
 	Konnectors             Konnectors
+	ExternalIndexers       map[string][]string
 	Mail                   *gomail.DialerOptions
 	MailPerContext         map[string]interface{}
 	CampaignMail           *gomail.DialerOptions
@@ -557,6 +558,11 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	indexers, err := makeExternalIndexers(v)
+	if err != nil {
+		return err
+	}
+
 	regs, err := makeRegistries(v)
 	if err != nil {
 		return err
@@ -848,6 +854,7 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
+		ExternalIndexers: indexers,
 		Move: Move{
 			URL: v.GetString("move.url"),
 		},
@@ -1002,6 +1009,25 @@ func makeCouch(v *viper.Viper) (CouchDB, error) {
 		couch.Clusters = []CouchDBCluster{couch.Global}
 	}
 	return couch, nil
+}
+
+func makeExternalIndexers(v *viper.Viper) (map[string][]string, error) {
+	indexers := make(map[string][]string)
+	for k, v := range v.GetStringMap("external_indexers") {
+		list, ok := v.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf(
+				"Bad format in the external_indexers section of the configuration file: "+
+					"should be a list of strings, got %#v", v)
+		}
+		strings := []string{}
+		for _, item := range list {
+			str, _ := item.(string)
+			strings = append(strings, str)
+		}
+		indexers[k] = strings
+	}
+	return indexers, nil
 }
 
 func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
