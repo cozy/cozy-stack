@@ -140,6 +140,7 @@ jobs:
   # List of available workers:
   #
   #   - "clean-clients":     delete unused OAuth clients
+  #   - "index":             send data to a RAG for being indexed
   #   - "export":            exporting data from a cozy instance
   #   - "import":            importing data into a cozy instance
   #   - "konnector":         launching konnectors
@@ -199,6 +200,16 @@ konnectors:
   # cmd: ./scripts/konnector-node-run.sh # run connectors with node in dev mode
   # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
   # cmd: ./scripts/konnector-nsjail-node8-run.sh # run connectors with nsjail
+
+# external indexers are used for indexing files and doctypes in vector
+# databases.
+external_indexers:
+  # A cozy will use the indexers for its context, or if the context is not
+  # declared, for default.
+  default:
+    - http://localhost:8000
+  beta:
+    - http://localhost:8001
 
 # mail service parameters for sending email via SMTP
 mail:

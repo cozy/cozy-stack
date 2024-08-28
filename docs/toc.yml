@@ -23,6 +23,7 @@
   - "Sharing design": ./sharing-design.md
   - "Workflow of the konnectors": ./konnectors-workflow.md
 - List of services:
+  - "/ai - AI": ./ai.md
   - "/auth - Authentication & OAuth": ./auth.md
   - " /oidc - Delegated authentication": ./delegated-auth.md
   - "/apps - Applications Management": ./apps.md
