@@ -23,13 +23,15 @@ For the moment, the feature is experimental, and a trigger must be created
 manually on the Cozy:
 
 ```sh
-$ curl http://cozy.localhost:8080/jobs/triggers -H "Authorization: Bearer $TOKEN" -d '{ "data": { "attributes": { "type": "@event", "arguments": "io.cozy.files", "debounce": "1m", "worker": "index", "message": {"doctype": "io.cozy.files"} } } }'
+$ COZY=cozy.localhost:8080
+$ TOKEN=$(cozy-stack instances token-cli $COZY io.cozy.triggers)
+$ curl "http://${COZY}/jobs/triggers" -H "Authorization: Bearer $TOKEN" -d '{ "data": { "attributes": { "type": "@event", "arguments": "io.cozy.files", "debounce": "1m", "worker": "index", "message": {"doctype": "io.cozy.files"} } } }'
 ```
 
 It can also be a good idea to start a first indexation with:
 
 ```sh
-$ cozy-stack triggers launch --domain cozy.localhost:8080 $TRIGGER_ID
+$ cozy-stack triggers launch --domain $COZY $TRIGGER_ID
 ```
 
 In practice, when files are uploaded/modified/deleted, the trigger will create

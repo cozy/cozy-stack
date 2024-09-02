@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -83,6 +84,9 @@ func Worker(ctx *job.TaskContext) error {
 }
 
 func callExternalIndexers(inst *instance.Instance, doctype string, change couchdb.Change) error {
+	if strings.HasPrefix(change.DocID, "_design/") {
+		return nil
+	}
 	if change.Doc.Get("type") == consts.DirType {
 		return nil
 	}
@@ -157,6 +161,7 @@ func callExternalIndexers(inst *instance.Instance, doctype string, change couchd
 				DocName:    name,
 				InternalID: internalID,
 			}
+			// TODO notes with images
 			content, err := fs.OpenFile(fileDoc)
 			if err != nil {
 				return err
