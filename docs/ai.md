@@ -8,13 +8,13 @@ AI can be used for interacting with the personal data of a Cozy. This is
 currently an experimental feature. Retrieval-Augmented Generation (RAG) is
 a classical pattern in the AI world. Here, it is specific to each Cozy.
 
-[LibreChat](https://www.librechat.ai/) has been integrated this way:
+[OpenWebUI](https://openwebui.com/) has been integrated this way:
 
-![Architecture with LibreChat](diagrams/librechat.svg)
+![Architecture with OpenWebUI](diagrams/openwebui.svg)
 
 ## Indexation
 
-First of all, LibreChat and the RAG must be installed with their dependencies.
+First of all, OpenWebUI and the RAG must be installed with their dependencies.
 It is not mandatory to install them on the same servers as the cozy-stack. And
 the URL of RAG must be filled in cozy-stack configuration file (in
 `external_indexers`).
@@ -41,7 +41,7 @@ changed feed, and will call the RAG for each entry in the changes feed.
 
 ## Chat
 
-When a user starts a chat in LibreChat, their prompts are sent to the RAG that
+When a user starts a chat in OpenWebUI, their prompts are sent to the RAG that
 can use the vector database to find relevant documents (technically, only some
 parts of the documents called chunks). Those documents are sent back to
 LibreChat that can be added to the prompt, so that the LLM can use them as a
