@@ -162,7 +162,7 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 				Method:   zip.Deflate,
 				Modified: file.UpdatedAt,
 			}
-			if entry.Page >= 0 {
+			if entry.Page > 0 {
 				header.Name = addPageToName(header.Name, entry.Page)
 			}
 			ze, err := zw.CreateHeader(header)
