@@ -817,6 +817,12 @@ msgstr "Journaux de l'application"
 msgid "Permissions cc.cozycloud.errors"
 msgstr "Journaux de l'application"
 
+msgid "Permissions cc.cozycloud.announcements.dev"
+msgstr "Annonces pour le développement"
+
+msgid "Permissions cc.cozycloud.announcements.dev.uploads"
+msgstr "Images des annonces pour le développement"
+
 msgid "Mail Greeting"
 msgstr "Bonjour"
 

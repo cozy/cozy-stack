@@ -743,6 +743,12 @@ msgstr "Application logs"
 msgid "Permissions cc.cozycloud.errors"
 msgstr "Application logs"
 
+msgid "Permissions cc.cozycloud.announcements.dev"
+msgstr "Announcements for development development purpose"
+
+msgid "Permissions cc.cozycloud.announcements.dev.uploads"
+msgstr "Images of announcements for development purpose"
+
 msgid "Mail Greeting"
 msgstr "Hello"
 

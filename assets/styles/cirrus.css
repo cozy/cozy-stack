@@ -287,6 +287,11 @@
   -webkit-mask-image: url("../icons/doctypes/stats.svg");
   mask-image: url("../icons/doctypes/stats.svg");
 }
+.perm[class^="cc.cozycloud.anouncements.dev"],
+.perm[class^="cc.cozycloud.anouncements.dev.uploads"] {
+  -webkit-mask-image: url("../icons/doctypes/announcement.svg");
+  mask-image: url("../icons/doctypes/announcement.svg");
+}
 .perm[class^="io-cozy-settings"],
 .perm[class^="io-cozy-bank-settings"] {
   -webkit-mask-image: url("../icons/doctypes/cog.svg");
