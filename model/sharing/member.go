@@ -461,6 +461,9 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	v.Add("state", state)
 	v.Add("url", cozyURL)
 	body := []byte(v.Encode())
+	if len(s.Credentials) == 0 {
+		return "", ErrInvalidSharing
+	}
 	c := &s.Credentials[0]
 	opts := &request.Options{
 		Method: http.MethodPost,
