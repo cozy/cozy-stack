@@ -42,8 +42,8 @@ executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
 #### Compile the binary using `go`
 
 You can compile a `cozy-stack` from the source.
-First, you need to [install go](https://golang.org/doc/install), version >= 1.19. With `go`
-installed and configured, you can run the following commands:
+First, you need to [install go](https://golang.org/doc/install), version >=
+1.21. With `go` installed and configured, you can run the following commands:
 
 ```
 git clone git@github.com:cozy/cozy-stack.git
