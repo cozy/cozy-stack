@@ -1,6 +1,6 @@
 module github.com/cozy/cozy-stack
 
-go 1.19
+go 1.21
 
 require (
 	firebase.google.com/go/v4 v4.14.1
