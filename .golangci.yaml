@@ -31,8 +31,7 @@ linters:
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
-    - bidichk 
-    - exportloopref 
+    - bidichk
     - errname
     - forbidigo
     - gocritic
@@ -42,7 +41,7 @@ linters:
     - nolintlint
     - tenv
     - unconvert
-    - unused 
+    - unused
     - whitespace
   # Run only fast linters from enabled linters set (first run won't be fast)
   # Default: false
