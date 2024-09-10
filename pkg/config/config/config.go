@@ -146,6 +146,7 @@ type Config struct {
 	Office         map[string]Office
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
+	OpenWebUI      map[string]OpenWebUI
 
 	RemoteAllowCustomPort bool
 
@@ -228,6 +229,12 @@ type Office struct {
 	OnlyOfficeURL string
 	InboxSecret   string
 	OutboxSecret  string
+}
+
+// OpenWebUI contains the configuration for OpenWebUI chat server.
+type OpenWebUI struct {
+	URL   string
+	Admin map[string]interface{}
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -573,6 +580,11 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	openWebUI, err := makeOpenWebUI(v)
+	if err != nil {
+		return err
+	}
+
 	var subdomains SubdomainType
 	if subs := v.GetString("subdomains"); subs != "" {
 		switch subs {
@@ -895,6 +907,7 @@ func UseViper(v *viper.Viper) error {
 		Contexts:               v.GetStringMap("contexts"),
 		Authentication:         v.GetStringMap("authentication"),
 		Office:                 office,
+		OpenWebUI:              openWebUI,
 		Registries:             regs,
 		AuthorizedForConfirm:   v.GetStringSlice("authorized_hosts_for_confirm_auth"),
 
@@ -1108,6 +1121,31 @@ func makeOffice(v *viper.Viper) (map[string]Office, error) {
 	}
 
 	return office, nil
+}
+
+func makeOpenWebUI(v *viper.Viper) (map[string]OpenWebUI, error) {
+	openWebUI := make(map[string]OpenWebUI)
+
+	for k, v := range v.GetStringMap("openWebUI") {
+		ctx, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("Bad format in the openWebUI section of the configuration file")
+		}
+		url, ok := ctx["url"].(string)
+		if !ok {
+			return nil, errors.New("Bad format in the openWebUI section of the configuration file")
+		}
+		admin, ok := ctx["admin"].(map[string]interface{})
+		if !ok {
+			return nil, errors.New("Bad format in the openWebUI section of the configuration file")
+		}
+		openWebUI[k] = OpenWebUI{
+			URL:   url,
+			Admin: admin,
+		}
+	}
+
+	return openWebUI, nil
 }
 
 func makeSMS(raw map[string]interface{}) map[string]SMS {

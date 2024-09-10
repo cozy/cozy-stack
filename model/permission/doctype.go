@@ -43,6 +43,7 @@ var blockList = map[string]bool{
 	consts.OfficeURL:               none,
 	consts.NotesURL:                none,
 	consts.AppsOpenParameters:      none,
+	consts.AIOpenURL:               none,
 
 	// Synthetic doctypes (realtime events only)
 	consts.AuthConfirmations:   none,

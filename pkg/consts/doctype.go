@@ -142,4 +142,6 @@ const (
 	// NextCloudFiles doc type is used when listing files from a NextCloud via
 	// WebDAV.
 	NextCloudFiles = "io.cozy.remote.nextcloud.files"
+	// AIOpenURL doc type is used to open a chatbot session.
+	AIOpenURL = "io.cozy.ai.url"
 )

@@ -211,6 +211,15 @@ external_indexers:
   beta:
     - http://localhost:8001
 
+# OpenWebUI is the app used for AI chatbot.
+openwebui:
+  # It is configurable per context.
+  default:
+    url: https://openwebui.example.org/
+    admin:
+      email: admin@openwebui.example.org
+      password: p4$$w0rd
+
 # mail service parameters for sending email via SMTP
 mail:
   # mail noreply address - flags: --mail-noreply-address

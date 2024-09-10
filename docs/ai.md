@@ -46,3 +46,47 @@ can use the vector database to find relevant documents (technically, only some
 parts of the documents called chunks). Those documents are sent back to
 LibreChat that can be added to the prompt, so that the LLM can use them as a
 context when answering.
+
+### GET /ai/open
+
+This route returns the parameters to open an iframe with OpenWebUI. It creates
+an account on the OpenWebUI chat server if needed, creates a token an returns
+the configured URL of the OpenWebUI chat server.
+
+### Request
+
+```http
+GET /ai/open HTTP/1.1
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.ai.url",
+    "id": "eeec30e8-02d9-4988-80a5-acdb238f8d10",
+    "attributes": {
+      "url": "https://openwebui.example.org/",
+      "token:": "eyJh...Md4o"
+    }
+  }
+}
+```
+
+The webapp can then creates an iframe:
+
+```html
+<iframe src="https://openwebui.example.org/" data-token="eyJh...Md4o"></iframe>
+```
+
+and inside the iframe loads the token with:
+
+```js
+localStorage.token = window.frameElement.dataset.token
+```
