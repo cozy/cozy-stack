@@ -287,6 +287,8 @@
   -webkit-mask-image: url("../icons/doctypes/stats.svg");
   mask-image: url("../icons/doctypes/stats.svg");
 }
+.perm[class^="cc.cozycloud.anouncements"],
+.perm[class^="cc.cozycloud.anouncements.uploads"],
 .perm[class^="cc.cozycloud.anouncements.dev"],
 .perm[class^="cc.cozycloud.anouncements.dev.uploads"] {
   -webkit-mask-image: url("../icons/doctypes/announcement.svg");
