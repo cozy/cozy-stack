@@ -30,7 +30,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/leonelquinteros/gotext v1.6.1
 	github.com/mssola/user_agent v0.6.0
-	github.com/ncw/swift/v2 v2.0.2
+	github.com/ncw/swift/v2 v2.0.3
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.20.3
 	github.com/oschwald/maxminddb-golang v1.13.1
