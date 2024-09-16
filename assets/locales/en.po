@@ -743,11 +743,17 @@ msgstr "Application logs"
 msgid "Permissions cc.cozycloud.errors"
 msgstr "Application logs"
 
+msgid "Permissions cc.cozycloud.announcements"
+msgstr "API to retrieve announcements"
+
+msgid "Permissions cc.cozycloud.announcements.uploads"
+msgstr "API to retrieve announcement images"
+
 msgid "Permissions cc.cozycloud.announcements.dev"
-msgstr "Announcements for development development purpose"
+msgstr "API to retrieve announcements (development)"
 
 msgid "Permissions cc.cozycloud.announcements.dev.uploads"
-msgstr "Images of announcements for development purpose"
+msgstr "API to retrieve announcement images (development)"
 
 msgid "Mail Greeting"
 msgstr "Hello"

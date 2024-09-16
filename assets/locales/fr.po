@@ -817,11 +817,17 @@ msgstr "Journaux de l'application"
 msgid "Permissions cc.cozycloud.errors"
 msgstr "Journaux de l'application"
 
+msgid "Permissions cc.cozycloud.announcements"
+msgstr "API pour récupérer les annonces"
+
+msgid "Permissions cc.cozycloud.announcements.uploads"
+msgstr "API pour récupérer les images des annonces"
+
 msgid "Permissions cc.cozycloud.announcements.dev"
-msgstr "Annonces pour le développement"
+msgstr "API pour récupérer les annonces (développement)"
 
 msgid "Permissions cc.cozycloud.announcements.dev.uploads"
-msgstr "Images des annonces pour le développement"
+msgstr "API pour récupérer les images des annonces (développement)"
 
 msgid "Mail Greeting"
 msgstr "Bonjour"
