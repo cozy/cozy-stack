@@ -123,7 +123,6 @@ type Config struct {
 	CouchDB                CouchDB
 	Jobs                   Jobs
 	Konnectors             Konnectors
-	ExternalIndexers       map[string][]string
 	Mail                   *gomail.DialerOptions
 	MailPerContext         map[string]interface{}
 	CampaignMail           *gomail.DialerOptions
@@ -143,6 +142,7 @@ type Config struct {
 
 	Contexts       map[string]interface{}
 	Authentication map[string]interface{}
+	RAGServers     map[string]RAGServer
 	Office         map[string]Office
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
@@ -228,6 +228,11 @@ type Office struct {
 	OnlyOfficeURL string
 	InboxSecret   string
 	OutboxSecret  string
+}
+
+// RAGServer contains the configuration for a RAG server (AI features).
+type RAGServer struct {
+	URL string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -558,7 +563,7 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
-	indexers, err := makeExternalIndexers(v)
+	rag, err := makeRAGServers(v)
 	if err != nil {
 		return err
 	}
@@ -854,7 +859,7 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
-		ExternalIndexers: indexers,
+		RAGServers: rag,
 		Move: Move{
 			URL: v.GetString("move.url"),
 		},
@@ -1011,23 +1016,21 @@ func makeCouch(v *viper.Viper) (CouchDB, error) {
 	return couch, nil
 }
 
-func makeExternalIndexers(v *viper.Viper) (map[string][]string, error) {
-	indexers := make(map[string][]string)
-	for k, v := range v.GetStringMap("external_indexers") {
-		list, ok := v.([]interface{})
+func makeRAGServers(v *viper.Viper) (map[string]RAGServer, error) {
+	servers := make(map[string]RAGServer)
+	for k, v := range v.GetStringMap("rag") {
+		m, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf(
-				"Bad format in the external_indexers section of the configuration file: "+
-					"should be a list of strings, got %#v", v)
+				"Bad format in the rag section of the configuration file: "+
+					"should be a map, got %#v", v)
 		}
-		strings := []string{}
-		for _, item := range list {
-			str, _ := item.(string)
-			strings = append(strings, str)
+		url, _ := m["url"].(string)
+		servers[k] = RAGServer{
+			URL: url,
 		}
-		indexers[k] = strings
 	}
-	return indexers, nil
+	return servers, nil
 }
 
 func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {

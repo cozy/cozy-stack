@@ -31,7 +31,6 @@ import (
 	// import workers
 	_ "github.com/cozy/cozy-stack/worker/archive"
 	"github.com/cozy/cozy-stack/worker/exec"
-	_ "github.com/cozy/cozy-stack/worker/index"
 	_ "github.com/cozy/cozy-stack/worker/log"
 	_ "github.com/cozy/cozy-stack/worker/mails"
 	_ "github.com/cozy/cozy-stack/worker/migrations"
@@ -39,6 +38,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/notes"
 	_ "github.com/cozy/cozy-stack/worker/oauth"
 	_ "github.com/cozy/cozy-stack/worker/push"
+	_ "github.com/cozy/cozy-stack/worker/rag"
 	_ "github.com/cozy/cozy-stack/worker/share"
 	_ "github.com/cozy/cozy-stack/worker/sms"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"

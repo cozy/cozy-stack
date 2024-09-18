@@ -439,13 +439,12 @@ func (i *Instance) Registries() []*url.URL {
 	return context
 }
 
-// ExternalIndexers returns the URLs of the external indexers (RAG) where
-// documents of this instance can be indexed.
-func (i *Instance) ExternalIndexers() []string {
-	contexts := config.GetConfig().ExternalIndexers
+// RAGServer returns the RAG server for the instance (AI features).
+func (i *Instance) RAGServer() config.RAGServer {
+	contexts := config.GetConfig().RAGServers
 	if i.ContextName != "" {
-		if indexers, ok := contexts[i.ContextName]; ok {
-			return indexers
+		if server, ok := contexts[i.ContextName]; ok {
+			return server
 		}
 	}
 	return contexts[config.DefaultInstanceContext]
