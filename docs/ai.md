@@ -50,7 +50,7 @@ identifier for a new chat session.
 
 The stack will respond after pushing a job for this task, but without the
 response. The client must use the real-time websocket and subscribe to
-`io.cozy.ai.chat.completions`.
+`io.cozy.ai.chat.events`.
 
 #### Request
 
@@ -88,4 +88,25 @@ Content-Type: application/vnd.api+json
     }
   }
 }
+```
+
+### Real-time via websockets
+
+```
+client > {"method": "AUTH", "payload": "token"}
+client > {"method": "SUBSCRIBE",
+          "payload": {"type": "io.cozy.ai.chat.events"}}
+server > {"event": "CREATED",
+          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+                      "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "delta", "content": "The "}}}
+server > {"event": "CREATED",
+          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+                      "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "delta", "content": "sky "}}}
+[...]
+server > {"event": "CREATED",
+          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+                      "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "done"}}}
 ```

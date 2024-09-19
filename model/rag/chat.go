@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/labstack/echo/v4"
 )
 
@@ -104,7 +106,8 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	}
 	msg := chat.Messages[len(chat.Messages)-1]
 	payload := map[string]interface{}{
-		"q": msg.Content,
+		"q":      msg.Content,
+		"stream": true,
 	}
 
 	res, err := callRAGQuery(inst, payload)
@@ -116,14 +119,28 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		return fmt.Errorf("POST status code: %d", res.StatusCode)
 	}
 
-	// TODO streaming
-	completion, err := io.ReadAll(res.Body)
+	var completion string
+	err = foreachSSE(res.Body, func(event map[string]interface{}) {
+		switch event["object"] {
+		case "delta", "done":
+			content, _ := event["content"].(string)
+			completion += content
+			delta := couchdb.JSONDoc{
+				Type: consts.ChatEvents,
+				M:    event,
+			}
+			go realtime.GetHub().Publish(inst, realtime.EventCreate, &delta, nil)
+		default:
+			// We can ignore done events
+		}
+	})
 	if err != nil {
 		return err
 	}
+
 	answer := ChatMessage{
 		Role:    AIRole,
-		Content: string(completion),
+		Content: completion,
 	}
 	chat.Messages = append(chat.Messages, answer)
 	return couchdb.UpdateDoc(inst, &chat)
@@ -149,4 +166,35 @@ func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*htt
 	}
 	req.Header.Add("Content-Type", echo.MIMEApplicationJSON)
 	return http.DefaultClient.Do(req)
+}
+
+func foreachSSE(r io.Reader, fn func(event map[string]interface{})) error {
+	rb := bufio.NewReader(r)
+	for {
+		bs, err := rb.ReadBytes('\n')
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(bs, []byte("\n")) {
+			continue
+		}
+		if bytes.HasPrefix(bs, []byte(":")) {
+			continue
+		}
+		parts := bytes.SplitN(bs, []byte(": "), 2)
+		if len(parts) != 2 {
+			return errors.New("invalid SSE response")
+		}
+		if string(parts[0]) != "data" {
+			return errors.New("invalid SSE response")
+		}
+		var event map[string]interface{}
+		if err := json.Unmarshal(bytes.TrimSpace(parts[1]), &event); err != nil {
+			return err
+		}
+		fn(event)
+	}
 }

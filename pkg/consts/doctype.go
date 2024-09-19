@@ -144,4 +144,6 @@ const (
 	NextCloudFiles = "io.cozy.remote.nextcloud.files"
 	// ChatCompletions doc type is used for a chat between the user and a chatbot.
 	ChatCompletions = "io.cozy.ai.chat.completions"
+	// ChatEvents doc type is used for RAG events about a chat session.
+	ChatEvents = "io.cozy.ai.chat.events"
 )
