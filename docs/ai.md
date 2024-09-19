@@ -41,3 +41,51 @@ When a user starts a chat, their prompts are sent to the RAG that can use the
 vector database to find relevant documents (technically, only some parts of
 the documents called chunks). Those documents are added to the prompt, so
 that the LLM can use them as a context when answering.
+
+### POST /ai/chat/completions/:id
+
+This route can be used to ask AI for a chat completion. The id in the path
+must be the identifier of a chat session. The client can generate a random
+identifier for a new chat session.
+
+The stack will respond after pushing a job for this task, but without the
+response. The client must use the real-time websocket and subscribe to
+`io.cozy.ai.chat.completions`.
+
+#### Request
+
+```http
+POST /ai/chat/completions/e21dce8058b9013d800a18c04daba326 HTTP/1.1
+Content-Type: application/json
+```
+
+```json
+{
+  "q": "Why the sky is blue?"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.ai.chat.completions"
+    "id": "e21dce8058b9013d800a18c04daba326",
+    "rev": "1-23456",
+    "attributes": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Why the sky is blue?"
+        }
+      ]
+    }
+  }
+}
+```
