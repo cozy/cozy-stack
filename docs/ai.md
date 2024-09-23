@@ -42,11 +42,11 @@ vector database to find relevant documents (technically, only some parts of
 the documents called chunks). Those documents are added to the prompt, so
 that the LLM can use them as a context when answering.
 
-### POST /ai/chat/completions/:id
+### POST /ai/chat/conversations/:id
 
 This route can be used to ask AI for a chat completion. The id in the path
-must be the identifier of a chat session. The client can generate a random
-identifier for a new chat session.
+must be the identifier of a chat conversation. The client can generate a random
+identifier for a new chat conversation.
 
 The stack will respond after pushing a job for this task, but without the
 response. The client must use the real-time websocket and subscribe to
@@ -55,7 +55,7 @@ response. The client must use the real-time websocket and subscribe to
 #### Request
 
 ```http
-POST /ai/chat/completions/e21dce8058b9013d800a18c04daba326 HTTP/1.1
+POST /ai/chat/conversations/e21dce8058b9013d800a18c04daba326 HTTP/1.1
 Content-Type: application/json
 ```
 
@@ -75,12 +75,13 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.ai.chat.completions"
+    "type": "io.cozy.ai.chat.conversations"
     "id": "e21dce8058b9013d800a18c04daba326",
     "rev": "1-23456",
     "attributes": {
       "messages": [
         {
+          "id": "eb17c3205bf1013ddea018c04daba326",
           "role": "user",
           "content": "Why the sky is blue?"
         }
@@ -97,16 +98,16 @@ client > {"method": "AUTH", "payload": "token"}
 client > {"method": "SUBSCRIBE",
           "payload": {"type": "io.cozy.ai.chat.events"}}
 server > {"event": "CREATED",
-          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "delta", "content": "The "}}}
 server > {"event": "CREATED",
-          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "delta", "content": "sky "}}}
 [...]
 server > {"event": "CREATED",
-          "payload": {"id": "e21dce8058b9013d800a18c04daba326",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "done"}}}
 ```

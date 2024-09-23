@@ -142,8 +142,8 @@ const (
 	// NextCloudFiles doc type is used when listing files from a NextCloud via
 	// WebDAV.
 	NextCloudFiles = "io.cozy.remote.nextcloud.files"
-	// ChatCompletions doc type is used for a chat between the user and a chatbot.
-	ChatCompletions = "io.cozy.ai.chat.completions"
-	// ChatEvents doc type is used for RAG events about a chat session.
+	// ChatConversations doc type is used for a chat between the user and a chatbot.
+	ChatConversations = "io.cozy.ai.chat.conversations"
+	// ChatEvents doc type is used for RAG events about a chat conversation.
 	ChatEvents = "io.cozy.ai.chat.events"
 )

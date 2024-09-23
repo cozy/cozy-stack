@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -16,62 +17,83 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/gofrs/uuid/v5"
 	"github.com/labstack/echo/v4"
 )
 
 type ChatPayload struct {
-	ChatCompletionID string
-	Query            string `json:"q"`
+	ChatConversationID string
+	Query              string `json:"q"`
 }
 
-type ChatCompletion struct {
-	DocID    string        `json:"_id"`
-	DocRev   string        `json:"_rev,omitempty"`
-	Messages []ChatMessage `json:"messages"`
+type ChatConversation struct {
+	DocID    string                 `json:"_id"`
+	DocRev   string                 `json:"_rev,omitempty"`
+	Messages []ChatMessage          `json:"messages"`
+	Metadata *metadata.CozyMetadata `json:"cozyMetadata"`
 }
 
 type ChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	ID        string `json:"id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	CreatedAt time.Time
 }
 
 const (
-	HumanRole = "human"
-	AIRole    = "ai"
+	UserRole      = "user"
+	AssistantRole = "assistant"
 )
 
-func (c *ChatCompletion) ID() string        { return c.DocID }
-func (c *ChatCompletion) Rev() string       { return c.DocRev }
-func (c *ChatCompletion) DocType() string   { return consts.ChatCompletions }
-func (c *ChatCompletion) SetID(id string)   { c.DocID = id }
-func (c *ChatCompletion) SetRev(rev string) { c.DocRev = rev }
-func (c *ChatCompletion) Clone() couchdb.Doc {
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
+
+func (c *ChatConversation) ID() string        { return c.DocID }
+func (c *ChatConversation) Rev() string       { return c.DocRev }
+func (c *ChatConversation) DocType() string   { return consts.ChatConversations }
+func (c *ChatConversation) SetID(id string)   { c.DocID = id }
+func (c *ChatConversation) SetRev(rev string) { c.DocRev = rev }
+func (c *ChatConversation) Clone() couchdb.Doc {
 	cloned := *c
 	cloned.Messages = make([]ChatMessage, len(c.Messages))
 	copy(cloned.Messages, c.Messages)
 	return &cloned
 }
-func (c *ChatCompletion) Included() []jsonapi.Object             { return nil }
-func (c *ChatCompletion) Relationships() jsonapi.RelationshipMap { return nil }
-func (c *ChatCompletion) Links() *jsonapi.LinksList              { return nil }
+func (c *ChatConversation) Included() []jsonapi.Object             { return nil }
+func (c *ChatConversation) Relationships() jsonapi.RelationshipMap { return nil }
+func (c *ChatConversation) Links() *jsonapi.LinksList              { return nil }
 
-var _ jsonapi.Object = (*ChatCompletion)(nil)
+var _ jsonapi.Object = (*ChatConversation)(nil)
 
 type QueryMessage struct {
 	Task  string `json:"task"`
 	DocID string `json:"doc_id"`
 }
 
-func Chat(inst *instance.Instance, payload ChatPayload) (*ChatCompletion, error) {
-	var chat ChatCompletion
-	err := couchdb.GetDoc(inst, consts.ChatCompletions, payload.ChatCompletionID, &chat)
+func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
+	var chat ChatConversation
+	err := couchdb.GetDoc(inst, consts.ChatConversations, payload.ChatConversationID, &chat)
 	if couchdb.IsNotFoundError(err) {
-		chat.DocID = payload.ChatCompletionID
+		chat.DocID = payload.ChatConversationID
+		md := metadata.New()
+		md.DocTypeVersion = DocTypeVersion
+		md.UpdatedAt = md.CreatedAt
+		chat.Metadata = md
 	} else if err != nil {
 		return nil, err
+	} else {
+		chat.Metadata.UpdatedAt = time.Now().UTC()
 	}
-	msg := ChatMessage{Role: HumanRole, Content: payload.Query}
+	uuidv7, _ := uuid.NewV7()
+	msg := ChatMessage{
+		ID:        uuidv7.String(),
+		Role:      UserRole,
+		Content:   payload.Query,
+		CreatedAt: time.Now().UTC(),
+	}
 	chat.Messages = append(chat.Messages, msg)
 	if chat.DocRev == "" {
 		err = couchdb.CreateNamedDocWithDB(inst, &chat)
@@ -99,15 +121,14 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatCompletion, error)
 }
 
 func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) error {
-	var chat ChatCompletion
-	err := couchdb.GetDoc(inst, consts.ChatCompletions, query.DocID, &chat)
+	var chat ChatConversation
+	err := couchdb.GetDoc(inst, consts.ChatConversations, query.DocID, &chat)
 	if err != nil {
 		return err
 	}
-	msg := chat.Messages[len(chat.Messages)-1]
 	payload := map[string]interface{}{
-		"q":      msg.Content,
-		"stream": true,
+		"messages": chat.Messages,
+		"stream":   true,
 	}
 
 	res, err := callRAGQuery(inst, payload)
@@ -119,6 +140,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		return fmt.Errorf("POST status code: %d", res.StatusCode)
 	}
 
+	msg := chat.Messages[len(chat.Messages)-1]
 	var completion string
 	err = foreachSSE(res.Body, func(event map[string]interface{}) {
 		switch event["object"] {
@@ -129,6 +151,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 				Type: consts.ChatEvents,
 				M:    event,
 			}
+			delta.SetID(msg.ID)
 			go realtime.GetHub().Publish(inst, realtime.EventCreate, &delta, nil)
 		default:
 			// We can ignore done events
@@ -138,9 +161,12 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		return err
 	}
 
+	uuidv7, _ := uuid.NewV7()
 	answer := ChatMessage{
-		Role:    AIRole,
-		Content: completion,
+		ID:        uuidv7.String(),
+		Role:      AssistantRole,
+		Content:   completion,
+		CreatedAt: time.Now().UTC(),
 	}
 	chat.Messages = append(chat.Messages, answer)
 	return couchdb.UpdateDoc(inst, &chat)
@@ -155,7 +181,7 @@ func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*htt
 	if err != nil {
 		return nil, err
 	}
-	u.Path = fmt.Sprintf("/query/%s", inst.Domain)
+	u.Path = fmt.Sprintf("/chat/%s", inst.Domain)
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err

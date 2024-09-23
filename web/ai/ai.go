@@ -13,14 +13,14 @@ import (
 
 // Chat is the route for asking a chat completion to AI.
 func Chat(c echo.Context) error {
-	if err := middlewares.AllowWholeType(c, permission.POST, consts.ChatCompletions); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.ChatConversations); err != nil {
 		return middlewares.ErrForbidden
 	}
 	var payload rag.ChatPayload
 	if err := c.Bind(&payload); err != nil {
 		return err
 	}
-	payload.ChatCompletionID = c.Param("id")
+	payload.ChatConversationID = c.Param("id")
 	inst := middlewares.GetInstance(c)
 	chat, err := rag.Chat(inst, payload)
 	if err != nil {
@@ -31,5 +31,5 @@ func Chat(c echo.Context) error {
 
 // Routes sets the routing for the AI tasks.
 func Routes(router *echo.Group) {
-	router.POST("/chat/completions/:id", Chat)
+	router.POST("/chat/conversations/:id", Chat)
 }
