@@ -75,7 +75,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.ai.chat.conversations"
+    "type": "io.cozy.ai.chat.conversations",
     "id": "e21dce8058b9013d800a18c04daba326",
     "rev": "1-23456",
     "attributes": {
@@ -83,10 +83,18 @@ Content-Type: application/vnd.api+json
         {
           "id": "eb17c3205bf1013ddea018c04daba326",
           "role": "user",
-          "content": "Why the sky is blue?"
+          "content": "Why the sky is blue?",
+          "createdAt": "2024-09-24T13:24:07.576Z"
         }
       ]
     }
+  },
+  "cozyMetadata": {
+    "createdAt": "2024-09-24T13:24:07.576Z",
+    "createdOn": "http://cozy.localhost:8080/",
+    "doctypeVersion": "1",
+    "metadataVersion": 1,
+    "updatedAt": "2024-09-24T13:24:07.576Z"
   }
 }
 ```
