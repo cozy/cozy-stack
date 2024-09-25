@@ -232,7 +232,8 @@ type Office struct {
 
 // RAGServer contains the configuration for a RAG server (AI features).
 type RAGServer struct {
-	URL string
+	URL    string
+	APIKey string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -1026,8 +1027,10 @@ func makeRAGServers(v *viper.Viper) (map[string]RAGServer, error) {
 					"should be a map, got %#v", v)
 		}
 		url, _ := m["url"].(string)
+		key, _ := m["api_key"].(string)
 		servers[k] = RAGServer{
-			URL: url,
+			URL:    url,
+			APIKey: key,
 		}
 	}
 	return servers, nil

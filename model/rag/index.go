@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/labstack/echo/v4"
 )
 
 // BatchSize is the maximal number of documents manipulated at once by the
@@ -86,6 +87,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		if err != nil {
 			return err
 		}
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return err
@@ -100,6 +102,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		if err != nil {
 			return err
 		}
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return err
@@ -154,6 +157,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		if err != nil {
 			return err
 		}
+		req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
 		req.Header.Add("Content-Type", mime)
 		res, err = http.DefaultClient.Do(req)
 		if err != nil {

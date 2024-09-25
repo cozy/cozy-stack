@@ -208,8 +208,10 @@ rag:
   # declared, for default.
   default:
     url: http://localhost:8000
+    api_key: $3cr3t
   beta:
     url: http://localhost:8001
+    api_key: $3cr3t
 
 # mail service parameters for sending email via SMTP
 mail:

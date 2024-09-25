@@ -190,6 +190,7 @@ func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*htt
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
 	req.Header.Add("Content-Type", echo.MIMEApplicationJSON)
 	return http.DefaultClient.Do(req)
 }
