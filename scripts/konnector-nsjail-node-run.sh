@@ -164,6 +164,7 @@ nsjail \
   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
   -E "COZY_TIME_LIMIT=${COZY_TIME_LIMIT}" \
   -E "COZY_TRIGGER_ID=${COZY_TRIGGER_ID}" \
+  -E "HOME=/usr/src/konnector" \
   -R "${rundir}:/usr/src/konnector/" \
   -R /lib \
   -R /lib64 \
@@ -194,5 +195,6 @@ nsjail \
 #   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
 #   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
 #   -E "COZY_LOCALE=${COZY_LOCALE}" \
+#   -E "HOME=/usr/src/konnector" \
 #   -R "${rundir}:/usr/src/konnector/" \
 #   -- /usr/bin/nodejs ${NODE_OPTS} "${runfile}"
