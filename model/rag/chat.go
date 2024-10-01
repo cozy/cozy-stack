@@ -141,10 +141,13 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	}
 
 	msg := chat.Messages[len(chat.Messages)-1]
+	position := 0
 	var completion string
 	err = foreachSSE(res.Body, func(event map[string]interface{}) {
 		switch event["object"] {
 		case "delta", "done":
+			event["position"] = position
+			position++
 			content, _ := event["content"].(string)
 			completion += content
 			delta := couchdb.JSONDoc{

@@ -108,11 +108,11 @@ client > {"method": "SUBSCRIBE",
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
-                      "doc": {"object": "delta", "content": "The "}}}
+                      "doc": {"object": "delta", "content": "The ", "position": 0}}}
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
-                      "doc": {"object": "delta", "content": "sky "}}}
+                      "doc": {"object": "delta", "content": "sky ", "position": 1}}}
 [...]
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
