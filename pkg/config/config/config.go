@@ -142,6 +142,7 @@ type Config struct {
 
 	Contexts       map[string]interface{}
 	Authentication map[string]interface{}
+	RAGServers     map[string]RAGServer
 	Office         map[string]Office
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
@@ -227,6 +228,12 @@ type Office struct {
 	OnlyOfficeURL string
 	InboxSecret   string
 	OutboxSecret  string
+}
+
+// RAGServer contains the configuration for a RAG server (AI features).
+type RAGServer struct {
+	URL    string
+	APIKey string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -557,6 +564,11 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	rag, err := makeRAGServers(v)
+	if err != nil {
+		return err
+	}
+
 	regs, err := makeRegistries(v)
 	if err != nil {
 		return err
@@ -848,6 +860,7 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
+		RAGServers: rag,
 		Move: Move{
 			URL: v.GetString("move.url"),
 		},
@@ -1002,6 +1015,25 @@ func makeCouch(v *viper.Viper) (CouchDB, error) {
 		couch.Clusters = []CouchDBCluster{couch.Global}
 	}
 	return couch, nil
+}
+
+func makeRAGServers(v *viper.Viper) (map[string]RAGServer, error) {
+	servers := make(map[string]RAGServer)
+	for k, v := range v.GetStringMap("rag") {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf(
+				"Bad format in the rag section of the configuration file: "+
+					"should be a map, got %#v", v)
+		}
+		url, _ := m["url"].(string)
+		key, _ := m["api_key"].(string)
+		servers[k] = RAGServer{
+			URL:    url,
+			APIKey: key,
+		}
+	}
+	return servers, nil
 }
 
 func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {

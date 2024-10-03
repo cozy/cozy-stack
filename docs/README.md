@@ -72,6 +72,7 @@ designing new services.
 
 ### List of services
 
+-   `/ai` - [AI](ai.md)
 -   `/auth` - [Authentication & OAuth](auth.md)
     -   [Delegated authentication](delegated-auth.md)
 -   `/apps` - [Applications Management](apps.md)

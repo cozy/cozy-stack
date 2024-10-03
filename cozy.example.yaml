@@ -146,6 +146,8 @@ jobs:
   #   - "service":           launching services
   #   - "migrations":        transforming a VFS with Swift to layout v3
   #   - "notes-save":        saving notes to the VFS
+  #   - "rag-index":         send data to the RAG server for being indexed
+  #   - "rag-query":         send a query to the RAG server
   #   - "push":              sending push notifications
   #   - "sms":               sending SMS notifications
   #   - "sendmail":          sending mails
@@ -199,6 +201,17 @@ konnectors:
   # cmd: ./scripts/konnector-node-run.sh # run connectors with node in dev mode
   # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
   # cmd: ./scripts/konnector-nsjail-node8-run.sh # run connectors with nsjail
+
+# rag are the URL of the RAG server(s) for AI.
+rag:
+  # A cozy will use the rag server for its context, or if the context is not
+  # declared, for default.
+  default:
+    url: http://localhost:8000
+    api_key: $3cr3t
+  beta:
+    url: http://localhost:8001
+    api_key: $3cr3t
 
 # mail service parameters for sending email via SMTP
 mail:

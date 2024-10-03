@@ -38,6 +38,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/notes"
 	_ "github.com/cozy/cozy-stack/worker/oauth"
 	_ "github.com/cozy/cozy-stack/worker/push"
+	_ "github.com/cozy/cozy-stack/worker/rag"
 	_ "github.com/cozy/cozy-stack/worker/share"
 	_ "github.com/cozy/cozy-stack/worker/sms"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"

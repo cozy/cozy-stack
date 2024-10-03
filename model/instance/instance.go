@@ -439,6 +439,17 @@ func (i *Instance) Registries() []*url.URL {
 	return context
 }
 
+// RAGServer returns the RAG server for the instance (AI features).
+func (i *Instance) RAGServer() config.RAGServer {
+	contexts := config.GetConfig().RAGServers
+	if i.ContextName != "" {
+		if server, ok := contexts[i.ContextName]; ok {
+			return server
+		}
+	}
+	return contexts[config.DefaultInstanceContext]
+}
+
 // HasForcedOIDC returns true only if the instance is in a context where the
 // config says that the stack shouldn't allow to authenticate with the
 // password.

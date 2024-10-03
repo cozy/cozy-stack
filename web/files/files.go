@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/rag"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
@@ -383,6 +384,24 @@ func FileCopyHandler(c echo.Context) error {
 	}
 
 	return FileData(c, http.StatusCreated, newdoc, false, nil)
+}
+
+func AddDescription(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("file-id")
+	doc, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	err = checkPerm(c, permission.POST, nil, doc)
+	if err != nil {
+		return err
+	}
+	newdoc, err := rag.AddDescriptionToFile(inst, doc)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return FileData(c, http.StatusOK, newdoc, false, nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
@@ -1932,6 +1951,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
 	router.PATCH("/", ModifyMetadataByIDInBatchHandler)
+	router.POST("/:file-id/description", AddDescription)
 
 	router.POST("/shared-drives", SharedDrivesCreationHandler)
 	router.POST("/", CreationHandler)

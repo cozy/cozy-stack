@@ -412,3 +412,9 @@ It can be launched from command-line with:
 ```sh
 $ cozy-stack jobs run migrations --domain example.mycozy.cloud --json '{"type": "to-swift-v3"}'
 ```
+
+## index
+
+This worker is used for sending data to a RAG. It looks at the changes feed for
+the given doctype, send the changes to an external indexer that will generate
+embeddings for the data and put them in a vector database.

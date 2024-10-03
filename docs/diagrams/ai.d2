@@ -1,0 +1,17 @@
+# https://d2lang.com/
+
+stack: {label: "Cozy-Stack"}
+rag: {label: "RAG"}
+llm: {label: "LLM"; shape: diamond}
+embed: {label: "Embeddings model"; shape: diamond}
+vector: {label: "Vector DB"; shape: cylinder}
+couchdb: {label: "CouchDB"; shape: cylinder}
+swift: {label: "Swift"; shape: cylinder}
+
+stack -> rag
+stack -> couchdb
+stack -> swift
+
+rag -> embed
+rag -> vector
+rag -> llm
