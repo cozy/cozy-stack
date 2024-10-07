@@ -1,15 +1,18 @@
 package rag
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -139,20 +142,40 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			"name":   []string{name},
 			"md5sum": []string{md5sum},
 		}.Encode()
-		fs := inst.VFS()
-		fileDoc := &vfs.FileDoc{
-			Type:       consts.FileType,
-			DocID:      change.DocID,
-			DirID:      dirID,
-			DocName:    name,
-			InternalID: internalID,
+		var content io.Reader
+		fmt.Printf("mime = %s\n", mime)
+		if mime == consts.NoteMimeType {
+			fmt.Printf("NOTE !!")
+			metadata, _ := change.Doc.Get("metadata").(map[string]interface{})
+			schema, _ := metadata["schema"].(map[string]interface{})
+			raw, _ := metadata["content"].(map[string]interface{})
+			noteDoc := &note.Document{
+				DocID:      change.DocID,
+				SchemaSpec: schema,
+				RawContent: raw,
+			}
+			md, err := noteDoc.Markdown(nil)
+			fmt.Printf("markdown: %s\n", md)
+			if err != nil {
+				return err
+			}
+			content = bytes.NewReader(md)
+		} else {
+			fs := inst.VFS()
+			fileDoc := &vfs.FileDoc{
+				Type:       consts.FileType,
+				DocID:      change.DocID,
+				DirID:      dirID,
+				DocName:    name,
+				InternalID: internalID,
+			}
+			f, err := fs.OpenFile(fileDoc)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			content = f
 		}
-		// TODO notes with images
-		content, err := fs.OpenFile(fileDoc)
-		if err != nil {
-			return err
-		}
-		defer content.Close()
 		req, err = http.NewRequest(http.MethodPut, u.String(), content)
 		if err != nil {
 			return err
