@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -126,8 +127,10 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	if err != nil {
 		return err
 	}
+	myself, _ := contact.GetMyself(inst)
 	payload := map[string]interface{}{
 		"messages": chat.Messages,
+		"myself":   myself,
 		"stream":   true,
 	}
 
