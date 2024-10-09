@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -256,7 +257,7 @@ func FindByEmail(db prefixer.Prefixer, email string) (*Contact, error) {
 }
 
 // CreateMyself creates the myself contact document from the instance settings.
-func CreateMyself(db prefixer.Prefixer, settings *couchdb.JSONDoc) (*Contact, error) {
+func CreateMyself(inst *instance.Instance, settings *couchdb.JSONDoc) (*Contact, error) {
 	doc := New()
 	doc.JSONDoc.M["me"] = true
 	if name, ok := settings.M["public_name"]; ok {
@@ -267,7 +268,10 @@ func CreateMyself(db prefixer.Prefixer, settings *couchdb.JSONDoc) (*Contact, er
 			{"address": email, "primary": true},
 		}
 	}
-	if err := couchdb.CreateDoc(db, doc); err != nil {
+	doc.JSONDoc.M["cozy"] = []map[string]interface{}{
+		{"url": inst.PageURL("", nil), "primary": true},
+	}
+	if err := couchdb.CreateDoc(inst, doc); err != nil {
 		return nil, err
 	}
 	return doc, nil
