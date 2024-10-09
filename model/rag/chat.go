@@ -128,10 +128,12 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		return err
 	}
 	myself, _ := contact.GetMyself(inst)
+	relatives, _ := getRelatives(inst, myself)
 	payload := map[string]interface{}{
-		"messages": chat.Messages,
-		"myself":   myself,
-		"stream":   true,
+		"messages":  chat.Messages,
+		"myself":    myself,
+		"relatives": relatives,
+		"stream":    true,
 	}
 
 	res, err := callRAGQuery(inst, payload)
@@ -176,6 +178,40 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	}
 	chat.Messages = append(chat.Messages, answer)
 	return couchdb.UpdateDoc(inst, &chat)
+}
+
+func getRelatives(inst *instance.Instance, myself *contact.Contact) ([]*contact.Contact, error) {
+	if myself == nil {
+		return nil, errors.New("no myself contact")
+	}
+	var ids []string
+	rels, _ := myself.Get("relationships").(map[string]interface{})
+	if len(rels) == 0 {
+		return nil, nil
+	}
+	related, _ := rels["related"].(map[string]interface{})
+	if len(related) == 0 {
+		return nil, nil
+	}
+	data, _ := related["data"].([]interface{})
+	for _, item := range data {
+		item, _ := item.(map[string]interface{})
+		if len(item) > 0 {
+			id, _ := item["_id"].(string)
+			if len(id) > 0 {
+				ids = append(ids, id)
+			}
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var relatives []*contact.Contact
+	req := &couchdb.AllDocsRequest{Keys: ids}
+	if err := couchdb.GetAllDocs(inst, consts.Contacts, req, &relatives); err != nil {
+		return nil, err
+	}
+	return relatives, nil
 }
 
 func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*http.Response, error) {
