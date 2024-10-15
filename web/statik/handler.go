@@ -226,7 +226,7 @@ func AssetPath(domain, name string, context ...string) string {
 			"domain":  domain,
 			"name":    name,
 			"context": ctx,
-		}).Errorf("Cannot find asset")
+		}).Infof("Cannot find asset")
 	}
 
 	if ok {
