@@ -260,16 +260,33 @@ func FindByEmail(db prefixer.Prefixer, email string) (*Contact, error) {
 func CreateMyself(inst *instance.Instance, settings *couchdb.JSONDoc) (*Contact, error) {
 	doc := New()
 	doc.JSONDoc.M["me"] = true
-	if name, ok := settings.M["public_name"]; ok {
-		doc.JSONDoc.M["fullname"] = name
-	}
-	if email, ok := settings.M["email"]; ok {
+	email, ok := settings.M["email"].(string)
+	if ok {
 		doc.JSONDoc.M["email"] = []map[string]interface{}{
 			{"address": email, "primary": true},
 		}
 	}
+	name, _ := settings.M["public_name"].(string)
+	displayName := name
+	if name == "" {
+		parts := strings.SplitN(email, "@", 2)
+		name = parts[0]
+		displayName = email
+	}
+	if name != "" {
+		doc.JSONDoc.M["fullname"] = name
+		doc.JSONDoc.M["displayName"] = displayName
+	}
+	cozyURL := inst.PageURL("", nil)
 	doc.JSONDoc.M["cozy"] = []map[string]interface{}{
-		{"url": inst.PageURL("", nil), "primary": true},
+		{"url": cozyURL, "primary": true},
+	}
+	index := email
+	if index == "" {
+		index = cozyURL
+	}
+	doc.JSONDoc.M["indexes"] = map[string]interface{}{
+		"byFamilyNameGivenNameEmailCozyUrl": index,
 	}
 	if err := couchdb.CreateDoc(inst, doc); err != nil {
 		return nil, err
