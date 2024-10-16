@@ -48,11 +48,12 @@ type LoginURI struct {
 
 // LoginData is the encrypted data for a cipher with the login type.
 type LoginData struct {
-	URIs     []LoginURI `json:"uris,omitempty"`
-	Username string     `json:"username,omitempty"`
-	Password string     `json:"password,omitempty"`
-	RevDate  string     `json:"passwordRevisionDate,omitempty"`
-	TOTP     string     `json:"totp,omitempty"`
+	URIs     []LoginURI  `json:"uris,omitempty"`
+	Username string      `json:"username,omitempty"`
+	Password string      `json:"password,omitempty"`
+	RevDate  string      `json:"passwordRevisionDate,omitempty"`
+	TOTP     string      `json:"totp,omitempty"`
+	Fido     interface{} `json:"fido2Credentials,omitempty"`
 }
 
 // Field is used to store some additional fields.
