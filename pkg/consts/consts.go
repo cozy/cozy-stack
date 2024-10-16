@@ -113,4 +113,5 @@ var PlatformApps = []string{
 	"store",
 	"coachco2",
 	"mespapiers",
+	"dataproxy",
 }
