@@ -100,6 +100,7 @@ type loginResponse struct {
 	Password *string       `json:"Password"`
 	RevDate  *string       `json:"PasswordRevisionDate"`
 	TOTP     *string       `json:"Totp"`
+	Fido     interface{}   `json:"fido2Credentials"`
 }
 
 type fieldResponse struct {
@@ -212,6 +213,7 @@ func newCipherResponse(c *bitwarden.Cipher, setting *settings.Settings) *cipherR
 			if c.Login.TOTP != "" {
 				r.Login.TOTP = &c.Login.TOTP
 			}
+			r.Login.Fido = c.Login.Fido
 		}
 	case bitwarden.SecureNoteType:
 		if c.Data != nil {
