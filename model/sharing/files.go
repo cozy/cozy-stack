@@ -209,7 +209,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		} else {
 			dir.CozyMetadata.UpdatedAt = now
 		}
-		_, err = vfs.RestoreDir(fs, dir)
+		dir, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("EnsureSharedWithMeDir failed to restore the dir: %s", err)
