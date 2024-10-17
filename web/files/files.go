@@ -1020,48 +1020,6 @@ func HeadDirOrFile(c echo.Context) error {
 	return nil
 }
 
-// IconHandler serves icon for the PDFs.
-func IconHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	secret := c.Param("secret")
-	fileID, err := vfs.GetStore().GetThumb(instance, secret)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-	if c.Param("file-id") != fileID {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
-	}
-
-	doc, err := instance.VFS().FileByID(fileID)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-
-	return vfs.ServePDFIcon(c.Response(), c.Request(), instance.VFS(), doc)
-}
-
-// PreviewHandler serves preview images for the PDFs.
-func PreviewHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	secret := c.Param("secret")
-	fileID, err := vfs.GetStore().GetThumb(instance, secret)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-	if c.Param("file-id") != fileID {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
-	}
-
-	doc, err := instance.VFS().FileByID(fileID)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-
-	return vfs.ServePDFPreview(c.Response(), c.Request(), instance.VFS(), doc)
-}
-
 // ThumbnailHandler serves thumbnails of the images/photos
 func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -1960,8 +1918,6 @@ func Routes(router *echo.Group) {
 	router.POST("/upload/metadata", UploadMetadataHandler)
 	router.POST("/:file-id/copy", FileCopyHandler)
 
-	router.GET("/:file-id/icon/:secret", IconHandler)
-	router.GET("/:file-id/preview/:secret", PreviewHandler)
 	router.GET("/:file-id/thumbnails/:secret/:format", ThumbnailHandler)
 
 	router.POST("/archive", ArchiveDownloadCreateHandler)

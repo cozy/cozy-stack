@@ -3614,10 +3614,6 @@ func TestFiles(t *testing.T) {
 		data.ValueEqual("id", parentID)
 		data.Value("attributes").Object().ValueEqual("size", "90")
 	})
-
-	t.Run("DeprecatePreviewAndIcon", func(t *testing.T) {
-		testutils.TODO(t, "2024-05-01", "Remove the deprecated preview and icon for PDF files")
-	})
 }
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
