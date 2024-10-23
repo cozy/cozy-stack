@@ -37,10 +37,11 @@ type ChatConversation struct {
 }
 
 type ChatMessage struct {
-	ID        string    `json:"id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        string        `json:"id"`
+	Role      string        `json:"role"`
+	Content   string        `json:"content"`
+	Sources   []interface{} `json:"sources,omitempty"`
+	CreatedAt time.Time     `json:"createdAt"`
 }
 
 const (
@@ -130,10 +131,11 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	myself, _ := contact.GetMyself(inst)
 	relatives, _ := getRelatives(inst, myself)
 	payload := map[string]interface{}{
-		"messages":  chat.Messages,
-		"myself":    myself,
-		"relatives": relatives,
-		"stream":    true,
+		"messages":     chat.Messages,
+		"myself":       myself,
+		"relatives":    relatives,
+		"stream":       true,
+		"with_sources": true,
 	}
 
 	res, err := callRAGQuery(inst, payload)
@@ -148,9 +150,10 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	msg := chat.Messages[len(chat.Messages)-1]
 	position := 0
 	var completion string
+	var sources []interface{}
 	err = foreachSSE(res.Body, func(event map[string]interface{}) {
 		switch event["object"] {
-		case "delta", "done":
+		case "delta":
 			event["position"] = position
 			position++
 			content, _ := event["content"].(string)
@@ -161,8 +164,21 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 			}
 			delta.SetID(msg.ID)
 			go realtime.GetHub().Publish(inst, realtime.EventCreate, &delta, nil)
-		default:
-			// We can ignore done events
+		case "sources":
+			sources, _ = event["content"].([]interface{})
+			doc := couchdb.JSONDoc{
+				Type: consts.ChatEvents,
+				M:    event,
+			}
+			doc.SetID(msg.ID)
+			go realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
+		default: // done, generated, etc.
+			doc := couchdb.JSONDoc{
+				Type: consts.ChatEvents,
+				M:    event,
+			}
+			doc.SetID(msg.ID)
+			go realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
 		}
 	})
 	if err != nil {
@@ -174,6 +190,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		ID:        uuidv7.String(),
 		Role:      AssistantRole,
 		Content:   completion,
+		Sources:   sources,
 		CreatedAt: time.Now().UTC(),
 	}
 	chat.Messages = append(chat.Messages, answer)

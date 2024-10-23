@@ -117,5 +117,13 @@ server > {"event": "CREATED",
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "generated"}}}
+server > {"event": "CREATED",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
+                      "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "sources", "content": [{"id": "827f0fbb928b375cc457c732a4013aa7", "doctype": "io.cozy.files"}]}}}
+server > {"event": "CREATED",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
+                      "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "done"}}}
 ```
