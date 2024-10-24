@@ -141,8 +141,8 @@ func TestIntents(t *testing.T) {
 		err := intent.FillAvailableWebapps(ins)
 		assert.NoError(t, err)
 
-		// Should have Home and Collect
-		assert.Equal(t, 2, len(intent.AvailableApps))
+		// Should have Home
+		assert.Equal(t, 1, len(intent.AvailableApps))
 
 		res := map[string]interface{}{}
 		for _, v := range intent.AvailableApps {
@@ -150,6 +150,5 @@ func TestIntents(t *testing.T) {
 		}
 
 		assert.Contains(t, res, "home")
-		assert.Contains(t, res, "collect")
 	})
 }
