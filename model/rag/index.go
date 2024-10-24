@@ -85,7 +85,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		return err
 	}
 	u.Path = fmt.Sprintf("/docs/%s/%s/%s", inst.Domain, doctype, change.DocID)
-	if change.Deleted {
+	if change.Deleted || change.Doc.Get("trashed") == true {
 		req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
 		if err != nil {
 			return err
