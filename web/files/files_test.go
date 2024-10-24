@@ -3305,6 +3305,33 @@ func TestFiles(t *testing.T) {
 		})
 	})
 
+	t.Run("GetAllDocs", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		obj := e.POST("/files/_all_docs").
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+				"keys": ["io.cozy.files.root-dir", "%s"]
+      }`, fileID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Array()
+		data.Length().IsEqual(2)
+
+		elem := data.Value(0).Object()
+		attrs := elem.Value("attributes").Object()
+		attrs.HasValue("path", "/")
+
+		elem = data.Value(1).Object()
+		attrs = elem.Value("attributes").Object()
+		attrs.Value("path").String().NotEmpty()
+		links := elem.Value("links").Object()
+		links.Value("tiny").String().NotEmpty()
+	})
+
 	t.Run("Find", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
