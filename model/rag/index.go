@@ -53,10 +53,11 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) erro
 		return nil
 	}
 
+	var errj error
 	for _, change := range feed.Results {
 		if err := callRAGIndexer(inst, msg.Doctype, change); err != nil {
 			logger.Warnf("Index error: %s", err)
-			return err
+			errj = errors.Join(errj, err)
 		}
 	}
 	_ = updateLastSequenceNumber(inst, msg.Doctype, feed.LastSeq)
@@ -65,7 +66,7 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) erro
 		_ = pushJob(inst, msg.Doctype)
 	}
 
-	return nil
+	return errj
 }
 
 func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Change) error {
