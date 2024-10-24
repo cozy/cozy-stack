@@ -372,6 +372,134 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST `/files/_all_docs`
+
+This route allows to fetch several files in one request. It is the same as the
+`_all_docs` request for CouchDB, except the response is in the JSON-API format,
+(with thumbnails and path for the files).
+
+### Request
+
+```http
+POST /files/_all_docs HTTP/1.1
+```
+
+```json
+{
+  "keys": ["e8c1561846c730428180a5f6c6107914", "e8c1561846c730428180a5f6c6109007"]
+}
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Date: Mon, 27 Sept 2016 12:28:53 GMT
+Content-Length: ...
+Content-Type: application/json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.files",
+      "id": "e8c1561846c730428180a5f6c6107914",
+      "attributes": {
+        "type": "file",
+        "name": "nicepic1.jpg",
+        "dir_id": "f49b4087cbf946dfc759214394009a6c",
+        "created_at": "2020-02-13T16:35:47.568155477+01:00",
+        "updated_at": "2020-02-13T16:35:47.568155477+01:00",
+        "size": "345385",
+        "md5sum": "12cGYwT+RiNjFxf4f7AmzQ==",
+        "mime": "image/jpeg",
+        "class": "image",
+        "executable": false,
+        "trashed": false,
+        "tags": [],
+        "path": "/Pictures/nicepic1.jpg",
+        "metadata": {
+          "datetime": "2020-02-13T16:35:47.568155477+01:00",
+          "extractor_version": 2,
+          "height": 1080,
+          "width": 1920
+        }
+      },
+      "meta": {
+        "rev": "2-235e715b1d82a93285be1b0bd691b779"
+      },
+      "links": {
+        "self": "/files/e8c1561846c730428180a5f6c6107914",
+        "tiny": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/tiny",
+        "small": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/small",
+        "medium": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/medium",
+        "large": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/large"
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/f49b4087cbf946dfc759214394009a6c"
+          },
+          "data": {
+            "id": "f49b4087cbf946dfc759214394009a6c",
+            "type": "io.cozy.files"
+          }
+        }
+      }
+    },
+    {
+      "type": "io.cozy.files",
+      "id": "e8c1561846c730428180a5f6c6109007",
+      "attributes": {
+        "type": "file",
+        "name": "nicepic2.jpg",
+        "dir_id": "f49b4087cbf946dfc759214394009a6c",
+        "created_at": "2020-02-13T16:35:47.845049743+01:00",
+        "updated_at": "2020-02-13T16:35:47.845049743+01:00",
+        "size": "323009",
+        "md5sum": "Fla3ucNXuW2Xw/TK8pfsPA==",
+        "mime": "image/jpeg",
+        "class": "image",
+        "executable": false,
+        "trashed": false,
+        "tags": [],
+        "path": "/Pictures/nicepic2.jpg",
+        "metadata": {
+          "datetime": "2020-02-13T16:35:47.845049743+01:00",
+          "extractor_version": 2,
+          "height": 1080,
+          "width": 1920
+        }
+      },
+      "meta": {
+        "rev": "2-4883d6b8ccad32f8fb056af9b7f8b37f"
+      },
+      "links": {
+        "self": "/files/e8c1561846c730428180a5f6c6109007",
+        "tiny": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/tiny",
+        "small": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/small",
+        "medium": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/medium",
+        "large": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/large"
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/f49b4087cbf946dfc759214394009a6c"
+          },
+          "data": {
+            "id": "f49b4087cbf946dfc759214394009a6c",
+            "type": "io.cozy.files"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+
+
 ### GET `/files/_changes`
 
 This endpoint is similar to the changes feed of CouchDB for io.cozy.files.

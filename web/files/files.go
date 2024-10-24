@@ -1524,6 +1524,43 @@ func DestroyFileHandler(c echo.Context) error {
 	return c.NoContent(204)
 }
 
+// GetAllDocs is the handler for POST /files/_all_docs
+func GetAllDocs(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+	var allDocsReq struct {
+		Keys []string `json:"keys"`
+	}
+	if err := json.NewDecoder(c.Request().Body).Decode(&allDocsReq); err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	req := &couchdb.AllDocsRequest{Keys: allDocsReq.Keys}
+	var results []vfs.DirOrFileDoc
+	if err := couchdb.GetAllDocs(inst, consts.Files, req, &results); err != nil {
+		return err
+	}
+
+	out := make([]jsonapi.Object, 0)
+	fp := vfs.NewFilePatherWithCache(inst.VFS())
+	for _, result := range results {
+		if result.ID() == consts.TrashDirID {
+			continue
+		}
+		d, f := result.Refine()
+		if d != nil {
+			out = append(out, newDir(d))
+		} else {
+			file := NewFile(f, inst)
+			file.IncludePath(fp)
+			out = append(out, file)
+		}
+	}
+	return jsonapi.DataList(c, http.StatusOK, out, nil)
+}
+
 // FindFilesMango is the route POST /files/_find
 // used to retrieve files and their metadata from a mango query.
 func FindFilesMango(c echo.Context) error {
@@ -1938,6 +1975,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:file-id/versions", CopyVersionHandler)
 	router.DELETE("/versions", ClearOldVersions)
 
+	router.POST("/_all_docs", GetAllDocs)
 	router.POST("/_find", FindFilesMango)
 	router.GET("/_changes", ChangesFeed)
 
