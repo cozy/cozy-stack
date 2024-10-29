@@ -252,3 +252,29 @@ func pushJob(inst *instance.Instance, doctype string) error {
 	})
 	return err
 }
+
+func CleanInstance(inst *instance.Instance) error {
+	ragServer := inst.RAGServer()
+	if ragServer.URL == "" {
+		return nil
+	}
+	u, err := url.Parse(ragServer.URL)
+	if err != nil {
+		return err
+	}
+	u.Path = fmt.Sprintf("/instances/%s", inst.Domain)
+	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode >= 500 {
+		return fmt.Errorf("DELETE status code: %d", res.StatusCode)
+	}
+	return nil
+}

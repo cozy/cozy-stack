@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	job "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/rag"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -73,6 +74,10 @@ func Destroy(domain string) error {
 	// launch a worker in order to clean the account.
 	if err := deleteAccounts(inst); err != nil {
 		sendAlert(inst, err)
+		return err
+	}
+
+	if err := rag.CleanInstance(inst); err != nil {
 		return err
 	}
 
