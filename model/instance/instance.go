@@ -546,6 +546,14 @@ func (i *Instance) ChangePasswordURL() string {
 	return u.String()
 }
 
+// DataProxyCleanURL returns the URL of the DataProxy iframe for cleaning
+// PouchDB.
+func (i *Instance) DataProxyCleanURL() string {
+	u := i.SubDomain(consts.DataProxySlug)
+	u.Path = "/reset"
+	return u.String()
+}
+
 // FromURL normalizes a given url with the scheme and domain of the instance.
 func (i *Instance) FromURL(u *url.URL) string {
 	u2 := url.URL{

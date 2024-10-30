@@ -21,6 +21,9 @@ const (
 	// PassSlug is the slug of cozy-pass webapp, which is used by the stack for
 	// linking the bitwarden OAuth clients.
 	PassSlug = "passwords"
+	// DataProxySlug is the slug of the dataproxy webapp, which is used for
+	// embedding a PouchDB in the client (used by the search for example).
+	DataProxySlug = "dataproxy"
 )
 
 const (
