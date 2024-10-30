@@ -261,6 +261,12 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		handleIntent(c, i, slug, intentID)
 	}
 
+	if route.Public && slug == consts.DataProxySlug {
+		// Allow to dataproxy to be embedded in a iframe from the login page of the
+		// stack for cleaning.
+		middlewares.AppendCSPRule(c, "frame-ancestors", i.PageURL("/", nil))
+	}
+
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
 	content, err := fs.Open(slug, version, shasum, filepath)

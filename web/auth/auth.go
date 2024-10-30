@@ -207,6 +207,11 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		magicLink = false
 	}
 
+	dataProxyCleanURL := i.DataProxyCleanURL()
+	csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
+	csp = strings.Replace(csp, "frame-src 'none'", "frame-src "+dataProxyCleanURL+" ", 1)
+	c.Response().Header().Set(echo.HeaderContentSecurityPolicy, csp)
+
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":     i.TemplateTitle(),
 		"Domain":            i.ContextualDomain(),
@@ -226,6 +231,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"MagicLink":         magicLink,
 		"OAuth":             hasOAuth,
 		"FranceConnect":     hasFranceConnect,
+		"DataProxyCleanURL": dataProxyCleanURL,
 	})
 }
 

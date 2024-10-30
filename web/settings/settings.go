@@ -69,6 +69,14 @@ func (h *HTTPHandler) getSessions(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func (h *HTTPHandler) getCurrentSession(c echo.Context) error {
+	sess, ok := middlewares.GetSession(c)
+	if !ok {
+		return jsonapi.NotFound(errors.New("no current session"))
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiSession{sess}, nil)
+}
+
 func (h *HTTPHandler) listWarnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
@@ -276,6 +284,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/flags", h.getFlags)
 
 	router.GET("/sessions", h.getSessions)
+	router.GET("/sessions/current", h.getCurrentSession)
 
 	router.GET("/clients", h.listClients)
 	router.DELETE("/clients/:id", h.revokeClient)
