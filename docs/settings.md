@@ -158,7 +158,7 @@ an HTML error page will appears.
 
 ```http
 HTTP/1.1 307 Temporary Redirect
-Location: http://alice-settings.cozy.localhost:8080 
+Location: http://alice-settings.cozy.localhost:8080
 ```
 
 
@@ -367,7 +367,7 @@ route is necessary to actually update the passphrase. See below.
 A `"force": true` parameter can be added in the JSON to force a passphrase on a
 Cozy where authentication by password is disabled and the vault is empty. It
 allows to use Cozy Pass when the authentication on the Cozy is delegated via
-OIDC. When forcing a password reset, you need to regenerate the 
+OIDC. When forcing a password reset, you need to regenerate the
 
 * public and private keys
 * encryption key
@@ -922,6 +922,37 @@ Content-Type: application/json
 
 This route requires the application to have permissions on the
 `io.cozy.sessions` doctype with the `GET` verb.
+
+### GET /settings/sessions/current
+
+This route returns information about the current session.
+
+```
+GET /settings/sessions/current HTTP/1.1
+Host: cozy.example.org
+Cookie: ...
+Authorization: Bearer ...
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "data": {
+    "id": "...",
+    "attributes": {
+      "last_seen": "",
+      "long_run": true
+    },
+    "meta": {
+      "rev": "..."
+    }
+  }
+}
+```
 
 ## OAuth 2 clients
 
