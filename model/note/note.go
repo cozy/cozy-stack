@@ -372,7 +372,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	if oldDoc == nil {
 		fileDoc, err = newFileDoc(inst, doc)
 		if err != nil {
-			return
+			return nil, err
 		}
 	} else {
 		fileDoc = doc.asFile(inst, oldDoc)
@@ -403,7 +403,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 		if err == nil {
 			break
 		} else if !errors.Is(err, os.ErrExist) {
-			return
+			return nil, err
 		}
 		filename := strings.TrimSuffix(path.Base(basename), path.Ext(basename))
 		fileDoc.DocName = fmt.Sprintf("%s (%d).cozy-note", filename, i)
@@ -421,7 +421,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			_ = saveToCache(inst, doc)
 		}
 	}
-	return
+	return fileDoc, err
 }
 
 // forceRename will update the FileDoc in CouchDB with the new name (but the
