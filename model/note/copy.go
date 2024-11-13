@@ -71,7 +71,10 @@ func CopyFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
 	if cerr := file.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return SetupTrigger(inst, newdoc.ID())
 }
 
 func updateProsemirrorImageURLs(node *model.Node, mapping map[string]*Image) {
