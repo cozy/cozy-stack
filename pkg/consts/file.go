@@ -35,6 +35,8 @@ const (
 	CarbonCopyKey = "carbonCopy"
 	// ElectronicSafeKey is the metadata key for an electronic safe (certified)
 	ElectronicSafeKey = "electronicSafe"
+	// FavoriteKey is the metadata key for a favorite.
+	FavoriteKey = "favorite"
 )
 
 const (

@@ -60,6 +60,23 @@ func MergeMetadata(doc *FileDoc, meta Metadata) {
 	}
 }
 
+// RemoveFavoriteMetadata returns a metadata map where the favorite key has been
+// removed. It can be useful for sharing, as favorite metadata are only valid
+// localy.
+func (m Metadata) RemoveFavoriteMetadata() Metadata {
+	if len(m) == 0 {
+		return Metadata{}
+	}
+	result := make(Metadata, len(m))
+	for k, v := range m {
+		if k == consts.FavoriteKey {
+			continue
+		}
+		result[k] = v
+	}
+	return result
+}
+
 // RemoveCertifiedMetadata returns a metadata map where the keys that are
 // certified have been removed. It can be useful for sharing, as certified
 // metadata are only valid localy.

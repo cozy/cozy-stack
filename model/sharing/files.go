@@ -1404,7 +1404,10 @@ func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 		doc.M["restore_path"] = file.RestorePath
 	}
 	if len(file.Metadata) > 0 {
-		doc.M["metadata"] = file.Metadata.RemoveCertifiedMetadata()
+		meta := file.Metadata
+		meta = meta.RemoveCertifiedMetadata()
+		meta = meta.RemoveFavoriteMetadata()
+		doc.M["metadata"] = meta
 	}
 	fcm := file.CozyMetadata
 	if fcm == nil {
