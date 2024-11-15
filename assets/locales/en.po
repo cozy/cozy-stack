@@ -64,7 +64,7 @@ msgid "Login Password hide"
 msgstr "Hide password"
 
 msgid "Login Long Session"
-msgstr "Remember me"
+msgstr "Remember me and my data on this device"
 
 msgid "Login Submit"
 msgstr "Log in"
