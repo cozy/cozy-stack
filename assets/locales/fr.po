@@ -82,7 +82,7 @@ msgid "Login Password hide"
 msgstr "Cacher le mot de passe"
 
 msgid "Login Long Session"
-msgstr "Se souvenir de moi"
+msgstr "Se souvenir de moi et mes données sur cet appareil"
 
 msgid "Login Submit"
 msgstr "Se connecter"
