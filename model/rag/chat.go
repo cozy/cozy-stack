@@ -131,6 +131,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	myself, _ := contact.GetMyself(inst)
 	relatives, _ := getRelatives(inst, myself)
 	payload := map[string]interface{}{
+		"locale":       inst.Locale,
 		"messages":     chat.Messages,
 		"myself":       myself,
 		"relatives":    relatives,
