@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	firebase.google.com/go/v4 v4.14.1
-	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/adrg/xdg v0.5.0
 	github.com/andybalholm/brotli v1.1.0
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
