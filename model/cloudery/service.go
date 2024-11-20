@@ -38,6 +38,9 @@ type SaveCmd struct {
 // SaveInstance data into the cloudery matching the instance context.
 func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error {
 	client := instance.APIManagerClient(inst)
+	if client == nil {
+		return nil
+	}
 
 	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, map[string]interface{}{
@@ -57,6 +60,9 @@ type BlockingSubscription struct {
 
 func (s *ClouderyService) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
 	client := instance.APIManagerClient(inst)
+	if client == nil {
+		return nil, nil
+	}
 
 	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
 	res, err := client.Get(url)
