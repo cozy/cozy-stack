@@ -7,7 +7,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/manager"
 )
 
 var (
@@ -38,10 +37,7 @@ type SaveCmd struct {
 
 // SaveInstance data into the cloudery matching the instance context.
 func (s *ClouderyService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error {
-	client, err := s.getClient(inst)
-	if err != nil {
-		return err
-	}
+	client := instance.APIManagerClient(inst)
 
 	url := fmt.Sprintf("/api/v1/instances/%s?source=stack", url.PathEscape(inst.UUID))
 	if err := client.Put(url, map[string]interface{}{
@@ -60,10 +56,7 @@ type BlockingSubscription struct {
 }
 
 func (s *ClouderyService) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
-	client, err := s.getClient(inst)
-	if err != nil {
-		return nil, err
-	}
+	client := instance.APIManagerClient(inst)
 
 	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
 	res, err := client.Get(url)
@@ -95,19 +88,4 @@ func blockingSubscriptionVendor(clouderyInstance map[string]interface{}) (string
 	}
 
 	return "", fmt.Errorf("invalid blocking subscription vendor")
-}
-
-func (s *ClouderyService) getClient(inst *instance.Instance) (*manager.APIClient, error) {
-	cfg, ok := s.contexts[inst.ContextName]
-	if !ok {
-		cfg, ok = s.contexts[config.DefaultInstanceContext]
-	}
-
-	if !ok {
-		return nil, fmt.Errorf("%w: tried %q and %q", ErrInvalidContext, inst.ContextName, config.DefaultInstanceContext)
-	}
-
-	client := manager.NewAPIClient(cfg.API.URL, cfg.API.Token)
-
-	return client, nil
 }
