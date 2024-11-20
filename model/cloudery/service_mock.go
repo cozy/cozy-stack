@@ -35,3 +35,13 @@ func (m *Mock) BlockingSubscription(inst *instance.Instance) (*BlockingSubscript
 
 	return args.Get(0).(*BlockingSubscription), args.Error(1)
 }
+
+func (m *Mock) LegalNoticeUrl(inst *instance.Instance) (string, error) {
+	args := m.Called(inst)
+
+	if args.Get(0) == "" {
+		return "", args.Error(1)
+	}
+
+	return args.Get(0).(string), args.Error(1)
+}

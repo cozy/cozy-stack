@@ -95,3 +95,30 @@ func blockingSubscriptionVendor(clouderyInstance map[string]interface{}) (string
 
 	return "", fmt.Errorf("invalid blocking subscription vendor")
 }
+
+func (s *ClouderyService) LegalNoticeUrl(inst *instance.Instance) (string, error) {
+	client := instance.APIManagerClient(inst)
+	if client == nil {
+		return "", nil
+	}
+
+	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
+	res, err := client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("request failed: %w", err)
+	}
+
+	return legalNoticeUrl(res)
+}
+
+func legalNoticeUrl(clouderyInstance map[string]interface{}) (string, error) {
+	if str, ok := clouderyInstance["legal_notice_url"]; ok {
+		if url, ok := str.(string); ok {
+			return url, nil
+		}
+
+		return "", fmt.Errorf("invalid legal notice url")
+	}
+
+	return "", nil
+}

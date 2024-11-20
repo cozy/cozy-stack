@@ -15,3 +15,7 @@ func (s *NoopService) SaveInstance(inst *instance.Instance, cmd *SaveCmd) error 
 func (s *NoopService) BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error) {
 	return nil, nil
 }
+
+func (s *NoopService) LegalNoticeUrl(inst *instance.Instance) (string, error) {
+	return "", nil
+}

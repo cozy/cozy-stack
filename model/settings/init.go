@@ -20,6 +20,7 @@ type Service interface {
 	ConfirmEmailUpdate(inst *instance.Instance, tok string) error
 	CancelEmailUpdate(inst *instance.Instance) error
 	GetExternalTies(inst *instance.Instance) (*ExternalTies, error)
+	GetLegalNoticeUrl(inst *instance.Instance) (string, error)
 }
 
 func Init(

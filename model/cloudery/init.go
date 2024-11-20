@@ -16,6 +16,7 @@ var service Service
 type Service interface {
 	SaveInstance(inst *instance.Instance, cmd *SaveCmd) error
 	BlockingSubscription(inst *instance.Instance) (*BlockingSubscription, error)
+	LegalNoticeUrl(inst *instance.Instance) (string, error)
 }
 
 func Init(contexts map[string]config.ClouderyConfig) Service {
