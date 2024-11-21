@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -189,12 +190,14 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	} else {
 		action = inst.Translate("Mail Sharing Request Action Write")
 	}
+	titleType := getDocumentTitleType(inst, s)
 	docType := getDocumentType(inst, s)
 	mailValues := map[string]interface{}{
 		"SharerPublicName": sharer,
 		"SharerEmail":      sharerMail,
 		"Action":           action,
 		"Description":      description,
+		"TitleType":        titleType,
 		"DocType":          docType,
 		"SharingLink":      link,
 	}
@@ -216,6 +219,24 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	return err
 }
 
+func getDocumentTitleType(inst *instance.Instance, s *Sharing) string {
+	rule := s.FirstFilesRule()
+	if rule == nil {
+		if len(s.Rules) > 0 && s.Rules[0].DocType == consts.BitwardenOrganizations {
+			return inst.Translate("Notification Sharing Title Organization")
+		}
+		return inst.Translate("Notification Sharing Title Document")
+	}
+	_, err := inst.VFS().FileByID(rule.Values[0])
+	if err != nil {
+		return inst.Translate("Notification Sharing Title Directory")
+	}
+	if strings.HasSuffix(s.Description, ".cozy-note") {
+		return inst.Translate("Notification Sharing Title Note")
+	}
+	return inst.Translate("Notification Sharing Title File")
+}
+
 func getDocumentType(inst *instance.Instance, s *Sharing) string {
 	rule := s.FirstFilesRule()
 	if rule == nil {
@@ -227,6 +248,9 @@ func getDocumentType(inst *instance.Instance, s *Sharing) string {
 	_, err := inst.VFS().FileByID(rule.Values[0])
 	if err != nil {
 		return inst.Translate("Notification Sharing Type Directory")
+	}
+	if strings.HasSuffix(s.Description, ".cozy-note") {
+		return inst.Translate("Notification Sharing Type Note")
 	}
 	return inst.Translate("Notification Sharing Type File")
 }
@@ -342,10 +366,12 @@ func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc
 	} else {
 		action = inst.Translate("Mail Sharing Request Action Write")
 	}
+	titleType := getTargetTitleType(inst, fileDoc.Metadata)
 	targetType := getTargetType(inst, fileDoc.Metadata)
 	mailValues := map[string]interface{}{
 		"SharerPublicName": sharerName,
 		"Action":           action,
+		"TitleType":        titleType,
 		"TargetType":       targetType,
 		"TargetName":       s.Description,
 		"SharingLink":      previewURL,
@@ -366,10 +392,27 @@ func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc
 	return err
 }
 
+func getTargetTitleType(inst *instance.Instance, metadata map[string]interface{}) string {
+	target, _ := metadata["target"].(map[string]interface{})
+	if target["_type"] != consts.Files {
+		return inst.Translate("Notification Sharing Title Document")
+	}
+	if target["mime"] == consts.NoteMimeType {
+		return inst.Translate("Notification Sharing Title Note")
+	}
+	if target["mime"] == nil || target["mime"] == "" {
+		return inst.Translate("Notification Sharing Title Directory")
+	}
+	return inst.Translate("Notification Sharing Title File")
+}
+
 func getTargetType(inst *instance.Instance, metadata map[string]interface{}) string {
 	target, _ := metadata["target"].(map[string]interface{})
 	if target["_type"] != consts.Files {
 		return inst.Translate("Notification Sharing Type Document")
+	}
+	if target["mime"] == consts.NoteMimeType {
+		return inst.Translate("Notification Sharing Type Note")
 	}
 	if target["mime"] == nil || target["mime"] == "" {
 		return inst.Translate("Notification Sharing Type Directory")

@@ -264,7 +264,7 @@ msgstr "Shared by"
 
 msgid "Authorize Sharing Description start"
 msgstr ""
-"%s and you can collaborate by editing the %s. "
+"%s and you can collaborate by editing %s. "
 "Each change will be sent automatically between your Cozys."
 
 msgid "Authorize Sharing Description end"
@@ -1030,22 +1030,22 @@ msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
 
 msgid "Mail Sharing Request Subject"
-msgstr "New sharing from %s"
+msgstr "%s has shared %s with you"
 
 msgid "Mail Sharing Request Intro"
 msgstr "Hello,"
 
 msgid "Mail Sharing Request Description"
-msgstr "%s (%s) invites you to %s the %s **%s** on their personal space, Cozy."
+msgstr "%s (%s) invites you to %s %s **%s** from their personal space, Cozy."
 
 msgid "Mail Sharing Request Action Read"
-msgstr "access"
+msgstr "view"
 
 msgid "Mail Sharing Request Action Write"
-msgstr "update"
+msgstr "edit"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Access to this %s"
+msgstr "View %s"
 
 msgid "Mail Sharing Member To Confirm Subject"
 msgstr "Confirmation required to finalize the sharing of your passwords"
@@ -1080,25 +1080,40 @@ msgid "Mail Support Confirmation Signature"
 msgstr "Claude - Customer Service at Cozy Cloud"
 
 msgid "Notification Sharing Subject"
-msgstr "A new sharing is available in your Cozy"
+msgstr "%s has shared %s with you"
 
 msgid "Notification Sharing Description"
-msgstr "%s invites you to %s the %s %s"
+msgstr "%s invites you to %s the %s **%s**"
 
 msgid "Notification Sharing Type Organization"
 msgstr "folder of passwords"
 
+msgid "Notification Sharing Title Document"
+msgstr "a document"
+
+msgid "Notification Sharing Title Directory"
+msgstr "a directory"
+
+msgid "Notification Sharing Title File"
+msgstr "a file"
+
+msgid "Notification Sharing Title Note"
+msgstr "a note"
+
 msgid "Notification Sharing Type Document"
-msgstr "document"
+msgstr "the document"
 
 msgid "Notification Sharing Type Directory"
-msgstr "directory"
+msgstr "the directory"
 
 msgid "Notification Sharing Type File"
-msgstr "file"
+msgstr "the file"
+
+msgid "Notification Sharing Type Note"
+msgstr "the note"
 
 msgid "Notification Sharing Button text"
-msgstr "See the sharing"
+msgstr "See %s"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Connect to your Cozy"
