@@ -1546,6 +1546,9 @@ func GetAllDocs(c echo.Context) error {
 	out := make([]jsonapi.Object, 0)
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
 	for _, result := range results {
+		if result.DirDoc == nil {
+			continue
+		}
 		if result.ID() == consts.TrashDirID {
 			continue
 		}
