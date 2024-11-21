@@ -266,3 +266,7 @@ func (s *SettingsService) GetExternalTies(inst *instance.Instance) (*ExternalTie
 
 	return &ties, nil
 }
+
+func (s *SettingsService) GetLegalNoticeUrl(inst *instance.Instance) (string, error) {
+	return s.cloudery.LegalNoticeUrl(inst)
+}

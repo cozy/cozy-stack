@@ -71,6 +71,14 @@ func (h *HTTPHandler) getInstance(c echo.Context) error {
 		return err
 	}
 
+	url, err := h.svc.GetLegalNoticeUrl(inst)
+	if err != nil {
+		return err
+	}
+	if url != "" {
+		doc.M["legal_notice_url"] = url
+	}
+
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 

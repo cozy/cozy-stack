@@ -12,19 +12,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestServiceImplems(t *testing.T) {
-	assert.Implements(t, (*Service)(nil), new(SettingsService))
-	assert.Implements(t, (*Service)(nil), new(Mock))
-}
-
-func Test_StartEmailUpdate_success(t *testing.T) {
+func setupTest(t *testing.T) (*emailer.Mock, *instance.Mock, *token.Mock, *cloudery.Mock, *storageMock, Service) {
 	emailerSvc := emailer.NewMock(t)
 	instSvc := instance.NewMock(t)
 	tokenSvc := token.NewMock(t)
 	clouderySvc := cloudery.NewMock(t)
 	storage := newStorageMock(t)
 
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	return emailerSvc,
+		instSvc,
+		tokenSvc,
+		clouderySvc,
+		storage,
+		NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+}
+
+func TestServiceImplems(t *testing.T) {
+	assert.Implements(t, (*Service)(nil), new(SettingsService))
+	assert.Implements(t, (*Service)(nil), new(Mock))
+}
+
+func Test_StartEmailUpdate_success(t *testing.T) {
+	emailerSvc, instSvc, tokenSvc, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -64,13 +73,7 @@ func Test_StartEmailUpdate_success(t *testing.T) {
 }
 
 func Test_StartEmailUpdate_with_an_invalid_password(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, instSvc, _, _, _, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -88,13 +91,7 @@ func Test_StartEmailUpdate_with_an_invalid_password(t *testing.T) {
 }
 
 func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	emailerSvc, instSvc, tokenSvc, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -135,13 +132,7 @@ func Test_StartEmailUpdate_with_a_missing_public_name(t *testing.T) {
 }
 
 func TestConfirmEmailUpdate_success(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, tokenSvc, clouderySvc, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -178,13 +169,7 @@ func TestConfirmEmailUpdate_success(t *testing.T) {
 }
 
 func TestConfirmEmailUpdate_with_an_invalid_token(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, tokenSvc, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -206,13 +191,7 @@ func TestConfirmEmailUpdate_with_an_invalid_token(t *testing.T) {
 }
 
 func TestConfirmEmailUpdate_without_a_pending_email(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, _, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -231,13 +210,7 @@ func TestConfirmEmailUpdate_without_a_pending_email(t *testing.T) {
 }
 
 func Test_CancelEmailUpdate_success(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, _, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -264,13 +237,7 @@ func Test_CancelEmailUpdate_success(t *testing.T) {
 }
 
 func Test_CancelEmailUpdate_without_pending_email(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, _, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -288,13 +255,7 @@ func Test_CancelEmailUpdate_without_pending_email(t *testing.T) {
 }
 
 func Test_ResendEmailUpdate_success(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	emailerSvc, _, tokenSvc, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -323,13 +284,7 @@ func Test_ResendEmailUpdate_success(t *testing.T) {
 }
 
 func Test_ResendEmailUpdate_with_no_pending_email(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, _, _, storage, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -347,13 +302,7 @@ func Test_ResendEmailUpdate_with_no_pending_email(t *testing.T) {
 }
 
 func Test_GetExternalTies(t *testing.T) {
-	emailerSvc := emailer.NewMock(t)
-	instSvc := instance.NewMock(t)
-	tokenSvc := token.NewMock(t)
-	clouderySvc := cloudery.NewMock(t)
-	storage := newStorageMock(t)
-
-	svc := NewService(emailerSvc, instSvc, tokenSvc, clouderySvc, storage)
+	_, _, _, clouderySvc, _, svc := setupTest(t)
 
 	inst := instance.Instance{
 		Domain: "foo.mycozy.cloud",
@@ -384,5 +333,38 @@ func Test_GetExternalTies(t *testing.T) {
 		ties, err := svc.GetExternalTies(&inst)
 		assert.ErrorIs(t, err, unauthorizedError)
 		assert.Nil(t, ties)
+	})
+}
+
+func Test_GetLegalNoticeUrl(t *testing.T) {
+	_, _, _, clouderySvc, _, svc := setupTest(t)
+
+	inst := instance.Instance{
+		Domain: "foo.mycozy.cloud",
+	}
+
+	t.Run("with a legal notice", func(t *testing.T) {
+		clouderySvc.On("LegalNoticeUrl", &inst).Return("https://testmanager.cozycloud.cc", nil).Once()
+
+		url, err := svc.GetLegalNoticeUrl(&inst)
+		assert.NoError(t, err)
+		assert.Equal(t, "https://testmanager.cozycloud.cc", url)
+	})
+
+	t.Run("without a legal notice", func(t *testing.T) {
+		clouderySvc.On("LegalNoticeUrl", &inst).Return("", nil).Once()
+
+		url, err := svc.GetLegalNoticeUrl(&inst)
+		assert.NoError(t, err)
+		assert.Equal(t, "", url)
+	})
+
+	t.Run("with error from cloudery", func(t *testing.T) {
+		unauthorizedError := errors.New("unauthorized")
+		clouderySvc.On("LegalNoticeUrl", &inst).Return("", unauthorizedError).Once()
+
+		url, err := svc.GetLegalNoticeUrl(&inst)
+		assert.ErrorIs(t, err, unauthorizedError)
+		assert.Equal(t, "", url)
 	})
 }

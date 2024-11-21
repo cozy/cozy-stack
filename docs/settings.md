@@ -690,13 +690,14 @@ Cookie: sessionid=xxxx
             "auth_mode": "basic",
             "default_redirection": "drive/#/folder",
             "context": "dev",
-            "sponsorships": ["springfield"]
+            "sponsorships": ["springfield"],
+            "legal_notice_url": "https://manager.cozycloud.cc/e96388a5-8eed-44cc-81e6-40aad273f0d4.pdf"
         }
     }
 }
 ```
 
-#### Note about `password_defined`
+##### Note about `password_defined`
 
 There are a few fields that are persisted on the instance its-self, not on its
 settings document. When they are updated, it won't be reflected in the realtime
@@ -705,6 +706,12 @@ when listening on the `io.cozy.settings.instance` document.
 For `password_defined`, it is possible to be notified when the password is
 defined by watching a synthetic document with the doctype `io.cozy.settings`,
 and the id `io.cozy.settings.passphrase`.
+
+##### Note about `legal_notice_url`
+
+This attribute will only be present if a manager is associated with the
+instance and the instance was created on behalf of a partner with a defined
+legal notice.
 
 ### POST /settings/instance/deletion
 

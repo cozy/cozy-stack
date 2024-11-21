@@ -121,12 +121,12 @@ func TestSettings(t *testing.T) {
 			Object()
 
 		data := obj.Value("data").Object()
-		data.ValueEqual("type", "io.cozy.settings")
-		data.ValueEqual("id", "io.cozy.settings.context")
+		data.HasValue("type", "io.cozy.settings")
+		data.HasValue("id", "io.cozy.settings.context")
 
 		attrs := data.Value("attributes").Object()
-		attrs.ValueEqual("manager_url", "http://manager.example.org")
-		attrs.ValueEqual("logos", map[string]interface{}{
+		attrs.HasValue("manager_url", "http://manager.example.org")
+		attrs.HasValue("logos", map[string]interface{}{
 			"home": map[string]interface{}{
 				"light": []interface{}{
 					map[string]interface{}{"src": "/logos/main_cozy.png", "alt": "Cozy Cloud"},
@@ -470,6 +470,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetCapabilities", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
+		svc.On("GetLegalNoticeUrl", testInstance).Return("", nil).Once()
 
 		e.GET("/settings/instance").
 			WithCookie(sessCookie, "connected").
@@ -508,6 +509,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(200)
 
 		testInstance.RegisterToken = []byte{}
+		svc.On("GetLegalNoticeUrl", testInstance).Return("https://testmanager.cozycloud.cc/tos/12345.pdf", nil).Once()
 
 		obj := e.GET("/settings/instance").
 			WithCookie(sessCookie, "connected").
@@ -528,6 +530,7 @@ func TestSettings(t *testing.T) {
 		attrs.HasValue("tz", "Europe/London")
 		attrs.HasValue("locale", "en")
 		attrs.HasValue("password_defined", true)
+		attrs.HasValue("legal_notice_url", "https://testmanager.cozycloud.cc/tos/12345.pdf")
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
@@ -571,6 +574,7 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetUpdatedInstance", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
+		svc.On("GetLegalNoticeUrl", testInstance).Return("", nil).Once()
 
 		obj := e.GET("/settings/instance").
 			WithCookie(sessCookie, "connected").
