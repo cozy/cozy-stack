@@ -10,6 +10,8 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/notification/center"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -330,7 +332,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
 	}
 
-	return s.SendShortcutMail(inst, fileDoc, previewURL)
+	return s.SendShortcutNotification(inst, fileDoc, previewURL)
 }
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding
@@ -353,13 +355,58 @@ func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) 
 	return m.CreateSharingRequest(inst, s, creds, u)
 }
 
-// SendShortcutMail will send a notification mail after a shortcut for a
-// sharing has been created.
-func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL string) error {
+func (s *Sharing) SendShortcutNotification(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL string) error {
 	sharerName := s.Members[0].PublicName
 	if sharerName == "" {
 		sharerName = inst.Translate("Sharing Empty name")
 	}
+	if err := s.SendShortcutPush(inst, fileDoc, previewURL, sharerName); err != nil {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("Cannot send push notification: %s", err)
+	}
+	return s.SendShortcutMail(inst, fileDoc, previewURL, sharerName)
+}
+
+func (s *Sharing) SendShortcutPush(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL, sharerName string) error {
+	notifiables, err := oauth.GetNotifiables(inst)
+	if err != nil {
+		return err
+	}
+	hasFlashship := false
+	for _, notifiable := range notifiables {
+		if notifiable.Flagship {
+			hasFlashship = true
+		}
+	}
+	if !hasFlashship {
+		return nil
+	}
+
+	targetType := getTargetTitleType(inst, fileDoc.Metadata)
+	title := inst.Translate("Push Sharing Shortcut Title")
+	message := inst.Translate("Push Sharing Shortcut Message", sharerName, targetType)
+	push := center.PushMessage{
+		NotificationID: fileDoc.ID(),
+		Title:          title,
+		Message:        message,
+		Data: map[string]interface{}{
+			"redirectLink": previewURL,
+		},
+	}
+	msg, err := job.NewMessage(&push)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "push",
+		Message:    msg,
+	})
+	return err
+}
+
+// SendShortcutMail will send a notification mail after a shortcut for a
+// sharing has been created.
+func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL, sharerName string) error {
 	var action string
 	if s.ReadOnlyRules() {
 		action = inst.Translate("Mail Sharing Request Action Read")
