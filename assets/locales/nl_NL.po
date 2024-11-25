@@ -1197,3 +1197,9 @@ msgstr ""
 msgid "Onboarding Resend activation Detail"
 msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
+
+msgid "Push Sharing Shortcut Title"
+msgstr "A new share is available in your Cozy"
+
+msgid "Push Sharing Shortcut Message"
+msgstr "%s has shared %s with you."
