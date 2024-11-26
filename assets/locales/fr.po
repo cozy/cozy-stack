@@ -1,4 +1,4 @@
-# 
+#
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
@@ -9,7 +9,7 @@
 # Cyrille Perois <cyrille@cozycloud.cc>, 2023
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2023
 # Bruno Michel, 2023
-# 
+#
 msgid ""
 msgstr ""
 "Last-Translator: Bruno Michel, 2023\n"
@@ -1186,7 +1186,7 @@ msgid "Notification Sharing Subject"
 msgstr "%s a partagé %s avec vous"
 
 msgid "Notification Sharing Description"
-msgstr "%s vous invite à %s le %s **%s**"
+msgstr "%s vous invite à %s %s **%s**"
 
 msgid "Notification Sharing Type Organization"
 msgstr "dossier partagé de mots de passe"
