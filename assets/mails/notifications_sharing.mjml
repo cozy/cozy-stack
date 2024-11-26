@@ -1,7 +1,7 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
 	<img src="https://files.cozycloud.cc/email-assets/stack/icon-share.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
-	{{t "Notification Sharing Subject" .SharerPublicName .TargetType}}
+	{{t "Notification Sharing Subject" .SharerPublicName .TitleType}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{tHTML "Notification Sharing Description" .SharerPublicName .Action .TargetType .TargetName}}
