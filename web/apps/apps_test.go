@@ -66,7 +66,6 @@ func TestApps(t *testing.T) {
 		Host:   "localhost",
 		Path:   tempdir,
 	}
-	cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
 	was := cfg.Subdomains
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
@@ -205,7 +204,7 @@ func TestApps(t *testing.T) {
 
 		// TOS not signed warning
 
-		testutils.WithManager(t, testInstance)
+		testutils.WithManager(t, testInstance, testutils.ManagerConfig{URL: "http://manager.example.org", WithPremiumLinks: true})
 
 		tosSigned := testInstance.TOSSigned
 		tosLatest := testInstance.TOSLatest

@@ -74,7 +74,6 @@ func TestSettings(t *testing.T) {
 	conf := config.GetConfig()
 	conf.Assets = "../../assets"
 	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
-		"manager_url": "http://manager.example.org",
 		"logos": map[string]interface{}{
 			"home": map[string]interface{}{
 				"light": []interface{}{
@@ -111,6 +110,8 @@ func TestSettings(t *testing.T) {
 
 	t.Run("GetContext", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
+
+		testutils.WithManager(t, testInstance, testutils.ManagerConfig{URL: "http://manager.example.org"})
 
 		obj := e.GET("/settings/context").
 			WithCookie(sessCookie, "connected").
@@ -1021,7 +1022,7 @@ func TestSettings(t *testing.T) {
 			Contains("/#/connectedDevices").
 			NotContains("http://manager.example.org")
 
-		testutils.WithManager(t, testInstance)
+		testutils.WithManager(t, testInstance, testutils.ManagerConfig{URL: "http://manager.example.org", WithPremiumLinks: true})
 
 		e.GET("/settings/clients/limit-exceeded").
 			WithCookie(sessCookie, "connected").
