@@ -61,7 +61,6 @@ func TestInstance(t *testing.T) {
 
 		cfg.Contexts = map[string]interface{}{
 			"context": map[string]interface{}{
-				"manager_url": "http://manager.example.org",
 				"logos": map[string]interface{}{
 					"coachco2": map[string]interface{}{
 						"light": []interface{}{
@@ -173,8 +172,7 @@ func TestInstance(t *testing.T) {
         }
       ]
     }
-  },
-  "manager_url": "http://manager.example.org"
+  }
 }`
 		assert.Equal(t, expected, string(bytes))
 	})

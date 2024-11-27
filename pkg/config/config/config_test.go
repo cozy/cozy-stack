@@ -116,7 +116,6 @@ func TestConfigUnmarshal(t *testing.T) {
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
 		"my-context": map[string]interface{}{
-			"manager_url":              "https://manager-url",
 			"onboarded_redirection":    "home/intro",
 			"default_redirection":      "home/",
 			"help_link":                "https://cozy.io/fr/support",
@@ -214,6 +213,12 @@ func TestConfigUnmarshal(t *testing.T) {
 			API: ClouderyAPI{
 				URL:   "https://some-url",
 				Token: "some-token",
+			},
+		},
+		"my-context": {
+			API: ClouderyAPI{
+				URL:   "https://manager-url",
+				Token: "manager-token",
 			},
 		},
 	}, cfg.Clouderies)

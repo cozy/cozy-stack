@@ -32,8 +32,6 @@ func TestClient(t *testing.T) {
 	}
 
 	config.UseTestFile(t)
-	conf := config.GetConfig()
-	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{"manager_url": "http://manager.example.org"}
 	setup := testutils.NewSetup(t, t.Name())
 	testInstance := setup.GetTestInstance()
 
@@ -197,7 +195,7 @@ func TestClient(t *testing.T) {
 		premiumLink := assertClientsLimitAlertMailWasSent(t, testInstance, "notificationWithoutPremium", 1)
 		assert.Empty(t, premiumLink)
 
-		testutils.WithManager(t, testInstance)
+		testutils.WithManager(t, testInstance, testutils.ManagerConfig{URL: "http://manager.example.org", WithPremiumLinks: true})
 
 		notificationWithPremium = &oauth.Client{
 			ClientName:   "notificationWithPremium",

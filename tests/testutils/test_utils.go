@@ -3,6 +3,7 @@ package testutils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -469,7 +470,14 @@ func compress(content string) []byte {
 	return buf.Bytes()
 }
 
-func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) {
+type ManagerConfig struct {
+	URL              string
+	WithPremiumLinks bool
+}
+
+func WithManager(t *testing.T, inst *instance.Instance, managerConfig ManagerConfig) (shouldRemoveUUID bool) {
+	require.NotEmpty(t, managerConfig.URL, "Could not enable test instance manager: cloudery API URL is required")
+
 	if inst.UUID == "" {
 		uuid, err := uuid.NewV7()
 		require.NoError(t, err, "Could not enable test instance manager")
@@ -477,18 +485,26 @@ func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) 
 		shouldRemoveUUID = true
 	}
 
-	config, ok := inst.SettingsContext()
-	require.True(t, ok, "Could not enable test instance manager: could not fetch test instance settings context")
+	cfg := config.GetConfig()
+	originalCfg, _ := json.Marshal(cfg)
 
-	managerURL, ok := config["manager_url"].(string)
-	require.True(t, ok, "Could not enable test instance manager: manager_url config is required")
-	require.NotEmpty(t, managerURL, "Could not enable test instance manager: manager_url config is required")
+	if cfg.Clouderies == nil {
+		cfg.Clouderies = map[string]config.ClouderyConfig{}
+	}
+	cloudery, contextName := getCloudery(inst, cfg)
+	cloudery.API = config.ClouderyAPI{URL: managerConfig.URL, Token: ""}
+	cfg.Clouderies[contextName] = cloudery
 
-	was := config["enable_premium_links"]
-	config["enable_premium_links"] = true
+	if cfg.Contexts == nil {
+		cfg.Contexts = map[string]interface{}{}
+	}
+	context, contextName := getContext(inst, cfg)
+	context["manager_url"] = managerConfig.URL
+	context["enable_premium_links"] = managerConfig.WithPremiumLinks
+	cfg.Contexts[contextName] = context
 
 	t.Cleanup(func() {
-		config["enable_premium_links"] = was
+		json.Unmarshal(originalCfg, cfg)
 
 		if shouldRemoveUUID {
 			inst.UUID = ""
@@ -500,6 +516,32 @@ func WithManager(t *testing.T, inst *instance.Instance) (shouldRemoveUUID bool) 
 	require.NoError(t, err, "Could not enable test instance manager")
 
 	return shouldRemoveUUID
+}
+
+// getCloudery returns the most relevant cloudery config depending on the
+// instance context name or creates a new one if none exist.
+// It also returns the name of the context associated with the config.
+func getCloudery(inst *instance.Instance, cfg *config.Config) (config.ClouderyConfig, string) {
+	if cloudery, ok := cfg.Clouderies[inst.ContextName]; ok {
+		return cloudery, inst.ContextName
+	}
+	if cloudery, ok := cfg.Clouderies[config.DefaultInstanceContext]; ok {
+		return cloudery, config.DefaultInstanceContext
+	}
+	return config.ClouderyConfig{}, config.DefaultInstanceContext
+}
+
+// getContext returns the most relevant context config depending on the
+// instance context name or creates a new one if none exist.
+// It also returns the name of the context associated with the config.
+func getContext(inst *instance.Instance, cfg *config.Config) (map[string]interface{}, string) {
+	if context, ok := cfg.Contexts[inst.ContextName].(map[string]interface{}); ok {
+		return context, inst.ContextName
+	}
+	if context, ok := cfg.Contexts[config.DefaultInstanceContext].(map[string]interface{}); ok {
+		return context, config.DefaultInstanceContext
+	}
+	return map[string]interface{}{}, config.DefaultInstanceContext
 }
 
 func DisableManager(inst *instance.Instance, shouldRemoveUUID bool) error {

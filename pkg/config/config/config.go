@@ -1150,6 +1150,7 @@ func createTestViper() *viper.Viper {
 	v.SetDefault("log.level", "info")
 	v.SetDefault("assets_polling_disabled", false)
 	v.SetDefault("assets_polling_interval", 2*time.Minute)
+	v.SetDefault("contexts", map[string]interface{}{DefaultInstanceContext: map[string]interface{}{}})
 	applyDefaults(v)
 	return v
 }
