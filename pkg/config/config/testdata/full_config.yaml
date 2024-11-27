@@ -109,6 +109,10 @@ clouderies:
     api:
       url: https://some-url
       token: some-token
+  my-context:
+    api:
+      url: https://manager-url
+      token: manager-token
 
 password_reset_interval: 1h
 
@@ -163,7 +167,6 @@ log:
 
 contexts:
   my-context:
-    manager_url: https://manager-url
     onboarded_redirection: home/intro
     default_redirection: home/
     help_link: https://cozy.io/fr/support

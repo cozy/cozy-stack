@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -78,6 +79,23 @@ func (h *HTTPHandler) context(c echo.Context) error {
 	}
 
 	i := middlewares.GetInstance(c)
-	doc := &apiContext{i.GetContextWithSponsorships()}
-	return jsonapi.Data(c, http.StatusOK, doc, nil)
+	context := &apiContext{i.GetContextWithSponsorships()}
+
+	managerURL, err := i.ManagerURL(instance.ManagerBaseURL)
+	if err != nil {
+		return err
+	}
+	if managerURL != "" {
+		// XXX: The manager URL used to be stored in the config in
+		// `context.<context_name>.manager_url`. It's now stored in
+		// `clouderies.<context_name>.api.url` and can be retrieved via a call
+		// to `instance.ManagerURL()`.
+		//
+		// However, some external apps and clients (e.g. `cozy-client`) still
+		// expect to find the `manager_url` attribute in the context document
+		// so we add it back for backwards compatibility.
+		context.doc["manager_url"] = managerURL
+	}
+
+	return jsonapi.Data(c, http.StatusOK, context, nil)
 }

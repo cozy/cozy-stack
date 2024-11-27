@@ -149,12 +149,8 @@ func checkRedirectToAuthorized(c echo.Context) (*url.URL, error) {
 }
 
 func checkRedirectToManager(inst *instance.Instance, redirect *url.URL) bool {
-	config, ok := inst.SettingsContext()
-	if !ok {
-		return false
-	}
-	managerURL, ok := config["manager_url"].(string)
-	if !ok {
+	managerURL, err := inst.ManagerURL(instance.ManagerBaseURL)
+	if err != nil {
 		return false
 	}
 	manager, err := url.Parse(managerURL)
