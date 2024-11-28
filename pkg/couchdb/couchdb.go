@@ -311,7 +311,11 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 		log.Error(err.Error())
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Flush the body, so that the connection can be reused by keep-alive
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 
 	if elapsed.Seconds() >= 10 {
 		log.Infof("slow request on %s %s (%s)", method, path, elapsed)
@@ -322,8 +326,6 @@ func makeRequest(db prefixer.Prefixer, doctype, method, path string, reqbody int
 		return err
 	}
 	if resbody == nil {
-		// Flush the body, so that the connection can be reused by keep-alive
-		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
 
