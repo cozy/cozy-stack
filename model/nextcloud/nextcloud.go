@@ -252,6 +252,14 @@ func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMeta
 	doc.CozyMetadata = cozyMetadata
 
 	fs := nc.inst.VFS()
+	exists, err := fs.GetIndexer().DirChildExists(doc.DirID, doc.DocName)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		doc.DocName = vfs.ConflictName(fs, doc.DirID, doc.DocName, true)
+	}
+
 	file, err := fs.CreateFile(doc, nil)
 	if err != nil {
 		return nil, err
