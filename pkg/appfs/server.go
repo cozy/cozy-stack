@@ -113,7 +113,7 @@ var initCacheOnce sync.Once
 // using the swift backend as file server.
 func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileServer {
 	initCacheOnce.Do(func() {
-		c, err := lru.New[string, cacheEntry](128)
+		c, err := lru.New[string, cacheEntry](1024)
 		if err != nil {
 			panic(err)
 		}
