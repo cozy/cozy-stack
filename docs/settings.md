@@ -1083,6 +1083,29 @@ Authorization: Bearer oauth2-access-token
 HTTP/1.1 204 No Content
 ```
 
+## Avatar
+
+### PUT /settings/avatar
+
+This route can be used to upload the avatar for an instance.
+
+#### Request
+
+```http
+PUT /settings/avatar HTTP/1.1
+Host: alice.cozy.example.net
+Authorization: Bearer token
+Content-Type: image/jpeg
+
+...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Context
 
 ### GET /settings/onboarded
