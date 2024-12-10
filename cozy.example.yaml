@@ -218,7 +218,7 @@ mail:
   # mail noreply address - flags: --mail-noreply-address
   noreply_address: noreply@localhost
   noreply_name: My Cozy
-  reply_to: support@cozycloud.cc
+  reply_to: support@example.org
   # mail smtp host - flags: --mail-host
   host: smtp.home
   # mail smtp port - flags: --mail-port
@@ -246,7 +246,7 @@ mail:
   contexts:
     beta:
       # If the host is set to "-", no mail will be sent on this context
-      host: smtp.cozy.beta
+      host: smtp.example.org
       port: 587
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}
       password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
@@ -285,7 +285,7 @@ campaign_mail:
   contexts:
     beta:
       # If the host is set to "-", no mail will be sent on this context
-      host: smtp.cozy.beta
+      host: smtp.example.org
       port: 587
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}
       password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
@@ -350,16 +350,16 @@ move:
 # OnlyOffice server for collaborative edition of office documents
 office:
   default:
-    onlyoffice_url: https://documentserver.cozycloud.cc/
+    onlyoffice_url: https://documentserver.example.org/
     onlyoffice_inbox_secret: inbox_secret
     onlyoffice_outbox_secret: outbox_secret
 
 # [internal usage] Cloudery configuration
-clouderies:
-  default:
-    api:
-      url: https://manager.cozycloud.cc/
-      token: xxxxxx
+# clouderies:
+#   default:
+#     api:
+#       url: https://manager.example.org/
+#       token: xxxxxx
 
 # All the deprecated apps listed here will see their OAUTH2 Authorization
 # flow interupted and redirected to a page proposing to move to the new
@@ -377,7 +377,7 @@ deprecated_apps:
 # The list of authorized hosts to redirect to when using the authentication
 # confirm endpoint.
 authorized_hosts_for_confirm_auth:
-  - sometool.cozycloud.cc
+  - sometool.example.org
 
 notifications:
   # Activate development APIs (iOS only)
@@ -400,7 +400,7 @@ notifications:
   contexts:
     beta:
       provider: api_sen
-      url: https://sms.cozy.beta/api/send
+      url: https://sms.example.org/api/send
       token: {{.Env.COZY_BETA_SMS_TOKEN}}
 
 flagship:
@@ -483,15 +483,15 @@ contexts:
     # Allows to override the default template "Cozy" title by your own title
     templates_title: "My Personal Cloud"
     # Use a different noreply mail for this context
-    noreply_address: noreply@cozy.beta
+    noreply_address: noreply@example.org
     noreply_name: My Cozy Beta
-    reply_to: support@cozy.beta
+    reply_to: support@example.org
     # Configure the error page
-    support_address: support@cozy.beta
+    support_address: support@example.org
     # Change the limit on the number of members for a sharing
     max_members_per_sharing: 50
     # Use a different wizard for moving a Cozy
-    move_url: https://move.cozy.beta/
+    move_url: https://move.example.org/
     # Feature flags
     features:
       - hide_konnector_errors
