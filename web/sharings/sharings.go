@@ -10,6 +10,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -844,8 +845,15 @@ func GetAvatar(c echo.Context) error {
 	m := s.Members[index]
 
 	// Use the local avatar
-	if m.Instance == "" || m.Instance == inst.PageURL("", nil) {
+	if m.Instance == "" {
 		return localAvatar(c, m)
+	}
+	if m.Instance == inst.PageURL("", nil) {
+		err := inst.AvatarFS().ServeAvatarContent(c.Response(), c.Request())
+		if err == os.ErrNotExist {
+			return localAvatar(c, m)
+		}
+		return err
 	}
 
 	// Use the public avatar from the member's instance

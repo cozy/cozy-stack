@@ -251,6 +251,29 @@ func (i *Instance) MakeVFS() error {
 	return err
 }
 
+// AvatarFS returns the hidden filesystem for storing the avatar.
+func (i *Instance) AvatarFS() vfs.Avatarer {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case config.SchemeFile:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
+		return vfsafero.NewAvatarFs(baseFS)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS(i.DomainName() + "-avatar")
+		return vfsafero.NewAvatarFs(baseFS)
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		switch i.SwiftLayout {
+		case 2:
+			return vfsswift.NewAvatarFsV3(config.GetSwiftConnection(), i)
+		default:
+			panic(ErrInvalidSwiftLayout)
+		}
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
+}
+
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
 func (i *Instance) ThumbsFS() vfs.Thumbser {
