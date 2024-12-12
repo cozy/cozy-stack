@@ -602,7 +602,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 	})
 }
 
-func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
+func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode, shortcut string, m *sharing.Member) error {
 	publicName, _ := settings.PublicName(inst)
 	fqdn := strings.TrimPrefix(m.Instance, "https://")
 	slug, domain := "", consts.KnownFlatDomains[0]
@@ -628,6 +628,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"SharingID":       sharingID,
 		"State":           state,
 		"ShareCode":       sharecode,
+		"Shortcut":        shortcut,
 		"URLError":        code == http.StatusBadRequest,
 		"NotEmailError":   code == http.StatusPreconditionFailed,
 	})
@@ -640,6 +641,7 @@ func GetDiscovery(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	state := c.QueryParam("state")
 	sharecode := c.FormValue("sharecode")
+	shortcut := c.QueryParam("shortcut")
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -686,14 +688,14 @@ func GetDiscovery(c echo.Context) error {
 			err = s.RegisterCozyURL(inst, m, m.Instance)
 		}
 		if err == nil {
-			redirectURL, err := m.GenerateOAuthURL(s)
+			redirectURL, err := m.GenerateOAuthURL(s, shortcut)
 			if err == nil {
 				return c.Redirect(http.StatusFound, redirectURL)
 			}
 		}
 	}
 
-	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, sharecode, m)
+	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, sharecode, shortcut, m)
 }
 
 // PostDiscovery is called when the recipient has given its Cozy URL. Either an
@@ -705,6 +707,7 @@ func PostDiscovery(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	state := c.FormValue("state")
 	sharecode := c.FormValue("sharecode")
+	shortcut := c.FormValue("shortcut")
 	cozyURL := c.FormValue("url")
 	if cozyURL == "" {
 		cozyURL = c.FormValue("slug")
@@ -742,7 +745,7 @@ func PostDiscovery(c echo.Context) error {
 			}
 		}
 		if strings.Contains(cozyURL, "@") {
-			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, member)
+			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, shortcut, member)
 		}
 		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
@@ -752,21 +755,21 @@ func PostDiscovery(c echo.Context) error {
 			if errors.Is(err, sharing.ErrAlreadyAccepted) {
 				return renderAlreadyAccepted(c, inst, cozyURL)
 			}
-			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, member)
+			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, shortcut, member)
 		}
-		redirectURL, err = member.GenerateOAuthURL(s)
+		redirectURL, err = member.GenerateOAuthURL(s, shortcut)
 		if err != nil {
 			return wrapErrors(err)
 		}
 		sharing.PersistInstanceURL(inst, member.Email, member.Instance)
 	} else {
-		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
+		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL, shortcut)
 		if err != nil {
 			if errors.Is(err, sharing.ErrInvalidURL) {
 				if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 					return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 				}
-				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, &sharing.Member{})
+				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, shortcut, &sharing.Member{})
 			}
 			return wrapErrors(err)
 		}

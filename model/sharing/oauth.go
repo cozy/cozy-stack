@@ -250,7 +250,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 
 // GenerateOAuthURL takes care of creating a correct OAuth request for
 // the given member of the sharing.
-func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
+func (m *Member) GenerateOAuthURL(s *Sharing, shortcut string) (string, error) {
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return "", ErrInvalidSharing
 	}
@@ -271,6 +271,9 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	q := url.Values{
 		"sharing_id": {s.SID},
 		"state":      {creds.State},
+	}
+	if shortcut != "" {
+		q.Add("shortcut", shortcut)
 	}
 	u.RawQuery = q.Encode()
 
