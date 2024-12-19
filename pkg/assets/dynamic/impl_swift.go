@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/ncw/swift/v2"
 )
 
@@ -24,8 +26,19 @@ type SwiftFS struct {
 	ctx       context.Context
 }
 
+type cacheEntry struct {
+	found   bool
+	content []byte
+}
+
+var cache *expirable.LRU[string, cacheEntry]
+var initCacheOnce sync.Once
+
 // NewSwiftFS instantiate a new SwiftFS.
 func NewSwiftFS() (*SwiftFS, error) {
+	initCacheOnce.Do(func() {
+		cache = expirable.NewLRU[string, cacheEntry](1024, nil, 1*time.Hour)
+	})
 	ctx := context.Background()
 	swiftFS := &SwiftFS{swiftConn: config.GetSwiftConnection(), ctx: ctx}
 	err := swiftFS.swiftConn.ContainerCreate(ctx, DynamicAssetsContainerName, nil)
@@ -54,14 +67,25 @@ func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
 
 func (s *SwiftFS) Get(context, name string) ([]byte, error) {
 	objectName := path.Join(context, name)
-	assetContent := new(bytes.Buffer)
+	if entry, ok := cache.Get(objectName); ok {
+		if !entry.found {
+			return nil, swift.ObjectNotFound
+		}
+		return entry.content, nil
+	}
 
+	assetContent := new(bytes.Buffer)
 	_, err := s.swiftConn.ObjectGet(s.ctx, DynamicAssetsContainerName, objectName, assetContent, true, nil)
 	if err != nil {
+		if err == swift.ObjectNotFound {
+			cache.Add(objectName, cacheEntry{found: false})
+		}
 		return nil, err
 	}
 
-	return assetContent.Bytes(), nil
+	content := assetContent.Bytes()
+	cache.Add(objectName, cacheEntry{found: true, content: content})
+	return content, nil
 }
 
 func (s *SwiftFS) Remove(context, name string) error {
