@@ -541,7 +541,16 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
-	hasShortcut := s.ShortcutID != ""
+	if strings.ToLower(c.QueryParam("shortcut")) == "true" {
+		if err := s.AddShortcut(instance, params.state); err != nil {
+			return err
+		}
+		u := instance.SubDomain(consts.DriveSlug)
+		u.RawQuery = "sharing=" + s.SID
+		u.Fragment = "/folder/" + consts.SharedWithMeDirID
+		return c.Redirect(http.StatusSeeOther, u.String())
+	}
+
 	var sharerDomain, targetType string
 	sharerURL, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
@@ -551,7 +560,6 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 	}
 	if s.Rules[0].DocType == consts.BitwardenOrganizations {
 		targetType = instance.Translate("Notification Sharing Type Organization")
-		hasShortcut = true
 		s.Rules[0].Mime = "organization"
 		if len(s.Rules) == 2 && s.Rules[1].DocType == consts.BitwardenCiphers {
 			s.Rules = s.Rules[:1]
@@ -575,7 +583,6 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
-		"HasShortcut":  hasShortcut,
 		"TargetType":   targetType,
 	})
 }
@@ -602,16 +609,6 @@ func (a *AuthorizeHTTPHandler) authorizeSharing(c echo.Context) error {
 	}
 	if s.Owner || len(s.Members) < 2 {
 		return sharing.ErrInvalidSharing
-	}
-
-	if c.FormValue("synchronize") == "" {
-		if err = s.AddShortcut(instance, params.state); err != nil {
-			return err
-		}
-		u := instance.SubDomain(consts.DriveSlug)
-		u.RawQuery = "sharing=" + s.SID
-		u.Fragment = "/folder/" + consts.SharedWithMeDirID
-		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 
 	if !s.Active {

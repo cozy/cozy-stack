@@ -648,6 +648,9 @@ msgstr "Cozy の URL はメールアドレスではありません。"
 msgid "Sharing Discovery Submit"
 msgstr "送信"
 
+msgid "Sharing Discovery Shortcut Submit"
+msgstr "送信"
+
 msgid "Sharing No Cozy"
 msgstr "まだ Cozy をお持ちではありませんか?"
 

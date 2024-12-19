@@ -1024,6 +1024,9 @@ msgstr "De Cozy-url is niet je e-mailadres."
 msgid "Sharing Discovery Submit"
 msgstr "Synchroniseren naar mijn Cozy"
 
+msgid "Sharing Discovery Shortcut Submit"
+msgstr "Synchroniseren naar mijn Cozy"
+
 msgid "Sharing No Cozy"
 msgstr "Heb je nog geen Cozy?"
 
