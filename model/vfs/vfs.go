@@ -262,6 +262,12 @@ type DiskThresholder interface {
 	DiskQuota() int64
 }
 
+// Avatarer defines an interface to define an avatar filesystem.
+type Avatarer interface {
+	CreateAvatar(contentType string) (io.WriteCloser, error)
+	ServeAvatarContent(w http.ResponseWriter, req *http.Request) error
+}
+
 // Thumbser defines an interface to define a thumbnail filesystem.
 type Thumbser interface {
 	ThumbExists(img *FileDoc, format string) (ok bool, err error)
