@@ -372,13 +372,13 @@ func (s *Sharing) SendShortcutPush(inst *instance.Instance, fileDoc *vfs.FileDoc
 	if err != nil {
 		return err
 	}
-	hasFlashship := false
+	hasFlagship := false
 	for _, notifiable := range notifiables {
 		if notifiable.Flagship {
-			hasFlashship = true
+			hasFlagship = true
 		}
 	}
-	if !hasFlashship {
+	if !hasFlagship {
 		return nil
 	}
 
