@@ -826,6 +826,9 @@ msgstr "Die Cozy URL ist nicht deine E-Mail-Adresse"
 msgid "Sharing Discovery Submit"
 msgstr "In mein Cozy synchronisieren"
 
+msgid "Sharing Discovery Shortcut Submit"
+msgstr "In mein Cozy synchronisieren"
+
 msgid "Sharing No Cozy"
 msgstr "Hast du noch kein Cozy?"
 

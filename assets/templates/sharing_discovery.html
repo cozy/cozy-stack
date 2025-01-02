@@ -15,6 +15,7 @@
     <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="d-contents">
       <input type="hidden" name="state" value="{{.State}}" />
       <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
+      <input type="hidden" name="shortcut" value="{{.Shortcut}}" />
       <main class="wrapper">
         <header class="wrapper-top">
           <a href="https://cozy.io/" class="btn p-2 d-sm-none">
@@ -55,7 +56,11 @@
             </a>
           </p>
           <button id="login-submit" class="btn btn-primary btn-md-lg w-100 mb-3" type="submit">
+            {{if .Shortcut}}
+            {{t "Sharing Discovery Shortcut Submit"}}
+            {{else}}
             {{t "Sharing Discovery Submit"}}
+            {{end}}
           </button>
         </footer>
       </main>

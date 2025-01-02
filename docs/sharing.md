@@ -184,14 +184,15 @@ just have to click OK).
 
 #### Query-String
 
-| Parameter | Description                        |
-| --------- | ---------------------------------- |
-| state     | a code that identify the recipient |
+| Parameter | Description                                                                               |
+| --------- | ----------------------------------------------------------------------------------------- |
+| state     | a code that identify the recipient                                                        |
+| shortcut  | true means that accepting the sharing will just create a shortcut on the recipient's Cozy |
 
 #### Example
 
 ```http
-GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?state=eiJ3iepoaihohz1Y HTTP/1.1
+GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?state=eiJ3iepoaihohz1Y&shortcut=true HTTP/1.1
 Host: alice.example.net
 ```
 
@@ -206,10 +207,11 @@ This route exists in two versions, the version is selected by the HTTP header
 
 #### Classical (`x-www-form-urlencoded`)
 
-| Parameter | Description                           |
-| --------- | ------------------------------------- |
-| state     | a code that identify the recipient    |
-| url       | the URL of the Cozy for the recipient |
+| Parameter | Description                                                                               |
+| --------- | ----------------------------------------------------------------------------------------- |
+| state     | a code that identify the recipient                                                        |
+| url       | the URL of the Cozy for the recipient                                                     |
+| shortcut  | true means that accepting the sharing will just create a shortcut on the recipient's Cozy |
 
 ##### Example
 
@@ -1207,8 +1209,8 @@ HTTP/1.1 204 No Content
 ### DELETE /sharings/:sharing-id/recipients/:index
 
 This route can be only be called on the cozy instance of the sharer to revoke
-only one recipient of the sharing. The parameter is the index of this recipient 
-in the `members` array of the sharing. 
+only one recipient of the sharing. The parameter is the index of this recipient
+in the `members` array of the sharing.
 The status for this member will be set to `revoked`, its cozy will be informed of the
 revokation, and the credentials for this cozy will be deleted.
 
