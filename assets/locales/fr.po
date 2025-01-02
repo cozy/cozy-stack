@@ -1437,3 +1437,9 @@ msgstr ""
 "Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se"
 " faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. "
 "N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "
+
+msgid "Push Sharing Shortcut Title"
+msgstr "Un nouveau partage est disponible dans votre Cozy"
+
+msgid "Push Sharing Shortcut Message"
+msgstr "%s vous a partagé %s."
