@@ -262,7 +262,7 @@ func (h *HTTPHandler) UploadAvatar(c echo.Context) error {
 	header := c.Request().Header
 	size := c.Request().ContentLength
 	if size > 20_000_000 {
-		return jsonapi.BadRequest(errors.New("Avatar is too big"))
+		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "Avatar is too big")
 	}
 	contentType := header.Get(echo.HeaderContentType)
 	f, err := inst.AvatarFS().CreateAvatar(contentType)

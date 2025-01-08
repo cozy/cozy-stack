@@ -9,12 +9,14 @@ import (
 	"github.com/spf13/afero"
 )
 
+const AvatarFilename = "avatar"
+
 // NewAvatarFs creates a new avatar filesystem base on a afero.Fs.
 func NewAvatarFs(fs afero.Fs) vfs.Avatarer {
-	return &avatar{fs}
+	return &avatarFS{fs}
 }
 
-type avatar struct {
+type avatarFS struct {
 	fs afero.Fs
 }
 
@@ -29,11 +31,11 @@ func (u *avatarUpload) Close() error {
 		_ = u.fs.Remove(u.tmpname)
 		return err
 	}
-	return u.fs.Rename(u.tmpname, "avatar")
+	return u.fs.Rename(u.tmpname, AvatarFilename)
 }
 
-func (a *avatar) CreateAvatar(contentType string) (io.WriteCloser, error) {
-	f, err := afero.TempFile(a.fs, "/", "avatar")
+func (a *avatarFS) CreateAvatar(contentType string) (io.WriteCloser, error) {
+	f, err := afero.TempFile(a.fs, "/", AvatarFilename)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +48,8 @@ func (a *avatar) CreateAvatar(contentType string) (io.WriteCloser, error) {
 	return u, nil
 }
 
-func (a *avatar) AvatarExists() (bool, error) {
-	infos, err := a.fs.Stat("avatar")
+func (a *avatarFS) AvatarExists() (bool, error) {
+	infos, err := a.fs.Stat(AvatarFilename)
 	if os.IsNotExist(err) {
 		return false, nil
 	}
@@ -57,19 +59,19 @@ func (a *avatar) AvatarExists() (bool, error) {
 	return infos.Size() > 0, nil
 }
 
-func (a *avatar) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
-	s, err := a.fs.Stat("avatar")
+func (a *avatarFS) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
+	s, err := a.fs.Stat(AvatarFilename)
 	if err != nil {
 		return err
 	}
 	if s.Size() == 0 {
 		return os.ErrInvalid
 	}
-	f, err := a.fs.Open("avatar")
+	f, err := a.fs.Open(AvatarFilename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	http.ServeContent(w, req, "avatar", s.ModTime(), f)
+	http.ServeContent(w, req, AvatarFilename, s.ModTime(), f)
 	return nil
 }
