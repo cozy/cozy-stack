@@ -452,7 +452,7 @@ func (s *Sharing) AddDelegatedContact(inst *instance.Instance, m Member) (string
 // DelegateDiscovery delegates the POST discovery when a recipient has invited
 // another person to a sharing, and this person accepts the sharing on the
 // recipient cozy. The calls is delegated to the owner cozy.
-func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL string) (string, error) {
+func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL, shortcut string) (string, error) {
 	u, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		return "", err
@@ -460,6 +460,9 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	v := url.Values{}
 	v.Add("state", state)
 	v.Add("url", cozyURL)
+	if shortcut != "" {
+		v.Add("shortcut", shortcut)
+	}
 	body := []byte(v.Encode())
 	if len(s.Credentials) == 0 {
 		return "", ErrInvalidSharing

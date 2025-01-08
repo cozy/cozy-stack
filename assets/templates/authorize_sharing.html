@@ -46,16 +46,6 @@
                 </p>
               </div>
 
-              {{if .HasShortcut}}
-              <input type="hidden" name="synchronize" value="true" />
-              {{else}}
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="synchronize" name="synchronize" checked />
-                <label class="form-check-label" for="synchronize">
-                  {{t "Authorize Sharing Synchronize label"}}
-                </label>
-              </div>
-              {{end}}
               <p class="{{if not .HasShortcut}}ps-4{{else}}text-center{{end}} caption text-muted mb-2">
                 {{t "Authorize Sharing Description start" .SharerName .TargetType}}
               </p>
