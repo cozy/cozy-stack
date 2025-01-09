@@ -5,6 +5,7 @@ package public
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -20,6 +21,11 @@ import (
 // Avatar returns the default avatar currently.
 func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	err := inst.AvatarFS().ServeAvatarContent(c.Response(), c.Request())
+	if err != os.ErrNotExist {
+		return err
+	}
+
 	switch c.QueryParam("fallback") {
 	case "404":
 		// Nothing

@@ -1,0 +1,77 @@
+package vfsafero
+
+import (
+	"io"
+	"net/http"
+	"os"
+
+	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/spf13/afero"
+)
+
+const AvatarFilename = "avatar"
+
+// NewAvatarFs creates a new avatar filesystem base on a afero.Fs.
+func NewAvatarFs(fs afero.Fs) vfs.Avatarer {
+	return &avatarFS{fs}
+}
+
+type avatarFS struct {
+	fs afero.Fs
+}
+
+type avatarUpload struct {
+	afero.File
+	fs      afero.Fs
+	tmpname string
+}
+
+func (u *avatarUpload) Close() error {
+	if err := u.File.Close(); err != nil {
+		_ = u.fs.Remove(u.tmpname)
+		return err
+	}
+	return u.fs.Rename(u.tmpname, AvatarFilename)
+}
+
+func (a *avatarFS) CreateAvatar(contentType string) (io.WriteCloser, error) {
+	f, err := afero.TempFile(a.fs, "/", AvatarFilename)
+	if err != nil {
+		return nil, err
+	}
+	tmpname := f.Name()
+	u := &avatarUpload{
+		File:    f,
+		fs:      a.fs,
+		tmpname: tmpname,
+	}
+	return u, nil
+}
+
+func (a *avatarFS) AvatarExists() (bool, error) {
+	infos, err := a.fs.Stat(AvatarFilename)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return infos.Size() > 0, nil
+}
+
+func (a *avatarFS) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
+	s, err := a.fs.Stat(AvatarFilename)
+	if err != nil {
+		return err
+	}
+	if s.Size() == 0 {
+		return os.ErrInvalid
+	}
+	f, err := a.fs.Open(AvatarFilename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	http.ServeContent(w, req, AvatarFilename, s.ModTime(), f)
+	return nil
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -253,6 +254,31 @@ func isMovedError(err error) bool {
 	return ok && j.Code == "moved"
 }
 
+func (h *HTTPHandler) UploadAvatar(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, http.MethodPut, consts.Settings); err != nil {
+		return err
+	}
+	header := c.Request().Header
+	size := c.Request().ContentLength
+	if size > 20_000_000 {
+		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "Avatar is too big")
+	}
+	contentType := header.Get(echo.HeaderContentType)
+	f, err := inst.AvatarFS().CreateAvatar(contentType)
+	if err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+	_, err = io.Copy(f, c.Request().Body)
+	if cerr := f.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Register all the `/settings` routes to the given router.
 func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
@@ -280,6 +306,8 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.PUT("/instance/auth_mode", h.updateInstanceAuthMode)
 	router.PUT("/instance/sign_tos", h.updateInstanceTOS)
 	router.DELETE("/instance/moved_from", h.clearMovedFrom)
+
+	router.PUT("/avatar", h.UploadAvatar)
 
 	router.GET("/flags", h.getFlags)
 
