@@ -357,19 +357,36 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
 		patchCodes := len(patch.Codes) > 0
 
-		if patchCodes == patchSet {
-			return ErrPatchCodeOrSet
-		}
-
 		toPatch, err := getPerms(instance, c.Param(paramName))
 		if err != nil {
 			return err
 		}
 
-		if patchCodes {
-			if !current.CanUpdateShareByLink(toPatch) {
-				return permission.ErrNotParent
+		if !patchSet && !current.CanUpdateShareByLink(toPatch) {
+			return permission.ErrNotParent
+		}
+
+		if patchCodes == patchSet {
+			if patchSet {
+				return ErrPatchCodeOrSet
 			}
+			if patch.Password == nil && patch.ExpiresAt == nil {
+				return ErrPatchCodeOrSet
+			}
+		}
+
+		if pass, _ := patch.Password.(string); pass != "" {
+			hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+			if err != nil {
+				return err
+			}
+			toPatch.Password = hash
+		}
+		if patch.ExpiresAt != nil {
+			toPatch.ExpiresAt = patch.ExpiresAt
+		}
+
+		if patchCodes {
 			toPatch.PatchCodes(patch.Codes)
 		}
 
@@ -404,6 +421,11 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 
 		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
 			return err
+		}
+
+		// Don't send the password hash to the client
+		if toPatch.Password != nil {
+			toPatch.Password = true
 		}
 
 		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch, nil}, nil)
