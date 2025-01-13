@@ -31,7 +31,7 @@ type Permission struct {
 	Type        string            `json:"type,omitempty"`
 	SourceID    string            `json:"source_id,omitempty"`
 	Permissions Set               `json:"permissions,omitempty"`
-	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
+	ExpiresAt   interface{}       `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
 	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
 	Password    interface{}       `json:"password,omitempty"`
@@ -113,7 +113,12 @@ func (p *Permission) Expired() bool {
 	if p.ExpiresAt == nil {
 		return false
 	}
-	return p.ExpiresAt.Before(time.Now())
+	if expiresAt, _ := p.ExpiresAt.(string); expiresAt != "" {
+		if at, err := time.Parse(time.RFC3339, expiresAt); err == nil {
+			return at.Before(time.Now())
+		}
+	}
+	return true
 }
 
 // AddRules add some rules to the permission doc

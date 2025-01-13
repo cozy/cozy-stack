@@ -375,15 +375,27 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			}
 		}
 
-		if pass, _ := patch.Password.(string); pass != "" {
-			hash, err := crypto.GenerateFromPassphrase([]byte(pass))
-			if err != nil {
-				return err
+		if pass, ok := patch.Password.(string); ok {
+			if pass == "" {
+				toPatch.Password = nil
+			} else {
+				hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+				if err != nil {
+					return err
+				}
+				toPatch.Password = hash
 			}
-			toPatch.Password = hash
 		}
-		if patch.ExpiresAt != nil {
-			toPatch.ExpiresAt = patch.ExpiresAt
+		if at, ok := patch.ExpiresAt.(string); ok {
+			if patch.ExpiresAt == "" {
+				toPatch.ExpiresAt = nil
+			} else {
+				expiresAt, err := time.Parse(time.RFC3339, at)
+				if err != nil {
+					return jsonapi.InvalidAttribute("expires_at", err)
+				}
+				toPatch.ExpiresAt = expiresAt
+			}
 		}
 
 		if patchCodes {
