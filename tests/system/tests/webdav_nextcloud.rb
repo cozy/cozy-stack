@@ -22,7 +22,7 @@ describe "NextCloud" do
       host = container.host
       port = container.first_mapped_port
       user = "fred"
-      pass = "570a90bfbf8c7eab5dc5d4e26832d5b1"
+      pass = "796ecbcc9e42a074e22b2c9aa03b79c6"
 
       inst = Instance.create name: "Fred"
       auth = { login: user, password: pass, url: "http://#{host}:#{port}/" }

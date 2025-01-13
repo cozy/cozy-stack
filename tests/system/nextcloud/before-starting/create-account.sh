@@ -1,5 +1,5 @@
 #!/bin/bash
 
-# echo -ne fred | md5sum
-export OC_PASS=570a90bfbf8c7eab5dc5d4e26832d5b1
+# echo -ne fred-password | md5sum
+export OC_PASS=796ecbcc9e42a074e22b2c9aa03b79c6
 php occ user:add --password-from-env --display-name="Fred" --group="users" fred
