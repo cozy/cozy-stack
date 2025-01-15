@@ -145,6 +145,15 @@ func createPermission(c echo.Context) error {
 				tiny = false
 			}
 		}
+	} else {
+		tiny = false
+		if at, ok := subdoc.ExpiresAt.(string); ok {
+			expires, err := time.Parse(time.RFC3339, at)
+			if err != nil {
+				return jsonapi.InvalidAttribute("expires_at", err)
+			}
+			expiresAt = &expires
+		}
 	}
 
 	var codes map[string]string
