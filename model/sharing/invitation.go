@@ -360,14 +360,14 @@ func (s *Sharing) SendShortcutNotification(inst *instance.Instance, fileDoc *vfs
 	if sharerName == "" {
 		sharerName = inst.Translate("Sharing Empty name")
 	}
-	if err := s.SendShortcutPush(inst, fileDoc, previewURL, sharerName); err != nil {
+	if err := s.SendShortcutPush(inst, fileDoc, sharerName); err != nil {
 		inst.Logger().WithNamespace("sharing").
 			Warnf("Cannot send push notification: %s", err)
 	}
 	return s.SendShortcutMail(inst, fileDoc, previewURL, sharerName)
 }
 
-func (s *Sharing) SendShortcutPush(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL, sharerName string) error {
+func (s *Sharing) SendShortcutPush(inst *instance.Instance, fileDoc *vfs.FileDoc, sharerName string) error {
 	notifiables, err := oauth.GetNotifiables(inst)
 	if err != nil {
 		return err
@@ -390,7 +390,7 @@ func (s *Sharing) SendShortcutPush(inst *instance.Instance, fileDoc *vfs.FileDoc
 		Title:          title,
 		Message:        message,
 		Data: map[string]interface{}{
-			"redirectLink": previewURL,
+			"redirectLink": "drive/#/sharings",
 		},
 	}
 	msg, err := job.NewMessage(&push)
