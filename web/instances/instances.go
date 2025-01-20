@@ -554,7 +554,7 @@ func unxorID(c echo.Context) error {
 		err := errors.New("it only works on a recipient's instance")
 		return jsonapi.BadRequest(err)
 	}
-	if len(s.Credentials) != 1 {
+	if len(s.Credentials) != 1 || len(s.Credentials[0].XorKey) == 0 {
 		err := errors.New("unexpected credentials")
 		return jsonapi.BadRequest(err)
 	}
