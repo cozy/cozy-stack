@@ -135,7 +135,7 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
-	var expiresAt *time.Time
+	var expiresAt interface{}
 	if ttl != "" {
 		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
 			ex := time.Now().Add(d)

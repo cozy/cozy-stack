@@ -500,7 +500,14 @@ func checkSetPermissions(set Set, parent *Permission) error {
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, subdoc Permission, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(
+	db prefixer.Prefixer,
+	parent *Permission,
+	sourceID string,
+	codes, shortcodes map[string]string,
+	subdoc Permission,
+	expiresAt interface{},
+) (*Permission, error) {
 	set := subdoc.Permissions
 	if err := checkSetPermissions(set, parent); err != nil {
 		return nil, err
