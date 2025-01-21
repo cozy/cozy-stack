@@ -135,7 +135,7 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
-	var expiresAt *time.Time
+	var expiresAt interface{}
 	if ttl != "" {
 		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
 			ex := time.Now().Add(d)
@@ -144,6 +144,15 @@ func createPermission(c echo.Context) error {
 				instance.Logger().Info("Tiny can not be set to true since duration > 1h")
 				tiny = false
 			}
+		}
+	} else {
+		tiny = false
+		if at, ok := subdoc.ExpiresAt.(string); ok {
+			expires, err := time.Parse(time.RFC3339, at)
+			if err != nil {
+				return jsonapi.InvalidAttribute("expires_at", err)
+			}
+			expiresAt = &expires
 		}
 	}
 
@@ -357,19 +366,48 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
 		patchCodes := len(patch.Codes) > 0
 
-		if patchCodes == patchSet {
-			return ErrPatchCodeOrSet
-		}
-
 		toPatch, err := getPerms(instance, c.Param(paramName))
 		if err != nil {
 			return err
 		}
 
-		if patchCodes {
-			if !current.CanUpdateShareByLink(toPatch) {
-				return permission.ErrNotParent
+		if !patchSet && !current.CanUpdateShareByLink(toPatch) {
+			return permission.ErrNotParent
+		}
+
+		if patchCodes == patchSet {
+			if patchSet {
+				return ErrPatchCodeOrSet
 			}
+			if patch.Password == nil && patch.ExpiresAt == nil {
+				return ErrPatchCodeOrSet
+			}
+		}
+
+		if pass, ok := patch.Password.(string); ok {
+			if pass == "" {
+				toPatch.Password = nil
+			} else {
+				hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+				if err != nil {
+					return err
+				}
+				toPatch.Password = hash
+			}
+		}
+		if at, ok := patch.ExpiresAt.(string); ok {
+			if patch.ExpiresAt == "" {
+				toPatch.ExpiresAt = nil
+			} else {
+				expiresAt, err := time.Parse(time.RFC3339, at)
+				if err != nil {
+					return jsonapi.InvalidAttribute("expires_at", err)
+				}
+				toPatch.ExpiresAt = expiresAt
+			}
+		}
+
+		if patchCodes {
 			toPatch.PatchCodes(patch.Codes)
 		}
 
@@ -404,6 +442,11 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 
 		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
 			return err
+		}
+
+		// Don't send the password hash to the client
+		if toPatch.Password != nil {
+			toPatch.Password = true
 		}
 
 		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch, nil}, nil)

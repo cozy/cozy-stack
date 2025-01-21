@@ -57,7 +57,7 @@ Some known types:
 -   `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 -   `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
-It is also possible to use a wildcard to use a doctype and its sub-doctypes if 
+It is also possible to use a wildcard to use a doctype and its sub-doctypes if
 the doctype contains at least 3 `.`.
 For example, `io.cozy.bank.*` will give access to `io.cozy.bank`,
 `io.cozy.bank.accounts`, `io.cozy.bank.accounts.stats`,
@@ -415,6 +415,9 @@ give the contacts application the permissions to use it.
 
 This route also accepts a [document metadata](https://github.com/cozy/cozy-doctypes/#document-metadata) to update document informations.
 
+Giving an empty string for `password` or `expires_at` will remove it (while
+omitting the field will keep the old value).
+
 #### Request to add / remove codes with a document metadata
 
 ```http
@@ -434,6 +437,62 @@ Accept: application/vnd.api+json
             "codes": {
                 "jane": "Yohyoo8BHahh1lie"
             }
+        },
+        "cozyMetadata": {
+            "doctypeVersion": 1,
+            "metadataVersion": 1,
+            "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
+        }
+    }
+}
+```
+
+#### Request to update the password and the expiration date of the sharing link
+
+```http
+PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+        "type": "io.cozy.permissions",
+        "attributes": {
+            "password": "NewPassword",
+            "expires_at": "2025-01-01T00:00:00Z"
+        },
+        "cozyMetadata": {
+            "doctypeVersion": 1,
+            "metadataVersion": 1,
+            "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
+        }
+    }
+}
+```
+
+#### Request to remove the password and the expiration date of the sharing link
+
+```http
+PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+        "type": "io.cozy.permissions",
+        "attributes": {
+            "password": "",
+            "expires_at": ""
         },
         "cozyMetadata": {
             "doctypeVersion": 1,
