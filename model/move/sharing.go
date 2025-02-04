@@ -70,6 +70,9 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 		return err
 	}
 
+	if len(s.Credentials) == 0 {
+		return errors.New("sharing in invalid state")
+	}
 	clientID := s.Credentials[0].InboundClientID
 	if index > 0 {
 		clientID = s.Credentials[index-1].InboundClientID
