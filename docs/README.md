@@ -103,5 +103,6 @@ designing new services.
 -   `/settings` - [Settings](settings.md)
     -   [Terms of Services](user-action-required.md)
 -   `/sharings` - [Sharing](sharing.md)
+    -   [Shared drives](shared-drives.md)
 -   `/shortcuts` - [Shortcuts](shortcuts.md)
 -   `/.well-known` - [Well-known](wellknown.md)
