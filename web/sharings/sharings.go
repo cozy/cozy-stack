@@ -932,6 +932,9 @@ func Routes(router *echo.Group) {
 	router.POST("/:sharing-id/discovery", PostDiscovery)
 	router.POST("/:sharing-id/preview-url", GetPreviewURL)
 
+	// Drives routes
+	drivesRoutes(router)
+
 	// Replicator routes
 	replicatorRoutes(router)
 }
