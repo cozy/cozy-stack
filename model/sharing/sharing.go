@@ -52,6 +52,7 @@ type Sharing struct {
 	SRev string `json:"_rev,omitempty"`
 
 	Triggers    Triggers  `json:"triggers"`
+	Drive       bool      `json:"drive,omitempty"`
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
@@ -157,7 +158,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	if s.AppSlug == "" {
 		s.AppSlug = slug
 	}
-	if s.AppSlug == "" {
+	if s.Drive || s.AppSlug == "" {
 		s.PreviewPath = ""
 	}
 	s.CreatedAt = time.Now()
@@ -726,6 +727,24 @@ func FindActive(db prefixer.Prefixer) ([]*Sharing, error) {
 		UseIndex: "active",
 		Selector: mango.Equal("active", true),
 		Limit:    1000,
+	}
+	var res []*Sharing
+	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// ListDrives returns the list of the active sharings with drive: true.
+func ListDrives(db prefixer.Prefixer) ([]*Sharing, error) {
+	req := &couchdb.FindRequest{
+		UseIndex: "active",
+		Selector: mango.And(
+			mango.Equal("active", true),
+			mango.Equal("drive", true),
+		),
+		Limit: 1000,
 	}
 	var res []*Sharing
 	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
