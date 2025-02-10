@@ -173,6 +173,28 @@ func GetSharing(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
+func PatchSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if _, err = checkCreatePermissions(c, s); err != nil {
+		return wrapErrors(err)
+	}
+
+	req := sharing.APISharing{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapErrors(err)
+	}
+	if err := s.PatchDescription(inst, req.Description); err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapiSharingWithDocs(c, s)
+}
+
 // CountNewShortcuts returns the number of shortcuts to a sharing that have not
 // been seen.
 func CountNewShortcuts(c echo.Context) error {
@@ -899,6 +921,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)        // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
+	router.PATCH("/:sharing-id", PatchSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Managing recipients
