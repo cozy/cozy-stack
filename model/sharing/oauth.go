@@ -79,6 +79,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	sh := APISharing{
 		&Sharing{
 			SID:         s.SID,
+			Drive:       s.Drive,
 			Active:      false,
 			Owner:       false,
 			Open:        s.Open,

@@ -19,6 +19,9 @@ import (
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
 // receive the shared documents.
 func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
+	if s.Drive {
+		return nil
+	}
 	inst.Logger().WithNamespace("sharing").
 		Debugf("Setup receiver on %#v", inst)
 
@@ -93,50 +96,52 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	}
 	defer mu.Unlock()
 
-	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
-	}
-	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
-		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+	if !s.Drive {
+		if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
+				Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 		}
-	}
-
-	if err := s.AddTrackTriggers(inst); err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Warnf("Error on setup of track triggers (%s): %s", s.SID, err)
-	}
-	if s.Triggers.ReplicateID == "" {
-		for i, rule := range s.Rules {
-			if err := s.InitialIndex(inst, rule, i); err != nil {
-				inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
+		if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
+			if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
 			}
 		}
-	}
-	if err := s.AddReplicateTrigger(inst); err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
-	}
-	if s.FirstFilesRule() != nil {
-		if err := s.AddUploadTrigger(inst); err != nil {
+
+		if err := s.AddTrackTriggers(inst); err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
+				Warnf("Error on setup of track triggers (%s): %s", s.SID, err)
 		}
-	}
-	if err := s.InitialReplication(inst, m); err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Warnf("Error on initial replication (%s): %s", s.SID, err)
-		s.retryWorker(inst, "share-replicate", 0)
+		if s.Triggers.ReplicateID == "" {
+			for i, rule := range s.Rules {
+				if err := s.InitialIndex(inst, rule, i); err != nil {
+					inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
+				}
+			}
+		}
+		if err := s.AddReplicateTrigger(inst); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
+		}
 		if s.FirstFilesRule() != nil {
-			s.retryWorker(inst, "share-upload", 1) // 1, so that it will start after share-replicate
+			if err := s.AddUploadTrigger(inst); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
+			}
 		}
-	} else if s.FirstFilesRule() != nil {
-		if err := s.InitialUpload(inst, m); err != nil {
+		if err := s.InitialReplication(inst, m); err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on initial upload (%s): %s", s.SID, err)
-			s.retryWorker(inst, "share-upload", 0)
+				Warnf("Error on initial replication (%s): %s", s.SID, err)
+			s.retryWorker(inst, "share-replicate", 0)
+			if s.FirstFilesRule() != nil {
+				s.retryWorker(inst, "share-upload", 1) // 1, so that it will start after share-replicate
+			}
+		} else if s.FirstFilesRule() != nil {
+			if err := s.InitialUpload(inst, m); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Error on initial upload (%s): %s", s.SID, err)
+				s.retryWorker(inst, "share-upload", 0)
+			}
 		}
 	}
 

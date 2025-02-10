@@ -541,7 +541,7 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
-	if strings.ToLower(c.QueryParam("shortcut")) == "true" {
+	if s.Drive || strings.ToLower(c.QueryParam("shortcut")) == "true" {
 		if err := s.AddShortcut(instance, params.state); err != nil {
 			return err
 		}
