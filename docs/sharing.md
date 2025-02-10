@@ -401,6 +401,99 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### PATCH /sharings/:id
+
+This endpoint allows to update the description of a sharing.
+
+#### Request
+
+```http
+PATCH /sharings/ce8835a061d0ef68947afe69a0046722 HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "description": "this is an updated description"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "meta": {
+      "rev": "2-8f7c18cb8c17"
+    },
+    "attributes": {
+      "description": "this is an updated description",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "initial_number_of_files_to_sync": 42,
+      "members": [
+        {
+          "status": "owner",
+          "public_name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "ready",
+          "name": "Bob",
+          "email": "bob@example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    },
+    "relationships": {
+      "shared_docs": {
+        "data": [
+          {
+            "id": "612acf1c-1d72-11e8-b043-ef239d3074dd",
+            "type": "io.cozy.files"
+          },
+          {
+            "id": "a34528d2-13fb-9482-8d20-bf1972531225",
+            "type": "io.cozy.files"
+          }
+        ]
+      }
+    },
+    "links": {
+      "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
+    }
+  }
+}
+```
+
 ### GET /sharings/news
 
 It returns the number of shortcuts to a sharing that have not been seen.

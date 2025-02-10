@@ -988,6 +988,12 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 	return previewURL, nil
 }
 
+// PatchDescription saves a new description for a sharing.
+func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
+	s.Description = description
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // AddShortcut creates a shortcut for this sharing on the local instance.
 func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
 	previewURL, err := s.GetPreviewURL(inst, state)
