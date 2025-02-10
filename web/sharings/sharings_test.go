@@ -1013,6 +1013,28 @@ func TestSharings(t *testing.T) {
 		host = sharings.ClearAppInURL("https://my-cozy.example.net/")
 		assert.Equal(t, "https://my-cozy.example.net/", host)
 	})
+
+	t.Run("PatchSharing", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+
+		obj := eA.PATCH("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+            "data": {
+              "type": "` + consts.Sharings + `",
+              "attributes": {
+                "description":  "this is an updated description"
+              }
+            }
+          }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		updated := obj.Value("data").Object().Value("attributes").Object().Value("description").String().NotEmpty().Raw()
+		assert.Equal(t, updated, "this is an updated description")
+	})
 }
 
 func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array, instance *instance.Instance) {
