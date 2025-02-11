@@ -124,10 +124,17 @@ func PutSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
+	// TODO for a shared drive
 	if c.QueryParam("shortcut") == "true" {
-		u := c.QueryParam("url")
-		if err := s.CreateShortcut(inst, u, false); err != nil {
-			return wrapErrors(err)
+		if s.Drive {
+			if err := s.CreateDriveShortcut(inst, false); err != nil {
+				return wrapErrors(err)
+			}
+		} else {
+			u := c.QueryParam("url")
+			if err := s.CreateShortcut(inst, u, false); err != nil {
+				return wrapErrors(err)
+			}
 		}
 	}
 
