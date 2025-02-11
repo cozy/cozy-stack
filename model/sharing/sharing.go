@@ -996,11 +996,15 @@ func (s *Sharing) PatchDescription(inst *instance.Instance, description string) 
 
 // AddShortcut creates a shortcut for this sharing on the local instance.
 func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
-	previewURL, err := s.GetPreviewURL(inst, state)
-	if err != nil {
-		return err
+	if s.Drive {
+		return s.CreateDriveShortcut(inst, true)
+	} else {
+		previewURL, err := s.GetPreviewURL(inst, state)
+		if err != nil {
+			return err
+		}
+		return s.CreateShortcut(inst, previewURL, true)
 	}
-	return s.CreateShortcut(inst, previewURL, true)
 }
 
 // CountNewShortcuts returns the number of shortcuts to a sharing that have not
