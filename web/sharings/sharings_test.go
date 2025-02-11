@@ -137,7 +137,7 @@ func TestSharings(t *testing.T) {
 		sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
 		assertSharingIsCorrectOnSharer(t, obj, sharingID, aliceInstance)
-		description := assertInvitationMailWasSent(t, aliceInstance)
+		description := assertInvitationMailWasSent(t, aliceInstance, "Alice")
 		assert.Equal(t, description, "this is a test")
 		assert.Contains(t, discoveryLink, "/discovery?state=")
 	})
@@ -207,7 +207,7 @@ func TestSharings(t *testing.T) {
 			Header("Location").Contains("home")
 		// End bob login
 
-		fakeAliceInstance(t, bobInstance, tsA.URL)
+		FakeOwnerInstance(t, bobInstance, tsA.URL)
 
 		t.Logf("redirect header: %q\n\n", authorizeLink)
 
@@ -421,7 +421,7 @@ func TestSharings(t *testing.T) {
 		rule.HasValue("doctype", iocozytests)
 		rule.HasValue("values", []string{"foobaz"})
 
-		description := assertInvitationMailWasSent(t, aliceInstance)
+		description := assertInvitationMailWasSent(t, aliceInstance, "Alice")
 		assert.Equal(t, description, "this is a test with preview")
 		assert.Contains(t, discoveryLink, aliceInstance.Domain)
 		assert.Contains(t, discoveryLink, "/preview?sharecode=")
@@ -1088,7 +1088,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharin
 	rule.HasValue("values", []interface{}{"000000"})
 }
 
-func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) string {
+func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance, owner string) string {
 	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
@@ -1115,7 +1115,7 @@ func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) stri
 	assert.Equal(t, msg["mode"], "from")
 	assert.Equal(t, msg["template_name"], "sharing_request")
 	values := msg["template_values"].(map[string]interface{})
-	assert.Equal(t, values["SharerPublicName"], "Alice")
+	assert.Equal(t, values["SharerPublicName"], owner)
 	discoveryLink = values["SharingLink"].(string)
 	return values["Description"].(string)
 }
@@ -1155,7 +1155,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T, instanceA, instanceB *inst
 	assert.NotEmpty(t, rule.Values)
 }
 
-func fakeAliceInstance(t *testing.T, instance *instance.Instance, serverURL string) {
+func FakeOwnerInstance(t *testing.T, instance *instance.Instance, serverURL string) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
 	err := couchdb.GetAllDocs(instance, consts.Sharings, &req, &results)

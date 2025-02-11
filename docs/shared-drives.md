@@ -13,7 +13,7 @@ following steps:
    [`POST /files/shared-drives`](https://docs.cozy.io/en/cozy-stack/files/#post-filesshared-drives)
    route.
 2. Create a folder inside it, with the name of shared drive.
-3. Create a sharing with the `sharing: true` attribute, and one rule for
+3. Create a sharing with the `drive: true` attribute, and one rule for
    shared folder (with `none` for `add`, `update` and `remove` attributes).
 
 ## GET /sharings/drives
