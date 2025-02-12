@@ -16,6 +16,11 @@ following steps:
 3. Create a sharing with the `drive: true` attribute, and one rule for
    shared folder (with `none` for `add`, `update` and `remove` attributes).
 
+# Routes
+
+A permission on the whole `io.cozy.files` doctype is required to use the
+following routes.
+
 ## GET /sharings/drives
 
 The `GET /sharings/drives` route returns the list of shared drives.
@@ -87,5 +92,37 @@ Content-Type: application/vnd.api+json
       }
     }
   ]
+}
+```
+
+### GET /sharings/drives/:id/:file-id/size
+
+This endpoint returns the size taken by the files in a directory inside a shared
+drive, including those in subdirectories.
+
+#### Request
+
+```http
+GET /sharings/drives/aae62886e79611ef8381fb83ff72e425/af1e1b66e92111ef8ddd5fbac4938703/size HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.sizes",
+    "id": "af1e1b66e92111ef8ddd5fbac4938703",
+    "attributes": {
+      "size": "1234567890"
+    },
+    "meta": {}
+  }
 }
 ```
