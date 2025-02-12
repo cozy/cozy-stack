@@ -33,33 +33,38 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		return ErrInvalidSharing
 	}
 
-	rules := make([]Rule, 0, len(s.Rules))
-	for _, rule := range s.Rules {
-		if rule.Local {
-			continue
-		}
-		if rule.FilesByID() && len(rule.Values) > 0 {
-			if fileDoc, err := inst.VFS().FileByID(rule.Values[0]); err == nil {
-				// err != nil means that the target is a directory and not
-				// a file, and we leave the mime blank in that case.
-				rule.Mime = fileDoc.Mime
+	rules := s.Rules
+	if !s.Drive {
+		rules = make([]Rule, 0, len(s.Rules))
+		for _, rule := range s.Rules {
+			if rule.Local {
+				continue
 			}
-		}
-		values := make([]string, len(rule.Values))
-		for i, v := range rule.Values {
-			switch rule.Selector {
-			case "", "id", "_id", "organization_id":
-				values[i] = XorID(v, c.XorKey)
-			case couchdb.SelectorReferencedBy:
-				parts := strings.SplitN(v, "/", 2)
-				values[i] = parts[0] + "/" + XorID(parts[1], c.XorKey)
-			default:
-				values[i] = v
+			if rule.FilesByID() && len(rule.Values) > 0 {
+				if fileDoc, err := inst.VFS().FileByID(rule.Values[0]); err == nil {
+					// err != nil means that the target is a directory and not
+					// a file, and we leave the mime blank in that case.
+					rule.Mime = fileDoc.Mime
+				}
 			}
+			values := make([]string, len(rule.Values))
+			for i, v := range rule.Values {
+				switch rule.Selector {
+				case "", "id", "_id", "organization_id":
+					values[i] = XorID(v, c.XorKey)
+				case couchdb.SelectorReferencedBy:
+					parts := strings.SplitN(v, "/", 2)
+					values[i] = parts[0] + "/" + XorID(parts[1], c.XorKey)
+				default:
+					values[i] = v
+				}
+			}
+			rule.Values = values
+			rules = append(rules, rule)
 		}
-		rule.Values = values
-		rules = append(rules, rule)
 	}
+
+	var memberIndex int
 	members := make([]Member, len(s.Members))
 	for i, m := range s.Members {
 		// Instance and name are private...
@@ -73,9 +78,21 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		}
 		// ... except for the sharer and the recipient of this request
 		if i == 0 || &s.Credentials[i-1] == c {
+			memberIndex = i
 			members[i].Instance = m.Instance
 		}
 	}
+
+	var creds *interface{}
+	if s.Drive {
+		token, err := s.GetInteractCode(inst, &s.Members[memberIndex], memberIndex)
+		if err != nil {
+			return err
+		}
+		var list interface{} = []Credentials{{DriveToken: token}}
+		creds = &list
+	}
+
 	sh := APISharing{
 		&Sharing{
 			SID:         s.SID,
@@ -93,7 +110,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			Groups:      s.Groups,
 			NbFiles:     s.countFiles(inst),
 		},
-		nil,
+		creds,
 		nil,
 	}
 	data, err := jsonapi.MarshalObject(&sh)

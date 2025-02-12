@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -26,6 +27,8 @@ func TestSharedDrives(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
+
+	var productID string
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
@@ -43,6 +46,7 @@ func TestSharedDrives(t *testing.T) {
 	})
 	acmeAppToken := generateAppToken(acmeInstance, "drive", "io.cozy.files")
 	tsA := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
 		"/sharings": sharings.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
@@ -58,7 +62,7 @@ func TestSharedDrives(t *testing.T) {
 		KdfIterations: 5000,
 		Key:           "xxx",
 	})
-	// bettyAppToken := generateAppToken(bettyInstance, "drive", consts.Files)
+	bettyAppToken := generateAppToken(bettyInstance, "drive", consts.Files)
 	tsB := bettySetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
@@ -75,10 +79,35 @@ func TestSharedDrives(t *testing.T) {
 	t.Run("CreateSharedDrive", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 
-		// Create a shared drive
+		// Prepare a few things
 		contact := createContact(t, acmeInstance, "Betty", "betty@example.net")
-		daveContact := createContact(t, acmeInstance, "Dave", "dave@example.net")
 		require.NotNil(t, contact)
+		daveContact := createContact(t, acmeInstance, "Dave", "dave@example.net")
+		require.NotNil(t, daveContact)
+		productID = eA.POST("/files/").
+			WithQuery("Name", "Product team").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+		meetingsID := eA.POST("/files/"+productID).
+			WithQuery("Name", "dirsizesub").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+		eA.POST("/files/"+meetingsID).
+			WithQuery("Name", "Checklist.txt").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithBytes([]byte("foo")).
+			Expect().Status(201)
+
+		// Create a shared drive
 		obj := eA.POST("/sharings/").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
@@ -86,12 +115,12 @@ func TestSharedDrives(t *testing.T) {
         "data": {
           "type": "` + consts.Sharings + `",
           "attributes": {
-            "description":  "Drive for the product team",
+            "description": "Drive for the product team",
             "drive": true,
             "rules": [{
                 "title": "Product team",
                 "doctype": "` + consts.Files + `",
-                "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"]
+                "values": ["` + productID + `"]
               }]
           },
           "relationships": {
@@ -155,7 +184,7 @@ func TestSharedDrives(t *testing.T) {
 		rule := rules.Value(0).Object()
 		rule.Value("title").IsEqual("Product team")
 		rule.Value("doctype").IsEqual("io.cozy.files")
-		rule.Value("values").Array().Value(0).IsEqual("612acf1c-1d72-11e8-b043-ef239d3074dd")
+		rule.Value("values").Array().Value(0).IsEqual(productID)
 	})
 
 	t.Run("AcceptSharedDrive", func(t *testing.T) {
@@ -197,7 +226,6 @@ func TestSharedDrives(t *testing.T) {
 		redirectHeader.Contains(tsB.URL)
 		redirectHeader.Contains("/auth/authorize/sharing")
 		authorizeLink = redirectHeader.NotEmpty().Raw()
-		t.Logf("redirect header: %q\n\n", authorizeLink)
 
 		FakeOwnerInstance(t, bettyInstance, tsA.URL)
 
@@ -212,7 +240,23 @@ func TestSharedDrives(t *testing.T) {
 			Expect().Status(303).Header("Location")
 
 		redirectHeader.Contains("#/folder/io.cozy.files.shared-drives-dir")
-		driveLink := redirectHeader.NotEmpty().Raw()
-		t.Logf("redirect header: %q\n\n", driveLink)
+
+		// TODO check the rules/members/credentials of the sharing on the recipient
+		// TODO check that a shortcut has been created
+	})
+
+	t.Run("GetDirSize", func(t *testing.T) {
+		eB := httpexpect.Default(t, tsB.URL)
+		u := eB.GET("/sharings/drives/"+sharingID+"/"+productID+"/size").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Accept", "application/vnd.api+json").
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := u.Value("data").Object()
+		data.Value("id").IsEqual(productID)
+		data.Value("type").IsEqual("io.cozy.files.sizes")
+		data.Value("attributes").Object().Value("size").IsEqual("3")
 	})
 }
