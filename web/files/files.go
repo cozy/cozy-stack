@@ -825,20 +825,20 @@ func GetChildrenHandler(c echo.Context) error {
 	return dirDataList(c, http.StatusOK, dir)
 }
 
-type apiDiskSize struct {
+type ApiDiskSize struct {
 	DocID string `json:"id,omitempty"`
 	Size  int64  `json:"size,string"`
 }
 
-func (d *apiDiskSize) ID() string                             { return d.DocID }
-func (d *apiDiskSize) Rev() string                            { return "" }
-func (d *apiDiskSize) DocType() string                        { return consts.DirSizes }
-func (d *apiDiskSize) Clone() couchdb.Doc                     { return d }
-func (d *apiDiskSize) SetID(id string)                        { d.DocID = id }
-func (d *apiDiskSize) SetRev(_ string)                        {}
-func (d *apiDiskSize) Relationships() jsonapi.RelationshipMap { return nil }
-func (d *apiDiskSize) Included() []jsonapi.Object             { return nil }
-func (d *apiDiskSize) Links() *jsonapi.LinksList              { return nil }
+func (d *ApiDiskSize) ID() string                             { return d.DocID }
+func (d *ApiDiskSize) Rev() string                            { return "" }
+func (d *ApiDiskSize) DocType() string                        { return consts.DirSizes }
+func (d *ApiDiskSize) Clone() couchdb.Doc                     { return d }
+func (d *ApiDiskSize) SetID(id string)                        { d.DocID = id }
+func (d *ApiDiskSize) SetRev(_ string)                        {}
+func (d *ApiDiskSize) Relationships() jsonapi.RelationshipMap { return nil }
+func (d *ApiDiskSize) Included() []jsonapi.Object             { return nil }
+func (d *ApiDiskSize) Links() *jsonapi.LinksList              { return nil }
 
 // GetDirSize returns the size of a directory (the sum of the size of the files
 // in this directory, including those in subdirectories).
@@ -859,7 +859,7 @@ func GetDirSize(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	result := apiDiskSize{DocID: fileID, Size: size}
+	result := ApiDiskSize{DocID: fileID, Size: size}
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
