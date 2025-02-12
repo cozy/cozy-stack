@@ -209,8 +209,6 @@ func TestSharings(t *testing.T) {
 
 		FakeOwnerInstance(t, bobInstance, tsA.URL)
 
-		t.Logf("redirect header: %q\n\n", authorizeLink)
-
 		body := eB.GET(u.Path).
 			WithQuery("sharing_id", sharingID).
 			WithQuery("state", state).
@@ -433,8 +431,6 @@ func TestSharings(t *testing.T) {
 		sharecode := u.Query()["sharecode"][0]
 
 		eA := httpexpect.Default(t, tsA.URL)
-
-		t.Logf("sharcode: %q\n\n", sharecode)
 
 		obj := eA.POST("/sharings/"+sharingID+"/discovery").
 			WithHeader("Accept", "application/json").
