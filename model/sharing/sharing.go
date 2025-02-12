@@ -404,7 +404,9 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.Active = false
 	s.Owner = false
 	s.UpdatedAt = time.Now()
-	s.Credentials = make([]Credentials, 1)
+	if !s.Drive {
+		s.Credentials = make([]Credentials, 1)
+	}
 
 	for i, m := range s.Members {
 		if m.Email != "" {
