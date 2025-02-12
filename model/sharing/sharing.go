@@ -52,6 +52,7 @@ type Sharing struct {
 	SRev string `json:"_rev,omitempty"`
 
 	Triggers    Triggers  `json:"triggers"`
+	Drive       bool      `json:"drive,omitempty"`
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
@@ -157,7 +158,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	if s.AppSlug == "" {
 		s.AppSlug = slug
 	}
-	if s.AppSlug == "" {
+	if s.Drive || s.AppSlug == "" {
 		s.PreviewPath = ""
 	}
 	s.CreatedAt = time.Now()
@@ -403,7 +404,9 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.Active = false
 	s.Owner = false
 	s.UpdatedAt = time.Now()
-	s.Credentials = make([]Credentials, 1)
+	if !s.Drive {
+		s.Credentials = make([]Credentials, 1)
+	}
 
 	for i, m := range s.Members {
 		if m.Email != "" {
@@ -735,6 +738,24 @@ func FindActive(db prefixer.Prefixer) ([]*Sharing, error) {
 	return res, nil
 }
 
+// ListDrives returns the list of the active sharings with drive: true.
+func ListDrives(db prefixer.Prefixer) ([]*Sharing, error) {
+	req := &couchdb.FindRequest{
+		UseIndex: "active",
+		Selector: mango.And(
+			mango.Equal("active", true),
+			mango.Equal("drive", true),
+		),
+		Limit: 1000,
+	}
+	var res []*Sharing
+	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // GetSharingsByDocType returns all the sharings for the given doctype
 func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
 	req := &couchdb.ViewRequest{
@@ -969,13 +990,23 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 	return previewURL, nil
 }
 
+// PatchDescription saves a new description for a sharing.
+func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
+	s.Description = description
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // AddShortcut creates a shortcut for this sharing on the local instance.
 func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
-	previewURL, err := s.GetPreviewURL(inst, state)
-	if err != nil {
-		return err
+	if s.Drive {
+		return s.CreateDriveShortcut(inst, true)
+	} else {
+		previewURL, err := s.GetPreviewURL(inst, state)
+		if err != nil {
+			return err
+		}
+		return s.CreateShortcut(inst, previewURL, true)
 	}
-	return s.CreateShortcut(inst, previewURL, true)
 }
 
 // CountNewShortcuts returns the number of shortcuts to a sharing that have not
