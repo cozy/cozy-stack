@@ -541,13 +541,17 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
-	if strings.ToLower(c.QueryParam("shortcut")) == "true" {
+	if s.Drive || strings.ToLower(c.QueryParam("shortcut")) == "true" {
 		if err := s.AddShortcut(instance, params.state); err != nil {
 			return err
 		}
 		u := instance.SubDomain(consts.DriveSlug)
 		u.RawQuery = "sharing=" + s.SID
-		u.Fragment = "/folder/" + consts.SharedWithMeDirID
+		if s.Drive {
+			u.Fragment = "/folder/" + consts.SharedDrivesDirID
+		} else {
+			u.Fragment = "/folder/" + consts.SharedWithMeDirID
+		}
 		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 

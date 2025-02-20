@@ -412,6 +412,12 @@ func GetPermission(c echo.Context) (*permission.Permission, error) {
 	return pdoc, nil
 }
 
+// ForcePermission can be used to force a permission document for an
+// echo.Context.
+func ForcePermission(c echo.Context, pdoc *permission.Permission) {
+	c.Set(contextPermissionDoc, pdoc)
+}
+
 // AllowWholeType validates that the context permission set can use a verb on
 // the whold doctype
 func AllowWholeType(c echo.Context, v permission.Verb, doctype string) error {
