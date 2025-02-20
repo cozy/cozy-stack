@@ -22,7 +22,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23.x"
+          go-version: "1.24.x"
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Build the binaries
@@ -71,7 +71,6 @@ jobs:
             "debian:10",
             "debian:11",
             "debian:12",
-            "ubuntu:20.04",
             "ubuntu:22.04",
             "ubuntu:24.04",
           ]
