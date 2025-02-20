@@ -371,7 +371,7 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	if err := s.ValidateRules(); err != nil {
 		return nil, err
 	}
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		return nil, ErrNoRecipients
 	}
 
@@ -397,7 +397,7 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	if err := s.ValidateRules(); err != nil {
 		return err
 	}
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		return ErrNoRecipients
 	}
 
@@ -685,6 +685,9 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 
 // NoMoreRecipient cleans up the sharing if there is no more active recipient
 func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
+	if s.Drive {
+		return nil
+	}
 	for _, m := range s.Members {
 		if m.Status == MemberStatusReady {
 			return couchdb.UpdateDoc(inst, s)
@@ -1126,11 +1129,14 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 		membersChecks, validMembers := s.checkSharingMembers()
 		checks = append(checks, membersChecks...)
 
-		triggersChecks := s.checkSharingTriggers(inst, accepted)
-		checks = append(checks, triggersChecks...)
+		var triggersChecks, credentialsChecks []map[string]interface{}
+		if !s.Drive {
+			triggersChecks = s.checkSharingTriggers(inst, accepted)
+			checks = append(checks, triggersChecks...)
 
-		credentialsChecks := s.checkSharingCredentials()
-		checks = append(checks, credentialsChecks...)
+			credentialsChecks = s.checkSharingCredentials()
+			checks = append(checks, credentialsChecks...)
+		}
 
 		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
 			if !s.Owner || !s.Active {
@@ -1391,7 +1397,7 @@ func (s *Sharing) checkSharingTriggers(inst *instance.Instance, accepted bool) (
 }
 
 func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validMembers []*instance.Instance) {
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		checks = append(checks, map[string]interface{}{
 			"id":         s.SID,
 			"type":       "not_enough_members",
