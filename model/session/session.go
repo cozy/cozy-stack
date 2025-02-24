@@ -41,6 +41,7 @@ type Session struct {
 	LastSeen  time.Time `json:"last_seen"`
 	LongRun   bool      `json:"long_run"`
 	ShortRun  bool      `json:"short_run"`
+	SID       string    `json:"sid,omitempty"` // only present with OIDC
 }
 
 // DocType implements couchdb.Doc
@@ -101,7 +102,7 @@ func (s *Session) OlderThan(t time.Duration) bool {
 }
 
 // New creates a session in couchdb for the given instance
-func New(i *instance.Instance, duration Duration) (*Session, error) {
+func New(i *instance.Instance, duration Duration, sid string) (*Session, error) {
 	now := time.Now()
 	s := &Session{
 		instance:  i,
@@ -109,6 +110,7 @@ func New(i *instance.Instance, duration Duration) (*Session, error) {
 		CreatedAt: now,
 		ShortRun:  duration == ShortRun,
 		LongRun:   duration == LongRun,
+		SID:       sid,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
@@ -300,6 +302,21 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 		}
 	}
 	return nil
+}
+
+// DeleteBySID is used for the OIDC back-channel logout. It deletes the sessions
+// for the current device of the user.
+func DeleteBySID(inst *instance.Instance, sid string) error {
+	return couchdb.ForeachDocs(inst, consts.Sessions, func(_ string, data json.RawMessage) error {
+		var s Session
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		if s.SID == sid {
+			s.Delete(inst)
+		}
+		return nil
+	})
 }
 
 // cookieSessionMACConfig returns the options to authenticate the session

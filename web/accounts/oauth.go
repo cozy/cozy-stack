@@ -344,7 +344,7 @@ func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		if !wasLoggedIn {
-			sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun)
+			sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun, "")
 			req := c.Request()
 			if err == nil {
 				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {

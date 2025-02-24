@@ -317,6 +317,7 @@ func IndexesByDoctype(doctype string) []*mango.Index {
 // properly.
 var globalIndexes = []*mango.Index{
 	mango.MakeIndex(consts.Exports, "by-domain", mango.IndexDef{Fields: []string{"domain", "created_at"}}),
+	mango.MakeIndex(consts.Instances, "by-oidcid", mango.IndexDef{Fields: []string{"oidc_id"}}),
 }
 
 // secretIndexes is the index list required on the secret databases to run

@@ -100,9 +100,9 @@ func Home(c echo.Context) error {
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
-func SetCookieForNewSession(c echo.Context, duration session.Duration) (string, error) {
+func SetCookieForNewSession(c echo.Context, duration session.Duration, sid string) (string, error) {
 	instance := middlewares.GetInstance(c)
-	session, err := session.New(instance, duration)
+	session, err := session.New(instance, duration, sid)
 	if err != nil {
 		return "", err
 	}
@@ -255,7 +255,7 @@ func loginForm(c echo.Context) error {
 		if err != nil {
 			instance.Logger().Warnf("Delegated token check failed: %s", err)
 		} else {
-			sessionID, err := SetCookieForNewSession(c, session.NormalRun)
+			sessionID, err := SetCookieForNewSession(c, session.NormalRun, "")
 			if err != nil {
 				return err
 			}
@@ -284,7 +284,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, dura
 		duration = session.ShortRun
 	}
 
-	sessionID, err := SetCookieForNewSession(c, duration)
+	sessionID, err := SetCookieForNewSession(c, duration, "")
 	if err != nil {
 		return err
 	}

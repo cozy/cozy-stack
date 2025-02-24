@@ -797,7 +797,7 @@ func openWebapp(c echo.Context) error {
 		cookie.HttpOnly = true
 		cookie.SameSite = http.SameSiteLaxMode
 	} else {
-		sess, err = session.New(inst, session.NormalRun)
+		sess, err = session.New(inst, session.NormalRun, "")
 		if err != nil {
 			return wrapAppsError(err)
 		}
