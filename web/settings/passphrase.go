@@ -125,7 +125,7 @@ func (h *HTTPHandler) registerPassphrase(c echo.Context) error {
 		}
 	}
 
-	sessionID, err := auth.SetCookieForNewSession(c, session.LongRun)
+	sessionID, err := auth.SetCookieForNewSession(c, session.LongRun, "")
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (h *HTTPHandler) updatePassphrase(c echo.Context) error {
 			_ = sharing.SendPublicKey(inst, params.PublicKey)
 		}()
 		if hasSession {
-			_, _ = auth.SetCookieForNewSession(c, currentSession.Duration())
+			_, _ = auth.SetCookieForNewSession(c, currentSession.Duration(), "")
 		}
 		return c.NoContent(http.StatusNoContent)
 	}
@@ -348,7 +348,7 @@ func (h *HTTPHandler) updatePassphrase(c echo.Context) error {
 	if hasSession {
 		duration = currentSession.Duration()
 	}
-	if _, err = auth.SetCookieForNewSession(c, duration); err != nil {
+	if _, err = auth.SetCookieForNewSession(c, duration, ""); err != nil {
 		return err
 	}
 

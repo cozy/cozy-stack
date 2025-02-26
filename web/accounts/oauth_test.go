@@ -37,7 +37,7 @@ func TestOauth(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 	ts := setup.GetTestServer("/accounts", Routes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
-			sess, _ := session.New(testInstance, session.LongRun)
+			sess, _ := session.New(testInstance, session.LongRun, "")
 			cookie, _ := sess.ToCookie()
 			t.Logf("cookie: %q", cookie)
 			c.SetCookie(cookie)

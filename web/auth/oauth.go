@@ -182,7 +182,7 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 		// reused, even if the user is already logged in and we don't want to
 		// create a new session
 		if checked := inst.CheckAndClearSessionCode(code); checked && !isLoggedIn {
-			sessionID, err := SetCookieForNewSession(c, session.ShortRun)
+			sessionID, err := SetCookieForNewSession(c, session.ShortRun, "")
 			req := c.Request()
 			if err == nil {
 				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {

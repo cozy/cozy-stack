@@ -177,6 +177,24 @@ Set-Cookie: ...
 Location: https://name00001-home.mycozy.cloud/
 ```
 
+#### POST /oidc/:context/logout
+
+This route implements the OpenID Connect Back-Channel Logout. It means that the
+SSO can call this endpoint to logout the user.
+
+```http
+POST /oidc/a-context/logout HTTP/1.1
+Host: name00001.mycozy.cloud
+Content-Type: application/x-www-form-urlencoded
+
+logout_token=eyJhbGci ... .eyJpc3Mi ... .T3BlbklE ...
+```
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-store
+```
+
 #### POST /oidc/access_token
 
 This additional route can be used by an OAuth client (like a mobile app) when

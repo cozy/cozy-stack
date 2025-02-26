@@ -46,7 +46,7 @@ func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) *
 			if err != http.ErrNoCookie {
 				require.NoError(t, err, "Could not get session cookie")
 				if cookie.Value == "connected" {
-					sess, _ := session.New(inst, session.LongRun)
+					sess, _ := session.New(inst, session.LongRun, "")
 					context.Set("session", sess)
 				}
 			}

@@ -92,7 +92,7 @@ func TestApps(t *testing.T) {
 
 	ts := setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
-			sess, _ := session.New(testInstance, session.LongRun)
+			sess, _ := session.New(testInstance, session.LongRun, "")
 			cookie, _ := sess.ToCookie()
 			c.SetCookie(cookie)
 			return c.HTML(http.StatusOK, "OK")

@@ -23,8 +23,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -147,12 +149,13 @@ func Login(c echo.Context) error {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
 
+	var token string
 	if idToken != "" && conf.IDTokenKeyURL != "" {
 		if err := checkIDToken(conf, inst, idToken); err != nil {
 			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
+		token = idToken
 	} else {
-		var token string
 		if conf.AllowOAuthToken {
 			token = c.QueryParam("access_token")
 		}
@@ -186,7 +189,10 @@ func Login(c echo.Context) error {
 		}
 	}
 
-	return createSessionAndRedirect(c, inst, redirect, confirm)
+	claims := jwt.MapClaims{}
+	_, _, _ = jwt.NewParser().ParseUnverified(token, claims)
+	sid, _ := claims["sid"].(string)
+	return createSessionAndRedirect(c, inst, redirect, confirm, sid)
 }
 
 func TwoFactor(c echo.Context) error {
@@ -205,7 +211,7 @@ func TwoFactor(c echo.Context) error {
 	}
 
 	if inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken) {
-		return createSessionAndRedirect(c, inst, redirect, confirm)
+		return createSessionAndRedirect(c, inst, redirect, confirm, "")
 	}
 
 	twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
@@ -224,14 +230,14 @@ func TwoFactor(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 }
 
-func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect, confirm string) error {
+func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect, confirm, sid string) error {
 	// The OIDC danse has been made to confirm the identity of the user, not
 	// for creating a new session.
 	if confirm != "" {
 		return auth.ConfirmSuccess(c, inst, confirm)
 	}
 
-	sessionID, err := auth.SetCookieForNewSession(c, session.NormalRun)
+	sessionID, err := auth.SetCookieForNewSession(c, session.NormalRun, sid)
 	if err != nil {
 		return err
 	}
@@ -242,6 +248,103 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 		redirect = inst.DefaultRedirection().String()
 	}
 	return c.Redirect(http.StatusSeeOther, redirect)
+}
+
+// Logout is the handler for the OpenID back-channel logout endpoint.
+func Logout(c echo.Context) error {
+	contextName := c.Param("context")
+	conf, err := getGenericConfig(contextName)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "No OpenID Connect is configured",
+		})
+	}
+
+	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":             "Cannot get the keys",
+			"error_description": err,
+		})
+	}
+
+	logoutToken := c.FormValue("logout_token")
+	token, err := jwt.Parse(logoutToken, func(token *jwt.Token) (interface{}, error) {
+		return ChooseKeyForIDToken(keys, token)
+	})
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse for logout token: %s", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":             "error on parsing the token",
+			"error_description": err,
+		})
+	}
+	if !token.Valid {
+		logger.WithNamespace("oidc").Errorf("Invalid logout token: %#v", token)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid logout token",
+		})
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	var inst *instance.Instance
+	if conf.AllowCustomInstance {
+		sub, ok := claims["sub"].(string)
+		if !ok {
+			logger.WithNamespace("oidc").Errorf("Invalid claims: %#v", claims)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid claims",
+			})
+		}
+		var instances []*instance.Instance
+		req := &couchdb.FindRequest{
+			UseIndex: "by-oidcid",
+			Selector: mango.And(
+				mango.Equal("oidc_id", sub),
+				mango.Equal("context", contextName),
+			),
+			Limit: 1,
+		}
+		err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &instances)
+		if err != nil || len(instances) == 0 {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error":             "internal server error",
+				"error_description": err,
+			})
+		}
+		inst = instances[0]
+	} else {
+		domain, ok := claims[conf.UserInfoField].(string)
+		if !ok {
+			logger.WithNamespace("oidc").Errorf("Invalid claims: %#v", claims)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid claims",
+			})
+		}
+		domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
+		domain = strings.ToLower(domain)             // The domain is case insensitive
+		domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
+		instance, err := lifecycle.GetInstance(domain)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error":             "internal server error",
+				"error_description": err,
+			})
+		}
+		inst = instance
+	}
+
+	// TODO use the sid to logout only on the current device
+	if err := session.DeleteOthers(inst, "all"); err != nil {
+		inst.Logger().WithNamespace("oidc").Errorf("Cannot delete the session: %s", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":             "internal server error",
+			"error_description": err,
+		})
+	}
+
+	c.Response().Header().Set("Cache-Control", "no-store")
+	return c.NoContent(http.StatusOK)
 }
 
 // AccessToken delivers an access_token and a refresh_token if the client gives
@@ -848,6 +951,7 @@ func Routes(router *echo.Group) {
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
+	router.POST("/:context/logout", Logout)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
 }
 
