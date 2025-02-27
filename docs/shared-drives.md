@@ -95,6 +95,128 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /sharings/drives/:id/:file-id
+
+Get a directory or a file informations inside a shared drive. In the case of a
+directory, it contains the list of files and sub-directories inside it. For a
+note, its images are included.
+
+#### Request
+
+```http
+GET /sharings/drives/aae62886e79611ef8381fb83ff72e425/af1e1b66e92111ef8ddd5fbac4938703 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "af1e1b66e92111ef8ddd5fbac4938703",
+    "meta": {
+      "rev": "1-e36ab092"
+    },
+    "attributes": {
+      "type": "directory",
+      "name": "Streams",
+      "path": "/Product team/Streams",
+      "created_at": "2016-09-19T12:35:00Z",
+      "updated_at": "2016-09-19T12:35:00Z",
+      "tags": [],
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2016-09-20T18:32:47Z",
+        "createdByApp": "drive",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2016-09-20T18:32:47Z"
+      }
+    },
+    "relationships": {
+      "contents": {
+        "data": [
+          {
+            "type": "io.cozy.files",
+            "id": "a2843318f52411ef8e7ab79eae2f09ab"
+          },
+          {
+            "type": "io.cozy.files",
+            "id": "b1db1642f52411efbe0b3bfc5fc0b437"
+          }
+        ]
+      }
+    },
+    "links": {
+      "self": "/files/af1e1b66e92111ef8ddd5fbac4938703"
+    }
+  },
+  "included": [
+    {
+      "type": "io.cozy.files",
+      "id": "a2843318f52411ef8e7ab79eae2f09ab",
+      "meta": {
+        "rev": "1-ff3beeb456eb"
+      },
+      "attributes": {
+        "type": "directory",
+        "name": "Authentication",
+        "path": "/Product team/Streams/Authentication",
+        "created_at": "2016-09-19T12:35:08Z",
+        "updated_at": "2016-09-19T12:35:08Z",
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:32:47Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:32:47Z"
+        }
+      }
+    },
+    {
+      "type": "io.cozy.files",
+      "id": "b1db1642f52411efbe0b3bfc5fc0b437",
+      "meta": {
+        "rev": "1-0e6d5b72"
+      },
+      "attributes": {
+        "type": "file",
+        "name": "REAMDE.md",
+        "trashed": false,
+        "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+        "created_at": "2016-09-19T12:38:04Z",
+        "updated_at": "2016-09-19T12:38:04Z",
+        "tags": [],
+        "size": 12,
+        "executable": false,
+        "class": "document",
+        "mime": "text/plain",
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:32:49Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:32:49Z",
+          "uploadedAt": "2016-09-20T18:32:49Z",
+          "uploadedOn": "https://cozy.example.com/",
+          "uploadedBy": {
+            "slug": "drive"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
 ### GET /sharings/drives/:id/:file-id/size
 
 This endpoint returns the size taken by the files in a directory inside a shared
