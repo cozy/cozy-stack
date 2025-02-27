@@ -41,6 +41,44 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	if dir != nil {
+		err = middlewares.AllowVFS(c, permission.GET, dir)
+	} else {
+		err = middlewares.AllowVFS(c, permission.GET, file)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	if dir != nil {
+		err = middlewares.AllowVFS(c, permission.GET, dir)
+	} else {
+		err = middlewares.AllowVFS(c, permission.GET, file)
+	}
+	if err != nil {
+		return err
+	}
+
+	if dir != nil {
+		return files.DirData(c, http.StatusOK, dir)
+	}
+	return files.FileData(c, http.StatusOK, file, true, nil)
+}
+
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
 	fileID := c.Param("file-id")
@@ -50,7 +88,7 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	}
 
 	if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
-		return wrapErrors(err)
+		return err
 	}
 
 	size, err := fs.DirSize(dir)
@@ -68,6 +106,8 @@ func drivesRoutes(router *echo.Group) {
 	group.GET("", ListSharedDrives)
 
 	drive := group.Group("/:id")
+	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
+	drive.GET("/:file-id", proxy(GetDirOrFile))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
 }
 
@@ -87,9 +127,13 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		}
 
 		// On a recipient, we proxy the request to the owner
-		verb := permission.Verb(c.Request().Method)
+		method := c.Request().Method
+		if method == http.MethodHead {
+			method = http.MethodGet
+		}
+		verb := permission.Verb(method)
 		if err := middlewares.AllowWholeType(c, verb, consts.Files); err != nil {
-			return wrapErrors(err)
+			return err
 		}
 		if len(s.Credentials) == 0 {
 			return jsonapi.InternalServerError(errors.New("no credentials"))
