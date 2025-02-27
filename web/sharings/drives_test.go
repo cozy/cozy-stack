@@ -28,7 +28,7 @@ func TestSharedDrives(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	var productID string
+	var productID, meetingsID, checklistID string
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
@@ -91,21 +91,23 @@ func TestSharedDrives(t *testing.T) {
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
-		meetingsID := eA.POST("/files/"+productID).
-			WithQuery("Name", "dirsizesub").
+		meetingsID = eA.POST("/files/"+productID).
+			WithQuery("Name", "Meetings").
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
-		eA.POST("/files/"+meetingsID).
+		checklistID = eA.POST("/files/"+meetingsID).
 			WithQuery("Name", "Checklist.txt").
 			WithQuery("Type", "file").
 			WithHeader("Content-Type", "text/plain").
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			WithBytes([]byte("foo")).
-			Expect().Status(201)
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
 
 		// Create a shared drive
 		obj := eA.POST("/sharings/").
@@ -243,6 +245,89 @@ func TestSharedDrives(t *testing.T) {
 
 		// TODO check the rules/members/credentials of the sharing on the recipient
 		// TODO check that a shortcut has been created
+	})
+
+	t.Run("HeadDirOrFile", func(t *testing.T) {
+		eB := httpexpect.Default(t, tsB.URL)
+
+		// HEAD request on non-existing file should return 404 for recipient
+		eB.HEAD("/sharings/drives/"+sharingID+"/nonexistent").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(404)
+
+		// HEAD request on directory should return 200 for recipient
+		eB.HEAD("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200)
+
+		// HEAD request on file should return 200 for recipient
+		eB.HEAD("/sharings/drives/"+sharingID+"/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200)
+
+		// HEAD request without authentication should fail
+		eB.HEAD("/sharings/drives/" + sharingID + "/" + checklistID).
+			Expect().Status(401)
+
+		// HEAD request with wrong sharing ID should fail
+		eB.HEAD("/sharings/drives/wrong-id/"+checklistID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(404)
+	})
+
+	t.Run("GetDirOrFile", func(t *testing.T) {
+		eB := httpexpect.Default(t, tsB.URL)
+
+		// GET request on non-existing file should return 404 for recipient
+		eB.GET("/sharings/drives/"+sharingID+"/nonexistent").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(404)
+
+		// GET request on directory should return 200 and directory data for recipient
+		obj := eB.GET("/sharings/drives/"+sharingID+"/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.Value("type").String().IsEqual("io.cozy.files")
+		data.Value("id").String().IsEqual(meetingsID)
+		attrs := data.Value("attributes").Object()
+		attrs.Value("type").String().IsEqual("directory")
+		attrs.Value("name").String().IsEqual("Meetings")
+		attrs.Value("path").String().IsEqual("/Product team/Meetings")
+
+		contents := data.Path("$.relationships.contents.data").Array()
+		contents.Length().IsEqual(1)
+		fileRef := contents.Value(0).Object()
+		fileRef.Value("type").String().IsEqual("io.cozy.files")
+		fileRef.Value("id").String().IsEqual(checklistID)
+
+		// GET request on file should return 200 and file data for recipient
+		obj = eB.GET("/sharings/drives/"+sharingID+"/"+checklistID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data = obj.Value("data").Object()
+		data.Value("type").String().IsEqual("io.cozy.files")
+		data.Value("id").String().IsEqual(checklistID)
+		attrs = data.Value("attributes").Object()
+		attrs.Value("type").String().IsEqual("file")
+		attrs.Value("name").String().IsEqual("Checklist.txt")
+		attrs.Value("mime").String().IsEqual("text/plain")
+		attrs.Value("size").String().IsEqual("3")
+
+		// GET request without authentication should fail
+		eB.GET("/sharings/drives/" + sharingID + "/" + meetingsID).
+			Expect().Status(401)
+
+		// GET request with wrong sharing ID should fail
+		eB.GET("/sharings/drives/wrong-id/"+meetingsID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(404)
 	})
 
 	t.Run("GetDirSize", func(t *testing.T) {

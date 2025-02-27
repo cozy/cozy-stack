@@ -121,7 +121,7 @@ func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.Dir
 	return count, cursor, children, nil
 }
 
-func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
+func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	instance := middlewares.GetInstance(c)
 	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
