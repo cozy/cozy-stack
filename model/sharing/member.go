@@ -108,6 +108,7 @@ type Credentials struct {
 	// Information needed to send data to the member
 	Client      *auth.Client      `json:"client,omitempty"`
 	AccessToken *auth.AccessToken `json:"access_token,omitempty"`
+	DriveToken  string            `json:"drive_token,omitempty"`
 
 	// XorKey is used to transform file identifiers
 	XorKey []byte `json:"xor_key,omitempty"`
