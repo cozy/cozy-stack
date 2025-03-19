@@ -1082,6 +1082,21 @@ func TestSettings(t *testing.T) {
 			Expect().Status(302).
 			Header("location").IsEqual(testInstance.DefaultRedirection().String())
 	})
+
+	t.Run("PutAvatar", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		sessCookie := session.CookieName(testInstance)
+
+		// Create a sample avatar image
+		avatarContent := "fake image content"
+
+		e.PUT("/settings/avatar").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHeader("Content-Type", "image/png").
+			WithBytes([]byte(avatarContent)).
+			Expect().Status(204)
+	})
 }
 
 func TestRegisterPassphraseForFlagshipApp(t *testing.T) {

@@ -35,6 +35,9 @@ func (u *avatarUpload) Close() error {
 }
 
 func (a *avatarFS) CreateAvatar(contentType string) (io.WriteCloser, error) {
+	if err := a.fs.MkdirAll("/", 0755); err != nil {
+		return nil, err
+	}
 	f, err := afero.TempFile(a.fs, "/", AvatarFilename)
 	if err != nil {
 		return nil, err
