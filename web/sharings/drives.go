@@ -100,6 +100,10 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
+func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.CopyFile(c, inst)
+}
+
 // drivesRoutes sets the routing for the shared drives
 func drivesRoutes(router *echo.Group) {
 	group := router.Group("/drives")
@@ -109,6 +113,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 	drive.GET("/:file-id", proxy(GetDirOrFile))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
+	drive.POST("/:file-id/copy", proxy(CopyFile))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error) echo.HandlerFunc {
