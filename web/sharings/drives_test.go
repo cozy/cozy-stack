@@ -344,4 +344,51 @@ func TestSharedDrives(t *testing.T) {
 		data.Value("type").IsEqual("io.cozy.files.sizes")
 		data.Value("attributes").Object().Value("size").IsEqual("3")
 	})
+
+	t.Run("SharedDriveFileCopy", func(t *testing.T) {
+		t.Run("CannotCopyUnsharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+			nonSharedID := eA.POST("/files/").
+				WithQuery("Name", "Non shared file").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eB.POST("/sharings/drives/"+sharingID+"/"+nonSharedID+"/copy").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(403)
+		})
+
+		t.Run("CanCopySharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			checklistClone := eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
+				WithQuery("Name", "Checklist.txt").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			checklistCloneData := checklistClone.Value("data").Object()
+			checklistCloneId := checklistCloneData.Value("id").String().NotEmpty().Raw()
+
+			name := checklistCloneData.Path("$.attributes.name").String().IsEqual("Checklist (copy).txt").Raw()
+			checklistCloneData.Value("type").IsEqual("io.cozy.files")
+
+			// GET request on cloned file should have an identical file name
+			eA.GET("/sharings/drives/"+sharingID+"/"+checklistCloneId).
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.attributes.name").String().IsEqual(name).Raw()
+		})
+	})
 }

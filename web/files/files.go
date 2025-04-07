@@ -330,26 +330,26 @@ func UploadMetadataHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &m, nil)
 }
 
-// FileCopyHandler handles POST requests on /files/:file-id/copy
-//
-// It is used to duplicate the given file and its metadata except for
-// relationships.
-func FileCopyHandler(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
+// Copy a single file from an instance to itself using parameters from the echo Context:
+// - url param: `file-id`: surce file's ID
+// - url query param: `DirID`: optional destination folder's ID
+// - url query param: `Name`: optional destination file name
+func CopyFile(c echo.Context, inst *instance.Instance) error {
+	fileID := c.Param("file-id")
+	destinationDirID := c.QueryParam("DirID")
+	destinationName := c.QueryParam("Name")
+
 	fs := inst.VFS()
 
-	fileID := c.Param("file-id")
 	olddoc, err := inst.VFS().FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	newDirID := c.QueryParam("DirID")
-	copyName := c.QueryParam("Name")
+	copyName := destinationName
 	if copyName == "" {
 		copyName = fileCopyName(inst, olddoc.DocName)
 	}
-	newdoc := vfs.CreateFileDocCopy(olddoc, newDirID, copyName)
+	newdoc := vfs.CreateFileDocCopy(olddoc, destinationDirID, copyName)
 
 	err = checkPerm(c, permission.POST, nil, newdoc)
 	if err != nil {
@@ -384,6 +384,14 @@ func FileCopyHandler(c echo.Context) error {
 	}
 
 	return FileData(c, http.StatusCreated, newdoc, false, nil)
+}
+
+// FileCopyHandler handles POST requests on /files/:file-id/copy
+//
+// It is used to duplicate the given file and its metadata except for
+// relationships.
+func FileCopyHandler(c echo.Context) error {
+	return CopyFile(c, middlewares.GetInstance(c))
 }
 
 func AddDescription(c echo.Context) error {
