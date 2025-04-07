@@ -344,4 +344,59 @@ func TestSharedDrives(t *testing.T) {
 		data.Value("type").IsEqual("io.cozy.files.sizes")
 		data.Value("attributes").Object().Value("size").IsEqual("3")
 	})
+
+	t.Run("SharedDriveFileCopy", func(t *testing.T) {
+		t.Run("CannotCopyUnsharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+			nonSharedID := eA.POST("/files/").
+				WithQuery("Name", "Non shared file").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eB.POST("/sharings/drives/"+sharingID+"/"+nonSharedID+"/copy").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(403)
+		})
+
+		t.Run("CanCopySharedFile", func(t *testing.T) {
+			eB := httpexpect.Default(t, tsB.URL)
+
+			// 1. Create copy without name
+			eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.name").String().IsEqual("Checklist (copy).txt")
+
+			// 2. Create copy with same name
+			eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
+				WithQuery("Name", "Checklist.txt").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.name").String().IsEqual("Checklist (2).txt")
+
+			// 2. Create copy with different name
+			eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
+				WithQuery("Name", "My list.txt").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.name").String().IsEqual("My list.txt")
+		})
+	})
 }

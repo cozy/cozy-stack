@@ -248,3 +248,10 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+### POST /sharings/drives/:id/:file-id/copy
+
+Duplicates a file.
+
+Identical call to [`POST /files/:file-id/copy`](files.md) but over a shared drive.
+See there for request and response examples, the only difference is the URL.
