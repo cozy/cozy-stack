@@ -51,6 +51,7 @@ func TranslatorHTML(locale, contextName string) func(key string, vars ...interfa
 // Translate translates the given key on the specified locale.
 func Translate(key, locale, contextName string, vars ...interface{}) string {
 	if po, ok := translations[contextName+"/"+locale]; ok {
+		//nolint:govet // Causes "printf: non-constant format string" - but this is a format string on purpose
 		translated := po.Get(key)
 		if translated != key && translated != "" {
 			if len(vars) > 0 {
@@ -60,6 +61,7 @@ func Translate(key, locale, contextName string, vars ...interface{}) string {
 		}
 	}
 	if po, ok := translations[locale]; ok {
+		//nolint:govet // Causes "printf: non-constant format string" - but this is a format string on purpose
 		translated := po.Get(key)
 		if translated != key && translated != "" {
 			if len(vars) > 0 {
