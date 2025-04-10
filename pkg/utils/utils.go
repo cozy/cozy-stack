@@ -155,6 +155,14 @@ func DirExists(name string) (bool, error) {
 	return true, nil
 }
 
+// If `s` does not end with `suffix`, it returns `suffix` appended to `s`, or just `s`
+func EnsureHasSuffix(s, suffix string) string {
+	if strings.HasSuffix(s, suffix) {
+		return s
+	}
+	return s + suffix
+}
+
 // AbsPath returns an absolute path relative.
 func AbsPath(inPath string) string {
 	if strings.HasPrefix(inPath, "~") {
