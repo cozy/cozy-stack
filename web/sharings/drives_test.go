@@ -2,6 +2,7 @@ package sharings_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -34,6 +35,10 @@ func TestSharedDrives(t *testing.T) {
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
 		otherSharedFileThenDeletedID string
+	const productName = "Product team"
+	const meetingsName = "Meetings"
+	const checklistName = "Checklist.txt"
+	checklistFullOwnerPath := "/" + strings.Join([]string{productName, meetingsName, checklistName}, "/")
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
@@ -109,28 +114,28 @@ func TestSharedDrives(t *testing.T) {
 		daveContact := createContact(t, acmeInstance, "Dave", "dave@example.net")
 		require.NotNil(t, daveContact)
 		productID = eA.POST("/files/").
-			WithQuery("Name", "Product team").
+			WithQuery("Name", productName).
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 		outsideOfShareID = eA.POST("/files/").
-			WithQuery("Name", "Unshared directory at the root of ACME").
+			WithQuery("Name", "Unshared directory *at the root of ACME").
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 		meetingsID = eA.POST("/files/"+productID).
-			WithQuery("Name", "Meetings").
+			WithQuery("Name", meetingsName).
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 		checklistID = eA.POST("/files/"+meetingsID).
-			WithQuery("Name", "Checklist.txt").
+			WithQuery("Name", checklistName).
 			WithQuery("Type", "file").
 			WithHeader("Content-Type", "text/plain").
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
@@ -382,7 +387,7 @@ func TestSharedDrives(t *testing.T) {
 		data.Value("id").String().IsEqual(checklistID)
 		attrs = data.Value("attributes").Object()
 		attrs.Value("type").String().IsEqual("file")
-		attrs.Value("name").String().IsEqual("Checklist.txt")
+		attrs.Value("name").String().IsEqual(checklistName)
 		attrs.Value("mime").String().IsEqual("text/plain")
 		attrs.Value("size").String().IsEqual("3")
 
@@ -437,7 +442,7 @@ func TestSharedDrives(t *testing.T) {
 			eB := httpexpect.Default(t, tsB.URL)
 
 			checklistClone := eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
-				WithQuery("Name", "Checklist.txt").
+				WithQuery("Name", checklistName).
 				WithHeader("Authorization", "Bearer "+bettyAppToken).
 				WithBytes([]byte("")).
 				Expect().Status(201).
@@ -463,6 +468,7 @@ func TestSharedDrives(t *testing.T) {
 		getChangeFeedLocally := func(client clientInfo) *httpexpect.Response {
 			return client.client.GET("/files/_changes").
 				WithQuery("include_docs", true).
+				WithQuery("include_file_path", true).
 				WithHeader("Authorization", "Bearer "+client.token).
 				Expect()
 		}
@@ -487,14 +493,19 @@ func TestSharedDrives(t *testing.T) {
 				return change.Object().Value(field).String().Raw() == value
 			}
 		}
-		expectInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) *httpexpect.Object {
-			return changesFeedResults.Find(makeDocFieldMatcherFn("id", value)).Object()
+		expectInChangesByDocId := func(changesFeedResults *httpexpect.Array, docID string) *httpexpect.Object {
+			return changesFeedResults.Find(makeDocFieldMatcherFn("id", docID)).Object()
 		}
-		expectDeletionInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) {
-			expectInChangesByDocId(changesFeedResults, value).Value("deleted").Boolean().IsTrue()
+		expectInChangesByDocIdHasPath := func(changesFeedResults *httpexpect.Array, docID, expectedPath string) *httpexpect.Object {
+			change := expectInChangesByDocId(changesFeedResults, docID)
+			change.Value("doc").Object().Value("path").String().IsEqual(expectedPath)
+			return change
 		}
-		expectNotInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) {
-			changesFeedResults.Filter(makeDocFieldMatcherFn("id", value)).IsEmpty()
+		expectDeletionInChangesByDocId := func(changesFeedResults *httpexpect.Array, docID string) {
+			expectInChangesByDocId(changesFeedResults, docID).Value("deleted").Boolean().IsTrue()
+		}
+		expectNotInChangesByDocId := func(changesFeedResults *httpexpect.Array, docID string) {
+			changesFeedResults.Filter(makeDocFieldMatcherFn("id", docID)).IsEmpty()
 		}
 
 		t.Run("FilesChangesFeedAsExpectedForThisSetup", func(t *testing.T) {
@@ -502,6 +513,7 @@ func TestSharedDrives(t *testing.T) {
 			changes := expectChangesResult(localChangesFeedResponse)
 
 			expectInChangesByDocId(changes, consts.RootDirID)
+			expectInChangesByDocIdHasPath(changes, checklistID, checklistFullOwnerPath)
 			expectInChangesByDocId(changes, outsideOfShareID)
 			expectInChangesByDocId(changes, otherSharedFileThenTrashedID).Path("$.doc.trashed").Boolean().IsTrue()
 			expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
@@ -518,7 +530,7 @@ func TestSharedDrives(t *testing.T) {
 				changesFeedResponse := getChangeFeedBySharing(clientMaker(t), sharingID)
 				changes := expectChangesResult(changesFeedResponse)
 
-				expectInChangesByDocId(changes, checklistID)
+				expectInChangesByDocIdHasPath(changes, checklistID, "//"+consts.SharedDrivesDirID+"/1/"+sharingID+"/"+meetingsName+"/"+checklistName)
 				expectDeletionInChangesByDocId(changes, outsideOfShareID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenTrashedID)
