@@ -1709,12 +1709,24 @@ var allowedChangesParams = map[string]bool{
 	"skip_trashed":      false,
 }
 
-// ChangesFeed is the handler for GET /files/_changes. It is similar to the
-// changes feed of CouchDB with some additional options, like skip_trashed.
-func ChangesFeed(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
-		return err
+// ChangesFeed is the handler for GET /files/_changes, and indirectly,
+// GET /sharings/drives/:sharingID/_changes. It is similar to the changes feed
+// of CouchDB with some additional options, like skip_trashed.
+//
+// sharedDir is an optional directory used to filter the changes feed. It is
+// used when the changes feed is called from a sharing drive. The changes feed
+// will only return files that are below this directory. If missing, no special
+// filtering is done, everything is returned. Otherwise, options like
+// `include_file_path` and `include_docs` are forced to true.
+// if sharedDir is present, it is the responsibility of the caller to check for
+// the right permissions (anything outside this directory should only be
+// deletions with the document ID as only information)
+func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc) error {
+	if sharedDir == nil {
+		//TODO: WARNING: check security here
+		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+			return err
+		}
 	}
 
 	// Drop a clear error for parameters not supported by stack
@@ -1744,6 +1756,13 @@ func ChangesFeed(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
 	}
 
+	if sharedDir != nil {
+		filter.SharedDir = sharedDir
+		// These are required to check if documents are in the shared directory
+		filter.IncludePath = true
+		includeDocs = true
+	}
+
 	// Use the VFS lock for the files to avoid sending the changed feed while
 	// the VFS is moving a directory.
 	mu := config.Lock().ReadWrite(inst, "vfs")
@@ -1771,7 +1790,6 @@ func ChangesFeed(c echo.Context) error {
 		}
 	}
 
-	filter.Reject(results)
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	c.Response().WriteHeader(http.StatusOK)
 	if err := filter.Stream(c.Response(), inst, results); err != nil {
@@ -1781,11 +1799,18 @@ func ChangesFeed(c echo.Context) error {
 	return nil
 }
 
+func ChangesFeedForFiles(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	return ChangesFeed(c, inst, nil)
+}
+
 type changesFilter struct {
 	Fields      []string
 	IncludePath bool
 	SkipDeleted bool
 	SkipTrashed bool
+	SharedDir   *vfs.DirDoc
 	reader      io.Reader
 }
 
@@ -1802,35 +1827,60 @@ func (filter *changesFilter) Add(key, value string) {
 	}
 }
 
-func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
+func (filter *changesFilter) Reject(change *couchdb.Change) *couchdb.Change {
 	if !filter.SkipDeleted && !filter.SkipTrashed {
-		return
+		return change
 	}
 
-	changes := results.Results[:0]
-	for _, change := range results.Results {
-		if filter.SkipDeleted && change.Deleted {
-			continue
-		}
-		if filter.SkipTrashed {
-			if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
-				continue
-			}
-			if change.Doc.M["type"] == "directory" {
-				path, _ := change.Doc.M["path"].(string)
-				if path == vfs.TrashDirName {
-					continue
-				}
-				if strings.HasPrefix(path, vfs.TrashDirName+"/") {
-					continue
-				}
-			}
-		}
-		changes = append(changes, change)
+	if filter.SkipDeleted && change.Deleted {
+		return nil
 	}
-	results.Results = changes
+	if filter.SkipTrashed {
+		if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
+			return nil
+		}
+		if change.Doc.M["type"] == "directory" {
+			path, _ := change.Doc.M["path"].(string)
+			if path == vfs.TrashDirName {
+				return nil
+			}
+			if strings.HasPrefix(path, vfs.TrashDirName+"/") {
+				return nil
+			}
+		}
+	}
+	return change
 }
 
+// This transforms the results of the changes feed when the request comes from
+// a shared drive.
+//
+//   - If the change is for the root directory, it is filtered out
+//   - If the change is not within one of the shared directories, it is
+//     transformed into a deletion
+//   - Otherwise the change is left as-is
+func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *couchdb.Change) *couchdb.Change {
+	if filter.SharedDir == nil {
+		// This is a request from GET /files/_changes: No need to map the changes
+		return change
+	}
+	if change.Deleted {
+		return change
+	}
+
+	if change.DocID == consts.RootDirID {
+		return nil
+	}
+
+	path := change.Doc.M["path"].(string)
+	sharedDirPath := utils.EnsureHasSuffix(filter.SharedDir.Fullpath, "/")
+	if strings.HasPrefix(path, sharedDirPath) {
+		return change
+	}
+	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
+}
+
+// Stream writes the changes to the writer in JSON format, after hydrating.
 func (filter *changesFilter) Stream(
 	w io.Writer,
 	inst *instance.Instance,
@@ -1840,9 +1890,9 @@ func (filter *changesFilter) Stream(
 	if _, err := w.Write([]byte(first)); err != nil {
 		return err
 	}
-
+	alreadyWroteAnElement := false
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
-	for i, result := range results.Results {
+	for _, result := range results.Results {
 		if filter.IncludePath && result.Doc.M != nil && result.Doc.M["type"] == "file" {
 			dirID, _ := result.Doc.M["dir_id"].(string)
 			name, _ := result.Doc.M["name"].(string)
@@ -1851,12 +1901,24 @@ func (filter *changesFilter) Stream(
 				result.Doc.M["path"] = pth
 			}
 		}
-		buf, err := json.Marshal(&result)
+		resultToWrite := filter.SharedDirChange(inst, &result)
+		if resultToWrite == nil {
+			continue
+		}
+		resultToWrite = filter.Reject(resultToWrite)
+		if resultToWrite == nil {
+			continue
+		}
+		buf, err := json.Marshal(resultToWrite)
 		if err != nil {
 			return err
 		}
-		if i != len(results.Results)-1 {
-			buf = append(buf, ',')
+		if alreadyWroteAnElement {
+			if _, err := w.Write([]byte(",")); err != nil {
+				return err
+			}
+		} else {
+			alreadyWroteAnElement = true
 		}
 		if _, err := w.Write(buf); err != nil {
 			return err
@@ -1969,7 +2031,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/_all_docs", GetAllDocs)
 	router.POST("/_find", FindFilesMango)
-	router.GET("/_changes", ChangesFeed)
+	router.GET("/_changes", ChangesFeedForFiles)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
 

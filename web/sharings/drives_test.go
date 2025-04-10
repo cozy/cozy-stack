@@ -28,7 +28,12 @@ func TestSharedDrives(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	var productID, meetingsID, checklistID string
+	var productID,
+		meetingsID,
+		checklistID,
+		outsideOfShareID,
+		otherSharedFileThenTrashedID,
+		otherSharedFileThenDeletedID string
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
@@ -76,6 +81,25 @@ func TestSharedDrives(t *testing.T) {
 
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
 
+	type clientInfo struct {
+		client *httpexpect.Expect
+		token  string
+	}
+	makeClientToActAsACMETheOwner := func(t *testing.T) clientInfo {
+		return clientInfo{client: httpexpect.Default(t, tsA.URL), token: acmeAppToken}
+	}
+	makeClientToActAsBettyTheRecipient := func(t *testing.T) clientInfo {
+		return clientInfo{client: httpexpect.Default(t, tsB.URL), token: bettyAppToken}
+	}
+	runTestAsACMEThenAgainAsBetty := func(t *testing.T, runner func(t *testing.T, clientMaker func(t *testing.T) clientInfo)) {
+		t.Run("AsACMETheOwner", func(t *testing.T) {
+			runner(t, makeClientToActAsACMETheOwner)
+		})
+		t.Run("AsBettyTheRecipient", func(t *testing.T) {
+			runner(t, makeClientToActAsBettyTheRecipient)
+		})
+	}
+
 	t.Run("CreateSharedDrive", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 
@@ -86,6 +110,13 @@ func TestSharedDrives(t *testing.T) {
 		require.NotNil(t, daveContact)
 		productID = eA.POST("/files/").
 			WithQuery("Name", "Product team").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+		outsideOfShareID = eA.POST("/files/").
+			WithQuery("Name", "Unshared directory at the root of ACME").
 			WithQuery("Type", "directory").
 			WithHeader("Authorization", "Bearer "+acmeAppToken).
 			Expect().Status(201).
@@ -108,6 +139,41 @@ func TestSharedDrives(t *testing.T) {
 			Expect().Status(201).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		otherSharedFileThenDeletedID = eA.POST("/files/"+meetingsID).
+			WithQuery("Name", "Shared but then deleted.txt").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		eA.DELETE("/files/"+otherSharedFileThenDeletedID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200)
+
+		// Empty Trash
+		eA.DELETE("/files/trash").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(204)
+
+		otherSharedFileThenTrashedID = eA.POST("/files/"+meetingsID).
+			WithQuery("Name", "Shared but then trashed.txt").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		eA.DELETE("/files/"+otherSharedFileThenTrashedID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200)
 
 		// Create a shared drive
 		obj := eA.POST("/sharings/").
@@ -397,6 +463,74 @@ func TestSharedDrives(t *testing.T) {
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object().
 				Path("$.data.attributes.name").String().IsEqual("My list.txt")
+		})
+	})
+
+	t.Run("SharedDriveChangesFeed", func(t *testing.T) {
+		// Request to GET /files/_changes using the given client and token
+		getChangeFeedLocally := func(client clientInfo) *httpexpect.Response {
+			return client.client.GET("/files/_changes").
+				WithQuery("include_docs", true).
+				WithHeader("Authorization", "Bearer "+client.token).
+				Expect()
+		}
+		// Request to GET /sharings/drives/:sharing-id/_changes using the given client and token
+		getChangeFeedBySharing := func(client clientInfo, sharingID string) *httpexpect.Response {
+			return client.client.GET("/sharings/drives/"+sharingID+"/_changes").
+				WithHeader("Authorization", "Bearer "+client.token).
+				Expect()
+		}
+		// From the result of getChangeFeedBySharing, expect a successful response and return its results
+		expectChangesResult := func(changesFromSharingResponse *httpexpect.Response) *httpexpect.Array {
+			return changesFromSharingResponse.
+				Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+				Object().
+				Value("results").
+				Array()
+		}
+		// Create a matcher function to find a document by the given field and value
+		makeDocFieldMatcherFn := func(field, value string) func(index int, value *httpexpect.Value) bool {
+			return func(index int, change *httpexpect.Value) bool {
+				return change.Object().Value(field).String().Raw() == value
+			}
+		}
+		expectInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) *httpexpect.Object {
+			return changesFeedResults.Find(makeDocFieldMatcherFn("id", value)).Object()
+		}
+		expectDeletionInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) {
+			expectInChangesByDocId(changesFeedResults, value).Value("deleted").Boolean().IsTrue()
+		}
+		expectNotInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) {
+			changesFeedResults.Filter(makeDocFieldMatcherFn("id", value)).IsEmpty()
+		}
+
+		t.Run("FilesChangesFeedAsExpectedForThisSetup", func(t *testing.T) {
+			localChangesFeedResponse := getChangeFeedLocally(makeClientToActAsACMETheOwner(t))
+			changes := expectChangesResult(localChangesFeedResponse)
+
+			expectInChangesByDocId(changes, consts.RootDirID)
+			expectInChangesByDocId(changes, outsideOfShareID)
+			expectInChangesByDocId(changes, otherSharedFileThenTrashedID).Path("$.doc.trashed").Boolean().IsTrue()
+			expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
+		})
+
+		runTestAsACMEThenAgainAsBetty(t, func(t *testing.T, clientMaker func(t *testing.T) clientInfo) {
+			t.Run("RootIsNotInShared", func(t *testing.T) {
+				changesFeedResponse := getChangeFeedBySharing(clientMaker(t), sharingID)
+				changes := expectChangesResult(changesFeedResponse)
+
+				expectNotInChangesByDocId(changes, consts.RootDirID)
+			})
+			t.Run("UnsharedOtherRootFileAndTrashedShouldBeDeleted", func(t *testing.T) {
+				changesFeedResponse := getChangeFeedBySharing(clientMaker(t), sharingID)
+				changes := expectChangesResult(changesFeedResponse)
+
+				expectInChangesByDocId(changes, checklistID)
+				expectDeletionInChangesByDocId(changes, outsideOfShareID)
+				expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
+				expectDeletionInChangesByDocId(changes, otherSharedFileThenTrashedID)
+			})
 		})
 	})
 }
