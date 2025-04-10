@@ -1728,12 +1728,75 @@ var allowedChangesParams = map[string]bool{
 	"skip_trashed":      false,
 }
 
-// ChangesFeed is the handler for GET /files/_changes. It is similar to the
+// This returns a function that transforms the results of the changes
+// feed when the request comes from a shared drive.
+//
+//   - If the change is for the root directory, it is filtered out
+//   - If the change is not below one of the parent shared directories,
+//     it is transformed into a deletion
+//   - Otherwise the change is left as-is
+func makeChangesFeedMapperFunction(inst *instance.Instance, parentSharedDirIDs []string) (err error, changeMapperFunction changeMapperFunction) {
+	if len(parentSharedDirIDs) == 0 {
+		// This is a request from GET /files/_changes: No need to map the changes
+		return nil, func(change *couchdb.Change) *couchdb.Change {
+			return change
+		}
+	}
+
+	// This is a request from GET /sharings/drives/:sharingID/_changes
+	// Find the paths of directories that are linked to by the sharing
+	var parentRoots []string
+	for _, dirID := range parentSharedDirIDs {
+		dir, err := inst.VFS().DirByID(dirID)
+		if err != nil {
+			return err, nil
+		}
+		// Dont consider `/aa/b` as a file in the folder `/a`
+		path := utils.EnsureHasSuffix(dir.Fullpath, "/")
+		parentRoots = append(parentRoots, path)
+	}
+
+	return nil, func(change *couchdb.Change) *couchdb.Change {
+		if change.DocID == consts.RootDirID {
+			return nil
+		}
+		if !change.Deleted {
+			path := change.Doc.M["path"].(string)
+			for _, parentRoot := range parentRoots {
+				// Do consider `/a` as included in the folder `/a/`
+				parentRoot = utils.EnsureHasSuffix(parentRoot, "/")
+				if strings.HasPrefix(path, parentRoot) {
+					return change
+				}
+			}
+		}
+		return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
+	}
+}
+
+// ChangesFeed is the handler for GET /files/_changes, and indirectly,
+// GET /sharings/drives/:sharingID/_changes. It is similar to the
 // changes feed of CouchDB with some additional options, like skip_trashed.
-func ChangesFeed(c echo.Context) error {
+//
+// parentSharedDirIDs is an optional list of directory IDs that are used to
+// filter the changes feed. It is used when the changes feed is called
+// from a sharing drive. The changes feed will only return files that are
+// below one of the directories in this list (it is plural because a
+// sharing might link to multiple directories in the data model,
+// results are an union). If empty, no special filtering is done,
+// everything is returned. Otherwise, options like `include_file_path` and
+// `include_docs` are forced to true.
+// if parentSharedDirIDs is not empty, it is the responsibility of
+// the caller to check for the right permissions for all directories
+// (anything outside those directories should only be deletions with the
+// document ID as only information)
+func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
 	inst := middlewares.GetInstance(c)
+	if len(parentSharedDirIDs) == 0 {
+		//TODO: WARNING: check security here
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
+	}
 	}
 
 	// Drop a clear error for parameters not supported by stack
@@ -1763,6 +1826,13 @@ func ChangesFeed(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
 	}
 
+	if len(parentSharedDirIDs) > 0 {
+		// These are required to check the documents are bellow the shared
+		// directories
+		filter.IncludePath = true
+		includeDocs = true
+	}
+
 	// Use the VFS lock for the files to avoid sending the changed feed while
 	// the VFS is moving a directory.
 	mu := config.Lock().ReadWrite(inst, "vfs")
@@ -1790,14 +1860,23 @@ func ChangesFeed(c echo.Context) error {
 		}
 	}
 
+	err, changeMapperFn := makeChangesFeedMapperFunction(inst, parentSharedDirIDs)
+	if err != nil {
+		return err
+	}
+
 	filter.Reject(results)
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	c.Response().WriteHeader(http.StatusOK)
-	if err := filter.Stream(c.Response(), inst, results); err != nil {
+	if err := filter.Stream(c.Response(), inst, results, changeMapperFn); err != nil {
 		inst.Logger().WithNamespace("files").Warnf("error on _changes: %s", err)
 		return err
 	}
 	return nil
+}
+
+func ChangesFeedForFiles(c echo.Context) error {
+	return ChangesFeed(c, nil)
 }
 
 type changesFilter struct {
@@ -1850,18 +1929,22 @@ func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
 	results.Results = changes
 }
 
+type changeMapperFunction func(change *couchdb.Change) *couchdb.Change
+
+// Stream writes the changes to the writer in JSON format, after hydrating.
 func (filter *changesFilter) Stream(
 	w io.Writer,
 	inst *instance.Instance,
 	results *couchdb.ChangesResponse,
+	mapFn changeMapperFunction,
 ) error {
 	first := fmt.Sprintf(`{"last_seq": %q, "pending": %d, "results": [`, results.LastSeq, results.Pending)
 	if _, err := w.Write([]byte(first)); err != nil {
 		return err
 	}
-
+	alreadyWroteAnElement := false
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
-	for i, result := range results.Results {
+	for _, result := range results.Results {
 		if filter.IncludePath && result.Doc.M != nil && result.Doc.M["type"] == "file" {
 			dirID, _ := result.Doc.M["dir_id"].(string)
 			name, _ := result.Doc.M["name"].(string)
@@ -1870,12 +1953,20 @@ func (filter *changesFilter) Stream(
 				result.Doc.M["path"] = pth
 			}
 		}
-		buf, err := json.Marshal(&result)
+		resultToWrite := mapFn(&result)
+		if resultToWrite == nil {
+			continue
+		}
+		buf, err := json.Marshal(resultToWrite)
 		if err != nil {
 			return err
 		}
-		if i != len(results.Results)-1 {
-			buf = append(buf, ',')
+		if alreadyWroteAnElement {
+			if _, err := w.Write([]byte(",")); err != nil {
+				return err
+			}
+		} else {
+			alreadyWroteAnElement = true
 		}
 		if _, err := w.Write(buf); err != nil {
 			return err
@@ -1988,7 +2079,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/_all_docs", GetAllDocs)
 	router.POST("/_find", FindFilesMango)
-	router.GET("/_changes", ChangesFeed)
+	router.GET("/_changes", ChangesFeedForFiles)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
 
