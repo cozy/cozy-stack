@@ -140,6 +140,28 @@ type Change struct {
 	} `json:"changes"`
 }
 
+// Create a change entry for the deletion of the document
+// with the given id, rev and seq
+func MakeChangeForDeletion(id, rev, seq string) *Change {
+	return &Change{
+		DocID:   id,
+		Seq:     seq,
+		Deleted: true,
+		Changes: []struct {
+			Rev string `json:"rev"`
+		}{
+			{Rev: rev},
+		},
+		Doc: JSONDoc{
+			M: map[string]interface{}{
+				"_deleted": true,
+				"_id":      id,
+				"_rev":     rev,
+			},
+		},
+	}
+}
+
 // GetChanges returns a list of changes in couchdb
 func GetChanges(db prefixer.Prefixer, req *ChangesRequest) (*ChangesResponse, error) {
 	if req.DocType == "" {
