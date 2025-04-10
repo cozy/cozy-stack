@@ -104,12 +104,44 @@ func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error
 	return files.CopyFile(c, inst)
 }
 
+func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
+	// TODO: should this break if there ever is actually more than 1 directory ?
+	// TODO: consider nested sharings
+	sharedDir, err := getSharingDir(c, inst, s)
+	if err != nil {
+		return err
+	}
+	return files.ChangesFeed(c, inst, sharedDir)
+}
+
+// Find the directory linked to the drive sharing and return it if the user
+// requesting it has the proper permissions.
+func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+	rule := s.FirstFilesRule()
+	if rule != nil {
+		if rule.Mime != "" {
+			inst.Logger().WithNamespace("drive-proxy").
+				Warnf("getSharingDir called for only one file: %s", s.SID)
+			return nil, jsonapi.BadRequest(errors.New("not a shared drive"))
+		}
+		dir, _ := fs.DirByID(rule.Values[0])
+		if dir != nil {
+			return dir, nil
+		}
+	}
+
+	return nil, jsonapi.NotFound(errors.New("shared drive not found"))
+}
+
 // drivesRoutes sets the routing for the shared drives
 func drivesRoutes(router *echo.Group) {
 	group := router.Group("/drives")
 	group.GET("", ListSharedDrives)
 
 	drive := group.Group("/:id")
+	drive.GET("/_changes", proxy(ChangesFeed))
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 	drive.GET("/:file-id", proxy(GetDirOrFile))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
