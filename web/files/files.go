@@ -1795,9 +1795,9 @@ func ChangesFeed(c echo.Context, sharingID string, parentSharedDirIDs []string) 
 	inst := middlewares.GetInstance(c)
 	if len(parentSharedDirIDs) == 0 {
 		//TODO: WARNING: check security here
-	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
-		return err
-	}
+		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+			return err
+		}
 	}
 
 	// Drop a clear error for parameters not supported by stack
