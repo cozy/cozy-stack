@@ -90,19 +90,23 @@ func TestSharedDrives(t *testing.T) {
 		client *httpexpect.Expect
 		token  string
 	}
+	type clientMaker func(t *testing.T) clientInfo
+
 	makeClientToActAsACMETheOwner := func(t *testing.T) clientInfo {
 		return clientInfo{client: httpexpect.Default(t, tsA.URL), token: acmeAppToken}
 	}
 	makeClientToActAsBettyTheRecipient := func(t *testing.T) clientInfo {
 		return clientInfo{client: httpexpect.Default(t, tsB.URL), token: bettyAppToken}
 	}
-	runTestAsACMEThenAgainAsBetty := func(t *testing.T, runner func(t *testing.T, clientMaker func(t *testing.T) clientInfo)) {
-		t.Run("AsACMETheOwner", func(t *testing.T) {
-			runner(t, makeClientToActAsACMETheOwner)
-		})
-		t.Run("AsBettyTheRecipient", func(t *testing.T) {
-			runner(t, makeClientToActAsBettyTheRecipient)
-		})
+	runTestAsACMEThenAgainAsBetty := func(t *testing.T, runner func(t *testing.T, clientMaker clientMaker)) {
+		for name, maker := range map[string]clientMaker{
+			"AsACMETheOwner":      makeClientToActAsACMETheOwner,
+			"AsBettyTheRecipient": makeClientToActAsBettyTheRecipient,
+		} {
+			t.Run(name, func(t *testing.T) {
+				runner(t, maker)
+			})
+		}
 	}
 
 	t.Run("CreateSharedDrive", func(t *testing.T) {
@@ -519,7 +523,7 @@ func TestSharedDrives(t *testing.T) {
 			expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
 		})
 
-		runTestAsACMEThenAgainAsBetty(t, func(t *testing.T, clientMaker func(t *testing.T) clientInfo) {
+		runTestAsACMEThenAgainAsBetty(t, func(t *testing.T, clientMaker clientMaker) {
 			t.Run("RootIsNotInShared", func(t *testing.T) {
 				changesFeedResponse := getChangeFeedBySharing(clientMaker(t), sharingID)
 				changes := expectChangesResult(changesFeedResponse)
@@ -534,6 +538,27 @@ func TestSharedDrives(t *testing.T) {
 				expectDeletionInChangesByDocId(changes, outsideOfShareID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenTrashedID)
+			})
+		})
+		t.Run("DownloadFile", func(t *testing.T) {
+			// Request to GET /sharings/drives/:sharing-id/_changes using the given client and token
+			downloadFile := func(client clientInfo, sharingID string, fileID string) *httpexpect.Response {
+				return client.client.GET("/sharings/drives/"+sharingID+"/"+fileID+"/download").
+					WithHeader("Authorization", "Bearer "+client.token).
+					Expect()
+			}
+			t.Run("DownloadFile", func(t *testing.T) {
+				// Download the file
+				res := downloadFile(makeClientToActAsBettyTheRecipient(t), sharingID, checklistID).
+					Status(200)
+
+				// Check the response headers
+				res.Header("Content-Disposition").HasPrefix("inline")
+				res.Header("Content-Disposition").Contains(`filename="` + checklistName + `"`)
+				res.Header("Content-Type").Equal("text/plain")
+				res.Header("Etag").NotEmpty()
+				res.Header("Content-Length").Equal("3")
+				res.Body().Equal("foo")
 			})
 		})
 	})
