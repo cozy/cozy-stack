@@ -95,6 +95,29 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /sharings/drives/:id/_changes
+
+Get the change feed for a drive.
+
+Identical call to [`GET /files/_changes`](files.md#get-files_changes) but over a shared drive.
+See there for request and response examples, differences are the URL and:
+
+- Any item that changed for that owner but isn't under that shared drive
+  is presented as a deletion.
+- Paths are truncated to the shared drive, and formatted accordingly:
+
+  eg: `//io.cozy.files.shared-drives-dir/1/ba3b516812f636fc022f3968f991357a/Meetings/Checklist.txt`
+
+  Schema and it's version, followed by the shared drive ID, and the path within
+
+
+### GET /sharings/drives/:id/download/:file-id
+
+Download a file via a drive share.
+
+Identical call to [`GET /files/download/:file-id`](files.md#get-filesdownloadfile-id) but over a shared drive.
+See there for request and response examples
+
 ### GET /sharings/drives/:id/:file-id
 
 Get a directory or a file informations inside a shared drive. In the case of a
@@ -253,5 +276,5 @@ Content-Type: application/vnd.api+json
 
 Duplicates a file.
 
-Identical call to [`POST /files/:file-id/copy`](files.md) but over a shared drive.
+Identical call to [`POST /files/:file-id/copy`](files.md#post-filesfile-idcopy) but over a shared drive.
 See there for request and response examples, the only difference is the URL.
