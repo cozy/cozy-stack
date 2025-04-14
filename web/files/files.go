@@ -1106,14 +1106,10 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	return err
 }
 
-func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
-	instance := middlewares.GetInstance(c)
-
-	doc, err := instance.VFS().FileByPath(path)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-
+// SendFileFromDoc sends the file content to the client.
+// It does permissions, inlining, CSP rules, and PDF single page serving
+func SendFileFromDoc(instance *instance.Instance, c echo.Context, doc *vfs.FileDoc, checkPermission bool) error {
+	var err error
 	if checkPermission {
 		err = middlewares.Allow(c, permission.GET, doc)
 		if err != nil {
@@ -1149,6 +1145,16 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	return nil
 }
 
+func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
+	instance := middlewares.GetInstance(c)
+
+	doc, err := instance.VFS().FileByPath(path)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return SendFileFromDoc(instance, c, doc, checkPermission)
+}
+
 func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
 	if config.GetConfig().CSPDisabled {
 		return
@@ -1163,6 +1169,10 @@ func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
 // aiming at downloading a file given its path. It serves the file in in
 // attachment mode.
 func ReadFileContentFromPathHandler(c echo.Context) error {
+	return sendFileFromPath(c, c.QueryParam("Path"), true)
+}
+
+func ReadFileContentFromSharingFileID(c echo.Context, fileID string) error {
 	return sendFileFromPath(c, c.QueryParam("Path"), true)
 }
 

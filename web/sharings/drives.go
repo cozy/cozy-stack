@@ -42,10 +42,11 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+// Load either a DirDoc or a FileDoc from the given `file-id` param. The function also checks permissions
+func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
-		return files.WrapVfsError(err)
+		return nil, nil, files.WrapVfsError(err)
 	}
 
 	if dir != nil {
@@ -53,42 +54,66 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 	} else {
 		err = middlewares.AllowVFS(c, permission.GET, file)
 	}
+	if err != nil {
+		return nil, nil, files.WrapVfsError(err)
+	}
+
+	if dir != nil {
+		return dir, nil, nil
+	}
+	return nil, file, nil
+}
+
+// Same as `loadDirOrFile` but intolerant of files, responds 422s
+func loadDirFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
+	dir, file, err := loadDirOrFileFromParam(c, inst, s)
+	if file != nil {
+		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a directory"))
+	}
+	return dir, err
+}
+
+// Same as `loadDirOrFile` but intolerant of directories, responds 422s
+func loadFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.FileDoc, error) {
+	dir, file, err := loadDirOrFileFromParam(c, inst, s)
+	if dir != nil {
+		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a file"))
+	}
+	return file, err
+}
+
+func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	_, _, err := loadDirOrFileFromParam(c, inst, s)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	if dir != nil {
-		err = middlewares.AllowVFS(c, permission.GET, dir)
-	} else {
-		err = middlewares.AllowVFS(c, permission.GET, file)
-	}
+func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	dir, file, err := loadDirOrFileFromParam(c, inst, s)
 	if err != nil {
 		return err
 	}
-
 	if dir != nil {
 		return files.DirData(c, http.StatusOK, dir)
 	}
 	return files.FileData(c, http.StatusOK, file, true, nil)
 }
 
+func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	//TODO: CSP ?
+	file, err := loadFileFromParam(c, inst, s)
+	if err != nil {
+		return err
+	}
+	return files.SendFileFromDoc(inst, c, file, false)
+}
+
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
-	fileID := c.Param("file-id")
-	dir, err := fs.DirByID(fileID)
+	dir, err := loadDirFromParam(c, inst, s)
 	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
 		return err
 	}
 
@@ -97,7 +122,7 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 		return files.WrapVfsError(err)
 	}
 
-	result := files.ApiDiskSize{DocID: fileID, Size: size}
+	result := files.ApiDiskSize{DocID: dir.DocID, Size: size}
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
@@ -142,11 +167,14 @@ func drivesRoutes(router *echo.Group) {
 
 	drive := group.Group("/:id")
 
+	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler))
+	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler))
+
 	drive.GET("/_changes", proxy(ChangesFeed))
 
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 
-	drive.GET("/:file-id", proxy(GetDirOrFile))
+	drive.GET("/:file-id", proxy(GetDirOrFileData))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
 
 	drive.POST("/:file-id/copy", proxy(CopyFile))
