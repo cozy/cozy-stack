@@ -33,6 +33,14 @@ func (a *avatarV3) CreateAvatar(contentType string) (io.WriteCloser, error) {
 	return a.c.ObjectCreate(a.ctx, a.container, "avatar", true, "", contentType, nil)
 }
 
+func (a *avatarV3) DeleteAvatar() error {
+	err := a.c.ObjectDelete(a.ctx, a.container, "avatar")
+	if err == swift.ObjectNotFound {
+		return nil
+	}
+	return err
+}
+
 func (a *avatarV3) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
 	f, o, err := a.c.ObjectOpen(a.ctx, a.container, "avatar", false, nil)
 	if err != nil {

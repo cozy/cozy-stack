@@ -51,6 +51,18 @@ func (a *avatarFS) CreateAvatar(contentType string) (io.WriteCloser, error) {
 	return u, nil
 }
 
+func (a *avatarFS) DeleteAvatar() error {
+	if exists, err := a.AvatarExists(); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+	if err := a.fs.Remove(AvatarFilename); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *avatarFS) AvatarExists() (bool, error) {
 	infos, err := a.fs.Stat(AvatarFilename)
 	if os.IsNotExist(err) {

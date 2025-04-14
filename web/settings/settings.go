@@ -279,6 +279,18 @@ func (h *HTTPHandler) UploadAvatar(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func (h *HTTPHandler) DeleteAvatar(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, http.MethodPut, consts.Settings); err != nil {
+		return err
+	}
+	err := inst.AvatarFS().DeleteAvatar()
+	if err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Register all the `/settings` routes to the given router.
 func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/disk-usage", h.diskUsage)
@@ -308,6 +320,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.DELETE("/instance/moved_from", h.clearMovedFrom)
 
 	router.PUT("/avatar", h.UploadAvatar)
+	router.DELETE("/avatar", h.DeleteAvatar)
 
 	router.GET("/flags", h.getFlags)
 

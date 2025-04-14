@@ -265,6 +265,10 @@ type DiskThresholder interface {
 // Avatarer defines an interface to define an avatar filesystem.
 type Avatarer interface {
 	CreateAvatar(contentType string) (io.WriteCloser, error)
+	// DeleteAvatar deletes the avatar file if it exists.
+	// It does not return an error if the file does not exist,
+	// but does if there was a problem deleting it.
+	DeleteAvatar() error
 	ServeAvatarContent(w http.ResponseWriter, req *http.Request) error
 }
 

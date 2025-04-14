@@ -1096,7 +1096,25 @@ PUT /settings/avatar HTTP/1.1
 Host: alice.cozy.example.net
 Authorization: Bearer token
 Content-Type: image/jpeg
+...
+```
 
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /settings/avatar
+
+This route can be used to delete the avatar for an instance.
+
+#### Request
+
+```http
+DELETE /settings/avatar HTTP/1.1
+Host: alice.cozy.example.net
+Authorization: Bearer token
 ...
 ```
 
