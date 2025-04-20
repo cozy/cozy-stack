@@ -10,7 +10,8 @@ import (
 )
 
 func TestGetInitials(t *testing.T) {
-	assert.Equal(t, "?", getInitials("  "))
+	assert.Equal(t, "", getInitials(""))
+	assert.Equal(t, "", getInitials("  "))
 	assert.Equal(t, "P", getInitials("Pierre"))
 	assert.Equal(t, "FP", getInitials("François Pignon"))
 	assert.Equal(t, "П", getInitials("Пьер"))

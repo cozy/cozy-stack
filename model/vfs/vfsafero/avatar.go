@@ -77,6 +77,9 @@ func (a *avatarFS) AvatarExists() (bool, error) {
 func (a *avatarFS) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
 	s, err := a.fs.Stat(AvatarFilename)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return os.ErrNotExist
+		}
 		return err
 	}
 	if s.Size() == 0 {
