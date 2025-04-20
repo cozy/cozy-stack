@@ -49,7 +49,7 @@ func errorInvalidParam(name string) error {
 //
 //     4.1. `fx=translucent`: if SVG, make the output partially transparent
 //     4.2. `as=unconfirmed`: if SVG, make the output grayscale
-//     4.2. `format=png`: request a PNG response, otherwise defaults to SVG
+//     4.3. `format=png`: request a PNG response, otherwise defaults to SVG
 func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := inst.AvatarFS().ServeAvatarContent(c.Response(), c.Request()); err != os.ErrNotExist {

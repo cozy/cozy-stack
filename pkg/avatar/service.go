@@ -62,12 +62,16 @@ func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, 
 		return SvgForAvatar(info.initials, "xl", uint(info.colorHash), isGrayscale, isTranslucent)
 	}
 
-	key := "initials:" + info.initials + info.color
+	initials := info.initials
+	if initials == "" {
+		initials = "?"
+	}
+	key := "initials:" + initials + info.color
 	if bytes, ok := s.cache.Get(key); ok {
 		return bytes, contentTypePNG, nil
 	}
 
-	bytes, err := s.initials.Generate(info.initials, info.color)
+	bytes, err := s.initials.Generate(initials, info.color)
 	if err != nil {
 		return nil, "", err
 	}
