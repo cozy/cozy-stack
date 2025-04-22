@@ -36,13 +36,13 @@ func errorInvalidParam(name string) error {
 //
 //     2.1. `fallback=404`: just respond a 404 if no avatar file was set
 //
-//     2.2. `fallback=default`: get the `default-avatar.png` asset (for retro-compatibility)
+//     2.2. `fallback=default` (or empty): get the `default-avatar.png` asset (for retro-compatibility)
 //
 //     2.3. `fallback=anonymous`: get a generic user avatar without initials visible (respects `format`)
 //
-//  3. Without a `fallback` argument, or with `fallback=initials`, initials are calculated:
+//     2.4. `fallback=initials`, initials are calculated:
 //
-//     3.1. Attempt with [../../model/settings/service.go] PublicName(), which gets the
+//     2.4.1. Attempt with [../../model/settings/service.go] PublicName(), which gets the
 //     instance's `public_name`, or the `DomainName`
 //
 //  4. Additional query params when `fallback` isn't set or is `anonymous`:
@@ -75,11 +75,11 @@ func Avatar(c echo.Context) error {
 	}
 
 	fallback := c.QueryParam("fallback")
-	fallbackIsEmpty := fallback == "" || fallback == "initials"
+	fallbackIsInitials := fallback == "initials"
 	fallbackIs404 := fallback == "404"
-	fallbackIsDefault := fallback == "default"
+	fallbackIsDefault := fallback == "" || fallback == "default"
 	fallbackIsAnonymous := fallback == "anonymous"
-	if !(fallbackIsEmpty || fallbackIs404 || fallbackIsDefault || fallbackIsAnonymous) {
+	if !(fallbackIsInitials || fallbackIs404 || fallbackIsDefault || fallbackIsAnonymous) {
 		return errorInvalidParam("fallback")
 	}
 
@@ -96,7 +96,7 @@ func Avatar(c echo.Context) error {
 		}
 		return errorNotFound()
 
-	case fallbackIsEmpty || fallbackIsAnonymous:
+	case fallbackIsInitials || fallbackIsAnonymous:
 		publicName, err := csettings.PublicName(inst)
 		if err != nil {
 			publicName = strings.Split(inst.Domain, ".")[0]
