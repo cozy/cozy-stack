@@ -91,6 +91,9 @@ func (sfs *swiftVFSV3) checkFiles(
 			return nil, err
 		}
 		for _, obj := range objs {
+			if obj.Name == "avatar" {
+				continue
+			}
 			if strings.HasPrefix(obj.Name, "thumbs/") {
 				objName := strings.TrimPrefix(obj.Name, "thumbs/")
 				idx := strings.LastIndex(objName, "-")
