@@ -20,11 +20,12 @@ const (
 	cozyPersonPathSize   = 24
 	cozyPersonSizeAt64px = (21.3 / 16.0)
 
-	cozyUIInitialsColor = "rgba(29, 33, 42, 0.9)"
+	cozyUIInitialsColorDarkMode  = "rgba(29, 33, 42, 0.9)"
+	cozyUIInitialsColorLightMode = "#ffffff"
 
 	cozyUIFontFamily    = "Lato"
 	cozyUIFontFallbacks = ", sans-serif"
-	cozyUIFontCSS       = "color: " + cozyUIInitialsColor + "; font-family:" + cozyUIFontFamily + cozyUIFontFallbacks + "; font-weight: 600;"
+	cozyUIFontCSS       = "font-family:" + cozyUIFontFamily + cozyUIFontFallbacks + "; font-weight: 600;"
 )
 
 type linearGradientStop struct {
@@ -174,7 +175,9 @@ var fontMap = make(map[fontDescriptor]string)
 //				src:url(data:application/font-woff;charset=utf-8;base64,font_data_in_base64) format("woff");
 //				font-weight:normal;font-style:normal;
 //			}
-//			.avatar-initials { ...
+//			.cozy-stack-avatar ... { ...
+//
+// }
 func encodeStyleElement(encoder *xml.Encoder, avatar *avatarInfo) error {
 	fontBase64 := fontMap[fontKey]
 	if fontBase64 == "" && avatar.fontLoader != nil {
@@ -185,16 +188,24 @@ func encodeStyleElement(encoder *xml.Encoder, avatar *avatarInfo) error {
 		fontBase64 = base64.StdEncoding.EncodeToString(fontData)
 		fontMap[fontKey] = fontBase64
 	}
+	removeTabs := func(s string) string {
+		return strings.ReplaceAll(s, "\t", "")
+	}
 	css := ""
 	if fontBase64 != "" {
-		css += strings.ReplaceAll(fmt.Sprintf(`
+		css += removeTabs(fmt.Sprintf(`
 			@font-face{font-family: "%s";
 			src:url(data:application/font-woff;charset=utf-8;base64,%s) format("woff");
 			font-weight:%s;font-style:%s;
-		}`, fontKey.name, fontBase64, fontKey.weight, fontKey.style), "\t", "") + "\n"
+		}`, fontKey.name, fontBase64, fontKey.weight, fontKey.style)) + "\n"
 	}
-	css += fmt.Sprintf(".avatar-initials { font-size: %dpx; user-select: none; %s }\n",
-		avatar.sizes.fontSizePx, cozyUIFontCSS)
+	css += removeTabs(fmt.Sprintf(`
+		.cozy-stack-avatar text, .cozy-stack-avatar path { font-size: %dpx; user-select: none; %s; fill: %s; }
+		@media (prefers-color-scheme: dark) {
+			.cozy-stack-avatar text, .cozy-stack-avatar path { fill: %s; }
+		}
+		`,
+		avatar.sizes.fontSizePx, cozyUIFontCSS, cozyUIInitialsColorLightMode, cozyUIInitialsColorDarkMode))
 
 	return encodeClosedXMLElement(encoder, "style", makeCharDataEncoder(css), makeXMLAttr("type", "text/css"))
 }
@@ -286,7 +297,8 @@ func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error 
 		return err
 	}
 
-	gAttributes := make([]xml.Attr, 0, 2)
+	gAttributes := make([]xml.Attr, 1, 3)
+	gAttributes[0] = makeXMLAttr("class", "cozy-stack-avatar")
 	if a.grayscale {
 		gAttributes = append(gAttributes, makeXMLAttr("filter", "url(#grayscale)"))
 	}
@@ -309,7 +321,6 @@ func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error 
 				halfCozyPersonSize := cozyPersonPathSize / 2
 				if err = encodeClosedXMLElement(encoder, "path", nil,
 					makeXMLAttr("d", cozyPersonPath),
-					makeXMLAttr("fill", cozyUIInitialsColor),
 					makeXMLAttrf("transform-origin", "%d %d", halfCozyPersonSize, halfCozyPersonSize),
 					makeXMLAttrf("transform", "translate(%d %d) scale(%f) ", halfSize-halfCozyPersonSize, halfSize-halfCozyPersonSize, cozyPersonSizeAt64px*(float64(a.sizes.sizePx)/64.0)),
 				); err != nil {
@@ -317,7 +328,6 @@ func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error 
 				}
 			} else {
 				if err = encodeClosedXMLElement(encoder, "text", makeCharDataEncoder(a.initials),
-					makeXMLAttr("class", "avatar-initials"),
 					makeXMLAttr("clip-path", "url(#clip)"),
 					makeXMLAttr("alignment-baseline", "central"),
 					makeXMLAttr("text-anchor", "middle"),
