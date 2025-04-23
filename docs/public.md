@@ -21,6 +21,7 @@ query-string:
     - `format=png`: request a PNG response, otherwise defaults to SVG
     - `fx=translucent`: if SVG, make the output partially transparent
     - `as=unconfirmed`: if SVG, make the output grayscale
+    - `q=high`: if SVG, embed the required fonts in the file (otherwise use `<inline>`)
 
 ## Prelogin
 

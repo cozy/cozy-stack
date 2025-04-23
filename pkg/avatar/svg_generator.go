@@ -1,6 +1,7 @@
 package avatar
 
 import (
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -10,7 +11,7 @@ import (
 )
 
 const (
-	// indentSVGOutput = " ├ "
+	// indentSVGOutput = "  "
 	indentSVGOutput = ""
 	paddingPx       = 0
 	svgContentType  = "image/svg+xml"
@@ -20,7 +21,10 @@ const (
 	cozyPersonSizeAt64px = (21.3 / 16.0)
 
 	cozyUIInitialsColor = "rgba(29, 33, 42, 0.9)"
-	cozyUIFontCSS       = "color: " + cozyUIInitialsColor + "; font-family:Lato,sans-serif; font-weight: 600;"
+
+	cozyUIFontFamily    = "Lato"
+	cozyUIFontFallbacks = ", sans-serif"
+	cozyUIFontCSS       = "color: " + cozyUIInitialsColor + "; font-family:" + cozyUIFontFamily + cozyUIFontFallbacks + "; font-weight: 600;"
 )
 
 type linearGradientStop struct {
@@ -37,12 +41,21 @@ type avatarSizeInfo struct {
 	sizePx, fontSizePx int
 }
 
+type fontDescriptor struct{ name, style, weight string }
+
+// For the moment, there's only one font anyway
+var fontKey = fontDescriptor{cozyUIFontFamily, "normal", "bold"}
+
+type avatarFontProvider func(familyName, style, weight string) ([]byte, error)
+
 type avatarInfo struct {
 	initials  string
 	sizes     *avatarSizeInfo
 	gradient  *linearGradient
 	grayscale bool
 	faded     bool
+
+	fontLoader avatarFontProvider
 }
 
 var cozyUIAvatarSizes = map[string]*avatarSizeInfo{
@@ -153,9 +166,36 @@ func getGradientByHash(gradientHash int) *linearGradient {
 	return cozyUIAvatarColorSchemes[cozyUIAvatarColorSchemes_sortedKeys[gradientHash%len(cozyUIAvatarColorSchemes_sortedKeys)]]
 }
 
+var fontMap = make(map[fontDescriptor]string)
+
+//	 <style>
+//			@font-face{
+//				font-family:"Roboto Condensed";
+//				src:url(data:application/font-woff;charset=utf-8;base64,font_data_in_base64) format("woff");
+//				font-weight:normal;font-style:normal;
+//			}
+//			.avatar-initials { ...
 func encodeStyleElement(encoder *xml.Encoder, avatar *avatarInfo) error {
-	css := fmt.Sprintf(".avatar-initials { font-size: %dpx; user-select: none; %s }",
+	fontBase64 := fontMap[fontKey]
+	if fontBase64 == "" && avatar.fontLoader != nil {
+		fontData, err := avatar.fontLoader(fontKey.name, fontKey.style, fontKey.weight)
+		if err != nil {
+			return err
+		}
+		fontBase64 = base64.StdEncoding.EncodeToString(fontData)
+		fontMap[fontKey] = fontBase64
+	}
+	css := ""
+	if fontBase64 != "" {
+		css += strings.ReplaceAll(fmt.Sprintf(`
+			@font-face{font-family: "%s";
+			src:url(data:application/font-woff;charset=utf-8;base64,%s) format("woff");
+			font-weight:%s;font-style:%s;
+		}`, fontKey.name, fontBase64, fontKey.weight, fontKey.style), "\t", "") + "\n"
+	}
+	css += fmt.Sprintf(".avatar-initials { font-size: %dpx; user-select: none; %s }\n",
 		avatar.sizes.fontSizePx, cozyUIFontCSS)
+
 	return encodeClosedXMLElement(encoder, "style", makeCharDataEncoder(css), makeXMLAttr("type", "text/css"))
 }
 
@@ -207,6 +247,9 @@ func encodeGrayscaleFilter(encoder *xml.Encoder) error {
 //		  </defs>
 //		  <g>
 //		    <circle...
+//
+//		    <path...
+//		    or
 //		    <text...
 func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error {
 	svgElement, err := encodeXMLElement(encoder, "svg",
@@ -316,13 +359,13 @@ func (a *avatarInfo) String() (string, error) {
 var ErrInvalidSizeArg = errors.New("invalid size name")
 
 // Return the SVG XML body for the given initials, the content-type and an error
-func SvgForAvatar(initials, sizeName string, gradientHash uint, grayscale, faded bool) ([]byte, string, error) {
+func SvgForAvatar(initials, sizeName string, gradientHash uint, grayscale, faded bool, fontLoader avatarFontProvider) ([]byte, string, error) {
 	sizes := cozyUIAvatarSizes[sizeName]
 	if sizes == nil {
 		return nil, "", ErrInvalidSizeArg
 	}
 	gradient := getGradientByHash(int(gradientHash))
-	avatar := &avatarInfo{initials: initials, sizes: sizes, gradient: gradient, grayscale: grayscale, faded: faded}
+	avatar := &avatarInfo{initials: initials, sizes: sizes, gradient: gradient, grayscale: grayscale, faded: faded, fontLoader: fontLoader}
 	svg, err := avatar.String()
 	return []byte(svg), svgContentType, err
 }

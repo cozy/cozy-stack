@@ -18,9 +18,8 @@ const (
 
 	GreyBackground Options = 1 + iota
 	Translucent    Options = 1 + iota
-
-	// If this option is absent, SVG is assumed
-	FormatPNG
+	FormatPNG      Options = 1 + iota // If this option is absent, SVG is assumed
+	EmbedFont      Options = 1 + iota
 )
 
 // Initials is able to generate initial avatar.
@@ -44,9 +43,9 @@ func NewService(cache cache.Cache, cmd string) *Service {
 
 // GenerateInitials an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, string, error) {
+func (s *Service) GenerateInitials(publicName string, fontLoader avatarFontProvider, opts ...Options) ([]byte, string, error) {
 	info := extractInfo(strings.TrimSpace(publicName))
-	isPNG, isGrayscale, isTranslucent := false, false, false
+	isPNG, isGrayscale, isTranslucent, embedFont := false, false, false, false
 	for _, opt := range opts {
 		if opt == GreyBackground {
 			info.color = charcoalGrey
@@ -55,13 +54,17 @@ func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, 
 			isTranslucent = true
 		} else if opt == FormatPNG {
 			isPNG = true
+		} else if opt == EmbedFont {
+			embedFont = true
 		}
 	}
 
-	if !isPNG {
-		return SvgForAvatar(info.initials, "xl", uint(info.colorHash), isGrayscale, isTranslucent)
+	if !embedFont {
+		fontLoader = nil
 	}
-
+	if !isPNG {
+		return SvgForAvatar(info.initials, "xl", uint(info.colorHash), isGrayscale, isTranslucent, fontLoader)
+	}
 	initials := info.initials
 	if initials == "" {
 		initials = "?"

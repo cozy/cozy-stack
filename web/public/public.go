@@ -4,6 +4,7 @@
 package public
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -50,6 +51,7 @@ func errorInvalidParam(name string) error {
 //     4.1. `fx=translucent`: if SVG, make the output partially transparent
 //     4.2. `as=unconfirmed`: if SVG, make the output grayscale
 //     4.3. `format=png`: request a PNG response, otherwise defaults to SVG
+//     4.4. `q=high`: request a larger but higher quality file (for SVG means embedding the font)
 func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := inst.AvatarFS().ServeAvatarContent(c.Response(), c.Request()); err != os.ErrNotExist {
@@ -73,6 +75,8 @@ func Avatar(c echo.Context) error {
 	if format != "" && !wantPNG && format != "svg" {
 		return errorInvalidParam("format")
 	}
+
+	embedFont := strings.ToLower(c.QueryParam("q")) == "high"
 
 	fallback := c.QueryParam("fallback")
 	fallbackIsInitials := fallback == "initials"
@@ -114,8 +118,23 @@ func Avatar(c echo.Context) error {
 		if translucent {
 			options = append(options, avatar.Translucent)
 		}
-
-		img, mime, err := config.Avatars().GenerateInitials(publicName, options...)
+		if embedFont {
+			options = append(options, avatar.EmbedFont)
+		}
+		img, mime, err := config.Avatars().GenerateInitials(publicName, func(familyName, style, weight string) ([]byte, error) {
+			if familyName != "Lato" || style != "normal" || (weight != "normal" && weight != "bold") {
+				return nil, errors.New("invalid font")
+			}
+			fontPath := "/fonts/Lato-Regular.woff2"
+			if weight == "bold" {
+				fontPath = "/fonts/Lato-Bold.woff2"
+			}
+			asset, ok := assets.Get(fontPath, inst.ContextName)
+			if ok {
+				return asset.GetData(), nil
+			}
+			return nil, errors.New("font not found")
+		}, options...)
 		if err == nil {
 			return c.Blob(http.StatusOK, mime, img)
 		}
