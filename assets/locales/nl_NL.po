@@ -687,7 +687,7 @@ msgid "Mail Signature"
 msgstr "Met vriendelijke groet,"
 
 msgid "Mail Cozy Team"
-msgstr "Het Cozy Cloud-team"
+msgstr "Het Twake Workplace-team"
 
 msgid "Mail Hint Subject"
 msgstr "Wachtwoord vergeten: hint"
@@ -746,7 +746,7 @@ msgstr "Hallo %s,"
 
 msgid "Mail Archive Intro 2"
 msgstr ""
-"Je hebt een kopie aangevraagd van de gegevens die Cozy over je heeft "
+"Je hebt een kopie aangevraagd van de gegevens die Twake over je heeft "
 "verzameld."
 
 msgid "Mail Archive Button instruction"
@@ -756,10 +756,10 @@ msgid "Mail Archive Button text"
 msgstr "Je gegevens downloaden"
 
 msgid "Mail Archive Alternative text"
-msgstr "De downloadlink van je Cozy is:"
+msgstr "De downloadlink van je Twake is:"
 
 msgid "Mail Import Success Subject"
-msgstr "Goed nieuws: je Cozy is geïmporteerd!"
+msgstr "Goed nieuws: je Twake is geïmporteerd!"
 
 msgid "Mail Import Success Intro 1"
 msgstr "Hallo %s,"
@@ -771,7 +771,7 @@ msgid "Mail Import Success Button instruction"
 msgstr "Klik op de volgende knop om je gegevens te bekijken."
 
 msgid "Mail Import Success Button text"
-msgstr "Ga naar mijn Cozy"
+msgstr "Ga naar mijn Twake"
 
 msgid "Mail Import Success Apps not installed"
 msgstr ""
@@ -779,7 +779,7 @@ msgstr ""
 "bijbehorende gegevens zijn echter geïmporteerd."
 
 msgid "Mail Import Success Outro"
-msgstr "Tot snel! Liefs, je Cozy"
+msgstr "Tot snel! Liefs, je Twake"
 
 msgid "Mail Import Error Subject"
 msgstr "⚠ Het importeren is mislukt"
@@ -804,7 +804,7 @@ msgid "Mail Export Error Outro"
 msgstr "Als het probleem zich blijft voordoen, neem dan contact met ons op."
 
 msgid "Mail Move Confirm Subject"
-msgstr "Wil je je Cozy nu verplaatsen?"
+msgstr "Wil je je Twake nu verplaatsen?"
 
 msgid "Mail Move Confirm Intro 1"
 msgstr "Hallo %s,"
@@ -820,19 +820,19 @@ msgid "Mail Move Confirm Button text"
 msgstr "Verplaatsing goedkeuren"
 
 msgid "Mail Move Success Subject"
-msgstr "Goed nieuws: je Cozy is verplaatst!"
+msgstr "Goed nieuws: je Twake is verplaatst!"
 
 msgid "Mail Move Success Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Move Success Intro 2"
-msgstr "Alle gegevens zijn verplaatst naar je Cozy."
+msgstr "Alle gegevens zijn verplaatst naar je Twake."
 
 msgid "Mail Move Success Button instruction"
 msgstr "Klik op de volgende knop om je gegevens te bekijken."
 
 msgid "Mail Move Success Button text"
-msgstr "Ga naar mijn Cozy"
+msgstr "Ga naar mijn Twake"
 
 msgid "Mail Move Success Apps not installed"
 msgstr ""
@@ -840,10 +840,10 @@ msgstr ""
 "bijbehorende gegevens zijn echter geïmporteerd."
 
 msgid "Mail Move Success Outro"
-msgstr "Tot snel! Liefs, je Cozy"
+msgstr "Tot snel! Liefs, je Twake"
 
 msgid "Mail Move Error Subject"
-msgstr "⚠ Het verplaatsen van je Cozy is mislukt"
+msgstr "⚠ Het verplaatsen van je Twake is mislukt"
 
 msgid "Mail Move Error Text"
 msgstr ""
@@ -858,7 +858,7 @@ msgstr "Eenmalige koppelcode"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
-"Authenticatie in twee stappen is ingeschakeld op je Cozy. Voer de volgende "
+"Authenticatie in twee stappen is ingeschakeld op je Twake. Voer de volgende "
 "code in om je identiteit te bevestigen:"
 
 msgid "Mail Two Factor Outro"
@@ -884,8 +884,8 @@ msgstr "Nieuwe koppeling met je %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Dit is een bericht van je Cozy.\n"
-"Er is ingelogd op je Cozy-account vanaf een nieuw apparaat. Controleer middels onderstaande verbindingsinformatie of jíj degene was die inlogde."
+"Dit is een bericht van je Twake.\n"
+"Er is ingelogd op je Twake-account vanaf een nieuw apparaat. Controleer middels onderstaande verbindingsinformatie of jíj degene was die inlogde."
 
 msgid "Mail New Connection Place"
 msgstr "Locatie:"
@@ -920,22 +920,22 @@ msgstr "Authenticatie in twee stappen in schakelen"
 
 msgid "Mail New Connection Outro"
 msgstr ""
-"Waarom deze e-mail? De veiligheid van je Cozy heeft onze hoogste prioriteit,"
+"Waarom deze e-mail? De veiligheid van je Twake heeft onze hoogste prioriteit,"
 " dus willen we zeker weten dat je account niet wordt misbruikt."
 
 msgid "Mail New Connection Signature"
 msgstr ""
 "Tot snel! Liefs,\n"
-"je Cozy"
+"je Twake"
 
 msgid "Mail New Registration Subject"
 msgstr "Nieuw apparaat gekoppeld aan je %s"
 
 msgid "Mail New Registration Intro"
-msgstr "Gefeliciteerd! Je hebt een nieuw apparaat geregistreerd op je Cozy!"
+msgstr "Gefeliciteerd! Je hebt een nieuw apparaat geregistreerd op je Twake!"
 
 msgid "Mail New Registration Devices instruction"
-msgstr "Je kunt je apparaten direct beheren vanuit je Cozy:"
+msgstr "Je kunt je apparaten direct beheren vanuit je Twake:"
 
 msgid "Mail New Registration Devices text"
 msgstr "Mijn apparaten beheren"
@@ -956,7 +956,7 @@ msgstr "Hallo,"
 
 msgid "Mail Sharing Request Description"
 msgstr ""
-"%s (%s) wil dat je iets %s (%s %s) in zijn/haar persoonlijke ruimte, Cozy."
+"%s (%s) wil dat je iets %s (%s %s) in zijn/haar persoonlijke ruimte, Twake."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "bekijkt"
@@ -983,10 +983,10 @@ msgid "Mail Support Confirmation Outro"
 msgstr "Ik antwoord je per e-mail zodra ik meer weet."
 
 msgid "Mail Support Confirmation Signature"
-msgstr "Claude - klantenservice van Cozy Cloud"
+msgstr "Claude - klantenservice van Twake Workplace"
 
 msgid "Notification Sharing Subject"
-msgstr "Er is een gedeeld item beschikbaar op je Cozy"
+msgstr "Er is een gedeeld item beschikbaar op je Twake"
 
 msgid "Notification Sharing Description"
 msgstr "%s (%s) wil dat je iets %s (%s %s)"
@@ -1057,7 +1057,7 @@ msgstr "Je kunt twee dingen doen om meer ruimte te verkrijgen."
 msgid "Notifications Disk Quota offers instruction"
 msgstr ""
 "Optie 1:\n"
-"upgrade je Cozy naar een hoger abonnement met meer ruimte."
+"upgrade je Twake naar een hoger abonnement met meer ruimte."
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Nu upgraden"
@@ -1080,13 +1080,13 @@ msgid "Notifications OAuth Clients Greeting"
 msgstr "Hello,"
 
 msgid "Notifications OAuth Clients Reason Device"
-msgstr "**You've exceeded the maximum number of devices allowed** when connecting **%s** to your Cozy."
+msgstr "**You've exceeded the maximum number of devices allowed** when connecting **%s** to your Twake."
 
 msgid "Notifications OAuth Clients Reason Limit"
 msgstr "Your plan allows you to connect up to **%.0f devices**."
 
 msgid "Notifications OAuth Clients Increase Limit"
-msgstr "To upgrade your Cozy, or simply support us, you can change your Cozy plan."
+msgstr "To upgrade your Twake, or simply support us, you can change your Twake plan."
 
 msgid "Notifications OAuth Clients Offers Text"
 msgstr "Check our plans"

@@ -1,6 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
-	<img src="https://files.cozycloud.cc/email-assets/stack/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	<img src="https://files.cozycloud.cc/email-assets/stack/twake-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Reset Passphrase Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">

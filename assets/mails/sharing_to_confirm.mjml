@@ -1,6 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
-	<img src="https://files.cozycloud.cc/email-assets/stack/icon-share.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	<img src="https://files.cozycloud.cc/email-assets/stack/twake-share.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Sharing Member To Confirm Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">

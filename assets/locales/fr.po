@@ -387,7 +387,7 @@ msgstr "Bonjour %s,"
 
 msgid "Mail Confirm Flagship Intro"
 msgstr ""
-"Pour confirmer votre volonté d'utiliser l'application Cozy, copiez le code "
+"Pour confirmer votre volonté d'utiliser l'application Twake Workplace, copiez le code "
 "suivant et entrez-le dans l'application :"
 
 msgid "Move delegated auth Title"
@@ -836,19 +836,19 @@ msgid "Mail Signature"
 msgstr "Merci de votre confiance"
 
 msgid "Mail Cozy Team"
-msgstr "L'équipe de Cozy Cloud"
+msgstr "L'équipe de Twake Workplace"
 
 msgid "Mail Magic Link Subject"
-msgstr "Accéder à votre Cozy"
+msgstr "Accéder à votre Twake"
 
 msgid "Mail Magic Link Greeting"
 msgstr "Bonjour %s,"
 
 msgid "Mail Magic Link Intro"
-msgstr "Cliquer sur le bouton ci-dessous pour accéder à votre Cozy :"
+msgstr "Cliquer sur le bouton ci-dessous pour accéder à votre Twake :"
 
 msgid "Mail Magic Link Button text"
-msgstr "Accéder à mon Cozy"
+msgstr "Accéder à mon Twake"
 
 msgid "Mail Hint Subject"
 msgstr "Mot de passe oublié : mon indice"
@@ -858,12 +858,12 @@ msgstr "Bonjour %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
-"Vous avez demandé l’indice du mot de passe de votre Cozy Le voici ci-dessous"
+"Vous avez demandé l’indice du mot de passe de votre Twake. Le voici ci-dessous"
 " :"
 
 msgid "Mail Hint Intro 2 Cozy Pass"
 msgstr ""
-"Vous avez demandé l’indice du mot de passe Cozy Pass. Le voici ci-dessous :"
+"Vous avez demandé l’indice du mot de passe Twake Pass. Le voici ci-dessous :"
 
 msgid "Mail Hint Outro"
 msgstr ""
@@ -878,7 +878,7 @@ msgid "Mail Update Email Intro 1"
 msgstr "Bonjour %s,"
 
 msgid "Mail Update Email Intro 2"
-msgstr "Vous avez demandé à changer l'adresse email de votre Cozy."
+msgstr "Vous avez demandé à changer l'adresse email de votre Twake."
 
 msgid "Mail Update Email Button instruction"
 msgstr "Cliquez sur le bouton suivant pour valider votre changement d'adresse email."
@@ -899,7 +899,7 @@ msgstr ""
 
 msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
 msgstr ""
-"Vous avez demandé à changer votre mot de passe Cozy Pass. Si ce n'est pas le"
+"Vous avez demandé à changer votre mot de passe Twake Pass. Si ce n'est pas le"
 " cas, contactez-nous en réponse à ce mail."
 
 msgid "Mail Reset Passphrase Button instruction"
@@ -931,25 +931,25 @@ msgid "Mail Archive Button text"
 msgstr "Télécharger vos données"
 
 msgid "Mail Archive Alternative text"
-msgstr "Le lien de téléchargement de votre Cozy est le suivant :"
+msgstr "Le lien de téléchargement de votre Twake est le suivant :"
 
 msgid "Mail Import Success Subject"
-msgstr "Bonne nouvelle ! L'import dans votre Cozy est terminé"
+msgstr "Bonne nouvelle ! L'import dans votre Twake est terminé"
 
 msgid "Mail Import Success Intro 1"
 msgstr "Bonjour %s,"
 
 msgid "Mail Import Success Intro 2"
 msgstr ""
-"L'import de toutes vos données dans votre Cozy s'est déroulé avec succès."
+"L'import de toutes vos données dans votre Twake s'est déroulé avec succès."
 
 msgid "Mail Import Success Button instruction"
 msgstr ""
-"Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant "
+"Vous pouvez dès à présent accéder à vos données dans votre Twake en cliquant "
 "sur le bouton suivant :"
 
 msgid "Mail Import Success Button text"
-msgstr "Accéder à mon Cozy"
+msgstr "Accéder à mon Twake"
 
 msgid "Mail Import Success Apps not installed"
 msgstr ""
@@ -957,33 +957,33 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Import Success Outro"
-msgstr "À bientôt, votre Cozy"
+msgstr "À bientôt, votre Twake"
 
 msgid "Mail Import Error Subject"
-msgstr "⚠ L'import dans votre Cozy n'a pas abouti"
+msgstr "⚠ L'import dans votre Twake n'a pas abouti"
 
 msgid "Mail Import Error Text"
 msgstr ""
-"L'import des données dans votre Cozy a rencontré un souci. L'archive "
-"transmise à votre Cozy ne semble pas valide. Pouvez-vous renouveler "
+"L'import des données dans votre Twake a rencontré un souci. L'archive "
+"transmise à votre Twake ne semble pas valide. Pouvez-vous renouveler "
 "l'opération depuis le début ?"
 
 msgid "Mail Import Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
 
 msgid "Mail Export Error Subject"
-msgstr "⚠ L'export dans votre Cozy n'a pas abouti"
+msgstr "⚠ L'export dans votre Twake n'a pas abouti"
 
 msgid "Mail Export Error Text"
 msgstr ""
-"L'export des données de votre Cozy a rencontré un souci. Pouvez-vous "
+"L'export des données de votre Twake a rencontré un souci. Pouvez-vous "
 "renouveler l'opération depuis le début ?"
 
 msgid "Mail Export Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
 
 msgid "Mail Move Confirm Subject"
-msgstr "Souhaitez-vous vraiment déménager votre Cozy ?"
+msgstr "Souhaitez-vous vraiment déménager votre Twake ?"
 
 msgid "Mail Move Confirm Intro 1"
 msgstr "Bonjour %s,"
@@ -1000,23 +1000,23 @@ msgid "Mail Move Confirm Button text"
 msgstr "Accepter le déménagement"
 
 msgid "Mail Move Success Subject"
-msgstr "Bonne nouvelle ! Le déménagement dans votre Cozy est terminé"
+msgstr "Bonne nouvelle ! Le déménagement dans votre Twake est terminé"
 
 msgid "Mail Move Success Intro 1"
 msgstr "Bonjour %s,"
 
 msgid "Mail Move Success Intro 2"
 msgstr ""
-"Le déménagement de toutes vos données dans votre nouveau Cozy s'est déroulé "
+"Le déménagement de toutes vos données dans votre nouveau Twake s'est déroulé "
 "avec succès."
 
 msgid "Mail Move Success Button instruction"
 msgstr ""
-"Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant "
+"Vous pouvez dès à présent accéder à vos données dans votre Twake en cliquant "
 "sur le bouton suivant :"
 
 msgid "Mail Move Success Button text"
-msgstr "Accéder à mon Cozy"
+msgstr "Accéder à mon Twake"
 
 msgid "Mail Move Success Apps not installed"
 msgstr ""
@@ -1024,14 +1024,14 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Move Success Outro"
-msgstr "À bientôt, votre Cozy"
+msgstr "À bientôt, votre Twake"
 
 msgid "Mail Move Error Subject"
-msgstr "⚠ Le déménagement de votre Cozy n'a pas abouti"
+msgstr "⚠ Le déménagement de votre Twake n'a pas abouti"
 
 msgid "Mail Move Error Text"
 msgstr ""
-"Le déménagement de votre Cozy a rencontré un souci. Pouvez-vous renouveler "
+"Le déménagement de votre Twake a rencontré un souci. Pouvez-vous renouveler "
 "l'opération depuis le début ?"
 
 msgid "Mail Move Error Outro"
@@ -1042,11 +1042,11 @@ msgstr "Code de connexion à usage unique"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
-"L'authentification en deux étapes est activée sur votre Cozy. Voici votre "
+"L'authentification en deux étapes est activée sur votre Twake. Voici votre "
 "code de vérification de la seconde authentification :"
 
 msgid "Mail Two Factor Outro"
-msgstr "Besoin d'aide ? Ecrivez à l'adresse contact@cozycloud.cc"
+msgstr "Besoin d'aide ? Ecrivez à l'adresse contact@twake.app"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "Vous souhaitez activer la validation en deux étapes sur votre %s"
@@ -1058,15 +1058,15 @@ msgstr ""
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr ""
 "Si vous n'êtes pas à l'origine de cette modification, vous pouvez nous "
-"contacter à l'adresse contact@cozycloud.cc."
+"contacter à l'adresse contact@twake.app."
 
 msgid "Mail New Connection Subject"
 msgstr "Nouvelle connexion à votre %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Ceci est un message provenant de votre Cozy.\n"
-"Un nouvel appareil s’est connecté à votre compte Cozy récemment. Examinez les informations sur cette nouvelle connexion pour vérifier si c’est bien vous."
+"Ceci est un message provenant de votre Twake.\n"
+"Un nouvel appareil s’est connecté à votre compte Twake récemment. Examinez les informations sur cette nouvelle connexion pour vérifier si c’est bien vous."
 
 msgid "Mail New Connection Place"
 msgstr "Lieu :"
@@ -1108,16 +1108,16 @@ msgstr ""
 msgid "Mail New Connection Signature"
 msgstr ""
 "À bientôt,\n"
-"Votre Cozy"
+"Votre Twake"
 
 msgid "Mail New Registration Subject"
 msgstr "Un nouvel appareil connecté à votre %s"
 
 msgid "Mail New Registration Intro"
-msgstr "Félicitations, vous avez connecté un nouvel appareil à votre Cozy."
+msgstr "Félicitations, vous avez connecté un nouvel appareil à votre Twake."
 
 msgid "Mail New Registration Devices instruction"
-msgstr "Vous pouvez gérer vos différents appareils depuis votre Cozy :"
+msgstr "Vous pouvez gérer vos différents appareils depuis votre Twake :"
 
 msgid "Mail New Registration Devices text"
 msgstr "Gérer mes appareils"
@@ -1137,7 +1137,7 @@ msgid "Mail Sharing Request Intro"
 msgstr "Bonjour,"
 
 msgid "Mail Sharing Request Description"
-msgstr "%s (%s) vous invite à %s %s **%s** depuis son espace personnel, Cozy."
+msgstr "%s (%s) vous invite à %s %s **%s** depuis son espace personnel, Twake."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "voir"
@@ -1157,7 +1157,7 @@ msgstr "Bonjour %s,"
 msgid "Mail Sharing Member To Confirm Description"
 msgstr ""
 "%s a accepté votre partage de mot de passe. Afin de finaliser ce partage, "
-"vous devez vérifier l'identité de son Cozy."
+"vous devez vérifier l'identité de son Twake."
 
 msgid "Mail Sharing Member To Confirm Button"
 msgstr "Vérifier l'identité"
@@ -1167,7 +1167,7 @@ msgstr ""
 "Le nettoyage des comptes a échoué lors de la suppression de l'instance"
 
 msgid "Mail Support Confirmation Subject"
-msgstr "[cozy-support] Votre demande a bien été prise en compte"
+msgstr "[twake-support] Votre demande a bien été prise en compte"
 
 msgid "Mail Support Confirmation Intro 1"
 msgstr "Bonjour %s,"
@@ -1180,7 +1180,7 @@ msgstr ""
 "Vous recevrez une réponse de ma part par e-mail dans les plus brefs délais."
 
 msgid "Mail Support Confirmation Signature"
-msgstr "Claude - Service Client chez Cozy Cloud"
+msgstr "Claude - Service Client chez Twake Workplace"
 
 msgid "Notification Sharing Subject"
 msgstr "%s a partagé %s avec vous"
@@ -1279,7 +1279,7 @@ msgstr "Ajouter de l'espace"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"Option 2 : Libérez de l'espace dans votre Cozy en supprimant des fichiers ou"
+"Option 2 : Libérez de l'espace dans votre Twake en supprimant des fichiers ou"
 " en vidant votre corbeille"
 
 msgid "Notifications Disk Quota free text"
@@ -1295,13 +1295,13 @@ msgid "Notifications OAuth Clients Greeting"
 msgstr "Bonjour,"
 
 msgid "Notifications OAuth Clients Reason Device"
-msgstr "**Vous avez dépassé le nombre d'appareils autorisés** en connectant **%s** à votre Cozy."
+msgstr "**Vous avez dépassé le nombre d'appareils autorisés** en connectant **%s** à votre Twake."
 
 msgid "Notifications OAuth Clients Reason Limit"
 msgstr "Votre offre vous permet de connecter jusqu'à **%.0f appareils** simultanément."
 
 msgid "Notifications OAuth Clients Increase Limit"
-msgstr "Pour augmenter cette limite, ou simplement nous soutenir, vous pouvez modifier l'offre de votre Cozy."
+msgstr "Pour augmenter cette limite, ou simplement nous soutenir, vous pouvez modifier l'offre de votre Twake."
 
 msgid "Notifications OAuth Clients Offers Text"
 msgstr "Voir les offres"
