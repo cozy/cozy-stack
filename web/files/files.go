@@ -1745,7 +1745,7 @@ var allowedChangesParams = map[string]bool{
 //   - If the change is not below one of the parent shared directories,
 //     it is transformed into a deletion
 //   - Otherwise the change is left as-is
-func makeChangesFeedMapperFunction(inst *instance.Instance, sharingID string, parentSharedDirIDs []string) (err error, changeMapperFunction changeMapperFunction) {
+func makeChangesFeedMapperFunction(inst *instance.Instance, parentSharedDirIDs []string) (err error, changeMapperFunction changeMapperFunction) {
 	if len(parentSharedDirIDs) == 0 {
 		// This is a request from GET /files/_changes: No need to map the changes
 		return nil, func(change *couchdb.Change) *couchdb.Change {
@@ -1776,7 +1776,6 @@ func makeChangesFeedMapperFunction(inst *instance.Instance, sharingID string, pa
 				// Do consider `/a` as included in the folder `/a/`
 				parentRoot = utils.EnsureHasSuffix(parentRoot, "/")
 				if strings.HasPrefix(path, parentRoot) {
-					change.Doc.M["path"] = "//" + consts.SharedDrivesDirID + "/1/" + sharingID + "/" + path[len(parentRoot):]
 					return change
 				}
 			}
@@ -1801,13 +1800,13 @@ func makeChangesFeedMapperFunction(inst *instance.Instance, sharingID string, pa
 // the caller to check for the right permissions for all directories
 // (anything outside those directories should only be deletions with the
 // document ID as only information)
-func ChangesFeed(c echo.Context, sharingID string, parentSharedDirIDs []string) error {
+func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
 	inst := middlewares.GetInstance(c)
 	if len(parentSharedDirIDs) == 0 {
 		//TODO: WARNING: check security here
-		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
-			return err
-		}
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
 	}
 
 	// Drop a clear error for parameters not supported by stack
@@ -1871,7 +1870,7 @@ func ChangesFeed(c echo.Context, sharingID string, parentSharedDirIDs []string) 
 		}
 	}
 
-	err, changeMapperFn := makeChangesFeedMapperFunction(inst, sharingID, parentSharedDirIDs)
+	err, changeMapperFn := makeChangesFeedMapperFunction(inst, parentSharedDirIDs)
 	if err != nil {
 		return err
 	}
@@ -1887,7 +1886,7 @@ func ChangesFeed(c echo.Context, sharingID string, parentSharedDirIDs []string) 
 }
 
 func ChangesFeedForFiles(c echo.Context) error {
-	return ChangesFeed(c, "", nil)
+	return ChangesFeed(c, nil)
 }
 
 type changesFilter struct {

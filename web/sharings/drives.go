@@ -167,7 +167,7 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 	if err != nil {
 		return err
 	}
-	return files.ChangesFeed(c, s.ID(), directoryIDsOfSharing)
+	return files.ChangesFeed(c, directoryIDsOfSharing)
 }
 
 // drivesRoutes sets the routing for the shared drives
