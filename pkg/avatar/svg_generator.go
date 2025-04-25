@@ -11,16 +11,12 @@ import (
 )
 
 const (
-	// indentSVGOutput = "  "
 	indentSVGOutput = ""
-	paddingPx       = 0
 	svgContentType  = "image/svg+xml"
 
-	cozyPersonPath       = "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-	cozyPersonPathSize   = 24
-	cozyPersonSizeAt64px = (21.3 / 16.0)
+	cozyPersonPath = "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
 
-	cozyUIInitialsColorDarkMode  = "rgba(29, 33, 42, 0.9)"
+	cozyUIInitialsColorDarkMode  = "rgba(66, 66, 68, 0.9)"
 	cozyUIInitialsColorLightMode = "#ffffff"
 
 	cozyUIFontFamily    = "Lato"
@@ -38,10 +34,6 @@ type linearGradient struct {
 	Stops       []linearGradientStop
 }
 
-type avatarSizeInfo struct {
-	sizePx, fontSizePx int
-}
-
 type fontDescriptor struct{ name, style, weight string }
 
 // For the moment, there's only one font anyway
@@ -50,21 +42,11 @@ var fontKey = fontDescriptor{cozyUIFontFamily, "normal", "bold"}
 type avatarFontProvider func(familyName, style, weight string) ([]byte, error)
 
 type avatarInfo struct {
-	initials  string
-	sizes     *avatarSizeInfo
-	gradient  *linearGradient
-	grayscale bool
-	faded     bool
-
+	initials   string
+	gradient   *linearGradient
+	grayscale  bool
+	faded      bool
 	fontLoader avatarFontProvider
-}
-
-var cozyUIAvatarSizes = map[string]*avatarSizeInfo{
-	"xs": {sizePx: 16, fontSizePx: 8},
-	"s":  {sizePx: 24, fontSizePx: 12},
-	"m":  {sizePx: 32, fontSizePx: 16},
-	"l":  {sizePx: 48, fontSizePx: 24},
-	"xl": {sizePx: 64, fontSizePx: 32},
 }
 
 // grep linear-gradient path-to/cozy-ui/react/Avatar/helpers.js
@@ -200,26 +182,26 @@ func encodeStyleElement(encoder *xml.Encoder, avatar *avatarInfo) error {
 		}`, fontKey.name, fontBase64, fontKey.weight, fontKey.style)) + "\n"
 	}
 	css += removeTabs(fmt.Sprintf(`
-		.cozy-stack-avatar text, .cozy-stack-avatar path { font-size: %dpx; user-select: none; %s; fill: %s; }
+		.cozy-stack-avatar text, .cozy-stack-avatar path { font-size: 16px; user-select: none; %s; fill: %s; }
 		@media (prefers-color-scheme: dark) {
 			.cozy-stack-avatar text, .cozy-stack-avatar path { fill: %s; }
 		}
 		`,
-		avatar.sizes.fontSizePx, cozyUIFontCSS, cozyUIInitialsColorLightMode, cozyUIInitialsColorDarkMode))
+		cozyUIFontCSS, cozyUIInitialsColorLightMode, cozyUIInitialsColorDarkMode))
 
 	return encodeClosedXMLElement(encoder, "style", makeCharDataEncoder(css), makeXMLAttr("type", "text/css"))
 }
 
 //	  <clipPath id="clip">
-//		  <circle cx="32px" cy="32px" r="32px" />
+//		  <circle cx="16px" cy="16px" r="16px" />
 //	  </clipPath>
-func encodeClipPath(encoder *xml.Encoder, id string, halfSize int) error {
+func encodeClipPath(encoder *xml.Encoder, id string, size int) error {
 	if err := encodeClosedXMLElement(encoder, "clipPath",
 		func(encoder *xml.Encoder) error {
 			return encodeClosedXMLElement(encoder, "circle", nil,
-				makeIntPxXMLAttr("cx", halfSize+paddingPx),
-				makeIntPxXMLAttr("cy", halfSize+paddingPx),
-				makeIntPxXMLAttr("r", halfSize),
+				makeIntPxXMLAttr("cx", size),
+				makeIntPxXMLAttr("cy", size),
+				makeIntPxXMLAttr("r", size),
 			)
 		},
 		makeXMLAttr("id", id),
@@ -264,10 +246,8 @@ func encodeGrayscaleFilter(encoder *xml.Encoder) error {
 //		    <text...
 func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error {
 	svgElement, err := encodeXMLElement(encoder, "svg",
-		makeIntPxXMLAttr("width", a.sizes.sizePx),
-		makeIntPxXMLAttr("height", a.sizes.sizePx),
 		makeXMLAttr("style", "shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality;"),
-		makeXMLAttrf("viewBox", "0 0 %d %d", a.sizes.sizePx, a.sizes.sizePx),
+		makeXMLAttrf("viewBox", "0 0 32 32"),
 		makeXMLAttr("version", "1.1"),
 		makeXMLAttr("xmlns", "http://www.w3.org/2000/svg"),
 	)
@@ -278,11 +258,9 @@ func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error 
 		return err
 	}
 
-	halfSize := (a.sizes.sizePx / 2) - paddingPx
-
 	if err = encodeClosedXMLElement(encoder, "defs",
 		func(encoder *xml.Encoder) error {
-			err := encodeClipPath(encoder, "clip", halfSize)
+			err := encodeClipPath(encoder, "clip", 16)
 			if err != nil {
 				return err
 			}
@@ -310,29 +288,27 @@ func (a *avatarInfo) MarshalXML(encoder *xml.Encoder, _ xml.StartElement) error 
 		func(encoder *xml.Encoder) error {
 			if err = encodeClosedXMLElement(encoder, "circle", nil,
 				makeXMLAttr("fill", "url(#bkg)"),
-				makeIntPxXMLAttr("cx", halfSize+paddingPx),
-				makeIntPxXMLAttr("cy", halfSize+paddingPx),
-				makeIntPxXMLAttr("r", halfSize),
+				makeIntPxXMLAttr("cx", 16),
+				makeIntPxXMLAttr("cy", 16),
+				makeIntPxXMLAttr("r", 16),
 			); err != nil {
 				return err
 			}
 
 			if a.initials == "" {
-				halfCozyPersonSize := cozyPersonPathSize / 2
+				// halfCozyPersonSize := cozyPersonPathSize / 2
 				if err = encodeClosedXMLElement(encoder, "path", nil,
 					makeXMLAttr("d", cozyPersonPath),
-					makeXMLAttrf("transform-origin", "%d %d", halfCozyPersonSize, halfCozyPersonSize),
-					makeXMLAttrf("transform", "translate(%d %d) scale(%f) ", halfSize-halfCozyPersonSize, halfSize-halfCozyPersonSize, cozyPersonSizeAt64px*(float64(a.sizes.sizePx)/64.0)),
+					makeXMLAttrf("transform", "translate(4 4)"),
 				); err != nil {
 					return nil
 				}
 			} else {
 				if err = encodeClosedXMLElement(encoder, "text", makeCharDataEncoder(a.initials),
 					makeXMLAttr("clip-path", "url(#clip)"),
-					makeXMLAttr("alignment-baseline", "central"),
 					makeXMLAttr("text-anchor", "middle"),
-					makeIntPxXMLAttr("x", halfSize+paddingPx),
-					makeIntPxXMLAttr("y", halfSize+paddingPx),
+					makeIntPxXMLAttr("x", 16),
+					makeIntPxXMLAttr("y", 22), // hardcoded vertical center to support every browsers
 				); err != nil {
 					return err
 				}
@@ -369,13 +345,9 @@ func (a *avatarInfo) String() (string, error) {
 var ErrInvalidSizeArg = errors.New("invalid size name")
 
 // Return the SVG XML body for the given initials, the content-type and an error
-func SvgForAvatar(initials, sizeName string, gradientHash uint, grayscale, faded bool, fontLoader avatarFontProvider) ([]byte, string, error) {
-	sizes := cozyUIAvatarSizes[sizeName]
-	if sizes == nil {
-		return nil, "", ErrInvalidSizeArg
-	}
+func SvgForAvatar(initials string, gradientHash uint, grayscale bool, faded bool, fontLoader avatarFontProvider) ([]byte, string, error) {
 	gradient := getGradientByHash(int(gradientHash))
-	avatar := &avatarInfo{initials: initials, sizes: sizes, gradient: gradient, grayscale: grayscale, faded: faded, fontLoader: fontLoader}
+	avatar := &avatarInfo{initials: initials, gradient: gradient, grayscale: grayscale, faded: faded, fontLoader: fontLoader}
 	svg, err := avatar.String()
 	return []byte(svg), svgContentType, err
 }

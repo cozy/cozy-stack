@@ -63,7 +63,7 @@ func (s *Service) GenerateInitials(publicName string, fontLoader avatarFontProvi
 		fontLoader = nil
 	}
 	if !isPNG {
-		return SvgForAvatar(info.initials, "xl", uint(info.colorHash), isGrayscale, isTranslucent, fontLoader)
+		return SvgForAvatar(info.initials, uint(info.colorHash), isGrayscale, isTranslucent, fontLoader)
 	}
 	initials := info.initials
 	if initials == "" {
