@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -30,7 +31,10 @@ type avatarV3 struct {
 }
 
 func (a *avatarV3) CreateAvatar(contentType string) (io.WriteCloser, error) {
-	return a.c.ObjectCreate(a.ctx, a.container, "avatar", true, "", contentType, nil)
+	headers := swift.Metadata{
+		"created-at": time.Now().UTC().Format(time.RFC3339),
+	}.ObjectHeaders()
+	return a.c.ObjectCreate(a.ctx, a.container, "avatar", true, "", contentType, headers)
 }
 
 func (a *avatarV3) DeleteAvatar() error {
@@ -48,8 +52,15 @@ func (a *avatarV3) ServeAvatarContent(w http.ResponseWriter, req *http.Request) 
 	}
 	defer f.Close()
 
+	t := unixEpochZero
+	if createdAt := o["created-at"]; createdAt != "" {
+		if createdAtTime, err := time.Parse(time.RFC3339, createdAt); err == nil {
+			t = createdAtTime
+		}
+	}
+
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
 	w.Header().Set("Content-Type", o["Content-Type"])
-	http.ServeContent(w, req, "avatar", unixEpochZero, &backgroundSeeker{f})
+	http.ServeContent(w, req, "avatar", t, &backgroundSeeker{f})
 	return nil
 }
