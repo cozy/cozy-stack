@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	csettings "github.com/cozy/cozy-stack/model/settings"
@@ -82,9 +81,6 @@ func Prelogin(c echo.Context) error {
 
 // Routes sets the routing for the public service
 func Routes(router *echo.Group) {
-	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
-		MaxAge: 24 * time.Hour,
-	})
-	router.GET("/avatar", Avatar, cacheControl)
+	router.GET("/avatar", Avatar)
 	router.GET("/prelogin", Prelogin)
 }
