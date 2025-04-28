@@ -35216,10 +35216,10 @@ mPlfzMhbBsjhQvIKUhDv9RBziRAiS2YojgQV8CQoUntANZdmDg==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/notifications_sharing.text
-Size: 147
+Size: 176
 
-G5IA4IzDuOG72Zb2L+o+hT25DSLiQgdyccD+a1FAiXceeRLUDZdZUcImXYZ//7gt
-8NWD1QRxpEL2g3waZo0xJKSlpf0X+CH6kQbOSf3lo44m
+G68AYJwHdouHi5Zeo2XfI+WeCEgolAtdyfXp5ID971GWJZ63RZrkNnZeEJL1Qlw+
+9sdAygclCiJzpuAeRLNKiotA8DjGJLTjKPt/5k+EhXmBhj4GAtEa
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/passphrase_hint.mjml
