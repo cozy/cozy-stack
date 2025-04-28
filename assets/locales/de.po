@@ -574,7 +574,7 @@ msgid "Mail Signature"
 msgstr "Vertrauensvolle Grüße"
 
 msgid "Mail Cozy Team"
-msgstr "Dein Cozy Cloud Team"
+msgstr "Dein Twake Workplace Team"
 
 msgid "Mail Hint Subject"
 msgstr "Vergessenes Passwort: dein Hinweis"
@@ -584,7 +584,7 @@ msgstr "Hallo %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
-"Unten befindet sich der angefragte Hinweis, um dich an dein Cozy Passwort zu"
+"Unten befindet sich der angefragte Hinweis, um dich an dein Twake Passwort zu"
 " erinnern"
 
 msgid "Mail Hint Outro"
@@ -631,24 +631,24 @@ msgid "Mail Archive Button text"
 msgstr "Deine Daten herunterladen"
 
 msgid "Mail Archive Alternative text"
-msgstr "Der Downloadlink für dein Cozy lautet wie folgt:"
+msgstr "Der Downloadlink für dein Twake lautet wie folgt:"
 
 msgid "Mail Import Success Subject"
-msgstr "Gute Neuigkeiten! Dein Cozy wurde erfolgreich importiert"
+msgstr "Gute Neuigkeiten! Dein Twake wurde erfolgreich importiert"
 
 msgid "Mail Import Success Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Import Success Intro 2"
-msgstr "Der Import all deiner Daten in dein Cozy war erfolgreich."
+msgstr "Der Import all deiner Daten in dein Twake war erfolgreich."
 
 msgid "Mail Import Success Button instruction"
 msgstr ""
-"Du kannst nun auf deine Daten in deinem Cozy zugreifen, indem du auf den "
+"Du kannst nun auf deine Daten in deinem Twake zugreifen, indem du auf den "
 "folgenden Button klickst:"
 
 msgid "Mail Import Success Button text"
-msgstr "Mein Cozy betreten"
+msgstr "Mein Twake betreten"
 
 msgid "Mail Import Success Apps not installed"
 msgstr ""
@@ -656,14 +656,14 @@ msgstr ""
 " auch sei: alle zugehörigen Daten wurden erfolgreich importiert."
 
 msgid "Mail Import Success Outro"
-msgstr "Bis bald, dein Cozy"
+msgstr "Bis bald, dein Twake"
 
 msgid "Mail Import Error Subject"
-msgstr "⚠ Der Import in dein Cozy ist fehlgeschlagen"
+msgstr "⚠ Der Import in dein Twake ist fehlgeschlagen"
 
 msgid "Mail Import Error Text"
 msgstr ""
-"Beim Import deiner Daten in dein Cozy gab es ein Problem. Das zu deinem Cozy"
+"Beim Import deiner Daten in dein Twake gab es ein Problem. Das zu deinem Twake"
 " übermittelte Archiv scheint nicht gültig zu sein. Kannst du den Vorgang "
 "wiederholen?"
 
@@ -675,7 +675,7 @@ msgstr "Zugangscode für die einmalige Verbindung"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
-"Zwei-Faktor-Authentifizierung ist für dein Cozy aktiviert. Gib den folgenden"
+"Zwei-Faktor-Authentifizierung ist für dein Twake aktiviert. Gib den folgenden"
 " Code ein, um deine Identität zu bestätigen:"
 
 msgid "Mail Two Factor Outro"
@@ -697,7 +697,7 @@ msgstr "Neue Verbindung zu deinem %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Dies ist eine Nachricht deines Cozys:\n"
+"Dies ist eine Nachricht deines Twake:\n"
 "Ein neues Gerät hat sich kürzlich in deinem Cozykonto angemeldet. Überprüfe die Verbindungsinformationen unten, um zu bestätigen, dass es deines ist."
 
 msgid "Mail New Connection Place"
@@ -717,7 +717,7 @@ msgstr "Browser:"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"Wenn du hinter dieser neuen Verbindung steckst, kannst du diese Nachricht ignorieren und dein Cozy genießen.\n"
+"Wenn du hinter dieser neuen Verbindung steckst, kannst du diese Nachricht ignorieren und dein Twake genießen.\n"
 "Wenn nicht, empfehlen wir dir dein Passwort umgehend zu erneuern."
 
 msgid "Mail New Connection Change Passphrase text"
@@ -739,18 +739,18 @@ msgstr ""
 msgid "Mail New Connection Signature"
 msgstr ""
 "Bis bald,\n"
-"Dein Cozy"
+"Dein Twake"
 
 msgid "Mail New Registration Subject"
 msgstr "Ein neues Gerät hat sich mit deinem %s verbunden"
 
 msgid "Mail New Registration Intro"
 msgstr ""
-"Glückwunsch! Die Registrierung deines neuen Geräts für dein Cozy war "
+"Glückwunsch! Die Registrierung deines neuen Geräts für dein Twake war "
 "erfolgreich."
 
 msgid "Mail New Registration Devices instruction"
-msgstr "Du kannst die Geräte direkt in deinem Cozy verwalten:"
+msgstr "Du kannst die Geräte direkt in deinem Twake verwalten:"
 
 msgid "Mail New Registration Devices text"
 msgstr "Meine Geräte verwalten"
@@ -771,7 +771,7 @@ msgstr "Hallo,"
 
 msgid "Mail Sharing Request Description"
 msgstr ""
-"%s(%s) lädt dich ein zum %s der %s%sauf ihrem persönlichen Raum, Cozy."
+"%s(%s) lädt dich ein zum %s der %s%sauf ihrem persönlichen Raum, Twake."
 
 msgid "Mail Sharing Request Action Read"
 msgstr "abrufen"

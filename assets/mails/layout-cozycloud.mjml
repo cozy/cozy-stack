@@ -2,7 +2,7 @@
 	<mj-head>
 		<mj-defaults></mj-defaults>
 	</mj-head>
-	<mj-body background-color="#f5f6f7">
+	<mj-body background-color="#f3f6f9">
 		<mj-header></mj-header>
 		<mj-wrapper background-color="#fff" border-radius="8px" padding="0">
 			<mj-section padding="24px 0 8px">

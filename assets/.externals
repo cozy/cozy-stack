@@ -39,8 +39,8 @@ url     https://matomo.cozycloud.cc/piwik.js
 sha256  d7fc375178c93a2fc15fd888e30170eedf4ef3d04497e7f951ab7bfe0c921693
 
 name    ./js/cozy-mjml.js
-url     https://unpkg.com/cozy-mjml@0.10.0/dist/main.js
-sha256  26fd473bae2d1285dd6d5e2e7da61c68e11348947fc591c7e67fafcbc878116e
+url     https://unpkg.com/cozy-mjml@0.21.0/dist/main.js
+sha256  2fa3ec8964d01150ccc7aa0d3904a4fd7070626146941a655f372627a9fc4f82
 
 name    ./js/asmcrypto.js
 url     https://unpkg.com/asmcrypto.js@2.3.2/asmcrypto.all.es5.min.js

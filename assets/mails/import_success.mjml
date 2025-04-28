@@ -1,6 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
-	<img src="https://files.cozycloud.cc/email-assets/stack/icon-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	<img src="https://files.cozycloud.cc/email-assets/stack/twake-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Import Success Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
