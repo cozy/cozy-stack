@@ -13,11 +13,13 @@ import (
 type Options int
 
 const (
-	cacheTTL    = 30 * 24 * time.Hour // 1 month
-	contentType = "image/png"
+	cacheTTL       = 30 * 24 * time.Hour // 1 month
+	contentTypePNG = "image/png"
 
-	// GreyBackground is an option to force a grey background
 	GreyBackground Options = 1 + iota
+	Translucent    Options = 1 + iota
+	FormatPNG      Options = 1 + iota // If this option is absent, SVG is assumed
+	EmbedFont      Options = 1 + iota
 )
 
 // Initials is able to generate initial avatar.
@@ -41,21 +43,38 @@ func NewService(cache cache.Cache, cmd string) *Service {
 
 // GenerateInitials an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-func (s *Service) GenerateInitials(publicName string, opts ...Options) ([]byte, string, error) {
-	name := strings.TrimSpace(publicName)
-	info := extractInfo(name)
+func (s *Service) GenerateInitials(publicName string, fontLoader avatarFontProvider, opts ...Options) ([]byte, string, error) {
+	info := extractInfo(strings.TrimSpace(publicName))
+	isPNG, isGrayscale, isTranslucent, embedFont := false, false, false, false
 	for _, opt := range opts {
 		if opt == GreyBackground {
 			info.color = charcoalGrey
+			isGrayscale = true
+		} else if opt == Translucent {
+			isTranslucent = true
+		} else if opt == FormatPNG {
+			isPNG = true
+		} else if opt == EmbedFont {
+			embedFont = true
 		}
 	}
 
-	key := "initials:" + info.initials + info.color
+	if !embedFont {
+		fontLoader = nil
+	}
+	if !isPNG {
+		return SvgForAvatar(info.initials, uint(info.colorHash), isGrayscale, isTranslucent, fontLoader)
+	}
+	initials := info.initials
+	if initials == "" {
+		initials = "?"
+	}
+	key := "initials:" + initials + info.color
 	if bytes, ok := s.cache.Get(key); ok {
-		return bytes, contentType, nil
+		return bytes, contentTypePNG, nil
 	}
 
-	bytes, err := s.initials.Generate(info.initials, info.color)
+	bytes, err := s.initials.Generate(initials, info.color)
 	if err != nil {
 		return nil, "", err
 	}
@@ -87,14 +106,16 @@ var colors = []string{
 var charcoalGrey = "#32363F"
 
 type info struct {
-	initials string
-	color    string
+	initials  string
+	colorHash int
+	color     string
 }
 
 func extractInfo(name string) info {
 	initials := strings.ToUpper(getInitials(name))
-	color := getColor(name)
-	return info{initials: initials, color: color}
+	colorHash := getInitialsColorHash(name)
+	color := getColorFromHash(colorHash)
+	return info{initials: initials, colorHash: colorHash, color: color}
 }
 
 func getInitials(name string) string {
@@ -108,7 +129,7 @@ func getInitials(name string) string {
 	}
 	switch len(initials) {
 	case 0:
-		return "?"
+		return ""
 	case 1:
 		return string(initials)
 	default:
@@ -116,10 +137,18 @@ func getInitials(name string) string {
 	}
 }
 
-func getColor(name string) string {
+func getInitialsColorHash(name string) int {
 	sum := 0
 	for i := 0; i < len(name); i++ {
 		sum += int(name[i])
 	}
-	return colors[sum%len(colors)]
+	return sum
+}
+
+func getColorFromHash(hash int) string {
+	return colors[hash%len(colors)]
+}
+
+func getColor(name string) string {
+	return getColorFromHash(getInitialsColorHash(name))
 }
