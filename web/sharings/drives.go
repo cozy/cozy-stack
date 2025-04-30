@@ -135,7 +135,7 @@ func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error
 // permission for the user in the context. If any fail, return an error.
 func resolveSharingToPermittedDirIDs(c echo.Context, inst *instance.Instance, s *sharing.Sharing) ([]string, error) {
 	fs := inst.VFS()
-	var directoryIDsOfSharing []string
+	var sharedDirIDs []string
 	for _, rule := range s.Rules {
 		if rule.DocType != consts.Files || (rule.Selector != "" && rule.Selector != "id") {
 			continue
@@ -150,24 +150,24 @@ func resolveSharingToPermittedDirIDs(c echo.Context, inst *instance.Instance, s 
 				return nil, err
 			}
 		}
-		directoryIDsOfSharing = append(directoryIDsOfSharing, rule.Values...)
+		sharedDirIDs = append(sharedDirIDs, rule.Values...)
 	}
 
-	if len(directoryIDsOfSharing) == 0 {
+	if len(sharedDirIDs) == 0 {
 		return nil, errors.New("sharing has no matching directories")
 	}
-	return directoryIDsOfSharing, nil
+	return sharedDirIDs, nil
 }
 
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
 	// TODO: consider nested sharings
-	directoryIDsOfSharing, err := resolveSharingToPermittedDirIDs(c, inst, s)
+	sharedDirIDs, err := resolveSharingToPermittedDirIDs(c, inst, s)
 	if err != nil {
 		return err
 	}
-	return files.ChangesFeed(c, directoryIDsOfSharing)
+	return files.ChangesFeed(c, inst, sharedDirIDs)
 }
 
 // drivesRoutes sets the routing for the shared drives
@@ -179,7 +179,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.GET("/_changes", proxy(ChangesFeed))
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 	drive.GET("/:file-id", proxy(GetDirOrFileData))
-	drive.GET("/:file-id/download", proxy(DownloadFile))
+	drive.GET("/download/:file-id", proxy(DownloadFile))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
 	drive.POST("/:file-id/copy", proxy(CopyFile))
 }
@@ -222,15 +222,12 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		// the handler. We just need to fake the middlewares. It helps for
 		// performances.
 		if owner, err := lifecycle.GetInstance(u.Host); err == nil {
-			s, err := sharing.FindSharing(owner, c.Param("id"))
-			if err != nil {
-				return wrapErrors(err)
-			}
 			pdoc, err := permission.GetForShareCode(owner, token)
 			if err != nil {
 				return err
 			}
 			middlewares.ForcePermission(c, pdoc)
+			middlewares.SetInstance(c, owner)
 			return fn(c, owner, s)
 		}
 

@@ -1738,57 +1738,11 @@ var allowedChangesParams = map[string]bool{
 	"skip_trashed":      false,
 }
 
-// This returns a function that transforms the results of the changes
-// feed when the request comes from a shared drive.
-//
-//   - If the change is for the root directory, it is filtered out
-//   - If the change is not below one of the parent shared directories,
-//     it is transformed into a deletion
-//   - Otherwise the change is left as-is
-func makeChangesFeedMapperFunction(inst *instance.Instance, parentSharedDirIDs []string) (err error, changeMapperFunction changeMapperFunction) {
-	if len(parentSharedDirIDs) == 0 {
-		// This is a request from GET /files/_changes: No need to map the changes
-		return nil, func(change *couchdb.Change) *couchdb.Change {
-			return change
-		}
-	}
-
-	// This is a request from GET /sharings/drives/:sharingID/_changes
-	// Find the paths of directories that are linked to by the sharing
-	var parentRoots []string
-	for _, dirID := range parentSharedDirIDs {
-		dir, err := inst.VFS().DirByID(dirID)
-		if err != nil {
-			return err, nil
-		}
-		// Dont consider `/aa/b` as a file in the folder `/a`
-		path := utils.EnsureHasSuffix(dir.Fullpath, "/")
-		parentRoots = append(parentRoots, path)
-	}
-
-	return nil, func(change *couchdb.Change) *couchdb.Change {
-		if change.DocID == consts.RootDirID {
-			return nil
-		}
-		if !change.Deleted {
-			path := change.Doc.M["path"].(string)
-			for _, parentRoot := range parentRoots {
-				// Do consider `/a` as included in the folder `/a/`
-				parentRoot = utils.EnsureHasSuffix(parentRoot, "/")
-				if strings.HasPrefix(path, parentRoot) {
-					return change
-				}
-			}
-		}
-		return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
-	}
-}
-
 // ChangesFeed is the handler for GET /files/_changes, and indirectly,
 // GET /sharings/drives/:sharingID/_changes. It is similar to the
 // changes feed of CouchDB with some additional options, like skip_trashed.
 //
-// parentSharedDirIDs is an optional list of directory IDs that are used to
+// sharedDirIDs is an optional list of directory IDs that are used to
 // filter the changes feed. It is used when the changes feed is called
 // from a sharing drive. The changes feed will only return files that are
 // below one of the directories in this list (it is plural because a
@@ -1796,17 +1750,16 @@ func makeChangesFeedMapperFunction(inst *instance.Instance, parentSharedDirIDs [
 // results are an union). If empty, no special filtering is done,
 // everything is returned. Otherwise, options like `include_file_path` and
 // `include_docs` are forced to true.
-// if parentSharedDirIDs is not empty, it is the responsibility of
+// if sharedDirIDs is not empty, it is the responsibility of
 // the caller to check for the right permissions for all directories
 // (anything outside those directories should only be deletions with the
 // document ID as only information)
-func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
-	inst := middlewares.GetInstance(c)
-	if len(parentSharedDirIDs) == 0 {
+func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDirIDs []string) error {
+	if len(sharedDirIDs) == 0 {
 		//TODO: WARNING: check security here
-	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
-		return err
-	}
+		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+			return err
+		}
 	}
 
 	// Drop a clear error for parameters not supported by stack
@@ -1836,7 +1789,18 @@ func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
 	}
 
-	if len(parentSharedDirIDs) > 0 {
+	if len(sharedDirIDs) > 0 {
+		// This is a request from GET /sharings/drives/:sharingID/_changes
+		// Find the paths of directories that are linked to by the sharing
+		for _, dirID := range sharedDirIDs {
+			dir, err := inst.VFS().DirByID(dirID)
+			if err != nil {
+				return err
+			}
+			// Dont consider `/aa/b` as a file in the folder `/a`
+			path := utils.EnsureHasSuffix(dir.Fullpath, "/")
+			filter.SharedDirPaths = append(filter.SharedDirPaths, path)
+		}
 		// These are required to check the documents are bellow the shared
 		// directories
 		filter.IncludePath = true
@@ -1870,15 +1834,9 @@ func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
 		}
 	}
 
-	err, changeMapperFn := makeChangesFeedMapperFunction(inst, parentSharedDirIDs)
-	if err != nil {
-		return err
-	}
-
-	filter.Reject(results)
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	c.Response().WriteHeader(http.StatusOK)
-	if err := filter.Stream(c.Response(), inst, results, changeMapperFn); err != nil {
+	if err := filter.Stream(c.Response(), inst, results); err != nil {
 		inst.Logger().WithNamespace("files").Warnf("error on _changes: %s", err)
 		return err
 	}
@@ -1886,15 +1844,18 @@ func ChangesFeed(c echo.Context, parentSharedDirIDs []string) error {
 }
 
 func ChangesFeedForFiles(c echo.Context) error {
-	return ChangesFeed(c, nil)
+	inst := middlewares.GetInstance(c)
+
+	return ChangesFeed(c, inst, nil)
 }
 
 type changesFilter struct {
-	Fields      []string
-	IncludePath bool
-	SkipDeleted bool
-	SkipTrashed bool
-	reader      io.Reader
+	Fields         []string
+	IncludePath    bool
+	SkipDeleted    bool
+	SkipTrashed    bool
+	SharedDirPaths []string
+	reader         io.Reader
 }
 
 func (filter *changesFilter) Add(key, value string) {
@@ -1910,43 +1871,65 @@ func (filter *changesFilter) Add(key, value string) {
 	}
 }
 
-func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
+func (filter *changesFilter) Reject(change *couchdb.Change) *couchdb.Change {
 	if !filter.SkipDeleted && !filter.SkipTrashed {
-		return
+		return change
 	}
 
-	changes := results.Results[:0]
-	for _, change := range results.Results {
-		if filter.SkipDeleted && change.Deleted {
-			continue
-		}
-		if filter.SkipTrashed {
-			if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
-				continue
-			}
-			if change.Doc.M["type"] == "directory" {
-				path, _ := change.Doc.M["path"].(string)
-				if path == vfs.TrashDirName {
-					continue
-				}
-				if strings.HasPrefix(path, vfs.TrashDirName+"/") {
-					continue
-				}
-			}
-		}
-		changes = append(changes, change)
+	if filter.SkipDeleted && change.Deleted {
+		return nil
 	}
-	results.Results = changes
+	if filter.SkipTrashed {
+		if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
+			return nil
+		}
+		if change.Doc.M["type"] == "directory" {
+			path, _ := change.Doc.M["path"].(string)
+			if path == vfs.TrashDirName {
+				return nil
+			}
+			if strings.HasPrefix(path, vfs.TrashDirName+"/") {
+				return nil
+			}
+		}
+	}
+	return change
 }
 
-type changeMapperFunction func(change *couchdb.Change) *couchdb.Change
+// This transforms the results of the changes feed when the request comes from
+// a shared drive.
+//
+//   - If the change is for the root directory, it is filtered out
+//   - If the change is not within one of the shared directories, it is
+//     transformed into a deletion
+//   - Otherwise the change is left as-is
+func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *couchdb.Change) *couchdb.Change {
+	if len(filter.SharedDirPaths) == 0 {
+		// This is a request from GET /files/_changes: No need to map the changes
+		return change
+	}
+	if change.Deleted {
+		return change
+	}
+
+	if change.DocID == consts.RootDirID {
+		return nil
+	}
+
+	path := change.Doc.M["path"].(string)
+	for _, sharedDirPath := range filter.SharedDirPaths {
+		if strings.HasPrefix(path, sharedDirPath) {
+			return change
+		}
+	}
+	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
+}
 
 // Stream writes the changes to the writer in JSON format, after hydrating.
 func (filter *changesFilter) Stream(
 	w io.Writer,
 	inst *instance.Instance,
 	results *couchdb.ChangesResponse,
-	mapFn changeMapperFunction,
 ) error {
 	first := fmt.Sprintf(`{"last_seq": %q, "pending": %d, "results": [`, results.LastSeq, results.Pending)
 	if _, err := w.Write([]byte(first)); err != nil {
@@ -1963,7 +1946,11 @@ func (filter *changesFilter) Stream(
 				result.Doc.M["path"] = pth
 			}
 		}
-		resultToWrite := mapFn(&result)
+		resultToWrite := filter.SharedDirChange(inst, &result)
+		if resultToWrite == nil {
+			continue
+		}
+		resultToWrite = filter.Reject(resultToWrite)
 		if resultToWrite == nil {
 			continue
 		}
