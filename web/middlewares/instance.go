@@ -284,3 +284,7 @@ func GetInstanceSafe(c echo.Context) (*instance.Instance, bool) {
 	inst, ok := i.(*instance.Instance)
 	return inst, ok
 }
+
+func SetInstance(c echo.Context, inst *instance.Instance) {
+	c.Set("instance", inst)
+}
