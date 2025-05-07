@@ -418,7 +418,7 @@ func (i *Instance) SupportEmailAddress() string {
 			return email
 		}
 	}
-	return "contact@cozycloud.cc"
+	return "support@twake.app"
 }
 
 // TemplateTitle returns the specific-context instance template title (if there
