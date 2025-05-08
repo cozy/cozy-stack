@@ -51,9 +51,6 @@ jobs:
       - name: Install ghostscript
         run: sudo apt install ghostscript
 
-      - name: Change ImageMagick security policy
-        run: sudo rm /etc/ImageMagick-6/policy.xml
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -65,3 +62,19 @@ jobs:
 
       - name: Run tests
         run: go test -p 1 -timeout 5m ./...
+
+      - name: Install build dependencies for ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y build-essential checkinstall libjpeg-dev libpng-dev libtiff-dev libwebp-dev libheif-dev libopenjp2-7-dev libraw-dev libfftw3-dev liblcms2-dev libxml2-dev ghostscript poppler-utils wget
+
+      - name: Download and build ImageMagick from source
+        run: |
+          wget https://imagemagick.org/archive/ImageMagick.tar.gz
+          tar xvzf ImageMagick.tar.gz
+          cd ImageMagick-*
+          ./configure --with-jpeg=yes --with-png=yes --with-tiff=yes --with-webp=yes --with-heic=yes --with-openjp2=yes --with-raw=yes --with-fftw=yes --with-lcms=yes --with-xml=yes
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig /usr/local/lib
+
+      - name: Change ImageMagick security policy
+        run: sudo rm /usr/local/etc/ImageMagick-7/policy.xml || sudo rm /etc/ImageMagick-6/policy.xml || true
