@@ -3643,7 +3643,7 @@ func TestFiles(t *testing.T) {
 	})
 
 	t.Run("DeprecatePreviewAndIcon", func(t *testing.T) {
-		testutils.TODO(t, "2025-05-01", "Remove the deprecated preview and icon for PDF files")
+		testutils.TODO(t, "2026-05-01", "Remove the deprecated preview and icon for PDF files")
 	})
 }
 
