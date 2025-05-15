@@ -481,7 +481,7 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 func checkSetPermissions(set Set, parent *Permission) error {
-	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
+	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth && parent.Type != TypeCLI {
 		return ErrOnlyAppCanCreateSubSet
 	}
 	if !set.IsSubSetOf(parent.Permissions) {
