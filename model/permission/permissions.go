@@ -64,8 +64,8 @@ const (
 	// cozy-to-cozy sharing
 	TypeSharePreview = "share-preview"
 
-	// TypeShareInteract is the value of Permission.Type for reading and
-	// writing a note in a shared folder.
+	// TypeShareInteract is the value of Permission.Type for shared drives. It
+	// is also used for reading and writing a note in a shared folder.
 	TypeShareInteract = "share-interact"
 )
 
