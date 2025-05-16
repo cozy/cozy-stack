@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -47,6 +46,9 @@ type ChatMessage struct {
 const (
 	UserRole      = "user"
 	AssistantRole = "assistant"
+	Temperature   = 0.3   // LLM parameter - Sampling temperature, lower is more deterministic, higher is more creative.
+	TopP          = 1     // LLM parameter - Alternative to temperature, take the tokens with the top p probability.
+	LogProbs      = false // LLM parameter - Whether to return log probabilities of the output tokens.
 )
 
 // DocTypeVersion represents the doctype version. Each time this document
@@ -128,15 +130,27 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	if err != nil {
 		return err
 	}
-	myself, _ := contact.GetMyself(inst)
-	relatives, _ := getRelatives(inst, myself)
+
+	type RAGMessage struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+
+	chat_history := make([]RAGMessage, 0, len(chat.Messages))
+	for _, msg := range chat.Messages {
+		chat_history = append(chat_history, RAGMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
 	payload := map[string]interface{}{
-		"locale":       inst.Locale,
-		"messages":     chat.Messages,
-		"myself":       myself,
-		"relatives":    relatives,
-		"stream":       true,
-		"with_sources": true,
+		"model":       fmt.Sprintf("ragondin-%s", inst.Domain),
+		"messages":    chat_history,
+		"stream":      true,
+		"temperature": Temperature,
+		"top_p":       TopP,
+		"logprobs":    LogProbs,
 	}
 
 	res, err := callRAGQuery(inst, payload)
@@ -152,36 +166,92 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	position := 0
 	var completion string
 	var sources []interface{}
+
+	// Realtime messages are sent to the client during the response stream
+	// When the stream is finished, the whole answer is saved in the CouchDB document
 	err = foreachSSE(res.Body, func(event map[string]interface{}) {
-		switch event["object"] {
-		case "delta":
-			event["position"] = position
-			position++
-			content, _ := event["content"].(string)
-			completion += content
-			delta := couchdb.JSONDoc{
-				Type: consts.ChatEvents,
-				M:    event,
+		// See https://platform.openai.com/docs/api-reference/chat-streaming/streaming#chat-streaming
+		if event["object"] == "chat.completion.chunk" {
+			choices, ok := event["choices"].([]interface{})
+			if !ok || len(choices) < 1 {
+				return
 			}
-			delta.SetID(msg.ID)
-			go realtime.GetHub().Publish(inst, realtime.EventCreate, &delta, nil)
-		case "sources":
-			sources, _ = event["content"].([]interface{})
-			doc := couchdb.JSONDoc{
-				Type: consts.ChatEvents,
-				M:    event,
+			choice := choices[0].(map[string]interface{}) // Only one choice is possible for now
+			var doc map[string]interface{}
+
+			if delta, ok := choice["delta"].(map[string]interface{}); ok {
+				// The content is progressively reveived through a delta stream
+				content, ok := delta["content"].(string)
+				if !ok {
+					return
+				}
+				doc = map[string]interface{}{
+					"doc": map[string]interface{}{
+						"_id":      msg.ID,
+						"object":   "delta",
+						"content":  content,
+						"position": position,
+					},
+				}
+				completion += content
+				position++
+			} else if reason, ok := choice["finish_reason"].(string); ok && reason != "" {
+				// The response stream is finished
+				doc = map[string]interface{}{
+					"doc": map[string]interface{}{
+						"_id":    msg.ID,
+						"object": "done",
+					},
+				}
 			}
-			doc.SetID(msg.ID)
-			go realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
-		default: // done, generated, etc.
-			doc := couchdb.JSONDoc{
+			payload := couchdb.JSONDoc{
 				Type: consts.ChatEvents,
-				M:    event,
+				M:    doc,
 			}
-			doc.SetID(msg.ID)
-			go realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
+			payload.SetID(msg.ID)
+			go realtime.GetHub().Publish(inst, realtime.EventCreate, &payload, nil)
+
+			// Sources are sent in another realtime message
+			if event["extra"] != nil {
+				extra, ok := event["extra"].(map[string]interface{})
+				if !ok {
+					return
+				}
+				sourcesResp, ok := extra["sources"].([]interface{})
+				if !ok {
+					return
+				}
+				for _, s := range sourcesResp {
+					obj, ok := s.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					docID, ok := obj["doc_id"].(string)
+					if !ok {
+						continue
+					}
+					sources = append(sources, map[string]string{
+						"id":      docID,
+						"doctype": "io.cozy.files",
+					})
+				}
+
+				sourceDoc := map[string]interface{}{
+					"doc": map[string]interface{}{
+						"_id":     msg.ID,
+						"object":  "sources",
+						"content": sources,
+					},
+				}
+				sourcePayload := couchdb.JSONDoc{
+					Type: consts.ChatEvents,
+					M:    sourceDoc,
+				}
+				go realtime.GetHub().Publish(inst, realtime.EventCreate, &sourcePayload, nil)
+			}
 		}
 	})
+
 	if err != nil {
 		return err
 	}
@@ -198,40 +268,6 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	return couchdb.UpdateDoc(inst, &chat)
 }
 
-func getRelatives(inst *instance.Instance, myself *contact.Contact) ([]*contact.Contact, error) {
-	if myself == nil {
-		return nil, errors.New("no myself contact")
-	}
-	var ids []string
-	rels, _ := myself.Get("relationships").(map[string]interface{})
-	if len(rels) == 0 {
-		return nil, nil
-	}
-	related, _ := rels["related"].(map[string]interface{})
-	if len(related) == 0 {
-		return nil, nil
-	}
-	data, _ := related["data"].([]interface{})
-	for _, item := range data {
-		item, _ := item.(map[string]interface{})
-		if len(item) > 0 {
-			id, _ := item["_id"].(string)
-			if len(id) > 0 {
-				ids = append(ids, id)
-			}
-		}
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	var relatives []*contact.Contact
-	req := &couchdb.AllDocsRequest{Keys: ids}
-	if err := couchdb.GetAllDocs(inst, consts.Contacts, req, &relatives); err != nil {
-		return nil, err
-	}
-	return relatives, nil
-}
-
 func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*http.Response, error) {
 	ragServer := inst.RAGServer()
 	if ragServer.URL == "" {
@@ -241,7 +277,8 @@ func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*htt
 	if err != nil {
 		return nil, err
 	}
-	u.Path = fmt.Sprintf("/chat/%s", inst.Domain)
+
+	u.Path = "v1/chat/completions"
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -265,7 +302,7 @@ func foreachSSE(r io.Reader, fn func(event map[string]interface{})) error {
 		if err != nil {
 			return err
 		}
-		if bytes.Equal(bs, []byte("\n")) {
+		if bytes.Equal(bs, []byte("\n")) || bytes.Equal(bs, []byte("\r\n")) {
 			continue
 		}
 		if bytes.HasPrefix(bs, []byte(":")) {
@@ -276,12 +313,17 @@ func foreachSSE(r io.Reader, fn func(event map[string]interface{})) error {
 			return errors.New("invalid SSE response")
 		}
 		if string(parts[0]) != "data" {
-			return errors.New("invalid SSE response")
+			continue
+		}
+		data := bytes.TrimSpace(parts[1])
+		if string(data) == "[DONE]" {
+			break
 		}
 		var event map[string]interface{}
-		if err := json.Unmarshal(bytes.TrimSpace(parts[1]), &event); err != nil {
+		if err := json.Unmarshal(data, &event); err != nil {
 			return err
 		}
 		fn(event)
 	}
+	return nil
 }

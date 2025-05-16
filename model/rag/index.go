@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -85,8 +86,9 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 	if err != nil {
 		return err
 	}
-	u.Path = fmt.Sprintf("/docs/%s/%s/%s", inst.Domain, doctype, change.DocID)
+	u.Path = fmt.Sprintf("/indexer/partition/%s/file/%s", inst.Domain, change.DocID)
 	if change.Deleted || change.Doc.Get("trashed") == true {
+		// Doc deletion
 		req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
 		if err != nil {
 			return err
@@ -102,6 +104,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		}
 	} else {
 		md5sum := fmt.Sprintf("%x", change.Doc.Get("md5sum"))
+		u.Path = fmt.Sprintf("/partition/%s/file/%s", inst.Domain, change.DocID)
 		req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 		if err != nil {
 			return err
@@ -116,15 +119,26 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		// When the content has not changed, there is no need to regenerate
 		// an embedding.
 		needIndexation := false
+		isNewFile := false
 		switch res.StatusCode {
 		case 200:
-			var metadata map[string]interface{}
-			if err = json.NewDecoder(res.Body).Decode(&metadata); err != nil {
+			var response map[string]interface{}
+			if err = json.NewDecoder(res.Body).Decode(&response); err != nil {
 				return err
 			}
-			needIndexation = metadata["md5sum"] != md5sum
+			metadata, ok := response["metadata"].(map[string]interface{})
+			if !ok {
+				needIndexation = true
+			}
+			md5sumFromRAG, ok := metadata["md5sum"].(string)
+			if !ok {
+				needIndexation = true
+			}
+			needIndexation = md5sumFromRAG != md5sum
+
 		case 404:
 			needIndexation = true
+			isNewFile = true
 		default:
 			return fmt.Errorf("GET status code: %d", res.StatusCode)
 		}
@@ -137,6 +151,11 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		dirID, _ := change.Doc.Get("dir_id").(string)
 		name, _ := change.Doc.Get("name").(string)
 		mime, _ := change.Doc.Get("mime").(string)
+		metadataRaw, ok := change.Doc.Get("metadata").(map[string]interface{})
+		datetime := ""
+		if ok {
+			datetime, _ = metadataRaw["datetime"].(string)
+		}
 		internalID, _ := change.Doc.Get("internal_vfs_id").(string)
 		u.RawQuery = url.Values{
 			"dir_id": []string{dirID},
@@ -174,19 +193,57 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			defer f.Close()
 			content = f
 		}
-		req, err = http.NewRequest(http.MethodPut, u.String(), content)
+
+		var requestBody bytes.Buffer
+		writer := multipart.NewWriter(&requestBody)
+		part, err := writer.CreateFormFile("file", name)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(part, content)
+		if err != nil {
+			return err
+		}
+		// No need to add filename here, it is already set through the file form
+		meta := map[string]string{
+			"md5sum":   md5sum,
+			"datetime": datetime,
+			"doctype":  doctype,
+		}
+		ragMetadata, err := json.Marshal(meta)
+		if err != nil {
+			return err
+		}
+		_ = writer.WriteField("metadata", string(ragMetadata))
+		err = writer.Close()
+		if err != nil {
+			return err
+		}
+
+		u.Path = fmt.Sprintf("/indexer/partition/%s/file/%s", inst.Domain, change.DocID)
+		if isNewFile {
+			req, err = http.NewRequest(http.MethodPost, u.String(), &requestBody)
+		} else {
+			req, err = http.NewRequest(http.MethodPut, u.String(), &requestBody)
+		}
 		if err != nil {
 			return err
 		}
 		req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
-		req.Header.Add("Content-Type", mime)
+		req.Header.Add("Content-Type", writer.FormDataContentType())
+
 		res, err = http.DefaultClient.Do(req)
 		if err != nil {
 			return err
 		}
+		var response map[string]interface{}
+		if err = json.NewDecoder(res.Body).Decode(&response); err != nil {
+			return err
+		}
 		defer res.Body.Close()
+
 		if res.StatusCode >= 500 {
-			return fmt.Errorf("PUT status code: %d", res.StatusCode)
+			return fmt.Errorf("Status code: %d", res.StatusCode)
 		}
 	}
 	return nil
