@@ -330,26 +330,26 @@ func UploadMetadataHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &m, nil)
 }
 
-// FileCopyHandler handles POST requests on /files/:file-id/copy
-//
-// It is used to duplicate the given file and its metadata except for
-// relationships.
-func FileCopyHandler(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
+// Copy a single file from an instance to itself using parameters from the echo Context:
+// - url param: `file-id`: surce file's ID
+// - url query param: `DirID`: optional destination folder's ID
+// - url query param: `Name`: optional destination file name
+func CopyFile(c echo.Context, inst *instance.Instance) error {
+	fileID := c.Param("file-id")
+	destinationDirID := c.QueryParam("DirID")
+	destinationName := c.QueryParam("Name")
+
 	fs := inst.VFS()
 
-	fileID := c.Param("file-id")
 	olddoc, err := inst.VFS().FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	newDirID := c.QueryParam("DirID")
-	copyName := c.QueryParam("Name")
+	copyName := destinationName
 	if copyName == "" {
 		copyName = fileCopyName(inst, olddoc.DocName)
 	}
-	newdoc := vfs.CreateFileDocCopy(olddoc, newDirID, copyName)
+	newdoc := vfs.CreateFileDocCopy(olddoc, destinationDirID, copyName)
 
 	err = checkPerm(c, permission.POST, nil, newdoc)
 	if err != nil {
@@ -384,6 +384,14 @@ func FileCopyHandler(c echo.Context) error {
 	}
 
 	return FileData(c, http.StatusCreated, newdoc, false, nil)
+}
+
+// FileCopyHandler handles POST requests on /files/:file-id/copy
+//
+// It is used to duplicate the given file and its metadata except for
+// relationships.
+func FileCopyHandler(c echo.Context) error {
+	return CopyFile(c, middlewares.GetInstance(c))
 }
 
 func AddDescription(c echo.Context) error {
@@ -736,7 +744,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	}
 
 	if dir != nil {
-		return dirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir)
 	}
 	return FileData(c, http.StatusOK, file, false, nil)
 }
@@ -817,7 +825,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return dirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir)
 	}
 	return FileData(c, http.StatusOK, file, true, nil)
 }
@@ -844,20 +852,20 @@ func GetChildrenHandler(c echo.Context) error {
 	return dirDataList(c, http.StatusOK, dir)
 }
 
-type apiDiskSize struct {
+type ApiDiskSize struct {
 	DocID string `json:"id,omitempty"`
 	Size  int64  `json:"size,string"`
 }
 
-func (d *apiDiskSize) ID() string                             { return d.DocID }
-func (d *apiDiskSize) Rev() string                            { return "" }
-func (d *apiDiskSize) DocType() string                        { return consts.DirSizes }
-func (d *apiDiskSize) Clone() couchdb.Doc                     { return d }
-func (d *apiDiskSize) SetID(id string)                        { d.DocID = id }
-func (d *apiDiskSize) SetRev(_ string)                        {}
-func (d *apiDiskSize) Relationships() jsonapi.RelationshipMap { return nil }
-func (d *apiDiskSize) Included() []jsonapi.Object             { return nil }
-func (d *apiDiskSize) Links() *jsonapi.LinksList              { return nil }
+func (d *ApiDiskSize) ID() string                             { return d.DocID }
+func (d *ApiDiskSize) Rev() string                            { return "" }
+func (d *ApiDiskSize) DocType() string                        { return consts.DirSizes }
+func (d *ApiDiskSize) Clone() couchdb.Doc                     { return d }
+func (d *ApiDiskSize) SetID(id string)                        { d.DocID = id }
+func (d *ApiDiskSize) SetRev(_ string)                        {}
+func (d *ApiDiskSize) Relationships() jsonapi.RelationshipMap { return nil }
+func (d *ApiDiskSize) Included() []jsonapi.Object             { return nil }
+func (d *ApiDiskSize) Links() *jsonapi.LinksList              { return nil }
 
 // GetDirSize returns the size of a directory (the sum of the size of the files
 // in this directory, including those in subdirectories).
@@ -878,7 +886,7 @@ func GetDirSize(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	result := apiDiskSize{DocID: fileID, Size: size}
+	result := ApiDiskSize{DocID: fileID, Size: size}
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
@@ -899,7 +907,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return dirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir)
 	}
 	return FileData(c, http.StatusOK, file, true, nil)
 }
@@ -1117,14 +1125,10 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	return err
 }
 
-func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
-	instance := middlewares.GetInstance(c)
-
-	doc, err := instance.VFS().FileByPath(path)
-	if err != nil {
-		return WrapVfsError(err)
-	}
-
+// SendFileFromDoc sends the file content to the client.
+// It does permissions, inlining, CSP rules, and PDF single page serving
+func SendFileFromDoc(instance *instance.Instance, c echo.Context, doc *vfs.FileDoc, checkPermission bool) error {
+	var err error
 	if checkPermission {
 		err = middlewares.Allow(c, permission.GET, doc)
 		if err != nil {
@@ -1160,6 +1164,16 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	return nil
 }
 
+func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
+	instance := middlewares.GetInstance(c)
+
+	doc, err := instance.VFS().FileByPath(path)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return SendFileFromDoc(instance, c, doc, checkPermission)
+}
+
 func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
 	if config.GetConfig().CSPDisabled {
 		return
@@ -1174,6 +1188,10 @@ func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
 // aiming at downloading a file given its path. It serves the file in in
 // attachment mode.
 func ReadFileContentFromPathHandler(c echo.Context) error {
+	return sendFileFromPath(c, c.QueryParam("Path"), true)
+}
+
+func ReadFileContentFromSharingFileID(c echo.Context, fileID string) error {
 	return sendFileFromPath(c, c.QueryParam("Path"), true)
 }
 
@@ -1379,7 +1397,7 @@ func TrashHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return dirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1431,7 +1449,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return dirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1720,12 +1738,28 @@ var allowedChangesParams = map[string]bool{
 	"skip_trashed":      false,
 }
 
-// ChangesFeed is the handler for GET /files/_changes. It is similar to the
+// ChangesFeed is the handler for GET /files/_changes, and indirectly,
+// GET /sharings/drives/:sharingID/_changes. It is similar to the
 // changes feed of CouchDB with some additional options, like skip_trashed.
-func ChangesFeed(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
-		return err
+//
+// sharedDirIDs is an optional list of directory IDs that are used to
+// filter the changes feed. It is used when the changes feed is called
+// from a sharing drive. The changes feed will only return files that are
+// below one of the directories in this list (it is plural because a
+// sharing might link to multiple directories in the data model,
+// results are an union). If empty, no special filtering is done,
+// everything is returned. Otherwise, options like `include_file_path` and
+// `include_docs` are forced to true.
+// if sharedDirIDs is not empty, it is the responsibility of
+// the caller to check for the right permissions for all directories
+// (anything outside those directories should only be deletions with the
+// document ID as only information)
+func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDirIDs []string) error {
+	if len(sharedDirIDs) == 0 {
+		//TODO: WARNING: check security here
+		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+			return err
+		}
 	}
 
 	// Drop a clear error for parameters not supported by stack
@@ -1755,6 +1789,24 @@ func ChangesFeed(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
 	}
 
+	if len(sharedDirIDs) > 0 {
+		// This is a request from GET /sharings/drives/:sharingID/_changes
+		// Find the paths of directories that are linked to by the sharing
+		for _, dirID := range sharedDirIDs {
+			dir, err := inst.VFS().DirByID(dirID)
+			if err != nil {
+				return err
+			}
+			// Dont consider `/aa/b` as a file in the folder `/a`
+			path := utils.EnsureHasSuffix(dir.Fullpath, "/")
+			filter.SharedDirPaths = append(filter.SharedDirPaths, path)
+		}
+		// These are required to check the documents are bellow the shared
+		// directories
+		filter.IncludePath = true
+		includeDocs = true
+	}
+
 	// Use the VFS lock for the files to avoid sending the changed feed while
 	// the VFS is moving a directory.
 	mu := config.Lock().ReadWrite(inst, "vfs")
@@ -1782,7 +1834,6 @@ func ChangesFeed(c echo.Context) error {
 		}
 	}
 
-	filter.Reject(results)
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	c.Response().WriteHeader(http.StatusOK)
 	if err := filter.Stream(c.Response(), inst, results); err != nil {
@@ -1792,12 +1843,19 @@ func ChangesFeed(c echo.Context) error {
 	return nil
 }
 
+func ChangesFeedForFiles(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	return ChangesFeed(c, inst, nil)
+}
+
 type changesFilter struct {
-	Fields      []string
-	IncludePath bool
-	SkipDeleted bool
-	SkipTrashed bool
-	reader      io.Reader
+	Fields         []string
+	IncludePath    bool
+	SkipDeleted    bool
+	SkipTrashed    bool
+	SharedDirPaths []string
+	reader         io.Reader
 }
 
 func (filter *changesFilter) Add(key, value string) {
@@ -1813,35 +1871,61 @@ func (filter *changesFilter) Add(key, value string) {
 	}
 }
 
-func (filter *changesFilter) Reject(results *couchdb.ChangesResponse) {
+func (filter *changesFilter) Reject(change *couchdb.Change) *couchdb.Change {
 	if !filter.SkipDeleted && !filter.SkipTrashed {
-		return
+		return change
 	}
 
-	changes := results.Results[:0]
-	for _, change := range results.Results {
-		if filter.SkipDeleted && change.Deleted {
-			continue
-		}
-		if filter.SkipTrashed {
-			if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
-				continue
-			}
-			if change.Doc.M["type"] == "directory" {
-				path, _ := change.Doc.M["path"].(string)
-				if path == vfs.TrashDirName {
-					continue
-				}
-				if strings.HasPrefix(path, vfs.TrashDirName+"/") {
-					continue
-				}
-			}
-		}
-		changes = append(changes, change)
+	if filter.SkipDeleted && change.Deleted {
+		return nil
 	}
-	results.Results = changes
+	if filter.SkipTrashed {
+		if change.Doc.M["type"] == "file" && change.Doc.M["trashed"] == true {
+			return nil
+		}
+		if change.Doc.M["type"] == "directory" {
+			path, _ := change.Doc.M["path"].(string)
+			if path == vfs.TrashDirName {
+				return nil
+			}
+			if strings.HasPrefix(path, vfs.TrashDirName+"/") {
+				return nil
+			}
+		}
+	}
+	return change
 }
 
+// This transforms the results of the changes feed when the request comes from
+// a shared drive.
+//
+//   - If the change is for the root directory, it is filtered out
+//   - If the change is not within one of the shared directories, it is
+//     transformed into a deletion
+//   - Otherwise the change is left as-is
+func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *couchdb.Change) *couchdb.Change {
+	if len(filter.SharedDirPaths) == 0 {
+		// This is a request from GET /files/_changes: No need to map the changes
+		return change
+	}
+	if change.Deleted {
+		return change
+	}
+
+	if change.DocID == consts.RootDirID {
+		return nil
+	}
+
+	path := change.Doc.M["path"].(string)
+	for _, sharedDirPath := range filter.SharedDirPaths {
+		if strings.HasPrefix(path, sharedDirPath) {
+			return change
+		}
+	}
+	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
+}
+
+// Stream writes the changes to the writer in JSON format, after hydrating.
 func (filter *changesFilter) Stream(
 	w io.Writer,
 	inst *instance.Instance,
@@ -1851,9 +1935,9 @@ func (filter *changesFilter) Stream(
 	if _, err := w.Write([]byte(first)); err != nil {
 		return err
 	}
-
+	alreadyWroteAnElement := false
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
-	for i, result := range results.Results {
+	for _, result := range results.Results {
 		if filter.IncludePath && result.Doc.M != nil && result.Doc.M["type"] == "file" {
 			dirID, _ := result.Doc.M["dir_id"].(string)
 			name, _ := result.Doc.M["name"].(string)
@@ -1862,12 +1946,24 @@ func (filter *changesFilter) Stream(
 				result.Doc.M["path"] = pth
 			}
 		}
-		buf, err := json.Marshal(&result)
+		resultToWrite := filter.SharedDirChange(inst, &result)
+		if resultToWrite == nil {
+			continue
+		}
+		resultToWrite = filter.Reject(resultToWrite)
+		if resultToWrite == nil {
+			continue
+		}
+		buf, err := json.Marshal(resultToWrite)
 		if err != nil {
 			return err
 		}
-		if i != len(results.Results)-1 {
-			buf = append(buf, ',')
+		if alreadyWroteAnElement {
+			if _, err := w.Write([]byte(",")); err != nil {
+				return err
+			}
+		} else {
+			alreadyWroteAnElement = true
 		}
 		if _, err := w.Write(buf); err != nil {
 			return err
@@ -1980,7 +2076,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/_all_docs", GetAllDocs)
 	router.POST("/_find", FindFilesMango)
-	router.GET("/_changes", ChangesFeed)
+	router.GET("/_changes", ChangesFeedForFiles)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
 
