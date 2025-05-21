@@ -186,6 +186,18 @@ func GetByID(db prefixer.Prefixer, id string) (*Permission, error) {
 	return perm, nil
 }
 
+// GetPermissionByIDIncludingExpired is the same as GetByID, but it doesn't
+// check if the permission has expired. It can be useful when we want to patch
+// this permission, as we want to allow patching/deleting an expired
+// permission.
+func GetPermissionByIDIncludingExpired(db prefixer.Prefixer, id string) (*Permission, error) {
+	perm := &Permission{}
+	if err := couchdb.GetDoc(db, consts.Permissions, id, perm); err != nil {
+		return nil, err
+	}
+	return perm, nil
+}
+
 // GetForRegisterToken create a non-persisted permissions doc with hard coded
 // registerToken permissions set
 func GetForRegisterToken() *Permission {
