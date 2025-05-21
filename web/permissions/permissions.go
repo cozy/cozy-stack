@@ -461,7 +461,7 @@ func revokePermission(c echo.Context) error {
 		return err
 	}
 
-	toRevoke, err := permission.GetByID(instance, c.Param("permdocid"))
+	toRevoke, err := permission.GetPermissionByIDIncludingExpired(instance, c.Param("permdocid"))
 	if err != nil {
 		return err
 	}
@@ -485,7 +485,7 @@ func Routes(router *echo.Group) {
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.GET("/:permdocid", showPermissions)
-	router.PATCH("/:permdocid", patchPermission(permission.GetByID, "permdocid"))
+	router.PATCH("/:permdocid", patchPermission(permission.GetPermissionByIDIncludingExpired, "permdocid"))
 	router.DELETE("/:permdocid", revokePermission)
 
 	router.PATCH("/apps/:slug", patchPermission(permission.GetForWebapp, "slug"))
