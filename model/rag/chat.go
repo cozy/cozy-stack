@@ -36,11 +36,11 @@ type ChatConversation struct {
 }
 
 type ChatMessage struct {
-	ID        string        `json:"id"`
-	Role      string        `json:"role"`
-	Content   string        `json:"content"`
-	Sources   []interface{} `json:"sources,omitempty"`
-	CreatedAt time.Time     `json:"createdAt"`
+	ID        string    `json:"id"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	Sources   []Source  `json:"sources,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 const (
@@ -75,6 +75,15 @@ var _ jsonapi.Object = (*ChatConversation)(nil)
 type QueryMessage struct {
 	Task  string `json:"task"`
 	DocID string `json:"doc_id"`
+}
+
+type Source struct {
+	ID       string `json:"id"`
+	DocType  string `json:"doctype"`
+	Filename string `json:"filename"`
+	FileURL  string `json:"fileUrl"`
+	ChunkURL string `json:"chunkUrl"`
+	Page     int    `json:"page"`
 }
 
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
@@ -124,6 +133,40 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 	return &chat, nil
 }
 
+func getSources(event map[string]interface{}) ([]Source, error) {
+	extraStr, ok := event["extra"].(string)
+	if !ok {
+		return nil, nil
+	}
+
+	var extra map[string]interface{}
+	err := json.Unmarshal([]byte(extraStr), &extra)
+	if err != nil {
+		return nil, err
+	}
+	sourcesRaw, ok := extra["sources"].([]interface{})
+	if !ok {
+		return nil, nil
+	}
+	var sources []Source
+
+	for _, s := range sourcesRaw {
+		src, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		sources = append(sources, Source{
+			ID:       src["file_id"].(string),
+			DocType:  "io.cozy.files",
+			Filename: src["filename"].(string),
+			Page:     int(src["page"].(float64)),
+			FileURL:  src["file_url"].(string),
+			ChunkURL: src["chunk_url"].(string),
+		})
+	}
+	return sources, nil
+}
+
 func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) error {
 	var chat ChatConversation
 	err := couchdb.GetDoc(inst, consts.ChatConversations, query.DocID, &chat)
@@ -165,7 +208,8 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	msg := chat.Messages[len(chat.Messages)-1]
 	position := 0
 	var completion string
-	var sources []interface{}
+	var sources []Source
+	var sourcePayload couchdb.JSONDoc
 
 	// Realtime messages are sent to the client during the response stream
 	// When the stream is finished, the whole answer is saved in the CouchDB document
@@ -179,76 +223,54 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 			choice := choices[0].(map[string]interface{}) // Only one choice is possible for now
 			var doc map[string]interface{}
 
-			if delta, ok := choice["delta"].(map[string]interface{}); ok {
+			if reason, ok := choice["finish_reason"].(string); ok && reason != "" {
+				// The response stream is finished
+				doc = map[string]interface{}{
+					"_id":    msg.ID,
+					"object": "done",
+				}
+			} else if delta, ok := choice["delta"].(map[string]interface{}); ok {
 				// The content is progressively reveived through a delta stream
 				content, ok := delta["content"].(string)
 				if !ok {
 					return
 				}
 				doc = map[string]interface{}{
-					"doc": map[string]interface{}{
-						"_id":      msg.ID,
-						"object":   "delta",
-						"content":  content,
-						"position": position,
-					},
+					"_id":      msg.ID,
+					"object":   "delta",
+					"content":  content,
+					"position": position,
 				}
 				completion += content
 				position++
-			} else if reason, ok := choice["finish_reason"].(string); ok && reason != "" {
-				// The response stream is finished
-				doc = map[string]interface{}{
-					"doc": map[string]interface{}{
-						"_id":    msg.ID,
-						"object": "done",
-					},
+
+				if event["extra"].(string) != "" && sources == nil {
+					// Sources are included in all delta messages, but should be sent once
+					sources, err = getSources(event)
+					if err != nil {
+						return
+					}
+					if sources != nil {
+						sourceDoc := map[string]interface{}{
+							"_id":     msg.ID,
+							"object":  "sources",
+							"content": sources,
+						}
+						sourcePayload = couchdb.JSONDoc{
+							Type: consts.ChatEvents,
+							M:    sourceDoc,
+						}
+						go realtime.GetHub().Publish(inst, realtime.EventCreate, &sourcePayload, nil)
+					}
 				}
 			}
+
 			payload := couchdb.JSONDoc{
 				Type: consts.ChatEvents,
 				M:    doc,
 			}
 			payload.SetID(msg.ID)
 			go realtime.GetHub().Publish(inst, realtime.EventCreate, &payload, nil)
-
-			// Sources are sent in another realtime message
-			if event["extra"] != nil {
-				extra, ok := event["extra"].(map[string]interface{})
-				if !ok {
-					return
-				}
-				sourcesResp, ok := extra["sources"].([]interface{})
-				if !ok {
-					return
-				}
-				for _, s := range sourcesResp {
-					obj, ok := s.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					docID, ok := obj["doc_id"].(string)
-					if !ok {
-						continue
-					}
-					sources = append(sources, map[string]string{
-						"id":      docID,
-						"doctype": "io.cozy.files",
-					})
-				}
-
-				sourceDoc := map[string]interface{}{
-					"doc": map[string]interface{}{
-						"_id":     msg.ID,
-						"object":  "sources",
-						"content": sources,
-					},
-				}
-				sourcePayload := couchdb.JSONDoc{
-					Type: consts.ChatEvents,
-					M:    sourceDoc,
-				}
-				go realtime.GetHub().Publish(inst, realtime.EventCreate, &sourcePayload, nil)
-			}
 		}
 	})
 
