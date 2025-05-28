@@ -69,7 +69,7 @@ func CreateNote(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusCreated, file, false, nil)
+	return files.FileData(c, http.StatusCreated, file, false, nil, nil)
 }
 
 // ListNotes is the API handler for GET /notes. It returns the list of the
@@ -94,7 +94,7 @@ func ListNotes(c echo.Context) error {
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
 	objs := make([]jsonapi.Object, len(docs))
 	for i, doc := range docs {
-		f := files.NewFile(doc, inst)
+		f := files.NewFile(doc, inst, nil)
 		f.IncludePath(fp)
 		objs[i] = f
 	}
@@ -121,7 +121,7 @@ func GetNote(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusOK, file, false, nil)
+	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 func GetNoteText(c echo.Context) error {
@@ -192,7 +192,7 @@ func GetSteps(c echo.Context) error {
 		if err != nil {
 			return wrapError(err)
 		}
-		return files.FileData(c, http.StatusPreconditionFailed, file, false, nil)
+		return files.FileData(c, http.StatusPreconditionFailed, file, false, nil, nil)
 	}
 	if err != nil {
 		return wrapError(err)
@@ -239,7 +239,7 @@ func PatchNote(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusOK, file, false, nil)
+	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 // ChangeTitle is the API handler for PUT /notes/:id/title. It updates the
@@ -267,7 +267,7 @@ func ChangeTitle(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusOK, file, false, nil)
+	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 // PutTelepointer is the API handler for PUT /notes/:id/telepointer. It updates
@@ -380,7 +380,7 @@ func UpdateNoteSchema(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusOK, file, false, nil)
+	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 // UploadImage is the API handler for POST /notes/:id/images. It uploads an

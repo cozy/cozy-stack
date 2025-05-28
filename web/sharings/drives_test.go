@@ -368,6 +368,7 @@ func TestSharedDrives(t *testing.T) {
 		attrs.Value("type").String().IsEqual("directory")
 		attrs.Value("name").String().IsEqual("Meetings")
 		attrs.Value("path").String().IsEqual("/Product team/Meetings")
+		attrs.Value("driveId").String().IsEqual(sharingID)
 
 		contents := data.Path("$.relationships.contents.data").Array()
 		contents.Length().IsEqual(1)
@@ -441,13 +442,16 @@ func TestSharedDrives(t *testing.T) {
 			eB := httpexpect.Default(t, tsB.URL)
 
 			// 1. Create copy without name
-			eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
+			attrs := eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
 				WithHeader("Authorization", "Bearer "+bettyAppToken).
 				WithBytes([]byte("")).
 				Expect().Status(201).
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object().
-				Path("$.data.attributes.name").String().IsEqual("Checklist (copy).txt")
+				Path("$.data.attributes").Object()
+
+			attrs.Value("name").String().IsEqual("Checklist (copy).txt")
+			attrs.Value("driveId").String().IsEqual(sharingID)
 
 			// 2. Create copy with same name
 			eB.POST("/sharings/drives/"+sharingID+"/"+checklistID+"/copy").
@@ -500,6 +504,7 @@ func TestSharedDrives(t *testing.T) {
 				return change.Object().Value(field).String().Raw() == value
 			}
 		}
+
 		expectInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) *httpexpect.Object {
 			return changesFeedResults.Find(makeDocFieldMatcherFn("id", value)).Object()
 		}
@@ -535,6 +540,8 @@ func TestSharedDrives(t *testing.T) {
 				expectDeletionInChangesByDocId(changes, outsideOfShareID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenTrashedID)
+				expectInChangesByDocId(changes, meetingsID).Path("$.doc.driveId").String().IsEqual(sharingID)
+				expectInChangesByDocId(changes, checklistID).Path("$.doc.driveId").String().IsEqual(sharingID)
 			})
 		})
 
