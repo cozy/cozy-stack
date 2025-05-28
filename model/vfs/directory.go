@@ -164,6 +164,15 @@ func (d *DirDoc) RemoveNotSynchronizedOn(refs ...couchdb.DocReference) {
 	d.NotSynchronizedOn = references
 }
 
+func (d *DirDoc) SharingID() string {
+	for _, ref := range d.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			return ref.ID
+		}
+	}
+	return ""
+}
+
 // NewDirDoc is the DirDoc constructor. The given name is validated.
 func NewDirDoc(index Indexer, name, dirID string, tags []string) (*DirDoc, error) {
 	if dirID == "" {
