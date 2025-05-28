@@ -131,43 +131,35 @@ func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error
 	return files.CopyFile(c, inst)
 }
 
-// From the provided drive sharing, find the linked directories, and check VFS
-// permission for the user in the context. If any fail, return an error.
-func resolveSharingToPermittedDirIDs(c echo.Context, inst *instance.Instance, s *sharing.Sharing) ([]string, error) {
-	fs := inst.VFS()
-	var sharedDirIDs []string
-	for _, rule := range s.Rules {
-		if rule.DocType != consts.Files || (rule.Selector != "" && rule.Selector != "id") {
-			continue
-		}
-		for _, dirID := range rule.Values {
-			dir, err := fs.DirByID(dirID)
-			if err != nil {
-				return nil, files.WrapVfsError(err)
-			}
-			// TODO: this is all the security there is for this endpoint, please triple check and remove this comment
-			if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
-				return nil, err
-			}
-		}
-		sharedDirIDs = append(sharedDirIDs, rule.Values...)
-	}
-
-	if len(sharedDirIDs) == 0 {
-		return nil, errors.New("sharing has no matching directories")
-	}
-	return sharedDirIDs, nil
-}
-
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
 	// TODO: consider nested sharings
-	sharedDirIDs, err := resolveSharingToPermittedDirIDs(c, inst, s)
+	sharedDir, err := getSharingDir(c, inst, s)
 	if err != nil {
 		return err
 	}
-	return files.ChangesFeed(c, inst, sharedDirIDs)
+	return files.ChangesFeed(c, inst, sharedDir)
+}
+
+// Find the directory linked to the drive sharing and return it if the user
+// requesting it has the proper permissions.
+func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+	rule := s.FirstFilesRule()
+	if rule != nil {
+		if rule.Mime != "" {
+			inst.Logger().WithNamespace("drive-proxy").
+				Warnf("getSharingDir called for only one file: %s", s.SID)
+			return nil, jsonapi.BadRequest(errors.New("not a shared drive"))
+		}
+		dir, _ := fs.DirByID(rule.Values[0])
+		if dir != nil {
+			return dir, nil
+		}
+	}
+
+	return nil, jsonapi.NotFound(errors.New("shared drive not found"))
 }
 
 // drivesRoutes sets the routing for the shared drives

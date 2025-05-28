@@ -1754,8 +1754,8 @@ var allowedChangesParams = map[string]bool{
 // the caller to check for the right permissions for all directories
 // (anything outside those directories should only be deletions with the
 // document ID as only information)
-func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDirIDs []string) error {
-	if len(sharedDirIDs) == 0 {
+func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc) error {
+	if sharedDir == nil {
 		//TODO: WARNING: check security here
 		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 			return err
@@ -1789,20 +1789,9 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDirIDs []string)
 		return jsonapi.Errorf(http.StatusBadRequest, "Invalid options: include_docs should be set to true")
 	}
 
-	if len(sharedDirIDs) > 0 {
-		// This is a request from GET /sharings/drives/:sharingID/_changes
-		// Find the paths of directories that are linked to by the sharing
-		for _, dirID := range sharedDirIDs {
-			dir, err := inst.VFS().DirByID(dirID)
-			if err != nil {
-				return err
-			}
-			// Dont consider `/aa/b` as a file in the folder `/a`
-			path := utils.EnsureHasSuffix(dir.Fullpath, "/")
-			filter.SharedDirPaths = append(filter.SharedDirPaths, path)
-		}
-		// These are required to check the documents are bellow the shared
-		// directories
+	if sharedDir != nil {
+		filter.SharedDir = sharedDir
+		// These are required to check if documents are in the shared directory
 		filter.IncludePath = true
 		includeDocs = true
 	}
@@ -1850,12 +1839,12 @@ func ChangesFeedForFiles(c echo.Context) error {
 }
 
 type changesFilter struct {
-	Fields         []string
-	IncludePath    bool
-	SkipDeleted    bool
-	SkipTrashed    bool
-	SharedDirPaths []string
-	reader         io.Reader
+	Fields      []string
+	IncludePath bool
+	SkipDeleted bool
+	SkipTrashed bool
+	SharedDir   *vfs.DirDoc
+	reader      io.Reader
 }
 
 func (filter *changesFilter) Add(key, value string) {
@@ -1904,7 +1893,7 @@ func (filter *changesFilter) Reject(change *couchdb.Change) *couchdb.Change {
 //     transformed into a deletion
 //   - Otherwise the change is left as-is
 func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *couchdb.Change) *couchdb.Change {
-	if len(filter.SharedDirPaths) == 0 {
+	if filter.SharedDir == nil {
 		// This is a request from GET /files/_changes: No need to map the changes
 		return change
 	}
@@ -1917,10 +1906,9 @@ func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *co
 	}
 
 	path := change.Doc.M["path"].(string)
-	for _, sharedDirPath := range filter.SharedDirPaths {
-		if strings.HasPrefix(path, sharedDirPath) {
-			return change
-		}
+	sharedDirPath := utils.EnsureHasSuffix(filter.SharedDir.Fullpath, "/")
+	if strings.HasPrefix(path, sharedDirPath) {
+		return change
 	}
 	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
 }
