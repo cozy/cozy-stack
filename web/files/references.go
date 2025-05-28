@@ -32,10 +32,10 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 	}
 	d, f := dof.Refine()
 	if d != nil {
-		return newDir(d), nil
+		return NewDir(d, nil), nil
 	}
 
-	return NewFile(f, i), nil
+	return NewFile(f, i, nil), nil
 }
 
 // ListReferencesHandler list all files referenced by a doc

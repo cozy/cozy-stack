@@ -132,7 +132,7 @@ func Create(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	return files.FileData(c, http.StatusCreated, fileDoc, false, nil)
+	return files.FileData(c, http.StatusCreated, fileDoc, false, nil, nil)
 }
 
 // Get is the API handler for GET /shortcuts/:id. It follows the link or send a

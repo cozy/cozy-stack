@@ -43,7 +43,7 @@ func ListSharedDrives(c echo.Context) error {
 }
 
 // Load either a DirDoc or a FileDoc from the given `file-id` param. The function also checks permissions
-func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, *vfs.FileDoc, error) {
+func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
 		return nil, nil, files.WrapVfsError(err)
@@ -65,8 +65,8 @@ func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.
 }
 
 // Same as `loadDirOrFile` but intolerant of files, responds 422s
-func loadDirFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
-	dir, file, err := loadDirOrFileFromParam(c, inst, s)
+func loadDirFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDoc, error) {
+	dir, file, err := loadDirOrFileFromParam(c, inst)
 	if file != nil {
 		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a directory"))
 	}
@@ -74,8 +74,8 @@ func loadDirFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 }
 
 // Same as `loadDirOrFile` but intolerant of directories, responds 422s
-func loadFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.FileDoc, error) {
-	dir, file, err := loadDirOrFileFromParam(c, inst, s)
+func loadFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.FileDoc, error) {
+	dir, file, err := loadDirOrFileFromParam(c, inst)
 	if dir != nil {
 		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a file"))
 	}
@@ -83,27 +83,28 @@ func loadFileFromParam(c echo.Context, inst *instance.Instance, s *sharing.Shari
 }
 
 func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	_, _, err := loadDirOrFileFromParam(c, inst, s)
+	_, _, err := loadDirOrFileFromParam(c, inst)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// TODO: reuse files.ReadMetadataFromIDHandler?!
 func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	dir, file, err := loadDirOrFileFromParam(c, inst, s)
+	dir, file, err := loadDirOrFileFromParam(c, inst)
 	if err != nil {
 		return err
 	}
 	if dir != nil {
-		return files.DirData(c, http.StatusOK, dir)
+		return files.DirData(c, http.StatusOK, dir, s)
 	}
-	return files.FileData(c, http.StatusOK, file, true, nil)
+	return files.FileData(c, http.StatusOK, file, true, nil, s)
 }
 
 func DownloadFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	//TODO: CSP ?
-	file, err := loadFileFromParam(c, inst, s)
+	file, err := loadFileFromParam(c, inst)
 	if err != nil {
 		return err
 	}
@@ -113,7 +114,7 @@ func DownloadFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) e
 
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
-	dir, err := loadDirFromParam(c, inst, s)
+	dir, err := loadDirFromParam(c, inst)
 	if err != nil {
 		return err
 	}
@@ -128,7 +129,7 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 }
 
 func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.CopyFile(c, inst)
+	return files.CopyFile(c, inst, s)
 }
 
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {

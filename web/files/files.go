@@ -70,7 +70,7 @@ func SharedDrivesCreationHandler(c echo.Context) error {
 	if err != nil {
 		return wrapVfsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, newDir(doc), nil)
+	return jsonapi.Data(c, http.StatusOK, NewDir(doc, nil), nil)
 }
 
 // CreationHandler handle all POST requests on /files/:file-id
@@ -130,7 +130,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 				Infof("Cannot import note: %s", err)
 			return nil, WrapVfsError(err)
 		}
-		return NewFile(doc, inst), nil
+		return NewFile(doc, inst, nil), nil
 	}
 
 	file, err := fs.CreateFile(doc, nil)
@@ -151,7 +151,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	if err != nil {
 		return nil, wrapVfsError(err)
 	}
-	return NewFile(doc, inst), nil
+	return NewFile(doc, inst, nil), nil
 }
 
 func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
@@ -169,7 +169,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		if err != nil {
 			return nil, err
 		}
-		return newDir(doc), nil
+		return NewDir(doc, nil), nil
 	}
 
 	dirID := c.Param("file-id")
@@ -229,7 +229,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		return nil, err
 	}
 
-	return newDir(doc), nil
+	return NewDir(doc, nil), nil
 }
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
@@ -287,7 +287,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 				Infof("Cannot import note: %s", err)
 			return WrapVfsError(err)
 		}
-		return FileData(c, http.StatusOK, newdoc, true, nil)
+		return FileData(c, http.StatusOK, newdoc, true, nil, nil)
 	}
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
@@ -301,7 +301,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	return FileData(c, http.StatusOK, newdoc, true, nil)
+	return FileData(c, http.StatusOK, newdoc, true, nil, nil)
 }
 
 // UploadMetadataHandler accepts a metadata objet and persist it, so that it
@@ -333,7 +333,7 @@ func UploadMetadataHandler(c echo.Context) error {
 // - url param: `file-id`: surce file's ID
 // - url query param: `DirID`: optional destination folder's ID
 // - url query param: `Name`: optional destination file name
-func CopyFile(c echo.Context, inst *instance.Instance) error {
+func CopyFile(c echo.Context, inst *instance.Instance, sharedDrive *sharing.Sharing) error {
 	fileID := c.Param("file-id")
 	destinationDirID := c.QueryParam("DirID")
 	destinationName := c.QueryParam("Name")
@@ -382,7 +382,7 @@ func CopyFile(c echo.Context, inst *instance.Instance) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusCreated, newdoc, false, nil)
+	return FileData(c, http.StatusCreated, newdoc, false, nil, sharedDrive)
 }
 
 // FileCopyHandler handles POST requests on /files/:file-id/copy
@@ -390,7 +390,7 @@ func CopyFile(c echo.Context, inst *instance.Instance) error {
 // It is used to duplicate the given file and its metadata except for
 // relationships.
 func FileCopyHandler(c echo.Context) error {
-	return CopyFile(c, middlewares.GetInstance(c))
+	return CopyFile(c, middlewares.GetInstance(c), nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
@@ -598,7 +598,7 @@ func CopyVersionHandler(c echo.Context) error {
 			err = WrapVfsError(err)
 			return
 		}
-		err = FileData(c, http.StatusOK, newdoc, true, nil)
+		err = FileData(c, http.StatusOK, newdoc, true, nil, nil)
 	}()
 
 	_, err = io.Copy(file, content)
@@ -725,9 +725,9 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, false, nil)
+	return FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
@@ -806,9 +806,9 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil, nil)
 }
 
 // GetChildrenHandler returns a list of children of a folder
@@ -888,9 +888,9 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -984,7 +984,7 @@ func RevertFileVersion(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusOK, doc, true, nil)
+	return FileData(c, http.StatusOK, doc, true, nil, nil)
 }
 
 // HeadDirOrFile handles HEAD requests on directory or file to check their
@@ -1277,7 +1277,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/downloads/" + secret + "/" + filename,
 	}
 
-	return FileData(c, http.StatusOK, doc, false, links)
+	return FileData(c, http.StatusOK, doc, false, links, nil)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
@@ -1378,7 +1378,7 @@ func TrashHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return DirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc, nil)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1386,7 +1386,7 @@ func TrashHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return FileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -1430,7 +1430,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return DirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc, nil)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1438,7 +1438,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return FileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash
@@ -1551,11 +1551,12 @@ func GetAllDocs(c echo.Context) error {
 		if result.ID() == consts.TrashDirID {
 			continue
 		}
+
 		d, f := result.Refine()
 		if d != nil {
-			out = append(out, newDir(d))
+			out = append(out, NewDir(d, nil))
 		} else {
-			file := NewFile(f, inst)
+			file := NewFile(f, inst, nil)
 			file.IncludePath(fp)
 			out = append(out, file)
 		}
@@ -1673,7 +1674,7 @@ func FindFilesMango(c echo.Context) error {
 			if ok {
 				out[i] = newFindDir(d, fields)
 			} else {
-				out[i] = newDir(d)
+				out[i] = NewDir(d, nil)
 			}
 		} else {
 			if ok {
@@ -1686,7 +1687,7 @@ func FindFilesMango(c echo.Context) error {
 				}
 				out[i] = file
 			} else {
-				file := NewFile(f, instance)
+				file := NewFile(f, instance, nil)
 				if includePath {
 					file.IncludePath(fp)
 				}
@@ -1885,6 +1886,7 @@ func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *co
 	path := change.Doc.M["path"].(string)
 	sharedDirPath := utils.EnsureHasSuffix(filter.SharedDir.Fullpath, "/")
 	if strings.HasPrefix(path, sharedDirPath) {
+		change.Doc.M["driveId"] = filter.SharedDir.SharingID()
 		return change
 	}
 	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)

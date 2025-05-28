@@ -368,6 +368,7 @@ func TestSharedDrives(t *testing.T) {
 		attrs.Value("type").String().IsEqual("directory")
 		attrs.Value("name").String().IsEqual("Meetings")
 		attrs.Value("path").String().IsEqual("/Product team/Meetings")
+		attrs.Value("driveId").String().IsEqual(sharingID)
 
 		contents := data.Path("$.relationships.contents.data").Array()
 		contents.Length().IsEqual(1)
@@ -455,11 +456,17 @@ func TestSharedDrives(t *testing.T) {
 			checklistCloneData.Value("type").IsEqual("io.cozy.files")
 
 			// GET request on cloned file should have an identical file name
-			eA.GET("/sharings/drives/"+sharingID+"/"+checklistCloneId).
+			obj := eA.GET("/sharings/drives/"+sharingID+"/"+checklistCloneId).
 				WithHeader("Authorization", "Bearer "+acmeAppToken).
 				Expect().Status(200).
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object().Path("$.data.attributes.name").String().IsEqual(name).Raw()
+				Object()
+
+			obj.Path("$.data.attributes.name").String().IsEqual(name)
+			data := obj.Value("data").Object()
+			data.Value("id").String().IsEqual(checklistCloneId)
+			attrs := data.Value("attributes").Object()
+			attrs.Value("driveId").String().IsEqual(sharingID)
 		})
 	})
 
@@ -492,6 +499,7 @@ func TestSharedDrives(t *testing.T) {
 				return change.Object().Value(field).String().Raw() == value
 			}
 		}
+
 		expectInChangesByDocId := func(changesFeedResults *httpexpect.Array, value string) *httpexpect.Object {
 			return changesFeedResults.Find(makeDocFieldMatcherFn("id", value)).Object()
 		}
@@ -527,6 +535,8 @@ func TestSharedDrives(t *testing.T) {
 				expectDeletionInChangesByDocId(changes, outsideOfShareID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenDeletedID)
 				expectDeletionInChangesByDocId(changes, otherSharedFileThenTrashedID)
+				expectInChangesByDocId(changes, meetingsID).Path("$.doc.driveId").String().IsEqual(sharingID)
+				expectInChangesByDocId(changes, checklistID).Path("$.doc.driveId").String().IsEqual(sharingID)
 			})
 		})
 

@@ -70,7 +70,7 @@ func FileByKey(c echo.Context) error {
 	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
 		return err
 	}
-	doc := files.NewFile(file, inst)
+	doc := files.NewFile(file, inst, nil)
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
