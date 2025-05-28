@@ -157,11 +157,6 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			datetime, _ = metadataRaw["datetime"].(string)
 		}
 		internalID, _ := change.Doc.Get("internal_vfs_id").(string)
-		u.RawQuery = url.Values{
-			"dir_id": []string{dirID},
-			"name":   []string{name},
-			"md5sum": []string{md5sum},
-		}.Encode()
 		var content io.Reader
 		if mime == consts.NoteMimeType {
 			metadata, _ := change.Doc.Get("metadata").(map[string]interface{})
@@ -177,6 +172,8 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 				return err
 			}
 			content = bytes.NewReader(md)
+			// Replace .cozy-note extension so the RAG can interpret it as markdown
+			name = strings.TrimSuffix(name, consts.NoteExtension) + consts.MarkdownExtension
 		} else {
 			fs := inst.VFS()
 			fileDoc := &vfs.FileDoc{
@@ -219,6 +216,11 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		if err != nil {
 			return err
 		}
+		u.RawQuery = url.Values{
+			"dir_id": []string{dirID},
+			"name":   []string{name},
+			"md5sum": []string{md5sum},
+		}.Encode()
 
 		u.Path = fmt.Sprintf("/indexer/partition/%s/file/%s", inst.Domain, change.DocID)
 		if isNewFile {

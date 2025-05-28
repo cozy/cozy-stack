@@ -28,6 +28,10 @@ const (
 	ShortcutMimeType = "application/internet-shortcut"
 	// NoteMimeType is the mime-type for the .cozy-note files.
 	NoteMimeType = "text/vnd.cozy.note+markdown"
+	// NoteExtension is the extension for the .cozy-note files.
+	NoteExtension = ".cozy-note"
+	// MarkdownExtension is the extension for the markdown files.
+	MarkdownExtension = ".md"
 )
 
 const (
