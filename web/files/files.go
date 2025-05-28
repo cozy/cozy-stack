@@ -1908,6 +1908,7 @@ func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *co
 	path := change.Doc.M["path"].(string)
 	sharedDirPath := utils.EnsureHasSuffix(filter.SharedDir.Fullpath, "/")
 	if strings.HasPrefix(path, sharedDirPath) {
+		change.Doc.M["driveId"] = filter.SharedDir.SharingID()
 		return change
 	}
 	return couchdb.MakeChangeForDeletion(change.DocID, change.Doc.M["_rev"].(string), change.Seq)
