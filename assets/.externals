@@ -11,8 +11,8 @@
 #
 
 name    ./css/cozy-bs.min.css
-url     https://unpkg.com/cozy-bootstrap@1.12.0/dist/cozy-bs.min.css
-sha256  78e6c68641d3d9bc73b03dac3272afc2de627eca0a18ee0e66b160e37c887ce4
+url     https://unpkg.com/cozy-bootstrap@1.16.0/dist/cozy-bs.min.css
+sha256  363581b9153bc977174eb554fda47f7161a9595d2cdce78123390ef302aceab5
 
 name    ./js/cozy-client.min.js
 url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.14.2/dist/cozy-client.min.js
@@ -36,7 +36,7 @@ sha256  2892f2052cbe2019b931d9669070b36c7fead375f4915213e68da8b201f55b25
 
 name    ./js/piwik.js
 url     https://matomo.cozycloud.cc/piwik.js
-sha256  d7fc375178c93a2fc15fd888e30170eedf4ef3d04497e7f951ab7bfe0c921693
+sha256  b39abd9035f703b76dfed940898d572b9864f676eb1912a9142f0639dca6b2ce
 
 name    ./js/cozy-mjml.js
 url     https://unpkg.com/cozy-mjml@0.21.0/dist/main.js

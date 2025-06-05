@@ -13,7 +13,7 @@
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
-  <body class="cirrus theme-inverted">
+  <body class="cirrus">
     {{if .MagicLink}}
     <form id="magic-link-form" method="POST" action="/auth/magic_link" class="d-contents">
     {{else}}
@@ -48,14 +48,14 @@
           {{if .FranceConnect}}
           <div class="alert alert-primary text-center mb-4 mb-md-5">
             <p class="small w-100">
-              FranceConnect est la solution proposée par l’État pour sécuriser et
+              FranceConnect est la solution proposée par l'État pour sécuriser et
               simplifier la connexion à vos services en ligne.
             </p>
             <a href="/oidc/franceconnect" class="d-inline-block mb-2">
-              <img src="{{asset .Domain "/images/franceconnect.svg"}}" alt="S’identifier avec FranceConnect" />
+              <img src="{{asset .Domain "/images/franceconnect.svg"}}" alt="S'identifier avec FranceConnect" />
             </a>
             <p class="w-100 small mb-0">
-              <a href="https://franceconnect.gouv.fr/">Qu’est-ce que FranceConnect ?</a>
+              <a href="https://franceconnect.gouv.fr/">Qu'est-ce que FranceConnect ?</a>
             </p>
           </div>
           <div class="horizontal-separator mb-4 mb-md-5">ou</div>

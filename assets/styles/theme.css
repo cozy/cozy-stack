@@ -1,1 +1,19 @@
 /* An empty theme served by default */
+
+
+/* Override background only for share password page */
+.share-password-page .wrapper {
+  background-color: #F3F6F9;
+  max-width: 40rem;
+}
+.share-password-page .illustration {
+  max-width: 48px;
+}
+.bg-gray-100 {
+  background-color: #F3F6F9;
+}
+.component-box {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 27px 24px 47px;
+}

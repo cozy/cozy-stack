@@ -12,7 +12,7 @@
     {{.Favicon}}
     <link rel="preload" href="/assets/icons/check.svg" as="image">
   </head>
-  <body class="cirrus theme-inverted">
+  <body class="cirrus">
     <form id="new-pass-form" method="POST" action="{{.Action}}" class="d-contents" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}" data-pass-error="{{t "Passphrase Pass Error"}}">
       <input type="hidden" id="from" name="from" value="{{.From}}" />
       <input type="hidden" id="iterations" name="iterations" value="{{.Iterations}}" />

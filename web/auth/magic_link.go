@@ -36,7 +36,7 @@ func sendMagicLink(c echo.Context) error {
 		"Locale":       inst.Locale,
 		"Title":        inst.TemplateTitle(),
 		"Favicon":      middlewares.Favicon(inst),
-		"Inverted":     true,
+		"Inverted":     false,
 		"Illustration": "/images/mail-sent.svg",
 		"ErrorTitle":   "Magic link has been sent Title",
 		"Error":        "Magic link has been sent Body",
