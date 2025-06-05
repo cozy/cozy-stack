@@ -595,7 +595,7 @@ func resendActivationMail(c echo.Context) error {
 		"Locale":       inst.Locale,
 		"Title":        inst.TemplateTitle(),
 		"Favicon":      middlewares.Favicon(inst),
-		"Inverted":     true,
+		"Inverted":     false,
 		"Illustration": "/images/mail-sent.svg",
 		"ErrorTitle":   "Onboarding Resend activation Title",
 		"Error":        "Onboarding Resend activation Body",
