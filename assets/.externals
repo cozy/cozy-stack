@@ -11,8 +11,8 @@
 #
 
 name    ./css/cozy-bs.min.css
-url     https://unpkg.com/cozy-bootstrap@1.16.0/dist/cozy-bs.min.css
-sha256  363581b9153bc977174eb554fda47f7161a9595d2cdce78123390ef302aceab5
+url     https://unpkg.com/cozy-bootstrap@1.17.0/dist/cozy-bs.min.css
+sha256  134dc19bb03dfdc9674b27a31d863af1746bee06d4a3067597a48b7b7f2788c2
 
 name    ./js/cozy-client.min.js
 url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.14.2/dist/cozy-client.min.js
