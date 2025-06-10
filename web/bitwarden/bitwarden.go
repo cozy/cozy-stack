@@ -270,7 +270,6 @@ type AccessTokenReponse struct {
 
 func getInitialCredentials(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithNamespace("bitwarden")
 	pass := []byte(c.FormValue("password"))
 
 	// Authentication
@@ -285,6 +284,12 @@ func getInitialCredentials(c echo.Context) error {
 			return nil
 		}
 	}
+
+	return RegisterClientAndReturnTokens(c, inst)
+}
+
+func RegisterClientAndReturnTokens(c echo.Context, inst *instance.Instance) error {
+	log := inst.Logger().WithNamespace("bitwarden")
 
 	// Register the client
 	kind := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
