@@ -96,11 +96,7 @@ func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 		return err
 	}
 	if dir != nil {
-		sharedDir, err := getSharingDir(c, inst, s)
-		if err != nil {
-			return err
-		}
-		return files.DirData(c, http.StatusOK, dir, sharedDir)
+		return files.DirData(c, http.StatusOK, dir, s)
 	}
 	return files.FileData(c, http.StatusOK, file, true, nil)
 }

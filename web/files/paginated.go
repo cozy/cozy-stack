@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -123,7 +124,7 @@ func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.Dir
 	return count, cursor, children, nil
 }
 
-func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDir *vfs.DirDoc) error {
+func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
@@ -213,8 +214,8 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDir *vfs.Dir
 	}
 
 	var driveId string
-	if sharedDir != nil {
-		driveId = sharedDir.ID()
+	if sharedDrive != nil {
+		driveId = sharedDrive.ID()
 	}
 
 	d := &dir{
@@ -320,7 +321,15 @@ func (d *dir) DocType() string                        { return d.doc.DocType() }
 func (d *dir) Clone() couchdb.Doc                     { cloned := *d; return &cloned }
 func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
 func (d *dir) Included() []jsonapi.Object             { return d.included }
-func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
+func (d *dir) MarshalJSON() ([]byte, error) {
+	docWithDriveId := struct {
+		*vfs.DirDoc
+		DriveId string `json:"driveId"`
+	}{
+		d.doc, d.driveId,
+	}
+	return json.Marshal(docWithDriveId)
+}
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
 }

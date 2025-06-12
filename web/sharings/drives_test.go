@@ -34,6 +34,7 @@ func TestSharedDrives(t *testing.T) {
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
 		otherSharedFileThenDeletedID string
+	var checklistName = "Checklist.txt"
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
@@ -134,7 +135,7 @@ func TestSharedDrives(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 		checklistID = eA.POST("/files/"+meetingsID).
-			WithQuery("Name", "Checklist.txt").
+			WithQuery("Name", checklistName).
 			WithQuery("Type", "file").
 			WithHeader("Content-Type", "text/plain").
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
@@ -367,6 +368,7 @@ func TestSharedDrives(t *testing.T) {
 		attrs.Value("type").String().IsEqual("directory")
 		attrs.Value("name").String().IsEqual("Meetings")
 		attrs.Value("path").String().IsEqual("/Product team/Meetings")
+		attrs.Value("driveId").String().IsEqual(sharingID)
 
 		contents := data.Path("$.relationships.contents.data").Array()
 		contents.Length().IsEqual(1)
@@ -531,7 +533,7 @@ func TestSharedDrives(t *testing.T) {
 		t.Run("DownloadFile", func(t *testing.T) {
 			// Request to GET /sharings/drives/:sharing-id/_changes using the given client and token
 			downloadFile := func(client clientInfo, sharingID string, fileID string) *httpexpect.Response {
-				return client.client.GET("/sharings/drives/"+sharingID+"/"+fileID+"/download").
+				return client.client.GET("/sharings/drives/"+sharingID+"/download/"+fileID).
 					WithHeader("Authorization", "Bearer "+client.token).
 					Expect()
 			}
