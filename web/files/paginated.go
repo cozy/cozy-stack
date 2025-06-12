@@ -32,6 +32,7 @@ type dir struct {
 	doc      *vfs.DirDoc
 	rel      jsonapi.RelationshipMap
 	included []jsonapi.Object
+	driveId  string
 }
 
 type file struct {
@@ -44,6 +45,7 @@ type file struct {
 	jsonDoc     *fileJSON
 	thumbSecret string
 	includePath bool
+	driveId     string
 }
 
 type fileJSON struct {
@@ -121,7 +123,7 @@ func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.Dir
 	return count, cursor, children, nil
 }
 
-func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
+func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDir *vfs.DirDoc) error {
 	instance := middlewares.GetInstance(c)
 	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
@@ -210,10 +212,16 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		links.Next = "/files/" + doc.DocID + "?" + params.Encode()
 	}
 
+	var driveId string
+	if sharedDir != nil {
+		driveId = sharedDir.ID()
+	}
+
 	d := &dir{
 		doc:      doc,
 		rel:      rel,
 		included: included,
+		driveId:  driveId,
 	}
 
 	return jsonapi.Data(c, statusCode, d, &links)
@@ -255,7 +263,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
 func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil, nil, &fileJSON{}, "", false}
+	return &file{doc, i, nil, nil, &fileJSON{}, "", false, ""}
 }
 
 // FileData returns a jsonapi representation of the given file.

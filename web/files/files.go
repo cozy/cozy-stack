@@ -744,7 +744,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
 	return FileData(c, http.StatusOK, file, false, nil)
 }
@@ -825,7 +825,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
 	return FileData(c, http.StatusOK, file, true, nil)
 }
@@ -907,7 +907,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir)
+		return DirData(c, http.StatusOK, dir, nil)
 	}
 	return FileData(c, http.StatusOK, file, true, nil)
 }
@@ -1397,7 +1397,7 @@ func TrashHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return DirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc, nil)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1449,7 +1449,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return DirData(c, http.StatusOK, doc)
+		return DirData(c, http.StatusOK, doc, nil)
 	}
 
 	updateFileCozyMetadata(c, file, false)
