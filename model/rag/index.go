@@ -174,9 +174,6 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			content = bytes.NewReader(md)
 			// See https://github.com/OpenLLM-France/RAGondin/issues/88
 			name = strings.TrimSuffix(name, consts.NoteExtension) + consts.MarkdownExtension
-		} else if strings.HasSuffix(name, consts.DocsExtension) {
-			// See https://github.com/OpenLLM-France/RAGondin/issues/88
-			name = strings.TrimSuffix(name, consts.DocsExtension) + consts.MarkdownExtension
 		} else {
 			fs := inst.VFS()
 			fileDoc := &vfs.FileDoc{
@@ -192,6 +189,10 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			}
 			defer f.Close()
 			content = f
+			if strings.HasSuffix(name, consts.DocsExtension) {
+				// See https://github.com/OpenLLM-France/RAGondin/issues/88
+				name = strings.TrimSuffix(name, consts.DocsExtension) + consts.MarkdownExtension
+			}
 		}
 
 		var requestBody bytes.Buffer
