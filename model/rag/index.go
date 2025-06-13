@@ -172,8 +172,11 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 				return err
 			}
 			content = bytes.NewReader(md)
-			// Replace .cozy-note extension so the RAG can interpret it as markdown
+			// See https://github.com/OpenLLM-France/RAGondin/issues/88
 			name = strings.TrimSuffix(name, consts.NoteExtension) + consts.MarkdownExtension
+		} else if strings.HasSuffix(name, consts.DocsExtension) {
+			// See https://github.com/OpenLLM-France/RAGondin/issues/88
+			name = strings.TrimSuffix(name, consts.DocsExtension) + consts.MarkdownExtension
 		} else {
 			fs := inst.VFS()
 			fileDoc := &vfs.FileDoc{

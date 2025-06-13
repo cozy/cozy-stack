@@ -30,6 +30,8 @@ const (
 	NoteMimeType = "text/vnd.cozy.note+markdown"
 	// NoteExtension is the extension for the .cozy-note files.
 	NoteExtension = ".cozy-note"
+	// DocsExtension is the extension for the .docs-note files.
+	DocsExtension = ".docs-note"
 	// MarkdownExtension is the extension for the markdown files.
 	MarkdownExtension = ".md"
 )
