@@ -36,6 +36,11 @@ type dir struct {
 	driveId  string
 }
 
+type dirJSON struct {
+	*vfs.DirDoc
+	DriveId string `json:"driveId"`
+}
+
 type file struct {
 	doc        *vfs.FileDoc
 	instance   *instance.Instance
@@ -56,6 +61,8 @@ type fileJSON struct {
 	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
 	// Include the path if asked for
 	Fullpath string `json:"path,omitempty"`
+	// Shared drive identifier if exist
+	DriveId string `json:"driveId,omitempty"`
 }
 
 func newDir(doc *vfs.DirDoc) *dir {
@@ -268,7 +275,7 @@ func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
 }
 
 // FileData returns a jsonapi representation of the given file.
-func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {
+func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 	f := NewFile(doc, instance)
 	if withVersions {
@@ -285,6 +292,11 @@ func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions boo
 			}
 		}
 	}
+
+	if sharedDrive != nil {
+		f.driveId = sharedDrive.ID()
+	}
+
 	return jsonapi.Data(c, statusCode, f, links)
 }
 
@@ -322,13 +334,9 @@ func (d *dir) Clone() couchdb.Doc                     { cloned := *d; return &cl
 func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
 func (d *dir) Included() []jsonapi.Object             { return d.included }
 func (d *dir) MarshalJSON() ([]byte, error) {
-	docWithDriveId := struct {
-		*vfs.DirDoc
-		DriveId string `json:"driveId"`
-	}{
+	return json.Marshal(dirJSON{
 		d.doc, d.driveId,
-	}
-	return json.Marshal(docWithDriveId)
+	})
 }
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
@@ -389,6 +397,7 @@ func (f *file) MarshalJSON() ([]byte, error) {
 	if f.includePath {
 		f.jsonDoc.Fullpath, _ = f.doc.Path(nil)
 	}
+	f.jsonDoc.DriveId = f.driveId
 	res, err := json.Marshal(f.jsonDoc)
 	return res, err
 }

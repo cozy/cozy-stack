@@ -288,7 +288,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 				Infof("Cannot import note: %s", err)
 			return WrapVfsError(err)
 		}
-		return FileData(c, http.StatusOK, newdoc, true, nil)
+		return FileData(c, http.StatusOK, newdoc, true, nil, nil)
 	}
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
@@ -302,7 +302,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	return FileData(c, http.StatusOK, newdoc, true, nil)
+	return FileData(c, http.StatusOK, newdoc, true, nil, nil)
 }
 
 // UploadMetadataHandler accepts a metadata objet and persist it, so that it
@@ -334,7 +334,7 @@ func UploadMetadataHandler(c echo.Context) error {
 // - url param: `file-id`: surce file's ID
 // - url query param: `DirID`: optional destination folder's ID
 // - url query param: `Name`: optional destination file name
-func CopyFile(c echo.Context, inst *instance.Instance) error {
+func CopyFile(c echo.Context, inst *instance.Instance, sharedDrive *sharing.Sharing) error {
 	fileID := c.Param("file-id")
 	destinationDirID := c.QueryParam("DirID")
 	destinationName := c.QueryParam("Name")
@@ -373,6 +373,8 @@ func CopyFile(c echo.Context, inst *instance.Instance) error {
 	newdoc.ResetFullpath()
 	updateFileCozyMetadata(c, newdoc, true)
 
+	//TODO[ASH] if the file is a part of shared drive, crete a sharing for the new file
+
 	if olddoc.Mime == consts.NoteMimeType {
 		// We need a special copy for notes because of their images
 		err = note.CopyFile(inst, olddoc, newdoc)
@@ -383,7 +385,7 @@ func CopyFile(c echo.Context, inst *instance.Instance) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusCreated, newdoc, false, nil)
+	return FileData(c, http.StatusCreated, newdoc, false, nil, sharedDrive)
 }
 
 // FileCopyHandler handles POST requests on /files/:file-id/copy
@@ -391,7 +393,7 @@ func CopyFile(c echo.Context, inst *instance.Instance) error {
 // It is used to duplicate the given file and its metadata except for
 // relationships.
 func FileCopyHandler(c echo.Context) error {
-	return CopyFile(c, middlewares.GetInstance(c))
+	return CopyFile(c, middlewares.GetInstance(c), nil)
 }
 
 func AddDescription(c echo.Context) error {
@@ -409,7 +411,7 @@ func AddDescription(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	return FileData(c, http.StatusOK, newdoc, false, nil)
+	return FileData(c, http.StatusOK, newdoc, false, nil, nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
@@ -617,7 +619,7 @@ func CopyVersionHandler(c echo.Context) error {
 			err = WrapVfsError(err)
 			return
 		}
-		err = FileData(c, http.StatusOK, newdoc, true, nil)
+		err = FileData(c, http.StatusOK, newdoc, true, nil, nil)
 	}()
 
 	_, err = io.Copy(file, content)
@@ -746,7 +748,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	if dir != nil {
 		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, false, nil)
+	return FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
@@ -827,7 +829,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	if dir != nil {
 		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil, nil)
 }
 
 // GetChildrenHandler returns a list of children of a folder
@@ -909,7 +911,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	if dir != nil {
 		return DirData(c, http.StatusOK, dir, nil)
 	}
-	return FileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -1003,7 +1005,7 @@ func RevertFileVersion(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	return FileData(c, http.StatusOK, doc, true, nil)
+	return FileData(c, http.StatusOK, doc, true, nil, nil)
 }
 
 // HeadDirOrFile handles HEAD requests on directory or file to check their
@@ -1296,7 +1298,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/downloads/" + secret + "/" + filename,
 	}
 
-	return FileData(c, http.StatusOK, doc, false, links)
+	return FileData(c, http.StatusOK, doc, false, links, nil)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
@@ -1405,7 +1407,7 @@ func TrashHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return FileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -1457,7 +1459,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return FileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash
@@ -2055,7 +2057,9 @@ func Routes(router *echo.Group) {
 	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
 
+	//TODO[ASH] the next method proxy candidate
 	router.HEAD("/download/:file-id/:version-id", ReadFileContentFromVersion)
+	//TODO[ASH] the next method proxy candidate
 	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
 	router.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)

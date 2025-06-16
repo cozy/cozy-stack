@@ -98,7 +98,7 @@ func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 	if dir != nil {
 		return files.DirData(c, http.StatusOK, dir, s)
 	}
-	return files.FileData(c, http.StatusOK, file, true, nil)
+	return files.FileData(c, http.StatusOK, file, true, nil, s)
 }
 
 func DownloadFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
@@ -128,7 +128,7 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 }
 
 func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.CopyFile(c, inst)
+	return files.CopyFile(c, inst, s)
 }
 
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
