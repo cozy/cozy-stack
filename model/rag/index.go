@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/note"
@@ -72,6 +73,30 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) erro
 func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Change) error {
 	if strings.HasPrefix(change.DocID, "_design/") {
 		return nil
+	}
+	flags, err := feature.GetFlags(inst)
+	class, _ := change.Doc.Get("class").(string)
+
+	if class == consts.ImageClass {
+		// Index images only if flag allows it
+		allowImage, ok := flags.M["rag.index.image.enabled"].(bool)
+		if !ok || !allowImage {
+			return nil
+		}
+	}
+	if class == consts.VideoClass {
+		// Index videos only if flag allows it
+		allowVideo, ok := flags.M["rag.index.video.enabled"].(bool)
+		if !ok || !allowVideo {
+			return nil
+		}
+	}
+	if class == consts.AudioClass {
+		// Index audio only if flag allows it
+		allowAudio, ok := flags.M["rag.index.audio.enabled"].(bool)
+		if !ok || !allowAudio {
+			return nil
+		}
 	}
 	if change.Doc.Get("type") == consts.DirType {
 		return nil
@@ -144,6 +169,7 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			"md5sum": []string{md5sum},
 		}.Encode()
 		var content io.Reader
+
 		if mime == consts.NoteMimeType {
 			metadata, _ := change.Doc.Get("metadata").(map[string]interface{})
 			schema, _ := metadata["schema"].(map[string]interface{})

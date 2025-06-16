@@ -28,6 +28,18 @@ const (
 	ShortcutMimeType = "application/internet-shortcut"
 	// NoteMimeType is the mime-type for the .cozy-note files.
 	NoteMimeType = "text/vnd.cozy.note+markdown"
+	// NoteExtension is the extension for the .cozy-note files.
+	NoteExtension = ".cozy-note"
+	// DocsExtension is the extension for the .docs-note files.
+	DocsExtension = ".docs-note"
+	// MarkdownExtension is the extension for the markdown files.
+	MarkdownExtension = ".md"
+	// ImageClass is the class for the image files
+	ImageClass = "image"
+	// VideoClass is the class for the video files
+	VideoClass = "video"
+	// AudioClass is the class for the audio files
+	AudioClass = "audio"
 )
 
 const (
