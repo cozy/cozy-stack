@@ -34,6 +34,12 @@ const (
 	DocsExtension = ".docs-note"
 	// MarkdownExtension is the extension for the markdown files.
 	MarkdownExtension = ".md"
+	// ImageClass is the class for the image files
+	ImageClass = "image"
+	// VideoClass is the class for the video files
+	VideoClass = "video"
+	// AudioClass is the class for the audio files
+	AudioClass = "audio"
 )
 
 const (
