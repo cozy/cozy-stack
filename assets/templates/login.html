@@ -26,15 +26,6 @@
       <main class="wrapper">
 
         <header class="wrapper-top">
-          {{if not .MagicLink}}
-          {{if not .BottomNavBar}}
-          <p class="banner caption small-md fst-italic">
-            <span class="icon icon-answer"></span>
-            <strong>{{t "Login Password best practice"}}</strong>
-            {{t "Login Password tip"}}
-          </p>
-          {{end}}
-          {{end}}
           <a href="https://cozy.io/" class="btn p-2 d-sm-none">
             <img src="{{asset .Domain "/images/logo-dark.svg"}}" alt="Cozy Cloud" class="logo" />
           </a>
@@ -107,13 +98,6 @@
           <button id="login-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
             {{t "Login Submit"}}
           </button>
-          {{if .BottomNavBar}}
-          <p class="banner caption mt-n1 mb-0 small-md fst-italic fullbleed">
-            <span class="icon icon-answer reverse-y align-bottom"></span>
-            <strong>{{t "Login Password best practice"}}</strong>
-            {{t "Login Password tip"}}
-          </p>
-          {{end}}
           {{end}}
         </footer>
 
