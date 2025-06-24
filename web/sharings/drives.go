@@ -146,6 +146,14 @@ func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing
 	return files.Create(c, s)
 }
 
+func DestroyFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.DestroyFileHandler(c)
+}
+
+func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.Trash(c, s)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -180,6 +188,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/:file-id/copy", proxy(CopyFile))
 	drive.POST("/", proxy(CreationHandler))
 	drive.POST("/:file-id", proxy(CreationHandler))
+	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler))
+	drive.DELETE("/:file-id", proxy(TrashHandler))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error) echo.HandlerFunc {
