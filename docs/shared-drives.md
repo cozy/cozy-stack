@@ -160,7 +160,8 @@ Content-Type: application/vnd.api+json
         "createdByApp": "drive",
         "createdOn": "https://cozy.example.com/",
         "updatedAt": "2016-09-20T18:32:47Z"
-      }
+      },
+      "driveId": "aae62886e79611ef8381fb83ff72e425"
     },
     "relationships": {
       "contents": {
