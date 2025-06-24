@@ -73,19 +73,19 @@ func SharedDrivesCreationHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, NewDir(doc, nil), nil)
 }
 
-// CreationHandler handle all POST requests on /files/:file-id
+// Create handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
 // create a new directory.
-func CreationHandler(c echo.Context) error {
+func Create(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 	var doc jsonapi.Object
 	var err error
 	switch c.QueryParam("Type") {
 	case consts.FileType:
-		doc, err = createFileHandler(c, instance.VFS())
+		doc, err = createFileHandler(c, instance.VFS(), sharedDrive)
 	case consts.DirType:
-		doc, err = createDirHandler(c, instance.VFS())
+		doc, err = createDirHandler(c, instance.VFS(), sharedDrive)
 	default:
 		err = ErrDocTypeInvalid
 	}
@@ -97,7 +97,11 @@ func CreationHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
+func CreationHandler(c echo.Context) error {
+	return Create(c, nil)
+}
+
+func createFileHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) (createdFile *file, err error) {
 	inst := middlewares.GetInstance(c)
 	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
@@ -130,7 +134,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 				Infof("Cannot import note: %s", err)
 			return nil, WrapVfsError(err)
 		}
-		return NewFile(doc, inst, nil), nil
+		return NewFile(doc, inst, sharedDrive), nil
 	}
 
 	file, err := fs.CreateFile(doc, nil)
@@ -151,15 +155,14 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	if err != nil {
 		return nil, wrapVfsError(err)
 	}
-	return NewFile(doc, inst, nil), nil
+	return NewFile(doc, inst, sharedDrive), nil
 }
 
-func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
+func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) (createdDir *dir, err error) {
 	path := c.QueryParam("Path")
 	tags := utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
 
 	var doc *vfs.DirDoc
-	var err error
 	if path != "" {
 		if c.QueryParam("Recursive") == "true" {
 			doc, err = vfs.MkdirAll(fs, path)
@@ -169,7 +172,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewDir(doc, nil), nil
+		return NewDir(doc, sharedDrive), nil
 	}
 
 	dirID := c.Param("file-id")
@@ -229,7 +232,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		return nil, err
 	}
 
-	return NewDir(doc, nil), nil
+	return NewDir(doc, sharedDrive), nil
 }
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id

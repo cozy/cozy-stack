@@ -128,10 +128,6 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
-func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.CopyFile(c, inst, s)
-}
-
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
@@ -141,6 +137,14 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 		return err
 	}
 	return files.ChangesFeed(c, inst, sharedDir)
+}
+
+func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.CopyFile(c, inst, s)
+}
+
+func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.Create(c, s)
 }
 
 // Find the directory linked to the drive sharing and return it if the user
@@ -175,6 +179,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.GET("/download/:file-id", proxy(DownloadFile))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
 	drive.POST("/:file-id/copy", proxy(CopyFile))
+	drive.POST("/", proxy(CreationHandler))
+	drive.POST("/:file-id", proxy(CreationHandler))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error) echo.HandlerFunc {
