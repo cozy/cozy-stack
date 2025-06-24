@@ -1345,10 +1345,10 @@ func versionDownloadHandler(c echo.Context, secret string) error {
 	return nil
 }
 
-// TrashHandler handles all DELETE requests on /files/:file-id and
+// Trash handles all DELETE requests on /files/:file-id and
 // moves the file or directory with the specified file-id to the
 // trash.
-func TrashHandler(c echo.Context) error {
+func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
@@ -1381,7 +1381,7 @@ func TrashHandler(c echo.Context) error {
 		if errt != nil {
 			return WrapVfsError(errt)
 		}
-		return DirData(c, http.StatusOK, doc, nil)
+		return DirData(c, http.StatusOK, doc, sharedDrive)
 	}
 
 	updateFileCozyMetadata(c, file, false)
@@ -1389,7 +1389,11 @@ func TrashHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return FileData(c, http.StatusOK, doc, false, nil, nil)
+	return FileData(c, http.StatusOK, doc, false, nil, sharedDrive)
+}
+
+func TrashHandler(c echo.Context) error {
+	return Trash(c, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -1410,9 +1414,9 @@ func ReadTrashFilesHandler(c echo.Context) error {
 	return dirDataList(c, http.StatusOK, trash)
 }
 
-// RestoreTrashFileHandler handle POST requests on /files/trash/file-id and
+// Restore handle POST requests on /files/trash/file-id and
 // can be used to restore a file or directory from the trash.
-func RestoreTrashFileHandler(c echo.Context) error {
+func Restore(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
@@ -1442,6 +1446,10 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return WrapVfsError(errt)
 	}
 	return FileData(c, http.StatusOK, doc, false, nil, nil)
+}
+
+func RestoreTrashFileHandler(c echo.Context) error {
+	return Restore(c, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash
