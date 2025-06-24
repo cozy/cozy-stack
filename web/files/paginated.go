@@ -65,7 +65,7 @@ type fileJSON struct {
 	DriveId string `json:"driveId,omitempty"`
 }
 
-func newDir(doc *vfs.DirDoc) *dir {
+func NewDir(doc *vfs.DirDoc, sharedDrive *sharing.Sharing) *dir {
 	rel := jsonapi.RelationshipMap{
 		"referenced_by": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
@@ -74,7 +74,13 @@ func newDir(doc *vfs.DirDoc) *dir {
 			Data: doc.ReferencedBy,
 		},
 	}
-	return &dir{doc: doc, rel: rel}
+
+	var driveId string
+	if sharedDrive != nil {
+		driveId = sharedDrive.ID()
+	}
+
+	return &dir{doc: doc, rel: rel, driveId: driveId}
 }
 
 func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.DirOrFileDoc, error) {
@@ -165,9 +171,9 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDrive *shari
 		relsData = append(relsData, couchdb.DocReference{ID: child.ID(), Type: child.DocType()})
 		d, f := child.Refine()
 		if d != nil {
-			included = append(included, newDir(d))
+			included = append(included, NewDir(d, sharedDrive))
 		} else {
-			file := NewFile(f, instance)
+			file := NewFile(f, instance, sharedDrive)
 			if secret, ok := secrets[f.ID()]; ok {
 				file.SetThumbSecret(secret)
 			}
@@ -220,17 +226,9 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDrive *shari
 		links.Next = "/files/" + doc.DocID + "?" + params.Encode()
 	}
 
-	var driveId string
-	if sharedDrive != nil {
-		driveId = sharedDrive.ID()
-	}
-
-	d := &dir{
-		doc:      doc,
-		rel:      rel,
-		included: included,
-		driveId:  driveId,
-	}
+	d := NewDir(doc, sharedDrive)
+	d.rel = rel
+	d.included = included
 
 	return jsonapi.Data(c, statusCode, d, &links)
 }
@@ -249,9 +247,9 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		}
 		d, f := child.Refine()
 		if d != nil {
-			included = append(included, newDir(d))
+			included = append(included, NewDir(d, nil))
 		} else {
-			included = append(included, NewFile(f, instance))
+			included = append(included, NewFile(f, instance, nil))
 		}
 	}
 
@@ -270,14 +268,18 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
-func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil, nil, &fileJSON{}, "", false, ""}
+func NewFile(doc *vfs.FileDoc, i *instance.Instance, sharedDrive *sharing.Sharing) *file {
+	var driveId string
+	if sharedDrive != nil {
+		driveId = sharedDrive.ID()
+	}
+	return &file{doc, i, nil, nil, &fileJSON{}, "", false, driveId}
 }
 
 // FileData returns a jsonapi representation of the given file.
 func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
-	f := NewFile(doc, instance)
+	f := NewFile(doc, instance, sharedDrive)
 	if withVersions {
 		if versions, err := vfs.VersionsFor(instance, doc.ID()); err == nil {
 			f.versions = versions
@@ -291,10 +293,6 @@ func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions boo
 				f.noteImages = append(f.noteImages, noteImage)
 			}
 		}
-	}
-
-	if sharedDrive != nil {
-		f.driveId = sharedDrive.ID()
 	}
 
 	return jsonapi.Data(c, statusCode, f, links)
@@ -486,7 +484,7 @@ func (f *findFile) Included() []jsonapi.Object             { return f.file.Inclu
 func (f *findFile) Links() *jsonapi.LinksList              { return f.file.Links() }
 
 func newFindFile(doc *vfs.FileDoc, fields []string, i *instance.Instance) *findFile {
-	f := NewFile(doc, i)
+	f := NewFile(doc, i, nil)
 	ff := &findFile{doc, f, "", nil, nil, nil, nil, nil, nil}
 	if hasField(fields, "created_at") {
 		ff.CreatedAt = &doc.CreatedAt

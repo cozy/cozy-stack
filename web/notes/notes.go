@@ -94,7 +94,7 @@ func ListNotes(c echo.Context) error {
 	fp := vfs.NewFilePatherWithCache(inst.VFS())
 	objs := make([]jsonapi.Object, len(docs))
 	for i, doc := range docs {
-		f := files.NewFile(doc, inst)
+		f := files.NewFile(doc, inst, nil)
 		f.IncludePath(fp)
 		objs[i] = f
 	}

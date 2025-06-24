@@ -71,7 +71,7 @@ func SharedDrivesCreationHandler(c echo.Context) error {
 	if err != nil {
 		return wrapVfsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, newDir(doc), nil)
+	return jsonapi.Data(c, http.StatusOK, NewDir(doc, nil), nil)
 }
 
 // CreationHandler handle all POST requests on /files/:file-id
@@ -131,7 +131,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 				Infof("Cannot import note: %s", err)
 			return nil, WrapVfsError(err)
 		}
-		return NewFile(doc, inst), nil
+		return NewFile(doc, inst, nil), nil
 	}
 
 	file, err := fs.CreateFile(doc, nil)
@@ -152,7 +152,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (*file, error) {
 	if err != nil {
 		return nil, wrapVfsError(err)
 	}
-	return NewFile(doc, inst), nil
+	return NewFile(doc, inst, nil), nil
 }
 
 func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
@@ -170,7 +170,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		if err != nil {
 			return nil, err
 		}
-		return newDir(doc), nil
+		return NewDir(doc, nil), nil
 	}
 
 	dirID := c.Param("file-id")
@@ -230,7 +230,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		return nil, err
 	}
 
-	return newDir(doc), nil
+	return NewDir(doc, nil), nil
 }
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
@@ -1574,9 +1574,9 @@ func GetAllDocs(c echo.Context) error {
 		}
 		d, f := result.Refine()
 		if d != nil {
-			out = append(out, newDir(d))
+			out = append(out, NewDir(d, nil))
 		} else {
-			file := NewFile(f, inst)
+			file := NewFile(f, inst, nil)
 			file.IncludePath(fp)
 			out = append(out, file)
 		}
@@ -1694,7 +1694,7 @@ func FindFilesMango(c echo.Context) error {
 			if ok {
 				out[i] = newFindDir(d, fields)
 			} else {
-				out[i] = newDir(d)
+				out[i] = NewDir(d, nil)
 			}
 		} else {
 			if ok {
@@ -1707,7 +1707,7 @@ func FindFilesMango(c echo.Context) error {
 				}
 				out[i] = file
 			} else {
-				file := NewFile(f, instance)
+				file := NewFile(f, instance, nil)
 				if includePath {
 					file.IncludePath(fp)
 				}
