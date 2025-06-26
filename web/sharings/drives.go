@@ -151,6 +151,10 @@ func DestroyFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Shar
 	return files.DestroyFileHandler(c)
 }
 
+func OverwriteFileContentHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.OverwriteFileContent(c, s)
+}
+
 func RestoreTrashFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.Restore(c, s)
 }
@@ -196,6 +200,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler))
 	drive.DELETE("/:file-id", proxy(TrashHandler))
 	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler))
+	drive.PUT("/:file-id", proxy(OverwriteFileContentHandler))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error) echo.HandlerFunc {

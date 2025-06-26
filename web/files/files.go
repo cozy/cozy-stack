@@ -235,9 +235,9 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 	return NewDir(doc, sharedDrive), nil
 }
 
-// OverwriteFileContentHandler handles PUT requests on /files/:file-id
+// OverwriteFileContent handles PUT requests on /files/:file-id
 // to overwrite the content of a file given its identifier.
-func OverwriteFileContentHandler(c echo.Context) error {
+func OverwriteFileContent(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
@@ -290,7 +290,7 @@ func OverwriteFileContentHandler(c echo.Context) error {
 				Infof("Cannot import note: %s", err)
 			return WrapVfsError(err)
 		}
-		return FileData(c, http.StatusOK, newdoc, true, nil, nil)
+		return FileData(c, http.StatusOK, newdoc, true, nil, sharedDrive)
 	}
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
@@ -304,7 +304,11 @@ func OverwriteFileContentHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	return FileData(c, http.StatusOK, newdoc, true, nil, nil)
+	return FileData(c, http.StatusOK, newdoc, true, nil, sharedDrive)
+}
+
+func OverwriteFileContentHandler(c echo.Context) error {
+	return OverwriteFileContent(c, nil)
 }
 
 // UploadMetadataHandler accepts a metadata objet and persist it, so that it
