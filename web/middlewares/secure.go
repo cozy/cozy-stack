@@ -186,7 +186,8 @@ func validCSPList(sources, defaults []CSPSource, allowList string) ([]CSPSource,
 			u.Path = "/"
 		}
 		// For custom links like cozydrive:, we want to allow the whole protocol
-		if !strings.HasPrefix(u.Scheme, "cozy") {
+		// Same for blob:
+		if !strings.HasPrefix(u.Scheme, "cozy") && u.Scheme != "blob" {
 			s = u.String()
 		}
 		allowListFilter = append(allowListFilter, s)
