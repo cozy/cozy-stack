@@ -161,6 +161,10 @@ func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) e
 	return files.Trash(c, s)
 }
 
+func UploadMetadataHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.UploadMetadataHandler(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -201,6 +205,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/", proxy(CreationHandler))
 	drive.POST("/:file-id", proxy(CreationHandler))
 	drive.PUT("/:file-id", proxy(OverwriteFileContentHandler))
+	drive.POST("/upload/metadata", proxy(UploadMetadataHandler))
 	drive.POST("/:file-id/copy", proxy(CopyFile))
 
 	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler))
