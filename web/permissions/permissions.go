@@ -187,7 +187,10 @@ func createPermission(c echo.Context) error {
 
 	// Handles the metadata part
 	md, err := metadata.NewWithApp(slug, "", permission.DocTypeVersion)
-	if err != nil {
+	if err == metadata.ErrSlugEmpty {
+		md = metadata.New()
+		md.DocTypeVersion = permission.DocTypeVersion
+	} else if err != nil {
 		return err
 	}
 
