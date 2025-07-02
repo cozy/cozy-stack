@@ -229,13 +229,13 @@ msgid "Authorize Sharing Permission end"
 msgstr "共有を確認すると。"
 
 msgid "Authorize Sharing Sync"
-msgstr "変更はすぐに両方の Cozy で利用可能になります:"
+msgstr "変更はすぐに両方の Twake で利用可能になります:"
 
 msgid "Authorize Sharing Self"
-msgstr "あなたの Cozy: %s"
+msgstr "あなたの Twake: %s"
 
 msgid "Authorize Sharing Client"
-msgstr "あなたの連絡先の Cozy: %s"
+msgstr "あなたの連絡先の Twake: %s"
 
 msgid "Authorize Policy sentence"
 msgstr "データの使用方法に関するポリシーを読むことができます"
@@ -367,10 +367,10 @@ msgid "Error Sharing already accepted Title"
 msgstr "この共有はすでに承認されています"
 
 msgid "Error Sharing already accepted"
-msgstr "お使いの Cozy でこの共有が見つかるはずです。"
+msgstr "お使いの Twake でこの共有が見つかるはずです。"
 
 msgid "Error Sharing already accepted Button"
-msgstr "自分の Cozy に移動: %s"
+msgstr "自分の Twake に移動: %s"
 
 msgid "Two Factor Activation"
 msgstr "二要素認証が有効になりました"
@@ -628,7 +628,7 @@ msgid "Mail Alert Account Subject"
 msgstr "アカウントのクリーニング時にインスタンスの削除に失敗しました"
 
 msgid "Sharing Connect to Cozy"
-msgstr "あなたの Cozy に接続"
+msgstr "あなたの Twake に接続"
 
 msgid "Sharing Empty name"
 msgstr "誰か"
@@ -637,13 +637,13 @@ msgid "Sharing Empty description"
 msgstr "サプライズ!"
 
 msgid "Sharing Discovery URL field"
-msgstr "あなたの Cozy アドレス"
+msgstr "あなたの Twake アドレス"
 
 msgid "Sharing URL Discovery error"
-msgstr "入力した Cozy URL が間違っています。もう一度やり直してください"
+msgstr "入力した Twake URL が間違っています。もう一度やり直してください"
 
 msgid "Sharing URL Not email error"
-msgstr "Cozy の URL はメールアドレスではありません。"
+msgstr "Twake の URL はメールアドレスではありません。"
 
 msgid "Sharing Discovery Submit"
 msgstr "送信"
@@ -652,19 +652,19 @@ msgid "Sharing Discovery Shortcut Submit"
 msgstr "送信"
 
 msgid "Sharing No Cozy"
-msgstr "まだ Cozy をお持ちではありませんか?"
+msgstr "まだ Twake をお持ちではありませんか?"
 
 msgid "Sharing Discover Cozy URL"
 msgstr "https://cozy.io/en/try-it/?from=sharing"
 
 msgid "Sharing Discover Cozy"
-msgstr "今すぐ Cozy を見つけてください!"
+msgstr "今すぐ Twake を見つけてください!"
 
 msgid "Sharing Forgotten URL"
 msgstr "URL をお忘れですか? 慌てないでください"
 
 msgid "Sharing Forgotten URL email"
-msgstr "メールの受信トレイで \"Cozy\" を検索してください。"
+msgstr "メールの受信トレイで \"Twake\" を検索してください。"
 
 msgid "Notifications Disk Quota Close Title"
 msgstr "You've reached 90% of your storage"
@@ -821,7 +821,7 @@ msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Push Sharing Shortcut Title"
-msgstr "A new share is available in your Cozy"
+msgstr "A new share is available in your Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s has shared %s with you."
