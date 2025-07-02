@@ -294,10 +294,10 @@ msgid "Authorize Title"
 msgstr "Autoriser %s à accéder à votre profil ?"
 
 msgid "Authorize Sharing Title Synchronize"
-msgstr "Synchroniser dans mon Cozy"
+msgstr "Synchroniser dans mon Twake"
 
 msgid "Authorize Sharing Title Add"
-msgstr "Ajouter à mon Cozy"
+msgstr "Ajouter à mon Twake"
 
 msgid "Authorize Client presentation"
 msgstr "voudrait accéder aux données suivantes du cozy "
@@ -311,10 +311,10 @@ msgstr ""
 "transmise automatiquement entre vos Cozy."
 
 msgid "Authorize Sharing Description end"
-msgstr "Vous conserverez le %s dans votre Cozy, même si %s annule le partage."
+msgstr "Vous conserverez le %s dans votre Twake, même si %s annule le partage."
 
 msgid "Authorize Sharing Synchronize label"
-msgstr "Synchroniser dans mon Cozy"
+msgstr "Synchroniser dans mon Twake"
 
 msgid "Authorize Sharing Submit Synchronize"
 msgstr "Synchroniser"
@@ -630,10 +630,10 @@ msgid "Error Sharing already accepted Title"
 msgstr "Vous avez déjà accepté ce partage"
 
 msgid "Error Sharing already accepted"
-msgstr "Vous pourrez retrouver ce partage sur votre Cozy."
+msgstr "Vous pourrez retrouver ce partage sur votre Twake."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Aller sur mon Cozy"
+msgstr "Aller sur mon Twake"
 
 msgid "Two Factor Activation"
 msgstr "L'authentification en deux étapes est activée"
@@ -1219,7 +1219,7 @@ msgid "Notification Sharing Button text"
 msgstr "Voir %s"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Renseignez l'adresse de votre Cozy"
+msgstr "Renseignez l'adresse de votre Twake"
 
 msgid "Sharing Empty name"
 msgstr "Quelqu'un"
@@ -1232,29 +1232,29 @@ msgstr ""
 "Votre adresse sera communiquée à %s pour simplifier vos futurs partages"
 
 msgid "Sharing Discovery URL field"
-msgstr "Adresse de mon Cozy"
+msgstr "Adresse de mon Twake"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
-"L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+"L'adresse du Twake que vous avez saisie est incorrecte, veuillez ré-essayer."
 
 msgid "Sharing URL Not email error"
-msgstr "L'URL de votre Cozy n'est pas votre adresse email."
+msgstr "L'URL de votre Twake n'est pas votre adresse email."
 
 msgid "Sharing Discovery Submit"
-msgstr "Synchroniser dans mon Cozy"
+msgstr "Synchroniser dans mon Twake"
 
 msgid "Sharing Discovery Shortcut Submit"
-msgstr "Ajouter à mon Cozy"
+msgstr "Ajouter à mon Twake"
 
 msgid "Sharing No Cozy"
-msgstr "Pas encore de Cozy ?"
+msgstr "Pas encore de Twake ?"
 
 msgid "Sharing Discover Cozy URL"
 msgstr "https://cozy.io/fr/try-it/?from=sharing"
 
 msgid "Sharing Discover Cozy"
-msgstr "Découvrez Cozy maintenant !"
+msgstr "Découvrez Twake maintenant !"
 
 msgid "Sharing Forgotten URL"
 msgstr "J'ai oublié mon adresse"
@@ -1442,7 +1442,7 @@ msgstr ""
 "N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "
 
 msgid "Push Sharing Shortcut Title"
-msgstr "Un nouveau partage est disponible dans votre Cozy"
+msgstr "Un nouveau partage est disponible dans votre Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s vous a partagé %s."

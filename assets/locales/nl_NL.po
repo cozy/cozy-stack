@@ -261,10 +261,10 @@ msgid "Authorize Title"
 msgstr "Machtig %s om toegang te krijgen tot je profiel"
 
 msgid "Authorize Sharing Title Synchronize"
-msgstr "Synchroniseren naar mijn Cozy"
+msgstr "Synchroniseren naar mijn Twake"
 
 msgid "Authorize Sharing Title Add"
-msgstr "Toevoegen aan mijn Cozy"
+msgstr "Toevoegen aan mijn Twake"
 
 msgid "Authorize Client presentation"
 msgstr "wil gemachtigd worden om toegang te krijgen tot je Cozy"
@@ -275,13 +275,13 @@ msgstr "heeft iets met je gedeeld:"
 msgid "Authorize Sharing Description start"
 msgstr ""
 "%s en jij kunnen samenwerken door %s aan te passen. Elke aanpassing wordt "
-"automatisch opgeslagen op jullie Cozy's."
+"automatisch opgeslagen op jullie Twake's."
 
 msgid "Authorize Sharing Description end"
 msgstr "Je behoudt %s, zelfs als het delen wordt gestopt door %s."
 
 msgid "Authorize Sharing Synchronize label"
-msgstr "Synchroniseren naar mijn Cozy"
+msgstr "Synchroniseren naar mijn Twake"
 
 msgid "Authorize Sharing Submit Synchronize"
 msgstr "Synchroniseren"
@@ -529,7 +529,7 @@ msgid "Error Sharing already accepted Title"
 msgstr "Je hebt dit deelverzoek al goedgekeurd"
 
 msgid "Error Sharing already accepted"
-msgstr "Je kunt het gedeelde bestand terugvinden op je Cozy."
+msgstr "Je kunt het gedeelde bestand terugvinden op je Twake."
 
 msgid "Error Sharing already accepted Button"
 msgstr "Ga naar mijn Cozy"
@@ -1004,7 +1004,7 @@ msgid "Notification Sharing Button text"
 msgstr "Gedeeld item bekijken"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Verbinden met je Cozy"
+msgstr "Verbinden met je Twake"
 
 msgid "Sharing Empty name"
 msgstr "Iemand"
@@ -1013,34 +1013,34 @@ msgid "Sharing Empty description"
 msgstr "Verassing!"
 
 msgid "Sharing Discovery URL field"
-msgstr "Mijn Cozy-adres"
+msgstr "Mijn Twake-adres"
 
 msgid "Sharing URL Discovery error"
-msgstr "De ingevoerde Cozy-url is onjuist. Probeer het opnieuw."
+msgstr "De ingevoerde Twake-url is onjuist. Probeer het opnieuw."
 
 msgid "Sharing URL Not email error"
-msgstr "De Cozy-url is niet je e-mailadres."
+msgstr "De Twake-url is niet je e-mailadres."
 
 msgid "Sharing Discovery Submit"
-msgstr "Synchroniseren naar mijn Cozy"
+msgstr "Synchroniseren naar mijn Twake"
 
 msgid "Sharing Discovery Shortcut Submit"
-msgstr "Synchroniseren naar mijn Cozy"
+msgstr "Synchroniseren naar mijn Twake"
 
 msgid "Sharing No Cozy"
-msgstr "Heb je nog geen Cozy?"
+msgstr "Heb je nog geen Twake?"
 
 msgid "Sharing Discover Cozy URL"
 msgstr "https://cozy.io/en/try-it/?from=sharing"
 
 msgid "Sharing Discover Cozy"
-msgstr "Ontdek Cozy nu!"
+msgstr "Ontdek Twake nu!"
 
 msgid "Sharing Forgotten URL"
 msgstr "Ben je de url vergeten? Maak je geen zorgen."
 
 msgid "Sharing Forgotten URL email"
-msgstr "Zoek naar \"Cozy\" in je Postvak IN."
+msgstr "Zoek naar \"Twake\" in je Postvak IN."
 
 msgid "Notifications Disk Quota Close Title"
 msgstr "You've reached 90% of your storage"
@@ -1202,7 +1202,7 @@ msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Push Sharing Shortcut Title"
-msgstr "A new share is available in your Cozy"
+msgstr "A new share is available in your Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s has shared %s with you."

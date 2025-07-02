@@ -117,7 +117,7 @@ func TestAuth(t *testing.T) {
 			Expect().Status(http.StatusServiceUnavailable).
 			Body()
 
-		body.Contains("<title>Cozy</title>")
+		body.Contains("<title>Twake Workplace</title>")
 		body.Contains("Your Cozy has been blocked</h1>")
 
 		// Unblock the instance

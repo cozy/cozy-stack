@@ -34,7 +34,7 @@ import (
 
 // DefaultTemplateTitle represents the default template title. It could be
 // overrided by configuring it in the instance context parameters
-const DefaultTemplateTitle = "Cozy"
+const DefaultTemplateTitle = "Twake Workplace"
 
 // PBKDF2_SHA256 is the value of kdf for using PBKDF2 with SHA256 to hash the
 // password on client side.

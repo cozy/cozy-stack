@@ -169,7 +169,7 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			HasContentType("text/html", "utf-8").
 			Body().
-			Contains("Connect to your Cozy").
+			Contains("Connect to your Twake").
 			Contains(`<input type="hidden" name="state" value="` + state)
 
 		redirectHeader := eA.POST(u.Path).

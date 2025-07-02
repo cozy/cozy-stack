@@ -238,10 +238,10 @@ msgid "Authorize Title"
 msgstr "Erlaube %s auf dein Profil zuzugreifen"
 
 msgid "Authorize Sharing Title Synchronize"
-msgstr "In mein Cozy synchronisieren"
+msgstr "In mein Twake synchronisieren"
 
 msgid "Authorize Sharing Title Add"
-msgstr "Meinem Cozy hinzufügen"
+msgstr "Meinem Twake hinzufügen"
 
 msgid "Authorize Client presentation"
 msgstr "möchte die Erlaubnis haben, auf dein Cozy zuzugreifen"
@@ -252,15 +252,15 @@ msgstr "hat mit dir geteilt:"
 msgid "Authorize Sharing Description start"
 msgstr ""
 "%sund du könnt zusammenarbeiten beim Bearbeiten der %s. Jede Änderung wird "
-"automatisch zwischen euren Cozys versendet."
+"automatisch zwischen euren Twakes versendet."
 
 msgid "Authorize Sharing Description end"
 msgstr ""
-"Du wirst das %sin deinem Cozy behalten, selbst wenn die Freigabe von "
+"Du wirst das %sin deinem Twake behalten, selbst wenn die Freigabe von "
 "%sabgebrochen wird."
 
 msgid "Authorize Sharing Synchronize label"
-msgstr "In mein Cozy synchronisieren"
+msgstr "In mein Twake synchronisieren"
 
 msgid "Authorize Sharing Submit Synchronize"
 msgstr "Synchronisieren"
@@ -425,10 +425,10 @@ msgid "Error Sharing already accepted Title"
 msgstr "Du hast diese Freigabe schon angenommen"
 
 msgid "Error Sharing already accepted"
-msgstr "Du solltest diese Freigabe in deinem Cozy finden."
+msgstr "Du solltest diese Freigabe in deinem Twake finden."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Gehe zu meinem Cozy: %s"
+msgstr "Gehe zu meinem Twake: %s"
 
 msgid "Two Factor Activation"
 msgstr "Zwei-Faktor-Authentifizierung wurde aktiviert"
@@ -787,7 +787,7 @@ msgstr ""
 "Das Löschen der Instanz ist beim Bereinigen von Accounts fehlgeschlagen"
 
 msgid "Notification Sharing Subject"
-msgstr "Eine neue Freigabe ist in deinem Cozy verfügbar"
+msgstr "Eine neue Freigabe ist in deinem Twake verfügbar"
 
 msgid "Notification Sharing Description"
 msgstr "%slädt dich ein zum %sder %s%s"
@@ -805,7 +805,7 @@ msgid "Notification Sharing Button text"
 msgstr "Die Freigabe ansehen"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Verbinde dich mit deinem Cozy"
+msgstr "Verbinde dich mit deinem Twake"
 
 msgid "Sharing Empty name"
 msgstr "Jemand"
@@ -814,35 +814,35 @@ msgid "Sharing Empty description"
 msgstr "Überraschung!"
 
 msgid "Sharing Discovery URL field"
-msgstr "Deine Cozy Adresse"
+msgstr "Deine Twake Adresse"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
-"Die Cozy URL, die du eingegeben hast ist falsch, bitte versuche es erneut"
+"Die Twake URL, die du eingegeben hast ist falsch, bitte versuche es erneut"
 
 msgid "Sharing URL Not email error"
-msgstr "Die Cozy URL ist nicht deine E-Mail-Adresse"
+msgstr "Die Twake URL ist nicht deine E-Mail-Adresse"
 
 msgid "Sharing Discovery Submit"
-msgstr "In mein Cozy synchronisieren"
+msgstr "In mein Twake synchronisieren"
 
 msgid "Sharing Discovery Shortcut Submit"
-msgstr "In mein Cozy synchronisieren"
+msgstr "In mein Twake synchronisieren"
 
 msgid "Sharing No Cozy"
-msgstr "Hast du noch kein Cozy?"
+msgstr "Hast du noch kein Twake?"
 
 msgid "Sharing Discover Cozy URL"
 msgstr "https://cozy.io/en/try-it/?from=sharing"
 
 msgid "Sharing Discover Cozy"
-msgstr "Entdecke jetzt Cozy!"
+msgstr "Entdecke jetzt Twake!"
 
 msgid "Sharing Forgotten URL"
 msgstr "URL vergessen? Keine Panik."
 
 msgid "Sharing Forgotten URL email"
-msgstr "Durchsuche dein E-Mail Postfach nach \"Cozy\"."
+msgstr "Durchsuche dein E-Mail Postfach nach \"Twake\"."
 
 msgid "Notifications Disk Quota Close Title"
 msgstr "You've reached 90% of your storage"
@@ -1006,7 +1006,7 @@ msgstr ""
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Push Sharing Shortcut Title"
-msgstr "A new share is available in your Cozy"
+msgstr "A new share is available in your Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s has shared %s with you."
