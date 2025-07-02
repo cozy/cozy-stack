@@ -114,6 +114,14 @@ clouderies:
       url: https://manager-url
       token: manager-token
 
+common_settings:
+  default:
+    url: https://common-settings-default-url
+    token: default-token
+  my-context:
+    url: https://common-settings-context-url
+    token: context-token
+
 password_reset_interval: 1h
 
 authentication:

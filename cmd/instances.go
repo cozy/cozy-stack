@@ -31,6 +31,7 @@ var flagLocale string
 var flagTimezone string
 var flagEmail string
 var flagPublicName string
+var flagPhone string
 var flagSettings string
 var flagDiskQuota string
 var flagApps []string
@@ -192,6 +193,7 @@ be used as the error message.
 			Sponsorships:    flagSponsorships,
 			Email:           flagEmail,
 			PublicName:      flagPublicName,
+			Phone:           flagPhone,
 			Settings:        flagSettings,
 			SwiftLayout:     flagSwiftLayout,
 			CouchCluster:    flagCouchCluster,
@@ -281,6 +283,7 @@ settings for a specified domain.
 			Sponsorships:    flagSponsorships,
 			Email:           flagEmail,
 			PublicName:      flagPublicName,
+			Phone:           flagPhone,
 			Settings:        flagSettings,
 			BlockingReason:  flagBlockingReason,
 			DiskQuota:       diskQuota,
@@ -1091,6 +1094,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagSponsorships, "sponsorships", nil, "Sponsorships of the instance (comma separated list)")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
+	addInstanceCmd.Flags().StringVar(&flagPhone, "phone", "", "The phone number of the owner")
 	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
 	addInstanceCmd.Flags().IntVar(&flagSwiftLayout, "swift-layout", -1, "Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default)")
 	addInstanceCmd.Flags().IntVar(&flagCouchCluster, "couch-cluster", -1, "Specify the CouchDB cluster where the instance will be created (-1 means the default)")
@@ -1112,6 +1116,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringSliceVar(&flagSponsorships, "sponsorships", nil, "Sponsorships of the instance (comma separated list)")
 	modifyInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "New email")
 	modifyInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "New public name")
+	modifyInstanceCmd.Flags().StringVar(&flagPhone, "phone", "", "New phone number")
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
 	modifyInstanceCmd.Flags().StringVar(&flagBlockingReason, "blocking-reason", "", "Code that explains why the instance is blocked (PAYMENT_FAILED, LOGIN_FAILED, etc.)")

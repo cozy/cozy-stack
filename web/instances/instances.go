@@ -66,6 +66,7 @@ func createHandler(c echo.Context) error {
 		ContextName:     c.QueryParam("ContextName"),
 		Email:           c.QueryParam("Email"),
 		PublicName:      c.QueryParam("PublicName"),
+		Phone:           c.QueryParam("Phone"),
 		Settings:        c.QueryParam("Settings"),
 		AuthMode:        c.QueryParam("AuthMode"),
 		Passphrase:      c.QueryParam("Passphrase"),
@@ -173,6 +174,7 @@ func modifyHandler(c echo.Context) error {
 		ContextName:     c.QueryParam("ContextName"),
 		Email:           c.QueryParam("Email"),
 		PublicName:      c.QueryParam("PublicName"),
+		Phone:           c.QueryParam("Phone"),
 		Settings:        c.QueryParam("Settings"),
 		BlockingReason:  c.QueryParam("BlockingReason"),
 	}

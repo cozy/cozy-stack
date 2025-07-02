@@ -113,6 +113,18 @@ func TestConfigUnmarshal(t *testing.T) {
 		"my-context": map[string]interface{}{"host": "-"},
 	}, cfg.CampaignMailPerContext)
 
+	// CommonSettings
+	assert.EqualValues(t, map[string]CommonSettings{
+		"default": {
+			URL:   "https://common-settings-default-url",
+			Token: "default-token",
+		},
+		"my-context": {
+			URL:   "https://common-settings-context-url",
+			Token: "context-token",
+		},
+	}, cfg.CommonSettings)
+
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
 		"my-context": map[string]interface{}{
@@ -320,4 +332,10 @@ func regsToStrings(regs []*url.URL) []string {
 		ss[i] = r.String()
 	}
 	return ss
+}
+
+func TestCommonSettingsHelpers(t *testing.T) {
+	require.NoError(t, Setup("./testdata/full_config.yaml"))
+	commonSettings := GetCommonSettings()
+	assert.Len(t, commonSettings, 2)
 }

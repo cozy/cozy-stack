@@ -70,6 +70,7 @@ type InstanceOptions struct {
 	Sponsorships       []string
 	Email              string
 	PublicName         string
+	Phone              string
 	Settings           string
 	BlockingReason     string
 	SwiftLayout        int
@@ -156,6 +157,7 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 		"ContextName":     {opts.ContextName},
 		"Email":           {opts.Email},
 		"PublicName":      {opts.PublicName},
+		"Phone":           {opts.Phone},
 		"Settings":        {opts.Settings},
 		"SwiftLayout":     {strconv.Itoa(opts.SwiftLayout)},
 		"CouchCluster":    {strconv.Itoa(opts.CouchCluster)},
@@ -237,6 +239,7 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 		"ContextName":     {opts.ContextName},
 		"Email":           {opts.Email},
 		"PublicName":      {opts.PublicName},
+		"Phone":           {opts.Phone},
 		"Settings":        {opts.Settings},
 		"DiskQuota":       {strconv.FormatInt(opts.DiskQuota, 10)},
 	}

@@ -143,6 +143,7 @@ type Config struct {
 	Contexts       map[string]interface{}
 	Authentication map[string]interface{}
 	RAGServers     map[string]RAGServer
+	CommonSettings map[string]CommonSettings
 	Office         map[string]Office
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
@@ -234,6 +235,12 @@ type Office struct {
 type RAGServer struct {
 	URL    string
 	APIKey string
+}
+
+// CommonSettings contains the configuration for common settings for a context
+type CommonSettings struct {
+	URL   string `mapstructure:"url"`
+	Token string `mapstructure:"token"`
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -395,6 +402,11 @@ func GetKeyring() keyring.Keyring {
 // GetRateLimiter return the setup rate limiter.
 func GetRateLimiter() *limits.RateLimiter {
 	return config.Limiter
+}
+
+// GetCommonSettings returns the CommonSettings configuration
+func GetCommonSettings() map[string]CommonSettings {
+	return config.CommonSettings
 }
 
 // GetOIDC returns the OIDC config for the given context (with a boolean to say
@@ -575,6 +587,11 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	office, err := makeOffice(v)
+	if err != nil {
+		return err
+	}
+
+	commonSettings, err := makeCommonSettings(v)
 	if err != nil {
 		return err
 	}
@@ -860,7 +877,8 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
-		RAGServers: rag,
+		RAGServers:     rag,
+		CommonSettings: commonSettings,
 		Move: Move{
 			URL: v.GetString("move.url"),
 		},
@@ -1132,6 +1150,26 @@ func makeSMS(raw map[string]interface{}) map[string]SMS {
 		sms[name] = SMS{Provider: provider, URL: url, Token: token}
 	}
 	return sms
+}
+
+func makeCommonSettings(v *viper.Viper) (map[string]CommonSettings, error) {
+	settings := make(map[string]CommonSettings)
+
+	for k, v := range v.GetStringMap("common_settings") {
+		ctx, ok := v.(map[string]interface{})
+		if !ok {
+			return settings, fmt.Errorf("Bad format in the common_settings section of the configuration file: "+
+				"should be a map, got %#v", v)
+		}
+		url, _ := ctx["url"].(string)
+		token, _ := ctx["token"].(string)
+		settings[k] = CommonSettings{
+			URL:   url,
+			Token: token,
+		}
+	}
+
+	return settings, nil
 }
 
 func createTestViper() *viper.Viper {
