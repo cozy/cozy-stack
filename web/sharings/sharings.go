@@ -198,7 +198,10 @@ func CountNewShortcuts(c echo.Context) error {
 func GetSharingsInfoByDocType(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	docType := c.Param("doctype")
-
+	withSharedDocs, err := strconv.ParseBool(c.QueryParam("shared_docs"))
+	if err != nil {
+		withSharedDocs = true
+	}
 	sharings, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").Errorf("GetSharingsByDocType error: %s", err)
@@ -214,10 +217,14 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 	for sID := range sharings {
 		sharingIDs = append(sharingIDs, sID)
 	}
-	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
-	if err != nil {
-		inst.Logger().WithNamespace("sharing").Errorf("GetSharedDocsBySharingIDs error: %s", err)
-		return wrapErrors(err)
+
+	var sDocs map[string][]couchdb.DocReference
+	if withSharedDocs {
+		sDocs, err = sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").Errorf("GetSharedDocsBySharingIDs error: %s", err)
+			return wrapErrors(err)
+		}
 	}
 
 	res := make([]*sharing.APISharing, 0, len(sharings))

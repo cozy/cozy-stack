@@ -433,11 +433,15 @@ Content-Type: application/vnd.api+json
 Get information about all the sharings that have a rule for the given doctype.
 This includes the content of the rules, the members, as well as the already
 shared documents for this sharing.
+A `shared_docs` query parameter is supported to control whether or not the
+shared docs should be included in the response. Default is true.
+This can be costful in case of large sharings, so it can be a good idea to set
+it to false for performances. 
 
 #### Request
 
 ```http
-GET /sharings/doctype/io.cozy.files HTTP/1.1
+GET /sharings/doctype/io.cozy.files?shared_docs=true HTTP/1.1
 Host: alice.example.net
 Accept: application/vnd.api+json
 ```
