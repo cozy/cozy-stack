@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/settings/common"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
@@ -165,6 +166,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 		if err != nil {
 			return err
 		}
+
 		if needSharingReupload && AskReupload != nil {
 			go func() {
 				inst := i.Clone().(*instance.Instance)
@@ -195,6 +197,17 @@ func Patch(i *instance.Instance, opts *Options) error {
 			if err != nil {
 				i.Logger().Errorf("Error during cloudery settings update %s", err)
 			}
+		}
+	}
+
+	updated, err := common.UpdateCommonSettings(i, settings)
+	if err != nil {
+		i.Logger().Errorf("Failed to update common settings: %s", err)
+	}
+	if updated {
+		// We need to persist the common settings version
+		if err = update(i); err != nil {
+			return err
 		}
 	}
 

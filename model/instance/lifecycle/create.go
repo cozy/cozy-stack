@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/settings/common"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -39,6 +40,7 @@ type Options struct {
 	FeatureSets        []string
 	Email              string
 	PublicName         string
+	Phone              string
 	Settings           string
 	SettingsObj        *couchdb.JSONDoc
 	AuthMode           string
@@ -268,6 +270,12 @@ func Create(opts *Options) (*instance.Instance, error) {
 		}
 	})
 
+	opts.trace("create common settings", func() {
+		if err = common.CreateCommonSettings(i, settings); err != nil {
+			i.Logger().Errorf("Failed to create common settings: %s", err)
+		}
+	})
+
 	return i, nil
 }
 
@@ -367,6 +375,9 @@ func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, er
 	}
 	if name := opts.PublicName; name != "" {
 		settings.M["public_name"] = name
+	}
+	if phone := opts.Phone; phone != "" {
+		settings.M["phone"] = phone
 	}
 
 	if len(opts.TOSSigned) == 8 {

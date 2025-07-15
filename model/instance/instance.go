@@ -73,6 +73,8 @@ type Instance struct {
 	BytesDiskQuota    int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 	IndexViewsVersion int   `json:"indexes_version,omitempty"`
 
+	CommonSettingsVersion int `json:"common_settings_version,omitempty"`
+
 	// Swift layout number:
 	// - 0 for layout v1
 	// - 1 for layout v2

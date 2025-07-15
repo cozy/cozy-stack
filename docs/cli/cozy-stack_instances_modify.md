@@ -29,6 +29,7 @@ cozy-stack instances modify <domain> [flags]
       --magic_link                  Enable authentication with magic links sent by email
       --oidc_id string              New identifier for checking authentication from OIDC
       --onboarding-finished         Force the finishing of the onboarding
+      --phone string                New phone number
       --public-name string          New public name
       --settings string             New list of settings (eg offer:premium)
       --sponsorships strings        Sponsorships of the instance (comma separated list)

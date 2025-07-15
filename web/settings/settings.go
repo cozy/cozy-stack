@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
+	"github.com/cozy/cozy-stack/model/settings/common"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -276,6 +277,18 @@ func (h *HTTPHandler) UploadAvatar(c echo.Context) error {
 	if err != nil {
 		return jsonapi.InternalServerError(err)
 	}
+
+	updated, err := common.UpdateAvatar(inst)
+	if err != nil {
+		inst.Logger().Errorf("Failed to update common settings: %s", err)
+	}
+	if updated {
+		// We need to persist the common settings version
+		if err = instance.Update(inst); err != nil {
+			return err
+		}
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 

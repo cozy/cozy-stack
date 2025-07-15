@@ -361,6 +361,12 @@ office:
 #       url: https://manager.example.org/
 #       token: xxxxxx
 
+# [internal usage] Common settings
+# common_settings:
+#   default:
+#     url: https://sign-up.example.org/
+#     token: f95880b7fa9e8a51e103ac5383bc5956d849267e99b336f31df8bd86c2e9ec50
+
 # All the deprecated apps listed here will see their OAUTH2 Authorization
 # flow interupted and redirected to a page proposing to move to the new
 # cozy application.

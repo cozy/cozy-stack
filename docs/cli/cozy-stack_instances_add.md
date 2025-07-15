@@ -39,6 +39,7 @@ $ cozy-stack instances add --passphrase cozy --apps drive,photos,settings,home,s
       --magic_link                Enable authentication with magic links sent by email
       --oidc_id string            The identifier for checking authentication from OIDC
       --passphrase string         Register the instance with this passphrase (useful for tests)
+      --phone string              The phone number of the owner
       --public-name string        The public name of the owner
       --settings string           A list of settings (eg context:foo,offer:premium)
       --sponsorships strings      Sponsorships of the instance (comma separated list)
