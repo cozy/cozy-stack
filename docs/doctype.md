@@ -8,7 +8,7 @@ in the near future. For the moment, this guide can help you to not forget a step
 ## Choosing a name for your doctype
 
 The doctype name is something like `io.cozy.contacts`. The `io.cozy` prefix is
-reserved for doctypes created and managed by Cozy Cloud. If you have an
+reserved for doctypes created and managed by Twake Workplace. If you have an
 official website, you can use it (in reversed order) for the prefix. Else, you
 can use your github or gitlab handle: `github.nono` or `gitlab.nono`.
 

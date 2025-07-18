@@ -3,7 +3,7 @@
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Matthieu AMBRY <matthieu@ambry.eu>, 2021
-# Cozy Cloud <contact@cozycloud.cc>, 2022
+# Twake Workplace <support@twake.app>, 2022
 # Sebastien BLAISOT <sebastien@blaisot.org>, 2023
 # JC Pagnon <gooz@cozycloud.cc>, 2023
 # Cyrille Perois <cyrille@cozycloud.cc>, 2023
@@ -1311,7 +1311,7 @@ msgstr "Gérer mes appareils"
 
 msgid "Terms of services have been updated"
 msgstr ""
-"Dans le cadre du RGPD, Cozy Cloud met à jour ses Conditions Générales "
+"Dans le cadre du RGPD, Twake Workplace met à jour ses Conditions Générales "
 "d'Utilisation qui ont pris effet le 25 Mai 2018"
 
 msgid "Compat Title"

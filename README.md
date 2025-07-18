@@ -1,4 +1,4 @@
-Cozy Cloud
+Twake Workplace
 ==========
 
 [![go.dev reference](https://pkg.go.dev/badge/github.com/cozy/cozy-stack)](https://pkg.go.dev/github.com/cozy/cozy-stack)
@@ -68,4 +68,4 @@ You can reach the Cozy Community by:
 
 ## License
 
-Cozy is developed by Cozy Cloud and distributed under the AGPL v3 license.
+Cozy is developed by Twake Workplace and distributed under the AGPL v3 license.

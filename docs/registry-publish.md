@@ -103,7 +103,7 @@ curl -sS --fail -X POST \
 ## Access to our official apps registry
 
 In order to access to our official repository, you need a token for a specific
-editor. To do so, concact us directly at the address contact@cozycloud.cc with a
+editor. To do so, concact us directly at the address support@twake.app with a
 mail using the following title prefix: `[registry]` and precising the name of
 the editor of your application.
 

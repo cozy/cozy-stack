@@ -952,7 +952,7 @@ msgid "Mail Two Factor Intro"
 msgstr "Two-factor authentication is enabled for your Twake. Enter the following code to verify your identity:"
 
 msgid "Mail Two Factor Outro"
-msgstr "Not sure what to do? Get some help from contact@cozycloud.cc"
+msgstr "Not sure what to do? Get some help from support@twake.app"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "You want to enable two-factor authentication on your %s"
@@ -961,7 +961,7 @@ msgid "Mail Two Factor Mail Confirmation Intro"
 msgstr "Here is the code to enable two-factor authentication:"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
-msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
+msgstr "If you have not made this change, please contact us at support@twake.app"
 
 msgid "Mail New Connection Subject"
 msgstr "New connection to your %s"
@@ -1205,7 +1205,7 @@ msgid "Notifications OAuth Clients Devices Text"
 msgstr "Manage my devices"
 
 msgid "Terms of services have been updated"
-msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that have taken effect on May 25, 2018"
+msgstr "To comply with the GDPR, Twake Workplace has updated its Terms of Services that have taken effect on May 25, 2018"
 
 msgid "Compat Title"
 msgstr "Your web browser is not up-to-date or no longer supported."

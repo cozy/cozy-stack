@@ -511,21 +511,21 @@ contexts:
       coachco2:
         light:
           - src: /logos/main_cozy.png
-            alt: Cozy Cloud
+            alt: Twake Workplace
         dark:
           - src: /logos/main_cozy.png
-            alt: Cozy Cloud
+            alt: Twake Workplace
       home:
         light:
           - src: /logos/main_cozy.png
-            alt: Cozy Cloud
+            alt: Twake Workplace
             type: main
           - src: /logos/1_partner.png
             alt: Partner n°1
             type: secondary
         dark:
           - src: /logos/main_cozy.png
-            alt: Cozy Cloud
+            alt: Twake Workplace
             type: main
           - src: /logos/1_partner.png
             alt: Partner n°1
