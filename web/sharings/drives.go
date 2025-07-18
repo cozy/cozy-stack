@@ -128,6 +128,10 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
+func FindFilesMangoHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.FindFilesMango(c, s)
+}
+
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
@@ -193,6 +197,7 @@ func drivesRoutes(router *echo.Group) {
 	group.GET("", ListSharedDrives)
 
 	drive := group.Group("/:id")
+	drive.POST("/_find", proxy(FindFilesMangoHandler))
 	drive.GET("/_changes", proxy(ChangesFeed))
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 	drive.GET("/:file-id", proxy(GetDirOrFileData))

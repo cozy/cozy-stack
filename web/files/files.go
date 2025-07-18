@@ -1581,7 +1581,7 @@ func GetAllDocs(c echo.Context) error {
 
 // FindFilesMango is the route POST /files/_find
 // used to retrieve files and their metadata from a mango query.
-func FindFilesMango(c echo.Context) error {
+func FindFilesMango(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 	var findRequest map[string]interface{}
 
@@ -1598,6 +1598,11 @@ func FindFilesMango(c echo.Context) error {
 		includePath = false
 		// Those fields are necessary for the JSON-API response
 		fields := []string{"_id", "_rev", "type", "class", "size", "trashed"}
+
+		if sharedDrive != nil {
+			fields = append(fields, couchdb.SelectorReferencedBy)
+		}
+
 		for _, v := range reqFields {
 			v := v.(string)
 			if v == "path" {
@@ -1608,7 +1613,27 @@ func FindFilesMango(c echo.Context) error {
 			}
 			fields = append(fields, v)
 		}
+
 		findRequest["fields"] = fields
+	}
+
+	if sharedDrive != nil {
+		selector := findRequest["selector"].(map[string]interface{})
+
+		var referencedBy []map[string]string
+		if r, ok := selector[couchdb.SelectorReferencedBy].([]map[string]string); ok {
+			referencedBy = r
+		}
+
+		ref := map[string]string{
+			"id":   sharedDrive.ID(),
+			"type": sharedDrive.DocType(),
+		}
+		referencedBy = append(referencedBy, ref)
+
+		selector[couchdb.SelectorReferencedBy] = referencedBy
+
+		findRequest["selector"] = selector
 	}
 
 	limit, hasLimit := findRequest["limit"].(float64)
@@ -1720,6 +1745,10 @@ func FindFilesMango(c echo.Context) error {
 		Warning:        resp.Warning,
 	}
 	return jsonapi.DataListWithMeta(c, http.StatusOK, meta, out, &links)
+}
+
+func FindFilesMangoHandler(c echo.Context) error {
+	return FindFilesMango(c, nil)
 }
 
 var allowedChangesParams = map[string]bool{
@@ -2057,7 +2086,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/versions", ClearOldVersions)
 
 	router.POST("/_all_docs", GetAllDocs)
-	router.POST("/_find", FindFilesMango)
+	router.POST("/_find", FindFilesMangoHandler)
 	router.GET("/_changes", ChangesFeedForFiles)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
