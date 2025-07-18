@@ -18,10 +18,10 @@
 
 ## Overview
 
-A typical Cozy Cloud runs multiple applications, but most of these applications
+A typical Twake Workplace runs multiple applications, but most of these applications
 are focused on one task and interact with one particular type of data.
 
-However, Cozy Cloud especially shines when data is combined across apps to
+However, Twake Workplace especially shines when data is combined across apps to
 provide an integrated experience. This is made difficult by the fact that apps
 have no dedicated back-end and that they have restricted access to documents.
 

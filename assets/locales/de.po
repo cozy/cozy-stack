@@ -679,7 +679,7 @@ msgstr ""
 " Code ein, um deine Identität zu bestätigen:"
 
 msgid "Mail Two Factor Outro"
-msgstr "Nicht sicher was zu tun ist? Erhalte Hilfe von contact@cozycloud.cc"
+msgstr "Nicht sicher was zu tun ist? Erhalte Hilfe von support@twake.app"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "Du möchtest die Zwei-Faktor-Authentifizierung für dein %s aktivieren"
@@ -690,7 +690,7 @@ msgstr "Hier ist der Code um den zweiten Faktor zu aktivieren:"
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr ""
 "Wenn du diese Änderung nicht vorgenommen hast, kontaktiere uns bitte über "
-"contact@cozycloud.cc"
+"support@twake.app"
 
 msgid "Mail New Connection Subject"
 msgstr "Neue Verbindung zu deinem %s"
@@ -898,7 +898,7 @@ msgstr "Manage my devices"
 
 msgid "Terms of services have been updated"
 msgstr ""
-"Um DSGVO-konform zu sein hat Cozy Cloud seine Nutzungsbedingungen zum 25. "
+"Um DSGVO-konform zu sein hat Twake Workplace seine Nutzungsbedingungen zum 25. "
 "Mai 2018 aktualisiert"
 
 msgid "Compat Title"

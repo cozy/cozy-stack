@@ -219,7 +219,7 @@ func (o *OfficeOpener) openLocalDocument(memberIndex int, readOnly bool) (*apiOf
 	doc.OO.Editor.Custom.Customer.Address = "\"Le Surena\" Face au 5 Quai Marcel Dassault 92150 Suresnes"
 	doc.OO.Editor.Custom.Customer.Logo = o.Inst.FromURL(&url.URL{Path: "/assets/icon-192.png"})
 	doc.OO.Editor.Custom.Customer.Mail = o.Inst.SupportEmailAddress()
-	doc.OO.Editor.Custom.Customer.Name = "Cozy Cloud"
+	doc.OO.Editor.Custom.Customer.Name = "Twake Workplace"
 	doc.OO.Editor.Custom.Customer.WWW = "cozy.io"
 	doc.OO.Editor.Custom.Feedback = false
 	doc.OO.Editor.Custom.ForceSave = true

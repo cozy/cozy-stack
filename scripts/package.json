@@ -2,7 +2,7 @@
   "name": "cozy-stack",
   "version": "1.0.0",
   "repository": "github.com/cozy/cozy-stack.git",
-  "author": "Cozy Cloud <contact@cozycloud.cc>",
+  "author": "Twake Workplace <support@twake.app>",
   "license": "AGPLv3",
   "type": "module",
   "dependencies": {

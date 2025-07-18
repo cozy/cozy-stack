@@ -3,7 +3,7 @@ Upstream-Name: cozy-stack
 Source: https://github.com/cozy/cozy-stack
 
 Files: *
-Copyright: Copyright 2012, 2023 Cozy Cloud <contact@cozycloud.cc>
+Copyright: Copyright 2012, 2023 Twake Workplace <support@twake.app>
 License: AGPL-3.0-only
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as published by

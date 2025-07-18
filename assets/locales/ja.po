@@ -552,7 +552,7 @@ msgid "Mail Two Factor Intro"
 msgstr "Cozy の二要素認証が有効になっています。 IDを確認するために次のコードを入力してください:"
 
 msgid "Mail Two Factor Outro"
-msgstr "何をすべきか分かりませんか? contact@cozycloud.cc からヘルプを受けてください"
+msgstr "何をすべきか分かりませんか? support@twake.app からヘルプを受けてください"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "%s の二要素認証を有効にします"
@@ -561,7 +561,7 @@ msgid "Mail Two Factor Mail Confirmation Intro"
 msgstr "これが二要素認証を有効にするコードです:"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
-msgstr "あなたがこの変更を行っていない場合、contact@cozycloud.cc にご連絡ください"
+msgstr "あなたがこの変更を行っていない場合、support@twake.app にご連絡ください"
 
 msgid "Mail New Connection Subject"
 msgstr "%s への接続を検出しました"
@@ -719,7 +719,7 @@ msgid "Notifications OAuth Clients Devices Text"
 msgstr "Manage my devices"
 
 msgid "Terms of services have been updated"
-msgstr "GDPR を遵守するため、Cozy Cloud は2018年5月25日に施行された利用規約を更新しました"
+msgstr "GDPR を遵守するため、Twake Workplace は2018年5月25日に施行された利用規約を更新しました"
 
 msgid "Compat Title"
 msgstr "お使いの Web ブラウザーは最新ではないか、サポートされていません。"
