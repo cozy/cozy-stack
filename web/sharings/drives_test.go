@@ -417,6 +417,221 @@ func TestSharedDrives(t *testing.T) {
 		data.Value("attributes").Object().Value("size").IsEqual("3")
 	})
 
+	t.Run("ModifyMetadataByIDHandler", func(t *testing.T) {
+		t.Run("CanMoveSharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			notesID := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "Meeting notes.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			movedNotes := eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + notesID + `",
+					"attributes": {
+					  "dir_id": "` + productID + `"
+					}
+				  }
+				}`)).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			movedNotes.Path("$.data.attributes.dir_id").String().NotEmpty().IsEqual(productID)
+		})
+
+		t.Run("CannotMoveSharedFileOutsideSharedDrive", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			notesID := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "Meeting notes.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + notesID + `",
+					"attributes": {
+					  "dir_id": "` + outsideOfShareID + `"
+					}
+				  }
+				}`)).
+				Expect().Status(403)
+		})
+
+		t.Run("CannotMoveUnsharedFileToSharedDrive", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			notesID := eA.POST("/files/"+outsideOfShareID).
+				WithQuery("Name", "Meeting notes.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + notesID + `",
+					"attributes": {
+					  "dir_id": "` + meetingsID + `"
+					}
+				  }
+				}`)).
+				Expect().Status(403)
+		})
+
+		t.Run("CanRenameSharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			todoID := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "TODO.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			renamedTodo := eB.PATCH("/sharings/drives/"+sharingID+"/"+todoID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + todoID + `",
+					"attributes": {
+					  "name": "Minutes.txt"
+					}
+				  }
+				}`)).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			renamedTodo.Path("$.data.attributes.name").String().NotEmpty().IsEqual("Minutes.txt")
+		})
+
+		t.Run("CannotRenameSharedFileWithConflictingName", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			todoID := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "TODO.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "Next steps.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			eB.PATCH("/sharings/drives/"+sharingID+"/"+todoID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + todoID + `",
+					"attributes": {
+					  "name": "Next steps.txt"
+					}
+				  }
+				}`)).
+				Expect().Status(409)
+		})
+
+		t.Run("CanModifyFileMetadata", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			script := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "script.sh").
+				WithQuery("Type", "file").
+				WithQuery("CreatedAt", "2025-06-17T01:12:47.982Z").
+				WithQuery("UpdatedAt", "2025-06-17T01:12:47.982Z").
+				WithQuery("Encrypted", "true").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data").Object()
+
+			attrs := script.Value("attributes").Object()
+			attrs.NotContainsKey("tags")
+			attrs.HasValue("updated_at", "2025-06-17T01:12:47.982Z")
+			attrs.HasValue("executable", false)
+			attrs.HasValue("encrypted", true)
+			attrs.HasValue("class", "text")
+
+			scriptID := script.Value("id").String().NotEmpty().Raw()
+
+			eB.PATCH("/sharings/drives/"+sharingID+"/"+scriptID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+				  "data": {
+				    "type": "io.cozy.files",
+					"id": "` + scriptID + `",
+					"attributes": {
+					  "tags": ["foo", "bar", "baz"],
+					  "updated_at": "2025-07-23T11:22:37.382Z",
+					  "executable": true,
+					  "encrypted": false,
+					  "class": "text/x-shellscript"
+					}
+				  }
+				}`)).
+				Expect().Status(200)
+		})
+	})
+
 	t.Run("SharedDriveFileCopy", func(t *testing.T) {
 		t.Run("CannotCopyUnsharedFile", func(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
