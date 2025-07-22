@@ -19,6 +19,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type docPatch struct {
+	docID string
+
+	vfs.DocPatch
+}
+
 // ListSharedDrives returns the list of the shared drives.
 func ListSharedDrives(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
@@ -43,16 +49,16 @@ func ListSharedDrives(c echo.Context) error {
 }
 
 // Load either a DirDoc or a FileDoc from the given `file-id` param. The function also checks permissions
-func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDoc, *vfs.FileDoc, error) {
+func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, perm permission.Verb) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
 		return nil, nil, files.WrapVfsError(err)
 	}
 
 	if dir != nil {
-		err = middlewares.AllowVFS(c, permission.GET, dir)
+		err = middlewares.AllowVFS(c, perm, dir)
 	} else {
-		err = middlewares.AllowVFS(c, permission.GET, file)
+		err = middlewares.AllowVFS(c, perm, file)
 	}
 	if err != nil {
 		return nil, nil, files.WrapVfsError(err)
@@ -66,7 +72,7 @@ func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDo
 
 // Same as `loadDirOrFile` but intolerant of files, responds 422s
 func loadDirFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDoc, error) {
-	dir, file, err := loadDirOrFileFromParam(c, inst)
+	dir, file, err := loadDirOrFileFromParam(c, inst, permission.GET)
 	if file != nil {
 		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a directory"))
 	}
@@ -74,8 +80,8 @@ func loadDirFromParam(c echo.Context, inst *instance.Instance) (*vfs.DirDoc, err
 }
 
 // Same as `loadDirOrFile` but intolerant of directories, responds 422s
-func loadFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.FileDoc, error) {
-	dir, file, err := loadDirOrFileFromParam(c, inst)
+func loadFileFromParam(c echo.Context, inst *instance.Instance, perm permission.Verb) (*vfs.FileDoc, error) {
+	dir, file, err := loadDirOrFileFromParam(c, inst, perm)
 	if dir != nil {
 		return nil, jsonapi.InvalidParameter("file-id", errors.New("file-id: not a file"))
 	}
@@ -83,7 +89,7 @@ func loadFileFromParam(c echo.Context, inst *instance.Instance) (*vfs.FileDoc, e
 }
 
 func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	_, _, err := loadDirOrFileFromParam(c, inst)
+	_, _, err := loadDirOrFileFromParam(c, inst, permission.GET)
 	if err != nil {
 		return err
 	}
@@ -92,7 +98,7 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 
 // TODO: reuse files.ReadMetadataFromIDHandler?!
 func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	dir, file, err := loadDirOrFileFromParam(c, inst)
+	dir, file, err := loadDirOrFileFromParam(c, inst, permission.GET)
 	if err != nil {
 		return err
 	}
@@ -104,7 +110,7 @@ func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 
 func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	//TODO: CSP ?
-	file, err := loadFileFromParam(c, inst)
+	file, err := loadFileFromParam(c, inst, permission.GET)
 	if err != nil {
 		return err
 	}
@@ -125,6 +131,97 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 
 	result := files.ApiDiskSize{DocID: dir.DocID, Size: size}
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
+}
+
+// ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
+//
+// It can be used to modify the file or directory metadata, as well as
+// moving and renaming it in the filesystem.
+func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	patch, err := getPatch(c, c.Param("file-id"))
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	if err = applyPatch(c, inst.VFS(), patch); err != nil {
+		return files.WrapVfsError(err)
+	}
+	return nil
+}
+
+func getPatch(c echo.Context, docID string) (*docPatch, error) {
+	var patch docPatch
+	obj, err := jsonapi.Bind(c.Request().Body, &patch)
+	if err != nil {
+		return nil, jsonapi.BadJSON()
+	}
+	patch.docID = docID
+	patch.RestorePath = nil
+	if rel, ok := obj.GetRelationship("parent"); ok {
+		rid, ok := rel.ResourceIdentifier()
+		if !ok {
+			return nil, jsonapi.BadJSON()
+		}
+		patch.DirID = &rid.ID
+	}
+	return &patch, nil
+}
+
+func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
+	dir, file, err := fs.DirOrFileByID(patch.docID)
+	if err != nil {
+		return err
+	}
+
+	var rev string
+	if dir != nil {
+		rev = dir.Rev()
+	} else {
+		rev = file.Rev()
+	}
+
+	if err = files.CheckIfMatch(c, rev); err != nil {
+		return err
+	}
+
+	if dir != nil {
+		if err = middlewares.AllowVFS(c, permission.PATCH, dir); err != nil {
+			return err
+		}
+	} else {
+		if err = middlewares.AllowVFS(c, permission.PATCH, file); err != nil {
+			return err
+		}
+	}
+
+	if patch.DirID != nil {
+		newParent, _, err := fs.DirOrFileByID(*patch.DirID)
+		if err != nil {
+			return err
+		}
+		if newParent == nil {
+			return jsonapi.BadRequest(errors.New("destination directory does not exist"))
+		}
+		// XXX: This permission check ensures the new parent is in the shared drive.
+		if err = middlewares.AllowVFS(c, permission.POST, newParent); err != nil {
+			return err
+		}
+	}
+
+	if dir != nil {
+		files.UpdateDirCozyMetadata(c, dir)
+		dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+	} else {
+		files.UpdateFileCozyMetadata(c, file, false)
+		file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+	}
+	if err != nil {
+		return err
+	}
+
+	if dir != nil {
+		return files.DirData(c, http.StatusOK, dir, nil)
+	}
+	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
@@ -201,6 +298,8 @@ func drivesRoutes(router *echo.Group) {
 
 	drive.GET("/:file-id", proxy(GetDirOrFileData))
 	drive.GET("/:file-id/size", proxy(GetDirSize))
+
+	drive.PATCH("/:file-id", proxy(ModifyMetadataByIDHandler))
 
 	drive.POST("/", proxy(CreationHandler))
 	drive.POST("/:file-id", proxy(CreationHandler))

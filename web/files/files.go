@@ -270,7 +270,7 @@ func OverwriteFileContent(c echo.Context, sharedDrive *sharing.Sharing) error {
 	if olddoc.CozyMetadata != nil {
 		newdoc.CozyMetadata = olddoc.CozyMetadata.Clone()
 	}
-	updateFileCozyMetadata(c, newdoc, true)
+	UpdateFileCozyMetadata(c, newdoc, true)
 
 	err = checkPerm(c, permission.PUT, nil, olddoc)
 	if err != nil {
@@ -377,7 +377,7 @@ func CopyFile(c echo.Context, inst *instance.Instance, sharedDrive *sharing.Shar
 		}
 	}
 	newdoc.ResetFullpath()
-	updateFileCozyMetadata(c, newdoc, true)
+	UpdateFileCozyMetadata(c, newdoc, true)
 
 	if olddoc.Mime == consts.NoteMimeType {
 		// We need a special copy for notes because of their images
@@ -584,7 +584,7 @@ func CopyVersionHandler(c echo.Context) error {
 	newdoc := olddoc.Clone().(*vfs.FileDoc)
 	newdoc.Metadata = meta
 	newdoc.Tags = utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
-	updateFileCozyMetadata(c, newdoc, true)
+	UpdateFileCozyMetadata(c, newdoc, true)
 
 	content, err := fs.OpenFile(olddoc)
 	if err != nil {
@@ -712,18 +712,18 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		}
 	} else if patch.Trash {
 		if dir != nil {
-			updateDirCozyMetadata(c, dir)
+			UpdateDirCozyMetadata(c, dir)
 			dir, err = vfs.TrashDir(fs, dir)
 		} else {
-			updateFileCozyMetadata(c, file, false)
+			UpdateFileCozyMetadata(c, file, false)
 			file, err = vfs.TrashFile(fs, file)
 		}
 	} else {
 		if dir != nil {
-			updateDirCozyMetadata(c, dir)
+			UpdateDirCozyMetadata(c, dir)
 			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 		} else {
-			updateFileCozyMetadata(c, file, false)
+			UpdateFileCozyMetadata(c, file, false)
 			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
 		}
 	}
@@ -760,17 +760,17 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			}
 		} else if patch.Trash {
 			if dir != nil {
-				updateDirCozyMetadata(c, dir)
+				UpdateDirCozyMetadata(c, dir)
 				_, errp = vfs.TrashDir(fs, dir)
 			} else if file != nil {
-				updateFileCozyMetadata(c, file, false)
+				UpdateFileCozyMetadata(c, file, false)
 				_, errp = vfs.TrashFile(fs, file)
 			}
 		} else if dir != nil {
-			updateDirCozyMetadata(c, dir)
+			UpdateDirCozyMetadata(c, dir)
 			_, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 		} else if file != nil {
-			updateFileCozyMetadata(c, file, false)
+			UpdateFileCozyMetadata(c, file, false)
 			_, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
 		}
 		if errp != nil {
@@ -1380,7 +1380,7 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 	ensureCleanOldTrashedTrigger(instance)
 
 	if dir != nil {
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {
 			return WrapVfsError(errt)
@@ -1388,7 +1388,7 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 		return DirData(c, http.StatusOK, doc, sharedDrive)
 	}
 
-	updateFileCozyMetadata(c, file, false)
+	UpdateFileCozyMetadata(c, file, false)
 	doc, errt := vfs.TrashFile(instance.VFS(), file)
 	if errt != nil {
 		return WrapVfsError(errt)
@@ -1436,7 +1436,7 @@ func Restore(c echo.Context, sharedDrive *sharing.Sharing) error {
 	}
 
 	if dir != nil {
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		doc, errt := vfs.RestoreDir(instance.VFS(), dir)
 		if errt != nil {
 			return WrapVfsError(errt)
@@ -1444,7 +1444,7 @@ func Restore(c echo.Context, sharedDrive *sharing.Sharing) error {
 		return DirData(c, http.StatusOK, doc, nil)
 	}
 
-	updateFileCozyMetadata(c, file, false)
+	UpdateFileCozyMetadata(c, file, false)
 	doc, errt := vfs.RestoreFile(instance.VFS(), file)
 	if errt != nil {
 		return WrapVfsError(errt)
@@ -2360,7 +2360,7 @@ func instanceURL(c echo.Context) string {
 	return middlewares.GetInstance(c).PageURL("/", nil)
 }
 
-func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
+func UpdateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
 	fcm, _ := CozyMetadataFromClaims(c, false)
 	if dir.CozyMetadata == nil {
 		fcm.CreatedAt = dir.CreatedAt
@@ -2375,7 +2375,7 @@ func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
 	}
 }
 
-func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields bool) {
+func UpdateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields bool) {
 	var oldSourceAccount, oldSourceIdentifier string
 	fcm, slug := CozyMetadataFromClaims(c, setUploadFields)
 	if file.CozyMetadata == nil {

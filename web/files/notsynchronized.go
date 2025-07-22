@@ -35,7 +35,7 @@ func AddNotSynchronizedOn(c echo.Context) error {
 	}
 
 	dir.AddNotSynchronizedOn(references...)
-	updateDirCozyMetadata(c, dir)
+	UpdateDirCozyMetadata(c, dir)
 	if err = couchdb.UpdateDoc(instance, dir); err != nil {
 		return WrapVfsError(err)
 	}
@@ -68,7 +68,7 @@ func RemoveNotSynchronizedOn(c echo.Context) error {
 	}
 
 	dir.RemoveNotSynchronizedOn(references...)
-	updateDirCozyMetadata(c, dir)
+	UpdateDirCozyMetadata(c, dir)
 	if err = couchdb.UpdateDoc(instance, dir); err != nil {
 		return WrapVfsError(err)
 	}
@@ -186,7 +186,7 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 		}
 		oldDocs[i] = dir.Clone()
 		dir.AddNotSynchronizedOn(docRef)
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		docs[i] = dir
 	}
 
@@ -236,7 +236,7 @@ func RemoveBulkNotSynchronizedOn(c echo.Context) error {
 		}
 		oldDocs[i] = dir.Clone()
 		dir.RemoveNotSynchronizedOn(docRef)
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		docs[i] = dir
 	}
 
