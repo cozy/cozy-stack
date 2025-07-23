@@ -118,6 +118,29 @@ func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sh
 	return files.SendFileFromDoc(inst, c, file, false)
 }
 
+func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	file, err := loadFileFromParam(c, inst, permission.GET)
+	if err != nil {
+		return err
+	}
+
+	version, err := vfs.FindVersion(inst, file.DocID+"/"+c.Param("version-id"))
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(inst.VFS(), file, version, "", disposition, c.Request(), c.Response())
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	return nil
+}
+
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
 	dir, err := loadDirFromParam(c, inst)
@@ -294,6 +317,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 
+	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
+	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
 	drive.GET("/_changes", proxy(ChangesFeed))
 
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
