@@ -117,6 +117,10 @@ func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sh
 	return files.SendFileFromDoc(inst, c, file, false)
 }
 
+func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.ReadFileContentFromVersion(c)
+}
+
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
 	dir, err := loadDirFromParam(c, inst)
@@ -292,6 +296,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 
+	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
+	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
 	drive.GET("/_changes", proxy(ChangesFeed))
 
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))

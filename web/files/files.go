@@ -903,6 +903,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
 // aiming at downloading a file given its ID. It serves the file in inline
 // mode.
+// TODO: use SendFileFromDoc?
 func ReadFileContentFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 

@@ -690,6 +690,77 @@ func TestSharedDrives(t *testing.T) {
 		})
 	})
 
+	t.Run("ReadFileContentFromVersion", func(t *testing.T) {
+		t.Run("CanReadVersionOfSharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			cfg := config.GetConfig()
+			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
+			cfg.Fs.Versioning.MaxNumberToKeep = 2
+
+			groceriesID := eA.POST("/files/"+meetingsID).
+				WithQuery("Name", "Groceries.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			oldVersionID := eA.PUT("/files/"+groceriesID).
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "YlBr401XTaSg0VimclPqmQ==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("food")).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.relationships.old_versions.data[0].id").String().NotEmpty().Raw()
+
+			eB.GET("/sharings/drives/"+sharingID+"/download/"+oldVersionID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(200).
+				Body().IsEqual("foo")
+		})
+
+		t.Run("CannotReadVersionOfUnsharedFile", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+			eB := httpexpect.Default(t, tsB.URL)
+
+			cfg := config.GetConfig()
+			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
+			cfg.Fs.Versioning.MaxNumberToKeep = 2
+
+			groceriesID := eA.POST("/files/"+outsideOfShareID).
+				WithQuery("Name", "Groceries.txt").
+				WithQuery("Type", "file").
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("foo")).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			oldVersionID := eA.PUT("/files/"+groceriesID).
+				WithHeader("Content-Type", "text/plain").
+				WithHeader("Content-MD5", "YlBr401XTaSg0VimclPqmQ==").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithBytes([]byte("food")).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.relationships.old_versions.data[0].id").String().NotEmpty().Raw()
+
+			eB.GET("/sharings/drives/"+sharingID+"/download/"+oldVersionID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				WithBytes([]byte("")).
+				Expect().Status(403)
+		})
+	})
+
 	t.Run("SharedDriveChangesFeed", func(t *testing.T) {
 		// Request to GET /files/_changes using the given client and token
 		getChangeFeedLocally := func(client clientInfo) *httpexpect.Response {

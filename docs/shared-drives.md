@@ -279,3 +279,18 @@ Duplicates a file.
 
 Identical call to [`POST /files/:file-id/copy`](files.md#post-filesfile-idcopy) but over a shared drive.
 See there for request and response examples, the only difference is the URL.
+
+## Versions
+
+The identifier of the `io.cozy.files.versions` is composed of the `file-id` and
+another string called the `version-id`, separated by a `/`. So, when a route
+makes reference to `/something/:file-id/:version-id`, you can use the identifier
+of the version document (without having to prepend the file identifier).
+
+### GET /sharings/drives/:id/download/:file-id/:version-id
+
+Downloads an old version of the file content.
+
+Identical call to [`GET /files/download/:file-id/:version-id`](files.md#get-filesdownloadfile-idversion-id)
+but over a shared drive. See there for request and response examples, the only
+difference is the URL.
