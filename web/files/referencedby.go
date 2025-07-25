@@ -55,13 +55,13 @@ func AddReferencedHandler(c echo.Context) error {
 	var refs []couchdb.DocReference
 	if dir != nil {
 		dir.AddReferencedBy(references...)
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
 		newRev = dir.Rev()
 		refs = dir.ReferencedBy
 	} else {
 		file.AddReferencedBy(references...)
-		updateFileCozyMetadata(c, file, false)
+		UpdateFileCozyMetadata(c, file, false)
 		err = couchdb.UpdateDocWithOld(instance, file, oldFile)
 		newRev = file.Rev()
 		refs = file.ReferencedBy
@@ -113,13 +113,13 @@ func RemoveReferencedHandler(c echo.Context) error {
 	var refs []couchdb.DocReference
 	if dir != nil {
 		dir.RemoveReferencedBy(references...)
-		updateDirCozyMetadata(c, dir)
+		UpdateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
 		newRev = dir.Rev()
 		refs = dir.ReferencedBy
 	} else {
 		file.RemoveReferencedBy(references...)
-		updateFileCozyMetadata(c, file, false)
+		UpdateFileCozyMetadata(c, file, false)
 		err = couchdb.UpdateDocWithOld(instance, file, oldFile)
 		newRev = file.Rev()
 		refs = file.ReferencedBy
