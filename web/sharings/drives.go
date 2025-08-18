@@ -287,6 +287,10 @@ func UploadMetadataHandler(c echo.Context, inst *instance.Instance, s *sharing.S
 	return files.UploadMetadataHandler(c)
 }
 
+func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.ThumbnailHandler(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -314,25 +318,57 @@ func drivesRoutes(router *echo.Group) {
 
 	drive := group.Group("/:id")
 
+	// TODO: drive.HEAD("/download", proxyPath(ReadFileContentFromPathHandler))
+	// TODO: drive.GET("/download", proxyPath(ReadFileContentFromPathHandler))
 	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler))
 
 	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
 	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
+	// TODO: drive.POST("/revert/:file-id/:version-id", RevertFileVersion)
+	// TODO: drive.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)
+	// TODO: drive.DELETE("/:file-id/:version-id", DeleteFileVersionMetadata)
+	// TODO: drive.POST("/:file-id/versions", CopyVersionHandler)
+	// TODO: drive.DELETE("/versions", ClearOldVersions)
+
+	// TODO: drive.POST("/_all_docs", GetAllDocs)
+	// WONT: drive.POST("/_find", FindFilesMango)
 	drive.GET("/_changes", proxy(ChangesFeed))
 
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
 
+	// TODO: drive.GET("/metadata", ReadMetadataFromPathHandler)
 	drive.GET("/:file-id", proxy(GetDirOrFileData))
+	// TODO: drive.GET("/:file-id/relationships/contents", GetChildrenHandler)
 	drive.GET("/:file-id/size", proxy(GetDirSize))
 
+	// TODO: drive.PATCH("/metadata", ModifyMetadataByPathHandler)
 	drive.PATCH("/:file-id", proxy(ModifyMetadataByIDHandler))
+	// TODO: drive.PATCH("/", ModifyMetadataByIDInBatchHandler)
 
 	drive.POST("/", proxy(CreationHandler))
 	drive.POST("/:file-id", proxy(CreationHandler))
 	drive.PUT("/:file-id", proxy(OverwriteFileContentHandler))
 	drive.POST("/upload/metadata", proxy(UploadMetadataHandler))
 	drive.POST("/:file-id/copy", proxy(CopyFile))
+
+	// ⇓
+	// TODO: drive.GET("/:file-id/icon/:secret", IconHandler)
+	// TODO: drive.GET("/:file-id/preview/:secret", PreviewHandler)
+	drive.GET("/:file-id/thumbnails/:secret/:format", proxy(ThumbnailHandler))
+
+	// TODO: drive.POST("/archive", ArchiveDownloadCreateHandler)
+	// TODO: drive.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)
+
+	// ⇓
+	// TODO: drive.POST("/downloads", FileDownloadCreateHandler)
+	// TODO: drive.GET("/downloads/:secret/:fake-name", FileDownloadHandler)
+
+	// TODO: drive.POST("/:file-id/relationships/referenced_by", AddReferencedHandler)
+	// TODO: drive.DELETE("/:file-id/relationships/referenced_by", RemoveReferencedHandler)
+
+	// TODO: drive.GET("/trash", ReadTrashFilesHandler)
+	// TODO: drive.DELETE("/trash", ClearTrashHandler)
 
 	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler))
 	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler))
