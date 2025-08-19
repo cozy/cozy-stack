@@ -851,6 +851,31 @@ func TestSharedDrives(t *testing.T) {
 				res.Header("Content-Length").Equal("3")
 				res.Body().Equal("foo")
 			})
+
+			// Test two-step download endpoints: POST /downloads then GET /downloads/:secret/:fake-name
+			t.Run("DownloadsEndpoints", func(t *testing.T) {
+				ci := makeClientToActAsBettyTheRecipient(t)
+				// Create the two-step download using the file ID
+				related := ci.client.POST("/sharings/drives/"+sharingID+"/downloads").
+					WithQuery("Id", checklistID).
+					WithHeader("Authorization", "Bearer "+ci.token).
+					Expect().Status(200).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.links.related").String().NotEmpty().Raw()
+
+				// GET the file via the returned related link (inline)
+				res := ci.client.GET(related).
+					WithHeader("Authorization", "Bearer "+ci.token).
+					Expect().Status(200)
+				res.Header("Content-Disposition").Equal(`inline; filename="` + checklistName + `"`)
+
+				// GET the file via the returned related link (attachment)
+				res = ci.client.GET(related).
+					WithQuery("Dl", "1").
+					WithHeader("Authorization", "Bearer "+ci.token).
+					Expect().Status(200)
+				res.Header("Content-Disposition").Equal(`attachment; filename="` + checklistName + `"`)
+			})
 		})
 	})
 }

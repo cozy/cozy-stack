@@ -291,6 +291,14 @@ func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 	return files.ThumbnailHandler(c)
 }
 
+func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.FileDownload(c, s)
+}
+
+func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.FileDownloadHandler(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -352,17 +360,13 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/upload/metadata", proxy(UploadMetadataHandler))
 	drive.POST("/:file-id/copy", proxy(CopyFile))
 
-	// ⇓
-	// TODO: drive.GET("/:file-id/icon/:secret", IconHandler)
-	// TODO: drive.GET("/:file-id/preview/:secret", PreviewHandler)
 	drive.GET("/:file-id/thumbnails/:secret/:format", proxy(ThumbnailHandler))
 
 	// TODO: drive.POST("/archive", ArchiveDownloadCreateHandler)
 	// TODO: drive.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)
 
-	// ⇓
-	// TODO: drive.POST("/downloads", FileDownloadCreateHandler)
-	// TODO: drive.GET("/downloads/:secret/:fake-name", FileDownloadHandler)
+	drive.POST("/downloads", proxy(FileDownloadCreateHandler))
+	drive.GET("/downloads/:secret/:fake-name", proxy(FileDownloadHandler))
 
 	// TODO: drive.POST("/:file-id/relationships/referenced_by", AddReferencedHandler)
 	// TODO: drive.DELETE("/:file-id/relationships/referenced_by", RemoveReferencedHandler)
