@@ -1234,9 +1234,9 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiArchive{archive}, links)
 }
 
-// FileDownloadCreateHandler stores the required path into a secret
+// FileDownload stores the required path into a secret
 // usable for download handler below.
-func FileDownloadCreateHandler(c echo.Context) error {
+func FileDownload(c echo.Context, sharedDrive *sharing.Sharing) error {
 	instance := middlewares.GetInstance(c)
 	var doc *vfs.FileDoc
 	var err error
@@ -1281,11 +1281,22 @@ func FileDownloadCreateHandler(c echo.Context) error {
 	if filename == "" {
 		filename = doc.DocName
 	}
-	links := &jsonapi.LinksList{
-		Related: "/files/downloads/" + secret + "/" + filename,
+	var links *jsonapi.LinksList
+	if sharedDrive != nil {
+		links = &jsonapi.LinksList{
+			Related: "/sharings/drives/" + sharedDrive.ID() + "/downloads/" + secret + "/" + filename,
+		}
+	} else {
+		links = &jsonapi.LinksList{
+			Related: "/files/downloads/" + secret + "/" + filename,
+		}
 	}
 
-	return FileData(c, http.StatusOK, doc, false, links, nil)
+	return FileData(c, http.StatusOK, doc, false, links, sharedDrive)
+}
+
+func FileDownloadCreateHandler(c echo.Context) error {
+	return FileDownload(c, nil)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip

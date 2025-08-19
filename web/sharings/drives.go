@@ -270,6 +270,14 @@ func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 	return files.ThumbnailHandler(c)
 }
 
+func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.FileDownload(c, s)
+}
+
+func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.FileDownloadHandler(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -318,6 +326,9 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/:file-id/copy", proxy(CopyFile))
 
 	drive.GET("/:file-id/thumbnails/:secret/:format", proxy(ThumbnailHandler))
+
+	drive.POST("/downloads", proxy(FileDownloadCreateHandler))
+	drive.GET("/downloads/:secret/:fake-name", proxy(FileDownloadHandler))
 
 	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler))
 	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler))
