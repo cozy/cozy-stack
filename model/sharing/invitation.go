@@ -329,6 +329,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return err
 	}
 
+	s.Active = true
 	s.ShortcutID = fileDoc.DocID
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)

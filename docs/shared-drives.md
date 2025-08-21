@@ -9,7 +9,7 @@ playing a proxy role.
 To create a shared drive (typically on the organization Cozy), we need the
 following steps:
 
-1. Ensure that the `/Drive` folder exists in the cozy instance with the
+1. Ensure that the `/Drives` folder exists in the cozy instance with the
    [`POST /files/shared-drives`](https://docs.cozy.io/en/cozy-stack/files/#post-filesshared-drives)
    route.
 2. Create a folder inside it, with the name of shared drive.
