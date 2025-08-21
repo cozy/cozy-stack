@@ -8,10 +8,10 @@ Here we detail the baseline of the Cozy sharing design where files are
 synchronized between several cozy instances.
 
 **Note:** shared drives is a newer feature, and it does not require to
-synchronize the files between the cozy instances. It is still possible to share
-files between cozy instances. As such, it is more scalable but does not provide
-the same features as the synchronized sharing. In particular, when a shared drive
-is revoked, the member has no longer access to a copy of the files in it.
+synchronize the files between the cozy instances. As such, it is more scalable
+but does not provide the same features as the synchronized sharing. In
+particular, when a shared drive is revoked, members no longer have access to a
+copy of the files in it.
 
 ### Data sync
 
