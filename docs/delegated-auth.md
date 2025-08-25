@@ -177,6 +177,68 @@ Set-Cookie: ...
 Location: https://name00001-home.mycozy.cloud/
 ```
 
+#### GET /oidc/bitwarden/:context
+
+This route can be used by a bitwarden client to get a token from the OpenID
+Connect Identity Provider, and the fqdn of the associated cozy instance. This
+token can then be exchanged for credentials for the cozy instance.
+
+```http
+GET /oidc/bitwarden/examplecontext?redirect_uri=cozypass://login HTTP/1.1
+Host: oauthcallback.mycozy.cloud
+```
+
+```http
+HTTP/1.1 303 See Other
+Location: https://identity-provider/path/to/authorize?response_type=code&state=9f6873dfce7d&scope=openid+profile+email&client_id=aClientID&nonce=94246498&redirect_uri=https://oauthcallback.mycozy.cloud/oidc/redirect
+```
+
+[...]
+
+```http
+HTTP/1.1 303 See Other
+Location: cozypass://login?code=xxx&instance=alice.example.com
+```
+
+#### POST /oidc/bitwarden/:context
+
+This route can be used by a bitwarden client to exchange the token from the
+previous route for credentials.
+
+```http
+POST /oidc/bitwarden/examplecontext HTTP/1.1
+Host: alice.example.com
+Content-Type: application/x-www-form-urlencoded
+```
+
+```
+code=xxx&
+client_id=mobile&
+deviceType=0&
+deviceIdentifier=aac2e34a-44db-42ab-a733-5322dd582c3d&
+deviceName=android&
+clientName=CozyPass&
+devicePushToken=
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "client_id": "f05671e159450b44d5c78cebbd0260b5",
+  "registration_access_token": "J9l-ZhwP[...omitted for brevity...]",
+  "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkJDMz[...](JWT string)",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "refresh_token": "28fb1911ef6db24025ce1bae5aa940e117eb09dfe609b425b69bff73d73c03bf",
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+  "PrivateKey": null
+}
+```
+
 #### POST /oidc/:context/logout
 
 This route implements the OpenID Connect Back-Channel Logout. It means that the

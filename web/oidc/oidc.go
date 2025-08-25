@@ -28,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/bitwarden"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -50,7 +51,7 @@ func Start(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
+	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -65,11 +66,76 @@ func StartFranceConnect(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("StartFranceConnect error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
+	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
 	return c.Redirect(http.StatusSeeOther, u)
+}
+
+func checkRedirectURIForBitwarden(redirectURI string) error {
+	if redirectURI == "" {
+		return errors.New("redirect URI is required")
+	}
+	u, err := url.Parse(redirectURI)
+	if err != nil {
+		return errors.New("invalid redirect URI")
+	}
+	if u.Scheme == "cozypass" || u.Scheme == "moz-extension" || u.Scheme == "chrome-extension" {
+		return nil
+	}
+	if u.Scheme == "https" && u.Host == "links.mycozy.cloud" {
+		return nil
+	}
+	return errors.New("invalid redirect URI")
+}
+
+// BitwardenStart starts the OIDC flow for Bitwarden clients
+func BitwardenStart(c echo.Context) error {
+	contextName := c.Param("context")
+	redirectURI := c.QueryParam("redirect_uri")
+
+	if err := checkRedirectURIForBitwarden(redirectURI); err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the redirect URI is not valid.")
+	}
+
+	conf, err := getGenericConfig(contextName)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
+	}
+	u, err := makeStartURL("", redirectURI, "", contextName, conf)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
+	}
+	return c.Redirect(http.StatusSeeOther, u)
+}
+
+// BitwardenExchange handles the POST /oidc/bitwarden/:context route for exchanging
+// a delegated code for bitwarden credentials
+func BitwardenExchange(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	code := c.FormValue("code")
+	if code == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "code parameter is required",
+		})
+	}
+
+	sub := getStorage().GetSub(code)
+	invalidCode := sub == ""
+	if sub != inst.OIDCID && sub != inst.Domain {
+		invalidCode = true
+	}
+	if invalidCode {
+		inst.Logger().WithNamespace("oidc").Infof("BitwardenExchange invalid code: %s (%s - %s)",
+			sub, inst.OIDCID, inst.Domain)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid code",
+		})
+	}
+
+	return bitwarden.RegisterClientAndReturnTokens(c, inst)
 }
 
 // Redirect is the route after the Identity Provider has redirected the user to
@@ -83,6 +149,42 @@ func Redirect(c echo.Context) error {
 	state := getStorage().Find(stateID)
 	if state == nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
+	}
+
+	if state.BitwardenContext != "" {
+		conf, err := getGenericConfig(state.BitwardenContext)
+		if err != nil {
+			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
+		}
+		accessToken, err := getToken(conf, c.QueryParam("code"))
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+			return renderError(c, nil, http.StatusBadGateway, "Error from the identity provider.")
+		}
+		params, err := getUserInfo(conf, accessToken)
+		if err != nil {
+			return err
+		}
+		sub, ok := params["sub"].(string)
+		if !ok {
+			logger.WithNamespace("oidc").Errorf("Missing sub")
+			return ErrAuthenticationFailed
+		}
+		domain, err := extractDomain(conf, params)
+		if err != nil {
+			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+		}
+
+		code := getStorage().CreateCode(sub)
+		u, err := url.Parse(state.Redirect)
+		if err != nil {
+			return renderError(c, nil, http.StatusNotFound, "Sorry, an error occurred.")
+		}
+		q := u.Query()
+		q.Add("code", code)
+		q.Add("instance", domain)
+		u.RawQuery = q.Encode()
+		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 
 	domain := state.Instance
@@ -625,12 +727,12 @@ func getFranceConnectConfig(context string) (*Config, error) {
 	return config, nil
 }
 
-func makeStartURL(domain, redirect, confirm string, conf *Config) (string, error) {
+func makeStartURL(domain, redirect, confirm, bitwardenContext string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newStateHolder(domain, redirect, confirm, conf.Provider)
+	state := newStateHolder(domain, redirect, confirm, bitwardenContext, conf.Provider)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -948,6 +1050,8 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
 	router.GET("/franceconnect", StartFranceConnect, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
+	router.GET("/bitwarden/:context", BitwardenStart)
+	router.POST("/bitwarden/:context", BitwardenExchange, middlewares.NeedInstance)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
@@ -1043,7 +1147,7 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(r.Host, "", "", conf)
+	u, err := makeStartURL(r.Host, "", "", "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
