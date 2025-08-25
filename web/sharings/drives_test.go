@@ -94,6 +94,9 @@ func TestSharedDrives(t *testing.T) {
 	makeClientToActAsBettyTheRecipient := func(t *testing.T) clientInfo {
 		return clientInfo{client: httpexpect.Default(t, tsB.URL), token: bettyAppToken}
 	}
+	makeClientToActAsAnonymous := func(t *testing.T) clientInfo {
+		return clientInfo{client: httpexpect.Default(t, tsB.URL)}
+	}
 	runTestAsACMEThenAgainAsBetty := func(t *testing.T, runner func(t *testing.T, clientMaker clientMaker)) {
 		for name, maker := range map[string]clientMaker{
 			"AsACMETheOwner":      makeClientToActAsACMETheOwner,
@@ -831,14 +834,15 @@ func TestSharedDrives(t *testing.T) {
 			})
 		})
 
-		t.Run("DownloadFile", func(t *testing.T) {
+		t.Run("ReadFileContentFromIDHandler", func(t *testing.T) {
 			// Request to GET /sharings/drives/:sharing-id/_changes using the given client and token
 			downloadFile := func(client clientInfo, sharingID string, fileID string) *httpexpect.Response {
 				return client.client.GET("/sharings/drives/"+sharingID+"/download/"+fileID).
 					WithHeader("Authorization", "Bearer "+client.token).
 					Expect()
 			}
-			t.Run("DownloadFile", func(t *testing.T) {
+
+			t.Run("CanReceiveContentOfSharedFile", func(t *testing.T) {
 				// Download the file
 				res := downloadFile(makeClientToActAsBettyTheRecipient(t), sharingID, checklistID).
 					Status(200)
@@ -846,36 +850,46 @@ func TestSharedDrives(t *testing.T) {
 				// Check the response headers
 				res.Header("Content-Disposition").HasPrefix("inline")
 				res.Header("Content-Disposition").Contains(`filename="` + checklistName + `"`)
-				res.Header("Content-Type").Equal("text/plain")
+				res.Header("Content-Type").IsEqual("text/plain")
 				res.Header("Etag").NotEmpty()
-				res.Header("Content-Length").Equal("3")
-				res.Body().Equal("foo")
+				res.Header("Content-Length").IsEqual("3")
+				res.Body().IsEqual("foo")
 			})
+		})
 
-			// Test two-step download endpoints: POST /downloads then GET /downloads/:secret/:fake-name
-			t.Run("DownloadsEndpoints", func(t *testing.T) {
-				ci := makeClientToActAsBettyTheRecipient(t)
-				// Create the two-step download using the file ID
-				related := ci.client.POST("/sharings/drives/"+sharingID+"/downloads").
-					WithQuery("Id", checklistID).
-					WithHeader("Authorization", "Bearer "+ci.token).
-					Expect().Status(200).
-					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-					Object().Path("$.links.related").String().NotEmpty().Raw()
+		// Test two-step download endpoints:
+		// 1. POST FileDownloadCreateHandler
+		// 2. GET FileDownloadHandler
+		t.Run("DownloadsEndpoints", func(t *testing.T) {
+			ci := makeClientToActAsBettyTheRecipient(t)
 
-				// GET the file via the returned related link (inline)
-				res := ci.client.GET(related).
-					WithHeader("Authorization", "Bearer "+ci.token).
-					Expect().Status(200)
-				res.Header("Content-Disposition").Equal(`inline; filename="` + checklistName + `"`)
+			// Create the two-step download using the file ID
+			related := ci.client.POST("/sharings/drives/"+sharingID+"/downloads").
+				WithQuery("Id", checklistID).
+				WithHeader("Authorization", "Bearer "+ci.token).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.links.related").String().NotEmpty().Raw()
 
-				// GET the file via the returned related link (attachment)
-				res = ci.client.GET(related).
-					WithQuery("Dl", "1").
-					WithHeader("Authorization", "Bearer "+ci.token).
-					Expect().Status(200)
-				res.Header("Content-Disposition").Equal(`attachment; filename="` + checklistName + `"`)
-			})
+			// GET the file via the returned related link (inline)
+			res := ci.client.GET(related).
+				WithHeader("Authorization", "Bearer "+ci.token).
+				Expect().Status(200)
+			res.Header("Content-Disposition").IsEqual(`inline; filename="` + checklistName + `"`)
+
+			// GET the file via the returned related link (attachment)
+			res = ci.client.GET(related).
+				WithQuery("Dl", "1").
+				WithHeader("Authorization", "Bearer "+ci.token).
+				Expect().Status(200)
+			res.Header("Content-Disposition").IsEqual(`attachment; filename="` + checklistName + `"`)
+
+			// GET the file as anonymous user via the returned link
+			anon := makeClientToActAsAnonymous(t)
+			res = anon.client.GET(related).
+				WithQuery("Dl", "1").
+				Expect().Status(200)
+			res.Header("Content-Disposition").IsEqual(`attachment; filename="` + checklistName + `"`)
 		})
 	})
 }
