@@ -305,38 +305,39 @@ func drivesRoutes(router *echo.Group) {
 
 	drive := group.Group("/:id")
 
-	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler))
-	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler))
+	drive.HEAD("/download/:file-id", proxy(ReadFileContentFromIDHandler, true))
+	drive.GET("/download/:file-id", proxy(ReadFileContentFromIDHandler, true))
 
-	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
-	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion))
-	drive.GET("/_changes", proxy(ChangesFeed))
+	drive.HEAD("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion, true))
+	drive.GET("/download/:file-id/:version-id", proxy(ReadFileContentFromVersion, true))
 
-	drive.HEAD("/:file-id", proxy(HeadDirOrFile))
+	drive.GET("/_changes", proxy(ChangesFeed, true))
 
-	drive.GET("/:file-id", proxy(GetDirOrFileData))
-	drive.GET("/:file-id/size", proxy(GetDirSize))
+	drive.HEAD("/:file-id", proxy(HeadDirOrFile, true))
 
-	drive.PATCH("/:file-id", proxy(ModifyMetadataByIDHandler))
+	drive.GET("/:file-id", proxy(GetDirOrFileData, true))
+	drive.GET("/:file-id/size", proxy(GetDirSize, true))
 
-	drive.POST("/", proxy(CreationHandler))
-	drive.POST("/:file-id", proxy(CreationHandler))
-	drive.PUT("/:file-id", proxy(OverwriteFileContentHandler))
-	drive.POST("/upload/metadata", proxy(UploadMetadataHandler))
-	drive.POST("/:file-id/copy", proxy(CopyFile))
+	drive.PATCH("/:file-id", proxy(ModifyMetadataByIDHandler, true))
 
-	drive.GET("/:file-id/thumbnails/:secret/:format", proxy(ThumbnailHandler))
+	drive.POST("/", proxy(CreationHandler, true))
+	drive.POST("/:file-id", proxy(CreationHandler, true))
+	drive.PUT("/:file-id", proxy(OverwriteFileContentHandler, true))
+	drive.POST("/upload/metadata", proxy(UploadMetadataHandler, true))
+	drive.POST("/:file-id/copy", proxy(CopyFile, true))
 
-	drive.POST("/downloads", proxy(FileDownloadCreateHandler))
-	drive.GET("/downloads/:secret/:fake-name", proxy(FileDownloadHandler))
+	drive.GET("/:file-id/thumbnails/:secret/:format", proxy(ThumbnailHandler, true))
 
-	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler))
-	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler))
+	drive.POST("/downloads", proxy(FileDownloadCreateHandler, true))
+	drive.GET("/downloads/:secret/:fake-name", proxy(FileDownloadHandler, false))
 
-	drive.DELETE("/:file-id", proxy(TrashHandler))
+	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler, true))
+	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler, true))
+
+	drive.DELETE("/:file-id", proxy(TrashHandler, true))
 }
 
-func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error) echo.HandlerFunc {
+func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		inst := middlewares.GetInstance(c)
 		s, err := sharing.FindSharing(inst, c.Param("id"))
@@ -352,14 +353,19 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		}
 
 		// On a recipient, we proxy the request to the owner
-		method := c.Request().Method
-		if method == http.MethodHead {
-			method = http.MethodGet
+		// Some routes need to be publicly accessible but others should be
+		// require an authorization token.
+		if needsAuth {
+			method := c.Request().Method
+			if method == http.MethodHead {
+				method = http.MethodGet
+			}
+			verb := permission.Verb(method)
+			if err := middlewares.AllowWholeType(c, verb, consts.Files); err != nil {
+				return err
+			}
 		}
-		verb := permission.Verb(method)
-		if err := middlewares.AllowWholeType(c, verb, consts.Files); err != nil {
-			return err
-		}
+
 		if len(s.Credentials) == 0 {
 			return jsonapi.InternalServerError(errors.New("no credentials"))
 		}
