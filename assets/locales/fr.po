@@ -1046,7 +1046,7 @@ msgstr ""
 "code de vérification de la seconde authentification :"
 
 msgid "Mail Two Factor Outro"
-msgstr "Besoin d'aide ? Ecrivez à l'adresse contact@twake.app"
+msgstr "Besoin d'aide ? Ecrivez à l'adresse support@twake.app"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "Vous souhaitez activer la validation en deux étapes sur votre %s"
@@ -1058,7 +1058,7 @@ msgstr ""
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr ""
 "Si vous n'êtes pas à l'origine de cette modification, vous pouvez nous "
-"contacter à l'adresse contact@twake.app."
+"contacter à l'adresse support@twake.app."
 
 msgid "Mail New Connection Subject"
 msgstr "Nouvelle connexion à votre %s"
