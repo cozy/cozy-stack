@@ -171,7 +171,13 @@ func Redirect(c echo.Context) error {
 			return ErrAuthenticationFailed
 		}
 		domain, err := extractDomain(conf, params)
-		if err != nil {
+		if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
+			inst, err := findInstanceBySub(sub, state.BitwardenContext)
+			if err != nil {
+				return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+			}
+			domain = inst.Domain
+		} else if err != nil {
 			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
 		}
 
@@ -398,23 +404,13 @@ func Logout(c echo.Context) error {
 				"error": "invalid claims",
 			})
 		}
-		var instances []*instance.Instance
-		req := &couchdb.FindRequest{
-			UseIndex: "by-oidcid",
-			Selector: mango.And(
-				mango.Equal("oidc_id", sub),
-				mango.Equal("context", contextName),
-			),
-			Limit: 1,
-		}
-		err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &instances)
-		if err != nil || len(instances) == 0 {
+		inst, err = findInstanceBySub(sub, contextName)
+		if err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error":             "internal server error",
 				"error_description": err,
 			})
 		}
-		inst = instances[0]
 	} else {
 		domain, ok := claims[conf.UserInfoField].(string)
 		if !ok {
@@ -891,6 +887,26 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 	domain = strings.ToLower(domain)             // The domain is case insensitive
 	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
 	return domain, nil
+}
+
+func findInstanceBySub(sub, contextName string) (*instance.Instance, error) {
+	var instances []*instance.Instance
+	req := &couchdb.FindRequest{
+		UseIndex: "by-oidcid",
+		Selector: mango.And(
+			mango.Equal("oidc_id", sub),
+			mango.Equal("context", contextName),
+		),
+		Limit: 1,
+	}
+	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &instances)
+	if err != nil {
+		return nil, err
+	}
+	if len(instances) == 0 {
+		return nil, errors.New("instance not found")
+	}
+	return instances[0], nil
 }
 
 func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
