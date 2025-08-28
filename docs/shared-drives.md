@@ -16,12 +16,9 @@ following steps:
 3. Create a sharing with the `drive: true` attribute, and one rule for
    shared folder (with `none` for `add`, `update` and `remove` attributes).
 
-# Routes
+## Managing shared drives
 
-A permission on the whole `io.cozy.files` doctype is required to use the
-following routes.
-
-## GET /sharings/drives
+### GET /sharings/drives
 
 The `GET /sharings/drives` route returns the list of shared drives.
 
@@ -95,6 +92,18 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+## Files and directories
+
+Unless stated otherwise, a permission on the whole `io.cozy.files` doctype is
+required to use the following routes.
+
+### GET /sharings/drives/:id/download/:file-id
+
+Download a file via a drive share.
+
+Identical call to [`GET /files/download/:file-id`](files.md#get-filesdownloadfile-id) but over a shared drive.
+See there for request and response examples
+
 ### GET /sharings/drives/:id/_changes
 
 Get the change feed for a drive.
@@ -109,14 +118,6 @@ See there for request and response examples, differences are the URL and:
   eg: `//io.cozy.files.shared-drives-dir/1/ba3b516812f636fc022f3968f991357a/Meetings/Checklist.txt`
 
   Schema and it's version, followed by the shared drive ID, and the path within
-
-
-### GET /sharings/drives/:id/download/:file-id
-
-Download a file via a drive share.
-
-Identical call to [`GET /files/download/:file-id`](files.md#get-filesdownloadfile-id) but over a shared drive.
-See there for request and response examples
 
 ### GET /sharings/drives/:id/:file-id
 
@@ -279,6 +280,116 @@ Duplicates a file.
 
 Identical call to [`POST /files/:file-id/copy`](files.md#post-filesfile-idcopy) but over a shared drive.
 See there for request and response examples, the only difference is the URL.
+
+### PATCH /sharings/drives/:id/:file-id
+
+This endpoint can be used to update the metadata of a file or directory, to
+rename it or to move it within the same shared drive.
+
+Some specific attributes of the patch can be used:
+
+- `dir_id` attribute can be updated to move a file or directory (the new
+  directory needs to be in the same shared drive as the old one)
+
+#### HTTP headers
+
+It's possible to send the `If-Match` header, with the previous revision of the
+file/directory (optional).
+
+#### Request
+
+```http
+PATCH /sharings/drives/aae62886e79611ef8381fb83ff72e425/9152d568-7e7c-11e6-a377-37cbfb190b4b HTTP/1.1
+Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "type": "file",
+      "name": "hi.txt",
+      "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
+      "tags": ["poem"]
+    }
+  }
+}
+```
+
+#### Status codes
+
+- 200 OK, when the file or directory metadata has been successfully updated
+- 400 Bad Request, when a the destination directory does not exist
+- 403 Forbidden, when the file or directory cannot be modified or the
+- destination directory is not accessible
+- 404 Not Found, when the file/directory does not exist
+- 412 Precondition Failed, when the `If-Match` header is set and doesn't match
+  the last revision of the file/directory
+- 422 Unprocessable Entity, when the sent data is invalid (for example, the
+  parent doesn't exist)
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+Location: https://cozy.example.com/sharings/drives/aae62886e79611ef8381fb83ff72e425/9152d568-7e7c-11e6-a377-37cbfb190b4b
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "meta": {
+      "rev": "1-0e6d5b72"
+    },
+    "attributes": {
+      "type": "file",
+      "name": "hi.txt",
+      "trashed": false,
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": ["poem"],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2016-09-20T18:32:49Z",
+        "createdByApp": "drive",
+        "createdOn": "https://cozy.example.com/",
+        "updatedAt": "2016-09-22T13:32:51Z",
+        "uploadedAt": "2016-09-21T04:27:50Z",
+        "uploadedOn": "https://cozy.example.com/",
+        "uploadedBy": {
+          "slug": "drive"
+        }
+      }
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        },
+        "data": {
+          "type": "io.cozy.files",
+          "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        }
+      }
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    }
+  }
+}
+```
 
 ## Versions
 

@@ -48,7 +48,8 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-// Load either a DirDoc or a FileDoc from the given `file-id` param. The function also checks permissions
+// Load either a DirDoc or a FileDoc from the given `file-id` param. The
+// function also checks permissions.
 func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, perm permission.Verb) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	dir, file, err := inst.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
@@ -88,6 +89,8 @@ func loadFileFromParam(c echo.Context, inst *instance.Instance, perm permission.
 	return file, err
 }
 
+// HeadDirOrFile returns an error if the requested file or directory does not
+// exist. It returns an empty body otherwise.
 func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	_, _, err := loadDirOrFileFromParam(c, inst, permission.GET)
 	if err != nil {
@@ -96,7 +99,9 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 	return nil
 }
 
-// TODO: reuse files.ReadMetadataFromIDHandler?!
+// GetDirOrFileData handles all GET requests on aiming at getting a file or
+// directory metadata from its id.
+// TODO: reuse files.ReadMetadataFromIDHandler?
 func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	dir, file, err := loadDirOrFileFromParam(c, inst, permission.GET)
 	if err != nil {
@@ -108,8 +113,10 @@ func GetDirOrFileData(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 	return files.FileData(c, http.StatusOK, file, true, nil, s)
 }
 
+// ReadFileContentFromIDHandler handles all GET requests aiming at downloading
+// a file given its ID. It serves the file in inline mode.
+// TODO: reuse files.ReadMetadataFromIDHandler?
 func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	//TODO: CSP ?
 	file, err := loadFileFromParam(c, inst, permission.GET)
 	if err != nil {
 		return err
@@ -117,10 +124,14 @@ func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sh
 	return files.SendFileFromDoc(inst, c, file, false)
 }
 
+// ReadFileContentFromVersion handles the download of an old version of the
+// file content.
 func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.ReadFileContentFromVersion(c)
 }
 
+// GetDirSize returns the size of a directory (the sum of the size of the files
+// in this directory, including those in subdirectories).
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	fs := inst.VFS()
 	dir, err := loadDirFromParam(c, inst)
@@ -137,10 +148,8 @@ func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
 
-// ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
-//
-// It can be used to modify the file or directory metadata, as well as
-// moving and renaming it in the filesystem.
+// ModifyMetadataByIDHandler handles PATCH requests used to modify the file or
+// directory metadata, as well as moving and renaming it in the shared drive's filesystem.
 func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	patch, err := getPatch(c, c.Param("file-id"))
 	if err != nil {
@@ -228,6 +237,12 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	return files.FileData(c, http.StatusOK, file, false, nil, nil)
 }
 
+// ChangesFeed is the handler for CouchDB's changes feed requests with some
+// additional options, like skip_trashed.
+//
+// The feed will be filtered by the given sharing directory returning only
+// files that are below this directory (anything outside this directory should
+// only be deletions with the document ID as only information).
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
@@ -238,42 +253,64 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 	return files.ChangesFeed(c, inst, sharedDir)
 }
 
+// CopyFile copies a single file from a shared drive to itself using parameters
+// from the echo Context:
+// - url param: `file-id`: surce file's ID
+// - url query param: `DirID`: optional destination folder's ID
+// - url query param: `Name`: optional destination file name
 func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.CopyFile(c, inst, s)
 }
 
+// CreationHandler handles POST requests to create files and directories in the
+// shared drive.
 func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.Create(c, s)
 }
 
+// DestroyFileHandler handles DELETE requests to clear one element from the
+// trash.
 func DestroyFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.DestroyFileHandler(c)
 }
 
+// OverwriteFileContentHandler handles PUT requests to overwrite the content of
+// a file given its identifier.
 func OverwriteFileContentHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.OverwriteFileContent(c, s)
 }
 
+// RestoreTrashFileHandler handles POST requests to restore a file or directory
+// from the trash.
 func RestoreTrashFileHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.Restore(c, s)
 }
 
+// TrashHandler handles all DELETE requests to move the file or directory with
+// the specified file-id to the trash.
 func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.Trash(c, s)
 }
 
+// UploadMetadataHandler accepts a metadata objet and persists it, so that it
+// can be used in a future file upload.
 func UploadMetadataHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.UploadMetadataHandler(c)
 }
 
+// ThumbnailHandler serves thumbnails of the images/photos.
 func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.ThumbnailHandler(c)
 }
 
+// FileDownloadCreateHandler stores the required path into a secret usable for
+// the download handler below.
 func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.FileDownload(c, s)
 }
 
+// FileDownloadHandler sends the content of a file that has previously been
+// prepared via a call to FileDownloadCreateHandler.
 func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.FileDownloadHandler(c)
 }
