@@ -32,10 +32,10 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 	}
 	d, f := dof.Refine()
 	if d != nil {
-		return newDir(d), nil
+		return NewDir(d, nil), nil
 	}
 
-	return NewFile(f, i), nil
+	return NewFile(f, i, nil), nil
 }
 
 // ListReferencesHandler list all files referenced by a doc
@@ -212,13 +212,13 @@ func AddReferencesHandler(c echo.Context) error {
 		if dir != nil {
 			oldDir := dir.Clone()
 			dir.AddReferencedBy(docRef)
-			updateDirCozyMetadata(c, dir)
+			UpdateDirCozyMetadata(c, dir)
 			docs[i] = dir
 			oldDocs[i] = oldDir
 		} else {
 			oldFile := file.Clone().(*vfs.FileDoc)
 			file.AddReferencedBy(docRef)
-			updateFileCozyMetadata(c, file, false)
+			UpdateFileCozyMetadata(c, file, false)
 			_, _ = file.Path(fs)    // Ensure the fullpath is filled to realtime
 			_, _ = oldFile.Path(fs) // Ensure the fullpath is filled to realtime
 			docs[i] = file
@@ -284,7 +284,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 			if altRef != nil {
 				dir.RemoveReferencedBy(*altRef)
 			}
-			updateDirCozyMetadata(c, dir)
+			UpdateDirCozyMetadata(c, dir)
 			docs[i] = dir
 			oldDocs[i] = oldDir
 		} else {
@@ -293,7 +293,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 			if altRef != nil {
 				file.RemoveReferencedBy(*altRef)
 			}
-			updateFileCozyMetadata(c, file, false)
+			UpdateFileCozyMetadata(c, file, false)
 			_, _ = file.Path(fs)    // Ensure the fullpath is filled to realtime
 			_, _ = oldFile.Path(fs) // Ensure the fullpath is filled to realtime
 			docs[i] = file
