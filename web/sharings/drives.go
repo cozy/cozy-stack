@@ -127,26 +127,7 @@ func ReadFileContentFromIDHandler(c echo.Context, inst *instance.Instance, s *sh
 // ReadFileContentFromVersion handles the download of an old version of the
 // file content.
 func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	file, err := loadFileFromParam(c, inst, permission.GET)
-	if err != nil {
-		return err
-	}
-
-	version, err := vfs.FindVersion(inst, file.DocID+"/"+c.Param("version-id"))
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	disposition := "inline"
-	if c.QueryParam("Dl") == "1" {
-		disposition = "attachment"
-	}
-	err = vfs.ServeFileContent(inst.VFS(), file, version, "", disposition, c.Request(), c.Response())
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	return nil
+	return files.ReadFileContentFromVersion(c)
 }
 
 // GetDirSize returns the size of a directory (the sum of the size of the files
