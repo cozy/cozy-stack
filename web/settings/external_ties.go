@@ -3,6 +3,7 @@ package settings
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -51,4 +52,23 @@ func (h *HTTPHandler) getExternalTies(c echo.Context) error {
 	doc := NewExternalTies(ties)
 
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
+}
+
+func (h *HTTPHandler) redirectToPremium(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return middlewares.ErrForbidden
+	}
+	inst := middlewares.GetInstance(c)
+
+	// TODO: move to a SettingsService method to avoid the dependency on the
+	// instance module.
+	url, err := inst.ManagerURL(instance.ManagerPremiumURL)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if url == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "This instance does not have a premium subscription manager.")
+	}
+
+	return c.Redirect(http.StatusMovedPermanently, url)
 }
