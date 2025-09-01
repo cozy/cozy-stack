@@ -325,6 +325,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 
 	router.GET("/capabilities", h.getCapabilities)
 	router.GET("/external-ties", h.getExternalTies)
+	router.GET("/premium", h.redirectToPremium)
 	router.GET("/instance", h.getInstance)
 	router.PUT("/instance", h.updateInstance)
 	router.POST("/instance/deletion", h.askInstanceDeletion)
