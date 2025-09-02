@@ -1,7 +1,9 @@
 package sharings_test
 
 import (
+	"io"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -867,14 +869,227 @@ func TestSharedDrives(t *testing.T) {
 				res := ci.client.GET(related).
 					WithHeader("Authorization", "Bearer "+ci.token).
 					Expect().Status(200)
-				res.Header("Content-Disposition").Equal(`inline; filename="` + checklistName + `"`)
+				res.Header("Content-Disposition").IsEqual(`inline; filename="` + checklistName + `"`)
 
 				// GET the file via the returned related link (attachment)
 				res = ci.client.GET(related).
 					WithQuery("Dl", "1").
 					WithHeader("Authorization", "Bearer "+ci.token).
 					Expect().Status(200)
-				res.Header("Content-Disposition").Equal(`attachment; filename="` + checklistName + `"`)
+				res.Header("Content-Disposition").IsEqual(`attachment; filename="` + checklistName + `"`)
+			})
+		})
+
+		t.Run("MoveDownstreamHandler", func(t *testing.T) {
+			var fileToUpload string
+			// Test missing parameters
+			t.Run("CreateSharedDataToMoveDownstream", func(t *testing.T) {
+				eA := httpexpect.Default(t, tsA.URL)
+
+				//as a target directory to move the file use Product directory "productID"
+
+				fileToUpload = eA.POST("/files/"+outsideOfShareID).
+					WithQuery("Name", "file-to-upload.txt").
+					WithQuery("Type", "file").
+					WithHeader("Content-Type", "text/plain").
+					WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					WithBytes([]byte("foo")).
+					Expect().Status(201).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.data.id").String().NotEmpty().Raw()
+
+			})
+
+			t.Run("MissingSourceInstance", func(t *testing.T) {
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+					WithQuery("file-id", fileToUpload).
+					Expect().Status(400)
+
+				res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.errors[0].detail").String().Contains("missing source-instance param")
+			})
+
+			t.Run("MissingFileID", func(t *testing.T) {
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+					WithQuery("source-instance", "https://"+acmeInstance.Domain).
+					Expect().Status(400)
+
+				res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.errors[0].detail").String().Contains("missing file-id parameter")
+			})
+
+			t.Run("FileNotFound", func(t *testing.T) {
+				_ = httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+					WithQuery("source-instance", "https://"+acmeInstance.Domain).
+					WithQuery("file-id", "non-existent-file").
+					Expect().Status(404)
+			})
+
+			t.Run("DirectoryNotFound", func(t *testing.T) {
+				_ = httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/non-existent-dir/downstream").
+					WithQuery("source-instance", "https://"+acmeInstance.Domain).
+					WithQuery("file-id", fileToUpload).
+					Expect().Status(404)
+			})
+
+			t.Run("SuccessfulMove", func(t *testing.T) {
+				// Perform the move operation
+				// Use a different source instance to test cross-stack functionality
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+					WithQuery("source-instance", "https://"+acmeInstance.Domain).
+					WithQuery("file-id", fileToUpload).
+					Expect().Status(201)
+
+				// Verify the response contains the new file
+				responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object()
+				responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+				responseObj.Path("$.data.attributes.name").String().IsEqual("test-file.txt")
+				responseObj.Path("$.data.attributes.dir_id").String().IsEqual(productID)
+
+				// Verify the file was moved
+				movedFile, err := acmeInstance.VFS().FileByID(responseObj.Path("$.data.id").String().Raw())
+				require.NoError(t, err)
+				require.Equal(t, "test-file.txt", movedFile.DocName)
+				require.Equal(t, productID, movedFile.DirID)
+				require.Equal(t, int64(11), movedFile.ByteSize)
+
+				// Verify the file content was preserved
+				fileHandle, err := acmeInstance.VFS().OpenFile(movedFile)
+				require.NoError(t, err)
+				defer fileHandle.Close()
+
+				content, err := io.ReadAll(fileHandle)
+				require.NoError(t, err)
+				require.Equal(t, "Hello World", string(content))
+
+				// TODO Verify the original file was deleted
+				require.Error(t, err)
+				require.True(t, os.IsNotExist(err))
+			})
+		})
+
+		t.Run("MoveUpstreamHandler", func(t *testing.T) {
+			var fileToMoveUpstream string
+			// Test missing parameters
+			t.Run("CreateSharedDataToMoveUpstream", func(t *testing.T) {
+				eA := httpexpect.Default(t, tsA.URL)
+
+				// Create a file in the shared directory that we'll move upstream
+				fileToMoveUpstream = eA.POST("/files/"+meetingsID).
+					WithQuery("Name", "file-to-move-upstream.txt").
+					WithQuery("Type", "file").
+					WithHeader("Content-Type", "text/plain").
+					WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					WithBytes([]byte("foo")).
+					Expect().Status(201).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.data.id").String().NotEmpty().Raw()
+			})
+
+			t.Run("MissingDestInstance", func(t *testing.T) {
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+fileToMoveUpstream+"/upstream").
+					WithQuery("dir-id", productID).
+					Expect().Status(400)
+
+				res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.errors[0].detail").String().Contains("missing dest-instance parameter")
+			})
+
+			t.Run("MissingDirID", func(t *testing.T) {
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+fileToMoveUpstream+"/upstream").
+					WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+					Expect().Status(400)
+
+				res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.errors[0].detail").String().Contains("missing dir-id parameter")
+			})
+
+			t.Run("FileNotFound", func(t *testing.T) {
+				_ = httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/non-existent-file/upstream").
+					WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+					WithQuery("dir-id", productID).
+					Expect().Status(404)
+			})
+
+			t.Run("SuccessfulMoveToSameStack", func(t *testing.T) {
+				eA := httpexpect.Default(t, tsA.URL)
+
+				// Create a test file to move
+				testFileID := eA.POST("/files/"+meetingsID).
+					WithQuery("Name", "test-upstream-move.txt").
+					WithQuery("Type", "file").
+					WithHeader("Content-Type", "text/plain").
+					WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					WithBytes([]byte("foo")).
+					Expect().Status(201).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.data.id").String().NotEmpty().Raw()
+
+				// Create destination directory on the target instance
+				destDirID := eA.POST("/files/").
+					WithQuery("Name", "Destination Dir").
+					WithQuery("Type", "directory").
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					Expect().Status(201).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.data.id").String().NotEmpty().Raw()
+
+				// Perform the upstream move operation (same-stack scenario)
+				res := eA.POST("/sharings/drives/"+sharingID+"/"+testFileID+"/upstream").
+					WithQuery("dest-instance", "https://"+acmeInstance.Domain).
+					WithQuery("dir-id", destDirID).
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					Expect().Status(201)
+
+				// Verify the response contains the new file
+				responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object()
+				responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+				responseObj.Path("$.data.attributes.name").String().IsEqual("test-upstream-move.txt")
+				responseObj.Path("$.data.attributes.dir_id").String().IsEqual(destDirID)
+
+				// Verify the file was moved to the destination
+				movedFile, err := acmeInstance.VFS().FileByID(responseObj.Path("$.data.id").String().Raw())
+				require.NoError(t, err)
+				require.Equal(t, "test-upstream-move.txt", movedFile.DocName)
+				require.Equal(t, destDirID, movedFile.DirID)
+				require.Equal(t, int64(3), movedFile.ByteSize)
+
+				// Verify the file content was preserved
+				fileHandle, err := acmeInstance.VFS().OpenFile(movedFile)
+				require.NoError(t, err)
+				defer fileHandle.Close()
+
+				content, err := io.ReadAll(fileHandle)
+				require.NoError(t, err)
+				require.Equal(t, "foo", string(content))
+
+				// Verify the original file was deleted from source
+				_, err = acmeInstance.VFS().FileByID(testFileID)
+				require.Error(t, err)
+			})
+
+			t.Run("InvalidFileParameter", func(t *testing.T) {
+				res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"//upstream").
+					WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+					WithQuery("dir-id", productID).
+					Expect().Status(400)
+
+				res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object().Path("$.errors[0].detail").String().Contains("missing file-id parameter")
+			})
+
+			t.Run("DirectoryInsteadOfFile", func(t *testing.T) {
+				// Try to move a directory using the file move endpoint
+				_ = httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+meetingsID+"/upstream").
+					WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+					WithQuery("dir-id", productID).
+					WithHeader("Authorization", "Bearer "+acmeAppToken).
+					Expect().Status(404) // Should fail because MoveUpstreamHandler expects a file, not a directory
 			})
 		})
 	})
