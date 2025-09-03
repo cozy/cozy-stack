@@ -264,7 +264,7 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return err
 	}
 
-	filename := s.Rules[0].Title + ".url"
+	filename := cleanFilename(s.Rules[0].Title) + ".url"
 	u := inst.SubDomain(consts.DriveSlug)
 	u.Fragment = "/folder/" + dir.ID()
 	driveURL := u.String()
@@ -339,6 +339,17 @@ func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error 
 		return s.SendShortcutNotification(inst, fileDoc, driveURL)
 	}
 	return nil
+}
+
+var illegalChars = []string{"<", ">", ":", `"`, "/", "\\", "|", "?", "*"}
+
+// cleanFilename removes characters in a filename that are not compatible with
+// Windows/macOS/Linux.
+func cleanFilename(filename string) string {
+	for _, char := range illegalChars {
+		filename = strings.ReplaceAll(filename, char, "-")
+	}
+	return filename
 }
 
 // CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
