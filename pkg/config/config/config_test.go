@@ -339,3 +339,88 @@ func TestCommonSettingsHelpers(t *testing.T) {
 	commonSettings := GetCommonSettings()
 	assert.Len(t, commonSettings, 2)
 }
+
+func TestRabbitMQConfig(t *testing.T) {
+	// Create a temporary YAML file with RabbitMQ configuration
+	yamlContent := `
+rabbitmq:
+  enabled: true
+  url: "amqp://test:test@localhost:5672/"
+  exchanges:
+    - name: "user-password-updates"
+      kind: "topic"
+      durable: true
+      dlx_name: "cozy.admin.dlx"
+      dlq_name: "cozy.admin.dlq"
+      queues:
+        - name: "password-change-queue"
+          bindings: ["user.password.change"]
+          prefetch: 32
+          delivery_limit: 5
+    
+    - name: "user-settings-updates"
+      kind: "topic"
+      durable: true
+      dlx_name: "cozy.admin.dlx_settings"
+      dlq_name: "cozy.admin.dlq_settings"
+      queues:
+        - name: "user-settings-updates"
+          bindings: ["settings.user.update"]
+          prefetch: 16
+          delivery_limit: 3
+        - name: "settings-admin-events"
+          bindings: ["settings.admin.*"]
+          prefetch: 8
+          delivery_limit: 2
+`
+
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test-rabbitmq-config.yaml")
+	err := os.WriteFile(tmpFile, []byte(yamlContent), 0644)
+	require.NoError(t, err)
+
+	require.NoError(t, Setup(tmpFile))
+
+	cfg := GetConfig()
+	rabbitmq := cfg.RabbitMQ
+
+	assert.True(t, rabbitmq.Enabled)
+	assert.Equal(t, "amqp://test:test@localhost:5672/", rabbitmq.URL)
+
+	require.Len(t, rabbitmq.Exchanges, 2, "Should have exactly 2 exchanges")
+
+	exchange1 := rabbitmq.Exchanges[0]
+	assert.Equal(t, "user-password-updates", exchange1.Name)
+	assert.Equal(t, "topic", exchange1.Kind)
+	assert.True(t, exchange1.Durable)
+	assert.Equal(t, "cozy.admin.dlx", exchange1.DLXName)
+	assert.Equal(t, "cozy.admin.dlq", exchange1.DLQName)
+
+	require.Len(t, exchange1.Queues, 1, "First exchange should have 1 queue")
+	queue1 := exchange1.Queues[0]
+	assert.Equal(t, "password-change-queue", queue1.Name)
+	assert.Equal(t, []string{"user.password.change"}, queue1.Bindings)
+	assert.Equal(t, 32, queue1.Prefetch)
+	assert.Equal(t, 5, queue1.DeliveryLimit)
+
+	exchange2 := rabbitmq.Exchanges[1]
+	assert.Equal(t, "user-settings-updates", exchange2.Name)
+	assert.Equal(t, "topic", exchange2.Kind)
+	assert.True(t, exchange2.Durable)
+	assert.Equal(t, "cozy.admin.dlx_settings", exchange2.DLXName)
+	assert.Equal(t, "cozy.admin.dlq_settings", exchange2.DLQName)
+
+	require.Len(t, exchange2.Queues, 2, "Second exchange should have 2 queues")
+
+	queue2a := exchange2.Queues[0]
+	assert.Equal(t, "user-settings-updates", queue2a.Name)
+	assert.Equal(t, []string{"settings.user.update"}, queue2a.Bindings)
+	assert.Equal(t, 16, queue2a.Prefetch)
+	assert.Equal(t, 3, queue2a.DeliveryLimit)
+
+	queue2b := exchange2.Queues[1]
+	assert.Equal(t, "settings-admin-events", queue2b.Name)
+	assert.Equal(t, []string{"settings.admin.*"}, queue2b.Bindings)
+	assert.Equal(t, 8, queue2b.Prefetch)
+	assert.Equal(t, 2, queue2b.DeliveryLimit)
+}
