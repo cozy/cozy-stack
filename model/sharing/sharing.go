@@ -52,6 +52,7 @@ type Sharing struct {
 	SRev string `json:"_rev,omitempty"`
 
 	Triggers    Triggers  `json:"triggers"`
+	Drive       bool      `json:"drive,omitempty"`
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
@@ -157,7 +158,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	if s.AppSlug == "" {
 		s.AppSlug = slug
 	}
-	if s.AppSlug == "" {
+	if s.Drive || s.AppSlug == "" {
 		s.PreviewPath = ""
 	}
 	s.CreatedAt = time.Now()
@@ -370,7 +371,7 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	if err := s.ValidateRules(); err != nil {
 		return nil, err
 	}
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		return nil, ErrNoRecipients
 	}
 
@@ -396,14 +397,16 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	if err := s.ValidateRules(); err != nil {
 		return err
 	}
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		return ErrNoRecipients
 	}
 
 	s.Active = false
 	s.Owner = false
 	s.UpdatedAt = time.Now()
-	s.Credentials = make([]Credentials, 1)
+	if !s.Drive {
+		s.Credentials = make([]Credentials, 1)
+	}
 
 	for i, m := range s.Members {
 		if m.Email != "" {
@@ -682,6 +685,9 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 
 // NoMoreRecipient cleans up the sharing if there is no more active recipient
 func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
+	if s.Drive {
+		return nil
+	}
 	for _, m := range s.Members {
 		if m.Status == MemberStatusReady {
 			return couchdb.UpdateDoc(inst, s)
@@ -726,6 +732,24 @@ func FindActive(db prefixer.Prefixer) ([]*Sharing, error) {
 		UseIndex: "active",
 		Selector: mango.Equal("active", true),
 		Limit:    1000,
+	}
+	var res []*Sharing
+	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// ListDrives returns the list of the active sharings with drive: true.
+func ListDrives(db prefixer.Prefixer) ([]*Sharing, error) {
+	req := &couchdb.FindRequest{
+		UseIndex: "active",
+		Selector: mango.And(
+			mango.Equal("active", true),
+			mango.Equal("drive", true),
+		),
+		Limit: 1000,
 	}
 	var res []*Sharing
 	err := couchdb.FindDocs(db, consts.Sharings, req, &res)
@@ -969,13 +993,23 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 	return previewURL, nil
 }
 
+// PatchDescription saves a new description for a sharing.
+func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
+	s.Description = description
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // AddShortcut creates a shortcut for this sharing on the local instance.
 func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
-	previewURL, err := s.GetPreviewURL(inst, state)
-	if err != nil {
-		return err
+	if s.Drive {
+		return s.CreateDriveShortcut(inst, true)
+	} else {
+		previewURL, err := s.GetPreviewURL(inst, state)
+		if err != nil {
+			return err
+		}
+		return s.CreateShortcut(inst, previewURL, true)
 	}
-	return s.CreateShortcut(inst, previewURL, true)
 }
 
 // CountNewShortcuts returns the number of shortcuts to a sharing that have not
@@ -1095,11 +1129,14 @@ func CheckSharings(inst *instance.Instance, skipFSConsistency bool) ([]map[strin
 		membersChecks, validMembers := s.checkSharingMembers()
 		checks = append(checks, membersChecks...)
 
-		triggersChecks := s.checkSharingTriggers(inst, accepted)
-		checks = append(checks, triggersChecks...)
+		var triggersChecks, credentialsChecks []map[string]interface{}
+		if !s.Drive {
+			triggersChecks = s.checkSharingTriggers(inst, accepted)
+			checks = append(checks, triggersChecks...)
 
-		credentialsChecks := s.checkSharingCredentials()
-		checks = append(checks, credentialsChecks...)
+			credentialsChecks = s.checkSharingCredentials()
+			checks = append(checks, credentialsChecks...)
+		}
 
 		if len(membersChecks) == 0 && len(triggersChecks) == 0 && len(credentialsChecks) == 0 {
 			if !s.Owner || !s.Active {
@@ -1360,7 +1397,7 @@ func (s *Sharing) checkSharingTriggers(inst *instance.Instance, accepted bool) (
 }
 
 func (s *Sharing) checkSharingMembers() (checks []map[string]interface{}, validMembers []*instance.Instance) {
-	if len(s.Members) < 2 {
+	if !s.Drive && len(s.Members) < 2 {
 		checks = append(checks, map[string]interface{}{
 			"id":         s.SID,
 			"type":       "not_enough_members",

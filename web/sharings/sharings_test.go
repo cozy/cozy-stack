@@ -137,7 +137,7 @@ func TestSharings(t *testing.T) {
 		sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
 		assertSharingIsCorrectOnSharer(t, obj, sharingID, aliceInstance)
-		description := assertInvitationMailWasSent(t, aliceInstance)
+		description := assertInvitationMailWasSent(t, aliceInstance, "Alice")
 		assert.Equal(t, description, "this is a test")
 		assert.Contains(t, discoveryLink, "/discovery?state=")
 	})
@@ -207,9 +207,7 @@ func TestSharings(t *testing.T) {
 			Header("Location").Contains("home")
 		// End bob login
 
-		fakeAliceInstance(t, bobInstance, tsA.URL)
-
-		t.Logf("redirect header: %q\n\n", authorizeLink)
+		FakeOwnerInstance(t, bobInstance, tsA.URL)
 
 		body := eB.GET(u.Path).
 			WithQuery("sharing_id", sharingID).
@@ -421,7 +419,7 @@ func TestSharings(t *testing.T) {
 		rule.HasValue("doctype", iocozytests)
 		rule.HasValue("values", []string{"foobaz"})
 
-		description := assertInvitationMailWasSent(t, aliceInstance)
+		description := assertInvitationMailWasSent(t, aliceInstance, "Alice")
 		assert.Equal(t, description, "this is a test with preview")
 		assert.Contains(t, discoveryLink, aliceInstance.Domain)
 		assert.Contains(t, discoveryLink, "/preview?sharecode=")
@@ -433,8 +431,6 @@ func TestSharings(t *testing.T) {
 		sharecode := u.Query()["sharecode"][0]
 
 		eA := httpexpect.Default(t, tsA.URL)
-
-		t.Logf("sharcode: %q\n\n", sharecode)
 
 		obj := eA.POST("/sharings/"+sharingID+"/discovery").
 			WithHeader("Accept", "application/json").
@@ -1013,6 +1009,28 @@ func TestSharings(t *testing.T) {
 		host = sharings.ClearAppInURL("https://my-cozy.example.net/")
 		assert.Equal(t, "https://my-cozy.example.net/", host)
 	})
+
+	t.Run("PatchSharing", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+
+		obj := eA.PATCH("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+            "data": {
+              "type": "` + consts.Sharings + `",
+              "attributes": {
+                "description":  "this is an updated description"
+              }
+            }
+          }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		updated := obj.Value("data").Object().Value("attributes").Object().Value("description").String().NotEmpty().Raw()
+		assert.Equal(t, updated, "this is an updated description")
+	})
 }
 
 func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array, instance *instance.Instance) {
@@ -1066,7 +1084,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, obj *httpexpect.Object, sharin
 	rule.HasValue("values", []interface{}{"000000"})
 }
 
-func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) string {
+func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance, owner string) string {
 	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
@@ -1093,7 +1111,7 @@ func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance) stri
 	assert.Equal(t, msg["mode"], "from")
 	assert.Equal(t, msg["template_name"], "sharing_request")
 	values := msg["template_values"].(map[string]interface{})
-	assert.Equal(t, values["SharerPublicName"], "Alice")
+	assert.Equal(t, values["SharerPublicName"], owner)
 	discoveryLink = values["SharingLink"].(string)
 	return values["Description"].(string)
 }
@@ -1133,7 +1151,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T, instanceA, instanceB *inst
 	assert.NotEmpty(t, rule.Values)
 }
 
-func fakeAliceInstance(t *testing.T, instance *instance.Instance, serverURL string) {
+func FakeOwnerInstance(t *testing.T, instance *instance.Instance, serverURL string) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
 	err := couchdb.GetAllDocs(instance, consts.Sharings, &req, &results)

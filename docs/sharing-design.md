@@ -1,11 +1,17 @@
 [Table of contents](README.md#table-of-contents)
 
-# Sharing design
+# Synchronized sharing design
 
 ## Baseline
 
-Here we detail the baseline of the Cozy sharing design and provide some core
-statements.
+Here we detail the baseline of the Cozy sharing design where files are
+synchronized between several cozy instances.
+
+**Note:** shared drives is a newer feature, and it does not require to
+synchronize the files between the cozy instances. As such, it is more scalable
+but does not provide the same features as the synchronized sharing. In
+particular, when a shared drive is revoked, members no longer have access to a
+copy of the files in it.
 
 ### Data sync
 
@@ -512,6 +518,7 @@ care of it later.
     -   `true` if any member of the sharing except the read-only ones can add a
         new recipient
     -   `false` if only the owner can add a new recipient
+-   A flag `drive`, that is false for a synchronized sharing
 -   Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
     `triggers`, `credentials`)
 -   A flag `initial_sync` present only when the initial replication is still

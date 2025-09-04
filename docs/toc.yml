@@ -1,58 +1,59 @@
 - README: ./README.md
 - Usage:
-  - "Install the cozy-stack": ./INSTALL.md
-  - "Configuration file": ./config.md
-  - "Managing Instances": ./instance.md
-  - "Security": ./security.md
-  - "Manpages of the command-line tool": ./cli/cozy-stack.md
-  - "Using the admin API": "./admin.md"
-  - "Important changes": "./important-changes.md"
+    - "Install the cozy-stack": ./INSTALL.md
+    - "Configuration file": ./config.md
+    - "Managing Instances": ./instance.md
+    - "Security": ./security.md
+    - "Manpages of the command-line tool": ./cli/cozy-stack.md
+    - "Using the admin API": "./admin.md"
+    - "Important changes": "./important-changes.md"
 - How-to guides for developpers:
-  - "Using the HTTP API": ./http-api.md
-  - "Develop a client-side app": ./client-app-dev.md
-  - "Running and building Docker images": ./docker.md
-  - "Running a konnector locally": ./konnectors-dev.md
-  - "Adding a new doctype": ./doctype.md
-  - "Working with the stack assets": ./assets.md
-  - "Build a release": ./release.md
-  - "The contributing guide": ./CONTRIBUTING.md
+    - "Using the HTTP API": ./http-api.md
+    - "Develop a client-side app": ./client-app-dev.md
+    - "Running and building Docker images": ./docker.md
+    - "Running a konnector locally": ./konnectors-dev.md
+    - "Adding a new doctype": ./doctype.md
+    - "Working with the stack assets": ./assets.md
+    - "Build a release": ./release.md
+    - "The contributing guide": ./CONTRIBUTING.md
 - Explanations:
-  - "Flagship app": ./flagship.md
-  - "Move design": ./move-design.md
-  - "Realtime internals": ./realtime-internals.md
-  - "Sharing design": ./sharing-design.md
-  - "Workflow of the konnectors": ./konnectors-workflow.md
+    - "Flagship app": ./flagship.md
+    - "Move design": ./move-design.md
+    - "Realtime internals": ./realtime-internals.md
+    - "Sharing design": ./sharing-design.md
+    - "Workflow of the konnectors": ./konnectors-workflow.md
 - List of services:
-  - "/ai - AI": ./ai.md
-  - "/auth - Authentication & OAuth": ./auth.md
-  - " /oidc - Delegated authentication": ./delegated-auth.md
-  - "/apps - Applications Management": ./apps.md
-  - " /apps - Apps registry": ./registry.md
-  - "/bitwarden - Bitwarden": ./bitwarden.md
-  - "/connection_check - Connection check": ./connection-check.md
-  - "/contacts - Contacts": ./contacts.md
-  - "/data - Data System": ./data-system.md
-  - " /data - Mango": ./mango.md
-  - " /data - CouchDB Quirks": ./couchdb-quirks.md
-  - " /data - PouchDB Quirks": ./pouchdb-quirks.md
-  - "/files - Virtual File System": ./files.md
-  - " /files - Not synchronized directories": ./not-synchronized-vfs.md
-  - " /files - References of documents in VFS": ./references-docs-in-vfs.md
-  - "/intents - Intents": ./intents.md
-  - "/jobs - Jobs": ./jobs.md
-  - " /jobs - Workers": ./workers.md
-  - "/konnectors - Konnectors": ./konnectors.md
-  - "/move - Move, export and import an instance": ./move.md
-  - "/notes - Notes for collaborative edition": ./notes.md
-  - "/notifications - Notifications": ./notifications.md
-  - "/office - Collaborative edition of Office documents": ./office.md
-  - "/public - Public": ./public.md
-  - "/permissions - Permissions": ./permissions.md
-  - "/realtime - Realtime": ./realtime.md
-  - "/remote - Proxy for remote data/API": ./remote.md
-  - " /remote/nextcloud - NextCloud": ./nextcloud.md
-  - "/settings - Settings": ./settings.md
-  - " /settings - Terms of Services": ./user-action-required.md
-  - "/sharings - Sharing": ./sharing.md
-  - "/shortcuts - Shortcuts": ./shortcuts.md
-  - "/.well-known - Well-known": ./wellknown.md
+    - "/ai - AI": ./ai.md
+    - "/auth - Authentication & OAuth": ./auth.md
+    - " /oidc - Delegated authentication": ./delegated-auth.md
+    - "/apps - Applications Management": ./apps.md
+    - " /apps - Apps registry": ./registry.md
+    - "/bitwarden - Bitwarden": ./bitwarden.md
+    - "/connection_check - Connection check": ./connection-check.md
+    - "/contacts - Contacts": ./contacts.md
+    - "/data - Data System": ./data-system.md
+    - " /data - Mango": ./mango.md
+    - " /data - CouchDB Quirks": ./couchdb-quirks.md
+    - " /data - PouchDB Quirks": ./pouchdb-quirks.md
+    - "/files - Virtual File System": ./files.md
+    - " /files - Not synchronized directories": ./not-synchronized-vfs.md
+    - " /files - References of documents in VFS": ./references-docs-in-vfs.md
+    - "/intents - Intents": ./intents.md
+    - "/jobs - Jobs": ./jobs.md
+    - " /jobs - Workers": ./workers.md
+    - "/konnectors - Konnectors": ./konnectors.md
+    - "/move - Move, export and import an instance": ./move.md
+    - "/notes - Notes for collaborative edition": ./notes.md
+    - "/notifications - Notifications": ./notifications.md
+    - "/office - Collaborative edition of Office documents": ./office.md
+    - "/public - Public": ./public.md
+    - "/permissions - Permissions": ./permissions.md
+    - "/realtime - Realtime": ./realtime.md
+    - "/remote - Proxy for remote data/API": ./remote.md
+    - " /remote/nextcloud - NextCloud": ./nextcloud.md
+    - "/settings - Settings": ./settings.md
+    - " /settings - Terms of Services": ./user-action-required.md
+    - "/sharings - Sharing": ./sharing.md
+    - " /sharings/drives - Shared drives": ./shared-drives.md
+    - "/shortcuts - Shortcuts": ./shortcuts.md
+    - "/.well-known - Well-known": ./wellknown.md

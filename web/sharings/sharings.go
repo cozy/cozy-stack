@@ -125,9 +125,15 @@ func PutSharing(c echo.Context) error {
 	}
 
 	if c.QueryParam("shortcut") == "true" {
-		u := c.QueryParam("url")
-		if err := s.CreateShortcut(inst, u, false); err != nil {
-			return wrapErrors(err)
+		if s.Drive {
+			if err := s.CreateDriveShortcut(inst, false); err != nil {
+				return wrapErrors(err)
+			}
+		} else {
+			u := c.QueryParam("url")
+			if err := s.CreateShortcut(inst, u, false); err != nil {
+				return wrapErrors(err)
+			}
 		}
 	}
 
@@ -170,6 +176,28 @@ func GetSharing(c echo.Context) error {
 	if err = checkGetPermissions(c, s); err != nil {
 		return wrapErrors(err)
 	}
+	return jsonapiSharingWithDocs(c, s)
+}
+
+func PatchSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if _, err = checkCreatePermissions(c, s); err != nil {
+		return wrapErrors(err)
+	}
+
+	req := sharing.APISharing{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapErrors(err)
+	}
+	if err := s.PatchDescription(inst, req.Description); err != nil {
+		return wrapErrors(err)
+	}
+
 	return jsonapiSharingWithDocs(c, s)
 }
 
@@ -899,6 +927,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)        // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
+	router.PATCH("/:sharing-id", PatchSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Managing recipients
@@ -931,6 +960,9 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id/discovery", GetDiscovery)
 	router.POST("/:sharing-id/discovery", PostDiscovery)
 	router.POST("/:sharing-id/preview-url", GetPreviewURL)
+
+	// Drives routes
+	drivesRoutes(router)
 
 	// Replicator routes
 	replicatorRoutes(router)

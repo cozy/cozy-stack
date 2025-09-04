@@ -257,6 +257,101 @@ func getDocumentType(inst *instance.Instance, s *Sharing) string {
 	return inst.Translate("Notification Sharing Type File")
 }
 
+// CreateDriveShortcut will create a shortcut for a shared Drive.
+func (s *Sharing) CreateDriveShortcut(inst *instance.Instance, seen bool) error {
+	dir, err := inst.EnsureSharedDrivesDir()
+	if err != nil {
+		return err
+	}
+
+	filename := cleanFilename(s.Rules[0].Title) + ".url"
+	u := inst.SubDomain(consts.DriveSlug)
+	u.Fragment = "/folder/" + dir.ID()
+	driveURL := u.String()
+	body := shortcut.Generate(driveURL)
+	cm := vfs.NewCozyMetadata(s.Members[0].Instance)
+	fileDoc, err := vfs.NewFileDoc(
+		filename,
+		dir.DocID,
+		int64(len(body)),
+		nil, // Let the VFS compute the md5sum
+		consts.ShortcutMimeType,
+		"shortcut",
+		cm.UpdatedAt,
+		false, // Not executable
+		false, // Not trashed
+		false, // Not encrypted
+		nil,   // No tags
+	)
+	if err != nil {
+		return err
+	}
+	fileDoc.CozyMetadata = cm
+	status := "new"
+	if seen {
+		status = "seen"
+	}
+	fileDoc.Metadata = vfs.Metadata{
+		"sharing": map[string]interface{}{
+			"status": status,
+		},
+		"target": map[string]interface{}{
+			"cozyMetadata": map[string]interface{}{
+				"instance": s.Members[0].Instance,
+			},
+			"_type": consts.Files,
+		},
+	}
+	fileDoc.AddReferencedBy(couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	})
+
+	file, err := inst.VFS().CreateFile(fileDoc, nil)
+	if err != nil {
+		basename := fileDoc.DocName
+		for i := 2; i < 100; i++ {
+			fileDoc.DocName = fmt.Sprintf("%s (%d)", basename, i)
+			file, err = inst.VFS().CreateFile(fileDoc, nil)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	_, err = file.Write(body)
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+
+	s.Active = true
+	s.ShortcutID = fileDoc.DocID
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
+	}
+
+	if !seen {
+		return s.SendShortcutNotification(inst, fileDoc, driveURL)
+	}
+	return nil
+}
+
+var illegalChars = []string{"<", ">", ":", `"`, "/", "\\", "|", "?", "*"}
+
+// cleanFilename removes characters in a filename that are not compatible with
+// Windows/macOS/Linux.
+func cleanFilename(filename string) string {
+	for _, char := range illegalChars {
+		filename = strings.ReplaceAll(filename, char, "-")
+	}
+	return filename
+}
+
 // CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
 // has not yet been accepted.
 func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, seen bool) error {
@@ -332,7 +427,10 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
 	}
 
-	return s.SendShortcutNotification(inst, fileDoc, previewURL)
+	if !seen {
+		return s.SendShortcutNotification(inst, fileDoc, previewURL)
+	}
+	return nil
 }
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding

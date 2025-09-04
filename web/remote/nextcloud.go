@@ -269,7 +269,7 @@ func nextcloudDownstream(c echo.Context) error {
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
-	obj := files.NewFile(f, inst)
+	obj := files.NewFile(f, inst, nil)
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
