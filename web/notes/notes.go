@@ -322,7 +322,7 @@ func ForceNoteSync(c echo.Context) error {
 // parameters to build the URL where the note can be opened.
 func OpenNoteURL(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	fileID := c.Param("id")
+	fileID := c.Param("file-id")
 	open, err := sharing.OpenNote(inst, fileID)
 	if err != nil {
 		return wrapError(err)
@@ -510,7 +510,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:id/title", ChangeTitle)
 	router.PUT("/:id/telepointer", PutTelepointer)
 	router.POST("/:id/sync", ForceNoteSync)
-	router.GET("/:id/open", OpenNoteURL)
+	router.GET("/:file-id/open", OpenNoteURL)
 	router.PUT("/:id/schema", UpdateNoteSchema)
 	router.POST("/:id/images", UploadImage)
 	router.POST("/:id/:image-id/copy", CopyImage)

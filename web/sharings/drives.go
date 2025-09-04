@@ -321,6 +321,10 @@ func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return notes.CreateNote(c)
 }
 
+func OpenNoteURL(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return notes.OpenNoteURL(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -380,6 +384,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.DELETE("/:file-id", proxy(TrashHandler, true))
 
 	drive.POST("/notes", proxy(CreateNote, true))
+	drive.GET("/notes/:file-id/open", proxy(OpenNoteURL, true))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

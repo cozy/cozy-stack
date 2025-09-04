@@ -408,6 +408,11 @@ difference is the URL.
 
 ## Notes
 
-### POST /sharings/drives/:id/Notes
+### POST /sharings/drives/:id/notes
 
 Create a note inside a shared drive. Identical to [`POST /notes`](notes.md#post-notes).
+
+### GET /sharings/drives/:id/notes/:file-id/open
+
+Return the parameters to build the URL where the note can be opened.
+Identical to [`GET /notes/:file-id/open`](notes.md#get-notesidopen).
