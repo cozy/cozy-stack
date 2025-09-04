@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notes"
+	"github.com/cozy/cozy-stack/web/office"
 	"github.com/labstack/echo/v4"
 )
 
@@ -321,8 +322,15 @@ func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 	return notes.CreateNote(c)
 }
 
+// OpenNoteURL returns the parameters to open a note inside a shared drive.
 func OpenNoteURL(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return notes.OpenNoteURL(c)
+}
+
+// OpenOffice returns the parameter to open an office document inside a shared
+// drive.
+func OpenOffice(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return office.Open(c)
 }
 
 // Find the directory linked to the drive sharing and return it if the user
@@ -385,6 +393,7 @@ func drivesRoutes(router *echo.Group) {
 
 	drive.POST("/notes", proxy(CreateNote, true))
 	drive.GET("/notes/:file-id/open", proxy(OpenNoteURL, true))
+	drive.GET("/office/:file-id/open", proxy(OpenOffice, true))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

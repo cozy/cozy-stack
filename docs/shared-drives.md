@@ -416,3 +416,10 @@ Create a note inside a shared drive. Identical to [`POST /notes`](notes.md#post-
 
 Return the parameters to build the URL where the note can be opened.
 Identical to [`GET /notes/:file-id/open`](notes.md#get-notesidopen).
+
+## Office
+
+### GET /sharings/drives/:id/office/:file-id/open
+
+Returns the parameters to open an office document. Identical to
+[`GET /office/:file-id/open`](office.md#get-officeidopen).

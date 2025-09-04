@@ -20,7 +20,7 @@ import (
 // Open returns the parameters to open an office document.
 func Open(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	fileID := c.Param("id")
+	fileID := c.Param("file-id")
 	open, err := sharing.OpenOffice(inst, fileID)
 	if err != nil {
 		return wrapError(err)
@@ -101,7 +101,7 @@ func Callback(c echo.Context) error {
 
 // Routes sets the routing for the collaborative edition of office documents.
 func Routes(router *echo.Group) {
-	router.GET("/:id/open", Open)
+	router.GET("/:file-id/open", Open)
 	router.POST("/keys/:key", FileByKey)
 	router.POST("/callback", Callback)
 }
