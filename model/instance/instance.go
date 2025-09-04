@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -48,8 +49,9 @@ const PBKDF2_SHA256 = 0
 type Instance struct {
 	DocID           string   `json:"_id,omitempty"`  // couchdb _id
 	DocRev          string   `json:"_rev,omitempty"` // couchdb _rev
-	Domain          string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Domain          string   `json:"domain"`         // The main DNS domain, like example.twake.app
 	DomainAliases   []string `json:"domain_aliases,omitempty"`
+	OldDomain       string   `json:"old_domain,omitempty"`       // The old DNS domain, like old.mycozy.cloud
 	Prefix          string   `json:"prefix,omitempty"`           // Possible database prefix
 	Locale          string   `json:"locale"`                     // The locale used on the server
 	UUID            string   `json:"uuid,omitempty"`             // UUID associated with the instance
@@ -722,6 +724,23 @@ func PaginatedList(limit int, startKey string, skip int) ([]*Instance, string, e
 		return docs, nextDoc.ID(), nil
 	}
 	return docs, "", nil
+}
+
+func FindByOldDomain(oldDomain string) (*Instance, error) {
+	var docs []*Instance
+	req := &couchdb.FindRequest{
+		UseIndex: "by-olddomain",
+		Selector: mango.Equal("old_domain", oldDomain),
+		Limit:    1,
+	}
+	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, ErrNotFound
+	}
+	return docs[0], nil
 }
 
 // PickKey choose which of the Instance keys to use depending on token audience

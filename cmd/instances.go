@@ -26,6 +26,7 @@ import (
 )
 
 var flagDomainAliases []string
+var flagOldDomain string
 var flagListFields []string
 var flagLocale string
 var flagTimezone string
@@ -183,6 +184,7 @@ be used as the error message.
 		in, err := ac.CreateInstance(&client.InstanceOptions{
 			Domain:          domain,
 			DomainAliases:   flagDomainAliases,
+			OldDomain:       flagOldDomain,
 			Locale:          flagLocale,
 			UUID:            flagUUID,
 			OIDCID:          flagOIDCID,
@@ -272,6 +274,7 @@ settings for a specified domain.
 		opts := &client.InstanceOptions{
 			Domain:          domain,
 			DomainAliases:   flagDomainAliases,
+			OldDomain:       flagOldDomain,
 			Locale:          flagLocale,
 			UUID:            flagUUID,
 			OIDCID:          flagOIDCID,
@@ -1083,6 +1086,7 @@ func init() {
 	instanceCmdGroup.AddCommand(setAuthModeCmd)
 	instanceCmdGroup.AddCommand(cleanSessionsCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
+	addInstanceCmd.Flags().StringVar(&flagOldDomain, "old-domain", "", "Old domain of the cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", consts.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
 	addInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "The identifier for checking authentication from OIDC")
@@ -1104,6 +1108,7 @@ func init() {
 	addInstanceCmd.Flags().BoolVar(&flagTrace, "trace", false, "Show where time is spent")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
+	modifyInstanceCmd.Flags().StringVar(&flagOldDomain, "old-domain", "", "Old domain of the cozy instance")
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
 	modifyInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "New identifier for checking authentication from OIDC")

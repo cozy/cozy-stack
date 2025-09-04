@@ -68,6 +68,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.OldDomain != "" && opts.OldDomain != i.OldDomain {
+			i.OldDomain = opts.OldDomain
+			needUpdate = true
+		}
+
 		if opts.UUID != "" && opts.UUID != i.UUID {
 			i.UUID = opts.UUID
 			needUpdate = true

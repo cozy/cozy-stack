@@ -3,10 +3,12 @@
 package web
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/stack"
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -350,10 +352,18 @@ func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerF
 		}
 
 		if parent, slug, _ := config.SplitCozyHost(host); slug != "" {
-			if i, err := lifecycle.GetInstance(parent); err == nil {
+			i, err := lifecycle.GetInstance(parent)
+			if err == nil {
 				c.Set("instance", i.WithContextualDomain(parent))
 				c.Set("slug", slug)
 				return appsHandler(c)
+			} else if err == instance.ErrNotFound {
+				if oldInstance, err := instance.FindByOldDomain(parent); err == nil {
+					newURL := oldInstance.SubDomain(slug)
+					newURL.Path = c.Request().URL.Path
+					newURL.RawQuery = c.Request().URL.RawQuery
+					return c.Redirect(http.StatusPermanentRedirect, newURL.String())
+				}
 			}
 		}
 

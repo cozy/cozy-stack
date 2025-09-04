@@ -30,6 +30,7 @@ type Instance struct {
 	Attrs struct {
 		Domain               string    `json:"domain"`
 		DomainAliases        []string  `json:"domain_aliases,omitempty"`
+		OldDomain            string    `json:"old_domain,omitempty"`
 		Prefix               string    `json:"prefix,omitempty"`
 		Locale               string    `json:"locale"`
 		UUID                 string    `json:"uuid,omitempty"`
@@ -59,6 +60,7 @@ type Instance struct {
 type InstanceOptions struct {
 	Domain             string
 	DomainAliases      []string
+	OldDomain          string
 	Locale             string
 	UUID               string
 	OIDCID             string
@@ -148,6 +150,7 @@ func (ac *AdminClient) CreateInstance(opts *InstanceOptions) (*Instance, error) 
 	}
 	q := url.Values{
 		"Domain":          {opts.Domain},
+		"OldDomain":       {opts.OldDomain},
 		"Locale":          {opts.Locale},
 		"UUID":            {opts.UUID},
 		"OIDCID":          {opts.OIDCID},
@@ -229,6 +232,7 @@ func (ac *AdminClient) ModifyInstance(opts *InstanceOptions) (*Instance, error) 
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
+		"OldDomain":       {opts.OldDomain},
 		"Locale":          {opts.Locale},
 		"UUID":            {opts.UUID},
 		"OIDCID":          {opts.OIDCID},
