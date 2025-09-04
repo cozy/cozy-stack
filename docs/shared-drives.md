@@ -405,3 +405,21 @@ Downloads an old version of the file content.
 Identical call to [`GET /files/download/:file-id/:version-id`](files.md#get-filesdownloadfile-idversion-id)
 but over a shared drive. See there for request and response examples, the only
 difference is the URL.
+
+## Notes
+
+### POST /sharings/drives/:id/notes
+
+Create a note inside a shared drive. Identical to [`POST /notes`](notes.md#post-notes).
+
+### GET /sharings/drives/:id/notes/:file-id/open
+
+Return the parameters to build the URL where the note can be opened.
+Identical to [`GET /notes/:file-id/open`](notes.md#get-notesidopen).
+
+## Office
+
+### GET /sharings/drives/:id/office/:file-id/open
+
+Returns the parameters to open an office document. Identical to
+[`GET /office/:file-id/open`](office.md#get-officeidopen).

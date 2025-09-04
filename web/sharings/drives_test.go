@@ -892,4 +892,90 @@ func TestSharedDrives(t *testing.T) {
 			res.Header("Content-Disposition").IsEqual(`attachment; filename="` + checklistName + `"`)
 		})
 	})
+
+	t.Run("CreateAndOpenNote", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		eB := httpexpect.Default(t, tsB.URL)
+
+		t.Run("CreateNoteInSharedDrive", func(t *testing.T) {
+			// Create a note in the shared drive as the owner
+			obj := eA.POST("/sharings/drives/"+sharingID+"/notes").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+					"data": {
+						"type": "io.cozy.notes.documents",
+						"attributes": {
+							"title": "Meeting Minutes",
+							"dir_id": "` + meetingsID + `",
+							"schema": {
+								"nodes": [
+									["doc", { "content": "block+" }],
+									["paragraph", { "content": "inline*", "group": "block" }],
+									["text", { "group": "inline" }],
+									["bullet_list", { "content": "list_item+", "group": "block" }],
+									["list_item", { "content": "paragraph block*" }]
+								],
+								"marks": [
+									["em", {}],
+									["strong", {}]
+								],
+								"topNode": "doc"
+							}
+						}
+					}
+				}`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			data.HasValue("type", "io.cozy.files")
+			noteID := data.Value("id").String().NotEmpty().Raw()
+
+			attrs := data.Value("attributes").Object()
+			attrs.HasValue("type", "file")
+			attrs.HasValue("name", "Meeting Minutes.cozy-note")
+			attrs.HasValue("mime", "text/vnd.cozy.note+markdown")
+
+			meta := attrs.Value("metadata").Object()
+			meta.HasValue("title", "Meeting Minutes")
+			meta.HasValue("version", 0)
+			meta.Value("schema").Object().NotEmpty()
+			meta.Value("content").Object().NotEmpty()
+
+			t.Run("OpenNoteFromSharedDrive", func(t *testing.T) {
+				obj := eB.GET("/sharings/drives/"+sharingID+"/notes/"+noteID+"/open").
+					WithHeader("Authorization", "Bearer "+bettyAppToken).
+					Expect().Status(200).
+					JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+					Object()
+
+				data := obj.Value("data").Object()
+				data.HasValue("type", consts.NotesURL)
+				data.HasValue("id", noteID)
+
+				attrs := data.Value("attributes").Object()
+				attrs.HasValue("note_id", noteID)
+				attrs.HasValue("subdomain", "nested")
+				attrs.HasValue("instance", acmeInstance.Domain)
+				attrs.Value("public_name").String().NotEmpty()
+			})
+		})
+
+		t.Run("CreateNoteWithoutAuthentication", func(t *testing.T) {
+			eB.POST("/sharings/drives/"+sharingID+"/notes").
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{
+					"data": {
+						"type": "io.cozy.notes.documents",
+						"attributes": {
+							"title": "Unauthorized Note",
+							"dir_id": "` + meetingsID + `"
+						}
+					}
+				}`)).
+				Expect().Status(401)
+		})
+	})
 }
