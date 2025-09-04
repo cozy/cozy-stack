@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/labstack/echo/v4"
 )
 
@@ -315,6 +316,11 @@ func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 	return files.FileDownloadHandler(c)
 }
 
+// CreateNote allows to create a note inside a shared drive.
+func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return notes.CreateNote(c)
+}
+
 // Find the directory linked to the drive sharing and return it if the user
 // requesting it has the proper permissions.
 func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
@@ -372,6 +378,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler, true))
 
 	drive.DELETE("/:file-id", proxy(TrashHandler, true))
+
+	drive.POST("/notes", proxy(CreateNote, true))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

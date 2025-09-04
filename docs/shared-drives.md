@@ -405,3 +405,9 @@ Downloads an old version of the file content.
 Identical call to [`GET /files/download/:file-id/:version-id`](files.md#get-filesdownloadfile-idversion-id)
 but over a shared drive. See there for request and response examples, the only
 difference is the URL.
+
+## Notes
+
+### POST /sharings/drives/:id/Notes
+
+Create a note inside a shared drive. Identical to [`POST /notes`](notes.md#post-notes).
