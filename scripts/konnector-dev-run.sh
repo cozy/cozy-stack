@@ -10,4 +10,4 @@ if [ ! -f "${arg}" ] && [ ! -d "${arg}" ]; then
 fi
 
 [ ! -d ~/.cozy ] && mkdir -p ~/.cozy
-node "${arg}" 2>&1 | tee -a ~/.cozy/services.log
+/Users/lethemanh/.nvm/versions/node/v20.18.0/bin/node "${arg}" 2>&1 | tee -a ~/.cozy/services.log

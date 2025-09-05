@@ -1,0 +1,532 @@
+# This file contain an example of cozy-stack configuration file.
+# It provides a description for all available fields to configure the stack.
+#
+# It is possible to pass environnment variable to this configuration using the
+# template language of golang, delimited by "{{" and "}}". See:
+#
+#     https://golang.org/pkg/text/template/.
+#
+# The env map is available in the ".Env" variable. For instance
+# ".Env.COUCHDB_PASSPHRASE" will access to "COUCHDB_PASSPHRASE" environment
+# variable. The template is evaluated at startup of the stack.
+
+# server host - flags: --host
+#
+# Specifies on which IP/domain the server will listen on. It also defines which
+# IP versions will be available (IPv4 and/or IPv6). The server will be available
+# only on the IP version you have defined in host. For domains it will favour
+# the IPv4 version if available.
+#
+# There are two values with custom behaviours:
+# - "localhost" -> will listen on both "127.0.0.1" on IPv4 and "[::1]" on IPv6
+# - "0.0.0.0" and "[::]" -> will listen on both "0.0.0.0" on IPv4 and "[::]" on IPv6
+host: localhost
+# server port - flags: --port -p
+port: 8080
+
+# how to structure the subdomains for apps - flags: --subdomains
+# values:
+#  - nested, like https://<app>.<user>.<domain>/ (well suited for self-hosted with Let's Encrypt)
+#  - flat, like https://<user>-<app>.<domain>/ (easier when using wildcard TLS certificate)
+subdomains: nested
+
+# defines a list of assets that can be fetched via the /remote/:asset-name
+# route.
+remote_assets:
+  bank: https://myassetserver.com/remote_asset.json
+
+# path to the directory with the assets - flags: --assets
+# default is to use the assets packed in the binary
+# assets: ""
+
+# administration endpoint parameters. this endpoint should be protected
+admin:
+  # server host - flags: --admin-host
+  host: localhost
+  # server port - flags: --admin-port
+  port: 6060
+  # secret file name containing the derived passphrase to access to the
+  # administration endpoint. this secret file can be generated using the `cozy-
+  # stack config passwd` command. this file should be located in the same path
+  # as the configuration file.
+  secret_filename: cozy-admin-passphrase
+
+# vault contains keyfiles informations
+# See https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_gen-keys/
+# to generate the keys
+vault:
+  # the path to the key used to encrypt credentials
+  # credentials_encryptor_key: /path/to/key.enc
+  # the path to the key used to decrypt credentials
+  # credentials_decryptor_key: /path/to/key.dec
+
+# file system parameters
+fs:
+  # file system url - flags: --fs-url
+  # default url is the directory relative to the binary: ./storage
+
+  # url: file://localhost/var/lib/cozy
+  # url: swift://openstack/?UserName={{ .Env.OS_USERNAME }}&Password={{ .Env.OS_PASSWORD }}&ProjectName={{ .Env.OS_PROJECT_NAME }}&UserDomainName={{ .Env.OS_USER_DOMAIN_NAME }}&Timeout={{ .Env.GOSWIFT_TIMEOUT }}
+
+  # Swift FS can be used with advanced parameters to activate TLS properties.
+  # For using swift with https, you must use the "swift+https" scheme.
+  #
+  # root_ca: /ca-certificates.pem
+  # client_cert: /client_cert.pem
+  # client_key: /client_key
+  # pinned_key: 57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6
+  # insecure_skip_validation: true
+  # can_query_info: true
+  # default_layout: 2 # 1 for layout v2 and 2 for layout v3
+
+  # auto_clean_trashed_after:
+  #   context_a: 30D
+  #   context_b: 3M
+
+  # versioning:
+  #   max_number_of_versions_to_keep: 20
+  #   min_delay_between_two_versions: 15m
+
+  # contexts:
+  #   cozy_beta:
+  #     max_number_of_versions_to_keep: 10
+  #     min_delay_between_two_versions: 1h
+
+# couchdb parameters
+couchdb:
+  # CouchDB URL - flags: --couchdb-url
+  url: http://localhost:5984/
+
+  # CouchDB advanced parameters to activate TLS properties:
+  #
+  # root_ca: /ca-certificates.pem
+  # client_cert: /client_cert.pem
+  # client_key: /client_key
+  # pinned_key: 57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6
+  # insecure_skip_validation: true
+
+  # Multiple CouchDB clusters:
+  # clusters:
+  #   - url: http://couchdb1:5984/
+  #     instance_creation: true
+  #   - url: http://couchdb2:5984/
+  #     instance_creation: false
+  #   - url: http://couchdb3:5984/
+  #     instance_creation: true
+
+# jobs parameters to configure the job system
+jobs:
+  # path to the imagemagick convert binary
+  # imagemagick_convert_cmd: convert
+
+  # path to the ghostscript binary
+  # ghostscript_cmd: gs
+
+  # Specify whether the given list of jobs is an allowlist or blocklist. In case
+  # of an allowlist, all jobs are deactivated by default and only the listed one
+  # are activated.
+  #
+  # allowlist: false
+
+  # workers individual configrations.
+  #
+  # For each worker type it is possible to configure the following fields:
+  #   - concurrency: the maximum number of jobs executed in parallel. when set
+  #     to zero, the worker is deactivated
+  #   - max_exec_count: the maximum number of retries for one job in case of an
+  #     error
+  #   - timeout: the maximum amount of time allowed for one execution of a job
+  #
+  # List of available workers:
+  #
+  #   - "clean-clients":     delete unused OAuth clients
+  #   - "export":            exporting data from a cozy instance
+  #   - "import":            importing data into a cozy instance
+  #   - "konnector":         launching konnectors
+  #   - "service":           launching services
+  #   - "migrations":        transforming a VFS with Swift to layout v3
+  #   - "notes-save":        saving notes to the VFS
+  #   - "rag-index":         send data to the RAG server for being indexed
+  #   - "rag-query":         send a query to the RAG server
+  #   - "push":              sending push notifications
+  #   - "sms":               sending SMS notifications
+  #   - "sendmail":          sending mails
+  #   - "share-group":       for cozy to cozy sharing
+  #   - "share-replicate":   idem
+  #   - "share-track":       idem
+  #   - "share-upload":      idem
+  #   - "thumbnail":         creatings and deleting thumbnails for images
+  #   - "thumbnailck":       generate missing thumbnails for all images
+  #   - "trash-files":       async deletion of files in the trash
+  #   - "clean-old-trashed": deletion of old files and directories after some time
+  #   - "unzip":             unzipping tarball
+  #   - "zip":               creating a zip tarball
+  #
+  # When no configuration is given for a worker, a default configuration is
+  # used. When a false boolean value is given, the worker is deactivated.
+  #
+  # To deactivate all workers, the workers field can be set to "false" or
+  # "none".
+  workers:
+    # thumbnail:
+    #   concurrency: {{mul .NumCPU 4}}
+    #   max_exec_count: 2
+    #   timeout: 15s
+
+    # konnector:
+    #   concurrency: {{.NumCPU}}
+    #   max_exec_count: 2
+    #   timeout: 200s
+
+    # service:
+    #   concurrency: {{.NumCPU}}
+    #   max_exec_count: 2
+    #   timeout: 200s
+
+    # export:
+    #   concurrency: 4
+    #   max_exec_count: 1
+    #   timeout: 200s
+
+    # push:     false
+    # sms:      false
+    # sendmail: false
+
+  # Sets the default duration of jobs database documents to keep
+  defaultDurationToKeep: "2W" # Keep 2 weeks
+
+# konnectors execution parameters for executing external processes.
+konnectors:
+  cmd: /Users/lethemanh/Codes/Linagora/cozy-stack/scripts/konnector-dev-run.sh # run connectors with node
+  # cmd: ./scripts/konnector-node-run.sh # run connectors with node in dev mode
+  # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
+  # cmd: ./scripts/konnector-nsjail-node8-run.sh # run connectors with nsjail
+
+# rag are the URL of the RAG server(s) for AI.
+rag:
+  # A cozy will use the rag server for its context, or if the context is not
+  # declared, for default.
+  default:
+    url: http://localhost:8000
+    api_key: $3cr3t
+  beta:
+    url: http://localhost:8001
+    api_key: $3cr3t
+
+# mail service parameters for sending email via SMTP
+mail:
+  # mail noreply address - flags: --mail-noreply-address
+  noreply_address: noreply@localhost
+  noreply_name: My Cozy
+  reply_to: support@example.org
+  # mail smtp host - flags: --mail-host
+  host: smtp.home
+  # mail smtp port - flags: --mail-port
+  port: 587
+  # mail smtp username - flags: --mail-username
+  username: {{.Env.COZY_MAIL_USERNAME}}
+  # mail smtp password - flags: --mail-password
+  password: {{.Env.COZY_MAIL_PASSWORD}}
+  # Use SSL connection (SMTPS)
+  # Means no STARTTLS
+  # flags: --mail-use-ssl
+  use_ssl: false
+  # disable mail STARTTLS
+  # Means using plain unencrypted SMTP
+  # flags: --mail-disable-tls
+  disable_tls: false
+  # skip the certificate validation (may be useful on localhost)
+  skip_certificate_validation: false
+  # Local Name
+  # The hostname sent to the SMTP server with the HELO command
+  # Defaults to localhost
+  # flags: --mail-local-name
+  local_name: cozy.domain.example
+  # It is also possible to override the mail server per context.
+  contexts:
+    beta:
+      # If the host is set to "-", no mail will be sent on this context
+      host: smtp.example.org
+      port: 587
+      username: {{.Env.COZY_BETA_MAIL_USERNAME}}
+      password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
+
+# campaign mail service parameters for sending campaign emails via SMTP
+# If campaign_mail.host is empty, the default mail config will be used.
+campaign_mail:
+  # SMTP server host
+  # Defaults to empty string
+  host: smtp.home
+  # SMTP server port
+  # Defaults to 25
+  port: 587
+  # SMTP server username
+  # Defaults to empty string
+  username: {{.Env.COZY_MAIL_USERNAME}}
+  # SMTP server password
+  # Defaults to empty string
+  password: {{.Env.COZY_MAIL_PASSWORD}}
+  # Use SSL connection (SMTPS)
+  # Means no STARTTLS
+  # Defaults to false
+  use_ssl: false
+  # Disable STARTTLS for SMTP server
+  # Means using plain unencrypted SMTP
+  # Defaults to true
+  disable_tls: false
+  # Skip the certificate validation (may be useful on localhost)
+  # Defaults to false
+  skip_certificate_validation: false
+  # Local Name
+  # The hostname sent to the SMTP server with the HELO command
+  # Defaults to empty string
+  local_name: cozy.domain.example
+  # It is also possible to override the campaign mail config per context.
+  contexts:
+    beta:
+      # If the host is set to "-", no mail will be sent on this context
+      host: smtp.example.org
+      port: 587
+      username: {{.Env.COZY_BETA_MAIL_USERNAME}}
+      password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
+
+# location of the database for IP -> City lookups - flags: --geodb
+# See https://dev.maxmind.com/geoip/geoip2/geolite2/
+geodb: ""
+
+# minimal duration between two password reset
+password_reset_interval: 15m
+
+# redis namespace to configure its usage for different part of the stack. redis
+# is not mandatory and is specifically useful to run the stack in an
+# environment where multiple stacks run simultaneously.
+redis:
+  # the redis clients created can be configured to be used with a cluster of
+  # redis. if addrs field is left empty, redis is not used.
+
+  # either a single address or a seed list of host:port addresses
+  # of cluster/sentinel nodes separated by whitespaces.
+  addrs: # localhost:1234 localhost:4321
+
+  # the sentinel master name - only failover clients.
+  master:
+
+  # redis password
+  password:
+
+  # databases number for each part of the stack using a specific database.
+  databases:
+    jobs: 0
+    cache: 1
+    lock: 2
+    sessions: 3
+    downloads: 4
+    konnectors: 5
+    realtime: 6
+    log: 7
+    rate_limiting: 8
+
+  # advanced parameters for advanced users
+
+  # dial_timeout: 5s
+  # read_timeout: 3s
+  # write_timeout: 3s
+  # pool_size: max(25, 10 * runtime.NumCPU())  # pool_size cannot be below 25
+  # pool_timeout: 3s
+  # idle_timeout: 5m
+
+  # enables read only queries on slave nodes.
+  # read_only_slave: false
+
+# Registries used for applications and konnectors
+registries:
+  default:
+    - https://apps-registry.cozycloud.cc/
+
+# Wizard used for moving a Cozy from one place/hoster to another
+move:
+  url: https://move.cozycloud.cc/
+
+# OnlyOffice server for collaborative edition of office documents
+office:
+  default:
+    onlyoffice_url: https://documentserver.example.org/
+    onlyoffice_inbox_secret: inbox_secret
+    onlyoffice_outbox_secret: outbox_secret
+
+# [internal usage] Cloudery configuration
+# clouderies:
+#   default:
+#     api:
+#       url: https://manager.example.org/
+#       token: xxxxxx
+
+# [internal usage] Common settings
+# common_settings:
+#   default:
+#     url: https://sign-up.example.org/
+#     token: f95880b7fa9e8a51e103ac5383bc5956d849267e99b336f31df8bd86c2e9ec50
+
+# All the deprecated apps listed here will see their OAUTH2 Authorization
+# flow interupted and redirected to a page proposing to move to the new
+# cozy application.
+#
+# The keys for `store_urls` can be: iphone/android/other
+deprecated_apps:
+  apps:
+#     - software_id: "github.com/cozy/some-app"
+#       name: "some-app"
+#       store_urls:
+#         iphone: https://some-apple-store-url
+#         android: https://some-android-store-url
+
+# The list of authorized hosts to redirect to when using the authentication
+# confirm endpoint.
+authorized_hosts_for_confirm_auth:
+  - sometool.example.org
+
+notifications:
+  # Activate development APIs (iOS only)
+  development: false
+
+  # Firebase Cloud Messaging API
+  # fcm_credentials_file: /etc/cozy/fcm_credentials.json
+
+  # APNS/2 certificates for iOS notifications
+  # ios_certificate_key_path: path/to/certificate.p12
+  # ios_certificate_password: mycertificatepasswordifany
+  # ios_key_id: my_key_id_if_any
+  # ios_team_id: my_team_id_if_any
+
+  # Huawei notifications
+  # huawei_get_token: http://localhost:3001/api/notification-token/huawei
+  # huawei_send_message: https://push-api.cloud.huawei.com/v1/<your_appid>/messages:send
+
+  # Configure the SMS per context
+  contexts:
+    beta:
+      provider: api_sen
+      url: https://sms.example.org/api/send
+      token: {{.Env.COZY_BETA_SMS_TOKEN}}
+
+flagship:
+  contexts:
+    cozy_beta:
+      skip_certification: true
+  apk_package_names:
+    - io.cozy.drive.mobile
+    - io.cozy.flagship.mobile
+  apk_certificate_digests:
+    - 'xNnH7T1BSDh6erMzNysfakBVLLacbSbOMxVk8jEPgdU='
+  play_integrity_decryption_keys:
+    - 'bVcBAv0eO64NKIvDoRHpnTOZVxAkhMuFwRHrTEMr23U='
+  play_integrity_verification_keys:
+    - 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElTF2uARN7oxfoDWyERYMe6QutI2NqS+CAtVmsPDIRjBBxF96fYojFVXRRsMb86PjkE21Ol+sO1YuspY+YuDRMw=='
+  apple_app_ids:
+    - 3AKXFMV43J.io.cozy.drive.mobile
+    - 3AKXFMV43J.io.cozy.flagship.mobile
+
+# Allowed domains for the CSP policy used in hosted web applications
+csp_allowlist:
+  # script: https://allowed1.domain.com/ https://allowed2.domain.com/
+  # img:    https://allowed.domain.com/
+  # style:  https://allowed.domain.com/
+  # font:   https://allowed.domain.com/
+
+  # It is also possible to configure the CSP policy per context. The values are
+  # cumulative with the global csp allowlist.
+  contexts:
+    beta:
+      img: https://allowed2.domain.com/
+
+# It can useful to disable the CSP policy to debug and test things in local
+# disable_csp: true
+
+log:
+  # logger level (debug, info, warning, panic, fatal) - flags: --log-level
+  level: info
+  # send logs to the local syslog - flags: --log-syslog
+  syslog: false
+
+# It is possible to customize some behaviors of cozy-stack in function of the
+# context of an instance (the context field of the settings document of this
+# instance). Here, the "beta" context is customized with.
+contexts:
+  beta:
+    # Indicates if debug related features should be enabled in front
+    # applications.
+    debug: false
+    # Redirect to a specific route of Cozy-Home after the onboarding
+    # Format: appslug/#/path/to/route
+    onboarded_redirection: home/#/discovery/?intro
+    # Redirect to the photos application after login
+    default_redirection: drive/#/folder
+    # This domain will be used as a suggestion for the members of a sharing
+    # when they are asked for the URL of their Cozy instance
+    sharing_domain: mycozy.cloud
+    # Allow to customize the cozy-bar link to the help
+    help_link: https://forum.cozy.io/
+    # claudy actions list
+    claudy_actions:
+      - desktop
+      - mobile
+    # konnectors slugs to exclude from cozy-collect
+    exclude_konnectors:
+      - a_konnector_slug
+    # If enabled, this option will skip permissions verification during
+    # webapp/konnectors installs & updates processes
+    permissions_skip_verification: false
+    # By default, only the store app can install and update applications. But,
+    # if this setting is enabled, it allows other applications with the right
+    # permission to install and update applications.
+    allow_install_via_a_permission: true
+    # Tells if the photo folder should be created or not during the instance
+    # creation (default: true)
+    init_photos_folder: true
+    # Tells if the administrative folder should be created or not during the
+    # instance creation (default: true)
+    init_administrative_folder: true
+    # Allows to override the default template "Cozy" title by your own title
+    templates_title: "My Personal Cloud"
+    # Use a different noreply mail for this context
+    noreply_address: noreply@example.org
+    noreply_name: My Cozy Beta
+    reply_to: support@example.org
+    # Configure the error page
+    support_address: support@example.org
+    # Change the limit on the number of members for a sharing
+    max_members_per_sharing: 50
+    # Use a different wizard for moving a Cozy
+    move_url: https://move.example.org/
+    # Feature flags
+    features:
+      - hide_konnector_errors
+    # List of applications that can be automatically updated even if the
+    # permissions have changed
+    additional_platform_apps:
+      - superapp
+    # Provides custom logo used in some cozy app (e.g. Home footer)
+    # Use type key if you want defined a logo as main
+    logos:
+      coachco2:
+        light:
+          - src: /logos/main_cozy.png
+            alt: Twake Workplace
+        dark:
+          - src: /logos/main_cozy.png
+            alt: Twake Workplace
+      home:
+        light:
+          - src: /logos/main_cozy.png
+            alt: Twake Workplace
+            type: main
+          - src: /logos/1_partner.png
+            alt: Partner n°1
+            type: secondary
+        dark:
+          - src: /logos/main_cozy.png
+            alt: Twake Workplace
+            type: main
+          - src: /logos/1_partner.png
+            alt: Partner n°1
+            type: secondary
