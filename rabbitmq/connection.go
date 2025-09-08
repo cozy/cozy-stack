@@ -72,7 +72,6 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 	return nil, fmt.Errorf("exceeded maximum connection attempts")
 }
 
-// returns a channel that will receive an error when the connection is closed
 func (cm *RabbitMQConnection) MonitorConnection() <-chan *amqp.Error {
 	return cm.connClose
 }
@@ -109,9 +108,9 @@ func (cm *RabbitMQConnection) Close() error {
 
 func nextBackoff(attempt int) time.Duration {
 	base := time.Duration(1<<uint(attempt)) * time.Second
-	max := 30 * time.Second
-	if base > max {
-		base = max
+	maxDuration := 30 * time.Second
+	if base > maxDuration {
+		base = maxDuration
 	}
 	return withJitter(base)
 }
