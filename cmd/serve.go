@@ -17,6 +17,7 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/rabbitmq"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -97,6 +98,15 @@ example), you can use the --appdir flag like this:
 		processes, services, err := stack.Start()
 		if err != nil {
 			return err
+		}
+
+		// Optionally start RabbitMQ consumer at boot from config
+		if config.GetConfig().RabbitMQ.Enabled {
+			shutdowner, err := rabbitmq.Start(config.GetConfig().RabbitMQ)
+			if err != nil {
+				return err
+			}
+			processes = utils.NewGroupShutdown(processes, shutdowner)
 		}
 
 		var servers *web.Servers

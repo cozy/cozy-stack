@@ -24,14 +24,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func startRabbitMQContainer(t *testing.T) (tc.Container, string) {
-	t.Helper()
-
-	f := StartRabbitMQ(t, true, false)
-
-	return f.Container, f.AMQPURL
-}
-
 func initConnection(t *testing.T, mgr *RabbitMQConnection) *amqp.Connection {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -52,7 +44,7 @@ func declareTestQueue(t *testing.T, conn *amqp.Connection, name string) {
 	require.NoError(t, err)
 }
 
-func TestConnectionTest(t *testing.T) {
+func TestConnection(t *testing.T) {
 	t.Parallel()
 
 	t.Run("InitConnectionAndQueue", func(t *testing.T) {
@@ -113,7 +105,7 @@ func TestConnectionTest(t *testing.T) {
 		require.NotNil(t, conn)
 	})
 
-	t.Run("TestConnectionTLS", func(t *testing.T) {
+	t.Run("ConnectWithTLS", func(t *testing.T) {
 		t.Parallel()
 
 		f := StartRabbitMQ(t, false, true)
@@ -128,7 +120,7 @@ func TestConnectionTest(t *testing.T) {
 		require.NoError(t, cm.Close())
 	})
 
-	t.Run("TestConnectionTLSIgnoreCA", func(t *testing.T) {
+	t.Run("ConnectWithTLSIgnoreCA", func(t *testing.T) {
 		t.Parallel()
 
 		f := StartRabbitMQ(t, false, true)
