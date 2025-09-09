@@ -28,6 +28,7 @@ cozy-stack instances modify <domain> [flags]
       --locale string               New locale
       --magic_link                  Enable authentication with magic links sent by email
       --oidc_id string              New identifier for checking authentication from OIDC
+      --old-domain string           Old domain of the cozy instance
       --onboarding-finished         Force the finishing of the onboarding
       --phone string                New phone number
       --public-name string          New public name

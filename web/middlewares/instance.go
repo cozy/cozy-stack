@@ -35,7 +35,19 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			var errHTTP *echo.HTTPError
 			switch err {
-			case instance.ErrNotFound, instance.ErrIllegalDomain:
+			case instance.ErrNotFound:
+				if oldInstance, err := instance.FindByOldDomain(host); err == nil {
+					newURL := url.URL{
+						Scheme:   oldInstance.Scheme(),
+						Host:     oldInstance.Domain,
+						Path:     c.Request().URL.Path,
+						RawQuery: c.Request().URL.RawQuery,
+					}
+					return c.Redirect(http.StatusPermanentRedirect, newURL.String())
+				}
+				err = instance.ErrNotFound
+				errHTTP = echo.NewHTTPError(http.StatusNotFound, err)
+			case instance.ErrIllegalDomain:
 				err = instance.ErrNotFound
 				errHTTP = echo.NewHTTPError(http.StatusNotFound, err)
 			default:
