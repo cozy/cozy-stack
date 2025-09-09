@@ -165,6 +165,14 @@ type RabbitMQ struct {
 	Enabled   bool             `mapstructure:"enabled" yaml:"enabled"`
 	URL       string           `mapstructure:"url" yaml:"url"`
 	Exchanges []RabbitExchange `mapstructure:"exchanges" yaml:"exchanges"`
+	TLS       RabbitMQTLS      `mapstructure:"tls" yaml:"tls"`
+}
+
+// RabbitMQTLS defines TLS settings for the RabbitMQ connection.
+type RabbitMQTLS struct {
+	RootCAFile             string `mapstructure:"root_ca" yaml:"root_ca"`
+	InsecureSkipValidation bool   `mapstructure:"insecure_skip_validation" yaml:"insecure_skip_validation"`
+	ServerName             string `mapstructure:"server_name" yaml:"server_name"`
 }
 
 type RabbitQueue struct {
@@ -172,6 +180,8 @@ type RabbitQueue struct {
 	Bindings      []string `mapstructure:"bindings" yaml:"bindings"`             // routing keys to bind
 	Prefetch      int      `mapstructure:"prefetch" yaml:"prefetch"`             // per-consumer QoS (optional override)
 	DeliveryLimit int      `mapstructure:"delivery_limit" yaml:"delivery_limit"` // x-delivery-limit (for quorum)
+	DLXName       string   `mapstructure:"dlx_name" yaml:"dlx_name"`             // optional per-queue DLX name (overrides exchange)
+	DLQName       string   `mapstructure:"dlq_name" yaml:"dlq_name"`             // optional per-queue DLQ name (overrides exchange)
 }
 
 type RabbitExchange struct {

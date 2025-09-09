@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"crypto/tls"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,6 +39,33 @@ func TestRabbitMQConnection_Connect_ContextCancelled(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, conn)
 	assert.Equal(t, context.Canceled, err)
+}
+
+func TestRabbitMQConnection_Connect_TLS_WithAMQPSInvalid(t *testing.T) {
+	cm := NewRabbitMQConnection("amqps://test:test@localhost:5671/")
+	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer cancel()
+
+	conn, err := cm.Connect(ctx, 3)
+	assert.Error(t, err)
+	assert.Nil(t, conn)
+}
+
+func TestRabbitMQConnection_Connect_TLS_WithConfigInvalid(t *testing.T) {
+	cm := NewRabbitMQConnection("amqps://localhost:5671/")
+	cm.tlsConfig = &tls.Config{InsecureSkipVerify: false, ServerName: "does-not-exist.invalid"}
+	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer cancel()
+
+	conn, err := cm.Connect(ctx, 3)
+	assert.Error(t, err)
+	assert.Nil(t, conn)
+}
+
+func Test_isAMQPS(t *testing.T) {
+	assert.True(t, isAMQPS("amqps://example"))
+	assert.False(t, isAMQPS("amqp://example"))
+	assert.False(t, isAMQPS("://bad"))
 }
 
 func TestRabbitMQConnection_Close_NotConnected(t *testing.T) {
@@ -96,4 +125,15 @@ func TestWithJitter(t *testing.T) {
 func TestWithJitter_ZeroDuration(t *testing.T) {
 	result := withJitter(0)
 	assert.Equal(t, time.Duration(0), result)
+}
+
+func TestRabbitMQConnection_Connect_TLS_SkipVerify(t *testing.T) {
+	cm := NewRabbitMQConnection("amqps://localhost:5671/")
+	cm.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
+	defer cancel()
+
+	conn, err := cm.Connect(ctx, 3)
+	assert.Error(t, err)
+	assert.Nil(t, conn)
 }

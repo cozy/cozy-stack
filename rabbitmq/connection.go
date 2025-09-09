@@ -7,12 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"crypto/tls"
+	neturl "net/url"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // RabbitMQConnection handles RabbitMQ connection management with automatic reconnection.
 type RabbitMQConnection struct {
 	url       string
+	tlsConfig *tls.Config
 	conn      *amqp.Connection
 	connClose chan *amqp.Error
 	mu        sync.RWMutex // Protects conn and connClose fields
@@ -54,7 +58,16 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 		}
 
 		// Try to create connection
-		conn, err := amqp.Dial(cm.url)
+		var conn *amqp.Connection
+		var err error
+		if isAMQPS(cm.url) {
+			if cm.tlsConfig == nil {
+				cm.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}
+			}
+			conn, err = amqp.DialTLS(cm.url, cm.tlsConfig)
+		} else {
+			conn, err = amqp.Dial(cm.url)
+		}
 		if err != nil {
 			if attempt == maxRetries-1 {
 				return nil, fmt.Errorf("failed to connect after %d attempts: %w", maxRetries, err)
@@ -122,4 +135,12 @@ func withJitter(d time.Duration) time.Duration {
 	}
 	jitter := time.Duration(rand.Int63n(int64(d / 4)))
 	return d + jitter
+}
+
+func isAMQPS(u string) bool {
+	parsed, err := neturl.Parse(u)
+	if err != nil {
+		return false
+	}
+	return parsed.Scheme == "amqps"
 }
