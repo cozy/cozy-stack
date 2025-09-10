@@ -76,11 +76,11 @@ func TestRabbitMQManager(t *testing.T) {
 			sender.publish(testMessage{TimeStamp: time.Now().UnixMilli()})
 		}
 
-		//restart the container
+		// restart the container
 		MQ.Stop(context.Background(), 30*time.Second)
 		MQ.Restart(context.Background(), 30*time.Second)
 
-		//publish second half
+		// publish second half
 		sender = newTestMessageSender(t, MQ.AMQPURL, "auth", "password.changed")
 		// Publish half of the messages
 		for i := 0; i < totalMessages/2; i++ {
@@ -107,7 +107,7 @@ func TestPasswordHandler(t *testing.T) {
 	MQ := testutils.StartRabbitMQ(t, false, false)
 
 	// Configure RabbitMQ before starting the stack so it is initialized by the stack
-	setup := setUpRabiitMQConfig(t, MQ)
+	setup := setUpRabbitMQConfig(t, MQ)
 	inst := setup.GetTestInstance()
 
 	domain := inst.Domain
@@ -153,9 +153,9 @@ func TestPasswordHandler(t *testing.T) {
 	})
 }
 
-func getChannel(t *testing.T, MQ *testutils.RabbitFixture) (error, *amqp.Channel) {
+func getChannel(t *testing.T, mq *testutils.RabbitFixture) (error, *amqp.Channel) {
 	t.Helper()
-	conn, err := amqp.Dial(MQ.AMQPURL)
+	conn, err := amqp.Dial(mq.AMQPURL)
 	require.NoError(t, err)
 	ch, err := conn.Channel()
 	require.NoError(t, err)
@@ -163,13 +163,11 @@ func getChannel(t *testing.T, MQ *testutils.RabbitFixture) (error, *amqp.Channel
 	return err, ch
 }
 
-func setUpRabiitMQConfig(t *testing.T, MQ *testutils.RabbitFixture) *testutils.TestSetup {
+func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture) *testutils.TestSetup {
 	cfg := config.GetConfig()
-	//orig := cfg.RabbitMQ
-	//t.Cleanup(func() { cfg.RabbitMQ = orig })
 
 	cfg.RabbitMQ.Enabled = true
-	cfg.RabbitMQ.URL = MQ.AMQPURL
+	cfg.RabbitMQ.URL = mq.AMQPURL
 	cfg.RabbitMQ.Exchanges = []config.RabbitExchange{
 		{
 			Name:    "auth",
@@ -221,7 +219,7 @@ func TestConnection(t *testing.T) {
 		connMgr := rabbitmq.NewRabbitMQConnection(f.AMQPURL)
 		conn := initConnection(t, connMgr)
 
-		//queue declaration should work find
+		// queue declaration should work find
 		declareTestQueue(t, conn, "testcontainers-queue")
 		require.NoError(t, connMgr.Close(), "can")
 	})
@@ -241,7 +239,7 @@ func TestConnection(t *testing.T) {
 		// stop container
 		MQ.Stop(context.Background(), 30*time.Second)
 
-		//asserts a close notification is received.
+		// asserts a close notification is received.
 		select {
 		case <-time.After(30 * time.Second):
 			t.Fatalf("did not receive connection close notification within timeout")
@@ -266,7 +264,7 @@ func TestConnection(t *testing.T) {
 		// Restart container,update manager, reconnect
 		MQ.Restart(context.Background(), 30*time.Second)
 
-		//update manager, reconnect
+		// update manager, reconnect
 		rconn, err := conn.Connect(context.Background(), 10)
 		require.NoError(t, err)
 		require.NotNil(t, rconn)
@@ -299,7 +297,6 @@ func TestConnection(t *testing.T) {
 		declareTestQueue(t, conn, "tls-test-queue")
 		require.NoError(t, cm.Close())
 	})
-
 }
 
 func certRoot() string {

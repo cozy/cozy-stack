@@ -587,7 +587,7 @@ func WaitForOrFail(t testing.TB, timeout time.Duration, condition func() bool) {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("timeout after %s waiting for condition", timeout)
+			t.Fatalf("timeout after %s waiting for condition", timeout)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}

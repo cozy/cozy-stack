@@ -88,6 +88,6 @@ type UserSettingsUpdateMessage struct {
 // Handle processes a user settings update message.
 func (h *UserSettingsUpdateHandler) Handle(ctx context.Context, d amqp.Delivery) error {
 	log.Infof("Received user settings update message: %s", d.RoutingKey)
-	//TODO process user setting handler
+	// TODO process user setting handler
 	return nil
 }

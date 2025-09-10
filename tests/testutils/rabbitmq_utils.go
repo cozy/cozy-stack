@@ -1,10 +1,10 @@
-package rabbitmq
+package testutils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -13,128 +13,15 @@ import (
 	"testing"
 	"time"
 
-	"crypto/tls"
-	"crypto/x509"
-
-	c "github.com/docker/docker/api/types/container"
+	"github.com/cozy/cozy-stack/rabbitmq"
 	"github.com/docker/go-connections/nat"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
+
+	c "github.com/docker/docker/api/types/container"
 	tc "github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
-
-func initConnection(t *testing.T, mgr *RabbitMQConnection) *amqp.Connection {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	conn, err := mgr.Connect(ctx, 5)
-	require.NoError(t, err)
-	require.NotNil(t, conn)
-	return conn
-}
-
-func declareTestQueue(t *testing.T, conn *amqp.Connection, name string) {
-	t.Helper()
-	ch, err := conn.Channel()
-	require.NoError(t, err)
-	_, err = ch.QueueDeclare(name, false, true, false, false, nil)
-	require.NoError(t, err)
-	err = ch.Close()
-	require.NoError(t, err)
-}
-
-func TestConnection(t *testing.T) {
-	t.Parallel()
-
-	t.Run("InitConnectionAndQueue", func(t *testing.T) {
-		t.Parallel()
-
-		f := StartRabbitMQ(t, false, false)
-
-		connMgr := NewRabbitMQConnection(f.AMQPURL)
-		conn := initConnection(t, connMgr)
-
-		//queue declaration should work find
-		declareTestQueue(t, conn, "testcontainers-queue")
-		require.NoError(t, connMgr.Close(), "can")
-	})
-
-	t.Run("MonitorClose", func(t *testing.T) {
-		t.Parallel()
-
-		rabbitmq := StartRabbitMQ(t, false, false)
-
-		mgr := NewRabbitMQConnection(rabbitmq.AMQPURL)
-
-		_ = initConnection(t, mgr)
-
-		monitor := mgr.MonitorConnection()
-		require.NotNil(t, monitor)
-
-		rabbitmq.Stop(context.Background(), 30*time.Second)
-
-		//asserts a close notification is received.
-		select {
-		case <-time.After(30 * time.Second):
-			t.Fatalf("did not receive connection close notification within timeout")
-		case err := <-monitor:
-			require.Error(t, err)
-		}
-	})
-
-	t.Run("ReconnectAfterDowntime", func(t *testing.T) {
-		t.Parallel()
-
-		rabbitmq := StartRabbitMQ(t, true, false)
-
-		connMgr := NewRabbitMQConnection(rabbitmq.AMQPURL)
-
-		// Initial connection
-		_ = initConnection(t, connMgr)
-
-		// Stop broker
-		rabbitmq.Stop(context.Background(), 30*time.Second)
-
-		// Restart container,update manager, reconnect
-		rabbitmq.Restart(context.Background(), 30*time.Second)
-
-		//update manager, reconnect
-		conn, err := connMgr.Connect(context.Background(), 10)
-		require.NoError(t, err)
-		require.NotNil(t, conn)
-	})
-
-	t.Run("ConnectWithTLS", func(t *testing.T) {
-		t.Parallel()
-
-		f := StartRabbitMQ(t, false, true)
-		require.NotEmpty(t, f.AMQPSURL, "AMQPSURL should be set when TLS is enabled")
-
-		cm := NewRabbitMQConnection(f.AMQPSURL)
-		cm.tlsConfig = getTlsConfig(t)
-
-		conn := initConnection(t, cm)
-
-		declareTestQueue(t, conn, "tls-test-queue")
-		require.NoError(t, cm.Close())
-	})
-
-	t.Run("ConnectWithTLSIgnoreCA", func(t *testing.T) {
-		t.Parallel()
-
-		f := StartRabbitMQ(t, false, true)
-		require.NotEmpty(t, f.AMQPSURL, "AMQPSURL should be set when TLS is enabled")
-
-		cm := NewRabbitMQConnection(f.AMQPSURL)
-		cm.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}
-
-		conn := initConnection(t, cm)
-
-		declareTestQueue(t, conn, "tls-test-queue")
-		require.NoError(t, cm.Close())
-	})
-}
 
 type RabbitFixture struct {
 	Container   tc.Container
@@ -176,7 +63,6 @@ func StartRabbitMQ(t *testing.T, withVolume bool, enableTLS bool) *RabbitFixture
 				fmt.Sprintf("%s:/etc/rabbitmq/rabbitmq.conf", filepath.Join(certRoot(), "rabbitmq.conf")),
 				fmt.Sprintf("%s:/etc/rabbitmq/certs", certRoot()),
 			)
-
 		}
 		if withVolume {
 			hc.Binds = append(hc.Binds, fmt.Sprintf("%s:/var/lib/rabbitmq/mnesia", volName))
@@ -241,6 +127,30 @@ func StartRabbitMQ(t *testing.T, withVolume bool, enableTLS bool) *RabbitFixture
 	})
 
 	return fixture
+}
+
+func (f *RabbitFixture) Publish() {
+	conn, err := amqp.Dial(f.AMQPURL)
+	require.NoError(f.t, err)
+	ch, err := conn.Channel()
+	require.NoError(f.t, err)
+	f.t.Cleanup(func() { _ = ch.Close(); _ = conn.Close() })
+
+	// Compose message
+	testHash := "testhash123"
+	domain := "test.example.com"
+	msg := rabbitmq.PasswordChangeMessage{
+		TwakeID:    "user-123",
+		Iterations: 100000,
+		Hash:       testHash,
+		PublicKey:  "PUB",
+		PrivateKey: "PRIV",
+		Key:        "KEY",
+		Timestamp:  time.Now().Unix(),
+		Domain:     domain,
+	}
+	_, err = json.Marshal(msg)
+	require.NoError(f.t, err)
 }
 
 func (f *RabbitFixture) Restart(ctx context.Context, timeout time.Duration) {
@@ -326,14 +236,4 @@ func certRoot() string {
 	_, thisFile, _, _ := runtime.Caller(0)
 	testDir := filepath.Dir(thisFile)
 	return filepath.Join(testDir, "testdata")
-}
-
-func getTlsConfig(t *testing.T) *tls.Config {
-	t.Helper()
-	caPEM, err := os.ReadFile(filepath.Join(certRoot(), "ca.pem"))
-	require.NoError(t, err)
-	pool := x509.NewCertPool()
-	require.True(t, pool.AppendCertsFromPEM(caPEM))
-	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: pool}
-	return tlsCfg
 }
