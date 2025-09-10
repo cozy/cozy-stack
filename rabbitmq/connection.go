@@ -16,7 +16,7 @@ import (
 // RabbitMQConnection handles RabbitMQ connection management with automatic reconnection.
 type RabbitMQConnection struct {
 	url       string
-	tlsConfig *tls.Config
+	TLSConfig *tls.Config
 	conn      *amqp.Connection
 	connClose chan *amqp.Error
 	mu        sync.RWMutex // Protects conn and connClose fields
@@ -61,10 +61,10 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 		var conn *amqp.Connection
 		var err error
 		if isAMQPS(cm.url) {
-			if cm.tlsConfig == nil {
-				cm.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}
+			if cm.TLSConfig == nil {
+				cm.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}
 			}
-			conn, err = amqp.DialTLS(cm.url, cm.tlsConfig)
+			conn, err = amqp.DialTLS(cm.url, cm.TLSConfig)
 		} else {
 			conn, err = amqp.Dial(cm.url)
 		}

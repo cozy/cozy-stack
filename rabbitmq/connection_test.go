@@ -53,7 +53,7 @@ func TestRabbitMQConnection_Connect_TLS_WithAMQPSInvalid(t *testing.T) {
 
 func TestRabbitMQConnection_Connect_TLS_WithConfigInvalid(t *testing.T) {
 	cm := NewRabbitMQConnection("amqps://localhost:5671/")
-	cm.tlsConfig = &tls.Config{InsecureSkipVerify: false, ServerName: "does-not-exist.invalid"}
+	cm.TLSConfig = &tls.Config{InsecureSkipVerify: false, ServerName: "does-not-exist.invalid"}
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
 	defer cancel()
 
@@ -129,7 +129,7 @@ func TestWithJitter_ZeroDuration(t *testing.T) {
 
 func TestRabbitMQConnection_Connect_TLS_SkipVerify(t *testing.T) {
 	cm := NewRabbitMQConnection("amqps://localhost:5671/")
-	cm.tlsConfig = &tls.Config{InsecureSkipVerify: true}
+	cm.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
 	defer cancel()
 

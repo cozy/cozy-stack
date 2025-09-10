@@ -53,6 +53,24 @@ func NewRabbitMQManager(url string, exchanges []ExchangeSpec) *RabbitMQManager {
 	}
 }
 
+// NewExchangeSpec creates a new ExchangeSpec with the given configuration
+func NewExchangeSpec(cfg *config.RabbitExchange) ExchangeSpec {
+	return ExchangeSpec{
+		cfg:    cfg,
+		Queues: []QueueSpec{},
+	}
+}
+
+// NewQueueSpec creates a new QueueSpec with the given configuration and handler
+func NewQueueSpec(cfg *config.RabbitQueue, handler Handler, dlxName, dlqName string) QueueSpec {
+	return QueueSpec{
+		cfg:     cfg,
+		Handler: handler,
+		dlxName: dlxName,
+		dlqName: dlqName,
+	}
+}
+
 // Start runs the consumer/manager in background and returns a Shutdowner
 func Start(opts config.RabbitMQ) (utils.Shutdowner, error) {
 	exchanges := buildExchangeSpecs(opts)
@@ -62,7 +80,7 @@ func Start(opts config.RabbitMQ) (utils.Shutdowner, error) {
 	if err != nil {
 		return nil, err
 	}
-	mgr.connection.tlsConfig = tlsCfg
+	mgr.connection.TLSConfig = tlsCfg
 	return mgr.Start(context.Background())
 }
 
@@ -199,7 +217,7 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 
 			// Map queue names to appropriate handlers
 			switch configQueue.Name {
-			case "password-change-queue":
+			case "user.password.updated":
 				handler = NewPasswordChangeHandler()
 			case "user-settings-updates":
 				handler = NewUserSettingsUpdateHandler()

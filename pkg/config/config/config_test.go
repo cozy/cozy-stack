@@ -353,7 +353,7 @@ rabbitmq:
       dlx_name: "cozy.admin.dlx"
       dlq_name: "cozy.admin.dlq"
       queues:
-        - name: "password-change-queue"
+        - name: "user.password.updated"
           bindings: ["user.password.change"]
           prefetch: 32
           delivery_limit: 5
@@ -398,7 +398,7 @@ rabbitmq:
 
 	require.Len(t, exchange1.Queues, 1, "First exchange should have 1 queue")
 	queue1 := exchange1.Queues[0]
-	assert.Equal(t, "password-change-queue", queue1.Name)
+	assert.Equal(t, "user.password.updated", queue1.Name)
 	assert.Equal(t, []string{"user.password.change"}, queue1.Bindings)
 	assert.Equal(t, 32, queue1.Prefetch)
 	assert.Equal(t, 5, queue1.DeliveryLimit)
