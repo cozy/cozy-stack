@@ -219,8 +219,8 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 			switch configQueue.Name {
 			case "user.password.updated":
 				handler = NewPasswordChangeHandler()
-			case "user-settings-updates":
-				handler = NewUserSettingsUpdateHandler()
+			case "user.created":
+				handler = NewUserCreatedHandler()
 			}
 
 			if handler == nil {

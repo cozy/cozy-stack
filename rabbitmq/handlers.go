@@ -74,24 +74,45 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	return nil
 }
 
-// UserSettingsUpdateHandler handles user settings update messages.
-type UserSettingsUpdateHandler struct{}
+// UserCreatedHandler handles user creation messages.
+type UserCreatedHandler struct{}
 
-// NewUserSettingsUpdateHandler creates a new user settings update handler.
-func NewUserSettingsUpdateHandler() *UserSettingsUpdateHandler {
-	return &UserSettingsUpdateHandler{}
+// NewUserCreatedHandler creates a new user created handler.
+func NewUserCreatedHandler() *UserCreatedHandler {
+	return &UserCreatedHandler{}
 }
 
-// UserSettingsUpdateMessage represents a user settings update message.
-type UserSettingsUpdateMessage struct {
-	Domain   string                 `json:"domain"`
-	Settings map[string]interface{} `json:"settings"`
-	Version  int                    `json:"version"`
+// UserCreatedMessage represents a user creation message.
+type UserCreatedMessage struct {
+	TwakeID       string `json:"twakeId"`
+	Mobile        string `json:"mobile"`
+	InternalEmail string `json:"internalEmail"`
+	Iterations    int    `json:"iterations"`
+	Hash          string `json:"hash"`
+	PublicKey     string `json:"publicKey"`
+	PrivateKey    string `json:"privateKey"`
+	Key           string `json:"key"`
+	Timestamp     int64  `json:"timestamp"`
 }
 
-// Handle processes a user settings update message.
-func (h *UserSettingsUpdateHandler) Handle(ctx context.Context, d amqp.Delivery) error {
-	log.Infof("Received user settings update message: %s", d.RoutingKey)
-	// TODO process user setting handler
+// Handle processes a user created message.
+func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("user.created: received message: %s", d.RoutingKey)
+
+	var msg UserCreatedMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("user.created: failed to unmarshal message: %w", err)
+	}
+
+	// Basic validation
+	if msg.TwakeID == "" {
+		return fmt.Errorf("user.created: missing twakeId")
+	}
+	if msg.InternalEmail == "" {
+		return fmt.Errorf("user.created: missing internalEmail")
+	}
+
+	// For now, we simply acknowledge the message after validation.
+	// Integrate business logic (e.g., instance/user provisioning) here as needed.
 	return nil
 }
