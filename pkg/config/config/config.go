@@ -185,12 +185,13 @@ type RabbitQueue struct {
 }
 
 type RabbitExchange struct {
-	Name    string        `mapstructure:"name" yaml:"name"`         // e.g. "user-common-settings" or "user-password-updates"
-	Kind    string        `mapstructure:"kind" yaml:"kind"`         // "topic", "direct", etc.
-	Durable bool          `mapstructure:"durable" yaml:"durable"`   // whether exchange is durable
-	DLXName string        `mapstructure:"dlx_name" yaml:"dlx_name"` // DLX name
-	DLQName string        `mapstructure:"dlq_name" yaml:"dlq_name"` // DLQ name
-	Queues  []RabbitQueue `mapstructure:"queues" yaml:"queues"`     // list of queues
+	Name            string        `mapstructure:"name" yaml:"name"`                         // e.g. "user-common-settings" or "user-password-updates"
+	Kind            string        `mapstructure:"kind" yaml:"kind"`                         // "topic", "direct", etc.
+	Durable         bool          `mapstructure:"durable" yaml:"durable"`                   // whether exchange is durable
+	DeclareExchange bool          `mapstructure:"declare_exchange" yaml:"declare_exchange"` // whether declare exchange on start up
+	DLXName         string        `mapstructure:"dlx_name" yaml:"dlx_name"`                 // DLX name
+	DLQName         string        `mapstructure:"dlq_name" yaml:"dlq_name"`                 // DLQ name
+	Queues          []RabbitQueue `mapstructure:"queues" yaml:"queues"`                     // list of queues
 }
 
 // ClouderyConfig for [cloudery.ClouderyService].

@@ -215,9 +215,10 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 	cfg.RabbitMQ.URL = mq.AMQPURL
 	cfg.RabbitMQ.Exchanges = []config.RabbitExchange{
 		{
-			Name:    "auth",
-			Kind:    "topic",
-			Durable: true,
+			Name:            "auth",
+			Kind:            "topic",
+			Durable:         true,
+			DeclareExchange: true,
 			Queues: []config.RabbitQueue{
 				{
 					Name:     "user.password.updated",
@@ -384,9 +385,10 @@ func testCtx(t *testing.T) context.Context {
 
 func initRabbitMQManager(amqpURL string, exchangeName string, queueName string, routingKey string, handler *countingTestHandler) *rabbitmq.RabbitMQManager {
 	exchangeCfg := &config.RabbitExchange{
-		Name:    exchangeName,
-		Kind:    "topic",
-		Durable: true,
+		Name:            exchangeName,
+		Kind:            "topic",
+		DeclareExchange: true,
+		Durable:         true,
 	}
 	queueCfg := &config.RabbitQueue{
 		Name:          queueName,

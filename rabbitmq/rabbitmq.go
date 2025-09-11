@@ -256,14 +256,16 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 }
 
 func declareRabbitMQExchange(conn *amqp.Connection, spec ExchangeSpec) error {
-	ch, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("failed to open channel for exchange %s: %w", spec.cfg.Name, err)
-	}
-	defer ch.Close()
+	if spec.cfg.DeclareExchange {
+		ch, err := conn.Channel()
+		if err != nil {
+			return fmt.Errorf("failed to open channel for exchange %s: %w", spec.cfg.Name, err)
+		}
+		defer ch.Close()
 
-	if err := ch.ExchangeDeclare(spec.cfg.Name, spec.cfg.Kind, spec.cfg.Durable, false, false, false, nil); err != nil {
-		return fmt.Errorf("failed to declare exchange %s: %w", spec.cfg.Name, err)
+		if err := ch.ExchangeDeclare(spec.cfg.Name, spec.cfg.Kind, spec.cfg.Durable, false, false, false, nil); err != nil {
+			return fmt.Errorf("failed to declare exchange %s: %w", spec.cfg.Name, err)
+		}
 	}
 	return nil
 }
