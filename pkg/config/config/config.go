@@ -180,6 +180,7 @@ type RabbitQueue struct {
 	Bindings      []string `mapstructure:"bindings" yaml:"bindings"`             // routing keys to bind
 	Prefetch      int      `mapstructure:"prefetch" yaml:"prefetch"`             // per-consumer QoS (optional override)
 	DeliveryLimit int      `mapstructure:"delivery_limit" yaml:"delivery_limit"` // x-delivery-limit (for quorum)
+	Declare       bool     `mapstructure:"declare" yaml:"declare"`               // whether declare queue on start up
 	DLXName       string   `mapstructure:"dlx_name" yaml:"dlx_name"`             // optional per-queue DLX name (overrides exchange)
 	DLQName       string   `mapstructure:"dlq_name" yaml:"dlq_name"`             // optional per-queue DLQ name (overrides exchange)
 }

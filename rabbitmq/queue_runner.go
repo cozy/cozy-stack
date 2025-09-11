@@ -62,9 +62,12 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		"x-dead-letter-exchange": q.dlxName,
 		"x-delivery-limit":       q.cfg.DeliveryLimit,
 	}
-	if _, err := r.ch.QueueDeclare(q.cfg.Name, true, false, false, false, qArgs); err != nil {
-		_ = ch.Close()
-		return nil, fmt.Errorf("failed to declare queue %s: %w", q.cfg.Name, err)
+
+	if q.cfg.Declare {
+		if _, err := r.ch.QueueDeclare(q.cfg.Name, true, false, false, false, qArgs); err != nil {
+			_ = ch.Close()
+			return nil, fmt.Errorf("failed to declare queue %s: %w", q.cfg.Name, err)
+		}
 	}
 	for _, binding := range q.cfg.Bindings {
 		if err := r.ch.QueueBind(q.cfg.Name, binding, exchangeName, false, nil); err != nil {

@@ -224,6 +224,7 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 					Name:     "user.password.updated",
 					Bindings: []string{"password.changed"},
 					Prefetch: 4,
+					Declare:  true,
 				},
 			},
 		},
@@ -393,6 +394,7 @@ func initRabbitMQManager(amqpURL string, exchangeName string, queueName string, 
 	queueCfg := &config.RabbitQueue{
 		Name:          queueName,
 		Bindings:      []string{routingKey},
+		Declare:       true,
 		Prefetch:      8,
 		DeliveryLimit: 5,
 	}
