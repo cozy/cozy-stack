@@ -10,6 +10,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 )
 
+const DefaultDomain = "twake.app"
+
 // PasswordChangeHandler handles password change messages.
 type PasswordChangeHandler struct{}
 
@@ -23,11 +25,11 @@ type PasswordChangeMessage struct {
 	TwakeID    string `json:"twakeId"`    // external user identifier
 	Iterations int    `json:"iterations"` // PBKDF2 iterations used client-side (when applicable)
 	Hash       string `json:"hash"`       // client-side hashed passphrase (base64)
-	PublicKey  string `json:"publicKey"`  // Bitwarden public key (base64)
-	PrivateKey string `json:"privateKey"` // Bitwarden private key (encrypted, CipherString)
-	Key        string `json:"key"`        // encrypted symmetric key (CipherString)
-	Timestamp  int64  `json:"timestamp"`  // unix timestamp of the event
-	Domain     string `json:"domain"`     // domain of the instance, e.g. "twake.app"
+	PublicKey  string `json:"publicKey"`  // [OPTIONAL] Bitwarden public key (base64)
+	PrivateKey string `json:"privateKey"` // [OPTIONAL] Bitwarden private key (encrypted, CipherString)
+	Key        string `json:"key"`        // [OPTIONAL] encrypted symmetric key (CipherString)
+	Timestamp  int64  `json:"timestamp"`  // [OPTIONAL] unix timestamp of the event
+	Domain     string `json:"domain"`     // [OPTIONAL] domain of the instance, e.g. "twake.app"
 }
 
 // Handle processes a password change message.
@@ -40,7 +42,7 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	}
 
 	if msg.Domain == "" {
-		return fmt.Errorf("password change: missing domain")
+		msg.Domain = DefaultDomain
 	}
 	if msg.Hash == "" {
 		return fmt.Errorf("password change: missing passphrase hash")
@@ -48,8 +50,17 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	if msg.Iterations <= 0 {
 		return fmt.Errorf("password change: missing iterations")
 	}
-	if msg.Key == "" || msg.PublicKey == "" || msg.PrivateKey == "" {
-		return fmt.Errorf("password change: missing key materials")
+
+	params := lifecycle.PassParameters{
+		Pass:       []byte(msg.Hash),
+		Iterations: msg.Iterations,
+	}
+
+	// if one of the keys is missing, do not update any of the keys
+	if msg.Key != "" && msg.PublicKey != "" || msg.PrivateKey != "" {
+		params.Key = msg.Key
+		params.PublicKey = msg.PublicKey
+		params.PrivateKey = msg.PrivateKey
 	}
 
 	inst, err := lifecycle.GetInstance(msg.Domain)
@@ -57,13 +68,6 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		return fmt.Errorf("password change: get instance: %w", err)
 	}
 
-	params := lifecycle.PassParameters{
-		Pass:       []byte(msg.Hash),
-		Iterations: msg.Iterations,
-		Key:        msg.Key,
-		PublicKey:  msg.PublicKey,
-		PrivateKey: msg.PrivateKey,
-	}
 	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, []byte(msg.Hash), params); err != nil {
 		return fmt.Errorf("password change: update passphrase: %w", err)
 	}

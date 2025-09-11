@@ -69,9 +69,6 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 			conn, err = amqp.Dial(cm.url)
 		}
 		if err != nil {
-			if attempt == maxRetries-1 {
-				return nil, fmt.Errorf("failed to connect after %d attempts: %w", maxRetries, err)
-			}
 			continue
 		}
 
@@ -82,7 +79,7 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 		return cm.conn, nil
 	}
 
-	return nil, fmt.Errorf("exceeded maximum connection attempts")
+	return nil, fmt.Errorf("failed to connect after %d attempts with urls: %s", maxRetries, cm.url)
 }
 
 func (cm *RabbitMQConnection) MonitorConnection() <-chan *amqp.Error {

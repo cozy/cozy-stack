@@ -96,60 +96,105 @@ func TestRabbitMQManager(t *testing.T) {
 }
 
 func TestPasswordHandler(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration test skipped with --short")
-	}
+	// Start RabbitMQ broker
+	MQ := testutils.StartRabbitMQ(t, false, false)
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
-	// Start RabbitMQ broker
-	// Local helper to boot a RabbitMQ container (copied signature from rabbitmq package test helper)
-	MQ := testutils.StartRabbitMQ(t, false, false)
-
-	// Configure RabbitMQ before starting the stack so it is initialized by the stack
-	setup := setUpRabbitMQConfig(t, MQ)
-	inst := setup.GetTestInstance()
-
-	domain := inst.Domain
-
-	// Publisher conn/channel
-	err, ch := getChannel(t, MQ)
-
-	// Compose message
-	testHash := "testhash123"
-	msg := rabbitmq.PasswordChangeMessage{
-		TwakeID:    inst.Prefix,
-		Iterations: 100000,
-		Hash:       testHash,
-		PublicKey:  "PUB",
-		PrivateKey: "PRIV",
-		Key:        "KEY",
-		Timestamp:  time.Now().Unix(),
-		Domain:     domain,
+	if testing.Short() {
+		t.Skip("integration test skipped with --short")
 	}
-	body, err := json.Marshal(msg)
-	require.NoError(t, err)
 
-	// Publish
-	err = ch.PublishWithContext(
-		testCtx(t),
-		"auth",
-		"password.changed",
-		false,
-		false,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "application/json",
-			Body:         body,
-			MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
-		},
-	)
-	require.NoError(t, err)
+	t.Run("ChangePasswordWithKeys", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
+		inst := setup.GetTestInstance()
 
-	// Wait until the instance hash is updated
-	testutils.WaitForOrFail(t, 10*time.Second, func() bool {
-		updated, err := lifecycle.GetInstance(domain)
-		return err == nil && string(updated.PassphraseHash) == testHash
+		domain := inst.Domain
+
+		// Publisher conn/channel
+		err, ch := getChannel(t, MQ)
+
+		// Compose message
+		testHash := "testhash123"
+		msg := rabbitmq.PasswordChangeMessage{
+			TwakeID:    inst.Prefix,
+			Iterations: 100000,
+			Hash:       testHash,
+			PublicKey:  "PUB",
+			PrivateKey: "PRIV",
+			Key:        "KEY",
+			Timestamp:  time.Now().Unix(),
+			Domain:     domain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"password.changed",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance hash is updated
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(domain)
+			return err == nil && string(updated.PassphraseHash) == testHash
+		})
+	})
+
+	t.Run("ChangePasswordWithoutKeys", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
+		inst := setup.GetTestInstance()
+
+		domain := inst.Domain
+
+		// Publisher conn/channel
+		err, ch := getChannel(t, MQ)
+
+		// Compose message
+		testHash := "testhash1234"
+		msg := rabbitmq.PasswordChangeMessage{
+			TwakeID:    inst.Prefix,
+			Iterations: 100000,
+			Hash:       testHash,
+			Domain:     domain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"password.changed",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance hash is updated
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(domain)
+			return err == nil && string(updated.PassphraseHash) == testHash
+		})
 	})
 }
 
@@ -163,7 +208,7 @@ func getChannel(t *testing.T, mq *testutils.RabbitFixture) (error, *amqp.Channel
 	return err, ch
 }
 
-func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture) *testutils.TestSetup {
+func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string) *testutils.TestSetup {
 	cfg := config.GetConfig()
 
 	cfg.RabbitMQ.Enabled = true
@@ -184,7 +229,7 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture) *testutils.T
 	}
 
 	// Start the stack via testutils and create an instance
-	setup := testutils.NewSetup(t, "password_change")
+	setup := testutils.NewSetup(t, name)
 	return setup
 }
 
