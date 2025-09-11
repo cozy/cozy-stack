@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/rabbitmq"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 )

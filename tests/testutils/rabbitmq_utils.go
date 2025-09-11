@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"net"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/rabbitmq"
 	"github.com/docker/go-connections/nat"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"

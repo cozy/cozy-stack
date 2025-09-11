@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"os"
 
 	"github.com/cozy/cozy-stack/model/cloudery"
@@ -17,8 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/rabbitmq"
-
 	"github.com/google/gops/agent"
 )
 
