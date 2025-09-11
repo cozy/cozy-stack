@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	defaultPrefetch = 32
-	defaultType     = "quorum"
+	DefaultPrefetch     = 32
+	QuorumType          = "quorum"
+	StrategyAtLeastOnce = "at-least-once"
+	StrategyOverflow    = "reject-publish"
 )
 
 // runs a single queue with its own channel/consumer
@@ -58,9 +60,11 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 
 	// Declare queue with args and bind to exchange
 	qArgs := amqp.Table{
-		"x-queue-type":           defaultType,
+		"x-queue-type":           QuorumType,
 		"x-dead-letter-exchange": q.dlxName,
 		"x-delivery-limit":       q.cfg.DeliveryLimit,
+		"x-dead-letter-strategy": StrategyAtLeastOnce,
+		"x-overflow":             StrategyOverflow,
 	}
 
 	if q.cfg.Declare {
@@ -79,7 +83,7 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 	// QoS
 	prefetch := q.cfg.Prefetch
 	if prefetch == 0 {
-		prefetch = defaultPrefetch
+		prefetch = DefaultPrefetch
 	}
 	if err := r.ch.Qos(prefetch, 0, false); err != nil {
 		_ = ch.Close()
