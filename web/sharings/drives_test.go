@@ -35,7 +35,8 @@ func TestSharedDrives(t *testing.T) {
 		checklistID,
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
-		otherSharedFileThenDeletedID string
+		otherSharedFileThenDeletedID,
+		sharingID string
 	var checklistName = "Checklist.txt"
 
 	config.UseTestFile(t)
@@ -887,7 +888,6 @@ func TestSharedDrives(t *testing.T) {
 				eA := httpexpect.Default(t, tsA.URL)
 
 				//as a target directory to move the file use Product directory "productID"
-
 				fileToUpload = eA.POST("/files/"+outsideOfShareID).
 					WithQuery("Name", "file-to-upload.txt").
 					WithQuery("Type", "file").
@@ -945,15 +945,15 @@ func TestSharedDrives(t *testing.T) {
 				responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 					Object()
 				responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
-				responseObj.Path("$.data.attributes.name").String().IsEqual("test-file.txt")
+				responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-upload.txt")
 				responseObj.Path("$.data.attributes.dir_id").String().IsEqual(productID)
 
 				// Verify the file was moved
 				movedFile, err := acmeInstance.VFS().FileByID(responseObj.Path("$.data.id").String().Raw())
 				require.NoError(t, err)
-				require.Equal(t, "test-file.txt", movedFile.DocName)
+				require.Equal(t, "file-to-upload.txt", movedFile.DocName)
 				require.Equal(t, productID, movedFile.DirID)
-				require.Equal(t, int64(11), movedFile.ByteSize)
+				require.Equal(t, int64(3), movedFile.ByteSize)
 
 				// Verify the file content was preserved
 				fileHandle, err := acmeInstance.VFS().OpenFile(movedFile)
@@ -962,9 +962,10 @@ func TestSharedDrives(t *testing.T) {
 
 				content, err := io.ReadAll(fileHandle)
 				require.NoError(t, err)
-				require.Equal(t, "Hello World", string(content))
+				require.Equal(t, "foo", string(content))
 
-				// TODO Verify the original file was deleted
+				// Verify the original file was deleted
+				_, err = acmeInstance.VFS().FileByID(fileToUpload)
 				require.Error(t, err)
 				require.True(t, os.IsNotExist(err))
 			})

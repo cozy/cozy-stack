@@ -294,8 +294,14 @@ func MoveDownstreamSameStack(c echo.Context, inst *instance.Instance, sourceInst
 		return files.WrapVfsError(err)
 	}
 
+	//var file, e = inst.VFS().CreateFile(newFileDoc, nil)
+	//if e != nil {
+	//	return err
+	//}
+	//file.Close()
+
 	// Copy the file content from the source instance
-	if err := inst.VFS().CopyFileFromOtherFS(srcFile, newFileDoc, sourceInstance.VFS(), srcFile); err != nil {
+	if err := inst.VFS().CopyFileFromOtherFS(newFileDoc, nil, sourceInstance.VFS(), srcFile); err != nil {
 		return files.WrapVfsError(err)
 	}
 
@@ -512,7 +518,7 @@ func MoveUpstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 		}
 
 		// Copy the file content to the destination instance
-		if err := destInstance.VFS().CopyFileFromOtherFS(srcFile, newFileDoc, inst.VFS(), srcFile); err != nil {
+		if err := destInstance.VFS().CopyFileFromOtherFS(newFileDoc, nil, inst.VFS(), srcFile); err != nil {
 			return files.WrapVfsError(err)
 		}
 
@@ -692,7 +698,7 @@ func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 }
 
 func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return files.FileDownloadCreateHandler(c)
+	return files.FileDownload(c, s)
 }
 
 func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
