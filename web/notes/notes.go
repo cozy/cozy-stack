@@ -338,7 +338,9 @@ func OpenNoteURL(c echo.Context) error {
 	// If a directory is shared by link and contains a note, the note can be
 	// opened with the same sharecode as the directory. The sharecode is also
 	// used to identify the member that previews a sharing.
-	if pdoc.Type == permission.TypeShareByLink || pdoc.Type == permission.TypeSharePreview {
+	if pdoc.Type == permission.TypeShareByLink ||
+		pdoc.Type == permission.TypeSharePreview ||
+		pdoc.Type == permission.TypeShareInteract {
 		code := middlewares.GetRequestToken(c)
 		open.AddShareByLinkCode(code)
 	}
