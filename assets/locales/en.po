@@ -963,54 +963,6 @@ msgstr "Here is the code to enable two-factor authentication:"
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at support@twake.app"
 
-msgid "Mail New Connection Subject"
-msgstr "New connection to your %s"
-
-msgid "Mail New Connection Intro"
-msgstr ""
-"This is a message from your Twake.\n"
-"A new device has recently logged into your Twake account. "
-"Check out the below connection information to confirm that is yours."
-
-msgid "Mail New Connection Place"
-msgstr "Location:"
-
-msgid "Mail New Connection Near"
-msgstr "near"
-
-msgid "Mail New Connection Time"
-msgstr "Time:"
-
-msgid "Mail New Connection IP"
-msgstr "IP Address:"
-
-msgid "Mail New Connection Browser"
-msgstr "Browser:"
-
-msgid "Mail New Connection Change Passphrase instruction"
-msgstr ""
-"If you are behind this new connection, you can ignore this message and enjoy your Twake.\n"
-"If not, we suggest to reset your password now."
-
-msgid "Mail New Connection Change Passphrase text"
-msgstr "Change my password"
-
-msgid "Mail New Connection Bonus instruction"
-msgstr ""
-"Do you want to reinforce the security of your account? "
-"We advise you to activate two-factor authentication on your account."
-
-msgid "Mail New Connection Bonus text"
-msgstr "Activate two-factor authentication"
-
-msgid "Mail New Connection Outro"
-msgstr "Why the email? For any unusual behaviour in your connections you will be notified in order to ensure the security of all your data."
-
-msgid "Mail New Connection Signature"
-msgstr ""
-"See you soon,\n"
-"Your Twake"
-
 msgid "Mail New Registration Subject"
 msgstr "A new device connected to your %s"
 

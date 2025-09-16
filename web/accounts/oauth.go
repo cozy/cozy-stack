@@ -347,7 +347,7 @@ func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
 			sessionID, err := auth.SetCookieForNewSession(c, session.ShortRun, "")
 			req := c.Request()
 			if err == nil {
-				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code"); err != nil {
 					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 				}
 			}

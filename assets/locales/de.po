@@ -692,55 +692,6 @@ msgstr ""
 "Wenn du diese Änderung nicht vorgenommen hast, kontaktiere uns bitte über "
 "support@twake.app"
 
-msgid "Mail New Connection Subject"
-msgstr "Neue Verbindung zu deinem %s"
-
-msgid "Mail New Connection Intro"
-msgstr ""
-"Dies ist eine Nachricht deines Twake:\n"
-"Ein neues Gerät hat sich kürzlich in deinem Cozykonto angemeldet. Überprüfe die Verbindungsinformationen unten, um zu bestätigen, dass es deines ist."
-
-msgid "Mail New Connection Place"
-msgstr "Ort:"
-
-msgid "Mail New Connection Near"
-msgstr "nahe"
-
-msgid "Mail New Connection Time"
-msgstr "Zeit:"
-
-msgid "Mail New Connection IP"
-msgstr "IP Adresse:"
-
-msgid "Mail New Connection Browser"
-msgstr "Browser:"
-
-msgid "Mail New Connection Change Passphrase instruction"
-msgstr ""
-"Wenn du hinter dieser neuen Verbindung steckst, kannst du diese Nachricht ignorieren und dein Twake genießen.\n"
-"Wenn nicht, empfehlen wir dir dein Passwort umgehend zu erneuern."
-
-msgid "Mail New Connection Change Passphrase text"
-msgstr "Mein Passwort ändern"
-
-msgid "Mail New Connection Bonus instruction"
-msgstr ""
-"Möchtest du die Sicherheit deines Kontos verstärken? Wir raten dir, die "
-"Zwei-Faktor-Authentifizierung in deinem Konto zu aktivieren."
-
-msgid "Mail New Connection Bonus text"
-msgstr "Zwei-Faktor-Authentifizierung aktivieren"
-
-msgid "Mail New Connection Outro"
-msgstr ""
-"Warum die E-Mail? Für jedes ungewöhnliche Verhalten bei deinen Verbindungen,"
-" wirst du benachrichtigt, um die Sicherheit deiner Daten sicherzustellen."
-
-msgid "Mail New Connection Signature"
-msgstr ""
-"Bis bald,\n"
-"Dein Twake"
-
 msgid "Mail New Registration Subject"
 msgstr "Ein neues Gerät hat sich mit deinem %s verbunden"
 

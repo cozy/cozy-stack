@@ -349,7 +349,7 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 	if err != nil {
 		return err
 	}
-	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), "OIDC", true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), "OIDC"); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	if redirect == "" {

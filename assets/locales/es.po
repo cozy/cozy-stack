@@ -694,56 +694,6 @@ msgstr ""
 "Si usted no es el autor de este cambio, por favor contáctenos en "
 "support@twake.app"
 
-msgid "Mail New Connection Subject"
-msgstr "Nueva conexión a su %s"
-
-msgid "Mail New Connection Intro"
-msgstr ""
-"Este es un mensaje de su Twake.\n"
-"Un nuevo dispositivo se ha conectado recientemente a su cuenta de Twake. Revise la siguiente información de conexión para confirmar que es suyo."
-
-msgid "Mail New Connection Place"
-msgstr "Ubicación:"
-
-msgid "Mail New Connection Near"
-msgstr "Cerca"
-
-msgid "Mail New Connection Time"
-msgstr "Hora:"
-
-msgid "Mail New Connection IP"
-msgstr "Dirección IP:"
-
-msgid "Mail New Connection Browser"
-msgstr "Navegador:"
-
-msgid "Mail New Connection Change Passphrase instruction"
-msgstr ""
-"Si está detrás de esta nueva conexión, puede ignorar este mensaje y disfrutar de su Twake.\n"
-"Si no, le sugerimos que modifique su contraseña ahora."
-
-msgid "Mail New Connection Change Passphrase text"
-msgstr "Cambiar mi contraseña"
-
-msgid "Mail New Connection Bonus instruction"
-msgstr ""
-"¿Quiere reforzar la seguridad de su cuenta? Le aconsejamos que active en su "
-"cuenta la autenticación de dos factores."
-
-msgid "Mail New Connection Bonus text"
-msgstr "Activar la autenticación de dos factores"
-
-msgid "Mail New Connection Outro"
-msgstr ""
-"¿Por qué el correo electrónico? Para cualquier comportamiento inusual en sus"
-" conexiones se le notificará para garantizar la seguridad de todos sus "
-"datos."
-
-msgid "Mail New Connection Signature"
-msgstr ""
-"Hasta pronto,\n"
-"Su Twake"
-
 msgid "Mail New Registration Subject"
 msgstr "A su %s se ha conectado un nuevo periférico"
 

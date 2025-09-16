@@ -8,8 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -224,12 +222,7 @@ func sendRegistrationNotification(entry *registrationEntry, registrationNotifica
 		return SendNewRegistrationNotification(i, clientID)
 	}
 
-	var login LoginEntry
-	err = couchdb.GetDoc(i, consts.SessionsLogins, entry.LoginEntryID, &login)
-	if err != nil {
-		return err
-	}
-	return sendLoginNotification(i, &login)
+	return nil
 }
 
 func sendExpiredRegistrationNotifications(entries []registrationEntry) {

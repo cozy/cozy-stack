@@ -165,7 +165,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 			sessionID, err := auth.SetCookieForNewSession(c, session.NormalRun, "")
 			req := c.Request()
 			if err == nil {
-				if err = session.StoreNewLoginEntry(i, sessionID, "", req, "session_code", false); err != nil {
+				if err = session.StoreNewLoginEntry(i, sessionID, "", req, "session_code"); err != nil {
 					i.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 				}
 			}

@@ -879,55 +879,6 @@ msgstr ""
 "Als je deze wijziging niet hebt aangebracht, neem dan contact met ons op: "
 "support@twake.app"
 
-msgid "Mail New Connection Subject"
-msgstr "Nieuwe koppeling met je %s"
-
-msgid "Mail New Connection Intro"
-msgstr ""
-"Dit is een bericht van je Twake.\n"
-"Er is ingelogd op je Twake-account vanaf een nieuw apparaat. Controleer middels onderstaande verbindingsinformatie of jíj degene was die inlogde."
-
-msgid "Mail New Connection Place"
-msgstr "Locatie:"
-
-msgid "Mail New Connection Near"
-msgstr "in de buurt van"
-
-msgid "Mail New Connection Time"
-msgstr "Tijdstip:"
-
-msgid "Mail New Connection IP"
-msgstr "IP-adres:"
-
-msgid "Mail New Connection Browser"
-msgstr "Webbrowser:"
-
-msgid "Mail New Connection Change Passphrase instruction"
-msgstr ""
-"Was je dit zelf? Dan kun je dit bericht negeren.\n"
-"Als je dit niet zelf was, wijzig dan nu je wachtwoord."
-
-msgid "Mail New Connection Change Passphrase text"
-msgstr "Mijn wachtwoord wijzigen"
-
-msgid "Mail New Connection Bonus instruction"
-msgstr ""
-"Wil je je accountbeveiliging opschroeven? Dan raden we aan authenticatie in "
-"twee stappen in te schakelen."
-
-msgid "Mail New Connection Bonus text"
-msgstr "Authenticatie in twee stappen in schakelen"
-
-msgid "Mail New Connection Outro"
-msgstr ""
-"Waarom deze e-mail? De veiligheid van je Twake heeft onze hoogste prioriteit,"
-" dus willen we zeker weten dat je account niet wordt misbruikt."
-
-msgid "Mail New Connection Signature"
-msgstr ""
-"Tot snel! Liefs,\n"
-"je Twake"
-
 msgid "Mail New Registration Subject"
 msgstr "Nieuw apparaat gekoppeld aan je %s"
 

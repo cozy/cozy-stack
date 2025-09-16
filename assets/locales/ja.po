@@ -563,34 +563,6 @@ msgstr "これが二要素認証を有効にするコードです:"
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "あなたがこの変更を行っていない場合、support@twake.app にご連絡ください"
 
-msgid "Mail New Connection Subject"
-msgstr "%s への接続を検出しました"
-
-msgid "Mail New Connection Intro"
-msgstr ""
-"お使いの Cozy への接続を検出しました。\n"
-"これが、この接続の詳細です:"
-
-msgid "Mail New Connection Place"
-msgstr "場所"
-
-msgid "Mail New Connection IP"
-msgstr "IP アドレス"
-
-msgid "Mail New Connection Browser"
-msgstr "ブラウザー"
-
-msgid "Mail New Connection Change Passphrase instruction"
-msgstr ""
-"あなたが行いましたか? すばらしいです! 安心しました。 ご不便おかけしてすみません。 "
-"そうでない場合は、次のボタンをクリックして今すぐパスワードを変更してください:"
-
-msgid "Mail New Connection Change Passphrase text"
-msgstr "パスワードを変更する"
-
-msgid "Mail New Connection Outro"
-msgstr "このメールが届いた理由は? お使いの Cozy の安全は私たちの最優先事項であり、私たちは異常な接続を気を付けるようにしています。"
-
 msgid "Mail New Registration Subject"
 msgstr " %s に新しいデバイスが接続されました"
 
