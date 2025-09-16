@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
@@ -53,6 +54,7 @@ func TestSharedDrives(t *testing.T) {
 	acmeAppToken := generateAppToken(acmeInstance, "drive", "io.cozy.files")
 	tsA := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/files":    files.Routes,
+		"/notes":    notes.Routes,
 		"/sharings": sharings.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
@@ -960,6 +962,7 @@ func TestSharedDrives(t *testing.T) {
 				attrs.HasValue("subdomain", "nested")
 				attrs.HasValue("instance", acmeInstance.Domain)
 				attrs.Value("public_name").String().NotEmpty()
+				attrs.Value("sharecode").String().NotEmpty()
 			})
 		})
 

@@ -323,14 +323,72 @@ func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 }
 
 // OpenNoteURL returns the parameters to open a note inside a shared drive.
-func OpenNoteURL(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return notes.OpenNoteURL(c)
+func OpenNoteURL(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Drive {
+		return jsonapi.NotFound(errors.New("not a drive"))
+	}
+	if s.Owner {
+		return notes.OpenNoteURL(c)
+	}
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	fileID := c.Param("file-id")
+	fileOpener := &sharing.FileOpener{
+		Inst:    inst,
+		Sharing: s,
+		File:    &vfs.FileDoc{DocID: fileID},
+	}
+	open := &sharing.NoteOpener{FileOpener: fileOpener}
+
+	doc, err := open.GetResult(-1, false)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
 // OpenOffice returns the parameter to open an office document inside a shared
 // drive.
-func OpenOffice(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	return office.Open(c)
+func OpenOffice(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Drive {
+		return jsonapi.NotFound(errors.New("not a drive"))
+	}
+	if s.Owner {
+		return office.Open(c)
+	}
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	fileID := c.Param("file-id")
+	fileOpener := &sharing.FileOpener{
+		Inst:    inst,
+		Sharing: s,
+		File:    &vfs.FileDoc{DocID: fileID},
+	}
+	open := &sharing.OfficeOpener{FileOpener: fileOpener}
+
+	doc, err := open.GetResult(-1, false)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
 // Find the directory linked to the drive sharing and return it if the user
@@ -392,8 +450,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.DELETE("/:file-id", proxy(TrashHandler, true))
 
 	drive.POST("/notes", proxy(CreateNote, true))
-	drive.GET("/notes/:file-id/open", proxy(OpenNoteURL, true))
-	drive.GET("/office/:file-id/open", proxy(OpenOffice, true))
+	drive.GET("/notes/:file-id/open", OpenNoteURL)
+	drive.GET("/office/:file-id/open", OpenOffice)
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

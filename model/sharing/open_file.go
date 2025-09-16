@@ -101,6 +101,29 @@ func (o *FileOpener) CheckPermission(pdoc *permission.Permission, sharingID stri
 		}
 	}
 
+	// Same for shared drives
+	if o.Sharing == nil && pdoc.Type == permission.TypeShareInteract {
+		parts := strings.SplitN(pdoc.SourceID, "/", 2)
+		if len(parts) != 2 {
+			return ErrInvalidSharing
+		}
+		sharingID := parts[1]
+		var sharing Sharing
+		if err := couchdb.GetDoc(o.Inst, consts.Sharings, sharingID, &sharing); err != nil {
+			return err
+		}
+		o.Sharing = &sharing
+		preview, err := permission.GetForShareInteract(o.Inst, sharingID)
+		if err != nil {
+			return err
+		}
+		for k, v := range preview.Codes {
+			if v == o.Code {
+				o.MemberKey = k
+			}
+		}
+	}
+
 	// If a file is opened via a token for cozy-to-cozy sharing, then the file
 	// must be in this sharing, or the stack should refuse to open the file.
 	if sharingID != "" && o.Sharing != nil && o.Sharing.ID() == sharingID {
@@ -115,6 +138,12 @@ func (o *FileOpener) CheckPermission(pdoc *permission.Permission, sharingID stri
 // ShouldOpenLocally returns true if the file can be opened in the current
 // instance, and false if it is a shared file created on another instance.
 func (o *FileOpener) ShouldOpenLocally() bool {
+	// For a shared drive, a file is always opened on the organization Cozy
+	if o.Sharing != nil && o.Sharing.Drive {
+		return o.Sharing.Owner
+	}
+
+	// Else, we try to open it where it was created
 	if o.File.CozyMetadata == nil {
 		return true
 	}
@@ -129,7 +158,7 @@ func (o *FileOpener) ShouldOpenLocally() bool {
 // permissions of the member.
 func (o *FileOpener) GetSharecode(memberIndex int, readOnly bool) (string, error) {
 	s := o.Sharing
-	if s == nil || (o.ClientID == "" && o.MemberKey == "") {
+	if s == nil || (!s.Drive && o.ClientID == "" && o.MemberKey == "") {
 		return o.Code, nil
 	}
 
@@ -299,7 +328,15 @@ func (o *FileOpener) PrepareRequestForSharedFile() (*PreparedRequest, error) {
 		return &prepared, nil
 	}
 
-	prepared.XoredID = XorID(o.File.ID(), prepared.Creds.XorKey)
+	var token string
+	if s.Drive {
+		prepared.XoredID = o.File.ID()
+		token = prepared.Creds.DriveToken
+	} else {
+		prepared.XoredID = XorID(o.File.ID(), prepared.Creds.XorKey)
+		token = prepared.Creds.AccessToken.AccessToken
+	}
+
 	u, err := url.Parse(prepared.Creator.Instance)
 	if err != nil {
 		return nil, ErrCannotOpenFile
@@ -315,7 +352,7 @@ func (o *FileOpener) PrepareRequestForSharedFile() (*PreparedRequest, error) {
 		},
 		Headers: request.Headers{
 			echo.HeaderAccept:        jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + prepared.Creds.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + token,
 		},
 		ParseError: ParseRequestError,
 	}
