@@ -1060,26 +1060,6 @@ msgstr ""
 "Si vous n'êtes pas à l'origine de cette modification, vous pouvez nous "
 "contacter à l'adresse support@twake.app."
 
-msgid "Mail New Registration Subject"
-msgstr "Un nouvel appareil connecté à votre %s"
-
-msgid "Mail New Registration Intro"
-msgstr "Félicitations, vous avez connecté un nouvel appareil à votre Twake."
-
-msgid "Mail New Registration Devices instruction"
-msgstr "Vous pouvez gérer vos différents appareils depuis votre Twake :"
-
-msgid "Mail New Registration Devices text"
-msgstr "Gérer mes appareils"
-
-msgid "Mail New Registration Revoke instruction"
-msgstr ""
-"Si vous n'êtes pas à l'origine de cet ajout, vous pouvez révoquer cet "
-"appareil :"
-
-msgid "Mail New Registration Revoke text"
-msgstr "Révoquer cet appareil"
-
 msgid "Mail Sharing Request Subject"
 msgstr "%s a partagé %s avec vous"
 

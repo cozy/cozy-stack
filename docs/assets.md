@@ -48,7 +48,6 @@ with given parameter. For example:
 * http://cozy.localhost:8080/dev/mails/move_confirm
 * http://cozy.localhost:8080/dev/mails/move_error
 * http://cozy.localhost:8080/dev/mails/move_success
-* http://cozy.localhost:8080/dev/mails/new_registration
 * http://cozy.localhost:8080/dev/mails/notifications_diskquota
 * http://cozy.localhost:8080/dev/mails/notifications_oauthclients
 * http://cozy.localhost:8080/dev/mails/notifications_sharing

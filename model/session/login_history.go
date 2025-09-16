@@ -3,7 +3,6 @@ package session
 import (
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/emailer"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
@@ -154,34 +152,5 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 		ClientRegistration: clientID != "",
 		CreatedAt:          createdAt,
 	}
-
-	if err := couchdb.CreateDoc(i, l); err != nil {
-		return err
-	}
-
-	if clientID != "" {
-		if err := PushLoginRegistration(i, l, clientID); err != nil {
-			i.Logger().Errorf("Could not push login in registration queue: %s", err)
-		}
-	}
-
-	return nil
-}
-
-// SendNewRegistrationNotification is used to send a notification to the user
-// when a new OAuth client is registered.
-func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID string) error {
-	devicesLink := i.SubDomain(consts.SettingsSlug)
-	devicesLink.Fragment = "/connectedDevices"
-	revokeLink := i.SubDomain(consts.SettingsSlug)
-	revokeLink.Fragment = "/connectedDevices/" + url.PathEscape(clientRegistrationID)
-	templateValues := map[string]interface{}{
-		"DevicesLink": devicesLink.String(),
-		"RevokeLink":  revokeLink.String(),
-	}
-
-	return emailer.SendEmail(i, &emailer.TransactionalEmailCmd{
-		TemplateName:   "new_registration",
-		TemplateValues: templateValues,
-	})
+	return couchdb.CreateDoc(i, l)
 }

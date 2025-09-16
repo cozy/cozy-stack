@@ -563,12 +563,6 @@ func AccessToken(c echo.Context) error {
 		client.ClientID = client.CouchID
 	}
 
-	if err := session.SendNewRegistrationNotification(inst, client.ClientID); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err.Error(),
-		})
-	}
-
 	// Generate the access/refresh tokens
 	accessToken, err := client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
 	if err != nil {

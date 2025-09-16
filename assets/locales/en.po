@@ -963,24 +963,6 @@ msgstr "Here is the code to enable two-factor authentication:"
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at support@twake.app"
 
-msgid "Mail New Registration Subject"
-msgstr "A new device connected to your %s"
-
-msgid "Mail New Registration Intro"
-msgstr "Congrats, the registration of a new device to your Twake has been successful."
-
-msgid "Mail New Registration Devices instruction"
-msgstr "You can manage your devices directly from your Twake:"
-
-msgid "Mail New Registration Devices text"
-msgstr "Manage my devices"
-
-msgid "Mail New Registration Revoke instruction"
-msgstr "If you are not the source of this addition you can revoke the new device"
-
-msgid "Mail New Registration Revoke text"
-msgstr "Revoke this device"
-
 msgid "Mail Sharing Request Subject"
 msgstr "%s has shared %s with you"
 

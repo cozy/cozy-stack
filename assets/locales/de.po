@@ -692,28 +692,6 @@ msgstr ""
 "Wenn du diese Änderung nicht vorgenommen hast, kontaktiere uns bitte über "
 "support@twake.app"
 
-msgid "Mail New Registration Subject"
-msgstr "Ein neues Gerät hat sich mit deinem %s verbunden"
-
-msgid "Mail New Registration Intro"
-msgstr ""
-"Glückwunsch! Die Registrierung deines neuen Geräts für dein Twake war "
-"erfolgreich."
-
-msgid "Mail New Registration Devices instruction"
-msgstr "Du kannst die Geräte direkt in deinem Twake verwalten:"
-
-msgid "Mail New Registration Devices text"
-msgstr "Meine Geräte verwalten"
-
-msgid "Mail New Registration Revoke instruction"
-msgstr ""
-"Wenn du das Gerät nicht hinzugefügt hast, kannst du den Zugriff hier "
-"wiederrufen"
-
-msgid "Mail New Registration Revoke text"
-msgstr "Dieses Gerät wiederrufen"
-
 msgid "Mail Sharing Request Subject"
 msgstr "Neue Freigabe von %s erteilt"
 

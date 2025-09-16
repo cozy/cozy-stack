@@ -563,24 +563,6 @@ msgstr "これが二要素認証を有効にするコードです:"
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "あなたがこの変更を行っていない場合、support@twake.app にご連絡ください"
 
-msgid "Mail New Registration Subject"
-msgstr " %s に新しいデバイスが接続されました"
-
-msgid "Mail New Registration Intro"
-msgstr "おめでとうございます。お使いの Cozy への新しいデバイスの登録は成功しました。"
-
-msgid "Mail New Registration Devices instruction"
-msgstr "お使いの Cozy から直接デバイスを管理することができます:"
-
-msgid "Mail New Registration Devices text"
-msgstr "デバイスの管理"
-
-msgid "Mail New Registration Revoke instruction"
-msgstr "この追加を行っていない場合は、新しいデバイスを取り消すことができます"
-
-msgid "Mail New Registration Revoke text"
-msgstr "このデバイスを取り消す"
-
 msgid "Mail Sharing Request Subject"
 msgstr "%s から新しい共有要求"
 

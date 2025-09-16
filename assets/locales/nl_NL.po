@@ -879,26 +879,6 @@ msgstr ""
 "Als je deze wijziging niet hebt aangebracht, neem dan contact met ons op: "
 "support@twake.app"
 
-msgid "Mail New Registration Subject"
-msgstr "Nieuw apparaat gekoppeld aan je %s"
-
-msgid "Mail New Registration Intro"
-msgstr "Gefeliciteerd! Je hebt een nieuw apparaat geregistreerd op je Twake!"
-
-msgid "Mail New Registration Devices instruction"
-msgstr "Je kunt je apparaten direct beheren vanuit je Twake:"
-
-msgid "Mail New Registration Devices text"
-msgstr "Mijn apparaten beheren"
-
-msgid "Mail New Registration Revoke instruction"
-msgstr ""
-"Als jij dit niet gedaan hebt, dan kun je de machtiging van het nieuwe "
-"apparaat intrekken."
-
-msgid "Mail New Registration Revoke text"
-msgstr "Machtiging intrekken"
-
 msgid "Mail Sharing Request Subject"
 msgstr "Nieuw deelverzoek van %s"
 

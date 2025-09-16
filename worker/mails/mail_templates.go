@@ -29,7 +29,6 @@ func initMailTemplates() {
 		"magic_link":                   subjectEntry{"Mail Magic Link Subject", nil},
 		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
-		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{templateTitleVar}},
 		"confirm_flagship":             subjectEntry{"Mail Confirm Flagship Subject", nil},
 		"alert_account":                subjectEntry{"Mail Alert Account Subject", nil},
 		"support_request":              subjectEntry{"Mail Support Confirmation Subject", nil},
