@@ -403,8 +403,8 @@ func MoveDownstreamDifferentStack(c echo.Context, inst *instance.Instance, sourc
 		return err
 	}
 
-	// Best effort: delete the source file
-	if err := srcClient.TrashByID(sourceFileID); err != nil {
+	// Best effort: permanently delete the source file
+	if err := srcClient.PermanentDeleteByID(sourceFileID); err != nil {
 		log.Printf("Warning: Could not delete source file: %v", err)
 	}
 
