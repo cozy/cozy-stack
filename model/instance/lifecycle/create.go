@@ -276,6 +276,10 @@ func Create(opts *Options) (*instance.Instance, error) {
 		if err = common.CreateCommonSettings(i, settings); err != nil {
 			i.Logger().Errorf("Failed to create common settings: %s", err)
 		}
+		// We need to persist the common settings version
+		if err = instance.Update(i); err != nil {
+			return
+		}
 	})
 
 	return i, nil
