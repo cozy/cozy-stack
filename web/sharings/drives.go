@@ -1,10 +1,7 @@
 package sharings
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -269,17 +268,11 @@ func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error
 	return files.CopyFile(c, inst, s)
 }
 
-func MoveDownstreamSameStack(c echo.Context, inst *instance.Instance, sourceInstance *instance.Instance, targetDirId string, sourceFileID string) error {
-	// Check if the source file exists and get its metadata
-	srcFile, err := sourceInstance.VFS().FileByID(sourceFileID)
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	// Just move the file using CopyFileFromOtherFS for same-stack optimization
-	newFileDoc, err := vfs.NewFileDoc(
+// createFileDocFromSource creates a new file document based on a source file
+func createFileDocFromSource(srcFile *vfs.FileDoc, targetDirID string) (*vfs.FileDoc, error) {
+	return vfs.NewFileDoc(
 		srcFile.DocName,
-		targetDirId,
+		targetDirID,
 		srcFile.ByteSize,
 		srcFile.MD5Sum,
 		srcFile.Mime,
@@ -290,24 +283,45 @@ func MoveDownstreamSameStack(c echo.Context, inst *instance.Instance, sourceInst
 		false, // encrypted
 		srcFile.Tags,
 	)
+}
+
+// copyFileContent copies file content between instances
+func copyFileContent(destVFS vfs.VFS, newFileDoc *vfs.FileDoc, srcVFS vfs.VFS, srcFile *vfs.FileDoc) error {
+	if err := destVFS.CopyFileFromOtherFS(newFileDoc, nil, srcVFS, srcFile); err != nil {
+		return files.WrapVfsError(err)
+	}
+	return nil
+}
+
+// deleteSourceFile deletes a file from the source instance
+func deleteSourceFile(srcVFS vfs.VFS, srcFile *vfs.FileDoc) error {
+	if err := srcVFS.GetIndexer().DeleteFileDoc(srcFile); err != nil {
+		return files.WrapVfsError(err)
+	}
+	return nil
+}
+
+func MoveDownstreamSameStack(c echo.Context, inst *instance.Instance, sourceInstance *instance.Instance, targetDirId string, sourceFileID string) error {
+	// Check if the source file exists and get its metadata
+	srcFile, err := sourceInstance.VFS().FileByID(sourceFileID)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
 
-	//var file, e = inst.VFS().CreateFile(newFileDoc, nil)
-	//if e != nil {
-	//	return err
-	//}
-	//file.Close()
-
-	// Copy the file content from the source instance
-	if err := inst.VFS().CopyFileFromOtherFS(newFileDoc, nil, sourceInstance.VFS(), srcFile); err != nil {
+	// Create a new file document based on the source file
+	newFileDoc, err := createFileDocFromSource(srcFile, targetDirId)
+	if err != nil {
 		return files.WrapVfsError(err)
 	}
 
+	// Copy the file content from the source instance
+	if err := copyFileContent(inst.VFS(), newFileDoc, sourceInstance.VFS(), srcFile); err != nil {
+		return err
+	}
+
 	// Delete the file from the source instance
-	if err := sourceInstance.VFS().GetIndexer().DeleteFileDoc(srcFile); err != nil {
-		return files.WrapVfsError(err)
+	if err := deleteSourceFile(sourceInstance.VFS(), srcFile); err != nil {
+		return err
 	}
 
 	// Return the new file document
@@ -315,112 +329,131 @@ func MoveDownstreamSameStack(c echo.Context, inst *instance.Instance, sourceInst
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
-func MoveDownstreamDifferentStack(c echo.Context, inst *instance.Instance, sourceInstanceURL string, targetDirId string, sourceFileID string) error {
-	//TODO get information about source file with HTTP call
+// extractBearerToken extracts the bearer token from the Authorization header
+func extractBearerToken(c echo.Context) string {
+	var bearer string
+	if auth := c.Request().Header.Get("Authorization"); auth != "" {
+		parts := strings.SplitN(auth, " ", 2)
+		if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+			bearer = parts[1]
+		}
+	}
+	return bearer
+}
 
-	// Cross-stack move: download and save the file via HTTP
-	// Create a new file document in the destination
-	//TODO create a new file with data from HTTP call
-	var newFileDoc, err = vfs.NewFileDoc(
-		"srcFile.DocName",
-		targetDirId,
-		0,
-		nil,
-		"srcFile.Mime",
-		"srcFile.Class",
+// createFileDocFromRemoteFile creates a new file document based on a remote file
+func createFileDocFromRemoteFile(remoteFile *client.File, targetDirID string) (*vfs.FileDoc, error) {
+	return vfs.NewFileDoc(
+		remoteFile.Attrs.Name,
+		targetDirID,
+		remoteFile.Attrs.Size,
+		remoteFile.Attrs.MD5Sum,
+		remoteFile.Attrs.Mime,
+		remoteFile.Attrs.Class,
 		time.Now(),
-		false,
+		remoteFile.Attrs.Executable,
 		false, // trashed
-		false, // encrypted
-		nil,
+		remoteFile.Attrs.Encrypted,
+		remoteFile.Attrs.Tags,
 	)
+}
+
+func MoveDownstreamDifferentStack(c echo.Context, inst *instance.Instance, sourceInstanceURL string, targetDirId string, sourceFileID string) error {
+	// Build a client for the source instance
+	u, err := url.Parse(sourceInstanceURL)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Build the remote client (overridable in tests)
+	bearer := extractBearerToken(c)
+	srcClient := NewRemoteClient(u, bearer)
+
+	// Get source file metadata
+	srcFile, err := srcClient.GetFileByID(sourceFileID)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Create destination file doc using source metadata
+	newFileDoc, err := createFileDocFromRemoteFile(srcFile, targetDirId)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
 
 	// Create the file in the destination VFS
-	_, err = inst.VFS().CreateFile(newFileDoc, nil)
+	fd, err := inst.VFS().CreateFile(newFileDoc, nil)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
 
-	// Download the file content from the source instance via HTTP
-	if !strings.HasSuffix(sourceInstanceURL, "/") {
-		sourceInstanceURL += "/"
-	}
-
-	// Make HTTP request to download the file content
-	downloadURL := sourceInstanceURL + "files/" + sourceFileID + "/content"
-	req, err := http.NewRequest("GET", downloadURL, nil)
+	// Download content from source and write into destination
+	rc, err := srcClient.DownloadByID(sourceFileID)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
+	defer rc.Close()
 
-	// TODO implement authorization
-	// Add authorization header if we have credentials
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return files.WrapVfsError(fmt.Errorf("failed to download file from source instance: %s", resp.Status))
-	}
-
-	// Open the destination file for writing
-	destFileHandle, err := inst.VFS().OpenFile(newFileDoc)
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-	defer destFileHandle.Close()
-
-	// Copy the file content from HTTP response to destination file
-	if _, err := io.Copy(destFileHandle, resp.Body); err != nil {
+	if _, err := io.Copy(fd, rc); err != nil {
 		return files.WrapVfsError(err)
 	}
 
-	// Close the destination file to ensure content is written
-	destFileHandle.Close()
-
-	// Delete the file from the source instance via HTTP API
-	deleteURL := sourceInstanceURL + "files/" + sourceFileID
-	deleteReq, err := http.NewRequest("DELETE", deleteURL, nil)
+	err = fd.Close()
 	if err != nil {
-		// Log the error but don't fail the operation - the file was copied successfully
-		log.Printf("Warning: Could not create delete request for source file: %v", err)
-	} else {
-		// TODO: Add proper authorization headers here
-		deleteResp, err := client.Do(deleteReq)
-		if err != nil {
-			log.Printf("Warning: Could not delete source file: %v", err)
-		} else {
-			deleteResp.Body.Close()
-			if deleteResp.StatusCode != http.StatusOK && deleteResp.StatusCode != http.StatusNoContent {
-				log.Printf("Warning: Failed to delete source file, status: %s", deleteResp.Status)
-			}
-		}
+		return err
+	}
+
+	// Best effort: delete the source file
+	if err := srcClient.TrashByID(sourceFileID); err != nil {
+		log.Printf("Warning: Could not delete source file: %v", err)
 	}
 
 	obj := files.NewFile(newFileDoc, inst, nil)
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
+// validateInstanceURL validates an instance URL and returns an error if it's invalid
+func validateInstanceURL(instanceURL string, paramName string) error {
+	if instanceURL == "" {
+		return jsonapi.BadRequest(errors.New("missing " + paramName + " parameter"))
+	}
+	if _, err := url.Parse(instanceURL); err != nil {
+		return jsonapi.BadRequest(errors.New("invalid " + paramName + " parameter"))
+	}
+	return nil
+}
+
+// validateFileID validates a file ID and returns an error if it's invalid
+func validateFileID(fileID string) error {
+	if fileID == "" {
+		return jsonapi.BadRequest(errors.New("missing file-id parameter"))
+	}
+	return nil
+}
+
+// validateDirID validates a directory ID, checks if it exists, and returns an error if it's invalid
+func validateDirID(dirID string, inst *instance.Instance) error {
+	if dirID == "" {
+		return jsonapi.BadRequest(errors.New("missing dir-id parameter"))
+	}
+	// Check if the directory exists
+	_, err := inst.VFS().DirByID(dirID)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	return nil
+}
+
 // TODO we can move not only a file but a directory
-func MoveDownstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+// moveDownstream handles the common logic for moving a file downstream
+func moveDownstream(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// instance url, from where we are going to move the file
 	sourceInstanceURL := c.QueryParam("source-instance")
-	if sourceInstanceURL == "" {
-		return jsonapi.BadRequest(errors.New("missing source-instance param"))
-	}
-	// Validate the destination instance URL
-	if _, err := url.Parse(sourceInstanceURL); err != nil {
-		return jsonapi.BadRequest(errors.New("invalid source-instance parameter"))
+	if err := validateInstanceURL(sourceInstanceURL, "source-instance"); err != nil {
+		return err
 	}
 
-	sourceInstance, err := GetInstanceIdentifierFromURL(sourceInstanceURL)
+	sourceInstance, err := getInstanceIdentifierFromURL(sourceInstanceURL)
 	if err != nil {
 		// if we can't get source instance it will be cross stack request
 		sourceInstance = nil
@@ -428,55 +461,126 @@ func MoveDownstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.S
 
 	// file identifier to move
 	fileID := c.QueryParam("file-id")
-	if fileID == "" {
-		return jsonapi.BadRequest(errors.New("missing file-id parameter"))
+	if err := validateFileID(fileID); err != nil {
+		return err
 	}
 
 	// Identifier of the directory in the current instance to move the file
 	dirID := c.Param("dir-id")
-	if dirID == "" {
-		return jsonapi.BadRequest(errors.New("missing dir-id parameter"))
+	if err := validateDirID(dirID, inst); err != nil {
+		return err
 	}
 
-	// Check if the destination directory exists
-	_, err = inst.VFS().DirByID(dirID)
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
-	if sourceInstance != nil && onSameStack(sourceInstance, inst) {
+	if sourceInstance != nil && OnSameStackCheck(sourceInstance, inst) {
 		return MoveDownstreamSameStack(c, inst, sourceInstance, dirID, fileID)
 	} else {
 		return MoveDownstreamDifferentStack(c, inst, sourceInstanceURL, dirID, fileID)
 	}
 }
 
-// TODO we can move not only a file but a directory
-func MoveUpstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+// MoveDownstreamHandler handles moving a file from a source instance to the current instance
+func MoveDownstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return moveDownstream(c, inst, s)
+}
+
+// moveUpstreamSameStack handles moving a file upstream when both instances are on the same stack
+func moveUpstreamSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, srcFile *vfs.FileDoc, dirID string) error {
+	// Create a new file document based on the source file
+	newFileDoc, err := createFileDocFromSource(srcFile, dirID)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Copy the file content to the destination instance
+	if err := copyFileContent(destInst.VFS(), newFileDoc, srcInst.VFS(), srcFile); err != nil {
+		return err
+	}
+
+	// Delete the file from the source instance
+	if err := deleteSourceFile(srcInst.VFS(), srcFile); err != nil {
+		return err
+	}
+
+	// Return the new file document
+	obj := files.NewFile(newFileDoc, destInst, nil)
+	return jsonapi.Data(c, http.StatusCreated, obj, nil)
+}
+
+// moveUpstreamDifferentStack handles moving a file upstream when instances are on different stacks
+func moveUpstreamDifferentStack(c echo.Context, srcInst *instance.Instance, destInstanceURL string, srcFile *vfs.FileDoc, dirID string) error {
+	// Parse the destination URL
+	u, err := url.Parse(destInstanceURL)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Extract bearer token from the request
+	bearer := extractBearerToken(c)
+	dstClient := NewRemoteClient(u, bearer)
+
+	// Open the source file for reading
+	srcFileHandle, err := srcInst.VFS().OpenFile(srcFile)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	defer srcFileHandle.Close()
+
+	// Upload the file to the destination
+	uploaded, err := dstClient.Upload(&client.Upload{
+		Name:          srcFile.DocName,
+		DirID:         dirID,
+		ContentMD5:    srcFile.MD5Sum,
+		Contents:      srcFileHandle,
+		ContentType:   srcFile.Mime,
+		ContentLength: srcFile.ByteSize,
+	})
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Delete the file from the source instance
+	if err := deleteSourceFile(srcInst.VFS(), srcFile); err != nil {
+		return err
+	}
+
+	// Return success response mirroring created remote file
+	c.Response().Header().Set("Content-Type", "application/vnd.api+json")
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "io.cozy.files",
+			"id":   uploaded.ID,
+			"attributes": map[string]interface{}{
+				"name":       uploaded.Attrs.Name,
+				"dir_id":     uploaded.Attrs.DirID,
+				"type":       uploaded.Attrs.Type,
+				"size":       uploaded.Attrs.Size,
+				"mime":       uploaded.Attrs.Mime,
+				"class":      uploaded.Attrs.Class,
+				"executable": uploaded.Attrs.Executable,
+				"tags":       uploaded.Attrs.Tags,
+			},
+		},
+	})
+}
+
+// moveUpstream handles the common logic for moving a file upstream
+func moveUpstream(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// Get the destination instance URL from query parameter
 	destInstanceURL := c.QueryParam("dest-instance")
-	if destInstanceURL == "" {
-		return jsonapi.BadRequest(errors.New("missing dest-instance parameter"))
+	if err := validateInstanceURL(destInstanceURL, "dest-instance"); err != nil {
+		return err
 	}
 
 	// Get the file ID from path parameter
 	fileID := c.Param("file-id")
-	if fileID == "" {
-		return jsonapi.BadRequest(errors.New("missing file-id parameter"))
+	if err := validateFileID(fileID); err != nil {
+		return err
 	}
 
-	// Get the destination directory ID from path parameter (or query fallback)
-	dirID := c.Param("dir-id")
-	if dirID == "" {
-		dirID = c.QueryParam("dir-id")
-	}
-	if dirID == "" {
-		return jsonapi.BadRequest(errors.New("missing dir-id parameter"))
-	}
-
-	// Validate the destination instance URL
-	if _, err := url.Parse(destInstanceURL); err != nil {
-		return jsonapi.BadRequest(errors.New("invalid dest-instance parameter"))
+	// Get the destination directory ID
+	dirID := c.QueryParam("dir-id")
+	if err := validateDirID(dirID, inst); err != nil {
+		return err
 	}
 
 	// Check if the source file exists and get its metadata
@@ -485,188 +589,23 @@ func MoveUpstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 		return files.WrapVfsError(err)
 	}
 
-	// Check if the destination directory exists
-	_, err = inst.VFS().DirByID(dirID)
-	if err != nil {
-		return files.WrapVfsError(err)
-	}
-
 	// Try to get the destination instance to check if it's on the same stack
-	destInstance, err := GetInstanceIdentifierFromURL(destInstanceURL)
+	destInstance, err := getInstanceIdentifierFromURL(destInstanceURL)
 	if err != nil {
 		// If we can't get the instance, treat it as cross-stack
 		destInstance = nil
 	}
 
-	if destInstance != nil && onSameStack(inst, destInstance) {
-		// Same-stack optimization: use VFS operations directly
-		newFileDoc, err := vfs.NewFileDoc(
-			srcFile.DocName,
-			dirID,
-			srcFile.ByteSize,
-			srcFile.MD5Sum,
-			srcFile.Mime,
-			srcFile.Class,
-			time.Now(),
-			srcFile.Executable,
-			false, // trashed
-			false, // encrypted
-			srcFile.Tags,
-		)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Copy the file content to the destination instance
-		if err := destInstance.VFS().CopyFileFromOtherFS(newFileDoc, nil, inst.VFS(), srcFile); err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Delete the file from the source instance
-		if err := inst.VFS().GetIndexer().DeleteFileDoc(srcFile); err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Return the new file document
-		obj := files.NewFile(newFileDoc, destInstance, nil)
-		return jsonapi.Data(c, http.StatusCreated, obj, nil)
+	if destInstance != nil && OnSameStackCheck(inst, destInstance) {
+		return moveUpstreamSameStack(c, inst, destInstance, srcFile, dirID)
 	} else {
-		// Cross-stack move: upload file via HTTP
-		// Create a new file document for the destination
-		newFileDoc, err := vfs.NewFileDoc(
-			srcFile.DocName,
-			dirID,
-			srcFile.ByteSize,
-			srcFile.MD5Sum,
-			srcFile.Mime,
-			srcFile.Class,
-			time.Now(),
-			srcFile.Executable,
-			false, // trashed
-			false, // encrypted
-			srcFile.Tags,
-		)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Ensure the destination URL ends with a slash
-		if !strings.HasSuffix(destInstanceURL, "/") {
-			destInstanceURL += "/"
-		}
-
-		// Create the file on the destination instance via HTTP
-		createURL := destInstanceURL + "files/"
-		createData := map[string]interface{}{
-			"type": "io.cozy.files",
-			"attributes": map[string]interface{}{
-				"name":       newFileDoc.DocName,
-				"dir_id":     newFileDoc.DirID,
-				"type":       newFileDoc.Type,
-				"size":       newFileDoc.ByteSize,
-				"mime":       newFileDoc.Mime,
-				"class":      newFileDoc.Class,
-				"executable": newFileDoc.Executable,
-				"tags":       newFileDoc.Tags,
-			},
-		}
-
-		createJSON, err := json.Marshal(createData)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		createReq, err := http.NewRequest("POST", createURL, bytes.NewBuffer(createJSON))
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-		createReq.Header.Set("Content-Type", "application/vnd.api+json")
-
-		// TODO: Add proper authorization headers here
-		// This would typically include:
-		// - Bearer token for authentication
-		// - API key for cross-instance operations
-		// - Verification that the source instance has permission to create files
-
-		client := &http.Client{}
-		createResp, err := client.Do(createReq)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-		defer createResp.Body.Close()
-
-		if createResp.StatusCode != http.StatusCreated {
-			return files.WrapVfsError(fmt.Errorf("failed to create file on destination instance: %s", createResp.Status))
-		}
-
-		// Parse the response to get the created file ID
-		var createResponse map[string]interface{}
-		if err := json.NewDecoder(createResp.Body).Decode(&createResponse); err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Extract the file ID from the response
-		data, ok := createResponse["data"].(map[string]interface{})
-		if !ok {
-			return files.WrapVfsError(errors.New("invalid response format from destination instance"))
-		}
-
-		createdFileID, ok := data["id"].(string)
-		if !ok {
-			return files.WrapVfsError(errors.New("could not get file ID from destination instance response"))
-		}
-
-		// Upload the file content to the destination instance
-		uploadURL := destInstanceURL + "files/" + createdFileID + "/content"
-
-		// Open the source file for reading
-		srcFileHandle, err := inst.VFS().OpenFile(srcFile)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-		defer srcFileHandle.Close()
-
-		uploadReq, err := http.NewRequest("PUT", uploadURL, srcFileHandle)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-		uploadReq.Header.Set("Content-Type", srcFile.Mime)
-		uploadReq.Header.Set("Content-Length", fmt.Sprintf("%d", srcFile.ByteSize))
-
-		// TODO: Add proper authorization headers here
-		uploadResp, err := client.Do(uploadReq)
-		if err != nil {
-			return files.WrapVfsError(err)
-		}
-		defer uploadResp.Body.Close()
-
-		if uploadResp.StatusCode != http.StatusOK && uploadResp.StatusCode != http.StatusNoContent {
-			return files.WrapVfsError(fmt.Errorf("failed to upload file content to destination instance: %s", uploadResp.Status))
-		}
-
-		// Delete the file from the source instance
-		if err := inst.VFS().GetIndexer().DeleteFileDoc(srcFile); err != nil {
-			return files.WrapVfsError(err)
-		}
-
-		// Return success response
-		return c.JSON(http.StatusCreated, map[string]interface{}{
-			"data": map[string]interface{}{
-				"type": "io.cozy.files",
-				"id":   createdFileID,
-				"attributes": map[string]interface{}{
-					"name":       newFileDoc.DocName,
-					"dir_id":     newFileDoc.DirID,
-					"type":       newFileDoc.Type,
-					"size":       newFileDoc.ByteSize,
-					"mime":       newFileDoc.Mime,
-					"class":      newFileDoc.Class,
-					"executable": newFileDoc.Executable,
-					"tags":       newFileDoc.Tags,
-				},
-			},
-		})
+		return moveUpstreamDifferentStack(c, inst, destInstanceURL, srcFile, dirID)
 	}
+}
+
+// TODO we can move not only a file but a directory
+func MoveUpstreamHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return moveUpstream(c, inst, s)
 }
 
 func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
@@ -852,10 +791,9 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 	}
 }
 
-// GetInstanceIdentifierFromURL extracts the cozy instance identifier from a URL and returns the instance object.
-// It returns the instance object for the given URL, which typically represents the instance identifier.
+// getInstanceIdentifierFromURL extracts the cozy instance identifier from a URL
 // For example, from "https://user.cozy.cloud" it returns the instance object for "user.cozy.cloud"
-func GetInstanceIdentifierFromURL(urlStr string) (*instance.Instance, error) {
+func getInstanceIdentifierFromURL(urlStr string) (*instance.Instance, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -890,4 +828,23 @@ func onSameStack(src, dst *instance.Instance) bool {
 		dstPort = parts[1]
 	}
 	return srcPort == dstPort
+}
+
+// OnSameStackCheck allows tests to override same-stack detection.
+// Default to onSameStack; tests can replace it.
+var OnSameStackCheck = onSameStack
+
+// NewRemoteClient allows tests to override how the remote client is constructed
+// for cross-stack file operations. By default, it builds a client using the
+// provided URL and optional bearer token.
+var NewRemoteClient = func(u *url.URL, bearerToken string) *client.Client {
+	c := &client.Client{
+		Scheme: u.Scheme,
+		Addr:   u.Host,
+		Domain: u.Hostname(),
+	}
+	if bearerToken != "" {
+		c.Authorizer = &request.BearerAuthorizer{Token: bearerToken}
+	}
+	return c
 }
