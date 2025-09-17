@@ -38,7 +38,7 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 
 	var msg PasswordChangeMessage
 	if err := json.Unmarshal(d.Body, &msg); err != nil {
-		return fmt.Errorf("fpassword change:  ailed to unmarshal password change message: %w", err)
+		return fmt.Errorf("password change:  ailed to unmarshal password change message: %w", err)
 	}
 
 	if msg.Domain == "" {
@@ -56,9 +56,12 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		Iterations: msg.Iterations,
 	}
 
-	// if one of the keys is missing, do not update any of the keys
-	if msg.Key != "" && msg.PublicKey != "" || msg.PrivateKey != "" {
+	if msg.Key != "" {
 		params.Key = msg.Key
+	}
+
+	// if one of the keys is missing, do not update any of the keys
+	if msg.PublicKey != "" || msg.PrivateKey != "" {
 		params.PublicKey = msg.PublicKey
 		params.PrivateKey = msg.PrivateKey
 	}
