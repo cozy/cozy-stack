@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           # Recommended version
-          - go-version: '1.24.x'
+          - go-version: '1.25.x'
             couchdb-version: '3.3.3'
           # More exotic version
           - go-version: '1.21.x'
