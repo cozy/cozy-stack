@@ -452,6 +452,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/notes", proxy(CreateNote, true))
 	drive.GET("/notes/:file-id/open", OpenNoteURL)
 	drive.GET("/office/:file-id/open", OpenOffice)
+
+	drive.GET("/realtime", Ws)
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

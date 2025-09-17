@@ -423,3 +423,17 @@ Identical to [`GET /notes/:file-id/open`](notes.md#get-notesidopen).
 
 Returns the parameters to open an office document. Identical to
 [`GET /office/:file-id/open`](office.md#get-officeidopen).
+
+## Realtime
+
+### GET /sharings/drives/:id/realtime
+
+Get the changes inside a shared drive in real-time from a websocket.
+Identical to [`GET /realtime`](realtime.md), except subscribing to the shared drive is automatically done.
+
+```
+client > {"method": "AUTH",
+          "payload": "xxAppOrAuthTokenxx="}
+server > {"event": "UPDATED",
+          "payload": {"id": "idB", "rev": "6-457...", "type": "io.cozy.files", "doc": {embeded doc ...}}}
+```
