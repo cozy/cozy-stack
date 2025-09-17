@@ -94,8 +94,11 @@ func UpdateCommonSettings(inst *instance.Instance, settings *couchdb.JSONDoc) (b
 	if cfg == nil {
 		return false, nil
 	}
+
 	if inst.CommonSettingsVersion == 0 {
 		CreateCommonSettings(inst, settings)
+
+		return true, nil
 	}
 	inst.CommonSettingsVersion++
 	request := buildRequest(inst, settings)
