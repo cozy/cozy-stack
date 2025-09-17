@@ -5,12 +5,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 
 	"golang.org/x/net/context"
 
@@ -112,8 +114,14 @@ func TestPasswordHandler(t *testing.T) {
 
 		domain := inst.Domain
 
+		// Capture current Bitwarden public/private keys to ensure they are not changed
+		bwBefore, err := settings.Get(inst)
+		require.NoError(t, err)
+		prevPub, prevPriv := bwBefore.PublicKey, bwBefore.PrivateKey
+
 		// Publisher conn/channel
-		err, ch := getChannel(t, MQ)
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
 
 		// Compose message
 		testHash := "testhash123"
@@ -121,6 +129,7 @@ func TestPasswordHandler(t *testing.T) {
 			TwakeID:    inst.Prefix,
 			Iterations: 100000,
 			Hash:       testHash,
+			PublicKey:  "PUB",
 			Key:        "KEY",
 			Timestamp:  time.Now().Unix(),
 			Domain:     domain,
@@ -149,6 +158,14 @@ func TestPasswordHandler(t *testing.T) {
 			updated, err := lifecycle.GetInstance(domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
+
+		// Also ensure the key was updated
+		bw, err := settings.Get(inst)
+		require.NoError(t, err)
+		require.Equal(t, msg.Key, bw.Key)
+		// Public and private keys must remain unchanged when only Key is provided
+		require.Equal(t, prevPub, bw.PublicKey)
+		require.Equal(t, prevPriv, bw.PrivateKey)
 	})
 
 	t.Run("ChangePasswordWithKeys", func(t *testing.T) {
@@ -159,7 +176,8 @@ func TestPasswordHandler(t *testing.T) {
 		domain := inst.Domain
 
 		// Publisher conn/channel
-		err, ch := getChannel(t, MQ)
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
 
 		// Compose message
 		testHash := "testhash123"
@@ -207,7 +225,8 @@ func TestPasswordHandler(t *testing.T) {
 		domain := inst.Domain
 
 		// Publisher conn/channel
-		err, ch := getChannel(t, MQ)
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
 
 		// Compose message
 		testHash := "testhash1234"
@@ -244,14 +263,14 @@ func TestPasswordHandler(t *testing.T) {
 	})
 }
 
-func getChannel(t *testing.T, mq *testutils.RabbitFixture) (error, *amqp.Channel) {
+func getChannel(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Channel, error) {
 	t.Helper()
 	conn, err := amqp.Dial(mq.AMQPURL)
 	require.NoError(t, err)
 	ch, err := conn.Channel()
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = ch.Close(); _ = conn.Close() })
-	return err, ch
+	return ch, err
 }
 
 func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string) *testutils.TestSetup {

@@ -61,7 +61,7 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	}
 
 	// if one of the keys is missing, do not update any of the keys
-	if msg.PublicKey != "" || msg.PrivateKey != "" {
+	if msg.PublicKey != "" && msg.PrivateKey != "" {
 		params.PublicKey = msg.PublicKey
 		params.PrivateKey = msg.PrivateKey
 	}
