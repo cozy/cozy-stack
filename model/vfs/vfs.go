@@ -129,7 +129,7 @@ type Fs interface {
 	// CopyFileFromOtherFS creates or updates a file by copying the content of
 	// a file in another Cozy. It is used for sharings, to optimize I/O when
 	// two instances are on the same stack.
-	CopyFileFromOtherFS(olddoc, newdoc *FileDoc, srcFS Fs, srcDoc *FileDoc) error
+	CopyFileFromOtherFS(newdoc, olddoc *FileDoc, srcFS Fs, srcDoc *FileDoc) error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog), bool) (err error)
