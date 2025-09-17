@@ -259,7 +259,7 @@ func loginForm(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), "JWT", true); err != nil {
+			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), "JWT"); err != nil {
 				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 			}
 			if redirect == nil {
@@ -289,7 +289,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, dura
 		return err
 	}
 
-	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), logMessage, true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), logMessage); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 

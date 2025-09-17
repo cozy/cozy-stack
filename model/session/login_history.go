@@ -3,7 +3,6 @@ package session
 import (
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -11,9 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/emailer"
-	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
@@ -116,7 +112,7 @@ func lookupIP(ip, locale string) (city, subdivision, country, timezone string) {
 // StoreNewLoginEntry creates a new login entry in the database associated with
 // the given instance.
 func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
-	req *http.Request, logMessage string, notifEnabled bool,
+	req *http.Request, logMessage string,
 ) error {
 	var ip string
 	if forwardedFor := req.Header.Get(echo.HeaderXForwardedFor); forwardedFor != "" {
@@ -156,95 +152,5 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string,
 		ClientRegistration: clientID != "",
 		CreatedAt:          createdAt,
 	}
-
-	if err := couchdb.CreateDoc(i, l); err != nil {
-		return err
-	}
-
-	if clientID != "" {
-		if err := PushLoginRegistration(i, l, clientID); err != nil {
-			i.Logger().Errorf("Could not push login in registration queue: %s", err)
-		}
-	} else if notifEnabled {
-		if err := sendLoginNotification(i, l); err != nil {
-			i.Logger().Errorf("Could not send login notification: %s", err)
-		}
-	}
-
-	return nil
-}
-
-func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
-	// Don't send a notification the first time the user logs in their Cozy, as
-	// it doesn't make sense for the user. In general, this function is not
-	// even called when this is the case, but sometimes the user can create
-	// their Cozy from the manager with an OIDC flow, with no confirmation mail
-	// no password choosing, and we need this trick for them.
-	nb, _ := couchdb.CountNormalDocs(i, consts.SessionsLogins)
-	if nb == 1 {
-		return nil
-	}
-
-	var results []*LoginEntry
-	r := &couchdb.FindRequest{
-		UseIndex: "by-os-browser-ip",
-		Selector: mango.And(
-			mango.Equal("os", l.OS),
-			mango.Equal("browser", l.Browser),
-			mango.Equal("ip", l.IP),
-			mango.NotEqual("_id", l.ID()),
-		),
-		Limit: 1,
-	}
-	err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
-	sendNotification := err != nil || len(results) == 0
-	if !sendNotification {
-		return nil
-	}
-
-	var changePassphraseLink string
-	if !i.HasForcedOIDC() {
-		changePassphraseLink = i.ChangePasswordURL()
-	}
-	var activateTwoFALink string
-	if !i.HasAuthMode(instance.TwoFactorMail) {
-		settingsURL := i.SubDomain(consts.SettingsSlug)
-		settingsURL.Fragment = "/profile"
-		activateTwoFALink = settingsURL.String()
-	}
-
-	layout := i.Translate("Time Format Long")
-	time := i18n.LocalizeTime(l.CreatedAt, i.Locale, layout)
-
-	templateValues := map[string]interface{}{
-		"Time":                 time,
-		"Country":              l.Country,
-		"IP":                   l.IP,
-		"Browser":              l.Browser,
-		"ChangePassphraseLink": changePassphraseLink,
-		"ActivateTwoFALink":    activateTwoFALink,
-	}
-
-	return emailer.SendEmail(i, &emailer.TransactionalEmailCmd{
-		TemplateName:   "new_connection",
-		TemplateValues: templateValues,
-	})
-}
-
-// SendNewRegistrationNotification is used to send a notification to the user
-// when a new OAuth client is registered.
-func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID string) error {
-	devicesLink := i.SubDomain(consts.SettingsSlug)
-	devicesLink.Fragment = "/connectedDevices"
-	revokeLink := i.SubDomain(consts.SettingsSlug)
-	revokeLink.Fragment = "/connectedDevices/" + url.PathEscape(clientRegistrationID)
-	templateValues := map[string]interface{}{
-		"DevicesLink": devicesLink.String(),
-		"RevokeLink":  revokeLink.String(),
-	}
-
-	return emailer.SendEmail(i, &emailer.TransactionalEmailCmd{
-		TemplateName:   "new_registration",
-		TemplateValues: templateValues,
-	})
+	return couchdb.CreateDoc(i, l)
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -246,12 +245,6 @@ func loginFlagship(c echo.Context) error {
 		client.ClientID = ""
 		_ = couchdb.UpdateDoc(inst, client)
 		client.ClientID = client.CouchID
-	}
-
-	if err := session.SendNewRegistrationNotification(inst, client.ClientID); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err.Error(),
-		})
 	}
 
 	out := AccessTokenReponse{

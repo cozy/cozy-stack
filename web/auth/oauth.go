@@ -185,7 +185,7 @@ func (a *AuthorizeHTTPHandler) authorizeForm(c echo.Context) error {
 			sessionID, err := SetCookieForNewSession(c, session.ShortRun, "")
 			req := c.Request()
 			if err == nil {
-				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code", false); err != nil {
+				if err = session.StoreNewLoginEntry(inst, sessionID, "", req, "session_code"); err != nil {
 					inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 				}
 			}
@@ -987,7 +987,6 @@ func accessToken(c echo.Context) error {
 	client.LastRefreshedAt = time.Now()
 	_ = couchdb.UpdateDoc(instance, client)
 
-	_ = session.RemoveLoginRegistration(instance.ContextualDomain(), clientID)
 	return c.JSON(http.StatusOK, out)
 }
 
