@@ -1,12 +1,19 @@
 package sharings_test
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -27,6 +34,88 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper functions for file operations
+
+// createDirectory creates a directory with the given name in the specified parent directory
+// and returns the directory ID
+func createDirectory(t *testing.T, client *httpexpect.Expect, parentDirID, name, token string) string {
+	return client.POST("/files/"+parentDirID).
+		WithQuery("Name", name).
+		WithQuery("Type", "directory").
+		WithHeader("Authorization", "Bearer "+token).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object().Path("$.data.id").String().NotEmpty().Raw()
+}
+
+// createRootDirectory creates a directory with the given name at the root level
+// and returns the directory ID
+func createRootDirectory(t *testing.T, client *httpexpect.Expect, name, token string) string {
+	return createDirectory(t, client, "", name, token)
+}
+
+// createFile creates a file with the given name in the specified parent directory
+// and returns the file ID
+func createFile(t *testing.T, client *httpexpect.Expect, parentDirID, name, token string) string {
+	return client.POST("/files/"+parentDirID).
+		WithQuery("Name", name).
+		WithQuery("Type", "file").
+		WithHeader("Content-Type", "text/plain").
+		WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+		WithHeader("Authorization", "Bearer "+token).
+		WithBytes([]byte("foo")).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object().Path("$.data.id").String().NotEmpty().Raw()
+}
+
+// moveFileDownstream moves a file from the source instance to the target directory
+func moveFileDownstream(t *testing.T, client *httpexpect.Expect, sharingID, targetDirID, sourceInstanceURL, sourceFileID, token string) *httpexpect.Response {
+	return client.POST("/sharings/drives/"+sharingID+"/"+targetDirID+"/downstream").
+		WithQuery("source-instance", sourceInstanceURL).
+		WithQuery("file-id", sourceFileID).
+		WithHeader("Authorization", "Bearer "+token).
+		Expect()
+}
+
+// moveFileUpstream moves a file from the source instance to the target directory
+func moveFileUpstream(t *testing.T, client *httpexpect.Expect, sharingID, fileID, destInstanceURL, targetDirID, token string) *httpexpect.Response {
+	return client.POST("/sharings/drives/"+sharingID+"/"+fileID+"/upstream").
+		WithQuery("dest-instance", destInstanceURL).
+		WithQuery("dir-id", targetDirID).
+		WithHeader("Authorization", "Bearer "+token).
+		Expect()
+}
+
+// verifyFileMove verifies that a file was moved successfully by checking its attributes
+func verifyFileMove(t *testing.T, inst *instance.Instance, fileID, expectedName, expectedDirID string, expectedContent string) {
+	// Get the file from the VFS
+	fs := inst.VFS()
+
+	// Verify file exists in destination with correct attributes
+	fileDoc, err := fs.FileByID(fileID)
+	require.NoError(t, err)
+	require.Equal(t, expectedName, fileDoc.DocName)
+	require.Equal(t, expectedDirID, fileDoc.DirID)
+	require.Equal(t, int64(len(expectedContent)), fileDoc.ByteSize)
+
+	// Verify file content was preserved
+	fileHandle, err := fs.OpenFile(fileDoc)
+	require.NoError(t, err)
+	defer fileHandle.Close()
+
+	content, err := io.ReadAll(fileHandle)
+	require.NoError(t, err)
+	require.Equal(t, expectedContent, string(content))
+}
+
+// verifyFileDeleted verifies that a file was deleted from the source instance
+func verifyFileDeleted(t *testing.T, inst *instance.Instance, fileID string) {
+	_, err := inst.VFS().FileByID(fileID)
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err))
+}
+
 func TestSharedDrives(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -37,7 +126,8 @@ func TestSharedDrives(t *testing.T) {
 		checklistID,
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
-		otherSharedFileThenDeletedID string
+		otherSharedFileThenDeletedID,
+		sharingID string
 	var checklistName = "Checklist.txt"
 
 	config.UseTestFile(t)
@@ -483,17 +573,10 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			notesID := eA.POST("/files/"+meetingsID).
-				WithQuery("Name", "Meeting notes.txt").
-				WithQuery("Type", "file").
-				WithHeader("Content-Type", "text/plain").
-				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
-				WithHeader("Authorization", "Bearer "+acmeAppToken).
-				WithBytes([]byte("foo")).
-				Expect().Status(201).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object().Path("$.data.id").String().NotEmpty().Raw()
+			// Create a file in the shared directory
+			notesID := createFile(t, eA, meetingsID, "Meeting notes.txt", acmeAppToken)
 
+			// Move the file to another directory within the shared drive
 			movedNotes := eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
 				WithHeader("Authorization", "Bearer "+bettyAppToken).
 				WithHeader("Content-Type", "application/json").
@@ -512,21 +595,74 @@ func TestSharedDrives(t *testing.T) {
 			movedNotes.Path("$.data.attributes.dir_id").String().NotEmpty().IsEqual(productID)
 		})
 
+		// Move a file from one shared drive to another using the downstream endpoint
+		t.Run("MoveBetweenSharedDrivesDownstream", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+
+			// Create a second directory to be shared as another drive
+			secondRootDirID := createRootDirectory(t, eA, "Marketing team", acmeAppToken)
+
+			// Create a contact for the recipient and share the second directory
+			contact2 := createContact(t, acmeInstance, "Betty Marketing", "betty.marketing@example.net")
+			require.NotNil(t, contact2)
+			sharing2 := eA.POST("/sharings/").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithBytes([]byte(`{
+			  "data": {
+			    "type": "` + consts.Sharings + `",
+			    "attributes": {
+			      "description": "Drive for the marketing team",
+			      "drive": true,
+			      "rules": [{
+			          "title": "Marketing team",
+			          "doctype": "` + consts.Files + `",
+			          "values": ["` + secondRootDirID + `"]
+			        }]
+			    },
+			    "relationships": {
+			      "recipients": {
+			        "data": [{"id": "` + contact2.ID() + `", "type": "` + contact2.DocType() + `"}]
+			      }
+			    }
+			  }
+			}`)).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			sharingID2 := sharing2.Path("$.data.id").String().NotEmpty().Raw()
+			// Ensure we got a valid sharing id before proceeding
+			require.NotEmpty(t, sharingID2)
+
+			// Create a file inside the first shared drive that we'll move to the second
+			sourceFileID := createFile(t, eA, meetingsID, "to-move-between-drives.txt", acmeAppToken)
+
+			// Move downstream from the first drive to the second drive's root
+			res := moveFileDownstream(t, eA, sharingID2, secondRootDirID,
+				"https://"+acmeInstance.Domain, sourceFileID, acmeAppToken).Status(201)
+
+			// Verify JSON:API and destination
+			obj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+			obj.Path("$.data.type").String().IsEqual("io.cozy.files")
+			obj.Path("$.data.attributes.name").String().IsEqual("to-move-between-drives.txt")
+			obj.Path("$.data.attributes.dir_id").String().IsEqual(secondRootDirID)
+
+			// Verify file exists in destination and content preserved
+			movedFileID := obj.Path("$.data.id").String().Raw()
+			verifyFileMove(t, acmeInstance, movedFileID, "to-move-between-drives.txt", secondRootDirID, "foo")
+
+			// Verify original file is deleted
+			verifyFileDeleted(t, acmeInstance, sourceFileID)
+		})
+
 		t.Run("CannotMoveSharedFileOutsideSharedDrive", func(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			notesID := eA.POST("/files/"+meetingsID).
-				WithQuery("Name", "Meeting notes.txt").
-				WithQuery("Type", "file").
-				WithHeader("Content-Type", "text/plain").
-				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
-				WithHeader("Authorization", "Bearer "+acmeAppToken).
-				WithBytes([]byte("foo")).
-				Expect().Status(201).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object().Path("$.data.id").String().NotEmpty().Raw()
+			// Create a file in the shared directory
+			notesID := createFile(t, eA, meetingsID, "Meeting notes.txt", acmeAppToken)
 
+			// Attempt to move the file outside the shared drive (should fail)
 			eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
 				WithHeader("Authorization", "Bearer "+bettyAppToken).
 				WithHeader("Content-Type", "application/json").
@@ -546,17 +682,10 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			notesID := eA.POST("/files/"+outsideOfShareID).
-				WithQuery("Name", "Meeting notes.txt").
-				WithQuery("Type", "file").
-				WithHeader("Content-Type", "text/plain").
-				WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
-				WithHeader("Authorization", "Bearer "+acmeAppToken).
-				WithBytes([]byte("foo")).
-				Expect().Status(201).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object().Path("$.data.id").String().NotEmpty().Raw()
+			// Create a file outside the shared directory
+			notesID := createFile(t, eA, outsideOfShareID, "Meeting notes.txt", acmeAppToken)
 
+			// Attempt to move the unshared file into the shared drive (should fail)
 			eB.PATCH("/sharings/drives/"+sharingID+"/"+notesID).
 				WithHeader("Authorization", "Bearer "+bettyAppToken).
 				WithHeader("Content-Type", "application/json").
@@ -1111,6 +1240,243 @@ func TestSharedDrives(t *testing.T) {
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object()
 			obj.Value("data").Array().Length().IsEqual(0)
+		})
+	})
+
+	t.Run("MoveDownstreamHandler", func(t *testing.T) {
+		var fileToMoveSameStack string
+		var fileToMoveDifferentStack string
+		// Test missing parameters
+		t.Run("CreateSharedDataToMoveDownstream", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+
+			// as a target directory to move the file use Product directory "productID"
+			fileToMoveSameStack = createFile(t, eA, outsideOfShareID, "file-to-upload.txt", acmeAppToken)
+			fileToMoveDifferentStack = createFile(t, eA, outsideOfShareID, "file-to-upload-diff.txt", acmeAppToken)
+		})
+
+		t.Run("MissingSourceInstance", func(t *testing.T) {
+			res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+				WithQuery("file-id", fileToMoveSameStack).
+				Expect().Status(400)
+
+			res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Contains("missing source-instance param")
+		})
+
+		t.Run("MissingFileID", func(t *testing.T) {
+			res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+productID+"/downstream").
+				WithQuery("source-instance", "https://"+acmeInstance.Domain).
+				Expect().Status(400)
+
+			res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Contains("missing file-id parameter")
+		})
+
+		t.Run("FileNotFound", func(t *testing.T) {
+			_ = moveFileDownstream(t, httpexpect.Default(t, tsA.URL), sharingID, productID,
+				"https://"+acmeInstance.Domain, "non-existent-file", "").Status(404)
+		})
+
+		t.Run("DirectoryNotFound", func(t *testing.T) {
+			_ = moveFileDownstream(t, httpexpect.Default(t, tsA.URL), sharingID, "non-existent-dir",
+				"https://"+acmeInstance.Domain, fileToMoveSameStack, "").Status(404)
+		})
+
+		t.Run("SuccessfulMove", func(t *testing.T) {
+			// Perform the move operation
+			eA := httpexpect.Default(t, tsA.URL)
+			res := moveFileDownstream(t, eA, sharingID, productID,
+				"https://"+acmeInstance.Domain, fileToMoveSameStack, acmeAppToken).Status(201)
+
+			// Verify the response contains the new file
+			responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+			responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-upload.txt")
+			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(productID)
+
+			// Verify the file was moved and content preserved
+			movedFileID := responseObj.Path("$.data.id").String().Raw()
+			verifyFileMove(t, acmeInstance, movedFileID, "file-to-upload.txt", productID, "foo")
+
+			// Verify the original file was deleted
+			verifyFileDeleted(t, acmeInstance, fileToMoveSameStack)
+		})
+
+		// Force the cross-stack path even if instances are on the same server
+		t.Run("SuccessfulMoveForcedDifferentStack", func(t *testing.T) {
+			// mock to perform http call to different stack
+			prev := sharings.OnSameStackCheck
+			defer func() { sharings.OnSameStackCheck = prev }()
+			sharings.OnSameStackCheck = func(_, _ *instance.Instance) bool { return false }
+
+			// mock remote client to route *.cozy.local to the local test server while preserving Host
+			prevClient := sharings.NewRemoteClient
+			defer func() { sharings.NewRemoteClient = prevClient }()
+			uA, _ := url.Parse(tsA.URL)
+			sharings.NewRemoteClient = func(u *url.URL, bearer string) *client.Client {
+				tr := &http.Transport{
+					Proxy: http.ProxyFromEnvironment,
+					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+						return (&net.Dialer{}).DialContext(ctx, network, uA.Host)
+					},
+				}
+				c := &client.Client{
+					Scheme:    uA.Scheme,
+					Addr:      uA.Host,
+					Domain:    u.Hostname(),
+					Transport: tr,
+				}
+				if bearer != "" {
+					c.Authorizer = &request.BearerAuthorizer{Token: bearer}
+				}
+				return c
+			}
+
+			eA := httpexpect.Default(t, tsA.URL)
+			res := moveFileDownstream(t, eA, sharingID, productID,
+				"https://"+acmeInstance.Domain, fileToMoveDifferentStack, acmeAppToken).Status(201)
+
+			responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+			responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-upload-diff.txt")
+			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(productID)
+
+			// Verify the file was moved and content preserved
+			movedFileID := responseObj.Path("$.data.id").String().Raw()
+			verifyFileMove(t, acmeInstance, movedFileID, "file-to-upload-diff.txt", productID, "foo")
+
+			// Verify the original file was deleted
+			verifyFileDeleted(t, acmeInstance, fileToMoveDifferentStack)
+		})
+	})
+
+	t.Run("MoveUpstreamHandler", func(t *testing.T) {
+		var fileToMoveUpstream string
+		// Test missing parameters
+		t.Run("CreateSharedDataToMoveUpstream", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+
+			// Create a file in the shared directory that we'll move upstream
+			fileToMoveUpstream = createFile(t, eA, meetingsID, "file-to-move-upstream.txt", acmeAppToken)
+		})
+
+		t.Run("MissingDestInstance", func(t *testing.T) {
+			res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+fileToMoveUpstream+"/upstream").
+				WithQuery("dir-id", productID).
+				Expect().Status(400)
+
+			res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Contains("missing dest-instance parameter")
+		})
+
+		t.Run("MissingDirID", func(t *testing.T) {
+			res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"/"+fileToMoveUpstream+"/upstream").
+				WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+				Expect().Status(400)
+
+			res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Contains("missing dir-id parameter")
+		})
+
+		t.Run("FileNotFound", func(t *testing.T) {
+			_ = moveFileUpstream(t, httpexpect.Default(t, tsA.URL), sharingID, "non-existent-file",
+				"https://"+bettyInstance.Domain, productID, "").Status(404)
+		})
+
+		t.Run("SuccessfulMoveToSameStack", func(t *testing.T) {
+			eA := httpexpect.Default(t, tsA.URL)
+
+			// Create a test file to move
+			testFileID := createFile(t, eA, meetingsID, "test-upstream-move.txt", acmeAppToken)
+
+			// Create destination directory on the target instance
+			destDirID := createRootDirectory(t, eA, "Destination Dir", acmeAppToken)
+
+			// Perform the upstream move operation (same-stack scenario)
+			res := moveFileUpstream(t, eA, sharingID, testFileID,
+				"https://"+acmeInstance.Domain, destDirID, acmeAppToken).Status(201)
+
+			// Verify the response contains the new file
+			responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+			responseObj.Path("$.data.attributes.name").String().IsEqual("test-upstream-move.txt")
+			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(destDirID)
+
+			// Verify the file was moved to the destination
+			movedFileID := responseObj.Path("$.data.id").String().Raw()
+			verifyFileMove(t, acmeInstance, movedFileID, "test-upstream-move.txt", destDirID, "foo")
+
+			// Verify the original file was deleted from source
+			verifyFileDeleted(t, acmeInstance, testFileID)
+		})
+
+		// Force the cross-stack path even if instances are on the same server
+		t.Run("SuccessfulMoveForcedDifferentStack", func(t *testing.T) {
+			// Create destination directory on the target (owner) instance
+			eA := httpexpect.Default(t, tsA.URL)
+			destDirID := createRootDirectory(t, eA, "Destination Dir Forced", acmeAppToken)
+
+			// mock to perform http call to different stack
+			prev := sharings.OnSameStackCheck
+			defer func() { sharings.OnSameStackCheck = prev }()
+			sharings.OnSameStackCheck = func(_, _ *instance.Instance) bool { return false }
+
+			// mock remote client to route *.cozy.local to the local test server while preserving Host
+			prevClient := sharings.NewRemoteClient
+			defer func() { sharings.NewRemoteClient = prevClient }()
+			uA, _ := url.Parse(tsA.URL)
+			sharings.NewRemoteClient = func(u *url.URL, bearer string) *client.Client {
+				tr := &http.Transport{
+					Proxy: http.ProxyFromEnvironment,
+					DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+						return (&net.Dialer{}).DialContext(ctx, network, uA.Host)
+					},
+				}
+				c := &client.Client{
+					Scheme:    uA.Scheme,
+					Addr:      uA.Host,
+					Domain:    u.Hostname(),
+					Transport: tr,
+				}
+				if bearer != "" {
+					c.Authorizer = &request.BearerAuthorizer{Token: bearer}
+				}
+				return c
+			}
+
+			// Perform the upstream move operation (forced cross-stack scenario)
+			res := moveFileUpstream(t, eA, sharingID, fileToMoveUpstream,
+				"https://"+acmeInstance.Domain, destDirID, acmeAppToken).Status(201)
+
+			// Verify the response contains the new file
+			responseObj := res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
+			responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-move-upstream.txt")
+			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(destDirID)
+
+			// Verify the file was moved to the destination
+			movedFileID := responseObj.Path("$.data.id").String().Raw()
+			verifyFileMove(t, acmeInstance, movedFileID, "file-to-move-upstream.txt", destDirID, "foo")
+
+			// Verify the original file was deleted from source
+			verifyFileDeleted(t, acmeInstance, fileToMoveUpstream)
+		})
+
+		t.Run("InvalidFileParameter", func(t *testing.T) {
+			res := httpexpect.Default(t, tsA.URL).POST("/sharings/drives/"+sharingID+"//upstream").
+				WithQuery("dest-instance", "https://"+bettyInstance.Domain).
+				WithQuery("dir-id", productID).
+				Expect().Status(400)
+
+			res.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.errors[0].detail").String().Contains("missing file-id parameter")
+		})
+
+		t.Run("DirectoryInsteadOfFile", func(t *testing.T) {
+			// Try to move a directory using the file move endpoint
+			_ = moveFileUpstream(t, httpexpect.Default(t, tsA.URL), sharingID, meetingsID,
+				"https://"+bettyInstance.Domain, productID, acmeAppToken).Status(404)
 		})
 	})
 }
