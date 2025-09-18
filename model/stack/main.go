@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/model/cloudery"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/token"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -132,9 +131,6 @@ security features. Please do not use this binary as your production server.
 		}
 		shutdowners = append(shutdowners, shutdowner)
 	}
-
-	sessionSweeper := session.SweepLoginRegistrations()
-	shutdowners = append(shutdowners, sessionSweeper)
 
 	// Global shutdowner that composes all the running processes of the stack
 	processes := utils.NewGroupShutdown(shutdowners...)
