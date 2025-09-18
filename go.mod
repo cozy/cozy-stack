@@ -1,6 +1,8 @@
 module github.com/cozy/cozy-stack
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.6
 
 require (
 	firebase.google.com/go/v4 v4.14.1
@@ -51,7 +53,7 @@ require (
 	golang.org/x/crypto v0.31.0
 	golang.org/x/image v0.18.0
 	golang.org/x/net v0.33.0
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.27.0
 	golang.org/x/text v0.21.0
