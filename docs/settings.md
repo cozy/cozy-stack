@@ -658,6 +658,27 @@ Accept: application/vnd.api+json
 No permissions are required to access this route, but the request needs to be
 made from an authenticated Web session or Webapp.
 
+### GET /settings/premium
+
+Redirect to the instance's premium management page if it existes (i.e. the
+instance is linked to a manager) without the client knowing about the manager
+itself (neither its base URL nor the instance UUID).
+If there aren't any manager set up for the given instance, the route returns an
+error page with a 404 status code.
+
+#### Request
+
+```http
+GET /settings/premium HTTP/1.1
+Host: alice.example.com
+Accept: text/html
+```
+
+#### Permissions
+
+No permissions are required to access this route, but the request needs to be
+made from an authenticated Web session or Webapp.
+
 ### GET /settings/instance
 
 If the user is logged in, display all instance settings.
