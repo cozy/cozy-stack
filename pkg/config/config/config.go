@@ -148,6 +148,8 @@ type Config struct {
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
 
+	RabbitMQ RabbitMQ
+
 	RemoteAllowCustomPort bool
 
 	CSPDisabled   bool
@@ -156,6 +158,41 @@ type Config struct {
 
 	AssetsPollingDisabled bool
 	AssetsPollingInterval time.Duration
+}
+
+// RabbitMQ contains configuration for the RabbitMQ consumer.
+type RabbitMQ struct {
+	Enabled   bool             `mapstructure:"enabled" yaml:"enabled"`
+	URL       string           `mapstructure:"url" yaml:"url"`
+	Exchanges []RabbitExchange `mapstructure:"exchanges" yaml:"exchanges"`
+	TLS       RabbitMQTLS      `mapstructure:"tls" yaml:"tls"`
+}
+
+// RabbitMQTLS defines TLS settings for the RabbitMQ connection.
+type RabbitMQTLS struct {
+	RootCAFile             string `mapstructure:"root_ca" yaml:"root_ca"`
+	InsecureSkipValidation bool   `mapstructure:"insecure_skip_validation" yaml:"insecure_skip_validation"`
+	ServerName             string `mapstructure:"server_name" yaml:"server_name"`
+}
+
+type RabbitQueue struct {
+	Name          string   `mapstructure:"name" yaml:"name"`                     // e.g. "user-settings-queue"
+	Bindings      []string `mapstructure:"bindings" yaml:"bindings"`             // routing keys to bind
+	Prefetch      int      `mapstructure:"prefetch" yaml:"prefetch"`             // per-consumer QoS (optional override)
+	DeliveryLimit int      `mapstructure:"delivery_limit" yaml:"delivery_limit"` // x-delivery-limit (for quorum)
+	Declare       bool     `mapstructure:"declare" yaml:"declare"`               // whether declare queue on start up
+	DLXName       string   `mapstructure:"dlx_name" yaml:"dlx_name"`             // optional per-queue DLX name (overrides exchange)
+	DLQName       string   `mapstructure:"dlq_name" yaml:"dlq_name"`             // optional per-queue DLQ name (overrides exchange)
+}
+
+type RabbitExchange struct {
+	Name            string        `mapstructure:"name" yaml:"name"`                         // e.g. "user-common-settings" or "user-password-updates"
+	Kind            string        `mapstructure:"kind" yaml:"kind"`                         // "topic", "direct", etc.
+	Durable         bool          `mapstructure:"durable" yaml:"durable"`                   // whether exchange is durable
+	DeclareExchange bool          `mapstructure:"declare_exchange" yaml:"declare_exchange"` // whether declare exchange on start up
+	DLXName         string        `mapstructure:"dlx_name" yaml:"dlx_name"`                 // DLX name
+	DLQName         string        `mapstructure:"dlq_name" yaml:"dlq_name"`                 // DLQ name
+	Queues          []RabbitQueue `mapstructure:"queues" yaml:"queues"`                     // list of queues
 }
 
 // ClouderyConfig for [cloudery.ClouderyService].
@@ -927,6 +964,12 @@ func UseViper(v *viper.Viper) error {
 
 		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
+
+		RabbitMQ: func() RabbitMQ {
+			var rabbitmq RabbitMQ
+			v.UnmarshalKey("rabbitmq", &rabbitmq)
+			return rabbitmq
+		}(),
 	}
 
 	err = v.UnmarshalKey("deprecated_apps", &config.DeprecatedApps)

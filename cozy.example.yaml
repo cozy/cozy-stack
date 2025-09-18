@@ -530,3 +530,24 @@ contexts:
           - src: /logos/1_partner.png
             alt: Partner n°1
             type: secondary
+
+rabbitmq:
+  enabled: true
+  url: amqp://guest:guest@localhost:5672/
+  tls:
+    # root_ca: /etc/ssl/certs/ca.pem
+    insecure_skip_validation: false
+  exchanges:
+    - name: auth
+      kind: topic
+      durable: true
+      declare_exchange: true
+      dlx_name: auth.dlx
+      queues:
+        - name: user.password.updated
+          declare: true
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - password.changed
+

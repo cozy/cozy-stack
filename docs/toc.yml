@@ -51,6 +51,7 @@
     - "/realtime - Realtime": ./realtime.md
     - "/remote - Proxy for remote data/API": ./remote.md
     - " /remote/nextcloud - NextCloud": ./nextcloud.md
+    - "/rabbitmq - RabbitMQ integration": ./rabbitmq.md
     - "/settings - Settings": ./settings.md
     - " /settings - Terms of Services": ./user-action-required.md
     - "/sharings - Sharing": ./sharing.md

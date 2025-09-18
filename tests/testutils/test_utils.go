@@ -578,3 +578,17 @@ func WithFlag(t *testing.T, inst *instance.Instance, name string, value interfac
 		require.NoError(t, instance.Update(inst))
 	})
 }
+
+func WaitForOrFail(t testing.TB, timeout time.Duration, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		if condition() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timeout after %s waiting for condition", timeout)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}

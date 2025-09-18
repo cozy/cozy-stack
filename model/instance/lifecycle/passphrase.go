@@ -247,6 +247,26 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte, params P
 	return update(inst)
 }
 
+func ForceUpdatePassphraseWithSHash(inst *instance.Instance, hash []byte, params PassParameters) error {
+	if len(hash) == 0 {
+		return instance.ErrMissingPassphrase
+	}
+	if params.Iterations == 0 {
+		if err := setDefaultParameters(inst, &params); err != nil {
+			return err
+		}
+	}
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return nil
+	}
+	setPassphraseKdfAndSecret(inst, settings, hash, params)
+	if err := settings.Save(inst); err != nil {
+		return err
+	}
+	return update(inst)
+}
+
 func setDefaultParameters(inst *instance.Instance, params *PassParameters) error {
 	pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
 	params.Pass, params.Iterations = pass, iterations
