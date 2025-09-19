@@ -135,7 +135,7 @@ func BitwardenExchange(c echo.Context) error {
 			"error": "invalid code",
 		})
 	}
-    if err := instance.CheckPassphrase(inst, []byte(pass)); err != nil {
+	if err := instance.CheckPassphrase(inst, []byte(pass)); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid password",
 		})
