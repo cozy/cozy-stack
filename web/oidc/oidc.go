@@ -116,6 +116,7 @@ func BitwardenExchange(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	code := c.FormValue("code")
+	pass := c.FormValue("password")
 	if code == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "code parameter is required",
@@ -132,6 +133,11 @@ func BitwardenExchange(c echo.Context) error {
 			sub, inst.OIDCID, inst.Domain)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid code",
+		})
+	}
+    if err := instance.CheckPassphrase(inst, []byte(pass)); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid password",
 		})
 	}
 

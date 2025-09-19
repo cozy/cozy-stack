@@ -213,6 +213,7 @@ Content-Type: application/x-www-form-urlencoded
 
 ```
 code=xxx&
+password=myHashedPassword&
 client_id=mobile&
 deviceType=0&
 deviceIdentifier=aac2e34a-44db-42ab-a733-5322dd582c3d&
