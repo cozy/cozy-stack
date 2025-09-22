@@ -898,6 +898,37 @@ func TestSharedDrives(t *testing.T) {
 		})
 	})
 
+	t.Run("RealtimeInSharedDrive", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		eB := httpexpect.Default(t, tsB.URL)
+
+		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
+			WithWebsocketUpgrade().
+			Expect().Status(http.StatusSwitchingProtocols).
+			Websocket()
+		defer ws.Disconnect()
+
+		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, bettyAppToken))
+		time.Sleep(50 * time.Millisecond)
+
+		newFileID := eA.POST("/files/"+meetingsID).
+			WithQuery("Name", "Realtime test file.txt").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithBytes([]byte("foo")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		obj := ws.Expect().TextMessage().JSON().Object()
+		obj.HasValue("event", "CREATED")
+		payload := obj.Value("payload").Object()
+		payload.HasValue("type", consts.Files)
+		payload.HasValue("id", newFileID)
+	})
+
 	t.Run("CreateAndOpenNote", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 		eB := httpexpect.Default(t, tsB.URL)
@@ -983,37 +1014,5 @@ func TestSharedDrives(t *testing.T) {
 				}`)).
 				Expect().Status(401)
 		})
-	})
-
-	t.Run("RealtimeInSharedDrive", func(t *testing.T) {
-		eA := httpexpect.Default(t, tsA.URL)
-		eB := httpexpect.Default(t, tsB.URL)
-
-		ws := eB.GET("/sharings/drives/" + sharingID + "/realtime").
-			WithWebsocketUpgrade().
-			Expect().Status(http.StatusSwitchingProtocols).
-			Websocket()
-		defer ws.Disconnect()
-
-		time.Sleep(10 * time.Millisecond)
-		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, bettyAppToken))
-		time.Sleep(50 * time.Millisecond)
-
-		newFileID := eA.POST("/files/"+meetingsID).
-			WithQuery("Name", "Realtime test file.txt").
-			WithQuery("Type", "file").
-			WithHeader("Content-Type", "text/plain").
-			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
-			WithHeader("Authorization", "Bearer "+acmeAppToken).
-			WithBytes([]byte("foo")).
-			Expect().Status(201).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().Path("$.data.id").String().NotEmpty().Raw()
-
-		obj := ws.Expect().TextMessage().JSON().Object()
-		obj.HasValue("event", "CREATED")
-		payload := obj.Value("payload").Object()
-		payload.HasValue("type", consts.Files)
-		payload.HasValue("id", newFileID)
 	})
 }
