@@ -881,8 +881,11 @@ func GetDirSize(c echo.Context) error {
 // ReadMetadataFromPathHandler handles all GET requests on
 // /files/metadata aiming at getting file metadata from its path.
 func ReadMetadataFromPathHandler(c echo.Context) error {
-	var err error
+	return ReadMetadataFromPath(c, nil)
+}
 
+func ReadMetadataFromPath(c echo.Context, sharedDrive *sharing.Sharing) error {
+	var err error
 	instance := middlewares.GetInstance(c)
 
 	dir, file, err := instance.VFS().DirOrFileByPath(c.QueryParam("Path"))
@@ -895,9 +898,9 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		return DirData(c, http.StatusOK, dir, nil)
+		return DirData(c, http.StatusOK, dir, sharedDrive)
 	}
-	return FileData(c, http.StatusOK, file, true, nil, nil)
+	return FileData(c, http.StatusOK, file, true, nil, sharedDrive)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id

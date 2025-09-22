@@ -101,6 +101,11 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 	return nil
 }
 
+// ReadMetadataFromPath allows to get file/dir information for a path.
+func ReadMetadataFromPath(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.ReadMetadataFromPath(c, s)
+}
+
 // GetDirOrFileData handles all GET requests on aiming at getting a file or
 // directory metadata from its id.
 // TODO: reuse files.ReadMetadataFromIDHandler?
@@ -428,6 +433,7 @@ func drivesRoutes(router *echo.Group) {
 
 	drive.HEAD("/:file-id", proxy(HeadDirOrFile, true))
 
+	drive.GET("/metadata", proxy(ReadMetadataFromPath, true))
 	drive.GET("/:file-id", proxy(GetDirOrFileData, true))
 	drive.GET("/:file-id/size", proxy(GetDirSize, true))
 

@@ -391,6 +391,18 @@ Location: https://cozy.example.com/sharings/drives/aae62886e79611ef8381fb83ff72e
 }
 ```
 
+### Similar to /files
+
+The following routes are similar to [`/files`](files.md), but for a shared
+drive.
+
+#### GET /sharings/drives/:id/metadata
+#### POST /sharings/drives/upload/metadata
+#### DELETE /sharings/drives/:file-id
+#### POST /sharings/drives/trash/:file-id
+#### DELETE /sharings/drives/trash/:file-id
+
+
 ## Versions
 
 The identifier of the `io.cozy.files.versions` is composed of the `file-id` and

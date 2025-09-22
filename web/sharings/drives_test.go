@@ -410,6 +410,59 @@ func TestSharedDrives(t *testing.T) {
 			Expect().Status(404)
 	})
 
+	t.Run("GetMetadata", func(t *testing.T) {
+		runTestAsACMEThenAgainAsBetty(t, func(t *testing.T, clientMaker clientMaker) {
+			clientInfo := clientMaker(t)
+
+			// GET metadata request with path should return file metadata
+			obj := clientInfo.client.GET("/sharings/drives/"+sharingID+"/metadata").
+				WithQuery("Path", "/Product team/Meetings/Checklist.txt").
+				WithHeader("Authorization", "Bearer "+clientInfo.token).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data := obj.Value("data").Object()
+			data.Value("type").String().IsEqual("io.cozy.files")
+			data.Value("id").String().IsEqual(checklistID)
+			attrs := data.Value("attributes").Object()
+			attrs.Value("type").String().IsEqual("file")
+			attrs.Value("name").String().IsEqual("Checklist.txt")
+
+			// GET metadata request with directory path should return directory metadata
+			obj = clientInfo.client.GET("/sharings/drives/"+sharingID+"/metadata").
+				WithQuery("Path", "/Product team/Meetings").
+				WithHeader("Authorization", "Bearer "+clientInfo.token).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			data = obj.Value("data").Object()
+			data.Value("type").String().IsEqual("io.cozy.files")
+			data.Value("id").String().IsEqual(meetingsID)
+			attrs = data.Value("attributes").Object()
+			attrs.Value("type").String().IsEqual("directory")
+			attrs.Value("name").String().IsEqual("Meetings")
+
+			// GET metadata request with non-existent path should return 404
+			clientInfo.client.GET("/sharings/drives/"+sharingID+"/metadata").
+				WithQuery("Path", "/Product team/NonExistent").
+				WithHeader("Authorization", "Bearer "+clientInfo.token).
+				Expect().Status(404)
+
+			// GET metadata request without path should return 400
+			clientInfo.client.GET("/sharings/drives/"+sharingID+"/metadata").
+				WithHeader("Authorization", "Bearer "+clientInfo.token).
+				Expect().Status(400)
+		})
+
+		// GET metadata request without authentication should fail
+		eB := httpexpect.Default(t, tsB.URL)
+		eB.GET("/sharings/drives/"+sharingID+"/metadata").
+			WithQuery("Path", "/Product team/Meetings/Checklist.txt").
+			Expect().Status(401)
+	})
+
 	t.Run("GetDirSize", func(t *testing.T) {
 		eB := httpexpect.Default(t, tsB.URL)
 		u := eB.GET("/sharings/drives/"+sharingID+"/"+productID+"/size").
