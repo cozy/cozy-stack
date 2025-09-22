@@ -316,7 +316,7 @@ func wsHijack(c echo.Context, inst, owner *instance.Instance, s *sharing.Sharing
 		filterMapEvents(ds, ch, owner, s)
 	}()
 
-	return wsWrite(ws, ch, nil)
+	return wsWrite(ws, ch, errc)
 }
 
 func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token string) error {
