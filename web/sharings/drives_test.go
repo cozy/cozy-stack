@@ -995,6 +995,7 @@ func TestSharedDrives(t *testing.T) {
 			Websocket()
 		defer ws.Disconnect()
 
+		time.Sleep(10 * time.Millisecond)
 		ws.WriteText(fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, bettyAppToken))
 		time.Sleep(50 * time.Millisecond)
 
