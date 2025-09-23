@@ -222,6 +222,9 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 }
 
 func getDocumentTitleType(inst *instance.Instance, s *Sharing) string {
+	if s.Drive {
+		return inst.Translate("Notification Sharing Title Shared Drive")
+	}
 	rule := s.FirstFilesRule()
 	if rule == nil {
 		if len(s.Rules) > 0 && s.Rules[0].DocType == consts.BitwardenOrganizations {
@@ -240,6 +243,9 @@ func getDocumentTitleType(inst *instance.Instance, s *Sharing) string {
 }
 
 func getDocumentType(inst *instance.Instance, s *Sharing) string {
+	if s.Drive {
+		return inst.Translate("Notification Sharing Type Shared Drive")
+	}
 	rule := s.FirstFilesRule()
 	if rule == nil {
 		if len(s.Rules) > 0 && s.Rules[0].DocType == consts.BitwardenOrganizations {

@@ -1118,8 +1118,8 @@ msgstr "%s a partagé %s avec vous"
 msgid "Notification Sharing Description"
 msgstr "%s vous invite à %s %s **%s**"
 
-msgid "Notification Sharing Type Organization"
-msgstr "dossier partagé de mots de passe"
+msgid "Notification Sharing Title Shared Drive"
+msgstr "un drive"
 
 msgid "Notification Sharing Title Document"
 msgstr "un document"
@@ -1132,6 +1132,12 @@ msgstr "un fichier"
 
 msgid "Notification Sharing Title Note"
 msgstr "une note"
+
+msgid "Notification Sharing Type Shared Drive"
+msgstr "le drive partagé"
+
+msgid "Notification Sharing Type Organization"
+msgstr "le dossier partagé de mots de passe"
 
 msgid "Notification Sharing Type Document"
 msgstr "le document"
