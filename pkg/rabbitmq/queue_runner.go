@@ -39,13 +39,14 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 	}
 
 	// Declare DLX/DLQ using resolved fields already set on QueueSpec
-	if q.dlxName != "" {
+	if q.cfg.DeclareDLX && q.dlxName != "" {
 		if err := r.ch.ExchangeDeclare(q.dlxName, "fanout", true, false, false, false, nil); err != nil {
 			_ = ch.Close()
 			return nil, fmt.Errorf("failed to declare DLX %s: %w", q.dlxName, err)
 		}
 	}
-	if q.dlqName != "" {
+
+	if q.cfg.DeclareDLQ && q.dlqName != "" {
 		if _, err := r.ch.QueueDeclare(q.dlqName, true, false, false, false, nil); err != nil {
 			_ = ch.Close()
 			return nil, fmt.Errorf("failed to declare DLQ %s: %w", q.dlqName, err)
