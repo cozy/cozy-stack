@@ -643,14 +643,14 @@ func TestDLXDLQDeclaration(t *testing.T) {
 }
 
 // createAndStartManager creates a RabbitMQ manager with the given configuration and starts it
-func createAndStartManager(t *testing.T, MQ *testutils.RabbitFixture, exchangeCfg *config.RabbitExchange, queueCfg *config.RabbitQueue, dlxName, dlqName string) *rabbitmq.RabbitMQManager {
+func createAndStartManager(t *testing.T, mq *testutils.RabbitFixture, exchangeCfg *config.RabbitExchange, queueCfg *config.RabbitQueue, dlxName, dlqName string) *rabbitmq.RabbitMQManager {
 	handler := newCountingTestHandler()
 	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
 	queue := rabbitmq.NewQueueSpec(queueCfg, handler, dlxName, dlqName)
 	exchange.Queues = []rabbitmq.QueueSpec{queue}
 
 	exchanges := []rabbitmq.ExchangeSpec{exchange}
-	mgr := rabbitmq.NewRabbitMQManager(MQ.AMQPURL, exchanges)
+	mgr := rabbitmq.NewRabbitMQManager(mq.AMQPURL, exchanges)
 
 	_, err := mgr.Start(testCtx(t))
 	require.NoError(t, err)
@@ -662,8 +662,8 @@ func createAndStartManager(t *testing.T, MQ *testutils.RabbitFixture, exchangeCf
 	return mgr
 }
 
-func verifyDLXExists(t *testing.T, MQ *testutils.RabbitFixture, dlxName string) {
-	conn, ch := createTestConnection(t, MQ)
+func verifyDLXExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
+	conn, ch := createTestConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -672,8 +672,8 @@ func verifyDLXExists(t *testing.T, MQ *testutils.RabbitFixture, dlxName string) 
 	require.Error(t, err, "DLX %s should already be declared with different type", dlxName)
 }
 
-func verifyDLQExists(t *testing.T, MQ *testutils.RabbitFixture, dlqName string) {
-	conn, ch := createTestConnection(t, MQ)
+func verifyDLQExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
+	conn, ch := createTestConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -682,8 +682,8 @@ func verifyDLQExists(t *testing.T, MQ *testutils.RabbitFixture, dlqName string) 
 	require.Error(t, err, "DLQ %s should already be declared with different durability", dlqName)
 }
 
-func verifyDLXNotExists(t *testing.T, MQ *testutils.RabbitFixture, dlxName string) {
-	conn, ch := createTestConnection(t, MQ)
+func verifyDLXNotExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
+	conn, ch := createTestConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -692,8 +692,8 @@ func verifyDLXNotExists(t *testing.T, MQ *testutils.RabbitFixture, dlxName strin
 	require.NoError(t, err, "DLX %s should not be declared yet", dlxName)
 }
 
-func verifyDLQNotExists(t *testing.T, MQ *testutils.RabbitFixture, dlqName string) {
-	conn, ch := createTestConnection(t, MQ)
+func verifyDLQNotExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
+	conn, ch := createTestConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -702,8 +702,8 @@ func verifyDLQNotExists(t *testing.T, MQ *testutils.RabbitFixture, dlqName strin
 	require.NoError(t, err, "DLQ %s should not be declared yet", dlqName)
 }
 
-func createTestConnection(t *testing.T, MQ *testutils.RabbitFixture) (*amqp.Connection, *amqp.Channel) {
-	conn, err := amqp.Dial(MQ.AMQPURL)
+func createTestConnection(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Connection, *amqp.Channel) {
+	conn, err := amqp.Dial(mq.AMQPURL)
 	require.NoError(t, err)
 
 	ch, err := conn.Channel()

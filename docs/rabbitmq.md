@@ -33,6 +33,8 @@ Key fields:
     - `declare`: If true, declare the queue on startup.
     - `prefetch`: Per-consumer QoS prefetch.
     - `delivery_limit`: x-delivery-limit for quorum queues.
+    - `declare_dlx`: If true, declare the Dead Letter Exchange (DLX) on startup.
+    - `declare_dlq`: If true, declare the Dead Letter Queue (DLQ) on startup.
     - `dlx_name`, `dlq_name`: Optional overrides per queue.
 
 Example:
@@ -50,20 +52,81 @@ rabbitmq:
       kind: topic
       durable: true
       declare_exchange: true
+      dlx_name: auth.dlx
+      dlq_name: auth.dlq
       queues:
         - name: user.password.updated
           declare: true
+          declare_dlx: true
+          declare_dlq: true
           prefetch: 8
           delivery_limit: 5
           bindings:
             - password.changed
         - name: user.created
           declare: true
+          declare_dlx: false
+          declare_dlq: true
           prefetch: 8
           delivery_limit: 5
           bindings:
             - user.created
 ```
+
+### Dead Letter Exchange (DLX) and Dead Letter Queue (DLQ)
+
+The RabbitMQ integration supports Dead Letter Exchange (DLX) and Dead Letter Queue (DLQ) functionality for handling failed messages:
+
+- **DLX (Dead Letter Exchange)**: An exchange where messages are sent when they cannot be delivered to their original destination.
+- **DLQ (Dead Letter Queue)**: A queue bound to the DLX that receives failed messages for analysis or reprocessing.
+
+#### Configuration
+
+DLX and DLQ can be configured at both exchange and queue levels:
+
+- **Exchange level**: Set `dlx_name` and `dlq_name` in the exchange configuration to provide defaults for all queues under that exchange.
+- **Queue level**: Set `dlx_name` and `dlq_name` in the queue configuration to override exchange defaults.
+- **Declaration control**: Use `declare_dlx` and `declare_dlq` flags to control whether the DLX and DLQ are automatically declared on startup.
+
+#### Example with DLX/DLQ
+
+```yaml
+rabbitmq:
+  enabled: true
+  url: amqp://guest:guest@localhost:5672/
+  exchanges:
+    - name: auth
+      kind: topic
+      durable: true
+      declare_exchange: true
+      dlx_name: auth.dlx
+      dlq_name: auth.dlq
+      queues:
+        - name: user.password.updated
+          declare: true
+          declare_dlx: true
+          declare_dlq: true
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - password.changed
+        - name: user.created
+          declare: true
+          declare_dlx: false
+          declare_dlq: true
+          dlq_name: user.created.dlq  # Override exchange default
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - user.created
+```
+
+#### Behavior
+
+- When `declare_dlx: true` and a `dlx_name` is provided, the DLX is declared as a fanout exchange on startup.
+- When `declare_dlq: true` and a `dlq_name` is provided, the DLQ is declared and bound to the DLX on startup.
+- If queue-level `dlx_name`/`dlq_name` are not specified, exchange-level defaults are used.
+- Messages that exceed the `delivery_limit` or are rejected will be sent to the DLX and routed to the DLQ.
 
 ### Handlers
 
@@ -119,9 +182,10 @@ On startup, if `rabbitmq.enabled` is true:
 
 1. The manager creates an AMQP connection (TLS if configured) and retries with exponential backoff.
 2. It declares configured exchanges and queues (if `declare_*` flags are set).
-3. It binds queues to their routing keys and starts consumers.
-4. It exposes a readiness channel internally so tests can wait until consumption is active.
-5. It monitors the connection and restarts consumers upon reconnection.
+3. It declares Dead Letter Exchanges and Dead Letter Queues (if `declare_dlx`/`declare_dlq` flags are set).
+4. It binds queues to their routing keys and starts consumers.
+5. It exposes a readiness channel internally so tests can wait until consumption is active.
+6. It monitors the connection and restarts consumers upon reconnection.
 
 ### Adding a new queue handler
 
