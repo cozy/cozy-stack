@@ -277,6 +277,13 @@ func Ws(c echo.Context) error {
 		return jsonapi.InternalServerError(err)
 	}
 
+	go func() {
+		if err := markSharingAsSeen(inst, s); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("markSharingAsSeen failed: %s", err)
+		}
+	}()
+
 	// XXX Let's try to avoid one http request by cheating a bit. If the two
 	// instances are on the same domain (same stack), we can watch directly
 	// the real-time events. It helps for performances.
@@ -388,4 +395,34 @@ func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token 
 	}()
 
 	return wsWrite(ws, ch, errc)
+}
+
+func markSharingAsSeen(inst *instance.Instance, s *sharing.Sharing) error {
+	key := []string{consts.Sharings, s.SID}
+	end := []string{key[0], key[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    key,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
+	if err != nil {
+		return err
+	}
+	if len(res.Rows) == 0 {
+		return nil
+	}
+	fs := inst.VFS()
+	file, err := fs.FileByID(res.Rows[0].ID)
+	if err != nil {
+		return err
+	}
+
+	if meta, ok := file.Metadata["sharing"].(map[string]interface{}); ok && meta["status"] != "seen" {
+		old := file.Clone().(*vfs.FileDoc)
+		meta["status"] = "seen"
+		return fs.UpdateFileDoc(old, file)
+	}
+	return nil
 }
