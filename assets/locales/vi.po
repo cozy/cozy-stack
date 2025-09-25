@@ -1,0 +1,1332 @@
+msgid ""
+msgstr ""
+
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Time Format Long"
+msgstr "ngày 2 tháng 1 năm 2006 lúc 15 giờ 04"
+
+msgid "Tree Administrative"
+msgstr "Quản trị"
+
+msgid "Tree Photos"
+msgstr "Ảnh"
+
+msgid "Tree Notes"
+msgstr "Ghi chú"
+
+msgid "Tree Shared Drives"
+msgstr "Ổ đĩa được chia sẻ"
+
+msgid "Tree Shared with me"
+msgstr "Hộp thư chia sẻ đến"
+
+msgid "Tree No longer shared"
+msgstr "Đã ngừng chia sẻ"
+
+msgid "Tree Revoked sharing suffix"
+msgstr "Đã hủy chia sẻ"
+
+msgid "Notes New note"
+msgstr "Ghi chú mới"
+
+msgid "Back icon label"
+msgstr "Quay lại màn hình trước"
+
+msgid "Login Credentials error"
+msgstr "Mật khẩu bạn nhập không đúng, vui lòng thử lại."
+
+msgid "URL Discovery error"
+msgstr "URL Cozy bạn nhập không đúng, vui lòng thử lại."
+
+msgid "Login Welcome"
+msgstr "Chào mừng!"
+
+msgid "Login Welcome name"
+msgstr "%s"
+
+msgid "Login Password best practice"
+msgstr "Khuyến nghị bảo mật:"
+
+msgid "Login Password tip"
+msgstr "Không nhập mật khẩu nếu chưa kiểm tra địa chỉ trên trình duyệt có trùng khớp với địa chỉ Cozy của bạn."
+
+msgid "Login Password help"
+msgstr "Nhập mật khẩu để truy cập vào Cozy của bạn"
+
+msgid "Login Password field"
+msgstr "Mật khẩu"
+
+msgid "Login Password show"
+msgstr "Hiện mật khẩu"
+
+msgid "Login Password hide"
+msgstr "Ẩn mật khẩu"
+
+msgid "Login Long Session"
+msgstr "Ghi nhớ tôi và dữ liệu của tôi trên thiết bị này"
+
+msgid "Login Submit"
+msgstr "Đăng nhập"
+
+msgid "Login Confirm"
+msgstr "Đăng nhập"
+
+msgid "Login Connect after reset requested title"
+msgstr "Kiểm tra email của bạn!"
+
+msgid "Login Connect after reset requested help"
+msgstr "Chúng tôi đã gửi cho bạn một liên kết đặc biệt qua email."
+"Nhấn vào liên kết này để đặt lại mật khẩu của bạn. "
+"Lưu ý: Email này có thể vào thư mục Spam."
+"Hãy kiểm tra toàn bộ hộp thư của bạn. "
+
+msgid "Login Reconnect title"
+msgstr "Xác nhận mật khẩu của bạn"
+
+msgid "Login Reconnect help"
+msgstr "Xin chào! Sau khi xác nhận mật khẩu, bạn sẽ được chuyển đến bảng cấp quyền để cho phép hoặc từ chối truy cập từ ứng dụng di động. Quyết định là ở bạn!"
+
+msgid "Login Connect from sharing title"
+msgstr "Xin chào %s!"
+
+msgid "Login Connect from sharing help"
+msgstr "Nhập mật khẩu của bạn"
+
+msgid "Login Two factor title"
+msgstr "Xác thực hai bước"
+
+msgid "Login Two factor error"
+msgstr "Mã bạn đã nhập không đúng, vui lòng thử lại."
+
+msgid "Login Two factor attempts error"
+msgstr "Bạn đã nhập sai quá nhiều lần. Một mã mới đã được gửi, hãy kiểm tra email của bạn."
+
+msgid "Login Two factor field"
+msgstr "Mã (6 chữ số)"
+
+msgid "Login Two factor help"
+msgstr "Nhập mã đã được gửi đến hộp thư của bạn"
+
+msgid "Login Two factor device trust field"
+msgstr "Tin cậy thiết bị này"
+
+msgid "Login Two factor device trust help"
+msgstr "Khi chọn tùy chọn này, thiết bị này sẽ không yêu cầu xác thực hai bước trong tương lai"
+
+msgid "Magic Link Submit"
+msgstr "Đăng nhập bằng email của tôi"
+
+msgid "Magic link has been sent Title"
+msgstr "Mở hộp thư của bạn"
+
+msgid "Magic link has been sent Body"
+msgstr "Một email đã được gửi đến bạn để đăng nhập vào Cozy"
+
+msgid "Magic link has been sent Detail"
+msgstr ""
+"Không nhận được email? Hãy kiểm tra các thư mục Spam, Thông báo và Mạng xã hội."
+
+msgid "Onboarding Not activated Title"
+msgstr "Bạn cần kích hoạt Cozy của mình"
+
+msgid "Onboarding Not activated Check mails"
+msgstr "Cozy của bạn chưa được kích hoạt. Kiểm tra email và nhấn vào liên kết kích hoạt để bắt đầu cài đặt Cozy."
+
+msgid "Onboarding Not activated Contact us"
+msgstr "Bạn gặp khó khăn? Hãy liên hệ với chúng tôi qua"
+
+msgid "Passphrase reset Title"
+msgstr "Quên mật khẩu"
+
+msgid "Passphrase reset Help hint"
+msgstr ""
+"Gợi ý bạn đã chọn khi tạo mật khẩu sẽ được gửi tới bạn qua email."
+
+msgid "Passphrase reset Help hint Cozy Pass"
+msgstr ""
+"Gợi ý bạn đã chọn khi tạo mật khẩu cho Cozy Pass sẽ được gửi tới bạn qua email."
+
+msgid "Passphrase reset Submit hint"
+msgstr "Giúp tôi khôi phục mật khẩu" 
+
+msgid "Passphrase reset Help Message"
+msgstr ""
+"Cảnh báo! Mật khẩu hiện tại của bạn là cách duy nhất để giải mã "
+"các mật khẩu được lưu trong ứng dụng \"Cozy Pass\". "
+"Nếu bạn đặt lại mật khẩu, dữ liệu này sẽ bị mất. "
+"Các dữ liệu còn lại vẫn sẽ truy cập được."
+
+msgid "Passphrase reset Help emptyVault"
+msgstr "Một liên kết sẽ được gửi cho bạn qua email để đặt mật khẩu mới."
+
+msgid "Passphrase reset Help emptyVault Cozy Pass"
+msgstr "Một liên kết sẽ được gửi cho bạn qua email để đặt mật khẩu mới cho Cozy Pass."
+
+msgid "Passphrase reset Submit"
+msgstr "Đặt lại mật khẩu của tôi"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Thay đổi mật khẩu của tôi"
+
+msgid "Hint sent Title"
+msgstr "Kiểm tra email của bạn!"
+
+msgid "Passphrase is reset Title"
+msgstr "Kiểm tra email của bạn!"
+
+msgid "Passphrase Onboarding Title"
+msgstr "Chọn mật khẩu của bạn"
+
+msgid "Passphrase Onboarding Help"
+msgstr "Sử dụng ít nhất tám ký tự gồm chữ cái, số và ký hiệu."
+
+msgid "Passphrase Pass Error"
+msgstr "Mật khẩu của bạn quá ngắn!"
+
+msgid "Passphrase Hint Error"
+msgstr "Gợi ý của bạn phải khác mật khẩu!"
+
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Để lại gợi ý"
+
+msgid "Passphrase Onboarding Hint Field"
+msgstr "Để lại gợi ý (không bắt buộc)"
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+"Gợi ý sẽ được gửi đến email của bạn nếu bạn quên mật khẩu. "
+"Hãy chọn một gợi ý mà chỉ bạn mới hiểu được."
+
+msgid "Passphrase Onboarding Submit"
+msgstr "Hoàn tất"
+
+msgid "Hint sent Body"
+msgstr ""
+"Chúng tôi vừa gửi gợi ý mật khẩu tới email của bạn. Gợi ý này sẽ giúp bạn nhớ lại mật khẩu Cozy."
+
+msgid "Hint sent Detail"
+msgstr ""
+"Lưu ý: email có thể nằm trong mục Spam, Thông báo hoặc Mạng xã hội.  
+Hãy kiểm tra kỹ các thư mục này để tìm email."
+
+msgid "Hint sent Login Button"
+msgstr "Quay lại trang đăng nhập"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"Chúng tôi vừa gửi cho bạn một liên kết đặc biệt qua email. Hãy nhấn vào liên kết để đặt lại mật khẩu của bạn."
+
+msgid "Passphrase is reset Detail"
+msgstr ""
+"Lưu ý: email có thể nằm trong mục Spam, Thông báo hoặc Mạng xã hội.  
+Hãy kiểm tra kỹ các thư mục này để tìm email."
+
+msgid "Passphrase is reset Login Button"
+msgstr "Quay lại trang đăng nhập"
+
+msgid "Passphrase renew Title"
+msgstr "Chọn mật khẩu mới"
+
+msgid "Passphrase renew Help"
+msgstr "Sử dụng ít nhất tám ký tự gồm chữ cái, số và ký hiệu."
+
+msgid "Passphrase renew Field"
+msgstr "mật khẩu"
+
+msgid "Passphrase renew Submit"
+msgstr "Lưu"
+
+msgid "Login Forgot password"
+msgstr "Tôi quên mật khẩu"
+
+msgid "Login Confirm Title"
+msgstr "Xác thực"
+
+msgid "Login Confirm Help"
+msgstr "Vì lý do bảo mật, vui lòng xác nhận danh tính của bạn"
+
+msgid "Login Confirm Submit"
+msgstr "Xác nhận"
+
+msgid "Authorize Title"
+msgstr "Cho phép %s truy cập vào hồ sơ của bạn"
+
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Đồng bộ vào Cozy của tôi"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Thêm vào Cozy của tôi"
+
+msgid "Authorize Client presentation"
+msgstr "muốn được cấp quyền truy cập vào Cozy của bạn"
+
+msgid "Authorize Sharing Request"
+msgstr "Được chia sẻ bởi"
+
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%s và bạn có thể cộng tác bằng cách chỉnh sửa %s."
+"Mỗi thay đổi sẽ được tự động đồng bộ giữa các Cozy của bạn."
+
+msgid "Authorize Sharing Description end"
+msgstr "Bạn sẽ vẫn giữ %s trong Cozy của mình, ngay cả khi việc chia sẻ bị hủy bởi %s."
+
+msgid "Authorize Sharing Synchronize label"
+msgstr "Đồng bộ vào Cozy của tôi"
+
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Đồng bộ"
+
+msgid "Authorize Sharing Submit Add"
+msgstr "Thêm"
+
+msgid "Authorize Sharing Cancel"
+msgstr "Hủy"
+
+msgid "Authorize Policy sentence"
+msgstr "Bạn có thể đọc chính sách về việc sử dụng dữ liệu của bạn"
+
+msgid "Authorize Policy link"
+msgstr "tại đây"
+
+msgid "Authorize Give permission"
+msgstr "Khi nhấn **Cho phép**, bạn đồng ý rằng ứng dụng được quyền truy cập vào dữ liệu của bạn, tuân thủ theo điều khoản dịch vụ và chính sách bảo mật."
+
+msgid "Authorize Submit"
+msgstr "Cho phép"
+
+msgid "Authorize Cancel"
+msgstr "Từ chối"
+
+msgid "Authorize Linked Title"
+msgstr "Yêu cầu quyền truy cập"
+
+msgid "Authorize Linked Webapp"
+msgstr "Một ứng dụng tự nhận là:"
+
+msgid "Authorize Linked YourCozy"
+msgstr "yêu cầu quyền truy cập vào Cozy của bạn:"
+
+msgid "Authorize Linked Help"
+msgstr "Ứng dụng này yêu cầu quyền truy cập vào các loại dữ liệu sau trong Cozy của bạn:"
+
+msgid "Authorize Confirm Flagship title"
+msgstr "Ứng dụng chưa được chứng nhận"
+
+msgid "Authorize Confirm Flagship help"
+msgstr ""
+"Nguồn gốc của ứng dụng này chưa được xác thực. "
+"Một mã gồm 6 chữ số đã được gửi tới địa chỉ email: %s. "
+"Hãy nhập mã này để xác nhận bạn muốn sử dụng ứng dụng."
+
+msgid "Authorize Confirm Flagship more link"
+msgstr "https://support.cozy.io/"
+
+msgid "Authorize Confirm Flagship more text"
+msgstr "tìm hiểu thêm"
+
+msgid "Authorize Confirm Flagship field"
+msgstr "Mã xác nhận"
+
+msgid "Authorize Confirm Flagship Confirm"
+msgstr "Xác nhận"
+
+msgid "Confirm Flagship Invalid code"
+msgstr "Mã không hợp lệ"
+
+msgid "Mail Confirm Flagship Subject"
+msgstr "Mã xác nhận"
+
+msgid "Mail Confirm Flagship Greeting"
+msgstr "Xin chào %s,"
+
+msgid "Mail Confirm Flagship Intro"
+msgstr ""
+"Để xác nhận bạn muốn sử dụng ứng dụng Twake, "
+"hãy sao chép mã dưới đây và nhập vào trong ứng dụng:"
+
+msgid "Move delegated auth Title"
+msgstr "Xác nhận di chuyển"
+
+msgid "Move delegated auth Help"
+msgstr "Một mã đã được gửi qua email tới địa chỉ %s."
+
+msgid "Import Title"
+msgstr "Đang nhập dữ liệu"
+
+msgid "Import Description"
+msgstr "Việc nhập dữ liệu có thể mất một chút thời gian. Bạn có thể đóng màn hình này, chúng tôi sẽ gửi email khi quá trình hoàn tất."
+
+msgid "Move in progress Title"
+msgstr "Đang di chuyển dữ liệu"
+
+msgid "Move in progress Box"
+msgstr "Từ **%s** đến **%s**"
+
+msgid "Move in progress Description"
+msgstr "Việc di chuyển dữ liệu có thể mất một chút thời gian. Bạn có thể đóng màn hình này, chúng tôi sẽ gửi email khi quá trình hoàn tất."
+
+msgid "Move Confirm Title"
+msgstr "Yêu cầu di chuyển của bạn đã được ghi nhận"
+
+msgid "Move Confirm Box"
+msgstr "Một email đã được gửi tới %s để xác nhận việc di chuyển."
+
+msgid "Move Confirm Description"
+msgstr "Bạn không nhận được email? Hãy kiểm tra mục SPAM hoặc gửi email cho chúng tôi tại claude@cozycloud.cc."
+
+msgid "Move Link Title"
+msgstr "%s đã thay đổi địa chỉ Cozy của mình"
+
+msgid "Move Link Description"
+msgstr ""
+"Liên kết này sẽ sớm không còn hiệu lực, một liên kết mới đã được tạo:"
+
+msgid "Move Link More"
+msgstr "Hãy sao chép và lưu trữ liên kết này trước khi bạn không thể truy cập trang này nữa."
+
+msgid "Move Link FAQ URL"
+msgstr "https://help.cozy.io/article/491-how-to-retrieve-a-share-link"
+
+msgid "Move Link FAQ Text"
+msgstr "Làm thế nào để tìm lại liên kết chia sẻ nếu địa chỉ bị thay đổi?"
+
+msgid "Move Vault Title"
+msgstr "Nhập khẩu mật khẩu của tôi"
+
+msgid "Move Vault Description"
+msgstr "Làm theo các bước sau để nhập khẩu mật khẩu bạn đã xuất ra trước khi di chuyển Cozy:"
+
+msgid "Move Vault Step 1"
+msgstr "Mở tiện ích mở rộng Cozy trên trình duyệt của bạn"
+
+msgid "Move Vault Step 2"
+msgstr "Đăng xuất, sau đó đăng nhập lại tiện ích với Cozy mới của bạn"
+
+msgid "Move Vault Step 3"
+msgstr "Nhấn vào \"**Cài đặt / Nhập dữ liệu**\""
+
+msgid "Move Vault Step 4"
+msgstr "Chọn định dạng nguồn là \"**Bitwarden (json)**\", nhấn \"**chọn tệp**\" và chọn tệp bạn vừa xuất"
+
+msgid "Move Vault Step 5"
+msgstr "Nhấn \"**Nhập**\""
+
+msgid "Move Vault Link"
+msgstr "Tôi đã nhập khẩu mật khẩu của mình"
+
+msgid "Move Vault Ignore"
+msgstr "Bỏ qua bước này"
+
+msgid "Error Title"
+msgstr "Rất tiếc, đã xảy ra lỗi không mong muốn."
+
+msgid "Error Internal Server Error Title"
+msgstr "Oops…"
+
+msgid "Error Internal Server Error Message"
+msgstr "Cozy của bạn đang gặp sự cố. Đội ngũ của chúng tôi đang nỗ lực khắc phục."
+
+msgid "Error Instance not found Title"
+msgstr "Địa chỉ Cozy này không tồn tại"
+
+msgid "Error Instance not found Message"
+msgstr "Có thể bạn đã nhập sai địa chỉ. Vui lòng kiểm tra lại địa chỉ Cozy được gửi qua email khi tạo tài khoản."
+
+msgid "Error InvalidToken Title"
+msgstr "Liên kết không hợp lệ"
+
+msgid "Error InvalidToken Message"
+msgstr "Liên kết của bạn đã hết hạn hoặc không hợp lệ"
+
+msgid "Error InvalidToken Link"
+msgstr "Quay lại phần cài đặt"
+
+msgid "Error Application not installed Title"
+msgstr "Ứng dụng chưa khả dụng"
+
+msgid "Error Application not installed Message"
+msgstr "Ứng dụng này hiện chưa khả dụng trong Cozy của bạn."
+
+msgid "Error Application not supported Message"
+msgstr "Ứng dụng này không được Cozy server của bạn hỗ trợ."
+
+msgid "Error Application not found Title"
+msgstr "Ứng dụng không tồn tại"
+
+msgid "Error Application not found Message"
+msgstr ""
+""Chúng tôi không tìm thấy ứng dụng nào tương ứng với địa chỉ này trong Cozy của bạn."
+"Có thể bạn đã nhập sai địa chỉ."
+
+msgid "Error Application not found Action"
+msgstr "Về trang chủ"
+
+msgid "Error Application not found Button"
+msgstr "Cài đặt ứng dụng này"
+
+msgid "Error Address forgotten"
+msgstr "Tôi đã quên địa chỉ Cozy của mình"
+
+msgid "Error Contact us"
+msgstr "Có thắc mắc hoặc sự cố? Liên hệ với chúng tôi tại"
+
+msgid "Error Contact instance blocked"
+msgstr "Liên hệ với chúng tôi nếu bạn muốn biết thêm thông tin tại"
+
+msgid "Error Message instance blocked"
+msgstr "Cozy của bạn đã bị khóa"
+
+msgid "the authentication has failed"
+msgstr "Xác thực không thành công"
+
+msgid "the FranceConnect authentication has failed"
+msgstr "Xác thực bằng FranceConnect không thành công"
+
+msgid "Instance Blocked Login"
+msgstr "Cozy đã bị khóa do có quá nhiều lần đăng nhập không thành công"
+
+msgid "Instance Blocked Payment"
+msgstr "Cozy yêu cầu thanh toán"
+
+msgid "Instance Blocked Importing"
+msgstr "Cozy đang trong quá trình nhập dữ liệu"
+
+msgid "Instance Blocked Moving"
+msgstr "Đang di chuyển dữ liệu"
+
+msgid "Instance Blocked Unknown"
+msgstr "Cozy bị khóa do lý do không xác định"
+
+msgid "Error No state parameter"
+msgstr "Tham số state là bắt buộc"
+
+msgid "Error No client_id parameter"
+msgstr "Tham số client_id là bắt buộc"
+
+msgid "Error No redirect_uri parameter"
+msgstr "Tham số redirect_uri là bắt buộc"
+
+msgid "Error No scope parameter"
+msgstr "Tham số scope là bắt buộc"
+
+msgid "Error No registered client"
+msgstr "Client phải được đăng ký"
+
+msgid "Error No sharing_id parameter"
+msgstr "Tham số sharing_id là bắt buộc"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "Tham số redirect_uri không khớp với giá trị đã đăng ký"
+
+msgid "Error Invalid redirect_uri"
+msgstr "Tham số redirect_uri không hợp lệ"
+
+msgid "Error Invalid response type"
+msgstr "Loại phản hồi không hợp lệ"
+
+msgid "Error Invalid scope"
+msgstr "Scope không hợp lệ"
+
+msgid "Error Invalid challenge code method"
+msgstr "Phương thức mã hóa challenge không hợp lệ"
+
+msgid "Error No challenge code"
+msgstr "Tham số code_challenge là bắt buộc khi có code_challenge_method"
+
+msgid "Error Must be authenticated"
+msgstr "Bạn phải đăng nhập"
+
+msgid "Error Invalid reset token"
+msgstr "Liên kết đặt lại mật khẩu đã bị rút gọn hoặc đã hết hạn"
+
+msgid "Error Reset already requested"
+msgstr "Yêu cầu đặt lại mật khẩu đã được gửi trước đó. Vui lòng kiểm tra hộp thư và mục spam!"
+
+msgid "Error Invalid magic link"
+msgstr "Liên kết đăng nhập Cozy đã bị rút gọn hoặc đã hết hạn"
+
+msgid "Error Invalid mail token"
+msgstr "Liên kết xác nhận email đã bị rút gọn hoặc đã hết hạn"
+
+msgid "Error Invalid sharing"
+msgstr "Chia sẻ không tồn tại hoặc đã bị thu hồi"
+
+msgid "Error Sharing already accepted Title"
+msgstr "Bạn đã chấp nhận chia sẻ này"
+
+msgid "Error Sharing already accepted"
+msgstr "Bạn có thể tìm thấy nội dung chia sẻ này trong Cozy của mình."
+
+msgid "Error Sharing already accepted Button"
+msgstr "Truy cập Cozy của tôi"
+
+msgid "Two Factor Activation"
+msgstr "Xác thực hai bước đã được kích hoạt"
+
+msgid "Confirmation User Content"
+msgstr "Email của bạn đã được xác nhận. Xác thực hai bước đã được kích hoạt thành công cho Cozy của bạn."
+
+msgid "Permissions Maximal"
+msgstr "Tất cả dữ liệu"
+
+msgid "Permissions Wildcard"
+msgstr ", và các tài liệu liên quan"
+
+msgid "Permissions Read only"
+msgstr ", chỉ đọc"
+
+msgid "Permissions disk usage"
+msgstr "Dung lượng ổ đĩa đã sử dụng"
+
+msgid "Permissions worker konnectors"
+msgstr "Chạy kết nối để nhập dữ liệu"
+
+msgid "Permissions worker log"
+msgstr "Lưu nhật ký hệ thống"
+
+msgid "Permissions worker sendmail"
+msgstr "Gửi email"
+
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Hồ sơ trình quản lý mật khẩu"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Các mục trong trình quản lý mật khẩu"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Thư mục của trình quản lý mật khẩu"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Thư mục chia sẻ mật khẩu"
+
+msgid "Permissions io.cozy.accounts"
+msgstr "Tài khoản"
+
+msgid "Permissions io.cozy.apps"
+msgstr "Danh sách ứng dụng đã cài đặt"
+
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "Đề xuất ứng dụng"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "Tài khoản ngân hàng"
+
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Thống kê tài khoản ngân hàng"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "Nhóm tài khoản ngân hàng"
+
+msgid "Permissions io.cozy.bank.operations"
+msgstr "Giao dịch ngân hàng"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "Cài đặt ứng dụng"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Người nhận chuyển khoản ngân hàng"
+
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Nhóm giao dịch định kỳ"
+
+msgid "Permissions io.cozy.bills"
+msgstr "Hóa đơn"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "Cài đặt ứng dụng"
+
+msgid "Permissions io.cozy.contacts"
+msgstr "Danh bạ"
+
+msgid "Permissions io.cozy.contacts.groups"
+msgstr "Nhóm danh bạ"
+
+msgid "Permissions io.cozy.files"
+msgstr "Tập tin"
+
+msgid "Permissions io.cozy.calendar"
+msgstr "Lịch"
+
+msgid "Permissions io.cozy.certified.carbon_copy"
+msgstr "Bản sao chứng thực"
+
+msgid "Permissions io.cozy.certified.electronic_safe"
+msgstr "Két điện tử"
+
+msgid "Permissions io.cozy.files.versions"
+msgstr "Phiên bản tập tin"
+
+msgid "Permissions io.cozy.home.settings"
+msgstr "Cài đặt ứng dụng"
+
+msgid "Permissions io.cozy.identities"
+msgstr "Định danh"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "Trình kết nối nhập dữ liệu"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "Tùy chọn thông báo ứng dụng"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "Album ảnh"
+
+msgid "Permissions io.cozy.tags"
+msgstr "Thẻ"
+
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Hành trình"
+
+msgid "Permissions io.cozy.timeseries.grades"
+msgstr "Bảng điểm"
+
+msgid "Permissions io.cozy.settings"
+msgstr "Cài đặt"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "Công việc"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "Lên lịch công việc"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "Phân quyền"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "Thiết bị đã kết nối"
+
+msgid "Permissions io.cozy.sharings"
+msgstr "Danh sách chia sẻ"
+
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Hợp đồng (Maif)"
+
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Nhà ở (Maif)"
+
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Gia đình (Maif)"
+
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Điều khoản thanh toán (Maif)"
+
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Thiệt hại (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Thành viên (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Yêu cầu bồi thường bảo hiểm (Maif)"
+
+msgid "Permissions cc.cozycloud.autocategorization"
+msgstr "Tệp huấn luyện mô hình phân loại"
+
+msgid "Permissions cc.cozycloud.dacc"
+msgstr "Thống kê tổng hợp ẩn danh"
+
+msgid "Permissions cc.cozycloud.dacc.dev"
+msgstr "Thống kê tổng hợp ẩn danh phục vụ phát triển"
+
+msgid "Permissions cc.cozycloud.dacc_v2"
+msgstr "Thống kê tổng hợp ẩn danh"
+
+msgid "Permissions cc.cozycloud.dacc.dev_v2"
+msgstr "Thống kê tổng hợp ẩn danh phục vụ phát triển"
+
+msgid "Permissions eu.mycozy.dacc_v2"
+msgstr "Thống kê tổng hợp ẩn danh"
+
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "Nhật ký ứng dụng"
+
+msgid "Permissions cc.cozycloud.errors"
+msgstr "Nhật ký ứng dụng"
+
+msgid "Permissions cc.cozycloud.announcements"
+msgstr "API lấy thông báo"
+
+msgid "Permissions cc.cozycloud.announcements.uploads"
+msgstr "API lấy hình ảnh thông báo"
+
+msgid "Permissions cc.cozycloud.announcements.dev"
+msgstr "API lấy thông báo (môi trường phát triển)"
+
+msgid "Permissions cc.cozycloud.announcements.dev.uploads"
+msgstr "API lấy hình ảnh thông báo (môi trường phát triển)"
+
+msgid "Mail Greeting"
+msgstr "Xin chào"
+
+msgid "Mail Signature"
+msgstr "Trân trọng"
+
+msgid "Mail Cozy Team"
+msgstr "Đội ngũ Twake Workplace"
+
+msgid "Mail Magic Link Subject"
+msgstr "Đăng nhập vào Twake của bạn"
+
+msgid "Mail Magic Link Greeting"
+msgstr "Xin chào %s,"
+
+msgid "Mail Magic Link Intro"
+msgstr "Nhấn vào nút dưới đây để đăng nhập vào Twake của bạn:"
+
+msgid "Mail Magic Link Button text"
+msgstr "Đăng nhập vào Twake của tôi"
+
+msgid "Mail Hint Subject"
+msgstr "Mật khẩu bị quên: gợi ý của bạn"
+
+msgid "Mail Hint Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr "Dưới đây là gợi ý bạn đã yêu cầu để ghi nhớ mật khẩu Twake của mình"
+
+msgid "Mail Hint Intro 2 Cozy Pass"
+msgstr "Dưới đây là gợi ý bạn đã yêu cầu để ghi nhớ mật khẩu Twake Pass của mình"
+
+msgid "Mail Hint Outro"
+msgstr ""
+"Nếu không thể nhớ ra, bạn có thể đặt lại mật khẩu tại phần “Quên mật khẩu” trên Twake.\n"
+"Nếu bạn không yêu cầu điều này, vui lòng phản hồi email này để liên hệ với chúng tôi."
+
+msgid "Mail Update Email Subject"
+msgstr "Xác nhận địa chỉ email của bạn"
+
+msgid "Mail Update Email Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Update Email Intro 2"
+msgstr "Bạn đã yêu cầu thay đổi địa chỉ email cho Twake của mình."
+
+msgid "Mail Update Email Button instruction"
+msgstr "Nhấn vào nút dưới đây để xác nhận địa chỉ mới."
+
+msgid "Mail Update Email Button text"
+msgstr "Xác nhận địa chỉ mới của tôi"
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "Đặt lại mật khẩu của bạn"
+
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr ""
+"Bạn đã yêu cầu thay đổi mật khẩu.\n"
+"Nếu bạn không thực hiện yêu cầu này, vui lòng phản hồi email này để liên hệ với chúng tôi."
+
+msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
+msgstr ""
+"Bạn đã yêu cầu thay đổi mật khẩu cho Twake Pass.\n"
+"Nếu bạn không thực hiện yêu cầu này, vui lòng phản hồi email này để liên hệ với chúng tôi."
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "Nhấn vào nút dưới đây để thay đổi mật khẩu một cách an toàn."
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "Đặt lại mật khẩu của tôi"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr ""
+"Bạn có 15 phút để chọn mật khẩu mới, sau đó email này sẽ hết hiệu lực."
+
+msgid "Mail Archive Subject"
+msgstr "Tải dữ liệu của bạn"
+
+msgid "Mail Archive Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Archive Intro 2"
+msgstr "Bạn đã yêu cầu nhận bản sao toàn bộ dữ liệu mà chúng tôi lưu trữ về bạn."
+
+msgid "Mail Archive Button instruction"
+msgstr "Bạn có thể tải dữ liệu bằng cách nhấn vào liên kết dưới đây."
+
+msgid "Mail Archive Button text"
+msgstr "Tải dữ liệu của bạn"
+
+msgid "Mail Archive Alternative text"
+msgstr "Liên kết tải dữ liệu Twake của bạn là:"
+
+msgid "Mail Import Success Subject"
+msgstr "Tin tốt! Twake của bạn đã được nhập thành công"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr "Việc nhập toàn bộ dữ liệu vào Twake của bạn đã hoàn tất."
+
+msgid "Mail Import Success Button instruction"
+msgstr "Bạn có thể truy cập dữ liệu của mình trong Twake bằng cách nhấn vào nút dưới đây:"
+
+msgid "Mail Import Success Button text"
+msgstr "Truy cập Twake của tôi"
+
+msgid "Mail Import Success Apps not installed"
+msgstr "Lưu ý: các dịch vụ %s không thể được cài đặt lại. "
+"Tuy nhiên, toàn bộ dữ liệu liên quan đã được nhập đầy đủ."
+
+msgid "Mail Import Success Outro"
+msgstr "Hẹn gặp lại, Twake của bạn"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ Việc nhập dữ liệu vào Twake đã thất bại"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"Đã xảy ra sự cố khi nhập dữ liệu vào Twake của bạn.\n"
+"Tệp lưu trữ được gửi đến Twake không hợp lệ.\n"
+"Bạn có thể thử lại thao tác này từ đầu?"
+
+msgid "Mail Import Error Outro"
+msgstr "Nếu sự cố vẫn tiếp diễn, vui lòng liên hệ bộ phận hỗ trợ."
+
+msgid "Mail Export Error Subject"
+msgstr "⚠ Việc xuất dữ liệu từ Twake đã thất bại"
+
+msgid "Mail Export Error Text"
+msgstr ""
+"Đã xảy ra sự cố khi xuất dữ liệu từ Twake của bạn.\n"
+"Bạn có thể thử lại thao tác này từ đầu?"
+
+msgid "Mail Export Error Outro"
+msgstr "Nếu sự cố vẫn tiếp diễn, vui lòng liên hệ bộ phận hỗ trợ."
+
+msgid "Mail Move Confirm Subject"
+msgstr "Bạn muốn di chuyển Twake của mình ngay bây giờ?"
+
+msgid "Mail Move Confirm Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Move Confirm Intro 2"
+msgstr "Đã có yêu cầu chuyển dữ liệu của bạn từ %s sang %s."
+
+msgid "Mail Move Confirm Button instruction"
+msgstr "Nếu đúng là bạn đã yêu cầu, hãy nhấn vào nút dưới đây để bắt đầu quá trình chuyển."
+
+msgid "Mail Move Confirm Button text"
+msgstr "Chấp nhận chuyển dữ liệu"
+
+msgid "Mail Move Success Subject"
+msgstr "Tin tốt! Twake của bạn đã được chuyển thành công"
+
+msgid "Mail Move Success Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Move Success Intro 2"
+msgstr "Việc chuyển toàn bộ dữ liệu vào Twake của bạn đã hoàn tất."
+
+msgid "Mail Move Success Button instruction"
+msgstr "Bạn có thể truy cập dữ liệu của mình trong Twake bằng cách nhấn vào nút dưới đây:"
+
+msgid "Mail Move Success Button text"
+msgstr "Truy cập Twake của tôi"
+
+msgid "Mail Move Success Apps not installed"
+msgstr "Lưu ý: các dịch vụ %s không thể được cài đặt lại. "
+"Tuy nhiên, toàn bộ dữ liệu liên quan đã được nhập đầy đủ."
+
+msgid "Mail Move Success Outro"
+msgstr "Hẹn gặp lại, Twake của bạn"
+
+msgid "Mail Move Error Subject"
+msgstr "⚠ Việc chuyển Twake của bạn đã thất bại"
+
+msgid "Mail Move Error Text"
+msgstr ""
+"Đã xảy ra sự cố khi chuyển Twake của bạn.\n"
+"Bạn có thể thử lại thao tác này từ đầu?"
+
+msgid "Mail Move Error Outro"
+msgstr "Nếu sự cố vẫn tiếp diễn, vui lòng liên hệ bộ phận hỗ trợ."
+
+msgid "Mail Two Factor Subject"
+msgstr "Mã kết nối dùng một lần"
+
+msgid "Mail Two Factor Intro"
+msgstr "Xác thực hai bước đã được bật cho Twake của bạn. Nhập mã sau để xác minh danh tính:"
+
+msgid "Mail Two Factor Outro"
+msgstr "Không rõ phải làm gì? Vui lòng liên hệ contact@cozycloud.cc"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "Bạn muốn bật xác thực hai bước trên %s của mình"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr "Đây là mã để kích hoạt xác thực hai bước:"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr "Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ contact@cozycloud.cc"
+
+msgid "Mail New Connection Subject"
+msgstr "Kết nối mới với %s của bạn"
+
+msgid "Mail New Connection Intro"
+msgstr ""
+"Đây là thông báo từ Twake của bạn.\n"
+"Một thiết bị mới vừa đăng nhập vào tài khoản Twake của bạn.\n"
+"Vui lòng kiểm tra thông tin kết nối bên dưới để xác nhận đó là bạn."
+
+msgid "Mail New Connection Place"
+msgstr "Vị trí:"
+
+msgid "Mail New Connection Near"
+msgstr "gần"
+
+msgid "Mail New Connection Time"
+msgstr "Thời gian:"
+
+msgid "Mail New Connection IP"
+msgstr "Địa chỉ IP:"
+
+msgid "Mail New Connection Browser"
+msgstr "Trình duyệt:"
+
+msgid "Mail New Connection Change Passphrase instruction"
+msgstr ""
+"Nếu đúng là bạn đã thực hiện kết nối này, bạn có thể bỏ qua email này và tiếp tục sử dụng Twake.\n"
+"Nếu không, chúng tôi khuyến nghị bạn nên thay đổi mật khẩu ngay lập tức."
+
+msgid "Mail New Connection Change Passphrase text"
+msgstr "Thay đổi mật khẩu của tôi"
+
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"Bạn muốn tăng cường bảo mật cho tài khoản?\n"
+"Chúng tôi khuyên bạn nên bật xác thực hai bước."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Bật xác thực hai bước"
+
+msgid "Mail New Connection Outro"
+msgstr "Tại sao bạn nhận được email này? Với bất kỳ hoạt động đăng nhập bất thường nào, bạn sẽ được thông báo để đảm bảo an toàn cho toàn bộ dữ liệu của mình."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"Hẹn gặp lại,\n"
+"Twake của bạn"
+
+msgid "Mail New Registration Subject"
+msgstr "Một thiết bị mới đã kết nối với %s của bạn"
+
+msgid "Mail New Registration Intro"
+msgstr "Chúc mừng, thiết bị mới đã được đăng ký thành công với Twake của bạn."
+
+msgid "Mail New Registration Devices instruction"
+msgstr "Bạn có thể quản lý các thiết bị của mình trực tiếp từ Twake:"
+
+msgid "Mail New Registration Devices text"
+msgstr "Quản lý thiết bị của tôi"
+
+msgid "Mail New Registration Revoke instruction"
+msgstr "Nếu bạn không thực hiện việc thêm thiết bị này, bạn có thể thu hồi thiết bị đó"
+
+msgid "Mail New Registration Revoke text"
+msgstr "Thu hồi thiết bị này"
+
+msgid "Mail Sharing Request Subject"
+msgstr "%s đã chia sẻ %s với bạn"
+
+msgid "Mail Sharing Request Intro"
+msgstr "Xin chào,"
+
+msgid "Mail Sharing Request Description"
+msgstr "%s (%s) mời bạn %s %s **%s** từ không gian cá nhân của họ trên Twake."
+
+msgid "Mail Sharing Request Action Read"
+msgstr "xem"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "chỉnh sửa"
+
+msgid "Mail Sharing Request Button text"
+msgstr "Xem %s"
+
+msgid "Mail Sharing Member To Confirm Subject"
+msgstr "Cần xác nhận để hoàn tất việc chia sẻ mật khẩu của bạn"
+
+msgid "Mail Sharing Member To Confirm Intro"
+msgstr "Xin chào %s,"
+
+msgid "Mail Sharing Member To Confirm Description"
+msgstr ""
+"%s đã chấp nhận chia sẻ mật khẩu của bạn. "
+"Để hoàn tất việc chia sẻ này, bạn cần xác minh danh tính Twake của họ."
+
+msgid "Mail Sharing Member To Confirm Button"
+msgstr "Xác minh danh tính"
+
+msgid "Mail Alert Account Subject"
+msgstr "Xóa instance không thành công khi dọn dẹp tài khoản"
+
+msgid "Mail Support Confirmation Subject"
+msgstr "[cozy-support] Yêu cầu của bạn đang được xử lý!"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Xin chào %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Đội ngũ của chúng tôi đang xem xét yêu cầu của bạn."
+
+msgid "Mail Support Confirmation Outro"
+msgstr "Tôi sẽ phản hồi qua email trong thời gian sớm nhất."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - Bộ phận Hỗ trợ khách hàng tại Twake Workplace"
+
+msgid "Notification Sharing Subject"
+msgstr "%s đã chia sẻ %s với bạn"
+
+msgid "Notification Sharing Description"
+msgstr "%s mời bạn %s %s **%s**"
+
+msgid "Notification Sharing Type Organization"
+msgstr "thư mục mật khẩu"
+
+msgid "Notification Sharing Title Document"
+msgstr "một tài liệu"
+
+msgid "Notification Sharing Title Directory"
+msgstr "một thư mục"
+
+msgid "Notification Sharing Title File"
+msgstr "một tập tin"
+
+msgid "Notification Sharing Title Note"
+msgstr "một ghi chú"
+
+msgid "Notification Sharing Type Document"
+msgstr "tài liệu"
+
+msgid "Notification Sharing Type Directory"
+msgstr "thư mục"
+
+msgid "Notification Sharing Type File"
+msgstr "tập tin"
+
+msgid "Notification Sharing Type Note"
+msgstr "ghi chú"
+
+msgid "Notification Sharing Button text"
+msgstr "Xem %s"
+
+msgid "Sharing Connect to Cozy"
+msgstr "Kết nối với Cozy của bạn"
+
+msgid "Sharing Empty name"
+msgstr "msgstr "Một người nào đó"
+
+msgid "Sharing Empty description"
+msgstr "Bất ngờ!"
+
+msgid "Sharing Discovery Intro"
+msgstr "Địa chỉ của bạn sẽ được gửi đến %s để đơn giản hóa các lần chia sẻ tiếp theo"
+
+msgid "Sharing Discovery URL field"
+msgstr "Địa chỉ Cozy của tôi"
+
+msgid "Sharing URL Discovery error"
+msgstr "URL Cozy bạn nhập không đúng, vui lòng thử lại."
+
+msgid "Sharing URL Not email error"
+msgstr "URL Cozy không phải là địa chỉ email của bạn."
+
+msgid "Sharing Discovery Submit"
+msgstr "Đồng bộ vào Cozy của tôi"
+
+msgid "Sharing Discovery Shortcut Submit"
+msgstr "Thêm vào Cozy của tôi"
+
+msgid "Sharing No Cozy"
+msgstr "Bạn chưa có Cozy?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/en/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "Khám phá Cozy ngay!"
+
+msgid "Sharing Forgotten URL"
+msgstr "Tôi đã quên địa chỉ của mình"
+
+msgid "Notifications Disk Quota Close Title"
+msgstr "Bạn đã sử dụng 90% dung lượng lưu trữ"
+
+msgid "Notifications Disk Quota Close Message"
+msgstr "Bạn đang sử dụng hơn 90% dung lượng lưu trữ. Vui lòng xóa bớt tập tin hoặc nâng cấp gói của bạn để có thêm không gian."
+
+msgid "Notifications Disk Quota Subject"
+msgstr "Hiện tại bạn đã sử dụng 90% dung lượng của mình."
+
+msgid "Notifications Disk Quota Intro"
+msgstr "Bạn có hai lựa chọn để có thêm dung lượng."
+
+msgid "Notifications Disk Quota offers instruction"
+msgstr "Lựa chọn 1:\n"
+"Nâng cấp Twake bằng cách chọn gói mới để có thêm nhiều không gian"
+
+msgid "Notifications Disk Quota offers text"
+msgstr "Nâng cấp ngay"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr "Lựa chọn 2:\n"
+"Giải phóng không gian bằng cách xóa các tập tin không cần thiết"
+
+msgid "Notifications Disk Quota free text"
+msgstr "Giải phóng dung lượng lưu trữ"
+
+msgid "Notifications OAuth Clients Subject"
+msgstr "Bạn đã vượt quá số lượng thiết bị tối đa cho phép trong gói của mình"
+
+msgid "Notifications OAuth Clients Title"
+msgstr "Thông tin quan trọng: đã vượt quá số thiết bị được phép kết nối"
+
+msgid "Notifications OAuth Clients Greeting"
+msgstr "Xin chào,"
+
+msgid "Notifications OAuth Clients Reason Device"
+msgstr "**Bạn đã vượt quá số lượng thiết bị cho phép** khi kết nối **%s** với Twake của bạn."
+
+msgid "Notifications OAuth Clients Reason Limit"
+msgstr "Gói hiện tại cho phép bạn kết nối tối đa **%.0f thiết bị**."
+
+msgid "Notifications OAuth Clients Increase Limit"
+msgstr "Để nâng cấp Twake hoặc ủng hộ chúng tôi, bạn có thể thay đổi gói của mình."
+
+msgid "Notifications OAuth Clients Offers Text"
+msgstr "Xem các gói"
+
+msgid "Notifications OAuth Clients Devices Text"
+msgstr "Quản lý thiết bị của tôi"
+
+msgid "Terms of services have been updated"
+msgstr "Để tuân thủ GDPR, Cozy Cloud đã cập nhật Điều khoản dịch vụ, có hiệu lực từ ngày 25/05/2018"
+
+msgid "Compat Title"
+msgstr "Trình duyệt web của bạn đã lỗi thời hoặc không còn được hỗ trợ."
+
+msgid "Compat Subtitle"
+msgstr "Cập nhật trình duyệt của bạn hoặc tải một trong các trình duyệt sau để trải nghiệm đầy đủ Cozy. Chúng tôi khuyên dùng Firefox!"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/en-US/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/en-us/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr "Cập nhật trình duyệt giúp bạn duyệt web an toàn hơn với bảo mật tốt hơn."
+
+msgid "Compat Tip 2"
+msgstr "Trình duyệt của bạn sẽ nhanh hơn và trải nghiệm Cozy sẽ được cải thiện."
+
+msgid "Compat Help"
+msgstr "Cần thêm trợ giúp?"
+
+msgid "Compat Guide"
+msgstr "Xem hướng dẫn hỗ trợ của chúng tôi."
+
+msgid "Compat Guide Link"
+msgstr "https://help.cozy.io/article/274-ie-11-not-supported"
+
+msgid "File copy Suffix"
+msgstr "bản sao"
+
+msgid "Install New App Title"
+msgstr "Cài đặt ứng dụng Cozy mới!"
+
+msgid "Install App Unavailable"
+msgstr "Phiên bản %s này không còn được hỗ trợ."
+
+msgid "Install New Iphone App Description"
+msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ App Store để tiếp tục sử dụng đầy đủ các tính năng."
+
+msgid "Install New Android App Description"
+msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ Play Store để tiếp tục sử dụng đầy đủ các tính năng."
+
+msgid "Install New Generic App Description"
+msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ cửa hàng yêu thích của bạn để tiếp tục sử dụng đầy đủ các tính năng."
+
+msgid "Install New App Store Btn"
+msgstr "Cài đặt"
+
+msgid "Too Many OAuth Clients Title"
+msgstr "%s/%s thiết bị đã được kết nối"
+
+msgid "Too Many OAuth Clients Intro"
+msgstr "Gói hiện tại cho phép bạn kết nối đồng thời %s thiết bị"
+
+msgid "Too Many OAuth Clients More Text"
+msgstr "Tìm hiểu thêm"
+
+msgid "Too Many OAuth Clients More Link"
+msgstr "https://help.cozy.io/maximum-number-of-connected-devices-allowed/"
+
+msgid "Too Many OAuth Clients Available Actions"
+msgstr "Ngắt kết nối một thiết bị hoặc thay đổi gói Cozy của bạn để truy cập Cozy từ thiết bị này."
+
+msgid "Too Many OAuth Clients Offers Btn"
+msgstr "Xem các gói"
+
+msgid "Too Many OAuth Clients Settings Btn"
+msgstr "Quản lý thiết bị đã kết nối"
+
+msgid "Too Many OAuth Clients Refresh Btn"
+msgstr "Tải lại"
+
+msgid "Asset not found"
+msgstr "Tài nguyên không tìm thấy"
+
+msgid "Install flagship app Title"
+msgstr "Cài đặt ứng dụng để hoàn tất"
+
+msgid "Install flagship app Description"
+msgstr "Cozy của bạn đã được tạo thành công, hãy cài đặt ứng dụng để bắt đầu sử dụng ngay!"
+
+msgid "Install flagship app Install"
+msgstr "Cài đặt ứng dụng Cozy"
+
+msgid "Install flagship app Skip"
+msgstr "Tiếp tục sử dụng trên trình duyệt"
+
+msgid "Share by link Password Title"
+msgstr "Nhập mật khẩu để truy cập liên kết"
+
+msgid "Share by link Password Field"
+msgstr "Mật khẩu"
+
+msgid "Share by link Password Submit"
+msgstr "Tiếp tục"
+
+msgid "Share by link Password Invalid"
+msgstr "Mật khẩu không hợp lệ"
+
+msgid "Onboarding Resend activation mail"
+msgstr "Gửi lại email kích hoạt"
+
+msgid "Onboarding Resend activation Title"
+msgstr "Kiểm tra email của bạn!"
+
+msgid "Onboarding Resend activation Body"
+msgstr ""
+"Chúng tôi vừa gửi cho bạn một liên kết kích hoạt qua email."
+
+msgid "Onboarding Resend activation Detail"
+msgstr ""
+"Chúng tôi lưu ý rằng email này có thể nằm trong thư mục Spam, Thông báo hoặc Mạng xã hội. Vui lòng kiểm tra các thư mục đó để tìm email."
+
+msgid "Push Sharing Shortcut Title"
+msgstr "Có một chia sẻ mới trong Cozy của bạn"
+
+msgid "Push Sharing Shortcut Message"
+msgstr "%s đã chia sẻ %s với bạn."

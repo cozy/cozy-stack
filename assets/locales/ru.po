@@ -1,0 +1,1360 @@
+msgid ""
+msgstr ""
+
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Time Format Long"
+msgstr "2 янв. 2006 в 15:04"
+
+msgid "Tree Administrative"
+msgstr "Административные"
+
+msgid "Tree Photos"
+msgstr "Фотографии"
+
+msgid "Tree Notes"
+msgstr "Заметки"
+
+msgid "Tree Shared Drives"
+msgstr "Диски"
+
+msgid "Tree Shared with me"
+msgstr "Поделились со мной"
+
+msgid "Tree No longer shared"
+msgstr "Больше не публичные"
+
+msgid "Tree Revoked sharing suffix"
+msgstr "доступ отозван"
+
+msgid "Notes New note"
+msgstr "Новая заметка"
+
+msgid "Back icon label"
+msgstr "Вернуться к предыдущему экрану"
+
+msgid "Login Credentials error"
+msgstr ""
+"Введённые вами учетные данные неверны, попробуйте ещё раз."
+
+msgid "URL Discovery error"
+msgstr ""
+"Введённый вами адрес Cozy неверен, попробуйте ещё раз."
+
+msgid "Login Welcome"
+msgstr "Добро пожаловать!"
+
+msgid "Login Welcome name"
+msgstr "%s"
+
+msgid "Login Password best practice"
+msgstr "Лучшая практика:"
+
+msgid "Login Password tip"
+msgstr ""
+"никогда не вводите пароль, не проверив, что адрес выше "
+"действительно принадлежит вашему Cozy."
+
+msgid "Login Password help"
+msgstr "Введите пароль для доступа к вашему Cozy"
+
+msgid "Login Password field"
+msgstr "Пароль"
+
+msgid "Login Password show"
+msgstr "Показать пароль"
+
+msgid "Login Password hide"
+msgstr "Скрыть пароль"
+
+msgid "Login Long Session"
+msgstr "Запомнить меня и мои данные на этом устройстве"
+
+msgid "Login Submit"
+msgstr "Войти"
+
+msgid "Login Confirm"
+msgstr "Подтвердить"
+
+msgid "Login Connect after reset requested title"
+msgstr "Проверьте вашу почту!"
+
+msgid "Login Connect after reset requested help"
+msgstr ""
+"Мы отправили вам по электронной почте (очень) особую ссылку. Нажмите на эту "
+"ссылку, чтобы сбросить пароль. Предупреждаем: это письмо может быть "
+"игривым и попасть в папки Спам, Уведомления или Социальные сети. Не "
+"стесняйтесь проверить все папки, чтобы найти его."
+
+msgid "Login Reconnect title"
+msgstr "Подтвердите ваш пароль"
+
+msgid "Login Reconnect help"
+msgstr ""
+"Привет! После подтверждения пароля вы сможете предоставить мобильному "
+"приложению доступ к данным, которыми хотите поделиться. Решение за вами."
+
+msgid "Login Connect from sharing title"
+msgstr "Привет, %s!"
+
+msgid "Login Connect from sharing help"
+msgstr "Теперь введите ваш пароль"
+
+msgid "Magic Link Submit"
+msgstr "Войти с помощью email"
+
+msgid "Magic link has been sent Title"
+msgstr "Откройте вашу почту"
+
+msgid "Magic link has been sent Body"
+msgstr "Письмо было отправлено для доступа к вашему Cozy"
+
+msgid "Magic link has been sent Detail"
+msgstr ""
+"Не получили это письмо? Проверьте папку спам или нежелательную почту."
+
+msgid "Login Two factor title"
+msgstr "Двухфакторная аутентификация"
+
+msgid "Login Two factor error"
+msgstr "Введённый код неверен, попробуйте ещё раз."
+
+msgid "Login Two factor attempts error"
+msgstr ""
+"Вы ввели слишком много неправильных паролей. Новый был отправлен вам, "
+"проверьте вашу почту."
+
+msgid "Login Two factor field"
+msgstr "Код (6 цифр)"
+
+msgid "Login Two factor help"
+msgstr "Введите код подтверждения, который был отправлен вам по почте"
+
+msgid "Login Two factor device trust field"
+msgstr "Доверять этому устройству"
+
+msgid "Login Two factor device trust help"
+msgstr ""
+"Отметив эту галочку, будущие входы с вашего текущего устройства "
+"не потребуют двойной аутентификации"
+
+msgid "Onboarding Not activated Title"
+msgstr "Вы почти у цели!"
+
+msgid "Onboarding Not activated Check mails"
+msgstr ""
+"Отлично! Теперь нажмите на ссылку активации, отправленную по электронной "
+"почте, чтобы завершить установку вашего Cozy."
+
+msgid "Onboarding Not activated Contact us"
+msgstr "Потерялись? Не стесняйтесь связаться с нами по адресу"
+
+msgid "Passphrase reset Title"
+msgstr "Забытый пароль"
+
+msgid "Passphrase reset Help hint"
+msgstr ""
+"Подсказка, которую вы оставили при создании пароля, будет отправлена "
+"вам по электронной почте."
+
+msgid "Passphrase reset Help hint Cozy Pass"
+msgstr ""
+"Подсказка, которую вы оставили при создании пароля Cozy Pass, будет "
+"отправлена вам по электронной почте."
+
+msgid "Passphrase reset Submit hint"
+msgstr "Помочь мне вспомнить пароль"
+
+msgid "Passphrase reset Help Message"
+msgstr ""
+"Внимание! Ваш текущий пароль — единственный способ получить доступ к "
+"паролям, хранимым в приложении «Cozy Pass». Если вы его сбросите, "
+"вы потеряете эти данные. Остальные данные останутся доступными."
+
+msgid "Passphrase reset Help emptyVault"
+msgstr ""
+"Ссылка будет отправлена вам по электронной почте для выбора нового пароля."
+
+msgid "Passphrase reset Help emptyVault Cozy Pass"
+msgstr ""
+"Ссылка будет отправлена вам по электронной почте для выбора нового "
+"пароля Cozy Pass."
+
+msgid "Passphrase reset Submit"
+msgstr "Сбросить мой пароль (крайняя мера)"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Сбросить мой пароль"
+
+msgid "Hint sent Title"
+msgstr "Проверьте вашу почту!"
+
+msgid "Passphrase is reset Title"
+msgstr "Проверьте вашу почту!"
+
+msgid "Passphrase Onboarding Title"
+msgstr "Выберите ваш пароль"
+
+msgid "Passphrase Onboarding Help"
+msgstr ""
+"Используйте не менее восьми символов с буквами, цифрами и "
+"специальными символами."
+
+msgid "Passphrase Pass Error"
+msgstr "Ваш пароль слишком короткий!"
+
+msgid "Passphrase Hint Error"
+msgstr "Ваша подсказка должна отличаться от пароля!"
+
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Оставить подсказку"
+
+msgid "Passphrase Onboarding Hint Field"
+msgstr "Оставить подсказку (необязательно)"
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+"Подсказка будет отправлена вам по электронной почте в случае забытого "
+"пароля, выберите подсказку, которую поймёте только вы."
+
+msgid "Passphrase Onboarding Submit"
+msgstr "Завершить"
+
+msgid "Hint sent Body"
+msgstr ""
+"Мы отправили вам подсказку по электронной почте. Она поможет вам "
+"вспомнить пароль Cozy."
+
+msgid "Hint sent Detail"
+msgstr ""
+"Предупреждаем: это письмо может быть игривым и попасть в папки Спам, "
+"Уведомления или Социальные сети. Не стесняйтесь проверить все папки, "
+"чтобы найти его."
+
+msgid "Hint sent Login Button"
+msgstr "Перейти на страницу входа"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"Мы отправили вам по электронной почте (очень) особую ссылку. Нажмите "
+"на эту ссылку, чтобы сбросить пароль."
+
+msgid "Passphrase is reset Detail"
+msgstr ""
+"Предупреждаем: это письмо может быть игривым и попасть в папки Спам, "
+"Уведомления или Социальные сети. Не стесняйтесь проверить все папки, "
+"чтобы найти его."
+
+msgid "Passphrase is reset Login Button"
+msgstr "Перейти на страницу входа"
+
+msgid "Passphrase renew Title"
+msgstr "Выбрать новый пароль"
+
+msgid "Passphrase renew Help"
+msgstr ""
+"Используйте не менее восьми символов с буквами, цифрами и "
+"специальными символами."
+
+msgid "Passphrase renew Field"
+msgstr "пароль"
+
+msgid "Passphrase renew Submit"
+msgstr "Сохранить"
+
+msgid "Login Forgot password"
+msgstr "Я забыл пароль"
+
+msgid "Login Confirm Title"
+msgstr "Аутентификация"
+
+msgid "Login Confirm Help"
+msgstr "Для безопасности подтвердите вашу личность"
+
+msgid "Login Confirm Submit"
+msgstr "Подтвердить"
+
+msgid "Authorize Title"
+msgstr "Разрешить %s доступ к вашему профилю?"
+
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Синхронизировать с моим Twake"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Добавить в мой Twake"
+
+msgid "Authorize Client presentation"
+msgstr "хочет получить доступ к следующим данным cozy "
+
+msgid "Authorize Sharing Request"
+msgstr "Поделился"
+
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%s и вы можете сотрудничать, редактируя %s. Каждое изменение будет "
+"автоматически передано между вашими Cozy."
+
+msgid "Authorize Sharing Description end"
+msgstr "Вы сохраните %s в вашем Twake, даже если %s отменит общий доступ."
+
+msgid "Authorize Sharing Synchronize label"
+msgstr "Синхронизировать с моим Twake"
+
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Синхронизировать"
+
+msgid "Authorize Sharing Submit Add"
+msgstr "Добавить"
+
+msgid "Authorize Sharing Cancel"
+msgstr "Отменить"
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Вы можете прочитать политику использования данных по этому адресу "
+
+msgid "Authorize Policy link"
+msgstr "здесь"
+
+msgid "Authorize Give permission"
+msgstr ""
+"Нажимая **Разрешить**, вы разрешаете приложению доступ к вашим "
+"данным согласно его условиям обслуживания и политике конфиденциальности."
+
+msgid "Authorize Submit"
+msgstr "Разрешить"
+
+msgid "Authorize Cancel"
+msgstr "Отказать"
+
+msgid "Authorize Linked Title"
+msgstr "Запрос разрешений"
+
+msgid "Authorize Linked Webapp"
+msgstr "Приложение, объявленное как:"
+
+msgid "Authorize Linked YourCozy"
+msgstr "запрашивает доступ к вашему Cozy:"
+
+msgid "Authorize Linked Help"
+msgstr "Приложение запрашивает доступ к следующим данным вашего Cozy:"
+
+msgid "Authorize Confirm Flagship title"
+msgstr "Не сертифицированное приложение"
+
+msgid "Authorize Confirm Flagship help"
+msgstr ""
+"Происхождение этого приложения не сертифицировано. 6-значный код "
+"был отправлен вам по электронной почте на адрес: %s. Введите код для "
+"подтверждения вашего желания использовать приложение"
+
+msgid "Authorize Confirm Flagship more link"
+msgstr "https://support.cozy.io/"
+
+msgid "Authorize Confirm Flagship more text"
+msgstr "узнать больше"
+
+msgid "Authorize Confirm Flagship field"
+msgstr "Код подтверждения"
+
+msgid "Authorize Confirm Flagship Confirm"
+msgstr "Подтвердить"
+
+msgid "Confirm Flagship Invalid code"
+msgstr "Недействительный код"
+
+msgid "Mail Confirm Flagship Subject"
+msgstr "Код подтверждения"
+
+msgid "Mail Confirm Flagship Greeting"
+msgstr "Привет, %s,"
+
+msgid "Mail Confirm Flagship Intro"
+msgstr ""
+"Для подтверждения вашего желания использовать приложение Twake Workplace скопируйте "
+"следующий код и введите его в приложении:"
+
+msgid "Move delegated auth Title"
+msgstr "Подтверждение переезда"
+
+msgid "Move delegated auth Help"
+msgstr "Код подтверждения был отправлен по электронной почте на адрес %s."
+
+msgid "Import Title"
+msgstr "Импорт в процессе"
+
+msgid "Import Description"
+msgstr ""
+"Импорт данных может занять время. Вы можете закрыть этот экран "
+"спокойно, письмо будет отправлено по завершении импорта."
+
+msgid "Move in progress Title"
+msgstr "Переезд в процессе"
+
+msgid "Move in progress Box"
+msgstr "С **%s** на **%s**"
+
+msgid "Move in progress Description"
+msgstr ""
+"Переезд данных может занять время. Вы можете закрыть этот экран "
+"спокойно, письмо будет отправлено по завершении переезда."
+
+msgid "Move Confirm Title"
+msgstr "Ваш запрос на переезд успешно передан"
+
+msgid "Move Confirm Box"
+msgstr "Письмо было отправлено на %s для подтверждения переезда."
+
+msgid "Move Confirm Description"
+msgstr ""
+"Не получили это письмо? Проверьте папку СПАМ и нежелательную почту или "
+"свяжитесь с нами по адресу claude@cozycloud.cc."
+
+msgid "Move Link Title"
+msgstr "%s изменил адрес своего Cozy"
+
+msgid "Move Link Description"
+msgstr "Эта ссылка скоро станет недоступной, новая была создана:"
+
+msgid "Move Link More"
+msgstr ""
+"Скопируйте/вставьте эту новую ссылку, чтобы сохранить её, пока "
+"вы ещё можете получить доступ к этой странице."
+
+msgid "Move Link FAQ URL"
+msgstr ""
+"https://support.cozy.io/article/490-comment-retrouver-un-lien-de-partage"
+
+msgid "Move Link FAQ Text"
+msgstr ""
+"Как найти ссылку для совместного доступа при смене адреса?"
+
+msgid "Move Vault Title"
+msgstr "Импорт моих паролей"
+
+msgid "Move Vault Description"
+msgstr ""
+"Следуйте этим шагам для импорта паролей, которые вы "
+"экспортировали в начале процесса:"
+
+msgid "Move Vault Step 1"
+msgstr "Откройте расширение Cozy, установленное в вашем браузере"
+
+msgid "Move Vault Step 2"
+msgstr ""
+"Отключитесь от старого Cozy, затем войдите в расширение с вашим "
+"новым Cozy"
+
+msgid "Move Vault Step 3"
+msgstr "Перейдите в «**Настройки / Импорт элементов**»"
+
+msgid "Move Vault Step 4"
+msgstr ""
+"Выберите исходный формат «**Bitwarden (json)**», нажмите «"
+"**выбрать файл**» и выберите файл, который вы экспортировали "
+"из расширения в начале переезда"
+
+msgid "Move Vault Step 5"
+msgstr "Нажмите «**Импорт**»"
+
+msgid "Move Vault Link"
+msgstr "Я импортировал мои пароли"
+
+msgid "Move Vault Ignore"
+msgstr "Пропустить этот шаг"
+
+msgid "Error Title"
+msgstr "Мы столкнулись с неожиданной ошибкой."
+
+msgid "Error Internal Server Error Title"
+msgstr "Упс..."
+
+msgid "Error Internal Server Error Message"
+msgstr ""
+"Похоже, что Cozy под водой от сохранения, синхронизации и перекрёстной обработки ваших данных. Наша команда работает над восстановлением его суперспособностей.\\n"
+"Тем временем и особенно для поддержки, вы можете отправлять свои запросы на claude@cozycloud.cc. "
+
+msgid "Error Instance not found Title"
+msgstr "Адрес этого Cozy не существует."
+
+msgid "Error Instance not found Message"
+msgstr ""
+"Мы не нашли Cozy по этому адресу. Возможно, это опечатка. Чтобы "
+"узнать, проверьте адрес вашего Cozy в письме, которое мы отправили "
+"вам при его создании."
+
+msgid "Error InvalidToken Title"
+msgstr "Недействительная ссылка"
+
+msgid "Error InvalidToken Message"
+msgstr "Ссылка, по которой вы перешли, истекла или неверна"
+
+msgid "Error InvalidToken Link"
+msgstr "Вернуться на страницу настройки"
+
+msgid "Error Application not installed Title"
+msgstr "Приложение пока недоступно"
+
+msgid "Error Application not installed Message"
+msgstr "Это приложение пока недоступно в вашем Cozy."
+
+msgid "Error Application not supported Message"
+msgstr "Это приложение не поддерживается вашим сервером Cozy."
+
+msgid "Error Application not found Title"
+msgstr "Приложение не существует"
+
+msgid "Error Application not found Message"
+msgstr ""
+"Мы не нашли приложения, соответствующего этому адресу в "
+"вашем Cozy. Возможно, это опечатка."
+
+msgid "Error Application not found Action"
+msgstr "Вернуться на главную"
+
+msgid "Error Application not found Button"
+msgstr "Установить это приложение"
+
+msgid "Error Address forgotten"
+msgstr "Я забыл мой адрес"
+
+msgid "Error Contact us"
+msgstr "Проблема, предложение? Свяжитесь с нами по адресу"
+
+msgid "Error Contact instance blocked"
+msgstr "Свяжитесь с нами, если хотите узнать больше, по адресу"
+
+msgid "Error Message instance blocked"
+msgstr "Работа вашего Cozy была временно прервана"
+
+msgid "the authentication has failed"
+msgstr "Аутентификация не удалась"
+
+msgid "the FranceConnect authentication has failed"
+msgstr "Используемый аккаунт FranceConnect не соответствует вашему аккаунту Cozy."
+
+msgid "Instance Blocked Login"
+msgstr "Cozy был заблокирован из-за слишком многих попыток входа"
+
+msgid "Instance Blocked Payment"
+msgstr "Cozy требует оплаты"
+
+msgid "Instance Blocked Importing"
+msgstr "Cozy импортирует данные"
+
+msgid "Instance Blocked Moving"
+msgstr "Переезд в процессе"
+
+msgid "Instance Blocked Unknown"
+msgstr "Cozy был заблокирован по неизвестной причине"
+
+msgid "Error No state parameter"
+msgstr "Параметр state обязателен"
+
+msgid "Error No client_id parameter"
+msgstr "Параметр client_id обязателен"
+
+msgid "Error No redirect_uri parameter"
+msgstr "Параметр redirect_uri обязателен"
+
+msgid "Error No scope parameter"
+msgstr "Параметр scope обязателен"
+
+msgid "Error No registered client"
+msgstr "Клиент должен быть зарегистрирован"
+
+msgid "Error No sharing_id parameter"
+msgstr "Параметр sharing_id обязателен"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "Параметр redirect_uri не соответствует зарегистрированным"
+
+msgid "Error Invalid redirect_uri"
+msgstr "Параметр redirect_uri недействителен"
+
+msgid "Error Invalid response type"
+msgstr "Тип ответа недействителен"
+
+msgid "Error Invalid scope"
+msgstr "Параметр scope недействителен"
+
+msgid "Error Invalid challenge code method"
+msgstr "Параметр code_challenge_method недействителен"
+
+msgid "Error No challenge code"
+msgstr ""
+"Параметр code_challenge должен быть предоставлен при наличии параметра "
+"code_challenge_method"
+
+msgid "Error Must be authenticated"
+msgstr "Вы должны войти в систему"
+
+msgid "Error Invalid magic link"
+msgstr "Ссылка для доступа к вашему Cozy обрезана или истекла"
+
+msgid "Error Invalid reset token"
+msgstr "Ссылка для сброса пароля обрезана или истекла"
+
+msgid "Error Reset already requested"
+msgstr ""
+"Сброс пароля уже был запрошен. Не забудьте проверить "
+"вашу почту, особенно папку спам!"
+
+msgid "Error Invalid mail token"
+msgstr ""
+"Ссылка для подтверждения вашего адреса электронной почты обрезана или "
+"истекла."
+
+msgid "Error Invalid sharing"
+msgstr ""
+"Похоже, общий доступ не найден или был отозван"
+
+msgid "Error Sharing already accepted Title"
+msgstr "Вы уже приняли этот общий доступ"
+
+msgid "Error Sharing already accepted"
+msgstr "Вы найдёте этот общий доступ в вашем Twake."
+
+msgid "Error Sharing already accepted Button"
+msgstr "Перейти в мой Twake"
+
+msgid "Two Factor Activation"
+msgstr "Двухэтапная аутентификация активирована"
+
+msgid "Confirmation User Content"
+msgstr ""
+"Ваш адрес электронной почты теперь подтверждён. Двойная аутентификация "
+"была успешно активирована на вашем Cozy."
+
+msgid "Permissions Maximal"
+msgstr "Все данные"
+
+msgid "Permissions Wildcard"
+msgstr ", с связанными данными"
+
+msgid "Permissions Read only"
+msgstr ", только для чтения"
+
+msgid "Permissions disk usage"
+msgstr "Объём используемого дискового пространства"
+
+msgid "Permissions worker konnectors"
+msgstr "Выполнение коннектора для импорта данных"
+
+msgid "Permissions worker log"
+msgstr "Сохранение сообщения в системных журналах"
+
+msgid "Permissions worker sendmail"
+msgstr "Отправка электронной почты"
+
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Профили менеджера паролей"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Записи менеджера паролей"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Папки менеджера паролей"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Общие папки паролей"
+
+msgid "Permissions io.cozy.accounts"
+msgstr "Аккаунты"
+
+msgid "Permissions io.cozy.apps"
+msgstr "Список установленных приложений"
+
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "Предложения приложений для установки"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "Банковские счета"
+
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Статистика по банковским счетам"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "Группы банковских счетов"
+
+msgid "Permissions io.cozy.bank.operations"
+msgstr "Банковские транзакции"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "Настройки приложения"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Получатели банковских переводов"
+
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Группы банковских рекуррентных операций"
+
+msgid "Permissions io.cozy.bills"
+msgstr "Счета"
+
+msgid "Permissions io.cozy.calendar"
+msgstr "Календарь"
+
+msgid "Permissions io.cozy.coachco2.settings"
+msgstr "Настройки приложения"
+
+msgid "Permissions io.cozy.contacts"
+msgstr "Контакты"
+
+msgid "Permissions io.cozy.contacts.groups"
+msgstr "Группы контактов"
+
+msgid "Permissions io.cozy.files"
+msgstr "Файлы"
+
+msgid "Permissions io.cozy.certified.carbon_copy"
+msgstr "Копия"
+
+msgid "Permissions io.cozy.certified.electronic_safe"
+msgstr "Цифровой сейф"
+
+msgid "Permissions io.cozy.files.versions"
+msgstr "Версии файлов"
+
+msgid "Permissions io.cozy.identities"
+msgstr "Личности"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "Коннекторы для импорта данных"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "Настройки уведомлений приложения"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "Фотоальбомы"
+
+msgid "Permissions io.cozy.tags"
+msgstr "Теги"
+
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Перемещения"
+
+msgid "Permissions io.cozy.timeseries.grades"
+msgstr "Оценки"
+
+msgid "Permissions io.cozy.settings"
+msgstr "Настройки"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "Задачи для выполнения"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "Планирование задач для выполнения"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "Делегирование разрешений"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "Подключённые устройства"
+
+msgid "Permissions io.cozy.sharings"
+msgstr "Список общих доступов"
+
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Контракт (Maif)"
+
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Дом (Maif)"
+
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Семья (Maif)"
+
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Платёж (Maif)"
+
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Ущерб (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Член (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Страховые заявления (Maif)"
+
+msgid "Permissions cc.cozycloud.autocategorization"
+msgstr "Файл обогащения модели категоризации"
+
+msgid "Permissions cc.cozycloud.dacc"
+msgstr "Анонимная агрегированная статистика"
+
+msgid "Permissions cc.cozycloud.dacc.dev"
+msgstr "Анонимная агрегированная статистика для разработки"
+
+msgid "Permissions cc.cozycloud.dacc_v2"
+msgstr "Анонимная агрегированная статистика"
+
+msgid "Permissions cc.cozycloud.dacc.dev_v2"
+msgstr "Анонимная агрегированная статистика для разработки"
+
+msgid "Permissions eu.mycozy.dacc_v2"
+msgstr "Анонимная агрегированная статистика"
+
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "Журналы приложения"
+
+msgid "Permissions cc.cozycloud.errors"
+msgstr "Журналы приложения"
+
+msgid "Permissions cc.cozycloud.announcements"
+msgstr "API для получения объявлений"
+
+msgid "Permissions cc.cozycloud.announcements.uploads"
+msgstr "API для получения изображений объявлений"
+
+msgid "Permissions cc.cozycloud.announcements.dev"
+msgstr "API для получения объявлений (разработка)"
+
+msgid "Permissions cc.cozycloud.announcements.dev.uploads"
+msgstr "API для получения изображений объявлений (разработка)"
+
+msgid "Mail Greeting"
+msgstr "Привет"
+
+msgid "Mail Signature"
+msgstr "Спасибо за доверие"
+
+msgid "Mail Cozy Team"
+msgstr "Команда Twake Workplace"
+
+msgid "Mail Magic Link Subject"
+msgstr "Доступ к вашему Twake"
+
+msgid "Mail Magic Link Greeting"
+msgstr "Привет, %s,"
+
+msgid "Mail Magic Link Intro"
+msgstr "Нажмите кнопку ниже для доступа к вашему Twake:"
+
+msgid "Mail Magic Link Button text"
+msgstr "Доступ к моему Twake"
+
+msgid "Mail Hint Subject"
+msgstr "Забытый пароль: моя подсказка"
+
+msgid "Mail Hint Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+"Вы запросили подсказку для пароля вашего Twake. Вот она ниже:"
+
+msgid "Mail Hint Intro 2 Cozy Pass"
+msgstr ""
+"Вы запросили подсказку для пароля Twake Pass. Вот она ниже:"
+
+msgid "Mail Hint Outro"
+msgstr ""
+"В крайнем случае страница забытого пароля позволяет сбросить "
+"ваш пароль. Если вы не делали этот запрос, "
+"свяжитесь с нами, ответив на это письмо."
+
+msgid "Mail Update Email Subject"
+msgstr "Обновление email"
+
+msgid "Mail Update Email Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Update Email Intro 2"
+msgstr "Вы запросили изменение адреса электронной почты вашего Twake."
+
+msgid "Mail Update Email Button instruction"
+msgstr "Нажмите следующую кнопку для подтверждения изменения адреса электронной почты."
+
+msgid "Mail Update Email Button text"
+msgstr "Подтверждаю мой новый адрес"
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "Сброс пароля"
+
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr ""
+"Вы запросили смену пароля. Если это не так, "
+"свяжитесь с нами, ответив на это письмо."
+
+msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
+msgstr ""
+"Вы запросили смену пароля Twake Pass. Если это не так, "
+"свяжитесь с нами, ответив на это письмо."
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "Нажмите эту кнопку, чтобы безопасно сменить его."
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "Сбросить мой пароль"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr ""
+"У вас есть 15 минут, чтобы выбрать новый пароль. После этого "
+"времени вам нужно будет повторить запрос."
+
+msgid "Mail Archive Subject"
+msgstr "Скачивание ваших данных"
+
+msgid "Mail Archive Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Archive Intro 2"
+msgstr ""
+"Вы запросили получение копии всех данных, которые мы "
+"храним о вас."
+
+msgid "Mail Archive Button instruction"
+msgstr "Вы можете скачать их, нажав на эту ссылку."
+
+msgid "Mail Archive Button text"
+msgstr "Скачать ваши данные"
+
+msgid "Mail Archive Alternative text"
+msgstr "Ссылка для скачивания вашего Twake:"
+
+msgid "Mail Import Success Subject"
+msgstr "Хорошие новости! Импорт в ваш Twake завершён"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr ""
+"Импорт всех ваших данных в ваш Twake прошёл успешно."
+
+msgid "Mail Import Success Button instruction"
+msgstr ""
+"Теперь вы можете получить доступ к вашим данным в вашем Twake, нажав "
+"кнопку ниже:"
+
+msgid "Mail Import Success Button text"
+msgstr "Доступ к моему Twake"
+
+msgid "Mail Import Success Apps not installed"
+msgstr ""
+"Для информации, сервисы %s не могли быть переустановлены. Однако "
+"связанные данные были импортированы."
+
+msgid "Mail Import Success Outro"
+msgstr "До встречи, ваш Twake"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ Импорт в ваш Twake не удался"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"Импорт данных в ваш Twake столкнулся с проблемой. Архив, "
+"переданный в ваш Twake, не кажется действительным. Можете ли вы "
+"повторить операцию с самого начала?"
+
+msgid "Mail Import Error Outro"
+msgstr "Если проблема сохраняется, свяжитесь с службой поддержки клиентов."
+
+msgid "Mail Export Error Subject"
+msgstr "⚠ Экспорт из вашего Twake не удался"
+
+msgid "Mail Export Error Text"
+msgstr ""
+"Экспорт данных из вашего Twake столкнулся с проблемой. Можете ли вы "
+"повторить операцию с самого начала?"
+
+msgid "Mail Export Error Outro"
+msgstr "Если проблема сохраняется, свяжитесь с службой поддержки клиентов."
+
+msgid "Mail Move Confirm Subject"
+msgstr "Действительно ли вы хотите переместить ваш Twake?"
+
+msgid "Mail Move Confirm Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Move Confirm Intro 2"
+msgstr "Был сделан запрос на перемещение ваших данных с %s на %s."
+
+msgid "Mail Move Confirm Button instruction"
+msgstr ""
+"Если вы действительно сделали этот запрос, нажмите ниже, чтобы "
+"начать перемещение."
+
+msgid "Mail Move Confirm Button text"
+msgstr "Принять перемещение"
+
+msgid "Mail Move Success Subject"
+msgstr "Хорошие новости! Перемещение в ваш Twake завершено"
+
+msgid "Mail Move Success Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Move Success Intro 2"
+msgstr ""
+"Перемещение всех ваших данных в ваш новый Twake прошло "
+"успешно."
+
+msgid "Mail Move Success Button instruction"
+msgstr ""
+"Теперь вы можете получить доступ к вашим данным в вашем Twake, нажав "
+"кнопку ниже:"
+
+msgid "Mail Move Success Button text"
+msgstr "Доступ к моему Twake"
+
+msgid "Mail Move Success Apps not installed"
+msgstr ""
+"Для информации, сервисы %s не могли быть переустановлены. Однако "
+"связанные данные были импортированы."
+
+msgid "Mail Move Success Outro"
+msgstr "До встречи, ваш Twake"
+
+msgid "Mail Move Error Subject"
+msgstr "⚠ Перемещение вашего Twake не удалось"
+
+msgid "Mail Move Error Text"
+msgstr ""
+"Перемещение вашего Twake столкнулось с проблемой. Можете ли вы "
+"повторить операцию с самого начала?"
+
+msgid "Mail Move Error Outro"
+msgstr "Если проблема сохраняется, свяжитесь с службой поддержки клиентов."
+
+msgid "Mail Two Factor Subject"
+msgstr "Одноразовый код входа"
+
+msgid "Mail Two Factor Intro"
+msgstr ""
+"Двухэтапная аутентификация активирована на вашем Twake. Вот ваш "
+"код подтверждения для второй аутентификации:"
+
+msgid "Mail Two Factor Outro"
+msgstr "Нужна помощь? Пишите на support@twake.app"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "Вы хотите активировать двухэтапную проверку на вашем %s"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr ""
+"Вот код для активации двухэтапной аутентификации:"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr ""
+"Если вы не делали это изменение, вы можете связаться с нами "
+"по адресу support@twake.app."
+
+msgid "Mail Sharing Request Subject"
+msgstr "%s поделился %s с вами"
+
+msgid "Mail Sharing Request Intro"
+msgstr "Привет,"
+
+msgid "Mail Sharing Request Description"
+msgstr "%s (%s) приглашает вас %s %s **%s** из личного пространства, Twake."
+
+msgid "Mail Sharing Request Action Read"
+msgstr "посмотреть"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "изменить"
+
+msgid "Mail Sharing Request Button text"
+msgstr "Посмотреть %s"
+
+msgid "Mail Sharing Member To Confirm Subject"
+msgstr "Требуется подтверждение для завершения общего доступа к вашим паролям"
+
+msgid "Mail Sharing Member To Confirm Intro"
+msgstr "Привет, %s,"
+
+msgid "Mail Sharing Member To Confirm Description"
+msgstr ""
+"%s принял ваш общий доступ к паролям. Чтобы завершить этот общий доступ, "
+"вы должны проверить личность его Twake."
+
+msgid "Mail Sharing Member To Confirm Button"
+msgstr "Проверить личность"
+
+msgid "Mail Alert Account Subject"
+msgstr ""
+"Очистка аккаунтов не удалась при удалении экземпляра"
+
+msgid "Mail Support Confirmation Subject"
+msgstr "[twake-support] Ваш запрос принят"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Привет, %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Наша команда рассматривает ваш запрос."
+
+msgid "Mail Support Confirmation Outro"
+msgstr ""
+"Вы получите ответ от меня по электронной почте в ближайшее время."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - Служба поддержки клиентов в Twake Workplace"
+
+msgid "Notification Sharing Subject"
+msgstr "%s поделился %s с вами"
+
+msgid "Notification Sharing Description"
+msgstr "%s приглашает вас %s %s **%s**"
+
+msgid "Notification Sharing Type Organization"
+msgstr "общая папка паролей"
+
+msgid "Notification Sharing Title Document"
+msgstr "документ"
+
+msgid "Notification Sharing Title Directory"
+msgstr "каталог"
+
+msgid "Notification Sharing Title File"
+msgstr "файл"
+
+msgid "Notification Sharing Title Note"
+msgstr "заметку"
+
+msgid "Notification Sharing Type Document"
+msgstr "документ"
+
+msgid "Notification Sharing Type Directory"
+msgstr "каталог"
+
+msgid "Notification Sharing Type File"
+msgstr "файл"
+
+msgid "Notification Sharing Type Note"
+msgstr "заметку"
+
+msgid "Notification Sharing Button text"
+msgstr "Посмотреть %s"
+
+msgid "Sharing Connect to Cozy"
+msgstr "Укажите адрес вашего Twake"
+
+msgid "Sharing Empty name"
+msgstr "Кто-то"
+
+msgid "Sharing Empty description"
+msgstr "Сюрприз!"
+
+msgid "Sharing Discovery Intro"
+msgstr ""
+"Ваш адрес будет передан %s для упрощения ваших будущих общих доступов"
+
+msgid "Sharing Discovery URL field"
+msgstr "Адрес моего Twake"
+
+msgid "Sharing URL Discovery error"
+msgstr ""
+"Адрес Twake, который вы ввели, неверен, попробуйте ещё раз."
+
+msgid "Sharing URL Not email error"
+msgstr "URL вашего Twake не является вашим адресом электронной почты."
+
+msgid "Sharing Discovery Submit"
+msgstr "Синхронизировать с моим Twake"
+
+msgid "Sharing Discovery Shortcut Submit"
+msgstr "Добавить в мой Twake"
+
+msgid "Sharing No Cozy"
+msgstr "Ещё нет Twake?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/fr/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "Откройте Twake сейчас!"
+
+msgid "Sharing Forgotten URL"
+msgstr "Я забыл мой адрес"
+
+msgid "Notifications Disk Quota Close Title"
+msgstr "Квота хранилища превышает 90%"
+
+msgid "Notifications Disk Quota Close Message"
+msgstr "Удалите файлы или смените тариф для получения большего пространства для хранения."
+
+msgid "Notifications Disk Quota Subject"
+msgstr "Вы достигли 90% вашего пространства для хранения."
+
+msgid "Notifications Disk Quota Intro"
+msgstr "У вас есть два выбора для получения пространства для хранения."
+
+msgid "Notifications Disk Quota offers instruction"
+msgstr "Вариант 1: Получите больше места, подписавшись на один из наших тарифов"
+
+msgid "Notifications Disk Quota offers text"
+msgstr "Добавить место"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr ""
+"Вариант 2: Освободите место в вашем Twake, удалив файлы или "
+"очистив корзину"
+
+msgid "Notifications Disk Quota free text"
+msgstr "Освободить место"
+
+msgid "Notifications OAuth Clients Subject"
+msgstr "Вы превысили максимальное количество подключённых устройств, включённых в ваш тариф"
+
+msgid "Notifications OAuth Clients Title"
+msgstr "Важная информация: превышено максимальное количество устройств"
+
+msgid "Notifications OAuth Clients Greeting"
+msgstr "Привет,"
+
+msgid "Notifications OAuth Clients Reason Device"
+msgstr "**Вы превысили количество разрешённых устройств**, подключив **%s** к вашему Twake."
+
+msgid "Notifications OAuth Clients Reason Limit"
+msgstr "Ваш тариф позволяет подключать до **%.0f устройств** одновременно."
+
+msgid "Notifications OAuth Clients Increase Limit"
+msgstr "Чтобы увеличить этот лимит или просто поддержать нас, вы можете изменить тариф вашего Twake."
+
+msgid "Notifications OAuth Clients Offers Text"
+msgstr "Посмотреть тарифы"
+
+msgid "Notifications OAuth Clients Devices Text"
+msgstr "Управлять моими устройствами"
+
+msgid "Terms of services have been updated"
+msgstr ""
+"В рамках GDPR Twake Workplace обновляет свои Общие условия "
+"использования, вступившие в силу 25 мая 2018 года"
+
+msgid "Compat Title"
+msgstr ""
+"Ваш браузер больше не совместим или имеет слишком старую "
+"версию."
+
+msgid "Compat Subtitle"
+msgstr ""
+"Убедитесь, что у вас самая последняя версия, или скачайте один "
+"из этих вариантов для полного использования вашего Cozy. Мы рекомендуем "
+"Firefox!"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/ru/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/ru-ru/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr ""
+"Обновлённый браузер как вакцина: ваш Cozy будет ещё более "
+"безопасным в Интернете с последними обновлениями."
+
+msgid "Compat Tip 2"
+msgstr "Вы будете быстрее путешествовать и полностью наслаждаться вашим Cozy."
+
+msgid "Compat Help"
+msgstr " Хотите узнать больше?"
+
+msgid "Compat Guide"
+msgstr "Посмотреть помощь."
+
+msgid "Compat Guide Link"
+msgstr ""
+"https://support.cozy.io/article/273-cozy-nest-pas-compatible-avec-internet-"
+"explorer-11"
+
+msgid "File copy Suffix"
+msgstr "копия"
+
+msgid "Install New App Title"
+msgstr "Установите новое приложение Cozy!"
+
+msgid "Install App Unavailable"
+msgstr "Эта версия %s больше не поддерживается."
+
+msgid "Install New Iphone App Description"
+msgstr "Пожалуйста, установите новое приложение Cozy из App Store, чтобы продолжать пользоваться всеми его функциями."
+
+msgid "Install New Android App Description"
+msgstr "Пожалуйста, установите новое приложение Cozy из Play Store, чтобы продолжать пользоваться всеми его функциями."
+
+msgid "Install New Generic App Description"
+msgstr "Пожалуйста, установите новое приложение Cozy из вашего магазина, чтобы продолжать пользоваться всеми его функциями."
+
+msgid "Install New App Store Btn"
+msgstr "Установить"
+
+msgid "Too Many OAuth Clients Title"
+msgstr "%s/%s подключённых устройств"
+
+msgid "Too Many OAuth Clients Intro"
+msgstr "Ваш текущий тариф позволяет подключать одновременно %s устройств"
+
+msgid "Too Many OAuth Clients More Text"
+msgstr "Узнать больше"
+
+msgid "Too Many OAuth Clients More Link"
+msgstr "https://support.cozy.io/nombre-maximum-dappareils-connectes-autorises/"
+
+msgid "Too Many OAuth Clients Available Actions"
+msgstr "Отключите устройство или измените тариф вашего Cozy для доступа к вашему Cozy с этого устройства."
+
+msgid "Too Many OAuth Clients Offers Btn"
+msgstr "Посмотреть тарифы"
+
+msgid "Too Many OAuth Clients Settings Btn"
+msgstr "Управлять подключёнными устройствами"
+
+msgid "Too Many OAuth Clients Refresh Btn"
+msgstr "Обновить"
+
+msgid "Asset not found"
+msgstr "Элемент не найден"
+
+msgid "Install flagship app Title"
+msgstr "Установите приложение для завершения"
+
+msgid "Install flagship app Description"
+msgstr "Ваш Cozy был создан, установите приложение, чтобы использовать его прямо сейчас!"
+
+msgid "Install flagship app Install"
+msgstr "Установить приложение Cozy"
+
+msgid "Install flagship app Skip"
+msgstr "Продолжить в моём браузере"
+
+msgid "Share by link Password Title"
+msgstr "Введите пароль для доступа к данным, которыми с вами поделились"
+
+msgid "Share by link Password Field"
+msgstr "Пароль"
+
+msgid "Share by link Password Submit"
+msgstr "Продолжить"
+
+msgid "Share by link Password Invalid"
+msgstr "Неверный пароль"
+
+msgid "Onboarding Resend activation mail"
+msgstr "Отправить ещё раз письмо завершения регистрации"
+
+msgid "Onboarding Resend activation Title"
+msgstr "Проверьте вашу почту!"
+
+msgid "Onboarding Resend activation Body"
+msgstr ""
+"Мы отправили вам по электронной почте ссылку активации."
+
+msgid "Onboarding Resend activation Detail"
+msgstr ""
+"Предупреждаем: это письмо может быть игривым и попасть в папки Спам, "
+"Уведомления или Социальные сети. Не стесняйтесь проверить все папки, "
+"чтобы найти его."
+
+msgid "Push Sharing Shortcut Title"
+msgstr "Новый общий доступ доступен в вашем Twake"
+
+msgid "Push Sharing Shortcut Message"
+msgstr "%s поделился с вами %s."
