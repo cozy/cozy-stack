@@ -314,6 +314,9 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 	if err != nil {
 		return "", err
 	}
+	if interact.Codes == nil {
+		interact.Codes = make(map[string]string)
+	}
 	interact.Codes[key] = code
 	if err := couchdb.UpdateDoc(inst, interact); err != nil {
 		return "", err
@@ -462,6 +465,9 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 			return err
 		}
 	}
+	if err := s.RevokeInteractPermissions(inst); err != nil {
+		return err
+	}
 	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
 		if err := s.RemoveAllBitwardenMembers(inst, rule.Values[0]); err != nil {
 			return err
@@ -484,6 +490,43 @@ func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
 	now := time.Now()
 	perms.ExpiresAt = &now
 	return couchdb.UpdateDoc(inst, perms)
+}
+
+// RevokeInteractPermissions ensure that the permissions for interact tokens
+// are no longer valid.
+func (s *Sharing) RevokeInteractPermissions(inst *instance.Instance) error {
+	perms, err := permission.GetForShareInteract(inst, s.SID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	now := time.Now()
+	perms.ExpiresAt = &now
+	return couchdb.UpdateDoc(inst, perms)
+}
+
+func (s *Sharing) RemoveInteractPermissionsForAMember(inst *instance.Instance, m *Member, memberIndex int) error {
+	interact, err := permission.GetForShareInteract(inst, s.SID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+
+	indexKey := keyFromMemberIndex(memberIndex)
+	for key := range interact.Codes {
+		if key == "" {
+			continue
+		}
+		if key == m.Instance || key == m.Email || key == indexKey {
+			delete(interact.Codes, key)
+			return couchdb.UpdateDoc(inst, interact)
+		}
+	}
+	return nil
 }
 
 // RevokeRecipient revoke only one recipient on the sharer. After that, if the
@@ -606,30 +649,34 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	if s.Owner {
 		return ErrInvalidSharing
 	}
-	if err := DeleteOAuthClient(inst, &s.Members[0], &s.Credentials[0]); err != nil {
-		return err
-	}
-	if err := s.RemoveTriggers(inst); err != nil {
-		return err
-	}
-	if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
-		return err
-	}
-	if err := RemoveSharedRefs(inst, s.SID); err != nil {
-		return err
-	}
-	if err := s.FixRevokedNotes(inst); err != nil {
-		inst.Logger().WithNamespace("sharing").
-			Warnf("RevokeByNotification failed to fix notes for revoked sharing %s: %s", s.ID(), err)
-	}
-	if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
-		if err := s.RemoveSharingDir(inst); err != nil {
+	if s.Drive {
+		s.cleanShortcutID(inst)
+	} else {
+		if err := DeleteOAuthClient(inst, &s.Members[0], &s.Credentials[0]); err != nil {
 			return err
 		}
-	}
-	if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
-		if err := s.RemoveBitwardenOrganization(inst, rule.Values[0]); err != nil {
+		if err := s.RemoveTriggers(inst); err != nil {
 			return err
+		}
+		if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
+			return err
+		}
+		if err := s.FixRevokedNotes(inst); err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("RevokeByNotification failed to fix notes for revoked sharing %s: %s", s.ID(), err)
+		}
+		if rule := s.FirstFilesRule(); rule != nil && rule.Mime == "" {
+			if err := s.RemoveSharingDir(inst); err != nil {
+				return err
+			}
+		}
+		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+		if rule := s.FirstBitwardenOrganizationRule(); rule != nil && len(rule.Values) > 0 {
+			if err := s.RemoveBitwardenOrganization(inst, rule.Values[0]); err != nil {
+				return err
+			}
 		}
 	}
 

@@ -472,6 +472,9 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		if !s.Drive {
 			return jsonapi.NotFound(errors.New("not a drive"))
 		}
+		if !s.Active {
+			return jsonapi.Forbidden(middlewares.ErrForbidden)
+		}
 
 		if s.Owner {
 			return fn(c, inst, s)
