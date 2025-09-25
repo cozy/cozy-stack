@@ -19,6 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/tests/testutils"
 
+	"sync/atomic"
+
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
@@ -510,6 +512,13 @@ func (h *countingTestHandler) Handle(ctx context.Context, d amqp.Delivery) error
 	return nil
 }
 
+type countingFailingHandler struct{ calls atomic.Int64 }
+
+func (h *countingFailingHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	h.calls.Add(1)
+	return fmt.Errorf("forced failure")
+}
+
 func testCtx(t *testing.T) context.Context {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
@@ -778,4 +787,82 @@ func createTestConnection(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Conn
 	require.NoError(t, err)
 
 	return conn, ch
+}
+
+func getOneFromQueue(t *testing.T, mq *testutils.RabbitFixture, q string, timeout time.Duration) (*amqp.Delivery, bool) {
+	deadline := time.Now().Add(timeout)
+	conn, ch := createTestConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+	for time.Now().Before(deadline) {
+		msg, ok, err := ch.Get(q, true)
+		require.NoError(t, err)
+		if ok {
+			return &msg, true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return nil, false
+}
+
+func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test skipped with --short")
+	}
+
+	t.Parallel()
+
+	MQ := testutils.StartRabbitMQ(t, true, false)
+	defer MQ.Stop(context.Background(), 30*time.Second)
+
+	// Configuration per request
+	exchangeCfg := &config.RabbitExchange{
+		Name:            "auth",
+		Kind:            "topic",
+		Durable:         true,
+		DeclareExchange: true,
+		DLXName:         "auth.dlx",
+	}
+	queueCfg := &config.RabbitQueue{
+		Name:          "user.password.updated",
+		Declare:       true,
+		Prefetch:      8,
+		DeliveryLimit: 5,
+		DeclareDLQ:    true,
+		DLQName:       "stack.dead.letter.user.password.updated",
+		Bindings:      []string{"password.changed"},
+		// Declare DLX so the DLX exists even if not pre-created
+		DeclareDLX: true,
+	}
+
+	// Create manager with a failing handler to force redeliveries and count attempts
+	handler := &countingFailingHandler{}
+	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
+	queue := rabbitmq.NewQueueSpec(queueCfg, handler, "auth.dlx", "stack.dead.letter.user.password.updated")
+	exchange.Queues = []rabbitmq.QueueSpec{queue}
+	mgr := rabbitmq.NewRabbitMQManager(MQ.AMQPURL, []rabbitmq.ExchangeSpec{exchange})
+
+	// Start consumers
+	_, err := mgr.Start(testCtx(t))
+	require.NoError(t, err)
+	require.NoError(t, mgr.WaitReady(testCtx(t)))
+
+	// Publish one message to be routed to the main queue
+	sender := newTestMessageSender(t, MQ.AMQPURL, "auth", "password.changed")
+	original := testMessage{TimeStamp: time.Now().UnixMilli()}
+	sender.publish(original)
+
+	// Expect the message to be dead-lettered to the DLQ after exceeding delivery limit
+	if msg, ok := getOneFromQueue(t, MQ, "stack.dead.letter.user.password.updated", 60*time.Second); !ok {
+		t.Fatalf("expected a message in DLQ but none received")
+	} else {
+		require.Equal(t, "application/json", msg.ContentType)
+		var got testMessage
+		require.NoError(t, json.Unmarshal(msg.Body, &got))
+		require.Equal(t, original.TimeStamp, got.TimeStamp)
+		// Ensure the message was attempted DeliveryLimit+1 times (final attempt causes DLQ)
+		require.Equal(t, int64(queueCfg.DeliveryLimit+1), handler.calls.Load())
+	}
+
+	require.NoError(t, mgr.Shutdown(testCtx(t)))
 }
