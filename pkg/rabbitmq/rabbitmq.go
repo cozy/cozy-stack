@@ -200,7 +200,8 @@ func (m *RabbitMQManager) run(ctx context.Context) error {
 func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 	var exchanges []ExchangeSpec
 
-	for _, configExchange := range opts.Exchanges {
+	for i := range opts.Exchanges {
+		configExchange := &opts.Exchanges[i]
 		var queues []QueueSpec
 
 		if configExchange.Name == "" || configExchange.Kind == "" {
@@ -208,7 +209,8 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 			continue
 		}
 
-		for _, configQueue := range configExchange.Queues {
+		for j := range configExchange.Queues {
+			configQueue := &configExchange.Queues[j]
 			if configQueue.Name == "" {
 				log.Warnf("Skipping invalid queue config on exchange %s: missing name", configExchange.Name)
 				continue
@@ -239,7 +241,7 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 			}
 
 			queues = append(queues, QueueSpec{
-				cfg:     &configQueue,
+				cfg:     configQueue,
 				Handler: handler,
 				dlxName: resolvedDLX,
 				dlqName: resolvedDLQ,
@@ -247,7 +249,7 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 		}
 
 		exchanges = append(exchanges, ExchangeSpec{
-			cfg:    &configExchange,
+			cfg:    configExchange,
 			Queues: queues,
 		})
 	}

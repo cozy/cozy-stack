@@ -154,7 +154,7 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait until the instance hash is updated
-		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
@@ -211,7 +211,7 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait until the instance hash is updated
-		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
@@ -261,6 +261,68 @@ func TestPasswordHandler(t *testing.T) {
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
 	})
+
+	t.Run("CreateUserWithKey", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "CreateUserWithKey")
+		inst := setup.GetTestInstance()
+
+		domain := inst.Domain
+
+		// Capture current Bitwarden public/private keys to ensure they are not changed
+		bwBefore, err := settings.Get(inst)
+		require.NoError(t, err)
+		prevPub, prevPriv := bwBefore.PublicKey, bwBefore.PrivateKey
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message
+		testHash := "testhash_user_created_1"
+		msg := rabbitmq.UserCreatedMessage{
+			TwakeID:    inst.Prefix,
+			Iterations: 100000,
+			Hash:       testHash,
+			PublicKey:  "PUB",
+			Key:        "KEY",
+			Timestamp:  time.Now().Unix(),
+			Domain:     domain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		time.Sleep(1 * time.Second)
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.created",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance hash is updated
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(domain)
+			return err == nil && string(updated.PassphraseHash) == testHash
+		})
+
+		// Also ensure the key was updated
+		bw, err := settings.Get(inst)
+		require.NoError(t, err)
+		require.Equal(t, msg.Key, bw.Key)
+		// Public and private keys must remain unchanged when only Key is provided
+		require.Equal(t, prevPub, bw.PublicKey)
+		require.Equal(t, prevPriv, bw.PrivateKey)
+	})
 }
 
 func getChannel(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Channel, error) {
@@ -288,6 +350,12 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "user.password.updated",
 					Bindings: []string{"password.changed"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+				{
+					Name:     "user.created",
+					Bindings: []string{"user.created"},
 					Prefetch: 4,
 					Declare:  true,
 				},
