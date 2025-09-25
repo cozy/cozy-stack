@@ -961,15 +961,21 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, index int) error {
 	c := &s.Credentials[index-1]
 
 	// No need to contact the revoked member if the sharing is not ready
-	if m.Status == MemberStatusReady {
+	if m.Status == MemberStatusReady || s.Drive {
 		if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("Error on revocation notification: %s", err)
 		}
+	}
 
+	if m.Status == MemberStatusReady {
 		if err := DeleteOAuthClient(inst, m, c); err != nil {
 			return err
 		}
+	}
+
+	if err := s.RemoveInteractPermissionsForAMember(inst, m, index); err != nil {
+		return err
 	}
 
 	// We may have concurrency issues where RevokeMember is called several
@@ -1025,8 +1031,22 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	if m.Instance == "" || err != nil {
 		return ErrInvalidSharing
 	}
-	if c.Client == nil || c.AccessToken == nil {
-		return ErrNoOAuthClient
+	var token string
+	if s.Drive {
+		interact, err := permission.GetForShareInteract(inst, s.ID())
+		if err != nil {
+			return err
+		}
+		if code, ok := interact.Codes[m.Instance]; ok {
+			token = code
+		} else if code, ok := interact.Codes[m.Email]; ok {
+			token = code
+		}
+	} else {
+		if c.Client == nil || c.AccessToken == nil {
+			return ErrNoOAuthClient
+		}
+		token = c.AccessToken.AccessToken
 	}
 
 	var path string
@@ -1042,7 +1062,7 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		Domain: u.Host,
 		Path:   path,
 		Headers: request.Headers{
-			echo.HeaderAuthorization: "Bearer " + c.AccessToken.AccessToken,
+			echo.HeaderAuthorization: "Bearer " + token,
 		},
 		ParseError: ParseRequestError,
 	}

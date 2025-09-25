@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -88,6 +89,17 @@ func RevocationRecipientNotif(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return wrapErrors(err)
+	}
+	if s.Drive {
+		token := c.Request().Header.Get(echo.HeaderAuthorization)
+		token = strings.TrimPrefix(token, "Bearer ")
+		if token == "" || token != s.Credentials[0].DriveToken {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+	} else {
+		if err := hasSharingWritePermissions(c); err != nil {
+			return err
+		}
 	}
 	if err = s.RevokeByNotification(inst); err != nil {
 		return wrapErrors(err)

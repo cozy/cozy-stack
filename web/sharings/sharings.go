@@ -941,7 +941,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:sharing-id/recipients/self/readonly", DowngradeToReadOnly, checkSharingWritePermissions)  // On the recipient
 	router.DELETE("/:sharing-id/recipients/:index/readonly", RemoveReadOnly)                                 // On the sharer
 	router.DELETE("/:sharing-id/recipients/self/readonly", UpgradeToReadWrite, checkSharingWritePermissions) // On the recipient
-	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)                    // On the recipient
+	router.DELETE("/:sharing-id", RevocationRecipientNotif)                                                  // On the recipient
 	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                                     // On the recipient
 	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions)                 // On the sharer
 	router.POST("/:sharing-id/public-key", ReceivePublicKey)

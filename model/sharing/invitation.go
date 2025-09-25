@@ -50,10 +50,11 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 
 			link := m.InvitationLink(inst, s, state, perms)
 			if m.Instance != "" && canSendShortcut {
+				m.Status = MemberStatusPendingInvitation
 				if err := m.SendShortcut(inst, s, link); err == nil {
-					m.Status = MemberStatusPendingInvitation
 					return nil
 				}
+				m.Status = MemberStatusMailNotSent
 			}
 			if m.Email == "" {
 				if len(m.Groups) > 0 {
