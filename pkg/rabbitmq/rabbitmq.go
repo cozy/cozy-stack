@@ -86,6 +86,7 @@ func Start(opts config.RabbitMQ) (utils.Shutdowner, error) {
 
 // Start runs the manager in background and returns a Shutdowner for graceful stop.
 func (m *RabbitMQManager) Start(ctx context.Context) (utils.Shutdowner, error) {
+	log.Info("Initializing RabbitMQ manager")
 	if m.readyCh == nil {
 		m.readyCh = make(chan struct{})
 	}
@@ -97,31 +98,47 @@ func (m *RabbitMQManager) Start(ctx context.Context) (utils.Shutdowner, error) {
 	}()
 	m.cancel = cancel
 	m.done = done
+	log.Info("RabbitMQ manager started successfully")
 	return m, nil
 }
 
 // WaitReady blocks until the manager has declared exchanges/queues and started consumers.
 func (m *RabbitMQManager) WaitReady(ctx context.Context) error {
+	log.Info("Waiting for RabbitMQ manager to be ready")
 	select {
 	case <-m.readyCh:
+		log.Info("RabbitMQ manager is ready")
 		return nil
 	case <-ctx.Done():
+		log.Warnf("RabbitMQ manager wait ready cancelled: %v", ctx.Err())
 		return ctx.Err()
 	}
 }
 
 func (m *RabbitMQManager) Shutdown(ctx context.Context) error {
+	log.Info("Shutting down RabbitMQ manager")
 	if m.cancel != nil {
+		log.Debug("Cancelling RabbitMQ manager context")
 		m.cancel()
 	}
 	if m.done != nil {
+		log.Debug("Waiting for RabbitMQ manager to finish")
 		select {
 		case <-m.done:
+			log.Debug("RabbitMQ manager finished gracefully")
 		case <-ctx.Done():
+			log.Warnf("RabbitMQ manager shutdown cancelled: %v", ctx.Err())
 			return ctx.Err()
 		}
 	}
-	return m.connection.Close()
+	log.Debug("Closing RabbitMQ connection")
+	err := m.connection.Close()
+	if err != nil {
+		log.Errorf("Error closing RabbitMQ connection: %v", err)
+	} else {
+		log.Info("RabbitMQ manager shutdown completed successfully")
+	}
+	return err
 }
 
 // run starts the manager loop with automatic reconnection.
@@ -129,6 +146,7 @@ func (m *RabbitMQManager) run(ctx context.Context) error {
 	log.Infof("Starting RabbitMQ manager with %d exchanges", len(m.exchanges))
 
 	// Main manager loop with automatic reconnection
+	reconnectCount := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -137,63 +155,87 @@ func (m *RabbitMQManager) run(ctx context.Context) error {
 		default:
 		}
 
+		reconnectCount++
+		if reconnectCount > 1 {
+			log.Infof("Attempting reconnection #%d to RabbitMQ", reconnectCount)
+		}
+
 		// Connect to RabbitMQ with retry
+		log.Debug("Connecting to RabbitMQ")
 		conn, err := m.connection.Connect(ctx, 5)
 		if err != nil {
 			log.Errorf("Failed to connect to RabbitMQ after retries: %v", err)
 			continue
 		}
+		log.Info("Successfully connected to RabbitMQ")
 
 		// Declare exchanges once per cycle
+		log.Debug("Declaring exchanges")
 		for _, spec := range m.exchanges {
+			log.Debugf("Declaring exchange: %s (type: %s, durable: %v)", spec.cfg.Name, spec.cfg.Kind, spec.cfg.Durable)
 			if err := declareRabbitMQExchange(conn, spec); err != nil {
 				log.Errorf("Failed to declare exchange %s: %v", spec.cfg.Name, err)
 				_ = m.connection.Close()
 				continue
 			}
+			log.Debugf("Successfully declared exchange: %s", spec.cfg.Name)
 		}
 
 		g, gctx := errgroup.WithContext(ctx)
 		// Start all queue runners across all exchanges
+		log.Debug("Starting queue runners")
 		var queueRunners []*queueRunner
 		for _, spec := range m.exchanges {
+			log.Debugf("Processing %d queues for exchange: %s", len(spec.Queues), spec.cfg.Name)
 			for _, q := range spec.Queues {
+				log.Debugf("Starting queue runner for queue: %s on exchange: %s", q.cfg.Name, spec.cfg.Name)
 				r, err := newQueueRunner(conn, spec.cfg.Name, q)
 				if err != nil {
 					log.Errorf("Failed to start queue runner for %s on %s: %v", q.cfg.Name, spec.cfg.Name, err)
 					continue
 				}
 				queueRunners = append(queueRunners, r)
+				log.Debugf("Successfully started queue runner for: %s", q.cfg.Name)
 			}
 		}
+		log.Infof("Started %d queue runners", len(queueRunners))
 		for _, r := range queueRunners {
 			r := r
 			g.Go(func() error { return r.run(gctx) })
 		}
 		// Signal readiness once topology is set and consumers are started
-		m.readyOnce.Do(func() { close(m.readyCh) })
+		m.readyOnce.Do(func() {
+			log.Info("RabbitMQ manager topology ready, signaling readiness")
+			close(m.readyCh)
+		})
 		// Monitor connection in the same errgroup; exit on context cancel too
 		g.Go(func() error {
 			select {
 			case <-gctx.Done():
+				log.Debug("Connection monitor context cancelled")
 				return gctx.Err()
 			case err := <-m.connection.MonitorConnection():
 				if err != nil {
+					log.Warnf("RabbitMQ connection lost: %v", err)
 					return err
 				}
+				log.Debug("RabbitMQ connection monitor received close signal")
 				return context.Canceled
 			}
 		})
 
+		log.Debug("Waiting for queue runners and connection monitor")
 		if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 			log.Errorf("Manager cycle error: %v", err)
 		}
 
 		// Close all queue runners and connection before next reconnect attempt
+		log.Debug("Closing queue runners and connection")
 		for _, r := range queueRunners {
 			r.close()
 		}
 		_ = m.connection.Close()
+		log.Info("RabbitMQ manager cycle completed, will attempt reconnection")
 	}
 }
 
