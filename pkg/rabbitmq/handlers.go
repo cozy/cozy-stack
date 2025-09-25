@@ -88,6 +88,7 @@ func NewUserCreatedHandler() *UserCreatedHandler {
 // UserCreatedMessage represents a user creation message.
 type UserCreatedMessage struct {
 	TwakeID       string `json:"twakeId"`
+	Domain        string `json:"domain"`
 	Mobile        string `json:"mobile"`
 	InternalEmail string `json:"internalEmail"`
 	Iterations    int    `json:"iterations"`
@@ -111,11 +112,39 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	if msg.TwakeID == "" {
 		return fmt.Errorf("user.created: missing twakeId")
 	}
-	if msg.InternalEmail == "" {
-		return fmt.Errorf("user.created: missing internalEmail")
+
+	if msg.Domain == "" {
+		msg.Domain = DefaultDomain
+	}
+	if msg.Hash == "" {
+		return fmt.Errorf("user.created: missing passphrase hash")
+	}
+	if msg.Iterations <= 0 {
+		return fmt.Errorf("user.created: missing iterations")
 	}
 
-	// For now, we simply acknowledge the message after validation.
-	// Integrate business logic (e.g., instance/user provisioning) here as needed.
+	params := lifecycle.PassParameters{
+		Pass:       []byte(msg.Hash),
+		Iterations: msg.Iterations,
+	}
+
+	if msg.Key != "" {
+		params.Key = msg.Key
+	}
+
+	// if one of the keys is missing, do not update any of the keys
+	if msg.PublicKey != "" && msg.PrivateKey != "" {
+		params.PublicKey = msg.PublicKey
+		params.PrivateKey = msg.PrivateKey
+	}
+
+	inst, err := lifecycle.GetInstance(msg.Domain)
+	if err != nil {
+		return fmt.Errorf("user.created: get instance: %w", err)
+	}
+
+	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, []byte(msg.Hash), params); err != nil {
+		return fmt.Errorf("user.created: update passphrase: %w", err)
+	}
 	return nil
 }
