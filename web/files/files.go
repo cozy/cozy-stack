@@ -1764,8 +1764,11 @@ var allowedChangesParams = map[string]bool{
 // deletions with the document ID as only information)
 func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc) error {
 	if sharedDir == nil {
-		//TODO: WARNING: check security here
 		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+			return err
+		}
+	} else {
+		if err := middlewares.AllowVFS(c, permission.GET, sharedDir); err != nil {
 			return err
 		}
 	}
