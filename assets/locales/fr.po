@@ -53,7 +53,7 @@ msgstr ""
 
 msgid "URL Discovery error"
 msgstr ""
-"L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+"L'adresse du Twake que vous avez saisie est incorrecte, veuillez ré-essayer."
 
 msgid "Login Welcome"
 msgstr "Bienvenue !"
@@ -67,10 +67,10 @@ msgstr "Bonne pratique :"
 msgid "Login Password tip"
 msgstr ""
 "n’entrez jamais votre mot de passe sans vérifier que l’adresse ci-dessus est"
-" bien celle de votre Cozy."
+" bien celle de votre Twake."
 
 msgid "Login Password help"
-msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
+msgstr "Saisissez votre mot de passe pour accéder à votre Twake"
 
 msgid "Login Password field"
 msgstr "Mot de passe"
@@ -123,7 +123,7 @@ msgid "Magic link has been sent Title"
 msgstr "Ouvrez vos emails"
 
 msgid "Magic link has been sent Body"
-msgstr "Un email vous a été envoyé pour accéder à votre Cozy"
+msgstr "Un email vous a été envoyé pour accéder à votre Twake"
 
 msgid "Magic link has been sent Detail"
 msgstr ""
@@ -160,7 +160,7 @@ msgstr "Vous y êtes presque !"
 msgid "Onboarding Not activated Check mails"
 msgstr ""
 "Super ! Maintenant cliquez sur le lien d'activation envoyé par e-mail pour "
-"terminer l'installation de votre Cozy."
+"terminer l'installation de votre Twake."
 
 msgid "Onboarding Not activated Contact us"
 msgstr "Vous êtes perdu.e ? N'hésitez pas à nous contacter à"
@@ -175,7 +175,7 @@ msgstr ""
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"L'indice que vous avez laissé à la création du mot de passe Cozy pass vous "
+"L'indice que vous avez laissé à la création du mot de passe Twake pass vous "
 "sera envoyé par email."
 
 msgid "Passphrase reset Submit hint"
@@ -184,7 +184,7 @@ msgstr "M'aider à retrouver mon mot de passe"
 msgid "Passphrase reset Help Message"
 msgstr ""
 "Attention ! Votre mot de passe actuel est l’unique moyen pour accéder aux "
-"mots de passe gardés par votre app « Cozy Pass ». Si vous le réinitialisez, "
+"mots de passe gardés par votre app « Twake Pass ». Si vous le réinitialisez, "
 "vous perdrez ces données. Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Help emptyVault"
@@ -193,7 +193,7 @@ msgstr ""
 
 msgid "Passphrase reset Help emptyVault Cozy Pass"
 msgstr ""
-"Un lien vous sera envoyé par email pour choisir un nouveau mot de passe Cozy"
+"Un lien vous sera envoyé par email pour choisir un nouveau mot de passe Twake"
 " Pass."
 
 msgid "Passphrase reset Submit"
@@ -239,7 +239,7 @@ msgstr "Terminer"
 msgid "Hint sent Body"
 msgstr ""
 "Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver "
-"votre mot de passe Cozy."
+"votre mot de passe Twake."
 
 msgid "Hint sent Detail"
 msgstr ""
@@ -308,7 +308,7 @@ msgstr "Partagé par"
 msgid "Authorize Sharing Description start"
 msgstr ""
 "%s et vous pouvez collaborer en modifiant %s. Chaque modification sera "
-"transmise automatiquement entre vos Cozy."
+"transmise automatiquement entre vos Twake."
 
 msgid "Authorize Sharing Description end"
 msgstr "Vous conserverez le %s dans votre Twake, même si %s annule le partage."
@@ -350,10 +350,10 @@ msgid "Authorize Linked Webapp"
 msgstr "Une application déclarée comme :"
 
 msgid "Authorize Linked YourCozy"
-msgstr "demande l'accès à votre Cozy :"
+msgstr "demande l'accès à votre Twake :"
 
 msgid "Authorize Linked Help"
-msgstr "L'application demande à accéder aux données suivantes de votre Cozy :"
+msgstr "L'application demande à accéder aux données suivantes de votre Twake :"
 
 msgid "Authorize Confirm Flagship title"
 msgstr "Application non certifiée"
@@ -428,7 +428,7 @@ msgstr ""
 "contactez-nous à claude@cozycloud.cc."
 
 msgid "Move Link Title"
-msgstr "%s a changé l'adresse de son Cozy"
+msgstr "%s a changé l'adresse de son Twake"
 
 msgid "Move Link Description"
 msgstr "Ce lien ne sera bientôt plus disponible, un nouveau a été généré :"
@@ -455,12 +455,12 @@ msgstr ""
 "exportés en début de parcours :"
 
 msgid "Move Vault Step 1"
-msgstr "Ouvrez l'extension Cozy installée sur votre navigateur"
+msgstr "Ouvrez l'extension Twake installée sur votre navigateur"
 
 msgid "Move Vault Step 2"
 msgstr ""
-"Déconnectez votre ancien Cozy, puis connectez-vous à l'extension avec votre "
-"nouveau Cozy"
+"Déconnectez votre ancien Twake, puis connectez-vous à l'extension avec votre "
+"nouveau Twake"
 
 msgid "Move Vault Step 3"
 msgstr "Rendez-vous sur « **Paramètres / Importer des éléments** »"
@@ -488,16 +488,16 @@ msgstr "Oops…"
 
 msgid "Error Internal Server Error Message"
 msgstr ""
-"Il semblerait que Cozy soit sous l'eau à force de sauvegarder, synchroniser et croiser vos données. Notre équipe se charge de lui redonner ses super pouvoirs.\n"
+"Il semblerait que Twake soit sous l'eau à force de sauvegarder, synchroniser et croiser vos données. Notre équipe se charge de lui redonner ses super pouvoirs.\n"
 "En attendant et surtout pour l'encourager, vous pouvez toujours lui envoyer vos demandes à claude@cozycloud.cc. "
 
 msgid "Error Instance not found Title"
-msgstr "L'adresse de ce Cozy n'existe pas."
+msgstr "L'adresse de ce Twake n'existe pas."
 
 msgid "Error Instance not found Message"
 msgstr ""
-"Nous n'avons trouvé aucun Cozy à cette adresse. Il s'agit peut-être d'une "
-"erreur de frappe. Pour le savoir, vérifiez l'adresse de votre Cozy dans "
+"Nous n'avons trouvé aucun Twake à cette adresse. Il s'agit peut-être d'une "
+"erreur de frappe. Pour le savoir, vérifiez l'adresse de votre Twake dans "
 "l'e-mail que nous vous avons envoyé au moment de sa création."
 
 msgid "Error InvalidToken Title"
@@ -513,10 +513,10 @@ msgid "Error Application not installed Title"
 msgstr "Application pas encore disponible"
 
 msgid "Error Application not installed Message"
-msgstr "Cette application n'est pas encore disponible dans votre Cozy."
+msgstr "Cette application n'est pas encore disponible dans votre Twake."
 
 msgid "Error Application not supported Message"
-msgstr "Cette application n'est pas prise en charge dans votre serveur Cozy."
+msgstr "Cette application n'est pas prise en charge dans votre serveur Twake."
 
 msgid "Error Application not found Title"
 msgstr "L’application n’existe pas"
@@ -524,7 +524,7 @@ msgstr "L’application n’existe pas"
 msgid "Error Application not found Message"
 msgstr ""
 "Nous n’avons trouvé aucune application correspondant à cette adresse dans "
-"votre Cozy. Il s’agit peut-être d’une erreur de frappe."
+"votre Twake. Il s’agit peut-être d’une erreur de frappe."
 
 msgid "Error Application not found Action"
 msgstr "Retourner à l’accueil"
@@ -542,28 +542,28 @@ msgid "Error Contact instance blocked"
 msgstr "Contactez-nous, si vous souhaitez en savoir plus, à l'adresse"
 
 msgid "Error Message instance blocked"
-msgstr "Le fonctionnement de votre Cozy a été momentanément interrompu"
+msgstr "Le fonctionnement de votre Twake a été momentanément interrompu"
 
 msgid "the authentication has failed"
 msgstr "L'authentification n'a pu aboutir"
 
 msgid "the FranceConnect authentication has failed"
-msgstr "Le compte FranceConnect utilisé ne correspond pas à votre compte Cozy."
+msgstr "Le compte FranceConnect utilisé ne correspond pas à votre compte Twake."
 
 msgid "Instance Blocked Login"
-msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"
+msgstr "Le Twake a été bloqué à cause de trop nombreux essais de connexion"
 
 msgid "Instance Blocked Payment"
-msgstr "Le Cozy nécessite un paiement"
+msgstr "Le Twake nécessite un paiement"
 
 msgid "Instance Blocked Importing"
-msgstr "Le Cozy importe des données"
+msgstr "Le Twake importe des données"
 
 msgid "Instance Blocked Moving"
 msgstr "Déménagement en cours"
 
 msgid "Instance Blocked Unknown"
-msgstr "Le Cozy a été bloqué pour une raison inconnue"
+msgstr "Le Twake a été bloqué pour une raison inconnue"
 
 msgid "Error No state parameter"
 msgstr "Le paramètre state est obligatoire"
@@ -607,7 +607,7 @@ msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
 
 msgid "Error Invalid magic link"
-msgstr "Le lien pour accéder à votre Cozy est tronqué ou a expiré"
+msgstr "Le lien pour accéder à votre Twake est tronqué ou a expiré"
 
 msgid "Error Invalid reset token"
 msgstr "Le lien de réinitialisation du mot de passe est tronqué ou a expiré"
@@ -641,7 +641,7 @@ msgstr "L'authentification en deux étapes est activée"
 msgid "Confirmation User Content"
 msgstr ""
 "Votre adresse e-mail est maintenant confirmée. La double-authentification a "
-"bien été activée avec succès sur votre Cozy."
+"bien été activée avec succès sur votre Twake."
 
 msgid "Permissions Maximal"
 msgstr "Toutes les données"
@@ -1258,7 +1258,7 @@ msgstr ""
 msgid "Compat Subtitle"
 msgstr ""
 "Assurez-vous de disposer de la version la plus récente ou télécharger l'une "
-"de ces options pour profiter pleinement de votre Cozy. Nous recommandons "
+"de ces options pour profiter pleinement de votre Twake. Nous recommandons "
 "Firefox !"
 
 msgid "Compat Browser Chrome Link"
@@ -1272,11 +1272,11 @@ msgstr "https://www.microsoft.com/fr-fr/windows/microsoft-edge"
 
 msgid "Compat Tip 1"
 msgstr ""
-"Un navigateur à jour est comme un vaccin : votre Cozy sera encore plus "
+"Un navigateur à jour est comme un vaccin : votre Twake sera encore plus "
 "sécurisé sur Internet avec les dernières mises à jour."
 
 msgid "Compat Tip 2"
-msgstr "Vous naviguerez plus vite et profiterez pleinement de votre Cozy."
+msgstr "Vous naviguerez plus vite et profiterez pleinement de votre Twake."
 
 msgid "Compat Help"
 msgstr " Vous voulez en savoir plus ?"
@@ -1293,19 +1293,19 @@ msgid "File copy Suffix"
 msgstr "copie"
 
 msgid "Install New App Title"
-msgstr "Installez la nouvelle app Cozy !"
+msgstr "Installez la nouvelle app Twake !"
 
 msgid "Install App Unavailable"
 msgstr "Cette version de %s n'est désormais plus prise en charge."
 
 msgid "Install New Iphone App Description"
-msgstr "Merci d'installer la nouvelle application Cozy depuis l'App Store pour continuer à profiter de toutes ses fonctionnalités."
+msgstr "Merci d'installer la nouvelle application Twake depuis l'App Store pour continuer à profiter de toutes ses fonctionnalités."
 
 msgid "Install New Android App Description"
-msgstr "Merci d'installer la nouvelle application Cozy depuis le Play Store pour continuer à profiter de toutes ses fonctionnalités."
+msgstr "Merci d'installer la nouvelle application Twake depuis le Play Store pour continuer à profiter de toutes ses fonctionnalités."
 
 msgid "Install New Generic App Description"
-msgstr "Merci d'installer la nouvelle application Cozy depuis votre store pour continuer à profiter de toutes ses fonctionnalités."
+msgstr "Merci d'installer la nouvelle application Twake depuis votre store pour continuer à profiter de toutes ses fonctionnalités."
 
 msgid "Install New App Store Btn"
 msgstr "Installer"
@@ -1323,7 +1323,7 @@ msgid "Too Many OAuth Clients More Link"
 msgstr "https://support.cozy.io/nombre-maximum-dappareils-connectes-autorises/"
 
 msgid "Too Many OAuth Clients Available Actions"
-msgstr "Déconnectez un appareil ou modifiez l'offre de votre Cozy pour accéder à votre Cozy depuis cet appareil."
+msgstr "Déconnectez un appareil ou modifiez l'offre de votre Twake pour accéder à votre Twake depuis cet appareil."
 
 msgid "Too Many OAuth Clients Offers Btn"
 msgstr "Voir les offres"
@@ -1341,10 +1341,10 @@ msgid "Install flagship app Title"
 msgstr "Installer l'application pour terminer"
 
 msgid "Install flagship app Description"
-msgstr "Votre Cozy a bien été créé, installez l'application pour en profiter dès maintenant !"
+msgstr "Votre Twake a bien été créé, installez l'application pour en profiter dès maintenant !"
 
 msgid "Install flagship app Install"
-msgstr "Installer l'app Cozy"
+msgstr "Installer l'app Twake"
 
 msgid "Install flagship app Skip"
 msgstr "Continuer dans mon navigateur"

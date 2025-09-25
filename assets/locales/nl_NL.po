@@ -44,7 +44,7 @@ msgid "Login Credentials error"
 msgstr "Het ingevoerde wachtwoord is onjuist. Probeer het opnieuw."
 
 msgid "URL Discovery error"
-msgstr "De ingevoerde Cozy-url is onjuist. Probeer het opnieuw."
+msgstr "De ingevoerde Twake-url is onjuist. Probeer het opnieuw."
 
 msgid "Login Welcome"
 msgstr "Welkom!"
@@ -58,10 +58,10 @@ msgstr "Aandachtspunten:"
 msgid "Login Password tip"
 msgstr ""
 "Voer je wachtwoord alleen in als het adres in je browser overeenkomt met dat"
-" van je Cozy en de adresbalk een slotje toont."
+" van je Twake en de adresbalk een slotje toont."
 
 msgid "Login Password help"
-msgstr "Voer je wachtwoord in om toegang te krijgen tot je Cozy"
+msgstr "Voer je wachtwoord in om toegang te krijgen tot je Twake"
 
 msgid "Login Password field"
 msgstr "Wachtwoord"
@@ -130,12 +130,12 @@ msgstr ""
 "twee stappen uit te voeren."
 
 msgid "Onboarding Not activated Title"
-msgstr "Je moet je Cozy activeren"
+msgstr "Je moet je Twake activeren"
 
 msgid "Onboarding Not activated Check mails"
 msgstr ""
-"Je Cozy is nog niet geactiveerd. Controleer je Postvak IN en klik op de "
-"activatielink om door te gaan met het instellen van je Cozy."
+"Je Twake is nog niet geactiveerd. Controleer je Postvak IN en klik op de "
+"activatielink om door te gaan met het instellen van je Twake."
 
 msgid "Onboarding Not activated Contact us"
 msgstr "Ben je het spoor bijster? Neem dan contact met ons op via"
@@ -168,7 +168,7 @@ msgstr "Waarschuwing: alle gegevens in je wachtwoordbeheerder gaan verloren"
 msgid "Passphrase reset Help Message"
 msgstr ""
 "als je je wachtwoord opnieuw instelt! Je huidige wachtwoord is de enige "
-"sleutel van de app ‘Cozy Wachtwoorden’."
+"sleutel van de app ‘Twake Wachtwoorden’."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -267,7 +267,7 @@ msgid "Authorize Sharing Title Add"
 msgstr "Toevoegen aan mijn Twake"
 
 msgid "Authorize Client presentation"
-msgstr "wil gemachtigd worden om toegang te krijgen tot je Cozy"
+msgstr "wil gemachtigd worden om toegang te krijgen tot je Twake"
 
 msgid "Authorize Sharing Request"
 msgstr "heeft iets met je gedeeld:"
@@ -319,11 +319,11 @@ msgid "Authorize Linked Webapp"
 msgstr "Een app zegt te zijn:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "De app vereist toegang tot je Cozy:"
+msgstr "De app vereist toegang tot je Twake:"
 
 msgid "Authorize Linked Help"
 msgstr ""
-"Door te machtigen krijgt de app toegang tot de volgende gegevens op je Cozy:"
+"Door te machtigen krijgt de app toegang tot de volgende gegevens op je Twake:"
 
 msgid "Move delegated auth Title"
 msgstr "Verplaatsbevestiging"
@@ -362,7 +362,7 @@ msgstr ""
 "stuur een e-mail naar claude@cozycloud.cc"
 
 msgid "Move Link Title"
-msgstr "%s heeft het adres van zijn/haar Cozy gewijzigd"
+msgstr "%s heeft het adres van zijn/haar Twake gewijzigd"
 
 msgid "Move Link Description"
 msgstr ""
@@ -389,10 +389,10 @@ msgstr ""
 "importeren:"
 
 msgid "Move Vault Step 1"
-msgstr "Open de Cozy-extensie van je browser"
+msgstr "Open de Twake-extensie van je browser"
 
 msgid "Move Vault Step 2"
-msgstr "Log uit op de extensie en log weer in met de url van je nieuwe Cozy"
+msgstr "Log uit op de extensie en log weer in met de url van je nieuwe Twake"
 
 msgid "Move Vault Step 3"
 msgstr "Klik op ‘Instellingen’ en vervolgens op ‘Items importeren’"
@@ -419,22 +419,22 @@ msgstr "Oeps…"
 
 msgid "Error Internal Server Error Message"
 msgstr ""
-"Het lijkt erop dat je Cozy zich onderwater bevindt. Ons team werkt keihard "
+"Het lijkt erop dat je Twake zich onderwater bevindt. Ons team werkt keihard "
 "om hem te reanimeren."
 
 msgid "Error Instance not found Title"
-msgstr "Het adres van deze Cozy bestaat niet"
+msgstr "Het adres van deze Twake bestaat niet"
 
 msgid "Error Instance not found Message"
 msgstr ""
 "Je hebt waarschijnlijk een verkeerd adres ingetoetst. Controleer het adres "
-"van je Cozy, dat na het creëren per e-mail aan je verstuurd is."
+"van je Twake, dat na het creëren per e-mail aan je verstuurd is."
 
 msgid "Error Application not installed Title"
 msgstr "App is nog niet beschikbaar"
 
 msgid "Error Application not installed Message"
-msgstr "Deze app is nog niet beschikbaar op je Cozy."
+msgstr "Deze app is nog niet beschikbaar op je Twake."
 
 msgid "Error Application not found Title"
 msgstr "Deze app bestaat niet"
@@ -458,22 +458,22 @@ msgid "Error Contact instance blocked"
 msgstr "Als je meer te weten wilt komen, neem dan contact met ons op:"
 
 msgid "Error Message instance blocked"
-msgstr "Je Cozy is geblokkeerd"
+msgstr "Je Twake is geblokkeerd"
 
 msgid "Instance Blocked Login"
-msgstr "De Cozy is geblokkeerd wegens teveel inlogpogingen"
+msgstr "De Twake is geblokkeerd wegens teveel inlogpogingen"
 
 msgid "Instance Blocked Payment"
-msgstr "De Cozy vereist een betaling"
+msgstr "De Twake vereist een betaling"
 
 msgid "Instance Blocked Importing"
-msgstr "Cozy is bezig gegevens te importeren"
+msgstr "Twake is bezig gegevens te importeren"
 
 msgid "Instance Blocked Moving"
 msgstr "Bezig met verplaatsen…"
 
 msgid "Instance Blocked Unknown"
-msgstr "De Cozy is om onbekende reden geblokkeerd"
+msgstr "De Twake is om onbekende reden geblokkeerd"
 
 msgid "Error No state parameter"
 msgstr "De state-parameter is vereist"
@@ -532,7 +532,7 @@ msgid "Error Sharing already accepted"
 msgstr "Je kunt het gedeelde bestand terugvinden op je Twake."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Ga naar mijn Cozy"
+msgstr "Ga naar mijn Twake"
 
 msgid "Two Factor Activation"
 msgstr "Authenticatie in twee stappen is ingeschakeld"
@@ -1036,7 +1036,7 @@ msgstr "Je webbrowser is verouderd of wordt niet langer ondersteund."
 msgid "Compat Subtitle"
 msgstr ""
 "Werk je browser bij of probeer één van deze aanbevelingen voor een betere "
-"Cozy-ervaring. Wij bevelen Firefox aan!"
+"Twake-ervaring. Wij bevelen Firefox aan!"
 
 msgid "Compat Browser Chrome Link"
 msgstr "https://www.google.com/chrome/"
@@ -1053,7 +1053,7 @@ msgstr ""
 "verbeterde beveiliging."
 
 msgid "Compat Tip 2"
-msgstr "Je webbrowser wordt sneller en je Cozy-ervaring wordt beter."
+msgstr "Je webbrowser wordt sneller en je Twake-ervaring wordt beter."
 
 msgid "Compat Help"
 msgstr "Meer hulp nodig?"
@@ -1080,7 +1080,7 @@ msgid "Too Many OAuth Clients More Link"
 msgstr "https://help.cozy.io/maximum-number-of-connected-devices-allowed/"
 
 msgid "Too Many OAuth Clients Available Actions"
-msgstr "Disconnect one of your devices or change your Cozy offer to access your Cozy from this device."
+msgstr "Disconnect one of your devices or change your Twake offer to access your Twake from this device."
 
 msgid "Too Many OAuth Clients Offers Btn"
 msgstr "See offers"
@@ -1098,10 +1098,10 @@ msgid "Install flagship app Title"
 msgstr "Install the application to finish"
 
 msgid "Install flagship app Description"
-msgstr "Your Cozy has been successfully created, install the application to use it right now!"
+msgstr "Your Twake has been successfully created, install the application to use it right now!"
 
 msgid "Install flagship app Install"
-msgstr "Install the Cozy app"
+msgstr "Install the Twake app"
 
 msgid "Install flagship app Skip"
 msgstr "Continue in the browser"

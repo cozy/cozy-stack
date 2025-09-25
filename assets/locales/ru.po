@@ -39,7 +39,7 @@ msgstr ""
 
 msgid "URL Discovery error"
 msgstr ""
-"Введённый вами адрес Cozy неверен, попробуйте ещё раз."
+"Введённый вами адрес Twake неверен, попробуйте ещё раз."
 
 msgid "Login Welcome"
 msgstr "Добро пожаловать!"
@@ -53,10 +53,10 @@ msgstr "Лучшая практика:"
 msgid "Login Password tip"
 msgstr ""
 "никогда не вводите пароль, не проверив, что адрес выше "
-"действительно принадлежит вашему Cozy."
+"действительно принадлежит вашему Twake."
 
 msgid "Login Password help"
-msgstr "Введите пароль для доступа к вашему Cozy"
+msgstr "Введите пароль для доступа к вашему Twake"
 
 msgid "Login Password field"
 msgstr "Пароль"
@@ -107,7 +107,7 @@ msgid "Magic link has been sent Title"
 msgstr "Откройте вашу почту"
 
 msgid "Magic link has been sent Body"
-msgstr "Письмо было отправлено для доступа к вашему Cozy"
+msgstr "Письмо было отправлено для доступа к вашему Twake"
 
 msgid "Magic link has been sent Detail"
 msgstr ""
@@ -144,7 +144,7 @@ msgstr "Вы почти у цели!"
 msgid "Onboarding Not activated Check mails"
 msgstr ""
 "Отлично! Теперь нажмите на ссылку активации, отправленную по электронной "
-"почте, чтобы завершить установку вашего Cozy."
+"почте, чтобы завершить установку вашего Twake."
 
 msgid "Onboarding Not activated Contact us"
 msgstr "Потерялись? Не стесняйтесь связаться с нами по адресу"
@@ -159,7 +159,7 @@ msgstr ""
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"Подсказка, которую вы оставили при создании пароля Cozy Pass, будет "
+"Подсказка, которую вы оставили при создании пароля Twake Pass, будет "
 "отправлена вам по электронной почте."
 
 msgid "Passphrase reset Submit hint"
@@ -168,7 +168,7 @@ msgstr "Помочь мне вспомнить пароль"
 msgid "Passphrase reset Help Message"
 msgstr ""
 "Внимание! Ваш текущий пароль — единственный способ получить доступ к "
-"паролям, хранимым в приложении «Cozy Pass». Если вы его сбросите, "
+"паролям, хранимым в приложении «Twake Pass». Если вы его сбросите, "
 "вы потеряете эти данные. Остальные данные останутся доступными."
 
 msgid "Passphrase reset Help emptyVault"
@@ -178,7 +178,7 @@ msgstr ""
 msgid "Passphrase reset Help emptyVault Cozy Pass"
 msgstr ""
 "Ссылка будет отправлена вам по электронной почте для выбора нового "
-"пароля Cozy Pass."
+"пароля Twake Pass."
 
 msgid "Passphrase reset Submit"
 msgstr "Сбросить мой пароль (крайняя мера)"
@@ -223,7 +223,7 @@ msgstr "Завершить"
 msgid "Hint sent Body"
 msgstr ""
 "Мы отправили вам подсказку по электронной почте. Она поможет вам "
-"вспомнить пароль Cozy."
+"вспомнить пароль Twake."
 
 msgid "Hint sent Detail"
 msgstr ""
@@ -292,7 +292,7 @@ msgstr "Поделился"
 msgid "Authorize Sharing Description start"
 msgstr ""
 "%s и вы можете сотрудничать, редактируя %s. Каждое изменение будет "
-"автоматически передано между вашими Cozy."
+"автоматически передано между вашими Twake."
 
 msgid "Authorize Sharing Description end"
 msgstr "Вы сохраните %s в вашем Twake, даже если %s отменит общий доступ."
@@ -334,10 +334,10 @@ msgid "Authorize Linked Webapp"
 msgstr "Приложение, объявленное как:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "запрашивает доступ к вашему Cozy:"
+msgstr "запрашивает доступ к вашему Twake:"
 
 msgid "Authorize Linked Help"
-msgstr "Приложение запрашивает доступ к следующим данным вашего Cozy:"
+msgstr "Приложение запрашивает доступ к следующим данным вашего Twake:"
 
 msgid "Authorize Confirm Flagship title"
 msgstr "Не сертифицированное приложение"
@@ -411,7 +411,7 @@ msgstr ""
 "свяжитесь с нами по адресу claude@cozycloud.cc."
 
 msgid "Move Link Title"
-msgstr "%s изменил адрес своего Cozy"
+msgstr "%s изменил адрес своего Twake"
 
 msgid "Move Link Description"
 msgstr "Эта ссылка скоро станет недоступной, новая была создана:"
@@ -438,12 +438,12 @@ msgstr ""
 "экспортировали в начале процесса:"
 
 msgid "Move Vault Step 1"
-msgstr "Откройте расширение Cozy, установленное в вашем браузере"
+msgstr "Откройте расширение Twake, установленное в вашем браузере"
 
 msgid "Move Vault Step 2"
 msgstr ""
-"Отключитесь от старого Cozy, затем войдите в расширение с вашим "
-"новым Cozy"
+"Отключитесь от старого Twake, затем войдите в расширение с вашим "
+"новым Twake"
 
 msgid "Move Vault Step 3"
 msgstr "Перейдите в «**Настройки / Импорт элементов**»"
@@ -471,16 +471,16 @@ msgstr "Упс..."
 
 msgid "Error Internal Server Error Message"
 msgstr ""
-"Похоже, что Cozy под водой от сохранения, синхронизации и перекрёстной обработки ваших данных. Наша команда работает над восстановлением его суперспособностей.\\n"
+"Похоже, что Twake под водой от сохранения, синхронизации и перекрёстной обработки ваших данных. Наша команда работает над восстановлением его суперспособностей.\\n"
 "Тем временем и особенно для поддержки, вы можете отправлять свои запросы на claude@cozycloud.cc. "
 
 msgid "Error Instance not found Title"
-msgstr "Адрес этого Cozy не существует."
+msgstr "Адрес этого Twake не существует."
 
 msgid "Error Instance not found Message"
 msgstr ""
-"Мы не нашли Cozy по этому адресу. Возможно, это опечатка. Чтобы "
-"узнать, проверьте адрес вашего Cozy в письме, которое мы отправили "
+"Мы не нашли Twake по этому адресу. Возможно, это опечатка. Чтобы "
+"узнать, проверьте адрес вашего Twake в письме, которое мы отправили "
 "вам при его создании."
 
 msgid "Error InvalidToken Title"
@@ -496,10 +496,10 @@ msgid "Error Application not installed Title"
 msgstr "Приложение пока недоступно"
 
 msgid "Error Application not installed Message"
-msgstr "Это приложение пока недоступно в вашем Cozy."
+msgstr "Это приложение пока недоступно в вашем Twake."
 
 msgid "Error Application not supported Message"
-msgstr "Это приложение не поддерживается вашим сервером Cozy."
+msgstr "Это приложение не поддерживается вашим сервером Twake."
 
 msgid "Error Application not found Title"
 msgstr "Приложение не существует"
@@ -507,7 +507,7 @@ msgstr "Приложение не существует"
 msgid "Error Application not found Message"
 msgstr ""
 "Мы не нашли приложения, соответствующего этому адресу в "
-"вашем Cozy. Возможно, это опечатка."
+"вашем Twake. Возможно, это опечатка."
 
 msgid "Error Application not found Action"
 msgstr "Вернуться на главную"
@@ -525,28 +525,28 @@ msgid "Error Contact instance blocked"
 msgstr "Свяжитесь с нами, если хотите узнать больше, по адресу"
 
 msgid "Error Message instance blocked"
-msgstr "Работа вашего Cozy была временно прервана"
+msgstr "Работа вашего Twake была временно прервана"
 
 msgid "the authentication has failed"
 msgstr "Аутентификация не удалась"
 
 msgid "the FranceConnect authentication has failed"
-msgstr "Используемый аккаунт FranceConnect не соответствует вашему аккаунту Cozy."
+msgstr "Используемый аккаунт FranceConnect не соответствует вашему аккаунту Twake."
 
 msgid "Instance Blocked Login"
-msgstr "Cozy был заблокирован из-за слишком многих попыток входа"
+msgstr "Twake был заблокирован из-за слишком многих попыток входа"
 
 msgid "Instance Blocked Payment"
-msgstr "Cozy требует оплаты"
+msgstr "Twake требует оплаты"
 
 msgid "Instance Blocked Importing"
-msgstr "Cozy импортирует данные"
+msgstr "Twake импортирует данные"
 
 msgid "Instance Blocked Moving"
 msgstr "Переезд в процессе"
 
 msgid "Instance Blocked Unknown"
-msgstr "Cozy был заблокирован по неизвестной причине"
+msgstr "Twake был заблокирован по неизвестной причине"
 
 msgid "Error No state parameter"
 msgstr "Параметр state обязателен"
@@ -590,7 +590,7 @@ msgid "Error Must be authenticated"
 msgstr "Вы должны войти в систему"
 
 msgid "Error Invalid magic link"
-msgstr "Ссылка для доступа к вашему Cozy обрезана или истекла"
+msgstr "Ссылка для доступа к вашему Twake обрезана или истекла"
 
 msgid "Error Invalid reset token"
 msgstr "Ссылка для сброса пароля обрезана или истекла"
@@ -624,7 +624,7 @@ msgstr "Двухэтапная аутентификация активирова
 msgid "Confirmation User Content"
 msgstr ""
 "Ваш адрес электронной почты теперь подтверждён. Двойная аутентификация "
-"была успешно активирована на вашем Cozy."
+"была успешно активирована на вашем Twake."
 
 msgid "Permissions Maximal"
 msgstr "Все данные"
@@ -1234,7 +1234,7 @@ msgstr ""
 msgid "Compat Subtitle"
 msgstr ""
 "Убедитесь, что у вас самая последняя версия, или скачайте один "
-"из этих вариантов для полного использования вашего Cozy. Мы рекомендуем "
+"из этих вариантов для полного использования вашего Twake. Мы рекомендуем "
 "Firefox!"
 
 msgid "Compat Browser Chrome Link"
@@ -1248,11 +1248,11 @@ msgstr "https://www.microsoft.com/ru-ru/windows/microsoft-edge"
 
 msgid "Compat Tip 1"
 msgstr ""
-"Обновлённый браузер как вакцина: ваш Cozy будет ещё более "
+"Обновлённый браузер как вакцина: ваш Twake будет ещё более "
 "безопасным в Интернете с последними обновлениями."
 
 msgid "Compat Tip 2"
-msgstr "Вы будете быстрее путешествовать и полностью наслаждаться вашим Cozy."
+msgstr "Вы будете быстрее путешествовать и полностью наслаждаться вашим Twake."
 
 msgid "Compat Help"
 msgstr " Хотите узнать больше?"
@@ -1269,19 +1269,19 @@ msgid "File copy Suffix"
 msgstr "копия"
 
 msgid "Install New App Title"
-msgstr "Установите новое приложение Cozy!"
+msgstr "Установите новое приложение Twake!"
 
 msgid "Install App Unavailable"
 msgstr "Эта версия %s больше не поддерживается."
 
 msgid "Install New Iphone App Description"
-msgstr "Пожалуйста, установите новое приложение Cozy из App Store, чтобы продолжать пользоваться всеми его функциями."
+msgstr "Пожалуйста, установите новое приложение Twake из App Store, чтобы продолжать пользоваться всеми его функциями."
 
 msgid "Install New Android App Description"
-msgstr "Пожалуйста, установите новое приложение Cozy из Play Store, чтобы продолжать пользоваться всеми его функциями."
+msgstr "Пожалуйста, установите новое приложение Twake из Play Store, чтобы продолжать пользоваться всеми его функциями."
 
 msgid "Install New Generic App Description"
-msgstr "Пожалуйста, установите новое приложение Cozy из вашего магазина, чтобы продолжать пользоваться всеми его функциями."
+msgstr "Пожалуйста, установите новое приложение Twake из вашего магазина, чтобы продолжать пользоваться всеми его функциями."
 
 msgid "Install New App Store Btn"
 msgstr "Установить"
@@ -1299,7 +1299,7 @@ msgid "Too Many OAuth Clients More Link"
 msgstr "https://support.cozy.io/nombre-maximum-dappareils-connectes-autorises/"
 
 msgid "Too Many OAuth Clients Available Actions"
-msgstr "Отключите устройство или измените тариф вашего Cozy для доступа к вашему Cozy с этого устройства."
+msgstr "Отключите устройство или измените тариф вашего Twake для доступа к вашему Twake с этого устройства."
 
 msgid "Too Many OAuth Clients Offers Btn"
 msgstr "Посмотреть тарифы"
@@ -1317,10 +1317,10 @@ msgid "Install flagship app Title"
 msgstr "Установите приложение для завершения"
 
 msgid "Install flagship app Description"
-msgstr "Ваш Cozy был создан, установите приложение, чтобы использовать его прямо сейчас!"
+msgstr "Ваш Twake был создан, установите приложение, чтобы использовать его прямо сейчас!"
 
 msgid "Install flagship app Install"
-msgstr "Установить приложение Cozy"
+msgstr "Установить приложение Twake"
 
 msgid "Install flagship app Skip"
 msgstr "Продолжить в моём браузере"

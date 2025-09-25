@@ -118,7 +118,7 @@ func TestAuth(t *testing.T) {
 			Body()
 
 		body.Contains("<title>Twake Workplace</title>")
-		body.Contains("Your Cozy has been blocked</h1>")
+		body.Contains("Your Twake has been blocked</h1>")
 
 		// Unblock the instance
 		testInstance.Blocked = false
@@ -865,7 +865,7 @@ func TestAuth(t *testing.T) {
 			ContentType("text/html", "utf-8").
 			Body()
 
-		resBody.Contains("would like permission to access your Cozy")
+		resBody.Contains("would like permission to access your Twake")
 		matches := resBody.Match(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 		matches.Length().Equal(2)
 		csrfToken = matches.Index(1).Raw()
@@ -919,7 +919,7 @@ func TestAuth(t *testing.T) {
 			Expect().Status(200).
 			ContentType("text/html", "utf-8").
 			Body().
-			NotContains("would like permission to access your Cozy").
+			NotContains("would like permission to access your Twake").
 			Contains("The origin of this application is not certified.")
 	})
 
@@ -1733,7 +1733,7 @@ func TestAuth(t *testing.T) {
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
 			Expect().Status(200).
 			ContentType("text/html", "utf-8").
-			Body().Contains("Your Cozy has not been yet activated.")
+			Body().Contains("Your Twake has not been yet activated.")
 	})
 
 	t.Run("LoginOnboardingNotFinished", func(t *testing.T) {
@@ -1755,7 +1755,7 @@ func TestAuth(t *testing.T) {
 			WithHost(inst.Domain).
 			Expect().Status(200).
 			ContentType("text/html", "utf-8").
-			Body().Contains("Your Cozy has not been yet activated.")
+			Body().Contains("Your Twake has not been yet activated.")
 	})
 
 	t.Run("ShowConfirmForm", func(t *testing.T) {

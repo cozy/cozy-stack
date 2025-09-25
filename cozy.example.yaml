@@ -217,7 +217,7 @@ rag:
 mail:
   # mail noreply address - flags: --mail-noreply-address
   noreply_address: noreply@localhost
-  noreply_name: My Cozy
+  noreply_name: My Twake
   reply_to: support@example.org
   # mail smtp host - flags: --mail-host
   host: smtp.home
@@ -490,7 +490,7 @@ contexts:
     templates_title: "My Personal Cloud"
     # Use a different noreply mail for this context
     noreply_address: noreply@example.org
-    noreply_name: My Cozy Beta
+    noreply_name: My Twake Beta
     reply_to: support@example.org
     # Configure the error page
     support_address: support@example.org

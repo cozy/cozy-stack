@@ -37,7 +37,7 @@ msgid "Login Credentials error"
 msgstr "Mật khẩu bạn nhập không đúng, vui lòng thử lại."
 
 msgid "URL Discovery error"
-msgstr "URL Cozy bạn nhập không đúng, vui lòng thử lại."
+msgstr "URL Twake bạn nhập không đúng, vui lòng thử lại."
 
 msgid "Login Welcome"
 msgstr "Chào mừng!"
@@ -49,10 +49,10 @@ msgid "Login Password best practice"
 msgstr "Khuyến nghị bảo mật:"
 
 msgid "Login Password tip"
-msgstr "Không nhập mật khẩu nếu chưa kiểm tra địa chỉ trên trình duyệt có trùng khớp với địa chỉ Cozy của bạn."
+msgstr "Không nhập mật khẩu nếu chưa kiểm tra địa chỉ trên trình duyệt có trùng khớp với địa chỉ Twake của bạn."
 
 msgid "Login Password help"
-msgstr "Nhập mật khẩu để truy cập vào Cozy của bạn"
+msgstr "Nhập mật khẩu để truy cập vào Twake của bạn"
 
 msgid "Login Password field"
 msgstr "Mật khẩu"
@@ -121,17 +121,17 @@ msgid "Magic link has been sent Title"
 msgstr "Mở hộp thư của bạn"
 
 msgid "Magic link has been sent Body"
-msgstr "Một email đã được gửi đến bạn để đăng nhập vào Cozy"
+msgstr "Một email đã được gửi đến bạn để đăng nhập vào Twake"
 
 msgid "Magic link has been sent Detail"
 msgstr ""
 "Không nhận được email? Hãy kiểm tra các thư mục Spam, Thông báo và Mạng xã hội."
 
 msgid "Onboarding Not activated Title"
-msgstr "Bạn cần kích hoạt Cozy của mình"
+msgstr "Bạn cần kích hoạt Twake của mình"
 
 msgid "Onboarding Not activated Check mails"
-msgstr "Cozy của bạn chưa được kích hoạt. Kiểm tra email và nhấn vào liên kết kích hoạt để bắt đầu cài đặt Cozy."
+msgstr "Twake của bạn chưa được kích hoạt. Kiểm tra email và nhấn vào liên kết kích hoạt để bắt đầu cài đặt Twake."
 
 msgid "Onboarding Not activated Contact us"
 msgstr "Bạn gặp khó khăn? Hãy liên hệ với chúng tôi qua"
@@ -145,7 +145,7 @@ msgstr ""
 
 msgid "Passphrase reset Help hint Cozy Pass"
 msgstr ""
-"Gợi ý bạn đã chọn khi tạo mật khẩu cho Cozy Pass sẽ được gửi tới bạn qua email."
+"Gợi ý bạn đã chọn khi tạo mật khẩu cho Twake Pass sẽ được gửi tới bạn qua email."
 
 msgid "Passphrase reset Submit hint"
 msgstr "Giúp tôi khôi phục mật khẩu" 
@@ -153,7 +153,7 @@ msgstr "Giúp tôi khôi phục mật khẩu"
 msgid "Passphrase reset Help Message"
 msgstr ""
 "Cảnh báo! Mật khẩu hiện tại của bạn là cách duy nhất để giải mã "
-"các mật khẩu được lưu trong ứng dụng \"Cozy Pass\". "
+"các mật khẩu được lưu trong ứng dụng \"Twake Pass\". "
 "Nếu bạn đặt lại mật khẩu, dữ liệu này sẽ bị mất. "
 "Các dữ liệu còn lại vẫn sẽ truy cập được."
 
@@ -161,7 +161,7 @@ msgid "Passphrase reset Help emptyVault"
 msgstr "Một liên kết sẽ được gửi cho bạn qua email để đặt mật khẩu mới."
 
 msgid "Passphrase reset Help emptyVault Cozy Pass"
-msgstr "Một liên kết sẽ được gửi cho bạn qua email để đặt mật khẩu mới cho Cozy Pass."
+msgstr "Một liên kết sẽ được gửi cho bạn qua email để đặt mật khẩu mới cho Twake Pass."
 
 msgid "Passphrase reset Submit"
 msgstr "Đặt lại mật khẩu của tôi"
@@ -203,7 +203,7 @@ msgstr "Hoàn tất"
 
 msgid "Hint sent Body"
 msgstr ""
-"Chúng tôi vừa gửi gợi ý mật khẩu tới email của bạn. Gợi ý này sẽ giúp bạn nhớ lại mật khẩu Cozy."
+"Chúng tôi vừa gửi gợi ý mật khẩu tới email của bạn. Gợi ý này sẽ giúp bạn nhớ lại mật khẩu Twake."
 
 msgid "Hint sent Detail"
 msgstr ""
@@ -253,13 +253,13 @@ msgid "Authorize Title"
 msgstr "Cho phép %s truy cập vào hồ sơ của bạn"
 
 msgid "Authorize Sharing Title Synchronize"
-msgstr "Đồng bộ vào Cozy của tôi"
+msgstr "Đồng bộ vào Twake của tôi"
 
 msgid "Authorize Sharing Title Add"
-msgstr "Thêm vào Cozy của tôi"
+msgstr "Thêm vào Twake của tôi"
 
 msgid "Authorize Client presentation"
-msgstr "muốn được cấp quyền truy cập vào Cozy của bạn"
+msgstr "muốn được cấp quyền truy cập vào Twake của bạn"
 
 msgid "Authorize Sharing Request"
 msgstr "Được chia sẻ bởi"
@@ -267,13 +267,13 @@ msgstr "Được chia sẻ bởi"
 msgid "Authorize Sharing Description start"
 msgstr ""
 "%s và bạn có thể cộng tác bằng cách chỉnh sửa %s."
-"Mỗi thay đổi sẽ được tự động đồng bộ giữa các Cozy của bạn."
+"Mỗi thay đổi sẽ được tự động đồng bộ giữa các Twake của bạn."
 
 msgid "Authorize Sharing Description end"
-msgstr "Bạn sẽ vẫn giữ %s trong Cozy của mình, ngay cả khi việc chia sẻ bị hủy bởi %s."
+msgstr "Bạn sẽ vẫn giữ %s trong Twake của mình, ngay cả khi việc chia sẻ bị hủy bởi %s."
 
 msgid "Authorize Sharing Synchronize label"
-msgstr "Đồng bộ vào Cozy của tôi"
+msgstr "Đồng bộ vào Twake của tôi"
 
 msgid "Authorize Sharing Submit Synchronize"
 msgstr "Đồng bộ"
@@ -306,10 +306,10 @@ msgid "Authorize Linked Webapp"
 msgstr "Một ứng dụng tự nhận là:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "yêu cầu quyền truy cập vào Cozy của bạn:"
+msgstr "yêu cầu quyền truy cập vào Twake của bạn:"
 
 msgid "Authorize Linked Help"
-msgstr "Ứng dụng này yêu cầu quyền truy cập vào các loại dữ liệu sau trong Cozy của bạn:"
+msgstr "Ứng dụng này yêu cầu quyền truy cập vào các loại dữ liệu sau trong Twake của bạn:"
 
 msgid "Authorize Confirm Flagship title"
 msgstr "Ứng dụng chưa được chứng nhận"
@@ -377,7 +377,7 @@ msgid "Move Confirm Description"
 msgstr "Bạn không nhận được email? Hãy kiểm tra mục SPAM hoặc gửi email cho chúng tôi tại claude@cozycloud.cc."
 
 msgid "Move Link Title"
-msgstr "%s đã thay đổi địa chỉ Cozy của mình"
+msgstr "%s đã thay đổi địa chỉ Twake của mình"
 
 msgid "Move Link Description"
 msgstr ""
@@ -396,13 +396,13 @@ msgid "Move Vault Title"
 msgstr "Nhập khẩu mật khẩu của tôi"
 
 msgid "Move Vault Description"
-msgstr "Làm theo các bước sau để nhập khẩu mật khẩu bạn đã xuất ra trước khi di chuyển Cozy:"
+msgstr "Làm theo các bước sau để nhập khẩu mật khẩu bạn đã xuất ra trước khi di chuyển Twake:"
 
 msgid "Move Vault Step 1"
-msgstr "Mở tiện ích mở rộng Cozy trên trình duyệt của bạn"
+msgstr "Mở tiện ích mở rộng Twake trên trình duyệt của bạn"
 
 msgid "Move Vault Step 2"
-msgstr "Đăng xuất, sau đó đăng nhập lại tiện ích với Cozy mới của bạn"
+msgstr "Đăng xuất, sau đó đăng nhập lại tiện ích với Twake mới của bạn"
 
 msgid "Move Vault Step 3"
 msgstr "Nhấn vào \"**Cài đặt / Nhập dữ liệu**\""
@@ -426,13 +426,13 @@ msgid "Error Internal Server Error Title"
 msgstr "Oops…"
 
 msgid "Error Internal Server Error Message"
-msgstr "Cozy của bạn đang gặp sự cố. Đội ngũ của chúng tôi đang nỗ lực khắc phục."
+msgstr "Twake của bạn đang gặp sự cố. Đội ngũ của chúng tôi đang nỗ lực khắc phục."
 
 msgid "Error Instance not found Title"
-msgstr "Địa chỉ Cozy này không tồn tại"
+msgstr "Địa chỉ Twake này không tồn tại"
 
 msgid "Error Instance not found Message"
-msgstr "Có thể bạn đã nhập sai địa chỉ. Vui lòng kiểm tra lại địa chỉ Cozy được gửi qua email khi tạo tài khoản."
+msgstr "Có thể bạn đã nhập sai địa chỉ. Vui lòng kiểm tra lại địa chỉ Twake được gửi qua email khi tạo tài khoản."
 
 msgid "Error InvalidToken Title"
 msgstr "Liên kết không hợp lệ"
@@ -447,17 +447,17 @@ msgid "Error Application not installed Title"
 msgstr "Ứng dụng chưa khả dụng"
 
 msgid "Error Application not installed Message"
-msgstr "Ứng dụng này hiện chưa khả dụng trong Cozy của bạn."
+msgstr "Ứng dụng này hiện chưa khả dụng trong Twake của bạn."
 
 msgid "Error Application not supported Message"
-msgstr "Ứng dụng này không được Cozy server của bạn hỗ trợ."
+msgstr "Ứng dụng này không được Twake server của bạn hỗ trợ."
 
 msgid "Error Application not found Title"
 msgstr "Ứng dụng không tồn tại"
 
 msgid "Error Application not found Message"
 msgstr ""
-""Chúng tôi không tìm thấy ứng dụng nào tương ứng với địa chỉ này trong Cozy của bạn."
+""Chúng tôi không tìm thấy ứng dụng nào tương ứng với địa chỉ này trong Twake của bạn."
 "Có thể bạn đã nhập sai địa chỉ."
 
 msgid "Error Application not found Action"
@@ -467,7 +467,7 @@ msgid "Error Application not found Button"
 msgstr "Cài đặt ứng dụng này"
 
 msgid "Error Address forgotten"
-msgstr "Tôi đã quên địa chỉ Cozy của mình"
+msgstr "Tôi đã quên địa chỉ Twake của mình"
 
 msgid "Error Contact us"
 msgstr "Có thắc mắc hoặc sự cố? Liên hệ với chúng tôi tại"
@@ -476,7 +476,7 @@ msgid "Error Contact instance blocked"
 msgstr "Liên hệ với chúng tôi nếu bạn muốn biết thêm thông tin tại"
 
 msgid "Error Message instance blocked"
-msgstr "Cozy của bạn đã bị khóa"
+msgstr "Twake của bạn đã bị khóa"
 
 msgid "the authentication has failed"
 msgstr "Xác thực không thành công"
@@ -485,19 +485,19 @@ msgid "the FranceConnect authentication has failed"
 msgstr "Xác thực bằng FranceConnect không thành công"
 
 msgid "Instance Blocked Login"
-msgstr "Cozy đã bị khóa do có quá nhiều lần đăng nhập không thành công"
+msgstr "Twake đã bị khóa do có quá nhiều lần đăng nhập không thành công"
 
 msgid "Instance Blocked Payment"
-msgstr "Cozy yêu cầu thanh toán"
+msgstr "Twake yêu cầu thanh toán"
 
 msgid "Instance Blocked Importing"
-msgstr "Cozy đang trong quá trình nhập dữ liệu"
+msgstr "Twake đang trong quá trình nhập dữ liệu"
 
 msgid "Instance Blocked Moving"
 msgstr "Đang di chuyển dữ liệu"
 
 msgid "Instance Blocked Unknown"
-msgstr "Cozy bị khóa do lý do không xác định"
+msgstr "Twake bị khóa do lý do không xác định"
 
 msgid "Error No state parameter"
 msgstr "Tham số state là bắt buộc"
@@ -545,7 +545,7 @@ msgid "Error Reset already requested"
 msgstr "Yêu cầu đặt lại mật khẩu đã được gửi trước đó. Vui lòng kiểm tra hộp thư và mục spam!"
 
 msgid "Error Invalid magic link"
-msgstr "Liên kết đăng nhập Cozy đã bị rút gọn hoặc đã hết hạn"
+msgstr "Liên kết đăng nhập Twake đã bị rút gọn hoặc đã hết hạn"
 
 msgid "Error Invalid mail token"
 msgstr "Liên kết xác nhận email đã bị rút gọn hoặc đã hết hạn"
@@ -557,16 +557,16 @@ msgid "Error Sharing already accepted Title"
 msgstr "Bạn đã chấp nhận chia sẻ này"
 
 msgid "Error Sharing already accepted"
-msgstr "Bạn có thể tìm thấy nội dung chia sẻ này trong Cozy của mình."
+msgstr "Bạn có thể tìm thấy nội dung chia sẻ này trong Twake của mình."
 
 msgid "Error Sharing already accepted Button"
-msgstr "Truy cập Cozy của tôi"
+msgstr "Truy cập Twake của tôi"
 
 msgid "Two Factor Activation"
 msgstr "Xác thực hai bước đã được kích hoạt"
 
 msgid "Confirmation User Content"
-msgstr "Email của bạn đã được xác nhận. Xác thực hai bước đã được kích hoạt thành công cho Cozy của bạn."
+msgstr "Email của bạn đã được xác nhận. Xác thực hai bước đã được kích hoạt thành công cho Twake của bạn."
 
 msgid "Permissions Maximal"
 msgstr "Tất cả dữ liệu"
@@ -1118,7 +1118,7 @@ msgid "Notification Sharing Button text"
 msgstr "Xem %s"
 
 msgid "Sharing Connect to Cozy"
-msgstr "Kết nối với Cozy của bạn"
+msgstr "Kết nối với Twake của bạn"
 
 msgid "Sharing Empty name"
 msgstr "msgstr "Một người nào đó"
@@ -1130,28 +1130,28 @@ msgid "Sharing Discovery Intro"
 msgstr "Địa chỉ của bạn sẽ được gửi đến %s để đơn giản hóa các lần chia sẻ tiếp theo"
 
 msgid "Sharing Discovery URL field"
-msgstr "Địa chỉ Cozy của tôi"
+msgstr "Địa chỉ Twake của tôi"
 
 msgid "Sharing URL Discovery error"
-msgstr "URL Cozy bạn nhập không đúng, vui lòng thử lại."
+msgstr "URL Twake bạn nhập không đúng, vui lòng thử lại."
 
 msgid "Sharing URL Not email error"
-msgstr "URL Cozy không phải là địa chỉ email của bạn."
+msgstr "URL Twake không phải là địa chỉ email của bạn."
 
 msgid "Sharing Discovery Submit"
-msgstr "Đồng bộ vào Cozy của tôi"
+msgstr "Đồng bộ vào Twake của tôi"
 
 msgid "Sharing Discovery Shortcut Submit"
-msgstr "Thêm vào Cozy của tôi"
+msgstr "Thêm vào Twake của tôi"
 
 msgid "Sharing No Cozy"
-msgstr "Bạn chưa có Cozy?"
+msgstr "Bạn chưa có Twake?"
 
 msgid "Sharing Discover Cozy URL"
 msgstr "https://cozy.io/en/try-it/?from=sharing"
 
 msgid "Sharing Discover Cozy"
-msgstr "Khám phá Cozy ngay!"
+msgstr "Khám phá Twake ngay!"
 
 msgid "Sharing Forgotten URL"
 msgstr "Tôi đã quên địa chỉ của mình"
@@ -1207,13 +1207,13 @@ msgid "Notifications OAuth Clients Devices Text"
 msgstr "Quản lý thiết bị của tôi"
 
 msgid "Terms of services have been updated"
-msgstr "Để tuân thủ GDPR, Cozy Cloud đã cập nhật Điều khoản dịch vụ, có hiệu lực từ ngày 25/05/2018"
+msgstr "Để tuân thủ GDPR, Twake Cloud đã cập nhật Điều khoản dịch vụ, có hiệu lực từ ngày 25/05/2018"
 
 msgid "Compat Title"
 msgstr "Trình duyệt web của bạn đã lỗi thời hoặc không còn được hỗ trợ."
 
 msgid "Compat Subtitle"
-msgstr "Cập nhật trình duyệt của bạn hoặc tải một trong các trình duyệt sau để trải nghiệm đầy đủ Cozy. Chúng tôi khuyên dùng Firefox!"
+msgstr "Cập nhật trình duyệt của bạn hoặc tải một trong các trình duyệt sau để trải nghiệm đầy đủ Twake. Chúng tôi khuyên dùng Firefox!"
 
 msgid "Compat Browser Chrome Link"
 msgstr "https://www.google.com/chrome/"
@@ -1228,7 +1228,7 @@ msgid "Compat Tip 1"
 msgstr "Cập nhật trình duyệt giúp bạn duyệt web an toàn hơn với bảo mật tốt hơn."
 
 msgid "Compat Tip 2"
-msgstr "Trình duyệt của bạn sẽ nhanh hơn và trải nghiệm Cozy sẽ được cải thiện."
+msgstr "Trình duyệt của bạn sẽ nhanh hơn và trải nghiệm Twake sẽ được cải thiện."
 
 msgid "Compat Help"
 msgstr "Cần thêm trợ giúp?"
@@ -1243,19 +1243,19 @@ msgid "File copy Suffix"
 msgstr "bản sao"
 
 msgid "Install New App Title"
-msgstr "Cài đặt ứng dụng Cozy mới!"
+msgstr "Cài đặt ứng dụng Twake mới!"
 
 msgid "Install App Unavailable"
 msgstr "Phiên bản %s này không còn được hỗ trợ."
 
 msgid "Install New Iphone App Description"
-msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ App Store để tiếp tục sử dụng đầy đủ các tính năng."
+msgstr "Vui lòng cài đặt ứng dụng Twake mới từ App Store để tiếp tục sử dụng đầy đủ các tính năng."
 
 msgid "Install New Android App Description"
-msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ Play Store để tiếp tục sử dụng đầy đủ các tính năng."
+msgstr "Vui lòng cài đặt ứng dụng Twake mới từ Play Store để tiếp tục sử dụng đầy đủ các tính năng."
 
 msgid "Install New Generic App Description"
-msgstr "Vui lòng cài đặt ứng dụng Cozy mới từ cửa hàng yêu thích của bạn để tiếp tục sử dụng đầy đủ các tính năng."
+msgstr "Vui lòng cài đặt ứng dụng Twake mới từ cửa hàng yêu thích của bạn để tiếp tục sử dụng đầy đủ các tính năng."
 
 msgid "Install New App Store Btn"
 msgstr "Cài đặt"
@@ -1273,7 +1273,7 @@ msgid "Too Many OAuth Clients More Link"
 msgstr "https://help.cozy.io/maximum-number-of-connected-devices-allowed/"
 
 msgid "Too Many OAuth Clients Available Actions"
-msgstr "Ngắt kết nối một thiết bị hoặc thay đổi gói Cozy của bạn để truy cập Cozy từ thiết bị này."
+msgstr "Ngắt kết nối một thiết bị hoặc thay đổi gói Twake của bạn để truy cập Twake từ thiết bị này."
 
 msgid "Too Many OAuth Clients Offers Btn"
 msgstr "Xem các gói"
@@ -1291,10 +1291,10 @@ msgid "Install flagship app Title"
 msgstr "Cài đặt ứng dụng để hoàn tất"
 
 msgid "Install flagship app Description"
-msgstr "Cozy của bạn đã được tạo thành công, hãy cài đặt ứng dụng để bắt đầu sử dụng ngay!"
+msgstr "Twake của bạn đã được tạo thành công, hãy cài đặt ứng dụng để bắt đầu sử dụng ngay!"
 
 msgid "Install flagship app Install"
-msgstr "Cài đặt ứng dụng Cozy"
+msgstr "Cài đặt ứng dụng Twake"
 
 msgid "Install flagship app Skip"
 msgstr "Tiếp tục sử dụng trên trình duyệt"
@@ -1326,7 +1326,7 @@ msgstr ""
 "Chúng tôi lưu ý rằng email này có thể nằm trong thư mục Spam, Thông báo hoặc Mạng xã hội. Vui lòng kiểm tra các thư mục đó để tìm email."
 
 msgid "Push Sharing Shortcut Title"
-msgstr "Có một chia sẻ mới trong Cozy của bạn"
+msgstr "Có một chia sẻ mới trong Twake của bạn"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s đã chia sẻ %s với bạn."
