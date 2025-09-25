@@ -76,11 +76,12 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 	// Declare queue with args and bind to exchange
 	log.Debugf("Declaring queue: %s with DLX: %s, DLQ: %s, delivery limit: %d", q.cfg.Name, q.dlxName, q.dlqName, q.cfg.DeliveryLimit)
 	qArgs := amqp.Table{
-		"x-queue-type":           QuorumType,
-		"x-dead-letter-exchange": q.dlxName,
-		"x-delivery-limit":       q.cfg.DeliveryLimit,
-		"x-dead-letter-strategy": StrategyAtLeastOnce,
-		"x-overflow":             StrategyOverflow,
+		"x-queue-type":             QuorumType,
+		"x-dead-letter-exchange":   q.dlxName,
+		"x-delivery-limit":         q.cfg.DeliveryLimit,
+		"x-dead-letter-strategy":   StrategyAtLeastOnce,
+		"x-overflow":               StrategyOverflow,
+		"x-single-active-consumer": true, // Enable Single Active Consumer for failover
 	}
 
 	if q.cfg.Declare {
@@ -129,7 +130,7 @@ func (r *queueRunner) run(ctx context.Context) error {
 		log.Errorf("Failed to start consumer for queue %s: %v", r.queue.cfg.Name, err)
 		return fmt.Errorf("failed to start consumer [exchange=%s queue=%s]: %w", r.exchangeName, r.queue.cfg.Name, err)
 	}
-	log.Infof("Successfully started consumer for queue: %s", r.queue.cfg.Name)
+	log.Infof("Successfully started consumer for queue: %s (consumer tag: %s) - waiting for activation with Single Active Consumer", r.queue.cfg.Name, r.consumerTag)
 
 	messageCount := 0
 	for {
@@ -150,6 +151,9 @@ func (r *queueRunner) run(ctx context.Context) error {
 				return fmt.Errorf("delivery channel closed [exchange=%s queue=%s]", r.exchangeName, r.queue.cfg.Name)
 			}
 			messageCount++
+			if messageCount == 1 {
+				log.Infof("🎯 CONSUMER ACTIVATED: This process is now the active consumer for queue %s (consumer tag: %s)", r.queue.cfg.Name, r.consumerTag)
+			}
 			log.Debugf("Received message #%d for queue %s (routing key: %s, message ID: %s)", messageCount, r.queue.cfg.Name, d.RoutingKey, d.MessageId)
 			var handleErr error
 			func() {
