@@ -927,7 +927,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)        // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
-	router.PATCH("/:sharing-id", PatchSharing)
+	router.PATCH("/:sharing-id", PatchSharing, checkSharingWritePermissions)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Managing recipients

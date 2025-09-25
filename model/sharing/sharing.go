@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -1047,7 +1048,119 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 // PatchDescription saves a new description for a sharing.
 func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
 	s.Description = description
-	return couchdb.UpdateDoc(inst, s)
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	if s.Owner {
+		go s.ReplicateDescriptionChange(inst)
+	}
+	return nil
+}
+
+type PatchDescriptionParams struct {
+	Description string `json:"description"`
+}
+
+// ReplicateDescriptionChange sends the new sharing description to the non
+// revoked recipients so they can update it on their side.
+func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
+	if !s.Owner {
+		return
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch r := r.(type) {
+			case error:
+				err = r
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			stack := make([]byte, 4<<10) // 4 KB
+			length := runtime.Stack(stack, false)
+			log := inst.Logger().WithNamespace("sharing").WithField("panic", true)
+			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+		}
+	}()
+
+	shouldNotify := false
+	for i, m := range s.Members {
+		if shouldReplicateDescriptionChange(i, m) {
+			shouldNotify = true
+			break
+		}
+	}
+
+	if !shouldNotify {
+		return
+	}
+
+	for i, m := range s.Members {
+		if !shouldReplicateDescriptionChange(i, m) {
+			continue
+		}
+
+		u, err := url.Parse(m.Instance)
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Infof("Invalid instance URL %s: %s", m.Instance, err)
+			continue
+		}
+
+		c := &s.Credentials[i-1]
+		var token string
+		if m.Status == MemberStatusReady {
+			token = c.AccessToken.AccessToken
+		} else {
+			perms, err := permission.GetForSharePreview(inst, s.SID)
+			if err == nil {
+				token = perms.Codes[m.Email]
+			}
+			if token == "" {
+				continue
+			}
+		}
+
+		params := PatchDescriptionParams{
+			Description: s.Description,
+		}
+		body, err := json.Marshal(params)
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Can't serialize the updated description for %s: %s", s.SID, err)
+			return
+		}
+
+		// TODO: add optimization for recipients on the same stack?!
+		opts := &request.Options{
+			Method: http.MethodPatch,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID,
+			Headers: request.Headers{
+				echo.HeaderAccept:        jsonapi.ContentType,
+				echo.HeaderContentType:   jsonapi.ContentType,
+				echo.HeaderAuthorization: "Bearer " + token,
+			},
+			Body:       bytes.NewReader(body),
+			ParseError: ParseRequestError,
+		}
+		res, err := request.Req(opts)
+		if res != nil && res.StatusCode/100 == 4 {
+			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
+		}
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Debugf("Can't notify %#v about the updated description: %s", m, err)
+			continue
+		}
+		res.Body.Close()
+	}
+}
+
+func shouldReplicateDescriptionChange(i int, m Member) bool {
+	return i > 0 && m.Status != MemberStatusRevoked && m.Instance != ""
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.
