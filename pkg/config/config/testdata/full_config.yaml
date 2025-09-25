@@ -114,6 +114,38 @@ clouderies:
       url: https://manager-url
       token: manager-token
 
+rabbitmq:
+  enabled: true
+  url: amqp://guest:guest@localhost:5672/
+  tls:
+    root_ca: /etc/ssl/certs/ca.pem
+    insecure_skip_validation: false
+    server_name: rabbit.internal
+  exchanges:
+    - name: auth
+      kind: topic
+      durable: true
+      declare_exchange: true
+      dlx_name: auth.dlx
+      dlq_name: auth.dlq
+      queues:
+        - name: user.password.updated
+          declare: true
+          declare_dlx: true
+          declare_dlq: true
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - password.changed
+        - name: user.created
+          declare: true
+          declare_dlx: false
+          declare_dlq: true
+          prefetch: 8
+          delivery_limit: 5
+          bindings:
+            - user.created
+
 common_settings:
   default:
     url: https://common-settings-default-url

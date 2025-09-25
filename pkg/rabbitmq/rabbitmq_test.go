@@ -515,3 +515,199 @@ func (m *testMessageSender) publish(msg testMessage) {
 		},
 	))
 }
+
+func TestDLXDLQDeclaration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test skipped with --short")
+	}
+
+	t.Run("DeclareDLXAndDLQ_WhenConfigured", func(t *testing.T) {
+		t.Parallel()
+
+		MQ := testutils.StartRabbitMQ(t, true, false)
+		defer MQ.Stop(context.Background(), 30*time.Second)
+
+		// Create configuration with DLX/DLQ enabled
+		exchangeCfg := &config.RabbitExchange{
+			Name:            "test-exchange",
+			Kind:            "topic",
+			DeclareExchange: true,
+			Durable:         true,
+			DLXName:         "test-dlx",
+			DLQName:         "test-dlq",
+		}
+		queueCfg := &config.RabbitQueue{
+			Name:       "test-queue",
+			Bindings:   []string{"test.routing.key"},
+			Declare:    true,
+			DeclareDLX: true,
+			DeclareDLQ: true,
+			DLXName:    "test-dlx",
+			DLQName:    "test-dlq",
+		}
+
+		mgr := createAndStartManager(t, MQ, exchangeCfg, queueCfg, "test-dlx", "test-dlq")
+		defer mgr.Shutdown(testCtx(t))
+
+		verifyDLXExists(t, MQ, "test-dlx")
+		verifyDLQExists(t, MQ, "test-dlq")
+	})
+
+	t.Run("DoNotDeclareDLXAndDLQ_WhenNotConfigured", func(t *testing.T) {
+		t.Parallel()
+
+		MQ := testutils.StartRabbitMQ(t, true, false)
+		defer MQ.Stop(context.Background(), 30*time.Second)
+
+		// Create configuration without DLX/DLQ enabled
+		exchangeCfg := &config.RabbitExchange{
+			Name:            "test-exchange",
+			Kind:            "topic",
+			DeclareExchange: true,
+			Durable:         true,
+		}
+		queueCfg := &config.RabbitQueue{
+			Name:       "test-queue",
+			Bindings:   []string{"test.routing.key"},
+			Declare:    true,
+			DeclareDLX: false,
+			DeclareDLQ: false,
+		}
+
+		mgr := createAndStartManager(t, MQ, exchangeCfg, queueCfg, "", "")
+		defer mgr.Shutdown(testCtx(t))
+
+		verifyDLXNotExists(t, MQ, "test-dlx")
+		verifyDLQNotExists(t, MQ, "test-dlq")
+	})
+
+	t.Run("DeclareOnlyDLX_WhenOnlyDLXConfigured", func(t *testing.T) {
+		t.Parallel()
+
+		MQ := testutils.StartRabbitMQ(t, true, false)
+		defer MQ.Stop(context.Background(), 30*time.Second)
+
+		// Create configuration with only DLX enabled
+		exchangeCfg := &config.RabbitExchange{
+			Name:            "test-exchange",
+			Kind:            "topic",
+			DeclareExchange: true,
+			Durable:         true,
+			DLXName:         "test-dlx-only",
+		}
+		queueCfg := &config.RabbitQueue{
+			Name:       "test-queue",
+			Bindings:   []string{"test.routing.key"},
+			Declare:    true,
+			DeclareDLX: true,
+			DeclareDLQ: false,
+			DLXName:    "test-dlx-only",
+		}
+
+		mgr := createAndStartManager(t, MQ, exchangeCfg, queueCfg, "test-dlx-only", "")
+		defer mgr.Shutdown(testCtx(t))
+
+		verifyDLXExists(t, MQ, "test-dlx-only")
+		verifyDLQNotExists(t, MQ, "test-dlq-only")
+	})
+
+	t.Run("DeclareOnlyDLQ_WhenOnlyDLQConfigured", func(t *testing.T) {
+		t.Parallel()
+
+		MQ := testutils.StartRabbitMQ(t, true, false)
+		defer MQ.Stop(context.Background(), 30*time.Second)
+
+		// Create configuration with only DLQ enabled
+		exchangeCfg := &config.RabbitExchange{
+			Name:            "test-exchange",
+			Kind:            "topic",
+			DeclareExchange: true,
+			Durable:         true,
+			DLQName:         "test-dlq-only",
+		}
+		queueCfg := &config.RabbitQueue{
+			Name:       "test-queue",
+			Bindings:   []string{"test.routing.key"},
+			Declare:    true,
+			DeclareDLX: false,
+			DeclareDLQ: true,
+			DLQName:    "test-dlq-only",
+		}
+
+		mgr := createAndStartManager(t, MQ, exchangeCfg, queueCfg, "", "test-dlq-only")
+		defer mgr.Shutdown(testCtx(t))
+
+		verifyDLXNotExists(t, MQ, "test-dlx-only")
+		verifyDLQExists(t, MQ, "test-dlq-only")
+	})
+}
+
+// createAndStartManager creates a RabbitMQ manager with the given configuration and starts it
+func createAndStartManager(t *testing.T, mq *testutils.RabbitFixture, exchangeCfg *config.RabbitExchange, queueCfg *config.RabbitQueue, dlxName, dlqName string) *rabbitmq.RabbitMQManager {
+	handler := newCountingTestHandler()
+	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
+	queue := rabbitmq.NewQueueSpec(queueCfg, handler, dlxName, dlqName)
+	exchange.Queues = []rabbitmq.QueueSpec{queue}
+
+	exchanges := []rabbitmq.ExchangeSpec{exchange}
+	mgr := rabbitmq.NewRabbitMQManager(mq.AMQPURL, exchanges)
+
+	_, err := mgr.Start(testCtx(t))
+	require.NoError(t, err)
+	require.NoError(t, mgr.WaitReady(testCtx(t)))
+
+	// Give some time for DLX/DLQ to be declared
+	time.Sleep(100 * time.Millisecond)
+
+	return mgr
+}
+
+func verifyDLXExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
+	conn, ch := createTestConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	// Try to declare DLX with different parameters - should fail because it already exists
+	err := ch.ExchangeDeclare(dlxName, "direct", true, false, false, false, nil)
+	require.Error(t, err, "DLX %s should already be declared with different type", dlxName)
+}
+
+func verifyDLQExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
+	conn, ch := createTestConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	// Try to declare DLQ with different parameters - should fail because it already exists
+	_, err := ch.QueueDeclare(dlqName, false, false, false, false, nil)
+	require.Error(t, err, "DLQ %s should already be declared with different durability", dlqName)
+}
+
+func verifyDLXNotExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
+	conn, ch := createTestConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	// Try to declare DLX - should succeed because it doesn't exist
+	err := ch.ExchangeDeclare(dlxName, "fanout", true, false, false, false, nil)
+	require.NoError(t, err, "DLX %s should not be declared yet", dlxName)
+}
+
+func verifyDLQNotExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
+	conn, ch := createTestConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	// Try to declare DLQ - should succeed because it doesn't exist
+	_, err := ch.QueueDeclare(dlqName, true, false, false, false, nil)
+	require.NoError(t, err, "DLQ %s should not be declared yet", dlqName)
+}
+
+func createTestConnection(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Connection, *amqp.Channel) {
+	conn, err := amqp.Dial(mq.AMQPURL)
+	require.NoError(t, err)
+
+	ch, err := conn.Channel()
+	require.NoError(t, err)
+
+	return conn, ch
+}

@@ -543,9 +543,12 @@ rabbitmq:
       durable: true
       declare_exchange: true
       dlx_name: auth.dlx
+      dlq_name: auth.dlq
       queues:
         - name: user.password.updated
           declare: true
+          declare_dlx: true
+          declare_dlq: true
           prefetch: 8
           delivery_limit: 5
           bindings:
