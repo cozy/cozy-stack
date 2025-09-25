@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -231,6 +232,10 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	if dir != nil {
 		files.UpdateDirCozyMetadata(c, dir)
 		dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+		if patch.Name != nil {
+			// Update sharing description if this directory is a sharing root
+			updateSharingDescriptionIfNeeded(c, dir)
+		}
 	} else {
 		files.UpdateFileCozyMetadata(c, file, false)
 		file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
@@ -614,4 +619,35 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string, requi
 	}
 
 	return s, nil
+}
+
+// updateSharingDescriptionIfNeeded checks if the given directory is a sharing
+// root and triggers a job to update the sharing description if needed.
+func updateSharingDescriptionIfNeeded(c echo.Context, dir *vfs.DirDoc) {
+	inst := middlewares.GetInstance(c)
+
+	// Check if this directory is referenced by any sharings
+	for _, ref := range dir.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			// This directory is a sharing root, trigger an update job
+			msg, err := job.NewMessage(&sharing.UpdateMsg{
+				SharingID: ref.ID,
+				DirName:   dir.DocName,
+			})
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Failed to create share-update message: %s", err)
+				continue
+			}
+
+			_, err = job.System().PushJob(inst, &job.JobRequest{
+				WorkerType: "share-update",
+				Message:    msg,
+			})
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Failed to push share-update job for sharing %s: %s", ref.ID, err)
+			}
+		}
+	}
 }
