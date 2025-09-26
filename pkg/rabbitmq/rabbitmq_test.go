@@ -39,14 +39,14 @@ func TestRabbitMQManager(t *testing.T) {
 
 		// Build manager with one exchange and one queue using PasswordChangeHandler wrapper
 		handler := newCountingTestHandler()
-		mgr := initRabbitMQManager(rabbitmq.AMQPURL, "auth", "user.password.updated", "password.changed", handler)
+		mgr := initRabbitMQManager(rabbitmq.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
 		_, err := mgr.Start(testCtx(t))
 		require.NoError(t, err)
 
 		// Wait for manager to declare topology
 		require.NoError(t, mgr.WaitReady(testCtx(t)))
 
-		sender := newTestMessageSender(t, rabbitmq.AMQPURL, "auth", "password.changed")
+		sender := newTestMessageSender(t, rabbitmq.AMQPURL, "auth", "password.updated")
 		// Publish all messages
 		for i := 0; i < totalMessages; i++ {
 			msg := testMessage{TimeStamp: time.Now().UnixMilli()}
@@ -68,13 +68,13 @@ func TestRabbitMQManager(t *testing.T) {
 
 		// Build manager with one exchange and one queue using PasswordChangeHandler wrapper
 		handler := newCountingTestHandler()
-		mgr := initRabbitMQManager(MQ.AMQPURL, "auth", "user.password.updated", "password.changed", handler)
+		mgr := initRabbitMQManager(MQ.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
 		_, err := mgr.Start(testCtx(t))
 		require.NoError(t, err)
 
 		require.NoError(t, mgr.WaitReady(testCtx(t)))
 
-		sender := newTestMessageSender(t, MQ.AMQPURL, "auth", "password.changed")
+		sender := newTestMessageSender(t, MQ.AMQPURL, "auth", "password.updated")
 		// Publish half of the messages
 		for i := 0; i < totalMessages/2; i++ {
 			sender.publish(testMessage{TimeStamp: time.Now().UnixMilli()})
@@ -85,7 +85,7 @@ func TestRabbitMQManager(t *testing.T) {
 		MQ.Restart(context.Background(), 30*time.Second)
 
 		// publish second half
-		sender = newTestMessageSender(t, MQ.AMQPURL, "auth", "password.changed")
+		sender = newTestMessageSender(t, MQ.AMQPURL, "auth", "password.updated")
 		// Publish half of the messages
 		for i := 0; i < totalMessages/2; i++ {
 			sender.publish(testMessage{TimeStamp: time.Now().UnixMilli()})
@@ -143,7 +143,7 @@ func TestPasswordHandler(t *testing.T) {
 		err = ch.PublishWithContext(
 			testCtx(t),
 			"auth",
-			"password.changed",
+			"password.updated",
 			false,
 			false,
 			amqp.Publishing{
@@ -200,7 +200,7 @@ func TestPasswordHandler(t *testing.T) {
 		err = ch.PublishWithContext(
 			testCtx(t),
 			"auth",
-			"password.changed",
+			"password.updated",
 			false,
 			false,
 			amqp.Publishing{
@@ -245,7 +245,7 @@ func TestPasswordHandler(t *testing.T) {
 		err = ch.PublishWithContext(
 			testCtx(t),
 			"auth",
-			"password.changed",
+			"password.updated",
 			false,
 			false,
 			amqp.Publishing{
@@ -350,13 +350,13 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 			DeclareExchange: true,
 			Queues: []config.RabbitQueue{
 				{
-					Name:     "user.password.updated",
-					Bindings: []string{"password.changed"},
+					Name:     "stack.user.password.updated",
+					Bindings: []string{"password.updated"},
 					Prefetch: 4,
 					Declare:  true,
 				},
 				{
-					Name:     "user.created",
+					Name:     "stack.user.created",
 					Bindings: []string{"user.created"},
 					Prefetch: 4,
 					Declare:  true,
@@ -830,11 +830,11 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 		DeliveryLimit: 5,
 		DeclareDLQ:    true,
 		DLQName:       "stack.dead.letter.user.password.updated",
-		Bindings:      []string{"password.changed"},
+		Bindings:      []string{"password.updated"},
 		// Declare DLX so the DLX exists even if not pre-created
 		DeclareDLX: true,
 		// Route dead letters via a specific routing key on a topic DLX
-		DLRoutingKey: "password.changed.dead",
+		DLRoutingKey: "password.updated.dead",
 	}
 
 	// Create manager with a failing handler to force redeliveries and count attempts
@@ -850,7 +850,7 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 	require.NoError(t, mgr.WaitReady(testCtx(t)))
 
 	// Publish one message to be routed to the main queue
-	sender := newTestMessageSender(t, MQ.AMQPURL, "auth", "password.changed")
+	sender := newTestMessageSender(t, MQ.AMQPURL, "auth", "password.updated")
 	original := testMessage{TimeStamp: time.Now().UnixMilli()}
 	sender.publish(original)
 
@@ -867,7 +867,7 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 
 		// Verify dead-letter exchange and routing key were used by broker
 		// The message should retain the DLX used and be routed with our configured key
-		require.Equal(t, "password.changed.dead", msg.RoutingKey)
+		require.Equal(t, "password.updated.dead", msg.RoutingKey)
 	}
 
 	require.NoError(t, mgr.Shutdown(testCtx(t)))

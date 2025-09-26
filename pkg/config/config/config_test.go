@@ -353,7 +353,7 @@ rabbitmq:
       dlx_name: "cozy.admin.dlx"
       dlq_name: "cozy.admin.dlq"
       queues:
-        - name: "user.password.updated"
+        - name: "stack.user.password.updated"
           bindings: ["user.password.change"]
           prefetch: 32
           delivery_limit: 5
