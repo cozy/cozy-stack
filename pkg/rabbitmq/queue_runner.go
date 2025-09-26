@@ -54,6 +54,8 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		log.Debugf("Successfully declared DLX: %s", q.dlxName)
 	}
 
+	bindingDQLKey := getDLQBindingKey(q)
+
 	if q.cfg.DeclareDLQ && q.dlqName != "" {
 		log.Debugf("Declaring DLQ: %s for queue: %s", q.dlqName, q.cfg.Name)
 		if _, err := r.ch.QueueDeclare(q.dlqName, true, false, false, false, nil); err != nil {
@@ -64,34 +66,26 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		log.Debugf("Successfully declared DLQ: %s", q.dlqName)
 		if q.dlxName != "" {
 			// Use configured DL routing key if present; otherwise keep empty key
-			bindingKey := ""
-			if q.cfg.DLRoutingKey != "" {
-				bindingKey = q.cfg.DLRoutingKey
-			}
-			log.Debugf("Binding DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingKey)
-			if err := r.ch.QueueBind(q.dlqName, bindingKey, q.dlxName, false, nil); err != nil {
+			log.Debugf("Binding DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingDQLKey)
+			if err := r.ch.QueueBind(q.dlqName, bindingDQLKey, q.dlxName, false, nil); err != nil {
 				_ = ch.Close()
-				log.Errorf("Failed to bind DLQ %s to DLX %s with key '%s': %v", q.dlqName, q.dlxName, bindingKey, err)
+				log.Errorf("Failed to bind DLQ %s to DLX %s with key '%s': %v", q.dlqName, q.dlxName, bindingDQLKey, err)
 				return nil, fmt.Errorf("failed to bind DLQ %s to DLX %s: %w", q.dlqName, q.dlxName, err)
 			}
-			log.Debugf("Successfully bound DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingKey)
+			log.Debugf("Successfully bound DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingDQLKey)
 		}
 	}
 
 	// Declare queue with args and bind to exchange
 	log.Debugf("Declaring queue: %s with DLX: %s, DLQ: %s, delivery limit: %d", q.cfg.Name, q.dlxName, q.dlqName, q.cfg.DeliveryLimit)
 	qArgs := amqp.Table{
-		"x-queue-type":             QuorumType,
-		"x-dead-letter-exchange":   q.dlxName,
-		"x-delivery-limit":         q.cfg.DeliveryLimit,
-		"x-dead-letter-strategy":   StrategyAtLeastOnce,
-		"x-overflow":               StrategyOverflow,
-		"x-single-active-consumer": true, // Enable Single Active Consumer for failover
-	}
-
-	// Optional per-queue dead-letter routing key
-	if q.cfg.DLRoutingKey != "" {
-		qArgs["x-dead-letter-routing-key"] = q.cfg.DLRoutingKey
+		"x-queue-type":              QuorumType,
+		"x-dead-letter-exchange":    q.dlxName,
+		"x-delivery-limit":          q.cfg.DeliveryLimit,
+		"x-dead-letter-strategy":    StrategyAtLeastOnce,
+		"x-overflow":                StrategyOverflow,
+		"x-single-active-consumer":  true,          // Enable Single Active Consumer for failover
+		"x-dead-letter-routing-key": bindingDQLKey, // Optional per-queue dead-letter routing key
 	}
 
 	if q.cfg.Declare {
@@ -129,6 +123,14 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 
 	log.Debugf("Queue runner setup completed for: %s", q.cfg.Name)
 	return r, nil
+}
+
+func getDLQBindingKey(q QueueSpec) string {
+	bindingKey := q.cfg.Bindings[0]
+	if q.cfg.DLRoutingKey != "" {
+		bindingKey = q.cfg.DLRoutingKey
+	}
+	return bindingKey
 }
 
 func (r *queueRunner) run(ctx context.Context) error {
