@@ -87,8 +87,9 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		log.Debugf("password change: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
-	log.Debugf("password change: retrieving instance for domain: %s", msg.Domain)
-	inst, err := lifecycle.GetInstance(msg.Domain)
+	userDomain := msg.TwakeID + "." + msg.Domain
+	log.Debugf("password change: retrieving instance for domain: %s", userDomain)
+	inst, err := lifecycle.GetInstance(userDomain)
 	if err != nil {
 		return fmt.Errorf("password change: get instance: %w", err)
 	}
@@ -182,7 +183,9 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 		log.Debugf("user.created: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
-	inst, err := lifecycle.GetInstance(msg.Domain)
+	userDomain := msg.TwakeID + "." + msg.Domain
+	log.Debugf("user.created: looking for instance for domain: %s", userDomain)
+	inst, err := lifecycle.GetInstance(userDomain)
 	if err != nil {
 		return fmt.Errorf("user.created: get instance: %w", err)
 	}
