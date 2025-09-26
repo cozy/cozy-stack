@@ -46,7 +46,7 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 	// Declare DLX/DLQ using resolved fields already set on QueueSpec
 	if q.cfg.DeclareDLX && q.dlxName != "" {
 		log.Debugf("Declaring DLX: %s for queue: %s", q.dlxName, q.cfg.Name)
-		if err := r.ch.ExchangeDeclare(q.dlxName, "fanout", true, false, false, false, nil); err != nil {
+		if err := r.ch.ExchangeDeclare(q.dlxName, "topic", true, false, false, false, nil); err != nil {
 			_ = ch.Close()
 			log.Errorf("Failed to declare DLX %s for queue %s: %v", q.dlxName, q.cfg.Name, err)
 			return nil, fmt.Errorf("failed to declare DLX %s: %w", q.dlxName, err)
@@ -63,13 +63,18 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		}
 		log.Debugf("Successfully declared DLQ: %s", q.dlqName)
 		if q.dlxName != "" {
-			log.Debugf("Binding DLQ %s to DLX %s", q.dlqName, q.dlxName)
-			if err := r.ch.QueueBind(q.dlqName, "", q.dlxName, false, nil); err != nil {
+			// Use configured DL routing key if present; otherwise keep empty key
+			bindingKey := ""
+			if q.cfg.DLRoutingKey != "" {
+				bindingKey = q.cfg.DLRoutingKey
+			}
+			log.Debugf("Binding DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingKey)
+			if err := r.ch.QueueBind(q.dlqName, bindingKey, q.dlxName, false, nil); err != nil {
 				_ = ch.Close()
-				log.Errorf("Failed to bind DLQ %s to DLX %s: %v", q.dlqName, q.dlxName, err)
+				log.Errorf("Failed to bind DLQ %s to DLX %s with key '%s': %v", q.dlqName, q.dlxName, bindingKey, err)
 				return nil, fmt.Errorf("failed to bind DLQ %s to DLX %s: %w", q.dlqName, q.dlxName, err)
 			}
-			log.Debugf("Successfully bound DLQ %s to DLX %s", q.dlqName, q.dlxName)
+			log.Debugf("Successfully bound DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingKey)
 		}
 	}
 
@@ -82,6 +87,11 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		"x-dead-letter-strategy":   StrategyAtLeastOnce,
 		"x-overflow":               StrategyOverflow,
 		"x-single-active-consumer": true, // Enable Single Active Consumer for failover
+	}
+
+	// Optional per-queue dead-letter routing key
+	if q.cfg.DLRoutingKey != "" {
+		qArgs["x-dead-letter-routing-key"] = q.cfg.DLRoutingKey
 	}
 
 	if q.cfg.Declare {

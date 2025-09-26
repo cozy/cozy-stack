@@ -833,6 +833,8 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 		Bindings:      []string{"password.changed"},
 		// Declare DLX so the DLX exists even if not pre-created
 		DeclareDLX: true,
+		// Route dead letters via a specific routing key on a topic DLX
+		DLRoutingKey: "password.changed.dead",
 	}
 
 	// Create manager with a failing handler to force redeliveries and count attempts
@@ -862,6 +864,10 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 		require.Equal(t, original.TimeStamp, got.TimeStamp)
 		// Ensure the message was attempted DeliveryLimit+1 times (final attempt causes DLQ)
 		require.Equal(t, int64(queueCfg.DeliveryLimit+1), handler.calls.Load())
+
+		// Verify dead-letter exchange and routing key were used by broker
+		// The message should retain the DLX used and be routed with our configured key
+		require.Equal(t, "password.changed.dead", msg.RoutingKey)
 	}
 
 	require.NoError(t, mgr.Shutdown(testCtx(t)))
