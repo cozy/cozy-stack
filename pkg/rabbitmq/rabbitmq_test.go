@@ -115,7 +115,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithKey")
 		inst := setup.GetTestInstance()
 
-		username, domain := SplitDomain(t, inst.Domain)
+		slug, domain := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -129,7 +129,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    username,
+			TwakeID:    slug,
 			Iterations: 100000,
 			Hash:       testHash,
 			PublicKey:  "PUB",
@@ -176,7 +176,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		username, domain := SplitDomain(t, inst.Domain)
+		slug, domain := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -185,7 +185,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    username,
+			TwakeID:    slug,
 			Iterations: 100000,
 			Hash:       testHash,
 			PublicKey:  "PUB",
@@ -225,7 +225,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		username, domain := SplitDomain(t, inst.Domain)
+		slug, domain := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -234,7 +234,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash1234"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    username,
+			TwakeID:    slug,
 			Iterations: 100000,
 			Hash:       testHash,
 			Domain:     domain,
@@ -270,7 +270,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "CreateUserWithKey")
 		inst := setup.GetTestInstance()
 
-		username, domain := SplitDomain(t, inst.Domain)
+		slug, domain := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -284,7 +284,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash_user_created_1"
 		msg := rabbitmq.UserCreatedMessage{
-			TwakeID:    username,
+			TwakeID:    slug,
 			Iterations: 100000,
 			Hash:       testHash,
 			PublicKey:  "PUB",
