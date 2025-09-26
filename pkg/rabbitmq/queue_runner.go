@@ -46,13 +46,15 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 	// Declare DLX/DLQ using resolved fields already set on QueueSpec
 	if q.cfg.DeclareDLX && q.dlxName != "" {
 		log.Debugf("Declaring DLX: %s for queue: %s", q.dlxName, q.cfg.Name)
-		if err := r.ch.ExchangeDeclare(q.dlxName, "fanout", true, false, false, false, nil); err != nil {
+		if err := r.ch.ExchangeDeclare(q.dlxName, "topic", true, false, false, false, nil); err != nil {
 			_ = ch.Close()
 			log.Errorf("Failed to declare DLX %s for queue %s: %v", q.dlxName, q.cfg.Name, err)
 			return nil, fmt.Errorf("failed to declare DLX %s: %w", q.dlxName, err)
 		}
 		log.Debugf("Successfully declared DLX: %s", q.dlxName)
 	}
+
+	bindingDQLKey := getDLQBindingKey(q)
 
 	if q.cfg.DeclareDLQ && q.dlqName != "" {
 		log.Debugf("Declaring DLQ: %s for queue: %s", q.dlqName, q.cfg.Name)
@@ -63,25 +65,27 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 		}
 		log.Debugf("Successfully declared DLQ: %s", q.dlqName)
 		if q.dlxName != "" {
-			log.Debugf("Binding DLQ %s to DLX %s", q.dlqName, q.dlxName)
-			if err := r.ch.QueueBind(q.dlqName, "", q.dlxName, false, nil); err != nil {
+			// Use configured DL routing key if present; otherwise keep empty key
+			log.Debugf("Binding DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingDQLKey)
+			if err := r.ch.QueueBind(q.dlqName, bindingDQLKey, q.dlxName, false, nil); err != nil {
 				_ = ch.Close()
-				log.Errorf("Failed to bind DLQ %s to DLX %s: %v", q.dlqName, q.dlxName, err)
+				log.Errorf("Failed to bind DLQ %s to DLX %s with key '%s': %v", q.dlqName, q.dlxName, bindingDQLKey, err)
 				return nil, fmt.Errorf("failed to bind DLQ %s to DLX %s: %w", q.dlqName, q.dlxName, err)
 			}
-			log.Debugf("Successfully bound DLQ %s to DLX %s", q.dlqName, q.dlxName)
+			log.Debugf("Successfully bound DLQ %s to DLX %s with key '%s'", q.dlqName, q.dlxName, bindingDQLKey)
 		}
 	}
 
 	// Declare queue with args and bind to exchange
 	log.Debugf("Declaring queue: %s with DLX: %s, DLQ: %s, delivery limit: %d", q.cfg.Name, q.dlxName, q.dlqName, q.cfg.DeliveryLimit)
 	qArgs := amqp.Table{
-		"x-queue-type":             QuorumType,
-		"x-dead-letter-exchange":   q.dlxName,
-		"x-delivery-limit":         q.cfg.DeliveryLimit,
-		"x-dead-letter-strategy":   StrategyAtLeastOnce,
-		"x-overflow":               StrategyOverflow,
-		"x-single-active-consumer": true, // Enable Single Active Consumer for failover
+		"x-queue-type":              QuorumType,
+		"x-dead-letter-exchange":    q.dlxName,
+		"x-delivery-limit":          q.cfg.DeliveryLimit,
+		"x-dead-letter-strategy":    StrategyAtLeastOnce,
+		"x-overflow":                StrategyOverflow,
+		"x-single-active-consumer":  true,          // Enable Single Active Consumer for failover
+		"x-dead-letter-routing-key": bindingDQLKey, // Optional per-queue dead-letter routing key
 	}
 
 	if q.cfg.Declare {
@@ -119,6 +123,14 @@ func newQueueRunner(conn *amqp.Connection, exchangeName string, q QueueSpec) (*q
 
 	log.Debugf("Queue runner setup completed for: %s", q.cfg.Name)
 	return r, nil
+}
+
+func getDLQBindingKey(q QueueSpec) string {
+	bindingKey := q.cfg.Bindings[0]
+	if q.cfg.DLRoutingKey != "" {
+		bindingKey = q.cfg.DLRoutingKey
+	}
+	return bindingKey
 }
 
 func (r *queueRunner) run(ctx context.Context) error {

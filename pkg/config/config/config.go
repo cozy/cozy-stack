@@ -185,6 +185,7 @@ type RabbitQueue struct {
 	DeclareDLQ    bool     `mapstructure:"declare_dlq" yaml:"declare_dlq"`       // whether declare DLQ on start up
 	DLXName       string   `mapstructure:"dlx_name" yaml:"dlx_name"`             // optional per-queue DLX name (overrides exchange)
 	DLQName       string   `mapstructure:"dlq_name" yaml:"dlq_name"`             // optional per-queue DLQ name (overrides exchange)
+	DLRoutingKey  string   `mapstructure:"dl_routing_key" yaml:"dl_routing_key"` // optional dead-letter routing key override
 }
 
 type RabbitExchange struct {
