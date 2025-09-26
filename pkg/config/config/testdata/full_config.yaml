@@ -56,7 +56,7 @@ jobs:
 
 mail:
   noreply_address: foo@bar.baz
-  noreply_name: My Cozy
+  noreply_name: My Twake
   alert_address: foo2@bar.baz
   reply_to: support@cozycloud.cc
   contexts:

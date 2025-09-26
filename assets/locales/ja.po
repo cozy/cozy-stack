@@ -38,7 +38,7 @@ msgid "Login Credentials error"
 msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
 
 msgid "URL Discovery error"
-msgstr "入力した Cozy URL が間違っています。もう一度やり直してください"
+msgstr "入力した Twake URL が間違っています。もう一度やり直してください"
 
 msgid "Login Welcome"
 msgstr "ようこそ!"
@@ -47,7 +47,7 @@ msgid "Login Welcome name"
 msgstr "%s"
 
 msgid "Login Password help"
-msgstr "Cozy にアクセスするにはパスワードを入力してください"
+msgstr "Twake にアクセスするにはパスワードを入力してください"
 
 msgid "Login Password field"
 msgstr "パスワード"
@@ -110,11 +110,11 @@ msgid "Login Two factor device trust help"
 msgstr "このオプションをオンにすると、今後このデバイスは二要素認証が求められません"
 
 msgid "Onboarding Not activated Title"
-msgstr "Cozy をアクティベートする必要があります"
+msgstr "Twake をアクティベートする必要があります"
 
 msgid "Onboarding Not activated Check mails"
 msgstr ""
-"お使いの Cozy はまだアクティベーションされていません。 メールをチェックしてアクティベーションリンクをクリックすると、Cozy "
+"お使いの Twake はまだアクティベーションされていません。 メールをチェックしてアクティベーションリンクをクリックすると、Twake "
 "のインストールに進みます。"
 
 msgid "Onboarding Not activated Contact us"
@@ -137,7 +137,7 @@ msgstr "警告!"
 
 msgid "Passphrase reset Help"
 msgstr ""
-"現在のパスワードは、お使いのアプリ「Cozy パスワード」に保存されているパスワードを復元する唯一の鍵です。 リセットすると、そのデータは失われます。 "
+"現在のパスワードは、お使いのアプリ「Twake パスワード」に保存されているパスワードを復元する唯一の鍵です。 リセットすると、そのデータは失われます。 "
 "残りのデータには引き続きアクセスできます。"
 
 msgid "Passphrase reset Help emptyVault"
@@ -175,7 +175,7 @@ msgstr "完了"
 
 msgid "Hint sent Body"
 msgstr ""
-"パスワードのヒントをメールで送信しました。 Cozy のパスワードを思い出すのに役立ちます。\n"
+"パスワードのヒントをメールで送信しました。 Twake のパスワードを思い出すのに役立ちます。\n"
 "ご注意ください。このメールは、スパム、通知、またはソーシャルフォルダに入ることがあります。 メールを見つけるためにこれらのフォルダも確認してください。"
 
 msgid "Hint sent Login Button"
@@ -211,7 +211,7 @@ msgid "Authorize Sharing Title"
 msgstr "%s から新しい共有"
 
 msgid "Authorize Client presentation"
-msgstr "Cozy にアクセスする権限が必要です"
+msgstr "Twake にアクセスする権限が必要です"
 
 msgid "Authorize Sharing Request"
 msgstr "%s さんは次のデータをあなたと共有したいといっています:"
@@ -268,10 +268,10 @@ msgid "Authorize Linked Webapp"
 msgstr "アプリケーションの申請は:"
 
 msgid "Authorize Linked YourCozy"
-msgstr "あなたの Cozy にアクセスをリクエストします:"
+msgstr "あなたの Twake にアクセスをリクエストします:"
 
 msgid "Authorize Linked Help"
-msgstr "承認すると、アプリケーションは Cozy のこれらのデータにアクセスできるようになります:"
+msgstr "承認すると、アプリケーションは Twake のこれらのデータにアクセスできるようになります:"
 
 msgid "Error Title"
 msgstr "申し訳ありません。エラーが発生しました。"
@@ -280,19 +280,19 @@ msgid "Error Internal Server Error Title"
 msgstr "おっと…"
 
 msgid "Error Internal Server Error Message"
-msgstr "お使いの Cozy は沈んでいるようです。 私たちのチームは、元に戻す努力をしています。"
+msgstr "お使いの Twake は沈んでいるようです。 私たちのチームは、元に戻す努力をしています。"
 
 msgid "Error Instance not found Title"
-msgstr "この Cozy のアドレスは存在しません"
+msgstr "この Twake のアドレスは存在しません"
 
 msgid "Error Instance not found Message"
-msgstr "入力ミスで誤ったアドレス形式を入力した可能性があります。 作成中にメールで送信したあなたの Cozy のアドレスを確認してください。"
+msgstr "入力ミスで誤ったアドレス形式を入力した可能性があります。 作成中にメールで送信したあなたの Twake のアドレスを確認してください。"
 
 msgid "Error Application not found Title"
 msgstr "アプリケーションはまだ利用できません"
 
 msgid "Error Application not found Message"
-msgstr "申し訳ありません。このアプリケーションはまだお使いの Cozy で利用できません。"
+msgstr "申し訳ありません。このアプリケーションはまだお使いの Twake で利用できません。"
 
 msgid "Error Application not found Action"
 msgstr "ホームに移動"
@@ -307,16 +307,16 @@ msgid "Error Contact instance blocked"
 msgstr "私たちにご連絡ください"
 
 msgid "Error Message instance blocked"
-msgstr "お使いの Cozy はブロックされました"
+msgstr "お使いの Twake はブロックされました"
 
 msgid "Instance Blocked Login"
-msgstr "ログインに失敗した回数が多すぎるため Cozy はブロックされました"
+msgstr "ログインに失敗した回数が多すぎるため Twake はブロックされました"
 
 msgid "Instance Blocked Payment"
-msgstr "Cozy は支払いが必要です"
+msgstr "Twake は支払いが必要です"
 
 msgid "Instance Blocked Unknown"
-msgstr "不明な理由で Cozy がブロックされます"
+msgstr "不明な理由で Twake がブロックされます"
 
 msgid "Error No state parameter"
 msgstr "state パラメータは必須です"
@@ -376,7 +376,7 @@ msgid "Two Factor Activation"
 msgstr "二要素認証が有効になりました"
 
 msgid "Confirmation User Content"
-msgstr "あなたのメールアドレスが確認されました。 私たちはあなたの Cozy の二要素認証を有効にしました。"
+msgstr "あなたのメールアドレスが確認されました。 私たちはあなたの Twake の二要素認証を有効にしました。"
 
 msgid "Permissions Read only"
 msgstr "、読み取り専用"
@@ -496,7 +496,7 @@ msgid "Mail Signature"
 msgstr "敬具"
 
 msgid "Mail Cozy Team"
-msgstr "Cozy クラウドチーム"
+msgstr "Twake クラウドチーム"
 
 msgid "Mail Hint Subject"
 msgstr "パスワードを忘れた: あなたのヒント"
@@ -505,11 +505,11 @@ msgid "Mail Hint Intro 1"
 msgstr "%s さん、こんにちは。"
 
 msgid "Mail Hint Intro 2"
-msgstr "下をご覧ください。Cozy のパスワードを思い出ためのヒントがあります。"
+msgstr "下をご覧ください。Twake のパスワードを思い出ためのヒントがあります。"
 
 msgid "Mail Hint Outro"
 msgstr ""
-"最後の手段として、Cozy "
+"最後の手段として、Twake "
 "の「パスワードを忘れた」セクションでパスワードをリセットすることができます。このリクエストを行っていない場合は、このメールに直接返信してご連絡ください。"
 
 msgid "Mail Reset Passphrase Subject"
@@ -549,7 +549,7 @@ msgid "Mail Two Factor Subject"
 msgstr "ワンタイム接続コード"
 
 msgid "Mail Two Factor Intro"
-msgstr "Cozy の二要素認証が有効になっています。 IDを確認するために次のコードを入力してください:"
+msgstr "Twake の二要素認証が有効になっています。 IDを確認するために次のコードを入力してください:"
 
 msgid "Mail Two Factor Outro"
 msgstr "何をすべきか分かりませんか? support@twake.app からヘルプを受けてください"
@@ -635,7 +635,7 @@ msgstr "容量を増やすには2つの方法があります。"
 msgid "Notifications Disk Quota offers instruction"
 msgstr ""
 "オプション 1:\n"
-"新しい提案を選択して Cozy をアップグレードし、さらに多くの容量を入手しましょう"
+"新しい提案を選択して Twake をアップグレードし、さらに多くの容量を入手しましょう"
 
 msgid "Notifications Disk Quota offers text"
 msgstr "今すぐアップグレード"
@@ -658,13 +658,13 @@ msgid "Notifications OAuth Clients Greeting"
 msgstr "Hello,"
 
 msgid "Notifications OAuth Clients Reason Device"
-msgstr "**You've exceeded the maximum number of devices allowed** when connecting **%s** to your Cozy."
+msgstr "**You've exceeded the maximum number of devices allowed** when connecting **%s** to your Twake."
 
 msgid "Notifications OAuth Clients Reason Limit"
 msgstr "Your plan allows you to connect up to **%.0f devices**."
 
 msgid "Notifications OAuth Clients Increase Limit"
-msgstr "To upgrade your Cozy, or simply support us, you can change your Cozy plan."
+msgstr "To upgrade your Twake, or simply support us, you can change your Twake plan."
 
 msgid "Notifications OAuth Clients Offers Text"
 msgstr "Check our plans"
@@ -680,7 +680,7 @@ msgstr "お使いの Web ブラウザーは最新ではないか、サポート�
 
 msgid "Compat Subtitle"
 msgstr ""
-"ブラウザーを更新するか、これらの選択肢からダウンロードして、Cozy を最大限に活用してください。 私たちは Firefox をお勧めします!"
+"ブラウザーを更新するか、これらの選択肢からダウンロードして、Twake を最大限に活用してください。 私たちは Firefox をお勧めします!"
 
 msgid "Compat Browser Chrome Link"
 msgstr "https://www.google.com/chrome/"
@@ -695,7 +695,7 @@ msgid "Compat Tip 1"
 msgstr "Web ブラウザーをアップグレードすると、さらに安全なブラウジングが可能になります。"
 
 msgid "Compat Tip 2"
-msgstr "お使いのウェブブラウザーがさらに速くなり、Cozy の体験が改善されます。"
+msgstr "お使いのウェブブラウザーがさらに速くなり、Twake の体験が改善されます。"
 
 msgid "Compat Help"
 msgstr "もっと助けが必要ですか?"
@@ -722,7 +722,7 @@ msgid "Too Many OAuth Clients More Link"
 msgstr "https://help.cozy.io/maximum-number-of-connected-devices-allowed/"
 
 msgid "Too Many OAuth Clients Available Actions"
-msgstr "Disconnect one of your devices or change your Cozy offer to access your Cozy from this device."
+msgstr "Disconnect one of your devices or change your Twake offer to access your Twake from this device."
 
 msgid "Too Many OAuth Clients Offers Btn"
 msgstr "See offers"
@@ -740,10 +740,10 @@ msgid "Install flagship app Title"
 msgstr "Install the application to finish"
 
 msgid "Install flagship app Description"
-msgstr "Your Cozy has been successfully created, install the application to use it right now!"
+msgstr "Your Twake has been successfully created, install the application to use it right now!"
 
 msgid "Install flagship app Install"
-msgstr "Install the Cozy app"
+msgstr "Install the Twake app"
 
 msgid "Install flagship app Skip"
 msgstr "Continue in the browser"

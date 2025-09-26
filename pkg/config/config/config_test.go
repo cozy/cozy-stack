@@ -26,7 +26,7 @@ func TestConfigUnmarshal(t *testing.T) {
 	assert.Equal(t, cfg.AdminPort, 0)
 	assert.Equal(t, cfg.AlertAddr, "foo2@bar.baz")
 	assert.Equal(t, cfg.NoReplyAddr, "foo@bar.baz")
-	assert.Equal(t, cfg.NoReplyName, "My Cozy")
+	assert.Equal(t, cfg.NoReplyName, "My Twake")
 	assert.Equal(t, cfg.ReplyTo, "support@cozycloud.cc")
 	assert.Equal(t, cfg.GeoDB, "/geo/db/path")
 	assert.Equal(t, cfg.PasswordResetInterval, time.Hour)

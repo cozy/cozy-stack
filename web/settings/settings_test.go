@@ -1018,7 +1018,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(200).
 			HasContentType("text/html", "utf-8").
 			Body().
-			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("Disconnect one of your devices or change your Twake offer to access your Twake from this device.").
 			Contains("/#/connectedDevices").
 			NotContains("http://manager.example.org")
 
@@ -1032,7 +1032,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(200).
 			HasContentType("text/html", "utf-8").
 			Body().
-			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("Disconnect one of your devices or change your Twake offer to access your Twake from this device.").
 			Contains("/#/connectedDevices").
 			Contains("http://manager.example.org")
 
@@ -1047,7 +1047,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(200).
 			HasContentType("text/html", "utf-8").
 			Body().
-			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("Disconnect one of your devices or change your Twake offer to access your Twake from this device.").
 			Contains("/#/connectedDevices").
 			NotContains("http://manager.example.org")
 
@@ -1061,7 +1061,7 @@ func TestSettings(t *testing.T) {
 			Expect().Status(200).
 			HasContentType("text/html", "utf-8").
 			Body().
-			Contains("Disconnect one of your devices or change your Cozy offer to access your Cozy from this device.").
+			Contains("Disconnect one of your devices or change your Twake offer to access your Twake from this device.").
 			Contains("/#/connectedDevices").
 			Contains("http://manager.example.org")
 	})
