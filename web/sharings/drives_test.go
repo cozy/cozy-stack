@@ -1215,63 +1215,9 @@ func TestSharedDrives(t *testing.T) {
 		})
 	})
 
-<<<<<<< HEAD
-	t.Run("RevokeRecipientAccess", func(t *testing.T) {
-		eA := httpexpect.Default(t, tsA.URL)
-		eB := httpexpect.Default(t, tsB.URL)
-
-		t.Run("RecipientCanInitiallyAccessSharedDrive", func(t *testing.T) {
-			eB.GET("/sharings/drives/"+sharingID+"/"+checklistID).
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(200).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object().
-				Path("$.data.attributes.name").String().IsEqual("Checklist.txt")
-			obj := eB.GET("/sharings/drives").
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(200).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object()
-			obj.Value("data").Array().Length().IsEqual(1)
-		})
-
-		t.Run("RemoveRecipientFromSharing", func(t *testing.T) {
-			eA.DELETE("/sharings/"+sharingID+"/recipients/1").
-				WithHeader("Authorization", "Bearer "+acmeAppToken).
-				Expect().Status(204)
-		})
-
-		t.Run("RevokedRecipientCannotAccessSharedDrive", func(t *testing.T) {
-			eB.GET("/sharings/drives/"+sharingID+"/"+checklistID).
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(403)
-			eB.GET("/sharings/drives/"+sharingID+"/metadata").
-				WithQuery("Path", "/Product team/Meetings/Checklist.txt").
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(403)
-			eB.GET("/sharings/drives/"+sharingID+"/_changes").
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(403)
-			obj := eB.GET("/sharings/drives").
-				WithHeader("Authorization", "Bearer "+bettyAppToken).
-				Expect().Status(200).
-				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-				Object()
-			obj.Value("data").Array().Length().IsEqual(0)
-		})
-	})
-
-	t.Run("MoveDownstreamHandler", func(t *testing.T) {
-		var fileToMoveSameStack string
-		var fileToMoveDifferentStack string
-		// Test missing parameters
-		t.Run("CreateSharedDataToMoveDownstream", func(t *testing.T) {
-			eA := httpexpect.Default(t, tsA.URL)
-=======
 	t.Run("MoveSharedDrive", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 		eB := httpexpect.Default(t, tsB.URL)
->>>>>>> 11e9b367c (feat: Move function between shared drives)
 
 		t.Run("SuccessfulMove_ToSharedDrive_SameStack", func(t *testing.T) {
 			// Perform the move operation
@@ -1639,6 +1585,51 @@ func TestSharedDrives(t *testing.T) {
 				Expect().Status(403)
 		})
 
+	})
+
+	t.Run("RevokeRecipientAccess", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		eB := httpexpect.Default(t, tsB.URL)
+
+		t.Run("RecipientCanInitiallyAccessSharedDrive", func(t *testing.T) {
+			eB.GET("/sharings/drives/"+sharingID+"/"+checklistID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.name").String().IsEqual("Checklist.txt")
+			obj := eB.GET("/sharings/drives").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			obj.Value("data").Array().Length().IsEqual(3)
+		})
+
+		t.Run("RemoveRecipientFromSharing", func(t *testing.T) {
+			eA.DELETE("/sharings/"+sharingID+"/recipients/1").
+				WithHeader("Authorization", "Bearer "+acmeAppToken).
+				Expect().Status(204)
+		})
+
+		t.Run("RevokedRecipientCannotAccessSharedDrive", func(t *testing.T) {
+			eB.GET("/sharings/drives/"+sharingID+"/"+checklistID).
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(403)
+			eB.GET("/sharings/drives/"+sharingID+"/metadata").
+				WithQuery("Path", "/Product team/Meetings/Checklist.txt").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(403)
+			eB.GET("/sharings/drives/"+sharingID+"/_changes").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(403)
+			obj := eB.GET("/sharings/drives").
+				WithHeader("Authorization", "Bearer "+bettyAppToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+			obj.Value("data").Array().Length().IsEqual(2)
+		})
 	})
 
 	t.Run("CreateAnotherSharedDriveAndAccessIt", func(t *testing.T) {

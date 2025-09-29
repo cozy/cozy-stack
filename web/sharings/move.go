@@ -100,7 +100,10 @@ func moveFileToSharedDrive(c echo.Context, inst *instance.Instance, sourceInstan
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
-	bearer := s.Credentials[0].DriveToken
+	bearer, err := extractBearerToken(s)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
 	dstClient := NewRemoteClient(destURL, bearer)
 
 	srcHandle, err := inst.VFS().OpenFile(localSrcFile)
