@@ -1584,7 +1584,6 @@ func TestSharedDrives(t *testing.T) {
 				}`)).
 				Expect().Status(403)
 		})
-
 	})
 
 	t.Run("RevokeRecipientAccess", func(t *testing.T) {
@@ -1721,7 +1720,6 @@ func TestSharedDrives(t *testing.T) {
 			WithBytes([]byte("foo")).
 			Expect().Status(403)
 	})
-
 }
 
 func mockAcmeClient(uA *url.URL) func(u *url.URL, bearer string) *client.Client {

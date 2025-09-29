@@ -184,6 +184,8 @@ func moveFileFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInst
 
 	rc, err := srcClient.DownloadByID(fileID)
 	if err != nil {
+		// Best-effort close to avoid leaking descriptors on error paths
+		_ = fd.Close()
 		return files.WrapVfsError(err)
 	}
 	defer rc.Close()
