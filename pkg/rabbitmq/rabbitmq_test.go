@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -114,7 +115,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithKey")
 		inst := setup.GetTestInstance()
 
-		domain := inst.Domain
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -128,13 +129,13 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    inst.Prefix,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -157,7 +158,7 @@ func TestPasswordHandler(t *testing.T) {
 
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
-			updated, err := lifecycle.GetInstance(domain)
+			updated, err := lifecycle.GetInstance(inst.Domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
 
@@ -175,7 +176,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		domain := inst.Domain
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -184,14 +185,14 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    inst.Prefix,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			PrivateKey: "PRIV",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			PrivateKey:    "PRIV",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -214,7 +215,7 @@ func TestPasswordHandler(t *testing.T) {
 
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
-			updated, err := lifecycle.GetInstance(domain)
+			updated, err := lifecycle.GetInstance(inst.Domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
 	})
@@ -224,7 +225,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		domain := inst.Domain
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -233,10 +234,10 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash1234"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    inst.Prefix,
-			Iterations: 100000,
-			Hash:       testHash,
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -259,7 +260,7 @@ func TestPasswordHandler(t *testing.T) {
 
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
-			updated, err := lifecycle.GetInstance(domain)
+			updated, err := lifecycle.GetInstance(inst.Domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
 	})
@@ -269,7 +270,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "CreateUserWithKey")
 		inst := setup.GetTestInstance()
 
-		domain := inst.Domain
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -283,13 +284,13 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash_user_created_1"
 		msg := rabbitmq.UserCreatedMessage{
-			TwakeID:    inst.Prefix,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -313,7 +314,7 @@ func TestPasswordHandler(t *testing.T) {
 
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
-			updated, err := lifecycle.GetInstance(domain)
+			updated, err := lifecycle.GetInstance(inst.Domain)
 			return err == nil && string(updated.PassphraseHash) == testHash
 		})
 
@@ -871,4 +872,10 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 	}
 
 	require.NoError(t, mgr.Shutdown(testCtx(t)))
+}
+
+func SplitDomain(t *testing.T, host string) (prefix string, base string) {
+	t.Helper()
+	const baseDomain = "cozy.local"
+	return strings.TrimSuffix(host, "."+baseDomain), baseDomain
 }

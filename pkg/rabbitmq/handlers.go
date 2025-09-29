@@ -23,14 +23,15 @@ func NewPasswordChangeHandler() *PasswordChangeHandler {
 
 // PasswordChangeMessage represents a password change message using the new schema.
 type PasswordChangeMessage struct {
-	TwakeID    string `json:"twakeId"`    // external user identifier
-	Iterations int    `json:"iterations"` // PBKDF2 iterations used client-side (when applicable)
-	Hash       string `json:"hash"`       // client-side hashed passphrase (base64)
-	PublicKey  string `json:"publicKey"`  // [OPTIONAL] Bitwarden public key (base64)
-	PrivateKey string `json:"privateKey"` // [OPTIONAL] Bitwarden private key (encrypted, CipherString)
-	Key        string `json:"key"`        // [OPTIONAL] encrypted symmetric key (CipherString)
-	Timestamp  int64  `json:"timestamp"`  // [OPTIONAL] unix timestamp of the event
-	Domain     string `json:"domain"`     // [OPTIONAL] domain of the instance, e.g. "twake.app"
+	TwakeID       string `json:"twakeId"`       // external user identifier
+	Iterations    int    `json:"iterations"`    // PBKDF2 iterations used client-side (when applicable)
+	Hash          string `json:"hash"`          // client-side hashed passphrase (base64)
+	PublicKey     string `json:"publicKey"`     // [OPTIONAL] Bitwarden public key (base64)
+	PrivateKey    string `json:"privateKey"`    // [OPTIONAL] Bitwarden private key (encrypted, CipherString)
+	Key           string `json:"key"`           // [OPTIONAL] encrypted symmetric key (CipherString)
+	Timestamp     int64  `json:"timestamp"`     // [OPTIONAL] unix timestamp of the event
+	Domain        string `json:"domain"`        // [OPTIONAL] domain of the instance, e.g. "twake.app"
+	WorkplaceFqdn string `json:"workplaceFqdn"` // The fully qualified workplace domain
 }
 
 // Handle processes a password change message.
@@ -63,6 +64,10 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		log.Errorf("password change: validation failed - missing passphrase hash for TwakeID: %s", msg.TwakeID)
 		return fmt.Errorf("password change: missing passphrase hash")
 	}
+	if msg.WorkplaceFqdn == "" {
+		log.Errorf("password change: validation failed - missing workplaceFqdn for TwakeID: %s", msg.TwakeID)
+		return fmt.Errorf("password change: missing workplaceFqdn")
+	}
 	if msg.Iterations <= 0 {
 		return fmt.Errorf("password change: missing iterations")
 	}
@@ -87,8 +92,8 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		log.Debugf("password change: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
-	log.Debugf("password change: retrieving instance for domain: %s", msg.Domain)
-	inst, err := lifecycle.GetInstance(msg.Domain)
+	log.Debugf("password change: retrieving instance for domain: %s", msg.WorkplaceFqdn)
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
 	if err != nil {
 		return fmt.Errorf("password change: get instance: %w", err)
 	}
@@ -120,6 +125,7 @@ type UserCreatedMessage struct {
 	PrivateKey    string `json:"privateKey"`
 	Key           string `json:"key"`
 	Timestamp     int64  `json:"timestamp"`
+	WorkplaceFqdn string `json:"workplaceFqdn"` // The fully qualified workplace domain
 }
 
 // Handle processes a user created message.
@@ -158,6 +164,9 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	if msg.Hash == "" {
 		return fmt.Errorf("user.created: missing passphrase hash")
 	}
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("user.created: missing workplaceFqdn")
+	}
 	if msg.Iterations <= 0 {
 		return fmt.Errorf("user.created: missing iterations")
 	}
@@ -182,7 +191,8 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 		log.Debugf("user.created: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
-	inst, err := lifecycle.GetInstance(msg.Domain)
+	log.Debugf("user.created: looking for instance for domain: %s", msg.WorkplaceFqdn)
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
 	if err != nil {
 		return fmt.Errorf("user.created: get instance: %w", err)
 	}
