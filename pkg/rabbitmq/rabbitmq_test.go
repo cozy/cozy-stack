@@ -270,7 +270,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "CreateUserWithKey")
 		inst := setup.GetTestInstance()
 
-		slug, domain := SplitDomain(t, inst.Domain)
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -284,13 +284,13 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash_user_created_1"
 		msg := rabbitmq.UserCreatedMessage{
-			TwakeID:    slug,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)

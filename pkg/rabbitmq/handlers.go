@@ -125,6 +125,7 @@ type UserCreatedMessage struct {
 	PrivateKey    string `json:"privateKey"`
 	Key           string `json:"key"`
 	Timestamp     int64  `json:"timestamp"`
+	WorkplaceFqdn string `json:"workplaceFqdn"` // The fully qualified workplace domain
 }
 
 // Handle processes a user created message.
@@ -163,6 +164,9 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	if msg.Hash == "" {
 		return fmt.Errorf("user.created: missing passphrase hash")
 	}
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("user.created: missing workplaceFqdn")
+	}
 	if msg.Iterations <= 0 {
 		return fmt.Errorf("user.created: missing iterations")
 	}
@@ -187,9 +191,8 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 		log.Debugf("user.created: skipping key parameters (incomplete pair) for TwakeID: %s", msg.TwakeID)
 	}
 
-	userDomain := msg.TwakeID + "." + msg.Domain
-	log.Debugf("user.created: looking for instance for domain: %s", userDomain)
-	inst, err := lifecycle.GetInstance(userDomain)
+	log.Debugf("user.created: looking for instance for domain: %s", msg.WorkplaceFqdn)
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
 	if err != nil {
 		return fmt.Errorf("user.created: get instance: %w", err)
 	}
