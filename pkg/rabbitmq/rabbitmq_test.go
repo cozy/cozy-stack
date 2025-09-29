@@ -115,7 +115,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithKey")
 		inst := setup.GetTestInstance()
 
-		slug, domain := SplitDomain(t, inst.Domain)
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Capture current Bitwarden public/private keys to ensure they are not changed
 		bwBefore, err := settings.Get(inst)
@@ -129,13 +129,13 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    slug,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		slug, domain := SplitDomain(t, inst.Domain)
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -185,14 +185,14 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash123"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    slug,
-			Iterations: 100000,
-			Hash:       testHash,
-			PublicKey:  "PUB",
-			PrivateKey: "PRIV",
-			Key:        "KEY",
-			Timestamp:  time.Now().Unix(),
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			PublicKey:     "PUB",
+			PrivateKey:    "PRIV",
+			Key:           "KEY",
+			Timestamp:     time.Now().Unix(),
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestPasswordHandler(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "ChangePasswordWithoutKeys")
 		inst := setup.GetTestInstance()
 
-		slug, domain := SplitDomain(t, inst.Domain)
+		slug, _ := SplitDomain(t, inst.Domain)
 
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
@@ -234,10 +234,10 @@ func TestPasswordHandler(t *testing.T) {
 		// Compose message
 		testHash := "testhash1234"
 		msg := rabbitmq.PasswordChangeMessage{
-			TwakeID:    slug,
-			Iterations: 100000,
-			Hash:       testHash,
-			Domain:     domain,
+			TwakeID:       slug,
+			Iterations:    100000,
+			Hash:          testHash,
+			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
