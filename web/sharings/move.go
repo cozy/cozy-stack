@@ -410,7 +410,7 @@ func respondRemoteUpload(c echo.Context, uploaded *client.File) error {
 	c.Response().Header().Set("Content-Type", jsonAPIContentType)
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"data": map[string]interface{}{
-			"type": "io.cozy.files",
+			"type": consts.Files,
 			"id":   uploaded.ID,
 			"attributes": map[string]interface{}{
 				"name":       uploaded.Attrs.Name,
