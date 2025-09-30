@@ -190,8 +190,7 @@ func moveFileFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInst
 	}
 	defer rc.Close()
 
-	// Use a small buffer to reduce allocations during large copies
-	if _, err := io.CopyBuffer(fd, rc, make([]byte, copyBufferSize)); err != nil {
+	if _, err := io.Copy(fd, rc); err != nil {
 		// Best-effort close to avoid leaking descriptors on error paths
 		_ = fd.Close()
 		return files.WrapVfsError(err)
@@ -243,7 +242,7 @@ func MoveHandler(c echo.Context) error {
 
 	// Authorization: if at least one side is not a shared drive, require whole-type permission
 	if req.Source.SharingID == "" || req.Dest.SharingID == "" {
-		if err := middlewares.AllowWholeType(c, permission.PATCH, consts.Files); err != nil {
+		if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
 			return err
 		}
 	}
@@ -352,15 +351,13 @@ func getInstanceIdentifierFromURL(urlStr string) (*instance.Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	host := u.Host
-	if strings.Contains(host, ":") {
-		host = strings.Split(host, ":")[0]
+	// Try to get the real instance first (for same-stack operations)
+	inst, err := lifecycle.GetInstance(u.Host)
+	if err == nil {
+		return inst, nil
 	}
-	inst, err := lifecycle.GetInstance(host)
-	if err != nil {
-		return nil, err
-	}
-	return inst, nil
+	// If not found locally, return a minimal instance (for cross-stack operations)
+	return &instance.Instance{Domain: u.Host}, nil
 }
 
 // resolveInstanceOrCurrent returns the instance resolved from the given URL,
