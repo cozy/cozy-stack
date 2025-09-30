@@ -12,7 +12,9 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.3
-	github.com/dhowden/tag v0.0.0-20240413230847-dc579f508b6b
+	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
+	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/go-connections v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.16.0
 	github.com/go-viper/mapstructure/v2 v2.1.0
@@ -85,8 +87,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/docker v25.0.5+incompatible // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
