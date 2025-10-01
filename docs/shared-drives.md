@@ -281,6 +281,74 @@ Duplicates a file.
 Identical call to [`POST /files/:file-id/copy`](files.md#post-filesfile-idcopy) but over a shared drive.
 See there for request and response examples, the only difference is the URL.
 
+### POST /sharings/drives/move
+
+Move a file between locations (personal drive and/or shared drives).
+
+This endpoint supports moving:
+
+- From a shared drive to another shared drive (same stack or cross-stack)
+- From a shared drive to a personal drive
+- From a personal drive to a shared drive
+
+At least one side (source or destination) must be a shared drive.
+
+#### Request
+
+Body (preferred):
+
+```json
+{
+  "source": {
+    "instance": "https://alice.localhost:8080",
+    "sharing_id": "share_src_id",    
+    "file_id": "file123",
+    "dir_id": ""                      
+  },
+  "dest": {
+    "instance": "https://bob.localhost:8080",
+    "sharing_id": "share_dst_id",    
+    "dir_id": "destDir456"
+  }
+}
+```
+
+Notes:
+
+- For personal drive sides, omit `instance` and provide only the `sharing_id` on the shared side.
+- Moving directories is not supported; move their contents instead.
+- If either side is a personal drive (no `sharing_id`), whole-type permission on `io.cozy.files` is required.
+
+#### Responses
+
+- 201 Created, with a JSON object describing the created file on the destination.
+- 400 Bad Request, when required inputs are missing or invalid (e.g., moving a directory).
+- 403 Forbidden, on permission errors or missing credentials for a shared drive.
+- 404 Not Found, when referenced files or drives do not exist.
+
+Example response (abbreviated):
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "new-file-id",
+    "attributes": {
+      "name": "example.txt",
+      "dir_id": "destDir456",
+      "type": "file",
+      "size": 123,
+      "mime": "text/plain",
+      "class": "document",
+      "executable": false,
+      "tags": []
+    }
+  }
+}
+```
+
+When the move occurs locally (same stack), the response is identical to other local file-creation responses. For cross-stack moves, the shape is equivalent but built from the remote upload result.
+
 ### PATCH /sharings/drives/:id/:file-id
 
 This endpoint can be used to update the metadata of a file or directory, to

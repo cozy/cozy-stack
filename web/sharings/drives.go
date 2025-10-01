@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -269,8 +270,6 @@ func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error
 	return files.CopyFile(c, inst, s)
 }
 
-// CreationHandler handles POST requests to create files and directories in the
-// shared drive.
 func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return files.Create(c, s)
 }
@@ -420,6 +419,7 @@ func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 func drivesRoutes(router *echo.Group) {
 	group := router.Group("/drives")
 	group.GET("", ListSharedDrives)
+	group.POST("/move", MoveHandler)
 
 	drive := group.Group("/:id")
 
@@ -532,4 +532,59 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		proxy.ServeHTTP(c.Response(), c.Request())
 		return nil
 	}
+}
+
+// checkSharedDrivePermission checks if the current user has permission to access
+// the specified shared drive. It verifies that:
+// 1. The sharing exists and is a drive
+// 2. The current user is a member of the sharing (by domain or email)
+// Returns the sharing object if permission is granted, or an error if not.
+func checkSharedDrivePermission(inst *instance.Instance, sharingID string) (*sharing.Sharing, error) {
+	// Find the sharing by ID
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		// CouchDB not_found: treat as no access
+		if strings.Contains(err.Error(), "not_found") {
+			return nil, jsonapi.Forbidden(errors.New("not a member of this sharing"))
+		}
+		return nil, wrapErrors(err)
+	}
+
+	// Check if it's a drive
+	if !s.Drive {
+		return nil, jsonapi.NotFound(errors.New("not a drive"))
+	}
+
+	// Check that current user is a member of the sharing
+	currDomain := inst.Domain
+	if strings.Contains(currDomain, ":") {
+		currDomain = strings.SplitN(currDomain, ":", 2)[0]
+	}
+
+	// Get current instance email for comparison
+	currEmail, _ := inst.SettingsEMail()
+
+	isMember := false
+	for _, m := range s.Members {
+		memberHost := m.InstanceHost()
+		if memberHost == "" {
+			continue
+		}
+		// Check by domain
+		if memberHost == inst.Domain || memberHost == currDomain {
+			isMember = true
+			break
+		}
+		// Check by email
+		if currEmail != "" && m.Email == currEmail {
+			isMember = true
+			break
+		}
+	}
+
+	if !isMember {
+		return nil, jsonapi.Forbidden(errors.New("not a member of this sharing"))
+	}
+
+	return s, nil
 }

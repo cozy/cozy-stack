@@ -212,7 +212,9 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (*permission
 		}
 
 		if !okCode {
-			codes[key], err = inst.CreateShareCode(key)
+			// Use a scoped subject to avoid generating identical share codes
+			// for different permission types or sharings within the same second.
+			codes[key], err = inst.CreateShareCode("preview:" + s.SID + ":" + key)
 			if err != nil {
 				return nil, err
 			}
@@ -310,7 +312,8 @@ func (s *Sharing) GetInteractCode(inst *instance.Instance, member *Member, membe
 	if key == "" {
 		key = indexKey
 	}
-	code, err := inst.CreateShareCode(key)
+	// Use a scoped subject to avoid collisions with preview codes or other sharings
+	code, err := inst.CreateShareCode("interact:" + s.SID + ":" + key)
 	if err != nil {
 		return "", err
 	}
@@ -331,7 +334,8 @@ func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) 
 	if key == "" {
 		key = m.Instance
 	}
-	code, err := inst.CreateShareCode(key)
+	// Use a scoped subject to avoid collisions with preview codes or other sharings
+	code, err := inst.CreateShareCode("interact:" + s.SID + ":" + key)
 	if err != nil {
 		return "", err
 	}

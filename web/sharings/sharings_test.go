@@ -1116,6 +1116,39 @@ func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance, owne
 	return values["Description"].(string)
 }
 
+// extractInvitationLink returns the invitation mail description and discovery link without
+// mutating any package-level globals. Useful for tests that want to pass links explicitly.
+func extractInvitationLink(t *testing.T, instance *instance.Instance, owner string) (string, string) {
+	var jobs []job.Job
+	couchReq := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-state",
+		Selector: mango.And(
+			mango.Equal("worker", "sendmail"),
+			mango.Exists("state"),
+		),
+		Sort: mango.SortBy{
+			mango.SortByField{Field: "worker", Direction: "desc"},
+		},
+		Limit: 2,
+	}
+	err := couchdb.FindDocs(instance, consts.Jobs, couchReq, &jobs)
+	assert.NoError(t, err)
+	assert.Len(t, jobs, 2)
+	var msg map[string]interface{}
+	// Ignore the mail sent to Dave
+	err = json.Unmarshal(jobs[0].Message, &msg)
+	assert.NoError(t, err)
+	if msg["recipient_name"] == "Dave" {
+		err = json.Unmarshal(jobs[1].Message, &msg)
+		assert.NoError(t, err)
+	}
+	assert.Equal(t, msg["mode"], "from")
+	assert.Equal(t, msg["template_name"], "sharing_request")
+	values := msg["template_values"].(map[string]interface{})
+	assert.Equal(t, values["SharerPublicName"], owner)
+	return values["Description"].(string), values["SharingLink"].(string)
+}
+
 func assertSharingRequestHasBeenCreated(t *testing.T, instanceA, instanceB *instance.Instance, serverURL string) {
 	var results []*sharing.Sharing
 	req := couchdb.AllDocsRequest{}
@@ -1156,12 +1189,23 @@ func FakeOwnerInstance(t *testing.T, instance *instance.Instance, serverURL stri
 	req := couchdb.AllDocsRequest{}
 	err := couchdb.GetAllDocs(instance, consts.Sharings, &req, &results)
 	assert.NoError(t, err)
-	assert.Len(t, results, 1)
-	s := results[0]
-	assert.Len(t, s.Members, 3)
-	s.Members[0].Instance = serverURL
-	err = couchdb.UpdateDoc(instance, s)
+	for _, s := range results {
+		if len(s.Members) > 0 {
+			s.Members[0].Instance = serverURL
+			_ = couchdb.UpdateDoc(instance, s)
+		}
+	}
+}
+
+func FakeOwnerInstanceForSharing(t *testing.T, instance *instance.Instance, serverURL string, sharingID string) {
+	var s sharing.Sharing
+	err := couchdb.GetDoc(instance, consts.Sharings, sharingID, &s)
 	assert.NoError(t, err)
+	if len(s.Members) > 0 {
+		s.Members[0].Instance = serverURL
+		err = couchdb.UpdateDoc(instance, &s)
+		assert.NoError(t, err)
+	}
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T, instanceA, instanceB *instance.Instance, urlA, urlB string) {
