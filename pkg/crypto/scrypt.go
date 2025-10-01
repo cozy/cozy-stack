@@ -160,3 +160,11 @@ func CompareHashAndPassphrase(hash []byte, passphrase []byte) (needUpdate bool, 
 
 	return h.NeedUpdate(), nil
 }
+
+// ValidateScryptHashFormat validates that the provided hash is a correctly formatted
+// textual scrypt hash (e.g., "scrypt$P$N$R$<hexsalt>$<hexdk>").
+// It does not perform any comparison against a passphrase.
+func ValidateScryptHashFormat(hash []byte) error {
+	h := &scryptHash{}
+	return h.UnmarshalText(hash)
+}

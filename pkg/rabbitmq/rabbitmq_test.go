@@ -3,6 +3,7 @@ package rabbitmq_test
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 
 	"golang.org/x/net/context"
@@ -127,11 +129,11 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose message
-		testHash := "testhash123"
+		hashText, hashB64 := hashPassphrase(t)
 		msg := rabbitmq.PasswordChangeMessage{
 			TwakeID:       slug,
 			Iterations:    100000,
-			Hash:          testHash,
+			Hash:          hashB64,
 			PublicKey:     "PUB",
 			Key:           "KEY",
 			Timestamp:     time.Now().Unix(),
@@ -157,9 +159,9 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait until the instance hash is updated
-		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(inst.Domain)
-			return err == nil && string(updated.PassphraseHash) == testHash
+			return err == nil && string(updated.PassphraseHash) == hashText
 		})
 
 		// Also ensure the key was updated
@@ -183,11 +185,11 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose message
-		testHash := "testhash123"
+		hashText, hashB64 := hashPassphrase(t)
 		msg := rabbitmq.PasswordChangeMessage{
 			TwakeID:       slug,
 			Iterations:    100000,
-			Hash:          testHash,
+			Hash:          hashB64,
 			PublicKey:     "PUB",
 			PrivateKey:    "PRIV",
 			Key:           "KEY",
@@ -216,7 +218,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(inst.Domain)
-			return err == nil && string(updated.PassphraseHash) == testHash
+			return err == nil && string(updated.PassphraseHash) == hashText
 		})
 	})
 
@@ -232,11 +234,11 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose message
-		testHash := "testhash1234"
+		hashText, hashB64 := hashPassphrase(t)
 		msg := rabbitmq.PasswordChangeMessage{
 			TwakeID:       slug,
 			Iterations:    100000,
-			Hash:          testHash,
+			Hash:          hashB64,
 			WorkplaceFqdn: inst.Domain,
 		}
 		body, err := json.Marshal(msg)
@@ -261,7 +263,7 @@ func TestPasswordHandler(t *testing.T) {
 		// Wait until the instance hash is updated
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(inst.Domain)
-			return err == nil && string(updated.PassphraseHash) == testHash
+			return err == nil && string(updated.PassphraseHash) == hashText
 		})
 	})
 
@@ -282,11 +284,11 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose message
-		testHash := "testhash_user_created_1"
+		hashText, hashB64 := hashPassphrase(t)
 		msg := rabbitmq.UserCreatedMessage{
 			TwakeID:       slug,
 			Iterations:    100000,
-			Hash:          testHash,
+			Hash:          hashB64, // send base64-encoded to exercise decode path
 			PublicKey:     "PUB",
 			Key:           "KEY",
 			Timestamp:     time.Now().Unix(),
@@ -312,10 +314,10 @@ func TestPasswordHandler(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// Wait until the instance hash is updated
-		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+		// Wait until the instance hash is updated (should equal decoded textual scrypt hash)
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
 			updated, err := lifecycle.GetInstance(inst.Domain)
-			return err == nil && string(updated.PassphraseHash) == testHash
+			return err == nil && string(updated.PassphraseHash) == hashText
 		})
 
 		// Also ensure the key was updated
@@ -326,6 +328,16 @@ func TestPasswordHandler(t *testing.T) {
 		require.Equal(t, prevPub, bw.PublicKey)
 		require.Equal(t, prevPriv, bw.PrivateKey)
 	})
+}
+
+func hashPassphrase(t *testing.T) (string, string) {
+	t.Helper()
+	passphrase := []byte("super-secret-create-user-key")
+	hashBytes, err := crypto.GenerateFromPassphrase(passphrase)
+	require.NoError(t, err)
+	hashText := string(hashBytes)
+	hashB64 := base64.StdEncoding.EncodeToString(hashBytes)
+	return hashText, hashB64
 }
 
 func getChannel(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Channel, error) {

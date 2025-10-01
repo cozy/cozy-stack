@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
 const DefaultDomain = "twake.app"
@@ -73,8 +75,12 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	}
 	log.Debugf("password change: message validation passed for TwakeID: %s", msg.TwakeID)
 
+	decoded, err := decodePassword(msg.Hash)
+	if err != nil {
+		return err
+	}
 	params := lifecycle.PassParameters{
-		Pass:       []byte(msg.Hash),
+		Pass:       decoded,
 		Iterations: msg.Iterations,
 	}
 
@@ -98,7 +104,7 @@ func (h *PasswordChangeHandler) Handle(ctx context.Context, d amqp.Delivery) err
 		return fmt.Errorf("password change: get instance: %w", err)
 	}
 
-	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, []byte(msg.Hash), params); err != nil {
+	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, params.Pass, params); err != nil {
 		return fmt.Errorf("password change: update passphrase: %w", err)
 	}
 	log.Infof("password change: successfully updated passphrase for instance: %s", inst.Domain)
@@ -172,8 +178,13 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	}
 	log.Debugf("user.created: message validation passed for TwakeID: %s", msg.TwakeID)
 
+	decoded, err := decodePassword(msg.Hash)
+	if err != nil {
+		return err
+	}
+
 	params := lifecycle.PassParameters{
-		Pass:       []byte(msg.Hash),
+		Pass:       decoded,
 		Iterations: msg.Iterations,
 	}
 
@@ -197,11 +208,25 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 		return fmt.Errorf("user.created: get instance: %w", err)
 	}
 
-	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, []byte(msg.Hash), params); err != nil {
+	if err := lifecycle.ForceUpdatePassphraseWithSHash(inst, params.Pass, params); err != nil {
 		return fmt.Errorf("user.created: update passphrase: %w", err)
 	}
 	log.Infof("user.created: successfully updated passphrase for instance: %s (PasswordDefined: %v)", inst.Domain, inst.PasswordDefined)
 	return nil
+}
+
+func decodePassword(hash string) ([]byte, error) {
+	// Decode base64 hash if applicable
+	decoded, err := base64.StdEncoding.DecodeString(hash)
+	if err != nil {
+		return nil, fmt.Errorf("user.created: invalid passphrase hash format: %w", err)
+	}
+
+	// Validate the hash format using scrypt's exported validator (uses UnmarshalText internally)
+	if err := crypto.ValidateScryptHashFormat(decoded); err != nil {
+		return nil, fmt.Errorf("user.created: invalid passphrase hash format: %w", err)
+	}
+	return decoded, nil
 }
 
 func maskSensitiveData(data string) string {
