@@ -89,7 +89,7 @@ func createFileDocFromRemoteFile(remoteFile *client.File, targetDirID string) (*
 	)
 }
 
-func moveFileToSharedDrive(c echo.Context, inst *instance.Instance, sourceInstanceURL string,
+func moveFileToSharedDrive(c echo.Context, inst *instance.Instance,
 	targetDirID string, sourceFileID string, s *sharing.Sharing) error {
 	localSrcFile, err := inst.VFS().FileByID(sourceFileID)
 	if err != nil {
@@ -128,10 +128,10 @@ func moveFileToSharedDrive(c echo.Context, inst *instance.Instance, sourceInstan
 		return err
 	}
 
-	return respondRemoteUpload(c, uploaded)
+	return respondRemoteUpload(c, uploaded, s.ID())
 }
 
-func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, fileID string, dirID string) error {
+func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, fileID string, dirID string, destSharing *sharing.Sharing) error {
 	srcFile, err := srcInst.VFS().FileByID(fileID)
 	if err != nil {
 		return files.WrapVfsError(err)
@@ -146,7 +146,7 @@ func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *ins
 	if err := deleteSourceFile(srcInst.VFS(), srcFile); err != nil {
 		return err
 	}
-	obj := files.NewFile(newFileDoc, destInst, nil)
+	obj := files.NewFile(newFileDoc, destInst, destSharing)
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
@@ -240,11 +240,9 @@ func MoveHandler(c echo.Context) error {
 		return err
 	}
 
-	// Authorization: if at least one side is not a shared drive, require whole-type permission
-	if req.Source.SharingID == "" || req.Dest.SharingID == "" {
-		if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
-			return err
-		}
+	// Authorization: check that we have permissions to the current instance, require whole-type permission
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		return err
 	}
 
 	sourceInstance, err := resolveInstanceOrCurrent(req.Source.Instance, inst)
@@ -266,7 +264,7 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID)
+			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, destSharing)
 		} else {
 			return moveBetweenSharedDrives(c, req.Source.Instance, req.Source.FileID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing)
 		}
@@ -276,7 +274,7 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID)
+			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, nil)
 		} else {
 			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s)
 		}
@@ -286,9 +284,9 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID)
+			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, s)
 		} else {
-			return moveFileToSharedDrive(c, sourceInstance, req.Dest.Instance, req.Dest.DirID, req.Source.FileID, s)
+			return moveFileToSharedDrive(c, sourceInstance, req.Dest.DirID, req.Source.FileID, s)
 		}
 	} else {
 		return jsonapi.BadRequest(errors.New("to move files inside personal drive use patch function"))
@@ -343,7 +341,7 @@ func moveBetweenSharedDrives(c echo.Context, sourceInstanceURL, fileID string, s
 		inst.Logger().WithNamespace("move").Warnf("Could not delete source file: %v", err)
 	}
 
-	return respondRemoteUpload(c, uploaded)
+	return respondRemoteUpload(c, uploaded, destSharing.ID())
 }
 
 func getInstanceIdentifierFromURL(urlStr string) (*instance.Instance, error) {
@@ -406,22 +404,26 @@ var NewRemoteClient = func(u *url.URL, bearerToken string) *client.Client {
 
 // respondRemoteUpload returns a minimal JSONAPI-like response for a file created
 // via remote upload (cross-stack path), matching existing attributes used by clients.
-func respondRemoteUpload(c echo.Context, uploaded *client.File) error {
+func respondRemoteUpload(c echo.Context, uploaded *client.File, driveId string) error {
 	c.Response().Header().Set("Content-Type", jsonAPIContentType)
+	attrs := map[string]interface{}{
+		"name":       uploaded.Attrs.Name,
+		"dir_id":     uploaded.Attrs.DirID,
+		"type":       uploaded.Attrs.Type,
+		"size":       uploaded.Attrs.Size,
+		"mime":       uploaded.Attrs.Mime,
+		"class":      uploaded.Attrs.Class,
+		"executable": uploaded.Attrs.Executable,
+		"tags":       uploaded.Attrs.Tags,
+	}
+	if driveId != "" {
+		attrs["driveId"] = driveId
+	}
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"data": map[string]interface{}{
-			"type": consts.Files,
-			"id":   uploaded.ID,
-			"attributes": map[string]interface{}{
-				"name":       uploaded.Attrs.Name,
-				"dir_id":     uploaded.Attrs.DirID,
-				"type":       uploaded.Attrs.Type,
-				"size":       uploaded.Attrs.Size,
-				"mime":       uploaded.Attrs.Mime,
-				"class":      uploaded.Attrs.Class,
-				"executable": uploaded.Attrs.Executable,
-				"tags":       uploaded.Attrs.Tags,
-			},
+			"type":       consts.Files,
+			"id":         uploaded.ID,
+			"attributes": attrs,
 		},
 	})
 }

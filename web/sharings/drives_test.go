@@ -1242,6 +1242,7 @@ func TestSharedDrives(t *testing.T) {
 			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
 			responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-upload.txt")
 			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(productID)
+			responseObj.Path("$.data.attributes.driveId").String().IsEqual(sharingID)
 
 			// Verify the file was moved and content preserved
 			movedFileID := responseObj.Path("$.data.id").String().Raw()
@@ -1287,6 +1288,7 @@ func TestSharedDrives(t *testing.T) {
 			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
 			responseObj.Path("$.data.attributes.name").String().IsEqual("file-to-upload-diff.txt")
 			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(destDirInSharedDrive)
+			responseObj.Path("$.data.attributes.driveId").String().IsEqual(sharingID)
 
 			// Verify the file was moved and content preserved
 			movedFileID := responseObj.Path("$.data.id").String().Raw()
@@ -1418,6 +1420,7 @@ func TestSharedDrives(t *testing.T) {
 			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
 			responseObj.Path("$.data.attributes.name").String().IsEqual(fileName)
 			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(meetingsID)
+			responseObj.Path("$.data.attributes.driveId").String().IsEqual(sharingID)
 
 			// Verify the file was moved to the destination
 			movedFileID := responseObj.Path("$.data.id").String().Raw()
@@ -1457,6 +1460,7 @@ func TestSharedDrives(t *testing.T) {
 			responseObj.Path("$.data.type").String().IsEqual("io.cozy.files")
 			responseObj.Path("$.data.attributes.name").String().IsEqual(fileName)
 			responseObj.Path("$.data.attributes.dir_id").String().IsEqual(meetingsID)
+			responseObj.Path("$.data.attributes.driveId").String().IsEqual(sharingID)
 
 			// Verify the file was moved to the destination
 			movedFileID := responseObj.Path("$.data.id").String().Raw()
