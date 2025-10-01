@@ -301,6 +301,17 @@ func (h *HTTPHandler) DeleteAvatar(c echo.Context) error {
 	if err != nil {
 		return jsonapi.InternalServerError(err)
 	}
+	// Bump the common settings version and republish the avatar URL to bust caches
+	updated, uerr := common.UpdateAvatar(inst)
+	if uerr != nil {
+		inst.Logger().Errorf("Failed to update common settings: %s", uerr)
+	}
+	if updated {
+		// We need to persist the common settings version
+		if uerr = instance.Update(inst); uerr != nil {
+			return uerr
+		}
+	}
 	return c.NoContent(http.StatusNoContent)
 }
 
