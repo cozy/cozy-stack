@@ -149,6 +149,9 @@ func wsWrite(ws *websocket.Conn, ch chan *wsResponse, errc chan *wsError) error 
 				return nil
 			}
 		case res := <-ch:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return nil
+			}
 			if err := ws.WriteJSON(res); err != nil {
 				return nil
 			}
@@ -229,9 +232,9 @@ func wsOwner(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error 
 	defer cancel()
 	errc := make(chan *wsError)
 	ch := make(chan *wsResponse)
-	defer close(ch)
 
 	go func() {
+		defer close(ch)
 		defer close(errc)
 		pdoc, wsErr := getPermission(c, inst, ws)
 		if wsErr != nil {
@@ -337,9 +340,9 @@ func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token 
 	defer cancel()
 	errc := make(chan *wsError)
 	ch := make(chan *wsResponse)
-	defer close(ch)
 
 	go func() {
+		defer close(ch)
 		defer close(errc)
 		pdoc, wsErr := getPermission(c, inst, ws)
 		if wsErr != nil {
