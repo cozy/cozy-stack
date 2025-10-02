@@ -93,7 +93,7 @@ func RevocationRecipientNotif(c echo.Context) error {
 	if s.Drive {
 		token := c.Request().Header.Get(echo.HeaderAuthorization)
 		token = strings.TrimPrefix(token, "Bearer ")
-		if token == "" || token != s.Credentials[0].DriveToken {
+		if token == "" || len(s.Credentials) == 0 || token != s.Credentials[0].DriveToken {
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
 	} else {
