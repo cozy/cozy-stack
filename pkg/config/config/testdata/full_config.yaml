@@ -173,6 +173,9 @@ authentication:
       logout_url: https://some-logout-url
       userinfo_instance_field: instance-field
 
+# Public OIDC context name - references the authentication context to use for public Twake accounts
+public_oidc_context: twake_public
+
 remote_assets:
   bank_classifier: https://some-remote-assets-url
 

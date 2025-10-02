@@ -1094,6 +1094,24 @@ msgstr "Discover Twake now!"
 msgid "Sharing Forgotten URL"
 msgstr "I have forgotten my address"
 
+msgid "Sharing Connect with Twake Account"
+msgstr "Login to Twake account"
+
+msgid "Sharing Connect with OIDC"
+msgstr "Connect with OIDC"
+
+msgid "Sharing Login with"
+msgstr "Login with"
+
+msgid "Sharing Account"
+msgstr "account"
+
+msgid "Sharing Twake ID Description"
+msgstr "Twake ID is your one entry access to all our services: Chat, Mail and Drive"
+
+msgid "Sharing Twake ID Features"
+msgstr "End-to-end encryption, collaborative features for secure and efficient teamwork"
+
 msgid "Notifications Disk Quota Close Title"
 msgstr "You've reached 90% of your storage"
 

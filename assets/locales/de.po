@@ -770,6 +770,24 @@ msgstr "Entdecke jetzt Twake!"
 msgid "Sharing Forgotten URL"
 msgstr "URL vergessen? Keine Panik."
 
+msgid "Sharing Connect with Twake Account"
+msgstr "Bei Twake-Konto anmelden"
+
+msgid "Sharing Connect with OIDC"
+msgstr "Mit OIDC verbinden"
+
+msgid "Sharing Login with"
+msgstr "Anmelden mit"
+
+msgid "Sharing Account"
+msgstr "Konto"
+
+msgid "Sharing Twake ID Description"
+msgstr "Twake ID ist Ihr einheitlicher Zugang zu allen unseren Diensten: Chat, Mail und Drive"
+
+msgid "Sharing Twake ID Features"
+msgstr "Ende-zu-Ende-Verschlüsselung, Kollaborationsfunktionen für sichere und effiziente Teamarbeit"
+
 msgid "Sharing Forgotten URL email"
 msgstr "Durchsuche dein E-Mail Postfach nach \"Twake\"."
 

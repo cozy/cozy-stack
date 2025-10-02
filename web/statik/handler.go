@@ -51,7 +51,7 @@ var (
 		"passphrase_choose.html",
 		"passphrase_reset.html",
 		"share_by_link_password.html",
-		"sharing_discovery.html",
+		"sharing_discovery_v2.html",
 		"oauth_clients_limit_exceeded.html",
 		"twofactor.html",
 	}

@@ -1031,6 +1031,374 @@ func TestSharings(t *testing.T) {
 		updated := obj.Value("data").Object().Value("attributes").Object().Value("description").String().NotEmpty().Raw()
 		assert.Equal(t, updated, "this is an updated description")
 	})
+
+	t.Run("DiscoveryTemplateRendering", func(t *testing.T) {
+		// Create a new sharing with preview to test the discovery page
+		bobContact := createBobContact(t, aliceInstance)
+		require.NotEmpty(t, aliceAppToken)
+		require.NotNil(t, bobContact)
+
+		eA := httpexpect.Default(t, tsA.URL)
+
+		// Create sharing
+		obj := eA.POST("/sharings/").
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(`{
+        "data": {
+          "type": "` + consts.Sharings + `",
+          "attributes": {
+            "description":  "Test Discovery Template",
+            "preview_path": "/preview",
+            "rules": [{
+                "title": "discovery test",
+                "doctype": "` + iocozytests + `",
+                "values": ["discovery123"]
+              }]
+          },
+          "relationships": {
+            "recipients": {
+              "data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
+            }
+          }
+        }
+      }`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		testSharingID := obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+		// Get the sharing document to extract the state
+		var testSharing sharing.Sharing
+		err := couchdb.GetDoc(aliceInstance, consts.Sharings, testSharingID, &testSharing)
+		assert.NoError(t, err)
+
+		// Get the state from the credentials
+		assert.Len(t, testSharing.Credentials, 1)
+		testState := testSharing.Credentials[0].State
+
+		// Test 1: Verify all template parameters are rendered correctly
+		body := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			Expect().Status(200).
+			HasContentType("text/html", "utf-8").
+			Body()
+
+		// Verify basic structure
+		body.Contains("<!DOCTYPE html>")
+		body.Contains(`lang="en"`) // Default locale
+
+		// Verify title and meta tags
+		body.Contains("<title>")
+		body.Contains(`<meta charset="utf-8">`)
+		body.Contains(`<meta name="viewport" content="width=device-width, initial-scale=1">`)
+		body.Contains(`<meta name="theme-color" content="#fff">`)
+
+		// Verify CSS links
+		body.Contains("/fonts/fonts.css")
+		body.Contains("/css/cozy-bs.min.css")
+		body.Contains("/styles/theme.css")
+		body.Contains("/styles/cirrus.css")
+
+		// Verify form action and method
+		body.Contains(`<form method="POST" action="/sharings/` + testSharingID + `/discovery"`)
+
+		// Verify hidden inputs with correct values
+		body.Contains(`<input type="hidden" name="state" value="` + testState + `"`)
+		body.Contains(`<input type="hidden" name="sharecode" value=""`)
+		body.Contains(`<input type="hidden" name="shortcut" value=""`)
+
+		// Verify heading and public name
+		body.Contains("<h1")
+		body.Contains("Connect to")
+		body.Contains("Alice") // PublicName in the intro text
+
+		// Verify input fields structure
+		body.Contains(`<input type="text"`)
+		body.Contains(`name="slug"`)
+		body.Contains(`placeholder="claude"`)
+		body.Contains(`inputmode="url"`)
+		body.Contains(`class="form-control`)
+
+		// Verify domain selector
+		body.Contains(`<select name="domain"`)
+		body.Contains(`class="form-select`)
+		body.Contains("mycozy.cloud") // Default domain
+		body.Contains("Autre domaine")
+
+		// Verify submit button
+		body.Contains(`<button id="login-submit"`)
+		body.Contains(`type="submit"`)
+		body.Contains(`class="btn btn-primary`)
+
+		// Verify footer links
+		body.Contains("https://manager.cozycloud.cc/v2/cozy/remind")
+		body.Contains("Discover Twake now!") // Actual link text
+
+		// Verify scripts
+		body.Contains("/scripts/cirrus.js")
+
+		// Test 2: Verify error states - URL Error
+		bodyWithURLError := eA.POST("/sharings/"+testSharingID+"/discovery").
+			WithFormField("state", testState).
+			WithFormField("slug", "invalid url format").
+			Expect().Status(400).
+			HasContentType("text/html", "utf-8").
+			Body()
+
+		// Verify error styling is applied
+		bodyWithURLError.Contains(`class="form-control form-control-md-lg is-invalid"`)
+		bodyWithURLError.Contains(`<div class="invalid-tooltip`)
+		bodyWithURLError.Contains("The Twake URL you entered is incorrect") // Actual error message
+
+		// Test 3: Verify error states - Not Email Error (when email is provided instead of URL)
+		bodyWithEmailError := eA.POST("/sharings/"+testSharingID+"/discovery").
+			WithFormField("state", testState).
+			WithFormField("slug", "test@example.com").
+			Expect().Status(412). // Precondition Failed
+			HasContentType("text/html", "utf-8").
+			Body()
+
+		// Verify email error is displayed
+		bodyWithEmailError.Contains(`class="form-control form-control-md-lg is-invalid"`)
+		bodyWithEmailError.Contains(`<div class="invalid-tooltip`) // Error tooltip is shown
+
+		// Test 4: Verify shortcut parameter
+		bodyWithShortcut := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			WithQuery("shortcut", "true").
+			Expect().Status(200).
+			HasContentType("text/html", "utf-8").
+			Body()
+
+		bodyWithShortcut.Contains(`<input type="hidden" name="shortcut" value="true"`)
+		// Note: Button text changes based on shortcut value in template logic
+		// We verify the shortcut value is correctly passed
+
+		// Test 5: Verify recipient slug and domain are pre-filled
+		bodyPrefilled := eA.GET("/sharings/"+testSharingID+"/discovery").
+			WithQuery("state", testState).
+			Expect().Status(200).
+			Body()
+
+		// Check that the recipient slug input has a value attribute
+		bodyPrefilled.Contains(`value=""`) // Empty since member instance is not set initially
+	})
+
+	t.Run("DiscoveryTemplateWithOIDCButtons", func(t *testing.T) {
+		conf := config.GetConfig()
+		if conf.Authentication == nil {
+			conf.Authentication = make(map[string]interface{})
+		}
+
+		eA := httpexpect.Default(t, tsA.URL)
+		originalContext := aliceInstance.ContextName
+		originalPublicOIDCContext := conf.PublicOIDCContext
+		originalPublicDomains := consts.PublicSaaSDomains
+
+		// Helper to make domain public for testing
+		makePublicDomain := func() {
+			currentDomain := aliceInstance.ContextualDomain()
+			parts := strings.Split(currentDomain, ".")
+			if len(parts) >= 2 {
+				topDomain := parts[len(parts)-2] + "." + parts[len(parts)-1]
+				consts.PublicSaaSDomains = append(consts.PublicSaaSDomains, topDomain)
+			}
+		}
+
+		// Scenario 1: Private domain, NO sender OIDC, NO public OIDC
+		// Expected: No OIDC buttons shown
+		t.Logf("Scenario 1: Private domain, NO sender OIDC, NO public OIDC")
+		aliceInstance.ContextName = originalContext
+		conf.PublicOIDCContext = ""
+		require.NoError(t, instance.Update(aliceInstance))
+
+		sharingID1, state1 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario1")
+		body1 := eA.GET("/sharings/"+sharingID1+"/discovery").
+			WithQuery("state", state1).
+			Expect().Status(200).
+			HasContentType("text/html", "utf-8").
+			Body()
+
+		body1.NotContains(`\/oidc\/sharing\/public`) // No public Twake OIDC
+		body1.NotContains(`\/oidc\/sharing?`)        // No sender OIDC
+
+		// Scenario 2: Private domain, NO sender OIDC, WITH public OIDC
+		// Expected: Only Twake button shown
+		t.Logf("Scenario 2: Private domain, NO sender OIDC, WITH public OIDC")
+		publicContextName := "twake-public-test"
+		conf.Authentication[publicContextName] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "public-twake-client-id",
+				"client_secret": "public-twake-secret",
+				"authorize_url": "https://twake.app/oauth/authorize",
+				"token_url":     "https://twake.app/oauth/token",
+			},
+		}
+		conf.PublicOIDCContext = publicContextName
+
+		sharingID2, state2 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario2")
+		body2 := eA.GET("/sharings/"+sharingID2+"/discovery").
+			WithQuery("state", state2).
+			Expect().Status(200).
+			Body()
+
+		body2.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
+		body2.Contains("Login to Twake account")  // Button text
+		body2.NotContains(`\/oidc\/sharing?`)     // No sender OIDC
+
+		// Scenario 3: Private domain, WITH sender OIDC, NO public OIDC
+		// Expected: Only sender OIDC button shown (generic fallback text)
+		t.Logf("Scenario 3: Private domain, WITH sender OIDC, NO public OIDC")
+		conf.PublicOIDCContext = ""
+		senderOIDCContext := "test-sender-oidc"
+		conf.Authentication[senderOIDCContext] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "sender-oidc-client",
+				"client_secret": "sender-oidc-secret",
+				"authorize_url": "https://sender-oidc.example.com/authorize",
+				"token_url":     "https://sender-oidc.example.com/token",
+			},
+		}
+		aliceInstance.ContextName = senderOIDCContext
+		require.NoError(t, instance.Update(aliceInstance))
+
+		sharingID3, state3 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario3")
+		body3 := eA.GET("/sharings/"+sharingID3+"/discovery").
+			WithQuery("state", state3).
+			Expect().Status(200).
+			Body()
+
+		body3.Contains(`\/oidc\/sharing?`)           // Sender OIDC shown
+		body3.Contains("sharingID=" + sharingID3)    // URL parameter
+		body3.Contains("Connect with OIDC")          // Generic button text (no branding)
+		body3.NotContains(`\/oidc\/sharing\/public`) // No public Twake OIDC
+
+		// Scenario 3b: Private domain, WITH sender OIDC WITH branding, NO public OIDC
+		// Expected: Only sender OIDC button with company branding
+		t.Logf("Scenario 3b: Private domain, WITH sender OIDC with branding, NO public OIDC")
+		brandedOIDCContext := "test-branded-oidc"
+		conf.Authentication[brandedOIDCContext] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "branded-oidc-client",
+				"client_secret": "branded-oidc-secret",
+				"authorize_url": "https://branded-oidc.example.com/authorize",
+				"token_url":     "https://branded-oidc.example.com/token",
+				"display_name":  "ACME Corporation",
+				"logo_url":      "https://acme.example.com/logo.svg",
+			},
+		}
+		aliceInstance.ContextName = brandedOIDCContext
+		require.NoError(t, instance.Update(aliceInstance))
+
+		sharingID3b, state3b := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario3b")
+		body3b := eA.GET("/sharings/"+sharingID3b+"/discovery").
+			WithQuery("state", state3b).
+			Expect().Status(200).
+			Body()
+
+		body3b.Contains(`\/oidc\/sharing?`)                  // Sender OIDC shown
+		body3b.Contains("ACME Corporation")                  // Company name displayed
+		body3b.Contains("https://acme.example.com/logo.svg") // Logo URL in img src
+		body3b.Contains("Login with")                        // Translation key part 1
+		body3b.Contains("account")                           // Translation key part 2
+		body3b.NotContains("Connect with OIDC")              // Generic text not shown
+		body3b.NotContains(`\/oidc\/sharing\/public`)        // No public Twake OIDC
+
+		// Scenario 4: Private domain, WITH sender OIDC (no branding), WITH public OIDC
+		// Expected: Both buttons shown (sender button without branding)
+		t.Logf("Scenario 4: Private domain, WITH sender OIDC (no branding), WITH public OIDC")
+		conf.PublicOIDCContext = publicContextName
+		// Reset to non-branded OIDC context
+		aliceInstance.ContextName = senderOIDCContext
+		require.NoError(t, instance.Update(aliceInstance))
+
+		sharingID4, state4 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario4")
+		body4 := eA.GET("/sharings/"+sharingID4+"/discovery").
+			WithQuery("state", state4).
+			Expect().Status(200).
+			Body()
+
+		body4.Contains(`\/oidc\/sharing?`)        // Sender OIDC shown
+		body4.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
+		body4.Contains("Login to Twake account")  // Twake button text
+		body4.Contains("Connect with OIDC")       // Sender button text (generic, no branding)
+
+		// Scenario 5: Public domain, WITH sender OIDC, WITH public OIDC
+		// Expected: Only Twake button (sender OIDC disabled for public domains)
+		t.Logf("Scenario 5: Public domain, WITH sender OIDC, WITH public OIDC")
+		makePublicDomain()
+		conf.Authentication["test-public-sender"] = map[string]interface{}{
+			"oidc": map[string]interface{}{
+				"client_id":     "public-sender-oidc",
+				"client_secret": "public-sender-secret",
+				"authorize_url": "https://public-oidc.example.com/authorize",
+				"token_url":     "https://public-oidc.example.com/token",
+			},
+		}
+		aliceInstance.ContextName = "test-public-sender"
+		require.NoError(t, instance.Update(aliceInstance))
+
+		sharingID5, state5 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario5")
+		body5 := eA.GET("/sharings/"+sharingID5+"/discovery").
+			WithQuery("state", state5).
+			Expect().Status(200).
+			Body()
+
+		body5.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
+		body5.Contains("Login to Twake account")  // Button text
+		body5.NotContains(`\/oidc\/sharing?`)     // Sender OIDC disabled (public domain)
+
+		// Cleanup
+		aliceInstance.ContextName = originalContext
+		require.NoError(t, instance.Update(aliceInstance))
+		conf.PublicOIDCContext = originalPublicOIDCContext
+		consts.PublicSaaSDomains = originalPublicDomains
+	})
+}
+
+// createSharingAndGetState creates a sharing and returns its ID and state
+func createSharingAndGetState(t *testing.T, e *httpexpect.Expect, inst *instance.Instance, token, value string) (string, string) {
+	t.Helper()
+
+	bobContact := createBobContact(t, inst)
+	require.NotNil(t, bobContact)
+
+	obj := e.POST("/sharings/").
+		WithHeader("Authorization", "Bearer "+token).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "` + consts.Sharings + `",
+				"attributes": {
+					"description": "Test Sharing",
+					"preview_path": "/preview",
+					"rules": [{
+						"title": "test",
+						"doctype": "` + iocozytests + `",
+						"values": ["` + value + `"]
+					}]
+				},
+				"relationships": {
+					"recipients": {
+						"data": [{"id": "` + bobContact.ID() + `", "type": "` + bobContact.DocType() + `"}]
+					}
+				}
+			}
+		}`)).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+	var s sharing.Sharing
+	err := couchdb.GetDoc(inst, consts.Sharings, sharingID, &s)
+	require.NoError(t, err)
+	require.Len(t, s.Credentials, 1)
+
+	return sharingID, s.Credentials[0].State
 }
 
 func assertSharingByAliceToBobAndDave(t *testing.T, obj *httpexpect.Array, instance *instance.Instance) {

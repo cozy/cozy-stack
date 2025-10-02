@@ -668,7 +668,53 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	} else if parts := strings.SplitN(fqdn, ".", 2); len(parts) == 2 {
 		slug, domain = parts[0], parts[1]
 	}
-	return c.Render(code, "sharing_discovery.html", echo.Map{
+	// Check if sender is on a public or private domain
+	senderDomain := inst.ContextualDomain()
+	isPublicDomain := false
+	for _, publicDomain := range consts.PublicSaaSDomains {
+		if strings.HasSuffix(senderDomain, publicDomain) {
+			isPublicDomain = true
+			break
+		}
+	}
+
+	// Show sender's OIDC button only if sender is on a private domain and has OIDC configured
+	oidcLink := ""
+	oidcDisplayName := ""
+	oidcLogoURL := ""
+	if !isPublicDomain {
+		if oidc, ok := config.GetOIDC(inst.ContextName); ok {
+			if clientID, _ := oidc["client_id"].(string); clientID != "" {
+				q := url.Values{
+					"sharingID": {sharingID},
+					"state":     {state},
+				}
+				oidcLink = inst.PageURL("/oidc/sharing", q)
+
+				// Extract branding information for display
+				if displayName, ok := oidc["display_name"].(string); ok && displayName != "" {
+					oidcDisplayName = displayName
+				}
+				if logoURL, ok := oidc["logo_url"].(string); ok && logoURL != "" {
+					oidcLogoURL = logoURL
+				}
+			}
+		}
+	}
+
+	// Show "Login with Twake Account" button always if public OIDC is configured
+	twakeOIDCLink := ""
+	if publicOIDC, ok := config.GetPublicOIDC(); ok {
+		if clientID, _ := publicOIDC["client_id"].(string); clientID != "" {
+			q := url.Values{
+				"sharingID": {sharingID},
+				"state":     {state},
+			}
+			twakeOIDCLink = inst.PageURL("/oidc/sharing/public", q)
+		}
+	}
+
+	return c.Render(code, "sharing_discovery_v2.html", echo.Map{
 		"Domain":          inst.ContextualDomain(),
 		"ContextName":     inst.ContextName,
 		"Locale":          inst.Locale,
@@ -681,6 +727,10 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"State":           state,
 		"ShareCode":       sharecode,
 		"Shortcut":        shortcut,
+		"OIDCLink":        oidcLink,
+		"OIDCDisplayName": oidcDisplayName,
+		"OIDCLogoURL":     oidcLogoURL,
+		"TwakeOIDCLink":   twakeOIDCLink,
 		"URLError":        code == http.StatusBadRequest,
 		"NotEmailError":   code == http.StatusPreconditionFailed,
 	})

@@ -1171,6 +1171,24 @@ msgstr "Откройте Twake сейчас!"
 msgid "Sharing Forgotten URL"
 msgstr "Я забыл мой адрес"
 
+msgid "Sharing Connect with Twake Account"
+msgstr "Войти в учётную запись Twake"
+
+msgid "Sharing Connect with OIDC"
+msgstr "Войти через OIDC"
+
+msgid "Sharing Login with"
+msgstr "Войти через"
+
+msgid "Sharing Account"
+msgstr "аккаунт"
+
+msgid "Sharing Twake ID Description"
+msgstr "Twake ID — единый доступ к сервисам: чату, почте и диску"
+
+msgid "Sharing Twake ID Features"
+msgstr "Рабочее пространство с открытым исходным кодом для безопасной и эффективной командной работы"
+
 msgid "Notifications Disk Quota Close Title"
 msgstr "Квота хранилища превышает 90%"
 

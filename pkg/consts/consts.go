@@ -96,6 +96,11 @@ var KnownFlatDomains = []string{
 	"cozy.rocks",
 }
 
+// PublicSaaSDomains is a list of public SaaS domains (like *.twake.app)
+var PublicSaaSDomains = []string{
+	"twake.app",
+}
+
 // DefaultLocale is the default locale when creating an instance and for i18n.
 const DefaultLocale = "en"
 

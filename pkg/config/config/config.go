@@ -141,13 +141,14 @@ type Config struct {
 
 	CacheStorage cache.Cache
 
-	Contexts       map[string]interface{}
-	Authentication map[string]interface{}
-	RAGServers     map[string]RAGServer
-	CommonSettings map[string]CommonSettings
-	Office         map[string]Office
-	Registries     map[string][]*url.URL
-	Clouderies     map[string]ClouderyConfig
+	Contexts          map[string]interface{}
+	Authentication    map[string]interface{}
+	PublicOIDCContext string
+	RAGServers        map[string]RAGServer
+	CommonSettings    map[string]CommonSettings
+	Office            map[string]Office
+	Registries        map[string][]*url.URL
+	Clouderies        map[string]ClouderyConfig
 
 	RabbitMQ RabbitMQ
 
@@ -530,6 +531,19 @@ func GetFranceConnect(contextName string) (map[string]interface{}, bool) {
 	}
 	config, ok := auth["franceconnect"].(map[string]interface{})
 	return config, ok
+}
+
+// GetPublicOIDC returns the public Twake OIDC configuration from the configured context
+func GetPublicOIDC() (map[string]interface{}, bool) {
+	if config.Authentication == nil || config.PublicOIDCContext == "" {
+		return nil, false
+	}
+	publicAuth, ok := config.Authentication[config.PublicOIDCContext].(map[string]interface{})
+	if !ok {
+		return nil, false
+	}
+	oidcConfig, ok := publicAuth["oidc"].(map[string]interface{})
+	return oidcConfig, ok
 }
 
 var defaultPasswordResetInterval = 15 * time.Minute
@@ -1013,6 +1027,7 @@ func UseViper(v *viper.Viper) error {
 		CampaignMailPerContext: v.GetStringMap("campaign_mail.contexts"),
 		Contexts:               v.GetStringMap("contexts"),
 		Authentication:         v.GetStringMap("authentication"),
+		PublicOIDCContext:      v.GetString("public_oidc_context"),
 		Office:                 office,
 		Registries:             regs,
 		AuthorizedForConfirm:   v.GetStringSlice("authorized_hosts_for_confirm_auth"),
