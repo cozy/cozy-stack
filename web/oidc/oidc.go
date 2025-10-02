@@ -425,9 +425,7 @@ func Logout(c echo.Context) error {
 				"error": "invalid claims",
 			})
 		}
-		domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
-		domain = strings.ToLower(domain)             // The domain is case insensitive
-		domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
+		domain = buildDomain(domain, conf)
 		instance, err := lifecycle.GetInstance(domain)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
@@ -883,10 +881,19 @@ func extractDomain(conf *Config, params map[string]interface{}) (string, error) 
 	if !ok {
 		return "", ErrAuthenticationFailed
 	}
-	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
+	return buildDomain(domain, conf), nil
+}
+
+func buildDomain(domain string, conf *Config) string {
 	domain = strings.ToLower(domain)             // The domain is case insensitive
+	domain = strings.ReplaceAll(domain, "-", "") // We don't want - in cozy instance
+	if conf.UserInfoSuffix != "" {
+		// When we have a suffix, it means that the data from user infos is
+		// just the slug, and we don't . in the slug
+		domain = strings.ReplaceAll(domain, ".", "")
+	}
 	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
-	return domain, nil
+	return domain
 }
 
 func findInstanceBySub(sub, contextName string) (*instance.Instance, error) {
