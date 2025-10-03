@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/sharing"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -67,6 +68,21 @@ func StartFranceConnect(c echo.Context) error {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
+	}
+	return c.Redirect(http.StatusSeeOther, u)
+}
+
+// Sharing is the route to use the SSO to accept a shared drive.
+func Sharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	conf, err := getGenericConfig(inst.ContextName)
+	if err != nil {
+		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
+	}
+	u, err := makeSharingStartURL(inst.Domain, c.QueryParam("sharingID"), c.QueryParam("state"), conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -285,6 +301,9 @@ func Login(c echo.Context) error {
 				logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
 				return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
 			}
+			if state.SharingID != "" {
+				return acceptSharing(c, inst, conf, token, state)
+			}
 		}
 
 		// Check 2FA if enabled, and if yes, render an HTML page to check if
@@ -307,6 +326,48 @@ func Login(c echo.Context) error {
 	_, _, _ = jwt.NewParser().ParseUnverified(token, claims)
 	sid, _ := claims["sid"].(string)
 	return createSessionAndRedirect(c, inst, redirect, confirm, sid)
+}
+
+func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, token string, state *stateHolder) error {
+	params, err := getUserInfo(conf, token)
+	if err != nil {
+		return err
+	}
+
+	sub, ok := params["sub"].(string)
+	if !ok {
+		logger.WithNamespace("oidc").Errorf("Missing sub")
+		return ErrAuthenticationFailed
+	}
+	var memberInst *instance.Instance
+	domain, err := extractDomain(conf, params)
+	if err == nil {
+		memberInst, err = lifecycle.GetInstance(domain)
+	} else if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
+		memberInst, err = findInstanceBySub(sub, state.BitwardenContext)
+	}
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+	}
+
+	s, err := sharing.FindSharing(ownerInst, state.SharingID)
+	if err != nil {
+		return err
+	}
+	member, err := s.FindMemberByState(state.SharingState)
+	if err != nil {
+		return err
+	}
+	memberURL := memberInst.PageURL("/", nil)
+	if err = s.RegisterCozyURL(ownerInst, member, memberURL); err != nil {
+		return err
+	}
+	sharing.PersistInstanceURL(ownerInst, member.Email, member.Instance)
+	redirectURL, err := member.GenerateOAuthURL(s, "")
+	if err != nil {
+		return err
+	}
+	return c.Redirect(http.StatusFound, redirectURL)
 }
 
 func TwoFactor(c echo.Context) error {
@@ -744,6 +805,29 @@ func makeStartURL(domain, redirect, confirm, bitwardenContext string, conf *Conf
 	return u.String(), nil
 }
 
+func makeSharingStartURL(domain, sharingID, sharingState string, conf *Config) (string, error) {
+	u, err := url.Parse(conf.AuthorizeURL)
+	if err != nil {
+		return "", err
+	}
+	state := newSharingStateHolder(domain, sharingID, sharingState)
+	if err = getStorage().Add(state); err != nil {
+		return "", err
+	}
+	vv := u.Query()
+	vv.Add("response_type", "code")
+	vv.Add("scope", conf.Scope)
+	vv.Add("client_id", conf.ClientID)
+	vv.Add("redirect_uri", conf.RedirectURI)
+	vv.Add("state", state.id)
+	vv.Add("nonce", state.Nonce)
+	if conf.Provider == FranceConnectProvider {
+		vv.Add("acr_values", "eidas1")
+	}
+	u.RawQuery = vv.Encode()
+	return u.String(), nil
+}
+
 var oidcClient = &http.Client{
 	Timeout: 15 * time.Second,
 }
@@ -1073,6 +1157,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
 	router.GET("/franceconnect", StartFranceConnect, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
+	router.GET("/sharing", Sharing, middlewares.NeedInstance)
 	router.GET("/bitwarden/:context", BitwardenStart)
 	router.POST("/bitwarden/:context", BitwardenExchange, middlewares.NeedInstance)
 	router.GET("/redirect", Redirect)

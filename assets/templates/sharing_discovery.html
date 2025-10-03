@@ -49,6 +49,9 @@
         </div>
 
         <footer class="w-100 d-flex flex-column flex-md-column-reverse">
+          {{if .OIDCLink}}
+          <a href="{{.OIDCLink}}">{{t "Sharing Connect with OIDC"}}</a>
+          {{end}}
           <p class="text-center mb-3">
             {{t "Sharing No Cozy"}}
             <a href="{{t "Sharing Discover Cozy URL"}}">
