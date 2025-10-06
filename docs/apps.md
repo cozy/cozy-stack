@@ -44,6 +44,7 @@ filename for this file: `manifest.webapp`.
 | notifications                   | a map of notifications needed by the app (see [here](notifications.md) for more details)                                              |
 | services                        | a map of the services associated with the app (see below for more details)                                                            |
 | routes                          | a map of routes for the app (see below for more details)                                                                              |
+| entrypoints                     | a map of entrypoints for the app (see below for more details)                                                                   |
 | mobile                          | information about app's mobile version (see below for more details)                                                                   |
 | accept_from_flagship            | boolean stating if the app is compatible with the Flagship app's "OS Receive" feature                                                 |
 | accept_documents_from_flagship  | when `accept_from_flagship` is `true`, defines what can be uploaded to the app (see [here](accept-from-flagship.md) for more details) |
@@ -161,6 +162,25 @@ During the service execution, the stack will give some environment variables to 
 - "COZY_JOB_ID" # Job ID
 - "COZY_COUCH_DOC" # The CouchDB document which triggers the service
 ```
+
+### Entrypoints
+
+Entrypoints indicates front end routes to other apps. It contains a `name`, a `title` that can be translated, a `hash` (the front end route) and an `icon`. For example, it can indicates the front end route to create a new file in a drive application. Other apps can then directly link to the new file page by using entrypoints data:
+
+```json
+ [
+    {
+      "name": "new-file",
+      "title": {
+        "en": "New file",
+        "fr": "Nouveau fichier"
+      },
+      "hash": "/file/new",
+      "icon": "/assets/icons/new-file.svg"
+    }
+  ]
+```
+
 ### Notifications
 
 For more informations on how te declare notifications in the manifest, see the
