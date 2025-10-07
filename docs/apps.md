@@ -176,7 +176,7 @@ Entrypoints indicates front end routes to other apps. It contains a `name`, a `t
         "fr": "Nouveau fichier"
       },
       "hash": "/file/new",
-      "icon": "/assets/icons/new-file.svg"
+      "icon": "PHN2ZyB3aWR0aD0iMjkiIGhlaWdodD0iMz" // svg in base64, for example to use like this src={`data:image/svg+xml;base64,${entrypoint.icon}`}
     }
   ]
 ```
