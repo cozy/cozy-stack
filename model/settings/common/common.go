@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 )
 
@@ -64,9 +63,11 @@ func CreateCommonSettings(inst *instance.Instance, settings *couchdb.JSONDoc) er
 		return nil
 	}
 
-	inst.CommonSettingsVersion = 1
+	nextVersion := 1
 	request := buildRequest(inst, settings)
-	addAvatarURL(inst, &request)
+	request.Version = nextVersion
+	// Ensure avatar URL includes the computed next version
+	addAvatarURL(inst, &request, nextVersion)
 	requestBody, err := json.Marshal(request)
 	if err != nil {
 		return err
@@ -77,8 +78,12 @@ func CreateCommonSettings(inst *instance.Instance, settings *couchdb.JSONDoc) er
 	}
 	u.Path = "/api/admin/user/settings"
 	inst.Logger().WithNamespace("common_settings").WithDomain(inst.Domain).
-		Debugf("HTTP %s %s v=%d payload=%+v", "POST", u.String(), inst.CommonSettingsVersion, request.Payload)
-	return DoCommonHTTP("POST", u.String(), cfg.Token, requestBody)
+		Debugf("HTTP %s %s v=%d payload=%+v", "POST", u.String(), nextVersion, request.Payload)
+	if err := DoCommonHTTP("POST", u.String(), cfg.Token, requestBody); err != nil {
+		return err
+	}
+	inst.CommonSettingsVersion = nextVersion
+	return nil
 }
 
 // UpdateCommonSettings updates user settings for an instance via the common
@@ -191,9 +196,7 @@ func UpdateAvatar(inst *instance.Instance) (bool, error) {
 		Version:   nextVersion,
 	}
 	// Ensure avatar URL includes the computed next version
-	request.Payload.Avatar = inst.PageURL("/public/avatar", url.Values{
-		"v": {fmt.Sprintf("%d", nextVersion)},
-	})
+	addAvatarURL(inst, &request, nextVersion)
 	requestBody, err := json.Marshal(request)
 	if err != nil {
 		return false, err
@@ -312,9 +315,9 @@ func buildRequest(inst *instance.Instance, settings *couchdb.JSONDoc) UserSettin
 	return request
 }
 
-func addAvatarURL(inst *instance.Instance, request *UserSettingsRequest) {
+func addAvatarURL(inst *instance.Instance, request *UserSettingsRequest, version int) {
 	avatarURL := inst.PageURL("/public/avatar", url.Values{
-		"v": {fmt.Sprintf("%d", inst.CommonSettingsVersion+1)},
+		"v": {fmt.Sprintf("%d", version)},
 	})
 	request.Payload.Avatar = avatarURL
 }
@@ -335,8 +338,8 @@ func doCommonSettingsRequest(method, urlStr, token string, body []byte) error {
 	}
 	defer res.Body.Close()
 
-	logger.WithNamespace("common_settings").
-		Debugf("HTTP %s %s -> status=%d", method, urlStr, res.StatusCode)
+	// Intentionally not using a package-level logger here to keep logging
+	// instance-scoped at higher call sites.
 
 	return mapStatusError(res.StatusCode)
 }
