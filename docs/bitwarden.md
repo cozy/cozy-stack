@@ -101,7 +101,8 @@ Content-Type: application/json
   "KdfIterations": 10000,
   "OIDC": false,
   "HasCiphers": true,
-  "FlatSubdomains": true
+  "FlatSubdomains": true,
+  "Salt": "me@alice.example.com"
 }
 ```
 
