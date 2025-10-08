@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,6 +20,11 @@ import (
 // DefaultTimezone is used when no timezone is specified, as this parameter is
 // required.
 const DefaultTimezone = "Europe/Paris"
+
+// ErrCommonSettingsVersionMismatch indicates that the remote common settings
+// version differs from the local instance version and the update should not
+// proceed.
+var ErrCommonSettingsVersionMismatch = errors.New("common settings version mismatch")
 
 // UserSettingsPayload represents the payload structure for user settings
 type UserSettingsPayload struct {
@@ -48,10 +52,6 @@ type UserSettingsRequest struct {
 // DoCommonHTTP is the indirection used to perform HTTP calls to the common
 // settings API. Tests can override this variable to stub network calls.
 var DoCommonHTTP = doCommonSettingsRequest
-
-// DoCommonHTTPResp allows tests to override the HTTP caller for GET requests
-// that returns the decoded remote settings with its Version field.
-var DoCommonHTTPResp = doCommonSettingsRequestResp
 
 var GetRemoteCommonSettings = getRemoteCommonSettings
 
@@ -129,10 +129,13 @@ func UpdateCommonSettings(inst *instance.Instance, settings *couchdb.JSONDoc) (b
 		} else {
 			log.Warn("no changes in remote and local versions, skip common settings version bump")
 		}
-		return false, errors.New("common settings version mismatch")
+		return false, ErrCommonSettingsVersionMismatch
 	}
 
-	inst.CommonSettingsVersion++
+	// Compute next version without mutating the instance yet. We only bump
+	// the stored version after the remote update succeeds.
+	nextVersion := inst.CommonSettingsVersion + 1
+	request.Version = nextVersion
 
 	requestBody, err := json.Marshal(request)
 	if err != nil {
@@ -144,10 +147,12 @@ func UpdateCommonSettings(inst *instance.Instance, settings *couchdb.JSONDoc) (b
 	}
 	u.Path = fmt.Sprintf("/api/admin/user/settings/%s", request.Nickname)
 	log.
-		Debugf("HTTP %s %s v=%d payload=%+v", "PUT", u.String(), inst.CommonSettingsVersion, request.Payload)
+		Debugf("HTTP %s %s v=%d payload=%+v", "PUT", u.String(), nextVersion, request.Payload)
 	if err := DoCommonHTTP("PUT", u.String(), cfg.Token, requestBody); err != nil {
 		return false, err
 	}
+
+	inst.CommonSettingsVersion = nextVersion
 	return true, nil
 }
 
@@ -326,37 +331,6 @@ func doCommonSettingsRequest(method, urlStr, token string, body []byte) error {
 		Debugf("HTTP %s %s -> status=%d", method, urlStr, res.StatusCode)
 
 	return mapStatusError(res.StatusCode)
-}
-
-// doCommonSettingsRequestResp performs the HTTP request and returns the
-// response to the caller when status is 200. On non-200, it returns a mapped
-// error and closes the response body.
-func doCommonSettingsRequestResp(urlStr, token string) (*UserSettingsPayload, error) {
-	req, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	res, err := safehttp.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.WithNamespace("common_settings").
-		Debugf("HTTP GET %s -> status=%d", urlStr, res.StatusCode)
-
-	var settings *UserSettingsPayload
-	if res.StatusCode == http.StatusOK {
-		body, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(body, &settings)
-		return settings, err
-	}
-	defer res.Body.Close()
-	return nil, mapStatusError(res.StatusCode)
 }
 
 func mapStatusError(status int) error {
