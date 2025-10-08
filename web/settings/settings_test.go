@@ -1395,6 +1395,11 @@ func TestSettings(t *testing.T) {
 				WithHeader("Content-Type", "image/png").
 				WithBytes([]byte(avatarContent)).
 				Expect().Status(204)
+
+			// Verify common settings version persisted increased
+			reloaded, err := instance.Get(testInstance.Domain)
+			require.NoError(t, err)
+			assert.Greater(t, reloaded.CommonSettingsVersion, 0)
 		})
 
 		t.Run("Delete", func(t *testing.T) {
@@ -1404,6 +1409,11 @@ func TestSettings(t *testing.T) {
 				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				Expect().Status(204)
+
+			// Verify common settings version persisted increased again
+			reloaded, err := instance.Get(testInstance.Domain)
+			require.NoError(t, err)
+			assert.Greater(t, reloaded.CommonSettingsVersion, 0)
 		})
 	})
 }
