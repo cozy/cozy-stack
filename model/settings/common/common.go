@@ -161,13 +161,17 @@ func UpdateAvatar(inst *instance.Instance) (bool, error) {
 		return false, nil
 	}
 
-	// Ensure local version is in sync with remote before updating
-	if err := CheckCommonSettingsVersionSync(inst); err != nil {
-		inst.Logger().WithNamespace("common_settings").WithDomain(inst.Domain).
-			Errorf("Version mismatch before avatar update: %v", err)
+	if remote, err := GetRemoteCommonSettings(inst); err != nil {
 		return false, err
+	} else if remote != nil && remote.Version != inst.CommonSettingsVersion {
+		msg := fmt.Sprintf("common settings version mismatch, remote version: %d, local version: %d", remote.Version, inst.CommonSettingsVersion)
+		inst.Logger().WithNamespace("common_settings").Info(msg)
+		inst.Logger().WithNamespace("common_settings").Info("common settings force update with remote version")
+		inst.CommonSettingsVersion = remote.Version + 1
+	} else {
+		inst.CommonSettingsVersion++
 	}
-	inst.CommonSettingsVersion++
+
 	parts := strings.Split(inst.Domain, ".")
 	nickname := parts[0]
 	requestID := fmt.Sprintf("%s_%d", inst.Domain, time.Now().UnixNano())
@@ -239,54 +243,6 @@ func getRemoteCommonSettings(inst *instance.Instance) (*UserSettingsRequest, err
 		return nil, err
 	}
 	return &remote, nil
-}
-
-// CheckCommonSettingsVersionSync ensures local and remote common settings
-// versions are equal; returns nil if not configured or remote missing.
-func CheckCommonSettingsVersionSync(inst *instance.Instance) error {
-	cfg := getCommonSettings(inst)
-	if cfg == nil {
-		return nil
-	}
-	remote, err := GetRemoteCommonSettings(inst)
-	if err != nil {
-		return err
-	}
-	if remote == nil {
-		return nil
-	}
-	if remote.Version != inst.CommonSettingsVersion {
-		// Build local payload to compare fields with remote
-		localDoc, lerr := inst.SettingsDocument()
-		if lerr != nil {
-			return fmt.Errorf("common settings out of sync: local=%d remote=%d (failed to load local settings: %v)", inst.CommonSettingsVersion, remote.Version, lerr)
-		}
-		localReq := buildRequest(inst, localDoc)
-
-		// Collect differences field by field
-		diffs := make([]string, 0, 8)
-		addDiff := func(name, lv, rv string) {
-			if lv != rv {
-				diffs = append(diffs, fmt.Sprintf("%s: '%s' != '%s'", name, lv, rv))
-			}
-		}
-		addDiff("language", localReq.Payload.Language, remote.Payload.Language)
-		addDiff("timezone", localReq.Payload.Timezone, remote.Payload.Timezone)
-		addDiff("display_name", localReq.Payload.DisplayName, remote.Payload.DisplayName)
-		addDiff("first_name", localReq.Payload.FirstName, remote.Payload.FirstName)
-		addDiff("last_name", localReq.Payload.LastName, remote.Payload.LastName)
-		addDiff("email", localReq.Payload.Email, remote.Payload.Email)
-		addDiff("phone", localReq.Payload.Phone, remote.Payload.Phone)
-		addDiff("matrix_id", localReq.Payload.MatrixID, remote.Payload.MatrixID)
-		// Avatar URL contains version query param; still useful for diagnostics
-		addDiff("avatar", localReq.Payload.Avatar, remote.Payload.Avatar)
-
-		if len(diffs) == 0 {
-			return fmt.Errorf("common settings out of sync: local=%d remote=%d (no payload diffs)", inst.CommonSettingsVersion, remote.Version)
-		}
-		return fmt.Errorf("common settings out of sync: local=%d remote=%d; diffs: %s", inst.CommonSettingsVersion, remote.Version, strings.Join(diffs, "; "))
-	}
-	return nil
 }
 
 func getCommonSettings(inst *instance.Instance) *config.CommonSettings {
