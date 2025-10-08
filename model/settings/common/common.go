@@ -166,15 +166,18 @@ func UpdateAvatar(inst *instance.Instance) (bool, error) {
 		return false, nil
 	}
 
+	// Compute next version without mutating the instance yet. We only bump
+	// the stored version after the remote update succeeds.
+	var nextVersion int
 	if remote, err := GetRemoteCommonSettings(inst); err != nil {
 		return false, err
 	} else if remote != nil && remote.Version != inst.CommonSettingsVersion {
 		msg := fmt.Sprintf("common settings version mismatch, remote version: %d, local version: %d", remote.Version, inst.CommonSettingsVersion)
 		inst.Logger().WithNamespace("common_settings").Info(msg)
 		inst.Logger().WithNamespace("common_settings").Info("common settings force update with remote version")
-		inst.CommonSettingsVersion = remote.Version + 1
+		nextVersion = remote.Version + 1
 	} else {
-		inst.CommonSettingsVersion++
+		nextVersion = inst.CommonSettingsVersion + 1
 	}
 
 	parts := strings.Split(inst.Domain, ".")
@@ -185,9 +188,12 @@ func UpdateAvatar(inst *instance.Instance) (bool, error) {
 		Nickname:  nickname,
 		RequestID: requestID,
 		Timestamp: time.Now().UnixMilli(),
-		Version:   inst.CommonSettingsVersion,
+		Version:   nextVersion,
 	}
-	addAvatarURL(inst, &request)
+	// Ensure avatar URL includes the computed next version
+	request.Payload.Avatar = inst.PageURL("/public/avatar", url.Values{
+		"v": {fmt.Sprintf("%d", nextVersion)},
+	})
 	requestBody, err := json.Marshal(request)
 	if err != nil {
 		return false, err
@@ -198,10 +204,12 @@ func UpdateAvatar(inst *instance.Instance) (bool, error) {
 	}
 	u.Path = fmt.Sprintf("/api/admin/user/settings/%s", request.Nickname)
 	inst.Logger().WithNamespace("common_settings").WithDomain(inst.Domain).
-		Debugf("HTTP %s %s v=%d avatar_url=%s", "PUT", u.String(), inst.CommonSettingsVersion, request.Payload.Avatar)
+		Debugf("HTTP %s %s v=%d avatar_url=%s", "PUT", u.String(), nextVersion, request.Payload.Avatar)
 	if err := DoCommonHTTP("PUT", u.String(), cfg.Token, requestBody); err != nil {
 		return false, err
 	}
+	// Persist the new version only after a successful remote update
+	inst.CommonSettingsVersion = nextVersion
 	return true, nil
 }
 
