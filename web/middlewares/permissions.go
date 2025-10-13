@@ -164,7 +164,7 @@ func ExtractClaims(c echo.Context, instance *instance.Instance, token string) (*
 	}
 
 	// check if the claim is valid
-	if claims.Issuer != instance.Domain {
+	if claims.Issuer != instance.Domain && claims.Issuer != instance.OldDomain {
 		logger.WithNamespace("permissions").
 			Debugf("invalid token: bad domain %s != %s", claims.Issuer, instance.Domain)
 		return nil, permission.ErrInvalidToken
