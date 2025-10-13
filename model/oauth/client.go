@@ -792,7 +792,7 @@ func validToken(i *instance.Instance, audience, token string) (permission.Claims
 			Errorf("Unexpected audience for %s token: %v", audience, claims.Audience)
 		return claims, false
 	}
-	if claims.Issuer != i.Domain {
+	if claims.Issuer != i.Domain && claims.Issuer != i.OldDomain {
 		i.Logger().WithNamespace("oauth").
 			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
