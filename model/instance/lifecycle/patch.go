@@ -205,18 +205,9 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 	}
 
-	// Only propagate to common settings if relevant fields changed
-	shouldUpdateCommon := opts.Locale != "" ||
-		settings.M["email"] != nil ||
-		settings.M["public_name"] != nil ||
-		settings.M["tz"] != nil
-
 	var updated bool
-	if shouldUpdateCommon {
-		updated, err = common.UpdateCommonSettings(i, settings)
-	} else {
-		updated, err = false, nil
-	}
+	updated, err = common.UpdateCommonSettings(i, settings)
+
 	if err != nil {
 		i.Logger().Errorf("Failed to update common settings: %s", err)
 	}
