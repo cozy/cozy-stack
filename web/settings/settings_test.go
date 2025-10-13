@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
+	cscommon "github.com/cozy/cozy-stack/model/settings/common"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -964,6 +965,303 @@ func TestSettings(t *testing.T) {
 		attrs.HasValue("ratio_1", "context")
 	})
 
+	// Verify common settings version bump on instance update
+	t.Run("UpdateInstanceTriggersCommonSettings", func(t *testing.T) {
+		// Stub common settings HTTP to succeed and verify version bump
+		oldDo := cscommon.DoCommonHTTP
+		cscommon.DoCommonHTTP = func(method, urlStr, token string, body []byte) error { return nil }
+		defer func() { cscommon.DoCommonHTTP = oldDo }()
+
+		// Configure common_settings so the code path is enabled
+		conf := config.GetConfig()
+		conf.CommonSettings = map[string]config.CommonSettings{
+			config.DefaultInstanceContext: {URL: "http://example.org", Token: "test-token"},
+			"test-context":                {URL: "http://example.org", Token: "test-token"},
+		}
+
+		// Ensure starting version is 0 to hit CreateCommonSettings path
+		prev := 0
+		testInstance.CommonSettingsVersion = prev
+
+		// Use the current settings revision to avoid conflict
+		doc, err := testInstance.SettingsDocument()
+		require.NoError(t, err)
+
+		// create
+		e := testutils.CreateTestClient(t, tsURL)
+		obj := e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "bob@example.net", "public_name": "Bob Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		var doGet = cscommon.GetRemoteCommonSettings
+		cscommon.GetRemoteCommonSettings = func(inst *instance.Instance) (*cscommon.UserSettingsRequest, error) {
+			return &cscommon.UserSettingsRequest{
+				Version: 1,
+				Payload: cscommon.UserSettingsPayload{
+					DisplayName: "Bob Jones",
+					Email:       "bob@example.net",
+				},
+			}, nil
+		}
+		defer func() { cscommon.GetRemoteCommonSettings = doGet }()
+
+		// update
+		doc, err = testInstance.SettingsDocument()
+		obj = e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "alice@example.net", "public_name": "Alice Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Check instance rev bumped in response and common settings version increased
+		data := obj.Value("data").Object()
+		meta := data.Value("meta").Object()
+		instanceRev = meta.Value("rev").String().NotEmpty().Raw()
+		assert.Greater(t, testInstance.CommonSettingsVersion, prev)
+
+		// Confirm it's persisted by reloading the instance
+		reloaded, err := instance.Get(testInstance.Domain)
+		require.NoError(t, err)
+		assert.Equal(t, testInstance.CommonSettingsVersion, reloaded.CommonSettingsVersion)
+	})
+
+	// Verify common settings version bump on instance update
+	t.Run("UpdateInstanceTriggersCommonSettings_VersionMismatch", func(t *testing.T) {
+		// Stub common settings HTTP to succeed and verify version bump
+		oldDo := cscommon.DoCommonHTTP
+		cscommon.DoCommonHTTP = func(method, urlStr, token string, body []byte) error { return nil }
+		defer func() { cscommon.DoCommonHTTP = oldDo }()
+
+		// Configure common_settings so the code path is enabled
+		conf := config.GetConfig()
+		conf.CommonSettings = map[string]config.CommonSettings{
+			config.DefaultInstanceContext: {URL: "http://example.org", Token: "test-token"},
+			"test-context":                {URL: "http://example.org", Token: "test-token"},
+		}
+
+		// Ensure starting version is 0 to hit CreateCommonSettings path
+		prev := 0
+		testInstance.CommonSettingsVersion = prev
+
+		// Use the current settings revision to avoid conflict
+		doc, err := testInstance.SettingsDocument()
+		require.NoError(t, err)
+
+		// create
+		e := testutils.CreateTestClient(t, tsURL)
+		obj := e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "bob@example.net", "public_name": "Bob Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		var doGet = cscommon.GetRemoteCommonSettings
+		cscommon.GetRemoteCommonSettings = func(inst *instance.Instance) (*cscommon.UserSettingsRequest, error) {
+			return &cscommon.UserSettingsRequest{
+				Version: 2,
+				Payload: cscommon.UserSettingsPayload{
+					DisplayName: "Bob Jones",
+					Email:       "bob@example.net",
+				},
+			}, nil
+		}
+		defer func() { cscommon.GetRemoteCommonSettings = doGet }()
+
+		// update
+		doc, err = testInstance.SettingsDocument()
+		obj = e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "alice@example.net", "public_name": "Alice Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Check instance rev bumped the same and common setting version is unchanged
+		data := obj.Value("data").Object()
+		meta := data.Value("meta").Object()
+		instanceRev = meta.Value("rev").String().NotEmpty().Raw()
+		assert.Equal(t, testInstance.CommonSettingsVersion, 1)
+
+		// Confirm it's persisted by reloading the instance
+		reloaded, err := instance.Get(testInstance.Domain)
+		require.NoError(t, err)
+		assert.Equal(t, testInstance.CommonSettingsVersion, reloaded.CommonSettingsVersion)
+	})
+
+	// Verify common settings version bump on instance update
+	t.Run("UpdateInstanceTriggersCommonSettings_VersionMismatch_SettingsUnchanged", func(t *testing.T) {
+		// Stub common settings HTTP to succeed and verify version bump
+		oldDo := cscommon.DoCommonHTTP
+		cscommon.DoCommonHTTP = func(method, urlStr, token string, body []byte) error { return nil }
+		defer func() { cscommon.DoCommonHTTP = oldDo }()
+
+		// Configure common_settings so the code path is enabled
+		conf := config.GetConfig()
+		conf.CommonSettings = map[string]config.CommonSettings{
+			config.DefaultInstanceContext: {URL: "http://example.org", Token: "test-token"},
+			"test-context":                {URL: "http://example.org", Token: "test-token"},
+		}
+
+		// Ensure starting version is 0 to hit CreateCommonSettings path
+		prev := 0
+		testInstance.CommonSettingsVersion = prev
+
+		// Use the current settings revision to avoid conflict
+		doc, err := testInstance.SettingsDocument()
+		require.NoError(t, err)
+
+		// create
+		e := testutils.CreateTestClient(t, tsURL)
+		obj := e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "bob@example.net", "public_name": "Bob Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		var doGet = cscommon.GetRemoteCommonSettings
+		cscommon.GetRemoteCommonSettings = func(inst *instance.Instance) (*cscommon.UserSettingsRequest, error) {
+			return &cscommon.UserSettingsRequest{
+				Version: 2,
+				Payload: cscommon.UserSettingsPayload{
+					DisplayName: "Bob Jones",
+					Email:       "bob@example.net",
+				},
+			}, nil
+		}
+		defer func() { cscommon.GetRemoteCommonSettings = doGet }()
+
+		// update
+		doc, err = testInstance.SettingsDocument()
+		obj = e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+                "data": {
+                  "type": "io.cozy.settings",
+                  "id": "io.cozy.settings.instance",
+                  "meta": {"rev": "%s"},
+                  "attributes": {"email": "bob@example.net", "public_name": "Bob Jones"}
+                }
+              }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Check instance rev bumped the same and common setting version is unchanged
+		data := obj.Value("data").Object()
+		meta := data.Value("meta").Object()
+		instanceRev = meta.Value("rev").String().NotEmpty().Raw()
+		assert.Equal(t, testInstance.CommonSettingsVersion, 1)
+
+		// Confirm it's persisted by reloading the instance
+		reloaded, err := instance.Get(testInstance.Domain)
+		require.NoError(t, err)
+		assert.Equal(t, testInstance.CommonSettingsVersion, reloaded.CommonSettingsVersion)
+	})
+
+	// Verify common settings NOT updated when only non-common fields change
+	t.Run("NonCommonFieldsDoNotUpdateCommonSettings", func(t *testing.T) {
+		// Stub common settings HTTP to succeed and verify version bump
+		oldDo := cscommon.DoCommonHTTP
+		cscommon.DoCommonHTTP = func(method, urlStr, token string, body []byte) error { return nil }
+		defer func() { cscommon.DoCommonHTTP = oldDo }()
+
+		// Ensure common_settings is enabled
+		conf := config.GetConfig()
+		conf.CommonSettings = map[string]config.CommonSettings{
+			config.DefaultInstanceContext: {URL: "http://127.0.0.1:9", Token: "test-token"},
+			"test-context":                {URL: "http://127.0.0.1:9", Token: "test-token"},
+		}
+
+		prev := testInstance.CommonSettingsVersion
+
+		// Use current settings rev to avoid conflict
+		doc, err := testInstance.SettingsDocument()
+		require.NoError(t, err)
+
+		e := testutils.CreateTestClient(t, tsURL)
+		_ = e.PUT("/settings/instance").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(fmt.Sprintf(`{
+		        "data": {
+		          "type": "io.cozy.settings",
+		          "id": "io.cozy.settings.instance",
+		          "meta": {"rev": "%s"},
+		          "attributes": {"how_old_are_you": "99"}
+		        }
+		      }`, doc.Rev()))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Confirm common settings version did not change
+		assert.Equal(t, prev, testInstance.CommonSettingsVersion)
+		reloaded, err := instance.Get(testInstance.Domain)
+		require.NoError(t, err)
+		assert.Equal(t, prev, reloaded.CommonSettingsVersion)
+	})
+
 	t.Run("ClientsLimitExceededWithoutSession", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
@@ -1097,6 +1395,11 @@ func TestSettings(t *testing.T) {
 				WithHeader("Content-Type", "image/png").
 				WithBytes([]byte(avatarContent)).
 				Expect().Status(204)
+
+			// Verify common settings version persisted increased
+			reloaded, err := instance.Get(testInstance.Domain)
+			require.NoError(t, err)
+			assert.Greater(t, reloaded.CommonSettingsVersion, 0)
 		})
 
 		t.Run("Delete", func(t *testing.T) {
@@ -1106,6 +1409,11 @@ func TestSettings(t *testing.T) {
 				WithCookie(sessCookie, "connected").
 				WithHeader("Authorization", "Bearer "+token).
 				Expect().Status(204)
+
+			// Verify common settings version persisted increased again
+			reloaded, err := instance.Get(testInstance.Domain)
+			require.NoError(t, err)
+			assert.Greater(t, reloaded.CommonSettingsVersion, 0)
 		})
 	})
 }

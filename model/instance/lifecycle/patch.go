@@ -205,11 +205,14 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 	}
 
-	updated, err := common.UpdateCommonSettings(i, settings)
+	var updated bool
+	updated, err = common.UpdateCommonSettings(i, settings)
+
 	if err != nil {
 		i.Logger().Errorf("Failed to update common settings: %s", err)
 	}
 	if updated {
+		i.Logger().Info("Common settings updated")
 		// We need to persist the common settings version
 		if err = update(i); err != nil {
 			return err
