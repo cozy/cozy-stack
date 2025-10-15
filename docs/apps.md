@@ -176,7 +176,8 @@ Entrypoints indicates front end routes to other apps. It contains a `name`, a `t
         "fr": "Nouveau fichier"
       },
       "hash": "/file/new",
-      "icon": "PHN2ZyB3aWR0aD0iMjkiIGhlaWdodD0iMz" // svg in base64, for example to use like this src={`data:image/svg+xml;base64,${entrypoint.icon}`}
+      "icon": "PHN2ZyB3aWR0aD0iMjkiIGhlaWdodD0iMz", // svg in base64, for example to use like this src={`data:image/svg+xml;base64,${entrypoint.icon}`}
+      "conditions": [{ "type": "flag", "name": "office.enabled", "value": true }] // optional, conditions to display or not the entrypoint
     }
   ]
 ```
