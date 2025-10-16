@@ -157,7 +157,7 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 		}
 		sources = append(sources, Source{
 			ID:       src["file_id"].(string),
-			DocType:  "io.cozy.files",
+			DocType:  src["doctype"].(string),
 			Filename: src["filename"].(string),
 			Page:     int(src["page"].(float64)),
 			FileURL:  src["file_url"].(string),
