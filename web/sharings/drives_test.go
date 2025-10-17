@@ -209,7 +209,7 @@ func acceptSharedDrive(
 	// Recipient goes to the discovery link on owner host (provided by caller)
 	u, err := url.Parse(discoveryLink)
 	assert.NoError(t, err)
-	state = u.Query()["state"][0]
+	state := u.Query()["state"][0]
 
 	eA.GET(u.Path).
 		WithQuery("state", state).
@@ -227,7 +227,7 @@ func acceptSharedDrive(
 
 	redirectHeader.Contains(tsRecipientURL)
 	redirectHeader.Contains("/auth/authorize/sharing")
-	authorizeLink = redirectHeader.NotEmpty().Raw()
+	authorizeLink := redirectHeader.NotEmpty().Raw()
 
 	// Ensure the owner instance URL is set for this specific sharing
 	FakeOwnerInstanceForSharing(t, recipientInstance, tsAURL, sharingID)

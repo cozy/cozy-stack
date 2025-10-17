@@ -30,8 +30,6 @@ import (
 
 // Test helpers to reduce duplication across scenarios
 type sharedDrivesEnv struct {
-	eA, eB, eD *httpexpect.Expect
-
 	// Instances
 	acme, betty, dave *instance.Instance
 	// Tokens
@@ -44,6 +42,27 @@ type sharedDrivesEnv struct {
 	firstRootDirID string
 	productDirID   string
 	meetingsDirID  string
+}
+
+// createClients creates httpexpect clients for the current test with proper error reporting
+func (env *sharedDrivesEnv) createClients(t *testing.T) (*httpexpect.Expect, *httpexpect.Expect, *httpexpect.Expect) {
+	t.Helper()
+	eA := httpexpect.WithConfig(httpexpect.Config{
+		BaseURL:  env.tsA.URL,
+		Reporter: httpexpect.NewRequireReporter(t),
+		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
+	})
+	eB := httpexpect.WithConfig(httpexpect.Config{
+		BaseURL:  env.tsB.URL,
+		Reporter: httpexpect.NewRequireReporter(t),
+		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
+	})
+	eD := httpexpect.WithConfig(httpexpect.Config{
+		BaseURL:  env.tsD.URL,
+		Reporter: httpexpect.NewRequireReporter(t),
+		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
+	})
+	return eA, eB, eD
 }
 
 func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
@@ -101,20 +120,22 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 	tsD.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(tsD.Close)
 
-	eA := httpexpect.WithConfig(httpexpect.Config{BaseURL: tsA.URL, Reporter: httpexpect.NewRequireReporter(t)})
-	eB := httpexpect.WithConfig(httpexpect.Config{BaseURL: tsB.URL, Reporter: httpexpect.NewRequireReporter(t)})
-	eD := httpexpect.WithConfig(httpexpect.Config{BaseURL: tsD.URL, Reporter: httpexpect.NewRequireReporter(t)})
-
 	// Create initial shared drive and accept as Betty; create common dirs
 	sharingID, firstRootDirID, disco := createSharedDriveForAcme(t, acme, acmeToken, tsA.URL,
 		"One More Shared Drive "+crypto.GenerateRandomString(1000), "One more Shared drive description")
 	acceptSharedDriveForBetty(t, betty, tsA.URL, tsB.URL, sharingID, disco)
 
+	// Create temporary clients for initial setup
+	eA := httpexpect.WithConfig(httpexpect.Config{
+		BaseURL:  tsA.URL,
+		Reporter: httpexpect.NewRequireReporter(t),
+		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
+	})
+
 	productDirID := createDirectory(t, eA, firstRootDirID, "Product", acmeToken)
 	meetingsDirID := createDirectory(t, eA, firstRootDirID, "Meetings", acmeToken)
 
 	return &sharedDrivesEnv{
-		eA: eA, eB: eB, eD: eD,
 		acme: acme, betty: betty, dave: dave,
 		acmeToken: acmeToken, bettyToken: bettyToken, daveToken: daveToken,
 		tsA: tsA, tsB: tsB, tsD: tsD,
@@ -172,14 +193,12 @@ func TestSharedDrivesMove(t *testing.T) {
 	daveAppToken := env.daveToken
 	tsA := env.tsA
 	tsB := env.tsB
-	eA := env.eA
-	eB := env.eB
-	eD := env.eD
 	firstSharingID := env.firstSharingID
 	productDirID := env.productDirID
 	meetingsDirID := env.meetingsDirID
 
 	t.Run("SuccessfulMove_ToSharedDrive_SameStack", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		// Perform the move operation
 		fileToMoveSameStack := createFile(t, eB, "", "file-to-upload.txt", bettyAppToken)
 		responseObj := postMove(t, eB, bettyAppToken, `{
@@ -207,6 +226,7 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	// Force the cross-stack path even if instances are on the same server
 	t.Run("SuccessfulMove_ToSharedDrive_DifferentStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		fileToMoveDifferentStack := createFile(t, eB, "", "file-to-upload-diff.txt", bettyAppToken)
 		destDirInSharedDrive := createDirectory(t, eA, productDirID, "Dest DIR To Move", acmeAppToken)
 
@@ -237,6 +257,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("SuccessfulMove_FromSharedDrive_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		// Create file to move
 		fileToMove := createFile(t, eA, meetingsDirID, "file-to-move-upstream.txt", acmeAppToken)
 		// Create destination directory on the target instance
@@ -266,6 +287,7 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	// Force the cross-stack path even if instances are on the same server
 	t.Run("SuccessfulMove_FromSharedDrive_DifferentStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		fileName := "file-to-move-diff.txt"
 		fileToDiffStack := createFile(t, eA, meetingsDirID, fileName, acmeAppToken)
 		// Create destination directory on the target (owner) instance
@@ -297,6 +319,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("SuccessfulMove_BetweenSharedDrives_DifferentStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL,
 			"One More Shared Drive", "One more Shared drive description")
 		// Accept it as Betty
@@ -339,6 +362,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("SuccessfulMoveBetween_SharedDrives_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		firstSharingID, firstRootDirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL,
 			"One More Shared Drive "+crypto.GenerateRandomString(1000), "One more Shared drive description")
 		// Accept it as Betty
@@ -395,6 +419,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	// Directory move tests (sync) using existing /move route and source.dir_id
 	t.Run("MoveEmptyDirectory_BetweenSharedDrives_SameStack", func(t *testing.T) {
 		t.Skip()
+		eA, eB, _ := env.createClients(t)
 		// Prepare: create a second shared drive and accept it as Betty
 		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL,
 			"EmptyDir Move Target Drive", "Drive used as destination for empty dir move")
@@ -449,7 +474,188 @@ func TestSharedDrivesMove(t *testing.T) {
 		}).IsEmpty()
 	})
 
+	// File move with conflict resolution: moving a file between shared drives (same stack)
+	// when a file with the same name already exists at destination should auto-rename.
+	t.Run("AutoRename_MoveFile_BetweenSharedDrives_SameStack_NameExists", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Prepare: create another shared drive and accept it as Betty (source drive)
+		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL,
+			"AutoRename Target Drive", "Drive used as source for auto-rename move")
+		acceptSharedDriveForBetty(t, bettyInstance, tsA.URL, tsB.URL, secondSharingID, disco)
+
+		// Create destination file with the conflicting name in the first shared drive (target)
+		conflictName := "conflict-name.txt"
+		_ = createFile(t, eA, meetingsDirID, conflictName, acmeAppToken)
+
+		// Create source file with the same name in the second shared drive (source)
+		sourceFileID := createFile(t, eA, secondRootDirID, conflictName, acmeAppToken)
+
+		// Attempt to move → should succeed with auto-renaming
+		responseObj := eB.POST("/sharings/drives/move").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "source": {
+			    "instance": "https://` + acmeInstance.Domain + `",
+			    "sharing_id": "` + secondSharingID + `",
+			    "file_id": "` + sourceFileID + `"
+			  },
+			  "dest": {
+			    "instance": "https://` + acmeInstance.Domain + `",
+			    "sharing_id": "` + firstSharingID + `",
+			    "dir_id": "` + meetingsDirID + `"
+			  }
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the file was moved with a renamed name (conflict resolution)
+		movedFileName := responseObj.Path("$.data.attributes.name").String().Raw()
+		require.NotEqual(t, conflictName, movedFileName)
+		require.Contains(t, movedFileName, "conflict-name")
+		require.Contains(t, movedFileName, " (2)")
+
+		// Verify both files exist in destination (original + renamed)
+		// Get the actual path of the meetings directory
+		meetingsDir, err := acmeInstance.VFS().DirByID(meetingsDirID)
+		require.NoError(t, err)
+
+		_, err = acmeInstance.VFS().FileByPath(meetingsDir.Fullpath + "/" + conflictName)
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(meetingsDir.Fullpath + "/" + movedFileName)
+		require.NoError(t, err)
+
+		// Verify source file was deleted
+		verifyFileDeleted(t, acmeInstance, sourceFileID)
+	})
+
+	// Move directory from Betty's local drive to a shared drive
+	t.Run("MoveDirectoryWithFilesAndChild_LocalToSharedDrive_SameStack", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		// Create a directory with files and subdirectories in Betty's local drive
+		localDirID := createDirectory(t, eB, "", "LocalTestDir", bettyAppToken)
+		_ = createFile(t, eB, localDirID, "local-file1.txt", bettyAppToken)
+		_ = createFile(t, eB, localDirID, "local-file2.md", bettyAppToken)
+		subDirID := createDirectory(t, eB, localDirID, "LocalSubDir", bettyAppToken)
+		_ = createFile(t, eB, subDirID, "local-file3.bin", bettyAppToken)
+
+		// Move the directory to the shared drive
+		responseObj := eB.POST("/sharings/drives/move").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "source": {
+			    "dir_id": "` + localDirID + `"
+			  },
+			  "dest": {
+			    "instance": "https://` + acmeInstance.Domain + `",
+			    "sharing_id": "` + firstSharingID + `",
+			    "dir_id": "` + meetingsDirID + `"
+			  }
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the directory was moved successfully
+		// Note: The response type is "io.cozy.files" for both files and directories
+		require.Equal(t, "io.cozy.files", responseObj.Path("$.data.type").String().Raw())
+		require.Equal(t, "LocalTestDir", responseObj.Path("$.data.attributes.name").String().Raw())
+		require.Equal(t, "directory", responseObj.Path("$.data.attributes.type").String().Raw())
+
+		// Get the actual path of the meetings directory
+		meetingsDir, err := acmeInstance.VFS().DirByID(meetingsDirID)
+		require.NoError(t, err)
+
+		// Verify the moved directory exists in the shared drive
+		movedDir, err := acmeInstance.VFS().DirByPath(meetingsDir.Fullpath + "/LocalTestDir")
+		require.NoError(t, err)
+		require.Equal(t, "LocalTestDir", movedDir.DocName)
+
+		// Verify all files were moved to the shared drive
+		_, err = acmeInstance.VFS().FileByPath(meetingsDir.Fullpath + "/LocalTestDir/local-file1.txt")
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(meetingsDir.Fullpath + "/LocalTestDir/local-file2.md")
+		require.NoError(t, err)
+
+		// Verify subdirectory and its file were moved
+		_, err = acmeInstance.VFS().DirByPath(meetingsDir.Fullpath + "/LocalTestDir/LocalSubDir")
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(meetingsDir.Fullpath + "/LocalTestDir/LocalSubDir/local-file3.bin")
+		require.NoError(t, err)
+
+		// Verify the original directory was deleted from Betty's local drive
+		verifyFileDeleted(t, bettyInstance, localDirID)
+	})
+
+	// Move directory from a shared drive to Betty's local drive
+	t.Run("MoveDirectoryWithFilesAndChild_SharedDriveToLocal_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Create a directory with files and subdirectories in the shared drive
+		sharedDirID := createDirectory(t, eA, meetingsDirID, "SharedTestDir", acmeAppToken)
+		_ = createFile(t, eA, sharedDirID, "shared-file1.txt", acmeAppToken)
+		_ = createFile(t, eA, sharedDirID, "shared-file2.md", acmeAppToken)
+		subDirID := createDirectory(t, eA, sharedDirID, "SharedSubDir", acmeAppToken)
+		_ = createFile(t, eA, subDirID, "shared-file3.bin", acmeAppToken)
+
+		// Create a destination directory in Betty's local drive
+		destDirID := createRootDirectory(t, eB, "Betty Dest Dir", bettyAppToken)
+
+		// Move the directory to Betty's local drive
+		responseObj := eB.POST("/sharings/drives/move").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "source": {
+			    "instance": "https://` + acmeInstance.Domain + `",
+			    "sharing_id": "` + firstSharingID + `",
+			    "dir_id": "` + sharedDirID + `"
+			  },
+			  "dest": {
+			    "dir_id": "` + destDirID + `"
+			  }
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the directory was moved successfully
+		// Note: The response type is "io.cozy.files" for both files and directories
+		require.Equal(t, "io.cozy.files", responseObj.Path("$.data.type").String().Raw())
+		require.Equal(t, "SharedTestDir", responseObj.Path("$.data.attributes.name").String().Raw())
+		require.Equal(t, "directory", responseObj.Path("$.data.attributes.type").String().Raw())
+
+		// Get the actual path of the destination directory
+		destDir, err := bettyInstance.VFS().DirByID(destDirID)
+		require.NoError(t, err)
+
+		// Verify the moved directory exists in Betty's local drive
+		movedDir, err := bettyInstance.VFS().DirByPath(destDir.Fullpath + "/SharedTestDir")
+		require.NoError(t, err)
+		require.Equal(t, "SharedTestDir", movedDir.DocName)
+
+		// Verify all files were moved to Betty's local drive
+		_, err = bettyInstance.VFS().FileByPath(destDir.Fullpath + "/SharedTestDir/shared-file1.txt")
+		require.NoError(t, err)
+		_, err = bettyInstance.VFS().FileByPath(destDir.Fullpath + "/SharedTestDir/shared-file2.md")
+		require.NoError(t, err)
+
+		// Verify subdirectory and its file were moved
+		_, err = bettyInstance.VFS().DirByPath(destDir.Fullpath + "/SharedTestDir/SharedSubDir")
+		require.NoError(t, err)
+		_, err = bettyInstance.VFS().FileByPath(destDir.Fullpath + "/SharedTestDir/SharedSubDir/shared-file3.bin")
+		require.NoError(t, err)
+
+		// Verify the original directory was deleted from the shared drive
+		verifyFileDeleted(t, acmeInstance, sharedDirID)
+	})
+
 	t.Run("MoveDirectoryWithFilesAndChild_BetweenSharedDrives_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
 		// Prepare: create a second shared drive and accept it as Betty
 		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL,
 			"NestedDir Move Target Drive", "Drive used as destination for nested dir move")
@@ -458,8 +664,13 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Prepare: create a directory with files and a child directory with files in the first drive
 		srcDirID := createDirectory(t, eA, productDirID, "FolderToMove", acmeAppToken)
 		_ = createFile(t, eA, srcDirID, "A1.txt", acmeAppToken)
+		_ = createFile(t, eA, srcDirID, "B1.md", acmeAppToken)
+		_ = createFile(t, eA, srcDirID, "C1.bin", acmeAppToken)
 		childDirID := createDirectory(t, eA, srcDirID, "SubFolder", acmeAppToken)
 		_ = createFile(t, eA, childDirID, "A2.txt", acmeAppToken)
+		// add deeper hierarchy
+		deepDirID := createDirectory(t, eA, childDirID, "Deep", acmeAppToken)
+		_ = createFile(t, eA, deepDirID, "D1.txt", acmeAppToken)
 
 		// Destination directory under the second shared drive
 		destDirID := createDirectory(t, eA, secondRootDirID, "DestForFolder", acmeAppToken)
@@ -477,58 +688,47 @@ func TestSharedDrivesMove(t *testing.T) {
 				  "dest": {
 				    "instance": "https://` + acmeInstance.Domain + `",
 				    "sharing_id": "` + secondSharingID + `",
-				    "dir_id": "` + destDirID + `"
+				    "dir_id": "` + destDirID + `"	
 				  }
 				}`)).
 			Expect().Status(201)
 
-		// Verify: the moved root directory is now under destination (second drive)
-		destObj := eB.GET("/sharings/drives/"+secondSharingID+"/"+destDirID).
-			WithHeader("Authorization", "Bearer "+bettyAppToken).
-			Expect().Status(200).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object()
-		destContents := destObj.Path("$.data.relationships.contents.data").Array()
-		destContents.Filter(func(_ int, v *httpexpect.Value) bool {
-			return v.Object().Value("id").String().Raw() == srcDirID
-		}).Length().IsEqual(1)
+		// Verify using VFS on owner instance (IDs are not preserved; check by names and paths)
+		// 1) Destination now contains a directory named like the source root
+		destRoot, err := acmeInstance.VFS().DirByID(destDirID)
+		require.NoError(t, err)
+		movedRoot, err := acmeInstance.VFS().DirByPath(destRoot.Fullpath + "/" + "FolderToMove")
+		require.NoError(t, err)
+		require.Equal(t, "FolderToMove", movedRoot.DocName)
 
-		// Verify: first drive root no longer contains the moved directory
-		rootObj := eB.GET("/sharings/drives/"+firstSharingID+"/"+productDirID).
-			WithHeader("Authorization", "Bearer "+bettyAppToken).
-			Expect().Status(200).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object()
-		rootContents := rootObj.Path("$.data.relationships.contents.data").Array()
-		rootContents.Filter(func(_ int, v *httpexpect.Value) bool {
-			return v.Object().Value("id").String().Raw() == srcDirID
-		}).IsEmpty()
+		// 2) Moved root contains multiple files and subdir SubFolder
+		_, err = acmeInstance.VFS().FileByPath(movedRoot.Fullpath + "/A1.txt")
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(movedRoot.Fullpath + "/B1.md")
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(movedRoot.Fullpath + "/C1.bin")
+		require.NoError(t, err)
+		childDir, err := acmeInstance.VFS().DirByPath(movedRoot.Fullpath + "/SubFolder")
+		require.NoError(t, err)
 
-		// Verify: the subtree content is still present under the moved directory
-		dirObj := eB.GET("/sharings/drives/"+secondSharingID+"/"+srcDirID).
-			WithHeader("Authorization", "Bearer "+bettyAppToken).
-			Expect().Status(200).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object()
-		children := dirObj.Path("$.data.relationships.contents.data").Array()
-		children.Filter(func(_ int, v *httpexpect.Value) bool {
-			// file A1.txt or subdir SubFolder
-			id := v.Object().Value("id").String().Raw()
-			return id != "" // ensure non-empty; detailed name checks happen below
-		}).Length().NotEqual(0)
+		// 3) Child dir contains A2.txt and nested Deep/D1.txt
+		_, err = acmeInstance.VFS().FileByPath(childDir.Fullpath + "/A2.txt")
+		require.NoError(t, err)
+		deepDir, err := acmeInstance.VFS().DirByPath(childDir.Fullpath + "/Deep")
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().FileByPath(deepDir.Fullpath + "/D1.txt")
+		require.NoError(t, err)
 
-		// Verify: child directory still contains its file
-		childObj := eB.GET("/sharings/drives/"+secondSharingID+"/"+childDirID).
-			WithHeader("Authorization", "Bearer "+bettyAppToken).
-			Expect().Status(200).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object()
-		grandChildren := childObj.Path("$.data.relationships.contents.data").Array()
-		grandChildren.Length().IsEqual(1)
+		// 4) Original source path no longer exists
+		productRoot, err := acmeInstance.VFS().DirByID(productDirID)
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().DirByPath(productRoot.Fullpath + "/FolderToMove")
+		require.Error(t, err)
 	})
 
 	// Validation errors for Move endpoint
 	t.Run("BadRequest_MissingSourceFileID", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		// missing source.file_id
 		_ = postMoveExpectStatus(t, eB, bettyAppToken, `{
 			  "source": {},
@@ -537,6 +737,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("BadRequest_MissingDestDirID", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		fileID := createFile(t, eB, "", "file-missing-dest.txt", bettyAppToken)
 		_ = postMoveExpectStatus(t, eB, bettyAppToken, `{
 			  "source": {"file_id": "`+fileID+`"},
@@ -545,6 +746,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("BadRequest_SourceInstanceWithoutSharingID", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		fileID := createFile(t, eB, "", "file-src-no-share.txt", bettyAppToken)
 		_ = postMoveExpectStatus(t, eB, bettyAppToken, `{
 			  "source": {"instance": "https://`+acmeInstance.Domain+`", "file_id": "`+fileID+`"},
@@ -553,6 +755,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("BadRequest_DestInstanceWithoutSharingID", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		fileID := createFile(t, eB, "", "file-dest-no-share.txt", bettyAppToken)
 		_ = postMoveExpectStatus(t, eB, bettyAppToken, `{
 			  "source": {"file_id": "`+fileID+`"},
@@ -561,6 +764,7 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 
 	t.Run("BadRequest_NoSharingIDsProvided", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
 		fileID := createFile(t, eB, "", "file-no-shares.txt", bettyAppToken)
 		_ = postMoveExpectStatus(t, eB, bettyAppToken, `{
 			  "source": {"file_id": "`+fileID+`"},
@@ -570,6 +774,7 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	// Dave is a read-only member; he must not be able to move files to a shared drive
 	t.Run("PermissionDeniedWithoutShare_ToSharedDrive", func(t *testing.T) {
+		_, _, eD := env.createClients(t)
 		// Dave creates a file on his own instance
 		fileOnDave := createFile(t, eD, "", "dave-local.txt", daveAppToken)
 		// Try to move Dave's file into the shared drive → forbidden
@@ -581,6 +786,7 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	// Dave is a read-only member; he must not be able to move files out of a shared drive
 	t.Run("PermissionDeniedWithoutShare_FromSharedDrive", func(t *testing.T) {
+		eA, _, eD := env.createClients(t)
 		// ACME (owner) creates a file in the shared drive that Dave can see
 		sharedFile := createFile(t, eA, meetingsDirID, "dave-cannot-move.txt", acmeAppToken)
 		// Dave creates a destination directory on his instance

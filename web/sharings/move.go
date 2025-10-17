@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -45,14 +47,14 @@ type moveRequest struct {
 // returns a 400-style error via jsonapi when invalid. It does not perform
 // authorization checks.
 func validateMoveRequest(req moveRequest) error {
-	if req.Source.FileID == "" {
-		return jsonapi.BadRequest(errors.New("missing source file_id"))
+	if req.Source.FileID == "" && req.Source.DirID == "" {
+		return jsonapi.BadRequest(errors.New("missing source file_id and dir_is"))
+	}
+	if req.Source.FileID != "" && req.Source.DirID != "" {
+		return jsonapi.BadRequest(errors.New("ambiguous file_id and dir_is are set, please specify only one of them"))
 	}
 	if req.Dest.DirID == "" {
 		return jsonapi.BadRequest(errors.New("missing dest dir_id"))
-	}
-	if req.Source.DirID != "" {
-		return jsonapi.BadRequest(errors.New("moving directories is not supported, please move the directory content instead"))
 	}
 
 	hasSourceInstance := req.Source.Instance != ""
@@ -131,19 +133,153 @@ func moveFileToSharedDrive(c echo.Context, inst *instance.Instance,
 	return respondRemoteUpload(c, uploaded, s.ID())
 }
 
+func moveDirectorySameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, sourceDirID string,
+	destDirID string, destSharing *sharing.Sharing) error {
+	// Resolve source and destination root directories
+	srcRoot, err := srcInst.VFS().DirByID(sourceDirID)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	_, err = destInst.VFS().DirByID(destDirID)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	type plannedDir struct {
+		srcDir      *vfs.DirDoc
+		parentSrcID string
+	}
+	type plannedFile struct {
+		srcFile     *vfs.FileDoc
+		parentSrcID string
+	}
+
+	var dirs []plannedDir
+	var filesToMove []plannedFile
+
+	// Build a flat list of subdirectories and files to move (including children)
+	err = vfs.WalkAlreadyLocked(srcInst.VFS(), srcRoot, func(_ string, d *vfs.DirDoc, f *vfs.FileDoc, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if f != nil {
+			filesToMove = append(filesToMove, plannedFile{srcFile: f, parentSrcID: f.DirID})
+			return nil
+		}
+		if d != nil && d.DocID != srcRoot.DocID {
+			dirs = append(dirs, plannedDir{srcDir: d, parentSrcID: d.DirID})
+		}
+		return nil
+	})
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	// Create the new root directory under destination with the same name as the source root
+	newRoot, err := vfs.NewDirDoc(destInst.VFS(), srcRoot.DocName, destDirID, srcRoot.Tags)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+	if err := destInst.VFS().CreateDir(newRoot); err != nil {
+		if os.IsExist(err) {
+			// Reuse existing directory with same path/name if already present
+			existing, e2 := destInst.VFS().DirByPath(path.Join(path.Dir(newRoot.Fullpath), newRoot.DocName))
+			if e2 != nil {
+				return files.WrapVfsError(e2)
+			}
+			newRoot = existing
+		} else {
+			return files.WrapVfsError(err)
+		}
+	}
+
+	// Map from source dirID to destination dirID. The root of the source maps to the newly created root
+	srcToDstDirID := map[string]string{srcRoot.DocID: newRoot.DocID}
+
+	// Create destination subdirectories in a single pass, top-down order as collected by Walk
+	for _, pd := range dirs {
+		parentDestID, ok := srcToDstDirID[pd.parentSrcID]
+		if !ok {
+			return files.WrapVfsError(errors.New("parent directory mapping missing"))
+		}
+		newDir, err := vfs.NewDirDoc(destInst.VFS(), pd.srcDir.DocName, parentDestID, pd.srcDir.Tags)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
+		if err := destInst.VFS().CreateDir(newDir); err != nil {
+			// If already exists, try to resolve by path and reuse its ID
+			if os.IsExist(err) {
+				existing, e2 := destInst.VFS().DirByPath(path.Join(path.Dir(newDir.Fullpath), newDir.DocName))
+				if e2 != nil {
+					return files.WrapVfsError(e2)
+				}
+				srcToDstDirID[pd.srcDir.DocID] = existing.DocID
+			} else {
+				return files.WrapVfsError(err)
+			}
+		} else {
+			srcToDstDirID[pd.srcDir.DocID] = newDir.DocID
+		}
+	}
+
+	// Copy files and delete sources
+	for _, pf := range filesToMove {
+		destParentID, ok := srcToDstDirID[pf.parentSrcID]
+		if !ok {
+			return files.WrapVfsError(errors.New("destination parent not found for file move"))
+		}
+		// When moving a directory we copy files but do not delete sources here
+		if _, err := moveFileSameStackCore(srcInst, destInst, pf.srcFile, destParentID, false); err != nil {
+			return err
+		}
+	}
+
+	// Delete source directories bottom-up (reverse order)
+	_, _, err = srcInst.VFS().DeleteDirDocAndContent(srcRoot, false)
+	if err != nil {
+		return files.WrapVfsError(err)
+	}
+
+	obj := files.NewDir(newRoot, destSharing)
+	return jsonapi.Data(c, http.StatusCreated, obj, nil)
+}
+
+// moveFileSameStackCore performs the actual file move between two instances on the same stack
+// without writing any HTTP response. It returns the newly created destination file document.
+func moveFileSameStackCore(srcInst *instance.Instance, destInst *instance.Instance, srcFile *vfs.FileDoc, destDirID string, deleteSource bool) (*vfs.FileDoc, error) {
+	newFileDoc, err := createFileDocFromSource(srcFile, destDirID)
+	if err != nil {
+		return nil, files.WrapVfsError(err)
+	}
+
+	// Check for name conflicts and resolve automatically
+	exists, err := destInst.VFS().GetIndexer().DirChildExists(destDirID, newFileDoc.DocName)
+	if err != nil {
+		return nil, files.WrapVfsError(err)
+	}
+	if exists {
+		newFileDoc.DocName = vfs.ConflictName(destInst.VFS(), destDirID, newFileDoc.DocName, true)
+		newFileDoc.ResetFullpath()
+	}
+
+	if err := copyFileContent(destInst.VFS(), newFileDoc, srcInst.VFS(), srcFile); err != nil {
+		return nil, err
+	}
+	if deleteSource {
+		if err := deleteSourceFile(srcInst.VFS(), srcFile); err != nil {
+			return nil, err
+		}
+	}
+	return newFileDoc, nil
+}
+
 func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, fileID string, dirID string, destSharing *sharing.Sharing) error {
 	srcFile, err := srcInst.VFS().FileByID(fileID)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
-	newFileDoc, err := createFileDocFromSource(srcFile, dirID)
+	newFileDoc, err := moveFileSameStackCore(srcInst, destInst, srcFile, dirID, true)
 	if err != nil {
-		return files.WrapVfsError(err)
-	}
-	if err := copyFileContent(destInst.VFS(), newFileDoc, srcInst.VFS(), srcFile); err != nil {
-		return err
-	}
-	if err := deleteSourceFile(srcInst.VFS(), srcFile); err != nil {
 		return err
 	}
 	obj := files.NewFile(newFileDoc, destInst, destSharing)
@@ -254,6 +390,8 @@ func MoveHandler(c echo.Context) error {
 		return err
 	}
 
+	moveDirectory := req.Source.DirID != ""
+
 	if req.Source.Instance != "" && req.Dest.Instance != "" {
 		sourceSharing, err := checkSharedDrivePermission(inst, req.Source.SharingID)
 		if err != nil {
@@ -264,7 +402,11 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, destSharing)
+			if moveDirectory {
+				return moveDirectorySameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, destSharing)
+			} else {
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, destSharing)
+			}
 		} else {
 			return moveBetweenSharedDrives(c, req.Source.Instance, req.Source.FileID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing)
 		}
@@ -274,7 +416,11 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, nil)
+			if moveDirectory {
+				return moveDirectorySameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, nil)
+			} else {
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, nil)
+			}
 		} else {
 			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s)
 		}
@@ -284,7 +430,11 @@ func MoveHandler(c echo.Context) error {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
-			return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, s)
+			if moveDirectory {
+				return moveDirectorySameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, s)
+			} else {
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, s)
+			}
 		} else {
 			return moveFileToSharedDrive(c, sourceInstance, req.Dest.DirID, req.Source.FileID, s)
 		}
