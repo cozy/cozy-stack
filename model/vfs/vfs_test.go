@@ -689,6 +689,32 @@ func TestVfs(t *testing.T) {
 				}
 			})
 		})
+
+		t.Run("UpdateDirMetadataField", func(t *testing.T) {
+			// Create a simple directory
+			dir, err := vfs.NewDirDoc(fs, "meta-dir", consts.RootDirID, nil)
+			require.NoError(t, err)
+			require.NoError(t, fs.CreateDir(dir))
+
+			// Ensure initial metadata is empty
+			assert.Empty(t, dir.Metadata)
+
+			// Prepare metadata update via DocPatch
+			newMeta := vfs.Metadata{"k1": "v1", "k2": 2}
+			patch := &vfs.DocPatch{Metadata: &newMeta}
+			updated, err := vfs.ModifyDirMetadata(fs, dir, patch)
+			require.NoError(t, err)
+			assert.Equal(t, "v1", updated.Metadata["k1"])
+			assert.Equal(t, 2, updated.Metadata["k2"])
+
+			// Replace metadata with a new map
+			replace := vfs.Metadata{"only": true}
+			patch = &vfs.DocPatch{Metadata: &replace}
+			updated, err = vfs.ModifyDirMetadata(fs, updated, patch)
+			require.NoError(t, err)
+			assert.Equal(t, 1, len(updated.Metadata))
+			assert.Equal(t, true, updated.Metadata["only"])
+		})
 	}
 }
 

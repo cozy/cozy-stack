@@ -348,6 +348,8 @@ type DocPatch struct {
 	Encrypted   *bool      `json:"encrypted,omitempty"`
 	Class       *string    `json:"class,omitempty"`
 
+    Metadata *Metadata `json:"metadata,omitempty"`
+
 	CozyMetadata CozyMetadataPatch `json:"cozyMetadata"`
 }
 
