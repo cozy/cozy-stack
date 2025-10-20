@@ -1142,6 +1142,169 @@ func TestSharedDrivesMove(t *testing.T) {
 	})
 }
 
+func TestSharedDrivesCopy(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	// Test 1: Copy file between shared drives, same stack
+	t.Run("SuccessfulCopy_FileBetweenSharedDrives_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Create a second shared drive
+		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+			"SecondDrive", "Second shared drive for copy tests")
+		// Accept it as Betty
+		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+
+		// Create a file in the first shared drive
+		fileToCopy := createFile(t, eA, env.meetingsDirID, "file-to-copy.txt", env.acmeToken)
+
+		// Copy the file to the second shared drive
+		responseObj := postMove(t, eB, env.bettyToken, `{
+			"source": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+env.firstSharingID+`",
+				"file_id": "`+fileToCopy+`"
+			},
+			"dest": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+secondSharingID+`",
+				"dir_id": "`+secondRootDirID+`"
+			},
+			"copy": true
+		}`)
+
+		// Verify the response and get copied file ID
+		copiedFileID := assertMoveResponseWithSharing(t, responseObj, "file-to-copy.txt", secondRootDirID, secondSharingID)
+
+		// Verify the file was copied and content preserved
+		verifyFileMove(t, env.acme, copiedFileID, "file-to-copy.txt", secondRootDirID, "foo")
+
+		// Verify the original file still exists (not deleted)
+		verifyFileExists(t, env.acme, fileToCopy, "file-to-copy.txt", env.meetingsDirID, "foo")
+	})
+
+	// Test 2: Copy directory between shared drives, same stack
+	t.Run("SuccessfulCopy_DirectoryBetweenSharedDrives_SameStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Create a second shared drive
+		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+			"ThirdDrive", "Third shared drive for copy tests")
+		// Accept it as Betty
+		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+
+		// Create a directory with files in the first shared drive
+		dirToCopy := createDirectory(t, eA, env.meetingsDirID, "DirToCopy", env.acmeToken)
+		_ = createFile(t, eA, dirToCopy, "file1.txt", env.acmeToken)
+		_ = createFile(t, eA, dirToCopy, "file2.md", env.acmeToken)
+		subDirID := createDirectory(t, eA, dirToCopy, "SubDir", env.acmeToken)
+		_ = createFile(t, eA, subDirID, "file3.bin", env.acmeToken)
+
+		// Copy the directory to the second shared drive
+		responseObj := postMove(t, eB, env.bettyToken, `{
+			"source": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+env.firstSharingID+`",
+				"dir_id": "`+dirToCopy+`"
+			},
+			"dest": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+secondSharingID+`",
+				"dir_id": "`+secondRootDirID+`"
+			},
+			"copy": true
+		}`)
+
+		// Verify the response and get copied directory ID
+		copiedDirID := assertDirectoryResponse(t, responseObj, "DirToCopy", secondRootDirID)
+
+		// Verify the directory was copied with all its contents
+		verifyDirectoryCopy(t, env.acme, copiedDirID, "DirToCopy", secondRootDirID)
+
+		// Verify the original directory still exists (not deleted)
+		verifyDirectoryExists(t, env.acme, dirToCopy, "DirToCopy", env.meetingsDirID)
+	})
+
+	// Test 3: Copy file from local to shared drive, different stack
+	t.Run("SuccessfulCopy_FileFromLocalToSharedDrive_DifferentStack", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		// Create a file in Betty's local drive
+		fileToCopy := createFile(t, eB, "", "local-file-to-copy.txt", env.bettyToken)
+
+		// Force cross-stack behavior
+		cleanup := forceCrossStack(t, env.tsA.URL)
+		defer cleanup()
+
+		// Copy the file to the shared drive
+		responseObj := postMove(t, eB, env.bettyToken, `{
+			"source": {
+				"file_id": "`+fileToCopy+`"
+			},
+			"dest": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+env.firstSharingID+`",
+				"dir_id": "`+env.productDirID+`"
+			},
+			"copy": true
+		}`)
+
+		// Verify the response and get copied file ID
+		copiedFileID := assertMoveResponseWithSharing(t, responseObj, "local-file-to-copy.txt", env.productDirID, env.firstSharingID)
+
+		// Verify the file was copied and content preserved
+		verifyFileMove(t, env.acme, copiedFileID, "local-file-to-copy.txt", env.productDirID, "foo")
+
+		// Verify the original file still exists (not deleted)
+		verifyFileExists(t, env.betty, fileToCopy, "local-file-to-copy.txt", "", "foo")
+	})
+
+	// Test 4: Copy directory from shared drive to local, different stack
+	t.Run("SuccessfulCopy_DirectoryFromSharedDriveToLocal_DifferentStack", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Create a directory with files in the shared drive
+		dirToCopy := createDirectory(t, eA, env.meetingsDirID, "SharedDirToCopy", env.acmeToken)
+		_ = createFile(t, eA, dirToCopy, "shared-file1.txt", env.acmeToken)
+		_ = createFile(t, eA, dirToCopy, "shared-file2.md", env.acmeToken)
+		subDirID := createDirectory(t, eA, dirToCopy, "SharedSubDir", env.acmeToken)
+		_ = createFile(t, eA, subDirID, "shared-file3.bin", env.acmeToken)
+
+		// Create destination directory in Betty's local drive
+		destDirID := createRootDirectory(t, eB, "LocalDestDir", env.bettyToken)
+
+		// Force cross-stack behavior
+		cleanup := forceCrossStack(t, env.tsA.URL)
+		defer cleanup()
+
+		// Copy the directory to Betty's local drive
+		responseObj := postMove(t, eB, env.bettyToken, `{
+			"source": {
+				"instance": "https://`+env.acme.Domain+`",
+				"sharing_id": "`+env.firstSharingID+`",
+				"dir_id": "`+dirToCopy+`"
+			},
+			"dest": {
+				"dir_id": "`+destDirID+`"
+			},
+			"copy": true
+		}`)
+
+		// Verify the response and get copied directory ID
+		copiedDirID := assertDirectoryResponse(t, responseObj, "SharedDirToCopy", destDirID)
+
+		// Verify the directory was copied with all its contents
+		verifyDirectoryCopy(t, env.betty, copiedDirID, "SharedDirToCopy", destDirID)
+
+		// Verify the original directory still exists (not deleted)
+		verifyDirectoryExists(t, env.acme, dirToCopy, "SharedDirToCopy", env.meetingsDirID)
+	})
+}
+
 func testify(t *testing.T, s string) string {
 	return strings.ReplaceAll(t.Name()+"_"+s, "/", "_")
 }
@@ -1195,4 +1358,48 @@ func verifyBothFilesExist(t *testing.T, instance *instance.Instance, dirID, orig
 		_, err = instance.VFS().DirByPath(meetingsDir.Fullpath + "/" + renamedName)
 	}
 	require.NoError(t, err)
+}
+
+// verifyFileExists verifies that a file exists with the expected attributes
+func verifyFileExists(t *testing.T, inst *instance.Instance, fileID, expectedName, expectedDirID, expectedContent string) {
+	t.Helper()
+	fs := inst.VFS()
+
+	fileDoc, err := fs.FileByID(fileID)
+	require.NoError(t, err)
+	require.Equal(t, expectedName, fileDoc.DocName)
+	if expectedDirID != "" {
+		require.Equal(t, expectedDirID, fileDoc.DirID)
+	}
+	require.Equal(t, int64(len(expectedContent)), fileDoc.ByteSize)
+}
+
+// verifyDirectoryExists verifies that a directory exists with the expected attributes
+func verifyDirectoryExists(t *testing.T, inst *instance.Instance, dirID, expectedName, expectedDirID string) {
+	t.Helper()
+	fs := inst.VFS()
+
+	dirDoc, err := fs.DirByID(dirID)
+	require.NoError(t, err)
+	require.Equal(t, expectedName, dirDoc.DocName)
+	if expectedDirID != "" {
+		require.Equal(t, expectedDirID, dirDoc.DirID)
+	}
+}
+
+// verifyDirectoryCopy verifies that a directory was copied with all its contents
+func verifyDirectoryCopy(t *testing.T, inst *instance.Instance, dirID, expectedName, expectedParentDirID string) {
+	t.Helper()
+	fs := inst.VFS()
+
+	// Verify the directory exists
+	dirDoc, err := fs.DirByID(dirID)
+	require.NoError(t, err)
+	require.Equal(t, expectedName, dirDoc.DocName)
+	require.Equal(t, expectedParentDirID, dirDoc.DirID)
+
+	// Verify the directory is not empty (has contents)
+	isEmpty, err := dirDoc.IsEmpty(fs)
+	require.NoError(t, err)
+	require.False(t, isEmpty, "Copied directory should not be empty")
 }

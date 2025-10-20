@@ -40,6 +40,7 @@ type moveRequest struct {
 		SharingID string `json:"sharing_id"`
 		DirID     string `json:"dir_id"`
 	} `json:"dest"`
+	Copy bool `json:"copy,omitempty"`
 }
 
 // validateMoveRequest checks the structural validity of a move request and
@@ -78,6 +79,7 @@ func validateMoveRequest(req moveRequest) error {
 // - Common: file-id, dir-id
 // - Source: source-instance + source-sharing_id (both together for shared drives)
 // - Destination: dest-instance + dest-sharing_id (both together for shared drives)
+// - Copy: boolean flag (default false) - when true, performs copy instead of move (does not delete source)
 // For personal drives, only sharing_id is provided (instance is empty).
 // At least one sharing_id must be provided.
 //
@@ -94,7 +96,8 @@ func validateMoveRequest(req moveRequest) error {
 //		    "instance": "https://alice.localhost:8080",
 //	        "sharing_id": "sharing123",
 //		    "dir_id": "dir456"
-//		  }
+//		  },
+//		  "copy": false
 //		}
 func MoveHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -134,15 +137,15 @@ func MoveHandler(c echo.Context) error {
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
 			if moveDirectory {
-				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, destSharing)
+				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, destSharing, req.Copy)
 			} else {
-				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, destSharing)
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, destSharing, req.Copy)
 			}
 		} else {
 			if moveDirectory {
-				return moveDirBetweenSharedDrives(c, req.Source.Instance, req.Source.DirID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing)
+				return moveDirBetweenSharedDrives(c, req.Source.Instance, req.Source.DirID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing, req.Copy)
 			}
-			return moveFileBetweenSharedDrives(c, req.Source.Instance, req.Source.FileID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing)
+			return moveFileBetweenSharedDrives(c, req.Source.Instance, req.Source.FileID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing, req.Copy)
 		}
 	} else if req.Source.Instance != "" && req.Dest.Instance == "" {
 		s, err := checkSharedDrivePermission(inst, req.Source.SharingID)
@@ -151,15 +154,15 @@ func MoveHandler(c echo.Context) error {
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
 			if moveDirectory {
-				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, nil)
+				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, nil, req.Copy)
 			} else {
-				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, nil)
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, nil, req.Copy)
 			}
 		} else {
 			if moveDirectory {
-				return moveDirFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.DirID, req.Dest.DirID, s)
+				return moveDirFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			}
-			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s)
+			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s, req.Copy)
 		}
 	} else if req.Source.Instance == "" && req.Dest.Instance != "" {
 		s, err := checkSharedDrivePermission(inst, req.Dest.SharingID)
@@ -168,15 +171,15 @@ func MoveHandler(c echo.Context) error {
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
 			if moveDirectory {
-				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, s)
+				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			} else {
-				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, s)
+				return moveFileSameStack(c, sourceInstance, destInstance, req.Source.FileID, req.Dest.DirID, s, req.Copy)
 			}
 		} else {
 			if moveDirectory {
-				return moveDirToSharedDrive(c, sourceInstance, req.Source.DirID, req.Dest.DirID, s)
+				return moveDirToSharedDrive(c, sourceInstance, req.Source.DirID, req.Dest.DirID, s, req.Copy)
 			}
-			return moveFileToSharedDrive(c, sourceInstance, req.Dest.DirID, req.Source.FileID, s)
+			return moveFileToSharedDrive(c, sourceInstance, req.Dest.DirID, req.Source.FileID, s, req.Copy)
 		}
 	} else {
 		return jsonapi.BadRequest(errors.New("to move files inside personal drive use patch function"))
@@ -185,7 +188,7 @@ func MoveHandler(c echo.Context) error {
 
 // Same-stack moves (instance ↔ instance)
 func moveDirSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, sourceDirID string,
-	destDirID string, destSharing *sharing.Sharing) error {
+	destDirID string, destSharing *sharing.Sharing, copy bool) error {
 	// Resolve source and destination root directories
 	srcRoot, err := srcInst.VFS().DirByID(sourceDirID)
 	if err != nil {
@@ -249,10 +252,12 @@ func moveDirSameStack(c echo.Context, srcInst *instance.Instance, destInst *inst
 		}
 	}
 
-	// Delete source directories bottom-up (reverse order)
-	_, _, err = srcInst.VFS().DeleteDirDocAndContent(srcRoot, false)
-	if err != nil {
-		return files.WrapVfsError(err)
+	// Delete source directories bottom-up (reverse order) only if not copying
+	if !copy {
+		_, _, err = srcInst.VFS().DeleteDirDocAndContent(srcRoot, false)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
 	}
 
 	obj := files.NewDir(newRoot, destSharing)
@@ -289,12 +294,13 @@ func moveFileSameStackCore(srcInst *instance.Instance, destInst *instance.Instan
 	return newFileDoc, nil
 }
 
-func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, fileID string, dirID string, destSharing *sharing.Sharing) error {
+func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *instance.Instance, fileID string, dirID string, destSharing *sharing.Sharing, copy bool) error {
 	srcFile, err := srcInst.VFS().FileByID(fileID)
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
-	newFileDoc, err := moveFileSameStackCore(srcInst, destInst, srcFile, dirID, true)
+	deleteSource := !copy
+	newFileDoc, err := moveFileSameStackCore(srcInst, destInst, srcFile, dirID, deleteSource)
 	if err != nil {
 		return err
 	}
@@ -303,8 +309,9 @@ func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *ins
 }
 
 func moveFileFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInstanceURL string, fileID string,
-	dirID string, s *sharing.Sharing) error {
-	newFileDoc, err := moveFileFromSharedDriveCore(inst, sourceInstanceURL, fileID, dirID, s, true)
+	dirID string, s *sharing.Sharing, copy bool) error {
+	deleteSource := !copy
+	newFileDoc, err := moveFileFromSharedDriveCore(inst, sourceInstanceURL, fileID, dirID, s, deleteSource)
 	if err != nil {
 		return err
 	}
@@ -382,7 +389,7 @@ func moveFileFromSharedDriveCore(inst *instance.Instance, sourceInstanceURL stri
 }
 
 func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInstanceURL string, sourceDirID string,
-	targetDirID string, s *sharing.Sharing) error {
+	targetDirID string, s *sharing.Sharing, copy bool) error {
 	_, err := inst.VFS().DirByID(targetDirID)
 	if err != nil {
 		return files.WrapVfsError(err)
@@ -447,9 +454,11 @@ func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInsta
 		}
 	}
 
-	// Delete source directories bottom-up (reverse order)
-	if err := srcClient.PermanentDeleteByID(sourceDirID); err != nil {
-		inst.Logger().WithNamespace("move").Warnf("Could not delete source directory: %v", err)
+	// Delete source directories bottom-up (reverse order) only if not copying
+	if !copy {
+		if err := srcClient.PermanentDeleteByID(sourceDirID); err != nil {
+			inst.Logger().WithNamespace("move").Warnf("Could not delete source directory: %v", err)
+		}
 	}
 
 	// Get the created root directory for the response
@@ -464,7 +473,7 @@ func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInsta
 
 // Local → Shared-drive moves
 func moveDirToSharedDrive(c echo.Context, srcInst *instance.Instance,
-	sourceDirID string, destDirID string, s *sharing.Sharing) error {
+	sourceDirID string, destDirID string, s *sharing.Sharing, copy bool) error {
 	srcRoot, err := srcInst.VFS().DirByID(sourceDirID)
 	if err != nil {
 		return files.WrapVfsError(err)
@@ -517,10 +526,12 @@ func moveDirToSharedDrive(c echo.Context, srcInst *instance.Instance,
 		}
 	}
 
-	// Delete source directories bottom-up (reverse order)
-	_, _, err = srcInst.VFS().DeleteDirDocAndContent(srcRoot, false)
-	if err != nil {
-		return files.WrapVfsError(err)
+	// Delete source directories bottom-up (reverse order) only if not copying
+	if !copy {
+		_, _, err = srcInst.VFS().DeleteDirDocAndContent(srcRoot, false)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
 	}
 
 	dstDir, err := dstClient.GetDirByID(destDirID)
@@ -536,8 +547,9 @@ func moveDirToSharedDrive(c echo.Context, srcInst *instance.Instance,
 }
 
 func moveFileToSharedDrive(c echo.Context, inst *instance.Instance,
-	targetDirID string, sourceFileID string, s *sharing.Sharing) error {
-	uploaded, err := moveFileToSharedDriveCore(inst, targetDirID, sourceFileID, s, true)
+	targetDirID string, sourceFileID string, s *sharing.Sharing, copy bool) error {
+	deleteSource := !copy
+	uploaded, err := moveFileToSharedDriveCore(inst, targetDirID, sourceFileID, s, deleteSource)
 	if err != nil {
 		return err
 	}
@@ -628,7 +640,7 @@ func remoteContentToMove(remoteClient *client.Client, dirID string) ([]*client.D
 	return dirs, filesToMove, nil
 }
 
-func moveDirBetweenSharedDrives(c echo.Context, sourceInstanceURL, sourceDirID string, sourceSharing *sharing.Sharing, destInstanceURL, dirID string, destSharing *sharing.Sharing) error {
+func moveDirBetweenSharedDrives(c echo.Context, sourceInstanceURL, sourceDirID string, sourceSharing *sharing.Sharing, destInstanceURL, dirID string, destSharing *sharing.Sharing, copy bool) error {
 	inst := middlewares.GetInstance(c)
 
 	// Build remote clients for source and destination
@@ -713,14 +725,18 @@ func moveDirBetweenSharedDrives(c echo.Context, sourceInstanceURL, sourceDirID s
 			return files.WrapVfsError(err)
 		}
 
-		if err := sourceClient.PermanentDeleteByID(f.ID); err != nil {
-			inst.Logger().WithNamespace("move").Warnf("Could not delete source file: %v", err)
+		if !copy {
+			if err := sourceClient.PermanentDeleteByID(f.ID); err != nil {
+				inst.Logger().WithNamespace("move").Warnf("Could not delete source file: %v", err)
+			}
 		}
 	}
 
-	// Delete source directory (remote) after files are moved
-	if err := sourceClient.PermanentDeleteByID(sourceDirID); err != nil {
-		inst.Logger().WithNamespace("move").Warnf("Could not delete source directory: %v", err)
+	// Delete source directory (remote) after files are moved only if not copying
+	if !copy {
+		if err := sourceClient.PermanentDeleteByID(sourceDirID); err != nil {
+			inst.Logger().WithNamespace("move").Warnf("Could not delete source directory: %v", err)
+		}
 	}
 
 	// Respond with the created root directory on destination
@@ -732,7 +748,7 @@ func moveDirBetweenSharedDrives(c echo.Context, sourceInstanceURL, sourceDirID s
 	return respondRemoteUploadDir(c, dstRootDir, destSharing.ID())
 }
 
-func moveFileBetweenSharedDrives(c echo.Context, sourceInstanceURL, fileID string, sourceSharing *sharing.Sharing, destInstanceURL, destDirID string, destSharing *sharing.Sharing) error {
+func moveFileBetweenSharedDrives(c echo.Context, sourceInstanceURL, fileID string, sourceSharing *sharing.Sharing, destInstanceURL, destDirID string, destSharing *sharing.Sharing, copy bool) error {
 	inst := middlewares.GetInstance(c)
 	sourceURL, err := url.Parse(sourceInstanceURL)
 	if err != nil {
@@ -785,8 +801,10 @@ func moveFileBetweenSharedDrives(c echo.Context, sourceInstanceURL, fileID strin
 		return files.WrapVfsError(err)
 	}
 
-	if err := sourceClient.PermanentDeleteByID(fileID); err != nil {
-		inst.Logger().WithNamespace("move").Warnf("Could not delete source file: %v", err)
+	if !copy {
+		if err := sourceClient.PermanentDeleteByID(fileID); err != nil {
+			inst.Logger().WithNamespace("move").Warnf("Could not delete source file: %v", err)
+		}
 	}
 
 	return respondRemoteUpload(c, uploaded, destSharing.ID())
