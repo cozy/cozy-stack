@@ -141,10 +141,10 @@ func createSharedDriveForAcme(
 	eA := httpexpect.Default(t, tsAURL)
 
 	// Prepare contacts and the directory that will be shared
-	contact := createContact(t, acmeInstance, "Betty", "betty@example.net")
-	require.NotNil(t, contact)
-	daveContact := createContact(t, acmeInstance, "Dave", "dave@example.net")
-	require.NotNil(t, daveContact)
+	betty := createContact(t, acmeInstance, "Betty", "betty@example.net")
+	require.NotNil(t, betty)
+	dave := createContact(t, acmeInstance, "Dave", "dave@example.net")
+	require.NotNil(t, dave)
 
 	productID = eA.POST("/files/").
 		WithQuery("Name", driveName).
@@ -172,10 +172,10 @@ func createSharedDriveForAcme(
           },
           "relationships": {
             "recipients": {
-              "data": [{"id": "` + contact.ID() + `", "type": "` + contact.DocType() + `"}]
+              "data": [{"id": "` + betty.ID() + `", "type": "` + betty.DocType() + `"}]
             },
             "read_only_recipients": {
-              "data": [{"id": "` + daveContact.ID() + `", "type": "` + daveContact.DocType() + `"}]
+              "data": [{"id": "` + dave.ID() + `", "type": "` + dave.DocType() + `"}]
             }
           }
         }
