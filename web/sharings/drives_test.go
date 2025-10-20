@@ -187,7 +187,7 @@ func createSharedDriveForAcme(
 	sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
 
 	// pull fresh invitation data without relying on globals
-	sentDescription, disco := extractInvitationLink(t, acmeInstance, "ACME")
+	sentDescription, disco := extractInvitationLink(t, acmeInstance, "ACME", "")
 	assert.Equal(t, sentDescription, description)
 	assert.Contains(t, disco, "/discovery?state=")
 	discovery = disco
@@ -195,19 +195,24 @@ func createSharedDriveForAcme(
 	return
 }
 
-// acceptSharedDrive performs the acceptance flow on the recipient side using
-// the previously generated discovery and authorize links.
+// acceptSharedDrive performs the acceptance flow on the recipient side.
+// It extracts the discovery link for the specific recipient and completes the acceptance flow.
 func acceptSharedDrive(
 	t *testing.T,
+	ownerInstance *instance.Instance,
 	recipientInstance *instance.Instance,
+	recipientName string,
 	tsAURL string,
 	tsRecipientURL string,
 	sharingID string,
-	discoveryLink string,
 ) {
 	t.Helper()
 	eA := httpexpect.Default(t, tsAURL)
 	eR := httpexpect.Default(t, tsRecipientURL)
+
+	// Extract the discovery link for this specific recipient
+	ownerPublicName, _ := ownerInstance.SettingsPublicName()
+	_, discoveryLink := extractInvitationLink(t, ownerInstance, ownerPublicName, recipientName)
 
 	// Recipient login
 	token := eR.GET("/auth/login").
@@ -221,7 +226,7 @@ func acceptSharedDrive(
 		Expect().Status(303).
 		Header("Location").Contains("home")
 
-	// Recipient goes to the discovery link on owner host (provided by caller)
+	// Recipient goes to the discovery link on owner host
 	u, err := url.Parse(discoveryLink)
 	assert.NoError(t, err)
 	state := u.Query()["state"][0]
@@ -263,13 +268,13 @@ func acceptSharedDrive(
 // acceptSharedDriveForBetty is kept for convenience and delegates to acceptSharedDrive.
 func acceptSharedDriveForBetty(
 	t *testing.T,
+	ownerInstance *instance.Instance,
 	bettyInstance *instance.Instance,
 	tsAURL string,
 	tsBURL string,
 	sharingID string,
-	discoveryLink string,
 ) {
-	acceptSharedDrive(t, bettyInstance, tsAURL, tsBURL, sharingID, discoveryLink)
+	acceptSharedDrive(t, ownerInstance, bettyInstance, "Betty", tsAURL, tsBURL, sharingID)
 }
 
 // removed createSharedDriveForAcmeWithName in favor of createSharedDriveForAcme with parameters
@@ -387,9 +392,8 @@ func TestSharedDrives(t *testing.T) {
 
 	t.Run("CreateSharedDrive", func(t *testing.T) {
 		// Create the shared drive on ACME side only
-		sid, dirID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL, "Product team", "Drive for the product team")
+		sid, dirID, _ := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL, "Product team", "Drive for the product team")
 		sharingID, productID = sid, dirID
-		_ = disco
 
 		// Prepare additional folders/files used by subsequent tests
 		eA := httpexpect.Default(t, tsA.URL)
@@ -501,9 +505,7 @@ func TestSharedDrives(t *testing.T) {
 	})
 
 	t.Run("AcceptSharedDrive", func(t *testing.T) {
-		// fetch fresh discovery link for this sharing
-		_, disco := extractInvitationLink(t, acmeInstance, "ACME")
-		acceptSharedDriveForBetty(t, bettyInstance, tsA.URL, tsB.URL, sharingID, disco)
+		acceptSharedDriveForBetty(t, acmeInstance, bettyInstance, tsA.URL, tsB.URL, sharingID)
 	})
 
 	t.Run("HeadDirOrFile", func(t *testing.T) {
@@ -1277,17 +1279,16 @@ func TestSharedDrives(t *testing.T) {
 		// Create a new shared drive with custom name
 		secondName := "Marketing team" + strings.ReplaceAll(t.Name(), "/", "-")
 		secondDesc := "Drive for the marketing team"
-		sid, rootID, disco := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL, secondName, secondDesc)
+		sid, rootID, _ := createSharedDriveForAcme(t, acmeInstance, acmeAppToken, tsA.URL, secondName, secondDesc)
 		// Keep local variables to avoid interfering with global firstSharingID/productDirID
 		secondSharingID := sid
 		secondRootDirID := rootID
 
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, bettyInstance, tsA.URL, tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, acmeInstance, bettyInstance, tsA.URL, tsB.URL, secondSharingID)
 
-		// Fetch a fresh discovery link for Dave and accept as Dave (read-only)
-		_, discoDave := extractInvitationLink(t, acmeInstance, "ACME")
-		acceptSharedDrive(t, daveInstance, tsA.URL, tsD.URL, secondSharingID, discoDave)
+		// Accept as Dave (read-only)
+		acceptSharedDrive(t, acmeInstance, daveInstance, "Dave", tsA.URL, tsD.URL, secondSharingID)
 
 		// ACME uploads a file into this new shared drive
 		eA := httpexpect.Default(t, tsA.URL)

@@ -127,11 +127,11 @@ func MoveHandler(c echo.Context) error {
 	moveDirectory := req.Source.DirID != ""
 
 	if req.Source.Instance != "" && req.Dest.Instance != "" {
-		sourceSharing, err := checkSharedDrivePermission(inst, req.Source.SharingID)
+		sourceSharing, err := checkSharedDrivePermission(inst, req.Source.SharingID, !req.Copy)
 		if err != nil {
 			return err
 		}
-		destSharing, err := checkSharedDrivePermission(inst, req.Dest.SharingID)
+		destSharing, err := checkSharedDrivePermission(inst, req.Dest.SharingID, true)
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func MoveHandler(c echo.Context) error {
 			return moveFileBetweenSharedDrives(c, req.Source.Instance, req.Source.FileID, sourceSharing, req.Dest.Instance, req.Dest.DirID, destSharing, req.Copy)
 		}
 	} else if req.Source.Instance != "" && req.Dest.Instance == "" {
-		s, err := checkSharedDrivePermission(inst, req.Source.SharingID)
+		s, err := checkSharedDrivePermission(inst, req.Source.SharingID, !req.Copy)
 		if err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func MoveHandler(c echo.Context) error {
 			return moveFileFromSharedDrive(c, destInstance, req.Source.Instance, req.Source.FileID, req.Dest.DirID, s, req.Copy)
 		}
 	} else if req.Source.Instance == "" && req.Dest.Instance != "" {
-		s, err := checkSharedDrivePermission(inst, req.Dest.SharingID)
+		s, err := checkSharedDrivePermission(inst, req.Dest.SharingID, true)
 		if err != nil {
 			return err
 		}

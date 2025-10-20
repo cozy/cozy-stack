@@ -121,9 +121,9 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 	t.Cleanup(tsD.Close)
 
 	// Create initial shared drive and accept as Betty; create common dirs
-	sharingID, firstRootDirID, disco := createSharedDriveForAcme(t, acme, acmeToken, tsA.URL,
+	sharingID, firstRootDirID, _ := createSharedDriveForAcme(t, acme, acmeToken, tsA.URL,
 		"One More Shared Drive "+crypto.GenerateRandomString(1000), "One more Shared drive description")
-	acceptSharedDriveForBetty(t, betty, tsA.URL, tsB.URL, sharingID, disco)
+	acceptSharedDriveForBetty(t, acme, betty, tsA.URL, tsB.URL, sharingID)
 
 	// Create temporary clients for initial setup
 	eA := httpexpect.WithConfig(httpexpect.Config{
@@ -303,10 +303,10 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	t.Run("SuccessfulMove_BetweenSharedDrives_DifferentStack", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"One More Shared Drive", "One more Shared drive description")
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create the file on the owner (ACME) instance inside the second shared drive
 		fileName := "file-to-move-between-shared-drives.txt"
@@ -338,10 +338,10 @@ func TestSharedDrivesMove(t *testing.T) {
 
 	t.Run("SuccessfulMoveBetween_SharedDrives_SameStack", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
-		firstSharingID, firstRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		firstSharingID, firstRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"One More Shared Drive "+crypto.GenerateRandomString(1000), "One more Shared drive description")
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, firstSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, firstSharingID)
 
 		meetingsID := eA.POST("/files/"+firstRootDirID).
 			WithQuery("Name", "Meetings").
@@ -351,10 +351,10 @@ func TestSharedDrivesMove(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"One More Shared Drive "+crypto.GenerateRandomString(1000), "One more Shared drive description")
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create the file on the owner (ACME) instance inside the second shared drive
 		fileName := "file-to-move-between-shared-drives.txt" + crypto.GenerateRandomString(1000)
@@ -389,9 +389,9 @@ func TestSharedDrivesMove(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		// Prepare: create another shared drive and accept it as Betty (source drive)
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"AutoRename Target Drive "+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as source for auto-rename move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create destination file with the conflicting name in the first shared drive (target)
 		conflictName := "conflict-name-" + strings.ReplaceAll(t.Name(), "/", "_") + ".txt"
@@ -432,9 +432,9 @@ func TestSharedDrivesMove(t *testing.T) {
 		defer cleanup()
 
 		// Prepare: create another shared drive and accept it as Betty (source drive)
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"AutoRename Target Drive "+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as source for auto-rename move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create destination file with the conflicting name in the first shared drive (target)
 		conflictName := "conflict-name-" + strings.ReplaceAll(t.Name(), "/", "_") + ".txt"
@@ -473,9 +473,9 @@ func TestSharedDrivesMove(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		// Prepare: create another shared drive and accept it as Betty (source drive)
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"AutoRename Target Drive "+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as source for auto-rename move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create destination file with the conflicting name in the first shared drive (target)
 		conflictName := "conflict-name-" + strings.ReplaceAll(t.Name(), "/", "_")
@@ -513,9 +513,9 @@ func TestSharedDrivesMove(t *testing.T) {
 		defer cleanup()
 
 		// Prepare: create another shared drive and accept it as Betty (source drive)
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"AutoRename Target Drive "+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as source for auto-rename move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create destination file with the conflicting name in the first shared drive (target)
 		conflictName := "conflict-name-" + strings.ReplaceAll(t.Name(), "/", "_")
@@ -820,9 +820,9 @@ func TestSharedDrivesMove(t *testing.T) {
 	t.Run("MoveDirectoryWithFilesAndChild_BetweenSharedDrives_SameStack", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 		// Prepare: create a second shared drive and accept it as Betty
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"NestedDir Move Target Drive", "Drive used as destination for nested dir move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Prepare: create a directory with files and a child directory with files in the first drive
 		srcDirID := createDirectory(t, eA, env.productDirID, "FolderToMove", env.acmeToken)
@@ -888,9 +888,9 @@ func TestSharedDrivesMove(t *testing.T) {
 	t.Run("MoveDirectoryWithFilesAndChild_BetweenSharedDrives_DifferentStack", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 		// Prepare: create a second shared drive and accept it as Betty
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"NestedDir Move Target Drive Different Stack", "Drive used as destination for nested dir move")
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Prepare: create a directory with files and a child directory with files in the first drive
 		dirToMoveName := "FolderToMove" + strings.ReplaceAll(t.Name(), "/", "_")
@@ -1015,11 +1015,11 @@ func TestSharedDrivesMove(t *testing.T) {
 	t.Run("PermissionDeniedReadonly_ToSharedDrive", func(t *testing.T) {
 		_, _, eD := env.createClients(t)
 		// Prepare: create a second shared drive with Dave as read-only recipient
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			testify(t, "SharedDrive"), "Drive used as destination for nested dir move")
 
 		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
-		acceptSharedDrive(t, env.dave, env.tsA.URL, env.tsD.URL, secondSharingID, disco)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
 
 		// Dave should be able to access the shared drive as a read-only member
 		// Let's verify Dave can access the shared drive first
@@ -1048,11 +1048,11 @@ func TestSharedDrivesMove(t *testing.T) {
 		defer cleanup()
 
 		// Prepare: create a second shared drive with Dave as read-only recipient
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"ShareDrive"+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as destination for nested dir move")
 
 		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
-		acceptSharedDrive(t, env.dave, env.tsA.URL, env.tsD.URL, secondSharingID, disco)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
 
 		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
 			WithHeader("Authorization", "Bearer "+env.daveToken).
@@ -1074,13 +1074,13 @@ func TestSharedDrivesMove(t *testing.T) {
 	t.Run("PermissionDeniedReadonly_FromSharedDrive_SameStack", func(t *testing.T) {
 		eA, _, eD := env.createClients(t)
 		// Prepare: create a second shared drive with Dave as read-only recipient
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"ShareDrive"+strings.ReplaceAll(t.Name(), "/", "_"), "Drive used as destination for nested dir move")
 		fileToMoveSameStack := createFile(t, eA, "", "file-to-upload.txt", env.acmeToken)
 		daveDirID := createDirectory(t, eD, "", "DaveDir", env.daveToken)
 
 		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
-		acceptSharedDrive(t, env.dave, env.tsA.URL, env.tsD.URL, secondSharingID, disco)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
 
 		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
 			WithHeader("Authorization", "Bearer "+env.daveToken).
@@ -1103,13 +1103,13 @@ func TestSharedDrivesMove(t *testing.T) {
 		cleanup := forceCrossStack(t, env.tsA.URL)
 		defer cleanup()
 		// Prepare: create a second shared drive with Dave as read-only recipient
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			testify(t, "ShareDrive"), "Drive used as destination for nested dir move")
 		fileToMoveSameStack := createFile(t, eA, "", testify(t, "file-to-upload.txt"), env.acmeToken)
 		daveDirID := createDirectory(t, eD, "", testify(t, "DaveDir"), env.daveToken)
 
 		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
-		acceptSharedDrive(t, env.dave, env.tsA.URL, env.tsD.URL, secondSharingID, disco)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
 
 		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
 			WithHeader("Authorization", "Bearer "+env.daveToken).
@@ -1154,10 +1154,10 @@ func TestSharedDrivesCopy(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		// Create a second shared drive
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"SecondDrive", "Second shared drive for copy tests")
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create a file in the first shared drive
 		fileToCopy := createFile(t, eA, env.meetingsDirID, "file-to-copy.txt", env.acmeToken)
@@ -1192,10 +1192,10 @@ func TestSharedDrivesCopy(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		// Create a second shared drive
-		secondSharingID, secondRootDirID, disco := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
 			"ThirdDrive", "Third shared drive for copy tests")
 		// Accept it as Betty
-		acceptSharedDriveForBetty(t, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID, disco)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, secondSharingID)
 
 		// Create a directory with files in the first shared drive
 		dirToCopy := createDirectory(t, eA, env.meetingsDirID, "DirToCopy", env.acmeToken)
@@ -1303,6 +1303,100 @@ func TestSharedDrivesCopy(t *testing.T) {
 		// Verify the original directory still exists (not deleted)
 		verifyDirectoryExists(t, env.acme, dirToCopy, "SharedDirToCopy", env.meetingsDirID)
 	})
+
+	t.Run("SuccessfulCopy_FileFromSharedDriveToLocal_Readonly_DifferentStack", func(t *testing.T) {
+		eA, _, eD := env.createClients(t)
+		cleanup := forceCrossStack(t, env.tsA.URL)
+		defer cleanup()
+
+		// Prepare: create a second shared drive with Dave as read-only recipient
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+			testify(t, "ShareDrive"), "Drive used as destination for nested dir move")
+		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
+
+		fileToMoveName := testify(t, "file-to-upload.txt")
+		fileToMoveID := createFile(t, eA, secondRootDirID, fileToMoveName, env.acmeToken)
+
+		daveDirID := createDirectory(t, eD, "", testify(t, "DaveDir"), env.daveToken)
+
+		// Verify Dave can access the shared drive
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		// Verify Dave can access the file through the shared drive endpoint
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+fileToMoveID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		responseObj := postMove(t, eD, env.daveToken, `{
+				  "source": {
+				    "file_id": "`+fileToMoveID+`",
+					"sharing_id": "`+secondSharingID+`",
+					"instance": "https://`+env.acme.Domain+`"
+				  },
+				  "dest": {
+				    "dir_id": "`+daveDirID+`"
+				  },
+				  "copy": true
+				}`)
+
+		// Verify the response and get copied file ID
+		copiedFileID := assertMoveResponse(t, responseObj, fileToMoveName, daveDirID)
+
+		// Verify the file was copied and content preserved
+		verifyFileMove(t, env.dave, copiedFileID, fileToMoveName, daveDirID, "foo")
+
+		// Verify the original directory still exists (not deleted)
+		verifyFileExists(t, env.acme, fileToMoveID, fileToMoveName, secondRootDirID, "foo")
+	})
+
+	t.Run("SuccessfulCopy_FileFromSharedDriveToLocal_Readonly_SameStack", func(t *testing.T) {
+		eA, _, eD := env.createClients(t)
+
+		// Prepare: create a second shared drive with Dave as read-only recipient
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+			testify(t, "ShareDrive"), "Drive used as destination for nested dir move")
+		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
+
+		fileToMoveName := testify(t, "file-to-upload.txt")
+		fileToMoveID := createFile(t, eA, secondRootDirID, fileToMoveName, env.acmeToken)
+
+		daveDirID := createDirectory(t, eD, "", testify(t, "DaveDir"), env.daveToken)
+
+		// Verify Dave can access the shared drive
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		// Verify Dave can access the file through the shared drive endpoint
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+fileToMoveID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		responseObj := postMove(t, eD, env.daveToken, `{
+				  "source": {
+				    "file_id": "`+fileToMoveID+`",
+					"sharing_id": "`+secondSharingID+`",
+					"instance": "https://`+env.acme.Domain+`"
+				  },
+				  "dest": {
+				    "dir_id": "`+daveDirID+`"
+				  },
+				  "copy": true
+				}`)
+
+		// Verify the response and get copied file ID
+		copiedFileID := assertMoveResponse(t, responseObj, fileToMoveName, daveDirID)
+
+		// Verify the file was copied and content preserved
+		verifyFileMove(t, env.dave, copiedFileID, fileToMoveName, daveDirID, "foo")
+
+		// Verify the original directory still exists (not deleted)
+		verifyFileExists(t, env.acme, fileToMoveID, fileToMoveName, secondRootDirID, "foo")
+	})
 }
 
 func testify(t *testing.T, s string) string {
@@ -1311,6 +1405,7 @@ func testify(t *testing.T, s string) string {
 
 // Simple verification helpers to reduce repetitive assertions
 func assertMoveResponse(t *testing.T, response *httpexpect.Object, expectedName, expectedDirID string) string {
+	t.Helper()
 	response.Path("$.data.type").String().IsEqual("io.cozy.files")
 	response.Path("$.data.attributes.name").String().IsEqual(expectedName)
 	response.Path("$.data.attributes.dir_id").String().IsEqual(expectedDirID)
@@ -1318,6 +1413,7 @@ func assertMoveResponse(t *testing.T, response *httpexpect.Object, expectedName,
 }
 
 func assertMoveResponseWithSharing(t *testing.T, response *httpexpect.Object, expectedName, expectedDirID, expectedSharingID string) string {
+	t.Helper()
 	response.Path("$.data.type").String().IsEqual("io.cozy.files")
 	response.Path("$.data.attributes.name").String().IsEqual(expectedName)
 	response.Path("$.data.attributes.dir_id").String().IsEqual(expectedDirID)
@@ -1326,6 +1422,7 @@ func assertMoveResponseWithSharing(t *testing.T, response *httpexpect.Object, ex
 }
 
 func assertDirectoryResponse(t *testing.T, response *httpexpect.Object, expectedName, expectedDirID string) string {
+	t.Helper()
 	response.Path("$.data.type").String().IsEqual("io.cozy.files")
 	response.Path("$.data.attributes.name").String().IsEqual(expectedName)
 	response.Path("$.data.attributes.dir_id").String().IsEqual(expectedDirID)
@@ -1334,6 +1431,7 @@ func assertDirectoryResponse(t *testing.T, response *httpexpect.Object, expected
 }
 
 func assertAutoRename(t *testing.T, response *httpexpect.Object, originalName string) string {
+	t.Helper()
 	movedName := response.Path("$.data.attributes.name").String().Raw()
 	require.NotEqual(t, originalName, movedName)
 	require.Contains(t, movedName, " (2)")
