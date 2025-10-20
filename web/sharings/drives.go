@@ -492,6 +492,15 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 			if err := middlewares.AllowWholeType(c, verb, consts.Files); err != nil {
 				return err
 			}
+
+			// For write operations, check if the user has read-only access
+			if method == http.MethodPost || method == http.MethodPut ||
+				method == http.MethodPatch || method == http.MethodDelete {
+				_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		if len(s.Credentials) == 0 {

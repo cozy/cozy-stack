@@ -1140,6 +1140,41 @@ func TestSharedDrivesMove(t *testing.T) {
 			  "dest": {"dir_id": "`+daveDestDir+`"}
 		}`, 403)
 	})
+
+	// Dave is a read-only member; he must not be able to delete files from a shared drive
+	t.Run("PermissionDeniedReadonly_DeleteFileFromSharedDrive", func(t *testing.T) {
+		eA, _, eD := env.createClients(t)
+		cleanup := forceCrossStack(t, env.tsA.URL)
+		defer cleanup()
+
+		// Prepare: create a second shared drive with Dave as read-only recipient
+		secondSharingID, secondRootDirID, _ := createSharedDriveForAcme(t, env.acme, env.acmeToken, env.tsA.URL,
+			testify(t, "ShareDrive"), "Drive used for testing delete permissions")
+
+		// Create a file in the shared drive (by Acme)
+		fileToDeleteID := createFile(t, eA, secondRootDirID, testify(t, "file-to-delete.txt"), env.acmeToken)
+
+		// Dave needs to accept the sharing invitation (read-only recipients still need to accept)
+		acceptSharedDrive(t, env.acme, env.dave, "Dave", env.tsA.URL, env.tsD.URL, secondSharingID)
+
+		// Verify Dave can access the shared drive
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		// Verify Dave can access the file through the shared drive endpoint
+		eD.GET("/sharings/drives/"+secondSharingID+"/"+fileToDeleteID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(200)
+
+		// Try to delete the file → should be forbidden (403)
+		eD.DELETE("/sharings/drives/"+secondSharingID+"/"+fileToDeleteID).
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			Expect().Status(403)
+
+		// Verify the file still exists (was not deleted)
+		verifyFileExists(t, env.acme, fileToDeleteID, testify(t, "file-to-delete.txt"), secondRootDirID, "foo")
+	})
 }
 
 func TestSharedDrivesCopy(t *testing.T) {

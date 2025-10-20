@@ -1325,38 +1325,37 @@ func TestSharedDrives(t *testing.T) {
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.data.id").String().IsEqual(fileID)
-		// Dave can POST to create a new file in the shared drive (current behavior)
-		createdID := eD.POST("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
+
+		// Dave (read-only) cannot POST to create a new file in the shared drive
+		eD.POST("/sharings/drives/"+secondSharingID+"/"+secondRootDirID).
 			WithQuery("Name", "dave-note.txt").
 			WithQuery("Type", "file").
 			WithHeader("Content-Type", "text/plain").
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 			WithHeader("Authorization", "Bearer "+daveAppToken).
 			WithBytes([]byte("foo")).
-			Expect().Status(201).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().Path("$.data.id").String().NotEmpty().Raw()
+			Expect().Status(403)
 
-		// Dave can also rename metadata on his created file (current behavior)
-		eD.PATCH("/sharings/drives/"+secondSharingID+"/"+createdID).
+		// Dave (read-only) cannot PATCH to rename files in the shared drive
+		eD.PATCH("/sharings/drives/"+secondSharingID+"/"+fileID).
 			WithHeader("Authorization", "Bearer "+daveAppToken).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{
 			  "data": {
 			    "type": "io.cozy.files",
-				"id": "` + createdID + `",
+				"id": "` + fileID + `",
 				"attributes": {"name": "renamed-by-dave.txt"}
 			  }
 			}`)).
-			Expect().Status(200)
+			Expect().Status(403)
 
-		// Dave can delete his file in the shared drive (current behavior)
-		eD.DELETE("/sharings/drives/"+secondSharingID+"/"+createdID).
+		// Dave (read-only) cannot DELETE files in the shared drive
+		eD.DELETE("/sharings/drives/"+secondSharingID+"/"+fileID).
 			WithHeader("Authorization", "Bearer "+daveAppToken).
-			Expect().Status(200)
+			Expect().Status(403)
 
-		// And Dave cannot overwrite file content in the shared drive
-		eD.PUT("/sharings/drives/"+secondSharingID+"/"+createdID).
+		// Dave (read-only) cannot PUT to overwrite file content in the shared drive
+		eD.PUT("/sharings/drives/"+secondSharingID+"/"+fileID).
 			WithHeader("Authorization", "Bearer "+daveAppToken).
 			WithHeader("Content-Type", "text/plain").
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
