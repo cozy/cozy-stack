@@ -1358,3 +1358,6 @@ msgstr "Новый общий доступ доступен в вашем Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s поделился с вами %s."
+
+msgid "Permissions io.cozy.drive.settings"
+msgstr "Настройки Drive"

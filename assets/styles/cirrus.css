@@ -295,6 +295,7 @@
   mask-image: url("../icons/doctypes/announcement.svg");
 }
 .perm[class^="io-cozy-settings"],
+.perm[class^="io-cozy-drive-settings"],
 .perm[class^="io-cozy-bank-settings"] {
   -webkit-mask-image: url("../icons/doctypes/cog.svg");
   mask-image: url("../icons/doctypes/cog.svg");
