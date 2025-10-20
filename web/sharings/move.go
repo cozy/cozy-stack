@@ -383,7 +383,6 @@ func moveFileFromSharedDriveCore(inst *instance.Instance, sourceInstanceURL stri
 
 func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInstanceURL string, sourceDirID string,
 	targetDirID string, s *sharing.Sharing) error {
-
 	_, err := inst.VFS().DirByID(targetDirID)
 	if err != nil {
 		return files.WrapVfsError(err)
@@ -466,7 +465,6 @@ func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInsta
 // Local → Shared-drive moves
 func moveDirToSharedDrive(c echo.Context, srcInst *instance.Instance,
 	sourceDirID string, destDirID string, s *sharing.Sharing) error {
-
 	srcRoot, err := srcInst.VFS().DirByID(sourceDirID)
 	if err != nil {
 		return files.WrapVfsError(err)
