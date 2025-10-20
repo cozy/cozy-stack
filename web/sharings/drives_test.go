@@ -107,6 +107,21 @@ func verifyFileDeleted(t *testing.T, inst *instance.Instance, fileID string) {
 	require.True(t, os.IsNotExist(err))
 }
 
+// verifyNodeDeleted verifies that a node (file or directory) was deleted from the source instance
+func verifyNodeDeleted(t *testing.T, inst *instance.Instance, id string) {
+	t.Helper()
+	if _, err := inst.VFS().FileByID(id); err == nil {
+		require.Fail(t, "expected file to be deleted, but it still exists")
+	} else if os.IsNotExist(err) {
+		return
+	}
+	if _, err := inst.VFS().DirByID(id); err == nil {
+		require.Fail(t, "expected directory to be deleted, but it still exists")
+	} else {
+		require.True(t, os.IsNotExist(err))
+	}
+}
+
 // createSharedDriveForAcme creates the base directory and the sharing from ACME to Betty.
 // It returns the created sharing ID and the shared root directory ID.
 func createSharedDriveForAcme(

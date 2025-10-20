@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -228,19 +226,9 @@ func moveDirSameStack(c echo.Context, srcInst *instance.Instance, destInst *inst
 			return files.WrapVfsError(err)
 		}
 		if err := createLocalDir(destInst.VFS(), newDir); err != nil {
-			// If already exists, try to resolve by path and reuse its ID
-			if os.IsExist(err) {
-				existing, e2 := destInst.VFS().DirByPath(path.Join(path.Dir(newDir.Fullpath), newDir.DocName))
-				if e2 != nil {
-					return files.WrapVfsError(e2)
-				}
-				srcToDstDirID[d.DocID] = existing.DocID
-			} else {
-				return files.WrapVfsError(err)
-			}
-		} else {
-			srcToDstDirID[d.DocID] = newDir.DocID
+			return files.WrapVfsError(err)
 		}
+		srcToDstDirID[d.DocID] = newDir.DocID
 	}
 
 	// Get the created root directory for the response
@@ -539,11 +527,11 @@ func moveDirToSharedDrive(c echo.Context, srcInst *instance.Instance,
 
 	dstDir, err := dstClient.GetDirByID(destDirID)
 	if err != nil {
-		return err
+		return files.WrapVfsError(err)
 	}
 	movedDir, err := dstClient.GetDirByPath(dstDir.Attrs.Fullpath + "/" + srcRoot.DocName)
 	if err != nil {
-		return err
+		return files.WrapVfsError(err)
 	}
 
 	return respondRemoteUploadDir(c, movedDir, s.ID())
@@ -575,23 +563,12 @@ func moveFileToSharedDriveCore(inst *instance.Instance,
 	}
 	defer srcHandle.Close()
 
-	// Resolve destination parent fullpath for conflict checks
+	// Optimistic upload with conflict retry
 	dstParent, err := dstClient.GetDirByID(targetDirID)
 	if err != nil {
 		return nil, files.WrapVfsError(err)
 	}
-	uniqueName, err := ensureRemoteUniqueChildName(dstClient, dstParent.Attrs.Fullpath, localSrcFile.DocName, true)
-	if err != nil {
-		return nil, err
-	}
-	uploaded, err := dstClient.Upload(&client.Upload{
-		Name:          uniqueName,
-		DirID:         targetDirID,
-		ContentMD5:    localSrcFile.MD5Sum,
-		Contents:      srcHandle,
-		ContentType:   localSrcFile.Mime,
-		ContentLength: localSrcFile.ByteSize,
-	})
+	uploaded, err := uploadWithConflictRetry(dstClient, dstParent.Attrs.Fullpath, targetDirID, localSrcFile.DocName, localSrcFile.MD5Sum, srcHandle, localSrcFile.Mime, localSrcFile.ByteSize)
 	if err != nil {
 		return nil, files.WrapVfsError(err)
 	}
@@ -728,25 +705,12 @@ func moveDirBetweenSharedDrives(c echo.Context, sourceInstanceURL, sourceDirID s
 			return files.WrapVfsError(err)
 		}
 		defer srcReader.Close()
-		// Resolve destination parent fullpath for conflict checks
+		// Optimistic upload with conflict retry
 		dstParent, err := destClient.GetDirByID(destParentID)
 		if err != nil {
 			return files.WrapVfsError(err)
 		}
-		// Ensure a unique target name to avoid 409 conflicts on remote
-		uniqueName, err := ensureRemoteUniqueChildName(destClient, dstParent.Attrs.Fullpath, srcFile.Attrs.Name, true)
-		if err != nil {
-			return err
-		}
-		// Upload into destination remote
-		_, err = destClient.Upload(&client.Upload{
-			Name:          uniqueName,
-			DirID:         destParentID,
-			ContentMD5:    srcFile.Attrs.MD5Sum,
-			Contents:      srcReader,
-			ContentType:   srcFile.Attrs.Mime,
-			ContentLength: srcFile.Attrs.Size,
-		})
+		_, err = uploadWithConflictRetry(destClient, dstParent.Attrs.Fullpath, destParentID, srcFile.Attrs.Name, srcFile.Attrs.MD5Sum, srcReader, srcFile.Attrs.Mime, srcFile.Attrs.Size)
 		if err != nil {
 			return files.WrapVfsError(err)
 		}
@@ -1078,6 +1042,41 @@ func ensureRemoteUniqueChildName(c *client.Client, parentFullpath, name string, 
 		}
 	}
 	return "", files.WrapVfsError(errors.New("could not find unique name on remote"))
+}
+
+// uploadWithConflictRetry attempts an upload with the provided name first; if the
+// server responds with a 409/Conflict, it retries with an auto-generated unique
+// name under parentFullpath. Returns the created file metadata.
+func uploadWithConflictRetry(c *client.Client, parentFullpath, dirID, name string, md5sum []byte, contents io.Reader, contentType string, contentLength int64) (*client.File, error) {
+	// First, optimistic attempt with original name
+	f, err := c.Upload(&client.Upload{
+		Name:          name,
+		DirID:         dirID,
+		ContentMD5:    md5sum,
+		Contents:      contents,
+		ContentType:   contentType,
+		ContentLength: contentLength,
+	})
+	if err == nil {
+		return f, nil
+	}
+	// If it's not an HTTP 409/Conflict error, just return it
+	if reqErr, ok := err.(*request.Error); !ok || reqErr.Title != http.StatusText(http.StatusConflict) {
+		return nil, err
+	}
+	// Compute a unique name and retry once
+	uniqueName, uerr := ensureRemoteUniqueChildName(c, parentFullpath, name, true)
+	if uerr != nil {
+		return nil, uerr
+	}
+	return c.Upload(&client.Upload{
+		Name:          uniqueName,
+		DirID:         dirID,
+		ContentMD5:    md5sum,
+		Contents:      contents,
+		ContentType:   contentType,
+		ContentLength: contentLength,
+	})
 }
 
 // planLocalTree builds a flat list of directories and files to move starting at srcRoot.

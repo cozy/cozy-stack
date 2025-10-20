@@ -702,7 +702,86 @@ func TestSharedDrivesMove(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the original directory was deleted from Betty's local drive
-		verifyFileDeleted(t, bettyInstance, localDirID)
+		verifyNodeDeleted(t, bettyInstance, localDirID)
+	})
+
+	// Auto-rename on directory root conflict: Local -> Shared (same stack)
+	t.Run("AutoRename_MoveDir_LocalToShared_SameStack_NameExists", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		conflictName := "ConflictingDir" + strings.ReplaceAll(t.Name(), "/", "_")
+
+		// Destination already has a directory with the same name in the shared drive
+		// Create via ACME API (owner of the shared drive)
+		eA := httpexpect.WithConfig(httpexpect.Config{BaseURL: tsA.URL, Reporter: httpexpect.NewRequireReporter(t), Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)}})
+		_ = createDirectory(t, eA, meetingsDirID, conflictName, acmeAppToken)
+
+		// Create a local directory with the same name on Betty's drive
+		localDirID := createDirectory(t, eB, "", conflictName, bettyAppToken)
+		_ = createFile(t, eB, localDirID, "local.txt", bettyAppToken)
+
+		// Move local directory into the shared drive (should auto-rename)
+		responseObj := eB.POST("/sharings/drives/move").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "source": {"dir_id": "` + localDirID + `"},
+			  "dest": {"instance": "https://` + acmeInstance.Domain + `", "sharing_id": "` + firstSharingID + `", "dir_id": "` + meetingsDirID + `"}
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		movedName := responseObj.Path("$.data.attributes.name").String().Raw()
+		require.NotEqual(t, conflictName, movedName)
+		require.Contains(t, movedName, " (2)")
+
+		// Verify both directories exist on destination
+		meetingsDir, err := acmeInstance.VFS().DirByID(meetingsDirID)
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().DirByPath(meetingsDir.Fullpath + "/" + conflictName)
+		require.NoError(t, err)
+		_, err = acmeInstance.VFS().DirByPath(meetingsDir.Fullpath + "/" + movedName)
+		require.NoError(t, err)
+	})
+
+	// Auto-rename on directory root conflict: Shared -> Local (same stack)
+	t.Run("AutoRename_MoveDir_SharedToLocal_SameStack_NameExists", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		conflictName := "ConflictingDir" + strings.ReplaceAll(t.Name(), "/", "_")
+
+		// Destination local root and a conflicting child directory
+		destRoot := createRootDirectory(t, eB, "LocalDestRoot"+strings.ReplaceAll(t.Name(), "/", "_"), bettyAppToken)
+		_ = createDirectory(t, eB, destRoot, conflictName, bettyAppToken)
+
+		// Source directory in shared drive with the same name
+		srcDir := createDirectory(t, eA, meetingsDirID, conflictName, acmeAppToken)
+		_ = createFile(t, eA, srcDir, "shared.txt", acmeAppToken)
+
+		// Move shared directory into local destination (should auto-rename)
+		responseObj := eB.POST("/sharings/drives/move").
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "source": {"instance": "https://` + acmeInstance.Domain + `", "sharing_id": "` + firstSharingID + `", "dir_id": "` + srcDir + `"},
+			  "dest": {"dir_id": "` + destRoot + `"}
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		movedName := responseObj.Path("$.data.attributes.name").String().Raw()
+		require.NotEqual(t, conflictName, movedName)
+		require.Contains(t, movedName, " (2)")
+
+		// Verify both directories exist locally
+		dRoot, err := bettyInstance.VFS().DirByID(destRoot)
+		require.NoError(t, err)
+		_, err = bettyInstance.VFS().DirByPath(dRoot.Fullpath + "/" + conflictName)
+		require.NoError(t, err)
+		_, err = bettyInstance.VFS().DirByPath(dRoot.Fullpath + "/" + movedName)
+		require.NoError(t, err)
 	})
 
 	// Move directory from Betty's local drive to a shared drive
@@ -764,7 +843,7 @@ func TestSharedDrivesMove(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the original directory was deleted from Betty's local drive
-		verifyFileDeleted(t, bettyInstance, localDirID)
+		verifyNodeDeleted(t, bettyInstance, localDirID)
 	})
 
 	// Move directory from a shared drive to Betty's local drive
@@ -827,7 +906,7 @@ func TestSharedDrivesMove(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the original directory was deleted from the shared drive
-		verifyFileDeleted(t, acmeInstance, sharedDirID)
+		verifyNodeDeleted(t, acmeInstance, sharedDirID)
 	})
 
 	// Move directory from a shared drive to Betty's local drive
@@ -893,7 +972,7 @@ func TestSharedDrivesMove(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the original directory was deleted from the shared drive
-		verifyFileDeleted(t, acmeInstance, sharedDirID)
+		verifyNodeDeleted(t, acmeInstance, sharedDirID)
 	})
 
 	t.Run("MoveDirectoryWithFilesAndChild_BetweenSharedDrives_SameStack", func(t *testing.T) {
