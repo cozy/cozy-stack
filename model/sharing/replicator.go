@@ -43,6 +43,12 @@ type ReplicateMsg struct {
 	Errors    int    `json:"errors"`
 }
 
+// UpdateMsg is used for jobs on the share-update worker.
+type UpdateMsg struct {
+	SharingID string `json:"sharing_id"`
+	DirName   string `json:"dir_name"`
+}
+
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)

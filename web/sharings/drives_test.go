@@ -284,13 +284,13 @@ func TestSharedDrives(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	var productID,
+	var sharingID,
+		productID,
 		meetingsID,
 		checklistID,
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
-		otherSharedFileThenDeletedID,
-		sharingID string
+		otherSharedFileThenDeletedID string
 	var checklistName = "Checklist.txt"
 
 	config.UseTestFile(t)
@@ -981,6 +981,100 @@ func TestSharedDrives(t *testing.T) {
 				WithBytes([]byte("")).
 				Expect().Status(403)
 		})
+	})
+
+	// TODO refactor after move merge to use util function of separate drive created
+	t.Run("DescriptionUpdatesWhenDirectoryRenamed", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		eB := httpexpect.Default(t, tsB.URL)
+
+		// Verify the initial description on both sides
+		objA := eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		initialDesc := objA.Path("$.data.attributes.description").String().Raw()
+
+		objB := eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual(initialDesc)
+
+		// Rename the shared directory on ACME (owner) side using the drives endpoint
+		eA.PATCH("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "data": {
+			    "type": "io.cozy.files",
+				"id": "` + productID + `",
+				"attributes": {
+				  "name": "Engineering Team"
+				}
+			  }
+			}`)).
+			Expect().Status(200)
+
+		// Wait for the share-update worker to process and propagate
+		time.Sleep(500 * time.Millisecond)
+
+		// Verify the description was updated on the owner side
+		objA = eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objA.Path("$.data.attributes.description").String().IsEqual("Engineering Team")
+
+		// Verify the description was also updated on the recipient side
+		objB = eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual("Engineering Team")
+
+		// Rename back to original for other tests using the drives endpoint
+		eA.PATCH("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "data": {
+			    "type": "io.cozy.files",
+				"id": "` + productID + `",
+				"attributes": {
+				  "name": "Product team"
+				}
+			  }
+			}`)).
+			Expect().Status(200)
+
+		// Wait for the share-update worker to process the rename back
+		time.Sleep(500 * time.Millisecond)
+
+		// Verify both sides have the original description restored
+		objA = eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objA.Path("$.data.attributes.description").String().IsEqual("Product team")
+
+		objB = eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual("Product team")
 	})
 
 	t.Run("SharedDriveChangesFeed", func(t *testing.T) {

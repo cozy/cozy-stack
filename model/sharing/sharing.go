@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"runtime"
 	"strings"
 	"time"
 
@@ -1052,13 +1051,18 @@ func (s *Sharing) PatchDescription(inst *instance.Instance, description string) 
 		return err
 	}
 	if s.Owner {
-		go s.ReplicateDescriptionChange(inst)
+		// Make replication asynchronous to avoid blocking the main request
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					inst.Logger().WithNamespace("sharing").
+						Errorf("Panic in ReplicateDescriptionChange: %v", r)
+				}
+			}()
+			s.ReplicateDescriptionChange(inst)
+		}()
 	}
 	return nil
-}
-
-type PatchDescriptionParams struct {
-	Description string `json:"description"`
 }
 
 // ReplicateDescriptionChange sends the new sharing description to the non
@@ -1068,99 +1072,106 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 		return
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			var err error
-			switch r := r.(type) {
-			case error:
-				err = r
-			default:
-				err = fmt.Errorf("%v", r)
-			}
-			stack := make([]byte, 4<<10) // 4 KB
-			length := runtime.Stack(stack, false)
-			log := inst.Logger().WithNamespace("sharing").WithField("panic", true)
-			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
-		}
-	}()
-
-	shouldNotify := false
-	for i, m := range s.Members {
-		if shouldReplicateDescriptionChange(i, m) {
-			shouldNotify = true
-			break
-		}
-	}
-
-	if !shouldNotify {
-		return
-	}
+	var errors []error
+	successCount := 0
+	totalRecipients := 0
 
 	for i, m := range s.Members {
 		if !shouldReplicateDescriptionChange(i, m) {
 			continue
 		}
+		totalRecipients++
 
 		u, err := url.Parse(m.Instance)
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Infof("Invalid instance URL %s: %s", m.Instance, err)
+				Warnf("Invalid instance URL %s: %s", m.Instance, err)
+			errors = append(errors, fmt.Errorf("invalid URL for %s: %w", m.Instance, err))
 			continue
 		}
 
 		c := &s.Credentials[i-1]
 		var token string
-		if m.Status == MemberStatusReady {
+
+		// Use the AccessToken that was exchanged during the OAuth flow
+		// This token has scope io.cozy.sharings:ALL:{sharingID} which grants
+		// access to replicator endpoints
+		if m.Status == MemberStatusReady && c.AccessToken != nil {
 			token = c.AccessToken.AccessToken
-		} else {
+		}
+
+		// Fall back to preview codes if we don't have an access token
+		if token == "" {
 			perms, err := permission.GetForSharePreview(inst, s.SID)
 			if err == nil {
 				token = perms.Codes[m.Email]
 			}
 			if token == "" {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("No token available for member %s", m.Instance)
+				errors = append(errors, fmt.Errorf("no token available for %s", m.Instance))
 				continue
 			}
 		}
 
-		params := PatchDescriptionParams{
-			Description: s.Description,
+		// Use the replicator endpoint which accepts sharing tokens
+		params := map[string]string{
+			"description": s.Description,
 		}
 		body, err := json.Marshal(params)
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
 				Warnf("Can't serialize the updated description for %s: %s", s.SID, err)
-			return
+			errors = append(errors, fmt.Errorf("serialization failed for %s: %w", m.Instance, err))
+			continue
 		}
 
 		// TODO: add optimization for recipients on the same stack?!
 		opts := &request.Options{
-			Method: http.MethodPatch,
+			Method: http.MethodPut,
 			Scheme: u.Scheme,
 			Domain: u.Host,
-			Path:   "/sharings/" + s.SID,
+			Path:   "/sharings/" + s.SID + "/metadata",
 			Headers: request.Headers{
-				echo.HeaderAccept:        jsonapi.ContentType,
-				echo.HeaderContentType:   jsonapi.ContentType,
+				echo.HeaderContentType:   "application/json",
 				echo.HeaderAuthorization: "Bearer " + token,
 			},
 			Body:       bytes.NewReader(body),
 			ParseError: ParseRequestError,
 		}
+
 		res, err := request.Req(opts)
 		if res != nil && res.StatusCode/100 == 4 {
 			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Debugf("Can't notify %#v about the updated description: %s", m, err)
+				Warnf("Can't notify %s about the updated description: %s", m.Instance, err)
+			errors = append(errors, fmt.Errorf("failed to notify %s: %w", m.Instance, err))
 			continue
 		}
 		res.Body.Close()
+		successCount++
+	}
+
+	// Log summary of replication results
+	if len(errors) > 0 {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("Description replication completed with %d/%d successes, %d failures for sharing %s",
+				successCount, totalRecipients, len(errors), s.SID)
+		for _, err := range errors {
+			inst.Logger().WithNamespace("sharing").Debugf("Replication error: %v", err)
+		}
+	} else {
+		inst.Logger().WithNamespace("sharing").
+			Infof("Description replication successful for all %d recipients of sharing %s",
+				successCount, s.SID)
 	}
 }
 
 func shouldReplicateDescriptionChange(i int, m Member) bool {
-	return i > 0 && m.Status != MemberStatusRevoked && m.Instance != ""
+	// Only notify members who have completed the OAuth flow and are ready
+	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.

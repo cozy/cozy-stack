@@ -132,8 +132,7 @@ func WorkerUpdate(ctx *job.TaskContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	ctx.Instance.Logger().WithNamespace("share").
-		Debugf("Update %#v", msg)
+
 	s, err := sharing.FindSharing(ctx.Instance, msg.SharingID)
 	if err != nil {
 		return err
