@@ -16,10 +16,12 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	sharingModel "github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -263,6 +265,25 @@ func acceptSharedDrive(
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(303).
 		Header("Location").Contains("#/folder/io.cozy.files.shared-drives-dir")
+
+	// Complete the credential exchange: Betty sends answer to Alice
+	var bettySharing sharingModel.Sharing
+	err = couchdb.GetDoc(recipientInstance, consts.Sharings, sharingID, &bettySharing)
+	require.NoError(t, err)
+
+	// Send the answer to Alice's instance to exchange credentials
+	err = bettySharing.SendAnswer(recipientInstance, st)
+	require.NoError(t, err)
+
+	// Verify Betty's status is now "ready" on Alice's side
+	var aliceSharing sharingModel.Sharing
+	err = couchdb.GetDoc(ownerInstance, consts.Sharings, sharingID, &aliceSharing)
+	require.NoError(t, err)
+	assert.Equal(t, sharingModel.MemberStatusReady, aliceSharing.Members[1].Status)
+
+	// Verify Betty has an access token now
+	assert.NotNil(t, aliceSharing.Credentials[0].AccessToken)
+	assert.NotEmpty(t, aliceSharing.Credentials[0].AccessToken.AccessToken)
 }
 
 // acceptSharedDriveForBetty is kept for convenience and delegates to acceptSharedDrive.
