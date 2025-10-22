@@ -432,6 +432,65 @@ func TestFiles(t *testing.T) {
 		meta.ValueEqual("device-id", "123456789")
 	})
 
+	t.Run("PatchDirMetadata", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Create a directory
+		obj := e.POST("/files/").
+			WithQuery("Name", "meta-patch-dir").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		dirID := obj.Path("$.data.id").String().NotEmpty().Raw()
+
+		// Initially, metadata key is absent
+		obj.Path("$.data.attributes").Object().NotContainsKey("metadata")
+
+		// Patch metadata on the directory
+		obj = e.PATCH("/files/"+dirID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dirID + `",
+          "attributes": {
+            "metadata": { "decoration": { "color": "#FFF" } }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta := obj.Path("$.data.attributes.metadata").Object()
+		meta.Value("decoration").Object().HasValue("color", "#FFF")
+
+		// Replacing metadata should drop previous keys (no deep merge)
+		obj = e.PATCH("/files/"+dirID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "directory",
+          "id": "` + dirID + `",
+          "attributes": {
+            "metadata": { "only": true }
+          }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		meta = obj.Path("$.data.attributes.metadata").Object()
+		meta.HasValue("only", true)
+		meta.NotContainsKey("decoration")
+	})
+
 	t.Run("CreateDirConcurrently", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -1998,7 +2057,7 @@ func TestFiles(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-			// Get file informations
+		// Get file informations
 		obj := e.GET("/files/"+fileID).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
@@ -2814,7 +2873,7 @@ func TestFiles(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-			// The file should be restore but with a new name.
+		// The file should be restore but with a new name.
 		obj.Path("$.data.id").Equal(fileID)
 		attrs := obj.Path("$.data.attributes").Object()
 		attrs.Value("name").String().HasPrefix("torestorefilewithconflict")
@@ -3132,7 +3191,7 @@ func TestFiles(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-			// Retrieve the thumbnail links
+		// Retrieve the thumbnail links
 		links := obj.Path("$.data.links").Object()
 		large := links.Value("large").String().NotEmpty().Raw()
 		medium := links.Value("medium").String().NotEmpty().Raw()
@@ -3189,7 +3248,7 @@ func TestFiles(t *testing.T) {
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object()
 
-			// Retrieve the thumbnail links
+		// Retrieve the thumbnail links
 		links := obj.Path("$.data.links").Object()
 		large := links.Value("large").String().NotEmpty().Raw()
 		medium := links.Value("medium").String().NotEmpty().Raw()
