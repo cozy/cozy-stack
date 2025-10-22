@@ -342,6 +342,9 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.RestorePath = *patch.RestorePath
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.Metadata = olddoc.Metadata
+	if patch.Metadata != nil {
+		newdoc.Metadata = *patch.Metadata
+	}
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.CozyMetadata = olddoc.CozyMetadata
 	newdoc.InternalID = olddoc.InternalID
