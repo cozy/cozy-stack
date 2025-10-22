@@ -340,7 +340,7 @@ type DirIterator interface {
 // directory documents.
 type DocPatch struct {
 	Name        *string    `json:"name,omitempty"`
-	DirID       *string    `json:"dir_id,omitempty"`
+	DirID       *string    `json:"dir_id˚,omitempty"`
 	RestorePath *string    `json:"restore_path,omitempty"`
 	Tags        *[]string  `json:"tags,omitempty"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
@@ -348,7 +348,7 @@ type DocPatch struct {
 	Encrypted   *bool      `json:"encrypted,omitempty"`
 	Class       *string    `json:"class,omitempty"`
 
-    Metadata *Metadata `json:"metadata,omitempty"`
+	Metadata *Metadata `json:"metadata,omitempty"`
 
 	CozyMetadata CozyMetadataPatch `json:"cozyMetadata"`
 }

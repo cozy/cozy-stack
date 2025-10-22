@@ -274,9 +274,9 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.NotSynchronizedOn = olddoc.NotSynchronizedOn
 	newdoc.Metadata = olddoc.Metadata
-    if patch.Metadata != nil {
-        newdoc.Metadata = *patch.Metadata
-    }
+	if patch.Metadata != nil {
+		newdoc.Metadata = *patch.Metadata
+	}
 	newdoc.CozyMetadata = olddoc.CozyMetadata
 	if newdoc.CozyMetadata != nil && patch.CozyMetadata.Favorite != nil {
 		newdoc.CozyMetadata.Favorite = *patch.CozyMetadata.Favorite
