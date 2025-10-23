@@ -1330,3 +1330,6 @@ msgstr "Có một chia sẻ mới trong Twake của bạn"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s đã chia sẻ %s với bạn."
+
+msgid "Permissions io.cozy.drive.settings"
+msgstr "Cài đặt Drive"

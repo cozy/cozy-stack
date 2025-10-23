@@ -1382,3 +1382,6 @@ msgstr "Un nouveau partage est disponible dans votre Twake"
 
 msgid "Push Sharing Shortcut Message"
 msgstr "%s vous a partagé %s."
+
+msgid "Permissions io.cozy.drive.settings"
+msgstr "Paramètres de Drive"
