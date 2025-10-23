@@ -266,7 +266,7 @@ func acceptSharedDrive(
 		Expect().Status(303).
 		Header("Location").Contains("#/folder/io.cozy.files.shared-drives-dir")
 
-	// Complete the credential exchange: Betty sends answer to Alice
+	// Complete the credential exchange: %RECIPIENT% sends answer to Alice
 	var bettySharing sharingModel.Sharing
 	err = couchdb.GetDoc(recipientInstance, consts.Sharings, sharingID, &bettySharing)
 	require.NoError(t, err)
@@ -275,15 +275,26 @@ func acceptSharedDrive(
 	err = bettySharing.SendAnswer(recipientInstance, st)
 	require.NoError(t, err)
 
-	// Verify Betty's status is now "ready" on Alice's side
+	// Verify recipient's status is now "ready" on Alice's side
 	var aliceSharing sharingModel.Sharing
 	err = couchdb.GetDoc(ownerInstance, consts.Sharings, sharingID, &aliceSharing)
 	require.NoError(t, err)
-	assert.Equal(t, sharingModel.MemberStatusReady, aliceSharing.Members[1].Status)
 
-	// Verify Betty has an access token now
-	assert.NotNil(t, aliceSharing.Credentials[0].AccessToken)
-	assert.NotEmpty(t, aliceSharing.Credentials[0].AccessToken.AccessToken)
+	for i := range aliceSharing.Members {
+		if aliceSharing.Members[i].Name == recipientName {
+			assert.Equal(t, sharingModel.MemberStatusReady, aliceSharing.Members[i].Status)
+		}
+	}
+
+	// Verify recipient has an access token now(or at least one of recipients)
+	var accessToken string
+	for _, cred := range aliceSharing.Credentials {
+		if cred.AccessToken != nil && cred.AccessToken.AccessToken != "" {
+			accessToken = cred.AccessToken.AccessToken
+			break
+		}
+	}
+	require.NotEmpty(t, accessToken, "missing credential access token")
 }
 
 // acceptSharedDriveForBetty is kept for convenience and delegates to acceptSharedDrive.
