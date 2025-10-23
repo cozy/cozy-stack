@@ -93,6 +93,10 @@ type FilePatch struct {
 	Attrs FilePatchAttrs `json:"attributes"`
 }
 
+// ListChildrenPageSize controls the number of items fetched per request when
+// listing directory children. Tests can override this to force pagination.
+var ListChildrenPageSize = "100"
+
 // GetFileByID returns a File given the specified ID
 func (c *Client) GetFileByID(id string) (*File, error) {
 	res, err := c.Req(&request.Options{
@@ -380,6 +384,51 @@ func (c *Client) PermanentDeleteByPath(name string) error {
 	return c.PermanentDeleteByID(doc.ID)
 }
 
+// getIncludedPage performs a GET request on reqPath with reqQuery and returns
+// the page's included DirOrFile items and the next link (empty if none).
+func (c *Client) getIncludedPage(reqPath string, reqQuery url.Values) ([]*DirOrFile, string, error) {
+	res, err := c.Req(&request.Options{
+		Method:  "GET",
+		Path:    reqPath,
+		Queries: reqQuery,
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	var included []*DirOrFile
+	var links struct{ Next string }
+	if err = readJSONAPILinks(res.Body, &included, &links); err != nil {
+		return nil, "", err
+	}
+	return included, links.Next, nil
+}
+
+// ListChildrenByDirID returns all direct child items (files and directories)
+// of the directory identified by its ID. It transparently follows pagination
+// and returns the complete list.
+func (c *Client) ListChildrenByDirID(id string) ([]*DirOrFile, error) {
+	reqPath := "/files/" + url.PathEscape(id)
+	reqQuery := url.Values{"page[limit]": {ListChildrenPageSize}}
+	var all []*DirOrFile
+	for {
+		included, next, err := c.getIncludedPage(reqPath, reqQuery)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, included...)
+		if next == "" {
+			break
+		}
+		u, err := url.Parse(next)
+		if err != nil {
+			return nil, err
+		}
+		reqPath = u.Path
+		reqQuery = u.Query()
+	}
+	return all, nil
+}
+
 // WalkFn is the function type used by the walk function.
 type WalkFn func(name string, doc *DirOrFile, err error) error
 
@@ -410,22 +459,10 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 	}
 
 	reqPath := "/files/" + url.PathEscape(doc.ID)
-	reqQuery := url.Values{"page[limit]": {"100"}}
+	reqQuery := url.Values{"page[limit]": {ListChildrenPageSize}}
 	for {
-		res, err := c.Req(&request.Options{
-			Method:  "GET",
-			Path:    reqPath,
-			Queries: reqQuery,
-		})
+		included, next, err := c.getIncludedPage(reqPath, reqQuery)
 		if err != nil {
-			return walkFn(name, doc, err)
-		}
-
-		var included []*DirOrFile
-		var links struct {
-			Next string
-		}
-		if err = readJSONAPILinks(res.Body, &included, &links); err != nil {
 			return walkFn(name, doc, err)
 		}
 
@@ -437,10 +474,10 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 			}
 		}
 
-		if links.Next == "" {
+		if next == "" {
 			break
 		}
-		u, err := url.Parse(links.Next)
+		u, err := url.Parse(next)
 		if err != nil {
 			return err
 		}
@@ -465,7 +502,7 @@ func readFile(res *http.Response) (*File, error) {
 		return nil, err
 	}
 	if file.Attrs.Type != FileType {
-		return nil, fmt.Errorf("Not a file")
+		return nil, fmt.Errorf("not a file")
 	}
 	return file, nil
 }
@@ -476,7 +513,7 @@ func readDir(res *http.Response) (*Dir, error) {
 		return nil, err
 	}
 	if dir.Attrs.Type != DirType {
-		return nil, fmt.Errorf("Not a directory")
+		return nil, fmt.Errorf("not a directory")
 	}
 	return dir, nil
 }

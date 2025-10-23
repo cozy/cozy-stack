@@ -492,6 +492,15 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 			if err := middlewares.AllowWholeType(c, verb, consts.Files); err != nil {
 				return err
 			}
+
+			// For write operations, check if the user has read-only access
+			if method == http.MethodPost || method == http.MethodPut ||
+				method == http.MethodPatch || method == http.MethodDelete {
+				_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		if len(s.Credentials) == 0 {
@@ -538,8 +547,9 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 // the specified shared drive. It verifies that:
 // 1. The sharing exists and is a drive
 // 2. The current user is a member of the sharing (by domain or email)
-// Returns the sharing object if permission is granted, or an error if not.
-func checkSharedDrivePermission(inst *instance.Instance, sharingID string) (*sharing.Sharing, error) {
+// If requireWrite is true, it also checks that the user has write permission (not read-only).
+// Returns the sharing if the user has the required permissions.
+func checkSharedDrivePermission(inst *instance.Instance, sharingID string, requireWrite bool) (*sharing.Sharing, error) {
 	// Find the sharing by ID
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -555,7 +565,7 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string) (*sha
 		return nil, jsonapi.NotFound(errors.New("not a drive"))
 	}
 
-	// Check that current user is a member of the sharing
+	// Check that current user is a member of the sharing and get their read-only status
 	currDomain := inst.Domain
 	if strings.Contains(currDomain, ":") {
 		currDomain = strings.SplitN(currDomain, ":", 2)[0]
@@ -565,25 +575,42 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string) (*sha
 	currEmail, _ := inst.SettingsEMail()
 
 	isMember := false
-	for _, m := range s.Members {
-		memberHost := m.InstanceHost()
-		if memberHost == "" {
-			continue
-		}
-		// Check by domain
-		if memberHost == inst.Domain || memberHost == currDomain {
-			isMember = true
-			break
-		}
-		// Check by email
-		if currEmail != "" && m.Email == currEmail {
-			isMember = true
-			break
+	isReadOnly := false
+
+	// If this is the owner instance, they're a member with write access
+	if s.Owner {
+		isMember = true
+		isReadOnly = false
+	} else {
+		// On a recipient's instance, their own member entry is typically at index 1
+		// (index 0 is the owner). Check if there's a member with an Instance field set.
+		for _, m := range s.Members {
+			memberHost := m.InstanceHost()
+			if memberHost == "" {
+				continue
+			}
+			// Check by domain
+			if memberHost == inst.Domain || memberHost == currDomain {
+				isMember = true
+				isReadOnly = m.ReadOnly
+				break
+			}
+			// Check by email
+			if currEmail != "" && m.Email == currEmail {
+				isMember = true
+				isReadOnly = m.ReadOnly
+				break
+			}
 		}
 	}
 
 	if !isMember {
 		return nil, jsonapi.Forbidden(errors.New("not a member of this sharing"))
+	}
+
+	// If write permission is required, check that the user is not read-only
+	if requireWrite && isReadOnly {
+		return nil, jsonapi.Forbidden(errors.New("write access denied: read-only member"))
 	}
 
 	return s, nil

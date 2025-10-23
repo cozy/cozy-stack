@@ -1116,9 +1116,10 @@ func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance, owne
 	return values["Description"].(string)
 }
 
-// extractInvitationLink returns the invitation mail description and discovery link without
-// mutating any package-level globals. Useful for tests that want to pass links explicitly.
-func extractInvitationLink(t *testing.T, instance *instance.Instance, owner string) (string, string) {
+// extractInvitationLink returns the invitation mail description and discovery link for a specific recipient.
+// If recipientName is empty, it returns the invitation for the first non-Dave recipient (for backward compatibility).
+// If recipientName is specified, it returns the invitation for that specific recipient.
+func extractInvitationLink(t *testing.T, instance *instance.Instance, owner string, recipientName string) (string, string) {
 	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
@@ -1135,10 +1136,17 @@ func extractInvitationLink(t *testing.T, instance *instance.Instance, owner stri
 	assert.NoError(t, err)
 	assert.Len(t, jobs, 2)
 	var msg map[string]interface{}
-	// Ignore the mail sent to Dave
 	err = json.Unmarshal(jobs[0].Message, &msg)
 	assert.NoError(t, err)
-	if msg["recipient_name"] == "Dave" {
+
+	// If recipientName is specified, find that specific recipient's invitation
+	if recipientName != "" {
+		if msg["recipient_name"] != recipientName {
+			err = json.Unmarshal(jobs[1].Message, &msg)
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, msg["recipient_name"], recipientName)
+	} else {
 		err = json.Unmarshal(jobs[1].Message, &msg)
 		assert.NoError(t, err)
 	}

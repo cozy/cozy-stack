@@ -283,15 +283,19 @@ See there for request and response examples, the only difference is the URL.
 
 ### POST /sharings/drives/move
 
-Move a file between locations (personal drive and/or shared drives).
+Move or copy a file or a directory between locations (personal drive and/or shared drives).
 
-This endpoint supports moving:
+Supported flows:
 
 - From a shared drive to another shared drive (same stack or cross-stack)
 - From a shared drive to a personal drive
 - From a personal drive to a shared drive
 
 At least one side (source or destination) must be a shared drive.
+
+The `copy` parameter controls whether the operation is a move (default) or copy:
+- When `copy: false` (default): The source file/directory is moved to the destination and deleted from the source
+- When `copy: true`: The source file/directory is copied to the destination but remains in the source location
 
 #### Request
 
@@ -300,33 +304,46 @@ Body (preferred):
 ```json
 {
   "source": {
-    "instance": "https://alice.localhost:8080",
-    "sharing_id": "share_src_id",    
-    "file_id": "file123",
-    "dir_id": ""                      
+    "instance": "https://alice.localhost:8080", // omit for personal drive
+    "sharing_id": "share_src_id",               // required when instance is set
+    "file_id": "file123",                       // exactly one of file_id or dir_id
+    "dir_id": ""
   },
   "dest": {
-    "instance": "https://bob.localhost:8080",
-    "sharing_id": "share_dst_id",    
-    "dir_id": "destDir456"
-  }
+    "instance": "https://bob.localhost:8080",   // omit for personal drive
+    "sharing_id": "share_dst_id",               // required when instance is set
+    "dir_id": "destDir456"                      // destination directory id
+  },
+  "copy": false                                 // optional, defaults to false
 }
 ```
 
-Notes:
+Validation rules:
 
-- For personal drive sides, omit `instance` and provide only the `sharing_id` on the shared side.
-- Moving directories is not supported; move their contents instead.
-- If either side is a personal drive (no `sharing_id`), whole-type permission on `io.cozy.files` is required.
+- Exactly one of `source.file_id` or `source.dir_id` must be provided.
+- `dest.dir_id` is required.
+- If `source.instance` is provided, `source.sharing_id` is required.
+- If `dest.instance` is provided, `dest.sharing_id` is required.
+- At least one of `source.sharing_id` or `dest.sharing_id` must be provided.
+- When one side is a personal drive (no `instance`), whole-type permission on `io.cozy.files` is required.
+- `copy` is optional and defaults to `false` (move operation).
+
+Notes on behavior:
+
+- Name conflicts at destination are resolved automatically by appending a conflict suffix.
+- For directory operations, the subtree is recreated top-down and files are copied, then sources are deleted (only for move operations).
+- Cross-stack operations perform a remote download/upload and delete the remote source upon success (only for move operations).
+- When `copy: true`, source files and directories are preserved in their original location.
+- When `copy: false` (default), source files and directories are deleted after successful copy to destination.
 
 #### Responses
 
-- 201 Created, with a JSON object describing the created file on the destination.
-- 400 Bad Request, when required inputs are missing or invalid (e.g., moving a directory).
+- 201 Created, with a JSON object describing the created file or directory on the destination.
+- 400 Bad Request, when required inputs are missing or invalid.
 - 403 Forbidden, on permission errors or missing credentials for a shared drive.
 - 404 Not Found, when referenced files or drives do not exist.
 
-Example response (abbreviated):
+Example response (file, abbreviated):
 
 ```json
 {
@@ -341,13 +358,36 @@ Example response (abbreviated):
       "mime": "text/plain",
       "class": "document",
       "executable": false,
-      "tags": []
+      "tags": [],
+      "driveId": "aae62886e7..." // present when destination is a shared drive
     }
   }
 }
 ```
 
-When the move occurs locally (same stack), the response is identical to other local file-creation responses. For cross-stack moves, the shape is equivalent but built from the remote upload result.
+When the move occurs locally (same stack), the response matches the standard local creation response. For cross-stack moves, the response is built from the remote upload result and includes equivalent attributes.
+
+#### Copy Example
+
+To copy a file instead of moving it, set the `copy` parameter to `true`:
+
+```json
+{
+  "source": {
+    "instance": "https://alice.localhost:8080",
+    "sharing_id": "share_src_id",
+    "file_id": "file123"
+  },
+  "dest": {
+    "instance": "https://bob.localhost:8080",
+    "sharing_id": "share_dst_id",
+    "dir_id": "destDir456"
+  },
+  "copy": true
+}
+```
+
+This will create a copy of the file in the destination while preserving the original file in the source location.
 
 ### PATCH /sharings/drives/:id/:file-id
 
