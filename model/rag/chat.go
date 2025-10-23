@@ -155,13 +155,22 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 		if !ok {
 			continue
 		}
+		doctype, _ := src["doctype"].(string)
+		file_id, _ := src["file_id"].(string)
+		file_name, _ := src["filename"].(string)
+		page := 0
+		if p, ok := src["page"].(float64); ok {
+			page = int(p)
+		}
+		file_url, _ := src["file_url"].(string)
+		chunk_url, _ := src["chunk_url"].(string)
 		sources = append(sources, Source{
-			ID:       src["file_id"].(string),
-			DocType:  "io.cozy.files",
-			Filename: src["filename"].(string),
-			Page:     int(src["page"].(float64)),
-			FileURL:  src["file_url"].(string),
-			ChunkURL: src["chunk_url"].(string),
+			ID:       file_id,
+			DocType:  doctype,
+			Filename: file_name,
+			Page:     page,
+			FileURL:  file_url,
+			ChunkURL: chunk_url,
 		})
 	}
 	return sources, nil
