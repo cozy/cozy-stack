@@ -521,9 +521,13 @@ func CopyVersionHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fs := inst.VFS()
 	fileID := c.Param("file-id")
-	olddoc, err := fs.FileByID(fileID)
+	// Provide a clearer error when the target is a directory
+	dir, olddoc, err := fs.DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
+	}
+	if dir != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "cannot create versions for directories")
 	}
 	if olddoc == nil {
 		return WrapVfsError(vfs.ErrConflict)
