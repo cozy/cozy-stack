@@ -132,13 +132,17 @@ func WorkerUpdate(ctx *job.TaskContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
+	ctx.Instance.Logger().WithNamespace("share").
+		Debugf("Update %#v", msg)
 
 	s, err := sharing.FindSharing(ctx.Instance, msg.SharingID)
 	if err != nil {
 		return err
 	}
 	if !s.Active {
+		ctx.Instance.Logger().WithNamespace("share").
+			Debugf("Skipping description update for inactive sharing %s", msg.SharingID)
 		return nil
 	}
-	return s.PatchDescription(ctx.Instance, msg.DirName)
+	return s.PatchDescription(ctx.Instance, msg.NewDescription)
 }

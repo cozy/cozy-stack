@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/app"
@@ -27,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -1053,14 +1055,22 @@ func (s *Sharing) PatchDescription(inst *instance.Instance, description string) 
 	}
 	if s.Owner {
 		sharingID := s.SID
+		domain := inst.Domain
 		// Make replication asynchronous to avoid blocking the main request
-		go func(id string) {
+		go func(id, dom string) {
 			defer func() {
 				if r := recover(); r != nil {
-					inst.Logger().WithNamespace("sharing").
+					logger.WithDomain(dom).WithNamespace("sharing").
 						Errorf("Panic in ReplicateDescriptionChange: %v", r)
 				}
 			}()
+			// Get a fresh instance inside the goroutine to avoid concurrent access issues
+			inst, err := lifecycle.GetInstance(dom)
+			if err != nil {
+				logger.WithDomain(dom).WithNamespace("sharing").
+					Warnf("Unable to load instance %s for sharing %s description replication: %s", dom, id, err)
+				return
+			}
 			refreshed, err := FindSharing(inst, id)
 			if err != nil {
 				inst.Logger().WithNamespace("sharing").
@@ -1068,7 +1078,7 @@ func (s *Sharing) PatchDescription(inst *instance.Instance, description string) 
 				return
 			}
 			refreshed.ReplicateDescriptionChange(inst)
-		}(sharingID)
+		}(sharingID, domain)
 	}
 	return nil
 }
@@ -1083,6 +1093,13 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 	var errors []error
 	successCount := 0
 	totalRecipients := 0
+
+	// Fetch preview codes once before the loop to avoid repeated database calls
+	var previewCodes map[string]string
+	perms, err := permission.GetForSharePreview(inst, s.SID)
+	if err == nil && perms != nil {
+		previewCodes = perms.Codes
+	}
 
 	for i, m := range s.Members {
 		if !shouldReplicateDescriptionChange(i, m) {
@@ -1109,17 +1126,15 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 		}
 
 		// Fall back to preview codes if we don't have an access token
+		if token == "" && previewCodes != nil {
+			token = previewCodes[m.Email]
+		}
+
 		if token == "" {
-			perms, err := permission.GetForSharePreview(inst, s.SID)
-			if err == nil {
-				token = perms.Codes[m.Email]
-			}
-			if token == "" {
-				inst.Logger().WithNamespace("sharing").
-					Warnf("No token available for member %s", m.Instance)
-				errors = append(errors, fmt.Errorf("no token available for %s", m.Instance))
-				continue
-			}
+			inst.Logger().WithNamespace("sharing").
+				Warnf("No token available for member %s", m.Instance)
+			errors = append(errors, fmt.Errorf("no token available for %s", m.Instance))
+			continue
 		}
 
 		// Use the replicator endpoint which accepts sharing tokens

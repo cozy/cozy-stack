@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -107,7 +108,7 @@ func SyncFile(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if c.Param("id") != fileDoc.DocID {
-		err = errors.New("The identifiers in the URL and in the doc are not the same")
+		err = errors.New("the identifiers in the URL and in the doc are not the same")
 		return jsonapi.InvalidAttribute("id", err)
 	}
 	key, err := s.SyncFile(inst, &fileDoc)
@@ -220,7 +221,14 @@ func UpdateSharingMetadata(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "JSON input is malformed")
 	}
 
-	s.Description = payload.Description
+	// Validate description input
+	description := strings.TrimSpace(payload.Description)
+	if len(description) > 1000 {
+		inst.Logger().WithNamespace("replicator").Warnf("Description too long for sharing %s: %d characters", sharingID, len(description))
+		return echo.NewHTTPError(http.StatusBadRequest, "description is too long (maximum 1000 characters)")
+	}
+
+	s.Description = description
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return wrapErrors(err)
 	}

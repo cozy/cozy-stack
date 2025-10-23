@@ -634,8 +634,8 @@ func updateSharingDescriptionIfNeeded(c echo.Context, dir *vfs.DirDoc) {
 		if ref.Type == consts.Sharings {
 			// This directory is a sharing root, trigger an update job
 			msg, err := job.NewMessage(&sharing.UpdateMsg{
-				SharingID: ref.ID,
-				DirName:   dir.DocName,
+				SharingID:      ref.ID,
+				NewDescription: dir.DocName,
 			})
 			if err != nil {
 				inst.Logger().WithNamespace("sharing").
