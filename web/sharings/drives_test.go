@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/sharing"
 	sharingModel "github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -1487,6 +1488,112 @@ func TestSharedDrives(t *testing.T) {
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 			WithBytes([]byte("foo")).
 			Expect().Status(403)
+	})
+
+	t.Run("SharingDescriptionReplication", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+		}
+
+		env := setupSharedDrivesEnv(t)
+
+		t.Run("SameStackRecipients", func(t *testing.T) {
+			eA, eB, _ := env.createClients(t)
+
+			var ownerSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(env.acme, consts.Sharings, env.firstSharingID, &ownerSharing))
+			require.GreaterOrEqual(t, len(ownerSharing.Members), 2, "expect at least one recipient in sharing")
+
+			originalRecipientURL := ownerSharing.Members[1].Instance
+			sameStackURL := env.betty.PageURL("/", nil)
+			ownerSharing.Members[1].Instance = sameStackURL
+			require.NoError(t, couchdb.UpdateDoc(env.acme, &ownerSharing))
+
+			t.Cleanup(func() {
+				var s sharing.Sharing
+				require.NoError(t, couchdb.GetDoc(env.acme, consts.Sharings, env.firstSharingID, &s))
+				if len(s.Members) > 1 {
+					s.Members[1].Instance = originalRecipientURL
+					require.NoError(t, couchdb.UpdateDoc(env.acme, &s))
+				}
+			})
+
+			newDescription := "Updated description for same stack recipients"
+			payload := map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": consts.Sharings,
+					"id":   env.firstSharingID,
+					"attributes": map[string]interface{}{
+						"description": newDescription,
+					},
+				},
+			}
+
+			resp := eA.PATCH("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.acmeToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithJSON(payload).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			resp.Path("$.data.attributes.description").String().IsEqual(newDescription)
+
+			require.Eventually(t, func() bool {
+				var recipientSharing sharing.Sharing
+				if err := couchdb.GetDoc(env.betty, consts.Sharings, env.firstSharingID, &recipientSharing); err != nil {
+					return false
+				}
+				return recipientSharing.Description == newDescription
+			}, 5*time.Second, 100*time.Millisecond, "sharing description was not replicated on same stack recipient")
+
+			eB.GET("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.bettyToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.description").String().IsEqual(newDescription)
+		})
+
+		t.Run("CrossStackRecipients", func(t *testing.T) {
+			eA, eB, _ := env.createClients(t)
+
+			newDescription := "Updated description for cross stack recipients"
+			payload := map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": consts.Sharings,
+					"id":   env.firstSharingID,
+					"attributes": map[string]interface{}{
+						"description": newDescription,
+					},
+				},
+			}
+
+			resp := eA.PATCH("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.acmeToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithJSON(payload).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			resp.Path("$.data.attributes.description").String().IsEqual(newDescription)
+
+			require.Eventually(t, func() bool {
+				var recipientSharing sharing.Sharing
+				if err := couchdb.GetDoc(env.betty, consts.Sharings, env.firstSharingID, &recipientSharing); err != nil {
+					return false
+				}
+				return recipientSharing.Description == newDescription
+			}, 5*time.Second, 100*time.Millisecond, "sharing description was not replicated on cross stack recipient")
+
+			eB.GET("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.bettyToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.description").String().IsEqual(newDescription)
+		})
 	})
 }
 

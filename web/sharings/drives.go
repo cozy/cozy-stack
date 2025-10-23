@@ -232,6 +232,9 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	if dir != nil {
 		files.UpdateDirCozyMetadata(c, dir)
 		dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+		if err != nil {
+			return err
+		}
 		if patch.Name != nil {
 			// Update sharing description if this directory is a sharing root
 			updateSharingDescriptionIfNeeded(c, dir)
@@ -239,9 +242,9 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	} else {
 		files.UpdateFileCozyMetadata(c, file, false)
 		file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	if dir != nil {
