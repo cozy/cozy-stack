@@ -78,7 +78,7 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
 
 	// ACME
-	setupA := testutils.NewSetup(t, t.Name()+"_acme")
+	setupA := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_acme")
 	acme := setupA.GetTestInstance(&lifecycle.Options{Email: "acme@example.net", PublicName: "ACME"})
 	acmeToken := generateAppToken(acme, "drive", "io.cozy.files")
 	tsA := setupA.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
@@ -91,7 +91,7 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 	t.Cleanup(tsA.Close)
 
 	// Betty
-	setupB := testutils.NewSetup(t, t.Name()+"_betty")
+	setupB := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_betty")
 	betty := setupB.GetTestInstance(&lifecycle.Options{
 		Email: "betty@example.net", PublicName: "Betty", Passphrase: "MyPassphrase", KdfIterations: 5000, Key: "xxx",
 	})

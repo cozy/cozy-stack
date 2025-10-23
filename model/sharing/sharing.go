@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"io"
 	"net/http"
 	"net/url"
@@ -1051,16 +1052,23 @@ func (s *Sharing) PatchDescription(inst *instance.Instance, description string) 
 		return err
 	}
 	if s.Owner {
+		sharingID := s.SID
 		// Make replication asynchronous to avoid blocking the main request
-		go func() {
+		go func(id string) {
 			defer func() {
 				if r := recover(); r != nil {
 					inst.Logger().WithNamespace("sharing").
 						Errorf("Panic in ReplicateDescriptionChange: %v", r)
 				}
 			}()
-			s.ReplicateDescriptionChange(inst)
-		}()
+			refreshed, err := FindSharing(inst, id)
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Unable to load sharing %s for description replication: %s", id, err)
+				return
+			}
+			refreshed.ReplicateDescriptionChange(inst)
+		}(sharingID)
 	}
 	return nil
 }
@@ -1126,7 +1134,20 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 			continue
 		}
 
-		// TODO: add optimization for recipients on the same stack?!
+		// Optimization: use direct database update for recipients on the same stack
+		if IsSameStack(inst, m.Instance) {
+			err = s.UpdateDescriptionSameStack(inst, m.Instance, s.Description)
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Can't update description directly for same-stack recipient %s: %s", m.Instance, err)
+				errors = append(errors, fmt.Errorf("failed to update same-stack recipient %s: %w", m.Instance, err))
+				continue
+			}
+			successCount++
+			continue
+		}
+
+		// Fall back to HTTP request for cross-stack recipients
 		opts := &request.Options{
 			Method: http.MethodPut,
 			Scheme: u.Scheme,
@@ -1172,6 +1193,52 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 func shouldReplicateDescriptionChange(i int, m Member) bool {
 	// Only notify members who have completed the OAuth flow and are ready
 	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
+}
+
+// IsSameStack checks if the recipient instance is on the same stack as the owner instance
+func IsSameStack(ownerInst *instance.Instance, recipientURL string) bool {
+	u, err := url.Parse(recipientURL)
+	if err != nil {
+		return false
+	}
+
+	// Extract port from both domains for comparison
+	var ownerPort, recipientPort string
+	ownerParts := strings.SplitN(ownerInst.Domain, ":", 2)
+	if len(ownerParts) > 1 {
+		ownerPort = ownerParts[1]
+	}
+	recipientParts := strings.SplitN(u.Host, ":", 2)
+	if len(recipientParts) > 1 {
+		recipientPort = recipientParts[1]
+	}
+
+	// Same stack if ports match (both instances running on same port)
+	return ownerPort == recipientPort
+}
+
+// UpdateDescriptionSameStack directly updates the sharing description for recipients on the same stack
+func (s *Sharing) UpdateDescriptionSameStack(ownerInst *instance.Instance, recipientURL string, description string) error {
+	u, err := url.Parse(recipientURL)
+	if err != nil {
+		return err
+	}
+
+	// Get the recipient instance directly from the same stack
+	recipientInst, err := lifecycle.GetInstance(u.Host)
+	if err != nil {
+		return err
+	}
+
+	// Find the sharing document on the recipient's instance
+	recipientSharing, err := FindSharing(recipientInst, s.SID)
+	if err != nil {
+		return err
+	}
+
+	// Update the description directly
+	recipientSharing.Description = description
+	return couchdb.UpdateDoc(recipientInst, recipientSharing)
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.
