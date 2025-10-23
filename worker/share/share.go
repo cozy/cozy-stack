@@ -51,6 +51,15 @@ func init() {
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   WorkerUpload,
 	})
+
+	job.AddWorker(&job.WorkerConfig{
+		WorkerType:   "share-update",
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 2,
+		Reserved:     true,
+		Timeout:      30 * time.Second,
+		WorkerFunc:   WorkerUpdate,
+	})
 }
 
 // WorkerGroup is used to update the list of members of sharings for a group
@@ -116,4 +125,24 @@ func WorkerUpload(ctx *job.TaskContext) error {
 		return nil
 	}
 	return s.Upload(ctx.Instance, ctx.Context, msg.Errors)
+}
+
+func WorkerUpdate(ctx *job.TaskContext) error {
+	var msg sharing.UpdateMsg
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	ctx.Instance.Logger().WithNamespace("share").
+		Debugf("Update %#v", msg)
+
+	s, err := sharing.FindSharing(ctx.Instance, msg.SharingID)
+	if err != nil {
+		return err
+	}
+	if !s.Active {
+		ctx.Instance.Logger().WithNamespace("share").
+			Debugf("Skipping description update for inactive sharing %s", msg.SharingID)
+		return nil
+	}
+	return s.PatchDescription(ctx.Instance, msg.NewDescription)
 }

@@ -5,10 +5,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -106,7 +108,7 @@ func SyncFile(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if c.Param("id") != fileDoc.DocID {
-		err = errors.New("The identifiers in the URL and in the doc are not the same")
+		err = errors.New("the identifiers in the URL and in the doc are not the same")
 		return jsonapi.InvalidAttribute("id", err)
 	}
 	key, err := s.SyncFile(inst, &fileDoc)
@@ -175,6 +177,65 @@ func EndInitial(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// UpdateSharingMetadata is part of the replicator. It allows the owner of a
+// sharing to update the sharing metadata (currently just the description) on
+// recipient instances.
+//
+// This endpoint is called by the owner when the shared directory is renamed,
+// to keep the sharing description synchronized across all instances.
+//
+// Request:
+//
+//	PUT /sharings/:sharing-id/metadata
+//	Authorization: Bearer <access-token>
+//	Content-Type: application/json
+//
+//	{
+//	  "description": "New sharing description"
+//	}
+//
+// Response:
+//
+//	HTTP/1.1 204 No Content
+//
+// Error responses:
+//
+//	HTTP/1.1 400 Bad Request - Malformed JSON
+//	HTTP/1.1 401 Unauthorized - Missing or invalid token
+//	HTTP/1.1 403 Forbidden - Token doesn't have permission for this sharing
+//	HTTP/1.1 404 Not Found - Sharing doesn't exist
+func UpdateSharingMetadata(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	var payload struct {
+		Description string `json:"description"`
+	}
+	if err := c.Bind(&payload); err != nil {
+		inst.Logger().WithNamespace("replicator").Infof("Metadata cannot be bound: %s", err)
+		return echo.NewHTTPError(http.StatusBadRequest, "JSON input is malformed")
+	}
+
+	// Validate description input
+	description := strings.TrimSpace(payload.Description)
+	if len(description) > 1000 {
+		inst.Logger().WithNamespace("replicator").Warnf("Description too long for sharing %s: %d characters", sharingID, len(description))
+		return echo.NewHTTPError(http.StatusBadRequest, "description is too long (maximum 1000 characters)")
+	}
+
+	s.Description = description
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
@@ -183,6 +244,7 @@ func replicatorRoutes(router *echo.Group) {
 	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingReadPermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingWritePermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingWritePermissions)
+	group.PUT("/:sharing-id/metadata", UpdateSharingMetadata, checkSharingWritePermissions)
 	group.POST("/:sharing-id/reupload", ReuploadHandler, checkSharingReadPermissions)
 	group.DELETE("/:sharing-id/initial", EndInitial, checkSharingWritePermissions)
 }
