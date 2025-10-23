@@ -45,8 +45,8 @@ type ReplicateMsg struct {
 
 // UpdateMsg is used for jobs on the share-update worker.
 type UpdateMsg struct {
-	SharingID string `json:"sharing_id"`
-	DirName   string `json:"dir_name"`
+	SharingID      string `json:"sharing_id"`
+	NewDescription string `json:"new_description"`
 }
 
 // Replicate starts a replicator on this sharing.
