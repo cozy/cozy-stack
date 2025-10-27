@@ -497,9 +497,14 @@ func (i *Instance) HasForcedOIDC() bool {
 
 // PassphraseSalt computes the salt for the client-side hashing of the master
 // password. The rule for computing the salt is to create a fake email address
-// "me@<domain>".
+// "me@<domain>". If OldDomain is set, it uses the old domain for backward
+// compatibility during domain migration.
 func (i *Instance) PassphraseSalt() []byte {
-	domain := strings.Split(i.Domain, ":")[0] // Skip the optional port
+	domain := i.Domain
+	if i.OldDomain != "" {
+		domain = i.OldDomain
+	}
+	domain = strings.Split(domain, ":")[0] // Skip the optional port
 	return []byte("me@" + domain)
 }
 
