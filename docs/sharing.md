@@ -1647,6 +1647,43 @@ Authorization: Bearer ...
 HTTP/1.1 204 No Content
 ```
 
+### PUT /sharings/:sharing-id/metadata
+
+This internal route lets the sharer's Cozy propagate sharing metadata (currently
+the description) to the recipients once a rename or manual edit occurs. It is
+triggered by the replicator using the sharing-scoped token obtained during the
+OAuth flow.
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722/metadata HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+Content-Type: application/json
+```
+
+```json
+{
+  "description": "New sharing description"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Error responses
+
+- `400 Bad Request` when the JSON payload cannot be parsed or the description is
+  longer than the allowed limit.
+- `401 Unauthorized` when the request is missing or carries an invalid token.
+- `403 Forbidden` when the token does not grant write access to this sharing.
+- `404 Not Found` when the sharing identifier does not exist on the recipient
+  Cozy.
+
 ### POST /sharings/:sharing-id/reupload
 
 This is an internal route for the stack. It is called when the disk quota of an

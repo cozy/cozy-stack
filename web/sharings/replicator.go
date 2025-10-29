@@ -177,33 +177,8 @@ func EndInitial(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// UpdateSharingMetadata is part of the replicator. It allows the owner of a
-// sharing to update the sharing metadata (currently just the description) on
-// recipient instances.
-//
-// This endpoint is called by the owner when the shared directory is renamed,
-// to keep the sharing description synchronized across all instances.
-//
-// Request:
-//
-//	PUT /sharings/:sharing-id/metadata
-//	Authorization: Bearer <access-token>
-//	Content-Type: application/json
-//
-//	{
-//	  "description": "New sharing description"
-//	}
-//
-// Response:
-//
-//	HTTP/1.1 204 No Content
-//
-// Error responses:
-//
-//	HTTP/1.1 400 Bad Request - Malformed JSON
-//	HTTP/1.1 401 Unauthorized - Missing or invalid token
-//	HTTP/1.1 403 Forbidden - Token doesn't have permission for this sharing
-//	HTTP/1.1 404 Not Found - Sharing doesn't exist
+// UpdateSharingMetadata propagates metadata changes from the owner to the recipients.
+// See docs/sharing.md ("PUT /sharings/:sharing-id/metadata") for the full protocol description.
 func UpdateSharingMetadata(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
