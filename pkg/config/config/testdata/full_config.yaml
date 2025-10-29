@@ -30,6 +30,7 @@ couchdb:
 
 redis:
   addrs: url-1:12 url2:23 url3:34
+  dial_timeout: 10ms
   master: some-name
   password: some-password
   databases:
