@@ -559,6 +559,25 @@ func AccessToken(c echo.Context) error {
 		}
 	}
 
+	// Store the session ID in the client for logout purposes
+	if client.Flagship && reqBody.IDToken != "" {
+		// Extract SID from the ID token
+		claims := jwt.MapClaims{}
+		_, _, _ = jwt.NewParser().ParseUnverified(reqBody.IDToken, claims)
+		if sid, ok := claims["sid"].(string); ok && sid != "" {
+			client.OIDCSessionID = sid
+		} else {
+			logger.WithNamespace("oidc").Warnf("No session ID found in ID token")
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "No session ID found in ID token",
+			})
+		}
+	} else {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "No ID token which is necessary for flagship app",
+		})
+	}
+
 	// Remove the pending flag on the OAuth client (if needed)
 	if client.Pending {
 		client.Pending = false
@@ -748,7 +767,20 @@ var oidcClient = &http.Client{
 	Timeout: 15 * time.Second,
 }
 
+type tokenResponse struct {
+	AccessToken string `json:"access_token"`
+	IDToken     string `json:"id_token"`
+}
+
 func getToken(conf *Config, code string) (string, error) {
+	resp, err := getTokenWithIDToken(conf, code)
+	if err != nil {
+		return "", err
+	}
+	return resp.AccessToken, nil
+}
+
+func getTokenWithIDToken(conf *Config, code string) (*tokenResponse, error) {
 	data := url.Values{
 		"grant_type":   []string{"authorization_code"},
 		"code":         []string{code},
@@ -765,7 +797,7 @@ func getToken(conf *Config, code string) (string, error) {
 	body := strings.NewReader(data.Encode())
 	req, err := http.NewRequest("POST", conf.TokenURL, body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
@@ -777,7 +809,7 @@ func getToken(conf *Config, code string) (string, error) {
 
 	res, err := oidcClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
@@ -785,21 +817,19 @@ func getToken(conf *Config, code string) (string, error) {
 		_, _ = io.Copy(io.Discard, res.Body)
 		logger.WithNamespace("oidc").
 			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
-		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var out struct {
-		AccessToken string `json:"access_token"`
-	}
+	var out tokenResponse
 	err = json.Unmarshal(resBody, &out)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return out.AccessToken, nil
+	return &out, nil
 }
 
 func getDomainFromUserInfo(conf *Config, token string) (string, error) {
