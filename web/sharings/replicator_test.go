@@ -376,6 +376,93 @@ func TestReplicator(t *testing.T) {
 		obj.Value("created_at").String().AsDateTime(time.RFC3339)
 		obj.Value("updated_at").String().AsDateTime(time.RFC3339)
 	})
+
+	t.Run("UpdateSharingMetadata", func(t *testing.T) {
+		assert.NotEmpty(t, replSharingID)
+		assert.NotEmpty(t, replAccessToken)
+
+		e := httpexpect.Default(t, tsR.URL)
+
+		// Get the current sharing to check its initial description
+		var s sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, replSharingID, &s))
+		initialDescription := s.Description
+		assert.Equal(t, "replicator tests", initialDescription)
+
+		t.Run("WithoutBearerToken", func(t *testing.T) {
+			e.PUT("/sharings/"+replSharingID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithBytes([]byte(`{"description": "Updated description"}`)).
+				Expect().Status(401)
+		})
+
+		t.Run("WithInvalidSharingID", func(t *testing.T) {
+			// Returns 403 because permission check happens before sharing lookup
+			e.PUT("/sharings/invalid-sharing-id/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithBytes([]byte(`{"description": "Updated description"}`)).
+				Expect().Status(403)
+		})
+
+		t.Run("WithMalformedJSON", func(t *testing.T) {
+			// Returns 400 Bad Request for malformed JSON
+			e.PUT("/sharings/"+replSharingID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithBytes([]byte(`{"description": }`)).
+				Expect().Status(400)
+		})
+
+		t.Run("OK", func(t *testing.T) {
+			newDescription := "New replicator test description"
+
+			e.PUT("/sharings/"+replSharingID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithJSON(map[string]string{
+					"description": newDescription,
+				}).
+				Expect().Status(204)
+
+			// Verify the description was updated
+			var updatedSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, replSharingID, &updatedSharing))
+			assert.Equal(t, newDescription, updatedSharing.Description)
+		})
+
+		t.Run("WithSpecialCharacters", func(t *testing.T) {
+			specialDesc := "Test quotes and backslashes and emoji"
+
+			e.PUT("/sharings/"+replSharingID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithJSON(map[string]string{
+					"description": specialDesc,
+				}).
+				Expect().Status(204)
+
+			// Verify the description with special characters was stored correctly
+			var updatedSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, replSharingID, &updatedSharing))
+			assert.Equal(t, specialDesc, updatedSharing.Description)
+		})
+
+		t.Run("WithEmptyDescription", func(t *testing.T) {
+			e.PUT("/sharings/"+replSharingID+"/metadata").
+				WithHeader("Content-Type", "application/json").
+				WithHeader("Authorization", "Bearer "+replAccessToken).
+				WithJSON(map[string]string{
+					"description": "",
+				}).
+				Expect().Status(204)
+
+			// Verify empty description is allowed
+			var updatedSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(replInstance, consts.Sharings, replSharingID, &updatedSharing))
+			assert.Equal(t, "", updatedSharing.Description)
+		})
+	})
 }
 
 func uuidv7() string {

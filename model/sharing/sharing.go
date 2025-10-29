@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -26,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/revision"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -1047,7 +1050,210 @@ func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, 
 // PatchDescription saves a new description for a sharing.
 func (s *Sharing) PatchDescription(inst *instance.Instance, description string) error {
 	s.Description = description
-	return couchdb.UpdateDoc(inst, s)
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	if s.Owner {
+		sharingID := s.SID
+		domain := inst.Domain
+		// Make replication asynchronous to avoid blocking the main request
+		go func(id, dom string) {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.WithDomain(dom).WithNamespace("sharing").
+						Errorf("Panic in ReplicateDescriptionChange: %v", r)
+				}
+			}()
+			// Get a fresh instance inside the goroutine to avoid concurrent access issues
+			inst, err := lifecycle.GetInstance(dom)
+			if err != nil {
+				logger.WithDomain(dom).WithNamespace("sharing").
+					Warnf("Unable to load instance %s for sharing %s description replication: %s", dom, id, err)
+				return
+			}
+			refreshed, err := FindSharing(inst, id)
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Unable to load sharing %s for description replication: %s", id, err)
+				return
+			}
+			refreshed.ReplicateDescriptionChange(inst)
+		}(sharingID, domain)
+	}
+	return nil
+}
+
+// ReplicateDescriptionChange sends the new sharing description to the non
+// revoked recipients so they can update it on their side.
+func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
+	if !s.Owner {
+		return
+	}
+
+	var errors []error
+	successCount := 0
+	totalRecipients := 0
+
+	// Fetch preview codes once before the loop to avoid repeated database calls
+	var previewCodes map[string]string
+	perms, err := permission.GetForSharePreview(inst, s.SID)
+	if err == nil && perms != nil {
+		previewCodes = perms.Codes
+	}
+
+	for i, m := range s.Members {
+		if !shouldReplicateDescriptionChange(i, m) {
+			continue
+		}
+		totalRecipients++
+
+		u, err := url.Parse(m.Instance)
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Invalid instance URL %s: %s", m.Instance, err)
+			errors = append(errors, fmt.Errorf("invalid URL for %s: %w", m.Instance, err))
+			continue
+		}
+
+		c := &s.Credentials[i-1]
+		var token string
+
+		// Use the AccessToken that was exchanged during the OAuth flow
+		// This token has scope io.cozy.sharings:ALL:{sharingID} which grants
+		// access to replicator endpoints
+		if m.Status == MemberStatusReady && c.AccessToken != nil {
+			token = c.AccessToken.AccessToken
+		}
+
+		// Fall back to preview codes if we don't have an access token
+		if token == "" && previewCodes != nil {
+			token = previewCodes[m.Email]
+		}
+
+		if token == "" {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("No token available for member %s", m.Instance)
+			errors = append(errors, fmt.Errorf("no token available for %s", m.Instance))
+			continue
+		}
+
+		// Use the replicator endpoint which accepts sharing tokens
+		params := map[string]string{
+			"description": s.Description,
+		}
+		body, err := json.Marshal(params)
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Can't serialize the updated description for %s: %s", s.SID, err)
+			errors = append(errors, fmt.Errorf("serialization failed for %s: %w", m.Instance, err))
+			continue
+		}
+
+		// Optimization: use direct database update for recipients on the same stack
+		if IsSameStack(inst, m.Instance) {
+			err = s.UpdateDescriptionSameStack(inst, m.Instance, s.Description)
+			if err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Can't update description directly for same-stack recipient %s: %s", m.Instance, err)
+				errors = append(errors, fmt.Errorf("failed to update same-stack recipient %s: %w", m.Instance, err))
+				continue
+			}
+			successCount++
+			continue
+		}
+
+		// Fall back to HTTP request for cross-stack recipients
+		opts := &request.Options{
+			Method: http.MethodPut,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID + "/metadata",
+			Headers: request.Headers{
+				echo.HeaderContentType:   "application/json",
+				echo.HeaderAuthorization: "Bearer " + token,
+			},
+			Body:       bytes.NewReader(body),
+			ParseError: ParseRequestError,
+		}
+
+		res, err := request.Req(opts)
+		if res != nil && res.StatusCode/100 == 4 {
+			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
+		}
+		if err != nil {
+			inst.Logger().WithNamespace("sharing").
+				Warnf("Can't notify %s about the updated description: %s", m.Instance, err)
+			errors = append(errors, fmt.Errorf("failed to notify %s: %w", m.Instance, err))
+			continue
+		}
+		res.Body.Close()
+		successCount++
+	}
+
+	// Log summary of replication results
+	if len(errors) > 0 {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("Description replication completed with %d/%d successes, %d failures for sharing %s",
+				successCount, totalRecipients, len(errors), s.SID)
+		for _, err := range errors {
+			inst.Logger().WithNamespace("sharing").Debugf("Replication error: %v", err)
+		}
+	} else {
+		inst.Logger().WithNamespace("sharing").
+			Infof("Description replication successful for all %d recipients of sharing %s",
+				successCount, s.SID)
+	}
+}
+
+func shouldReplicateDescriptionChange(i int, m Member) bool {
+	// Only notify members who have completed the OAuth flow and are ready
+	return i > 0 && m.Status == MemberStatusReady && m.Instance != ""
+}
+
+// IsSameStack checks if the recipient instance is on the same stack as the owner instance
+func IsSameStack(ownerInst *instance.Instance, recipientURL string) bool {
+	u, err := url.Parse(recipientURL)
+	if err != nil {
+		return false
+	}
+
+	// Extract port from both domains for comparison
+	var ownerPort, recipientPort string
+	ownerParts := strings.SplitN(ownerInst.Domain, ":", 2)
+	if len(ownerParts) > 1 {
+		ownerPort = ownerParts[1]
+	}
+	recipientParts := strings.SplitN(u.Host, ":", 2)
+	if len(recipientParts) > 1 {
+		recipientPort = recipientParts[1]
+	}
+
+	// Same stack if ports match (both instances running on same port)
+	return ownerPort == recipientPort
+}
+
+// UpdateDescriptionSameStack directly updates the sharing description for recipients on the same stack
+func (s *Sharing) UpdateDescriptionSameStack(ownerInst *instance.Instance, recipientURL string, description string) error {
+	u, err := url.Parse(recipientURL)
+	if err != nil {
+		return err
+	}
+
+	// Get the recipient instance directly from the same stack
+	recipientInst, err := lifecycle.GetInstance(u.Host)
+	if err != nil {
+		return err
+	}
+
+	// Find the sharing document on the recipient's instance
+	recipientSharing, err := FindSharing(recipientInst, s.SID)
+	if err != nil {
+		return err
+	}
+
+	// Update the description directly
+	recipientSharing.Description = description
+	return couchdb.UpdateDoc(recipientInst, recipientSharing)
 }
 
 // AddShortcut creates a shortcut for this sharing on the local instance.

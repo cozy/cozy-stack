@@ -16,10 +16,13 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/sharing"
+	sharingModel "github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -263,6 +266,36 @@ func acceptSharedDrive(
 		WithRedirectPolicy(httpexpect.DontFollowRedirects).
 		Expect().Status(303).
 		Header("Location").Contains("#/folder/io.cozy.files.shared-drives-dir")
+
+	// Complete the credential exchange: %RECIPIENT% sends answer to Alice
+	var bettySharing sharingModel.Sharing
+	err = couchdb.GetDoc(recipientInstance, consts.Sharings, sharingID, &bettySharing)
+	require.NoError(t, err)
+
+	// Send the answer to Alice's instance to exchange credentials
+	err = bettySharing.SendAnswer(recipientInstance, st)
+	require.NoError(t, err)
+
+	// Verify recipient's status is now "ready" on Alice's side
+	var aliceSharing sharingModel.Sharing
+	err = couchdb.GetDoc(ownerInstance, consts.Sharings, sharingID, &aliceSharing)
+	require.NoError(t, err)
+
+	for i := range aliceSharing.Members {
+		if aliceSharing.Members[i].Name == recipientName {
+			assert.Equal(t, sharingModel.MemberStatusReady, aliceSharing.Members[i].Status)
+		}
+	}
+
+	// Verify recipient has an access token now(or at least one of recipients)
+	var accessToken string
+	for _, cred := range aliceSharing.Credentials {
+		if cred.AccessToken != nil && cred.AccessToken.AccessToken != "" {
+			accessToken = cred.AccessToken.AccessToken
+			break
+		}
+	}
+	require.NotEmpty(t, accessToken, "missing credential access token")
 }
 
 // acceptSharedDriveForBetty is kept for convenience and delegates to acceptSharedDrive.
@@ -284,13 +317,13 @@ func TestSharedDrives(t *testing.T) {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
 
-	var productID,
+	var sharingID,
+		productID,
 		meetingsID,
 		checklistID,
 		outsideOfShareID,
 		otherSharedFileThenTrashedID,
-		otherSharedFileThenDeletedID,
-		sharingID string
+		otherSharedFileThenDeletedID string
 	var checklistName = "Checklist.txt"
 
 	config.UseTestFile(t)
@@ -983,6 +1016,99 @@ func TestSharedDrives(t *testing.T) {
 		})
 	})
 
+	t.Run("DescriptionUpdatesWhenDirectoryRenamed", func(t *testing.T) {
+		eA := httpexpect.Default(t, tsA.URL)
+		eB := httpexpect.Default(t, tsB.URL)
+
+		// Verify the initial description on both sides
+		objA := eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		initialDesc := objA.Path("$.data.attributes.description").String().Raw()
+
+		objB := eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual(initialDesc)
+
+		// Rename the shared directory on ACME (owner) side using the drives endpoint
+		eA.PATCH("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "data": {
+			    "type": "io.cozy.files",
+				"id": "` + productID + `",
+				"attributes": {
+				  "name": "Engineering Team"
+				}
+			  }
+			}`)).
+			Expect().Status(200)
+
+		// Wait for the share-update worker to process and propagate
+		time.Sleep(500 * time.Millisecond)
+
+		// Verify the description was updated on the owner side
+		objA = eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objA.Path("$.data.attributes.description").String().IsEqual("Engineering Team")
+
+		// Verify the description was also updated on the recipient side
+		objB = eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual("Engineering Team")
+
+		// Rename back to original for other tests using the drives endpoint
+		eA.PATCH("/sharings/drives/"+sharingID+"/"+productID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+			  "data": {
+			    "type": "io.cozy.files",
+				"id": "` + productID + `",
+				"attributes": {
+				  "name": "Product team"
+				}
+			  }
+			}`)).
+			Expect().Status(200)
+
+		// Wait for the share-update worker to process the rename back
+		time.Sleep(500 * time.Millisecond)
+
+		// Verify both sides have the original description restored
+		objA = eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objA.Path("$.data.attributes.description").String().IsEqual("Product team")
+
+		objB = eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		objB.Path("$.data.attributes.description").String().IsEqual("Product team")
+	})
+
 	t.Run("SharedDriveChangesFeed", func(t *testing.T) {
 		// Request to GET /files/_changes using the given client and token
 		getChangeFeedLocally := func(client clientInfo) *httpexpect.Response {
@@ -1361,6 +1487,112 @@ func TestSharedDrives(t *testing.T) {
 			WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
 			WithBytes([]byte("foo")).
 			Expect().Status(403)
+	})
+
+	t.Run("SharingDescriptionReplication", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+		}
+
+		env := setupSharedDrivesEnv(t)
+
+		t.Run("SameStackRecipients", func(t *testing.T) {
+			eA, eB, _ := env.createClients(t)
+
+			var ownerSharing sharing.Sharing
+			require.NoError(t, couchdb.GetDoc(env.acme, consts.Sharings, env.firstSharingID, &ownerSharing))
+			require.GreaterOrEqual(t, len(ownerSharing.Members), 2, "expect at least one recipient in sharing")
+
+			originalRecipientURL := ownerSharing.Members[1].Instance
+			sameStackURL := env.betty.PageURL("/", nil)
+			ownerSharing.Members[1].Instance = sameStackURL
+			require.NoError(t, couchdb.UpdateDoc(env.acme, &ownerSharing))
+
+			t.Cleanup(func() {
+				var s sharing.Sharing
+				require.NoError(t, couchdb.GetDoc(env.acme, consts.Sharings, env.firstSharingID, &s))
+				if len(s.Members) > 1 {
+					s.Members[1].Instance = originalRecipientURL
+					require.NoError(t, couchdb.UpdateDoc(env.acme, &s))
+				}
+			})
+
+			newDescription := "Updated description for same stack recipients"
+			payload := map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": consts.Sharings,
+					"id":   env.firstSharingID,
+					"attributes": map[string]interface{}{
+						"description": newDescription,
+					},
+				},
+			}
+
+			resp := eA.PATCH("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.acmeToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithJSON(payload).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			resp.Path("$.data.attributes.description").String().IsEqual(newDescription)
+
+			require.Eventually(t, func() bool {
+				var recipientSharing sharing.Sharing
+				if err := couchdb.GetDoc(env.betty, consts.Sharings, env.firstSharingID, &recipientSharing); err != nil {
+					return false
+				}
+				return recipientSharing.Description == newDescription
+			}, 5*time.Second, 100*time.Millisecond, "sharing description was not replicated on same stack recipient")
+
+			eB.GET("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.bettyToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.description").String().IsEqual(newDescription)
+		})
+
+		t.Run("CrossStackRecipients", func(t *testing.T) {
+			eA, eB, _ := env.createClients(t)
+
+			newDescription := "Updated description for cross stack recipients"
+			payload := map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": consts.Sharings,
+					"id":   env.firstSharingID,
+					"attributes": map[string]interface{}{
+						"description": newDescription,
+					},
+				},
+			}
+
+			resp := eA.PATCH("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.acmeToken).
+				WithHeader("Content-Type", "application/vnd.api+json").
+				WithJSON(payload).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			resp.Path("$.data.attributes.description").String().IsEqual(newDescription)
+
+			require.Eventually(t, func() bool {
+				var recipientSharing sharing.Sharing
+				if err := couchdb.GetDoc(env.betty, consts.Sharings, env.firstSharingID, &recipientSharing); err != nil {
+					return false
+				}
+				return recipientSharing.Description == newDescription
+			}, 5*time.Second, 100*time.Millisecond, "sharing description was not replicated on cross stack recipient")
+
+			eB.GET("/sharings/"+env.firstSharingID).
+				WithHeader("Authorization", "Bearer "+env.bettyToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().
+				Path("$.data.attributes.description").String().IsEqual(newDescription)
+		})
 	})
 }
 
