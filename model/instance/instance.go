@@ -181,6 +181,9 @@ func (i *Instance) DBPrefix() string {
 	if i.Prefix != "" {
 		return i.Prefix
 	}
+	if i.OldDomain != "" {
+		return i.OldDomain
+	}
 	return i.Domain
 }
 
