@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/sharing"
-	sharingModel "github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -259,7 +258,68 @@ func acceptSharedDrive(
 	assert.NoError(t, err)
 	st := u.Query()["state"][0]
 
-	// Perform authorize request without following redirect to drive subdomain
+	// Perform authorize request (POST) without following redirect to drive subdomain.
+	// The CSRF token is the same as the login one.
+	eR.POST(u.Path).
+		WithFormField("sharing_id", sharingID).
+		WithFormField("state", st).
+		WithFormField("csrf_token", token).
+		WithFormField("synchronize", true).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").
+		Contains("/?sharing=" + sharingID)
+}
+
+func acceptSharedDriveViaGET(
+	t *testing.T,
+	ownerInstance *instance.Instance,
+	recipientInstance *instance.Instance,
+	recipientName string,
+	tsAURL string,
+	tsRecipientURL string,
+	sharingID string,
+) {
+	t.Helper()
+	eA := httpexpect.Default(t, tsAURL)
+	eR := httpexpect.Default(t, tsRecipientURL)
+
+	ownerPublicName, _ := ownerInstance.SettingsPublicName()
+	_, discoveryLink := extractInvitationLink(t, ownerInstance, ownerPublicName, recipientName)
+
+	token := eR.GET("/auth/login").
+		Expect().Status(200).
+		Cookie("_csrf").Value().NotEmpty().Raw()
+	eR.POST("/auth/login").
+		WithCookie("_csrf", token).
+		WithFormField("passphrase", "MyPassphrase").
+		WithFormField("csrf_token", token).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(303).
+		Header("Location").Contains("home")
+
+	u, err := url.Parse(discoveryLink)
+	assert.NoError(t, err)
+	state := u.Query()["state"][0]
+
+	eA.GET(u.Path).
+		WithQuery("state", state).
+		Expect().Status(200)
+
+	redirectHeader := eA.POST(u.Path).
+		WithFormField("state", state).
+		WithFormField("slug", tsRecipientURL).
+		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+		Expect().Status(302).Header("Location")
+
+	authorizeLink := redirectHeader.NotEmpty().Raw()
+
+	FakeOwnerInstanceForSharing(t, recipientInstance, tsAURL, sharingID)
+
+	u, err = url.Parse(authorizeLink)
+	assert.NoError(t, err)
+	st := u.Query()["state"][0]
+
 	eR.GET(u.Path).
 		WithQuery("sharing_id", sharingID).
 		WithQuery("state", st).
@@ -268,7 +328,7 @@ func acceptSharedDrive(
 		Header("Location").Contains("#/folder/io.cozy.files.shared-drives-dir")
 
 	// Complete the credential exchange: %RECIPIENT% sends answer to Alice
-	var bettySharing sharingModel.Sharing
+	var bettySharing sharing.Sharing
 	err = couchdb.GetDoc(recipientInstance, consts.Sharings, sharingID, &bettySharing)
 	require.NoError(t, err)
 
@@ -277,13 +337,13 @@ func acceptSharedDrive(
 	require.NoError(t, err)
 
 	// Verify recipient's status is now "ready" on Alice's side
-	var aliceSharing sharingModel.Sharing
+	var aliceSharing sharing.Sharing
 	err = couchdb.GetDoc(ownerInstance, consts.Sharings, sharingID, &aliceSharing)
 	require.NoError(t, err)
 
 	for i := range aliceSharing.Members {
 		if aliceSharing.Members[i].Name == recipientName {
-			assert.Equal(t, sharingModel.MemberStatusReady, aliceSharing.Members[i].Status)
+			assert.Equal(t, sharing.MemberStatusReady, aliceSharing.Members[i].Status)
 		}
 	}
 
@@ -539,6 +599,69 @@ func TestSharedDrives(t *testing.T) {
 
 	t.Run("AcceptSharedDrive", func(t *testing.T) {
 		acceptSharedDriveForBetty(t, acmeInstance, bettyInstance, tsA.URL, tsB.URL, sharingID)
+	})
+
+	t.Run("AcceptSharedDriveViaGETSetsReadyStatus", func(t *testing.T) {
+		getOnlySharingID, _, _ := createSharedDriveForAcme(
+			t,
+			acmeInstance,
+			acmeAppToken,
+			tsA.URL,
+			"Product team GET acceptance",
+			"Drive accepted via GET",
+		)
+
+		acceptSharedDriveViaGET(t, acmeInstance, bettyInstance, "Betty", tsA.URL, tsB.URL, getOnlySharingID)
+
+		require.Eventually(t, func() bool {
+			var s sharing.Sharing
+			if err := couchdb.GetDoc(bettyInstance, consts.Sharings, getOnlySharingID, &s); err != nil {
+				return false
+			}
+			if len(s.Members) < 2 {
+				return false
+			}
+			return s.Members[1].Status == sharing.MemberStatusReady
+		}, 10*time.Second, 200*time.Millisecond)
+
+		require.Eventually(t, func() bool {
+			var s sharing.Sharing
+			if err := couchdb.GetDoc(acmeInstance, consts.Sharings, getOnlySharingID, &s); err != nil {
+				return false
+			}
+			if len(s.Members) < 2 {
+				return false
+			}
+			return s.Members[1].Status == sharing.MemberStatusReady
+		}, 10*time.Second, 200*time.Millisecond)
+	})
+
+	t.Run("OwnerSeesRecipientReadyStatus", func(t *testing.T) {
+		eRecipient := httpexpect.Default(t, tsB.URL)
+		recipientObj := eRecipient.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bettyAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		recipientAttrs := recipientObj.Value("data").Object().Value("attributes").Object()
+		recipientMembers := recipientAttrs.Value("members").Array()
+		recipientMembers.Length().IsEqual(3)
+		recipientMembers.Value(1).Object().Value("email").IsEqual("betty@example.net")
+		recipientMembers.Value(1).Object().Value("status").IsEqual("ready")
+
+		eOwner := httpexpect.Default(t, tsA.URL)
+		ownerObj := eOwner.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+acmeAppToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		ownerAttrs := ownerObj.Value("data").Object().Value("attributes").Object()
+		ownerMembers := ownerAttrs.Value("members").Array()
+		ownerMembers.Length().IsEqual(3)
+		ownerMembers.Value(1).Object().Value("email").IsEqual("betty@example.net")
+		ownerMembers.Value(1).Object().Value("status").IsEqual("ready")
 	})
 
 	t.Run("HeadDirOrFile", func(t *testing.T) {
@@ -1372,7 +1495,7 @@ func TestSharedDrives(t *testing.T) {
 				Expect().Status(200).
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object()
-			obj.Value("data").Array().Length().IsEqual(1)
+			obj.Value("data").Array().Length().IsEqual(2)
 		})
 
 		t.Run("RemoveRecipientFromSharing", func(t *testing.T) {
@@ -1397,7 +1520,7 @@ func TestSharedDrives(t *testing.T) {
 				Expect().Status(200).
 				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 				Object()
-			obj.Value("data").Array().Length().IsEqual(0)
+			obj.Value("data").Array().Length().IsEqual(1)
 		})
 	})
 
