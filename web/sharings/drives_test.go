@@ -1016,7 +1016,6 @@ func TestSharedDrives(t *testing.T) {
 		})
 	})
 
-	// TODO refactor after move merge to use util function of separate drive created
 	t.Run("DescriptionUpdatesWhenDirectoryRenamed", func(t *testing.T) {
 		eA := httpexpect.Default(t, tsA.URL)
 		eB := httpexpect.Default(t, tsB.URL)
