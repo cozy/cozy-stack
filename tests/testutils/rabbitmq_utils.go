@@ -2,9 +2,7 @@ package testutils
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"net"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +13,6 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 
 	c "github.com/docker/docker/api/types/container"
@@ -127,30 +124,6 @@ func StartRabbitMQ(t *testing.T, withVolume bool, enableTLS bool) *RabbitFixture
 	})
 
 	return fixture
-}
-
-func (f *RabbitFixture) Publish() {
-	conn, err := amqp.Dial(f.AMQPURL)
-	require.NoError(f.t, err)
-	ch, err := conn.Channel()
-	require.NoError(f.t, err)
-	f.t.Cleanup(func() { _ = ch.Close(); _ = conn.Close() })
-
-	// Compose message
-	testHash := "testhash123"
-	domain := "test.example.com"
-	msg := rabbitmq.PasswordChangeMessage{
-		TwakeID:    "user-123",
-		Iterations: 100000,
-		Hash:       testHash,
-		PublicKey:  "PUB",
-		PrivateKey: "PRIV",
-		Key:        "KEY",
-		Timestamp:  time.Now().Unix(),
-		Domain:     domain,
-	}
-	_, err = json.Marshal(msg)
-	require.NoError(f.t, err)
 }
 
 func (f *RabbitFixture) Restart(ctx context.Context, timeout time.Duration) {

@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"fmt"
-	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"os"
 
 	"github.com/cozy/cozy-stack/model/cloudery"
@@ -16,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/emailer"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/google/gops/agent"
 )
@@ -51,6 +51,7 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 type Services struct {
 	Emailer  emailer.Emailer
 	Settings settings.Service
+	RabbitMQ rabbitmq.Service
 }
 
 // Start is used to initialize all the
@@ -110,9 +111,15 @@ security features. Please do not use this binary as your production server.
 	instanceSvc := instance.Init()
 	clouderySvc := cloudery.Init(config.GetConfig().Clouderies)
 
+	rabbitmqSvc, err := rabbitmq.Init(config.GetConfig().RabbitMQ)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
+	}
+
 	services := Services{
 		Emailer:  emailerSvc,
 		Settings: settings.Init(emailerSvc, instanceSvc, tokenSvc, clouderySvc),
+		RabbitMQ: rabbitmqSvc,
 	}
 
 	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
@@ -123,13 +130,13 @@ security features. Please do not use this binary as your production server.
 		}
 	}
 
-	// Start RabbitMQ manager if enabled in configuration
-	if cfg := config.GetConfig().RabbitMQ; cfg.Enabled {
-		shutdowner, err := rabbitmq.Start(cfg)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to start rabbitmq manager: %w", err)
-		}
-		shutdowners = append(shutdowners, shutdowner)
+	// Start RabbitMQ managers
+	rmqManagers, err := rabbitmqSvc.StartManagers()
+	for _, manager := range rmqManagers {
+		shutdowners = append(shutdowners, manager)
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start rabbitmq manager: %w", err)
 	}
 
 	// Global shutdowner that composes all the running processes of the stack

@@ -345,7 +345,10 @@ func TestRabbitMQConfig(t *testing.T) {
 	yamlContent := `
 rabbitmq:
   enabled: true
-  url: "amqp://test:test@localhost:5672/"
+  nodes:
+    default:
+      enabled: true
+      url: "amqp://test:test@localhost:5672/"
   exchanges:
     - name: "user-password-updates"
       kind: "topic"
@@ -385,7 +388,11 @@ rabbitmq:
 	rabbitmq := cfg.RabbitMQ
 
 	assert.True(t, rabbitmq.Enabled)
-	assert.Equal(t, "amqp://test:test@localhost:5672/", rabbitmq.URL)
+	assert.Len(t, rabbitmq.Nodes, 1, "Should have exactly 1 node")
+	node := rabbitmq.Nodes["default"]
+	assert.NotNil(t, node, "Should have default node config")
+	assert.True(t, node.Enabled)
+	assert.Equal(t, "amqp://test:test@localhost:5672/", node.URL)
 
 	require.Len(t, rabbitmq.Exchanges, 2, "Should have exactly 2 exchanges")
 

@@ -160,12 +160,18 @@ type Config struct {
 	AssetsPollingInterval time.Duration
 }
 
-// RabbitMQ contains configuration for the RabbitMQ consumer.
+// RabbitMQ contains configuration for the RabbitMQ consumers.
 type RabbitMQ struct {
-	Enabled   bool             `mapstructure:"enabled" yaml:"enabled"`
-	URL       string           `mapstructure:"url" yaml:"url"`
-	Exchanges []RabbitExchange `mapstructure:"exchanges" yaml:"exchanges"`
-	TLS       RabbitMQTLS      `mapstructure:"tls" yaml:"tls"`
+	Enabled   bool                    `mapstructure:"enabled" yaml:"enabled"`
+	Nodes     map[string]RabbitMQNode `mapstructure:"nodes" yaml:"nodes"`
+	Exchanges []RabbitExchange        `mapstructure:"exchanges" yaml:"exchanges"`
+}
+
+// RabbitMQNode defines the configuration for the connection with a RabbitMQ node.
+type RabbitMQNode struct {
+	Enabled bool        `mapstructure:"enabled" yaml:"enabled"`
+	URL     string      `mapstructure:"url" yaml:"url"`
+	TLS     RabbitMQTLS `mapstructure:"tls" yaml:"tls"`
 }
 
 // RabbitMQTLS defines TLS settings for the RabbitMQ connection.
@@ -967,12 +973,6 @@ func UseViper(v *viper.Viper) error {
 
 		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
-
-		RabbitMQ: func() RabbitMQ {
-			var rabbitmq RabbitMQ
-			v.UnmarshalKey("rabbitmq", &rabbitmq)
-			return rabbitmq
-		}(),
 	}
 
 	err = v.UnmarshalKey("deprecated_apps", &config.DeprecatedApps)
@@ -983,6 +983,11 @@ func UseViper(v *viper.Viper) error {
 	err = v.UnmarshalKey("clouderies", &config.Clouderies)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "clouderies": %w`, err)
+	}
+
+	err = v.UnmarshalKey("rabbitmq", &config.RabbitMQ)
+	if err != nil {
+		return fmt.Errorf(`failed to parse the config for "rabbitmq": %w`, err)
 	}
 
 	// For compatibility
