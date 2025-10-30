@@ -265,6 +265,8 @@ func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
 				handler = NewPasswordChangeHandler()
 			case "stack.user.created":
 				handler = NewUserCreatedHandler()
+			case "stack.user.phone.updated":
+				handler = NewUserPhoneUpdatedHandler()
 			}
 
 			if handler == nil {

@@ -328,6 +328,65 @@ func TestPasswordHandler(t *testing.T) {
 		require.Equal(t, prevPub, bw.PublicKey)
 		require.Equal(t, prevPriv, bw.PrivateKey)
 	})
+
+	t.Run("UpdateUserPhone", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "UpdateUserPhone")
+		inst := setup.GetTestInstance()
+
+		slug, _ := SplitDomain(t, inst.Domain)
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message
+		msg := rabbitmq.UserPhoneUpdatedMessage{
+			TwakeID:       slug,
+			Mobile:        "+33700000018",
+			InternalEmail: fmt.Sprintf("%s@%s", slug, rabbitmq.DefaultDomain),
+			WorkplaceFqdn: inst.Domain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.phone.updated",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance phone setting is updated
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(inst.Domain)
+			if err != nil {
+				return false
+			}
+			settingsDoc, err := updated.SettingsDocument()
+			if err != nil {
+				return false
+			}
+			phone, _ := settingsDoc.M["phone"].(string)
+			return phone == msg.Mobile
+		})
+
+		updated, err := lifecycle.GetInstance(inst.Domain)
+		require.NoError(t, err)
+		settingsDoc, err := updated.SettingsDocument()
+		require.NoError(t, err)
+		phone, _ := settingsDoc.M["phone"].(string)
+		require.Equal(t, msg.Mobile, phone)
+	})
 }
 
 func hashPassphrase(t *testing.T) (string, string) {
@@ -371,6 +430,12 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "stack.user.created",
 					Bindings: []string{"user.created"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+				{
+					Name:     "stack.user.phone.updated",
+					Bindings: []string{"user.phone.updated"},
 					Prefetch: 4,
 					Declare:  true,
 				},
