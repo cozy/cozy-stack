@@ -352,20 +352,23 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 
 	s, err := sharing.FindSharing(ownerInst, state.SharingID)
 	if err != nil {
-		return err
+		return renderError(c, ownerInst, http.StatusNotFound, "Sorry, the sharing was not found.")
 	}
 	member, err := s.FindMemberByState(state.SharingState)
 	if err != nil {
 		return err
 	}
+	if memberInst.Domain == ownerInst.Domain {
+		return renderError(c, ownerInst, http.StatusBadRequest, "Sorry, you cannot accept your own sharing invitation.")
+	}
 	memberURL := memberInst.PageURL("/", nil)
 	if err = s.RegisterCozyURL(ownerInst, member, memberURL); err != nil {
-		return err
+		return renderError(c, ownerInst, http.StatusInternalServerError, "Sorry, the sharing invitation could not be processed.")
 	}
 	sharing.PersistInstanceURL(ownerInst, member.Email, member.Instance)
 	redirectURL, err := member.GenerateOAuthURL(s, "")
 	if err != nil {
-		return err
+		return renderError(c, ownerInst, http.StatusInternalServerError, "Sorry, the sharing invitation could not be processed.")
 	}
 	return c.Redirect(http.StatusFound, redirectURL)
 }
