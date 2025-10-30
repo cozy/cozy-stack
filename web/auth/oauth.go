@@ -545,6 +545,15 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		if err := s.AddShortcut(instance, params.state); err != nil {
 			return err
 		}
+
+		if s.Drive && !isMemberReady(s, params.state) {
+			if params.state == "" {
+				return renderError(c, http.StatusBadRequest, "Error No state parameter")
+			}
+			if err := s.SendAnswer(instance, params.state); err != nil && !errors.Is(err, sharing.ErrAlreadyAccepted) {
+				return err
+			}
+		}
 		u := instance.SubDomain(consts.DriveSlug)
 		u.RawQuery = "sharing=" + s.SID
 		if s.Drive {
@@ -589,6 +598,15 @@ func (a *AuthorizeHTTPHandler) authorizeSharingForm(c echo.Context) error {
 		"CSRF":         c.Get("csrf"),
 		"TargetType":   targetType,
 	})
+}
+
+func isMemberReady(s *sharing.Sharing, state string) bool {
+	if state != "" {
+		if member, err := s.FindMemberByState(state); err == nil {
+			return member.Status == sharing.MemberStatusReady
+		}
+	}
+	return false
 }
 
 func (a *AuthorizeHTTPHandler) authorizeSharing(c echo.Context) error {
