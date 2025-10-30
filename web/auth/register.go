@@ -96,6 +96,14 @@ func deleteClient(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+
+	// If the client has an OIDC session ID, perform SSO logout
+	if client.OIDCSessionID != "" && instance.ContextName != "" {
+		// Call the end_session_endpoint to terminate the SSO session
+		// We don't fail the deletion if the logout fails, as this is best-effort
+		_ = oauth.PerformOIDCLogout(instance.ContextName, client.OIDCSessionID)
+	}
+
 	if err := client.Delete(instance); err != nil {
 		return c.JSON(err.Code, err)
 	}
