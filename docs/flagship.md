@@ -71,6 +71,17 @@ When a user uses an OIDC provider, or FranceConnect, the flagship app will get
 a delegated code from the cloudery and will use it via the `POST /oidc/access_token`
 endpoint to get access to the Cozy.
 
+## SSO logout integration
+
+When the flagship app authenticates via OpenID Connect, it must send an ID
+token that contains the `sid` claim when it exchanges its delegated code at
+`POST /oidc/access_token`. Cozy stores that session identifier in the OAuth
+client. When the user signs out of the flagship app and the client is removed,
+the stack calls the identity provider's `end_session_endpoint` (when one is
+declared in the provider configuration) so the upstream SSO session is closed
+as well. This keeps the Cozy session and the external provider in sync during
+logout.
+
 ## Manual certification
 
 When the certification from the Google and Apple stores has failed, the app

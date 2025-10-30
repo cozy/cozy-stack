@@ -900,8 +900,8 @@ func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit
 
 var _ couchdb.Doc = &Client{}
 
-// OpenIDConfiguration represents the OpenID Connect configuration from the well-known endpoint
-type OpenIDConfiguration struct {
+// OIDCConfiguration represents the OpenID Connect configuration from the well-known endpoint
+type OIDCConfiguration struct {
 	Issuer                string `json:"issuer"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 	TokenEndpoint         string `json:"token_endpoint"`
@@ -916,8 +916,8 @@ var oidcClient = &http.Client{
 
 const cacheTTL = 24 * time.Hour
 
-// fetchOpenIDConfiguration fetches the OpenID Connect configuration from the well-known endpoint
-func fetchOpenIDConfiguration(contextName string) (*OpenIDConfiguration, error) {
+// fetchOIDCConfiguration fetches the OpenID Connect configuration from the well-known endpoint
+func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
 	oidc, ok := config.GetOIDC(contextName)
 	if !ok {
 		return nil, fmt.Errorf("no OIDC is configured for this context")
@@ -926,13 +926,13 @@ func fetchOpenIDConfiguration(contextName string) (*OpenIDConfiguration, error) 
 	// Get the token URL to extract the base URL
 	tokenURL, ok := oidc["token_url"].(string)
 	if !ok {
-		return nil, fmt.Errorf("the token_url is missing for this context")
+		return nil, fmt.Errorf("the OIDC token_url is missing for this context")
 	}
 
 	// Parse the token URL to extract the base URL
 	parsedURL, err := url.Parse(tokenURL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid token URL: %w", err)
+		return nil, fmt.Errorf("invalid OIDC token URL: %w", err)
 	}
 
 	// Construct the well-known URL (typically https://domain/.well-known/openid-configuration)
@@ -976,7 +976,7 @@ func fetchOpenIDConfiguration(contextName string) (*OpenIDConfiguration, error) 
 		cache.Set(cacheKey, data, cacheTTL)
 	}
 
-	var oidcConfig OpenIDConfiguration
+	var oidcConfig OIDCConfiguration
 	if err := json.Unmarshal(data, &oidcConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse OpenID configuration: %w", err)
 	}
@@ -991,7 +991,7 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 		return nil
 	}
 
-	oidcConfig, err := fetchOpenIDConfiguration(contextName)
+	oidcConfig, err := fetchOIDCConfiguration(contextName)
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration for logout: %s", err)
 		// Don't fail the client deletion if we can't logout from the SSO

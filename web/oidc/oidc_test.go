@@ -492,7 +492,7 @@ func TestOIDCLogout(t *testing.T) {
 		mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/.well-known/openid-configuration":
-				config := oauth.OpenIDConfiguration{
+				config := oauth.OIDCConfiguration{
 					Issuer:             mockServer.URL,
 					EndSessionEndpoint: mockServer.URL + "/logout",
 				}
@@ -528,7 +528,7 @@ func TestOIDCLogout(t *testing.T) {
 		mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/.well-known/openid-configuration" {
 				requestCount++
-				config := oauth.OpenIDConfiguration{
+				config := oauth.OIDCConfiguration{
 					Issuer:             mockServer.URL,
 					EndSessionEndpoint: mockServer.URL + "/logout",
 				}

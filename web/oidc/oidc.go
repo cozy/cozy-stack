@@ -560,22 +560,24 @@ func AccessToken(c echo.Context) error {
 	}
 
 	// Store the session ID in the client for logout purposes
-	if client.Flagship && reqBody.IDToken != "" {
-		// Extract SID from the ID token
-		claims := jwt.MapClaims{}
-		_, _, _ = jwt.NewParser().ParseUnverified(reqBody.IDToken, claims)
-		if sid, ok := claims["sid"].(string); ok && sid != "" {
-			client.OIDCSessionID = sid
+	if client.Flagship {
+		if reqBody.IDToken != "" {
+			// Extract SID from the ID token
+			claims := jwt.MapClaims{}
+			_, _, _ = jwt.NewParser().ParseUnverified(reqBody.IDToken, claims)
+			if sid, ok := claims["sid"].(string); ok && sid != "" {
+				client.OIDCSessionID = sid
+			} else {
+				logger.WithNamespace("oidc").Warnf("No session ID found in ID token")
+				return c.JSON(http.StatusBadRequest, echo.Map{
+					"error": "No session ID found in ID token",
+				})
+			}
 		} else {
-			logger.WithNamespace("oidc").Warnf("No session ID found in ID token")
 			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "No session ID found in ID token",
+				"error": "No ID token which is necessary for flagship app",
 			})
 		}
-	} else {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "No ID token which is necessary for flagship app",
-		})
 	}
 
 	// Remove the pending flag on the OAuth client (if needed)
