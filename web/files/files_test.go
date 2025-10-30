@@ -2418,6 +2418,56 @@ func TestFiles(t *testing.T) {
 		meta.ValueEqual("version", meta1.Value("version").Raw())
 	})
 
+	t.Run("CopyNoteWithoutImagesDatabase", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Upload a note without images.
+		noteContent := "# Simple Note\n\nThis is a note without images."
+		obj := e.POST("/files/").
+			WithQuery("Name", "simple-note.cozy-note").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", consts.NoteMimeType).
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(noteContent)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fileID = obj.Path("$.data.id").String().NotEmpty().Raw()
+
+		// Delete the io.cozy.notes.images database to simulate the case
+		// where a note has never had images and the database doesn't exist yet.
+		// This is the specific case that was fixed in PR #4608.
+		_ = couchdb.DeleteDB(testInstance, consts.NotesImages)
+		// Restore the database after the test to avoid affecting other tests.
+		t.Cleanup(func() {
+			_ = couchdb.CreateDB(testInstance, consts.NotesImages)
+		})
+
+		// Copy the note. This should succeed even though the images database
+		// doesn't exist. Before the fix, this would fail with a database error.
+		// After the fix, getImages() returns an empty slice when the database
+		// doesn't exist, allowing the copy to continue.
+		copyObj := e.POST("/files/"+fileID+"/copy").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		copyID := copyObj.Path("$.data.id").String().NotEmpty().NotEqual(fileID).Raw()
+
+		// Verify the copy has the expected name.
+		copyObj.Path("$.data.attributes.name").String().Equal("simple-note (copy).cozy-note")
+
+		// Download and verify the content of the copy.
+		res := e.GET("/files/download/"+copyID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200)
+
+		res.Header("Content-Type").Equal(consts.NoteMimeType)
+		res.Body().NotEmpty()
+	})
+
 	t.Run("ArchiveNoFiles", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
