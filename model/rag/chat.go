@@ -78,12 +78,16 @@ type QueryMessage struct {
 }
 
 type Source struct {
-	ID       string `json:"id"`
-	DocType  string `json:"doctype"`
-	Filename string `json:"filename"`
-	FileURL  string `json:"fileUrl"`
-	ChunkURL string `json:"chunkUrl"`
-	Page     int    `json:"page"`
+	ID           string `json:"id"`
+	DocType      string `json:"doctype"`
+	Filename     string `json:"filename"`
+	FileURL      string `json:"fileUrl"`
+	ChunkURL     string `json:"chunkUrl"`
+	Page         int    `json:"page"`
+	EmailPreview string `json:"email.preview,omitempty"`
+	GroupID      string `json:"email.groupId,omitempty"`
+	Subject      string `json:"email.subject,omitempty"`
+	Date         string `json:"email.date,omitempty"`
 }
 
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
@@ -155,6 +159,10 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 		if !ok {
 			continue
 		}
+		subject, _ := src["email.subject"].(string)
+		date, _ := src["email.date"].(string)
+		emailpreview, _ := src["email.preview"].(string)
+		groupID, _ := src["email.groupId"].(string)
 		doctype, _ := src["doctype"].(string)
 		file_id, _ := src["file_id"].(string)
 		file_name, _ := src["filename"].(string)
@@ -165,12 +173,16 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 		file_url, _ := src["file_url"].(string)
 		chunk_url, _ := src["chunk_url"].(string)
 		sources = append(sources, Source{
-			ID:       file_id,
-			DocType:  doctype,
-			Filename: file_name,
-			Page:     page,
-			FileURL:  file_url,
-			ChunkURL: chunk_url,
+			ID:           file_id,
+			DocType:      doctype,
+			Filename:     file_name,
+			Page:         page,
+			FileURL:      file_url,
+			ChunkURL:     chunk_url,
+			EmailPreview: emailpreview,
+			GroupID:      groupID,
+			Subject:      subject,
+			Date:         date,
 		})
 	}
 	return sources, nil
