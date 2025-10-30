@@ -238,6 +238,10 @@ func getImages(db prefixer.Prefixer, fileID string) ([]*Image, error) {
 		EndKey:   endkey(fileID),
 	}
 	if err := couchdb.GetAllDocs(db, consts.NotesImages, &req, &images); err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return images, nil
+		}
+
 		return nil, err
 	}
 	return images, nil
