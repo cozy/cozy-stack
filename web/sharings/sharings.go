@@ -652,6 +652,16 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	} else if parts := strings.SplitN(fqdn, ".", 2); len(parts) == 2 {
 		slug, domain = parts[0], parts[1]
 	}
+	oidcLink := ""
+	if oidc, ok := config.GetOIDC(inst.ContextName); ok {
+		if clientID, _ := oidc["client_id"].(string); clientID != "" {
+			q := url.Values{
+				"sharingID": {sharingID},
+				"state":     {state},
+			}
+			oidcLink = inst.PageURL("/oidc/sharing", q)
+		}
+	}
 	return c.Render(code, "sharing_discovery.html", echo.Map{
 		"Domain":          inst.ContextualDomain(),
 		"ContextName":     inst.ContextName,
@@ -665,6 +675,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"State":           state,
 		"ShareCode":       sharecode,
 		"Shortcut":        shortcut,
+		"OIDCLink":        oidcLink,
 		"URLError":        code == http.StatusBadRequest,
 		"NotEmailError":   code == http.StatusPreconditionFailed,
 	})

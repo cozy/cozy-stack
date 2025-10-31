@@ -27,6 +27,8 @@ type stateHolder struct {
 	Nonce            string
 	Confirm          string
 	BitwardenContext string
+	SharingID        string
+	SharingState     string
 }
 
 type ProviderOIDC int
@@ -47,6 +49,19 @@ func newStateHolder(domain, redirect, confirm, bitwardenContext string, provider
 		Confirm:          confirm,
 		Nonce:            nonce,
 		BitwardenContext: bitwardenContext,
+	}
+}
+
+func newSharingStateHolder(domain, sharingID, sharingState string) *stateHolder {
+	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
+	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
+	return &stateHolder{
+		id:           id,
+		Provider:     GenericProvider,
+		Instance:     domain,
+		Nonce:        nonce,
+		SharingID:    sharingID,
+		SharingState: sharingState,
 	}
 }
 
