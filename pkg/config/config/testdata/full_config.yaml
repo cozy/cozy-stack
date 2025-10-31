@@ -117,11 +117,13 @@ clouderies:
 
 rabbitmq:
   enabled: true
-  url: amqp://guest:guest@localhost:5672/
-  tls:
-    root_ca: /etc/ssl/certs/ca.pem
-    insecure_skip_validation: false
-    server_name: rabbit.internal
+  nodes:
+    default:
+      url: amqp://guest:guest@localhost:5672/
+      tls:
+        root_ca: /etc/ssl/certs/ca.pem
+        insecure_skip_validation: false
+        server_name: rabbit.internal
   exchanges:
     - name: auth
       kind: topic
