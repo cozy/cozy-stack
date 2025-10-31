@@ -85,9 +85,10 @@ type Source struct {
 	ChunkURL     string `json:"chunkUrl"`
 	Page         int    `json:"page"`
 	EmailPreview string `json:"email.preview,omitempty"`
-	GroupID      string `json:"email.groupId,omitempty"`
+	Group_id     string `json:"group_id,omitempty"`
+	Parent_id    string `json:"parent_id,omitempty"`
 	Subject      string `json:"email.subject,omitempty"`
-	Date         string `json:"email.date,omitempty"`
+	Datetime     string `json:"datetime,omitempty"`
 }
 
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
@@ -160,9 +161,10 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 			continue
 		}
 		subject, _ := src["email.subject"].(string)
-		date, _ := src["email.date"].(string)
+		datetime, _ := src["datetime"].(string)
 		emailpreview, _ := src["email.preview"].(string)
-		groupID, _ := src["email.groupId"].(string)
+		group_id, _ := src["group_id"].(string)
+		parent_id, _ := src["parent_id"].(string)
 		doctype, _ := src["doctype"].(string)
 		file_id, _ := src["file_id"].(string)
 		file_name, _ := src["filename"].(string)
@@ -180,9 +182,10 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 			FileURL:      file_url,
 			ChunkURL:     chunk_url,
 			EmailPreview: emailpreview,
-			GroupID:      groupID,
+			Group_id:     group_id,
 			Subject:      subject,
-			Date:         date,
+			Datetime:     datetime,
+			Parent_id:    parent_id,
 		})
 	}
 	return sources, nil
