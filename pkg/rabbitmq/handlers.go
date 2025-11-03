@@ -215,6 +215,62 @@ func (h *UserCreatedHandler) Handle(ctx context.Context, d amqp.Delivery) error 
 	return nil
 }
 
+// UserPhoneUpdatedHandler handles user phone update messages.
+type UserPhoneUpdatedHandler struct{}
+
+// NewUserPhoneUpdatedHandler creates a new user phone update handler.
+func NewUserPhoneUpdatedHandler() *UserPhoneUpdatedHandler {
+	return &UserPhoneUpdatedHandler{}
+}
+
+// UserPhoneUpdatedMessage represents a user phone update message.
+type UserPhoneUpdatedMessage struct {
+	TwakeID       string `json:"twakeId"`
+	Mobile        string `json:"mobile"`
+	InternalEmail string `json:"internalEmail"`
+	WorkplaceFqdn string `json:"workplaceFqdn"`
+}
+
+// Handle processes a user phone update message.
+func (h *UserPhoneUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("user.phone.updated: received message: %s", d.RoutingKey)
+	log.Debugf("user.phone.updated: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+		d.MessageId, d.ContentType, len(d.Body))
+
+	var msg UserPhoneUpdatedMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("user.phone.updated: failed to unmarshal message: %w", err)
+	}
+
+	log.Infof("user.phone.updated: processing message - TwakeID: %s, Mobile: %s, InternalEmail: %s, WorkplaceFqdn: %s",
+		msg.TwakeID, msg.Mobile, msg.InternalEmail, msg.WorkplaceFqdn)
+
+	if msg.TwakeID == "" {
+		return fmt.Errorf("user.phone.updated: missing twakeId")
+	}
+	if msg.Mobile == "" {
+		return fmt.Errorf("user.phone.updated: missing mobile")
+	}
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("user.phone.updated: missing workplaceFqdn")
+	}
+
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
+	if err != nil {
+		return fmt.Errorf("user.phone.updated: get instance: %w", err)
+	}
+
+	if err := lifecycle.Patch(inst, &lifecycle.Options{
+		Phone:        msg.Mobile,
+		FromCloudery: true, // XXX: do not update the instance's phone on the Cloudery as its API does not permit it and the Cloudery only uses it when requesting the instance creation from the stack
+	}); err != nil {
+		return fmt.Errorf("user.phone.updated: update settings: %w", err)
+	}
+
+	log.Infof("user.phone.updated: successfully updated phone for instance: %s", inst.Domain)
+	return nil
+}
+
 func decodePassword(hash string) ([]byte, error) {
 	// Decode base64 hash if applicable
 	decoded, err := base64.StdEncoding.DecodeString(hash)

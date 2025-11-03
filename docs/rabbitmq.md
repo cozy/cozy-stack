@@ -144,6 +144,7 @@ Queue names are mapped to handlers in the stack. For example:
 
 - `user.password.updated` → updates an instance passphrase when a `password.changed` routing key is received.
 - `user.created` → validates and processes user creation events.
+- `user.phone.updated` → updates the phone number stored in user settings.
 
 Message schemas are JSON and validated in the handler. Example payload for `user.password.updated`:
 
@@ -173,6 +174,17 @@ Example payload for `user.created`:
   "privateKey": "cipherString",
   "key": "cipherString",
   "timestamp": 1726040000
+}
+```
+
+Example payload for `user.phone.updated`:
+
+```json
+{
+  "twakeId": "string",
+  "mobile": "+33123456789",
+  "internalEmail": "string",
+  "workplaceFqdn": "example.twake.app"
 }
 ```
 
@@ -269,5 +281,4 @@ ch.PublishWithContext(ctx,
     },
 )
 ```
-
 
