@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -20,10 +21,13 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -104,6 +108,9 @@ type Client struct {
 	Flagship            bool `json:"flagship,omitempty"`
 	CertifiedFromStore  bool `json:"certified_from_store,omitempty"`
 	CreatedAtOnboarding bool `json:"created_at_onboarding,omitempty"`
+
+	// OIDC session ID for end_session_endpoint logout (more reliable than ID token)
+	OIDCSessionID string `json:"oidc_session_id,omitempty"`
 
 	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
@@ -891,3 +898,144 @@ func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit
 }
 
 var _ couchdb.Doc = &Client{}
+
+// OIDCConfiguration represents the OpenID Connect configuration from the well-known endpoint
+type OIDCConfiguration struct {
+	Issuer                string `json:"issuer"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+	UserinfoEndpoint      string `json:"userinfo_endpoint"`
+	EndSessionEndpoint    string `json:"end_session_endpoint"`
+	JwksURI               string `json:"jwks_uri"`
+}
+
+var oidcClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
+
+const cacheTTL = 24 * time.Hour
+
+// fetchOIDCConfiguration fetches the OpenID Connect configuration from the well-known endpoint
+func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
+	oidc, ok := config.GetOIDC(contextName)
+	if !ok {
+		return nil, fmt.Errorf("no OIDC is configured for this context")
+	}
+
+	// Get the token URL to extract the base URL
+	tokenURL, ok := oidc["token_url"].(string)
+	if !ok {
+		return nil, fmt.Errorf("the OIDC token_url is missing for this context")
+	}
+
+	// Parse the token URL to extract the base URL
+	parsedURL, err := url.Parse(tokenURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid OIDC token URL: %w", err)
+	}
+
+	// Construct the well-known URL (typically https://domain/.well-known/openid-configuration)
+	wellKnownURL := &url.URL{
+		Scheme: parsedURL.Scheme,
+		Host:   parsedURL.Host,
+		Path:   "/.well-known/openid-configuration",
+	}
+
+	// Try to fetch from cache first
+	cache := config.GetConfig().CacheStorage
+	cacheKey := "oidc-config:" + wellKnownURL.String()
+
+	data, ok := cache.Get(cacheKey)
+	if !ok {
+		// Fetch from the server
+		req, err := http.NewRequest(http.MethodGet, wellKnownURL.String(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Add("User-Agent", build.UserAgent())
+
+		res, err := oidcClient.Do(req)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error fetching OpenID configuration: %s", err)
+			return nil, fmt.Errorf("failed to fetch OpenID configuration: %w", err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration: %d", res.StatusCode)
+			return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		}
+
+		data, err = io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		// Cache for 24 hours
+		cache.Set(cacheKey, data, cacheTTL)
+	}
+
+	var oidcConfig OIDCConfiguration
+	if err := json.Unmarshal(data, &oidcConfig); err != nil {
+		return nil, fmt.Errorf("failed to parse OpenID configuration: %w", err)
+	}
+
+	return &oidcConfig, nil
+}
+
+// PerformOIDCLogout calls the end_session_endpoint to terminate the SSO session
+func PerformOIDCLogout(contextName, sessionID string) error {
+	if sessionID == "" {
+		// No session ID, nothing to do
+		return nil
+	}
+
+	oidcConfig, err := fetchOIDCConfiguration(contextName)
+	if err != nil {
+		logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration for logout: %s", err)
+		// Don't fail the client deletion if we can't logout from the SSO
+		return err
+	}
+
+	if oidcConfig.EndSessionEndpoint == "" {
+		logger.WithNamespace("oidc").Warnf("No end_session_endpoint found in OpenID configuration")
+		// No end_session_endpoint, nothing we can do
+		return err
+	}
+
+	// Call the end_session_endpoint with the session ID
+	endSessionURL, err := url.Parse(oidcConfig.EndSessionEndpoint)
+	if err != nil {
+		logger.WithNamespace("oidc").Warnf("Invalid end_session_endpoint URL: %s", err)
+		return err
+	}
+
+	// Add the session_id parameter
+	q := endSessionURL.Query()
+	q.Add("session_id", sessionID)
+	endSessionURL.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, endSessionURL.String(), nil)
+	if err != nil {
+		logger.WithNamespace("oidc").Warnf("Failed to create end_session request: %s", err)
+		return err
+	}
+	req.Header.Add("User-Agent", build.UserAgent())
+
+	res, err := oidcClient.Do(req)
+	if err != nil {
+		logger.WithNamespace("oidc").Warnf("Error calling end_session_endpoint: %s", err)
+		// Don't fail the client deletion if the SSO logout fails
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode >= 400 {
+		logger.WithNamespace("oidc").Warnf("end_session_endpoint returned status %d", res.StatusCode)
+		// Don't fail the client deletion if the SSO logout fails
+		return err
+	}
+
+	logger.WithNamespace("oidc").Infof("Successfully called end_session_endpoint for OIDC logout")
+	return err
+}

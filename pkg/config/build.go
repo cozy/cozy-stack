@@ -1,5 +1,10 @@
 package build
 
+import (
+	"runtime"
+	"sync"
+)
+
 const (
 	// ModeDev is the development release value
 	ModeDev = "development"
@@ -22,4 +27,15 @@ var (
 // release
 func IsDevRelease() bool {
 	return BuildMode == ModeDev
+}
+
+var userAgentOnce sync.Once
+var userAgent string
+
+// UserAgent returns the Cozy Stack User-Agent string and caches it.
+func UserAgent() string {
+	userAgentOnce.Do(func() {
+		userAgent = "cozy-stack " + Version + " (" + runtime.Version() + ")"
+	})
+	return userAgent
 }

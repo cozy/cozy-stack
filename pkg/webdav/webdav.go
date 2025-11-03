@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -330,7 +329,7 @@ func (c *Client) req(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	req.Header.Set("User-Agent", build.UserAgent())
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

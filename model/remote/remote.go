@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"runtime"
 	"strings"
 	"time"
 
@@ -398,7 +397,7 @@ func (remote *Remote) ProxyTo(
 		return ErrInvalidRequest
 	}
 
-	req.Header.Set("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	req.Header.Set("User-Agent", build.UserAgent())
 	for k, v := range remote.Headers {
 		req.Header.Set(k, v)
 	}
@@ -470,8 +469,7 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent",
-		"cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	req.Header.Set("User-Agent", build.UserAgent())
 
 	res, err := assetsClient.Do(req)
 	if err != nil {
