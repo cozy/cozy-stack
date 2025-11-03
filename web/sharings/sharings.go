@@ -714,7 +714,12 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		}
 	}
 
-	return c.Render(code, "sharing_discovery_v2.html", echo.Map{
+	templateName := "sharing_discovery_v2.html"
+	if oidcLink == "" && twakeOIDCLink == "" {
+		templateName = "sharing_discovery.html"
+	}
+
+	return c.Render(code, templateName, echo.Map{
 		"Domain":          inst.ContextualDomain(),
 		"ContextName":     inst.ContextName,
 		"Locale":          inst.Locale,
