@@ -995,20 +995,20 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration for logout: %s", err)
 		// Don't fail the client deletion if we can't logout from the SSO
-		return nil
+		return err
 	}
 
 	if oidcConfig.EndSessionEndpoint == "" {
 		logger.WithNamespace("oidc").Warnf("No end_session_endpoint found in OpenID configuration")
 		// No end_session_endpoint, nothing we can do
-		return nil
+		return err
 	}
 
 	// Call the end_session_endpoint with the session ID
 	endSessionURL, err := url.Parse(oidcConfig.EndSessionEndpoint)
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Invalid end_session_endpoint URL: %s", err)
-		return nil
+		return err
 	}
 
 	// Add the session_id parameter
@@ -1019,7 +1019,7 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 	req, err := http.NewRequest(http.MethodGet, endSessionURL.String(), nil)
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Failed to create end_session request: %s", err)
-		return nil
+		return err
 	}
 	req.Header.Add("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
 
@@ -1027,16 +1027,16 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Error calling end_session_endpoint: %s", err)
 		// Don't fail the client deletion if the SSO logout fails
-		return nil
+		return err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode >= 400 {
 		logger.WithNamespace("oidc").Warnf("end_session_endpoint returned status %d", res.StatusCode)
 		// Don't fail the client deletion if the SSO logout fails
-		return nil
+		return err
 	}
 
 	logger.WithNamespace("oidc").Infof("Successfully called end_session_endpoint for OIDC logout")
-	return nil
+	return err
 }
