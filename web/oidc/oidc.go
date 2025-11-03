@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"runtime"
 	"strings"
 	"time"
 
@@ -1025,7 +1024,7 @@ func getKeysFromHTTP(keyURL string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	req.Header.Add("User-Agent", build.UserAgent())
 	res, err := keysClient.Do(req)
 	if err != nil {
 		return nil, err

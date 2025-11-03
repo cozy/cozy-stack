@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -953,7 +952,7 @@ func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
-		req.Header.Add("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+		req.Header.Add("User-Agent", build.UserAgent())
 
 		res, err := oidcClient.Do(req)
 		if err != nil {
@@ -1021,7 +1020,7 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 		logger.WithNamespace("oidc").Warnf("Failed to create end_session request: %s", err)
 		return err
 	}
-	req.Header.Add("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
+	req.Header.Add("User-Agent", build.UserAgent())
 
 	res, err := oidcClient.Do(req)
 	if err != nil {
