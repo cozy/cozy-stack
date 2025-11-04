@@ -673,6 +673,36 @@ be used for two scenarios:
 2. This request will be used to create a shortcut (in that case, a query-string
    parameter `shortcut=true&url=...` will be added).
 
+When the sharer considers a recipient trusted, Drive sharings include in the
+payload a credentials entry containing the OAuth state generated for that
+recipient. When the recipient Cozy is configured with `sharing.auto_accept_trusted = true`,
+receiving this state enqueues a background job that performs the same handshake
+as a manual acceptance and POSTs the answer back to the owner's Cozy.
+
+Trusted members (both recipients and senders) are determined by their Cozy
+instance domain according to configured trusted domains. Trust is
+bidirectional:
+- The owner checks if the recipient's instance domain is trusted before including the credentials state
+- The recipient checks if the sender's instance domain is trusted before auto-accepting
+
+Members are trusted when their instance domain exactly matches or is a
+subdomain of any of the configured trusted domains. The behaviour can be tuned
+via the configuration:
+
+```yaml
+sharing:
+  auto_accept_trusted: true
+  trusted_domains:
+    - example.com
+  contexts:
+    white-label:
+      auto_accept_trusted: false
+```
+
+If `auto_accept_trusted` is disabled on the recipient Cozy, the request is kept
+in the pending state even if the sharer provided the state in the credentials
+payload.
+
 #### Request
 
 ```http

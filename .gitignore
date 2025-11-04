@@ -9,6 +9,7 @@ node_modules
 /scripts/golangci-lint
 /storage
 tmp
+/.idea
 
 *.log
 *.enc

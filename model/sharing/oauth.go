@@ -89,7 +89,10 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		if err != nil {
 			return err
 		}
-		var list interface{} = []Credentials{{DriveToken: token}}
+		var list interface{} = []Credentials{{
+			DriveToken: token,
+			State:      c.State,
+		}}
 		creds = &list
 	}
 

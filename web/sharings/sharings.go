@@ -111,6 +111,7 @@ func CreateSharing(c echo.Context) error {
 // PutSharing creates a sharing request (on the recipient's cozy)
 func PutSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithNamespace("sharing")
 
 	var s sharing.Sharing
 	obj, err := jsonapi.Bind(c.Request().Body, &s)
@@ -122,6 +123,21 @@ func PutSharing(c echo.Context) error {
 
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)
+	}
+
+	if s.Drive && len(s.Members) > 0 {
+		sender := &s.Members[0]
+		if sharing.IsTrustedMember(inst, sender) {
+			if len(s.Credentials) > 0 && s.Credentials[0].State != "" {
+				state := s.Credentials[0].State
+				log.Debugf("Auto-accepting drive sharing %s from trusted sender %s", s.SID, sender.Instance)
+				if err := sharing.EnqueueAutoAccept(inst, s.SID, state); err != nil {
+					log.Warnf("Cannot enqueue auto-accept: %s", err)
+				}
+			} else {
+				log.Warnf("Drive sharing from trusted sender but State not available")
+			}
+		}
 	}
 
 	if c.QueryParam("shortcut") == "true" {

@@ -93,6 +93,14 @@ move:
 konnectors:
   cmd: some-cmd
 
+sharing:
+  auto_accept_trusted: true
+  contexts:
+    my-context:
+      auto_accept_trusted: false
+      trusted_domains:
+        - context.example
+
 registries:
   default: []
   example:

@@ -2,6 +2,8 @@ package sharings_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
@@ -1296,6 +1298,151 @@ func assertLastRecipientIsRevoked(t *testing.T, s *sharing.Sharing, refs []*shar
 	assert.EqualError(t, err, "CouchDB(not_found): deleted")
 	err = couchdb.GetDoc(instance, refs[1].DocType(), refs[1].ID(), &sdoc)
 	assert.EqualError(t, err, "CouchDB(not_found): deleted")
+}
+
+func TestAutoAcceptTrustedRecipient(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Owner setup
+	aliceSetup := testutils.NewSetup(t, t.Name()+"_trusted_alice")
+	aliceInstance := aliceSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "alice@example.local",
+		PublicName: "Alice",
+	})
+	aliceAppToken := generateAppToken(aliceInstance, "testapp-auto", iocozytests)
+	tsA := aliceSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings":    sharings.Routes,
+		"/permissions": permissions.Routes,
+	})
+	tsA.Config.Handler.(*echo.Echo).Renderer = render
+	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsA.Close)
+
+	// Recipient setup
+	bobSetup := testutils.NewSetup(t, t.Name()+"_trusted_bob")
+	bobInstance := bobSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "bob@example.net",
+		PublicName: "Bob",
+		Passphrase: "MyPassphrase",
+	})
+	bobAppToken := generateAppToken(bobInstance, "testapp", iocozytests)
+	tsB := bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
+		"/sharings": sharings.Routes,
+	})
+	tsB.Config.Handler.(*echo.Echo).Renderer = render
+	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsB.Close)
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
+
+	cfg := config.GetConfig()
+	prevAuto := cfg.Sharing.AutoAcceptTrusted
+	prevContexts := cfg.Sharing.Contexts
+	cfg.Sharing.AutoAcceptTrusted = true
+	// Add trusted domains via context
+	// Both test instances use .cozy.local domain AND communicate via 127.0.0.1
+	// We trust both so that domain checking works with test infrastructure
+	cfg.Sharing.Contexts = map[string]config.SharingContext{
+		config.DefaultInstanceContext: {
+			TrustedDomains: []string{"cozy.local", "127.0.0.1", "localhost"},
+		},
+	}
+	t.Cleanup(func() {
+		cfg.Sharing.AutoAcceptTrusted = prevAuto
+		cfg.Sharing.Contexts = prevContexts
+	})
+
+	// Alice adds Bob as a contact
+	contactDoc := contact.New()
+	contactDoc.M["fullname"] = "Bob"
+	contactDoc.M["email"] = []interface{}{
+		map[string]interface{}{"address": "bob@example.net", "primary": true},
+	}
+	contactDoc.M["cozy"] = []interface{}{
+		map[string]interface{}{"url": tsB.URL, "primary": true},
+	}
+	require.NoError(t, couchdb.CreateDoc(aliceInstance, contactDoc))
+
+	eA := httpexpect.Default(t, tsA.URL)
+	// Create a Drive sharing instead of a regular sharing
+	payload := fmt.Sprintf(`{
+      "data": {
+        "type": "%s",
+        "attributes": {
+          "description": "auto accept trusted drive",
+          "drive": true,
+          "open_sharing": false,
+          "rules": [{
+            "title": "auto drive",
+            "doctype": "%s",
+            "values": [],
+            "add": "sync"
+          }]
+        },
+        "relationships": {
+          "recipients": {
+            "data": [{"id": "%s", "type": "%s"}]
+          }
+        }
+      }
+    }`, consts.Sharings, consts.Files, contactDoc.ID(), contactDoc.DocType())
+
+	resp := eA.POST("/sharings/").
+		WithHeader("Authorization", "Bearer "+aliceAppToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(payload)).
+		Expect().
+		Status(http.StatusCreated).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := resp.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+	FakeOwnerInstanceForSharing(t, bobInstance, tsA.URL, sharingID)
+
+	require.Eventually(t, func() bool {
+		obj := eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			Expect().
+			Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		attrs := obj.Value("data").Object().Value("attributes").Object()
+		members := attrs.Value("members").Array()
+		if members.Length().Raw() < 2 {
+			return false
+		}
+		status := members.Value(1).Object().Value("status").String().Raw()
+		active := attrs.Value("active").Boolean().Raw()
+		return status == sharing.MemberStatusReady && active
+	}, 10*time.Second, 200*time.Millisecond, "trusted recipient was not auto-accepted on owner side")
+
+	eB := httpexpect.Default(t, tsB.URL)
+	require.Eventually(t, func() bool {
+		obj := eB.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bobAppToken).
+			Expect().
+			Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		attrs := obj.Value("data").Object().Value("attributes").Object()
+		return attrs.Value("active").Boolean().Raw()
+	}, 10*time.Second, 200*time.Millisecond, "trusted recipient was not active on recipient side")
 }
 
 func createBobContact(t *testing.T, instance *instance.Instance) *contact.Contact {
