@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/labstack/echo/v4"
 )
@@ -338,7 +339,10 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 // RefreshAccount requires a new AccessToken using the RefreshToken
 // as specified in https://tools.ietf.org/html/rfc6749#section-6
 func (at *AccountType) RefreshAccount(a Account) error {
+	log := logger.WithNamespace("account-refresh")
+
 	if a.Oauth == nil {
+		log.Debugf("Account %s: no OAuth info, cannot refresh", a.ID())
 		return ErrUnrefreshable
 	}
 
@@ -346,49 +350,105 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	// the client ID and client secret to the konnector and let it fetch the
 	// token its-self.
 	if a.Oauth.RefreshToken == "" {
+		log.Debugf("Account %s (type: %s): no refresh token, delegating to konnector", a.ID(), at.Slug)
 		a.Oauth.ClientID = at.ClientID
 		a.Oauth.ClientSecret = at.ClientSecret
 		return nil
 	}
 
-	res, err := http.PostForm(at.TokenEndpoint, url.Values{
+	authMode := at.TokenAuthMode
+	if authMode == "" {
+		authMode = FormTokenAuthMode
+	}
+	log.Debugf("Account %s (type: %s): refreshing OAuth token using %s auth mode", a.ID(), at.Slug, authMode)
+
+	params := url.Values{
 		"grant_type":    []string{RefreshToken},
 		"refresh_token": []string{a.Oauth.RefreshToken},
-		"client_id":     []string{at.ClientID},
-		"client_secret": []string{at.ClientSecret},
-	})
+	}
+	if authMode != BasicTokenAuthMode {
+		params.Add("client_id", at.ClientID)
+		params.Add("client_secret", at.ClientSecret)
+	}
+
+	var res *http.Response
+	var err error
+
+	switch authMode {
+	case BasicTokenAuthMode:
+		log.Debugf("Account %s: using Basic authentication mode", a.ID())
+		var req *http.Request
+		req, err = http.NewRequest("POST", at.TokenEndpoint, strings.NewReader(params.Encode()))
+		if err != nil {
+			log.Errorf("Account %s: failed to create POST request: %s", a.ID(), err)
+			return err
+		}
+		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
+		req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
+		auth := []byte(at.ClientID + ":" + at.ClientSecret)
+		req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
+		res, err = accountsClient.Do(req)
+	case GetTokenAuthMode:
+		log.Debugf("Account %s: using GET authentication mode", a.ID())
+		var req *http.Request
+		req, err = http.NewRequest("GET", at.TokenEndpoint+"?"+params.Encode(), nil)
+		if err != nil {
+			log.Errorf("Account %s: failed to create GET request: %s", a.ID(), err)
+			return err
+		}
+		res, err = accountsClient.Do(req)
+	default:
+		log.Debugf("Account %s: using form-based authentication mode", a.ID())
+		res, err = http.PostForm(at.TokenEndpoint, params)
+	}
 
 	if err != nil {
+		log.Errorf("Account %s: HTTP request to token endpoint failed: %s", a.ID(), err)
+		return err
+	}
+
+	log.Debugf("Account %s: token endpoint responded with status %d", a.ID(), res.StatusCode)
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Errorf("Account %s: failed to read response body: %s", a.ID(), err)
 		return err
 	}
 
 	if res.StatusCode != 200 {
-		resBody, _ := io.ReadAll(res.Body)
-		return errors.New("oauth services responded with non-200 res: " + string(resBody))
+		log.Errorf("Account %s: OAuth service error (status %d): %s", a.ID(), res.StatusCode, string(resBody))
+		return fmt.Errorf("oauth service responded with status %d: %s", res.StatusCode, string(resBody))
 	}
 
 	var out tokenEndpointResponse
-	err = json.NewDecoder(res.Body).Decode(&out)
+	err = json.Unmarshal(resBody, &out)
 	if err != nil {
+		log.Errorf("Account %s: failed to parse JSON response: %s", a.ID(), err)
 		return err
 	}
 
 	if out.Error != "" {
+		log.Errorf("Account %s: OAuth error from service: %s - %s", a.ID(), out.Error, out.ErrorDescription)
 		return fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
 	}
 
 	if out.AccessToken != "" {
+		log.Debugf("Account %s: successfully received new access token", a.ID())
 		a.Oauth.AccessToken = out.AccessToken
 	}
 
 	if out.ExpiresIn != 0 {
 		a.Oauth.ExpiresAt = time.Now().Add(time.Duration(out.ExpiresIn) * time.Second)
+		log.Debugf("Account %s: token expires in %d seconds", a.ID(), out.ExpiresIn)
 	}
 
 	if out.RefreshToken != "" {
+		log.Debugf("Account %s: received new refresh token", a.ID())
 		a.Oauth.RefreshToken = out.RefreshToken
 	}
 
+	log.Infof("Account %s: successfully refreshed OAuth token", a.ID())
 	return nil
 }
 
