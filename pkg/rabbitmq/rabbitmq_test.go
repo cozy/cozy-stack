@@ -345,11 +345,13 @@ func TestPasswordHandler(t *testing.T) {
 			"":                            {URL: "http://example.org", Token: "token"},
 		}
 
-		// Track if common settings HTTP call was made
+		// Track if common settings HTTP call was made and capture request body
+		var capturedRequestBody []byte
 		commonSettingsCalled := false
 		originalDoCommonHTTP := common.DoCommonHTTP
 		common.DoCommonHTTP = func(method, urlStr, token string, body []byte) error {
 			commonSettingsCalled = true
+			capturedRequestBody = body
 			return nil // Mock successful response
 		}
 		t.Cleanup(func() {
@@ -418,6 +420,12 @@ func TestPasswordHandler(t *testing.T) {
 
 		// Verify that common settings were called
 		require.True(t, commonSettingsCalled, "Common settings should have been called when updating phone")
+
+		// Verify that the phone field is present in the request body sent to common settings API
+		require.NotNil(t, capturedRequestBody, "Request body should have been captured")
+		var sentRequest common.UserSettingsRequest
+		require.NoError(t, json.Unmarshal(capturedRequestBody, &sentRequest))
+		require.Equal(t, msg.Mobile, sentRequest.Payload.Phone, "Phone should be present in the common settings request payload")
 	})
 }
 
