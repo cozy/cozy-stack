@@ -260,8 +260,17 @@ func (h *UserPhoneUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) e
 		return fmt.Errorf("user.phone.updated: get instance: %w", err)
 	}
 
+	// Get current settings document
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return fmt.Errorf("user.phone.updated: get settings document: %w", err)
+	}
+
+	// Update phone in settings
+	settings.M["phone"] = msg.Mobile
+
 	if err := lifecycle.Patch(inst, &lifecycle.Options{
-		Phone:        msg.Mobile,
+		SettingsObj:  settings,
 		FromCloudery: true, // XXX: do not update the instance's phone on the Cloudery as its API does not permit it and the Cloudery only uses it when requesting the instance creation from the stack
 	}); err != nil {
 		return fmt.Errorf("user.phone.updated: update settings: %w", err)
