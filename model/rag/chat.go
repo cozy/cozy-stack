@@ -78,16 +78,17 @@ type QueryMessage struct {
 }
 
 type Source struct {
-	ID           string `json:"id"`
-	DocType      string `json:"doctype"`
-	Filename     string `json:"filename"`
-	FileURL      string `json:"fileUrl"`
-	ChunkURL     string `json:"chunkUrl"`
-	Page         int    `json:"page"`
-	EmailPreview string `json:"email.preview,omitempty"`
-	GroupID      string `json:"email.groupId,omitempty"`
-	Subject      string `json:"email.subject,omitempty"`
-	Date         string `json:"email.date,omitempty"`
+	ID             string `json:"id"`
+	DocType        string `json:"doctype"`
+	Filename       string `json:"filename"`
+	FileURL        string `json:"fileUrl"`
+	ChunkURL       string `json:"chunkUrl"`
+	Page           int    `json:"page"`
+	EmailPreview   string `json:"email.preview,omitempty"`
+	RelationshipID string `json:"relationship_id,omitempty"`
+	ParentID       string `json:"parent_id,omitempty"`
+	Subject        string `json:"email.subject,omitempty"`
+	Datetime       string `json:"datetime,omitempty"`
 }
 
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
@@ -160,29 +161,31 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 			continue
 		}
 		subject, _ := src["email.subject"].(string)
-		date, _ := src["email.date"].(string)
-		emailpreview, _ := src["email.preview"].(string)
-		groupID, _ := src["email.groupId"].(string)
+		datetime, _ := src["datetime"].(string)
+		emailPreview, _ := src["email.preview"].(string)
+		relationshipID, _ := src["relationship_id"].(string)
+		parentID, _ := src["parent_id"].(string)
 		doctype, _ := src["doctype"].(string)
-		file_id, _ := src["file_id"].(string)
-		file_name, _ := src["filename"].(string)
+		fileID, _ := src["file_id"].(string)
+		fileName, _ := src["filename"].(string)
 		page := 0
 		if p, ok := src["page"].(float64); ok {
 			page = int(p)
 		}
-		file_url, _ := src["file_url"].(string)
-		chunk_url, _ := src["chunk_url"].(string)
+		fileURL, _ := src["file_url"].(string)
+		chunkURL, _ := src["chunk_url"].(string)
 		sources = append(sources, Source{
-			ID:           file_id,
-			DocType:      doctype,
-			Filename:     file_name,
-			Page:         page,
-			FileURL:      file_url,
-			ChunkURL:     chunk_url,
-			EmailPreview: emailpreview,
-			GroupID:      groupID,
-			Subject:      subject,
-			Date:         date,
+			ID:             fileID,
+			DocType:        doctype,
+			Filename:       fileName,
+			Page:           page,
+			FileURL:        fileURL,
+			ChunkURL:       chunkURL,
+			EmailPreview:   emailPreview,
+			RelationshipID: relationshipID,
+			Subject:        subject,
+			Datetime:       datetime,
+			ParentID:       parentID,
 		})
 	}
 	return sources, nil
