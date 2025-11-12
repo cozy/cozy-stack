@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/settings/common"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 
@@ -336,6 +338,35 @@ func TestPasswordHandler(t *testing.T) {
 
 		slug, _ := SplitDomain(t, inst.Domain)
 
+		// Configure common settings to enable the code path
+		cfg := config.GetConfig()
+		cfg.CommonSettings = map[string]config.CommonSettings{
+			config.DefaultInstanceContext: {URL: "http://example.org", Token: "token"},
+			"":                            {URL: "http://example.org", Token: "token"},
+		}
+
+		// Track if common settings HTTP call was made and capture request body
+		var capturedRequestBody []byte
+		commonSettingsCalled := false
+		originalDoCommonHTTP := common.DoCommonHTTP
+		common.DoCommonHTTP = func(method, urlStr, token string, body []byte) error {
+			commonSettingsCalled = true
+			capturedRequestBody = body
+			return nil // Mock successful response
+		}
+		t.Cleanup(func() {
+			common.DoCommonHTTP = originalDoCommonHTTP
+		})
+
+		// Stub remote getter to return in-sync version
+		originalGetRemote := common.GetRemoteCommonSettings
+		common.GetRemoteCommonSettings = func(inst *instance.Instance) (*common.UserSettingsRequest, error) {
+			return &common.UserSettingsRequest{Version: inst.CommonSettingsVersion}, nil
+		}
+		t.Cleanup(func() {
+			common.GetRemoteCommonSettings = originalGetRemote
+		})
+
 		// Publisher conn/channel
 		ch, err := getChannel(t, MQ)
 		require.NoError(t, err)
@@ -386,6 +417,15 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, err)
 		phone, _ := settingsDoc.M["phone"].(string)
 		require.Equal(t, msg.Mobile, phone)
+
+		// Verify that common settings were called
+		require.True(t, commonSettingsCalled, "Common settings should have been called when updating phone")
+
+		// Verify that the phone field is present in the request body sent to common settings API
+		require.NotNil(t, capturedRequestBody, "Request body should have been captured")
+		var sentRequest common.UserSettingsRequest
+		require.NoError(t, json.Unmarshal(capturedRequestBody, &sentRequest))
+		require.Equal(t, msg.Mobile, sentRequest.Payload.Phone, "Phone should be present in the common settings request payload")
 	})
 }
 
