@@ -35,6 +35,7 @@ func TestRabbitMQManager(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test skipped with --short")
 	}
+
 	t.Run("ConsumeAll_NoLoss", func(t *testing.T) {
 		t.Parallel()
 
@@ -44,8 +45,9 @@ func TestRabbitMQManager(t *testing.T) {
 
 		// Build manager with one exchange and one queue using PasswordChangeHandler wrapper
 		handler := newCountingTestHandler()
-		mgr := initRabbitMQManager(rabbitmq.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
-		_, err := mgr.Start(testCtx(t))
+		mgr, err := initRabbitMQManager(rabbitmq.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
+		require.NoError(t, err)
+		_, err = mgr.Start(testCtx(t))
 		require.NoError(t, err)
 
 		// Wait for manager to declare topology
@@ -73,8 +75,9 @@ func TestRabbitMQManager(t *testing.T) {
 
 		// Build manager with one exchange and one queue using PasswordChangeHandler wrapper
 		handler := newCountingTestHandler()
-		mgr := initRabbitMQManager(MQ.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
-		_, err := mgr.Start(testCtx(t))
+		mgr, err := initRabbitMQManager(MQ.AMQPURL, "auth", "stack.user.password.updated", "password.updated", handler)
+		require.NoError(t, err)
+		_, err = mgr.Start(testCtx(t))
 		require.NoError(t, err)
 
 		require.NoError(t, mgr.WaitReady(testCtx(t)))
@@ -105,14 +108,14 @@ func TestRabbitMQManager(t *testing.T) {
 }
 
 func TestPasswordHandler(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test skipped with --short")
+	}
+
 	// Start RabbitMQ broker
 	MQ := testutils.StartRabbitMQ(t, false, false)
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
-
-	if testing.Short() {
-		t.Skip("integration test skipped with --short")
-	}
 
 	t.Run("ChangePasswordWithKey", func(t *testing.T) {
 		// Configure RabbitMQ before starting the stack so it is initialized by the stack
@@ -453,7 +456,12 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 	cfg := config.GetConfig()
 
 	cfg.RabbitMQ.Enabled = true
-	cfg.RabbitMQ.URL = mq.AMQPURL
+	cfg.RabbitMQ.Nodes = map[string]config.RabbitMQNode{
+		"default": {
+			Enabled: true,
+			URL:     mq.AMQPURL,
+		},
+	}
 	cfg.RabbitMQ.Exchanges = []config.RabbitExchange{
 		{
 			Name:            "auth",
@@ -644,7 +652,11 @@ func testCtx(t *testing.T) context.Context {
 	return ctx
 }
 
-func initRabbitMQManager(amqpURL string, exchangeName string, queueName string, routingKey string, handler *countingTestHandler) *rabbitmq.RabbitMQManager {
+func initRabbitMQManager(amqpURL string, exchangeName string, queueName string, routingKey string, handler *countingTestHandler) (*rabbitmq.RabbitMQManager, error) {
+	nodeCfg := config.RabbitMQNode{
+		Enabled: true,
+		URL:     amqpURL,
+	}
 	exchangeCfg := &config.RabbitExchange{
 		Name:            exchangeName,
 		Kind:            "topic",
@@ -659,12 +671,16 @@ func initRabbitMQManager(amqpURL string, exchangeName string, queueName string, 
 		DeliveryLimit: 5,
 	}
 
+	connection, err := rabbitmq.BuildConnection(nodeCfg)
+	if err != nil {
+		return nil, err
+	}
 	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
 	queue := rabbitmq.NewQueueSpec(queueCfg, handler, "", "")
 	exchange.Queues = []rabbitmq.QueueSpec{queue}
 
 	exchanges := []rabbitmq.ExchangeSpec{exchange}
-	return rabbitmq.NewRabbitMQManager(amqpURL, exchanges)
+	return rabbitmq.NewRabbitMQManager(connection, exchanges), nil
 }
 
 type testMessage struct {
@@ -693,7 +709,7 @@ func newTestMessageSender(t *testing.T, amqpURL string, exchangeName string, rou
 	}
 }
 
-func (m *testMessageSender) publish(msg testMessage) {
+func (m *testMessageSender) publish(msg any) {
 	m.t.Helper()
 	body, err := json.Marshal(msg)
 	require.NoError(m.t, err)
@@ -839,15 +855,20 @@ func TestDLXDLQDeclaration(t *testing.T) {
 
 // createAndStartManager creates a RabbitMQ manager with the given configuration and starts it
 func createAndStartManager(t *testing.T, mq *testutils.RabbitFixture, exchangeCfg *config.RabbitExchange, queueCfg *config.RabbitQueue, dlxName, dlqName string) *rabbitmq.RabbitMQManager {
+	connection, err := rabbitmq.BuildConnection(config.RabbitMQNode{
+		Enabled: true,
+		URL:     mq.AMQPURL,
+	})
+	require.NoError(t, err)
 	handler := newCountingTestHandler()
 	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
 	queue := rabbitmq.NewQueueSpec(queueCfg, handler, dlxName, dlqName)
 	exchange.Queues = []rabbitmq.QueueSpec{queue}
 
 	exchanges := []rabbitmq.ExchangeSpec{exchange}
-	mgr := rabbitmq.NewRabbitMQManager(mq.AMQPURL, exchanges)
+	mgr := rabbitmq.NewRabbitMQManager(connection, exchanges)
 
-	_, err := mgr.Start(testCtx(t))
+	_, err = mgr.Start(testCtx(t))
 	require.NoError(t, err)
 	require.NoError(t, mgr.WaitReady(testCtx(t)))
 
@@ -933,6 +954,11 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 	MQ := testutils.StartRabbitMQ(t, true, false)
 	defer MQ.Stop(context.Background(), 30*time.Second)
 
+	// Configuraion of node
+	nodeCfg := config.RabbitMQNode{
+		Enabled: true,
+		URL:     MQ.AMQPURL,
+	}
 	// Configuration per request
 	exchangeCfg := &config.RabbitExchange{
 		Name:            "auth",
@@ -957,13 +983,15 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 
 	// Create manager with a failing handler to force redeliveries and count attempts
 	handler := &countingFailingHandler{}
+	connection, err := rabbitmq.BuildConnection(nodeCfg)
+	require.NoError(t, err)
 	exchange := rabbitmq.NewExchangeSpec(exchangeCfg)
 	queue := rabbitmq.NewQueueSpec(queueCfg, handler, "auth.dlx", "stack.dead.letter.user.password.updated")
 	exchange.Queues = []rabbitmq.QueueSpec{queue}
-	mgr := rabbitmq.NewRabbitMQManager(MQ.AMQPURL, []rabbitmq.ExchangeSpec{exchange})
+	mgr := rabbitmq.NewRabbitMQManager(connection, []rabbitmq.ExchangeSpec{exchange})
 
 	// Start consumers
-	_, err := mgr.Start(testCtx(t))
+	_, err = mgr.Start(testCtx(t))
 	require.NoError(t, err)
 	require.NoError(t, mgr.WaitReady(testCtx(t)))
 

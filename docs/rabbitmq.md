@@ -4,13 +4,13 @@ Integration with RabbitMQ: configuration, topology, and handler semantics.
 
 ### Overview
 
-Cozy Stack can consume messages from RabbitMQ and dispatch them to Go handlers. The consumer is managed by a background manager which:
+Cozy Stack can consume messages from RabbitMQ and dispatch them to Go handlers. The consumers are managed by background managers which:
 
-- establishes and monitors the AMQP connection (with optional TLS),
-- declares exchanges and queues (if configured to do so),
-- binds queues to routing keys,
-- starts per-queue consumers with QoS and redelivery limits,
-- dispatches deliveries to queue-specific handlers.
+- establish and monitor the AMQP connection with their node (with optional TLS),
+- declare exchanges and queues (if configured),
+- bind queues to routing keys,
+- start per-queue consumers with QoS and redelivery limits,
+- dispatch deliveries to queue-specific handlers.
 
 ### Configuration
 
@@ -18,9 +18,11 @@ RabbitMQ is configured in `cozy.yaml` under the `rabbitmq` key.
 
 Key fields:
 
-- `enabled`: Enable the consumer.
-- `url`: AMQP URL, e.g. `amqp://guest:guest@localhost:5672/`.
-- `tls`: Optional TLS settings (`root_ca`, `insecure_skip_validation`, `server_name`).
+- `enabled`: Enable communication with RabbitMQ nodes.
+- `nodes`: Map of RabbitMQ node configuration by context
+  - `<context>`:
+    - `url`: AMQP URL, e.g. `amqp://guest:guest@localhost:5672/`.
+    - `tls`: Optional TLS settings (`root_ca`, `insecure_skip_validation`, `server_name`).
 - `exchanges[]`: List of exchanges the stack should consume from.
   - `name`: Exchange name.
   - `kind`: Exchange type (e.g. `topic`).
@@ -42,11 +44,13 @@ Example:
 ```yaml
 rabbitmq:
   enabled: true
-  url: amqp://guest:guest@localhost:5672/
-  tls:
-    # root_ca: /etc/ssl/certs/ca.pem
-    insecure_skip_validation: false
-    # server_name: rabbit.internal
+  nodes:
+    default:
+      url: amqp://guest:guest@localhost:5672/
+      tls:
+        # root_ca: /etc/ssl/certs/ca.pem
+        insecure_skip_validation: false
+        # server_name: rabbit.internal
   exchanges:
     - name: auth
       kind: topic
@@ -93,7 +97,9 @@ DLX and DLQ can be configured at both exchange and queue levels:
 ```yaml
 rabbitmq:
   enabled: true
-  url: amqp://guest:guest@localhost:5672/
+  nodes:
+    default:
+      url: amqp://guest:guest@localhost:5672/
   exchanges:
     - name: auth
       kind: topic
@@ -192,12 +198,13 @@ Example payload for `user.phone.updated`:
 
 On startup, if `rabbitmq.enabled` is true:
 
-1. The manager creates an AMQP connection (TLS if configured) and retries with exponential backoff.
-2. It declares configured exchanges and queues (if `declare_*` flags are set).
-3. It declares Dead Letter Exchanges and Dead Letter Queues (if `declare_dlx`/`declare_dlq` flags are set).
-4. It binds queues to their routing keys and starts consumers.
-5. It exposes a readiness channel internally so tests can wait until consumption is active.
-6. It monitors the connection and restarts consumers upon reconnection.
+1. The RabbitMQ service starts a manager for every context with configuration.
+2. The managers create an AMQP connection with their node (using TLS if configured) and retry with exponential backoff.
+3. They declare configured exchanges and queues (if `declare_*` flags are set).
+4. They declare Dead Letter Exchanges and Dead Letter Queues (if `declare_dlx`/`declare_dlq` flags are set).
+5. They bind queues to their routing keys and start consumers.
+6. They expose a readiness channel internally so tests can wait until consumption is active.
+7. They monitor the connection and restart consumers upon reconnection.
 
 ### Adding a new queue handler
 
@@ -251,7 +258,9 @@ Add the queue under an exchange with the routing keys to bind.
 ```yaml
 rabbitmq:
   enabled: true
-  url: amqp://guest:guest@localhost:5672/
+  nodes:
+    default:
+      url: amqp://guest:guest@localhost:5672/
   exchanges:
     - name: auth
       kind: topic

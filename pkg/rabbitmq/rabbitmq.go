@@ -11,13 +11,9 @@ import (
 	"os"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/sync/errgroup"
 )
-
-var log = logger.WithNamespace("rabbitmq")
 
 // Handler processes messages for a queue. Return nil to ack, or an error to requeue.
 type Handler interface {
@@ -45,9 +41,9 @@ type RabbitMQManager struct {
 	readyOnce  sync.Once
 }
 
-func NewRabbitMQManager(url string, exchanges []ExchangeSpec) *RabbitMQManager {
+func NewRabbitMQManager(connection *RabbitMQConnection, exchanges []ExchangeSpec) *RabbitMQManager {
 	return &RabbitMQManager{
-		connection: NewRabbitMQConnection(url),
+		connection: connection,
 		exchanges:  exchanges,
 		readyCh:    make(chan struct{}),
 	}
@@ -71,21 +67,8 @@ func NewQueueSpec(cfg *config.RabbitQueue, handler Handler, dlxName, dlqName str
 	}
 }
 
-// Start runs the consumer/manager in background and returns a Shutdowner
-func Start(opts config.RabbitMQ) (utils.Shutdowner, error) {
-	exchanges := buildExchangeSpecs(opts)
-	mgr := NewRabbitMQManager(opts.URL, exchanges)
-	// Build TLS config if provided
-	tlsCfg, err := buildRabbitTLS(opts.TLS)
-	if err != nil {
-		return nil, err
-	}
-	mgr.connection.TLSConfig = tlsCfg
-	return mgr.Start(context.Background())
-}
-
-// Start runs the manager in background and returns a Shutdowner for graceful stop.
-func (m *RabbitMQManager) Start(ctx context.Context) (utils.Shutdowner, error) {
+// Start runs the manager in background and returns itself
+func (m *RabbitMQManager) Start(ctx context.Context) (*RabbitMQManager, error) {
 	log.Info("Initializing RabbitMQ manager")
 	if m.readyCh == nil {
 		m.readyCh = make(chan struct{})
@@ -115,6 +98,7 @@ func (m *RabbitMQManager) WaitReady(ctx context.Context) error {
 	}
 }
 
+// RabbitMQManager implements utils.Shutdowner for a graceful stop
 func (m *RabbitMQManager) Shutdown(ctx context.Context) error {
 	log.Info("Shutting down RabbitMQ manager")
 	if m.cancel != nil {
@@ -239,11 +223,23 @@ func (m *RabbitMQManager) run(ctx context.Context) error {
 	}
 }
 
-func buildExchangeSpecs(opts config.RabbitMQ) []ExchangeSpec {
+func BuildConnection(node config.RabbitMQNode) (*RabbitMQConnection, error) {
+	connection := NewRabbitMQConnection(node.URL)
+
+	tlsCfg, err := buildRabbitTLS(node.TLS)
+	if err != nil {
+		return nil, err
+	}
+	connection.TLSConfig = tlsCfg
+
+	return connection, nil
+}
+
+func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 	var exchanges []ExchangeSpec
 
-	for i := range opts.Exchanges {
-		configExchange := &opts.Exchanges[i]
+	for i := range exchangesCfg {
+		configExchange := &exchangesCfg[i]
 		var queues []QueueSpec
 
 		if configExchange.Name == "" || configExchange.Kind == "" {
