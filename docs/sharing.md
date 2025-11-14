@@ -673,17 +673,15 @@ be used for two scenarios:
 2. This request will be used to create a shortcut (in that case, a query-string
    parameter `shortcut=true&url=...` will be added).
 
-When the sharer considers a recipient trusted, Drive sharings include in the
-payload a credentials entry containing the OAuth state generated for that
-recipient. When the recipient Cozy is configured with `sharing.auto_accept_trusted = true`,
-receiving this state enqueues a background job that performs the same handshake
-as a manual acceptance and POSTs the answer back to the owner's Cozy.
+Drive sharings always include in the payload a credentials entry containing the
+OAuth state generated for each recipient. When the recipient Cozy is configured
+with `sharing.auto_accept_trusted = true`, receiving this state enqueues a
+background job that performs the same handshake as a manual acceptance and
+POSTs the answer back to the owner's Cozy.
 
-Trusted members (both recipients and senders) are determined by their Cozy
-instance domain according to configured trusted domains. Trust is
-bidirectional:
-- The owner checks if the recipient's instance domain is trusted before including the credentials state
-- The recipient checks if the sender's instance domain is trusted before auto-accepting
+Trusted members are determined by the recipient Cozy only. The recipient checks
+that the sender belongs to a trusted domain (or has been marked as a trusted
+contact) before launching the auto-accept flow.
 
 Members are trusted when their instance domain exactly matches or is a
 subdomain of any of the configured trusted domains. The behaviour can be tuned
@@ -692,16 +690,49 @@ via the configuration:
 ```yaml
 sharing:
   auto_accept_trusted: true
-  trusted_domains:
-    - example.com
+  auto_accept_trusted_contacts: true
   contexts:
+    default:
+      trusted_domains:
+        - example.com
     white-label:
       auto_accept_trusted: false
 ```
 
+`trusted_domains` must be defined inside a context. Use the `default` context
+to configure a global rule, or override it per custom context.
+
 If `auto_accept_trusted` is disabled on the recipient Cozy, the request is kept
 in the pending state even if the sharer provided the state in the credentials
 payload.
+
+### Contact-Based Trust
+
+In addition to domain-based trust, contacts can be marked as trusted when you
+accept a sharing from them. This provides a more granular trust model:
+
+- **First sharing**: User manually accepts, sender's contact is automatically marked as trusted
+- **Subsequent sharings**: Automatically accepted because the contact is trusted
+
+Contact-based trust works independently of domain-based trust (and can be
+disabled via `sharing.auto_accept_trusted_contacts` or the corresponding
+context override):
+- A contact from an untrusted domain can still be trusted
+- This allows trusting specific individuals without trusting entire domains
+- Contact trust takes effect even if domain-based trust is not configured
+
+**Example workflow:**
+1. Alice receives a Drive sharing from `bob@external.com` (untrusted domain)
+2. Alice manually accepts the sharing
+3. Bob's contact is automatically marked as trusted in Alice's Cozy
+4. Future Drive sharings from Bob are auto-accepted (if `auto_accept_trusted` is enabled)
+
+**Trust determination:**
+A member is considered trusted if **either**:
+- Their instance domain matches a configured trusted domain (domain-based trust)
+- Their contact has been marked as trusted (contact-based trust)
+
+The contact's `trustedForSharing` field is set to `true` when a sharing is accepted.
 
 #### Request
 

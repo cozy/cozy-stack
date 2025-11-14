@@ -3,7 +3,9 @@ package sharing
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -82,7 +84,6 @@ func TestIsTrustedMember(t *testing.T) {
 			// Bob's domain ends with "linagora.twake.app" → should trust
 			require.True(t, IsTrustedMember(inst, member))
 		})
-
 	})
 
 	t.Run("Scenario 3: On-premise - all users trust each other", func(t *testing.T) {
@@ -115,6 +116,85 @@ func TestIsTrustedMember(t *testing.T) {
 			// Eve's domain doesn't end with "linagora.com" → should NOT trust
 			require.False(t, IsTrustedMember(inst, member))
 		})
+	})
 
+	t.Run("Contact-based trust", func(t *testing.T) {
+		// Configure with NO trusted domains
+
+		cfg.Sharing.Contexts[config.DefaultInstanceContext] = config.SharingContext{
+			TrustedDomains:            []string{},
+			AutoAcceptTrustedContacts: &[]bool{true}[0],
+		}
+		t.Cleanup(func() { delete(cfg.Sharing.Contexts, config.DefaultInstanceContext) })
+
+		t.Run("untrusted contact from untrusted domain", func(t *testing.T) {
+			inst.Domain = "alice.example.com"
+			member := &Member{
+				Email:    "bob@other.com",
+				Instance: "https://bob.other.com",
+			}
+
+			// No domain trust, no contact trust
+			require.False(t, IsTrustedMember(inst, member))
+		})
+
+		t.Run("trusted contact from untrusted domain", func(t *testing.T) {
+			// Create a contact and mark as trusted
+			c := contact.New()
+			c.M["email"] = []interface{}{
+				map[string]interface{}{"address": "charlie@external.com"},
+			}
+			require.NoError(t, couchdb.CreateDoc(inst, c))
+			require.NoError(t, c.MarkAsTrusted(inst))
+
+			inst.Domain = "alice.example.com"
+			member := &Member{
+				Email:    "charlie@external.com",
+				Instance: "https://charlie.external.com",
+			}
+
+			// No domain trust, but contact is trusted
+			require.True(t, IsTrustedMember(inst, member))
+		})
+
+		t.Run("member without email cannot be contact-trusted", func(t *testing.T) {
+			inst.Domain = "alice.example.com"
+			member := &Member{
+				Email:    "", // No email
+				Instance: "https://someone.other.com",
+			}
+
+			require.False(t, IsTrustedMember(inst, member))
+		})
+
+		t.Run("contact not found - should not be trusted", func(t *testing.T) {
+			inst.Domain = "alice.example.com"
+			member := &Member{
+				Email:    "nonexistent@other.com",
+				Instance: "https://nonexistent.other.com",
+			}
+
+			// Contact doesn't exist, should not be trusted
+			require.False(t, IsTrustedMember(inst, member))
+		})
+
+		t.Run("untrusted contact should not be trusted", func(t *testing.T) {
+			// Create a contact but don't mark as trusted
+			c := contact.New()
+			c.M["email"] = []interface{}{
+				map[string]interface{}{"address": "dave@external.com"},
+			}
+			require.NoError(t, couchdb.CreateDoc(inst, c))
+			// Note: NOT calling c.MarkAsTrusted(inst)
+
+			inst.Domain = "alice.example.com"
+			member := &Member{
+				Email:    "dave@external.com",
+				Instance: "https://dave.external.com",
+			}
+
+			// Contact exists but is not marked as trusted
+			require.False(t, IsTrustedMember(inst, member))
+		})
 	})
 }

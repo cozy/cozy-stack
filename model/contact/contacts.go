@@ -294,6 +294,66 @@ func CreateMyself(inst *instance.Instance, settings *couchdb.JSONDoc) (*Contact,
 	return doc, nil
 }
 
+// CreateFromSharingMember creates a contact from sharing member information.
+// This is useful when accepting a sharing and we want to create a contact for the sender.
+func CreateFromSharingMember(inst *instance.Instance, email, name, cozyURL string) (*Contact, error) {
+	if email == "" {
+		return nil, ErrNoMailAddress
+	}
+
+	doc := New()
+	doc.JSONDoc.M["email"] = []map[string]interface{}{
+		{"address": email, "primary": true},
+	}
+
+	displayName := name
+	if name == "" {
+		parts := strings.SplitN(email, "@", 2)
+		name = parts[0]
+		displayName = email
+	}
+	if name != "" {
+		doc.JSONDoc.M["fullname"] = name
+		doc.JSONDoc.M["displayName"] = displayName
+	}
+
+	if cozyURL != "" {
+		doc.JSONDoc.M["cozy"] = []map[string]interface{}{
+			{"url": cozyURL, "primary": true},
+		}
+	}
+
+	index := email
+	if cozyURL != "" {
+		index = cozyURL
+	}
+	doc.JSONDoc.M["indexes"] = map[string]interface{}{
+		"byFamilyNameGivenNameEmailCozyUrl": index,
+	}
+
+	if err := couchdb.CreateDoc(inst, doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// TrustedForSharingKey is the key used to mark a contact as trusted for auto-accepting sharings
+const TrustedForSharingKey = "trustedForSharing"
+
+// IsTrusted returns true if this contact has been marked as trusted for auto-accepting sharings
+func (c *Contact) IsTrusted() bool {
+	if val, ok := c.M[TrustedForSharingKey].(bool); ok {
+		return val
+	}
+	return false
+}
+
+// MarkAsTrusted marks this contact as trusted for auto-accepting sharings
+func (c *Contact) MarkAsTrusted(inst *instance.Instance) error {
+	c.M[TrustedForSharingKey] = true
+	return couchdb.UpdateDoc(inst, c)
+}
+
 // GetMyself returns the myself contact document, or an ErrNotFound error.
 func GetMyself(db prefixer.Prefixer) (*Contact, error) {
 	var docs []*Contact

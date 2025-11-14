@@ -321,14 +321,16 @@ type Flagship struct {
 
 // SharingConfig contains configuration for cozy-to-cozy sharing trust rules.
 type SharingConfig struct {
-	AutoAcceptTrusted bool                      `mapstructure:"auto_accept_trusted"`
-	Contexts          map[string]SharingContext `mapstructure:"contexts"`
+	AutoAcceptTrusted         bool                      `mapstructure:"auto_accept_trusted"`
+	AutoAcceptTrustedContacts bool                      `mapstructure:"auto_accept_trusted_contacts"`
+	Contexts                  map[string]SharingContext `mapstructure:"contexts"`
 }
 
 // SharingContext allows overriding sharing trust settings for a specific context.
 type SharingContext struct {
-	AutoAcceptTrusted *bool    `mapstructure:"auto_accept_trusted"`
-	TrustedDomains    []string `mapstructure:"trusted_domains"`
+	AutoAcceptTrusted         *bool    `mapstructure:"auto_accept_trusted"`
+	AutoAcceptTrustedContacts *bool    `mapstructure:"auto_accept_trusted_contacts"`
+	TrustedDomains            []string `mapstructure:"trusted_domains"`
 }
 
 // OptionsForContext returns the effective sharing configuration for a given context,
@@ -357,6 +359,14 @@ func (c SharingConfig) OptionsForContext(contextName string) SharingContext {
 	if result.AutoAcceptTrusted == nil {
 		falseVal := false
 		result.AutoAcceptTrusted = &falseVal
+	}
+
+	if result.AutoAcceptTrustedContacts == nil {
+		result.AutoAcceptTrustedContacts = &c.AutoAcceptTrustedContacts
+	}
+	if result.AutoAcceptTrustedContacts == nil {
+		falseVal := false
+		result.AutoAcceptTrustedContacts = &falseVal
 	}
 
 	return result
@@ -606,7 +616,7 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("assets_polling_interval", 2*time.Minute)
 	v.SetDefault("fs.versioning.max_number_of_versions_to_keep", 20)
 	v.SetDefault("fs.versioning.min_delay_between_two_versions", 15*time.Minute)
-	v.SetDefault("sharing.auto_accept_trusted", true)
+	v.SetDefault("sharing.auto_accept_trusted", false)
 }
 
 func envMap() map[string]string {

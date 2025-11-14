@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -388,7 +389,15 @@ func TestSharedDrives(t *testing.T) {
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
-	config.GetConfig().Assets = "../../assets"
+	cfg := config.GetConfig()
+	cfg.Assets = "../../assets"
+	cfg.Sharing.Contexts = map[string]config.SharingContext{
+		config.DefaultInstanceContext: {
+			AutoAcceptTrustedContacts: func() *bool { b := true; return &b }(),
+			AutoAcceptTrusted:         func() *bool { b := true; return &b }(),
+			TrustedDomains:            []string{"cozy.local", "example.com"},
+		},
+	}
 	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	render, _ := statik.NewDirRenderer("../../assets")
@@ -599,6 +608,16 @@ func TestSharedDrives(t *testing.T) {
 
 	t.Run("AcceptSharedDrive", func(t *testing.T) {
 		acceptSharedDriveForBetty(t, acmeInstance, bettyInstance, tsA.URL, tsB.URL, sharingID)
+
+		// Verify that ACME's contact was created and marked as trusted on Betty's side after accepting the sharing
+		// This is important: when Betty accepts a sharing, she creates a contact for the sender (ACME) and marks it as trusted
+		var s sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(bettyInstance, consts.Sharings, sharingID, &s))
+		require.NotEmpty(t, s.Members[0].Email, "Owner should have an email")
+
+		acmeContact, err := contact.FindByEmail(bettyInstance, s.Members[0].Email)
+		require.NoError(t, err, "ACME's contact should exist on Betty's instance after accepting")
+		require.True(t, acmeContact.IsTrusted(), "ACME's contact should be marked as trusted on Betty's side after she accepted the sharing")
 	})
 
 	t.Run("AcceptSharedDriveViaGETSetsReadyStatus", func(t *testing.T) {
@@ -1073,7 +1092,7 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			cfg := config.GetConfig()
+			cfg := cfg
 			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
 			cfg.Fs.Versioning.MaxNumberToKeep = 2
 
@@ -1108,7 +1127,7 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			cfg := config.GetConfig()
+			cfg := cfg
 			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
 			cfg.Fs.Versioning.MaxNumberToKeep = 2
 
