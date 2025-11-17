@@ -28,3 +28,5 @@ tmp
 /debian/cozy/
 /debian/cozy-stack/
 /debian/tmp/
+/.gocache
+/.idea

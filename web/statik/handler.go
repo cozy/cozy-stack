@@ -52,7 +52,7 @@ var (
 		"passphrase_reset.html",
 		"share_by_link_password.html",
 		"sharing_discovery.html",
-		"sharing_discovery_v2.html",
+		"sharing_discovery_sso.html",
 		"oauth_clients_limit_exceeded.html",
 		"twofactor.html",
 	}

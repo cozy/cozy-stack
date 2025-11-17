@@ -714,9 +714,17 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		}
 	}
 
-	templateName := "sharing_discovery_v2.html"
+	templateName := "sharing_discovery_sso.html"
 	if oidcLink == "" && twakeOIDCLink == "" {
 		templateName = "sharing_discovery.html"
+	}
+
+	// Add OIDC logo URL to CSP img-src if present
+	if oidcLogoURL != "" {
+		if logoURL, err := url.Parse(oidcLogoURL); err == nil && logoURL.Scheme != "" && logoURL.Host != "" {
+			logoOrigin := logoURL.Scheme + "://" + logoURL.Host
+			middlewares.AppendCSPRule(c, "img-src", logoOrigin)
+		}
 	}
 
 	return c.Render(code, templateName, echo.Map{

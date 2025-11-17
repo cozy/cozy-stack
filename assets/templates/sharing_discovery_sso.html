@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    {{.Favicon}}
+
+    <title>{{.Title}}</title>
+
+    <link rel="stylesheet" href="{{asset .Domain "/styles/sharing_discovery_sso.css" .ContextName}}">
+</head>
+<body data-sveltekit-preload-data="hover">
+
+    <div class="d-contents">
+        <div class="w-full h-[100dvh] lg:h-[max(100dvh,800px)] max-h-[max(100dvh,768px)] min-h-[min(100dvh,768px)] overflow-x-hidden overflow-y-scroll gradiant flex flex-col font-[Inter]">
+            <div class="flex w-full h-full lg:px-10 xl:px-[148px] 2xl:px-52 3xl:px-72 4xl:px-96">
+                <div class="flex flex-col lg:flex-row w-full xl:space-x-24 h-full">
+                    <div class="hidden lg:flex flex-col w-full lg:max-w-[506px] px-10 lg:px-0 space-y-6 pt-52 justify-center items-start pb-9">
+                        <div class="flex flex-col h-full justify-center space-y-[47px]">
+                            <img src="{{asset .Domain "/icons/twake-id-logo.svg" .ContextName}}" alt="Twake ID" width="174" height="85">
+                            <div class="flex flex-col space-y-5 h-full 4xl:h-auto pr-10"><h1 dir="auto"
+                                                                                             class="text-[32px] leading-10 not-italic font-semibold lg:leading-[44px] text-center lg:text-left w-full text-disabled-text rtl:text-right">
+                                                                                             {{t "Sharing Twake ID Description"}}</h1></div>
+                        </div>
+                        <div class="pt-auto"><span
+                                class="overflow-hidden text-sm not-italic font-medium leading-5 tracking-[0.1px] text-blueGray px-2">© 2000-2025, LINAGORA</span>
+                        </div>
+                    </div>
+                    <div class="w-full flex flex-col justify-center items-end h-full relative">
+                        <div class="absolute top-9 right-[17px] lg:right-0 lg:xs-min-height:top-6 lg:md-height:top-9">
+                            <div class="relative w-full text-[#8C9CAF] text-sm font-medium cursor-pointer min-w-[164px] z-[9999]">
+                                <!-- LANGUAGE SELECTOR CAN BE ADDED HERE IF NEEDED -->
+                            </div>
+                        </div>
+                        <div class="w-full flex flex-col md:flex-row justify-end h-full lg:xs-height:h-[610px] lg:sm-height:h-[630px] lg:md-height:h-[640px] lg:lg-min-height:h-[768px] xl:h-[768px]">
+                            <div class="lg:bg-white lg:shadow-[0px_0px_52px_0px_rgba(0,0,0,0.08)] lg:rounded-3xl flex flex-col w-full lg:w-[450px] xl:w-[504px] md:px-[60px] h-full">
+                                <div class="flex flex-row"></div>
+                                <div class="flex flex-col px-4 lg:px-0 h-full w-full xs:pt-[120px] pt-[188px] lg:pt-[169px] lg-height:pt-[120px] md-height:pt-[100px] sm-height:pt-[50px] xs-height:pt-11 pb-[28px] lg:pb-6 xs-height:pb-5">
+                                    <div class="flex p-[16px] flex-col items-center gap-[10px] self-stretch">
+                                    <img src="{{asset .Domain "/icons/twake-workplace-logo.svg" .ContextName}}" alt="Twake Workplace" width="259" height="137">
+                                </div>
+                                <div class="flex p-[16px] justify-center items-center gap-[10px] self-stretch w-full">
+                                    <div class="lg:hidden flex-[1_0_0] text-center text-[17px] font-medium tracking-[0px] w-full">
+                                        {{t "Sharing Twake ID Description"}}
+                                    </div>
+                                    <div class="hidden lg:block flex-[1_0_0] text-center text-[17px] font-medium tracking-[0px] w-full">
+                                        {{t "Sharing Twake ID Features"}}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col mt-auto gap-[16pt] py-4">
+                                    {{if .TwakeOIDCLink}}
+                                    <a href="{{.TwakeOIDCLink}}" aria-label="next"
+                                       class="flex items-center rounded-full justify-center w-full h-12 bg-primary text-white text-sm font-medium leading-5 tracking-wide text-center cursor-pointer">
+                                        {{t "Sharing Connect with Twake Account"}}
+                                    </a>
+                                    {{end}}
+                                    {{if .OIDCLink}}
+                                    <a href="{{.OIDCLink}}" aria-label="next"
+                                       class="flex justify-center bg-[#f4f4f4] items-center self-stretch rounded-[100px] shadow w-full cursor-pointer">
+                                        <div class="px-6 py-3.5 justify-center items-center flex gap-3">
+                                            {{if .OIDCLogoURL}}
+                                            <img src="{{.OIDCLogoURL}}" alt="{{.OIDCDisplayName}}" class="w-6 h-6 object-contain">
+                                            {{end}}
+                                            <div class="text-center text-primary text-sm font-medium leading-tight tracking-tight">
+                                                {{if .OIDCDisplayName}}
+                                                {{t "Sharing Login with"}} {{.OIDCDisplayName}} {{t "Sharing Account"}}
+                                                {{else}}
+                                                {{t "Sharing Connect with OIDC"}}
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                    </a>
+                                    {{end}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1221,8 +1221,8 @@ func TestSharings(t *testing.T) {
 			HasContentType("text/html", "utf-8").
 			Body()
 
-		body1.NotContains(`\/oidc\/sharing\/public`) // No public Twake OIDC
-		body1.NotContains(`\/oidc\/sharing?`)        // No sender OIDC
+		body1.NotContains(`/oidc/sharing/public`) // No public Twake OIDC
+		body1.NotContains(`/oidc/sharing?`)       // No sender OIDC
 
 		// Scenario 2: Private domain, NO sender OIDC, WITH public OIDC
 		// Expected: Only Twake button shown
@@ -1244,9 +1244,9 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			Body()
 
-		body2.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
-		body2.Contains("Login to Twake account")  // Button text
-		body2.NotContains(`\/oidc\/sharing?`)     // No sender OIDC
+		body2.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
+		body2.Contains("Login to Twake account") // Button text
+		body2.NotContains(`/oidc/sharing?`)      // No sender OIDC
 
 		// Scenario 3: Private domain, WITH sender OIDC, NO public OIDC
 		// Expected: Only sender OIDC button shown (generic fallback text)
@@ -1270,10 +1270,10 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			Body()
 
-		body3.Contains(`\/oidc\/sharing?`)           // Sender OIDC shown
-		body3.Contains("sharingID=" + sharingID3)    // URL parameter
-		body3.Contains("Connect with OIDC")          // Generic button text (no branding)
-		body3.NotContains(`\/oidc\/sharing\/public`) // No public Twake OIDC
+		body3.Contains(`/oidc/sharing?`)          // Sender OIDC shown
+		body3.Contains("sharingID=" + sharingID3) // URL parameter
+		body3.Contains("Connect with OIDC")       // Generic button text (no branding)
+		body3.NotContains(`/oidc/sharing/public`) // No public Twake OIDC
 
 		// Scenario 3b: Private domain, WITH sender OIDC WITH branding, NO public OIDC
 		// Expected: Only sender OIDC button with company branding
@@ -1298,13 +1298,13 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			Body()
 
-		body3b.Contains(`\/oidc\/sharing?`)                  // Sender OIDC shown
+		body3b.Contains(`/oidc/sharing?`)                    // Sender OIDC shown
 		body3b.Contains("ACME Corporation")                  // Company name displayed
 		body3b.Contains("https://acme.example.com/logo.svg") // Logo URL in img src
 		body3b.Contains("Login with")                        // Translation key part 1
 		body3b.Contains("account")                           // Translation key part 2
 		body3b.NotContains("Connect with OIDC")              // Generic text not shown
-		body3b.NotContains(`\/oidc\/sharing\/public`)        // No public Twake OIDC
+		body3b.NotContains(`/oidc/sharing/public`)           // No public Twake OIDC
 
 		// Scenario 4: Private domain, WITH sender OIDC (no branding), WITH public OIDC
 		// Expected: Both buttons shown (sender button without branding)
@@ -1320,10 +1320,10 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			Body()
 
-		body4.Contains(`\/oidc\/sharing?`)        // Sender OIDC shown
-		body4.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
-		body4.Contains("Login to Twake account")  // Twake button text
-		body4.Contains("Connect with OIDC")       // Sender button text (generic, no branding)
+		body4.Contains(`/oidc/sharing?`)         // Sender OIDC shown
+		body4.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
+		body4.Contains("Login to Twake account") // Twake button text
+		body4.Contains("Connect with OIDC")      // Sender button text (generic, no branding)
 
 		// Scenario 5: Public domain, WITH sender OIDC, WITH public OIDC
 		// Expected: Only Twake button (sender OIDC disabled for public domains)
@@ -1346,9 +1346,9 @@ func TestSharings(t *testing.T) {
 			Expect().Status(200).
 			Body()
 
-		body5.Contains(`\/oidc\/sharing\/public`) // Public Twake OIDC shown
-		body5.Contains("Login to Twake account")  // Button text
-		body5.NotContains(`\/oidc\/sharing?`)     // Sender OIDC disabled (public domain)
+		body5.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
+		body5.Contains("Login to Twake account") // Button text
+		body5.NotContains(`/oidc/sharing?`)      // Sender OIDC disabled (public domain)
 
 		// Cleanup
 		aliceInstance.ContextName = originalContext
