@@ -24,8 +24,9 @@ import (
 )
 
 type ChatPayload struct {
-	ChatConversationID string
-	Query              string `json:"q"`
+	ChatConversationID  string
+	Query               string `json:"q"`
+	UseMapReduceSources *bool  `json:"useMapReduceSources,omitempty"`
 }
 
 type ChatConversation struct {
@@ -36,11 +37,12 @@ type ChatConversation struct {
 }
 
 type ChatMessage struct {
-	ID        string    `json:"id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	Sources   []Source  `json:"sources,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID                  string    `json:"id"`
+	Role                string    `json:"role"`
+	Content             string    `json:"content"`
+	Sources             []Source  `json:"sources,omitempty"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UseMapReduceSources bool      `json:"useMapReduceSources,omitempty"`
 }
 
 const (
@@ -106,12 +108,20 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		chat.Metadata.UpdatedAt = time.Now().UTC()
 	}
 	uuidv7, _ := uuid.NewV7()
-	msg := ChatMessage{
-		ID:        uuidv7.String(),
-		Role:      UserRole,
-		Content:   payload.Query,
-		CreatedAt: time.Now().UTC(),
+	useMapReduceSources := false // using this option can take a lot of time, so default to false
+	if payload.UseMapReduceSources != nil {
+		useMapReduceSources = *payload.UseMapReduceSources
 	}
+
+	msg := ChatMessage{
+		ID:                  uuidv7.String(),
+		Role:                UserRole,
+		Content:             payload.Query,
+		UseMapReduceSources: useMapReduceSources,
+		CreatedAt:           time.Now().UTC(),
+	}
+	fmt.Printf("msg: %+v\n", msg)
+
 	chat.Messages = append(chat.Messages, msg)
 	if chat.DocRev == "" {
 		err = couchdb.CreateNamedDocWithDB(inst, &chat)
@@ -210,6 +220,11 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 			Content: msg.Content,
 		})
 	}
+	useMapReduceSources := chat.Messages[len(chat.Messages)-1].UseMapReduceSources
+	fmt.Printf("useMapReduceSources: %v\n", useMapReduceSources)
+	metadata := map[string]interface{}{
+		"use_map_reduce": useMapReduceSources,
+	}
 
 	payload := map[string]interface{}{
 		"model":       fmt.Sprintf("ragondin-%s", inst.Domain),
@@ -218,8 +233,10 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		"temperature": Temperature,
 		"top_p":       TopP,
 		"logprobs":    LogProbs,
+		"metadata":    metadata,
 	}
 
+	fmt.Printf("payload: %v\n", payload)
 	res, err := callRAGQuery(inst, payload)
 	if err != nil {
 		return err
