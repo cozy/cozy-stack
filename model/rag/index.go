@@ -221,46 +221,56 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 			}
 		}
 
-		var requestBody bytes.Buffer
-		writer := multipart.NewWriter(&requestBody)
-		part, err := writer.CreateFormFile("file", name)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(part, content)
-		if err != nil {
-			return err
-		}
-		// No need to add filename here, it is already set through the file form
-		meta := map[string]string{
-			"md5sum":   md5sum,
-			"datetime": datetime,
-			"doctype":  doctype,
-		}
-		ragMetadata, err := json.Marshal(meta)
-		if err != nil {
-			return err
-		}
-		_ = writer.WriteField("metadata", string(ragMetadata))
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
 		u.RawQuery = url.Values{
 			"dir_id": []string{dirID},
 			"name":   []string{name},
 			"md5sum": []string{md5sum},
 		}.Encode()
-
 		u.Path = fmt.Sprintf("/indexer/partition/%s/file/%s", inst.Domain, change.DocID)
+
+		// Create pipe and writer for file streaming
+		pr, pw := io.Pipe()
+		writer := multipart.NewWriter(pw)
+
+		go func() {
+			part, err := writer.CreateFormFile("file", name)
+			if err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
+			if _, err := io.Copy(part, content); err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
+
+			// No need to add filename here, it is already set through the file form
+			meta := map[string]string{
+				"md5sum":   md5sum,
+				"datetime": datetime,
+				"doctype":  doctype,
+			}
+			ragMetadata, err := json.Marshal(meta)
+			if err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
+			if err := writer.WriteField("metadata", string(ragMetadata)); err != nil {
+				_ = pw.CloseWithError(err)
+				return
+			}
+			defer pw.Close()
+			defer writer.Close()
+		}()
+
 		if isNewFile {
-			req, err = http.NewRequest(http.MethodPost, u.String(), &requestBody)
+			req, err = http.NewRequest(http.MethodPost, u.String(), pr)
 		} else {
-			req, err = http.NewRequest(http.MethodPut, u.String(), &requestBody)
+			req, err = http.NewRequest(http.MethodPut, u.String(), pr)
 		}
 		if err != nil {
 			return err
 		}
+
 		req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
 		req.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -268,8 +278,9 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 		if err != nil {
 			return err
 		}
+
 		var response map[string]interface{}
-		if err = json.NewDecoder(res.Body).Decode(&response); err != nil {
+		if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
 			return err
 		}
 		defer res.Body.Close()
