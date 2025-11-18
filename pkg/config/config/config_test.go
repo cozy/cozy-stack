@@ -125,6 +125,17 @@ func TestConfigUnmarshal(t *testing.T) {
 		},
 	}, cfg.CommonSettings)
 
+	falseVal := false
+	assert.EqualValues(t, SharingConfig{
+		AutoAcceptTrusted: true,
+		Contexts: map[string]SharingContext{
+			"my-context": {
+				AutoAcceptTrusted: &falseVal,
+				TrustedDomains:    []string{"context.example"},
+			},
+		},
+	}, cfg.Sharing)
+
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
 		"my-context": map[string]interface{}{

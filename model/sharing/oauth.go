@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	csettings "github.com/cozy/cozy-stack/model/settings"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -89,7 +90,10 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		if err != nil {
 			return err
 		}
-		var list interface{} = []Credentials{{DriveToken: token}}
+		var list interface{} = []Credentials{{
+			DriveToken: token,
+			State:      c.State,
+		}}
 		creds = &list
 	}
 
@@ -468,6 +472,43 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	s.Credentials[0].Client = creds.Client
 	s.Active = true
 	s.Initial = s.NbFiles > 0
+
+	options := config.GetConfig().Sharing.OptionsForContext(inst.ContextName)
+	// Mark the sender's contact as trusted since we accepted their sharing
+	if *options.AutoAcceptTrustedContacts && len(s.Members) > 0 && s.Members[0].Email != "" {
+		c, err := contact.FindByEmail(inst, s.Members[0].Email)
+		if err != nil {
+			// Contact doesn't exist, create it using the standardized method
+			c, err = contact.CreateFromSharingMember(inst, s.Members[0].Email, s.Members[0].Name, s.Members[0].Instance)
+			if err != nil {
+				if couchdb.IsConflictError(err) {
+					c, err = contact.FindByEmail(inst, s.Members[0].Email)
+					if err != nil {
+						inst.Logger().WithNamespace("sharing").
+							Debugf("Contact creation conflict and retry failed: %s", err)
+						c = nil
+					}
+				} else {
+					inst.Logger().WithNamespace("sharing").
+						Warnf("Could not create contact for sender: %s", err)
+				}
+			} else {
+				inst.Logger().WithNamespace("sharing").
+					Infof("Created contact for sender %s", s.Members[0].Email)
+			}
+		}
+
+		if c != nil && !c.IsTrusted() {
+			if err := c.MarkAsTrusted(inst); err != nil {
+				inst.Logger().WithNamespace("sharing").
+					Warnf("Could not mark contact as trusted: %s", err)
+			} else {
+				inst.Logger().WithNamespace("sharing").
+					Infof("Marked contact %s as trusted after accepting sharing", s.Members[0].Email)
+			}
+		}
+	}
+
 	return couchdb.UpdateDoc(inst, s)
 }
 

@@ -83,6 +83,49 @@ func CookieDomain(domain string) string {
 	return ascii
 }
 
+// NormalizeDomain normalizes a domain name by converting to lowercase,
+// trimming spaces, and removing trailing dots.
+func NormalizeDomain(domain string) string {
+	domain = strings.TrimSpace(strings.ToLower(domain))
+	domain = strings.TrimSuffix(domain, ".")
+	if domain == "" {
+		return ""
+	}
+	return domain
+}
+
+// ExtractInstanceHost extracts and normalizes the host from an instance URL.
+// It handles full URLs (https://example.com) and plain hostnames (example.com:8080),
+// and strips the port from the result.
+func ExtractInstanceHost(instanceURL string) string {
+	if instanceURL == "" {
+		return ""
+	}
+
+	// Try parsing as a full URL first
+	u, err := url.Parse(instanceURL)
+	if err == nil && u.Host != "" {
+		// Successfully parsed as URL, extract host and strip port
+		return NormalizeDomain(StripPort(u.Host))
+	}
+
+	// Fallback: treat as plain hostname (with optional path/port)
+	host := instanceURL
+
+	// Remove scheme if present but parsing failed
+	if idx := strings.Index(host, "://"); idx >= 0 {
+		host = host[idx+3:]
+	}
+
+	// Remove path
+	if idx := strings.Index(host, "/"); idx >= 0 {
+		host = host[:idx]
+	}
+
+	// Strip port and normalize
+	return NormalizeDomain(StripPort(host))
+}
+
 // SplitTrimString slices s into all substrings a s separated by sep, like
 // strings.Split. In addition it will trim all those substrings and filter out
 // the empty ones.

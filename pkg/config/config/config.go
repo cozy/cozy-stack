@@ -131,6 +131,8 @@ type Config struct {
 	Notifications          Notifications
 	Flagship               Flagship
 
+	Sharing SharingConfig
+
 	Lock              lock.Getter
 	Limiter           *limits.RateLimiter
 	SessionStorage    redis.UniversalClient
@@ -315,6 +317,49 @@ type Flagship struct {
 	PlayIntegrityDecryptionKeys   []string
 	PlayIntegrityVerificationKeys []string
 	AppleAppIDs                   []string
+}
+
+// SharingConfig contains configuration for cozy-to-cozy sharing trust rules.
+type SharingConfig struct {
+	AutoAcceptTrusted         bool                      `mapstructure:"auto_accept_trusted"`
+	AutoAcceptTrustedContacts bool                      `mapstructure:"auto_accept_trusted_contacts"`
+	Contexts                  map[string]SharingContext `mapstructure:"contexts"`
+}
+
+// SharingContext allows overriding sharing trust settings for a specific context.
+type SharingContext struct {
+	AutoAcceptTrusted         *bool    `mapstructure:"auto_accept_trusted"`
+	AutoAcceptTrustedContacts *bool    `mapstructure:"auto_accept_trusted_contacts"`
+	TrustedDomains            []string `mapstructure:"trusted_domains"`
+}
+
+// OptionsForContext returns the effective sharing configuration for a given context,
+// after applying context-specific overrides to the global settings.
+func (c SharingConfig) OptionsForContext(contextName string) SharingContext {
+	// Start with an empty context
+	var result SharingContext
+
+	// Try to get specific context, fallback to default context, or create empty
+	if contextName != "" {
+		if ctx, ok := c.Contexts[contextName]; ok {
+			result = ctx
+		} else if defaultCtx, ok := c.Contexts[DefaultInstanceContext]; ok {
+			result = defaultCtx
+		}
+	} else if defaultCtx, ok := c.Contexts[DefaultInstanceContext]; ok {
+		result = defaultCtx
+	}
+
+	// Apply global AutoAcceptTrusted if not set in context
+	if result.AutoAcceptTrusted == nil {
+		result.AutoAcceptTrusted = &c.AutoAcceptTrusted
+	}
+
+	if result.AutoAcceptTrustedContacts == nil {
+		result.AutoAcceptTrustedContacts = &c.AutoAcceptTrustedContacts
+	}
+
+	return result
 }
 
 // SMS contains the configuration to send notifications by SMS.
@@ -561,6 +606,7 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("assets_polling_interval", 2*time.Minute)
 	v.SetDefault("fs.versioning.max_number_of_versions_to_keep", 20)
 	v.SetDefault("fs.versioning.min_delay_between_two_versions", 15*time.Minute)
+	v.SetDefault("sharing.auto_accept_trusted", false)
 }
 
 func envMap() map[string]string {
@@ -638,6 +684,11 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	commonSettings, err := makeCommonSettings(v)
+	if err != nil {
+		return err
+	}
+
+	sharingCfg, err := makeSharingConfig(v)
 	if err != nil {
 		return err
 	}
@@ -951,6 +1002,7 @@ func UseViper(v *viper.Viper) error {
 			PlayIntegrityVerificationKeys: v.GetStringSlice("flagship.play_integrity_verification_keys"),
 			AppleAppIDs:                   v.GetStringSlice("flagship.apple_app_ids"),
 		},
+		Sharing:                sharingCfg,
 		Lock:                   lock.New(lockRedis),
 		SessionStorage:         sessionsRedis,
 		DownloadStorage:        downloadRedis,
@@ -1201,6 +1253,22 @@ func makeSMS(raw map[string]interface{}) map[string]SMS {
 		sms[name] = SMS{Provider: provider, URL: url, Token: token}
 	}
 	return sms
+}
+
+func makeSharingConfig(v *viper.Viper) (SharingConfig, error) {
+	var cfg SharingConfig
+
+	// Use UnmarshalKey to automatically handle type conversions
+	if err := v.UnmarshalKey("sharing", &cfg); err != nil {
+		return SharingConfig{}, fmt.Errorf("config: failed to unmarshal sharing config: %w", err)
+	}
+
+	// Ensure Contexts map is initialized even if not present in config
+	if cfg.Contexts == nil {
+		cfg.Contexts = map[string]SharingContext{}
+	}
+
+	return cfg, nil
 }
 
 func makeCommonSettings(v *viper.Viper) (map[string]CommonSettings, error) {

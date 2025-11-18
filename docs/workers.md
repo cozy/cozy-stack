@@ -348,12 +348,13 @@ in the config file, via the `fs.auto_clean_trashed_after` parameter.
 
 ## share workers
 
-The stack have 4 workers to power the sharings (internal usage only):
+The stack have 5 workers to power the sharings (internal usage only):
 
 1. `share-group`, to add/remove members to a sharing
 2. `share-track`, to update the `io.cozy.shared` database
 3. `share-replicate`, to start a replicator for most documents
 4. `share-upload`, to upload files
+5. `share-autoaccept`, to automatically accept a sharing for trusted members
 
 ### Share-group
 
@@ -371,6 +372,15 @@ optionaly the old version of this document.
 
 The message is composed of a sharing ID and a count of the number of errors
 (i.e. the number of times this job was retried).
+
+### Share-autoaccept
+
+The message is composed of the sharing ID and the OAuth state assigned to the
+recipient. When the job runs on the recipient Cozy it calls the owner's
+`/sharings/:sharing-id/answer` endpoint (the state is provided in the Drive
+sharing credentials payload in
+[PUT /sharings/:sharing-id](sharing.md#put-sharingssharing-id)) to perform the
+acceptance flow without user interaction.
 
 ## notes-save
 

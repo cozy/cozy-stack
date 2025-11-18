@@ -29,6 +29,15 @@ func init() {
 	})
 
 	job.AddWorker(&job.WorkerConfig{
+		WorkerType:   "share-autoaccept",
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 2,
+		Reserved:     true,
+		Timeout:      30 * time.Second,
+		WorkerFunc:   WorkerAutoAccept,
+	})
+
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "share-replicate",
 		Concurrency: runtime.NumCPU(),
 		// XXX the worker is not idempotent: if it fails, it adds a new job to
@@ -88,6 +97,17 @@ func WorkerTrack(ctx *job.TaskContext) error {
 	ctx.Instance.Logger().WithNamespace("share").
 		Debugf("Track %#v - %#v", msg, evt)
 	return sharing.UpdateShared(ctx.Instance, msg, evt)
+}
+
+// WorkerAutoAccept handles auto-acceptance of drive sharings from trusted senders
+func WorkerAutoAccept(ctx *job.TaskContext) error {
+	var msg sharing.AutoAcceptMsg
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	ctx.Instance.Logger().WithNamespace("share").
+		Debugf("AutoAccept drive sharing %s", msg.SharingID)
+	return sharing.HandleAutoAccept(ctx.Instance, &msg)
 }
 
 // WorkerReplicate is used for the replication of documents to the other

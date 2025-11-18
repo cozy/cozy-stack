@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -388,7 +389,15 @@ func TestSharedDrives(t *testing.T) {
 
 	config.UseTestFile(t)
 	build.BuildMode = build.ModeDev
-	config.GetConfig().Assets = "../../assets"
+	cfg := config.GetConfig()
+	cfg.Assets = "../../assets"
+	cfg.Sharing.Contexts = map[string]config.SharingContext{
+		config.DefaultInstanceContext: {
+			AutoAcceptTrustedContacts: func() *bool { b := true; return &b }(),
+			AutoAcceptTrusted:         func() *bool { b := true; return &b }(),
+			TrustedDomains:            []string{"cozy.local", "example.com"},
+		},
+	}
 	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb(t)
 	render, _ := statik.NewDirRenderer("../../assets")
@@ -599,6 +608,16 @@ func TestSharedDrives(t *testing.T) {
 
 	t.Run("AcceptSharedDrive", func(t *testing.T) {
 		acceptSharedDriveForBetty(t, acmeInstance, bettyInstance, tsA.URL, tsB.URL, sharingID)
+
+		// Verify that ACME's contact was created and marked as trusted on Betty's side after accepting the sharing
+		// This is important: when Betty accepts a sharing, she creates a contact for the sender (ACME) and marks it as trusted
+		var s sharing.Sharing
+		require.NoError(t, couchdb.GetDoc(bettyInstance, consts.Sharings, sharingID, &s))
+		require.NotEmpty(t, s.Members[0].Email, "Owner should have an email")
+
+		acmeContact, err := contact.FindByEmail(bettyInstance, s.Members[0].Email)
+		require.NoError(t, err, "ACME's contact should exist on Betty's instance after accepting")
+		require.True(t, acmeContact.IsTrusted(), "ACME's contact should be marked as trusted on Betty's side after she accepted the sharing")
 	})
 
 	t.Run("AcceptSharedDriveViaGETSetsReadyStatus", func(t *testing.T) {
@@ -1073,7 +1092,7 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			cfg := config.GetConfig()
+			cfg := cfg
 			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
 			cfg.Fs.Versioning.MaxNumberToKeep = 2
 
@@ -1108,7 +1127,7 @@ func TestSharedDrives(t *testing.T) {
 			eA := httpexpect.Default(t, tsA.URL)
 			eB := httpexpect.Default(t, tsB.URL)
 
-			cfg := config.GetConfig()
+			cfg := cfg
 			cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 0
 			cfg.Fs.Versioning.MaxNumberToKeep = 2
 
@@ -1738,4 +1757,158 @@ func mockAcmeClient(uA *url.URL) func(u *url.URL, bearer string) *client.Client 
 		}
 		return c
 	}
+}
+
+func TestDriveAutoAcceptTrusted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Owner setup
+	ownerSetup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := ownerSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.com",
+		PublicName: "Owner",
+	})
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+	tsOwner := ownerSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsOwner.Config.Handler.(*echo.Echo).Renderer = render
+	tsOwner.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsOwner.Close)
+
+	// Recipient setup with trusted domain configuration
+	recipientSetup := testutils.NewSetup(t, t.Name()+"_recipient")
+	recipientInstance := recipientSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "recipient@example.com",
+		PublicName: "Recipient",
+		Passphrase: "MyPassphrase",
+	})
+	recipientAppToken := generateAppToken(recipientInstance, "drive", consts.Files)
+	tsRecipient := recipientSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsRecipient.Config.Handler.(*echo.Echo).Renderer = render
+	tsRecipient.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsRecipient.Close)
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
+
+	// Configure auto-accept for trusted domains
+	cfg := config.GetConfig()
+	prevContexts := cfg.Sharing.Contexts
+	cfg.Sharing.Contexts = map[string]config.SharingContext{
+		config.DefaultInstanceContext: {
+			AutoAcceptTrusted: func() *bool { b := true; return &b }(),
+			TrustedDomains:    []string{"cozy.local", "example.com"},
+		},
+	}
+	t.Cleanup(func() {
+		cfg.Sharing.Contexts = prevContexts
+	})
+
+	// Create the Drive sharing using existing helper patterns
+	eOwner := httpexpect.Default(t, tsOwner.URL)
+
+	// Create a directory for the Drive sharing
+	sharedDirID := createRootDirectory(t, eOwner, "Shared Drive", ownerAppToken)
+
+	// Create a contact for the recipient
+	recipientContact := createContact(t, ownerInstance, "Recipient", "recipient@example.com")
+	recipientContact.M["cozy"] = []interface{}{
+		map[string]interface{}{"url": tsRecipient.URL, "primary": true},
+	}
+	require.NoError(t, couchdb.UpdateDoc(ownerInstance, recipientContact))
+
+	// Create the Drive sharing
+	payload := fmt.Sprintf(`{
+		"data": {
+			"type": "%s",
+			"attributes": {
+				"description": "Auto-accept test drive",
+				"drive": true,
+				"rules": [{
+					"title": "Test Drive",
+					"doctype": "%s",
+					"values": ["%s"]
+				}]
+			},
+			"relationships": {
+				"recipients": {
+					"data": [{
+						"id": "%s",
+						"type": "%s"
+					}]
+				}
+			}
+		}
+	}`, consts.Sharings, consts.Files, sharedDirID, recipientContact.ID(), recipientContact.DocType())
+
+	resp := eOwner.POST("/sharings/").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(payload)).
+		Expect().
+		Status(http.StatusCreated).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := resp.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+	// Make the recipient aware of the owner's test server URL
+	FakeOwnerInstanceForSharing(t, recipientInstance, tsOwner.URL, sharingID)
+
+	// Verify the sharing was auto-accepted on the owner's side
+	eRecipient := httpexpect.Default(t, tsRecipient.URL)
+
+	require.Eventually(t, func() bool {
+		// Check on owner side
+		ownerSharing := eOwner.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().
+			Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := ownerSharing.Value("data").Object().Value("attributes").Object()
+		members := attrs.Value("members").Array()
+
+		if members.Length().Raw() < 2 {
+			return false
+		}
+
+		// Check if recipient (member[1]) is ready
+		status := members.Value(1).Object().Value("status").String().Raw()
+		active := attrs.Value("active").Boolean().Raw()
+
+		return status == sharing.MemberStatusReady && active
+	}, 10*time.Second, 500*time.Millisecond, "Drive sharing was not auto-accepted")
+
+	// Verify the sharing is active on recipient side too
+	require.Eventually(t, func() bool {
+		recipientSharing := eRecipient.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+recipientAppToken).
+			Expect().
+			Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := recipientSharing.Value("data").Object().Value("attributes").Object()
+		return attrs.Value("active").Boolean().Raw()
+	}, 10*time.Second, 500*time.Millisecond, "Drive sharing not active on recipient side")
 }
