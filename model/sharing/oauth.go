@@ -475,7 +475,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 
 	options := config.GetConfig().Sharing.OptionsForContext(inst.ContextName)
 	// Mark the sender's contact as trusted since we accepted their sharing
-	if len(s.Members) > 0 && s.Members[0].Email != "" && *options.AutoAcceptTrustedContacts {
+	if *options.AutoAcceptTrustedContacts && len(s.Members) > 0 && s.Members[0].Email != "" {
 		c, err := contact.FindByEmail(inst, s.Members[0].Email)
 		if err != nil {
 			// Contact doesn't exist, create it using the standardized method

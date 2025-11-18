@@ -314,8 +314,8 @@ func CreateFromSharingMember(inst *instance.Instance, email, name, cozyURL strin
 	}
 	if name != "" {
 		doc.JSONDoc.M["fullname"] = name
-		doc.JSONDoc.M["displayName"] = displayName
 	}
+	doc.JSONDoc.M["displayName"] = displayName
 
 	if cozyURL != "" {
 		doc.JSONDoc.M["cozy"] = []map[string]interface{}{

@@ -51,7 +51,7 @@ func IsTrustedMember(inst *instance.Instance, member *Member) bool {
 	if options.AutoAcceptTrustedContacts == nil || !*options.AutoAcceptTrustedContacts {
 		return false
 	}
-	if isContactTrusted(inst, member) {
+	if isTrustedContact(inst, member) {
 		inst.Logger().WithNamespace("sharing-trust").
 			Infof("Member %s trusted (trusted contact)", member.Instance)
 		return true
@@ -60,8 +60,8 @@ func IsTrustedMember(inst *instance.Instance, member *Member) bool {
 	return false
 }
 
-// isContactTrusted checks if a member is marked as a trusted contact
-func isContactTrusted(inst *instance.Instance, member *Member) bool {
+// isTrustedContact checks if a member is marked as a trusted contact
+func isTrustedContact(inst *instance.Instance, member *Member) bool {
 	if member.Email == "" {
 		return false
 	}

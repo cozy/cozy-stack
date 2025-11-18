@@ -355,18 +355,8 @@ func (c SharingConfig) OptionsForContext(contextName string) SharingContext {
 		result.AutoAcceptTrusted = &c.AutoAcceptTrusted
 	}
 
-	// Ensure AutoAcceptTrusted is never nil (default to false)
-	if result.AutoAcceptTrusted == nil {
-		falseVal := false
-		result.AutoAcceptTrusted = &falseVal
-	}
-
 	if result.AutoAcceptTrustedContacts == nil {
 		result.AutoAcceptTrustedContacts = &c.AutoAcceptTrustedContacts
-	}
-	if result.AutoAcceptTrustedContacts == nil {
-		falseVal := false
-		result.AutoAcceptTrustedContacts = &falseVal
 	}
 
 	return result
