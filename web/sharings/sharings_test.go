@@ -3,6 +3,7 @@ package sharings_test
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1266,6 +1267,9 @@ func TestSharings(t *testing.T) {
 		body2.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
 		body2.Contains("Login to Twake account") // Button text
 		body2.NotContains(`/oidc/sharing?`)      // No sender OIDC
+		// Verify dynamic copyright year
+		currentYear := time.Now().Year()
+		body2.Contains("© 2000-" + strconv.Itoa(currentYear) + ", LINAGORA")
 
 		// Scenario 3: Private domain, WITH sender OIDC, NO public OIDC
 		// Expected: Only sender OIDC button shown (generic fallback text)

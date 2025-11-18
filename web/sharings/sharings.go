@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -744,6 +745,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"OIDCDisplayName": oidcDisplayName,
 		"OIDCLogoURL":     oidcLogoURL,
 		"TwakeOIDCLink":   twakeOIDCLink,
+		"Year":            time.Now().Year(),
 		"URLError":        code == http.StatusBadRequest,
 		"NotEmailError":   code == http.StatusPreconditionFailed,
 	})
