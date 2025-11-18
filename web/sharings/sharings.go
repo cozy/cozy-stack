@@ -704,7 +704,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 
 	// Show "Login with Twake Account" button always if public OIDC is configured
 	twakeOIDCLink := ""
-	if publicOIDC, ok := config.GetPublicOIDC(); ok {
+	if publicOIDC, ok := config.GetPublicOIDC(inst.ContextName); ok {
 		if clientID, _ := publicOIDC["client_id"].(string); clientID != "" {
 			q := url.Values{
 				"sharingID": {sharingID},

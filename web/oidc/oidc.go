@@ -782,8 +782,8 @@ func getGenericConfig(context string) (*Config, error) {
 }
 
 func getPublicOIDCConfig() (*Config, string, error) {
-	cfg := config.GetConfig()
-	contextName := cfg.PublicOIDCContext
+	// Get public OIDC context name from default context
+	contextName := config.GetPublicOIDCContext(config.DefaultInstanceContext)
 	if contextName == "" {
 		return nil, "", errors.New("No public OIDC context is configured")
 	}

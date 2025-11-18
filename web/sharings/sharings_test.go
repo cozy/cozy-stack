@@ -1191,10 +1191,29 @@ func TestSharings(t *testing.T) {
 		if conf.Authentication == nil {
 			conf.Authentication = make(map[string]interface{})
 		}
+		if conf.Contexts == nil {
+			conf.Contexts = make(map[string]interface{})
+		}
+
+		// Helper to set public_oidc_context in a context
+		setPublicOIDCContext := func(contextName, publicOIDCContext string) {
+			ctxData, ok := conf.Contexts[contextName].(map[string]interface{})
+			if !ok {
+				ctxData = make(map[string]interface{})
+			}
+			ctxData["public_oidc_context"] = publicOIDCContext
+			conf.Contexts[contextName] = ctxData
+		}
+
+		// Helper to remove public_oidc_context from a context
+		clearPublicOIDCContext := func(contextName string) {
+			if ctxData, ok := conf.Contexts[contextName].(map[string]interface{}); ok {
+				delete(ctxData, "public_oidc_context")
+			}
+		}
 
 		eA := httpexpect.Default(t, tsA.URL)
 		originalContext := aliceInstance.ContextName
-		originalPublicOIDCContext := conf.PublicOIDCContext
 		originalPublicDomains := consts.PublicSaaSDomains
 
 		// Helper to make domain public for testing
@@ -1211,7 +1230,7 @@ func TestSharings(t *testing.T) {
 		// Expected: No OIDC buttons shown
 		t.Logf("Scenario 1: Private domain, NO sender OIDC, NO public OIDC")
 		aliceInstance.ContextName = originalContext
-		conf.PublicOIDCContext = ""
+		clearPublicOIDCContext(config.DefaultInstanceContext)
 		require.NoError(t, instance.Update(aliceInstance))
 
 		sharingID1, state1 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario1")
@@ -1236,7 +1255,7 @@ func TestSharings(t *testing.T) {
 				"token_url":     "https://twake.app/oauth/token",
 			},
 		}
-		conf.PublicOIDCContext = publicContextName
+		setPublicOIDCContext(config.DefaultInstanceContext, publicContextName)
 
 		sharingID2, state2 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario2")
 		body2 := eA.GET("/sharings/"+sharingID2+"/discovery").
@@ -1251,7 +1270,7 @@ func TestSharings(t *testing.T) {
 		// Scenario 3: Private domain, WITH sender OIDC, NO public OIDC
 		// Expected: Only sender OIDC button shown (generic fallback text)
 		t.Logf("Scenario 3: Private domain, WITH sender OIDC, NO public OIDC")
-		conf.PublicOIDCContext = ""
+		clearPublicOIDCContext(config.DefaultInstanceContext)
 		senderOIDCContext := "test-sender-oidc"
 		conf.Authentication[senderOIDCContext] = map[string]interface{}{
 			"oidc": map[string]interface{}{
@@ -1309,7 +1328,7 @@ func TestSharings(t *testing.T) {
 		// Scenario 4: Private domain, WITH sender OIDC (no branding), WITH public OIDC
 		// Expected: Both buttons shown (sender button without branding)
 		t.Logf("Scenario 4: Private domain, WITH sender OIDC (no branding), WITH public OIDC")
-		conf.PublicOIDCContext = publicContextName
+		setPublicOIDCContext(config.DefaultInstanceContext, publicContextName)
 		// Reset to non-branded OIDC context
 		aliceInstance.ContextName = senderOIDCContext
 		require.NoError(t, instance.Update(aliceInstance))
@@ -1353,7 +1372,7 @@ func TestSharings(t *testing.T) {
 		// Cleanup
 		aliceInstance.ContextName = originalContext
 		require.NoError(t, instance.Update(aliceInstance))
-		conf.PublicOIDCContext = originalPublicOIDCContext
+		clearPublicOIDCContext(config.DefaultInstanceContext)
 		consts.PublicSaaSDomains = originalPublicDomains
 	})
 }

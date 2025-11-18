@@ -141,14 +141,13 @@ type Config struct {
 
 	CacheStorage cache.Cache
 
-	Contexts          map[string]interface{}
-	Authentication    map[string]interface{}
-	PublicOIDCContext string
-	RAGServers        map[string]RAGServer
-	CommonSettings    map[string]CommonSettings
-	Office            map[string]Office
-	Registries        map[string][]*url.URL
-	Clouderies        map[string]ClouderyConfig
+	Contexts       map[string]interface{}
+	Authentication map[string]interface{}
+	RAGServers     map[string]RAGServer
+	CommonSettings map[string]CommonSettings
+	Office         map[string]Office
+	Registries     map[string][]*url.URL
+	Clouderies     map[string]ClouderyConfig
 
 	RabbitMQ RabbitMQ
 
@@ -533,12 +532,43 @@ func GetFranceConnect(contextName string) (map[string]interface{}, bool) {
 	return config, ok
 }
 
+// GetPublicOIDCContext returns the context name for public OIDC from the specific context
+// or falls back to the default context if not set
+func GetPublicOIDCContext(contextName string) string {
+	if config == nil || config.Contexts == nil {
+		return ""
+	}
+
+	// Try to get public_oidc_context from the specific context
+	if contextName != "" {
+		if ctxData, ok := config.Contexts[contextName].(map[string]interface{}); ok {
+			if publicOIDCContext, ok := ctxData["public_oidc_context"].(string); ok && publicOIDCContext != "" {
+				return publicOIDCContext
+			}
+		}
+	}
+
+	// Fall back to default context
+	if ctxData, ok := config.Contexts[DefaultInstanceContext].(map[string]interface{}); ok {
+		if publicOIDCContext, ok := ctxData["public_oidc_context"].(string); ok && publicOIDCContext != "" {
+			return publicOIDCContext
+		}
+	}
+
+	return ""
+}
+
 // GetPublicOIDC returns the public Twake OIDC configuration from the configured context
-func GetPublicOIDC() (map[string]interface{}, bool) {
-	if config.Authentication == nil || config.PublicOIDCContext == "" {
+// If contextName is empty, it uses the default context
+func GetPublicOIDC(contextName string) (map[string]interface{}, bool) {
+	if contextName == "" {
+		contextName = DefaultInstanceContext
+	}
+	publicOIDCContext := GetPublicOIDCContext(contextName)
+	if config.Authentication == nil || publicOIDCContext == "" {
 		return nil, false
 	}
-	publicAuth, ok := config.Authentication[config.PublicOIDCContext].(map[string]interface{})
+	publicAuth, ok := config.Authentication[publicOIDCContext].(map[string]interface{})
 	if !ok {
 		return nil, false
 	}
@@ -1027,7 +1057,6 @@ func UseViper(v *viper.Viper) error {
 		CampaignMailPerContext: v.GetStringMap("campaign_mail.contexts"),
 		Contexts:               v.GetStringMap("contexts"),
 		Authentication:         v.GetStringMap("authentication"),
-		PublicOIDCContext:      v.GetString("public_oidc_context"),
 		Office:                 office,
 		Registries:             regs,
 		AuthorizedForConfirm:   v.GetStringSlice("authorized_hosts_for_confirm_auth"),
