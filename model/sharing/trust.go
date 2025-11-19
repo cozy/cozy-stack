@@ -19,9 +19,9 @@ func IsTrustedMember(inst *instance.Instance, member *Member) bool {
 	if inst == nil || member == nil {
 		return false
 	}
-	options := config.GetConfig().Sharing.OptionsForContext(inst.ContextName)
+	options := config.GetSharingConfig(inst.ContextName)
 
-	if options.AutoAcceptTrusted == nil || !*options.AutoAcceptTrusted {
+	if !options.AutoAcceptTrusted {
 		return false
 	}
 
@@ -48,7 +48,7 @@ func IsTrustedMember(inst *instance.Instance, member *Member) bool {
 	}
 
 	// Check if this member is a trusted contact
-	if options.AutoAcceptTrustedContacts == nil || !*options.AutoAcceptTrustedContacts {
+	if !options.AutoAcceptTrustedContacts {
 		return false
 	}
 	if isTrustedContact(inst, member) {

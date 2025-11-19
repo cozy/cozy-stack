@@ -473,9 +473,9 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	s.Active = true
 	s.Initial = s.NbFiles > 0
 
-	options := config.GetConfig().Sharing.OptionsForContext(inst.ContextName)
+	options := config.GetSharingConfig(inst.ContextName)
 	// Mark the sender's contact as trusted since we accepted their sharing
-	if *options.AutoAcceptTrustedContacts && len(s.Members) > 0 && s.Members[0].Email != "" {
+	if options.AutoAcceptTrustedContacts && len(s.Members) > 0 && s.Members[0].Email != "" {
 		c, err := contact.FindByEmail(inst, s.Members[0].Email)
 		if err != nil {
 			// Contact doesn't exist, create it using the standardized method

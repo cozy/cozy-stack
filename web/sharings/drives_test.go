@@ -391,11 +391,13 @@ func TestSharedDrives(t *testing.T) {
 	build.BuildMode = build.ModeDev
 	cfg := config.GetConfig()
 	cfg.Assets = "../../assets"
-	cfg.Sharing.Contexts = map[string]config.SharingContext{
-		config.DefaultInstanceContext: {
-			AutoAcceptTrustedContacts: func() *bool { b := true; return &b }(),
-			AutoAcceptTrusted:         func() *bool { b := true; return &b }(),
-			TrustedDomains:            []string{"cozy.local", "example.com"},
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted_contacts": true,
+				"auto_accept_trusted":          true,
+				"trusted_domains":              []interface{}{"cozy.local", "example.com"},
+			},
 		},
 	}
 	_ = web.LoadSupportedLocales()
@@ -1811,15 +1813,17 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 
 	// Configure auto-accept for trusted domains
 	cfg := config.GetConfig()
-	prevContexts := cfg.Sharing.Contexts
-	cfg.Sharing.Contexts = map[string]config.SharingContext{
-		config.DefaultInstanceContext: {
-			AutoAcceptTrusted: func() *bool { b := true; return &b }(),
-			TrustedDomains:    []string{"cozy.local", "example.com"},
+	prevContexts := cfg.Contexts
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+				"trusted_domains":     []interface{}{"cozy.local", "example.com"},
+			},
 		},
 	}
 	t.Cleanup(func() {
-		cfg.Sharing.Contexts = prevContexts
+		cfg.Contexts = prevContexts
 	})
 
 	// Create the Drive sharing using existing helper patterns
