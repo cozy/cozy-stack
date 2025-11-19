@@ -125,16 +125,18 @@ func TestConfigUnmarshal(t *testing.T) {
 		},
 	}, cfg.CommonSettings)
 
-	falseVal := false
-	assert.EqualValues(t, SharingConfig{
-		AutoAcceptTrusted: true,
-		Contexts: map[string]SharingContext{
-			"my-context": {
-				AutoAcceptTrusted: &falseVal,
-				TrustedDomains:    []string{"context.example"},
-			},
-		},
-	}, cfg.Sharing)
+	// Test GetSharingConfig for my-context
+	myContextSharing := GetSharingConfig("my-context")
+	assert.Equal(t, true, myContextSharing.AutoAcceptTrusted)
+	assert.Equal(t, []string{"linagora.com"}, myContextSharing.TrustedDomains)
+
+	// Test GetSharingConfig for default context
+	defaultSharing := GetSharingConfig("default")
+	assert.Equal(t, true, defaultSharing.AutoAcceptTrusted)
+
+	// Test GetSharingConfig for non-existent context falls back to default
+	fallbackSharing := GetSharingConfig("non-existent")
+	assert.Equal(t, true, fallbackSharing.AutoAcceptTrusted)
 
 	// Contexts
 	assert.EqualValues(t, map[string]interface{}{
@@ -149,6 +151,10 @@ func TestConfigUnmarshal(t *testing.T) {
 				map[string]interface{}{"hide_konnector_errors": true},
 				map[string]interface{}{"home.konnectors.hide-errors": true},
 				map[string]interface{}{"home_hidden_apps": []interface{}{"foobar"}},
+			},
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+				"trusted_domains":     []interface{}{"linagora.com"},
 			},
 			"logos": map[string]interface{}{
 				"coachco2": map[string]interface{}{
@@ -191,6 +197,11 @@ func TestConfigUnmarshal(t *testing.T) {
 						},
 					},
 				},
+			},
+		},
+		"default": map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
 			},
 		},
 	}, cfg.Contexts)

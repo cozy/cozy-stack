@@ -530,6 +530,25 @@ contexts:
           - src: /logos/1_partner.png
             alt: Partner n°1
             type: secondary
+    # Sharing configuration for cozy-to-cozy sharing trust rules
+    sharing:
+      # Auto-accept sharing invitations from trusted domains or contacts(default: false)
+      auto_accept_trusted: true
+      # Auto-accept sharing invitations from trusted contacts (default: false)
+      auto_accept_trusted_contacts: true
+      # List of trusted domains for automatic sharing acceptance
+      trusted_domains:
+        - example.com
+        - mycompany.twake.app
+
+  # Default context - used as fallback when instance context is not specified
+  # or when a context doesn't have sharing configuration
+  default:
+    sharing:
+      # Conservative defaults for production
+      auto_accept_trusted: false
+      auto_accept_trusted_contacts: false
+      trusted_domains: []
 
 rabbitmq:
   enabled: true

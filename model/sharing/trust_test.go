@@ -18,12 +18,16 @@ func TestIsTrustedMember(t *testing.T) {
 	inst := setup.GetTestInstance()
 
 	cfg := config.GetConfig()
-	prevSharing := cfg.Sharing
-	cfg.Sharing = config.SharingConfig{
-		AutoAcceptTrusted: true,
-		Contexts:          map[string]config.SharingContext{},
+	prevContexts := cfg.Contexts
+	// Initialize contexts with sharing config
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+			},
+		},
 	}
-	t.Cleanup(func() { cfg.Sharing = prevSharing })
+	t.Cleanup(func() { cfg.Contexts = prevContexts })
 
 	inst.Domain = "owner.example.com"
 
@@ -40,10 +44,14 @@ func TestIsTrustedMember(t *testing.T) {
 	t.Run("Scenario 1: B2C SaaS (twake.app) - users DON'T trust each other", func(t *testing.T) {
 		// In B2C SaaS, users like alice.twake.app and bob.twake.app should NOT trust each other
 		// Configuration: Don't add twake.app to TrustedDomains
-		cfg.Sharing.Contexts[config.DefaultInstanceContext] = config.SharingContext{
-			TrustedDomains: []string{}, // Empty - no trust between users
+		prevDefault := cfg.Contexts[config.DefaultInstanceContext]
+		cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+				"trusted_domains":     []interface{}{}, // Empty - no trust between users
+			},
 		}
-		t.Cleanup(func() { delete(cfg.Sharing.Contexts, config.DefaultInstanceContext) })
+		t.Cleanup(func() { cfg.Contexts[config.DefaultInstanceContext] = prevDefault })
 
 		inst.Domain = "alice.twake.app"
 		member := &Member{Email: "bob@twake.app", Instance: "https://bob.twake.app"}
@@ -56,10 +64,14 @@ func TestIsTrustedMember(t *testing.T) {
 		// In B2B SaaS, users within the same organization should trust each other
 		// Organization: linagora.twake.app
 		// Users: alice.linagora.twake.app, bob.linagora.twake.app
-		cfg.Sharing.Contexts[config.DefaultInstanceContext] = config.SharingContext{
-			TrustedDomains: []string{"linagora.twake.app"},
+		prevDefault := cfg.Contexts[config.DefaultInstanceContext]
+		cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+				"trusted_domains":     []interface{}{"linagora.twake.app"},
+			},
 		}
-		t.Cleanup(func() { delete(cfg.Sharing.Contexts, config.DefaultInstanceContext) })
+		t.Cleanup(func() { cfg.Contexts[config.DefaultInstanceContext] = prevDefault })
 
 		t.Run("users in same org trust each other", func(t *testing.T) {
 			inst.Domain = "alice.linagora.twake.app"
@@ -88,10 +100,14 @@ func TestIsTrustedMember(t *testing.T) {
 
 	t.Run("Scenario 3: On-premise - all users trust each other", func(t *testing.T) {
 		// On-premise deployment where all users under *.linagora.com trust each other
-		cfg.Sharing.Contexts[config.DefaultInstanceContext] = config.SharingContext{
-			TrustedDomains: []string{"linagora.com"},
+		prevDefault := cfg.Contexts[config.DefaultInstanceContext]
+		cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted": true,
+				"trusted_domains":     []interface{}{"linagora.com"},
+			},
 		}
-		t.Cleanup(func() { delete(cfg.Sharing.Contexts, config.DefaultInstanceContext) })
+		t.Cleanup(func() { cfg.Contexts[config.DefaultInstanceContext] = prevDefault })
 
 		t.Run("all users under same domain trust each other", func(t *testing.T) {
 			inst.Domain = "alice.linagora.com"
@@ -121,11 +137,15 @@ func TestIsTrustedMember(t *testing.T) {
 	t.Run("Contact-based trust", func(t *testing.T) {
 		// Configure with NO trusted domains
 
-		cfg.Sharing.Contexts[config.DefaultInstanceContext] = config.SharingContext{
-			TrustedDomains:            []string{},
-			AutoAcceptTrustedContacts: &[]bool{true}[0],
+		prevDefault := cfg.Contexts[config.DefaultInstanceContext]
+		cfg.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted":          true,
+				"trusted_domains":              []interface{}{},
+				"auto_accept_trusted_contacts": true,
+			},
 		}
-		t.Cleanup(func() { delete(cfg.Sharing.Contexts, config.DefaultInstanceContext) })
+		t.Cleanup(func() { cfg.Contexts[config.DefaultInstanceContext] = prevDefault })
 
 		t.Run("untrusted contact from untrusted domain", func(t *testing.T) {
 			inst.Domain = "alice.example.com"

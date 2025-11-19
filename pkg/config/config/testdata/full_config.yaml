@@ -93,14 +93,6 @@ move:
 konnectors:
   cmd: some-cmd
 
-sharing:
-  auto_accept_trusted: true
-  contexts:
-    my-context:
-      auto_accept_trusted: false
-      trusted_domains:
-        - context.example
-
 registries:
   default: []
   example:
@@ -255,3 +247,11 @@ contexts:
           - src: /logos/1_partner.png
             alt: Partner n°1
             type: secondary
+    sharing:
+      auto_accept_trusted: true
+      trusted_domains:
+        - linagora.com
+
+  default:
+    sharing:
+      auto_accept_trusted: true
