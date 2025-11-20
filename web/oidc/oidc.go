@@ -187,7 +187,10 @@ func Redirect(c echo.Context) error {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
 
-	if state.OIDCContext != "" {
+	// The delegated code flow is used for Bitwarden-style flows with a Redirect URL.
+	// For sharing flows (where SharingID is set), we skip this block and use the
+	// regular flow that redirects to the instance's /oidc/login endpoint.
+	if state.OIDCContext != "" && state.SharingID == "" {
 		conf, err := getGenericConfig(state.OIDCContext)
 		if err != nil {
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
