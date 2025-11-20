@@ -680,10 +680,12 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	}
 
 	// Show sender's OIDC button only if sender is on a private domain and has OIDC configured
+	// and if it's different from the public OIDC context (to avoid showing two identical buttons)
 	oidcLink := ""
 	oidcDisplayName := ""
 	oidcLogoURL := ""
-	if !isPublicDomain {
+	publicOIDCContext := config.GetPublicOIDCContext(inst.ContextName)
+	if !isPublicDomain && inst.ContextName != publicOIDCContext {
 		if oidc, ok := config.GetOIDC(inst.ContextName); ok {
 			if clientID, _ := oidc["client_id"].(string); clientID != "" {
 				q := url.Values{
