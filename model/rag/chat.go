@@ -220,7 +220,11 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		"logprobs":    LogProbs,
 	}
 
-	res, err := callRAGQuery(inst, payload)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	res, err := CallRAGQuery(inst, body, "v1/chat/completions", echo.MIMEApplicationJSON)
 	if err != nil {
 		return err
 	}
@@ -314,7 +318,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	return couchdb.UpdateDoc(inst, &chat)
 }
 
-func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*http.Response, error) {
+func CallRAGQuery(inst *instance.Instance, payload []byte, path string, contentType string) (*http.Response, error) {
 	ragServer := inst.RAGServer()
 	if ragServer.URL == "" {
 		return nil, errors.New("no RAG server configured")
@@ -324,17 +328,13 @@ func callRAGQuery(inst *instance.Instance, payload map[string]interface{}) (*htt
 		return nil, err
 	}
 
-	u.Path = "v1/chat/completions"
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(body))
+	u.Path = path
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+ragServer.APIKey)
-	req.Header.Add("Content-Type", echo.MIMEApplicationJSON)
+	req.Header.Add("Content-Type", contentType)
 	return http.DefaultClient.Do(req)
 }
 

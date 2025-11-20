@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -29,7 +30,49 @@ func Chat(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusAccepted, chat, nil)
 }
 
+func callAI(c echo.Context, path string) (*http.Response, error) {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.ChatConversations); err != nil {
+		return nil, middlewares.ErrForbidden
+	}
+	if path != "v1/tools/execute" && path != "v1/chat/completions" {
+		return nil, echo.NewHTTPError(http.StatusForbidden, "Invalid path")
+	}
+	inst := middlewares.GetInstance(c)
+
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Unable to read request body")
+	}
+	contentType := c.Request().Header.Get("Content-Type")
+	// TODO: handle streaming response
+	res, err := rag.CallRAGQuery(inst, body, path, contentType)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func OpenAICompletion(c echo.Context) error {
+	res, err := callAI(c, "v1/chat/completions")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return c.Stream(res.StatusCode, "application/json", res.Body)
+}
+
+func ExecuteTool(c echo.Context) error {
+	res, err := callAI(c, "v1/tools/execute")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return c.Stream(res.StatusCode, "application/json", res.Body)
+}
+
 // Routes sets the routing for the AI tasks.
 func Routes(router *echo.Group) {
 	router.POST("/chat/conversations/:id", Chat)
+	router.POST("/v1/chat/completions", OpenAICompletion)
+	router.POST("/v1/tools/execute", ExecuteTool)
 }
