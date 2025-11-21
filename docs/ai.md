@@ -35,9 +35,100 @@ In practice, when files are uploaded/modified/deleted, the trigger will create
 a job for the index worker (with debounce). The index worker will look at the
 changed feed, and will call the RAG for each entry in the changes feed.
 
-## Chat
+## openRAG
 
-When a user starts a chat, their prompts are sent to the RAG that can use the
+Some openRAG API are directly exposed through cozy-stack.
+Note the JSON-API format is not used here as we follow the openRAG format.
+
+### POST /ai/v1/chat/completions
+
+This route directly follows the [openAI chat completion AI](https://platform.openai.com/docs/api-reference/chat/create).
+
+#### Request
+
+POST /ai/v1/chat/completions HTTP/1.1
+Content-Type: application/json
+
+```json
+{
+  "messages": [
+    { "role": "user", "content": "Hello there, what's in your mind?" }
+  ],
+"temperature": 0.3
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "id": "chatcmpl-43036e48fbac40fead606e8692a7b408",
+  "created": 1763657211,
+  "model": null,
+  "object": "chat.completion",
+  "system_fingerprint": null,
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "As an artificial intelligence language model, I don't have personal thoughts or emotions like humans do. My purpose is to assist and provide information to the best of my abilities based on the data I have been trained on. Is there something specific you would like to know or discuss?",
+        "role": "assistant",
+        "tool_calls": null,
+        "function_call": null
+      }
+    }
+  ],
+  "usage": {
+    "completion_tokens": 56,
+    "prompt_tokens": 28,
+    "total_tokens": 84,
+    "completion_tokens_details": null,
+    "prompt_tokens_details": null
+  },
+  "service_tier": null,
+  "prompt_logprobs": null,
+  "extra": "{\"sources\": []}"
+}
+```
+
+### POST /ai/v1/tools/execute
+
+This route directly calls the [openRAG](https://github.com/linagora/openrag) tools API.
+
+#### Request
+
+POST /ai/v1/tools/execute HTTP/1.1
+Content-Type: multipart/form-data
+
+```
+file=<file content>
+tool={"name": "extractText"}
+metadata={"mime":"application/pdf","name":"myfile.pdf"}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "message": "Some file content"
+}
+```
+
+
+## Assistant chat
+
+When a user starts a chat from the assistant, their prompts are sent to the RAG that can use the
 vector database to find relevant documents (technically, only some parts of
 the documents called chunks). Those documents are added to the prompt, so
 that the LLM can use them as a context when answering.
