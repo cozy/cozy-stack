@@ -73,7 +73,7 @@ func StartFranceConnect(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, u)
 }
 
-// Sharing is the route to use the SSO to accept a shared drive.
+// Sharing is the route to use the SSO to accept a sharing.
 func Sharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getGenericConfig(inst.ContextName)
@@ -88,7 +88,7 @@ func Sharing(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, u)
 }
 
-// SharingPublic is the route to use the public Twake SSO to accept a shared drive.
+// SharingPublic is the route to use the public Twake SSO to accept a sharing.
 func SharingPublic(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, contextName, err := getPublicOIDCConfig()
