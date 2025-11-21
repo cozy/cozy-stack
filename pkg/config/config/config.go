@@ -532,6 +532,50 @@ func GetFranceConnect(contextName string) (map[string]interface{}, bool) {
 	return config, ok
 }
 
+// GetPublicOIDCContext returns the context name for public OIDC from the specific context
+// or falls back to the default context if not set
+func GetPublicOIDCContext(contextName string) string {
+	if config == nil || config.Contexts == nil {
+		return ""
+	}
+
+	// Try to get public_oidc_context from the specific context
+	if contextName != "" {
+		if ctxData, ok := config.Contexts[contextName].(map[string]interface{}); ok {
+			if publicOIDCContext, ok := ctxData["public_oidc_context"].(string); ok && publicOIDCContext != "" {
+				return publicOIDCContext
+			}
+		}
+	}
+
+	// Fall back to default context
+	if ctxData, ok := config.Contexts[DefaultInstanceContext].(map[string]interface{}); ok {
+		if publicOIDCContext, ok := ctxData["public_oidc_context"].(string); ok && publicOIDCContext != "" {
+			return publicOIDCContext
+		}
+	}
+
+	return ""
+}
+
+// GetPublicOIDC returns the public Twake OIDC configuration from the configured context
+// If contextName is empty, it uses the default context
+func GetPublicOIDC(contextName string) (map[string]interface{}, bool) {
+	if contextName == "" {
+		contextName = DefaultInstanceContext
+	}
+	publicOIDCContext := GetPublicOIDCContext(contextName)
+	if config.Authentication == nil || publicOIDCContext == "" {
+		return nil, false
+	}
+	publicAuth, ok := config.Authentication[publicOIDCContext].(map[string]interface{})
+	if !ok {
+		return nil, false
+	}
+	oidcConfig, ok := publicAuth["oidc"].(map[string]interface{})
+	return oidcConfig, ok
+}
+
 var defaultPasswordResetInterval = 15 * time.Minute
 
 // PasswordResetInterval returns the minimal delay between two password reset

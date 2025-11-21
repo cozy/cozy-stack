@@ -1156,6 +1156,24 @@ msgstr "Khám phá Twake ngay!"
 msgid "Sharing Forgotten URL"
 msgstr "Tôi đã quên địa chỉ của mình"
 
+msgid "Sharing Connect with Twake Account"
+msgstr "Login to Twake account"
+
+msgid "Sharing Connect with OIDC"
+msgstr "Connect with OIDC"
+
+msgid "Sharing Login with"
+msgstr "Đăng nhập với"
+
+msgid "Sharing Account"
+msgstr "tài khoản"
+
+msgid "Sharing Twake ID Description"
+msgstr "Twake ID là tài khoản truy cập duy nhất của bạn vào tất cả các dịch vụ Chat, Mail và Drive của chúng tôi"
+
+msgid "Sharing Twake ID Features"
+msgstr "Mã hóa đầu cuối, các tính năng cộng tác để làm việc nhóm an toàn và hiệu quả"
+
 msgid "Notifications Disk Quota Close Title"
 msgstr "Bạn đã sử dụng 90% dung lượng lưu trữ"
 

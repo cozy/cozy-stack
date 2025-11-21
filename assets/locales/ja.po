@@ -617,6 +617,24 @@ msgstr "今すぐ Twake を見つけてください!"
 msgid "Sharing Forgotten URL"
 msgstr "URL をお忘れですか? 慌てないでください"
 
+msgid "Sharing Connect with Twake Account"
+msgstr "Login to Twake account"
+
+msgid "Sharing Connect with OIDC"
+msgstr "Connect with OIDC"
+
+msgid "Sharing Login with"
+msgstr "ログイン："
+
+msgid "Sharing Account"
+msgstr "アカウント"
+
+msgid "Sharing Twake ID Description"
+msgstr "Twake ID is your one entry access to all our services: Chat, Mail and Drive"
+
+msgid "Sharing Twake ID Features"
+msgstr "End-to-end encryption, collaborative features for secure and efficient teamwork"
+
 msgid "Sharing Forgotten URL email"
 msgstr "メールの受信トレイで \"Twake\" を検索してください。"
 

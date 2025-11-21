@@ -19,14 +19,16 @@ const (
 )
 
 type stateHolder struct {
-	id               string
-	expiresAt        int64
-	Provider         ProviderOIDC
-	Instance         string
-	Redirect         string
-	Nonce            string
-	Confirm          string
-	BitwardenContext string
+	id           string
+	expiresAt    int64
+	Provider     ProviderOIDC
+	Instance     string
+	Redirect     string
+	Nonce        string
+	Confirm      string
+	OIDCContext  string
+	SharingID    string
+	SharingState string
 }
 
 type ProviderOIDC int
@@ -36,17 +38,31 @@ const (
 	FranceConnectProvider
 )
 
-func newStateHolder(domain, redirect, confirm, bitwardenContext string, provider ProviderOIDC) *stateHolder {
+func newStateHolder(domain, redirect, confirm, oidcContext string, provider ProviderOIDC) *stateHolder {
 	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	return &stateHolder{
-		id:               id,
-		Provider:         provider,
-		Instance:         domain,
-		Redirect:         redirect,
-		Confirm:          confirm,
-		Nonce:            nonce,
-		BitwardenContext: bitwardenContext,
+		id:          id,
+		Provider:    provider,
+		Instance:    domain,
+		Redirect:    redirect,
+		Confirm:     confirm,
+		Nonce:       nonce,
+		OIDCContext: oidcContext,
+	}
+}
+
+func newSharingStateHolder(domain, sharingID, sharingState string, provider ProviderOIDC, contextName string) *stateHolder {
+	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
+	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
+	return &stateHolder{
+		id:           id,
+		Provider:     provider,
+		Instance:     domain,
+		Nonce:        nonce,
+		SharingID:    sharingID,
+		SharingState: sharingState,
+		OIDCContext:  contextName,
 	}
 }
 
