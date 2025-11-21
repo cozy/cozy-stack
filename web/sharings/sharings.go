@@ -669,23 +669,13 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	} else if parts := strings.SplitN(fqdn, ".", 2); len(parts) == 2 {
 		slug, domain = parts[0], parts[1]
 	}
-	// Check if sender is on a public or private domain
-	senderDomain := inst.ContextualDomain()
-	isPublicDomain := false
-	for _, publicDomain := range consts.PublicSaaSDomains {
-		if strings.HasSuffix(senderDomain, publicDomain) {
-			isPublicDomain = true
-			break
-		}
-	}
-
-	// Show sender's OIDC button only if sender is on a private domain and has OIDC configured
-	// and if it's different from the public OIDC context (to avoid showing two identical buttons)
+	// Show sender's OIDC button only if sender is not in public OIDC context
+	// and has OIDC configured (to avoid showing two identical buttons)
 	oidcLink := ""
 	oidcDisplayName := ""
 	oidcLogoURL := ""
 	publicOIDCContext := config.GetPublicOIDCContext(inst.ContextName)
-	if !isPublicDomain && inst.ContextName != publicOIDCContext {
+	if inst.ContextName != publicOIDCContext {
 		if oidc, ok := config.GetOIDC(inst.ContextName); ok {
 			if clientID, _ := oidc["client_id"].(string); clientID != "" {
 				q := url.Values{

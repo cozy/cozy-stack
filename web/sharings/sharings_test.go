@@ -1215,17 +1215,6 @@ func TestSharings(t *testing.T) {
 
 		eA := httpexpect.Default(t, tsA.URL)
 		originalContext := aliceInstance.ContextName
-		originalPublicDomains := consts.PublicSaaSDomains
-
-		// Helper to make domain public for testing
-		makePublicDomain := func() {
-			currentDomain := aliceInstance.ContextualDomain()
-			parts := strings.Split(currentDomain, ".")
-			if len(parts) >= 2 {
-				topDomain := parts[len(parts)-2] + "." + parts[len(parts)-1]
-				consts.PublicSaaSDomains = append(consts.PublicSaaSDomains, topDomain)
-			}
-		}
 
 		// Scenario 1: Private domain, NO sender OIDC, NO public OIDC
 		// Expected: No OIDC buttons shown
@@ -1348,19 +1337,11 @@ func TestSharings(t *testing.T) {
 		body4.Contains("Login to Twake account") // Twake button text
 		body4.Contains("Connect with OIDC")      // Sender button text (generic, no branding)
 
-		// Scenario 5: Public domain, WITH sender OIDC, WITH public OIDC
-		// Expected: Only Twake button (sender OIDC disabled for public domains)
-		t.Logf("Scenario 5: Public domain, WITH sender OIDC, WITH public OIDC")
-		makePublicDomain()
-		conf.Authentication["test-public-sender"] = map[string]interface{}{
-			"oidc": map[string]interface{}{
-				"client_id":     "public-sender-oidc",
-				"client_secret": "public-sender-secret",
-				"authorize_url": "https://public-oidc.example.com/authorize",
-				"token_url":     "https://public-oidc.example.com/token",
-			},
-		}
-		aliceInstance.ContextName = "test-public-sender"
+		// Scenario 5: Sender context IS public OIDC context
+		// Expected: Only Twake button shown (avoid duplicate buttons)
+		t.Logf("Scenario 5: Sender context IS public OIDC context")
+		// Set sender's context to be the same as the public OIDC context
+		aliceInstance.ContextName = publicContextName
 		require.NoError(t, instance.Update(aliceInstance))
 
 		sharingID5, state5 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario5")
@@ -1371,30 +1352,12 @@ func TestSharings(t *testing.T) {
 
 		body5.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
 		body5.Contains("Login to Twake account") // Button text
-		body5.NotContains(`/oidc/sharing?`)      // Sender OIDC disabled (public domain)
-
-		// Scenario 6: Private domain, sender context IS public OIDC context
-		// Expected: Only Twake button shown (avoid duplicate buttons)
-		t.Logf("Scenario 6: Private domain, sender context IS public OIDC context")
-		consts.PublicSaaSDomains = originalPublicDomains // Reset to private domain
-		// Set sender's context to be the same as the public OIDC context
-		aliceInstance.ContextName = publicContextName
-
-		sharingID6, state6 := createSharingAndGetState(t, eA, aliceInstance, aliceAppToken, "scenario6")
-		body6 := eA.GET("/sharings/"+sharingID6+"/discovery").
-			WithQuery("state", state6).
-			Expect().Status(200).
-			Body()
-
-		body6.Contains(`/oidc/sharing/public`)   // Public Twake OIDC shown
-		body6.Contains("Login to Twake account") // Button text
-		body6.NotContains(`/oidc/sharing?`)      // Sender OIDC NOT shown (same as public OIDC)
+		body5.NotContains(`/oidc/sharing?`)      // Sender OIDC NOT shown (same as public OIDC)
 
 		// Cleanup
 		aliceInstance.ContextName = originalContext
 		require.NoError(t, instance.Update(aliceInstance))
 		clearPublicOIDCContext(config.DefaultInstanceContext)
-		consts.PublicSaaSDomains = originalPublicDomains
 	})
 }
 
