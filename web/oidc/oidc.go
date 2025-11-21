@@ -213,11 +213,11 @@ func Redirect(c echo.Context) error {
 		if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
 			inst, err := findInstanceBySub(sub, state.OIDCContext)
 			if err != nil {
-				return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+				return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 			}
 			domain = inst.Domain
 		} else if err != nil {
-			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+			return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 		}
 
 		code := getStorage().CreateCode(sub)
@@ -241,12 +241,12 @@ func Redirect(c echo.Context) error {
 		token := c.QueryParam("access_token")
 		domain, err = getDomainFromUserInfo(conf, token)
 		if err != nil {
-			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+			return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 		}
 	}
 	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 	}
 
 	u := url.Values{
@@ -365,14 +365,21 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 		return ErrAuthenticationFailed
 	}
 	var memberInst *instance.Instance
-	domain, err := extractDomain(conf, params)
-	if err == nil {
-		memberInst, err = lifecycle.GetInstance(domain)
-	} else if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
+	if state.OIDCContext != "" && conf.AllowCustomInstance {
+		// Try direct lookup by OIDC subject first when OIDCContext is specified
 		memberInst, err = findInstanceBySub(sub, state.OIDCContext)
 	}
-	if err != nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+	if memberInst == nil {
+		// Fall back to domain extraction from user info
+		domain, err := extractDomain(conf, params)
+		if err == nil {
+			memberInst, err = lifecycle.GetInstance(domain)
+		} else if errors.Is(err, ErrAuthenticationFailed) && conf.AllowCustomInstance {
+			memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+		}
+	}
+	if err != nil || memberInst == nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 	}
 
 	s, err := sharing.FindSharing(ownerInst, state.SharingID)
