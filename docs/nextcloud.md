@@ -320,12 +320,31 @@ directory on the Cozy where the file will be put.
 By default, the file will be moved, but using `Copy=true` in the query-string
 will makes a copy.
 
+By default, if a file with the same name already exists in the destination
+directory, a new name will be automatically generated (e.g., "file (2).txt").
+Using `FailOnConflict=true` in the query-string will make the route return a
+409 Conflict error instead of auto-renaming the file.
+
 **Note:** a permission on `POST io.cozy.files` is required to use this route.
 
 ### Request
 
 ```http
 POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/downstream/Documents/Images/sunset.jpg?To=b3ecbc00f4ba013c2bf418c04daba326 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+#### Query parameters
+
+- `To` (required): The ID of the directory on the Cozy where the file will be put.
+- `Copy` (optional): Set to `true` to make a copy instead of moving the file. Default is `false` (move).
+- `FailOnConflict` (optional): Set to `true` to return a 409 Conflict error if a file with the same name already exists, instead of auto-renaming. Default is `false` (auto-rename).
+
+#### Example with FailOnConflict
+
+```http
+POST /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/downstream/Documents/Images/sunset.jpg?To=b3ecbc00f4ba013c2bf418c04daba326&FailOnConflict=true HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbG...
 ```
@@ -394,9 +413,10 @@ Content-Type: application/vnd.api+json
 #### Status codes
 
 - 201 Created, when the file has been moved from the NextCloud to the Cozy
-- 400 Bad Request, when the account is not configured for NextCloud
+- 400 Bad Request, when the account is not configured for NextCloud or the `To` parameter is missing
 - 401 Unauthorized, when authentication to the NextCloud fails
 - 404 Not Found, when the account is not found or the file is not found on the NextCloud
+- 409 Conflict, when a file with the same name already exists in the destination directory and `FailOnConflict=true` is set
 
 ## POST /remote/nextcloud/:account/upstream/*path
 
