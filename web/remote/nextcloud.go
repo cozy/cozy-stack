@@ -264,8 +264,10 @@ func nextcloudDownstream(c echo.Context) error {
 		kind = nextcloud.CopyOperation
 	}
 
+	failOnConflict, _ := strconv.ParseBool(c.QueryParam("FailOnConflict"))
+
 	cozyMetadata, _ := files.CozyMetadataFromClaims(c, true)
-	f, err := nc.Downstream(path, to, kind, cozyMetadata)
+	f, err := nc.Downstream(path, to, kind, cozyMetadata, failOnConflict)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
