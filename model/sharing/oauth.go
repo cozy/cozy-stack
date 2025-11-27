@@ -649,6 +649,10 @@ func RefreshToken(
 	if err := creds.Refresh(inst, s, m); err != nil {
 		return nil, err
 	}
+	// Safety check: credentials may have been cleared by a concurrent revocation
+	if creds.AccessToken == nil {
+		return nil, ErrNoOAuthClient
+	}
 	opts.Headers["Authorization"] = "Bearer " + creds.AccessToken.AccessToken
 	if body != nil {
 		opts.Body = bytes.NewReader(body)
