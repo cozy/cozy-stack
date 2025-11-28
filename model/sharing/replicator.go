@@ -50,7 +50,7 @@ type UpdateMsg struct {
 }
 
 // Replicate starts a replicator on this sharing.
-func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
+func (s *Sharing) Replicate(inst *instance.Instance, errorsCount int) error {
 	mu := config.Lock().ReadWrite(inst, "sharings/"+s.SID)
 	if err := mu.Lock(); err != nil {
 		return err
@@ -89,7 +89,13 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 		err = g.Wait()
 	}
 	if err != nil {
-		s.retryWorker(inst, "share-replicate", errors)
+		if errors.Is(err, errRevokeSharing) {
+			if s.Owner {
+				return s.Revoke(inst)
+			}
+			return s.RevokeRecipientBySelf(inst, false)
+		}
+		s.retryWorker(inst, "share-replicate", errorsCount)
 	} else if pending {
 		s.pushJob(inst, "share-replicate")
 	}
@@ -188,13 +194,6 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 
 	feed, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
-		if errors.Is(err, errRevokeSharing) {
-			if s.Owner {
-				return false, s.Revoke(inst)
-			} else {
-				return false, s.RevokeRecipientBySelf(inst, false)
-			}
-		}
 		return false, err
 	}
 	if feed.Seq == lastSeq {

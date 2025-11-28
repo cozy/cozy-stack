@@ -448,11 +448,16 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 // Revoke remove the credentials for all members, contact them, removes the
 // triggers and set the active flag to false.
 func (s *Sharing) Revoke(inst *instance.Instance) error {
-	var errm error
-
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
+
+	// skip if sharing is already revoked
+	if !s.Active {
+		return nil
+	}
+
+	var errm error
 	for i := range s.Credentials {
 		if err := s.RevokeMember(inst, i+1); err != nil {
 			errm = multierror.Append(errm, err)

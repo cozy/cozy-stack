@@ -958,6 +958,12 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 // RevokeMember revoke the access granted to a member and contact it
 func (s *Sharing) RevokeMember(inst *instance.Instance, index int) error {
 	m := &s.Members[index]
+
+	// skip if member is already revoked
+	if m.Status == MemberStatusRevoked {
+		return nil
+	}
+
 	c := &s.Credentials[index-1]
 
 	// No need to contact the revoked member if the sharing is not ready
