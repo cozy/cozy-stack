@@ -16,7 +16,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/gavv/httpexpect/v2"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -127,12 +129,17 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 	// Create a minimal mock NextCloud WebDAV server
 	mockWebDAV := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle file download requests (webdav client adds trailing slash)
-		if r.Method == "GET" && r.URL.Path == "/remote.php/dav/files/testuser/testfile.txt/" {
+		if r.Method == "GET" && (r.URL.Path == "/remote.php/dav/files/testuser/testfile.txt/" ||
+			r.URL.Path == "/remote.php/dav/files/testuser/testfile2.txt/") {
 			content := []byte("downloaded content")
 			w.Header().Set("Content-Type", "text/plain")
 			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 			w.WriteHeader(http.StatusOK)
 			w.Write(content)
+			return
+		}
+		if r.Method == "DELETE" {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		// Handle user_status endpoint (needed to get webdav_user_id)
@@ -147,6 +154,7 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 	defer mockWebDAV.Close()
 
 	ts := setup.GetTestServer("/remote", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	t.Cleanup(ts.Close)
 
 	e := testutils.CreateTestClient(t, ts.URL)
@@ -182,7 +190,7 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 		existingContent := []byte("existing")
 		conflictFile, err := vfs.NewFileDoc(
 			"testfile.txt",
-			dirDoc.DirID,
+			dirDoc.ID(),
 			int64(len(existingContent)),
 			nil,
 			"text/plain",
@@ -219,11 +227,11 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 	})
 
 	t.Run("DownstreamWithFailOnConflict", func(t *testing.T) {
-		// Create a file that will conflict
+		// Create a file that will conflict (use a different name to avoid leftover from previous test)
 		existingContent := []byte("existing")
 		conflictFile, err := vfs.NewFileDoc(
-			"testfile.txt",
-			dirDoc.DirID,
+			"testfile2.txt",
+			dirDoc.ID(),
 			int64(len(existingContent)),
 			nil,
 			"text/plain",
@@ -243,7 +251,7 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 		require.NoError(t, err)
 
 		// With FailOnConflict=true, it should return 409 Conflict
-		e.POST("/remote/nextcloud/"+accountID+"/downstream/testfile.txt").
+		e.POST("/remote/nextcloud/"+accountID+"/downstream/testfile2.txt").
 			WithQuery("To", dirDoc.ID()).
 			WithQuery("FailOnConflict", "true").
 			WithHeader("Authorization", "Bearer "+token).

@@ -346,7 +346,7 @@ func wrapNextcloudErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case webdav.ErrInvalidAuth:
 		return jsonapi.Unauthorized(err)
-	case webdav.ErrAlreadyExist, vfs.ErrConflict:
+	case webdav.ErrAlreadyExist, vfs.ErrConflict, os.ErrExist:
 		return jsonapi.Conflict(err)
 	case webdav.ErrParentNotFound:
 		return jsonapi.NotFound(err)
