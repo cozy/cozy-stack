@@ -114,14 +114,18 @@ func (h *redisHub) start() {
 			log.Warnf("Error on start: %s", err)
 			continue
 		}
+		// Use local variables to avoid passing typed nil pointers as interface values.
+		var doc, old Doc
 		if je.Doc != nil {
 			je.Doc.Type = doctype
+			doc = je.Doc
 		}
 		if je.Old != nil {
 			je.Old.Type = doctype
+			old = je.Old
 		}
 		db := prefixer.NewPrefixer(je.Cluster, je.Domain, je.Prefix)
-		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
+		h.mem.Publish(db, je.Verb, doc, old)
 	}
 	logger.WithNamespace("realtime-redis").Infof("End of subscribe channel")
 }
