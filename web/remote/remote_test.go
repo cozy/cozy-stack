@@ -170,10 +170,11 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 
 	t.Run("DownstreamWithoutFailOnConflict", func(t *testing.T) {
 		// First, create a file that will conflict
+		existingContent := []byte("existing")
 		conflictFile, err := vfs.NewFileDoc(
 			"testfile.txt",
 			dirDoc.DirID,
-			10,
+			int64(len(existingContent)),
 			nil,
 			"text/plain",
 			"",
@@ -210,10 +211,11 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 
 	t.Run("DownstreamWithFailOnConflict", func(t *testing.T) {
 		// Create a file that will conflict
+		existingContent := []byte("existing")
 		conflictFile, err := vfs.NewFileDoc(
 			"testfile.txt",
 			dirDoc.DirID,
-			10,
+			int64(len(existingContent)),
 			nil,
 			"text/plain",
 			"",
@@ -226,7 +228,7 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 		require.NoError(t, err)
 		file, err := fs.CreateFile(conflictFile, nil)
 		require.NoError(t, err)
-		_, err = file.Write([]byte("existing"))
+		_, err = file.Write(existingContent)
 		require.NoError(t, err)
 		err = file.Close()
 		require.NoError(t, err)
