@@ -223,7 +223,7 @@ func (nc *NextCloud) ListTrashed(path string) ([]jsonapi.Object, error) {
 	return files, nil
 }
 
-func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata) (*vfs.FileDoc, error) {
+func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMetadata *vfs.FilesCozyMetadata, failOnConflict bool) (*vfs.FileDoc, error) {
 	path = "/files/" + nc.userID + "/" + path
 	dl, err := nc.webdav.Get(path)
 	if err != nil {
@@ -257,6 +257,9 @@ func (nc *NextCloud) Downstream(path, dirID string, kind OperationKind, cozyMeta
 		return nil, err
 	}
 	if exists {
+		if failOnConflict {
+			return nil, vfs.ErrConflict
+		}
 		doc.DocName = vfs.ConflictName(fs, doc.DirID, doc.DocName, true)
 	}
 
