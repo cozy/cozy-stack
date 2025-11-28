@@ -262,6 +262,15 @@ func (sfs *swiftVFSV3) CopyFile(olddoc, newdoc *vfs.FileDoc) error {
 	}
 	defer sfs.mu.Unlock()
 
+	// Check for duplicate filename inside the lock to avoid race conditions
+	exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return os.ErrExist
+	}
+
 	newsize, _, capsize, err := vfs.CheckAvailableDiskSpace(sfs, olddoc)
 	if err != nil {
 		return err

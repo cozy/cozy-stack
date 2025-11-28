@@ -267,6 +267,15 @@ func (afs *aferoVFS) CopyFile(olddoc, newdoc *vfs.FileDoc) (err error) {
 	}
 	defer afs.mu.Unlock()
 
+	// Check for duplicate filename inside the lock to avoid race conditions
+	exists, err := afs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return os.ErrExist
+	}
+
 	newsize, maxsize, capsize, err := vfs.CheckAvailableDiskSpace(afs, olddoc)
 	if err != nil {
 		return err
