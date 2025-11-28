@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -110,6 +111,14 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
+
+	// Allow loopback addresses for the mock server
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() {
+		build.BuildMode = oldBuildMode
+	})
+
 	setup := testutils.NewSetup(t, t.Name())
 
 	testInstance := setup.GetTestInstance()
@@ -117,8 +126,8 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 
 	// Create a minimal mock NextCloud WebDAV server
 	mockWebDAV := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Handle file download requests
-		if r.Method == "GET" && r.URL.Path == "/remote.php/dav/files/testuser/testfile.txt" {
+		// Handle file download requests (webdav client adds trailing slash)
+		if r.Method == "GET" && r.URL.Path == "/remote.php/dav/files/testuser/testfile.txt/" {
 			content := []byte("downloaded content")
 			w.Header().Set("Content-Type", "text/plain")
 			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
