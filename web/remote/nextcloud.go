@@ -264,8 +264,10 @@ func nextcloudDownstream(c echo.Context) error {
 		kind = nextcloud.CopyOperation
 	}
 
+	failOnConflict, _ := strconv.ParseBool(c.QueryParam("FailOnConflict"))
+
 	cozyMetadata, _ := files.CozyMetadataFromClaims(c, true)
-	f, err := nc.Downstream(path, to, kind, cozyMetadata)
+	f, err := nc.Downstream(path, to, kind, cozyMetadata, failOnConflict)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
@@ -344,7 +346,7 @@ func wrapNextcloudErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case webdav.ErrInvalidAuth:
 		return jsonapi.Unauthorized(err)
-	case webdav.ErrAlreadyExist, vfs.ErrConflict:
+	case webdav.ErrAlreadyExist, vfs.ErrConflict, os.ErrExist:
 		return jsonapi.Conflict(err)
 	case webdav.ErrParentNotFound:
 		return jsonapi.NotFound(err)
