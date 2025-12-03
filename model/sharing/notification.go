@@ -33,9 +33,9 @@ func sendFileChangeNotification(inst *instance.Instance, description, fileName, 
 	return center.PushStack(inst.DomainName(), center.NotificationSharingFileChanged, n)
 }
 
-// MaybeNotifyFileChange checks if a file change notification should be sent.
+// MaybeNotifyFileCreated checks if a file change notification should be sent.
 // Only sends notifications when a file or folder is CREATED, not updated or removed.
-func MaybeNotifyFileChange(inst *instance.Instance, msg TrackMessage, evt TrackEvent) {
+func MaybeNotifyFileCreated(inst *instance.Instance, msg TrackMessage, evt TrackEvent) {
 	// Check if notifications are enabled for this context
 	cfg := config.GetSharingNotificationsConfig(inst.ContextName)
 	if !cfg.Enabled {
@@ -81,12 +81,16 @@ func MaybeNotifyFileChange(inst *instance.Instance, msg TrackMessage, evt TrackE
 	// Get file/folder ID from the event
 	fileID := evt.Doc.ID()
 	if fileID == "" {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("Failed to get fileID from event: %s", err)
 		return
 	}
 
 	// Get parent folder ID from the event
 	dirID, _ := evt.Doc.Get("dir_id").(string)
 	if dirID == "" {
+		inst.Logger().WithNamespace("sharing").
+			Warnf("Failed to get dir_id from event doc: %s", err)
 		return
 	}
 

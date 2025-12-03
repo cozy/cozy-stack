@@ -428,7 +428,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	// Send notification to owner if a recipient modified a file
 	if !removed {
-		MaybeNotifyFileChange(inst, msg, evt)
+		MaybeNotifyFileCreated(inst, msg, evt)
 	}
 
 	// For a directory, we have to update the Removed flag for the files inside
