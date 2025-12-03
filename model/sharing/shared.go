@@ -40,7 +40,7 @@ type SharedInfo struct {
 	Removed bool `json:"removed,omitempty"`
 
 	// Binary is a boolean flag that is true only for files (and not even
-	// folders) with `removed: false`
+	// folders) with `removed: fa0lse`
 	Binary bool `json:"binary,omitempty"`
 
 	// Dissociated is a boolean flag that can be true only for files and
