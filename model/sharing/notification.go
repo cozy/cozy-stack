@@ -4,10 +4,10 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/notification"
+	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 func sendFileChangeNotification(inst *instance.Instance, description, fileName, fileOrDirID, parentID string, isFolder bool) error {
@@ -19,25 +19,18 @@ func sendFileChangeNotification(inst *instance.Instance, description, fileName, 
 		itemURL.Fragment = "/folder/" + url.PathEscape(parentID) + "/file/" + url.PathEscape(fileOrDirID)
 	}
 
-	msg, err := job.NewMessage(mail.Options{
-		Mode:         mail.ModeFromStack,
-		TemplateName: "sharing_file_changed",
-		TemplateValues: map[string]interface{}{
+	n := &notification.Notification{
+		Title: inst.Translate("Mail Sharing File Changed Subject", description),
+		Slug:  consts.DriveSlug,
+		Data: map[string]interface{}{
 			"SharingDescription": description,
 			"FileName":           fileName,
 			"FileURL":            itemURL.String(),
 			"IsFolder":           isFolder,
 		},
-	})
-	if err != nil {
-		return err
+		PreferredChannels: []string{"mail"},
 	}
-
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	return center.PushStack(inst.DomainName(), center.NotificationSharingFileChanged, n)
 }
 
 // MaybeNotifyFileChange checks if a file change notification should be sent.

@@ -28,6 +28,9 @@ const (
 	// NotificationOAuthClients category for sending alert when exceeding the
 	// connected OAuth clients limit.
 	NotificationOAuthClients = "oauth-clients"
+	// NotificationSharingFileChanged category for sending alert when a file or
+	// folder is created in a sharing.
+	NotificationSharingFileChanged = "sharing-file-changed"
 )
 
 var (
@@ -44,6 +47,12 @@ var (
 			Collapsible:  false,
 			Stateful:     false,
 			MailTemplate: "notifications_oauthclients",
+		},
+		NotificationSharingFileChanged: {
+			Description:  "Notify about new files or folders created in a sharing",
+			Collapsible:  false,
+			Stateful:     false,
+			MailTemplate: "sharing_file_changed",
 		},
 	}
 )
