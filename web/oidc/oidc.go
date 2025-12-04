@@ -673,9 +673,7 @@ func AccessToken(c echo.Context) error {
 				})
 			}
 		} else {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "No ID token which is necessary for flagship app",
-			})
+			logger.WithNamespace("oidc").Warnf("No ID token Logout won't work")
 		}
 	}
 
