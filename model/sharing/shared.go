@@ -426,8 +426,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	}
 
-	// Send notification to owner if a recipient modified a file
-	if !removed {
+	// Send notification to owner if a recipient created a file
+	if evt.Verb == "CREATED" {
 		MaybeNotifyFileCreated(inst, msg, evt)
 	}
 
