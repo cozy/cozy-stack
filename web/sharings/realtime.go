@@ -167,10 +167,14 @@ func wsWrite(ws *websocket.Conn, ch chan *wsResponse, errc chan *wsError) error 
 }
 
 func filterMapEvents(ds *realtime.Subscriber, ch chan *wsResponse, inst *instance.Instance, s *sharing.Sharing) {
+	log := inst.Logger().WithNamespace("sharing-realtime")
+
 	var dir vfs.DirDoc
 	if err := couchdb.GetDoc(inst, consts.Files, s.Rules[0].Values[0], &dir); err != nil {
+		log.Errorf("filterMapEvents: failed to get root dir %s: %s", s.Rules[0].Values[0], err)
 		return
 	}
+	log.Debugf("filterMapEvents: watching %s for sharing %s", dir.Fullpath, s.SID)
 
 	testPath := func(doc realtime.Doc) bool {
 		if d, ok := doc.(*vfs.DirDoc); ok {
@@ -185,6 +189,27 @@ func filterMapEvents(ds *realtime.Subscriber, ch chan *wsResponse, inst *instanc
 				return false
 			}
 			return strings.HasPrefix(p, dir.Fullpath+"/")
+		}
+		// Handle realtime.JSONDoc (happens when events come through Redis in multi-stack)
+		if j, ok := doc.(*realtime.JSONDoc); ok {
+			docType, _ := j.M["type"].(string)
+			if docType == consts.DirType {
+				fullpath, _ := j.M["path"].(string)
+				return strings.HasPrefix(fullpath, dir.Fullpath+"/")
+			}
+			dirID, _ := j.M["dir_id"].(string)
+			if dirID == "" {
+				log.Warnf("filterMapEvents: failed to get dir_id in event doc with id:%s", doc.ID())
+				return false
+			}
+			parentDir, err := inst.VFS().DirByID(dirID)
+			if err != nil {
+				log.Warnf("filterMapEvents: failed to get parent dir %s: %s", dirID, err)
+				return false
+			}
+			name, _ := j.M["name"].(string)
+			filePath := parentDir.Fullpath + "/" + name
+			return strings.HasPrefix(filePath, dir.Fullpath+"/")
 		}
 		return false
 	}
@@ -220,6 +245,8 @@ func filterMapEvents(ds *realtime.Subscriber, ch chan *wsResponse, inst *instanc
 }
 
 func wsOwner(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	log := inst.Logger().WithNamespace("sharing-realtime")
+
 	ws, err := upgradeWs(c)
 	if err != nil {
 		return nil
@@ -238,12 +265,14 @@ func wsOwner(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error 
 		defer close(errc)
 		pdoc, wsErr := getPermission(c, inst, ws)
 		if wsErr != nil {
+			log.Warnf("wsOwner: AUTH failed for sharing %s", s.SID)
 			sendErr(ctx, errc, wsErr)
 			return
 		}
 		for _, rule := range s.Rules {
 			for _, value := range rule.Values {
 				if !pdoc.Permissions.AllowID(permission.GET, rule.DocType, value) {
+					log.Warnf("wsOwner: permission denied for sharing %s", s.SID)
 					sendErr(ctx, errc, unauthorized(pdoc))
 					return
 				}
@@ -259,6 +288,8 @@ func wsOwner(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error 
 // Ws is the API handler for realtime via a websocket connection.
 func Ws(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithNamespace("sharing-realtime")
+
 	s, err := sharing.FindSharing(inst, c.Param("id"))
 	if err != nil {
 		return wrapErrors(err)
@@ -268,6 +299,7 @@ func Ws(c echo.Context) error {
 	}
 
 	if s.Owner {
+		log.Debugf("Ws: new connection for sharing %s (owner mode)", s.SID)
 		return wsOwner(c, inst, s)
 	}
 
@@ -291,12 +323,16 @@ func Ws(c echo.Context) error {
 	// instances are on the same domain (same stack), we can watch directly
 	// the real-time events. It helps for performances.
 	if owner, err := lifecycle.GetInstance(u.Host); err == nil {
+		log.Debugf("Ws: new connection for sharing %s (hijack mode, owner=%s)", s.SID, owner.Domain)
 		return wsHijack(c, inst, owner, s)
 	}
+	log.Debugf("Ws: new connection for sharing %s (proxy mode, owner=%s)", s.SID, u.Host)
 	return wsProxy(c, inst, s, token)
 }
 
 func wsHijack(c echo.Context, inst, owner *instance.Instance, s *sharing.Sharing) error {
+	log := inst.Logger().WithNamespace("sharing-realtime")
+
 	ws, err := upgradeWs(c)
 	if err != nil {
 		return nil
@@ -315,10 +351,12 @@ func wsHijack(c echo.Context, inst, owner *instance.Instance, s *sharing.Sharing
 		defer close(errc)
 		pdoc, wsErr := getPermission(c, inst, ws)
 		if wsErr != nil {
+			log.Warnf("wsHijack: AUTH failed for sharing %s", s.SID)
 			sendErr(ctx, errc, wsErr)
 			return
 		}
 		if !pdoc.Permissions.AllowWholeType(permission.GET, consts.Files) {
+			log.Warnf("wsHijack: permission denied for sharing %s", s.SID)
 			sendErr(ctx, errc, unauthorized(pdoc))
 			return
 		}
@@ -330,6 +368,8 @@ func wsHijack(c echo.Context, inst, owner *instance.Instance, s *sharing.Sharing
 }
 
 func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token string) error {
+	log := inst.Logger().WithNamespace("sharing-realtime")
+
 	ws, err := upgradeWs(c)
 	if err != nil {
 		return nil
@@ -346,10 +386,12 @@ func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token 
 		defer close(errc)
 		pdoc, wsErr := getPermission(c, inst, ws)
 		if wsErr != nil {
+			log.Warnf("wsProxy: AUTH failed for sharing %s", s.SID)
 			sendErr(ctx, errc, wsErr)
 			return
 		}
 		if !pdoc.Permissions.AllowWholeType(permission.GET, consts.Files) {
+			log.Warnf("wsProxy: permission denied for sharing %s", s.SID)
 			sendErr(ctx, errc, unauthorized(pdoc))
 			return
 		}
@@ -372,6 +414,7 @@ func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token 
 
 		ownerWS, _, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
 		if err != nil {
+			log.Errorf("wsProxy: failed to dial owner %s: %s", wsURL.String(), err)
 			return
 		}
 		defer ownerWS.Close()
@@ -381,8 +424,10 @@ func wsProxy(c echo.Context, inst *instance.Instance, s *sharing.Sharing, token 
 			"payload": token,
 		}
 		if err := ownerWS.WriteJSON(authMsg); err != nil {
+			log.Errorf("wsProxy: failed to send AUTH to owner: %s", err)
 			return
 		}
+		log.Debugf("wsProxy: connected to owner %s for sharing %s", u.Host, s.SID)
 
 		for {
 			var msg wsResponse
