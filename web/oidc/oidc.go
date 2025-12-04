@@ -180,74 +180,105 @@ func BitwardenExchange(c echo.Context) error {
 // call to the UserInfo endpoint. It redirects to the cozy instance to login
 // the user.
 func Redirect(c echo.Context) error {
+	log := logger.WithNamespace("oidc")
+	log.Debugf("[Redirect] === OIDC Redirect Handler ===")
+	log.Debugf("[Redirect] Query params - code length: %d, state: %s", len(c.QueryParam("code")), c.QueryParam("state"))
+
 	code := c.QueryParam("code")
 	stateID := c.QueryParam("state")
 	state := getStorage().Find(stateID)
 	if state == nil {
+		log.Errorf("[Redirect] State not found for stateID: %s", stateID)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
+
+	log.Debugf("[Redirect] State found - Instance: %s, OIDCContext: %s, SharingID: %s, Redirect: %s",
+		state.Instance, state.OIDCContext, state.SharingID, state.Redirect)
 
 	// The delegated code flow is used for Bitwarden-style flows with a Redirect URL.
 	// For sharing flows (where SharingID is set), we skip this block and use the
 	// regular flow that redirects to the instance's /oidc/login endpoint.
 	if state.OIDCContext != "" && state.SharingID == "" {
+		log.Debugf("[Redirect] Using delegated code flow (OIDCContext set, no SharingID)")
 		conf, err := getGenericConfig(state.OIDCContext)
 		if err != nil {
+			log.Errorf("[Redirect] Failed to get OIDC config for context %s: %s", state.OIDCContext, err)
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
+		log.Debugf("[Redirect] Getting token from code...")
 		accessToken, err := getToken(conf, c.QueryParam("code"))
 		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+			log.Errorf("[Redirect] Token exchange failed: %s", err)
 			return renderError(c, nil, http.StatusBadGateway, "Error from the identity provider.")
 		}
+		log.Debugf("[Redirect] Token obtained, getting user info...")
 		params, err := getUserInfo(conf, accessToken)
 		if err != nil {
+			log.Errorf("[Redirect] getUserInfo failed: %s", err)
 			return err
 		}
 		sub, ok := params["sub"].(string)
 		if !ok {
-			logger.WithNamespace("oidc").Errorf("Missing sub")
+			log.Errorf("[Redirect] Missing sub in userinfo response")
 			return ErrAuthenticationFailed
 		}
+		log.Debugf("[Redirect] User sub: %s", sub)
+
 		domain, err := extractDomain(conf, params)
 		if err == ErrAuthenticationFailed && conf.AllowCustomInstance {
+			log.Debugf("[Redirect] Domain extraction failed, looking up instance by sub")
 			inst, err := findInstanceBySub(sub, state.OIDCContext)
 			if err != nil {
+				log.Errorf("[Redirect] findInstanceBySub failed: %s", err)
 				return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 			}
 			domain = inst.Domain
 		} else if err != nil {
+			log.Errorf("[Redirect] Domain extraction failed: %s", err)
 			return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 		}
+		log.Debugf("[Redirect] Domain: %s", domain)
 
 		code := getStorage().CreateCode(sub)
 		u, err := url.Parse(state.Redirect)
 		if err != nil {
+			log.Errorf("[Redirect] Failed to parse redirect URL %s: %s", state.Redirect, err)
 			return renderError(c, nil, http.StatusNotFound, "Sorry, an error occurred.")
 		}
 		q := u.Query()
 		q.Add("code", code)
 		q.Add("instance", domain)
 		u.RawQuery = q.Encode()
+		log.Debugf("[Redirect] Redirecting to: %s", u.String())
 		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 
 	domain := state.Instance
+	log.Debugf("[Redirect] Using regular flow, initial domain: %s", domain)
+
 	if contextName, ok := FindLoginDomain(domain); ok {
+		log.Debugf("[Redirect] Login domain detected, context: %s", contextName)
 		conf, err := getGenericConfig(contextName)
 		if err != nil || !conf.AllowOAuthToken {
+			log.Errorf("[Redirect] Config error or AllowOAuthToken disabled: %v", err)
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
 		token := c.QueryParam("access_token")
+		log.Debugf("[Redirect] Getting domain from userinfo with token length: %d", len(token))
 		domain, err = getDomainFromUserInfo(conf, token)
 		if err != nil {
+			log.Errorf("[Redirect] getDomainFromUserInfo failed: %s", err)
 			return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 		}
+		log.Debugf("[Redirect] Domain from userinfo: %s", domain)
 	}
+
 	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
+		log.Errorf("[Redirect] GetInstance failed for domain %s: %s", domain, err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 	}
+	log.Debugf("[Redirect] Instance found: %s", inst.Domain)
 
 	u := url.Values{
 		"code":  {code},
@@ -262,21 +293,36 @@ func Redirect(c echo.Context) error {
 	if state.Provider == FranceConnectProvider {
 		u.Add("franceconnect", "true")
 		if c.QueryParam("nonce") != state.Nonce {
+			log.Errorf("[Redirect] FranceConnect nonce mismatch")
 			return renderError(c, nil, http.StatusBadRequest, "Sorry, an error occurred.")
 		}
 	}
 	redirect := inst.PageURL("/oidc/login", u)
+	log.Debugf("[Redirect] Redirecting to instance login: %s", redirect)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
 // Login checks that the OpenID Connect has been successful and logs in the user.
 func Login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithNamespace("oidc")
+
+	log.Debugf("[Login] === OIDC Login Handler ===")
+	log.Debugf("[Login] Instance domain: %s", inst.Domain)
+	log.Debugf("[Login] Context name: %s", inst.ContextName)
+	log.Debugf("[Login] Query params - state: %s, code length: %d, redirect: %s",
+		c.QueryParam("state"), len(c.QueryParam("code")), c.QueryParam("redirect"))
 
 	stateID := c.QueryParam("state")
 	var state *stateHolder
 	if stateID != "" {
 		state = getStorage().Find(stateID)
+		if state != nil {
+			log.Debugf("[Login] Found state - Instance: %s, SharingID: %s, OIDCContext: %s",
+				state.Instance, state.SharingID, state.OIDCContext)
+		} else {
+			log.Warnf("[Login] State not found for stateID: %s", stateID)
+		}
 	}
 
 	var conf *Config
@@ -286,47 +332,65 @@ func Login(c echo.Context) error {
 		if state != nil && state.OIDCContext != "" {
 			contextName = state.OIDCContext
 		}
+		log.Debugf("[Login] Getting generic OIDC config for context: %s", contextName)
 		conf, err = getGenericConfig(contextName)
 	} else {
+		log.Debugf("[Login] Getting FranceConnect config for context: %s", inst.ContextName)
 		conf, err = getFranceConnectConfig(inst.ContextName)
 	}
 	if err != nil {
+		log.Errorf("[Login] Failed to get OIDC config: %s", err)
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
+
+	log.Debugf("[Login] OIDC Config loaded - TokenURL: %s, UserInfoURL: %s, AllowCustomInstance: %v",
+		conf.TokenURL, conf.UserInfoURL, conf.AllowCustomInstance)
 
 	redirect := c.QueryParam("redirect")
 	confirm := c.QueryParam("confirm_state")
 	idToken := c.QueryParam("id_token")
 
+	log.Debugf("[Login] redirect: %s, confirm: %s, idToken length: %d", redirect, confirm, len(idToken))
+
 	err = config.GetRateLimiter().CheckRateLimit(inst, limits.AuthType)
 	if limits.IsLimitReachedOrExceeded(err) {
+		log.Warnf("[Login] Rate limit exceeded for instance: %s", inst.Domain)
 		if err = auth.LoginRateExceeded(inst); err != nil {
-			inst.Logger().WithNamespace("oidc").Warn(err.Error())
+			log.Warn(err.Error())
 		}
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
 
 	var token string
 	if idToken != "" && conf.IDTokenKeyURL != "" {
+		log.Debugf("[Login] Using id_token flow with key URL: %s", conf.IDTokenKeyURL)
 		if err := checkIDToken(conf, inst, idToken); err != nil {
+			log.Errorf("[Login] checkIDToken failed: %s", err)
 			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
 		token = idToken
+		log.Debugf("[Login] ID token validated successfully")
 	} else {
 		if conf.AllowOAuthToken {
 			token = c.QueryParam("access_token")
+			log.Debugf("[Login] AllowOAuthToken enabled, access_token length: %d", len(token))
 		}
 		if token == "" {
 			if state == nil {
+				log.Errorf("[Login] No state and no token - session expired")
 				return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 			}
 			code := c.QueryParam("code")
+			log.Debugf("[Login] Exchanging code for token, code length: %d", len(code))
 			token, err = getToken(conf, code)
 			if err != nil {
-				logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+				log.Errorf("[Login] Token exchange failed: %s", err)
 				return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
 			}
+			log.Debugf("[Login] Token obtained successfully, length: %d", len(token))
+
 			if state.SharingID != "" {
+				log.Debugf("[Login] Sharing flow detected, sharingID: %s", state.SharingID)
 				return acceptSharing(c, inst, conf, token, state)
 			}
 		}
@@ -334,6 +398,7 @@ func Login(c echo.Context) error {
 		// Check 2FA if enabled, and if yes, render an HTML page to check if
 		// the browser has a trusted device token in its local storage.
 		if inst.HasAuthMode(instance.TwoFactorMail) {
+			log.Debugf("[Login] 2FA enabled, rendering twofactor page")
 			return c.Render(http.StatusOK, "oidc_twofactor.html", echo.Map{
 				"Domain":      inst.ContextualDomain(),
 				"AccessToken": token,
@@ -342,45 +407,74 @@ func Login(c echo.Context) error {
 			})
 		}
 
+		log.Debugf("[Login] Checking domain from user info...")
 		if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
+			log.Errorf("[Login] checkDomainFromUserInfo failed: %s", err)
 			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
+		log.Debugf("[Login] Domain check passed")
 	}
 
 	claims := jwt.MapClaims{}
 	_, _, _ = jwt.NewParser().ParseUnverified(token, claims)
 	sid, _ := claims["sid"].(string)
+	log.Debugf("[Login] Session ID from token: %s", sid)
+	log.Debugf("[Login] Creating session and redirecting...")
+
 	return createSessionAndRedirect(c, inst, redirect, confirm, sid)
 }
 
 func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, token string, state *stateHolder) error {
+	log := ownerInst.Logger().WithNamespace("oidc")
+	log.Debugf("[acceptSharing] === Accept Sharing via OIDC ===")
+	log.Debugf("[acceptSharing] Owner instance: %s, SharingID: %s, SharingState: %s",
+		ownerInst.Domain, state.SharingID, state.SharingState)
+	log.Debugf("[acceptSharing] OIDCContext: %s, AllowCustomInstance: %v", state.OIDCContext, conf.AllowCustomInstance)
+
 	params, err := getUserInfo(conf, token)
 	if err != nil {
+		log.Errorf("[acceptSharing] getUserInfo failed: %s", err)
 		return err
 	}
 
 	sub, ok := params["sub"].(string)
 	if !ok {
-		logger.WithNamespace("oidc").Errorf("Missing sub")
+		log.Errorf("[acceptSharing] Missing sub in userinfo response")
 		return ErrAuthenticationFailed
 	}
+	log.Debugf("[acceptSharing] User sub: %s", sub)
+
 	var memberInst *instance.Instance
 	if state.OIDCContext != "" && conf.AllowCustomInstance {
 		// Try direct lookup by OIDC subject first when OIDCContext is specified
+		log.Debugf("[acceptSharing] Looking up instance by sub: %s in context: %s", sub, state.OIDCContext)
 		memberInst, err = findInstanceBySub(sub, state.OIDCContext)
+		if err != nil {
+			log.Debugf("[acceptSharing] findInstanceBySub failed: %s", err)
+		} else if memberInst != nil {
+			log.Debugf("[acceptSharing] Found member instance by sub: %s", memberInst.Domain)
+		}
 	}
 	if memberInst == nil {
 		// Fall back to domain extraction from user info
+		log.Debugf("[acceptSharing] Falling back to domain extraction from userinfo")
 		domain, err := extractDomain(conf, params)
 		if err == nil {
+			log.Debugf("[acceptSharing] Extracted domain: %s", domain)
 			memberInst, err = lifecycle.GetInstance(domain)
+			if err != nil {
+				log.Debugf("[acceptSharing] GetInstance failed for domain %s: %s", domain, err)
+			}
 		} else if errors.Is(err, ErrAuthenticationFailed) && conf.AllowCustomInstance {
+			log.Debugf("[acceptSharing] Domain extraction failed, trying findInstanceBySub again")
 			memberInst, err = findInstanceBySub(sub, state.OIDCContext)
 		}
 	}
 	if err != nil || memberInst == nil {
+		log.Errorf("[acceptSharing] Could not find member instance, err: %v, memberInst: %v", err, memberInst)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 	}
+	log.Debugf("[acceptSharing] Member instance found: %s", memberInst.Domain)
 
 	s, err := sharing.FindSharing(ownerInst, state.SharingID)
 	if err != nil {
@@ -552,6 +646,11 @@ func Logout(c echo.Context) error {
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithNamespace("oidc")
+
+	log.Debugf("[AccessToken] === OIDC AccessToken Handler ===")
+	log.Debugf("[AccessToken] Instance: %s, Context: %s", inst.Domain, inst.ContextName)
+
 	var reqBody struct {
 		ClientID       string `json:"client_id"`
 		ClientSecret   string `json:"client_secret"`
@@ -563,40 +662,63 @@ func AccessToken(c echo.Context) error {
 		TwoFactorCode  string `json:"two_factor_passcode"`
 	}
 	if err := c.Bind(&reqBody); err != nil {
+		log.Errorf("[AccessToken] Failed to bind request: %s", err)
 		return err
 	}
 
+	log.Debugf("[AccessToken] Request - ClientID: %s, Scope: %s, Code length: %d, OIDCToken length: %d, IDToken length: %d",
+		reqBody.ClientID, reqBody.Scope, len(reqBody.Code), len(reqBody.OIDCToken), len(reqBody.IDToken))
+
 	if reqBody.Code != "" {
+		log.Debugf("[AccessToken] Using delegated code flow")
 		sub := getStorage().GetSub(reqBody.Code)
+		log.Debugf("[AccessToken] Code sub: %s, Instance OIDCID: %s, FranceConnectID: %s, Domain: %s",
+			sub, inst.OIDCID, inst.FranceConnectID, inst.Domain)
 		invalidCode := sub == ""
 		if sub != inst.OIDCID && sub != inst.FranceConnectID && sub != inst.Domain {
 			invalidCode = true
 		}
 		if invalidCode {
-			inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid code: %s (%s - %s - %s)",
+			log.Errorf("[AccessToken] Invalid code - sub: %s doesn't match any of: OIDCID=%s, FranceConnectID=%s, Domain=%s",
 				sub, inst.OIDCID, inst.FranceConnectID, inst.Domain)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
 		}
+		log.Debugf("[AccessToken] Code validated successfully")
 	} else {
+		log.Debugf("[AccessToken] Using direct token flow")
 		conf, err := getGenericConfig(inst.ContextName)
-		if err != nil || !conf.AllowOAuthToken {
+		if err != nil {
+			log.Errorf("[AccessToken] Failed to get OIDC config: %s", err)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "this endpoint is not enabled",
 			})
 		}
+		if !conf.AllowOAuthToken {
+			log.Errorf("[AccessToken] AllowOAuthToken is disabled for context: %s", inst.ContextName)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "this endpoint is not enabled",
+			})
+		}
+		log.Debugf("[AccessToken] OIDC config loaded - AllowOAuthToken: %v, IDTokenKeyURL: %s",
+			conf.AllowOAuthToken, conf.IDTokenKeyURL)
+
 		// Check the token from the remote URL.
 		if reqBody.IDToken != "" {
+			log.Debugf("[AccessToken] Checking ID token...")
 			err = checkIDToken(conf, inst, reqBody.IDToken)
 		} else {
+			log.Debugf("[AccessToken] Checking OIDC token via userinfo...")
 			err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
 		}
 		if err != nil {
+			log.Errorf("[AccessToken] Token validation failed: %s", err)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": err.Error(),
 			})
 		}
+		log.Debugf("[AccessToken] Token validated successfully")
 	}
 
 	// Load the OAuth client
@@ -918,6 +1040,13 @@ func getToken(conf *Config, code string) (string, error) {
 }
 
 func getTokenWithIDToken(conf *Config, code string) (*tokenResponse, error) {
+	log := logger.WithNamespace("oidc")
+	log.Debugf("[getTokenWithIDToken] Starting token exchange, code length: %d", len(code))
+	log.Debugf("[getTokenWithIDToken] Token URL: %s", conf.TokenURL)
+	log.Debugf("[getTokenWithIDToken] Redirect URI: %s", conf.RedirectURI)
+	log.Debugf("[getTokenWithIDToken] Client ID: %s", conf.ClientID)
+	log.Debugf("[getTokenWithIDToken] Provider: %v", conf.Provider)
+
 	data := url.Values{
 		"grant_type":   []string{"authorization_code"},
 		"code":         []string{code},
@@ -929,11 +1058,13 @@ func getTokenWithIDToken(conf *Config, code string) (*tokenResponse, error) {
 	if conf.Provider == FranceConnectProvider {
 		data.Add("client_id", conf.ClientID)
 		data.Add("client_secret", conf.ClientSecret)
+		log.Debugf("[getTokenWithIDToken] FranceConnect: added client_id/secret to body")
 	}
 
 	body := strings.NewReader(data.Encode())
 	req, err := http.NewRequest("POST", conf.TokenURL, body)
 	if err != nil {
+		log.Errorf("[getTokenWithIDToken] Failed to create request: %s", err)
 		return nil, err
 	}
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
@@ -942,30 +1073,42 @@ func getTokenWithIDToken(conf *Config, code string) (*tokenResponse, error) {
 	if conf.Provider == GenericProvider {
 		auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
 		req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
+		log.Debugf("[getTokenWithIDToken] GenericProvider: added Basic auth header")
 	}
 
+	log.Debugf("[getTokenWithIDToken] Sending token request...")
 	res, err := oidcClient.Do(req)
 	if err != nil {
+		log.Errorf("[getTokenWithIDToken] HTTP request failed: %s", err)
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	log.Debugf("[getTokenWithIDToken] Token response status: %d", res.StatusCode)
+
 	if res.StatusCode != 200 {
-		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(io.Discard, res.Body)
-		logger.WithNamespace("oidc").
-			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
-		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+		// Read the error body for debugging
+		errBody, _ := io.ReadAll(res.Body)
+		log.Errorf("[getTokenWithIDToken] Token endpoint error - Status: %d, Body: %s", res.StatusCode, string(errBody))
+		return nil, fmt.Errorf("OIDC service responded with %d: %s", res.StatusCode, string(errBody))
 	}
 	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
+		log.Errorf("[getTokenWithIDToken] Failed to read response body: %s", err)
 		return nil, err
 	}
+
+	log.Debugf("[getTokenWithIDToken] Token response body length: %d", len(resBody))
 
 	var out tokenResponse
 	err = json.Unmarshal(resBody, &out)
 	if err != nil {
+		log.Errorf("[getTokenWithIDToken] Failed to unmarshal response: %s, body: %s", err, string(resBody))
 		return nil, err
 	}
+
+	log.Debugf("[getTokenWithIDToken] Token exchange successful, access_token length: %d, id_token length: %d",
+		len(out.AccessToken), len(out.IDToken))
 	return &out, nil
 }
 
@@ -981,8 +1124,14 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 }
 
 func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string) error {
+	log := inst.Logger().WithNamespace("oidc")
+	log.Debugf("[checkDomainFromUserInfo] Starting domain check for instance: %s", inst.Domain)
+	log.Debugf("[checkDomainFromUserInfo] AllowCustomInstance: %v, UserInfoField: %s", conf.AllowCustomInstance, conf.UserInfoField)
+	log.Debugf("[checkDomainFromUserInfo] Instance OIDCID: %s, FranceConnectID: %s", inst.OIDCID, inst.FranceConnectID)
+
 	params, err := getUserInfo(conf, token)
 	if err != nil {
+		log.Errorf("[checkDomainFromUserInfo] getUserInfo failed: %s", err)
 		return err
 	}
 
@@ -992,55 +1141,85 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 		if conf.Provider == FranceConnectProvider {
 			expected = inst.FranceConnectID
 		}
+		log.Debugf("[checkDomainFromUserInfo] AllowCustomInstance mode - sub: %s, expected: %s", sub, expected)
 		if !ok || sub == "" || sub != expected {
-			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
+			log.Errorf("[checkDomainFromUserInfo] Invalid sub: got %q, expected %q", sub, expected)
 			if conf.Provider == FranceConnectProvider {
 				return ErrFranceConnectFailed
 			}
 			return ErrAuthenticationFailed
 		}
+		log.Debugf("[checkDomainFromUserInfo] Sub matched successfully")
 		return nil
 	}
 
 	domain, err := extractDomain(conf, params)
 	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Cannot extract domain: %s", err)
+		log.Warnf("[checkDomainFromUserInfo] Cannot extract domain: %s", err)
 		return err
 	}
+	log.Debugf("[checkDomainFromUserInfo] Extracted domain: %s, Instance domain: %s", domain, inst.Domain)
 	if domain != inst.Domain {
-		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		log.Errorf("[checkDomainFromUserInfo] Domain mismatch: %s != %s", domain, inst.Domain)
 		return ErrAuthenticationFailed
 	}
+	log.Debugf("[checkDomainFromUserInfo] Domain check passed")
 	return nil
 }
 
 func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
+	log := logger.WithNamespace("oidc")
+	log.Debugf("[getUserInfo] Fetching user info from: %s", conf.UserInfoURL)
+	log.Debugf("[getUserInfo] Token length: %d", len(token))
+
 	req, err := http.NewRequest("GET", conf.UserInfoURL, nil)
 	if err != nil {
+		log.Errorf("[getUserInfo] Failed to create request: %s", err)
 		return nil, ErrInvalidConfiguration
 	}
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+
+	log.Debugf("[getUserInfo] Sending userinfo request...")
 	res, err := oidcClient.Do(req)
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		log.Errorf("[getUserInfo] HTTP request failed: %s", err)
 		return nil, ErrIdentityProvider
 	}
 	defer res.Body.Close()
+
+	log.Debugf("[getUserInfo] UserInfo response status: %d", res.StatusCode)
+
 	if res.StatusCode != 200 {
-		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(io.Discard, res.Body)
-		logger.WithNamespace("oidc").
-			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
-		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+		// Read error body for debugging
+		errBody, _ := io.ReadAll(res.Body)
+		log.Errorf("[getUserInfo] UserInfo endpoint error - Status: %d, Body: %s", res.StatusCode, string(errBody))
+		return nil, fmt.Errorf("OIDC service responded with %d: %s", res.StatusCode, string(errBody))
 	}
 
 	var params map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&params)
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		log.Errorf("[getUserInfo] Failed to decode response: %s", err)
 		return nil, ErrIdentityProvider
 	}
+
+	log.Debugf("[getUserInfo] UserInfo response keys: %v", getMapKeys(params))
+	if sub, ok := params["sub"].(string); ok {
+		log.Debugf("[getUserInfo] sub: %s", sub)
+	}
+	if email, ok := params["email"].(string); ok {
+		log.Debugf("[getUserInfo] email: %s", email)
+	}
 	return params, nil
+}
+
+// getMapKeys returns the keys of a map for logging purposes
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func extractDomain(conf *Config, params map[string]interface{}) (string, error) {

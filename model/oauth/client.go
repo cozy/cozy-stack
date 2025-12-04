@@ -238,13 +238,20 @@ func SortClientsByCreatedAtDesc(clients []*Client) {
 
 // FindClient loads a client from the database
 func FindClient(i *instance.Instance, id string) (*Client, error) {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[FindClient] Looking up client by ID: %s", id)
+
 	var c Client
 	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
+		log.Debugf("[FindClient] Client not found: %s, error: %s", id, err)
 		return nil, err
 	}
 	if c.ClientID == "" {
 		c.ClientID = c.CouchID
 	}
+
+	log.Debugf("[FindClient] Found client - ID: %s, Name: %s, SoftwareID: %s, Flagship: %v, Pending: %v",
+		c.ClientID, c.ClientName, c.SoftwareID, c.Flagship, c.Pending)
 	return &c, nil
 }
 
@@ -453,14 +460,22 @@ func (c *Client) ensureClientNameUnicity(i *instance.Instance) error {
 
 // Create is a function that sets some fields, and then save it in Couch.
 func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegistrationError {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[Create] === Creating OAuth Client ===")
+	log.Debugf("[Create] ClientName: %s, SoftwareID: %s, RedirectURIs: %v",
+		c.ClientName, c.SoftwareID, c.RedirectURIs)
+
 	if err := c.checkMandatoryFields(i); err != nil {
+		log.Debugf("[Create] Mandatory fields check failed: %s - %s", err.Error, err.Description)
 		return err
 	}
 	if err := c.CheckSoftwareID(i); err != nil {
+		log.Debugf("[Create] SoftwareID check failed: %s - %s", err.Error, err.Description)
 		return err
 	}
 
 	if err := c.ensureClientNameUnicity(i); err != nil {
+		log.Errorf("[Create] Failed to ensure client name unicity: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
@@ -489,19 +504,19 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	md.DocTypeVersion = DocTypeVersion
 	c.Metadata = md
 
+	log.Debugf("[Create] Saving client to CouchDB...")
 	if err := couchdb.CreateDoc(i, c); err != nil {
-		i.Logger().WithNamespace("oauth").
-			Warnf("Cannot create client: %s", err)
+		log.Warnf("[Create] Cannot create client in CouchDB: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
 		}
 	}
+	log.Debugf("[Create] Client saved with CouchID: %s", c.CouchID)
 
 	if !hasOptions(NotPending, opts) {
 		if err := setupTrigger(i, c.CouchID); err != nil {
-			i.Logger().WithNamespace("oauth").
-				Warnf("Cannot create trigger: %s", err)
+			log.Warnf("[Create] Cannot create trigger: %s", err)
 		}
 	}
 
@@ -513,8 +528,7 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 		Subject:  c.CouchID,
 	})
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Failed to create the registration access token: %s", err)
+		log.Errorf("[Create] Failed to create the registration access token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
@@ -522,12 +536,12 @@ func (c *Client) Create(i *instance.Instance, opts ...CreateOptions) *ClientRegi
 	}
 
 	c.TransformIDAndRev()
+	log.Debugf("[Create] Client created successfully - ClientID: %s, Pending: %v", c.ClientID, c.Pending)
 
 	if !c.Pending {
 		flags, err := feature.GetFlags(i)
 		if err != nil {
-			i.Logger().WithNamespace("oauth").
-				Errorf("Failed to get the OAuth clients limit: %s", err)
+			log.Errorf("[Create] Failed to get the OAuth clients limit: %s", err)
 			return nil
 		}
 
@@ -759,6 +773,9 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[CreateJWT] Creating JWT - ClientID: %s, Audience: %s, Scope: %s", c.CouchID, audience, scope)
+
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Audience: jwt.ClaimStrings{audience},
@@ -769,41 +786,50 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 		Scope: scope,
 	})
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Failed to create the %s token: %s", audience, err)
+		log.Errorf("[CreateJWT] Failed to create the %s token: %s", audience, err)
+		return token, err
 	}
+
+	log.Debugf("[CreateJWT] JWT created successfully for audience: %s, token length: %d", audience, len(token))
 	return token, err
 }
 
 func validToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[validToken] Validating token for audience: %s, token length: %d", audience, len(token))
+
 	claims := permission.Claims{}
 	if token == "" {
+		log.Debugf("[validToken] Empty token provided")
 		return claims, false
 	}
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
 		return i.OAuthSecret, nil
 	}
 	if err := crypto.ParseJWT(token, keyFunc, &claims); err != nil {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Failed to verify the %s token: %s", audience, err)
+		log.Errorf("[validToken] Failed to parse/verify the %s token: %s", audience, err)
 		return claims, false
 	}
+
+	log.Debugf("[validToken] Token parsed - Subject: %s, Issuer: %s, Audience: %v, Scope: %s",
+		claims.Subject, claims.Issuer, claims.Audience, claims.Scope)
+
 	if claims.Expired() {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Failed to verify the %s token: expired", audience)
+		log.Errorf("[validToken] Token expired for audience %s", audience)
 		return claims, false
 	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
 	if claims.AudienceString() != audience {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Unexpected audience for %s token: %v", audience, claims.Audience)
+		log.Errorf("[validToken] Audience mismatch - expected: %s, got: %v", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain && claims.Issuer != i.OldDomain {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
+		log.Errorf("[validToken] Issuer mismatch - expected: %s (or %s), got: %s",
+			i.Domain, i.OldDomain, claims.Issuer)
 		return claims, false
 	}
+
+	log.Debugf("[validToken] Token validated successfully for audience: %s", audience)
 	return claims, true
 }
 
@@ -811,22 +837,28 @@ func validToken(i *instance.Instance, audience, token string) (permission.Claims
 // claims. You should use client.ValidToken if you know the client, as it also
 // checks that the claims are associated to this client.
 func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[ValidTokenWithSStamp] Validating token with security stamp for audience: %s", audience)
+
 	claims, valid := validToken(i, audience, token)
 	if !valid {
+		log.Debugf("[ValidTokenWithSStamp] Base token validation failed")
 		return claims, valid
 	}
+
 	settings, err := settings.Get(i)
 	if err != nil {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Error while getting bitwarden settings: %s", err)
+		log.Errorf("[ValidTokenWithSStamp] Error while getting bitwarden settings: %s", err)
 		return claims, false
 	}
+
 	if claims.SStamp != settings.SecurityStamp {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Expected %s security stamp for %s token, but was: %s",
-				settings.SecurityStamp, claims.Subject, claims.SStamp)
+		log.Errorf("[ValidTokenWithSStamp] Security stamp mismatch - expected: %s, got: %s (subject: %s)",
+			settings.SecurityStamp, claims.SStamp, claims.Subject)
 		return claims, false
 	}
+
+	log.Debugf("[ValidTokenWithSStamp] Token validated successfully with matching security stamp")
 	return claims, true
 }
 
@@ -834,15 +866,22 @@ func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permiss
 // It is expected to be used for registration token and refresh token, and
 // it doesn't check when they were issued as they don't expire.
 func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	log := i.Logger().WithNamespace("oauth")
+	log.Debugf("[Client.ValidToken] Validating token for client: %s, audience: %s", c.CouchID, audience)
+
 	claims, valid := validToken(i, audience, token)
 	if !valid {
+		log.Debugf("[Client.ValidToken] Base token validation failed")
 		return claims, valid
 	}
+
 	if claims.Subject != c.CouchID {
-		i.Logger().WithNamespace("oauth").
-			Errorf("Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
+		log.Errorf("[Client.ValidToken] Subject mismatch - expected: %s, got: %s (audience: %s)",
+			c.CouchID, claims.Subject, audience)
 		return claims, false
 	}
+
+	log.Debugf("[Client.ValidToken] Token validated successfully for client: %s", c.CouchID)
 	return claims, true
 }
 
@@ -917,20 +956,27 @@ const cacheTTL = 24 * time.Hour
 
 // fetchOIDCConfiguration fetches the OpenID Connect configuration from the well-known endpoint
 func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
+	log := logger.WithNamespace("oauth")
+	log.Debugf("[fetchOIDCConfiguration] Fetching OIDC config for context: %s", contextName)
+
 	oidc, ok := config.GetOIDC(contextName)
 	if !ok {
+		log.Debugf("[fetchOIDCConfiguration] No OIDC configured for context: %s", contextName)
 		return nil, fmt.Errorf("no OIDC is configured for this context")
 	}
 
 	// Get the token URL to extract the base URL
 	tokenURL, ok := oidc["token_url"].(string)
 	if !ok {
+		log.Debugf("[fetchOIDCConfiguration] token_url missing in OIDC config")
 		return nil, fmt.Errorf("the OIDC token_url is missing for this context")
 	}
+	log.Debugf("[fetchOIDCConfiguration] Token URL: %s", tokenURL)
 
 	// Parse the token URL to extract the base URL
 	parsedURL, err := url.Parse(tokenURL)
 	if err != nil {
+		log.Errorf("[fetchOIDCConfiguration] Invalid token URL: %s", err)
 		return nil, fmt.Errorf("invalid OIDC token URL: %w", err)
 	}
 
@@ -940,73 +986,95 @@ func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
 		Host:   parsedURL.Host,
 		Path:   "/.well-known/openid-configuration",
 	}
+	log.Debugf("[fetchOIDCConfiguration] Well-known URL: %s", wellKnownURL.String())
 
 	// Try to fetch from cache first
 	cache := config.GetConfig().CacheStorage
 	cacheKey := "oidc-config:" + wellKnownURL.String()
 
 	data, ok := cache.Get(cacheKey)
-	if !ok {
+	if ok {
+		log.Debugf("[fetchOIDCConfiguration] Using cached OIDC configuration")
+	} else {
+		log.Debugf("[fetchOIDCConfiguration] Fetching OIDC configuration from server...")
 		// Fetch from the server
 		req, err := http.NewRequest(http.MethodGet, wellKnownURL.String(), nil)
 		if err != nil {
+			log.Errorf("[fetchOIDCConfiguration] Failed to create request: %s", err)
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 		req.Header.Add("User-Agent", build.UserAgent())
 
 		res, err := oidcClient.Do(req)
 		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error fetching OpenID configuration: %s", err)
+			log.Errorf("[fetchOIDCConfiguration] HTTP request failed: %s", err)
 			return nil, fmt.Errorf("failed to fetch OpenID configuration: %w", err)
 		}
 		defer res.Body.Close()
 
+		log.Debugf("[fetchOIDCConfiguration] Response status: %d", res.StatusCode)
+
 		if res.StatusCode != http.StatusOK {
-			logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration: %d", res.StatusCode)
+			errBody, _ := io.ReadAll(res.Body)
+			log.Warnf("[fetchOIDCConfiguration] Cannot fetch OpenID configuration: %d, body: %s",
+				res.StatusCode, string(errBody))
 			return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 		}
 
 		data, err = io.ReadAll(res.Body)
 		if err != nil {
+			log.Errorf("[fetchOIDCConfiguration] Failed to read response: %s", err)
 			return nil, fmt.Errorf("failed to read response: %w", err)
 		}
 
+		log.Debugf("[fetchOIDCConfiguration] Caching OIDC configuration for %v", cacheTTL)
 		// Cache for 24 hours
 		cache.Set(cacheKey, data, cacheTTL)
 	}
 
 	var oidcConfig OIDCConfiguration
 	if err := json.Unmarshal(data, &oidcConfig); err != nil {
+		log.Errorf("[fetchOIDCConfiguration] Failed to parse response: %s", err)
 		return nil, fmt.Errorf("failed to parse OpenID configuration: %w", err)
 	}
+
+	log.Debugf("[fetchOIDCConfiguration] OIDC Config - Issuer: %s, AuthEndpoint: %s, TokenEndpoint: %s, EndSessionEndpoint: %s",
+		oidcConfig.Issuer, oidcConfig.AuthorizationEndpoint, oidcConfig.TokenEndpoint, oidcConfig.EndSessionEndpoint)
 
 	return &oidcConfig, nil
 }
 
 // PerformOIDCLogout calls the end_session_endpoint to terminate the SSO session
 func PerformOIDCLogout(contextName, sessionID string) error {
+	log := logger.WithNamespace("oauth")
+	log.Debugf("[PerformOIDCLogout] === OIDC Logout ===")
+	log.Debugf("[PerformOIDCLogout] Context: %s, SessionID: %s", contextName, sessionID)
+
 	if sessionID == "" {
+		log.Debugf("[PerformOIDCLogout] No session ID provided, skipping logout")
 		// No session ID, nothing to do
 		return nil
 	}
 
 	oidcConfig, err := fetchOIDCConfiguration(contextName)
 	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration for logout: %s", err)
+		log.Warnf("[PerformOIDCLogout] Cannot fetch OpenID configuration for logout: %s", err)
 		// Don't fail the client deletion if we can't logout from the SSO
 		return err
 	}
 
 	if oidcConfig.EndSessionEndpoint == "" {
-		logger.WithNamespace("oidc").Warnf("No end_session_endpoint found in OpenID configuration")
+		log.Warnf("[PerformOIDCLogout] No end_session_endpoint found in OpenID configuration")
 		// No end_session_endpoint, nothing we can do
 		return err
 	}
 
+	log.Debugf("[PerformOIDCLogout] EndSessionEndpoint: %s", oidcConfig.EndSessionEndpoint)
+
 	// Call the end_session_endpoint with the session ID
 	endSessionURL, err := url.Parse(oidcConfig.EndSessionEndpoint)
 	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Invalid end_session_endpoint URL: %s", err)
+		log.Warnf("[PerformOIDCLogout] Invalid end_session_endpoint URL: %s", err)
 		return err
 	}
 
@@ -1015,27 +1083,33 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 	q.Add("session_id", sessionID)
 	endSessionURL.RawQuery = q.Encode()
 
+	log.Debugf("[PerformOIDCLogout] Calling end_session_endpoint: %s", endSessionURL.String())
+
 	req, err := http.NewRequest(http.MethodGet, endSessionURL.String(), nil)
 	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Failed to create end_session request: %s", err)
+		log.Warnf("[PerformOIDCLogout] Failed to create end_session request: %s", err)
 		return err
 	}
 	req.Header.Add("User-Agent", build.UserAgent())
 
 	res, err := oidcClient.Do(req)
 	if err != nil {
-		logger.WithNamespace("oidc").Warnf("Error calling end_session_endpoint: %s", err)
+		log.Warnf("[PerformOIDCLogout] HTTP request failed: %s", err)
 		// Don't fail the client deletion if the SSO logout fails
 		return err
 	}
 	defer res.Body.Close()
 
+	log.Debugf("[PerformOIDCLogout] Response status: %d", res.StatusCode)
+
 	if res.StatusCode >= 400 {
-		logger.WithNamespace("oidc").Warnf("end_session_endpoint returned status %d", res.StatusCode)
+		errBody, _ := io.ReadAll(res.Body)
+		log.Warnf("[PerformOIDCLogout] end_session_endpoint returned status %d, body: %s",
+			res.StatusCode, string(errBody))
 		// Don't fail the client deletion if the SSO logout fails
 		return err
 	}
 
-	logger.WithNamespace("oidc").Infof("Successfully called end_session_endpoint for OIDC logout")
+	log.Infof("[PerformOIDCLogout] Successfully called end_session_endpoint for OIDC logout")
 	return err
 }
