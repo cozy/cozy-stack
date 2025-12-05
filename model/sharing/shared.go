@@ -426,6 +426,11 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	}
 
+	// Send notification to owner if a recipient created a file
+	if evt.Verb == "CREATED" {
+		MaybeNotifyFileCreated(inst, msg, evt)
+	}
+
 	// For a directory, we have to update the Removed flag for the files inside
 	// it, as we won't have any events for them.
 	if needToUpdateFiles {

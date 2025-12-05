@@ -1379,3 +1379,15 @@ msgstr "%s поделился с вами %s."
 
 msgid "Permissions io.cozy.drive.settings"
 msgstr "Настройки Drive"
+
+msgid "Mail Sharing File Changed Subject"
+msgstr "File changed in shared folder: %s"
+
+msgid "Mail Sharing File Changed Intro"
+msgstr "Someone shared a file with you:"
+
+msgid "Mail Sharing File Changed Link Text"
+msgstr "See on Twake Drive"
+
+msgid "Mail Sharing Folder Changed Intro"
+msgstr "Someone shared a folder with you:"

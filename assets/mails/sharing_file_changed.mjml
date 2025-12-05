@@ -1,0 +1,15 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://files.cozycloud.cc/email-assets/stack/twake-share.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Sharing File Changed Subject" .SharingDescription}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{if .IsFolder}}{{t "Mail Sharing Folder Changed Intro"}}{{else}}{{t "Mail Sharing File Changed Intro"}}{{end}}
+</mj-text>
+<mj-text mj-class="content-medium" padding-left="20px">
+	<strong>{{.FileName}}</strong>
+</mj-text>
+<mj-button href="{{.FileURL}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail Sharing File Changed Link Text"}}
+</mj-button>
+{{end}}

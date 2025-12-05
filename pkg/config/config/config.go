@@ -366,6 +366,36 @@ func GetSharingConfig(contextName string) SharingConfig {
 	return defaultConfig
 }
 
+// SharingNotificationsConfig contains settings for sharing file change notifications.
+type SharingNotificationsConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+}
+
+func GetSharingNotificationsConfig(contextName string) SharingNotificationsConfig {
+	defaultConfig := SharingNotificationsConfig{
+		Enabled: false,
+	}
+
+	if config == nil || config.Contexts == nil {
+		return defaultConfig
+	}
+
+	if contextName == "" {
+		contextName = DefaultInstanceContext
+	}
+
+	if ctxData, ok := config.Contexts[contextName].(map[string]interface{}); ok {
+		if notifData, ok := ctxData["sharing_notifications"].(map[string]interface{}); ok {
+			var cfg SharingNotificationsConfig
+			if err := mapstructure.Decode(notifData, &cfg); err == nil {
+				return cfg
+			}
+		}
+	}
+
+	return defaultConfig
+}
+
 // SMS contains the configuration to send notifications by SMS.
 type SMS struct {
 	Provider string

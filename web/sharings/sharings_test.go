@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -1788,4 +1789,261 @@ func generateAppToken(inst *instance.Instance, slug, doctype string) string {
 		return ""
 	}
 	return inst.BuildAppToken(slug, "")
+}
+
+func TestSharingFileChangeNotification(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	// Setup config with sharing notifications enabled
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	cfg := config.GetConfig()
+	cfg.Assets = "../../assets"
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing_notifications": map[string]interface{}{
+				"enabled": true,
+			},
+		},
+	}
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Create test instance
+	setup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+
+	// Generate app token for file operations
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+	require.NotEmpty(t, ownerAppToken)
+
+	// Set up test server with files and permissions routes (no sharing needed)
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":       files.Routes,
+		"/permissions": permissions.Routes,
+	})
+	ts.Config.Handler.(*echo.Echo).Renderer = render
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
+
+	e := httpexpect.Default(t, ts.URL)
+
+	// Create a folder
+	folderObj := e.POST("/files/").
+		WithQuery("Name", "Shared Folder").
+		WithQuery("Type", "directory").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	sharedDirID := folderObj.Path("$.data.id").String().NotEmpty().Raw()
+
+	// Create a share-by-link permission for the folder
+	permObj := e.POST("/permissions").
+		WithQuery("codes", "anonymous").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "io.cozy.permissions",
+				"attributes": {
+					"permissions": {
+						"files": {
+							"type": "io.cozy.files",
+							"verbs": ["GET", "POST", "PUT", "PATCH"],
+							"values": ["` + sharedDirID + `"]
+						}
+					}
+				}
+			}
+		}`)).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	sharecode := permObj.Path("$.data.attributes.codes.anonymous").String().NotEmpty().Raw()
+	require.NotEmpty(t, sharecode, "sharecode should be generated")
+
+	// Upload a file to the shared folder using the sharecode (anonymous access)
+	fileObj := e.POST("/files/"+sharedDirID).
+		WithQuery("Name", "uploaded-file.pdf").
+		WithQuery("Type", "file").
+		WithHeader("Content-Type", "application/pdf").
+		WithHeader("Content-MD5", "rL0Y20zC+Fzt72VPzMSk2A==").
+		WithHeader("Authorization", "Bearer "+sharecode). // Using sharecode for anonymous access
+		WithBytes([]byte("foo")).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	uploadedFileID := fileObj.Path("$.data.id").String().NotEmpty().Raw()
+	require.NotEmpty(t, uploadedFileID)
+
+	// Wait for the async notification to be processed
+	time.Sleep(200 * time.Millisecond)
+
+	// Check that a sendmail job was created with the correct template
+	allJobs, err := job.GetAllJobs(ownerInstance)
+	require.NoError(t, err)
+
+	sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
+	require.NoError(t, err)
+
+	// Find the job with the sharing_file_changed template
+	var found bool
+	for _, j := range sendmailJobs {
+		var msgData map[string]interface{}
+		if err := json.Unmarshal(j.Message, &msgData); err != nil {
+			continue
+		}
+		if msgData["template_name"] == "sharing_file_changed" {
+			found = true
+			assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
+			values := msgData["template_values"].(map[string]interface{})
+			// For share-by-link, the description is the parent folder name
+			assert.Equal(t, "Shared Folder", values["SharingDescription"])
+			assert.Equal(t, "uploaded-file.pdf", values["FileName"])
+			assert.Contains(t, values["FileURL"], "/folder/")
+			assert.Contains(t, values["FileURL"], "/file/"+uploadedFileID)
+			assert.Equal(t, false, values["IsFolder"])
+			break
+		}
+	}
+	assert.True(t, found, "Expected to find a sendmail job with template 'sharing_file_changed'")
+}
+
+// TestSharingFolderChangeNotification tests that a notification email is sent
+// when a folder is created in a shared folder via share-by-link (public access).
+// This test uses pure share-by-link without creating a collaborative sharing.
+func TestSharingFolderChangeNotification(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	// Setup config with sharing notifications enabled
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	cfg := config.GetConfig()
+	cfg.Assets = "../../assets"
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing_notifications": map[string]interface{}{
+				"enabled": true,
+			},
+		},
+	}
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Create test instance
+	setup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+
+	// Generate app token for file operations
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+	require.NotEmpty(t, ownerAppToken)
+
+	// Set up test server with files and permissions routes (no sharing needed)
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":       files.Routes,
+		"/permissions": permissions.Routes,
+	})
+	ts.Config.Handler.(*echo.Echo).Renderer = render
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
+
+	e := httpexpect.Default(t, ts.URL)
+
+	// Create a folder via API
+	folderObj := e.POST("/files/").
+		WithQuery("Name", "Shared Folder").
+		WithQuery("Type", "directory").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	sharedDirID := folderObj.Path("$.data.id").String().NotEmpty().Raw()
+
+	// Create a share-by-link permission for the folder (public access with sharecode)
+	// No collaborative sharing is needed - this is a pure share-by-link scenario
+	permObj := e.POST("/permissions").
+		WithQuery("codes", "anonymous").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "io.cozy.permissions",
+				"attributes": {
+					"permissions": {
+						"files": {
+							"type": "io.cozy.files",
+							"verbs": ["GET", "POST", "PUT", "PATCH"],
+							"values": ["` + sharedDirID + `"]
+						}
+					}
+				}
+			}
+		}`)).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	sharecode := permObj.Path("$.data.attributes.codes.anonymous").String().NotEmpty().Raw()
+	require.NotEmpty(t, sharecode, "sharecode should be generated")
+
+	// Create a subfolder in the shared folder using the sharecode (anonymous access)
+	// The notification is sent automatically by the folder creation handler
+	subfolderObj := e.POST("/files/"+sharedDirID).
+		WithQuery("Name", "New Subfolder").
+		WithQuery("Type", "directory").
+		WithHeader("Authorization", "Bearer "+sharecode). // Using sharecode for anonymous access
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+	createdFolderID := subfolderObj.Path("$.data.id").String().NotEmpty().Raw()
+	require.NotEmpty(t, createdFolderID)
+
+	// Wait for the async notification to be processed
+	time.Sleep(200 * time.Millisecond)
+
+	// Check that a sendmail job was created with the correct template
+	allJobs, err := job.GetAllJobs(ownerInstance)
+	require.NoError(t, err)
+
+	sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
+	require.NoError(t, err)
+
+	// Find the job with the sharing_file_changed template
+	var found bool
+	for _, j := range sendmailJobs {
+		var msgData map[string]interface{}
+		if err := json.Unmarshal(j.Message, &msgData); err != nil {
+			continue
+		}
+		if msgData["template_name"] == "sharing_file_changed" {
+			found = true
+			assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
+			values := msgData["template_values"].(map[string]interface{})
+			// For share-by-link, the description is the parent folder name
+			assert.Equal(t, "Shared Folder", values["SharingDescription"])
+			assert.Equal(t, "New Subfolder", values["FileName"])
+			assert.Contains(t, values["FileURL"], "/folder/"+createdFolderID)
+			assert.Equal(t, true, values["IsFolder"])
+			break
+		}
+	}
+	assert.True(t, found, "Expected to find a sendmail job with template 'sharing_file_changed'")
 }

@@ -155,10 +155,24 @@ func createFileHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing)
 	if err != nil {
 		return nil, wrapVfsError(err)
 	}
+	maybeNotifyShareByLinkUpload(c, inst, doc.DocName, doc.ID(), doc.DirID, false)
 	return NewFile(doc, inst, sharedDrive), nil
 }
 
+// maybeNotifyShareByLinkUpload sends a notification
+// if the file/folder was uploaded via a share-by-link permission (public link).
+func maybeNotifyShareByLinkUpload(c echo.Context, inst *instance.Instance, name, id, dirID string, isFolder bool) {
+	perm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return
+	}
+	if perm.Type == permission.TypeShareByLink {
+		sharing.MaybeNotifyShareByLinkUpload(inst, name, id, dirID, isFolder)
+	}
+}
+
 func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) (createdDir *dir, err error) {
+	inst := middlewares.GetInstance(c)
 	path := c.QueryParam("Path")
 	tags := utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
 
@@ -172,6 +186,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 		if err != nil {
 			return nil, err
 		}
+		maybeNotifyShareByLinkUpload(c, inst, doc.DocName, doc.ID(), doc.DirID, true)
 		return NewDir(doc, sharedDrive), nil
 	}
 
@@ -200,8 +215,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 	}
 
 	if secret := c.QueryParam("MetadataID"); secret != "" {
-		instance := middlewares.GetInstance(c)
-		meta, err := vfs.GetStore().GetMetadata(instance, secret)
+		meta, err := vfs.GetStore().GetMetadata(inst, secret)
 		if err != nil {
 			return nil, err
 		}
@@ -232,6 +246,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 		return nil, err
 	}
 
+	maybeNotifyShareByLinkUpload(c, inst, doc.DocName, doc.ID(), doc.DirID, true)
 	return NewDir(doc, sharedDrive), nil
 }
 

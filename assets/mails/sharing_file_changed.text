@@ -1,0 +1,7 @@
+{{if .IsFolder}}{{t "Mail Sharing Folder Changed Intro"}}{{else}}{{t "Mail Sharing File Changed Intro"}}{{end}}
+
+  {{.FileName}}
+
+{{t "Mail Sharing File Changed Link Text"}}
+
+  [{{.FileURL}}]
