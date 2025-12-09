@@ -10,6 +10,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 const (
@@ -43,13 +45,15 @@ type ScanResult struct {
 type Client struct {
 	address string
 	timeout time.Duration
+	log     *logger.Entry
 }
 
 // NewClient creates a new ClamAV client
-func NewClient(address string, timeout time.Duration) *Client {
+func NewClient(address string, timeout time.Duration, log *logger.Entry) *Client {
 	return &Client{
 		address: address,
 		timeout: timeout,
+		log:     log,
 	}
 }
 
@@ -69,9 +73,16 @@ func wrapError(err error, fallback error) error {
 
 // Ping checks if the ClamAV daemon is responsive
 func (c *Client) Ping(ctx context.Context) error {
+	c.log.Debugf("Pinging ClamAV daemon at %s", c.address)
+
+	if err := ctx.Err(); err != nil {
+		return wrapError(err, ErrConnectionFailed)
+	}
+
 	dialer := &net.Dialer{Timeout: c.timeout}
 	conn, err := dialer.DialContext(ctx, "tcp", c.address)
 	if err != nil {
+		c.log.Debugf("Failed to connect to ClamAV at %s: %v", c.address, err)
 		return wrapError(err, ErrConnectionFailed)
 	}
 	defer conn.Close()
@@ -97,17 +108,28 @@ func (c *Client) Ping(ctx context.Context) error {
 
 	response = strings.TrimSpace(response)
 	if response != "PONG" {
+		c.log.Debugf("Unexpected PING response from ClamAV: %s", response)
 		return fmt.Errorf("%w: unexpected PING response: %s", ErrConnectionFailed, response)
 	}
 
+	c.log.Debugf("ClamAV daemon at %s is responsive", c.address)
 	return nil
 }
 
 // Scan scans content from a reader using the INSTREAM protocol
 func (c *Client) Scan(ctx context.Context, r io.Reader) (*ScanResult, error) {
+	c.log.Debugf("Starting scan via ClamAV at %s", c.address)
+	startTime := time.Now()
+
+	if err := ctx.Err(); err != nil {
+		return errorResult("context cancelled", err), wrapError(err, ErrScanFailed)
+	}
+
+	c.log.Debugf("Connecting to ClamAV daemon at %s", c.address)
 	dialer := &net.Dialer{Timeout: c.timeout}
 	conn, err := dialer.DialContext(ctx, "tcp", c.address)
 	if err != nil {
+		c.log.Debugf("Failed to connect to ClamAV at %s: %v", c.address, err)
 		return errorResult("connection failed", err), wrapError(err, ErrConnectionFailed)
 	}
 	defer conn.Close()
@@ -121,28 +143,38 @@ func (c *Client) Scan(ctx context.Context, r io.Reader) (*ScanResult, error) {
 	}
 
 	// Send INSTREAM command
+	c.log.Debugf("Sending INSTREAM command to ClamAV")
 	if _, err = conn.Write([]byte("nINSTREAM\n")); err != nil {
+		c.log.Debugf("Failed to send INSTREAM command: %v", err)
 		return errorResult("failed to send INSTREAM command", err), wrapError(err, ErrScanFailed)
 	}
 
 	// Stream file content using chunked writer
+	c.log.Debugf("Streaming content to ClamAV")
 	if err := c.streamContent(conn, r); err != nil {
+		c.log.Debugf("Failed to stream content: %v", err)
 		return errorResult("failed to stream content", err), wrapError(err, ErrScanFailed)
 	}
 
 	// Send terminator (4 zero bytes)
+	c.log.Debugf("Sending stream terminator")
 	if _, err := conn.Write([]byte{0, 0, 0, 0}); err != nil {
 		return errorResult("failed to send terminator", err), wrapError(err, ErrScanFailed)
 	}
 
 	// Read response
+	c.log.Debugf("Reading scan response from ClamAV")
 	reader := bufio.NewReader(conn)
 	response, err := reader.ReadString('\n')
 	if err != nil && err != io.EOF {
+		c.log.Debugf("Failed to read response: %v", err)
 		return errorResult("failed to read response", err), wrapError(err, ErrScanFailed)
 	}
 
-	return parseResponse(strings.TrimSpace(response)), nil
+	result := parseResponse(strings.TrimSpace(response))
+	c.log.Debugf("Scan completed in %v, status: %s", time.Since(startTime), result.Status)
+
+	return result, nil
 }
 
 // streamContent streams the content to ClamAV using the INSTREAM chunked protocol

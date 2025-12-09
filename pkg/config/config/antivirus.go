@@ -4,13 +4,14 @@ import "github.com/go-viper/mapstructure/v2"
 
 // AntivirusContextConfig contains the context-specific antivirus settings
 type AntivirusContextConfig struct {
-	Enabled       bool                         `json:"enabled" mapstructure:"enabled"`
+	Enabled bool `json:"enabled" mapstructure:"enabled"`
+	// OnInfected defines the action when an infected file is detected: "warn" or "block".
 	OnInfected    string                       `json:"on_infected,omitempty" mapstructure:"on_infected"`
 	Notifications AntivirusNotificationsConfig `json:"notifications,omitempty" mapstructure:"notifications"`
 	Actions       map[string][]string          `json:"actions" mapstructure:"actions"`
 }
 
-// AntivirusNotificationsConfig contains notification settings for antivirus
+// AntivirusNotificationsConfig contains notification settings for antivirus.
 type AntivirusNotificationsConfig struct {
 	EmailOnInfected bool `json:"email_on_infected" mapstructure:"email_on_infected"`
 }

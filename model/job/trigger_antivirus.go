@@ -10,11 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
-const (
-	// AntivirusStatusPending is the status set on files awaiting antivirus scan
-	AntivirusStatusPending = "pending"
-)
-
 // AntivirusTrigger listens for file creation events and schedules antivirus scans.
 type AntivirusTrigger struct {
 	broker      Broker
@@ -86,6 +81,7 @@ func (t *AntivirusTrigger) pushJob(e *realtime.Event) {
 	// Push antivirus job
 	event, err := NewEvent(e)
 	if err != nil {
+		log.Errorf("trigger antivirus: Could not create event for file %s: %s", doc.DocID, err.Error())
 		return
 	}
 
@@ -113,7 +109,7 @@ func (t *AntivirusTrigger) setPendingStatus(inst *instance.Instance, doc *vfs.Fi
 
 	newdoc := file.Clone().(*vfs.FileDoc)
 	newdoc.AntivirusStatus = &vfs.AntivirusStatus{
-		Status: AntivirusStatusPending,
+		Status: vfs.AVStatusPending,
 	}
 	if err := couchdb.UpdateDoc(fs, newdoc); err != nil {
 		// Conflict or other error - log and continue, job will still run

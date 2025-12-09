@@ -556,7 +556,6 @@ contexts:
           - share
           - preview
           - delete
-          - priority_scan
         clean:
           - download
           - share
@@ -569,7 +568,6 @@ contexts:
           - share
           - preview
           - delete
-          - priority_scan
         skipped:
           - download
           - share

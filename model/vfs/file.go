@@ -67,6 +67,15 @@ type FileDoc struct {
 	// structure DirOrFileDoc in model/vfs/vfs.go and client/files.go.
 }
 
+// Antivirus scan status values
+const (
+	AVStatusPending  = "pending"
+	AVStatusClean    = "clean"
+	AVStatusInfected = "infected"
+	AVStatusError    = "error"
+	AVStatusSkipped  = "skipped"
+)
+
 // AntivirusStatus contains the antivirus scan information for a file
 type AntivirusStatus struct {
 	Status    string     `json:"status"`               // pending, clean, infected, error, skipped

@@ -186,7 +186,7 @@ func TestSettings(t *testing.T) {
 
 		// Check default actions matrix
 		actions := av.Value("actions").Object()
-		actions.Value("pending").Array().Contains("download", "share", "preview", "delete", "priority_scan")
+		actions.Value("pending").Array().Contains("download", "share", "preview", "delete")
 		actions.Value("clean").Array().Contains("download", "share", "preview", "delete")
 		actions.Value("infected").Array().Contains("delete")
 		actions.Value("infected").Array().NotContains("download", "share", "preview")

@@ -365,15 +365,15 @@ type DirOrFileDoc struct {
 	*DirDoc
 
 	// fields from FileDoc not contained in DirDoc
-	ByteSize      int64            `json:"size,string"`
-	MD5Sum        []byte           `json:"md5sum,omitempty"`
-	Mime          string           `json:"mime,omitempty"`
-	Class         string           `json:"class,omitempty"`
-	Executable    bool             `json:"executable,omitempty"`
-	Trashed       bool             `json:"trashed,omitempty"`
-	Encrypted     bool             `json:"encrypted,omitempty"`
-	AntivirusScan *AntivirusStatus `json:"antivirus_scan,omitempty"`
-	InternalID    string           `json:"internal_vfs_id,omitempty"`
+	ByteSize        int64            `json:"size,string"`
+	MD5Sum          []byte           `json:"md5sum,omitempty"`
+	Mime            string           `json:"mime,omitempty"`
+	Class           string           `json:"class,omitempty"`
+	Executable      bool             `json:"executable,omitempty"`
+	Trashed         bool             `json:"trashed,omitempty"`
+	Encrypted       bool             `json:"encrypted,omitempty"`
+	AntivirusStatus *AntivirusStatus `json:"antivirus_status,omitempty"`
+	InternalID      string           `json:"internal_vfs_id,omitempty"`
 }
 
 // Clone is part of the couchdb.Doc interface
@@ -408,7 +408,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Metadata:        fd.Metadata,
 			ReferencedBy:    fd.ReferencedBy,
 			CozyMetadata:    fd.CozyMetadata,
-			AntivirusStatus: fd.AntivirusScan,
+			AntivirusStatus: fd.AntivirusStatus,
 			InternalID:      fd.InternalID,
 		}
 	}

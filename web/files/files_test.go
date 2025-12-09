@@ -3821,14 +3821,15 @@ func TestFileCreationTriggersAntivirusScan(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return updatedDoc.AntivirusStatus != nil && updatedDoc.AntivirusStatus.Status == "pending"
+		return updatedDoc.AntivirusStatus != nil &&
+			updatedDoc.AntivirusStatus.Status == vfs.AVStatusPending
 	})
 
 	// Verify antivirus status is pending
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
 	require.NotNil(t, updatedDoc.AntivirusStatus)
-	assert.Equal(t, "pending", updatedDoc.AntivirusStatus.Status)
+	assert.Equal(t, vfs.AVStatusPending, updatedDoc.AntivirusStatus.Status)
 
 	// Cleanup
 	_ = fs.DestroyFile(updatedDoc)

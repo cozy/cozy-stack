@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/clamav"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/worker/antivirus"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestAntivirus(t *testing.T) {
 		t.Run("CleanFile", func(t *testing.T) {
 			t.Parallel()
 
-			client := clamav.NewClient(clamavAddress, 30*time.Second)
+			client := clamav.NewClient(clamavAddress, 30*time.Second, logger.WithNamespace("test"))
 
 			// Test PING
 			err := client.Ping(context.Background())
@@ -49,7 +50,7 @@ func TestAntivirus(t *testing.T) {
 		t.Run("InfectedFile", func(t *testing.T) {
 			t.Parallel()
 
-			client := clamav.NewClient(clamavAddress, 30*time.Second)
+			client := clamav.NewClient(clamavAddress, 30*time.Second, logger.WithNamespace("test"))
 
 			// Test scanning an infected file (EICAR test signature)
 			infectedContent := testutils.EICARTestSignature()
@@ -106,7 +107,7 @@ func testWorkerCleanFile(t *testing.T, inst *instance.Instance) {
 	defer deleteTestFile(t, fs, doc)
 
 	doc.AntivirusStatus = &vfs.AntivirusStatus{
-		Status: antivirus.ScanStatusPending,
+		Status: vfs.AVStatusPending,
 	}
 
 	// Update the document
@@ -132,7 +133,7 @@ func testWorkerCleanFile(t *testing.T, inst *instance.Instance) {
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
 	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, antivirus.ScanStatusClean, updatedDoc.AntivirusStatus.Status)
+	require.Equal(t, vfs.AVStatusClean, updatedDoc.AntivirusStatus.Status)
 	require.NotNil(t, updatedDoc.AntivirusStatus.ScannedAt)
 	require.Empty(t, updatedDoc.AntivirusStatus.VirusName)
 }
@@ -144,7 +145,7 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	defer deleteTestFile(t, fs, doc)
 
 	doc.AntivirusStatus = &vfs.AntivirusStatus{
-		Status: antivirus.ScanStatusPending,
+		Status: vfs.AVStatusPending,
 	}
 	err := couchdb.UpdateDoc(fs, doc)
 	require.NoError(t, err)
@@ -168,7 +169,7 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
 	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, antivirus.ScanStatusInfected, updatedDoc.AntivirusStatus.Status)
+	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusStatus.Status)
 	require.NotNil(t, updatedDoc.AntivirusStatus.ScannedAt)
 	require.Contains(t, updatedDoc.AntivirusStatus.VirusName, "EICAR")
 }
@@ -207,7 +208,7 @@ func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
 	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, antivirus.ScanStatusSkipped, updatedDoc.AntivirusStatus.Status)
+	require.Equal(t, vfs.AVStatusSkipped, updatedDoc.AntivirusStatus.Status)
 }
 
 func testWorkerDeletedFile(t *testing.T, inst *instance.Instance) {

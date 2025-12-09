@@ -13,14 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-const (
-	ScanStatusPending  = "pending"
-	ScanStatusClean    = "clean"
-	ScanStatusInfected = "infected"
-	ScanStatusError    = "error"
-	ScanStatusSkipped  = "skipped"
-)
-
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "antivirus",
@@ -46,9 +38,11 @@ func Worker(ctx *job.TaskContext) error {
 	inst := ctx.Instance
 	log := inst.Logger().WithNamespace("antivirus")
 
+	log.Debugf("Starting antivirus job for file %s", msg.FileID)
+
 	// Check if antivirus is enabled for this instance
 	if !isEnabledForInstance(inst) {
-		log.Infof("Antivirus is disabled for this context, skipping scan")
+		log.Debugf("Antivirus is disabled for context %s, skipping scan", inst.ContextName)
 		return nil
 	}
 
@@ -59,18 +53,21 @@ func Worker(ctx *job.TaskContext) error {
 	file, err := fs.FileByID(msg.FileID)
 	if err != nil {
 		if os.IsNotExist(err) || couchdb.IsNotFoundError(err) {
-			log.Infof("File %s not found, skipping scan", msg.FileID)
+			log.Debugf("File %s not found (possibly deleted), skipping scan", msg.FileID)
 			return nil // File was deleted, nothing to do
 		}
+		log.Errorf("Failed to get file %s: %v", msg.FileID, err)
 		return err
 	}
+
+	log.Debugf("File %s: name=%s, size=%d bytes, mime=%s", msg.FileID, file.DocName, file.ByteSize, file.Mime)
 
 	avConfig := config.GetConfig().Antivirus
 
 	if avConfig.MaxFileSize > 0 && file.ByteSize > avConfig.MaxFileSize {
-		log.Infof("File %s is too large (%d bytes), skipping scan", msg.FileID, file.ByteSize)
+		log.Infof("File %s is too large (%d bytes > %d max), skipping scan", msg.FileID, file.ByteSize, avConfig.MaxFileSize)
 		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
-			Status: ScanStatusSkipped,
+			Status: vfs.AVStatusSkipped,
 		})
 	}
 
@@ -79,76 +76,79 @@ func Worker(ctx *job.TaskContext) error {
 	if timeout == 0 {
 		timeout = 5 * time.Minute
 	}
-	client := clamav.NewClient(avConfig.Address, timeout)
+	log.Debugf("Creating ClamAV client: address=%s, timeout=%v", avConfig.Address, timeout)
+	client := clamav.NewClient(avConfig.Address, timeout, log)
 
+	log.Debugf("Opening file %s for scanning", msg.FileID)
 	content, err := fs.OpenFile(file)
 	if err != nil {
 		log.Errorf("Failed to open file %s: %v", msg.FileID, err)
 		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
-			Status: ScanStatusError,
+			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
 	}
 	defer content.Close()
 
 	// Scan the file
+	log.Debugf("Sending file %s to ClamAV for scanning", msg.FileID)
 	result, err := client.Scan(ctx, content)
 	if err != nil {
-		log.Errorf("Failed to scan file %s: %v", msg.FileID, err)
+		log.Errorf("Failed to scan the file %s: %v", msg.FileID, err)
 		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
-			Status: ScanStatusError,
+			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
 	}
 
 	// Update file with scan result
 	now := time.Now()
-	scan := &vfs.AntivirusStatus{
+	st := &vfs.AntivirusStatus{
 		ScannedAt: &now,
 	}
 
 	switch result.Status {
 	case clamav.StatusClean:
-		scan.Status = ScanStatusClean
+		log.Debugf("File %s is clean", msg.FileID)
+		st.Status = vfs.AVStatusClean
 	case clamav.StatusInfected:
 		log.Warnf("File %s is infected with %s", msg.FileID, result.VirusName)
-		scan.Status = ScanStatusInfected
-		scan.VirusName = result.VirusName
+		st.Status = vfs.AVStatusInfected
+		st.VirusName = result.VirusName
 	default:
 		log.Errorf("Scan error for file %s: %s", msg.FileID, result.Error)
-		scan.Status = ScanStatusError
-		scan.Error = result.Error
+		st.Status = vfs.AVStatusError
+		st.Error = result.Error
 	}
 
-	return updateScanStatus(fs, file, scan)
+	log.Debugf("Updating scan status for file %s: status=%s", msg.FileID, st.Status)
+	return updateScanStatus(fs, file, st)
 }
 
-// updateScanStatus updates the file document with the scan status
+// updateScanStatus updates the file document with the scan status.
+// It retries on conflict errors to handle race conditions with the trigger.
 func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusStatus) error {
-	file, err := fs.FileByID(file.DocID)
-	if err != nil {
-		return err
-	}
-	newdoc := file.Clone().(*vfs.FileDoc)
-	newdoc.AntivirusStatus = scan
-	return couchdb.UpdateDoc(fs, newdoc)
-}
+	const maxRetries = 3
+	var err error
 
-// PushScanJob pushes an antivirus scan job for a file
-func PushScanJob(inst *instance.Instance, fileID string) (*job.Job, error) {
-	if !isEnabledForInstance(inst) {
-		return nil, nil // Antivirus disabled for this context
+	for i := 0; i < maxRetries; i++ {
+		var f *vfs.FileDoc
+		f, err = fs.FileByID(file.DocID)
+		if err != nil {
+			return err
+		}
+		newdoc := f.Clone().(*vfs.FileDoc)
+		newdoc.AntivirusStatus = scan
+		err = couchdb.UpdateDoc(fs, newdoc)
+		if err == nil {
+			return nil
+		}
+		if !couchdb.IsConflictError(err) {
+			return err
+		}
+		// Conflict error, retry with fresh document
 	}
-
-	msg, err := job.NewMessage(&Message{FileID: fileID})
-	if err != nil {
-		return nil, err
-	}
-
-	return job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "antivirus",
-		Message:    msg,
-	})
+	return err
 }
 
 // isEnabledForInstance returns true if antivirus is enabled for the given instance
