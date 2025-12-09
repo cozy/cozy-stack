@@ -17,24 +17,28 @@ type AntivirusNotificationsConfig struct {
 
 // GetAntivirusConfig returns the antivirus configuration for a given context.
 // It reads from contexts.<contextName>.antivirus and returns the configuration for the UI.
+// If global antivirus is enabled but no context-specific config exists, returns enabled with defaults.
 func GetAntivirusConfig(contextName string) *AntivirusContextConfig {
 	if config == nil || !config.Antivirus.Enabled {
 		return &AntivirusContextConfig{Enabled: false}
 	}
 
-	if config.Contexts == nil {
-		return &AntivirusContextConfig{Enabled: false}
+	// Try to get context-specific config
+	var ctxConfig *AntivirusContextConfig
+	if config.Contexts != nil {
+		ctxConfig = getAntivirusFromContext(contextName)
+		if ctxConfig == nil && contextName != DefaultInstanceContext {
+			// Fall back to default context
+			ctxConfig = getAntivirusFromContext(DefaultInstanceContext)
+		}
 	}
 
-	// Try to get antivirus config from the specific context
-	ctxConfig := getAntivirusFromContext(contextName)
-	if ctxConfig == nil && contextName != DefaultInstanceContext {
-		// Fall back to default context
-		ctxConfig = getAntivirusFromContext(DefaultInstanceContext)
-	}
-
+	// If no context config, use defaults (global is enabled)
 	if ctxConfig == nil {
-		return &AntivirusContextConfig{Enabled: false}
+		return &AntivirusContextConfig{
+			Enabled: true,
+			Actions: getDefaultActions(),
+		}
 	}
 
 	// If no actions are configured, use defaults

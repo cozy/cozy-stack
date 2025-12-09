@@ -51,6 +51,9 @@ type FileDoc struct {
 
 	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 
+	// AntivirusStatus contains the antivirus scan status and results
+	AntivirusStatus *AntivirusStatus `json:"antivirus_status,omitempty"`
+
 	// InternalID is an identifier that can be used by the VFS, but must no be
 	// used by clients. For example, it can be used to know the location in
 	// Swift of a file.
@@ -62,6 +65,14 @@ type FileDoc struct {
 
 	// NOTE: Do not forget to propagate changes made to this structure to the
 	// structure DirOrFileDoc in model/vfs/vfs.go and client/files.go.
+}
+
+// AntivirusStatus contains the antivirus scan information for a file
+type AntivirusStatus struct {
+	Status    string     `json:"status"`               // pending, clean, infected, error, skipped
+	ScannedAt *time.Time `json:"scanned_at,omitempty"` // When the scan was performed
+	VirusName string     `json:"virus_name,omitempty"` // Name of detected virus (if infected)
+	Error     string     `json:"error,omitempty"`      // Error message (if error status)
 }
 
 // ID returns the file qualified identifier
@@ -88,6 +99,10 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	}
 	if f.CozyMetadata != nil {
 		cloned.CozyMetadata = f.CozyMetadata.Clone()
+	}
+	if f.AntivirusStatus != nil {
+		scan := *f.AntivirusStatus
+		cloned.AntivirusStatus = &scan
 	}
 	return &cloned
 }
