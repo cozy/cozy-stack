@@ -540,6 +540,41 @@ contexts:
       trusted_domains:
         - example.com
         - mycompany.twake.app
+    # Antivirus context-specific configuration
+    antivirus:
+      # Action when an infected file is detected: "warn" or "block"
+      on_infected: warn
+      # Notification settings
+      notifications:
+        # Send email notification when infected file is detected
+        email_on_infected: true
+      # Allowed actions per scan status
+      # If not specified, permissive defaults are used
+      actions:
+        pending:
+          - download
+          - share
+          - preview
+          - delete
+          - priority_scan
+        clean:
+          - download
+          - share
+          - preview
+          - delete
+        infected:
+          - delete
+        error:
+          - download
+          - share
+          - preview
+          - delete
+          - priority_scan
+        skipped:
+          - download
+          - share
+          - preview
+          - delete
 
   # Default context - used as fallback when instance context is not specified
   # or when a context doesn't have sharing configuration
@@ -572,4 +607,15 @@ rabbitmq:
           delivery_limit: 5
           bindings:
             - password.changed
+
+# Antivirus configuration for scanning uploaded files using ClamAV
+antivirus:
+  # Enable or disable antivirus scanning
+  enabled: false
+  # ClamAV daemon TCP address (clamd must be running)
+  address: localhost:3310
+  # Maximum time to wait for a scan to complete
+  timeout: 300s
+  # Files larger than this size will be skipped (in bytes, 100MB default)
+  max_file_size: 104857600
 

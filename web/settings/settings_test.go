@@ -137,6 +137,103 @@ func TestSettings(t *testing.T) {
 		})
 	})
 
+	t.Run("GetContextWithAntivirusDisabled", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		// Antivirus is disabled by default
+		obj := e.GET("/settings/context").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Value("data").Object().Value("attributes").Object()
+		av := attrs.Value("antivirus").Object()
+		av.HasValue("enabled", false)
+	})
+
+	t.Run("GetContextWithAntivirusDefaultActions", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		// Enable antivirus without specifying actions (uses defaults)
+		conf.Antivirus.Enabled = true
+		conf.Antivirus.Address = "localhost:3310"
+		conf.Contexts["test-context"] = map[string]interface{}{
+			"antivirus": map[string]interface{}{
+				"notifications": map[string]interface{}{
+					"email_on_infected": true,
+				},
+			},
+		}
+		defer func() {
+			conf.Antivirus.Enabled = false
+			delete(conf.Contexts, "test-context")
+		}()
+
+		obj := e.GET("/settings/context").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Value("data").Object().Value("attributes").Object()
+		av := attrs.Value("antivirus").Object()
+		av.HasValue("enabled", true)
+
+		// Check default actions matrix
+		actions := av.Value("actions").Object()
+		actions.Value("pending").Array().Contains("download", "share", "preview", "delete", "priority_scan")
+		actions.Value("clean").Array().Contains("download", "share", "preview", "delete")
+		actions.Value("infected").Array().Contains("delete")
+		actions.Value("infected").Array().NotContains("download", "share", "preview")
+	})
+
+	t.Run("GetContextWithAntivirusCustomActions", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, tsURL)
+
+		// Enable antivirus with custom restricted actions (blocking mode)
+		conf.Antivirus.Enabled = true
+		conf.Antivirus.Address = "localhost:3310"
+		conf.Contexts["test-context"] = map[string]interface{}{
+			"antivirus": map[string]interface{}{
+				"actions": map[string]interface{}{
+					"pending":  []string{"delete"},
+					"clean":    []string{"download", "share", "preview", "delete"},
+					"infected": []string{"delete"},
+					"error":    []string{"delete"},
+					"skipped":  []string{"delete"},
+				},
+			},
+		}
+		defer func() {
+			conf.Antivirus.Enabled = false
+			delete(conf.Contexts, "test-context")
+		}()
+
+		obj := e.GET("/settings/context").
+			WithCookie(sessCookie, "connected").
+			WithHeader("Accept", "application/vnd.api+json").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		attrs := obj.Value("data").Object().Value("attributes").Object()
+		av := attrs.Value("antivirus").Object()
+		av.HasValue("enabled", true)
+
+		// Check custom actions matrix - pending files are blocked
+		actions := av.Value("actions").Object()
+		actions.Value("pending").Array().ContainsAll("delete")
+		actions.Value("pending").Array().NotContainsAll("download", "share", "preview")
+		actions.Value("clean").Array().ContainsAll("download", "share", "preview", "delete")
+		actions.Value("infected").Array().ContainsAll("delete")
+	})
+
 	t.Run("PatchWithGoodRev", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 

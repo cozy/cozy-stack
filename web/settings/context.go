@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -96,6 +97,8 @@ func (h *HTTPHandler) context(c echo.Context) error {
 		// so we add it back for backwards compatibility.
 		context.doc["manager_url"] = managerURL
 	}
+
+	context.doc["antivirus"] = config.GetAntivirusConfig(i.ContextName)
 
 	return jsonapi.Data(c, http.StatusOK, context, nil)
 }
