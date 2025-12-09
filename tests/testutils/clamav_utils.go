@@ -39,8 +39,9 @@ func StartClamAV(t *testing.T) *ClamAVFixture {
 	}
 
 	req := tc.ContainerRequest{
-		Image:        "clamav/clamav:stable",
-		ExposedPorts: []string{"3310/tcp"},
+		Image:         "clamav/clamav:stable",
+		ImagePlatform: "linux/amd64", // Force amd64 platform for ARM Macs
+		ExposedPorts:  []string{"3310/tcp"},
 		Env: map[string]string{
 			// Skip freshclam initial update for faster startup in tests
 			"CLAMAV_NO_FRESHCLAMD": "true",
@@ -96,7 +97,11 @@ func (f *ClamAVFixture) waitForPing(timeout time.Duration) error {
 
 // ping sends a PING command to clamd and returns true if it responds with PONG.
 func (f *ClamAVFixture) ping() bool {
-	conn, err := net.DialTimeout("tcp", f.Address, 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", f.Address)
 	if err != nil {
 		return false
 	}
