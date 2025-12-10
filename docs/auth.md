@@ -655,6 +655,30 @@ Content-Type: application/json
 }
 ```
 
+
+### POST /auth/registerFromWebApp
+
+This route is similar to `POST /auth/register` but is restricted to the Settings
+application only. It uses the same OAuth2 Dynamic Client Registration Protocol
+and accepts the same request/response format as `POST /auth/register`.
+
+**Important:** This endpoint requires authentication from the Settings webapp. The
+request must include a valid token from the Settings application, otherwise it
+will return a 403 Forbidden error.
+
+Example:
+
+```http
+POST /auth/registerFromWebApp HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer <settings-app-token>
+```
+
+The request and response format are identical to `POST /auth/register`.
+
+
 #### Linked applications
 
 Some OAuth applications are a mobile or desktop version of a Cozy webapp. For
