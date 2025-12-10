@@ -1,14 +1,25 @@
 package config
 
-import "github.com/go-viper/mapstructure/v2"
+import (
+	"time"
 
-// AntivirusContextConfig contains the context-specific antivirus settings
+	"github.com/go-viper/mapstructure/v2"
+)
+
+// AntivirusContextConfig contains the antivirus settings for a context.
 type AntivirusContextConfig struct {
+	// Enabled enables or disables antivirus scanning for this context
 	Enabled bool `json:"enabled" mapstructure:"enabled"`
+	// Address is the ClamAV daemon TCP address (e.g., "localhost:3310")
+	Address string `json:"address,omitempty" mapstructure:"address"`
+	// Timeout is the maximum time to wait for a scan to complete
+	Timeout time.Duration `json:"timeout,omitempty" mapstructure:"timeout"`
+	// MaxFileSize is the maximum file size to scan (larger files are skipped)
+	MaxFileSize int64 `json:"max_file_size,omitempty" mapstructure:"max_file_size"`
 	// OnInfected defines the action when an infected file is detected: "warn" or "block".
 	OnInfected    string                       `json:"on_infected,omitempty" mapstructure:"on_infected"`
 	Notifications AntivirusNotificationsConfig `json:"notifications,omitempty" mapstructure:"notifications"`
-	Actions       map[string][]string          `json:"actions" mapstructure:"actions"`
+	Actions       map[string][]string          `json:"actions,omitempty" mapstructure:"actions"`
 }
 
 // AntivirusNotificationsConfig contains notification settings for antivirus.
@@ -17,37 +28,27 @@ type AntivirusNotificationsConfig struct {
 }
 
 // GetAntivirusConfig returns the antivirus configuration for a given context.
-// It reads from contexts.<contextName>.antivirus and returns the configuration for the UI.
-// If global antivirus is enabled but no context-specific config exists, returns enabled with defaults.
 func GetAntivirusConfig(contextName string) *AntivirusContextConfig {
-	if config == nil || !config.Antivirus.Enabled {
+	if config == nil || config.Contexts == nil {
 		return &AntivirusContextConfig{Enabled: false}
 	}
 
 	// Try to get context-specific config
-	var ctxConfig *AntivirusContextConfig
-	if config.Contexts != nil {
-		ctxConfig = getAntivirusFromContext(contextName)
-		if ctxConfig == nil && contextName != DefaultInstanceContext {
-			// Fall back to default context
-			ctxConfig = getAntivirusFromContext(DefaultInstanceContext)
-		}
+	ctxConfig := getAntivirusFromContext(contextName)
+	if ctxConfig == nil && contextName != DefaultInstanceContext {
+		// Fall back to default context
+		ctxConfig = getAntivirusFromContext(DefaultInstanceContext)
 	}
 
-	// If no context config, use defaults (global is enabled)
+	// If no context config found, antivirus is disabled
 	if ctxConfig == nil {
-		return &AntivirusContextConfig{
-			Enabled: true,
-			Actions: getDefaultActions(),
-		}
+		return &AntivirusContextConfig{Enabled: false}
 	}
 
 	// If no actions are configured, use defaults
 	if ctxConfig.Actions == nil || len(ctxConfig.Actions) == 0 {
 		ctxConfig.Actions = getDefaultActions()
 	}
-
-	ctxConfig.Enabled = true
 
 	return ctxConfig
 }

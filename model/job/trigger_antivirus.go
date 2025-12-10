@@ -54,6 +54,7 @@ func (t *AntivirusTrigger) match(e *realtime.Event) bool {
 	if doc, ok := e.Doc.(*vfs.FileDoc); ok {
 		return doc.Type == consts.FileType
 	}
+	t.log.Warnf("Event doc is not *vfs.FileDoc, actual type: %T", e.Doc)
 	return false
 }
 

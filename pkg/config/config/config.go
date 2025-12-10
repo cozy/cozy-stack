@@ -149,8 +149,7 @@ type Config struct {
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]ClouderyConfig
 
-	RabbitMQ  RabbitMQ
-	Antivirus Antivirus
+	RabbitMQ RabbitMQ
 
 	RemoteAllowCustomPort bool
 
@@ -204,15 +203,6 @@ type RabbitExchange struct {
 	DLXName         string        `mapstructure:"dlx_name" yaml:"dlx_name"`                 // DLX name
 	DLQName         string        `mapstructure:"dlq_name" yaml:"dlq_name"`                 // DLQ name
 	Queues          []RabbitQueue `mapstructure:"queues" yaml:"queues"`                     // list of queues
-}
-
-// Antivirus contains the global configuration for antivirus scanning.
-// Context-specific settings (notifications) are in contexts.<name>.antivirus
-type Antivirus struct {
-	Enabled     bool          `mapstructure:"enabled" yaml:"enabled"`
-	Address     string        `mapstructure:"address" yaml:"address"`             // clamd TCP address, e.g. "localhost:3310"
-	Timeout     time.Duration `mapstructure:"timeout" yaml:"timeout"`             // scan timeout
-	MaxFileSize int64         `mapstructure:"max_file_size" yaml:"max_file_size"` // files larger are skipped
 }
 
 // ClouderyConfig for [cloudery.ClouderyService].
@@ -1121,11 +1111,6 @@ func UseViper(v *viper.Viper) error {
 	err = v.UnmarshalKey("rabbitmq", &config.RabbitMQ)
 	if err != nil {
 		return fmt.Errorf(`failed to parse the config for "rabbitmq": %w`, err)
-	}
-
-	err = v.UnmarshalKey("antivirus", &config.Antivirus)
-	if err != nil {
-		return fmt.Errorf(`failed to parse the config for "antivirus": %w`, err)
 	}
 
 	// For compatibility

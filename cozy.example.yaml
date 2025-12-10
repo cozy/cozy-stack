@@ -540,8 +540,16 @@ contexts:
       trusted_domains:
         - example.com
         - mycompany.twake.app
-    # Antivirus context-specific configuration
+    # Antivirus configuration for scanning uploaded files using ClamAV
     antivirus:
+      # Enable or disable antivirus scanning
+      enabled: false
+      # ClamAV daemon TCP address (clamd must be running)
+      address: localhost:3310
+      # Maximum time to wait for a scan to complete
+      timeout: 300s
+      # Files larger than this size will be skipped (in bytes, 100MB default)
+      max_file_size: 104857600
       # Action when an infected file is detected: "warn" or "block"
       on_infected: warn
       # Notification settings
@@ -605,15 +613,3 @@ rabbitmq:
           delivery_limit: 5
           bindings:
             - password.changed
-
-# Antivirus configuration for scanning uploaded files using ClamAV
-antivirus:
-  # Enable or disable antivirus scanning
-  enabled: false
-  # ClamAV daemon TCP address (clamd must be running)
-  address: localhost:3310
-  # Maximum time to wait for a scan to complete
-  timeout: 300s
-  # Files larger than this size will be skipped (in bytes, 100MB default)
-  max_file_size: 104857600
-

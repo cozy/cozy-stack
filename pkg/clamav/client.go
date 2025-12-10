@@ -242,15 +242,9 @@ func parseResponse(response string) *ScanResult {
 
 	// Check for error responses
 	if strings.HasPrefix(response, "ERROR") || strings.Contains(response, "error") {
-		return &ScanResult{
-			Status: StatusError,
-			Error:  response,
-		}
+		return errorResult(response, nil)
 	}
 
 	// Unknown response
-	return &ScanResult{
-		Status: StatusError,
-		Error:  fmt.Sprintf("unknown response: %s", response),
-	}
+	return errorResult(fmt.Sprintf("unknown response: %s", response), nil)
 }

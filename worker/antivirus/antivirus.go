@@ -62,7 +62,7 @@ func Worker(ctx *job.TaskContext) error {
 
 	log.Debugf("File %s: name=%s, size=%d bytes, mime=%s", msg.FileID, file.DocName, file.ByteSize, file.Mime)
 
-	avConfig := config.GetConfig().Antivirus
+	avConfig := config.GetAntivirusConfig(inst.ContextName)
 
 	if avConfig.MaxFileSize > 0 && file.ByteSize > avConfig.MaxFileSize {
 		log.Infof("File %s is too large (%d bytes > %d max), skipping scan", msg.FileID, file.ByteSize, avConfig.MaxFileSize)

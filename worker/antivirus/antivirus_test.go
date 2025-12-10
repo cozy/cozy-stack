@@ -68,14 +68,21 @@ func TestAntivirus(t *testing.T) {
 		setup := testutils.NewSetup(t, "antivirus_worker_test")
 		inst := setup.GetTestInstance(&lifecycle.Options{})
 
-		// Configure antivirus for all worker tests
+		// Configure antivirus in context for all worker tests
 		conf := config.GetConfig()
-		conf.Antivirus.Enabled = true
-		conf.Antivirus.Address = clamavAddress
-		conf.Antivirus.Timeout = 30 * time.Second
+		if conf.Contexts == nil {
+			conf.Contexts = make(map[string]interface{})
+		}
+		conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+			"antivirus": map[string]interface{}{
+				"enabled":       true,
+				"address":       clamavAddress,
+				"timeout":       30 * time.Second,
+				"max_file_size": int64(0),
+			},
+		}
 		t.Cleanup(func() {
-			conf.Antivirus.Enabled = false
-			conf.Antivirus.MaxFileSize = 0
+			delete(conf.Contexts, config.DefaultInstanceContext)
 		})
 
 		t.Run("CleanFile", func(t *testing.T) {
@@ -177,10 +184,12 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
 	// Configure antivirus with a small max file size
 	conf := config.GetConfig()
-	originalMaxFileSize := conf.Antivirus.MaxFileSize
-	conf.Antivirus.MaxFileSize = 10 // 10 bytes
+	ctxData := conf.Contexts[config.DefaultInstanceContext].(map[string]interface{})
+	avData := ctxData["antivirus"].(map[string]interface{})
+	originalMaxFileSize := avData["max_file_size"]
+	avData["max_file_size"] = int64(10) // 10 bytes
 	defer func() {
-		conf.Antivirus.MaxFileSize = originalMaxFileSize
+		avData["max_file_size"] = originalMaxFileSize
 	}()
 
 	// Create a test file larger than max size
@@ -232,10 +241,12 @@ func testWorkerDeletedFile(t *testing.T, inst *instance.Instance) {
 func testWorkerDisabled(t *testing.T, inst *instance.Instance) {
 	// Temporarily disable antivirus
 	conf := config.GetConfig()
-	originalEnabled := conf.Antivirus.Enabled
-	conf.Antivirus.Enabled = false
+	ctxData := conf.Contexts[config.DefaultInstanceContext].(map[string]interface{})
+	avData := ctxData["antivirus"].(map[string]interface{})
+	originalEnabled := avData["enabled"]
+	avData["enabled"] = false
 	defer func() {
-		conf.Antivirus.Enabled = originalEnabled
+		avData["enabled"] = originalEnabled
 	}()
 
 	// Create a test file

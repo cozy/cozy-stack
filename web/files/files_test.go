@@ -3791,10 +3791,20 @@ func TestFileCreationTriggersAntivirusScan(t *testing.T) {
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
-	// Enable antivirus globally
+	// Enable antivirus in context
 	conf := config.GetConfig()
-	conf.Antivirus.Enabled = true
-	t.Cleanup(func() { conf.Antivirus.Enabled = false })
+	if conf.Contexts == nil {
+		conf.Contexts = make(map[string]interface{})
+	}
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+		"antivirus": map[string]interface{}{
+			"enabled": true,
+			"address": "localhost:3310",
+		},
+	}
+	t.Cleanup(func() {
+		delete(conf.Contexts, config.DefaultInstanceContext)
+	})
 
 	setup := testutils.NewSetup(t, t.Name())
 	inst := setup.GetTestInstance(&lifecycle.Options{})

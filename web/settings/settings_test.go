@@ -158,17 +158,16 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		// Enable antivirus without specifying actions (uses defaults)
-		conf.Antivirus.Enabled = true
-		conf.Antivirus.Address = "localhost:3310"
 		conf.Contexts["test-context"] = map[string]interface{}{
 			"antivirus": map[string]interface{}{
+				"enabled": true,
+				"address": "localhost:3310",
 				"notifications": map[string]interface{}{
 					"email_on_infected": true,
 				},
 			},
 		}
 		defer func() {
-			conf.Antivirus.Enabled = false
 			delete(conf.Contexts, "test-context")
 		}()
 
@@ -196,10 +195,10 @@ func TestSettings(t *testing.T) {
 		e := testutils.CreateTestClient(t, tsURL)
 
 		// Enable antivirus with custom restricted actions (blocking mode)
-		conf.Antivirus.Enabled = true
-		conf.Antivirus.Address = "localhost:3310"
 		conf.Contexts["test-context"] = map[string]interface{}{
 			"antivirus": map[string]interface{}{
+				"enabled": true,
+				"address": "localhost:3310",
 				"actions": map[string]interface{}{
 					"pending":  []string{"delete"},
 					"clean":    []string{"download", "share", "preview", "delete"},
@@ -210,7 +209,6 @@ func TestSettings(t *testing.T) {
 			},
 		}
 		defer func() {
-			conf.Antivirus.Enabled = false
 			delete(conf.Contexts, "test-context")
 		}()
 
