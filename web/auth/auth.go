@@ -499,6 +499,36 @@ func logoutPreflight(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func registerPreflight(c echo.Context) error {
+	req := c.Request()
+	res := c.Response()
+	origin := req.Header.Get(echo.HeaderOrigin)
+
+	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowMethods, echo.POST)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
+	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
+		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func registerFromWebApp(c echo.Context) error {
+	res := c.Response()
+	origin := c.Request().Header.Get(echo.HeaderOrigin)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+	if err := middlewares.RequireSettingsApp(c); err != nil {
+		return err
+	}
+	return registerClient(c)
+}
+
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
 func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, error) {
@@ -646,6 +676,8 @@ func Routes(router *echo.Group) {
 
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
+	router.POST("/registerFromWebApp", registerFromWebApp, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
+	router.OPTIONS("/registerFromWebApp", registerPreflight)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.DELETE("/register/:client-id", deleteClient)
