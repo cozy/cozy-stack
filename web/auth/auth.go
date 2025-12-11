@@ -480,42 +480,33 @@ func logoutOthers(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func logoutPreflight(c echo.Context) error {
-	req := c.Request()
-	res := c.Response()
-	origin := req.Header.Get(echo.HeaderOrigin)
+func corsPreflight(method string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		req := c.Request()
+		res := c.Response()
+		origin := req.Header.Get(echo.HeaderOrigin)
 
-	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
-	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
-	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
-	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
-	res.Header().Set(echo.HeaderAccessControlAllowMethods, echo.DELETE)
-	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
-	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
-	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
-		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+		res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
+		res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
+		res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
+		res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+		res.Header().Set(echo.HeaderAccessControlAllowMethods, method)
+		res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+		res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
+		if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
+			res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+		}
+
+		return c.NoContent(http.StatusNoContent)
 	}
+}
 
-	return c.NoContent(http.StatusNoContent)
+func logoutPreflight(c echo.Context) error {
+	return corsPreflight(echo.DELETE)(c)
 }
 
 func registerPreflight(c echo.Context) error {
-	req := c.Request()
-	res := c.Response()
-	origin := req.Header.Get(echo.HeaderOrigin)
-
-	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
-	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
-	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
-	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
-	res.Header().Set(echo.HeaderAccessControlAllowMethods, echo.POST)
-	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
-	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
-	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
-		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
-	}
-
-	return c.NoContent(http.StatusNoContent)
+	return corsPreflight(echo.POST)(c)
 }
 
 func registerFromWebApp(c echo.Context) error {
