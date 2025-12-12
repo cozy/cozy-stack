@@ -29,6 +29,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	// import workers
+	_ "github.com/cozy/cozy-stack/worker/antivirus"
 	_ "github.com/cozy/cozy-stack/worker/archive"
 	"github.com/cozy/cozy-stack/worker/exec"
 	_ "github.com/cozy/cozy-stack/worker/log"
