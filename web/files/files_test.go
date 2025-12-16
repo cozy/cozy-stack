@@ -3782,3 +3782,65 @@ func loadLocale() error {
 	}
 	return nil
 }
+
+func TestFileCreationTriggersAntivirusScan(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	// Enable antivirus in context
+	conf := config.GetConfig()
+	if conf.Contexts == nil {
+		conf.Contexts = make(map[string]interface{})
+	}
+	conf.Contexts[config.DefaultInstanceContext] = map[string]interface{}{
+		"antivirus": map[string]interface{}{
+			"enabled": true,
+			"address": "localhost:3310",
+		},
+	}
+	t.Cleanup(func() {
+		delete(conf.Contexts, config.DefaultInstanceContext)
+	})
+
+	setup := testutils.NewSetup(t, t.Name())
+	inst := setup.GetTestInstance(&lifecycle.Options{})
+
+	// Create file via VFS
+	fs := inst.VFS()
+	parent, err := fs.DirByPath("/")
+	require.NoError(t, err)
+
+	content := []byte("test content for antivirus scan")
+	doc, err := vfs.NewFileDoc("test-av.txt", parent.DocID, int64(len(content)), nil, "text/plain", "text", time.Now(), false, false, false, nil)
+	require.NoError(t, err)
+
+	file, err := fs.CreateFile(doc, nil)
+	require.NoError(t, err)
+	_, err = file.Write(content)
+	require.NoError(t, err)
+	err = file.Close()
+	require.NoError(t, err)
+
+	// Wait for event trigger to process (best-effort, may take a moment)
+	testutils.WaitForOrFail(t, 2*time.Second, func() bool {
+		updatedDoc, err := fs.FileByID(doc.DocID)
+		if err != nil {
+			return false
+		}
+		return updatedDoc.AntivirusScan != nil &&
+			updatedDoc.AntivirusScan.Status == vfs.AVStatusPending
+	})
+
+	// Verify antivirus status is pending
+	updatedDoc, err := fs.FileByID(doc.DocID)
+	require.NoError(t, err)
+	require.NotNil(t, updatedDoc.AntivirusScan)
+	assert.Equal(t, vfs.AVStatusPending, updatedDoc.AntivirusScan.Status)
+
+	// Cleanup
+	_ = fs.DestroyFile(updatedDoc)
+}
