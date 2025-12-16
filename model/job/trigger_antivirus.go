@@ -109,7 +109,7 @@ func (t *AntivirusTrigger) setPendingStatus(inst *instance.Instance, doc *vfs.Fi
 	}
 
 	newdoc := file.Clone().(*vfs.FileDoc)
-	newdoc.AntivirusStatus = &vfs.AntivirusStatus{
+	newdoc.AntivirusScan = &vfs.AntivirusScan{
 		Status: vfs.AVStatusPending,
 	}
 	if err := couchdb.UpdateDoc(fs, newdoc); err != nil {

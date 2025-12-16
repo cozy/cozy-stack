@@ -66,7 +66,7 @@ func Worker(ctx *job.TaskContext) error {
 
 	if avConfig.MaxFileSize > 0 && file.ByteSize > avConfig.MaxFileSize {
 		log.Infof("File %s is too large (%d bytes > %d max), skipping scan", msg.FileID, file.ByteSize, avConfig.MaxFileSize)
-		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
+		return updateScanStatus(fs, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusSkipped,
 		})
 	}
@@ -83,7 +83,7 @@ func Worker(ctx *job.TaskContext) error {
 	content, err := fs.OpenFile(file)
 	if err != nil {
 		log.Errorf("Failed to open file %s: %v", msg.FileID, err)
-		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
+		return updateScanStatus(fs, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
@@ -95,7 +95,7 @@ func Worker(ctx *job.TaskContext) error {
 	result, err := client.Scan(ctx, content)
 	if err != nil {
 		log.Errorf("Failed to scan the file %s: %v", msg.FileID, err)
-		return updateScanStatus(fs, file, &vfs.AntivirusStatus{
+		return updateScanStatus(fs, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
@@ -103,7 +103,7 @@ func Worker(ctx *job.TaskContext) error {
 
 	// Update file with scan result
 	now := time.Now()
-	st := &vfs.AntivirusStatus{
+	st := &vfs.AntivirusScan{
 		ScannedAt: &now,
 	}
 
@@ -127,7 +127,7 @@ func Worker(ctx *job.TaskContext) error {
 
 // updateScanStatus updates the file document with the scan status.
 // It retries on conflict errors to handle race conditions with the trigger.
-func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusStatus) error {
+func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusScan) error {
 	const maxRetries = 3
 	var err error
 
@@ -138,7 +138,7 @@ func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusStatus) 
 			return err
 		}
 		newdoc := f.Clone().(*vfs.FileDoc)
-		newdoc.AntivirusStatus = scan
+		newdoc.AntivirusScan = scan
 		err = couchdb.UpdateDoc(fs, newdoc)
 		if err == nil {
 			return nil

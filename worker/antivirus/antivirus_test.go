@@ -113,7 +113,7 @@ func testWorkerCleanFile(t *testing.T, inst *instance.Instance) {
 	doc := createTestFile(t, fs, "clean-test.txt", []byte("This is a clean file"))
 	defer deleteTestFile(t, fs, doc)
 
-	doc.AntivirusStatus = &vfs.AntivirusStatus{
+	doc.AntivirusScan = &vfs.AntivirusScan{
 		Status: vfs.AVStatusPending,
 	}
 
@@ -139,10 +139,10 @@ func testWorkerCleanFile(t *testing.T, inst *instance.Instance) {
 	// Verify the file was updated
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
-	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, vfs.AVStatusClean, updatedDoc.AntivirusStatus.Status)
-	require.NotNil(t, updatedDoc.AntivirusStatus.ScannedAt)
-	require.Empty(t, updatedDoc.AntivirusStatus.VirusName)
+	require.NotNil(t, updatedDoc.AntivirusScan)
+	require.Equal(t, vfs.AVStatusClean, updatedDoc.AntivirusScan.Status)
+	require.NotNil(t, updatedDoc.AntivirusScan.ScannedAt)
+	require.Empty(t, updatedDoc.AntivirusScan.VirusName)
 }
 
 func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
@@ -151,7 +151,7 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	doc := createTestFile(t, fs, "infected-test.txt", testutils.EICARTestSignature())
 	defer deleteTestFile(t, fs, doc)
 
-	doc.AntivirusStatus = &vfs.AntivirusStatus{
+	doc.AntivirusScan = &vfs.AntivirusScan{
 		Status: vfs.AVStatusPending,
 	}
 	err := couchdb.UpdateDoc(fs, doc)
@@ -175,10 +175,10 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	// Verify the file was updated
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
-	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusStatus.Status)
-	require.NotNil(t, updatedDoc.AntivirusStatus.ScannedAt)
-	require.Contains(t, updatedDoc.AntivirusStatus.VirusName, "EICAR")
+	require.NotNil(t, updatedDoc.AntivirusScan)
+	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusScan.Status)
+	require.NotNil(t, updatedDoc.AntivirusScan.ScannedAt)
+	require.Contains(t, updatedDoc.AntivirusScan.VirusName, "EICAR")
 }
 
 func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
@@ -216,8 +216,8 @@ func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
 	// Verify the file was marked as skipped
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
-	require.NotNil(t, updatedDoc.AntivirusStatus)
-	require.Equal(t, vfs.AVStatusSkipped, updatedDoc.AntivirusStatus.Status)
+	require.NotNil(t, updatedDoc.AntivirusScan)
+	require.Equal(t, vfs.AVStatusSkipped, updatedDoc.AntivirusScan.Status)
 }
 
 func testWorkerDeletedFile(t *testing.T, inst *instance.Instance) {
@@ -272,7 +272,7 @@ func testWorkerDisabled(t *testing.T, inst *instance.Instance) {
 	// Verify the file was not updated (no scan status)
 	updatedDoc, err := fs.FileByID(doc.DocID)
 	require.NoError(t, err)
-	require.Nil(t, updatedDoc.AntivirusStatus)
+	require.Nil(t, updatedDoc.AntivirusScan)
 }
 
 func createTestFile(t *testing.T, fs vfs.VFS, name string, content []byte) *vfs.FileDoc {
