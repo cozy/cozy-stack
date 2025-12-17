@@ -3,6 +3,7 @@ package antivirus_test
 import (
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ func TestAntivirus(t *testing.T) {
 			result, err := client.Scan(context.Background(), bytes.NewReader(infectedContent))
 			require.NoError(t, err)
 			require.Equal(t, clamav.StatusInfected, result.Status)
-			require.Contains(t, result.VirusName, "EICAR")
+			require.Contains(t, strings.ToUpper(result.VirusName), "EICAR")
 			require.Empty(t, result.Error)
 		})
 	})
@@ -109,6 +110,10 @@ func TestAntivirus(t *testing.T) {
 		t.Run("Disabled", func(t *testing.T) {
 			testWorkerDisabled(t, inst)
 		})
+
+		t.Run("FileVersionUpdate", func(t *testing.T) {
+			testWorkerFileVersionUpdate(t, inst)
+		})
 	})
 }
 
@@ -156,10 +161,13 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	doc := createTestFile(t, fs, "infected-test.txt", testutils.EICARTestSignature())
 	defer deleteTestFile(t, fs, doc)
 
+	doc, err := fs.FileByID(doc.DocID)
+	require.NoError(t, err)
+
 	doc.AntivirusScan = &vfs.AntivirusScan{
 		Status: vfs.AVStatusPending,
 	}
-	err := couchdb.UpdateDoc(fs, doc)
+	err = couchdb.UpdateDoc(fs, doc)
 	require.NoError(t, err)
 
 	// Create and run the job
@@ -183,7 +191,7 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	require.NotNil(t, updatedDoc.AntivirusScan)
 	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusScan.Status)
 	require.NotNil(t, updatedDoc.AntivirusScan.ScannedAt)
-	require.Contains(t, updatedDoc.AntivirusScan.VirusName, "EICAR")
+	require.Contains(t, strings.ToUpper(updatedDoc.AntivirusScan.VirusName), "EICAR")
 
 	// Verify notification was sent
 	verifyNotificationCreated(t, inst, "infected-test.txt")
@@ -324,4 +332,101 @@ func verifyNotificationCreated(t *testing.T, inst *instance.Instance, fileName s
 		}
 	}
 	require.True(t, found, "Expected notification for file %s not found", fileName)
+}
+
+// testWorkerFileVersionUpdate tests that when a file is updated with new content,
+// the antivirus worker properly scans the new version.
+func testWorkerFileVersionUpdate(t *testing.T, inst *instance.Instance) {
+	fs := inst.VFS()
+
+	// Step 1: Create a clean file and scan it
+	doc := createTestFile(t, fs, "version-test.txt", []byte("This is clean content"))
+	defer deleteTestFile(t, fs, doc)
+
+	// Run initial scan
+	msg, err := job.NewMessage(&antivirus.Message{FileID: doc.DocID})
+	require.NoError(t, err)
+
+	j := &job.Job{
+		Domain:     inst.Domain,
+		WorkerType: "antivirus",
+		Message:    msg,
+	}
+
+	ctx, cancel := job.NewTaskContext("test", j, inst)
+	err = antivirus.Worker(ctx)
+	cancel()
+	require.NoError(t, err)
+
+	// Verify file is clean
+	doc, err = fs.FileByID(doc.DocID)
+	require.NoError(t, err)
+	require.NotNil(t, doc.AntivirusScan)
+	require.Equal(t, vfs.AVStatusClean, doc.AntivirusScan.Status)
+	originalMD5 := doc.MD5Sum
+
+	// Step 2: Update file with infected content (simulating new version upload)
+	doc = updateTestFileContent(t, fs, doc, testutils.EICARTestSignature())
+
+	// Verify MD5 changed (content was updated)
+	require.NotEqual(t, originalMD5, doc.MD5Sum, "MD5 should change when content is updated")
+
+	// Step 3: Run scan again on the updated file
+	msg, err = job.NewMessage(&antivirus.Message{FileID: doc.DocID})
+	require.NoError(t, err)
+
+	j = &job.Job{
+		Domain:     inst.Domain,
+		WorkerType: "antivirus",
+		Message:    msg,
+	}
+
+	ctx, cancel = job.NewTaskContext("test", j, inst)
+	err = antivirus.Worker(ctx)
+	cancel()
+	require.NoError(t, err)
+
+	// Step 4: Verify the new version is detected as infected
+	updatedDoc, err := fs.FileByID(doc.DocID)
+	require.NoError(t, err)
+	require.NotNil(t, updatedDoc.AntivirusScan)
+	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusScan.Status)
+	require.Contains(t, strings.ToUpper(updatedDoc.AntivirusScan.VirusName), "EICAR")
+}
+
+// updateTestFileContent updates a file's content by creating a new version.
+func updateTestFileContent(t *testing.T, fs vfs.VFS, olddoc *vfs.FileDoc, newContent []byte) *vfs.FileDoc {
+	t.Helper()
+
+	// Create new file doc for update - use -1 for size and nil for MD5
+	// so the VFS calculates them from the actual content
+	newdoc, err := vfs.NewFileDoc(
+		olddoc.DocName,
+		olddoc.DirID,
+		-1,  // size will be calculated
+		nil, // MD5 will be calculated
+		olddoc.Mime,
+		olddoc.Class,
+		time.Now(),
+		olddoc.Executable,
+		olddoc.Trashed,
+		olddoc.Encrypted,
+		olddoc.Tags,
+	)
+	require.NoError(t, err)
+
+	// Create the new version of the file
+	file, err := fs.CreateFile(newdoc, olddoc)
+	require.NoError(t, err)
+
+	_, err = file.Write(newContent)
+	require.NoError(t, err)
+
+	err = file.Close()
+	require.NoError(t, err)
+
+	// Get the updated document
+	updatedDoc, err := fs.FileByID(olddoc.DocID)
+	require.NoError(t, err)
+	return updatedDoc
 }
