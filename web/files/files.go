@@ -939,6 +939,10 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 		return err
 	}
 
+	if err = CheckAntivirusAction(instance, doc, ActionDownload); err != nil {
+		return err
+	}
+
 	disposition := "inline"
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
@@ -972,6 +976,10 @@ func ReadFileContentFromVersion(c echo.Context) error {
 
 	err = checkPerm(c, permission.GET, nil, doc)
 	if err != nil {
+		return err
+	}
+
+	if err = CheckAntivirusAction(instance, doc, ActionDownload); err != nil {
 		return err
 	}
 
@@ -1057,6 +1065,10 @@ func IconHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	if err = CheckAntivirusAction(instance, doc, ActionPreview); err != nil {
+		return err
+	}
+
 	return vfs.ServePDFIcon(c.Response(), c.Request(), instance.VFS(), doc)
 }
 
@@ -1078,6 +1090,10 @@ func PreviewHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	if err = CheckAntivirusAction(instance, doc, ActionPreview); err != nil {
+		return err
+	}
+
 	return vfs.ServePDFPreview(c.Response(), c.Request(), instance.VFS(), doc)
 }
 
@@ -1097,6 +1113,10 @@ func ThumbnailHandler(c echo.Context) error {
 	doc, err := instance.VFS().FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
+	}
+
+	if err = CheckAntivirusAction(instance, doc, ActionPreview); err != nil {
+		return err
 	}
 
 	fs := instance.ThumbsFS()
@@ -1145,6 +1165,10 @@ func SendFileFromDoc(instance *instance.Instance, c echo.Context, doc *vfs.FileD
 		if err != nil {
 			return err
 		}
+	}
+
+	if err = CheckAntivirusAction(instance, doc, ActionDownload); err != nil {
+		return err
 	}
 
 	// Forbid extracting autofilled passwords on an HTML page hosted in the Cozy
@@ -1234,6 +1258,12 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		// Check antivirus status for files
+		if e.File != nil {
+			if err = CheckAntivirusAction(instance, e.File, ActionDownload); err != nil {
+				return err
+			}
+		}
 	}
 
 	// if accept header is application/zip, send the archive immediately
@@ -1288,6 +1318,10 @@ func FileDownload(c echo.Context, sharedDrive *sharing.Sharing) error {
 		return err
 	}
 
+	if err = CheckAntivirusAction(instance, doc, ActionShare); err != nil {
+		return err
+	}
+
 	var secret string
 	if versionID == "" {
 		secret, err = vfs.GetStore().AddFile(instance, path)
@@ -1330,6 +1364,20 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
+
+	// Check antivirus status for all files in the archive
+	entries, err := archive.GetEntries(instance.VFS())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	for _, entry := range entries {
+		if entry.File != nil {
+			if err = CheckAntivirusAction(instance, entry.File, ActionDownload); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := archive.Serve(instance.VFS(), c.Response()); err != nil {
 		return WrapVfsError(err)
 	}
@@ -1363,6 +1411,11 @@ func versionDownloadHandler(c echo.Context, secret string) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
+
+	if err = CheckAntivirusAction(instance, doc, ActionDownload); err != nil {
+		return err
+	}
+
 	version, err := vfs.FindVersion(instance, versionID)
 	if err != nil {
 		return WrapVfsError(err)
@@ -1398,6 +1451,13 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 	err = checkPerm(c, permission.PATCH, dir, file)
 	if err != nil {
 		return err
+	}
+
+	// Check antivirus status for files
+	if file != nil {
+		if err = CheckAntivirusAction(instance, file, ActionDelete); err != nil {
+			return err
+		}
 	}
 
 	var rev string
@@ -1547,6 +1607,13 @@ func DestroyFileHandler(c echo.Context) error {
 	err = checkPerm(c, permission.DELETE, dir, file)
 	if err != nil {
 		return err
+	}
+
+	// Check antivirus status for files
+	if file != nil {
+		if err = CheckAntivirusAction(inst, file, ActionDelete); err != nil {
+			return err
+		}
 	}
 
 	var rev string
