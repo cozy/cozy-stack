@@ -1,15 +1,19 @@
 package antivirus
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/notification"
+	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/clamav"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -66,7 +70,7 @@ func Worker(ctx *job.TaskContext) error {
 
 	if avConfig.MaxFileSize > 0 && file.ByteSize > avConfig.MaxFileSize {
 		log.Infof("File %s is too large (%d bytes > %d max), skipping scan", msg.FileID, file.ByteSize, avConfig.MaxFileSize)
-		return updateScanStatus(fs, file, &vfs.AntivirusScan{
+		return updateScanStatus(inst, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusSkipped,
 		})
 	}
@@ -83,7 +87,7 @@ func Worker(ctx *job.TaskContext) error {
 	content, err := fs.OpenFile(file)
 	if err != nil {
 		log.Errorf("Failed to open file %s: %v", msg.FileID, err)
-		return updateScanStatus(fs, file, &vfs.AntivirusScan{
+		return updateScanStatus(inst, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
@@ -95,7 +99,7 @@ func Worker(ctx *job.TaskContext) error {
 	result, err := client.Scan(ctx, content)
 	if err != nil {
 		log.Errorf("Failed to scan the file %s: %v", msg.FileID, err)
-		return updateScanStatus(fs, file, &vfs.AntivirusScan{
+		return updateScanStatus(inst, file, &vfs.AntivirusScan{
 			Status: vfs.AVStatusError,
 			Error:  err.Error(),
 		})
@@ -122,14 +126,16 @@ func Worker(ctx *job.TaskContext) error {
 	}
 
 	log.Debugf("Updating scan status for file %s: status=%s", msg.FileID, st.Status)
-	return updateScanStatus(fs, file, st)
+	return updateScanStatus(inst, file, st)
 }
 
 // updateScanStatus updates the file document with the scan status.
 // It retries on conflict errors to handle race conditions with the trigger.
-func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusScan) error {
+// It also sends a notification when the status is infected, skipped, or error.
+func updateScanStatus(inst *instance.Instance, file *vfs.FileDoc, scan *vfs.AntivirusScan) error {
 	const maxRetries = 3
 	var err error
+	fs := inst.VFS()
 
 	for i := 0; i < maxRetries; i++ {
 		var f *vfs.FileDoc
@@ -141,6 +147,11 @@ func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusScan) er
 		newdoc.AntivirusScan = scan
 		err = couchdb.UpdateDoc(fs, newdoc)
 		if err == nil {
+			// Send notification for non-clean statuses
+			if scan.Status != vfs.AVStatusClean && scan.Status != vfs.AVStatusPending {
+				issueDesc := getIssueDescription(inst, scan)
+				sendNotification(inst, file, scan.Status, issueDesc)
+			}
 			return nil
 		}
 		if !couchdb.IsConflictError(err) {
@@ -148,6 +159,7 @@ func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusScan) er
 		}
 		// Conflict error, retry with fresh document
 	}
+
 	return err
 }
 
@@ -155,4 +167,59 @@ func updateScanStatus(fs vfs.VFS, file *vfs.FileDoc, scan *vfs.AntivirusScan) er
 func isEnabledForInstance(inst *instance.Instance) bool {
 	cfg := config.GetAntivirusConfig(inst.ContextName)
 	return cfg != nil && cfg.Enabled
+}
+
+// sendNotification sends a notification to the user about an antivirus issue
+// using the notification center.
+func sendNotification(inst *instance.Instance, file *vfs.FileDoc, status string, issueDescription string) {
+	avConfig := config.GetAntivirusConfig(inst.ContextName)
+	if avConfig == nil || !avConfig.Notifications.EmailOnInfected {
+		return
+	}
+
+	log := inst.Logger().WithNamespace("antivirus")
+
+	driveURL := inst.SubDomain("drive")
+	driveURL.Fragment = fmt.Sprintf("/folder/%s/file/%s", file.DirID, file.DocID)
+	fileURL := driveURL.String()
+
+	n := &notification.Notification{
+		Title: inst.Translate("Mail Antivirus Alert Title"),
+		Slug:  consts.DriveSlug,
+		Data: map[string]interface{}{
+			"IssueDescription": issueDescription,
+			"FileName":         file.DocName,
+			"FileURL":          fileURL,
+		},
+		PreferredChannels: []string{"mail"},
+	}
+
+	err := center.PushStack(inst.DomainName(), center.NotificationAntivirusAlert, n)
+	if err != nil {
+		log.Errorf("Failed to push antivirus notification: %v", err)
+		return
+	}
+
+	log.Infof("Sent antivirus notification for file %s (status: %s)", file.DocID, status)
+	return
+}
+
+// getIssueDescription returns a translated issue description for the given status.
+func getIssueDescription(inst *instance.Instance, scan *vfs.AntivirusScan) string {
+	switch scan.Status {
+	case vfs.AVStatusInfected:
+		if scan.VirusName != "" {
+			return inst.Translate("Mail Antivirus Issue Infected") + " (" + scan.VirusName + ")"
+		}
+		return inst.Translate("Mail Antivirus Issue Infected")
+	case vfs.AVStatusSkipped:
+		return inst.Translate("Mail Antivirus Issue Skipped")
+	case vfs.AVStatusError:
+		if scan.Error != "" {
+			return inst.Translate("Mail Antivirus Issue Error") + ": " + scan.Error
+		}
+		return inst.Translate("Mail Antivirus Issue Error")
+	default:
+		return ""
+	}
 }

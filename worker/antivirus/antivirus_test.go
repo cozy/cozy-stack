@@ -9,9 +9,11 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/clamav"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -79,6 +81,9 @@ func TestAntivirus(t *testing.T) {
 				"address":       clamavAddress,
 				"timeout":       30 * time.Second,
 				"max_file_size": int64(0),
+				"notifications": map[string]interface{}{
+					"email_on_infected": true,
+				},
 			},
 		}
 		t.Cleanup(func() {
@@ -179,6 +184,9 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	require.Equal(t, vfs.AVStatusInfected, updatedDoc.AntivirusScan.Status)
 	require.NotNil(t, updatedDoc.AntivirusScan.ScannedAt)
 	require.Contains(t, updatedDoc.AntivirusScan.VirusName, "EICAR")
+
+	// Verify notification was sent
+	verifyNotificationCreated(t, inst, "infected-test.txt")
 }
 
 func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
@@ -218,6 +226,9 @@ func testWorkerSkipsLargeFiles(t *testing.T, inst *instance.Instance) {
 	require.NoError(t, err)
 	require.NotNil(t, updatedDoc.AntivirusScan)
 	require.Equal(t, vfs.AVStatusSkipped, updatedDoc.AntivirusScan.Status)
+
+	// Verify notification was sent
+	verifyNotificationCreated(t, inst, "large-test.txt")
 }
 
 func testWorkerDeletedFile(t *testing.T, inst *instance.Instance) {
@@ -295,4 +306,22 @@ func createTestFile(t *testing.T, fs vfs.VFS, name string, content []byte) *vfs.
 func deleteTestFile(t *testing.T, fs vfs.VFS, doc *vfs.FileDoc) {
 	t.Helper()
 	_ = fs.DestroyFile(doc)
+}
+
+func verifyNotificationCreated(t *testing.T, inst *instance.Instance, fileName string) {
+	t.Helper()
+	var notifs []*notification.Notification
+	err := couchdb.GetAllDocs(inst, consts.Notifications, nil, &notifs)
+	require.NoError(t, err)
+
+	found := false
+	for _, n := range notifs {
+		if n.Category == "antivirus-alert" {
+			if data, ok := n.Data["FileName"].(string); ok && data == fileName {
+				found = true
+				break
+			}
+		}
+	}
+	require.True(t, found, "Expected notification for file %s not found", fileName)
 }

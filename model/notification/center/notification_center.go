@@ -31,6 +31,9 @@ const (
 	// NotificationSharingFileChanged category for sending alert when a file or
 	// folder is created in a sharing.
 	NotificationSharingFileChanged = "sharing-file-changed"
+	// NotificationAntivirusAlert category for sending alert when antivirus
+	// scanning detects an issue with a file (infected, too large, or error).
+	NotificationAntivirusAlert = "antivirus-alert"
 )
 
 var (
@@ -53,6 +56,12 @@ var (
 			Collapsible:  false,
 			Stateful:     false,
 			MailTemplate: "sharing_file_changed",
+		},
+		NotificationAntivirusAlert: {
+			Description:  "Alert when antivirus scanning detects an issue with a file",
+			Collapsible:  false,
+			Stateful:     false,
+			MailTemplate: "notifications_antivirus",
 		},
 	}
 )

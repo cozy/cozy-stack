@@ -1301,3 +1301,30 @@ msgstr "See on Twake Drive"
 
 msgid "Mail Sharing Folder Changed Intro"
 msgstr "Someone shared a folder with you:"
+
+msgid "Mail Antivirus Alert Subject"
+msgstr "Antivirus Alert on Your Twake Drive"
+
+msgid "Mail Antivirus Alert Title"
+msgstr "Antivirus Alert on Your Twake Drive"
+
+msgid "Mail Antivirus Alert Description"
+msgstr "Antivirus scan for a file on your Twake Drive has flagged an issue."
+
+msgid "Mail Antivirus Issue Label"
+msgstr "Issue:"
+
+msgid "Mail Antivirus Issue Infected"
+msgstr "Virus detected"
+
+msgid "Mail Antivirus Issue Skipped"
+msgstr "File too large to be scanned"
+
+msgid "Mail Antivirus Issue Error"
+msgstr "Scan error"
+
+msgid "Mail Antivirus File Label"
+msgstr "File:"
+
+msgid "Mail Antivirus View Details Button"
+msgstr "View File Details"

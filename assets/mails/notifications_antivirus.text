@@ -1,0 +1,11 @@
+{{t "Mail Antivirus Issue Label"}} {{.IssueDescription}}
+
+{{t "Mail Antivirus Alert Title"}}
+
+{{t "Mail Antivirus Alert Description"}}
+
+{{t "Mail Antivirus File Label"}} {{.FileName}}
+
+{{t "Mail Antivirus View Details Button"}}
+
+  [{{.FileURL}}]
