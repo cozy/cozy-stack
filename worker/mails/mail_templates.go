@@ -38,6 +38,7 @@ func initMailTemplates() {
 		"notifications_sharing":        subjectEntry{"Notification Sharing Subject", []string{"SharerPublicName", "TitleType"}},
 		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 		"notifications_oauthclients":   subjectEntry{"Notifications OAuth Clients Subject", nil},
+		"notifications_antivirus":      subjectEntry{"Mail Antivirus Alert Subject", nil},
 		"update_email":                 subjectEntry{"Mail Update Email Subject", nil},
 	}
 }

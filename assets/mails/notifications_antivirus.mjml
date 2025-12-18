@@ -1,0 +1,18 @@
+{{define "content"}}
+<mj-text mj-class="content-medium" color="#999999">
+	<span style="color: #e74c3c; font-size: 14px;">&#128683;</span>&nbsp;
+	{{t "Mail Antivirus Issue Label"}} {{.IssueDescription}}
+</mj-text>
+<mj-text mj-class="title content-medium">
+	{{t "Mail Antivirus Alert Title"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Antivirus Alert Description"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	<strong>{{t "Mail Antivirus File Label"}}</strong> {{.FileName}}
+</mj-text>
+<mj-button href="{{.FileURL}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail Antivirus View Details Button"}}
+</mj-button>
+{{end}}
