@@ -43,6 +43,20 @@ var (
 	ErrIdentityProvider     = errors.New("error from the identity provider")
 )
 
+// extractSessionID extracts the session ID (sid) from an id_token.
+func extractSessionID(idToken string) string {
+	if idToken == "" {
+		return ""
+	}
+	claims := jwt.MapClaims{}
+	_, _, _ = jwt.NewParser().ParseUnverified(idToken, claims)
+	sid, _ := claims["sid"].(string)
+	if sid != "" {
+		logger.WithNamespace("oidc").Debugf("Extracted session ID from id_token: %s", sid)
+	}
+	return sid
+}
+
 // Start is the route to start the OpenID Connect dance.
 func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -195,12 +209,13 @@ func Redirect(c echo.Context) error {
 		if err != nil {
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
-		accessToken, err := getToken(conf, c.QueryParam("code"))
+		// Use getToken to get both access_token and id_token
+		tokenResp, err := getToken(conf, c.QueryParam("code"))
 		if err != nil {
 			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
 			return renderError(c, nil, http.StatusBadGateway, "Error from the identity provider.")
 		}
-		params, err := getUserInfo(conf, accessToken)
+		params, err := getUserInfo(conf, tokenResp.AccessToken)
 		if err != nil {
 			return err
 		}
@@ -220,7 +235,9 @@ func Redirect(c echo.Context) error {
 			return renderError(c, nil, http.StatusNotFound, "Sorry, the twake was not found.")
 		}
 
-		code := getStorage().CreateCode(sub)
+		// Extract session ID from id_token for OIDC logout support
+		sessionID := extractSessionID(tokenResp.IDToken)
+		code := getStorage().CreateCodeData(sub, sessionID)
 		u, err := url.Parse(state.Redirect)
 		if err != nil {
 			return renderError(c, nil, http.StatusNotFound, "Sorry, an error occurred.")
@@ -307,11 +324,15 @@ func Login(c echo.Context) error {
 	}
 
 	var token string
+	// Track the id_token separately for SID extraction (used for OIDC logout)
+	var idTokenForSID string
+
 	if idToken != "" && conf.IDTokenKeyURL != "" {
 		if err := checkIDToken(conf, inst, idToken); err != nil {
 			return renderError(c, inst, http.StatusBadRequest, err.Error())
 		}
 		token = idToken
+		idTokenForSID = idToken
 	} else {
 		if conf.AllowOAuthToken {
 			token = c.QueryParam("access_token")
@@ -321,11 +342,14 @@ func Login(c echo.Context) error {
 				return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 			}
 			code := c.QueryParam("code")
-			token, err = getToken(conf, code)
+			// Use getToken to get both access_token and id_token
+			tokenResp, err := getToken(conf, code)
 			if err != nil {
 				logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
 				return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
 			}
+			token = tokenResp.AccessToken
+			idTokenForSID = tokenResp.IDToken
 			if state.SharingID != "" {
 				return acceptSharing(c, inst, conf, token, state)
 			}
@@ -347,9 +371,8 @@ func Login(c echo.Context) error {
 		}
 	}
 
-	claims := jwt.MapClaims{}
-	_, _, _ = jwt.NewParser().ParseUnverified(token, claims)
-	sid, _ := claims["sid"].(string)
+	// Extract SID from id_token (not access_token) for OIDC logout support
+	sid := extractSessionID(idTokenForSID)
 	return createSessionAndRedirect(c, inst, redirect, confirm, sid)
 }
 
@@ -548,6 +571,39 @@ func Logout(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// validateDelegatedCode validates a delegated code and returns the associated session ID.
+// Returns an error if the code is invalid or doesn't match the instance.
+func validateDelegatedCode(inst *instance.Instance, code string) (string, error) {
+	codeData := getStorage().GetCodeData(code)
+	if codeData == nil || codeData.Sub == "" {
+		return "", errors.New("invalid code")
+	}
+
+	sub := codeData.Sub
+	if sub != inst.OIDCID && sub != inst.FranceConnectID && sub != inst.Domain {
+		inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid code: %s (%s - %s - %s)",
+			sub, inst.OIDCID, inst.FranceConnectID, inst.Domain)
+		return "", errors.New("invalid code")
+	}
+
+	return codeData.SessionID, nil
+}
+
+// validateOIDCToken validates an OIDC token (id_token or access_token) for the instance.
+func validateOIDCToken(inst *instance.Instance, idToken, oidcToken string) error {
+	conf, err := getGenericConfig(inst.ContextName)
+	if err != nil || !conf.AllowOAuthToken {
+		return errors.New("this endpoint is not enabled")
+	}
+
+	if idToken != "" {
+		err = checkIDToken(conf, inst, idToken)
+	} else {
+		err = checkDomainFromUserInfo(conf, inst, oidcToken)
+	}
+	return err
+}
+
 // AccessToken delivers an access_token and a refresh_token if the client gives
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
@@ -566,33 +622,18 @@ func AccessToken(c echo.Context) error {
 		return err
 	}
 
+	// Validate the delegated code or OIDC token
+	var codeSessionID string
 	if reqBody.Code != "" {
-		sub := getStorage().GetSub(reqBody.Code)
-		invalidCode := sub == ""
-		if sub != inst.OIDCID && sub != inst.FranceConnectID && sub != inst.Domain {
-			invalidCode = true
-		}
-		if invalidCode {
-			inst.Logger().WithNamespace("oidc").Infof("AccessToken invalid code: %s (%s - %s - %s)",
-				sub, inst.OIDCID, inst.FranceConnectID, inst.Domain)
+		sessionID, err := validateDelegatedCode(inst, reqBody.Code)
+		if err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
 		}
+		codeSessionID = sessionID
 	} else {
-		conf, err := getGenericConfig(inst.ContextName)
-		if err != nil || !conf.AllowOAuthToken {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "this endpoint is not enabled",
-			})
-		}
-		// Check the token from the remote URL.
-		if reqBody.IDToken != "" {
-			err = checkIDToken(conf, inst, reqBody.IDToken)
-		} else {
-			err = checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken)
-		}
-		if err != nil {
+		if err := validateOIDCToken(inst, reqBody.IDToken, reqBody.OIDCToken); err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": err.Error(),
 			})
@@ -658,27 +699,19 @@ func AccessToken(c echo.Context) error {
 		}
 	}
 
-	// Store the session ID in the client for logout purposes
-	if client.Flagship {
-		if reqBody.IDToken != "" {
-			// Extract SID from the ID token
-			claims := jwt.MapClaims{}
-			_, _, _ = jwt.NewParser().ParseUnverified(reqBody.IDToken, claims)
-			if sid, ok := claims["sid"].(string); ok && sid != "" {
-				client.OIDCSessionID = sid
-			} else {
-				logger.WithNamespace("oidc").Warnf("No session ID found in ID token")
-				return c.JSON(http.StatusBadRequest, echo.Map{
-					"error": "No session ID found in ID token",
-				})
-			}
-		} else {
-			logger.WithNamespace("oidc").Warnf("No ID token Logout won't work")
-		}
+	// Store the session ID in the client for logout purposes (priority: delegated code > id_token)
+	sessionID := codeSessionID
+	if sessionID == "" {
+		sessionID = extractSessionID(reqBody.IDToken)
+	}
+	if sessionID != "" {
+		client.OIDCSessionID = sessionID
+		logger.WithNamespace("oidc").Debugf("Using session ID for OIDC logout: %s", sessionID)
 	}
 
-	// Remove the pending flag on the OAuth client (if needed)
-	if client.Pending {
+	// Update the OAuth client if needed (pending flag or new session ID)
+	needsUpdate := client.Pending || sessionID != ""
+	if needsUpdate {
 		client.Pending = false
 		client.ClientID = ""
 		_ = couchdb.UpdateDoc(inst, client)
@@ -907,15 +940,7 @@ type tokenResponse struct {
 	IDToken     string `json:"id_token"`
 }
 
-func getToken(conf *Config, code string) (string, error) {
-	resp, err := getTokenWithIDToken(conf, code)
-	if err != nil {
-		return "", err
-	}
-	return resp.AccessToken, nil
-}
-
-func getTokenWithIDToken(conf *Config, code string) (*tokenResponse, error) {
+func getToken(conf *Config, code string) (*tokenResponse, error) {
 	data := url.Values{
 		"grant_type":   []string{"authorization_code"},
 		"code":         []string{code},
@@ -1251,7 +1276,8 @@ func Routes(router *echo.Group) {
 
 // GetDelegatedCode is mostly a proxy for the userinfo request made by the
 // cloudery to the OIDC provider. It adds a delegated code in the response
-// associated to the sub.
+// associated to the sub. If an id_token is provided, the session ID (sid) is
+// extracted and stored with the delegated code for later use in OIDC logout.
 func GetDelegatedCode(c echo.Context) error {
 	contextName := c.Param("context")
 	provider := c.Param("provider")
@@ -1270,6 +1296,7 @@ func GetDelegatedCode(c echo.Context) error {
 
 	var reqBody struct {
 		AccessToken string `json:"access_token"`
+		IDToken     string `json:"id_token"`
 	}
 	if err := c.Bind(&reqBody); err != nil {
 		return err
@@ -1297,8 +1324,11 @@ func GetDelegatedCode(c echo.Context) error {
 		s = domain
 	}
 
+	// Extract session ID (sid) from id_token if provided
+	sessionID := extractSessionID(reqBody.IDToken)
+
 	logger.WithNamespace("oidc").Infof("GetDelegatedCode for %s", s)
-	params["delegated_code"] = getStorage().CreateCode(s)
+	params["delegated_code"] = getStorage().CreateCodeData(s, sessionID)
 	return c.JSON(http.StatusOK, params)
 }
 

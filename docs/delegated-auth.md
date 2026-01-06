@@ -299,15 +299,17 @@ If `id_token_jwk_url` option is set, the client can send an `id_token` instead
 of an `oidc_token` in the payload.
 
 If the flagship makes the request, it also can use a delegated code obtained
-from the cloudery, by using `code` instead of `oidc_token`.
+from the cloudery, by using `code` instead of `oidc_token`. When using a
+delegated code, the session ID (`sid`) is already stored with the code (the
+cloudery provides the `id_token` when requesting the delegated code), so the
+flagship app does not need to send an `id_token` separately.
 
-Flagship clients must include an `id_token` bearing a `sid` claim, even when
-they use a delegated code. Cozy keeps that session identifier on the OAuth
-client and, when the user signs out of the flagship app (which deletes the
-client), the stack performs a best-effort call to the OpenID provider's
-`end_session_endpoint` so the upstream SSO session is closed too. This
-complements the back-channel logout endpoint (`POST /oidc/:context/logout`)
-that the provider can call to terminate Cozy sessions.
+Cozy keeps the session identifier on the OAuth client and, when the user signs
+out of the flagship app (which deletes the client), the stack performs a
+best-effort call to the OpenID provider's `end_session_endpoint` so the
+upstream SSO session is closed too. This complements the back-channel logout
+endpoint (`POST /oidc/:context/logout`) that the provider can call to terminate
+Cozy sessions.
 
 **Note:** if the OAuth client asks for a `*` scope and has not been certified
 as the flagship app, this request will return:

@@ -1051,6 +1051,11 @@ The cloudery sends its access_token for the OIDC provider, the stack can use it
 to make a request to the userinfo endpoint of the OIDC provider. With the
 response, the stack can create a delegated code associated to the sub.
 
+If an `id_token` is also provided, the stack extracts the session ID (`sid`)
+claim and stores it with the delegated code. This session ID is later used for
+OIDC logout: when the user signs out of the flagship app, the stack calls the
+OpenID provider's `end_session_endpoint` to terminate the upstream SSO session.
+
 ```http
 POST /oidc/dev/franceconnect/code HTTP/1.1
 Accept: application/json
@@ -1060,7 +1065,8 @@ Authorization: Bearer ZmE2ZTFmN
 
 ```json
 {
-  "access_token": "ZmE2ZTFmN"
+  "access_token": "ZmE2ZTFmN",
+  "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
