@@ -1,6 +1,8 @@
 package job
 
 import (
+	"bytes"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -10,7 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
-// AntivirusTrigger listens for file creation events and schedules antivirus scans.
+// AntivirusTrigger listens for file creation and update events and schedules antivirus scans.
 type AntivirusTrigger struct {
 	broker      Broker
 	log         *logger.Entry
@@ -26,7 +28,7 @@ func NewAntivirusTrigger(broker Broker) *AntivirusTrigger {
 	}
 }
 
-// Schedule starts listening for file creation events.
+// Schedule starts listening for file creation and update events.
 func (t *AntivirusTrigger) Schedule() {
 	sub := realtime.GetHub().SubscribeFirehose()
 	defer sub.Close()
@@ -43,18 +45,50 @@ func (t *AntivirusTrigger) Schedule() {
 }
 
 func (t *AntivirusTrigger) match(e *realtime.Event) bool {
-	// Only match file creation events
+	// Only match file events (both FileDoc and DirDoc have DocType == consts.Files)
 	if e.Doc.DocType() != consts.Files {
 		return false
 	}
-	if e.Verb != realtime.EventCreate {
+	// Check if it's a file (not directory)
+	doc, ok := e.Doc.(*vfs.FileDoc)
+	if !ok {
 		return false
 	}
-	// Check if it's a file (not directory)
-	if doc, ok := e.Doc.(*vfs.FileDoc); ok {
-		return doc.Type == consts.FileType
+	if doc.Type != consts.FileType {
+		return false
 	}
-	t.log.Warnf("Event doc is not *vfs.FileDoc, actual type: %T", e.Doc)
+	// For file creation, always trigger scan
+	if e.Verb == realtime.EventCreate {
+		return true
+	}
+	// For file update, only trigger if content changed
+	return t.hasContentChanged(e)
+}
+
+// hasContentChanged checks if the file content has changed by comparing MD5 checksums.
+func (t *AntivirusTrigger) hasContentChanged(e *realtime.Event) bool {
+	newDoc, ok := e.Doc.(*vfs.FileDoc)
+	if !ok {
+		t.log.Warnf("Event doc is not *vfs.FileDoc, actual type: %T", e.Doc)
+		return false
+	}
+	// OldDoc should always be available for file updates via VFS.
+	// If nil, it's not a standard file update - skip scan.
+	if e.OldDoc == nil {
+		t.log.Warnf("Update event for file %s has no OldDoc, skipping scan", newDoc.DocID)
+		return false
+	}
+	oldDoc, ok := e.OldDoc.(*vfs.FileDoc)
+	if !ok {
+		t.log.Warnf("Event OldDoc is not *vfs.FileDoc, actual type: %T", e.OldDoc)
+		return false
+	}
+	if !bytes.Equal(newDoc.MD5Sum, oldDoc.MD5Sum) {
+		return true
+	}
+	if newDoc.ByteSize != oldDoc.ByteSize {
+		return true
+	}
 	return false
 }
 
