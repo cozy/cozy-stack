@@ -73,14 +73,16 @@ endpoint to get access to the Cozy.
 
 ## SSO logout integration
 
-When the flagship app authenticates via OpenID Connect, it must send an ID
-token that contains the `sid` claim when it exchanges its delegated code at
-`POST /oidc/access_token`. Cozy stores that session identifier in the OAuth
-client. When the user signs out of the flagship app and the client is removed,
-the stack calls the identity provider's `end_session_endpoint` (when one is
-declared in the provider configuration) so the upstream SSO session is closed
-as well. This keeps the Cozy session and the external provider in sync during
-logout.
+When the flagship app authenticates via OpenID Connect, the session ID (`sid`)
+is obtained from the delegated code. The cloudery sends the `id_token` when
+requesting the delegated code from the stack, and the stack extracts and stores
+the `sid` claim with the code. When the flagship app exchanges the delegated
+code at `POST /oidc/access_token`, the session ID is automatically retrieved
+and stored in the OAuth client. When the user signs out of the flagship app and
+the client is removed, the stack calls the identity provider's
+`end_session_endpoint` (when one is declared in the provider configuration) so
+the upstream SSO session is closed as well. This keeps the Cozy session and the
+external provider in sync during logout.
 
 ## Manual certification
 

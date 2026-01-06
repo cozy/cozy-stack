@@ -66,16 +66,23 @@ func newSharingStateHolder(domain, sharingID, sharingState string, provider Prov
 	}
 }
 
+// DelegatedCodeData holds the data associated with a delegated code
+type DelegatedCodeData struct {
+	Sub       string `json:"sub"`
+	SessionID string `json:"session_id,omitempty"`
+}
+
 type stateStorage interface {
 	Add(*stateHolder) error
 	Find(id string) *stateHolder
-	CreateCode(sub string) string
+	CreateCodeData(sub, sessionID string) string
 	GetSub(code string) string
+	GetCodeData(code string) *DelegatedCodeData
 }
 
 type memStateStorage struct {
 	states map[string]*stateHolder
-	codes  map[string]string // delegated code -> sub
+	codes  map[string]*DelegatedCodeData // delegated code -> code data
 }
 
 func (store memStateStorage) Add(state *stateHolder) error {
@@ -96,13 +103,20 @@ func (store memStateStorage) Find(id string) *stateHolder {
 	return state
 }
 
-func (store memStateStorage) CreateCode(sub string) string {
+func (store memStateStorage) CreateCodeData(sub, sessionID string) string {
 	code := makeCode()
-	store.codes[code] = sub
+	store.codes[code] = &DelegatedCodeData{Sub: sub, SessionID: sessionID}
 	return code
 }
 
 func (store memStateStorage) GetSub(code string) string {
+	if data := store.codes[code]; data != nil {
+		return data.Sub
+	}
+	return ""
+}
+
+func (store memStateStorage) GetCodeData(code string) *DelegatedCodeData {
 	return store.codes[code]
 }
 
@@ -139,14 +153,38 @@ func (store *redisStateStorage) Find(id string) *stateHolder {
 	return &s
 }
 
-func (store *redisStateStorage) CreateCode(sub string) string {
+func (store *redisStateStorage) CreateCodeData(sub, sessionID string) string {
 	code := makeCode()
-	store.cl.Set(store.ctx, code, sub, codeTTL)
+	data := &DelegatedCodeData{Sub: sub, SessionID: sessionID}
+	serialized, err := json.Marshal(data)
+	if err != nil {
+		// Fallback to just storing sub for backward compatibility
+		store.cl.Set(store.ctx, code, sub, codeTTL)
+	} else {
+		store.cl.Set(store.ctx, code, serialized, codeTTL)
+	}
 	return code
 }
 
 func (store *redisStateStorage) GetSub(code string) string {
-	return store.cl.Get(store.ctx, code).Val()
+	if data := store.GetCodeData(code); data != nil {
+		return data.Sub
+	}
+	return ""
+}
+
+func (store *redisStateStorage) GetCodeData(code string) *DelegatedCodeData {
+	val := store.cl.Get(store.ctx, code).Val()
+	if val == "" {
+		return nil
+	}
+	// Try to parse as JSON first (new format)
+	var data DelegatedCodeData
+	if err := json.Unmarshal([]byte(val), &data); err != nil {
+		// Fallback: old format was just the sub string
+		return &DelegatedCodeData{Sub: val}
+	}
+	return &data
 }
 
 var globalStorage stateStorage
@@ -162,7 +200,7 @@ func getStorage() stateStorage {
 	if cli == nil {
 		globalStorage = &memStateStorage{
 			states: make(map[string]*stateHolder),
-			codes:  make(map[string]string),
+			codes:  make(map[string]*DelegatedCodeData),
 		}
 	} else {
 		ctx := context.Background()

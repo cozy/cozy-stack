@@ -1,11 +1,8 @@
 package oidc
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -23,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +57,10 @@ func TestOidc(t *testing.T) {
 		"/admin-oidc": AdminRoutes,
 		"/token": func(g *echo.Group) {
 			g.POST("/getToken", func(c echo.Context) error {
-				return c.JSON(http.StatusOK, echo.Map{"access_token": "foobar"})
+				return c.JSON(http.StatusOK, echo.Map{
+					"access_token": "foobar",
+					"id_token":     makeUnsignedJWT(map[string]interface{}{"sid": "login-session-456"}),
+				})
 			})
 			g.GET("/:domain", func(c echo.Context) error {
 				return c.JSON(http.StatusOK, echo.Map{"domain": c.Param("domain")})
@@ -245,7 +244,10 @@ func TestOidc(t *testing.T) {
 
 		obj := e.POST("/admin-oidc/"+testInstance.ContextName+"/franceconnect/code").
 			WithHeader("Content-Type", "application/json").
-			WithBytes([]byte(`{ "access_token": "fc_token" }`)).
+			WithJSON(map[string]string{
+				"access_token": "fc_token",
+				"id_token":     makeUnsignedJWT(map[string]interface{}{"sid": "cloudery-session-789"}),
+			}).
 			Expect().Status(200).
 			JSON().
 			Object()
@@ -266,12 +268,6 @@ func TestOidc(t *testing.T) {
 		client.CertifiedFromStore = true
 		require.NoError(t, client.SetFlagship(testInstance))
 
-		idToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"sid": "delegated-session-123",
-		})
-		idTokenStr, err := idToken.SignedString([]byte("cozy-stack-test"))
-		require.NoError(t, err)
-
 		obj2 := e.POST("/oidc/access_token").
 			WithHost(testInstance.Domain).
 			WithJSON(map[string]string{
@@ -279,7 +275,6 @@ func TestOidc(t *testing.T) {
 				"client_secret": oauthClient.ClientSecret,
 				"scope":         "*",
 				"code":          code,
-				"id_token":      idTokenStr,
 			}).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
@@ -289,9 +284,10 @@ func TestOidc(t *testing.T) {
 		obj2.Value("access_token").String().NotEmpty()
 		obj2.Value("refresh_token").String().NotEmpty()
 
+		// Verify the session ID was retrieved from the delegated code (not from id_token in AccessToken)
 		storedClient, err := oauth.FindClient(testInstance, oauthClient.ClientID)
 		require.NoError(t, err)
-		require.Equal(t, "delegated-session-123", storedClient.OIDCSessionID)
+		require.Equal(t, "cloudery-session-789", storedClient.OIDCSessionID)
 	})
 }
 
@@ -312,24 +308,11 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	setup := testutils.NewSetup(t, t.Name())
 
 	// Prepare mock OIDC provider
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	kid := "flagship-oidc-key"
-	modulus := base64.RawURLEncoding.EncodeToString(privateKey.N.Bytes())
-	exponent := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(privateKey.E)).Bytes())
+	sub := "flagship-user-sub"
+	email := "flagship@example.org"
+	sessionID := "flagship-session-123"
 
 	logoutCh := make(chan string, 1)
-	jwksPayload := map[string]interface{}{
-		"keys": []map[string]string{{
-			"kty": "RSA",
-			"use": "sig",
-			"kid": kid,
-			"alg": "RS256",
-			"n":   modulus,
-			"e":   exponent,
-		}},
-	}
 
 	var oidcServer *httptest.Server
 	oidcServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -341,18 +324,16 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 				"token_endpoint":         oidcServer.URL + "/token",
 				"userinfo_endpoint":      oidcServer.URL + "/userinfo",
 				"end_session_endpoint":   oidcServer.URL + "/logout",
-				"jwks_uri":               oidcServer.URL + "/jwks",
 			}
 			_ = json.NewEncoder(w).Encode(resp)
-		case "/jwks":
-			_ = json.NewEncoder(w).Encode(jwksPayload)
+		case "/userinfo":
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"sub":   sub,
+				"email": email,
+			})
 		case "/logout":
 			logoutCh <- r.URL.Query().Get("session_id")
 			w.WriteHeader(http.StatusOK)
-		case "/userinfo":
-			_ = json.NewEncoder(w).Encode(map[string]string{
-				"domain": "example.test",
-			})
 		default:
 			w.WriteHeader(http.StatusOK)
 		}
@@ -363,30 +344,28 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	cfg.Authentication = map[string]interface{}{
 		"flagship-ctx": map[string]interface{}{
 			"oidc": map[string]interface{}{
-				"client_id":               "provider-client-id",
-				"client_secret":           "provider-secret",
-				"scope":                   "openid profile email",
-				"redirect_uri":            "https://example.org/callback",
-				"authorize_url":           oidcServer.URL + "/authorize",
-				"token_url":               oidcServer.URL + "/token",
-				"userinfo_url":            oidcServer.URL + "/userinfo",
-				"userinfo_instance_field": "domain",
-				"id_token_jwk_url":        oidcServer.URL + "/jwks",
-				"allow_oauth_token":       true,
+				"client_id":             "provider-client-id",
+				"client_secret":         "provider-secret",
+				"scope":                 "openid profile email",
+				"redirect_uri":          "https://example.org/callback",
+				"authorize_url":         oidcServer.URL + "/authorize",
+				"token_url":             oidcServer.URL + "/token",
+				"userinfo_url":          oidcServer.URL + "/userinfo",
+				"allow_custom_instance": true,
 			},
 		},
 	}
 
 	cache := cfg.CacheStorage
 	cache.Clear("oidc-config:" + oidcServer.URL + "/.well-known/openid-configuration")
-	cache.Clear("oidc-jwk:" + oidcServer.URL + "/jwks")
 
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 
 	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/oidc": Routes,
-		"/auth": auth.Routes,
+		"/oidc":       Routes,
+		"/admin-oidc": AdminRoutes,
+		"/auth":       auth.Routes,
 	})
 	ts.Config.Handler.(*echo.Echo).Renderer = render
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
@@ -396,7 +375,7 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	testInstance := setup.GetTestInstance(&lifecycle.Options{
 		ContextName:        "flagship-ctx",
 		OnboardingFinished: &onboardingFinished,
-		OIDCID:             "user-oidc-sub",
+		OIDCID:             sub,
 	})
 
 	flagshipClient := &oauth.Client{
@@ -421,47 +400,43 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, client.Flagship)
 
-	globalStorageMutex.Lock()
-	globalStorage = nil
-	globalStorageMutex.Unlock()
-	code := getStorage().CreateCode(testInstance.OIDCID)
-	require.NotEmpty(t, code)
-
-	claims := jwt.MapClaims{
-		"iss": oidcServer.URL,
-		"sub": testInstance.OIDCID,
-		"sid": "flagship-session-123",
-		"aud": []string{clientID},
-		"iat": time.Now().Unix(),
-		"exp": time.Now().Add(10 * time.Minute).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	token.Header["kid"] = kid
-	idToken, err := token.SignedString(privateKey)
-	require.NoError(t, err)
-
 	e := testutils.CreateTestClient(t, ts.URL)
 
-	obj := e.POST("/oidc/access_token").
-		WithHost(testInstance.Domain).
-		WithJSON(map[string]interface{}{
-			"client_id":     clientID,
-			"client_secret": clientSecret,
-			"scope":         "*",
-			"code":          code,
-			"id_token":      idToken,
+	// Call GetDelegatedCode endpoint (simulating cloudery)
+	delegatedCodeResp := e.POST("/admin-oidc/flagship-ctx/generic/code").
+		WithHeader("Content-Type", "application/json").
+		WithJSON(map[string]string{
+			"access_token": "cloudery-access-token",
+			"id_token":     makeUnsignedJWT(map[string]interface{}{"sid": sessionID}),
 		}).
 		Expect().Status(http.StatusOK).
 		JSON().
 		Object()
-	obj.Value("token_type").String().Equal("bearer")
-	obj.Value("scope").String().Equal("*")
-	obj.Value("access_token").String().NotEmpty()
-	obj.Value("refresh_token").String().NotEmpty()
+	delegatedCodeResp.Value("sub").String().IsEqual(sub)
+	delegatedCodeResp.Value("email").String().IsEqual(email)
+	delegatedCode := delegatedCodeResp.Value("delegated_code").String().NotEmpty().Raw()
 
+	// Call AccessToken with only the delegated code (no id_token)
+	accessTokenResp := e.POST("/oidc/access_token").
+		WithHost(testInstance.Domain).
+		WithJSON(map[string]string{
+			"client_id":     clientID,
+			"client_secret": clientSecret,
+			"scope":         "*",
+			"code":          delegatedCode,
+		}).
+		Expect().Status(http.StatusOK).
+		JSON().
+		Object()
+	accessTokenResp.Value("token_type").String().Equal("bearer")
+	accessTokenResp.Value("scope").String().Equal("*")
+	accessTokenResp.Value("access_token").String().NotEmpty()
+	accessTokenResp.Value("refresh_token").String().NotEmpty()
+
+	// Verify the session ID was stored in the OAuth client
 	client, err = oauth.FindClient(testInstance, clientID)
 	require.NoError(t, err)
-	require.Equal(t, "flagship-session-123", client.OIDCSessionID)
+	require.Equal(t, sessionID, client.OIDCSessionID)
 
 	e.DELETE("/auth/register/"+clientID).
 		WithHost(testInstance.Domain).
@@ -471,7 +446,7 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 
 	select {
 	case sid := <-logoutCh:
-		require.Equal(t, "flagship-session-123", sid)
+		require.Equal(t, sessionID, sid)
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timeout waiting for OIDC end_session call")
 	}
@@ -555,4 +530,12 @@ func TestOIDCLogout(t *testing.T) {
 		_ = oauth.PerformOIDCLogout("cache-test", "session-2")
 		assert.Equal(t, 1, requestCount, "Configuration should be cached")
 	})
+}
+
+// makeUnsignedJWT creates a simple unsigned JWT for testing.
+func makeUnsignedJWT(claims map[string]interface{}) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
+	payload, _ := json.Marshal(claims)
+	payloadB64 := base64.RawURLEncoding.EncodeToString(payload)
+	return header + "." + payloadB64 + "."
 }
