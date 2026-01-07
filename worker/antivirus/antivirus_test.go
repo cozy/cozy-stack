@@ -123,14 +123,6 @@ func testWorkerCleanFile(t *testing.T, inst *instance.Instance) {
 	doc := createTestFile(t, fs, "clean-test.txt", []byte("This is a clean file"))
 	defer deleteTestFile(t, fs, doc)
 
-	doc.AntivirusScan = &vfs.AntivirusScan{
-		Status: vfs.AVStatusPending,
-	}
-
-	// Update the document
-	err := couchdb.UpdateDoc(fs, doc)
-	require.NoError(t, err)
-
 	// Create and run the job
 	msg, err := job.NewMessage(&antivirus.Message{FileID: doc.DocID})
 	require.NoError(t, err)
@@ -160,15 +152,6 @@ func testWorkerInfectedFile(t *testing.T, inst *instance.Instance) {
 	fs := inst.VFS()
 	doc := createTestFile(t, fs, "infected-test.txt", testutils.EICARTestSignature())
 	defer deleteTestFile(t, fs, doc)
-
-	doc, err := fs.FileByID(doc.DocID)
-	require.NoError(t, err)
-
-	doc.AntivirusScan = &vfs.AntivirusScan{
-		Status: vfs.AVStatusPending,
-	}
-	err = couchdb.UpdateDoc(fs, doc)
-	require.NoError(t, err)
 
 	// Create and run the job
 	msg, err := job.NewMessage(&antivirus.Message{FileID: doc.DocID})
