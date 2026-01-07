@@ -46,6 +46,7 @@ var (
 // extractSessionID extracts the session ID (sid) from an id_token.
 func extractSessionID(idToken string) string {
 	if idToken == "" {
+		logger.WithNamespace("oidc").Debugf("id_token is empty")
 		return ""
 	}
 	claims := jwt.MapClaims{}
