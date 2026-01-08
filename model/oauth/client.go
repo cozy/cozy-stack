@@ -1019,9 +1019,10 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 		return err
 	}
 
-	// Add the session_id parameter
+	// Add the logout_hint parameter with the session ID
+	// Per OIDC RP-Initiated Logout spec, logout_hint can contain a session identifier
 	q := endSessionURL.Query()
-	q.Add("sid", sessionID)
+	q.Add("logout_hint", sessionID)
 	endSessionURL.RawQuery = q.Encode()
 
 	fullURL := endSessionURL.String()
