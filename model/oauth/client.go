@@ -606,6 +606,10 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 
 	c.Flagship = old.Flagship
 	c.CertifiedFromStore = old.CertifiedFromStore
+	// Preserve server-managed fields that should not be overwritten by client updates
+	c.OIDCSessionID = old.OIDCSessionID
+	c.SynchronizedAt = old.SynchronizedAt
+	c.LastRefreshedAt = old.LastRefreshedAt
 
 	// Updating metadata
 	md := metadata.New()
