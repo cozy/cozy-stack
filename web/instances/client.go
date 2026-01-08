@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/labstack/echo/v4"
 )
 
@@ -73,6 +74,9 @@ func createToken(c echo.Context) error {
 }
 
 func checkClient(inst *instance.Instance, clientID string) error {
+	// Lock to prevent race conditions with other client updates
+	defer auth.LockOAuthClient(inst, clientID)()
+
 	client, err := oauth.FindClient(inst, clientID)
 	if err != nil {
 		return err

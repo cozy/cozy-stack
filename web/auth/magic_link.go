@@ -178,6 +178,9 @@ func magicLinkFlagship(c echo.Context) error {
 		}
 	}
 
+	// Lock the OAuth client to prevent race conditions with OIDC AccessToken
+	defer LockOAuthClient(inst, args.ClientID)()
+
 	client, err := oauth.FindClient(inst, args.ClientID)
 	if err != nil {
 		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
@@ -187,6 +190,9 @@ func magicLinkFlagship(c echo.Context) error {
 			"error": "the client must be registered",
 		})
 	}
+	inst.Logger().WithNamespace("oauth").Debugf("magicLinkFlagship: found client_id=%s, client=%s, Pending=%v, OIDCSessionID=%s",
+		client.CouchID, client.ClientName, client.Pending, client.OIDCSessionID)
+
 	if subtle.ConstantTimeCompare([]byte(args.ClientSecret), []byte(client.ClientSecret)) == 0 {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid client_secret",
@@ -198,6 +204,8 @@ func magicLinkFlagship(c echo.Context) error {
 	}
 
 	if client.Pending {
+		inst.Logger().WithNamespace("oauth").Debugf("magicLinkFlagship: clearing Pending flag for client_id=%s, preserving OIDCSessionID=%s",
+			client.CouchID, client.OIDCSessionID)
 		client.Pending = false
 		client.ClientID = ""
 		_ = couchdb.UpdateDoc(inst, client)

@@ -426,10 +426,17 @@ func (a *AuthorizeHTTPHandler) authorize(c echo.Context) error {
 	}
 
 	// Fill the client_os of the OAuth client
-	rawUserAgent := c.Request().UserAgent()
-	ua := user_agent.New(rawUserAgent)
-	params.client.ClientOS = ua.OS()
-	_ = couchdb.UpdateDoc(instance, params.client)
+	// Lock to prevent race conditions with other client updates
+	defer LockOAuthClient(instance, params.clientID)()
+	// Re-fetch client after lock to get fresh data
+	client, err := oauth.FindClient(instance, params.clientID)
+	if err == nil {
+		rawUserAgent := c.Request().UserAgent()
+		ua := user_agent.New(rawUserAgent)
+		client.ClientOS = ua.OS()
+		_ = couchdb.UpdateDoc(instance, client)
+		params.client = client
+	}
 
 	return createAccessCode(c, params, u, q)
 }
@@ -970,6 +977,8 @@ func accessToken(c echo.Context) error {
 
 	case "refresh_token":
 		token := c.FormValue("refresh_token")
+		instance.Logger().WithNamespace("oauth").Debugf("accessToken: refresh_token for client_id=%s, client=%s, OIDCSessionID=%s",
+			client.CouchID, client.ClientName, client.OIDCSessionID)
 		claims, ok := client.ValidToken(instance, consts.RefreshTokenAudience, token)
 		if !ok && client.ClientKind == "sharing" {
 			out.Refresh, claims, ok = sharing.TryTokenForMovedSharing(instance, client, token)
@@ -1003,7 +1012,13 @@ func accessToken(c echo.Context) error {
 
 	// Update the last_refreshed_at field of the OAuth client
 	client.LastRefreshedAt = time.Now()
-	_ = couchdb.UpdateDoc(instance, client)
+	if err := couchdb.UpdateDoc(instance, client); err != nil {
+		instance.Logger().WithNamespace("oauth").Debugf("accessToken: failed to update LastRefreshedAt for client_id=%s: %s",
+			client.CouchID, err)
+	} else {
+		instance.Logger().WithNamespace("oauth").Debugf("accessToken: updated LastRefreshedAt for client_id=%s, OIDCSessionID preserved=%s",
+			client.CouchID, client.OIDCSessionID)
+	}
 
 	return c.JSON(http.StatusOK, out)
 }

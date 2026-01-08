@@ -676,6 +676,9 @@ func AccessToken(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: OIDC token valid")
 	}
 
+	// Lock the OAuth client to prevent race conditions with other client updates
+	defer auth.LockOAuthClient(inst, reqBody.ClientID)()
+
 	// Load the OAuth client
 	client, err := oauth.FindClient(inst, reqBody.ClientID)
 	if err != nil {
@@ -744,11 +747,11 @@ func AccessToken(c echo.Context) error {
 	}
 	if sessionID != "" {
 		client.OIDCSessionID = sessionID
-		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: storing OIDCSessionID=%s on client=%s (flagship=%v)",
-			sessionID, client.ClientName, client.Flagship)
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: storing OIDCSessionID=%s on client_id=%s, client=%s (flagship=%v)",
+			sessionID, client.CouchID, client.ClientName, client.Flagship)
 	} else {
-		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: no sessionID available for client=%s (flagship=%v)",
-			client.ClientName, client.Flagship)
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: no sessionID available for client_id=%s, client=%s (flagship=%v)",
+			client.CouchID, client.ClientName, client.Flagship)
 	}
 
 	// Update the OAuth client if needed (pending flag or new session ID)
@@ -757,9 +760,9 @@ func AccessToken(c echo.Context) error {
 		client.Pending = false
 		client.ClientID = ""
 		if err := couchdb.UpdateDoc(inst, client); err != nil {
-			inst.Logger().WithNamespace("oidc").Errorf("AccessToken: failed to update client with OIDCSessionID: %s", err)
+			inst.Logger().WithNamespace("oidc").Errorf("AccessToken: failed to update client_id=%s with OIDCSessionID: %s", client.CouchID, err)
 		} else {
-			inst.Logger().WithNamespace("oidc").Debugf("AccessToken: successfully updated client with OIDCSessionID=%s", sessionID)
+			inst.Logger().WithNamespace("oidc").Debugf("AccessToken: successfully updated client_id=%s with OIDCSessionID=%s", client.CouchID, sessionID)
 		}
 		client.ClientID = client.CouchID
 	}
