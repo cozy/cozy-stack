@@ -80,18 +80,25 @@ func updateClient(c echo.Context) error {
 func deleteClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	clientID := c.Param("client-id")
+	instance.Logger().WithNamespace("oauth").Debugf("deleteClient: called for client_id=%s", clientID)
 	defer LockOAuthClient(instance, clientID)()
 
 	client, err := oauth.FindClient(instance, clientID)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
+			instance.Logger().WithNamespace("oauth").Debugf("deleteClient: client not found, returning NoContent")
 			return c.NoContent(http.StatusNoContent)
 		}
+		instance.Logger().WithNamespace("oauth").Debugf("deleteClient: error finding client: %s", err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
+	instance.Logger().WithNamespace("oauth").Debugf("deleteClient: found client=%s, flagship=%v, OIDCSessionID=%s",
+		client.ClientName, client.Flagship, client.OIDCSessionID)
+
 	if err := checkClientToken(c, client); err != nil {
+		instance.Logger().WithNamespace("oauth").Debugf("deleteClient: token check failed: %s", err)
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": err.Error(),
 		})
@@ -99,14 +106,25 @@ func deleteClient(c echo.Context) error {
 
 	// If the client has an OIDC session ID, perform SSO logout
 	if client.OIDCSessionID != "" && instance.ContextName != "" {
+		instance.Logger().WithNamespace("oauth").Debugf("deleteClient: performing OIDC logout for session_id=%s, context=%s",
+			client.OIDCSessionID, instance.ContextName)
 		// Call the end_session_endpoint to terminate the SSO session
 		// We don't fail the deletion if the logout fails, as this is best-effort
-		_ = oauth.PerformOIDCLogout(instance.ContextName, client.OIDCSessionID)
+		if err := oauth.PerformOIDCLogout(instance.ContextName, client.OIDCSessionID); err != nil {
+			instance.Logger().WithNamespace("oauth").Debugf("deleteClient: OIDC logout failed: %s", err)
+		} else {
+			instance.Logger().WithNamespace("oauth").Debugf("deleteClient: OIDC logout succeeded")
+		}
+	} else {
+		instance.Logger().WithNamespace("oauth").Debugf("deleteClient: skipping OIDC logout (OIDCSessionID=%s, ContextName=%s)",
+			client.OIDCSessionID, instance.ContextName)
 	}
 
 	if err := client.Delete(instance); err != nil {
+		instance.Logger().WithNamespace("oauth").Debugf("deleteClient: error deleting client: %s", err)
 		return c.JSON(err.Code, err)
 	}
+	instance.Logger().WithNamespace("oauth").Debugf("deleteClient: client deleted successfully")
 	return c.NoContent(http.StatusNoContent)
 }
 
