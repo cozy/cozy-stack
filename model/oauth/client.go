@@ -991,8 +991,11 @@ func fetchOIDCConfiguration(contextName string) (*OIDCConfiguration, error) {
 func PerformOIDCLogout(contextName, sessionID string) error {
 	if sessionID == "" {
 		// No session ID, nothing to do
+		logger.WithNamespace("oidc").Debugf("PerformOIDCLogout: no session_id provided, skipping")
 		return nil
 	}
+
+	logger.WithNamespace("oidc").Debugf("PerformOIDCLogout: starting logout for context=%s, session_id=%s", contextName, sessionID)
 
 	oidcConfig, err := fetchOIDCConfiguration(contextName)
 	if err != nil {
@@ -1007,6 +1010,8 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 		return err
 	}
 
+	logger.WithNamespace("oidc").Debugf("PerformOIDCLogout: end_session_endpoint=%s", oidcConfig.EndSessionEndpoint)
+
 	// Call the end_session_endpoint with the session ID
 	endSessionURL, err := url.Parse(oidcConfig.EndSessionEndpoint)
 	if err != nil {
@@ -1016,10 +1021,13 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 
 	// Add the session_id parameter
 	q := endSessionURL.Query()
-	q.Add("session_id", sessionID)
+	q.Add("sid", sessionID)
 	endSessionURL.RawQuery = q.Encode()
 
-	req, err := http.NewRequest(http.MethodGet, endSessionURL.String(), nil)
+	fullURL := endSessionURL.String()
+	logger.WithNamespace("oidc").Infof("PerformOIDCLogout: calling GET %s", fullURL)
+
+	req, err := http.NewRequest(http.MethodGet, fullURL, nil)
 	if err != nil {
 		logger.WithNamespace("oidc").Warnf("Failed to create end_session request: %s", err)
 		return err
@@ -1034,8 +1042,17 @@ func PerformOIDCLogout(contextName, sessionID string) error {
 	}
 	defer res.Body.Close()
 
+	// Read the response body for logging
+	bodyBytes, _ := io.ReadAll(res.Body)
+	bodyStr := string(bodyBytes)
+	if len(bodyStr) > 500 {
+		bodyStr = bodyStr[:500] + "..."
+	}
+
+	logger.WithNamespace("oidc").Infof("PerformOIDCLogout: response status=%d, body=%s", res.StatusCode, bodyStr)
+
 	if res.StatusCode >= 400 {
-		logger.WithNamespace("oidc").Warnf("end_session_endpoint returned status %d", res.StatusCode)
+		logger.WithNamespace("oidc").Warnf("end_session_endpoint returned error status %d", res.StatusCode)
 		// Don't fail the client deletion if the SSO logout fails
 		return err
 	}
