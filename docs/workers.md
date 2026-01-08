@@ -428,3 +428,41 @@ $ cozy-stack jobs run migrations --domain example.mycozy.cloud --json '{"type": 
 This worker is used for sending data to a RAG. It looks at the changes feed for
 the given doctype, send the changes to an external indexer that will generate
 embeddings for the data and put them in a vector database.
+
+## antivirus
+
+The `antivirus` worker scans files for malware using ClamAV. It is automatically
+triggered when a file is created or updated (when the content changes). The
+worker sends the file content to a ClamAV daemon for scanning and updates the
+file document with the scan result.
+
+### How it works
+
+* When a file is created or its content is updated, the stack automatically
+   schedules an antivirus scan job
+* The file's `antivirus_scan.status` is immediately set to `pending`
+* The worker retrieves the file, sends it to ClamAV for scanning
+* The scan result is stored in the file document's `antivirus_scan` field
+* If the file is infected, skipped, or an error occurs, a notification is sent
+   to the user (if enabled)
+
+### Job arguments
+
+The worker expects a single argument:
+
+```json
+{
+    "file_id": "8737b5d6-51b6-11e7-9194-bf5b64b3bc9e"
+}
+```
+
+### Configuration
+
+Antivirus scanning must be enabled per-context in the stack configuration. See
+[cozy.example.yaml](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml)
+for a complete example.
+
+### Requirements
+
+- ClamAV daemon (`clamd`) must be running and accessible at the configured address
+- The daemon should be configured with appropriate scan limits
