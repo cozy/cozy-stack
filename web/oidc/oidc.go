@@ -46,20 +46,20 @@ var (
 // extractSessionID extracts the session ID (sid) from an id_token.
 func extractSessionID(idToken string) string {
 	if idToken == "" {
-		logger.WithNamespace("oidc").Debugf("extractSessionID: id_token is empty")
+		logger.WithNamespace("oidc").Infof("extractSessionID: id_token is empty")
 		return ""
 	}
 	claims := jwt.MapClaims{}
 	_, _, err := jwt.NewParser().ParseUnverified(idToken, claims)
 	if err != nil {
-		logger.WithNamespace("oidc").Debugf("extractSessionID: failed to parse id_token: %s", err)
+		logger.WithNamespace("oidc").Infof("extractSessionID: failed to parse id_token: %s", err)
 		return ""
 	}
 	sid, _ := claims["sid"].(string)
 	if sid != "" {
-		logger.WithNamespace("oidc").Debugf("extractSessionID: extracted sid=%s from id_token", sid)
+		logger.WithNamespace("oidc").Infof("extractSessionID: extracted sid=%s from id_token", sid)
 	} else {
-		logger.WithNamespace("oidc").Debugf("extractSessionID: no sid claim in id_token, available claims: %v", claims)
+		logger.WithNamespace("oidc").Infof("extractSessionID: no sid claim in id_token, available claims: %v", claims)
 	}
 	return sid
 }
@@ -496,7 +496,7 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 // Logout is the handler for the OpenID back-channel logout endpoint.
 func Logout(c echo.Context) error {
 	contextName := c.Param("context")
-	logger.WithNamespace("oidc").Debugf("Logout: called for context=%s", contextName)
+	logger.WithNamespace("oidc").Infof("Logout: called for context=%s", contextName)
 
 	conf, err := getGenericConfig(contextName)
 	if err != nil {
@@ -541,7 +541,7 @@ func Logout(c echo.Context) error {
 	// Log all claims for debugging
 	sid, _ := claims["sid"].(string)
 	sub, _ := claims["sub"].(string)
-	logger.WithNamespace("oidc").Debugf("Logout: token claims - sub=%s, sid=%s, aud=%v, iss=%v",
+	logger.WithNamespace("oidc").Infof("Logout: token claims - sub=%s, sid=%s, aud=%v, iss=%v",
 		sub, sid, claims["aud"], claims["iss"])
 
 	var inst *instance.Instance
@@ -553,7 +553,7 @@ func Logout(c echo.Context) error {
 				"error": "invalid claims",
 			})
 		}
-		logger.WithNamespace("oidc").Debugf("Logout: looking up instance by sub=%s, context=%s", sub, contextName)
+		logger.WithNamespace("oidc").Infof("Logout: looking up instance by sub=%s, context=%s", sub, contextName)
 		inst, err = findInstanceBySub(sub, contextName)
 		if err != nil {
 			logger.WithNamespace("oidc").Errorf("Logout: instance not found for sub=%s: %s", sub, err)
@@ -562,7 +562,7 @@ func Logout(c echo.Context) error {
 				"error_description": err,
 			})
 		}
-		logger.WithNamespace("oidc").Debugf("Logout: found instance domain=%s for sub=%s", inst.Domain, sub)
+		inst.Logger().WithNamespace("oidc").Debugf("Logout: found instance domain=%s for sub=%s", inst.Domain, sub)
 	} else {
 		domain, ok := claims[conf.UserInfoField].(string)
 		if !ok {
@@ -572,7 +572,7 @@ func Logout(c echo.Context) error {
 			})
 		}
 		domain = buildDomain(domain, conf)
-		logger.WithNamespace("oidc").Debugf("Logout: looking up instance by domain=%s", domain)
+		logger.WithNamespace("oidc").Infof("Logout: looking up instance by domain=%s", domain)
 		instance, err := lifecycle.GetInstance(domain)
 		if err != nil {
 			logger.WithNamespace("oidc").Errorf("Logout: instance not found domain=%s: %s", domain, err)
@@ -582,7 +582,7 @@ func Logout(c echo.Context) error {
 			})
 		}
 		inst = instance
-		logger.WithNamespace("oidc").Debugf("Logout: found instance domain=%s", inst.Domain)
+		inst.Logger().WithNamespace("oidc").Debugf("Logout: found instance domain=%s", inst.Domain)
 	}
 
 	// TODO use the sid to logout only on the current device
@@ -635,7 +635,7 @@ func validateOIDCToken(inst *instance.Instance, idToken, oidcToken string) error
 // a valid token for OIDC.
 func AccessToken(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	logger.WithNamespace("oidc").Debugf("AccessToken: called for instance=%s", inst.Domain)
+	inst.Logger().WithNamespace("oidc").Debugf("AccessToken: called for instance=%s", inst.Domain)
 
 	var reqBody struct {
 		ClientID       string `json:"client_id"`
@@ -651,7 +651,7 @@ func AccessToken(c echo.Context) error {
 		return err
 	}
 
-	logger.WithNamespace("oidc").Debugf("AccessToken: client_id=%s, has_code=%v, has_id_token=%v, has_oidc_token=%v",
+	inst.Logger().WithNamespace("oidc").Debugf("AccessToken: client_id=%s, has_code=%v, has_id_token=%v, has_oidc_token=%v",
 		reqBody.ClientID, reqBody.Code != "", reqBody.IDToken != "", reqBody.OIDCToken != "")
 
 	// Validate the delegated code or OIDC token
@@ -659,21 +659,21 @@ func AccessToken(c echo.Context) error {
 	if reqBody.Code != "" {
 		sessionID, err := validateDelegatedCode(inst, reqBody.Code)
 		if err != nil {
-			logger.WithNamespace("oidc").Debugf("AccessToken: invalid delegated code for instance=%s", inst.Domain)
+			inst.Logger().WithNamespace("oidc").Debugf("AccessToken: invalid delegated code for instance=%s", inst.Domain)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
 		}
 		codeSessionID = sessionID
-		logger.WithNamespace("oidc").Debugf("AccessToken: delegated code valid, sessionID from code=%s", codeSessionID)
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: delegated code valid, sessionID from code=%s", codeSessionID)
 	} else {
 		if err := validateOIDCToken(inst, reqBody.IDToken, reqBody.OIDCToken); err != nil {
-			logger.WithNamespace("oidc").Debugf("AccessToken: OIDC token validation failed: %s", err)
+			inst.Logger().WithNamespace("oidc").Debugf("AccessToken: OIDC token validation failed: %s", err)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": err.Error(),
 			})
 		}
-		logger.WithNamespace("oidc").Debugf("AccessToken: OIDC token valid")
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: OIDC token valid")
 	}
 
 	// Load the OAuth client
@@ -737,17 +737,17 @@ func AccessToken(c echo.Context) error {
 
 	// Store the session ID in the client for logout purposes (priority: delegated code > id_token)
 	sessionID := codeSessionID
-	logger.WithNamespace("oidc").Debugf("AccessToken: codeSessionID=%s", codeSessionID)
+	inst.Logger().WithNamespace("oidc").Debugf("AccessToken: codeSessionID=%s", codeSessionID)
 	if sessionID == "" {
 		sessionID = extractSessionID(reqBody.IDToken)
-		logger.WithNamespace("oidc").Debugf("AccessToken: extracted sessionID from id_token=%s", sessionID)
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: extracted sessionID from id_token=%s", sessionID)
 	}
 	if sessionID != "" {
 		client.OIDCSessionID = sessionID
-		logger.WithNamespace("oidc").Debugf("AccessToken: storing OIDCSessionID=%s on client=%s (flagship=%v)",
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: storing OIDCSessionID=%s on client=%s (flagship=%v)",
 			sessionID, client.ClientName, client.Flagship)
 	} else {
-		logger.WithNamespace("oidc").Debugf("AccessToken: no sessionID available for client=%s (flagship=%v)",
+		inst.Logger().WithNamespace("oidc").Debugf("AccessToken: no sessionID available for client=%s (flagship=%v)",
 			client.ClientName, client.Flagship)
 	}
 
@@ -757,9 +757,9 @@ func AccessToken(c echo.Context) error {
 		client.Pending = false
 		client.ClientID = ""
 		if err := couchdb.UpdateDoc(inst, client); err != nil {
-			logger.WithNamespace("oidc").Errorf("AccessToken: failed to update client with OIDCSessionID: %s", err)
+			inst.Logger().WithNamespace("oidc").Errorf("AccessToken: failed to update client with OIDCSessionID: %s", err)
 		} else {
-			logger.WithNamespace("oidc").Debugf("AccessToken: successfully updated client with OIDCSessionID=%s", sessionID)
+			inst.Logger().WithNamespace("oidc").Debugf("AccessToken: successfully updated client with OIDCSessionID=%s", sessionID)
 		}
 		client.ClientID = client.CouchID
 	}
@@ -1327,7 +1327,7 @@ func Routes(router *echo.Group) {
 func GetDelegatedCode(c echo.Context) error {
 	contextName := c.Param("context")
 	provider := c.Param("provider")
-	logger.WithNamespace("oidc").Debugf("GetDelegatedCode: called for context=%s, provider=%s", contextName, provider)
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode: called for context=%s, provider=%s", contextName, provider)
 
 	var conf *Config
 	var err error
@@ -1351,7 +1351,7 @@ func GetDelegatedCode(c echo.Context) error {
 		return err
 	}
 
-	logger.WithNamespace("oidc").Debugf("GetDelegatedCode: has_access_token=%v, has_id_token=%v",
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode: has_access_token=%v, has_id_token=%v",
 		reqBody.AccessToken != "", reqBody.IDToken != "")
 
 	params, err := getUserInfo(conf, reqBody.AccessToken)
@@ -1368,7 +1368,7 @@ func GetDelegatedCode(c echo.Context) error {
 			return ErrAuthenticationFailed
 		}
 		s = sub
-		logger.WithNamespace("oidc").Debugf("GetDelegatedCode: using sub=%s", sub)
+		logger.WithNamespace("oidc").Infof("GetDelegatedCode: using sub=%s", sub)
 	} else {
 		domain, err := extractDomain(conf, params)
 		if err != nil {
@@ -1376,14 +1376,14 @@ func GetDelegatedCode(c echo.Context) error {
 			return err
 		}
 		s = domain
-		logger.WithNamespace("oidc").Debugf("GetDelegatedCode: using domain=%s", domain)
+		logger.WithNamespace("oidc").Infof("GetDelegatedCode: using domain=%s", domain)
 	}
 
 	// Extract session ID (sid) from id_token if provided
 	sessionID := extractSessionID(reqBody.IDToken)
-	logger.WithNamespace("oidc").Debugf("GetDelegatedCode: extracted sessionID=%s from id_token", sessionID)
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode: extracted sessionID=%s from id_token", sessionID)
 
-	logger.WithNamespace("oidc").Debugf("GetDelegatedCode: creating delegated code for sub/domain=%s with sessionID=%s", s, sessionID)
+	logger.WithNamespace("oidc").Infof("GetDelegatedCode: creating delegated code for sub/domain=%s with sessionID=%s", s, sessionID)
 	params["delegated_code"] = getStorage().CreateCodeData(s, sessionID)
 	return c.JSON(http.StatusOK, params)
 }
