@@ -38,30 +38,61 @@ func TestInstances(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	t.Run("Create", func(t *testing.T) {
-		domain := "alice.cozy.localhost"
-		t.Cleanup(func() { _ = lifecycle.Destroy(domain) })
+		t.Run("WithoutOrganizationDomain", func(t *testing.T) {
+			domain := "alice.cozy.localhost"
+			t.Cleanup(func() { _ = lifecycle.Destroy(domain) })
 
-		e := testutils.CreateTestClient(t, ts.URL)
+			e := testutils.CreateTestClient(t, ts.URL)
 
-		// Create instance with feature sets
-		e.POST("/instances").
-			WithQuery("DiskQuota", 5000000000).
-			WithQuery("Domain", domain).
-			WithQuery("Email", "alice@example.com").
-			WithQuery("Locale", "en").
-			WithQuery("PublicName", "alice").
-			WithQuery("Settings", "partner:cozy,context:cozy_beta,tos:1.0.0").
-			WithQuery("SwiftLayout", "-1").
-			WithQuery("TOSSigned", "1.0.0").
-			WithQuery("UUID", "60bac7e8-abd9-11ee-8201-9cb6d0907fa3").
-			WithQuery("feature_sets", "71df3022-abd9-11ee-b79b-9cb6d0907fa3,790789f8-abd9-11ee-ae09-9cb6d0907fa3").
-			WithQuery("sponsorships", "").
-			WithHeader("Authorization", "Bearer "+token).
-			Expect().Status(201).
-			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().Path("$.data.attributes.feature_sets").
-			Array().
-			HasValue(0, "71df3022-abd9-11ee-b79b-9cb6d0907fa3").
-			HasValue(1, "790789f8-abd9-11ee-ae09-9cb6d0907fa3")
+			// Create instance with feature sets
+			e.POST("/instances").
+				WithQuery("DiskQuota", 5000000000).
+				WithQuery("Domain", domain).
+				WithQuery("Email", "alice@example.com").
+				WithQuery("Locale", "en").
+				WithQuery("PublicName", "alice").
+				WithQuery("Settings", "partner:cozy,context:cozy_beta,tos:1.0.0").
+				WithQuery("SwiftLayout", "-1").
+				WithQuery("TOSSigned", "1.0.0").
+				WithQuery("UUID", "60bac7e8-abd9-11ee-8201-9cb6d0907fa3").
+				WithQuery("feature_sets", "71df3022-abd9-11ee-b79b-9cb6d0907fa3,790789f8-abd9-11ee-ae09-9cb6d0907fa3").
+				WithQuery("sponsorships", "").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.attributes.feature_sets").
+				Array().
+				HasValue(0, "71df3022-abd9-11ee-b79b-9cb6d0907fa3").
+				HasValue(1, "790789f8-abd9-11ee-ae09-9cb6d0907fa3")
+		})
+
+		t.Run("WithOrganizationDomain", func(t *testing.T) {
+			domain := "alice.cozy.localhost"
+			t.Cleanup(func() { _ = lifecycle.Destroy(domain) })
+
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			// Create instance with feature sets
+			attrs := e.POST("/instances").
+				WithQuery("DiskQuota", 5000000000).
+				WithQuery("Domain", domain).
+				WithQuery("OrgDomain", "example.com").
+				WithQuery("Email", "alice@example.com").
+				WithQuery("Locale", "en").
+				WithQuery("PublicName", "alice").
+				WithQuery("Settings", "partner:cozy,context:cozy_beta,tos:1.0.0").
+				WithQuery("SwiftLayout", "-1").
+				WithQuery("TOSSigned", "1.0.0").
+				WithQuery("UUID", "60bac7e8-abd9-11ee-8201-9cb6d0907fa3").
+				WithQuery("feature_sets", "71df3022-abd9-11ee-b79b-9cb6d0907fa3,790789f8-abd9-11ee-ae09-9cb6d0907fa3").
+				WithQuery("sponsorships", "").
+				WithHeader("Authorization", "Bearer "+token).
+				Expect().Status(201).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object().Path("$.data.attributes").Object()
+
+			attrs.HasValue("org_domain", "example.com")
+			attrs.HasValue("feature_sets", []string{"71df3022-abd9-11ee-b79b-9cb6d0907fa3", "790789f8-abd9-11ee-ae09-9cb6d0907fa3"})
+		})
 	})
 }
