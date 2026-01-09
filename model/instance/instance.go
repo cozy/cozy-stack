@@ -51,6 +51,7 @@ type Instance struct {
 	DocRev          string   `json:"_rev,omitempty"` // couchdb _rev
 	Domain          string   `json:"domain"`         // The main DNS domain, like example.twake.app
 	DomainAliases   []string `json:"domain_aliases,omitempty"`
+	OrgDomain       string   `json:"org_domain,omitempty"`       // The instance's organization custom domain, like mycompany.com
 	OldDomain       string   `json:"old_domain,omitempty"`       // The old DNS domain, like old.mycozy.cloud
 	Prefix          string   `json:"prefix,omitempty"`           // Possible database prefix
 	Locale          string   `json:"locale"`                     // The locale used on the server
