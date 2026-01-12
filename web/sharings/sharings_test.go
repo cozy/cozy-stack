@@ -1886,37 +1886,35 @@ func TestSharingFileChangeNotification(t *testing.T) {
 	uploadedFileID := fileObj.Path("$.data.id").String().NotEmpty().Raw()
 	require.NotEmpty(t, uploadedFileID)
 
-	// Wait for the async notification to be processed
-	time.Sleep(200 * time.Millisecond)
-
-	// Check that a sendmail job was created with the correct template
-	allJobs, err := job.GetAllJobs(ownerInstance)
-	require.NoError(t, err)
-
-	sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
-	require.NoError(t, err)
-
-	// Find the job with the sharing_file_changed template
-	var found bool
-	for _, j := range sendmailJobs {
-		var msgData map[string]interface{}
-		if err := json.Unmarshal(j.Message, &msgData); err != nil {
-			continue
+	// Wait for the async notification to be processed and verify sendmail job
+	require.Eventually(t, func() bool {
+		allJobs, err := job.GetAllJobs(ownerInstance)
+		if err != nil {
+			return false
 		}
-		if msgData["template_name"] == "sharing_file_changed" {
-			found = true
-			assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
-			values := msgData["template_values"].(map[string]interface{})
-			// For share-by-link, the description is the parent folder name
-			assert.Equal(t, "Shared Folder", values["SharingDescription"])
-			assert.Equal(t, "uploaded-file.pdf", values["FileName"])
-			assert.Contains(t, values["FileURL"], "/folder/")
-			assert.Contains(t, values["FileURL"], "/file/"+uploadedFileID)
-			assert.Equal(t, false, values["IsFolder"])
-			break
+		sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
+		if err != nil {
+			return false
 		}
-	}
-	assert.True(t, found, "Expected to find a sendmail job with template 'sharing_file_changed'")
+		for _, j := range sendmailJobs {
+			var msgData map[string]interface{}
+			if err := json.Unmarshal(j.Message, &msgData); err != nil {
+				continue
+			}
+			if msgData["template_name"] == "sharing_file_changed" {
+				assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
+				values := msgData["template_values"].(map[string]interface{})
+				// For share-by-link, the description is the parent folder name
+				assert.Equal(t, "Shared Folder", values["SharingDescription"])
+				assert.Equal(t, "uploaded-file.pdf", values["FileName"])
+				assert.Contains(t, values["FileURL"], "/folder/")
+				assert.Contains(t, values["FileURL"], "/file/"+uploadedFileID)
+				assert.Equal(t, false, values["IsFolder"])
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Expected to find a sendmail job with template 'sharing_file_changed'")
 }
 
 // TestSharingFolderChangeNotification tests that a notification email is sent
@@ -2016,34 +2014,146 @@ func TestSharingFolderChangeNotification(t *testing.T) {
 	createdFolderID := subfolderObj.Path("$.data.id").String().NotEmpty().Raw()
 	require.NotEmpty(t, createdFolderID)
 
-	// Wait for the async notification to be processed
-	time.Sleep(200 * time.Millisecond)
-
-	// Check that a sendmail job was created with the correct template
-	allJobs, err := job.GetAllJobs(ownerInstance)
-	require.NoError(t, err)
-
-	sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
-	require.NoError(t, err)
-
-	// Find the job with the sharing_file_changed template
-	var found bool
-	for _, j := range sendmailJobs {
-		var msgData map[string]interface{}
-		if err := json.Unmarshal(j.Message, &msgData); err != nil {
-			continue
+	// Wait for the async notification to be processed and verify sendmail job
+	require.Eventually(t, func() bool {
+		allJobs, err := job.GetAllJobs(ownerInstance)
+		if err != nil {
+			return false
 		}
-		if msgData["template_name"] == "sharing_file_changed" {
-			found = true
-			assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
-			values := msgData["template_values"].(map[string]interface{})
-			// For share-by-link, the description is the parent folder name
-			assert.Equal(t, "Shared Folder", values["SharingDescription"])
-			assert.Equal(t, "New Subfolder", values["FileName"])
-			assert.Contains(t, values["FileURL"], "/folder/"+createdFolderID)
-			assert.Equal(t, true, values["IsFolder"])
-			break
+		sendmailJobs, err := job.GetLastsJobs(allJobs, "sendmail")
+		if err != nil {
+			return false
 		}
+		for _, j := range sendmailJobs {
+			var msgData map[string]interface{}
+			if err := json.Unmarshal(j.Message, &msgData); err != nil {
+				continue
+			}
+			if msgData["template_name"] == "sharing_file_changed" {
+				assert.Equal(t, "noreply", msgData["mode"]) // mail.ModeFromStack = "noreply"
+				values := msgData["template_values"].(map[string]interface{})
+				// For share-by-link, the description is the parent folder name
+				assert.Equal(t, "Shared Folder", values["SharingDescription"])
+				assert.Equal(t, "New Subfolder", values["FileName"])
+				assert.Contains(t, values["FileURL"], "/folder/"+createdFolderID)
+				assert.Equal(t, true, values["IsFolder"])
+				return true
+			}
+		}
+		return false
+	}, 5*time.Second, 100*time.Millisecond, "Expected to find a sendmail job with template 'sharing_file_changed'")
+}
+
+// TestReadOnlyHandlers tests the AddReadOnly and RemoveReadOnly handlers
+// that validate index parameters for readonly status management.
+func TestReadOnlyHandlers(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
-	assert.True(t, found, "Expected to find a sendmail job with template 'sharing_file_changed'")
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
+
+	// Prepare Owner's instance
+	ownerSetup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := ownerSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+
+	// Create a contact for the recipient
+	recipientContact := createContact(t, ownerInstance, "Recipient", "recipient@example.net")
+
+	tsOwner := ownerSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+		"/files":    files.Routes,
+	})
+	tsOwner.Config.Handler.(*echo.Echo).Renderer = render
+	tsOwner.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsOwner.Close)
+
+	eOwner := httpexpect.Default(t, tsOwner.URL)
+
+	// Create a sharing with a read-write recipient
+	dirID := eOwner.POST("/files/").
+		WithQuery("Name", "Shared Folder").
+		WithQuery("Type", "directory").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object().Path("$.data.id").String().NotEmpty().Raw()
+
+	sharingObj := eOwner.POST("/sharings/").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "io.cozy.sharings",
+				"attributes": {
+					"description": "Test Sharing for Readonly",
+					"open_sharing": true,
+					"rules": [{
+						"title": "Shared Folder",
+						"doctype": "io.cozy.files",
+						"values": ["` + dirID + `"],
+						"add": "sync",
+						"update": "sync",
+						"remove": "sync"
+					}]
+				},
+				"relationships": {
+					"recipients": {
+						"data": [{
+							"id": "` + recipientContact.ID() + `",
+							"type": "io.cozy.contacts"
+						}]
+					}
+				}
+			}
+		}`)).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	testSharingID := sharingObj.Path("$.data.id").String().NotEmpty().Raw()
+
+	t.Run("AddReadOnly_InvalidIndex", func(t *testing.T) {
+		e := httpexpect.Default(t, tsOwner.URL)
+
+		// Index 0 is the owner, should be invalid (returns 422 from jsonapi.InvalidParameter)
+		e.POST("/sharings/"+testSharingID+"/recipients/0/readonly").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(422)
+
+		// Index out of range returns 422 Unprocessable Entity
+		e.POST("/sharings/"+testSharingID+"/recipients/99/readonly").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(422)
+
+		// Non-numeric index (returns 422 from jsonapi.InvalidParameter)
+		e.POST("/sharings/"+testSharingID+"/recipients/invalid/readonly").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(422)
+	})
+
+	t.Run("RemoveReadOnly_InvalidIndex", func(t *testing.T) {
+		e := httpexpect.Default(t, tsOwner.URL)
+
+		// Index 0 is the owner, should be invalid (returns 422 from jsonapi.InvalidParameter)
+		e.DELETE("/sharings/"+testSharingID+"/recipients/0/readonly").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(422)
+
+		// Index out of range returns 422 Unprocessable Entity
+		e.DELETE("/sharings/"+testSharingID+"/recipients/99/readonly").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(422)
+	})
 }
