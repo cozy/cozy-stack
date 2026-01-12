@@ -333,6 +333,108 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 	return fs.UpdateDirDoc(olddoc, dir)
 }
 
+// ValidateFolderForDrive validates that a folder can be used to create a shared drive.
+// It checks that:
+// - The folder is not a system folder (root, trash, shared-with-me, shared-drives, etc.)
+// - The folder exists and is a directory
+// - The folder is not in the trash
+// - The folder has no existing sharing (checked via referenced_by)
+// - The folder is not inside another shared folder
+// - No descendant folder has an existing sharing
+func ValidateFolderForDrive(inst *instance.Instance, folderID string) (*vfs.DirDoc, error) {
+	// Check for system folder IDs first (before checking existence)
+	// This gives a more specific error for known system folders
+	if folderID == consts.RootDirID ||
+		folderID == consts.TrashDirID ||
+		folderID == consts.SharedWithMeDirID ||
+		folderID == consts.NoLongerSharedDirID ||
+		folderID == consts.SharedDrivesDirID {
+		return nil, ErrSystemFolder
+	}
+
+	fs := inst.VFS()
+
+	// Check folder exists and is a directory
+	dir, file, err := fs.DirOrFileByID(folderID)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrFolderNotFound
+		}
+		return nil, err
+	}
+	if dir == nil && file != nil {
+		return nil, ErrNotADirectory
+	}
+	if dir == nil {
+		return nil, ErrFolderNotFound
+	}
+
+	// Check not in trash (path-based check for folders inside trash)
+	if strings.HasPrefix(dir.Fullpath, vfs.TrashDirName+"/") {
+		return nil, ErrSystemFolder
+	}
+
+	// Check folder is not already in a sharing (via referenced_by)
+	for _, ref := range dir.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			return nil, ErrFolderAlreadyShared
+		}
+	}
+
+	// Check folder is not inside another sharing by walking up parent directories
+	currentPath := path.Dir(dir.Fullpath)
+	for currentPath != "/" && currentPath != "." && currentPath != "" {
+		parentDir, err := fs.DirByPath(currentPath)
+		if err != nil {
+			break
+		}
+		for _, ref := range parentDir.ReferencedBy {
+			if ref.Type == consts.Sharings {
+				return nil, ErrFolderAlreadyShared
+			}
+		}
+		currentPath = path.Dir(currentPath)
+	}
+
+	// Check no descendant folder has an existing sharing
+	if err := checkDescendantsForSharing(fs, dir); err != nil {
+		return nil, err
+	}
+
+	return dir, nil
+}
+
+// checkDescendantsForSharing recursively checks if any descendant directory
+// has an existing sharing reference.
+func checkDescendantsForSharing(fs vfs.VFS, dir *vfs.DirDoc) error {
+	iter := fs.DirIterator(dir, nil)
+	for {
+		child, _, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if child == nil {
+			continue
+		}
+
+		// Check if this child directory has a sharing reference
+		for _, ref := range child.ReferencedBy {
+			if ref.Type == consts.Sharings {
+				return ErrFolderAlreadyShared
+			}
+		}
+
+		// Recursively check subdirectories
+		if err := checkDescendantsForSharing(fs, child); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetSharingDir returns the directory used by this sharing for putting files
 // and folders that have no dir_id.
 func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {

@@ -401,6 +401,41 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	return nil, nil
 }
 
+// CreateDrive creates a new shared drive from an existing unshared folder.
+func CreateDrive(inst *instance.Instance, folderID, description, appSlug string) (*Sharing, error) {
+	// Validate the folder
+	dir, err := ValidateFolderForDrive(inst, folderID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the sharing structure
+	s := &Sharing{
+		Drive:       true,
+		Description: description,
+		Rules: []Rule{{
+			Title:   dir.DocName,
+			DocType: consts.Files,
+			Values:  []string{folderID},
+			Add:     ActionRuleNone,
+			Update:  ActionRuleNone,
+			Remove:  ActionRuleNone,
+		}},
+	}
+
+	// Use folder name as description if not provided
+	if s.Description == "" {
+		s.Description = dir.DocName
+	}
+
+	// Initialize as owner
+	if err := s.BeOwner(inst, appSlug); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
 // CreateRequest prepares a sharing as just a request that the user will have to
 // accept before it does anything.
 func (s *Sharing) CreateRequest(inst *instance.Instance) error {

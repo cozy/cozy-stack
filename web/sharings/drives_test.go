@@ -1916,3 +1916,357 @@ func TestDriveAutoAcceptTrusted(t *testing.T) {
 		return attrs.Value("active").Boolean().Raw()
 	}, 10*time.Second, 500*time.Millisecond, "Drive sharing not active on recipient side")
 }
+
+func TestCreateDriveFromFolder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	// Setup test instance
+	setup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := setup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+	tsOwner := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsOwner.Config.Handler.(*echo.Echo).Renderer = render
+	tsOwner.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsOwner.Close)
+
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
+
+	eOwner := httpexpect.Default(t, tsOwner.URL)
+
+	t.Run("CreateDriveFromUnsharedFolder", func(t *testing.T) {
+		// Create a directory
+		dirID := createRootDirectory(t, eOwner, "ProjectDocs", ownerAppToken)
+
+		// Create a contact for the recipient
+		recipientContact := createContact(t, ownerInstance, "Alice", "alice@example.net")
+
+		// Create shared drive from that folder using the new endpoint
+		obj := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Project Documents",
+						"folder_id": "%s"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, dirID, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify sharing was created with correct attributes
+		data := obj.Value("data").Object()
+		data.Value("id").String().NotEmpty()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("drive").Boolean().IsTrue()
+		attrs.Value("description").String().IsEqual("Project Documents")
+
+		// Verify the rule was created correctly
+		rules := attrs.Value("rules").Array()
+		rules.Length().IsEqual(1)
+		rule := rules.Value(0).Object()
+		rule.Value("title").String().IsEqual("ProjectDocs")
+		rule.Value("doctype").String().IsEqual(consts.Files)
+		rule.Value("values").Array().Value(0).String().IsEqual(dirID)
+	})
+
+	t.Run("CreateDriveWithoutRecipients", func(t *testing.T) {
+		// Create a directory
+		dirID := createRootDirectory(t, eOwner, "NoRecipientsFolder", ownerAppToken)
+
+		// Create shared drive without recipients (should succeed)
+		obj := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "Drive without recipients",
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify sharing was created
+		data := obj.Value("data").Object()
+		data.Value("id").String().NotEmpty()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("drive").Boolean().IsTrue()
+	})
+
+	t.Run("FailOnMissingFolderID", func(t *testing.T) {
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"description": "No folder ID"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(422)
+	})
+
+	t.Run("FailOnNonexistentFolder", func(t *testing.T) {
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "nonexistent-folder-id"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(404)
+	})
+
+	t.Run("FailOnFile", func(t *testing.T) {
+		// Create a file instead of directory
+		fileID := createFile(t, eOwner, "", "test.txt", ownerAppToken)
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, fileID))).
+			Expect().Status(422)
+	})
+
+	t.Run("FailOnSystemFolder", func(t *testing.T) {
+		// Try to share the root directory
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, consts.RootDirID))).
+			Expect().Status(422)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("Cannot share system folder")
+
+		// Try to share the trash directory
+		resp = eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, consts.TrashDirID))).
+			Expect().Status(422)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("Cannot share system folder")
+
+		// Try to share the shared-drives directory
+		resp = eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, consts.SharedDrivesDirID))).
+			Expect().Status(422)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("Cannot share system folder")
+	})
+
+	t.Run("FailOnAlreadySharedFolder", func(t *testing.T) {
+		// Create a directory and share it first
+		dirID := createRootDirectory(t, eOwner, "AlreadyShared", ownerAppToken)
+
+		recipientContact := createContact(t, ownerInstance, "Bob", "bob@example.net")
+
+		// Create first sharing
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, dirID, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201)
+
+		// Try to create another drive from the same folder
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(409)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("already has an existing sharing")
+	})
+
+	t.Run("FailOnFolderInsideSharing", func(t *testing.T) {
+		// Create a parent directory and share it
+		parentID := createRootDirectory(t, eOwner, "ParentShared", ownerAppToken)
+
+		// Create a subdirectory inside
+		childID := createDirectory(t, eOwner, parentID, "ChildFolder", ownerAppToken)
+
+		recipientContact := createContact(t, ownerInstance, "Carol", "carol@example.net")
+
+		// Share the parent
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, parentID, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201)
+
+		// Try to share the child folder (should fail because it's inside a shared folder)
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, childID))).
+			Expect().Status(409)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("already has an existing sharing")
+	})
+
+	t.Run("FailOnFolderContainingSharedChild", func(t *testing.T) {
+		// Create a parent directory
+		parentID := createRootDirectory(t, eOwner, "ParentWithSharedChild", ownerAppToken)
+
+		// Create a subdirectory inside
+		childID := createDirectory(t, eOwner, parentID, "SharedChildFolder", ownerAppToken)
+
+		recipientContact := createContact(t, ownerInstance, "Dan", "dan@example.net")
+
+		// Share the child folder first
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, childID, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201)
+
+		// Try to share the parent folder (should fail because it contains a shared folder)
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s"
+					}
+				}
+			}`, consts.Sharings, parentID))).
+			Expect().Status(409)
+
+		// Verify error message
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("already has an existing sharing")
+	})
+}

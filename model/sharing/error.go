@@ -61,4 +61,10 @@ var (
 	// ErrMemberAlreadyInGroup is used when trying to add a group with a member
 	// already in another group of the sharing with different rights.
 	ErrMemberAlreadyInGroup = errors.New("A group member cannot be added as they are already in another group of the sharing")
+	// ErrFolderAlreadyShared is used when the folder already has an existing sharing
+	ErrFolderAlreadyShared = errors.New("Folder already has an existing sharing")
+	// ErrNotADirectory is used when the provided folder_id is not a directory
+	ErrNotADirectory = errors.New("Provided ID is not a directory")
+	// ErrSystemFolder is used when trying to share a system folder
+	ErrSystemFolder = errors.New("Cannot share system folder")
 )
