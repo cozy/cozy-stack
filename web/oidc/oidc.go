@@ -868,6 +868,9 @@ func makeStartURL(domain, redirect, confirm, oidcContext string, conf *Config) (
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
+	if domain != "" {
+		vv.Add("login_hint", domain)
+	}
 	if conf.Provider == FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
 	}
@@ -891,6 +894,9 @@ func makeSharingStartURL(domain, sharingID, sharingState string, conf *Config, c
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
+	if domain != "" {
+		vv.Add("login_hint", domain)
+	}
 	if conf.Provider == FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
 	}

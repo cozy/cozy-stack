@@ -153,6 +153,10 @@ func TestOidc(t *testing.T) {
 		assert.NotNil(t, redirectURL.Query().Get("response_type"))
 		assert.NotNil(t, redirectURL.Query().Get("state"))
 		assert.NotNil(t, redirectURL.Query().Get("scope"))
+		// Verify login_hint is present with the instance domain
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.NotEmpty(t, loginHint, "login_hint should be present in redirect URL")
+		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should contain the instance domain")
 	})
 
 	// Get the login page, assert we have an error if state is missing
@@ -292,6 +296,66 @@ func TestOidc(t *testing.T) {
 		storedClient, err := oauth.FindClient(testInstance, oauthClient.ClientID)
 		require.NoError(t, err)
 		require.Equal(t, "delegated-session-123", storedClient.OIDCSessionID)
+	})
+
+	t.Run("LoginHintWithDomain", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+
+		// Test that login_hint is present when domain is provided
+		u := e.GET("/oidc/start").
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.NotEmpty(t, loginHint, "login_hint should be present when domain is provided")
+		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should match the instance domain")
+	})
+
+	t.Run("LoginHintWithFranceConnect", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+
+		// Test that login_hint is present for FranceConnect flow
+		u := e.GET("/oidc/franceconnect").
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.NotEmpty(t, loginHint, "login_hint should be present for FranceConnect flow")
+		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should match the instance domain")
+	})
+
+	t.Run("LoginHintWithoutDomain", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Test Bitwarden flow where domain is empty - login_hint should not be present
+		// Note: This tests the BitwardenStart endpoint which passes empty domain
+		u := e.GET("/oidc/bitwarden/foocontext").
+			WithQuery("redirect_uri", "cozypass://login").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.Empty(t, loginHint, "login_hint should not be present when domain is empty (Bitwarden case)")
 	})
 }
 
