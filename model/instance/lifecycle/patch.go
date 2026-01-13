@@ -115,6 +115,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			}
 		}
 
+		if opts.FeatureSets != nil {
+			i.FeatureSets = opts.FeatureSets
+			needUpdate = true
+		}
+
 		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
 			needUpdate = true
 			needSharingReupload = opts.DiskQuota > i.BytesDiskQuota

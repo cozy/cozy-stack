@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -277,6 +278,81 @@ func (h *UserPhoneUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) e
 	}
 
 	log.Infof("user.phone.updated: successfully updated phone for instance: %s", inst.Domain)
+	return nil
+}
+
+type DomainSubscriptionChangedHandler struct{}
+
+func NewDomainSubscriptionChangedHandler() *DomainSubscriptionChangedHandler {
+	return &DomainSubscriptionChangedHandler{}
+}
+
+type DomainSubscriptionChangedMessage struct {
+	Domain     string               `json:"domain"`
+	IsPaying   bool                 `json:"isPaying"`
+	CanUpgrade bool                 `json:"canUpgrade"`
+	Features   SubscriptionFeatures `json:"features"`
+}
+
+type SubscriptionFeatures struct {
+	Stack SubscriptionStackFeatures `json:"stack"`
+}
+
+type SubscriptionStackFeatures struct {
+	FeatureSets []string `json:"featureSets"`
+	DiskQuota   string   `json:"diskQuota"`
+}
+
+func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("domain.subscription.changed: received message: %s", d.RoutingKey)
+	log.Debugf("domain.subscription.changed: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+		d.MessageId, d.ContentType, len(d.Body))
+
+	var msg DomainSubscriptionChangedMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("domain.subscription.changed: failed to unmarshal message: %w", err)
+	}
+
+	log.Infof("domain.subscription.changed: processing message - Domain: %s, IsPaying: %t, CanUpgrade: %t, Features: %v",
+		msg.Domain, msg.IsPaying, msg.CanUpgrade, msg.Features)
+
+	if msg.Domain == "" {
+		return fmt.Errorf("domain.subscription.changed: missing organization domain")
+	}
+
+	if msg.Features.Stack.FeatureSets == nil {
+		return fmt.Errorf("domain.subscription.changed: missing feature sets for organization %s: %v", msg.Domain, msg.Features)
+	}
+	if msg.Features.Stack.DiskQuota == "" {
+		return fmt.Errorf("domain.subscription.changed: invalid missing disk quota for organization %s: %v", msg.Domain, msg.Features)
+	}
+
+	quota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
+	if err != nil {
+		return fmt.Errorf("domain.subscription.changed: invalid disk quota for organization %s: %w", msg.Domain, err)
+	}
+
+	list, err := lifecycle.ListOrgInstances(msg.Domain)
+	if err != nil {
+		return fmt.Errorf("domain.subscription.changed: could not list instances for organization %s: %w", msg.Domain, err)
+	}
+	if len(list) == 0 {
+		log.Infof("domain.subscription.changed: no instances found for organization %s", msg.Domain)
+		return nil
+	}
+
+	for _, inst := range list {
+		if err := lifecycle.Patch(inst, &lifecycle.Options{
+			DiskQuota:    quota,
+			FeatureSets:  msg.Features.Stack.FeatureSets,
+			FromCloudery: true, // XXX: do not update the instance on the Cloudery as the message comes from the Cloudery
+		}); err != nil {
+			return fmt.Errorf("domain.subscription.changed: update instance %s: %w", inst.Domain, err)
+		}
+		log.Infof("domain.subscription.changed: successfully updated instance %s", inst.Domain)
+	}
+
+	log.Infof("domain.subscription.changed: successfully updated %d instances for organization %s", len(list), msg.Domain)
 	return nil
 }
 

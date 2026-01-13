@@ -50,3 +50,8 @@ func GetInstance(domain string) (*instance.Instance, error) {
 	}
 	return i, nil
 }
+
+// ListOrgInstances retrieves all the instances of an organization
+func ListOrgInstances(orgDomain string) ([]*instance.Instance, error) {
+	return instance.ListByOrgDomain(orgDomain)
+}
