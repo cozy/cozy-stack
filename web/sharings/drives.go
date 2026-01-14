@@ -52,6 +52,100 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+// CreateSharedDrive creates a new shared drive from an existing folder.
+// POST /sharings/drives
+func CreateSharedDrive(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	var attrs struct {
+		Description string `json:"description"`
+		FolderID    string `json:"folder_id"`
+	}
+	obj, err := jsonapi.Bind(c.Request().Body, &attrs)
+	if err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	if attrs.FolderID == "" {
+		return jsonapi.InvalidParameter("folder_id", errors.New("folder_id is required"))
+	}
+
+	// Create the sharing from folder first (builds the rules)
+	newSharing, err := sharing.CreateDrive(inst, attrs.FolderID, attrs.Description, "")
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	// Check permissions using the existing function (validates against the rules)
+	slug, err := checkCreatePermissions(c, newSharing)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	// Set the app slug if obtained from permissions
+	if slug != "" && newSharing.AppSlug == "" {
+		newSharing.AppSlug = slug
+	}
+
+	// Extract recipient IDs from relationships
+	rwGroupIDs, rwContactIDs := extractRecipientIDs(obj, "recipients")
+	roGroupIDs, roContactIDs := extractRecipientIDs(obj, "read_only_recipients")
+
+	// Create the sharing document first (drives can be created without recipients)
+	if _, err = newSharing.Create(inst); err != nil {
+		return wrapErrors(err)
+	}
+
+	// Add read-write recipients and send invitations
+	if len(rwGroupIDs) > 0 || len(rwContactIDs) > 0 {
+		if err = newSharing.AddGroupsAndContacts(inst, rwGroupIDs, rwContactIDs, false); err != nil {
+			return wrapErrors(err)
+		}
+	}
+
+	// Add read-only recipients and send invitations
+	if len(roGroupIDs) > 0 || len(roContactIDs) > 0 {
+		if err = newSharing.AddGroupsAndContacts(inst, roGroupIDs, roContactIDs, true); err != nil {
+			return wrapErrors(err)
+		}
+	}
+
+	as := &sharing.APISharing{
+		Sharing:     newSharing,
+		Credentials: nil,
+		SharedDocs:  nil,
+	}
+	return jsonapi.Data(c, http.StatusCreated, as, nil)
+}
+
+// extractRecipientIDs extracts group and contact IDs from a JSON:API relationship.
+func extractRecipientIDs(obj *jsonapi.ObjectMarshalling, relationshipName string) (groupIDs, contactIDs []string) {
+	rel, ok := obj.GetRelationship(relationshipName)
+	if !ok {
+		return nil, nil
+	}
+	data, ok := rel.Data.([]interface{})
+	if !ok {
+		return nil, nil
+	}
+	for _, ref := range data {
+		refMap, ok := ref.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, ok := refMap["id"].(string)
+		if !ok {
+			continue
+		}
+		if t, _ := refMap["type"].(string); t == consts.Groups {
+			groupIDs = append(groupIDs, id)
+		} else {
+			contactIDs = append(contactIDs, id)
+		}
+	}
+	return groupIDs, contactIDs
+}
+
 // Load either a DirDoc or a FileDoc from the given `file-id` param. The
 // function also checks permissions.
 func loadDirOrFileFromParam(c echo.Context, inst *instance.Instance, perm permission.Verb) (*vfs.DirDoc, *vfs.FileDoc, error) {
@@ -427,6 +521,7 @@ func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 func drivesRoutes(router *echo.Group) {
 	group := router.Group("/drives")
 	group.GET("", ListSharedDrives)
+	group.POST("", CreateSharedDrive)
 	group.POST("/move", MoveHandler)
 
 	drive := group.Group("/:id")

@@ -1197,6 +1197,10 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrGroupCannotBeAddedTwice, sharing.ErrMemberAlreadyAdded, sharing.ErrMemberAlreadyInGroup:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrFolderAlreadyShared:
+		return jsonapi.Conflict(err)
+	case sharing.ErrNotADirectory, sharing.ErrSystemFolder:
+		return jsonapi.InvalidParameter("folder_id", err)
 	}
 	logger.WithNamespace("sharing").Warnf("Not wrapped error: %s", err)
 	return err

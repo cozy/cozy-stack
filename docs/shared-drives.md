@@ -6,8 +6,20 @@ A shared drive is a folder that is shared between several cozy instances. A
 member doesn't have the files in their Cozy, but can access them via the stack
 playing a proxy role.
 
-To create a shared drive (typically on the organization Cozy), we need the
-following steps:
+## Creating a shared drive
+
+There are two ways to create a shared drive:
+
+### Simple method: Convert an existing folder
+
+Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint to convert any
+existing folder into a shared drive. This is the recommended approach as it
+handles all validation and setup automatically.
+
+### Manual method
+
+To create a shared drive manually (typically on the organization Cozy), follow
+these steps:
 
 1. Ensure that the `/Drives` folder exists in the cozy instance with the
    [`POST /files/shared-drives`](https://docs.cozy.io/en/cozy-stack/files/#post-filesshared-drives)
@@ -87,6 +99,155 @@ Content-Type: application/vnd.api+json
       "links": {
         "self": "/sharings/aae62886e79611ef8381fb83ff72e425"
       }
+    }
+  ]
+}
+```
+
+### POST /sharings/drives
+
+Creates a new shared drive from an existing folder. This is an alternative to
+the manual process of creating a sharing with `drive: true` - it automatically
+validates the folder and creates the sharing with appropriate rules.
+
+The folder must:
+
+- Exist and be a directory (not a file)
+- Not be a system folder (root, trash, shared-with-me, shared-drives, no-longer-shared)
+- Not be inside the trash
+- Not already have a sharing (directly or via a parent folder)
+- Not contain any subfolder that already has a sharing
+
+#### Request
+
+```http
+POST /sharings/drives HTTP/1.1
+Host: acme.example.net
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "attributes": {
+      "description": "Project Documents",
+      "folder_id": "357665ec-e797-11ef-94fb-f3d08ccb3ff5"
+    },
+    "relationships": {
+      "recipients": {
+        "data": [
+          {"id": "contact-id-1", "type": "io.cozy.contacts"},
+          {"id": "group-id-1", "type": "io.cozy.contacts.groups"}
+        ]
+      },
+      "read_only_recipients": {
+        "data": [
+          {"id": "contact-id-2", "type": "io.cozy.contacts"}
+        ]
+      }
+    }
+  }
+}
+```
+
+**Attributes:**
+
+| Attribute     | Required | Description |
+|---------------|----------|-------------|
+| `folder_id`   | Yes      | The ID of the existing folder to convert into a shared drive |
+| `description` | No       | A description for the shared drive. If not provided, defaults to the folder name |
+
+**Relationships:**
+
+| Relationship           | Description |
+|------------------------|-------------|
+| `recipients`           | Contacts or groups to add as read-write members |
+| `read_only_recipients` | Contacts or groups to add as read-only members |
+
+Both relationships are optional - you can create a shared drive without any recipients
+and add them later.
+
+#### Response (Success)
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "aae62886e79611ef8381fb83ff72e425",
+    "attributes": {
+      "drive": true,
+      "owner": true,
+      "description": "Project Documents",
+      "app_slug": "drive",
+      "created_at": "2025-02-10T11:08:08Z",
+      "updated_at": "2025-02-10T11:08:08Z",
+      "members": [
+        {
+          "status": "owner",
+          "public_name": "ACME",
+          "email": "admin@acme.example.net",
+          "instance": "acme.example.net"
+        },
+        {
+          "status": "pending",
+          "name": "Alice",
+          "email": "alice@example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Project Documents",
+          "doctype": "io.cozy.files",
+          "values": [
+            "357665ec-e797-11ef-94fb-f3d08ccb3ff5"
+          ],
+          "add": "none",
+          "update": "none",
+          "remove": "none"
+        }
+      ]
+    },
+    "meta": {
+      "rev": "1-272ba74b868f"
+    },
+    "links": {
+      "self": "/sharings/aae62886e79611ef8381fb83ff72e425"
+    }
+  }
+}
+```
+
+#### Error Responses
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400    | Bad Request | Invalid JSON body |
+| 403    | Forbidden | Insufficient permissions to create a sharing |
+| 404    | Not Found | The folder with the given `folder_id` does not exist |
+| 409    | Conflict | The folder already has a sharing, is inside a shared folder, or contains a shared subfolder |
+| 422    | Unprocessable Entity | Missing `folder_id`, folder is a file, or folder is a system folder |
+
+**Example error (folder already shared):**
+
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "errors": [
+    {
+      "status": "409",
+      "title": "Conflict",
+      "detail": "Folder already has an existing sharing"
     }
   ]
 }
