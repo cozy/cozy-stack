@@ -3,7 +3,9 @@ package instance
 import (
 	"encoding/json"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -50,6 +52,19 @@ func (s *InstanceService) Get(domain string) (*Instance, error) {
 	}
 
 	return inst, nil
+}
+
+func (s *InstanceService) ListByOrgDomain(orgDomain string) ([]*Instance, error) {
+	var docs []*Instance
+	req := &couchdb.FindRequest{
+		UseIndex: "by-orgdomain",
+		Selector: mango.Equal("org_domain", orgDomain),
+	}
+	err := couchdb.FindDocs(prefixer.GlobalPrefixer, consts.Instances, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
 }
 
 // Update saves the changes in CouchDB.

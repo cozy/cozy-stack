@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -107,7 +108,7 @@ func TestRabbitMQManager(t *testing.T) {
 	})
 }
 
-func TestPasswordHandler(t *testing.T) {
+func TestHandlers(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test skipped with --short")
 	}
@@ -430,6 +431,101 @@ func TestPasswordHandler(t *testing.T) {
 		require.NoError(t, json.Unmarshal(capturedRequestBody, &sentRequest))
 		require.Equal(t, msg.Mobile, sentRequest.Payload.Phone, "Phone should be present in the common settings request payload")
 	})
+
+	t.Run("ChangeOrganizationSubscription", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "ChangeOrganizationSubscription")
+
+		// Create instance outside organization
+		inst := setup.GetTestInstance()
+
+		// Create instances inside organization
+		orgDomain := "myorg.com"
+		orgInst1, err := lifecycle.Create(&lifecycle.Options{
+			Domain:    "orgInst1.local",
+			OrgDomain: orgDomain,
+		})
+		require.NoError(t, err, "Cannot create orgInst1")
+		orgInst2, err := lifecycle.Create(&lifecycle.Options{
+			Domain:    "orgInst2.local",
+			OrgDomain: orgDomain,
+		})
+		require.NoError(t, err, "Cannot create orgInst2")
+		t.Cleanup(func() {
+			_ = lifecycle.Destroy(orgInst1.Domain)
+			_ = lifecycle.Destroy(orgInst2.Domain)
+		})
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message
+		msg := rabbitmq.DomainSubscriptionChangedMessage{
+			Domain:     orgDomain,
+			IsPaying:   true,
+			CanUpgrade: true,
+			Features: rabbitmq.SubscriptionFeatures{
+				Stack: rabbitmq.SubscriptionStackFeatures{
+					FeatureSets: []string{"plan-uuid"},
+					DiskQuota:   "50000000000",
+				},
+			},
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"billing",
+			"domain.subscription.changed",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until orgInst1 is updated
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(orgInst1.Domain)
+			if err != nil {
+				return false
+			}
+			if len(updated.FeatureSets) == 0 {
+				return false
+			}
+			return updated.FeatureSets[0] == msg.Features.Stack.FeatureSets[0]
+		})
+
+		// orgInst1 is updated
+		updated, err := lifecycle.GetInstance(orgInst1.Domain)
+		require.NoError(t, err)
+		msgQuota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
+		quota := updated.DiskQuota()
+		require.Equal(t, msgQuota, quota)
+		require.ElementsMatch(t, msg.Features.Stack.FeatureSets, updated.FeatureSets)
+
+		// orgInst2 is updated
+		updated, err = lifecycle.GetInstance(orgInst2.Domain)
+		require.NoError(t, err)
+		msgQuota, err = strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
+		quota = updated.DiskQuota()
+		require.Equal(t, msgQuota, quota)
+		require.ElementsMatch(t, msg.Features.Stack.FeatureSets, updated.FeatureSets)
+
+		// inst is not updated
+		updated, err = lifecycle.GetInstance(inst.Domain)
+		require.NoError(t, err)
+		quota = updated.DiskQuota()
+		require.Equal(t, inst.DiskQuota(), quota)
+		require.ElementsMatch(t, inst.FeatureSets, updated.FeatureSets)
+	})
 }
 
 func hashPassphrase(t *testing.T) (string, string) {
@@ -484,6 +580,20 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "stack.user.phone.updated",
 					Bindings: []string{"user.phone.updated"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+			},
+		},
+		{
+			Name:            "billing",
+			Kind:            "topic",
+			Durable:         true,
+			DeclareExchange: true,
+			Queues: []config.RabbitQueue{
+				{
+					Name:     "stack.domain.subscription.changed",
+					Bindings: []string{"domain.subscription.changed"},
 					Prefetch: 4,
 					Declare:  true,
 				},

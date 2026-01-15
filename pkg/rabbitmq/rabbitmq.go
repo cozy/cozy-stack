@@ -263,6 +263,8 @@ func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 				handler = NewUserCreatedHandler()
 			case "stack.user.phone.updated":
 				handler = NewUserPhoneUpdatedHandler()
+			case "stack.domain.subscription.changed":
+				handler = NewDomainSubscriptionChangedHandler()
 			}
 
 			if handler == nil {
