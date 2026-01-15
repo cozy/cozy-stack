@@ -14,9 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/settings/common"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 
@@ -526,6 +528,63 @@ func TestHandlers(t *testing.T) {
 		require.Equal(t, inst.DiskQuota(), quota)
 		require.ElementsMatch(t, inst.FeatureSets, updated.FeatureSets)
 	})
+
+	t.Run("InstallApp", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "InstallApp")
+		inst := setup.GetTestInstance()
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message with the new format
+		msg := rabbitmq.AppInstallMessage{
+			Emitter:       "admin-panel",
+			Type:           "app.install",
+			WorkplaceFqdn:  inst.Domain,
+			InternalEmail:  "test@twake.app",
+			Reason:         "admin user created",
+			Slug:           "admin",
+			Source:         "registry://admin/stable",
+			Timestamp:      time.Now().Unix(),
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"stack",
+			"app.install",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait for the message to be processed
+		// Note: The app installation may fail if the app doesn't exist in the registry,
+		// but we can at least verify the message was received and processed
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+			// Check if the app was installed (or if it already exists, that's OK too)
+			// We check by trying to get the app
+			_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
+			_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+			// If either succeeds, the app exists (installation succeeded or already existed)
+			return errWebapp == nil || errKonnector == nil
+		})
+
+		// Verify the app exists (either as webapp or konnector)
+		_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
+		_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+		require.True(t, errWebapp == nil || errKonnector == nil, "App should be installed (or already exist)")
+	})
 }
 
 func hashPassphrase(t *testing.T) (string, string) {
@@ -594,6 +653,20 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "stack.domain.subscription.changed",
 					Bindings: []string{"domain.subscription.changed"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+			},
+		},
+		{
+			Name:            "stack",
+			Kind:            "topic",
+			Durable:         true,
+			DeclareExchange: true,
+			Queues: []config.RabbitQueue{
+				{
+					Name:     "stack.app.install",
+					Bindings: []string{"app.install"},
 					Prefetch: 4,
 					Declare:  true,
 				},
