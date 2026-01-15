@@ -733,8 +733,8 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 			DeclareExchange: true,
 			Queues: []config.RabbitQueue{
 				{
-					Name:     "stack.app.install",
-					Bindings: []string{"app.install"},
+					Name:     "stack.app.lifecycle.queue",
+					Bindings: []string{"app.install", "app.uninstall"},
 					Prefetch: 4,
 					Declare:  true,
 				},
