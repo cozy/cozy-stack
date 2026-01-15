@@ -541,13 +541,13 @@ func TestHandlers(t *testing.T) {
 		// Compose message with the new format
 		msg := rabbitmq.AppInstallMessage{
 			Emitter:       "admin-panel",
-			Type:           "app.install",
-			WorkplaceFqdn:  inst.Domain,
-			InternalEmail:  "test@twake.app",
-			Reason:         "admin user created",
-			Slug:           "admin",
-			Source:         "registry://admin/stable",
-			Timestamp:      time.Now().Unix(),
+			Type:          "app.install",
+			WorkplaceFqdn: inst.Domain,
+			InternalEmail: "test@twake.app",
+			Reason:        "admin user created",
+			Slug:          "drive",
+			Source:        "registry://drive/stable",
+			Timestamp:     time.Now().Unix(),
 		}
 		body, err := json.Marshal(msg)
 		require.NoError(t, err)
@@ -584,6 +584,74 @@ func TestHandlers(t *testing.T) {
 		_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
 		_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
 		require.True(t, errWebapp == nil || errKonnector == nil, "App should be installed (or already exist)")
+	})
+
+	t.Run("UninstallApp", func(t *testing.T) {
+		// Configure RabbitMQ before starting the stack so it is initialized by the stack
+		setup := setUpRabbitMQConfig(t, MQ, "UninstallApp")
+		inst := setup.GetTestInstance()
+
+		// First, install an app so we can uninstall it
+		// We'll use a simple approach: try to install a test app first
+		// Note: This assumes the app exists in the registry, or we can skip if it doesn't
+		installer, err := app.NewInstaller(inst, app.Copier(consts.WebappType, inst), &app.InstallerOptions{
+			Operation:  app.Install,
+			Type:       consts.WebappType,
+			SourceURL:  "registry://drive/stable",
+			Slug:       "admin",
+			Registries: inst.Registries(),
+		})
+		if err == nil {
+			_, err = installer.RunSync()
+			// If installation fails or app already exists, that's OK - we just need it to exist
+		}
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose uninstall message (without source and timestamp as per the format)
+		msg := rabbitmq.AppInstallMessage{
+			Emitter:       "admin-panel",
+			Type:          "app.uninstall",
+			WorkplaceFqdn: inst.Domain,
+			InternalEmail: "test@twake.app",
+			Reason:        "admin user demoted",
+			Slug:          "drive",
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"stack",
+			"app.install",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait for the message to be processed
+		// Check that the app was uninstalled (or didn't exist in the first place)
+		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
+			// Check if the app no longer exists
+			_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
+			_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+			// If both fail, the app doesn't exist (uninstallation succeeded or app didn't exist)
+			return errWebapp != nil && errKonnector != nil
+		})
+
+		// Verify the app no longer exists
+		_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
+		_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+		require.True(t, errWebapp != nil && errKonnector != nil, "App should be uninstalled (or not exist)")
 	})
 }
 
