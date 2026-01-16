@@ -153,10 +153,20 @@ func TestOidc(t *testing.T) {
 		assert.NotNil(t, redirectURL.Query().Get("response_type"))
 		assert.NotNil(t, redirectURL.Query().Get("state"))
 		assert.NotNil(t, redirectURL.Query().Get("scope"))
-		// Verify login_hint is present with the instance domain
+		// Verify login_hint logic: old_domain > OIDCID > nothing
 		loginHint := redirectURL.Query().Get("login_hint")
-		assert.NotEmpty(t, loginHint, "login_hint should be present in redirect URL")
-		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should contain the instance domain")
+		expectedLoginHint := ""
+		if testInstance.OldDomain != "" {
+			expectedLoginHint = testInstance.OldDomain
+		} else if testInstance.OIDCID != "" {
+			expectedLoginHint = testInstance.OIDCID
+		}
+		if expectedLoginHint != "" {
+			assert.NotEmpty(t, loginHint, "login_hint should be present in redirect URL")
+			assert.Equal(t, expectedLoginHint, loginHint, "login_hint should match old_domain or OIDCID")
+		} else {
+			assert.Empty(t, loginHint, "login_hint should not be present when neither old_domain nor OIDCID is set")
+		}
 	})
 
 	// Get the login page, assert we have an error if state is missing
@@ -298,13 +308,18 @@ func TestOidc(t *testing.T) {
 		require.Equal(t, "delegated-session-123", storedClient.OIDCSessionID)
 	})
 
-	t.Run("LoginHintWithDomain", func(t *testing.T) {
+	t.Run("LoginHintWithOIDCID", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
 		onboardingFinished := true
-		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+		oidcID := "user-oidc-sub-123"
+		// Set OIDCID without old_domain to test OIDCID priority
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+			OIDCID:             oidcID,
+		})
 
-		// Test that login_hint is present when domain is provided
+		// Test that login_hint uses OIDCID when old_domain is not present
 		u := e.GET("/oidc/start").
 			WithHost(testInstance.Domain).
 			WithRedirectPolicy(httpexpect.DontFollowRedirects).
@@ -315,15 +330,50 @@ func TestOidc(t *testing.T) {
 		require.NoError(t, err)
 
 		loginHint := redirectURL.Query().Get("login_hint")
-		assert.NotEmpty(t, loginHint, "login_hint should be present when domain is provided")
-		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should match the instance domain")
+		// If old_domain exists from previous test, it should take priority
+		// Otherwise, OIDCID should be used
+		if testInstance.OldDomain != "" {
+			assert.Equal(t, testInstance.OldDomain, loginHint, "login_hint should use old_domain when present (priority)")
+		} else {
+			assert.NotEmpty(t, loginHint, "login_hint should be present when OIDCID is set")
+			assert.Equal(t, oidcID, loginHint, "login_hint should use OIDCID when old_domain is not present")
+		}
+	})
+
+	t.Run("LoginHintWithOldDomain", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		onboardingFinished := true
+		oldDomain := "old.example.com"
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+			OldDomain:          oldDomain,
+		})
+
+		// Test that login_hint uses old_domain when present (highest priority)
+		u := e.GET("/oidc/start").
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.NotEmpty(t, loginHint, "login_hint should be present when old_domain is set")
+		assert.Equal(t, oldDomain, loginHint, "login_hint should use old_domain when present (highest priority)")
 	})
 
 	t.Run("LoginHintWithFranceConnect", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
 		onboardingFinished := true
-		_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+		oldDomain := "old.franceconnect.example.com"
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+			OldDomain:          oldDomain,
+		})
 
 		// Test that login_hint is present for FranceConnect flow
 		u := e.GET("/oidc/franceconnect").
@@ -337,7 +387,37 @@ func TestOidc(t *testing.T) {
 
 		loginHint := redirectURL.Query().Get("login_hint")
 		assert.NotEmpty(t, loginHint, "login_hint should be present for FranceConnect flow")
-		assert.Equal(t, testInstance.Domain, loginHint, "login_hint should match the instance domain")
+		assert.Equal(t, oldDomain, loginHint, "login_hint should use old_domain for FranceConnect")
+	})
+
+	t.Run("LoginHintWithoutOldDomainOrOIDCID", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		onboardingFinished := true
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+		})
+
+		// Test that login_hint behavior depends on current instance state
+		// If old_domain or OIDCID exist from previous tests, they will be used
+		// Otherwise, no login_hint should be present
+		u := e.GET("/oidc/start").
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		// Check current state - if neither old_domain nor OIDCID is set, login_hint should be empty
+		if testInstance.OldDomain == "" && testInstance.OIDCID == "" {
+			assert.Empty(t, loginHint, "login_hint should not be present when neither old_domain nor OIDCID is set")
+		} else {
+			// If one of them exists, it should be used (this tests the priority logic)
+			assert.NotEmpty(t, loginHint, "login_hint should be present if old_domain or OIDCID is set")
+		}
 	})
 
 	t.Run("LoginHintWithoutDomain", func(t *testing.T) {

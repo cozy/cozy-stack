@@ -51,7 +51,7 @@ func Start(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
+	u, err := makeStartURL(inst, inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -66,7 +66,7 @@ func StartFranceConnect(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("StartFranceConnect error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
+	u, err := makeStartURL(inst, inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -81,7 +81,7 @@ func Sharing(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeSharingStartURL(inst.Domain, c.QueryParam("sharingID"), c.QueryParam("state"), conf, inst.ContextName)
+	u, err := makeSharingStartURL(inst, c.QueryParam("sharingID"), c.QueryParam("state"), conf, inst.ContextName)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -96,7 +96,7 @@ func SharingPublic(c echo.Context) error {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
-	u, err := makeSharingStartURL(inst.Domain, c.QueryParam("sharingID"), c.QueryParam("state"), conf, contextName)
+	u, err := makeSharingStartURL(inst, c.QueryParam("sharingID"), c.QueryParam("state"), conf, contextName)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -133,7 +133,7 @@ func BitwardenStart(c echo.Context) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL("", redirectURI, "", contextName, conf)
+	u, err := makeStartURL(nil, "", redirectURI, "", contextName, conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -852,7 +852,20 @@ func getFranceConnectConfig(context string) (*Config, error) {
 	return config, nil
 }
 
-func makeStartURL(domain, redirect, confirm, oidcContext string, conf *Config) (string, error) {
+func getLoginHint(inst *instance.Instance) string {
+	if inst == nil {
+		return ""
+	}
+	if inst.OldDomain != "" {
+		return inst.OldDomain
+	}
+	if inst.OIDCID != "" {
+		return inst.OIDCID
+	}
+	return ""
+}
+
+func makeStartURL(inst *instance.Instance, domain, redirect, confirm, oidcContext string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
@@ -868,8 +881,9 @@ func makeStartURL(domain, redirect, confirm, oidcContext string, conf *Config) (
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
-	if domain != "" {
-		vv.Add("login_hint", domain)
+	loginHint := getLoginHint(inst)
+	if loginHint != "" {
+		vv.Add("login_hint", loginHint)
 	}
 	if conf.Provider == FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
@@ -878,12 +892,12 @@ func makeStartURL(domain, redirect, confirm, oidcContext string, conf *Config) (
 	return u.String(), nil
 }
 
-func makeSharingStartURL(domain, sharingID, sharingState string, conf *Config, contextName string) (string, error) {
+func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string, conf *Config, contextName string) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newSharingStateHolder(domain, sharingID, sharingState, conf.Provider, contextName)
+	state := newSharingStateHolder(inst.Domain, sharingID, sharingState, conf.Provider, contextName)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -894,8 +908,9 @@ func makeSharingStartURL(domain, sharingID, sharingState string, conf *Config, c
 	vv.Add("redirect_uri", conf.RedirectURI)
 	vv.Add("state", state.id)
 	vv.Add("nonce", state.Nonce)
-	if domain != "" {
-		vv.Add("login_hint", domain)
+	loginHint := getLoginHint(inst)
+	if loginHint != "" {
+		vv.Add("login_hint", loginHint)
 	}
 	if conf.Provider == FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
@@ -1343,7 +1358,7 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(r.Host, "", "", "", conf)
+	u, err := makeStartURL(nil, r.Host, "", "", "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
