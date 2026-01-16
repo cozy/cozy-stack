@@ -1328,3 +1328,6 @@ msgstr "File:"
 
 msgid "Mail Antivirus View Details Button"
 msgstr "View File Details"
+
+msgid "Permissions io.cozy.ai.chat.assistants"
+msgstr "AI Assistant"
