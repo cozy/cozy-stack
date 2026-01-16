@@ -303,6 +303,17 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	})
 
 	if err != nil {
+		// Send error event to client
+		errorDoc := map[string]interface{}{
+			"_id":     msg.ID,
+			"object":  "error",
+			"message": err.Error(),
+		}
+		errorPayload := couchdb.JSONDoc{
+			Type: consts.ChatEvents,
+			M:    errorDoc,
+		}
+		go realtime.GetHub().Publish(inst, realtime.EventCreate, &errorPayload, nil)
 		return err
 	}
 
@@ -368,6 +379,18 @@ func foreachSSE(r io.Reader, fn func(event map[string]interface{})) error {
 		var event map[string]interface{}
 		if err := json.Unmarshal(data, &event); err != nil {
 			return err
+		}
+		// Check for error event from the server
+		if errObj, ok := event["error"].(map[string]interface{}); ok {
+			message, _ := errObj["message"].(string)
+			code, _ := errObj["code"].(string)
+			if message == "" {
+				message = "unknown streaming error"
+			}
+			if code != "" {
+				return fmt.Errorf("%s: %s", code, message)
+			}
+			return errors.New(message)
 		}
 		fn(event)
 	}
