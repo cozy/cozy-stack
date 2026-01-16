@@ -3,6 +3,7 @@ package middlewares
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,5 +122,76 @@ func TestSecure(t *testing.T) {
 
 		r = appendCSPRule("script '*'; toto;", "frame-ancestors", "new-rule")
 		assert.Equal(t, "script '*'; toto;frame-ancestors new-rule;", r)
+	})
+
+	t.Run("SecureMiddlewareCSPWithOrgDomain", func(t *testing.T) {
+		e := echo.New()
+		req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		inst := &instance.Instance{
+			Domain:    "cozy.local",
+			OrgDomain: "example.com",
+		}
+		c.Set("instance", inst)
+		h := Secure(&SecureConfig{
+			CSPDefaultSrc:     []CSPSource{CSPSrcSelf},
+			CSPScriptSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:       []CSPSource{CSPSrcSelf},
+			CSPConnectSrc:     []CSPSource{CSPSrcSelf},
+			CSPFontSrc:        []CSPSource{CSPSrcSelf},
+			CSPImgSrc:         []CSPSource{CSPSrcSelf},
+			CSPManifestSrc:    []CSPSource{CSPSrcSelf},
+			CSPMediaSrc:       []CSPSource{CSPSrcSelf},
+			CSPObjectSrc:      []CSPSource{CSPSrcSelf},
+			CSPStyleSrc:       []CSPSource{CSPSrcSelf},
+			CSPWorkerSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameAncestors: []CSPSource{CSPSrcSelf},
+			CSPBaseURI:        []CSPSource{CSPSrcSelf},
+			CSPFormAction:     []CSPSource{CSPSrcSelf},
+		})(echo.NotFoundHandler)
+		_ = h(c)
+
+		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
+		// Verify that *.example.com is added to all CSP directives
+		expectedDirectives := []string{
+			"default-src",
+			"script-src",
+			"frame-src",
+			"connect-src",
+			"font-src",
+			"img-src",
+			"manifest-src",
+			"media-src",
+			"object-src",
+			"style-src",
+			"worker-src",
+			"frame-ancestors",
+			"base-uri",
+			"form-action",
+		}
+
+		// Verify that *.example.com appears exactly once per directive
+		count := strings.Count(csp, "*.example.com")
+		assert.Equal(t, len(expectedDirectives), count, 
+			"*.example.com should appear exactly %d times (once per directive), but found %d times. CSP: %s", 
+			len(expectedDirectives), count, csp)
+
+		// Verify each directive individually contains *.example.com
+		for _, directivePattern := range expectedDirectives {
+			// Find the directive in the CSP string
+			directiveIndex := strings.Index(csp, directivePattern+" ")
+			assert.NotEqual(t, -1, directiveIndex, 
+				"Directive %s should be present in CSP. Full CSP: %s", directivePattern, csp)
+			
+			// Find the end of this directive (next semicolon)
+			directiveEnd := strings.Index(csp[directiveIndex:], ";")
+			assert.NotEqual(t, -1, directiveEnd, 
+				"Directive %s should end with semicolon", directivePattern)
+			
+			directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
+			assert.Contains(t, directiveContent, "*.example.com", 
+				"Directive %s should contain *.example.com. Found: %s", directivePattern, directiveContent)
+		}
 	})
 }

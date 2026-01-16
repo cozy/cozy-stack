@@ -134,8 +134,18 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				return err
 			}
 			var contextName string
-			if conf.CSPPerContext != nil {
-				contextName = GetInstance(c).ContextName
+			var orgDomain string
+			inst, ok := GetInstanceSafe(c)
+			if ok {
+				if conf.CSPPerContext != nil {
+					contextName = inst.ContextName
+				}
+				if inst.OrgDomain != "" {
+					// Add *.org_domain to all CSP directives
+					// The wildcard format *.example.com is valid in CSP and will
+					// match all subdomains of example.com
+					orgDomain = "*." + inst.OrgDomain
+				}
 			}
 			b := cspBuilder{
 				parent:      parent,
@@ -143,6 +153,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				isSecure:    isSecure,
 				contextName: contextName,
 				perContext:  conf.CSPPerContext,
+				orgDomain:   orgDomain,
 			}
 			cspHeader += b.makeCSPHeader("default-src", conf.CSPDefaultSrcAllowList, conf.CSPDefaultSrc)
 			cspHeader += b.makeCSPHeader("script-src", conf.CSPScriptSrcAllowList, conf.CSPScriptSrc)
@@ -227,6 +238,7 @@ type cspBuilder struct {
 	siblings    string
 	contextName string
 	perContext  map[string]map[string]string
+	orgDomain   string
 	isSecure    bool
 }
 
@@ -293,6 +305,10 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 				headers = append(headers, list)
 			}
 		}
+	}
+	// Add *.org_domain to all CSP directives if present
+	if b.orgDomain != "" {
+		headers = append(headers, b.orgDomain)
 	}
 	if len(headers) == 0 {
 		return ""
