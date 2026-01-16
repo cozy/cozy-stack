@@ -3,6 +3,7 @@ package middlewares
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,5 +122,84 @@ func TestSecure(t *testing.T) {
 
 		r = appendCSPRule("script '*'; toto;", "frame-ancestors", "new-rule")
 		assert.Equal(t, "script '*'; toto;frame-ancestors new-rule;", r)
+	})
+
+	t.Run("SecureMiddlewareCSPWithOrgDomain", func(t *testing.T) {
+		e := echo.New()
+		req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		inst := &instance.Instance{
+			Domain:    "cozy.local",
+			OrgDomain: "example.com",
+		}
+		c.Set("instance", inst)
+		h := Secure(&SecureConfig{
+			CSPDefaultSrc:     []CSPSource{CSPSrcSelf},
+			CSPScriptSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:       []CSPSource{CSPSrcSelf},
+			CSPConnectSrc:     []CSPSource{CSPSrcSelf},
+			CSPFontSrc:        []CSPSource{CSPSrcSelf},
+			CSPImgSrc:         []CSPSource{CSPSrcSelf},
+			CSPManifestSrc:    []CSPSource{CSPSrcSelf},
+			CSPMediaSrc:       []CSPSource{CSPSrcSelf},
+			CSPObjectSrc:      []CSPSource{CSPSrcSelf},
+			CSPStyleSrc:       []CSPSource{CSPSrcSelf},
+			CSPWorkerSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameAncestors: []CSPSource{CSPSrcSelf},
+			CSPBaseURI:        []CSPSource{CSPSrcSelf},
+			CSPFormAction:     []CSPSource{CSPSrcSelf},
+		})(echo.NotFoundHandler)
+		_ = h(c)
+
+		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
+		
+		// Verify that *.example.com appears only once (in frame-src)
+		count := strings.Count(csp, "matrix.example.com")
+		assert.Equal(t, 1, count, 
+			"matrix.example.com should appear exactly once (in frame-src), but found %d times. CSP: %s", 
+			count, csp)
+
+		// Verify that frame-src contains *.example.com
+		frameSrcIndex := strings.Index(csp, "frame-src ")
+		assert.NotEqual(t, -1, frameSrcIndex, 
+			"frame-src should be present in CSP. Full CSP: %s", csp)
+		
+		frameSrcEnd := strings.Index(csp[frameSrcIndex:], ";")
+		assert.NotEqual(t, -1, frameSrcEnd, 
+			"frame-src should end with semicolon")
+		
+		frameSrcContent := csp[frameSrcIndex : frameSrcIndex+frameSrcEnd]
+		assert.Contains(t, frameSrcContent, "matrix.example.com", 
+			"frame-src should contain matrix.example.com. Found: %s", frameSrcContent)
+
+		// Verify that other directives do NOT contain *.example.com
+		otherDirectives := []string{
+			"default-src",
+			"script-src",
+			"connect-src",
+			"font-src",
+			"img-src",
+			"manifest-src",
+			"media-src",
+			"object-src",
+			"style-src",
+			"worker-src",
+			"frame-ancestors",
+			"base-uri",
+			"form-action",
+		}
+
+		for _, directivePattern := range otherDirectives {
+			directiveIndex := strings.Index(csp, directivePattern+" ")
+			if directiveIndex != -1 {
+				directiveEnd := strings.Index(csp[directiveIndex:], ";")
+				if directiveEnd != -1 {
+					directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
+					assert.NotContains(t, directiveContent, "matrix.example.com", 
+						"Directive %s should NOT contain matrix.example.com. Found: %s", directivePattern, directiveContent)
+				}
+			}
+		}
 	})
 }
