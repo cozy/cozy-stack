@@ -328,7 +328,7 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 		return fmt.Errorf("domain.subscription.changed: missing feature sets for organization %s: %v", msg.Domain, msg.Features)
 	}
 	if msg.Features.Stack.DiskQuota == "" {
-		return fmt.Errorf("domain.subscription.changed: invalid missing disk quota for organization %s: %v", msg.Domain, msg.Features)
+		return fmt.Errorf("domain.subscription.changed: missing disk quota for organization %s: %v", msg.Domain, msg.Features)
 	}
 
 	quota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
@@ -371,13 +371,13 @@ func NewAppInstallHandler() *AppInstallHandler {
 
 // AppInstallMessage represents an app installation/uninstallation message.
 type AppInstallMessage struct {
-	Emitter       string `json:"emitter"`        // the application requesting the operation
-	Type          string `json:"type"`           // "app.install" | "app.uninstall"
-	WorkplaceFqdn string `json:"workplaceFqdn"`  // the instance FQDN
-	InternalEmail string `json:"internalEmail"`   // internal email (optional)
+	Emitter       string `json:"emitter"`       // the application requesting the operation
+	Type          string `json:"type"`          // "app.install" | "app.uninstall"
+	WorkplaceFqdn string `json:"workplaceFqdn"` // the instance FQDN
+	InternalEmail string `json:"internalEmail"` // internal email (optional)
 	Reason        string `json:"reason"`        // why this operation is performed
 	Slug          string `json:"slug"`          // the application slug
-	Source        string `json:"source"`         // registry source URL (e.g. "registry://admin/stable")
+	Source        string `json:"source"`        // registry source URL (e.g. "registry://admin/stable")
 	Timestamp     int64  `json:"timestamp"`     // when
 }
 
@@ -394,16 +394,6 @@ func (h *AppInstallHandler) Handle(ctx context.Context, d amqp.Delivery) error {
 
 	log.Infof("app.install: processing message - Emitter: %s, Type: %s, Slug: %s, WorkplaceFqdn: %s, Reason: %s, Source: %s, Timestamp: %d",
 		msg.Emitter, msg.Type, msg.Slug, msg.WorkplaceFqdn, msg.Reason, msg.Source, msg.Timestamp)
-
-	// Extract action from type: "app.install" -> "install", "app.uninstall" -> "uninstall"
-	var action string
-	if msg.Type == "app.install" {
-		action = "install"
-	} else if msg.Type == "app.uninstall" {
-		action = "uninstall"
-	} else {
-		return fmt.Errorf("app.install: invalid type %s, must be 'app.install' or 'app.uninstall'", msg.Type)
-	}
 
 	// Validation
 	if msg.Emitter == "" {
@@ -427,13 +417,13 @@ func (h *AppInstallHandler) Handle(ctx context.Context, d amqp.Delivery) error {
 	}
 
 	// Process the action
-	switch action {
-	case "install":
+	switch msg.Type {
+	case "app.install":
 		return h.handleInstall(inst, msg)
-	case "uninstall":
+	case "app.uninstall":
 		return h.handleUninstall(inst, msg)
 	default:
-		return fmt.Errorf("app.install: unknown action: %s", action)
+		return fmt.Errorf("app.install: invalid type %s, must be 'app.install' or 'app.uninstall'", msg.Type)
 	}
 }
 
@@ -526,6 +516,7 @@ func (h *AppInstallHandler) handleUninstall(inst *instance.Instance, msg AppInst
 	log.Infof("app.install: successfully uninstalled app %s from instance %s", msg.Slug, msg.WorkplaceFqdn)
 	return nil
 }
+
 func decodePassword(hash string) ([]byte, error) {
 	// Decode base64 hash if applicable
 	decoded, err := base64.StdEncoding.DecodeString(hash)
