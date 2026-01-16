@@ -574,15 +574,15 @@ func TestHandlers(t *testing.T) {
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			// Check if the app was installed (or if it already exists, that's OK too)
 			// We check by trying to get the app
-			_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
-			_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+			_, errWebapp := app.GetBySlug(inst, "drive", consts.WebappType)
+			_, errKonnector := app.GetBySlug(inst, "drive", consts.KonnectorType)
 			// If either succeeds, the app exists (installation succeeded or already existed)
 			return errWebapp == nil || errKonnector == nil
 		})
 
 		// Verify the app exists (either as webapp or konnector)
-		_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
-		_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+		_, errWebapp := app.GetBySlug(inst, "drive", consts.WebappType)
+		_, errKonnector := app.GetBySlug(inst, "drive", consts.KonnectorType)
 		require.True(t, errWebapp == nil || errKonnector == nil, "App should be installed (or already exist)")
 	})
 
@@ -591,14 +591,13 @@ func TestHandlers(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "UninstallApp")
 		inst := setup.GetTestInstance()
 
-		// First, install an app so we can uninstall it
-		// We'll use a simple approach: try to install a test app first
+		// First, install the drive app so we can uninstall it
 		// Note: This assumes the app exists in the registry, or we can skip if it doesn't
 		installer, err := app.NewInstaller(inst, app.Copier(consts.WebappType, inst), &app.InstallerOptions{
 			Operation:  app.Install,
 			Type:       consts.WebappType,
 			SourceURL:  "registry://drive/stable",
-			Slug:       "admin",
+			Slug:       "drive",
 			Registries: inst.Registries(),
 		})
 		if err == nil {
@@ -610,7 +609,7 @@ func TestHandlers(t *testing.T) {
 		ch, err := getChannel(t, MQ)
 		require.NoError(t, err)
 
-		// Compose uninstall message (without source and timestamp as per the format)
+		// Compose uninstall message for the drive app
 		msg := rabbitmq.AppInstallMessage{
 			Emitter:       "admin-panel",
 			Type:          "app.uninstall",
@@ -639,18 +638,18 @@ func TestHandlers(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait for the message to be processed
-		// Check that the app was uninstalled (or didn't exist in the first place)
+		// Check that the drive app was uninstalled (or didn't exist in the first place)
 		testutils.WaitForOrFail(t, 30*time.Second, func() bool {
 			// Check if the app no longer exists
-			_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
-			_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+			_, errWebapp := app.GetBySlug(inst, "drive", consts.WebappType)
+			_, errKonnector := app.GetBySlug(inst, "drive", consts.KonnectorType)
 			// If both fail, the app doesn't exist (uninstallation succeeded or app didn't exist)
 			return errWebapp != nil && errKonnector != nil
 		})
 
-		// Verify the app no longer exists
-		_, errWebapp := app.GetBySlug(inst, "admin", consts.WebappType)
-		_, errKonnector := app.GetBySlug(inst, "admin", consts.KonnectorType)
+		// Verify the drive app no longer exists
+		_, errWebapp := app.GetBySlug(inst, "drive", consts.WebappType)
+		_, errKonnector := app.GetBySlug(inst, "drive", consts.KonnectorType)
 		require.True(t, errWebapp != nil && errKonnector != nil, "App should be uninstalled (or not exist)")
 	})
 }
