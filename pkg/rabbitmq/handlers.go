@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
@@ -324,7 +328,7 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 		return fmt.Errorf("domain.subscription.changed: missing feature sets for organization %s: %v", msg.Domain, msg.Features)
 	}
 	if msg.Features.Stack.DiskQuota == "" {
-		return fmt.Errorf("domain.subscription.changed: invalid missing disk quota for organization %s: %v", msg.Domain, msg.Features)
+		return fmt.Errorf("domain.subscription.changed: missing disk quota for organization %s: %v", msg.Domain, msg.Features)
 	}
 
 	quota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
@@ -353,6 +357,163 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 	}
 
 	log.Infof("domain.subscription.changed: successfully updated %d instances for organization %s", len(list), msg.Domain)
+
+	return nil
+}
+
+// AppInstallHandler handles app installation and uninstallation messages.
+type AppInstallHandler struct{}
+
+// NewAppInstallHandler creates a new app install handler.
+func NewAppInstallHandler() *AppInstallHandler {
+	return &AppInstallHandler{}
+}
+
+// AppInstallMessage represents an app installation/uninstallation message.
+type AppInstallMessage struct {
+	Emitter       string `json:"emitter"`       // the application requesting the operation
+	Type          string `json:"type"`          // "app.install" | "app.uninstall"
+	WorkplaceFqdn string `json:"workplaceFqdn"` // the instance FQDN
+	InternalEmail string `json:"internalEmail"` // internal email (optional)
+	Reason        string `json:"reason"`        // why this operation is performed
+	Slug          string `json:"slug"`          // the application slug
+	Source        string `json:"source"`        // registry source URL (e.g. "registry://admin/stable")
+	Timestamp     int64  `json:"timestamp"`     // when
+}
+
+// Handle processes an app installation/uninstallation message.
+func (h *AppInstallHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("app.install: received message: %s", d.RoutingKey)
+	log.Debugf("app.install: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+		d.MessageId, d.ContentType, len(d.Body))
+
+	var msg AppInstallMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("app.install: failed to unmarshal message: %w", err)
+	}
+
+	log.Infof("app.install: processing message - Emitter: %s, Type: %s, Slug: %s, WorkplaceFqdn: %s, Reason: %s, Source: %s, Timestamp: %d",
+		msg.Emitter, msg.Type, msg.Slug, msg.WorkplaceFqdn, msg.Reason, msg.Source, msg.Timestamp)
+
+	// Validation
+	if msg.Emitter == "" {
+		return fmt.Errorf("app.install: missing emitter")
+	}
+	if msg.Slug == "" {
+		return fmt.Errorf("app.install: missing slug")
+	}
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("app.install: missing workplaceFqdn")
+	}
+
+	// Log the source application requesting the operation
+	log.Infof("app.install: operation requested by emitter: %s", msg.Emitter)
+
+	// Get the instance
+	log.Debugf("app.install: retrieving instance for domain: %s", msg.WorkplaceFqdn)
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
+	if err != nil {
+		return fmt.Errorf("app.install: get instance: %w", err)
+	}
+
+	// Process the action
+	switch msg.Type {
+	case "app.install":
+		return h.handleInstall(inst, msg)
+	case "app.uninstall":
+		return h.handleUninstall(inst, msg)
+	default:
+		return fmt.Errorf("app.install: invalid type %s, must be 'app.install' or 'app.uninstall'", msg.Type)
+	}
+}
+
+// handleInstall installs an application on the instance.
+func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstallMessage) error {
+	log.Infof("app.install: installing app %s on instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
+
+	// Use provided source if available, otherwise construct default
+	source := msg.Source
+	if source == "" || !strings.HasPrefix(source, "registry://") {
+		source = "registry://" + msg.Slug + "/stable"
+	}
+
+	// Try to install as webapp first, then as konnector if it fails
+	appTypes := []consts.AppType{consts.WebappType, consts.KonnectorType}
+	var lastErr error
+
+	for _, appType := range appTypes {
+		installer, err := app.NewInstaller(inst, app.Copier(appType, inst), &app.InstallerOptions{
+			Operation:  app.Install,
+			Type:       appType,
+			SourceURL:  source,
+			Slug:       msg.Slug,
+			Registries: inst.Registries(),
+		})
+		if err != nil {
+			log.Debugf("app.install: failed to create installer for %s as %s: %v", msg.Slug, appType.String(), err)
+			lastErr = err
+			continue
+		}
+
+		_, err = installer.RunSync()
+		if err != nil {
+			// If the app already exists, that's OK
+			if errors.Is(err, app.ErrAlreadyExists) {
+				log.Infof("app.install: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
+				return nil
+			}
+			log.Debugf("app.install: failed to install %s as %s: %v", msg.Slug, appType.String(), err)
+			lastErr = err
+			continue
+		}
+
+		log.Infof("app.install: successfully installed app %s as %s on instance %s", msg.Slug, appType.String(), msg.WorkplaceFqdn)
+		return nil
+	}
+
+	return fmt.Errorf("app.install: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, lastErr)
+}
+
+// handleUninstall uninstalls an application from the instance.
+func (h *AppInstallHandler) handleUninstall(inst *instance.Instance, msg AppInstallMessage) error {
+	log.Infof("app.install: uninstalling app %s from instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
+
+	// First, try to find the app to determine its type
+	appTypes := []consts.AppType{consts.WebappType, consts.KonnectorType}
+	var foundType consts.AppType
+	var found bool
+
+	for _, appType := range appTypes {
+		_, err := app.GetBySlug(inst, msg.Slug, appType)
+		if err == nil {
+			foundType = appType
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		log.Infof("app.install: app %s not found on instance %s, nothing to uninstall", msg.Slug, msg.WorkplaceFqdn)
+		return nil // Not an error if the app doesn't exist
+	}
+
+	// Uninstall the app
+	installer, err := app.NewInstaller(inst, app.Copier(foundType, inst), &app.InstallerOptions{
+		Operation:  app.Delete,
+		Type:       foundType,
+		Slug:       msg.Slug,
+		Registries: inst.Registries(),
+	})
+	if err != nil {
+		return fmt.Errorf("app.install: failed to create uninstaller: %w", err)
+	}
+
+	_, err = installer.RunSync()
+	if err != nil {
+		return fmt.Errorf("app.install: failed to uninstall app %s: %w", msg.Slug, err)
+	}
+
+	log.Infof("app.install: successfully uninstalled app %s from instance %s", msg.Slug, msg.WorkplaceFqdn)
 	return nil
 }
 
