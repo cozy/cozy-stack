@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -2019,4 +2020,292 @@ func TestSharedDriveRevocation(t *testing.T) {
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(403)
 	})
+}
+
+// TestSharedDriveGroupDynamicMembership tests that when a contact is added to a group
+// that is part of a shared drive, the new member automatically gets access to the drive
+// without needing to accept a specific invitation.
+func TestSharedDriveGroupDynamicMembership(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	build.BuildMode = build.ModeDev
+	cfg := config.GetConfig()
+	cfg.Assets = "../../assets"
+	cfg.Contexts = map[string]interface{}{
+		config.DefaultInstanceContext: map[string]interface{}{
+			"sharing": map[string]interface{}{
+				"auto_accept_trusted_contacts": true,
+				"auto_accept_trusted":          true,
+				"trusted_domains":              []interface{}{"cozy.local", "example.com"},
+			},
+		},
+	}
+	_ = web.LoadSupportedLocales()
+	testutils.NeedCouchdb(t)
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
+
+	// Create owner instance (ACME)
+	ownerSetup := testutils.NewSetup(t, t.Name()+"_owner")
+	ownerInstance := ownerSetup.GetTestInstance(&lifecycle.Options{
+		Email:      "owner@example.com",
+		PublicName: "Owner",
+	})
+	ownerAppToken := generateAppToken(ownerInstance, "drive", consts.Files)
+	tsOwner := ownerSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsOwner.Config.Handler.(*echo.Echo).Renderer = render
+	tsOwner.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsOwner.Close)
+
+	// Create first group member instance (Alice - already in the group when drive is created)
+	aliceSetup := testutils.NewSetup(t, t.Name()+"_alice")
+	aliceInstance := aliceSetup.GetTestInstance(&lifecycle.Options{
+		Email:         "alice@example.com",
+		PublicName:    "Alice",
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
+		Key:           "xxx",
+	})
+	aliceAppToken := generateAppToken(aliceInstance, "drive", consts.Files)
+	tsAlice := aliceSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsAlice.Config.Handler.(*echo.Echo).Renderer = render
+	tsAlice.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsAlice.Close)
+
+	// Create new member instance (Bob - will be added to the group later)
+	bobSetup := testutils.NewSetup(t, t.Name()+"_bob")
+	bobInstance := bobSetup.GetTestInstance(&lifecycle.Options{
+		Email:         "bob@example.com",
+		PublicName:    "Bob",
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
+		Key:           "xxx",
+	})
+	bobAppToken := generateAppToken(bobInstance, "drive", consts.Files)
+	tsBob := bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
+		"/files":    files.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsBob.Config.Handler.(*echo.Echo).Renderer = render
+	tsBob.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(tsBob.Close)
+
+	eOwner := httpexpect.Default(t, tsOwner.URL)
+
+	// Step 1: Create a group on owner's instance
+	teamGroup := createGroupOnInstance(t, ownerInstance, "Team")
+
+	// Step 2: Create Alice as a contact in that group on owner's instance (with Cozy URL for auto-accept)
+	aliceContact := createContactInGroupWithCozy(t, ownerInstance, teamGroup, "Alice", "alice@example.com", tsAlice.URL)
+	require.NotNil(t, aliceContact)
+
+	// Step 3: Create a directory for the shared drive
+	sharedDirID := createRootDirectory(t, eOwner, "Team Drive", ownerAppToken)
+
+	// Step 4: Create a file in the directory before sharing
+	fileID := createFile(t, eOwner, sharedDirID, "TeamDocument.txt", ownerAppToken)
+
+	// Step 5: Create a shared drive with the group as recipient
+	obj := eOwner.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+ownerAppToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "` + consts.Sharings + `",
+				"attributes": {
+					"description": "Team Drive for dynamic membership test",
+					"folder_id": "` + sharedDirID + `"
+				},
+				"relationships": {
+					"recipients": {
+						"data": [{"id": "` + teamGroup.ID() + `", "type": "` + consts.Groups + `"}]
+					}
+				}
+			}
+		}`)).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+	// Verify group and members are set correctly
+	attrs := obj.Value("data").Object().Value("attributes").Object()
+	groups := attrs.Value("groups").Array()
+	groups.Length().IsEqual(1)
+	groups.Value(0).Object().Value("id").IsEqual(teamGroup.ID())
+	groups.Value(0).Object().Value("name").IsEqual("Team")
+
+	members := attrs.Value("members").Array()
+	members.Length().IsEqual(2) // Owner + Alice
+	members.Value(1).Object().Value("name").IsEqual("Alice")
+	members.Value(1).Object().Value("only_in_groups").IsEqual(true)
+	members.Value(1).Object().Value("groups").Array().Value(0).IsEqual(0)
+
+	// Step 6: Set up Alice's instance to know about the owner's URL for the sharing (for auto-accept)
+	FakeOwnerInstanceForSharing(t, aliceInstance, tsOwner.URL, sharingID)
+
+	// Step 7: Wait for Alice's sharing to be auto-accepted
+	eAlice := httpexpect.Default(t, tsAlice.URL)
+	require.Eventually(t, func() bool {
+		resp := eAlice.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+aliceAppToken).
+			Expect()
+		if resp.Raw().StatusCode != 200 {
+			return false
+		}
+		obj := resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+		active := obj.Value("data").Object().Value("attributes").Object().Value("active").Boolean().Raw()
+		return active
+	}, 10*time.Second, 500*time.Millisecond, "Alice's sharing should be auto-accepted and active")
+
+	// Step 8: Verify Alice can access the file
+	eAlice.GET("/sharings/drives/"+sharingID+"/"+fileID).
+		WithHeader("Authorization", "Bearer "+aliceAppToken).
+		Expect().Status(200)
+
+	// Step 9: Create Bob as a contact WITHOUT the group initially (with Cozy URL for auto-accept)
+	bobContact := createContactWithCozy(t, ownerInstance, "Bob", "bob@example.com", tsBob.URL)
+
+	// Step 10: Add Bob to the group by updating the contact
+	addContactToExistingGroup(t, ownerInstance, bobContact, teamGroup)
+
+	// Step 11: Call UpdateGroups to simulate the trigger that fires when contact group membership changes
+	msg := job.ShareGroupMessage{
+		ContactID:   bobContact.ID(),
+		GroupsAdded: []string{teamGroup.ID()},
+	}
+	require.NoError(t, sharing.UpdateGroups(ownerInstance, msg))
+
+	// Step 12: Reload the sharing to verify Bob was added
+	var s sharing.Sharing
+	require.NoError(t, couchdb.GetDoc(ownerInstance, consts.Sharings, sharingID, &s))
+	require.Len(t, s.Members, 3, "Should now have 3 members: Owner, Alice, Bob")
+	require.Equal(t, "Bob", s.Members[2].Name)
+	require.True(t, s.Members[2].OnlyInGroups)
+	require.Equal(t, []int{0}, s.Members[2].Groups)
+
+	// Step 13: Set up Bob's instance to know about the owner's URL for the sharing
+	FakeOwnerInstanceForSharing(t, bobInstance, tsOwner.URL, sharingID)
+
+	// Step 14: Verify Bob can access the shared drive after auto-accept
+	// Wait for the sharing to be auto-accepted on Bob's side
+	eBob := httpexpect.Default(t, tsBob.URL)
+	require.Eventually(t, func() bool {
+		// Check if Bob can get the sharing
+		resp := eBob.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+bobAppToken).
+			Expect()
+		if resp.Raw().StatusCode != 200 {
+			return false
+		}
+		obj := resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
+		active := obj.Value("data").Object().Value("attributes").Object().Value("active").Boolean().Raw()
+		return active
+	}, 10*time.Second, 500*time.Millisecond, "Bob's sharing should be auto-accepted and active")
+
+	// Step 15: Verify Bob can access the file in the shared drive
+	eBob.GET("/sharings/drives/"+sharingID+"/"+fileID).
+		WithHeader("Authorization", "Bearer "+bobAppToken).
+		Expect().Status(200)
+
+	// Step 16: Verify Bob can see the file content via download
+	res := eBob.GET("/sharings/drives/"+sharingID+"/download/"+fileID).
+		WithHeader("Authorization", "Bearer "+bobAppToken).
+		Expect().Status(200)
+	res.Body().IsEqual("foo")
+}
+
+// createGroupOnInstance creates a contact group on the specified instance.
+func createGroupOnInstance(t *testing.T, inst *instance.Instance, name string) *contact.Group {
+	t.Helper()
+	g := contact.NewGroup()
+	g.M["name"] = name
+	require.NoError(t, couchdb.CreateDoc(inst, g))
+	return g
+}
+
+// createContactInGroupWithCozy creates a contact in a group with a Cozy URL.
+func createContactInGroupWithCozy(t *testing.T, inst *instance.Instance, g *contact.Group, name, email, cozyURL string) *contact.Contact {
+	t.Helper()
+	mail := map[string]interface{}{"address": email}
+	c := contact.New()
+	c.M["fullname"] = name
+	c.M["email"] = []interface{}{mail}
+	c.M["cozy"] = []interface{}{
+		map[string]interface{}{"url": cozyURL, "primary": true},
+	}
+	c.M["relationships"] = map[string]interface{}{
+		"groups": map[string]interface{}{
+			"data": []interface{}{
+				map[string]interface{}{
+					"_id":   g.ID(),
+					"_type": consts.Groups,
+				},
+			},
+		},
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, c))
+	return c
+}
+
+// createContactWithCozy creates a contact with a Cozy URL but NOT in any group.
+func createContactWithCozy(t *testing.T, inst *instance.Instance, name, email, cozyURL string) *contact.Contact {
+	t.Helper()
+	mail := map[string]interface{}{"address": email}
+	c := contact.New()
+	c.M["fullname"] = name
+	c.M["email"] = []interface{}{mail}
+	c.M["cozy"] = []interface{}{
+		map[string]interface{}{"url": cozyURL, "primary": true},
+	}
+	require.NoError(t, couchdb.CreateDoc(inst, c))
+	return c
+}
+
+// addContactToExistingGroup adds an existing contact to a group by updating the contact.
+func addContactToExistingGroup(t *testing.T, inst *instance.Instance, c *contact.Contact, g *contact.Group) {
+	t.Helper()
+
+	// Get existing groups or create empty slice
+	var existingGroups []interface{}
+	if rels, ok := c.M["relationships"].(map[string]interface{}); ok {
+		if groups, ok := rels["groups"].(map[string]interface{}); ok {
+			if data, ok := groups["data"].([]interface{}); ok {
+				existingGroups = data
+			}
+		}
+	}
+
+	// Add the new group
+	existingGroups = append(existingGroups, map[string]interface{}{
+		"_id":   g.ID(),
+		"_type": consts.Groups,
+	})
+
+	// Update the contact
+	c.M["relationships"] = map[string]interface{}{
+		"groups": map[string]interface{}{
+			"data": existingGroups,
+		},
+	}
+	require.NoError(t, couchdb.UpdateDoc(inst, c))
 }
