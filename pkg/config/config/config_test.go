@@ -130,6 +130,21 @@ func TestConfigUnmarshal(t *testing.T) {
 	assert.Equal(t, true, myContextSharing.AutoAcceptTrusted)
 	assert.Equal(t, []string{"linagora.com"}, myContextSharing.TrustedDomains)
 
+	// Test GetAntivirusConfig for my-context (includes duration parsing)
+	myContextAntivirus := GetAntivirusConfig("my-context")
+	assert.Equal(t, true, myContextAntivirus.Enabled)
+	assert.Equal(t, "localhost:3310", myContextAntivirus.Address)
+	assert.Equal(t, 5*time.Minute, myContextAntivirus.Timeout)
+	assert.Equal(t, int64(104857600), myContextAntivirus.MaxFileSize)
+	assert.Equal(t, "warn", myContextAntivirus.OnInfected)
+	assert.Equal(t, true, myContextAntivirus.Notifications.EmailOnInfected)
+	assert.Equal(t, []string{"download", "preview"}, myContextAntivirus.Actions["pending"])
+	assert.Equal(t, []string{"delete"}, myContextAntivirus.Actions["infected"])
+
+	// Test GetAntivirusConfig for non-existent context returns disabled
+	nonExistentAntivirus := GetAntivirusConfig("non-existent")
+	assert.Equal(t, false, nonExistentAntivirus.Enabled)
+
 	// Test GetSharingConfig for default context
 	defaultSharing := GetSharingConfig("default")
 	assert.Equal(t, true, defaultSharing.AutoAcceptTrusted)
@@ -155,6 +170,21 @@ func TestConfigUnmarshal(t *testing.T) {
 			"sharing": map[string]interface{}{
 				"auto_accept_trusted": true,
 				"trusted_domains":     []interface{}{"linagora.com"},
+			},
+			"antivirus": map[string]interface{}{
+				"enabled":       true,
+				"address":       "localhost:3310",
+				"timeout":       "5m",
+				"max_file_size": 104857600,
+				"on_infected":   "warn",
+				"notifications": map[string]interface{}{
+					"email_on_infected": true,
+				},
+				"actions": map[string]interface{}{
+					"pending":  []interface{}{"download", "preview"},
+					"clean":    []interface{}{"download", "share", "preview", "delete"},
+					"infected": []interface{}{"delete"},
+				},
 			},
 			"logos": map[string]interface{}{
 				"coachco2": map[string]interface{}{

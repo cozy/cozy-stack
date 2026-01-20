@@ -254,6 +254,25 @@ contexts:
       auto_accept_trusted: true
       trusted_domains:
         - linagora.com
+    antivirus:
+      enabled: true
+      address: localhost:3310
+      timeout: 5m
+      max_file_size: 104857600
+      on_infected: warn
+      notifications:
+        email_on_infected: true
+      actions:
+        pending:
+          - download
+          - preview
+        clean:
+          - download
+          - share
+          - preview
+          - delete
+        infected:
+          - delete
 
   default:
     sharing:
