@@ -69,7 +69,16 @@ func getAntivirusFromContext(contextName string) *AntivirusContextConfig {
 	}
 
 	var cfg AntivirusContextConfig
-	if err := mapstructure.Decode(avData, &cfg); err != nil {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.StringToTimeDurationHookFunc(),
+		Result:     &cfg,
+	})
+	if err != nil {
+		log.Warnf("Failed to create antivirus config decoder for context %q: %v", contextName, err)
+		return nil
+	}
+	if err := decoder.Decode(avData); err != nil {
+		log.Warnf("Failed to decode antivirus config for context %q: %v", contextName, err)
 		return nil
 	}
 
