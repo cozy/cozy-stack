@@ -1467,6 +1467,26 @@ func TestSharedDriveCreation(t *testing.T) {
 		require.NotEmpty(t, sharingID, "Sharing ID should not be empty")
 		require.NotEmpty(t, dirID, "Directory ID should not be empty")
 	})
+
+	t.Run("DriveIdInFilesEndpoint", func(t *testing.T) {
+		// Request the root folder of the existing shared drive via the regular /files/:id endpoint
+		eA, _, _ := env.createClients(t)
+		obj := eA.GET("/files/"+env.firstRootDirID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.Value("type").IsEqual("io.cozy.files")
+		data.Value("id").IsEqual(env.firstRootDirID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.Value("type").IsEqual("directory")
+
+		// Verify driveId is present and matches the sharing ID
+		attrs.Value("driveId").IsEqual(env.firstSharingID)
+	})
 }
 
 func TestSharedDriveDownload(t *testing.T) {

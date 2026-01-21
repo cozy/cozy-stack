@@ -260,7 +260,7 @@ func moveDirSameStack(c echo.Context, srcInst *instance.Instance, destInst *inst
 		}
 	}
 
-	obj := files.NewDir(newRoot, destSharing)
+	obj := files.NewDir(newRoot, destSharing, destInst)
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 
@@ -467,7 +467,7 @@ func moveDirFromSharedDrive(c echo.Context, inst *instance.Instance, sourceInsta
 		return files.WrapVfsError(err)
 	}
 
-	obj := files.NewDir(newRoot, nil)
+	obj := files.NewDir(newRoot, nil, nil)
 	return jsonapi.Data(c, http.StatusCreated, obj, nil)
 }
 

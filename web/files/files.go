@@ -70,7 +70,7 @@ func SharedDrivesCreationHandler(c echo.Context) error {
 	if err != nil {
 		return wrapVfsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, NewDir(doc, nil), nil)
+	return jsonapi.Data(c, http.StatusOK, NewDir(doc, nil, nil), nil)
 }
 
 // Create handle all POST requests on /files/:file-id
@@ -187,7 +187,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 			return nil, err
 		}
 		maybeNotifyShareByLinkUpload(c, inst, doc.DocName, doc.ID(), doc.DirID, true)
-		return NewDir(doc, sharedDrive), nil
+		return NewDir(doc, sharedDrive, nil), nil
 	}
 
 	dirID := c.Param("file-id")
@@ -247,7 +247,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS, sharedDrive *sharing.Sharing) 
 	}
 
 	maybeNotifyShareByLinkUpload(c, inst, doc.DocName, doc.ID(), doc.DirID, true)
-	return NewDir(doc, sharedDrive), nil
+	return NewDir(doc, sharedDrive, nil), nil
 }
 
 // OverwriteFileContent handles PUT requests on /files/:file-id
@@ -1670,7 +1670,7 @@ func GetAllDocs(c echo.Context) error {
 
 		d, f := result.Refine()
 		if d != nil {
-			out = append(out, NewDir(d, nil))
+			out = append(out, NewDir(d, nil, nil))
 		} else {
 			file := NewFile(f, inst, nil)
 			file.IncludePath(fp)
@@ -1790,7 +1790,7 @@ func FindFilesMango(c echo.Context) error {
 			if ok {
 				out[i] = newFindDir(d, fields)
 			} else {
-				out[i] = NewDir(d, nil)
+				out[i] = NewDir(d, nil, nil)
 			}
 		} else {
 			if ok {

@@ -65,7 +65,9 @@ type fileJSON struct {
 	DriveId string `json:"driveId,omitempty"`
 }
 
-func NewDir(doc *vfs.DirDoc, sharedDrive *sharing.Sharing) *dir {
+// NewDir creates a dir struct. If inst is provided and sharedDrive is nil,
+// it extracts driveId from referenced_by if the folder is the root of a shared drive.
+func NewDir(doc *vfs.DirDoc, sharedDrive *sharing.Sharing, inst *instance.Instance) *dir {
 	rel := jsonapi.RelationshipMap{
 		"referenced_by": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
@@ -78,9 +80,27 @@ func NewDir(doc *vfs.DirDoc, sharedDrive *sharing.Sharing) *dir {
 	var driveId string
 	if sharedDrive != nil {
 		driveId = sharedDrive.ID()
+	} else if inst != nil {
+		// Extract driveId from referenced_by only if it's a shared drive (not regular sharing)
+		driveId = extractDriveIDFromReferences(doc.ReferencedBy, inst)
 	}
 
 	return &dir{doc: doc, rel: rel, driveId: driveId}
+}
+
+// extractDriveIDFromReferences extracts the sharing ID from referenced_by if the
+// referenced sharing is a shared drive (drive: true), not a regular cozy-to-cozy sharing.
+func extractDriveIDFromReferences(refs []couchdb.DocReference, inst *instance.Instance) string {
+	for _, ref := range refs {
+		if ref.Type == consts.Sharings {
+			// Look up the sharing to check if it's a drive
+			s, err := sharing.FindSharing(inst, ref.ID)
+			if err == nil && s.Drive {
+				return ref.ID
+			}
+		}
+	}
+	return ""
 }
 
 func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.DirOrFileDoc, error) {
@@ -171,7 +191,7 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDrive *shari
 		relsData = append(relsData, couchdb.DocReference{ID: child.ID(), Type: child.DocType()})
 		d, f := child.Refine()
 		if d != nil {
-			included = append(included, NewDir(d, sharedDrive))
+			included = append(included, NewDir(d, sharedDrive, nil))
 		} else {
 			file := NewFile(f, instance, sharedDrive)
 			if secret, ok := secrets[f.ID()]; ok {
@@ -226,7 +246,7 @@ func DirData(c echo.Context, statusCode int, doc *vfs.DirDoc, sharedDrive *shari
 		links.Next = "/files/" + doc.DocID + "?" + params.Encode()
 	}
 
-	d := NewDir(doc, sharedDrive)
+	d := NewDir(doc, sharedDrive, instance)
 	d.rel = rel
 	d.included = included
 
@@ -247,7 +267,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		}
 		d, f := child.Refine()
 		if d != nil {
-			included = append(included, NewDir(d, nil))
+			included = append(included, NewDir(d, nil, nil))
 		} else {
 			included = append(included, NewFile(f, instance, nil))
 		}
@@ -272,6 +292,9 @@ func NewFile(doc *vfs.FileDoc, i *instance.Instance, sharedDrive *sharing.Sharin
 	var driveId string
 	if sharedDrive != nil {
 		driveId = sharedDrive.ID()
+	} else if i != nil {
+		// Extract driveId from referenced_by only if it's a shared drive (not regular sharing)
+		driveId = extractDriveIDFromReferences(doc.ReferencedBy, i)
 	}
 	return &file{doc, i, nil, nil, &fileJSON{}, "", false, driveId}
 }
