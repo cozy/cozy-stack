@@ -961,6 +961,9 @@ msgstr "%s has shared %s with you."
 msgid "Permissions io.cozy.drive.settings"
 msgstr "Drive-Einstellungen"
 
+msgid "Permissions io.cozy.ai.chat.assistants"
+msgstr "KI-Assistent"
+
 msgid "Mail Sharing File Changed Subject"
 msgstr "File changed in shared folder: %s"
 

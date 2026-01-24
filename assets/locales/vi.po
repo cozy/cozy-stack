@@ -1352,6 +1352,9 @@ msgstr "%s đã chia sẻ %s với bạn."
 msgid "Permissions io.cozy.drive.settings"
 msgstr "Cài đặt Drive"
 
+msgid "Permissions io.cozy.ai.chat.assistants"
+msgstr "Trợ lý AI"
+
 msgid "Mail Sharing File Changed Subject"
 msgstr "File changed in shared folder: %s"
 

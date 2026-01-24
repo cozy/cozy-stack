@@ -1380,6 +1380,9 @@ msgstr "%s поделился с вами %s."
 msgid "Permissions io.cozy.drive.settings"
 msgstr "Настройки Drive"
 
+msgid "Permissions io.cozy.ai.chat.assistants"
+msgstr "ИИ-ассистент"
+
 msgid "Mail Sharing File Changed Subject"
 msgstr "File changed in shared folder: %s"
 
