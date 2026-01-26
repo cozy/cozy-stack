@@ -106,6 +106,7 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	middlewares.FuncsMap = template.FuncMap{
 		"t":         fmt.Sprintf,
 		"tHTML":     fmt.Sprintf,
+		"tArgs":     func(key string, args interface{}) string { return fmt.Sprintf(key, args.([]interface{})...) },
 		"split":     strings.Split,
 		"replace":   strings.Replace,
 		"hasSuffix": strings.HasSuffix,
@@ -132,6 +133,7 @@ func NewRenderer() (AssetRenderer, error) {
 	middlewares.FuncsMap = template.FuncMap{
 		"t":         fmt.Sprintf,
 		"tHTML":     fmt.Sprintf,
+		"tArgs":     func(key string, args interface{}) string { return fmt.Sprintf(key, args.([]interface{})...) },
 		"split":     strings.Split,
 		"replace":   strings.Replace,
 		"hasSuffix": strings.HasSuffix,
@@ -171,12 +173,18 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		funcMap = template.FuncMap{
 			"t":     i.Translate,
 			"tHTML": i18n.TranslatorHTML(i.Locale, i.ContextName),
+			"tArgs": func(key string, args []interface{}) string {
+				return i18n.Translate(key, i.Locale, i.ContextName, args...)
+			},
 		}
 	} else {
 		lang := GetLanguageFromHeader(c.Request().Header)
 		funcMap = template.FuncMap{
 			"t":     i18n.Translator(lang, ""),
 			"tHTML": i18n.TranslatorHTML(lang, ""),
+			"tArgs": func(key string, args []interface{}) string {
+				return i18n.Translate(key, lang, "", args...)
+			},
 		}
 	}
 	var t *template.Template

@@ -28,7 +28,12 @@
         {{if .Illustration}}<img src="{{asset .Domain .Illustration}}" alt="" class="illustration mb-3" />{{end}}
         <h1 class="h4 h2-md mb-3 text-center">{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
         <div class="mb-2 mb-md-3">
-          {{$err := t .Error}}
+          {{$err := ""}}
+          {{if .ErrorArgs}}
+            {{$err = tArgs .Error .ErrorArgs}}
+          {{else}}
+            {{$err = t .Error}}
+          {{end}}
           {{$arr := split $err "\n"}}
           {{range $i, $p := $arr}}
             {{if ne $p ""}}<p class="text-center mb-2">{{$p}}</p>{{end}}

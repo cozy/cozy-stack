@@ -485,6 +485,9 @@ msgstr "The FranceConnect authentication has failed"
 msgid "OIDC Domain Mismatch %s %s"
 msgstr "To connect to %s, please disconnect first from %s"
 
+msgid "Disconnect"
+msgstr "Disconnect"
+
 msgid "Instance Blocked Login"
 msgstr "The Twake was blocked because of too many login attempts"
 
