@@ -43,6 +43,17 @@ var (
 	ErrIdentityProvider     = errors.New("error from the identity provider")
 )
 
+// DomainMismatchError is returned when the user tries to connect to an
+// instance but has an active OIDC session for a different instance.
+type DomainMismatchError struct {
+	ExpectedDomain string // The instance the user is trying to access
+	ActualDomain   string // The instance from the OIDC token
+}
+
+func (e *DomainMismatchError) Error() string {
+	return fmt.Sprintf("OIDC Domain Mismatch %s %s", e.ExpectedDomain, e.ActualDomain)
+}
+
 // extractSessionID extracts the session ID (sid) from an id_token.
 func extractSessionID(idToken string) string {
 	if idToken == "" {
@@ -1054,7 +1065,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	}
 	if domain != inst.Domain {
 		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return ErrAuthenticationFailed
+		return &DomainMismatchError{ExpectedDomain: inst.Domain, ActualDomain: domain}
 	}
 	return nil
 }

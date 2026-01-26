@@ -484,6 +484,9 @@ msgstr "Xác thực không thành công"
 msgid "the FranceConnect authentication has failed"
 msgstr "Xác thực bằng FranceConnect không thành công"
 
+msgid "OIDC Domain Mismatch %s %s"
+msgstr "Để kết nối với %s, vui lòng đăng xuất khỏi %s trước"
+
 msgid "Instance Blocked Login"
 msgstr "Twake đã bị khóa do có quá nhiều lần đăng nhập không thành công"
 
