@@ -50,6 +50,16 @@ type DomainMismatchError struct {
 	ActualDomain   string // The instance from the OIDC token
 }
 
+// TranslationKey returns the i18n key for translating this error.
+func (e *DomainMismatchError) TranslationKey() string {
+	return "OIDC Domain Mismatch %s %s"
+}
+
+// TranslationArgs returns the arguments for the translation.
+func (e *DomainMismatchError) TranslationArgs() []interface{} {
+	return []interface{}{e.ExpectedDomain, e.ActualDomain}
+}
+
 func (e *DomainMismatchError) Error() string {
 	return fmt.Sprintf("OIDC Domain Mismatch %s %s", e.ExpectedDomain, e.ActualDomain)
 }
@@ -378,7 +388,18 @@ func Login(c echo.Context) error {
 		}
 
 		if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
-			return renderError(c, inst, http.StatusBadRequest, err.Error())
+			extras := map[string]interface{}{}
+			errMsg := err.Error()
+			var dmErr *DomainMismatchError
+			if errors.As(err, &dmErr) {
+				extras["ErrorArgs"] = dmErr.TranslationArgs()
+				errMsg = dmErr.TranslationKey()
+				if logoutURL := getOIDCLogoutURL(inst.ContextName); logoutURL != "" {
+					extras["Button"] = "Disconnect"
+					extras["ButtonURL"] = logoutURL
+				}
+			}
+			return renderError(c, inst, http.StatusBadRequest, errMsg, extras)
 		}
 	}
 
@@ -454,7 +475,17 @@ func TwoFactor(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
 	if err := checkDomainFromUserInfo(conf, inst, accessToken); err != nil {
-		return renderError(c, inst, http.StatusBadRequest, err.Error())
+		extras := map[string]interface{}{}
+		errMsg := err.Error()
+		if dmErr, ok := err.(*DomainMismatchError); ok {
+			extras["ErrorArgs"] = dmErr.TranslationArgs()
+			errMsg = dmErr.TranslationKey()
+			if logoutURL := getOIDCLogoutURL(inst.ContextName); logoutURL != "" {
+				extras["Button"] = "Disconnect"
+				extras["ButtonURL"] = logoutURL
+			}
+		}
+		return renderError(c, inst, http.StatusBadRequest, errMsg, extras)
 	}
 
 	if inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken) {
@@ -1270,7 +1301,7 @@ func loadKey(raw *jwKey) (interface{}, error) {
 	return &key, nil
 }
 
-func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
+func renderError(c echo.Context, inst *instance.Instance, code int, msg string, extras ...map[string]interface{}) error {
 	if inst == nil {
 		inst = &instance.Instance{
 			Domain:      c.Request().Host,
@@ -1278,7 +1309,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 			Locale:      consts.DefaultLocale,
 		}
 	}
-	return c.Render(code, "error.html", echo.Map{
+	params := echo.Map{
 		"Domain":       inst.ContextualDomain(),
 		"ContextName":  inst.ContextName,
 		"Locale":       inst.Locale,
@@ -1287,7 +1318,22 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		"Illustration": "/images/generic-error.svg",
 		"Error":        msg,
 		"SupportEmail": inst.SupportEmailAddress(),
-	})
+	}
+	// Merge any extra params (Button, ButtonURL, etc.)
+	for _, extra := range extras {
+		for k, v := range extra {
+			params[k] = v
+		}
+	}
+	return c.Render(code, "error.html", params)
+}
+
+func getOIDCLogoutURL(contextName string) string {
+	a := config.GetConfig().Authentication
+	delegated, _ := a[contextName].(map[string]interface{})
+	oidc, _ := delegated["oidc"].(map[string]interface{})
+	u, _ := oidc["logout_url"].(string)
+	return u
 }
 
 // Routes setup routing for OpenID Connect routes.
