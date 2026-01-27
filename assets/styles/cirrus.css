@@ -410,6 +410,10 @@
   -webkit-mask-image: url("../icons/doctypes/devices.svg");
   mask-image: url("../icons/doctypes/devices.svg");
 }
+.perm[class^="io.cozy.ai.chat.assistants"] {
+  -webkit-mask-image: url("../icons/doctypes/assistant.svg");
+  mask-image: url("../icons/doctypes/assistant.svg");
+}
 
 /* Others */
 .halo-icon {
