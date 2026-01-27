@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/worker/antivirus"
 	"github.com/stretchr/testify/require"
@@ -349,6 +350,7 @@ func testWorkerFileVersionUpdate(t *testing.T, inst *instance.Instance) {
 	originalMD5 := doc.MD5Sum
 
 	// Step 2: Update file with infected content (simulating new version upload)
+	// Note: updateTestFileContent handles conflicts from background antivirus jobs
 	doc = updateTestFileContent(t, fs, doc, testutils.EICARTestSignature())
 
 	// Verify MD5 changed (content was updated)
@@ -378,38 +380,57 @@ func testWorkerFileVersionUpdate(t *testing.T, inst *instance.Instance) {
 }
 
 // updateTestFileContent updates a file's content by creating a new version.
+// It retries on conflict errors caused by background antivirus jobs updating the document.
 func updateTestFileContent(t *testing.T, fs vfs.VFS, olddoc *vfs.FileDoc, newContent []byte) *vfs.FileDoc {
 	t.Helper()
 
-	// Create new file doc for update - use -1 for size and nil for MD5
-	// so the VFS calculates them from the actual content
-	newdoc, err := vfs.NewFileDoc(
-		olddoc.DocName,
-		olddoc.DirID,
-		-1,  // size will be calculated
-		nil, // MD5 will be calculated
-		olddoc.Mime,
-		olddoc.Class,
-		time.Now(),
-		olddoc.Executable,
-		olddoc.Trashed,
-		olddoc.Encrypted,
-		olddoc.Tags,
-	)
-	require.NoError(t, err)
+	var result *vfs.FileDoc
+	fileID := olddoc.DocID
 
-	// Create the new version of the file
-	file, err := fs.CreateFile(newdoc, olddoc)
-	require.NoError(t, err)
+	err := utils.RetryWithExpBackoff(5, 10*time.Millisecond, func() error {
+		// Re-fetch the document to get the latest revision
+		currentDoc, err := fs.FileByID(fileID)
+		if err != nil {
+			return err
+		}
 
-	_, err = file.Write(newContent)
-	require.NoError(t, err)
+		// Create new file doc for update
+		newdoc, err := vfs.NewFileDoc(
+			currentDoc.DocName,
+			currentDoc.DirID,
+			-1,  // size will be calculated
+			nil, // MD5 will be calculated
+			currentDoc.Mime,
+			currentDoc.Class,
+			time.Now(),
+			currentDoc.Executable,
+			currentDoc.Trashed,
+			currentDoc.Encrypted,
+			currentDoc.Tags,
+		)
+		if err != nil {
+			return err
+		}
 
-	err = file.Close()
-	require.NoError(t, err)
+		// Create the new version of the file
+		file, err := fs.CreateFile(newdoc, currentDoc)
+		if err != nil {
+			return err
+		}
 
-	// Get the updated document
-	updatedDoc, err := fs.FileByID(olddoc.DocID)
+		if _, err = file.Write(newContent); err != nil {
+			return err
+		}
+
+		if err = file.Close(); err != nil {
+			return err
+		}
+
+		// Success - get the updated document
+		result, err = fs.FileByID(fileID)
+		return err
+	})
+
 	require.NoError(t, err)
-	return updatedDoc
+	return result
 }

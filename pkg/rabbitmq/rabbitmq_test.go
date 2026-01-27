@@ -505,6 +505,18 @@ func TestHandlers(t *testing.T) {
 			return updated.FeatureSets[0] == msg.Features.Stack.FeatureSets[0]
 		})
 
+		// Wait until orgInst2 is updated (the handler updates instances sequentially)
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(orgInst2.Domain)
+			if err != nil {
+				return false
+			}
+			if len(updated.FeatureSets) == 0 {
+				return false
+			}
+			return updated.FeatureSets[0] == msg.Features.Stack.FeatureSets[0]
+		})
+
 		// orgInst1 is updated
 		updated, err := lifecycle.GetInstance(orgInst1.Domain)
 		require.NoError(t, err)
