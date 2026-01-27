@@ -161,7 +161,7 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 }
 
 const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
-const illegalFirstChars = "0123456789."
+const illegalFirstChars = "."
 
 func validateDomain(domain string) (string, error) {
 	var err error

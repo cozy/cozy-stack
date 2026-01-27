@@ -88,6 +88,12 @@ func TestLifecycle(t *testing.T) {
 			assert.NotEmpty(t, instance.ID())
 			assert.Equal(t, instance.Domain, "test.cozycloud.cc")
 		}
+
+		_, err = lifecycle.Create(&lifecycle.Options{
+			Domain: "1test.cozycloud.cc",
+			Locale: "en",
+		})
+		assert.NoError(t, err)
 	})
 
 	t.Run("CreateInstanceWithFewSettings", func(t *testing.T) {
@@ -166,6 +172,12 @@ func TestLifecycle(t *testing.T) {
 
 		_, err = lifecycle.Create(&lifecycle.Options{
 			Domain: "foo/bar",
+			Locale: "en",
+		})
+		assert.Error(t, err, "An error is expected")
+
+		_, err = lifecycle.Create(&lifecycle.Options{
+			Domain: ".foo.cozycloud.cc",
 			Locale: "en",
 		})
 		assert.Error(t, err, "An error is expected")
