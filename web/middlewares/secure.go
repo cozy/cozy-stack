@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
@@ -134,8 +135,12 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				return err
 			}
 			var contextName string
-			if conf.CSPPerContext != nil {
-				contextName = GetInstance(c).ContextName
+			var inst *instance.Instance
+			inst, ok := GetInstanceSafe(c)
+			if ok {
+				if conf.CSPPerContext != nil {
+					contextName = inst.ContextName
+				}
 			}
 			b := cspBuilder{
 				parent:      parent,
@@ -143,6 +148,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				isSecure:    isSecure,
 				contextName: contextName,
 				perContext:  conf.CSPPerContext,
+				instance:    inst,
 			}
 			cspHeader += b.makeCSPHeader("default-src", conf.CSPDefaultSrcAllowList, conf.CSPDefaultSrc)
 			cspHeader += b.makeCSPHeader("script-src", conf.CSPScriptSrcAllowList, conf.CSPScriptSrc)
@@ -227,6 +233,7 @@ type cspBuilder struct {
 	siblings    string
 	contextName string
 	perContext  map[string]map[string]string
+	instance    *instance.Instance
 	isSecure    bool
 }
 
@@ -293,6 +300,10 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 				headers = append(headers, list)
 			}
 		}
+	}
+	// Add matrix.org_domain to frame-src directive if present (for iframes)
+	if header == "frame-src" && b.instance != nil && b.instance.OrgDomain != "" {
+		headers = append(headers, "matrix."+b.instance.OrgDomain)
 	}
 	if len(headers) == 0 {
 		return ""
