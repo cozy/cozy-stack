@@ -153,27 +153,27 @@ func TestSecure(t *testing.T) {
 		_ = h(c)
 
 		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
-		
-		// Verify that *.example.com appears only once (in frame-src)
+
+		// Verify that matrix.example.com appears only once (in frame-src)
 		count := strings.Count(csp, "matrix.example.com")
-		assert.Equal(t, 1, count, 
-			"matrix.example.com should appear exactly once (in frame-src), but found %d times. CSP: %s", 
+		assert.Equal(t, 1, count,
+			"matrix.example.com should appear exactly once (in frame-src), but found %d times. CSP: %s",
 			count, csp)
 
-		// Verify that frame-src contains *.example.com
+		// Verify that frame-src contains matrix.example.com
 		frameSrcIndex := strings.Index(csp, "frame-src ")
-		assert.NotEqual(t, -1, frameSrcIndex, 
+		assert.NotEqual(t, -1, frameSrcIndex,
 			"frame-src should be present in CSP. Full CSP: %s", csp)
-		
+
 		frameSrcEnd := strings.Index(csp[frameSrcIndex:], ";")
-		assert.NotEqual(t, -1, frameSrcEnd, 
+		assert.NotEqual(t, -1, frameSrcEnd,
 			"frame-src should end with semicolon")
-		
+
 		frameSrcContent := csp[frameSrcIndex : frameSrcIndex+frameSrcEnd]
-		assert.Contains(t, frameSrcContent, "matrix.example.com", 
+		assert.Contains(t, frameSrcContent, "matrix.example.com",
 			"frame-src should contain matrix.example.com. Found: %s", frameSrcContent)
 
-		// Verify that other directives do NOT contain *.example.com
+		// Verify that other directives do NOT contain matrix.example.com
 		otherDirectives := []string{
 			"default-src",
 			"script-src",
@@ -196,7 +196,7 @@ func TestSecure(t *testing.T) {
 				directiveEnd := strings.Index(csp[directiveIndex:], ";")
 				if directiveEnd != -1 {
 					directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
-					assert.NotContains(t, directiveContent, "matrix.example.com", 
+					assert.NotContains(t, directiveContent, "matrix.example.com",
 						"Directive %s should NOT contain matrix.example.com. Found: %s", directivePattern, directiveContent)
 				}
 			}
