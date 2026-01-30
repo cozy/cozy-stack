@@ -19,7 +19,7 @@ This approach has several issues:
 - **Version conflict complexity**: The code checks remote versions before updates, creating complex conflict resolution logic
 - **Tight coupling**: Direct HTTP dependency on the common settings app
 - **Failure propagation**: HTTP failures can affect the main settings update flow
-- **No longer needed**: The common settings app is no longer actively updating settings, making version conflict checking obsolete
+- **No longer needed**: The common settings app is being deprecated, so the stack no longer needs to support conflict resolution
 
 The codebase already has a mature RabbitMQ infrastructure for message consumption (password updates, user creation, phone updates, subscription changes, app lifecycle). 
 This infrastructure can be extended for publishing.
