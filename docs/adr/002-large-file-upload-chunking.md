@@ -234,6 +234,38 @@ Client requests {objName} → Swift reads manifest → Streams segments in order
 
 **Implementation complexity:** High
 
+### Alternative C: Swift Dynamic Large Objects (DLO) Instead of SLO
+
+**Description:** Swift offers two large object mechanisms: Static Large Objects (SLO) and Dynamic Large Objects (DLO). Both are supported by the `ncw/swift` Go library used in this project. DLO uses a simpler manifest that only stores a segment prefix—Swift dynamically discovers segments matching that prefix at download time.
+
+**Pros:**
+- Simpler manifest structure (just a prefix, no segment list)
+- Segments can be added or modified after manifest creation
+- Slightly simpler upload logic (no need to track segment metadata)
+
+**Cons:**
+- **No integrity validation**: DLO manifests don't store segment ETags, so Swift cannot detect missing or corrupted segments. Downloads succeed with incomplete or wrong data rather than returning an error.
+- **Race conditions**: Since segments are discovered dynamically, concurrent modifications can cause inconsistent reads (e.g., a download might see a partial set of segments if upload is in progress).
+- **Unpredictable content**: The downloaded content depends on what segments exist at read time, not what was originally uploaded. If a segment is deleted (disk failure, bug, manual deletion), the file silently shrinks.
+- **No size validation**: DLO cannot verify that the total size matches expectations.
+
+**Why SLO is preferred:**
+
+For a file storage system where data integrity matters, SLO provides critical guarantees that DLO lacks:
+
+| Aspect | SLO | DLO |
+|--------|-----|-----|
+| Segment list | Explicit with ETags and sizes | Dynamic prefix matching |
+| Integrity check | Swift validates each segment's ETag on download | None—trusts whatever exists |
+| Missing segment | Detected—connection dropped, client receives partial results | **Silently succeeds**—"happily ignores" the missing segment |
+| Modified segment | Detected—ETag mismatch causes failure | Silently returns different data |
+| Consistency | Immutable after creation | Can change between reads |
+| Client awareness | Failure is detectable (incomplete transfer) | No way to know data is missing |
+
+**Note on UI chunked uploads:** DLO's flexibility (adding segments after manifest creation) might seem useful for resumable UI uploads, but it provides no real advantage. Both DLO and SLO support the same upload flow: client uploads segments, then server creates manifest on completion.
+
+**Implementation complexity:** Low (similar to SLO), but unacceptable data integrity trade-offs.
+
 ## Decision
 
 **Recommended approach: Storage-Level Chunking**
