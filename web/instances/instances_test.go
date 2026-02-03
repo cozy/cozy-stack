@@ -66,17 +66,18 @@ func TestInstances(t *testing.T) {
 				HasValue(1, "790789f8-abd9-11ee-ae09-9cb6d0907fa3")
 		})
 
-		t.Run("WithOrganizationDomain", func(t *testing.T) {
+		t.Run("WithOrganizationDomainAndOrgID", func(t *testing.T) {
 			domain := "alice.cozy.localhost"
 			t.Cleanup(func() { _ = lifecycle.Destroy(domain) })
 
 			e := testutils.CreateTestClient(t, ts.URL)
 
-			// Create instance with feature sets
+			// Create instance with org_domain and org_id
 			attrs := e.POST("/instances").
 				WithQuery("DiskQuota", 5000000000).
 				WithQuery("Domain", domain).
 				WithQuery("OrgDomain", "example.com").
+				WithQuery("OrgID", "org-123-abc").
 				WithQuery("Email", "alice@example.com").
 				WithQuery("Locale", "en").
 				WithQuery("PublicName", "alice").
@@ -92,6 +93,7 @@ func TestInstances(t *testing.T) {
 				Object().Path("$.data.attributes").Object()
 
 			attrs.HasValue("org_domain", "example.com")
+			attrs.HasValue("org_id", "org-123-abc")
 			attrs.HasValue("feature_sets", []string{"71df3022-abd9-11ee-b79b-9cb6d0907fa3", "790789f8-abd9-11ee-ae09-9cb6d0907fa3"})
 		})
 	})

@@ -56,6 +56,8 @@ func (h *HTTPHandler) getInstance(c echo.Context) error {
 	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
 	doc.M["oidc_id"] = inst.OIDCID
+	doc.M["org_domain"] = inst.OrgDomain
+	doc.M["org_id"] = inst.OrgID
 	doc.M["context"] = inst.ContextName
 	if len(inst.Sponsorships) > 0 {
 		doc.M["sponsorships"] = inst.Sponsorships
@@ -126,6 +128,8 @@ func (h *HTTPHandler) updateInstance(c echo.Context) error {
 	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
 	doc.M["oidc_id"] = inst.OIDCID
+	doc.M["org_domain"] = inst.OrgDomain
+	doc.M["org_id"] = inst.OrgID
 	doc.M["context"] = inst.ContextName
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)

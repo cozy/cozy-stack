@@ -29,6 +29,7 @@ type Options struct {
 	Domain             string
 	DomainAliases      []string
 	OrgDomain          string
+	OrgID              string
 	OldDomain          string
 	Locale             string
 	UUID               string
@@ -118,6 +119,7 @@ func Create(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 	i.OrgDomain = opts.OrgDomain
+	i.OrgID = opts.OrgID
 	i.OldDomain = opts.OldDomain
 	i.Prefix = "cozy" + hex.EncodeToString(prefix[:16])
 	i.Locale = locale
