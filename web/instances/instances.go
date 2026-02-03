@@ -57,6 +57,7 @@ func createHandler(c echo.Context) error {
 	opts := &lifecycle.Options{
 		Domain:          c.QueryParam("Domain"),
 		OrgDomain:       c.QueryParam("OrgDomain"),
+		OrgID:           c.QueryParam("OrgID"),
 		OldDomain:       c.QueryParam("OldDomain"),
 		Locale:          c.QueryParam("Locale"),
 		UUID:            c.QueryParam("UUID"),

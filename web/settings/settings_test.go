@@ -98,6 +98,8 @@ func TestSettings(t *testing.T) {
 		Timezone:    "Europe/Berlin",
 		Email:       "alice@example.com",
 		ContextName: "test-context",
+		OrgDomain:   "test-org.example.com",
+		OrgID:       "test-org-id-456",
 	})
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token := setup.GetTestClient(scope)
@@ -628,6 +630,8 @@ func TestSettings(t *testing.T) {
 		attrs.HasValue("locale", "en")
 		attrs.HasValue("password_defined", true)
 		attrs.HasValue("legal_notice_url", "https://testmanager.cozycloud.cc/tos/12345.pdf")
+		attrs.HasValue("org_domain", "test-org.example.com")
+		attrs.HasValue("org_id", "test-org-id-456")
 	})
 
 	t.Run("UpdateInstance", func(t *testing.T) {
