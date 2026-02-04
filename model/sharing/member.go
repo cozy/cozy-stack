@@ -673,6 +673,11 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 		return err
 	}
 	c.AccessToken.AccessToken = token.AccessToken
+	// Also update the refresh token if a new one is provided (e.g., when the
+	// instance domain has changed and a new refresh token is issued)
+	if token.RefreshToken != "" {
+		c.AccessToken.RefreshToken = token.RefreshToken
+	}
 	if err = couchdb.UpdateDoc(inst, s); err != nil && !couchdb.IsConflictError(err) {
 		return err
 	}

@@ -276,6 +276,29 @@ func TestClient(t *testing.T) {
 		assert.False(t, ok, "The token should be invalid")
 	})
 
+	t.Run("ParseJWTValidWithOldDomain", func(t *testing.T) {
+		// Simulate a migrated instance where the domain changed but OldDomain is set
+		originalDomain := testInstance.Domain
+
+		// Create a refresh token with the current domain as issuer
+		tokenString, err := c.CreateJWT(testInstance, "refresh", "foo:read")
+		assert.NoError(t, err)
+
+		// Simulate migration: change Domain and set OldDomain to the original
+		testInstance.Domain = "new.example.com"
+		testInstance.OldDomain = originalDomain
+
+		// The token should still be valid because OldDomain matches the issuer
+		claims, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
+		assert.True(t, ok, "The token should be valid when OldDomain matches the issuer")
+		assert.Equal(t, originalDomain, claims.Issuer)
+		assert.Equal(t, "foo:read", claims.Scope)
+
+		// Restore the instance
+		testInstance.Domain = originalDomain
+		testInstance.OldDomain = ""
+	})
+
 	t.Run("ParseJWTInvalidSubject", func(t *testing.T) {
 		other := &oauth.Client{
 			CouchID: "my-other-client",
