@@ -994,10 +994,11 @@ func getToken(conf *Config, code string) (*tokenResponse, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		// Flush the body, so that the connecion can be reused by keep-alive
-		_, _ = io.Copy(io.Discard, res.Body)
+		// Read the error response body to log detailed error information
+		errBody, _ := io.ReadAll(res.Body)
 		logger.WithNamespace("oidc").
-			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
+			Errorf("Token request failed: status=%d url=%s redirect_uri=%s response=%s",
+				res.StatusCode, conf.TokenURL, conf.RedirectURI, string(errBody))
 		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 	resBody, err := io.ReadAll(res.Body)
