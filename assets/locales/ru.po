@@ -533,6 +533,12 @@ msgstr "Аутентификация не удалась"
 msgid "the FranceConnect authentication has failed"
 msgstr "Используемый аккаунт FranceConnect не соответствует вашему аккаунту Twake."
 
+msgid "OIDC Domain Mismatch %s %s"
+msgstr "Чтобы подключиться к %s, сначала отключитесь от %s"
+
+msgid "Disconnect"
+msgstr "Отключиться"
+
 msgid "Instance Blocked Login"
 msgstr "Twake был заблокирован из-за слишком многих попыток входа"
 
