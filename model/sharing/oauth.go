@@ -635,6 +635,7 @@ func updateContactAddress(inst *instance.Instance, email, newInstance string) {
 // the request.
 func RefreshToken(
 	inst *instance.Instance,
+	res *http.Response,
 	reqErr error,
 	s *Sharing,
 	m *Member,
@@ -642,6 +643,26 @@ func RefreshToken(
 	opts *request.Options,
 	body []byte,
 ) (*http.Response, error) {
+	// Check if a redirect occurred (e.g., 302 redirect to new domain).
+	// When Go's http.Client follows a redirect to a different host, it strips
+	// the Authorization header for security. This causes 401 Unauthorized on
+	// the new domain. We detect this by comparing the final URL with the original.
+	// We only check on 401 to avoid false positives on other 4xx errors.
+	if res != nil && res.StatusCode == http.StatusUnauthorized {
+		if res.Request != nil && res.Request.URL != nil {
+			finalHost := res.Request.URL.Host
+			if finalHost != "" && finalHost != opts.Domain {
+				// Redirect detected - update member instance to the new domain
+				newURL := &url.URL{Scheme: res.Request.URL.Scheme, Host: finalHost}
+				m.Instance = newURL.String()
+				opts.Scheme = newURL.Scheme
+				opts.Domain = newURL.Host
+				inst.Logger().WithNamespace("sharing").
+					Infof("Detected redirect from %s to %s, updating member instance", opts.Domain, m.Instance)
+			}
+		}
+	}
+
 	if err, ok := reqErr.(*request.Error); ok && err.Status == http.StatusText(http.StatusGone) {
 		tryUpdateMemberInstance(err, m, opts)
 	}

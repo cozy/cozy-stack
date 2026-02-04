@@ -113,7 +113,7 @@ func (o *NoteOpener) openSharedNote() (*apiNoteURL, error) {
 	prepared.Opts.Path = "/notes/" + prepared.XoredID + "/open"
 	res, err := request.Req(prepared.Opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(o.Inst, err, o.Sharing, prepared.Creator,
+		res, err = RefreshToken(o.Inst, res, err, o.Sharing, prepared.Creator,
 			prepared.Creds, prepared.Opts, nil)
 	}
 	if err != nil {
