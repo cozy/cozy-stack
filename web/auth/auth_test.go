@@ -1283,6 +1283,66 @@ func TestAuth(t *testing.T) {
 		assertValidToken(t, testInstance, obj.Value("access_token").String().Raw(), "access", clientID, "files:read")
 	})
 
+	t.Run("RefreshTokenWithOldDomainIssuer", func(t *testing.T) {
+		// This test simulates the scenario where an instance has been migrated
+		// from an old domain to a new domain. The refresh token was issued with
+		// the old domain as issuer, but the instance now has OldDomain set.
+		// After refresh, a new refresh token should be issued with the current domain.
+
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		// Set OldDomain on the instance to simulate migration
+		oldDomain := "old." + domain
+		testInstance.OldDomain = oldDomain
+		require.NoError(t, instance.Update(testInstance))
+
+		// Reload the instance to get the updated version
+		var err error
+		testInstance, err = lifecycle.GetInstance(testInstance.Domain)
+		require.NoError(t, err)
+
+		// Create a refresh token with the OLD domain as issuer
+		// (simulating a token created before migration)
+		oldDomainToken, err := crypto.NewJWT(testInstance.OAuthSecret, permission.Claims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Audience: jwt.ClaimStrings{consts.RefreshTokenAudience},
+				Issuer:   oldDomain, // OLD domain as issuer
+				IssuedAt: jwt.NewNumericDate(time.Now()),
+				Subject:  clientID,
+			},
+			Scope: "files:read",
+		})
+		require.NoError(t, err)
+
+		// Refresh should succeed and return a NEW refresh token with current domain
+		obj := e.POST("/auth/access_token").
+			WithFormField("grant_type", "refresh_token").
+			WithFormField("client_id", clientID).
+			WithFormField("client_secret", clientSecret).
+			WithFormField("refresh_token", oldDomainToken).
+			WithHost(domain).
+			Expect().Status(200).
+			JSON().Object()
+
+		obj.HasValue("token_type", "bearer")
+		obj.HasValue("scope", "files:read")
+
+		// Verify the access token is valid
+		assertValidToken(t, testInstance, obj.Value("access_token").String().Raw(), "access", clientID, "files:read")
+
+		// A new refresh token should be returned with the current domain as issuer
+		newRefreshToken := obj.Value("refresh_token").String().NotEmpty().Raw()
+		assertValidToken(t, testInstance, newRefreshToken, "refresh", clientID, "files:read")
+
+		// Verify the new refresh token has the current domain as issuer
+		var newClaims permission.Claims
+		err = crypto.ParseJWT(newRefreshToken, func(token *jwt.Token) (interface{}, error) {
+			return testInstance.OAuthSecret, nil
+		}, &newClaims)
+		require.NoError(t, err)
+		assert.Equal(t, domain, newClaims.Issuer, "New refresh token should have current domain as issuer")
+	})
+
 	t.Run("OAuthWithPKCE", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 

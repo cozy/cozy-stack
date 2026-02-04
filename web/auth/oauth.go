@@ -988,6 +988,13 @@ func accessToken(c echo.Context) error {
 			out.Scope = claims.Scope
 		}
 
+		// If the refresh token was issued by the old domain (validated via
+		// OldDomain), generate a new refresh token with the current domain
+		// so that future refreshes work without depending on OldDomain.
+		if claims.Issuer != instance.Domain && out.Refresh == "" {
+			out.Refresh, _ = client.CreateJWT(instance, consts.RefreshTokenAudience, out.Scope)
+		}
+
 	default:
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid grant type",
