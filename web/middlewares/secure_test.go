@@ -203,111 +203,83 @@ func TestSecure(t *testing.T) {
 		}
 	})
 
-	t.Run("SecureMiddlewareCSPWithOrgDomainAPILogin", func(t *testing.T) {
-		// Test case 1: Domain with 3+ parts (alice.twake.app)
-		// Should strip the first part and use "twake.app"
-		e1 := echo.New()
-		req1, _ := http.NewRequest(echo.GET, "http://alice.twake.app/", nil)
-		rec1 := httptest.NewRecorder()
-		c1 := e1.NewContext(req1, rec1)
-		inst1 := &instance.Instance{
-			Domain:    "alice.twake.app",
-			OrgDomain: "example.com",
-			OrgID:     "org123",
+	t.Run("SecureMiddlewareCSPWithOrgID", func(t *testing.T) {
+		e := echo.New()
+		req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		inst := &instance.Instance{
+			Domain: "alice.cozy.example.com",
+			OrgID:  "myorg123",
 		}
-		c1.Set("instance", inst1)
-		h1 := Secure(&SecureConfig{
-			CSPConnectSrc: []CSPSource{CSPSrcSelf},
+		c.Set("instance", inst)
+		h := Secure(&SecureConfig{
+			CSPDefaultSrc:     []CSPSource{CSPSrcSelf},
+			CSPScriptSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:       []CSPSource{CSPSrcSelf},
+			CSPConnectSrc:     []CSPSource{CSPSrcSelf},
+			CSPFontSrc:        []CSPSource{CSPSrcSelf},
+			CSPImgSrc:         []CSPSource{CSPSrcSelf},
+			CSPManifestSrc:    []CSPSource{CSPSrcSelf},
+			CSPMediaSrc:       []CSPSource{CSPSrcSelf},
+			CSPObjectSrc:      []CSPSource{CSPSrcSelf},
+			CSPStyleSrc:       []CSPSource{CSPSrcSelf},
+			CSPWorkerSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameAncestors: []CSPSource{CSPSrcSelf},
+			CSPBaseURI:        []CSPSource{CSPSrcSelf},
+			CSPFormAction:     []CSPSource{CSPSrcSelf},
 		})(echo.NotFoundHandler)
-		_ = h1(c1)
+		_ = h(c)
 
-		csp1 := rec1.Header().Get(echo.HeaderContentSecurityPolicy)
+		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
 
-		// Should contain api-login-org123.twake.app (domain without alice prefix)
-		assert.Contains(t, csp1, "api-login-org123.twake.app",
-			"connect-src should contain api-login-org123.twake.app for domain with 3+ parts. CSP: %s", csp1)
+		// Verify that api-login-myorg123.cozy.example.com appears only once (in connect-src)
+		expectedDomain := "api-login-myorg123.cozy.example.com"
+		count := strings.Count(csp, expectedDomain)
+		assert.Equal(t, 1, count,
+			"%s should appear exactly once (in connect-src), but found %d times. CSP: %s",
+			expectedDomain, count, csp)
 
-		connectSrcIndex := strings.Index(csp1, "connect-src ")
+		// Verify that connect-src contains the api-login domain
+		connectSrcIndex := strings.Index(csp, "connect-src ")
 		assert.NotEqual(t, -1, connectSrcIndex,
-			"connect-src should be present in CSP. Full CSP: %s", csp1)
+			"connect-src should be present in CSP. Full CSP: %s", csp)
 
-		connectSrcEnd := strings.Index(csp1[connectSrcIndex:], ";")
+		connectSrcEnd := strings.Index(csp[connectSrcIndex:], ";")
 		assert.NotEqual(t, -1, connectSrcEnd,
 			"connect-src should end with semicolon")
 
-		connectSrcContent := csp1[connectSrcIndex : connectSrcIndex+connectSrcEnd]
-		assert.Contains(t, connectSrcContent, "api-login-org123.twake.app",
-			"connect-src should contain api-login-org123.twake.app. Found: %s", connectSrcContent)
+		connectSrcContent := csp[connectSrcIndex : connectSrcIndex+connectSrcEnd]
+		assert.Contains(t, connectSrcContent, expectedDomain,
+			"connect-src should contain %s. Found: %s", expectedDomain, connectSrcContent)
 
-		// Test case 2: Domain with fewer than 3 parts (cozy.local)
-		// Should use the domain as-is
-		e2 := echo.New()
-		req2, _ := http.NewRequest(echo.GET, "http://cozy.local/", nil)
-		rec2 := httptest.NewRecorder()
-		c2 := e2.NewContext(req2, rec2)
-		inst2 := &instance.Instance{
-			Domain:    "cozy.local",
-			OrgDomain: "example.com",
-			OrgID:     "org456",
+		// Verify that other directives do NOT contain the api-login domain
+		otherDirectives := []string{
+			"default-src",
+			"script-src",
+			"frame-src",
+			"font-src",
+			"img-src",
+			"manifest-src",
+			"media-src",
+			"object-src",
+			"style-src",
+			"worker-src",
+			"frame-ancestors",
+			"base-uri",
+			"form-action",
 		}
-		c2.Set("instance", inst2)
-		h2 := Secure(&SecureConfig{
-			CSPConnectSrc: []CSPSource{CSPSrcSelf},
-		})(echo.NotFoundHandler)
-		_ = h2(c2)
 
-		csp2 := rec2.Header().Get(echo.HeaderContentSecurityPolicy)
-
-		// Should contain api-login-org456.cozy.local (full domain used)
-		assert.Contains(t, csp2, "api-login-org456.cozy.local",
-			"connect-src should contain api-login-org456.cozy.local for domain with <3 parts. CSP: %s", csp2)
-
-		connectSrcIndex2 := strings.Index(csp2, "connect-src ")
-		assert.NotEqual(t, -1, connectSrcIndex2,
-			"connect-src should be present in CSP. Full CSP: %s", csp2)
-
-		connectSrcEnd2 := strings.Index(csp2[connectSrcIndex2:], ";")
-		assert.NotEqual(t, -1, connectSrcEnd2,
-			"connect-src should end with semicolon")
-
-		connectSrcContent2 := csp2[connectSrcIndex2 : connectSrcIndex2+connectSrcEnd2]
-		assert.Contains(t, connectSrcContent2, "api-login-org456.cozy.local",
-			"connect-src should contain api-login-org456.cozy.local. Found: %s", connectSrcContent2)
-
-		// Test case 3: Domain with 4 parts (bob.acme.twake.app)
-		// Should strip only the first part and use "acme.twake.app"
-		e3 := echo.New()
-		req3, _ := http.NewRequest(echo.GET, "http://bob.acme.twake.app/", nil)
-		rec3 := httptest.NewRecorder()
-		c3 := e3.NewContext(req3, rec3)
-		inst3 := &instance.Instance{
-			Domain:    "bob.acme.twake.app",
-			OrgDomain: "example.org",
-			OrgID:     "org789",
+		for _, directivePattern := range otherDirectives {
+			directiveIndex := strings.Index(csp, directivePattern+" ")
+			if directiveIndex != -1 {
+				directiveEnd := strings.Index(csp[directiveIndex:], ";")
+				if directiveEnd != -1 {
+					directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
+					assert.NotContains(t, directiveContent, expectedDomain,
+						"Directive %s should NOT contain %s. Found: %s", directivePattern, expectedDomain, directiveContent)
+				}
+			}
 		}
-		c3.Set("instance", inst3)
-		h3 := Secure(&SecureConfig{
-			CSPConnectSrc: []CSPSource{CSPSrcSelf},
-		})(echo.NotFoundHandler)
-		_ = h3(c3)
-
-		csp3 := rec3.Header().Get(echo.HeaderContentSecurityPolicy)
-
-		// Should contain api-login-org789.acme.twake.app (domain without bob prefix)
-		assert.Contains(t, csp3, "api-login-org789.acme.twake.app",
-			"connect-src should contain api-login-org789.acme.twake.app for domain with 4 parts. CSP: %s", csp3)
-
-		// Verify it's in connect-src directive
-		connectSrcIndex3 := strings.Index(csp3, "connect-src ")
-		assert.NotEqual(t, -1, connectSrcIndex3,
-			"connect-src should be present in CSP. Full CSP: %s", csp3)
-
-		connectSrcEnd3 := strings.Index(csp3[connectSrcIndex3:], ";")
-		assert.NotEqual(t, -1, connectSrcEnd3,
-			"connect-src should end with semicolon")
-
-		connectSrcContent3 := csp3[connectSrcIndex3 : connectSrcIndex3+connectSrcEnd3]
-		assert.Contains(t, connectSrcContent3, "api-login-org789.acme.twake.app",
-			"connect-src should contain api-login-org789.acme.twake.app. Found: %s", connectSrcContent3)
 	})
 }

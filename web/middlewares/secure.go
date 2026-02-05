@@ -305,13 +305,11 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 	if header == "frame-src" && b.instance != nil && b.instance.OrgDomain != "" {
 		headers = append(headers, "matrix."+b.instance.OrgDomain)
 	}
-	// Add api-login.{org_id}.{domain without prefix} to connect-src directive if present
+	// Add api-login-{org_id}.{domain without prefix} to connect-src directive if present
 	if header == "connect-src" && b.instance != nil && b.instance.OrgID != "" {
-		if parts := strings.Split(b.instance.Domain, "."); len(parts) >= 3 {
-			domainWithoutPrefix := strings.Join(parts[1:], ".")
-			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domainWithoutPrefix)
-		} else {
-			headers = append(headers, "api-login-"+b.instance.OrgID+"."+b.instance.Domain)
+		_, domain, found := strings.Cut(b.instance.Domain, ".")
+		if found {
+			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domain)
 		}
 	}
 	if len(headers) == 0 {
