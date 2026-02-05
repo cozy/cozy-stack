@@ -328,7 +328,7 @@ func (s *Sharing) SendRemoveMemberFromGroup(inst *instance.Instance, groupIndex,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, nil)
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
 		return err
@@ -448,7 +448,7 @@ func (s *Sharing) DelegateAddInvitation(inst *instance.Instance, memberIndex int
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, body)
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
 		return err

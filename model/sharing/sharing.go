@@ -1213,7 +1213,7 @@ func (s *Sharing) ReplicateDescriptionChange(inst *instance.Instance) {
 
 		res, err := request.Req(opts)
 		if res != nil && res.StatusCode/100 == 4 {
-			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
+			res, err = RefreshToken(inst, res, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {
 			inst.Logger().WithNamespace("sharing").
@@ -1382,7 +1382,7 @@ func (s *Sharing) sendPublicKeyToOwner(inst *instance.Instance, publicKey string
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, err, s, &s.Members[0], &s.Credentials[0], opts, body)
+		res, err = RefreshToken(inst, res, err, s, &s.Members[0], &s.Credentials[0], opts, body)
 	}
 	if err != nil {
 		return err

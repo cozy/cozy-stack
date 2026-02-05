@@ -491,7 +491,7 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	var res *http.Response
 	res, err = request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, err, s, m, creds, opts, body)
+		res, err = RefreshToken(inst, res, err, s, m, creds, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
@@ -653,7 +653,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, err, s, m, creds, opts, body)
+		res, err = RefreshToken(inst, res, err, s, m, creds, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
