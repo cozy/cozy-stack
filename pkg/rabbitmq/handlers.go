@@ -437,7 +437,7 @@ func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstal
 		source = "registry://" + msg.Slug + "/stable"
 	}
 
-	// Try to install as webapp first, then as konnector if it fails
+	// Try to install as webapp first, then as konnector if it fails due to type mismatch
 	appTypes := []consts.AppType{consts.WebappType, consts.KonnectorType}
 	var lastErr error
 
@@ -450,6 +450,11 @@ func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstal
 			Registries: inst.Registries(),
 		})
 		if err != nil {
+			// If the app already exists, that's OK
+			if errors.Is(err, app.ErrAlreadyExists) {
+				log.Infof("app.install: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
+				return nil
+			}
 			log.Debugf("app.install: failed to create installer for %s as %s: %v", msg.Slug, appType.String(), err)
 			lastErr = err
 			continue
@@ -462,9 +467,15 @@ func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstal
 				log.Infof("app.install: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
 				return nil
 			}
-			log.Debugf("app.install: failed to install %s as %s: %v", msg.Slug, appType.String(), err)
-			lastErr = err
-			continue
+			// Only try the other app type if this one failed due to manifest type mismatch.
+			// For any other error (filesystem, database, network, etc.), return immediately
+			// to avoid hiding the real error with a misleading type mismatch error.
+			if errors.Is(err, app.ErrInvalidManifestForWebapp) || errors.Is(err, app.ErrInvalidManifestForKonnector) {
+				log.Debugf("app.install: manifest type mismatch for %s as %s, trying other type", msg.Slug, appType.String())
+				lastErr = err
+				continue
+			}
+			return fmt.Errorf("app.install: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, err)
 		}
 
 		log.Infof("app.install: successfully installed app %s as %s on instance %s", msg.Slug, appType.String(), msg.WorkplaceFqdn)
