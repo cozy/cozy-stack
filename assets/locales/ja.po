@@ -300,6 +300,9 @@ msgstr "ホームに移動"
 msgid "Error Application not found Button"
 msgstr "このアプリケーションをインストール"
 
+msgid "Error Learn more"
+msgstr "詳細を見る:"
+
 msgid "Error Contact us"
 msgstr "問題、質問? お問い合わせは"
 

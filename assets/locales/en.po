@@ -467,6 +467,9 @@ msgstr "Install this application"
 msgid "Error Address forgotten"
 msgstr "I have forgotten my address"
 
+msgid "Error Learn more"
+msgstr "Learn more:"
+
 msgid "Error Contact us"
 msgstr "A problem, a question? Contact us at"
 

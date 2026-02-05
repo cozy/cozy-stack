@@ -29,9 +29,15 @@
           </div>
         </div>
         <footer class="w-100">
+          {{if .SupportPageURL}}
+          <p class="text-center mb-3">
+            {{t "Error Learn more" }} <a href="{{.SupportPageURL}}">{{.SupportPageURL}}</a>.
+          </p>
+          {{else if .SupportEmail}}
           <p class="text-center mb-3">
             {{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.
           </p>
+          {{end}}
           <button id="confirm-flagship-submit" class="btn btn-primary btn-md-lg w-100 my-3 mt-md-5" type="submit">
             {{t "Authorize Confirm Flagship Confirm"}}
           </button>

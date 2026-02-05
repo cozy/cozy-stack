@@ -196,17 +196,18 @@ func (h *HTTPHandler) getEmailConfirmation(c echo.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, settingsURL)
 	case errors.Is(err, csettings.ErrNoPendingEmail), errors.Is(err, token.ErrInvalidToken):
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(inst),
-			"Illustration": "/images/generic-error.svg",
-			"ErrorTitle":   "Error InvalidToken Title",
-			"Error":        "Error InvalidToken Message",
-			"Link":         "Error InvalidToken Link",
-			"LinkURL":      settingsURL,
-			"SupportEmail": inst.SupportEmailAddress(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Title":          inst.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(inst),
+			"Illustration":   "/images/generic-error.svg",
+			"ErrorTitle":     "Error InvalidToken Title",
+			"Error":          "Error InvalidToken Message",
+			"Link":           "Error InvalidToken Link",
+			"LinkURL":        settingsURL,
+			"SupportEmail":   inst.SupportEmailAddress(),
+			"SupportPageURL": inst.SupportPageURL(),
 		})
 	default:
 		return echo.NewHTTPError(http.StatusInternalServerError, err)

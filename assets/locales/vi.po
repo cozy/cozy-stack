@@ -457,7 +457,7 @@ msgstr "Ứng dụng không tồn tại"
 
 msgid "Error Application not found Message"
 msgstr ""
-""Chúng tôi không tìm thấy ứng dụng nào tương ứng với địa chỉ này trong Twake của bạn."
+"Chúng tôi không tìm thấy ứng dụng nào tương ứng với địa chỉ này trong Twake của bạn."
 "Có thể bạn đã nhập sai địa chỉ."
 
 msgid "Error Application not found Action"
@@ -468,6 +468,9 @@ msgstr "Cài đặt ứng dụng này"
 
 msgid "Error Address forgotten"
 msgstr "Tôi đã quên địa chỉ Twake của mình"
+
+msgid "Error Learn more"
+msgstr "Tìm hiểu thêm:"
 
 msgid "Error Contact us"
 msgstr "Có thắc mắc hoặc sự cố? Liên hệ với chúng tôi tại"

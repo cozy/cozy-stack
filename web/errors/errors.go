@@ -160,20 +160,21 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 
 		err = c.Render(status, "error.html", echo.Map{
-			"Domain":       i.ContextualDomain(),
-			"ContextName":  i.ContextName,
-			"Locale":       i.Locale,
-			"Title":        i.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(i),
-			"Inverted":     inverted,
-			"Illustration": illustration,
-			"ErrorTitle":   title,
-			"Error":        value,
-			"Link":         link,
-			"LinkURL":      linkURL,
-			"SupportEmail": i.SupportEmailAddress(),
-			"Button":       button,
-			"ButtonURL":    buttonURL,
+			"Domain":         i.ContextualDomain(),
+			"ContextName":    i.ContextName,
+			"Locale":         i.Locale,
+			"Title":          i.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(i),
+			"Inverted":       inverted,
+			"Illustration":   illustration,
+			"ErrorTitle":     title,
+			"Error":          value,
+			"Link":           link,
+			"LinkURL":        linkURL,
+			"SupportEmail":   i.SupportEmailAddress(),
+			"SupportPageURL": i.SupportPageURL(),
+			"Button":         button,
+			"ButtonURL":      buttonURL,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))

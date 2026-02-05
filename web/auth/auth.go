@@ -42,14 +42,15 @@ func wantsJSON(c echo.Context) bool {
 func renderError(c echo.Context, code int, msg string) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(code, "error.html", echo.Map{
-		"Domain":       instance.ContextualDomain(),
-		"ContextName":  instance.ContextName,
-		"Locale":       instance.Locale,
-		"Title":        instance.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(instance),
-		"Illustration": "/images/generic-error.svg",
-		"Error":        msg,
-		"SupportEmail": instance.SupportEmailAddress(),
+		"Domain":         instance.ContextualDomain(),
+		"ContextName":    instance.ContextName,
+		"Locale":         instance.Locale,
+		"Title":          instance.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(instance),
+		"Illustration":   "/images/generic-error.svg",
+		"Error":          msg,
+		"SupportEmail":   instance.SupportEmailAddress(),
+		"SupportPageURL": instance.SupportPageURL(),
 	})
 }
 
@@ -611,17 +612,18 @@ func resendActivationMail(c echo.Context) error {
 		}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Domain":       inst.ContextualDomain(),
-		"ContextName":  inst.ContextName,
-		"Locale":       inst.Locale,
-		"Title":        inst.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(inst),
-		"Inverted":     false,
-		"Illustration": "/images/mail-sent.svg",
-		"ErrorTitle":   "Onboarding Resend activation Title",
-		"Error":        "Onboarding Resend activation Body",
-		"ErrorDetail":  "Onboarding Resend activation Detail",
-		"SupportEmail": inst.SupportEmailAddress(),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Inverted":       false,
+		"Illustration":   "/images/mail-sent.svg",
+		"ErrorTitle":     "Onboarding Resend activation Title",
+		"Error":          "Onboarding Resend activation Body",
+		"ErrorDetail":    "Onboarding Resend activation Detail",
+		"SupportEmail":   inst.SupportEmailAddress(),
+		"SupportPageURL": inst.SupportPageURL(),
 	})
 }
 

@@ -328,14 +328,15 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	if err := tmpl.Execute(generated, params); err != nil {
 		i.Logger().WithNamespace("apps").Warnf("%s cannot be interpreted as a template: %s", file, err)
 		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Domain":       i.ContextualDomain(),
-			"ContextName":  i.ContextName,
-			"Locale":       i.Locale,
-			"Title":        i.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(i),
-			"Illustration": "/images/generic-error.svg",
-			"Error":        "Error Application not supported Message",
-			"SupportEmail": i.SupportEmailAddress(),
+			"Domain":         i.ContextualDomain(),
+			"ContextName":    i.ContextName,
+			"Locale":         i.Locale,
+			"Title":          i.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(i),
+			"Illustration":   "/images/generic-error.svg",
+			"Error":          "Error Application not supported Message",
+			"SupportEmail":   i.SupportEmailAddress(),
+			"SupportPageURL": i.SupportPageURL(),
 		})
 	}
 

@@ -103,19 +103,20 @@ func sendHint(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Domain":       i.ContextualDomain(),
-		"ContextName":  i.ContextName,
-		"Locale":       i.Locale,
-		"Title":        i.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(i),
-		"Inverted":     false,
-		"Illustration": "/images/mail-sent.svg",
-		"ErrorTitle":   "Hint sent Title",
-		"Error":        "Hint sent Body",
-		"ErrorDetail":  "Hint sent Detail",
-		"SupportEmail": i.SupportEmailAddress(),
-		"Button":       "Hint sent Login Button",
-		"ButtonURL":    i.PageURL("/auth/login", u),
+		"Domain":         i.ContextualDomain(),
+		"ContextName":    i.ContextName,
+		"Locale":         i.Locale,
+		"Title":          i.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(i),
+		"Inverted":       false,
+		"Illustration":   "/images/mail-sent.svg",
+		"ErrorTitle":     "Hint sent Title",
+		"Error":          "Hint sent Body",
+		"ErrorDetail":    "Hint sent Detail",
+		"SupportEmail":   i.SupportEmailAddress(),
+		"SupportPageURL": i.SupportPageURL(),
+		"Button":         "Hint sent Login Button",
+		"ButtonURL":      i.PageURL("/auth/login", u),
 	})
 }
 
@@ -138,19 +139,20 @@ func passphraseReset(c echo.Context) error {
 		u = url.Values{"redirect": {redirect}}
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Domain":       i.ContextualDomain(),
-		"ContextName":  i.ContextName,
-		"Locale":       i.Locale,
-		"Title":        i.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(i),
-		"Inverted":     false,
-		"Illustration": "/images/mail-sent.svg",
-		"ErrorTitle":   "Passphrase is reset Title",
-		"Error":        "Passphrase is reset Body",
-		"ErrorDetail":  "Passphrase is reset Detail",
-		"SupportEmail": i.SupportEmailAddress(),
-		"Button":       "Passphrase is reset Login Button",
-		"ButtonURL":    i.PageURL("/auth/login", u),
+		"Domain":         i.ContextualDomain(),
+		"ContextName":    i.ContextName,
+		"Locale":         i.Locale,
+		"Title":          i.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(i),
+		"Inverted":       false,
+		"Illustration":   "/images/mail-sent.svg",
+		"ErrorTitle":     "Passphrase is reset Title",
+		"Error":          "Passphrase is reset Body",
+		"ErrorDetail":    "Passphrase is reset Detail",
+		"SupportEmail":   i.SupportEmailAddress(),
+		"SupportPageURL": i.SupportPageURL(),
+		"Button":         "Passphrase is reset Login Button",
+		"ButtonURL":      i.PageURL("/auth/login", u),
 	})
 }
 

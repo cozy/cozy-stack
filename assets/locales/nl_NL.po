@@ -451,6 +451,9 @@ msgstr "Deze app installeren"
 msgid "Error Address forgotten"
 msgstr "Ik ben mijn adres vergeten"
 
+msgid "Error Learn more"
+msgstr "Meer informatie:"
+
 msgid "Error Contact us"
 msgstr "Problemen? Vragen? Neem contact met ons op:"
 

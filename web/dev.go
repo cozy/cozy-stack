@@ -90,6 +90,7 @@ func devData(c echo.Context) echo.Map {
 		data["Favicon"] = middlewares.Favicon(i)
 		data["InstanceURL"] = i.PageURL("/", nil)
 		data["SupportEmail"] = i.SupportEmailAddress()
+		data["SupportPageURL"] = i.SupportPageURL()
 	}
 	for k, v := range c.QueryParams() {
 		if len(v) > 0 {

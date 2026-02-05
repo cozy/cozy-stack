@@ -143,14 +143,15 @@ func createImport(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := move.ScheduleImport(inst, options); err != nil {
 		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(inst),
-			"Illustration": "/images/generic-error.svg",
-			"Error":        err.Error(),
-			"SupportEmail": inst.SupportEmailAddress(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Title":          inst.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(inst),
+			"Illustration":   "/images/generic-error.svg",
+			"Error":          err.Error(),
+			"SupportEmail":   inst.SupportEmailAddress(),
+			"SupportPageURL": inst.SupportPageURL(),
 		})
 	}
 
@@ -397,14 +398,15 @@ func requestMove(c echo.Context) error {
 	}
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(inst),
-			"Illustration": "/images/generic-error.svg",
-			"Error":        err.Error(),
-			"SupportEmail": inst.SupportEmailAddress(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Title":          inst.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(inst),
+			"Illustration":   "/images/generic-error.svg",
+			"Error":          err.Error(),
+			"SupportEmail":   inst.SupportEmailAddress(),
+			"SupportPageURL": inst.SupportPageURL(),
 		})
 	}
 
@@ -451,15 +453,16 @@ func startMove(c echo.Context) error {
 	request, err := move.StartMove(inst, c.QueryParam("secret"))
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"ThemeCSS":     middlewares.ThemeCSS(inst),
-			"Favicon":      middlewares.Favicon(inst),
-			"Illustration": "/images/generic-error.svg",
-			"Error":        err.Error(),
-			"SupportEmail": inst.SupportEmailAddress(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Title":          inst.TemplateTitle(),
+			"ThemeCSS":       middlewares.ThemeCSS(inst),
+			"Favicon":        middlewares.Favicon(inst),
+			"Illustration":   "/images/generic-error.svg",
+			"Error":          err.Error(),
+			"SupportEmail":   inst.SupportEmailAddress(),
+			"SupportPageURL": inst.SupportPageURL(),
 		})
 	}
 

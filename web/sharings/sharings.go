@@ -642,16 +642,17 @@ func PutRecipients(c echo.Context) error {
 
 func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL string) error {
 	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-		"Domain":       inst.ContextualDomain(),
-		"ContextName":  inst.ContextName,
-		"Locale":       inst.Locale,
-		"Title":        inst.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(inst),
-		"ErrorTitle":   "Error Sharing already accepted Title",
-		"Error":        "Error Sharing already accepted",
-		"Button":       "Error Sharing already accepted Button",
-		"ButtonURL":    cozyURL,
-		"SupportEmail": inst.SupportEmailAddress(),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"ErrorTitle":     "Error Sharing already accepted Title",
+		"Error":          "Error Sharing already accepted",
+		"Button":         "Error Sharing already accepted Button",
+		"ButtonURL":      cozyURL,
+		"SupportEmail":   inst.SupportEmailAddress(),
+		"SupportPageURL": inst.SupportPageURL(),
 	})
 }
 
@@ -755,14 +756,15 @@ func GetDiscovery(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":       inst.ContextualDomain(),
-			"ContextName":  inst.ContextName,
-			"Locale":       inst.Locale,
-			"Title":        inst.TemplateTitle(),
-			"Favicon":      middlewares.Favicon(inst),
-			"Illustration": "/images/generic-error.svg",
-			"Error":        "Error Invalid sharing",
-			"SupportEmail": inst.SupportEmailAddress(),
+			"Domain":         inst.ContextualDomain(),
+			"ContextName":    inst.ContextName,
+			"Locale":         inst.Locale,
+			"Title":          inst.TemplateTitle(),
+			"Favicon":        middlewares.Favicon(inst),
+			"Illustration":   "/images/generic-error.svg",
+			"Error":          "Error Invalid sharing",
+			"SupportEmail":   inst.SupportEmailAddress(),
+			"SupportPageURL": inst.SupportPageURL(),
 		})
 	}
 
@@ -775,14 +777,15 @@ func GetDiscovery(c echo.Context) error {
 		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain":       inst.ContextualDomain(),
-				"ContextName":  inst.ContextName,
-				"Locale":       inst.Locale,
-				"Title":        inst.TemplateTitle(),
-				"Favicon":      middlewares.Favicon(inst),
-				"Illustration": "/images/generic-error.svg",
-				"Error":        "Error Invalid sharing",
-				"SupportEmail": inst.SupportEmailAddress(),
+				"Domain":         inst.ContextualDomain(),
+				"ContextName":    inst.ContextName,
+				"Locale":         inst.Locale,
+				"Title":          inst.TemplateTitle(),
+				"Favicon":        middlewares.Favicon(inst),
+				"Illustration":   "/images/generic-error.svg",
+				"Error":          "Error Invalid sharing",
+				"SupportEmail":   inst.SupportEmailAddress(),
+				"SupportPageURL": inst.SupportPageURL(),
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&

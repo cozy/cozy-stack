@@ -350,6 +350,9 @@ msgstr "Gehe zu dir nach Hause"
 msgid "Error Application not found Button"
 msgstr "Diese Anwendung installieren"
 
+msgid "Error Learn more"
+msgstr "Mehr erfahren:"
+
 msgid "Error Contact us"
 msgstr "Ein Problem, eine Frage? Kontaktiere uns über"
 
