@@ -136,6 +136,11 @@ func (h *HTTPHandler) updateInstance(c echo.Context) error {
 	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["org_domain"] = inst.OrgDomain
 	doc.M["org_id"] = inst.OrgID
+	if oidcConfig, ok := config.GetOIDC(inst.ContextName); ok {
+		if logoutURL, ok := oidcConfig["logout_url"].(string); ok && logoutURL != "" {
+			doc.M["oidc_logout_url"] = logoutURL
+		}
+	}
 	doc.M["context"] = inst.ContextName
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
