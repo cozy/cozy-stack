@@ -14,11 +14,6 @@ import (
 	"golang.org/x/net/idna"
 )
 
-func init() {
-	// So that we do not generate the same IDs upon restart
-	rand.Seed(time.Now().UTC().UnixNano())
-}
-
 // RandomString returns a string of random alpha characters of the specified
 // length.
 func RandomString(n int) string {

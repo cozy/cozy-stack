@@ -1,6 +1,6 @@
 module github.com/cozy/cozy-stack
 
-go 1.21
+go 1.24.0
 
 require (
 	firebase.google.com/go/v4 v4.14.1
@@ -13,6 +13,8 @@ require (
 	github.com/cozy/httpcache v0.0.0-20210224123405-3f334f841945
 	github.com/cozy/prosemirror-go v0.5.3
 	github.com/dhowden/tag v0.0.0-20240413230847-dc579f508b6b
+	github.com/docker/docker v25.0.5+incompatible
+	github.com/docker/go-connections v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gavv/httpexpect/v2 v2.16.0
 	github.com/go-viper/mapstructure/v2 v2.1.0
@@ -28,7 +30,8 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/leonelquinteros/gotext v1.6.1
+	github.com/leonelquinteros/gotext v1.7.2
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mssola/user_agent v0.6.0
 	github.com/ncw/swift/v2 v2.0.3
 	github.com/nightlyone/lockfile v1.0.0
@@ -48,13 +51,13 @@ require (
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/ugorji/go/codec v1.2.12
 	github.com/yuin/goldmark v1.7.4
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.47.0
 	golang.org/x/image v0.18.0
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.49.0
 	golang.org/x/oauth2 v0.21.0
-	golang.org/x/sync v0.10.0
-	golang.org/x/term v0.27.0
-	golang.org/x/text v0.21.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/term v0.39.0
+	golang.org/x/text v0.33.0
 	google.golang.org/api v0.182.0
 )
 
@@ -85,8 +88,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/docker v25.0.5+incompatible // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
@@ -119,7 +120,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
@@ -169,10 +169,10 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/appengine/v2 v2.0.2 // indirect
 	google.golang.org/genproto v0.0.0-20240401170217-c3f982113cda // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect

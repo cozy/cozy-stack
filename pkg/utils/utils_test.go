@@ -10,20 +10,26 @@ import (
 )
 
 func TestRandomString(t *testing.T) {
-	rand.Seed(42)
 	s1 := RandomString(10)
 	s2 := RandomString(20)
 
-	rand.Seed(42)
-	s3 := RandomString(10)
-	s4 := RandomString(20)
+	assert.Len(t, s1, 10)
+	assert.Len(t, s2, 20)
+	assert.NotEqual(t, s1, s2)
+}
+
+func TestRandomStringFast(t *testing.T) {
+	// Same seed produces reproducible results
+	rng1 := rand.New(rand.NewSource(42))
+	rng2 := rand.New(rand.NewSource(42))
+
+	s1 := RandomStringFast(rng1, 10)
+	s2 := RandomStringFast(rng1, 20)
+	s3 := RandomStringFast(rng2, 10)
+	s4 := RandomStringFast(rng2, 20)
 
 	assert.Len(t, s1, 10)
 	assert.Len(t, s2, 20)
-	assert.Len(t, s3, 10)
-	assert.Len(t, s4, 20)
-
-	assert.NotEqual(t, s1, s2)
 	assert.Equal(t, s1, s3)
 	assert.Equal(t, s2, s4)
 }
