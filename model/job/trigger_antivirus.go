@@ -30,15 +30,18 @@ func NewAntivirusTrigger(broker Broker) *AntivirusTrigger {
 
 // Schedule starts listening for file creation and update events.
 func (t *AntivirusTrigger) Schedule() {
+	t.log.Infof("trigger antivirus: Starting antivirus trigger, subscribing to firehose")
 	sub := realtime.GetHub().SubscribeFirehose()
 	defer sub.Close()
 	for {
 		select {
 		case e := <-sub.Channel:
 			if t.match(e) {
+				t.log.Debugf("trigger antivirus: matched event for domain %s, doctype %s", e.Domain, e.Doc.DocType())
 				t.pushJob(e)
 			}
 		case <-t.unscheduled:
+			t.log.Infof("trigger antivirus: Stopping antivirus trigger")
 			return
 		}
 	}
@@ -93,19 +96,28 @@ func (t *AntivirusTrigger) hasContentChanged(e *realtime.Event) bool {
 }
 
 func (t *AntivirusTrigger) pushJob(e *realtime.Event) {
+	t.log.Debugf("trigger antivirus: received event for domain %s, doctype %s, verb %s", e.Domain, e.Doc.DocType(), e.Verb)
+
 	// Get instance to check if antivirus is enabled
 	inst, err := instance.Get(e.Domain)
 	if err != nil {
+		t.log.Errorf("trigger antivirus: could not get instance %s: %v", e.Domain, err)
 		return
 	}
 
 	cfg := config.GetAntivirusConfig(inst.ContextName)
-	if cfg == nil || !cfg.Enabled {
+	if cfg == nil {
+		t.log.Debugf("trigger antivirus: no config for context %s", inst.ContextName)
+		return
+	}
+	if !cfg.Enabled {
+		t.log.Debugf("trigger antivirus: disabled for context %s", inst.ContextName)
 		return
 	}
 
 	doc, ok := e.Doc.(*vfs.FileDoc)
 	if !ok {
+		t.log.Debugf("trigger antivirus: event doc is not a FileDoc, type: %T", e.Doc)
 		return
 	}
 
