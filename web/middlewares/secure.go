@@ -301,9 +301,16 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 			}
 		}
 	}
-	// Add matrix.org_domain to frame-src directive if present (for iframes)
+	// Add matrix.{org_domain} to frame-src directive if present (for iframes)
 	if header == "frame-src" && b.instance != nil && b.instance.OrgDomain != "" {
 		headers = append(headers, "matrix."+b.instance.OrgDomain)
+	}
+	// Add api-login-{org_id}.{domain without prefix} to connect-src directive if present
+	if header == "connect-src" && b.instance != nil && b.instance.OrgID != "" {
+		_, domain, found := strings.Cut(b.instance.Domain, ".")
+		if found {
+			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domain)
+		}
 	}
 	if len(headers) == 0 {
 		return ""

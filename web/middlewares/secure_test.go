@@ -202,4 +202,84 @@ func TestSecure(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("SecureMiddlewareCSPWithOrgID", func(t *testing.T) {
+		e := echo.New()
+		req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		inst := &instance.Instance{
+			Domain: "alice.cozy.example.com",
+			OrgID:  "myorg123",
+		}
+		c.Set("instance", inst)
+		h := Secure(&SecureConfig{
+			CSPDefaultSrc:     []CSPSource{CSPSrcSelf},
+			CSPScriptSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameSrc:       []CSPSource{CSPSrcSelf},
+			CSPConnectSrc:     []CSPSource{CSPSrcSelf},
+			CSPFontSrc:        []CSPSource{CSPSrcSelf},
+			CSPImgSrc:         []CSPSource{CSPSrcSelf},
+			CSPManifestSrc:    []CSPSource{CSPSrcSelf},
+			CSPMediaSrc:       []CSPSource{CSPSrcSelf},
+			CSPObjectSrc:      []CSPSource{CSPSrcSelf},
+			CSPStyleSrc:       []CSPSource{CSPSrcSelf},
+			CSPWorkerSrc:      []CSPSource{CSPSrcSelf},
+			CSPFrameAncestors: []CSPSource{CSPSrcSelf},
+			CSPBaseURI:        []CSPSource{CSPSrcSelf},
+			CSPFormAction:     []CSPSource{CSPSrcSelf},
+		})(echo.NotFoundHandler)
+		_ = h(c)
+
+		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
+
+		// Verify that api-login-myorg123.cozy.example.com appears only once (in connect-src)
+		expectedDomain := "api-login-myorg123.cozy.example.com"
+		count := strings.Count(csp, expectedDomain)
+		assert.Equal(t, 1, count,
+			"%s should appear exactly once (in connect-src), but found %d times. CSP: %s",
+			expectedDomain, count, csp)
+
+		// Verify that connect-src contains the api-login domain
+		connectSrcIndex := strings.Index(csp, "connect-src ")
+		assert.NotEqual(t, -1, connectSrcIndex,
+			"connect-src should be present in CSP. Full CSP: %s", csp)
+
+		connectSrcEnd := strings.Index(csp[connectSrcIndex:], ";")
+		assert.NotEqual(t, -1, connectSrcEnd,
+			"connect-src should end with semicolon")
+
+		connectSrcContent := csp[connectSrcIndex : connectSrcIndex+connectSrcEnd]
+		assert.Contains(t, connectSrcContent, expectedDomain,
+			"connect-src should contain %s. Found: %s", expectedDomain, connectSrcContent)
+
+		// Verify that other directives do NOT contain the api-login domain
+		otherDirectives := []string{
+			"default-src",
+			"script-src",
+			"frame-src",
+			"font-src",
+			"img-src",
+			"manifest-src",
+			"media-src",
+			"object-src",
+			"style-src",
+			"worker-src",
+			"frame-ancestors",
+			"base-uri",
+			"form-action",
+		}
+
+		for _, directivePattern := range otherDirectives {
+			directiveIndex := strings.Index(csp, directivePattern+" ")
+			if directiveIndex != -1 {
+				directiveEnd := strings.Index(csp[directiveIndex:], ";")
+				if directiveEnd != -1 {
+					directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
+					assert.NotContains(t, directiveContent, expectedDomain,
+						"Directive %s should NOT contain %s. Found: %s", directivePattern, expectedDomain, directiveContent)
+				}
+			}
+		}
+	})
 }
