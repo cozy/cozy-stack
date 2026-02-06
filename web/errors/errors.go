@@ -147,14 +147,12 @@ func HTMLErrorHandler(err error, c echo.Context) {
 
 		inverted := false
 		illustration := "/images/generic-error.svg"
-		var link, linkURL, button, buttonURL string
+		var button, buttonURL string
 
 		switch err {
 		case instance.ErrNotFound:
 			inverted = true
 			illustration = "/images/desert.svg"
-			link = "Error Address forgotten"
-			linkURL = "https://manager.cozycloud.cc/v2/cozy/remind"
 		case app.ErrNotFound:
 			illustration = "/images/desert.svg"
 		}
@@ -169,8 +167,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Illustration":   illustration,
 			"ErrorTitle":     title,
 			"Error":          value,
-			"Link":           link,
-			"LinkURL":        linkURL,
 			"SupportEmail":   i.SupportEmailAddress(),
 			"SupportPageURL": i.SupportPageURL(),
 			"Button":         button,

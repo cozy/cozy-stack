@@ -464,9 +464,6 @@ msgstr "Go to the home"
 msgid "Error Application not found Button"
 msgstr "Install this application"
 
-msgid "Error Address forgotten"
-msgstr "I have forgotten my address"
-
 msgid "Error Learn more"
 msgstr "Learn more:"
 

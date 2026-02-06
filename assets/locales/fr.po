@@ -532,9 +532,6 @@ msgstr "Retourner à l’accueil"
 msgid "Error Application not found Button"
 msgstr "Installer cette application"
 
-msgid "Error Address forgotten"
-msgstr "J'ai oublié mon adresse"
-
 msgid "Error Learn more"
 msgstr "En savoir plus :"
 
