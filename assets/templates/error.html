@@ -51,7 +51,11 @@
       </div>
 
       <footer>
-        {{if .SupportEmail}}
+        {{if .SupportPageURL}}
+        <p class="text-center mb-3">
+          {{t "Error Learn more" }} <a href="{{.SupportPageURL}}">{{.SupportPageURL}}</a>.
+        </p>
+        {{else if .SupportEmail}}
         <p class="text-center mb-3">
           {{t "Error Contact us" }} <a href="mailto:{{.SupportEmail}}">{{.SupportEmail}}</a>.
         </p>

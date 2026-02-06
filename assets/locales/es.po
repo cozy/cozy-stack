@@ -344,6 +344,9 @@ msgstr "Ir a Inicio"
 msgid "Error Application not found Button"
 msgstr "Instalar esta aplicación"
 
+msgid "Error Learn more"
+msgstr "Más información:"
+
 msgid "Error Contact us"
 msgstr "¿Tiene un problema, una duda? Contáctenos en"
 

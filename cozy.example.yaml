@@ -494,6 +494,7 @@ contexts:
     reply_to: support@example.org
     # Configure the error page
     support_address: support@example.org
+    support_page_url: http://support.example.org
     # Change the limit on the number of members for a sharing
     max_members_per_sharing: 50
     # Use a different wizard for moving a Cozy

@@ -31,17 +31,18 @@ func sendMagicLink(c echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Domain":       inst.ContextualDomain(),
-		"ContextName":  inst.ContextName,
-		"Locale":       inst.Locale,
-		"Title":        inst.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(inst),
-		"Inverted":     false,
-		"Illustration": "/images/mail-sent.svg",
-		"ErrorTitle":   "Magic link has been sent Title",
-		"Error":        "Magic link has been sent Body",
-		"ErrorDetail":  "Magic link has been sent Detail",
-		"SupportEmail": inst.SupportEmailAddress(),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Inverted":       false,
+		"Illustration":   "/images/mail-sent.svg",
+		"ErrorTitle":     "Magic link has been sent Title",
+		"Error":          "Magic link has been sent Body",
+		"ErrorDetail":    "Magic link has been sent Detail",
+		"SupportEmail":   inst.SupportEmailAddress(),
+		"SupportPageURL": inst.SupportPageURL(),
 	})
 }
 

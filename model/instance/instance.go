@@ -427,6 +427,17 @@ func (i *Instance) SupportEmailAddress() string {
 	return "support@twake.app"
 }
 
+// SupportPageURL returns the URL of a page where users can find assistance (with
+// answers to frequently asked questions for example).
+func (i *Instance) SupportPageURL() string {
+	if ctxSettings, ok := i.SettingsContext(); ok {
+		if url, ok := ctxSettings["support_page_url"].(string); ok {
+			return url
+		}
+	}
+	return ""
+}
+
 // TemplateTitle returns the specific-context instance template title (if there
 // is one). Otherwise, returns the default one
 func (i *Instance) TemplateTitle() string {

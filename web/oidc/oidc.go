@@ -1310,14 +1310,15 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string, 
 		}
 	}
 	params := echo.Map{
-		"Domain":       inst.ContextualDomain(),
-		"ContextName":  inst.ContextName,
-		"Locale":       inst.Locale,
-		"Title":        inst.TemplateTitle(),
-		"Favicon":      middlewares.Favicon(inst),
-		"Illustration": "/images/generic-error.svg",
-		"Error":        msg,
-		"SupportEmail": inst.SupportEmailAddress(),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Title":          inst.TemplateTitle(),
+		"Favicon":        middlewares.Favicon(inst),
+		"Illustration":   "/images/generic-error.svg",
+		"Error":          msg,
+		"SupportEmail":   inst.SupportEmailAddress(),
+		"SupportPageURL": inst.SupportPageURL(),
 	}
 	// Merge any extra params (Button, ButtonURL, etc.)
 	for _, extra := range extras {

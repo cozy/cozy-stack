@@ -518,6 +518,9 @@ msgstr "Установить это приложение"
 msgid "Error Address forgotten"
 msgstr "Я забыл мой адрес"
 
+msgid "Error Learn more"
+msgstr "Узнать больше:"
+
 msgid "Error Contact us"
 msgstr "Проблема, предложение? Свяжитесь с нами по адресу"
 
