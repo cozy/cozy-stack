@@ -466,9 +466,6 @@ msgstr "Về trang chủ"
 msgid "Error Application not found Button"
 msgstr "Cài đặt ứng dụng này"
 
-msgid "Error Address forgotten"
-msgstr "Tôi đã quên địa chỉ Twake của mình"
-
 msgid "Error Learn more"
 msgstr "Tìm hiểu thêm:"
 

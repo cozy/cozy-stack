@@ -448,9 +448,6 @@ msgstr "Ga naar je startpagina"
 msgid "Error Application not found Button"
 msgstr "Deze app installeren"
 
-msgid "Error Address forgotten"
-msgstr "Ik ben mijn adres vergeten"
-
 msgid "Error Learn more"
 msgstr "Meer informatie:"
 

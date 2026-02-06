@@ -515,9 +515,6 @@ msgstr "Вернуться на главную"
 msgid "Error Application not found Button"
 msgstr "Установить это приложение"
 
-msgid "Error Address forgotten"
-msgstr "Я забыл мой адрес"
-
 msgid "Error Learn more"
 msgstr "Узнать больше:"
 
