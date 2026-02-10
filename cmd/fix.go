@@ -377,6 +377,34 @@ triggers.
 	},
 }
 
+var sharingsMovedFixer = &cobra.Command{
+	Use:   "sharings-moved <domain>",
+	Short: "Fix sharings after a domain migration",
+	Long: `
+This fixer repairs sharings after a domain migration. It performs three actions:
+
+1. Updates the local sharing documents to use the new instance URL for "self"
+2. Updates all trigger documents to use the new domain (fixes share-track jobs)
+3. Notifies other sharing members about the domain change
+
+Run this fixer after migrating an instance to a new domain to restore file
+sharing synchronization.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/sharings-moved", domain)
+		_, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
+		return err
+	},
+}
+
 var indexesFixer = &cobra.Command{
 	Use:   "indexes <domain>",
 	Short: "Rebuild the CouchDB views and indexes",
@@ -412,6 +440,7 @@ func init() {
 	fixerCmdGroup.AddCommand(passwordDefinedFixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 	fixerCmdGroup.AddCommand(serviceTriggersFixer)
+	fixerCmdGroup.AddCommand(sharingsMovedFixer)
 	fixerCmdGroup.AddCommand(indexesFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)

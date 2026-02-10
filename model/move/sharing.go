@@ -6,11 +6,11 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -28,22 +28,25 @@ func NotifySharings(inst *instance.Instance) error {
 	// Let the dust settle a bit before starting the notifications
 	time.Sleep(3 * time.Second)
 
-	var sharings []*sharing.Sharing
-	req := couchdb.AllDocsRequest{Limit: 1000}
-	if err := couchdb.GetAllDocs(inst, consts.Sharings, &req, &sharings); err != nil {
-		return err
-	}
-
 	var errm error
-	for _, s := range sharings {
-		if strings.HasPrefix(s.ID(), "_design") {
-			continue
+
+	err := couchdb.ForeachDocs(inst, consts.Sharings, func(id string, doc json.RawMessage) error {
+		var s sharing.Sharing
+		if err := json.Unmarshal(doc, &s); err != nil {
+			return err
 		}
+
 		time.Sleep(100 * time.Millisecond)
-		if err := notifySharing(inst, s); err != nil {
+		if err := notifySharing(inst, &s); err != nil {
 			errm = multierror.Append(errm, err)
 		}
+		return nil
+	})
+
+	if err != nil {
+		errm = multierror.Append(errm, err)
 	}
+
 	return errm
 }
 
@@ -129,4 +132,120 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 	defer res.Body.Close()
 
 	return nil
+}
+
+// UpdateSelfMemberInstance updates the instance URL for the current instance
+// in all local sharing documents. This is needed after a domain migration
+// because the sharing documents still reference the old domain for "self".
+func UpdateSelfMemberInstance(inst *instance.Instance) error {
+	if inst.OldDomain == "" {
+		inst.Logger().WithNamespace("move").
+			Infof("No OldDomain set on instance, skipping sharing member update")
+		return nil
+	}
+
+	newInstance := inst.PageURL("", nil)
+	var errm error
+
+	err := couchdb.ForeachDocs(inst, consts.Sharings, func(id string, doc json.RawMessage) error {
+		var s sharing.Sharing
+		if err := json.Unmarshal(doc, &s); err != nil {
+			return err
+		}
+
+		updated := false
+
+		if s.Owner {
+			// We are the owner, update members[0].Instance
+			if len(s.Members) > 0 && s.Members[0].Instance != newInstance {
+				inst.Logger().WithNamespace("move").
+					Infof("Updating owner instance in sharing %s from %s to %s",
+						s.SID, s.Members[0].Instance, newInstance)
+				s.Members[0].Instance = newInstance
+				updated = true
+			}
+		} else {
+			// We are a recipient, find our member entry by matching OldDomain
+			for i := range s.Members {
+				if i == 0 {
+					continue // skip the owner
+				}
+				if s.Members[i].Instance == newInstance {
+					continue // already has the correct instance
+				}
+				if s.Members[i].Status == sharing.MemberStatusRevoked {
+					continue
+				}
+
+				// Check if this member's instance matches our old domain exactly
+				memberURL, err := url.Parse(s.Members[i].Instance)
+				if err != nil {
+					inst.Logger().WithNamespace("move").
+						Warnf("Error parsing during sharings updata %s", s.Members[i].Instance)
+					continue
+				}
+				if memberURL.Host == inst.OldDomain {
+					inst.Logger().WithNamespace("move").
+						Infof("Found self in sharing %s: updating member %d from %s to %s",
+							s.SID, i, s.Members[i].Instance, newInstance)
+					s.Members[i].Instance = newInstance
+					updated = true
+					break
+				}
+			}
+		}
+
+		if updated {
+			if err := couchdb.UpdateDoc(inst, &s); err != nil {
+				errm = multierror.Append(errm, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		errm = multierror.Append(errm, err)
+	}
+
+	return errm
+}
+
+// UpdateTriggersAfterMove updates the domain field in all trigger documents
+// to use the current instance domain. This is needed after a domain migration
+// because triggers store the domain at creation time.
+func UpdateTriggersAfterMove(inst *instance.Instance) error {
+	sched := job.System()
+	triggers, err := sched.GetAllTriggers(inst)
+	if err != nil {
+		return err
+	}
+
+	newDomain := inst.Domain
+	var errm error
+
+	for _, t := range triggers {
+		infos := t.Infos()
+		if infos.Domain == newDomain {
+			continue // Already has the correct domain
+		}
+
+		inst.Logger().WithNamespace("move").
+			Infof("Updating trigger %s domain from %s to %s", infos.TID, infos.Domain, newDomain)
+
+		// Update the domain in the trigger infos
+		infos.Domain = newDomain
+
+		// Save the updated trigger to CouchDB
+		if err := couchdb.UpdateDoc(inst, infos); err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+
+	// Rebuild Redis to pick up the changes
+	if err := sched.RebuildRedis(inst); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+
+	return errm
 }
