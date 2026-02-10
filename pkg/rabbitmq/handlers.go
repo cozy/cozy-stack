@@ -361,16 +361,18 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 	return nil
 }
 
-// AppInstallHandler handles app installation and uninstallation messages.
-type AppInstallHandler struct{}
+// UserLifecycleHandler handles user lifecycle messages such as app
+// installation and uninstallation.
+type UserLifecycleHandler struct{}
 
-// NewAppInstallHandler creates a new app install handler.
-func NewAppInstallHandler() *AppInstallHandler {
-	return &AppInstallHandler{}
+// NewUserLifecycleHandler creates a new user lifecycle handler.
+func NewUserLifecycleHandler() *UserLifecycleHandler {
+	return &UserLifecycleHandler{}
 }
 
-// AppInstallMessage represents an app installation/uninstallation message.
-type AppInstallMessage struct {
+// UserLifecycleMessage represents a user lifecycle message such as app
+// installation/uninstallation.
+type UserLifecycleMessage struct {
 	Emitter       string `json:"emitter"`       // the application requesting the operation
 	Type          string `json:"type"`          // "app.install" | "app.uninstall"
 	WorkplaceFqdn string `json:"workplaceFqdn"` // the instance FQDN
@@ -381,39 +383,39 @@ type AppInstallMessage struct {
 	Timestamp     int64  `json:"timestamp"`     // when
 }
 
-// Handle processes an app installation/uninstallation message.
-func (h *AppInstallHandler) Handle(ctx context.Context, d amqp.Delivery) error {
-	log.Infof("app.install: received message: %s", d.RoutingKey)
-	log.Debugf("app.install: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+// Handle processes a user lifecycle message.
+func (h *UserLifecycleHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("user.lifecycle: received message: %s", d.RoutingKey)
+	log.Debugf("user.lifecycle: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
 		d.MessageId, d.ContentType, len(d.Body))
 
-	var msg AppInstallMessage
+	var msg UserLifecycleMessage
 	if err := json.Unmarshal(d.Body, &msg); err != nil {
-		return fmt.Errorf("app.install: failed to unmarshal message: %w", err)
+		return fmt.Errorf("user.lifecycle: failed to unmarshal message: %w", err)
 	}
 
-	log.Infof("app.install: processing message - Emitter: %s, Type: %s, Slug: %s, WorkplaceFqdn: %s, Reason: %s, Source: %s, Timestamp: %d",
+	log.Infof("user.lifecycle: processing message - Emitter: %s, Type: %s, Slug: %s, WorkplaceFqdn: %s, Reason: %s, Source: %s, Timestamp: %d",
 		msg.Emitter, msg.Type, msg.Slug, msg.WorkplaceFqdn, msg.Reason, msg.Source, msg.Timestamp)
 
 	// Validation
 	if msg.Emitter == "" {
-		return fmt.Errorf("app.install: missing emitter")
+		return fmt.Errorf("user.lifecycle: missing emitter")
 	}
 	if msg.Slug == "" {
-		return fmt.Errorf("app.install: missing slug")
+		return fmt.Errorf("user.lifecycle: missing slug")
 	}
 	if msg.WorkplaceFqdn == "" {
-		return fmt.Errorf("app.install: missing workplaceFqdn")
+		return fmt.Errorf("user.lifecycle: missing workplaceFqdn")
 	}
 
 	// Log the source application requesting the operation
-	log.Infof("app.install: operation requested by emitter: %s", msg.Emitter)
+	log.Infof("user.lifecycle: operation requested by emitter: %s", msg.Emitter)
 
 	// Get the instance
-	log.Debugf("app.install: retrieving instance for domain: %s", msg.WorkplaceFqdn)
+	log.Debugf("user.lifecycle: retrieving instance for domain: %s", msg.WorkplaceFqdn)
 	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
 	if err != nil {
-		return fmt.Errorf("app.install: get instance: %w", err)
+		return fmt.Errorf("user.lifecycle: get instance: %w", err)
 	}
 
 	// Process the action
@@ -423,13 +425,13 @@ func (h *AppInstallHandler) Handle(ctx context.Context, d amqp.Delivery) error {
 	case "app.uninstall":
 		return h.handleUninstall(inst, msg)
 	default:
-		return fmt.Errorf("app.install: invalid type %s, must be 'app.install' or 'app.uninstall'", msg.Type)
+		return fmt.Errorf("user.lifecycle: invalid type %s, must be 'app.install' or 'app.uninstall'", msg.Type)
 	}
 }
 
 // handleInstall installs an application on the instance.
-func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstallMessage) error {
-	log.Infof("app.install: installing app %s on instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
+func (h *UserLifecycleHandler) handleInstall(inst *instance.Instance, msg UserLifecycleMessage) error {
+	log.Infof("user.lifecycle: installing app %s on instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
 
 	// Use provided source if available, otherwise construct default
 	source := msg.Source
@@ -452,10 +454,10 @@ func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstal
 		if err != nil {
 			// If the app already exists, that's OK
 			if errors.Is(err, app.ErrAlreadyExists) {
-				log.Infof("app.install: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
+				log.Infof("user.lifecycle: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
 				return nil
 			}
-			log.Debugf("app.install: failed to create installer for %s as %s: %v", msg.Slug, appType.String(), err)
+			log.Debugf("user.lifecycle: failed to create installer for %s as %s: %v", msg.Slug, appType.String(), err)
 			lastErr = err
 			continue
 		}
@@ -464,30 +466,30 @@ func (h *AppInstallHandler) handleInstall(inst *instance.Instance, msg AppInstal
 		if err != nil {
 			// If the app already exists, that's OK
 			if errors.Is(err, app.ErrAlreadyExists) {
-				log.Infof("app.install: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
+				log.Infof("user.lifecycle: app %s already exists on instance %s", msg.Slug, msg.WorkplaceFqdn)
 				return nil
 			}
 			// Only try the other app type if this one failed due to manifest type mismatch.
 			// For any other error (filesystem, database, network, etc.), return immediately
 			// to avoid hiding the real error with a misleading type mismatch error.
 			if errors.Is(err, app.ErrInvalidManifestForWebapp) || errors.Is(err, app.ErrInvalidManifestForKonnector) {
-				log.Debugf("app.install: manifest type mismatch for %s as %s, trying other type", msg.Slug, appType.String())
+				log.Debugf("user.lifecycle: manifest type mismatch for %s as %s, trying other type", msg.Slug, appType.String())
 				lastErr = err
 				continue
 			}
-			return fmt.Errorf("app.install: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, err)
+			return fmt.Errorf("user.lifecycle: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, err)
 		}
 
-		log.Infof("app.install: successfully installed app %s as %s on instance %s", msg.Slug, appType.String(), msg.WorkplaceFqdn)
+		log.Infof("user.lifecycle: successfully installed app %s as %s on instance %s", msg.Slug, appType.String(), msg.WorkplaceFqdn)
 		return nil
 	}
 
-	return fmt.Errorf("app.install: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, lastErr)
+	return fmt.Errorf("user.lifecycle: failed to install app %s on instance %s: %w", msg.Slug, msg.WorkplaceFqdn, lastErr)
 }
 
 // handleUninstall uninstalls an application from the instance.
-func (h *AppInstallHandler) handleUninstall(inst *instance.Instance, msg AppInstallMessage) error {
-	log.Infof("app.install: uninstalling app %s from instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
+func (h *UserLifecycleHandler) handleUninstall(inst *instance.Instance, msg UserLifecycleMessage) error {
+	log.Infof("user.lifecycle: uninstalling app %s from instance %s (reason: %s)", msg.Slug, msg.WorkplaceFqdn, msg.Reason)
 
 	// First, try to find the app to determine its type
 	appTypes := []consts.AppType{consts.WebappType, consts.KonnectorType}
@@ -504,7 +506,7 @@ func (h *AppInstallHandler) handleUninstall(inst *instance.Instance, msg AppInst
 	}
 
 	if !found {
-		log.Infof("app.install: app %s not found on instance %s, nothing to uninstall", msg.Slug, msg.WorkplaceFqdn)
+		log.Infof("user.lifecycle: app %s not found on instance %s, nothing to uninstall", msg.Slug, msg.WorkplaceFqdn)
 		return nil // Not an error if the app doesn't exist
 	}
 
@@ -516,15 +518,15 @@ func (h *AppInstallHandler) handleUninstall(inst *instance.Instance, msg AppInst
 		Registries: inst.Registries(),
 	})
 	if err != nil {
-		return fmt.Errorf("app.install: failed to create uninstaller: %w", err)
+		return fmt.Errorf("user.lifecycle: failed to create uninstaller: %w", err)
 	}
 
 	_, err = installer.RunSync()
 	if err != nil {
-		return fmt.Errorf("app.install: failed to uninstall app %s: %w", msg.Slug, err)
+		return fmt.Errorf("user.lifecycle: failed to uninstall app %s: %w", msg.Slug, err)
 	}
 
-	log.Infof("app.install: successfully uninstalled app %s from instance %s", msg.Slug, msg.WorkplaceFqdn)
+	log.Infof("user.lifecycle: successfully uninstalled app %s from instance %s", msg.Slug, msg.WorkplaceFqdn)
 	return nil
 }
 

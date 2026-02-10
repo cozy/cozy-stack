@@ -266,7 +266,7 @@ func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 			case "stack.domain.subscription.changed":
 				handler = NewDomainSubscriptionChangedHandler()
 			case "stack.user.lifecycle.queue":
-				handler = NewAppInstallHandler()
+				handler = NewUserLifecycleHandler()
 			}
 
 			if handler == nil {

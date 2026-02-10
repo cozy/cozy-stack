@@ -551,7 +551,7 @@ func TestHandlers(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose message with the new format
-		msg := rabbitmq.AppInstallMessage{
+		msg := rabbitmq.UserLifecycleMessage{
 			Emitter:       "admin-panel",
 			Type:          "app.install",
 			WorkplaceFqdn: inst.Domain,
@@ -622,7 +622,7 @@ func TestHandlers(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compose uninstall message for the drive app
-		msg := rabbitmq.AppInstallMessage{
+		msg := rabbitmq.UserLifecycleMessage{
 			Emitter:       "admin-panel",
 			Type:          "app.uninstall",
 			WorkplaceFqdn: inst.Domain,
