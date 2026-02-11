@@ -140,6 +140,11 @@ func (s *Sharing) ReadOnlyFlag() bool {
 // ReadOnlyRules returns true if the rules forbid that a change on the
 // recipient's cozy instance can be propagated to the sharer's cozy.
 func (s *Sharing) ReadOnlyRules() bool {
+	// For Drive sharings, rules are "none" but that doesn't mean read-only.
+	// The member's ReadOnly flag determines access, not the rules.
+	if s.Drive {
+		return false
+	}
 	for _, rule := range s.Rules {
 		if rule.HasSync() {
 			return false
