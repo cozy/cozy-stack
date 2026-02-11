@@ -1044,14 +1044,23 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	}
 	var token string
 	if s.Drive {
-		interact, err := permission.GetForShareInteract(inst, s.ID())
-		if err != nil {
-			return err
-		}
-		if code, ok := interact.Codes[m.Instance]; ok {
-			token = code
-		} else if code, ok := interact.Codes[m.Email]; ok {
-			token = code
+		if m.Status == MemberStatusOwner {
+			// Recipient notifying owner - use DriveToken from credentials
+			if c == nil || c.DriveToken == "" {
+				return ErrNoOAuthClient
+			}
+			token = c.DriveToken
+		} else {
+			// Owner notifying recipient - use interact codes
+			interact, err := permission.GetForShareInteract(inst, s.ID())
+			if err != nil {
+				return err
+			}
+			if code, ok := interact.Codes[m.Instance]; ok {
+				token = code
+			} else if code, ok := interact.Codes[m.Email]; ok {
+				token = code
+			}
 		}
 	} else {
 		if c.Client == nil || c.AccessToken == nil {

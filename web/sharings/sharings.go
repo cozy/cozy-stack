@@ -1019,7 +1019,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:sharing-id/recipients/self/readonly", UpgradeToReadWrite, checkSharingWritePermissions) // On the recipient
 	router.DELETE("/:sharing-id", RevocationRecipientNotif)                                                  // On the recipient
 	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                                     // On the recipient
-	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions)                 // On the sharer
+	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif)
 	router.POST("/:sharing-id/public-key", ReceivePublicKey)
 
 	// Delegated routes for open sharing
