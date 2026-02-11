@@ -852,6 +852,38 @@ func TestSharings(t *testing.T) {
 		assertLastRecipientIsRevoked(t, s, sharedRefs, aliceInstance)
 	})
 
+	t.Run("RevokeRecipientDriveSharing", func(t *testing.T) {
+		sharedDocs := []string{"mydriveid1"}
+		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
+
+		// Make it a Drive sharing
+		s.Drive = true
+
+		cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
+		assert.NoError(t, err)
+		s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+		token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permission.ALL)
+		assert.NoError(t, err)
+		s.Credentials[0].AccessToken = token
+		s.Members[1].Status = sharing.MemberStatusReady
+
+		err = couchdb.UpdateDoc(aliceInstance, s)
+		assert.NoError(t, err)
+
+		// Simulate Bob leaving the sharing by calling RevokeRecipientByNotification
+		// This is what happens when the owner receives the revocation notification
+		err = s.RevokeRecipientByNotification(aliceInstance, &s.Members[1])
+		assert.NoError(t, err)
+
+		// Verify the member status is correctly persisted in CouchDB
+		var sRevoked sharing.Sharing
+		err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoked)
+		assert.NoError(t, err)
+		assert.Equal(t, sharing.MemberStatusRevoked, sRevoked.Members[1].Status)
+		// Drive sharings should remain active even after revocation
+		assert.True(t, sRevoked.Active)
+	})
+
 	t.Run("RevokeGroup", func(t *testing.T) {
 		sharedDocs := []string{"forgroup1"}
 		s := createSharing(t, aliceInstance, sharedDocs, tsB.URL)
