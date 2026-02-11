@@ -262,7 +262,6 @@ func (o *OfficeOpener) openSharedDocument() (*apiOfficeURL, error) {
 	}
 	publicName, _ := settings.PublicName(o.Inst)
 	doc.PublicName = publicName
-	doc.OO = nil
 	return &doc, nil
 }
 
