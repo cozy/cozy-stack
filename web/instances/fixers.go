@@ -11,9 +11,11 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
 
@@ -143,6 +145,43 @@ func orphanAccountFixer(c echo.Context) error {
 		if _, err = ins.RunSync(); err != nil {
 			return err
 		}
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func sharingsMovedFixer(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	var errm error
+
+	// First, update local sharing documents to use the new instance URL for "self"
+	if err := move.UpdateSelfMemberInstance(inst); err != nil {
+		inst.Logger().WithNamespace("fixer").
+			Warnf("Error updating self member instance in sharings: %s", err)
+		errm = multierror.Append(errm, err)
+	}
+
+	// Update all trigger domains to use the new domain
+	if err := move.UpdateTriggersAfterMove(inst); err != nil {
+		inst.Logger().WithNamespace("fixer").
+			Warnf("Error updating trigger domains: %s", err)
+		errm = multierror.Append(errm, err)
+	}
+
+	// Notify other instances about the move
+	if err := move.NotifySharings(inst); err != nil {
+		inst.Logger().WithNamespace("fixer").
+			Warnf("Error notifying sharings: %s", err)
+		errm = multierror.Append(errm, err)
+	}
+
+	if errm != nil {
+		return errm
 	}
 
 	return c.NoContent(http.StatusNoContent)
