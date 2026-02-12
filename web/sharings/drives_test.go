@@ -2037,6 +2037,54 @@ func TestSharedDriveRevocation(t *testing.T) {
 	})
 }
 
+// TestSharedDriveRecipientSelfRevocation tests that a recipient can revoke themselves
+// from a shared drive and the owner is properly notified.
+func TestSharedDriveRecipientSelfRevocation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	// Use the existing shared drive from setupSharedDrivesEnv where Betty is already a member
+	sharingID := env.firstSharingID
+
+	t.Run("VerifyBettyIsMember", func(t *testing.T) {
+		obj := eA.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Betty should be a ready member (member index 1, after owner)
+		members := obj.Path("$.data.attributes.members").Array()
+		members.Value(1).Object().HasValue("status", "ready")
+		members.Value(1).Object().HasValue("name", "Betty")
+	})
+
+	t.Run("BettyRevokesHerself", func(t *testing.T) {
+		// Betty revokes herself from the sharing
+		eB.DELETE("/sharings/"+sharingID+"/recipients/self").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(204)
+	})
+
+	t.Run("VerifyBettyIsRevokedOnOwnerSide", func(t *testing.T) {
+		// Wait for the revocation notification to be processed on owner's side
+		require.Eventually(t, func() bool {
+			obj := eA.GET("/sharings/"+sharingID).
+				WithHeader("Authorization", "Bearer "+env.acmeToken).
+				Expect().Status(200).
+				JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+				Object()
+
+			status := obj.Path("$.data.attributes.members[1].status").String().Raw()
+			return status == "revoked"
+		}, 5*time.Second, 100*time.Millisecond, "Betty's status should be revoked on owner's side")
+	})
+}
+
 // TestSharedDriveGroupDynamicMembership tests that when a contact is added to a group
 // that is part of a shared drive, the new member automatically gets access to the drive
 // without needing to accept a specific invitation.

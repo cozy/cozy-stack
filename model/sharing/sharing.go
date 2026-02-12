@@ -780,7 +780,7 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 // NoMoreRecipient cleans up the sharing if there is no more active recipient
 func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 	if s.Drive {
-		return nil
+		return couchdb.UpdateDoc(inst, s)
 	}
 	for _, m := range s.Members {
 		if m.Status == MemberStatusReady {
