@@ -1898,7 +1898,7 @@ func TestSharedDriveNotes(t *testing.T) {
 
 		noteID := noteObj.Value("data").Object().Value("id").String().Raw()
 
-		// Open the note as Betty
+		// Open the note as Betty (who has write access, ReadOnly: false)
 		obj := eB.GET("/sharings/drives/"+env.firstSharingID+"/notes/"+noteID+"/open").
 			WithHeader("Authorization", "Bearer "+env.bettyToken).
 			Expect().Status(200).
@@ -1911,7 +1911,22 @@ func TestSharedDriveNotes(t *testing.T) {
 
 		attrs := data.Value("attributes").Object()
 		attrs.HasValue("note_id", noteID)
-		attrs.Value("sharecode").String().NotEmpty()
+		sharecode := attrs.Value("sharecode").String().NotEmpty().Raw()
+
+		permObj := eA.GET("/permissions/self").
+			WithHeader("Authorization", "Bearer "+sharecode).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// The permissions should include write verbs (POST, PUT, PATCH, DELETE), not just GET
+		permAttrs := permObj.Value("data").Object().Value("attributes").Object()
+		perms := permAttrs.Value("permissions").Object()
+		for _, rule := range perms.Iter() {
+			verbs := rule.Object().Value("verbs").Array()
+			verbs.Length().Gt(1)
+			break
+		}
 	})
 
 	t.Run("CreateNoteWithoutAuth", func(t *testing.T) {

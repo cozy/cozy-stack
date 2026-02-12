@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notes"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/gavv/httpexpect/v2"
@@ -87,9 +88,10 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 	acme := setupA.GetTestInstance(&lifecycle.Options{Email: "acme@example.net", PublicName: "ACME"})
 	acmeToken := generateAppToken(acme, "drive", "io.cozy.files")
 	tsA := setupA.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/files":    files.Routes,
-		"/notes":    notes.Routes,
-		"/sharings": sharings.Routes,
+		"/files":       files.Routes,
+		"/notes":       notes.Routes,
+		"/permissions": permissions.Routes,
+		"/sharings":    sharings.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
