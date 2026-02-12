@@ -5,7 +5,7 @@ on:
       - "*.*.*" # Matching a version number like 1.4.19
 jobs:
   create_release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
           tag_name="${GITHUB_REF##*/}"
           gh release create "$tag_name" --target "$GITHUB_SHA"  --title "$tag_name" --notes "Release $tag_name"
   publish_binaries:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: create_release
     steps:
       - name: Install Go
@@ -38,7 +38,7 @@ jobs:
           tag_name="${GITHUB_REF##*/}"
           gh release upload "$tag_name" cozy-stack-*
   publish_cozy-stack_image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: create_release
     steps:
       - name: Checkout code
@@ -51,7 +51,7 @@ jobs:
       - name: Build and publish the cozy-stack image
         run: scripts/docker/production/release.sh
   publish_cozy-app-dev_image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: create_release
     steps:
       - name: Checkout code
