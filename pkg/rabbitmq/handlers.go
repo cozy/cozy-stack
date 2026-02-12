@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -304,7 +303,7 @@ type SubscriptionFeatures struct {
 
 type SubscriptionStackFeatures struct {
 	FeatureSets []string `json:"featureSets"`
-	DiskQuota   string   `json:"diskQuota"`
+	DiskQuota   int64    `json:"diskQuota"`
 }
 
 func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
@@ -327,14 +326,6 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 	if msg.Features.Stack.FeatureSets == nil {
 		return fmt.Errorf("domain.subscription.changed: missing feature sets for organization %s: %v", msg.Domain, msg.Features)
 	}
-	if msg.Features.Stack.DiskQuota == "" {
-		return fmt.Errorf("domain.subscription.changed: missing disk quota for organization %s: %v", msg.Domain, msg.Features)
-	}
-
-	quota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
-	if err != nil {
-		return fmt.Errorf("domain.subscription.changed: invalid disk quota for organization %s: %w", msg.Domain, err)
-	}
 
 	list, err := lifecycle.ListOrgInstances(msg.Domain)
 	if err != nil {
@@ -347,7 +338,7 @@ func (h *DomainSubscriptionChangedHandler) Handle(ctx context.Context, d amqp.De
 
 	for _, inst := range list {
 		if err := lifecycle.Patch(inst, &lifecycle.Options{
-			DiskQuota:    quota,
+			DiskQuota:    msg.Features.Stack.DiskQuota,
 			FeatureSets:  msg.Features.Stack.FeatureSets,
 			FromCloudery: true, // XXX: do not update the instance on the Cloudery as the message comes from the Cloudery
 		}); err != nil {
