@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -470,7 +469,7 @@ func TestHandlers(t *testing.T) {
 			Features: rabbitmq.SubscriptionFeatures{
 				Stack: rabbitmq.SubscriptionStackFeatures{
 					FeatureSets: []string{"plan-uuid"},
-					DiskQuota:   "50000000000",
+					DiskQuota:   50000000000,
 				},
 			},
 		}
@@ -520,17 +519,15 @@ func TestHandlers(t *testing.T) {
 		// orgInst1 is updated
 		updated, err := lifecycle.GetInstance(orgInst1.Domain)
 		require.NoError(t, err)
-		msgQuota, err := strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
 		quota := updated.DiskQuota()
-		require.Equal(t, msgQuota, quota)
+		require.Equal(t, msg.Features.Stack.DiskQuota, quota)
 		require.ElementsMatch(t, msg.Features.Stack.FeatureSets, updated.FeatureSets)
 
 		// orgInst2 is updated
 		updated, err = lifecycle.GetInstance(orgInst2.Domain)
 		require.NoError(t, err)
-		msgQuota, err = strconv.ParseInt(msg.Features.Stack.DiskQuota, 10, 64)
 		quota = updated.DiskQuota()
-		require.Equal(t, msgQuota, quota)
+		require.Equal(t, msg.Features.Stack.DiskQuota, quota)
 		require.ElementsMatch(t, msg.Features.Stack.FeatureSets, updated.FeatureSets)
 
 		// inst is not updated
