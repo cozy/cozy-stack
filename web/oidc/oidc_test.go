@@ -152,19 +152,24 @@ func TestOidc(t *testing.T) {
 		assert.NotNil(t, redirectURL.Query().Get("response_type"))
 		assert.NotNil(t, redirectURL.Query().Get("state"))
 		assert.NotNil(t, redirectURL.Query().Get("scope"))
-		// Verify login_hint logic: old_domain > OIDCID > nothing
+		// Verify login_hint logic: OrgDomain+email > old_domain > OIDCID > nothing
 		loginHint := redirectURL.Query().Get("login_hint")
 		expectedLoginHint := ""
-		if testInstance.OldDomain != "" {
+		if testInstance.OrgDomain != "" {
+			if email, err := testInstance.SettingsEMail(); err == nil && email != "" {
+				expectedLoginHint = email
+			}
+		}
+		if expectedLoginHint == "" && testInstance.OldDomain != "" {
 			expectedLoginHint = testInstance.OldDomain
-		} else if testInstance.OIDCID != "" {
+		} else if expectedLoginHint == "" && testInstance.OIDCID != "" {
 			expectedLoginHint = testInstance.OIDCID
 		}
 		if expectedLoginHint != "" {
 			assert.NotEmpty(t, loginHint, "login_hint should be present in redirect URL")
-			assert.Equal(t, expectedLoginHint, loginHint, "login_hint should match old_domain or OIDCID")
+			assert.Equal(t, expectedLoginHint, loginHint, "login_hint should match email, old_domain or OIDCID")
 		} else {
-			assert.Empty(t, loginHint, "login_hint should not be present when neither old_domain nor OIDCID is set")
+			assert.Empty(t, loginHint, "login_hint should not be present when no hint source is available")
 		}
 	})
 
@@ -334,6 +339,40 @@ func TestOidc(t *testing.T) {
 			assert.NotEmpty(t, loginHint, "login_hint should be present when OIDCID is set")
 			assert.Equal(t, oidcID, loginHint, "login_hint should use OIDCID when old_domain is not present")
 		}
+	})
+
+	t.Run("LoginHintWithOrgDomain", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		onboardingFinished := true
+		orgDomain := "company.com"
+		email := "user@company.com"
+
+		// Clear old_domain and OIDCID, set OrgDomain and email
+		testInstance.OrgDomain = orgDomain
+		testInstance.OldDomain = ""
+		testInstance.OIDCID = ""
+		_ = lifecycle.Patch(testInstance, &lifecycle.Options{
+			OnboardingFinished: &onboardingFinished,
+			Email:              email,
+		})
+
+		// Test that login_hint uses email when OrgDomain is present (highest priority)
+		u := e.GET("/oidc/start").
+			WithHost(testInstance.Domain).
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(303).
+			Header("Location").Raw()
+
+		redirectURL, err := url.Parse(u)
+		require.NoError(t, err)
+
+		loginHint := redirectURL.Query().Get("login_hint")
+		assert.NotEmpty(t, loginHint, "login_hint should be present when OrgDomain is set with email")
+		assert.Equal(t, email, loginHint, "login_hint should use email when OrgDomain is present (highest priority)")
+
+		// Clean up
+		testInstance.OrgDomain = ""
 	})
 
 	t.Run("LoginHintWithOldDomain", func(t *testing.T) {

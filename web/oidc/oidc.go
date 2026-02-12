@@ -931,6 +931,11 @@ func getLoginHint(inst *instance.Instance) string {
 	if inst == nil {
 		return ""
 	}
+	if inst.OrgDomain != "" {
+		if email, err := inst.SettingsEMail(); err == nil && email != "" {
+			return email
+		}
+	}
 	if inst.OldDomain != "" {
 		return inst.OldDomain
 	}
