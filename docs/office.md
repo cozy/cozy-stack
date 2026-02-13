@@ -217,3 +217,58 @@ Content-Type: application/json
 ```json
 { "error": 0 }
 ```
+
+## Local Development Setup
+
+To run OnlyOffice locally for development, you need to:
+
+1. Start the OnlyOffice Document Server with Docker
+2. Configure cozy-stack to use it
+3. Enable the feature flag in Drive
+
+### 1. Start OnlyOffice with Docker
+
+Use the helper script `scripts/start-oo.sh` or run manually:
+
+### 2. Configure cozy-stack
+
+Add to your `~/.cozy/cozy.yaml`:
+
+```yaml
+# In the contexts section - tells the Drive frontend that OnlyOffice is available
+contexts:
+  default:
+    onlyoffice_url: http://localhost:8000/
+
+# Backend configuration for the office endpoints
+office:
+  default:
+    onlyoffice_url: http://localhost:8000/
+    onlyoffice_inbox_secret: ""
+    onlyoffice_outbox_secret: ""
+```
+
+### 3. Enable Feature Flag
+
+Enable OnlyOffice in the Drive app:
+
+```bash
+cozy-stack features defaults '{"drive.office": {"enabled": true, "write": true}}'
+```
+
+### Troubleshooting
+
+**OnlyOffice can't download the document:**
+- Check OnlyOffice logs: `docker logs onlyoffice-ds`
+- Look for DNS errors like `ENOTFOUND cozy.localhost`
+- Ensure `--add-host` flag was applied: `docker exec onlyoffice-ds cat /etc/hosts | grep cozy`
+- Ensure `ALLOW_PRIVATE_IP_ADDRESS=true` is set
+
+**"Download failed" error in editor:**
+- The Document Server can't reach cozy-stack
+- Verify connectivity: `docker exec onlyoffice-ds wget -qO- http://cozy.localhost:8080/`
+
+**No "Open with OnlyOffice" option in Drive:**
+- Check feature flag: `cozy-stack features show`
+- Verify context has `onlyoffice_url`: check `/settings/context` endpoint
+
