@@ -538,6 +538,13 @@ func Logout(c echo.Context) error {
 		})
 	}
 
+	if conf.IDTokenKeyURL == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":             "Cannot get the keys",
+			"error_description": "id_token_jwk_url is not configured",
+		})
+	}
+
 	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
