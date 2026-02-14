@@ -14,6 +14,9 @@
 <mj-text mj-class="content-medium">
 	{{t "Mail Reset Passphrase Button instruction"}}
 </mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Reset Passphrase Warning Cozy Pass"}}
+</mj-text>
 <mj-button href="{{.PassphraseResetLink}}" align="left" mj-class="primary-button content-medium">
 	{{t "Mail Reset Passphrase Button text"}}
 </mj-button>
