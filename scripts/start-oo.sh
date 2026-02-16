@@ -9,7 +9,7 @@
 #
 # Usage: ./scripts/start-oo.sh
 #
-# See docs/office.md for more information
+# See docs/docker.md for more information
 
 set -e
 
