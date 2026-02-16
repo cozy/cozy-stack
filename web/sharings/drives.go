@@ -597,11 +597,18 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 			}
 
 			// For write operations, check if the user has read-only access
+			// POST /downloads is a read operation (creates temporary download link)
 			if method == http.MethodPost || method == http.MethodPut ||
 				method == http.MethodPatch || method == http.MethodDelete {
-				_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
-				if err != nil {
-					return err
+				// Skip write check for download endpoint (read-only operation)
+				path := c.Request().URL.Path
+				isDownload := strings.HasSuffix(path, "/downloads")
+
+				if !isDownload {
+					_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
