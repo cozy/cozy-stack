@@ -27,6 +27,7 @@ type ChatPayload struct {
 	ChatConversationID string
 	Query              string `json:"q"`
 	Stream             *bool  `json:"stream"`
+	WebSearch          *bool  `json:"websearch"`
 }
 
 type ChatConversation struct {
@@ -74,9 +75,10 @@ func (c *ChatConversation) Links() *jsonapi.LinksList              { return nil 
 var _ jsonapi.Object = (*ChatConversation)(nil)
 
 type QueryMessage struct {
-	Task   string `json:"task"`
-	DocID  string `json:"doc_id"`
-	Stream bool   `json:"stream"`
+	Task      string `json:"task"`
+	DocID     string `json:"doc_id"`
+	Stream    bool   `json:"stream"`
+	WebSearch bool   `json:"websearch"`
 }
 
 type Source struct {
@@ -127,10 +129,15 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 	if payload.Stream != nil {
 		stream = *payload.Stream
 	}
+	websearch := false
+	if payload.WebSearch != nil {
+		websearch = *payload.WebSearch
+	}
 	query, err := job.NewMessage(&QueryMessage{
-		Task:   "chat-completion",
-		DocID:  chat.DocID,
-		Stream: stream,
+		Task:      "chat-completion",
+		DocID:     chat.DocID,
+		Stream:    stream,
+		WebSearch: websearch,
 	})
 	if err != nil {
 		return nil, err
@@ -218,10 +225,14 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		})
 	}
 
+	metadata := map[string]interface{}{
+		"websearch": query.WebSearch,
+	}
 	payload := map[string]interface{}{
 		"model":       fmt.Sprintf("ragondin-%s", inst.Domain),
 		"messages":    chat_history,
 		"stream":      query.Stream,
+		"metadata":    metadata,
 		"temperature": Temperature,
 		"top_p":       TopP,
 		"logprobs":    LogProbs,
