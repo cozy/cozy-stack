@@ -2372,3 +2372,345 @@ func addContactToExistingGroup(t *testing.T, inst *instance.Instance, c *contact
 	}
 	require.NoError(t, couchdb.UpdateDoc(inst, c))
 }
+
+// TestShareByLinkOnSharedDrive tests the share-by-link (public link) functionality
+func TestShareByLinkOnSharedDrive(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eOwner, _, _ := env.createClients(t)
+	ownerAppToken := env.acmeToken
+	sharingID := env.firstSharingID
+	productID := env.firstRootDirID
+
+	// Create a file in the shared drive for testing
+	fileID := createFile(t, eOwner, productID, "document.txt", ownerAppToken)
+
+	t.Run("OwnerCanCreateShareByLink", func(t *testing.T) {
+		// Owner creates a share-by-link for the file
+		obj := eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the permission was created
+		data := obj.Value("data").Object()
+		permID := data.Value("id").String().NotEmpty().Raw()
+		attrs := data.Value("attributes").Object()
+
+		// Verify shortcodes are present
+		shortcodes := attrs.Value("shortcodes").Object()
+		shortcodes.Value("link").String().NotEmpty()
+
+		// Clean up - revoke the permission
+		eOwner.DELETE("/sharings/drives/"+sharingID+"/permissions/"+permID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(204)
+	})
+
+	t.Run("RecipientCanCreateShareByLink", func(t *testing.T) {
+		_, eBetty, _ := env.createClients(t)
+		bettyToken := env.bettyToken
+
+		// Recipient creates a share-by-link for the file in the shared drive
+		obj := eBetty.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+bettyToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the permission was created
+		data := obj.Value("data").Object()
+		permID := data.Value("id").String().NotEmpty().Raw()
+		attrs := data.Value("attributes").Object()
+
+		// Verify shortcodes are present
+		shortcodes := attrs.Value("shortcodes").Object()
+		shortcodes.Value("link").String().NotEmpty()
+
+		// Get the share code (JWT token) to use for downloading
+		codes := attrs.Value("codes").Object()
+		shareCode := codes.Value("link").String().NotEmpty().Raw()
+
+		// Download the file using the share-by-link (on owner's instance where the file resides)
+		eOwner.GET("/files/download/"+fileID).
+			WithHeader("Authorization", "Bearer "+shareCode).
+			Expect().Status(200)
+
+		// Clean up - recipient can also revoke the permission they created
+		eBetty.DELETE("/sharings/drives/"+sharingID+"/permissions/"+permID).
+			WithHeader("Authorization", "Bearer "+bettyToken).
+			Expect().Status(204)
+	})
+
+	t.Run("FailOnFileOutsideSharedDrive", func(t *testing.T) {
+		// Use the existing directory outside the share from setupSharedDrivesEnv
+		outsideOfShareID := env.outsideOfShareID
+
+		// Try to create share-by-link for directory outside shared drive - should fail
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, outsideOfShareID))).
+			Expect().Status(400)
+	})
+
+	t.Run("FailOnEmptyValues", func(t *testing.T) {
+		// Try to create share-by-link with empty values - should fail (would grant access to all files)
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": []
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files))).
+			Expect().Status(400)
+	})
+
+	t.Run("FailOnWildcardType", func(t *testing.T) {
+		// Try to create share-by-link with wildcard type - should fail
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "*",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, fileID))).
+			Expect().Status(400)
+	})
+
+	t.Run("FailOnSelector", func(t *testing.T) {
+		// Try to create share-by-link with selector - should fail
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"selector": "referenced_by",
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(400)
+	})
+
+	t.Run("FailOnUnauthorizedAccess", func(t *testing.T) {
+		// Try to create permission without authentication
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(401)
+	})
+
+	t.Run("RevokeNonExistentPermission", func(t *testing.T) {
+		// Try to revoke a non-existent permission
+		eOwner.DELETE("/sharings/drives/"+sharingID+"/permissions/non-existent-id").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(404)
+	})
+
+	t.Run("CreateShareByLinkForDirectory", func(t *testing.T) {
+		// Create a subdirectory in the shared drive
+		subDirID := createDirectory(t, eOwner, productID, "subdir", ownerAppToken)
+
+		// Owner creates a share-by-link for the directory
+		obj := eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "dir-link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, subDirID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the permission was created
+		data := obj.Value("data").Object()
+		permID := data.Value("id").String().NotEmpty().Raw()
+
+		// Clean up
+		eOwner.DELETE("/sharings/drives/"+sharingID+"/permissions/"+permID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(204)
+	})
+
+	t.Run("CreateShareByLinkWithPassword", func(t *testing.T) {
+		// Owner creates a share-by-link with password
+		obj := eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "pwd-link").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"password": "secret123",
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the permission was created with password (should be true, not the hash)
+		data := obj.Value("data").Object()
+		permID := data.Value("id").String().NotEmpty().Raw()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("password").Boolean().IsTrue()
+
+		// Clean up
+		eOwner.DELETE("/sharings/drives/"+sharingID+"/permissions/"+permID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(204)
+	})
+
+	t.Run("CreateShareByLinkWithTTL", func(t *testing.T) {
+		// Owner creates a share-by-link with TTL
+		obj := eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "ttl-link").
+			WithQuery("ttl", "24h").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		// Verify the permission was created with expires_at
+		data := obj.Value("data").Object()
+		permID := data.Value("id").String().NotEmpty().Raw()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("expires_at").String().NotEmpty()
+
+		// Clean up
+		eOwner.DELETE("/sharings/drives/"+sharingID+"/permissions/"+permID).
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			Expect().Status(204)
+	})
+}
