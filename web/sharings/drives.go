@@ -15,11 +15,13 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/office"
+	webperm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo/v4"
 )
 
@@ -356,7 +358,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
-	sharedDir, err := getSharingDir(c, inst, s)
+	sharedDir, err := getSharingDir(inst, s)
 	if err != nil {
 		return err
 	}
@@ -497,24 +499,115 @@ func OpenOffice(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-// Find the directory linked to the drive sharing and return it if the user
-// requesting it has the proper permissions.
-func getSharingDir(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
+// getSharingDir returns the directory linked to the drive sharing.
+func getSharingDir(inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
+	dir, err := s.GetSharingDir(inst)
+	if err != nil {
+		return nil, jsonapi.NotFound(errors.New("shared drive not found"))
+	}
+	return dir, nil
+}
+
+// CreateSharedDrivePermissionHandler creates a share-by-link permission for a file in a shared drive.
+func CreateSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	validate := func(perms permission.Set) error {
+		return validateSharedDrivePermission(inst, s, perms)
+	}
+
+	return webperm.HandleCreateShareByLink(c, inst, validate, true)
+}
+
+// validateSharedDrivePermission checks that all file IDs in the permission rules are files/directories that belong to the shared drive.
+func validateSharedDrivePermission(inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
+	rootDir, err := s.GetSharingDir(inst)
+	if err != nil {
+		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
+	}
+
 	fs := inst.VFS()
-	rule := s.FirstFilesRule()
-	if rule != nil {
-		if rule.Mime != "" {
-			inst.Logger().WithNamespace("drive-proxy").
-				Warnf("getSharingDir called for only one file: %s", s.SID)
-			return nil, jsonapi.BadRequest(errors.New("not a shared drive"))
+
+	for _, perm := range perms {
+		// Only allow exact io.cozy.files type - reject wildcards like "*" or "io.cozy.*"
+		if perm.Type != consts.Files {
+			return jsonapi.BadRequest(errors.New("shared drive permissions can only include files"))
 		}
-		dir, _ := fs.DirByID(rule.Values[0])
-		if dir != nil {
-			return dir, nil
+		// Reject empty values - share-by-link must target specific files
+		if len(perm.Values) == 0 {
+			return jsonapi.BadRequest(errors.New("shared drive permissions must specify file IDs"))
+		}
+		// Reject selectors - only file IDs are allowed
+		if perm.Selector != "" {
+			return jsonapi.BadRequest(errors.New("shared drive permissions cannot use selectors"))
+		}
+		for _, fileID := range perm.Values {
+			// Check if the file/directory is within the shared drive
+			if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
+				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
+			}
+		}
+	}
+	return nil
+}
+
+// isWithinDirectory checks if the given file/directory ID is within the
+// specified parent directory (including the parent itself).
+func isWithinDirectory(fs vfs.VFS, fileID string, parent *vfs.DirDoc) error {
+	if fileID == parent.ID() {
+		return nil
+	}
+
+	dir, file, err := fs.DirOrFileByID(fileID)
+	if err != nil {
+		return err
+	}
+
+	var fullpath string
+	if dir != nil {
+		fullpath = dir.Fullpath
+	} else {
+		fullpath, err = file.Path(fs)
+		if err != nil {
+			return err
 		}
 	}
 
-	return nil, jsonapi.NotFound(errors.New("shared drive not found"))
+	// Check if path is within parent directory
+	if strings.HasPrefix(fullpath, parent.Fullpath+"/") {
+		return nil
+	}
+
+	return errors.New("file is not within the directory")
+}
+
+// RevokeSharedDrivePermission revokes a share-by-link permission for a file in a shared drive.
+func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	permID := c.Param("perm-id")
+	if permID == "" {
+		return jsonapi.BadRequest(errors.New("missing permission ID"))
+	}
+
+	perm, err := permission.GetPermissionByIDIncludingExpired(inst, permID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return jsonapi.NotFound(errors.New("permission not found"))
+		}
+		return err
+	}
+
+	if perm.Type != permission.TypeShareByLink {
+		return jsonapi.BadRequest(errors.New("not a share-by-link permission"))
+	}
+
+	if err := validateSharedDrivePermission(inst, s, perm.Permissions); err != nil {
+		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
+	}
+
+	// Any member who can create share-by-link permissions can also revoke them
+	if err := perm.Revoke(inst); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // drivesRoutes sets the routing for the shared drives
@@ -563,6 +656,10 @@ func drivesRoutes(router *echo.Group) {
 	drive.GET("/office/:file-id/open", OpenOffice)
 
 	drive.GET("/realtime", Ws)
+
+	// Share-by-link (public link) endpoints for files in shared drives
+	drive.POST("/permissions", proxy(CreateSharedDrivePermissionHandler, true))
+	drive.DELETE("/permissions/:perm-id", proxy(RevokeSharedDrivePermission, true))
 }
 
 func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error, needsAuth bool) echo.HandlerFunc {

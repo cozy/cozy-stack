@@ -2016,7 +2016,7 @@ func TestAuth(t *testing.T) {
 			Password:    "the_password!",
 			Metadata:    md,
 		}
-		perm, err := permission.CreateShareSet(testInstance, parent, sourceID, codes, shortcodes, subdoc, nil)
+		perm, err := permission.CreateShareSet(testInstance, parent, sourceID, codes, shortcodes, subdoc, nil, false)
 		require.NoError(t, err)
 
 		e.POST("/auth/share-by-link/password").

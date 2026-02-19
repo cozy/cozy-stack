@@ -394,7 +394,7 @@ func TestCreateShareSetBlocklist(t *testing.T) {
 		Permissions: s,
 	}
 	parent := &Permission{Type: TypeWebapp, Permissions: s}
-	_, err := CreateShareSet(nil, parent, "", nil, nil, subdoc, nil)
+	_, err := CreateShareSet(nil, parent, "", nil, nil, subdoc, nil, false)
 	assert.Error(t, err)
 	e, ok := err.(*echo.HTTPError)
 	assert.True(t, ok)
@@ -405,7 +405,7 @@ func TestCreateShareSetBlocklist(t *testing.T) {
 		Permissions: s,
 	}
 	parent = &Permission{Type: TypeWebapp, Permissions: s}
-	_, err = CreateShareSet(nil, parent, "", nil, nil, subdoc, nil)
+	_, err = CreateShareSet(nil, parent, "", nil, nil, subdoc, nil, false)
 	assert.Error(t, err)
 }
 

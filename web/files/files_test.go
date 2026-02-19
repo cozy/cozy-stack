@@ -3384,7 +3384,7 @@ func TestFiles(t *testing.T) {
 			perms := permission.Permission{
 				Permissions: rules,
 			}
-			_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, perms, &expires)
+			_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, perms, &expires, false)
 			require.NoError(t, err)
 
 			// Use the public token to get the file
