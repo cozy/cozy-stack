@@ -728,8 +728,8 @@ func TestPermissions(t *testing.T) {
 			Permissions: p2,
 		}
 		codes := map[string]string{"bob": "secret"}
-		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm1, nil)
-		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm2, nil)
+		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm1, nil, false)
+		_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, perm2, nil, false)
 
 		obj := e.POST("/permissions/exists").
 			WithHeader("Authorization", "Bearer "+token).

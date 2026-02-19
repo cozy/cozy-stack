@@ -511,7 +511,9 @@ func checkSetPermissions(set Set, parent *Permission) error {
 	return nil
 }
 
-// CreateShareSet creates a Permission doc for sharing by link
+// CreateShareSet creates a Permission doc for sharing by link.
+// If skipValidation is true, the caller is responsible for validating permissions
+// (e.g., shared drives validate that files are within the drive directory).
 func CreateShareSet(
 	db prefixer.Prefixer,
 	parent *Permission,
@@ -519,10 +521,13 @@ func CreateShareSet(
 	codes, shortcodes map[string]string,
 	subdoc Permission,
 	expiresAt interface{},
+	skipValidation bool,
 ) (*Permission, error) {
 	set := subdoc.Permissions
-	if err := checkSetPermissions(set, parent); err != nil {
-		return nil, err
+	if !skipValidation {
+		if err := checkSetPermissions(set, parent); err != nil {
+			return nil, err
+		}
 	}
 	// SourceID stays the same, allow quick destruction of all children permissions
 	doc := &Permission{
