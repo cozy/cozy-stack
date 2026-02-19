@@ -2574,6 +2574,31 @@ func TestShareByLinkOnSharedDrive(t *testing.T) {
 			Expect().Status(400)
 	})
 
+	t.Run("FailWhenCallerCannotReadTargetFile", func(t *testing.T) {
+		// Use an app token without io.cozy.files permission.
+		tagsOnlyToken := generateAppToken(env.acme, "tags-app", "io.cozy.tags")
+
+		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").
+			WithQuery("codes", "link").
+			WithHeader("Authorization", "Bearer "+tagsOnlyToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"permissions": {
+							"files": {
+								"type": "%s",
+								"verbs": ["GET"],
+								"values": ["%s"]
+							}
+						}
+					}
+				}
+			}`, consts.Permissions, consts.Files, fileID))).
+			Expect().Status(403)
+	})
+
 	t.Run("FailOnUnauthorizedAccess", func(t *testing.T) {
 		// Try to create permission without authentication
 		eOwner.POST("/sharings/drives/"+sharingID+"/permissions").

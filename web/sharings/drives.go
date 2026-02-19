@@ -511,14 +511,17 @@ func getSharingDir(inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, er
 // CreateSharedDrivePermissionHandler creates a share-by-link permission for a file in a shared drive.
 func CreateSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	validate := func(perms permission.Set) error {
-		return validateSharedDrivePermission(inst, s, perms)
+		return validateSharedDrivePermission(c, inst, s, perms)
 	}
 
 	return webperm.HandleCreateShareByLink(c, inst, validate, true)
 }
 
-// validateSharedDrivePermission checks that all file IDs in the permission rules are files/directories that belong to the shared drive.
-func validateSharedDrivePermission(inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
+// validateSharedDrivePermission checks that all file IDs in the permission rules are:
+// - explicitly targeted io.cozy.files documents,
+// - accessible by the current caller token,
+// - and located inside the shared drive.
+func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
 	rootDir, err := s.GetSharingDir(inst)
 	if err != nil {
 		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
@@ -540,6 +543,19 @@ func validateSharedDrivePermission(inst *instance.Instance, s *sharing.Sharing, 
 			return jsonapi.BadRequest(errors.New("shared drive permissions cannot use selectors"))
 		}
 		for _, fileID := range perm.Values {
+			dir, file, err := fs.DirOrFileByID(fileID)
+			if err != nil {
+				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
+			}
+			if dir != nil {
+				if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
+					return err
+				}
+			} else {
+				if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+					return err
+				}
+			}
 			// Check if the file/directory is within the shared drive
 			if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
 				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
@@ -598,7 +614,7 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 		return jsonapi.BadRequest(errors.New("not a share-by-link permission"))
 	}
 
-	if err := validateSharedDrivePermission(inst, s, perm.Permissions); err != nil {
+	if err := validateSharedDrivePermission(c, inst, s, perm.Permissions); err != nil {
 		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
 	}
 
