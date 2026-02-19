@@ -380,12 +380,47 @@ func TestShareSetPermissions(t *testing.T) {
 	err = checkSetPermissions(setFiles, parent)
 	assert.NoError(t, err)
 
+	parent.Type = TypeShareInteract
+	err = checkSetPermissions(setFiles, parent)
+	assert.NoError(t, err)
+
+	parent.Type = TypeWebapp
 	err = checkSetPermissions(setFilesWildCard, parent)
 	assert.Error(t, err)
 
 	parent.Permissions = setFilesWildCard
 	err = checkSetPermissions(setFilesWildCard, parent)
 	assert.NoError(t, err)
+
+	// share-interact subset ignores selector/values and only checks type+verbs,
+	// as file boundary checks are enforced by shared-drive endpoints.
+	childFileRule := Set{Rule{
+		Type:   "io.cozy.files",
+		Verbs:  Verbs(GET),
+		Values: []string{"child-file-id"},
+	}}
+	parent = &Permission{
+		Type: TypeShareInteract,
+		Permissions: Set{Rule{
+			Type:     "io.cozy.files",
+			Verbs:    Verbs(GET),
+			Selector: "id",
+			Values:   []string{"drive-root-id"},
+		}},
+	}
+	err = checkSetPermissions(childFileRule, parent)
+	assert.NoError(t, err)
+
+	// For non share-interact parents, values remain part of subset checks.
+	parent.Type = TypeWebapp
+	err = checkSetPermissions(childFileRule, parent)
+	assert.Error(t, err)
+
+	// share-interact still enforces verbs coverage.
+	parent.Type = TypeShareInteract
+	childFileRule[0].Verbs = Verbs(POST)
+	err = checkSetPermissions(childFileRule, parent)
+	assert.Error(t, err)
 }
 
 func TestCreateShareSetBlocklist(t *testing.T) {

@@ -671,6 +671,66 @@ drive.
 #### POST /sharings/drives/trash/:file-id
 #### DELETE /sharings/drives/trash/:file-id
 
+## Share-by-link permissions
+
+The following routes manage share-by-link permissions scoped to files inside a
+shared drive:
+
+- `POST /sharings/drives/:id/permissions`
+- `PATCH /sharings/drives/:id/permissions/:perm-id`
+- `DELETE /sharings/drives/:id/permissions/:perm-id`
+
+### PATCH /sharings/drives/:id/permissions/:perm-id
+
+Updates an existing share-by-link permission.
+
+Authorization rules:
+
+- The shared-drive owner can patch any share-by-link permission.
+- The creator of a share-by-link permission can patch the permission they
+  created.
+- Creator resolution works for same-stack and cross-stack recipients.
+- Public share tokens (`share`, `share-preview`) cannot patch permissions.
+
+Allowed updates:
+
+- `password`
+- `expires_at`
+
+Validation:
+
+- `password` must be a string (empty string clears the password).
+- `expires_at` must be a string (empty string clears expiration, otherwise
+  RFC3339 date-time).
+
+Status codes:
+
+- `200 OK` updated
+- `400 Bad Request` invalid payload (for example trying to update `permissions`
+  or `codes`), invalid `password` / `expires_at` attribute format
+- `403 Forbidden` caller is not owner/creator, or caller identity cannot be
+  verified for a shared-drive token
+- `404 Not Found` permission ID does not exist
+
+### DELETE /sharings/drives/:id/permissions/:perm-id
+
+Revokes an existing share-by-link permission.
+
+Authorization rules:
+
+- The shared-drive owner can revoke any share-by-link permission.
+- The creator of a share-by-link permission can revoke the permission they
+  created.
+- Public share tokens (`share`, `share-preview`) cannot revoke permissions.
+
+Status codes:
+
+- `204 No Content` revoked
+- `400 Bad Request` permission is not a share-by-link permission
+- `403 Forbidden` caller is not owner/creator, or permission does not belong
+  to this shared drive
+- `404 Not Found` permission ID does not exist
+
 
 ## Versions
 

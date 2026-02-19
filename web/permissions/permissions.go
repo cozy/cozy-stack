@@ -40,8 +40,7 @@ const ContextClaims = "token_claims"
 // JSON-API
 type APIPermission struct {
 	*permission.Permission
-	PublicLink string `json:"public_link,omitempty"`
-	included   []jsonapi.Object
+	included []jsonapi.Object
 }
 
 // MarshalJSON implements jsonapi.Doc
@@ -110,9 +109,22 @@ func displayPermissions(c echo.Context) error {
 }
 
 func createPermission(c echo.Context) error {
+	parent, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	// Share-interact tokens are limited to shared-drive permission endpoints.
+	if parent != nil && parent.Type == permission.TypeShareInteract {
+		return permission.ErrOnlyAppCanCreateSubSet
+	}
+
 	inst := middlewares.GetInstance(c)
-	// Use standard validation (skipValidation=false)
-	return HandleCreateShareByLink(c, inst, nil, false)
+	opts := CreateShareByLinkOptions{}
+	if claims, ok := c.Get("claims").(permission.Claims); ok && claims.Issuer != "" {
+		domain := claims.Issuer
+		opts.CreatorDomain = &domain
+	}
+	return HandleCreateShareByLink(c, inst, opts)
 }
 
 // ValidatePermissionsFn is a function that validates permission rules.
@@ -120,17 +132,27 @@ func createPermission(c echo.Context) error {
 // the standard permission checks (e.g., verifying files are within a shared drive).
 type ValidatePermissionsFn func(perms permission.Set) error
 
+// CreateShareByLinkOptions configures HandleCreateShareByLink behavior.
+type CreateShareByLinkOptions struct {
+	// runs additional validations after request binding and
+	ValidatePermissions ValidatePermissionsFn
+	// controls whether CreateShareSet's standard permission validation is skipped.
+	SkipValidation bool
+	// overrides the creator domain stored in metadata.
+	CreatorDomain *string
+}
+
 // HandleCreateShareByLink is the common handler for creating share-by-link permissions.
 // It handles parsing, optional additional validation, creation via CreateShareSet, and response formatting.
-func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, extraValidate ValidatePermissionsFn, skipValidation bool) error {
+func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, opts CreateShareByLinkOptions) error {
 	var subdoc permission.Permission
 	if _, err := jsonapi.Bind(c.Request().Body, &subdoc); err != nil {
 		return err
 	}
 
 	// Run additional validation if provided (e.g., for shared drives)
-	if extraValidate != nil {
-		if err := extraValidate(subdoc.Permissions); err != nil {
+	if opts.ValidatePermissions != nil {
+		if err := opts.ValidatePermissions(subdoc.Permissions); err != nil {
 			return err
 		}
 	}
@@ -141,6 +163,11 @@ func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, extraValid
 	}
 	if parent == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
+	}
+
+	var creatorDomain string
+	if opts.CreatorDomain != nil {
+		creatorDomain = *opts.CreatorDomain
 	}
 
 	var slug string
@@ -220,9 +247,16 @@ func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, extraValid
 		subdoc.Metadata.EnsureCreatedFields(md)
 	}
 
+	// Track creator's instance domain for shared drive permissions.
+	if subdoc.Metadata != nil && subdoc.Metadata.UpdatedByApps != nil && len(subdoc.Metadata.UpdatedByApps) > 0 {
+		if creatorDomain != "" {
+			subdoc.Metadata.UpdatedByApps[0].Instance = creatorDomain
+		}
+	}
+
 	// Use CreateShareSet which handles password hashing and doc creation.
 	// Pass skipValidation to control whether standard validation is performed.
-	pdoc, err := permission.CreateShareSet(inst, parent, sourceID, codes, shortcodes, subdoc, expiresAt, skipValidation)
+	pdoc, err := permission.CreateShareSet(inst, parent, sourceID, codes, shortcodes, subdoc, expiresAt, opts.SkipValidation)
 	if err != nil {
 		return err
 	}

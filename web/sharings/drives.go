@@ -7,6 +7,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -16,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -358,9 +360,9 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
-	sharedDir, err := getSharingDir(inst, s)
+	sharedDir, err := s.GetSharingDir(inst)
 	if err != nil {
-		return err
+		return jsonapi.NotFound(errors.New("shared drive not found"))
 	}
 	return files.ChangesFeed(c, inst, sharedDir)
 }
@@ -499,22 +501,17 @@ func OpenOffice(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-// getSharingDir returns the directory linked to the drive sharing.
-func getSharingDir(inst *instance.Instance, s *sharing.Sharing) (*vfs.DirDoc, error) {
-	dir, err := s.GetSharingDir(inst)
-	if err != nil {
-		return nil, jsonapi.NotFound(errors.New("shared drive not found"))
+// CreateSharedDriveShareByLinkHandler creates a share-by-link permission for a file in a shared drive.
+func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	opts := webperm.CreateShareByLinkOptions{
+		ValidatePermissions: func(perms permission.Set) error {
+			return validateSharedDrivePermission(c, inst, s, perms)
+		},
 	}
-	return dir, nil
-}
-
-// CreateSharedDrivePermissionHandler creates a share-by-link permission for a file in a shared drive.
-func CreateSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
-	validate := func(perms permission.Set) error {
-		return validateSharedDrivePermission(c, inst, s, perms)
+	if domain, ok := getSharedDriveCallerDomain(c, inst, s); ok {
+		opts.CreatorDomain = &domain
 	}
-
-	return webperm.HandleCreateShareByLink(c, inst, validate, true)
+	return webperm.HandleCreateShareByLink(c, inst, opts)
 }
 
 // validateSharedDrivePermission checks that all file IDs in the permission rules are:
@@ -560,6 +557,180 @@ func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *s
 			if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
 				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
 			}
+		}
+	}
+	return nil
+}
+
+// getSharedDriveCallerDomain returns the domain of the user who initiated the request
+//
+// For cross-stack proxying, the request arrives with a drive token whose JWT
+// issuer is the owner domain, so we map the token back to a sharing member.
+// For same-stack shortcut, the request still carries the caller app token, so
+// we can use claims issuer.
+func getSharedDriveCallerDomain(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (string, bool) {
+	currentPerm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return "", false
+	}
+
+	claims, hasClaims := c.Get("claims").(permission.Claims)
+	issuer := ""
+	if hasClaims {
+		issuer = claims.Issuer
+	}
+
+	if currentPerm == nil {
+		if issuer != "" {
+			return issuer, true
+		}
+		return "", false
+	}
+
+	switch currentPerm.Type {
+	// Public share tokens represent anonymous/public access and must never be
+	// treated as a caller identity for shared-drive permission mutations.
+	case permission.TypeShareByLink, permission.TypeSharePreview:
+		return "", false
+
+	case permission.TypeShareInteract:
+		token := middlewares.GetRequestToken(c)
+		if token != "" {
+			member, err := s.FindMemberByInteractCode(inst, token)
+			if err == nil && member != nil {
+				if domain := member.InstanceHost(); domain != "" {
+					return domain, true
+				}
+			}
+		}
+
+		// Same-stack shortcut keeps the caller app token in the request.
+		// Cross-stack share tokens must not fallback to issuer.
+		if hasClaims && claims.AudienceString() != consts.ShareAudience && issuer != "" {
+			return issuer, true
+		}
+		return "", false
+
+	default:
+		if issuer != "" {
+			return issuer, true
+		}
+		return "", false
+	}
+}
+
+func isSharePermissionToken(perm *permission.Permission) bool {
+	if perm == nil {
+		return false
+	}
+	switch perm.Type {
+	case permission.TypeShareInteract, permission.TypeShareByLink, permission.TypeSharePreview:
+		return true
+	default:
+		return false
+	}
+}
+
+func authorizeSharedDrivePermissionMutation(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	perm *permission.Permission,
+) error {
+	currentPerm, _ := middlewares.GetPermission(c)
+	callerDomain, identityResolved := getSharedDriveCallerDomain(c, inst, s)
+	return CheckSharedDrivePermissionMutationAuthorization(
+		s,
+		perm,
+		currentPerm,
+		callerDomain,
+		identityResolved,
+	)
+}
+
+// CheckSharedDrivePermissionMutationAuthorization validates whether the caller can
+// mutate a shared-drive share-by-link permission.
+func CheckSharedDrivePermissionMutationAuthorization(
+	s *sharing.Sharing,
+	perm *permission.Permission,
+	currentPerm *permission.Permission,
+	callerDomain string,
+	identityResolved bool,
+) error {
+	// Public share tokens are never allowed to mutate permissions.
+	if currentPerm != nil &&
+		(currentPerm.Type == permission.TypeShareByLink || currentPerm.Type == permission.TypeSharePreview) {
+		return jsonapi.Forbidden(errors.New("public share token cannot modify this permission"))
+	}
+
+	isOwner := s.Owner && !isSharePermissionToken(currentPerm)
+	isCreator := false
+	if callerDomain != "" && perm.Metadata != nil && len(perm.Metadata.UpdatedByApps) > 0 {
+		creatorDomain := perm.Metadata.UpdatedByApps[0].Instance
+		isCreator = creatorDomain == callerDomain
+	}
+
+	if !isOwner && !isCreator {
+		if currentPerm != nil && currentPerm.Type == permission.TypeShareInteract && !identityResolved {
+			return jsonapi.Forbidden(errors.New("cannot verify caller identity for this shared-drive token"))
+		}
+		return jsonapi.Forbidden(errors.New("only creator or owner can modify this permission"))
+	}
+
+	return nil
+}
+
+// ValidateSharedDrivePermissionPatch validates the payload for patching a
+// shared-drive share-by-link permission.
+func ValidateSharedDrivePermissionPatch(patch permission.Permission) error {
+	// Only allow password and expires_at modifications
+	if len(patch.Permissions) > 0 || len(patch.Codes) > 0 {
+		return jsonapi.BadRequest(errors.New("only password and expires_at can be modified"))
+	}
+	if patch.Password == nil && patch.ExpiresAt == nil {
+		return jsonapi.BadRequest(errors.New("password or expires_at must be provided"))
+	}
+	if patch.Password != nil {
+		if _, ok := patch.Password.(string); !ok {
+			return jsonapi.BadRequest(errors.New("password must be a string"))
+		}
+	}
+	if patch.ExpiresAt != nil {
+		if _, ok := patch.ExpiresAt.(string); !ok {
+			return jsonapi.BadRequest(errors.New("expires_at must be a string"))
+		}
+	}
+	return nil
+}
+
+// ApplySharedDrivePermissionPatch applies password and expires_at updates for a
+// shared-drive share-by-link permission.
+func ApplySharedDrivePermissionPatch(perm *permission.Permission, patch permission.Permission) error {
+	// Apply password change
+	if patch.Password != nil {
+		pass := patch.Password.(string)
+		if pass == "" {
+			perm.Password = nil
+		} else {
+			hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+			if err != nil {
+				return err
+			}
+			perm.Password = hash
+		}
+	}
+
+	// Apply TTL change
+	if patch.ExpiresAt != nil {
+		at := patch.ExpiresAt.(string)
+		if at == "" {
+			perm.ExpiresAt = nil
+		} else {
+			expiresAt, err := time.Parse(time.RFC3339, at)
+			if err != nil {
+				return jsonapi.BadRequest(errors.New("expires_at must be an RFC3339 date-time"))
+			}
+			perm.ExpiresAt = expiresAt
 		}
 	}
 	return nil
@@ -618,12 +789,73 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
 	}
 
-	// Any member who can create share-by-link permissions can also revoke them
+	if err := authorizeSharedDrivePermissionMutation(c, inst, s, perm); err != nil {
+		return err
+	}
+
 	if err := perm.Revoke(inst); err != nil {
 		return err
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// PatchSharedDrivePermissionHandler modifies a share-by-link permission in a shared drive.
+// Only the creator or the drive owner can modify. Only password and expires_at can be changed.
+func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	permID := c.Param("perm-id")
+	if permID == "" {
+		return jsonapi.BadRequest(errors.New("missing permission ID"))
+	}
+
+	perm, err := permission.GetPermissionByIDIncludingExpired(inst, permID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return jsonapi.NotFound(errors.New("permission not found"))
+		}
+		return err
+	}
+
+	if perm.Type != permission.TypeShareByLink {
+		return jsonapi.BadRequest(errors.New("not a share-by-link permission"))
+	}
+
+	if err := validateSharedDrivePermission(c, inst, s, perm.Permissions); err != nil {
+		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
+	}
+
+	if err := authorizeSharedDrivePermissionMutation(c, inst, s, perm); err != nil {
+		return err
+	}
+
+	// Parse the patch request
+	var patch permission.Permission
+	if _, err := jsonapi.Bind(c.Request().Body, &patch); err != nil {
+		return err
+	}
+
+	if err := ValidateSharedDrivePermissionPatch(patch); err != nil {
+		return err
+	}
+	if err := ApplySharedDrivePermissionPatch(perm, patch); err != nil {
+		return err
+	}
+
+	if perm.Metadata != nil {
+		perm.Metadata.UpdatedAt = time.Now()
+	}
+
+	// Save
+	if err := couchdb.UpdateDoc(inst, perm); err != nil {
+		return err
+	}
+
+	// Don't send the password hash to the client
+	if perm.Password != nil {
+		perm.Password = true
+	}
+
+	return jsonapi.Data(c, http.StatusOK, &webperm.APIPermission{Permission: perm}, nil)
 }
 
 // drivesRoutes sets the routing for the shared drives
@@ -674,7 +906,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.GET("/realtime", Ws)
 
 	// Share-by-link (public link) endpoints for files in shared drives
-	drive.POST("/permissions", proxy(CreateSharedDrivePermissionHandler, true))
+	drive.POST("/permissions", proxy(CreateSharedDriveShareByLinkHandler, true))
+	drive.PATCH("/permissions/:perm-id", proxy(PatchSharedDrivePermissionHandler, true))
 	drive.DELETE("/permissions/:perm-id", proxy(RevokeSharedDrivePermission, true))
 }
 

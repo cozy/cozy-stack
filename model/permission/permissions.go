@@ -493,10 +493,19 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 func checkSetPermissions(set Set, parent *Permission) error {
-	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth && parent.Type != TypeCLI {
+	if parent.Type != TypeWebapp &&
+		parent.Type != TypeKonnector &&
+		parent.Type != TypeOauth &&
+		parent.Type != TypeCLI &&
+		parent.Type != TypeShareInteract {
 		return ErrOnlyAppCanCreateSubSet
 	}
-	if !set.IsSubSetOf(parent.Permissions) {
+
+	if parent.Type == TypeShareInteract {
+		if !isShareInteractSubset(set, parent.Permissions) {
+			return ErrNotSubset
+		}
+	} else if !set.IsSubSetOf(parent.Permissions) {
 		return ErrNotSubset
 	}
 	for _, rule := range set {
@@ -509,6 +518,29 @@ func checkSetPermissions(set Set, parent *Permission) error {
 		}
 	}
 	return nil
+}
+
+// isShareInteractSubset checks subset semantics for share-interact parents.
+// It validates type and verbs coverage, while selector/values are validated by
+// shared-drive endpoint checks (AllowVFS + isWithinDirectory).
+func isShareInteractSubset(set, parent Set) bool {
+	for _, child := range set {
+		matched := false
+		for _, parentRule := range parent {
+			if !MatchType(parentRule, child.Type) {
+				continue
+			}
+			if !parentRule.Verbs.ContainsAll(child.Verbs) {
+				continue
+			}
+			matched = true
+			break
+		}
+		if !matched {
+			return false
+		}
+	}
+	return true
 }
 
 // CreateShareSet creates a Permission doc for sharing by link.
