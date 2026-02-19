@@ -62,23 +62,79 @@ docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** c
 
 ## Only-Office document server
 
-The `cozy/onlyoffice-dev` docker image can be used for local development on
-Linux (the `--net=host` option doesn't work on macOS). Just start it with:
+### Option 1: With Helper Script
+
+Use the helper script that works on both Linux and macOS:
 
 ```bash
-$ docker run -it --rm --name=oodev --net=host cozy/onlyoffice-dev
+./scripts/start-oo.sh
 ```
 
-and run the stack with:
+The script automatically:
+- Collects all instance hostnames from cozy-stack
+- Starts OnlyOffice with proper `--add-host` mappings
+- Waits for OnlyOffice to be ready
+
+### Option 2: Manual Docker Command
+
+**For macOS and Linux (port mapping):**
 
 ```bash
-$ cozy-stack serve --disable-csp --onlyoffice-url=http://localhost:8000 --onlyoffice-inbox-secret=inbox_secret --onlyoffice-outbox-secret=outbox_secret
-$ cozy-stack features defaults '{"drive.office": {"enabled": true, "write": true}}'
+docker run -d --name onlyoffice-ds \
+    -p 8000:80 \
+    -e JWT_ENABLED=false \
+    -e ALLOW_PRIVATE_IP_ADDRESS=true \
+    -e ALLOW_META_IP_ADDRESS=true \
+    --add-host=cozy.localhost:host-gateway \
+    onlyoffice/documentserver:latest
 ```
 
-If you need to rebuild it, you can do that with:
+**For Linux only (`--net=host`):**
 
 ```bash
-$ cd scripts/onlyoffice-dev
-$ docker build -t "cozy/onlyoffice-dev" .
+docker run -d --name onlyoffice-ds \
+    --net=host \
+    -e JWT_ENABLED=false \
+    -e ALLOW_PRIVATE_IP_ADDRESS=true \
+    -e ALLOW_META_IP_ADDRESS=true \
+    -e DS_PORT=8000 \
+    onlyoffice/documentserver:latest
 ```
+
+### Configure cozy-stack
+
+Add to your `~/.cozy/cozy.yaml`:
+
+```yaml
+contexts:
+  default:
+    onlyoffice_url: http://localhost:8000/
+
+office:
+  default:
+    onlyoffice_url: http://localhost:8000/
+    onlyoffice_inbox_secret: ""
+    onlyoffice_outbox_secret: ""
+```
+
+### Enable Feature Flag
+
+```bash
+cozy-stack features defaults '{"drive.office": {"enabled": true, "write": true}}'
+```
+
+### Troubleshooting
+
+**OnlyOffice can't download the document:**
+- Check OnlyOffice logs: `docker logs onlyoffice-ds`
+- Look for DNS errors like `ENOTFOUND cozy.localhost`
+- Ensure `--add-host` flag was applied: `docker exec onlyoffice-ds cat /etc/hosts | grep cozy`
+- Ensure `ALLOW_PRIVATE_IP_ADDRESS=true` is set
+
+**"Download failed" error in editor:**
+- The Document Server can't reach cozy-stack
+- Verify connectivity: `docker exec onlyoffice-ds wget -qO- http://cozy.localhost:8080/`
+
+**No "Open with OnlyOffice" option in Drive:**
+- Check feature flag: `cozy-stack features show`
+- Verify context has `onlyoffice_url`: check `/settings/context` endpoint

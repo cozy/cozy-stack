@@ -31,6 +31,8 @@ Reference: https://api.onlyoffice.com/editors/save
 
 ## Routes
 
+> **Note:** For local development setup, see [Docker - OnlyOffice Document Server](docker.md#onlyoffice-document-server).
+
 ### GET /office/:id/open
 
 This route returns the parameters to open an office document. There are two
