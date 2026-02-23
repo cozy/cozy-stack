@@ -217,9 +217,9 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		Content string `json:"content"`
 	}
 
-	chat_history := make([]RAGMessage, 0, len(chat.Messages))
+	chatHistory := make([]RAGMessage, 0, len(chat.Messages))
 	for _, msg := range chat.Messages {
-		chat_history = append(chat_history, RAGMessage{
+		chatHistory = append(chatHistory, RAGMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
 		})
@@ -230,7 +230,7 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 	}
 	payload := map[string]interface{}{
 		"model":       fmt.Sprintf("ragondin-%s", inst.Domain),
-		"messages":    chat_history,
+		"messages":    chatHistory,
 		"stream":      query.Stream,
 		"metadata":    metadata,
 		"temperature": Temperature,
