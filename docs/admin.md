@@ -13,7 +13,6 @@ are very powerful.
 
 The default port for the admin endpoints is `6060`. If you want to customize the parameters, please see the [config file documentation page](config.md).
 
-
 ## Instance
 
 ### GET /instances
@@ -39,47 +38,47 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-    "data": [
-        {
-            "type": "instances",
-            "id": "3af6ed68a6d9146b3529d2584a001d98",
-            "attributes": {
-                "domain": "alice.cozy.localhost:8080",
-                "prefix": "cozy7d3d5947e7f3b0c674d1b8644646348e",
-                "locale": "fr",
-                "context": "dev",
-                "onboarding_finished": true,
-                "indexes_version": 30
-            },
-            "meta": {
-                "rev": "1-32c855c989e8f6def0bc0cc417d8b3b4"
-            },
-            "links": {
-                "self": "/instances/3af6ed68a6d9146b3529d2584a001d98"
-            }
-        },
-        {
-            "type": "instances",
-            "id": "3af6ed68a6d9146b3529d2584a01d557",
-            "attributes": {
-                "domain": "bob.cozy.localhost:8080",
-                "prefix": "cozybf682065ca3c7d64f2dafc6cc12fe702",
-                "locale": "fr",
-                "context": "dev",
-                "onboarding_finished": true,
-                "indexes_version": 30
-            },
-            "meta": {
-                "rev": "1-ab6f77dbfdb3aab5b70b022e37fe231f"
-            },
-            "links": {
-                "self": "/instances/3af6ed68a6d9146b3529d2584a01d557"
-            }
-        }
-    ],
-    "meta": {
-        "count": 2
+  "data": [
+    {
+      "type": "instances",
+      "id": "3af6ed68a6d9146b3529d2584a001d98",
+      "attributes": {
+        "domain": "alice.cozy.localhost:8080",
+        "prefix": "cozy7d3d5947e7f3b0c674d1b8644646348e",
+        "locale": "fr",
+        "context": "dev",
+        "onboarding_finished": true,
+        "indexes_version": 30
+      },
+      "meta": {
+        "rev": "1-32c855c989e8f6def0bc0cc417d8b3b4"
+      },
+      "links": {
+        "self": "/instances/3af6ed68a6d9146b3529d2584a001d98"
+      }
+    },
+    {
+      "type": "instances",
+      "id": "3af6ed68a6d9146b3529d2584a01d557",
+      "attributes": {
+        "domain": "bob.cozy.localhost:8080",
+        "prefix": "cozybf682065ca3c7d64f2dafc6cc12fe702",
+        "locale": "fr",
+        "context": "dev",
+        "onboarding_finished": true,
+        "indexes_version": 30
+      },
+      "meta": {
+        "rev": "1-ab6f77dbfdb3aab5b70b022e37fe231f"
+      },
+      "links": {
+        "self": "/instances/3af6ed68a6d9146b3529d2584a01d557"
+      }
     }
+  ],
+  "meta": {
+    "count": 2
+  }
 }
 ```
 
@@ -101,7 +100,7 @@ Content-Type: application/json
 ```
 
 ```json
-{"count":259}
+{ "count": 259 }
 ```
 
 ### GET /instances/:domain/last-activity
@@ -131,17 +130,47 @@ Content-Type: application/json
 
 ### PATCH /instances/:domain
 
-This route can be used to change an instance (email, locale, disk quota, ToS,
-etc.)
+Updates an instance's properties. All parameters are optional and passed as
+query string; only the ones provided are updated.
 
-**Note** a special parameter `FromCloudery=true` in the query string can be
-used to tell the stack to not call the cloudery if the email or public name has
-changed, since the change is already coming from the cloudery.
+#### Parameters (query string)
 
-#### Request
+| Parameter            | Type    | Description                                                                 |
+| -------------------- | ------- | --------------------------------------------------------------------------- |
+| `OldDomain`          | string  | Previous domain of the instance (migration)                                 |
+| `Locale`             | string  | Locale (e.g. `fr`, `en`)                                                    |
+| `UUID`               | string  | Instance UUID identifier                                                    |
+| `OIDCID`             | string  | Identifier for OIDC authentication                                          |
+| `FranceConnectID`    | string  | FranceConnect identifier                                                    |
+| `TOSSigned`          | string  | Signed TOS version                                                          |
+| `TOSLatest`          | string  | Latest TOS version                                                          |
+| `Timezone`           | string  | Timezone (e.g. `Europe/Paris`)                                              |
+| `ContextName`        | string  | Context name                                                                |
+| `Email`              | string  | Owner email address                                                         |
+| `PublicName`         | string  | Display name                                                                |
+| `Phone`              | string  | Phone number                                                                |
+| `Settings`           | string  | Settings (e.g. `offer:premium`)                                             |
+| `BlockingReason`     | string  | Blocking reason code (e.g. `PAYMENT_FAILED`, `LOGIN_FAILED`)                |
+| `DomainAliases`      | string  | Domain aliases, comma-separated                                             |
+| `Sponsorships`       | string  | Sponsorships, comma-separated                                               |
+| `DiskQuota`          | integer | Disk quota in bytes                                                         |
+| `OnboardingFinished` | bool    | `true` or `false` — whether onboarding is finished                          |
+| `MagicLink`          | bool    | `true` or `false` — enable magic links via email                            |
+| `Blocked`            | bool    | `true` or `false` — block or unblock the instance                           |
+| `FromCloudery`       | bool    | `true` to indicate the update comes from Cloudery (skips Cloudery callback) |
+| `Deleting`           | bool    | `true` or `false` — mark the instance as being deleted                      |
+| `Debug`              | bool    | _Deprecated_ — kept for compatibility                                       |
+
+#### Request example
 
 ```http
 PATCH /instances/john.mycozy.cloud?Email=john@example.com&FromCloudery=true HTTP/1.1
+```
+
+To block an instance with a reason:
+
+```http
+PATCH /instances/john.mycozy.cloud?Blocked=true&BlockingReason=PAYMENT_FAILED HTTP/1.1
 ```
 
 #### Response
@@ -177,7 +206,6 @@ HTTP/1.1 200 OK
 }
 ```
 
-
 ### GET /instances/with-app-version/:slug/:version
 
 Returns all the instances using slug/version pair
@@ -197,11 +225,11 @@ Content-Type: application/json
 
 ```json
 {
-    "instances": [
-        "alice.cozy.localhost",
-        "bob.cozy.localhost",
-        "zoe.cozy.localhost"
-    ]
+  "instances": [
+    "alice.cozy.localhost",
+    "bob.cozy.localhost",
+    "zoe.cozy.localhost"
+  ]
 }
 ```
 
@@ -399,8 +427,8 @@ POST /instances/alice.cozy.localhost/fixers/orphan-account HTTP/1.1
 
 ### POST /instances/:domain/export
 
-Starts an export for the given instance. The CouchDB documents will be saved in 
-an intermediary archive while the files won't be added until the data is 
+Starts an export for the given instance. The CouchDB documents will be saved in
+an intermediary archive while the files won't be added until the data is
 actually downloaded.
 
 The response contains the details of the scheduled export job.
@@ -411,11 +439,11 @@ The response contains the details of the scheduled export job.
 | --------- | ------------------------------------------------------------------------------------------- |
 | admin-req | Boolean indicating when the request is made by an admin and the user should not be notified |
 
-The admin-req parameter is optional: by default, the instance's owner will be 
-notified via e-mail, whether the export is successful or not. If it's 
+The admin-req parameter is optional: by default, the instance's owner will be
+notified via e-mail, whether the export is successful or not. If it's
 successful, the e-mail will contain a link to the Settings app allowing the user
 to download the data archives.
-When this parameter is `true`, no e-mails will be sent and the admin will be 
+When this parameter is `true`, no e-mails will be sent and the admin will be
 able to get the export document via realtime events.
 
 #### Request
@@ -436,19 +464,19 @@ Content-Type: application/json
   "_id": "123123",
   "_rev": "1-58d2b368da0a1b336bcd18ced210a8a1",
   "domain": "alice.cozy.localhost",
-   "prefix": "cozyfdd8fd8eb825ad98821b11871abf58c9",
-   "worker": "export",
-   "message": {
-     "parts_size": 0,
-     "max_age": 0,
-     "contextual_domain": "alice.cozy.localhost",
-     "admin_req": true
-   },
-   "event": null,
-   "state": "queued",
-   "queued_at": "2023-02-01T11:50:59.286530525+01:00",
-   "started_at": "0001-01-01T00:00:00Z",
-   "finished_at": "0001-01-01T00:00:00Z"
+  "prefix": "cozyfdd8fd8eb825ad98821b11871abf58c9",
+  "worker": "export",
+  "message": {
+    "parts_size": 0,
+    "max_age": 0,
+    "contextual_domain": "alice.cozy.localhost",
+    "admin_req": true
+  },
+  "event": null,
+  "state": "queued",
+  "queued_at": "2023-02-01T11:50:59.286530525+01:00",
+  "started_at": "0001-01-01T00:00:00Z",
+  "finished_at": "0001-01-01T00:00:00Z"
 }
 ```
 
@@ -465,7 +493,7 @@ Only the first part of the archive contains the metadata.
 | --------- | ------------------------------------------------------------------- |
 | cursor    | String reprentation of the export cursor to start the download from |
 
-The cursor parameter is optional but any given cursor should be one of the 
+The cursor parameter is optional but any given cursor should be one of the
 defined `parts_cursors` in the export document.
 To get all the parts, this endpoint must be called one time with no cursors, and
 one time for each cursor in `parts_cursors`.
@@ -501,24 +529,24 @@ Content-Type: application/json
 
 ```json
 {
-    "notification": {
-        "category": "account-balance",
-        "category_id": "my-bank",
-        "title": "Your account balance is not OK",
-        "message": "Warning: we have detected a negative balance in your my-bank",
-        "priority": "high",
-        "state": "-1",
-        "preferred_channels": ["mobile"],
-        "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
-        "content_html": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
-    },
-    "properties": {
-        "description": "Alert the user when its account balance is negative",
-        "collapsible": true,
-        "multiple": true,
-        "stateful": true,
-        "default_priority": "high"
-    }
+  "notification": {
+    "category": "account-balance",
+    "category_id": "my-bank",
+    "title": "Your account balance is not OK",
+    "message": "Warning: we have detected a negative balance in your my-bank",
+    "priority": "high",
+    "state": "-1",
+    "preferred_channels": ["mobile"],
+    "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
+    "content_html": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
+  },
+  "properties": {
+    "description": "Alert the user when its account balance is negative",
+    "collapsible": true,
+    "multiple": true,
+    "stateful": true,
+    "default_priority": "high"
+  }
 }
 ```
 
@@ -531,20 +559,20 @@ Content-Type: application/json
 
 ```json
 {
-    "_id": "c57a548c-7602-11e7-933b-6f27603d27da",
-    "_rev": "1-1f2903f9a867",
-    "source_id": "cozy/cli//account-balance/my-bank",
-    "originator": "cli",
-    "category": "account-balance",
-    "category_id": "my-bank",
-    "created_at": "2024-01-04T15:23:01.832Z",
-    "last_sent": "2024-01-04T15:23:01.832Z",
-    "title": "Your account balance is not OK",
-    "message": "Warning: we have detected a negative balance in your my-bank",
-    "priority": "high",
-    "state": "-1",
-    "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
-    "contentHTML": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
+  "_id": "c57a548c-7602-11e7-933b-6f27603d27da",
+  "_rev": "1-1f2903f9a867",
+  "source_id": "cozy/cli//account-balance/my-bank",
+  "originator": "cli",
+  "category": "account-balance",
+  "category_id": "my-bank",
+  "created_at": "2024-01-04T15:23:01.832Z",
+  "last_sent": "2024-01-04T15:23:01.832Z",
+  "title": "Your account balance is not OK",
+  "message": "Warning: we have detected a negative balance in your my-bank",
+  "priority": "high",
+  "state": "-1",
+  "content": "Hello,\r\nWe have detected a negative balance in your my-bank account.",
+  "contentHTML": "<html>\r\n\t<body>\r\n\t<p>Hello,<br/>We have detected a negative balance in your my-bank account.</p>\r\n\t</body>\r\n\t</html>"
 }
 ```
 
@@ -571,21 +599,14 @@ HTTP/1.1 200 OK
 [
   {
     "config": {
-      "claudy_actions": [
-        "desktop",
-        "mobile",
-        "support"
-      ],
+      "claudy_actions": ["desktop", "mobile", "support"],
       "debug": true,
       "features": [
         {
           "foo": "bar"
         },
         {
-          "baz": [
-            "qux",
-            "quux"
-          ]
+          "baz": ["qux", "quux"]
         }
       ],
       "help_link": "https://forum.cozy.io/",
@@ -594,9 +615,7 @@ HTTP/1.1 200 OK
       "sharing_domain": "cozy.localhost"
     },
     "context": "dev",
-    "registries": [
-      "https://apps-registry.cozycloud.cc/"
-    ],
+    "registries": ["https://apps-registry.cozycloud.cc/"],
     "office": {
       "OnlyOfficeURL": "https://documentserver.cozycloud.cc/"
     },
@@ -638,21 +657,14 @@ HTTP/1.1 200 OK
 ```json
 {
   "config": {
-    "claudy_actions": [
-      "desktop",
-      "mobile",
-      "support"
-    ],
+    "claudy_actions": ["desktop", "mobile", "support"],
     "debug": true,
     "features": [
       {
         "foo": "bar"
       },
       {
-        "baz": [
-          "qux",
-          "quux"
-        ]
+        "baz": ["qux", "quux"]
       }
     ],
     "help_link": "https://forum.cozy.io/",
@@ -661,9 +673,7 @@ HTTP/1.1 200 OK
     "sharing_domain": "cozy.localhost"
   },
   "context": "dev",
-  "registries": [
-    "https://apps-registry.cozycloud.cc/"
-  ],
+  "registries": ["https://apps-registry.cozycloud.cc/"],
   "office": {
     "OnlyOfficeURL": "https://documentserver.cozycloud.cc/",
     "InboxSecret": "inbox_secret",
@@ -672,7 +682,6 @@ HTTP/1.1 200 OK
   "cloudery_endpoint": ""
 }
 ```
-
 
 ## Checkers
 
@@ -758,8 +767,18 @@ Content-Type: application/json
 
 ```json
 [
-  {"_id":"io.cozy.files/fd1706de234d17d1ac2fe560051a2aae","child_rev":"1-e19947b4f9bfb273bc8958ae932ae4c7","parent_rev":"2-4f82af35577dbc9b686dd447719e4835","type":"invalid_revs_suite"},
-  {"_id":"io.cozy.files/fd9bef5df406f5b150f302b8c5b3f5f0","child_rev":"7-05bb459e0ac5450c17df79ed1f13afa1","parent_rev":"8-07b4cafef3c2e74e698ee4a04d1874c2","type":"invalid_revs_suite"}
+  {
+    "_id": "io.cozy.files/fd1706de234d17d1ac2fe560051a2aae",
+    "child_rev": "1-e19947b4f9bfb273bc8958ae932ae4c7",
+    "parent_rev": "2-4f82af35577dbc9b686dd447719e4835",
+    "type": "invalid_revs_suite"
+  },
+  {
+    "_id": "io.cozy.files/fd9bef5df406f5b150f302b8c5b3f5f0",
+    "child_rev": "7-05bb459e0ac5450c17df79ed1f13afa1",
+    "parent_rev": "8-07b4cafef3c2e74e698ee4a04d1874c2",
+    "type": "invalid_revs_suite"
+  }
 ]
 ```
 
@@ -776,7 +795,6 @@ It will return a `200 OK`, except if the instance is not found where the code
 will be `404 Not Found` (a `5xx` can also happen in case of server errors like
 CouchDB not available). The format of the response will be a JSON array of
 objects, each object representing an error.
-
 
 #### Possible error types
 
@@ -925,14 +943,38 @@ Content-Type: application/json
 
 ```json
 [
-  {"id":"314d69d7ebaed0a1870cca67f4433390","trigger":"track","trigger_id":"314d69d7ebaed0a1870cca67f4d75e41","type":"trigger_on_inactive_sharing"},
-  {"id":"314d69d7ebaed0a1870cca67f4433390","trigger":"replicate","trigger_id":"314d69d7ebaed0a1870cca67f4d75e41","type":"trigger_on_inactive_sharing"},
-  {"id":"314d69d7ebaed0a1870cca67f4433390","trigger":"upload","trigger_id":"314d69d7ebaed0a1870cca67f4d75e41","type":"trigger_on_inactive_sharing"},
-  {"id":"314d69d7ebaed0a1870cca67f4433390","member":0,"status":"revoked","type":"invalid_member_status"},
-  {"id":"314d69d7ebaed0a1870cca67f4433390","nb_members":0,"owner":false,"type":"invalid_number_of_credentials"}
+  {
+    "id": "314d69d7ebaed0a1870cca67f4433390",
+    "trigger": "track",
+    "trigger_id": "314d69d7ebaed0a1870cca67f4d75e41",
+    "type": "trigger_on_inactive_sharing"
+  },
+  {
+    "id": "314d69d7ebaed0a1870cca67f4433390",
+    "trigger": "replicate",
+    "trigger_id": "314d69d7ebaed0a1870cca67f4d75e41",
+    "type": "trigger_on_inactive_sharing"
+  },
+  {
+    "id": "314d69d7ebaed0a1870cca67f4433390",
+    "trigger": "upload",
+    "trigger_id": "314d69d7ebaed0a1870cca67f4d75e41",
+    "type": "trigger_on_inactive_sharing"
+  },
+  {
+    "id": "314d69d7ebaed0a1870cca67f4433390",
+    "member": 0,
+    "status": "revoked",
+    "type": "invalid_member_status"
+  },
+  {
+    "id": "314d69d7ebaed0a1870cca67f4433390",
+    "nb_members": 0,
+    "owner": false,
+    "type": "invalid_number_of_credentials"
+  }
 ]
 ```
-
 
 ## Konnectors
 
@@ -1105,7 +1147,7 @@ HTTP/1.1 200 OK
 ```
 
 ```json
-{"count": 42}
+{ "count": 42 }
 ```
 
 ## Swift
@@ -1153,7 +1195,6 @@ Content-Type: application/json
 
 The `show_domains=true` query parameter provides the domain names if needed
 
-
 #### Request
 
 ```http
@@ -1175,9 +1216,7 @@ Content-Type: application/json
   },
   "v1": {
     "counter": 1,
-    "domains": [
-      "bob.cozy.localhost:8081"
-    ]
+    "domains": ["bob.cozy.localhost:8081"]
   },
   "v2a": {
     "counter": 0
@@ -1187,10 +1226,7 @@ Content-Type: application/json
   },
   "v3a": {
     "counter": 2,
-    "domains": [
-      "alice.cozy.localhost:8081",
-      "ru.cozy.localhost:8081"
-    ]
+    "domains": ["alice.cozy.localhost:8081", "ru.cozy.localhost:8081"]
   },
   "v3b": {
     "counter": 4,
