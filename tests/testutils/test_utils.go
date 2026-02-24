@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,10 +110,13 @@ type TestSetup struct {
 // NewSetup returns a new TestSetup
 // name is used to prevent bug when tests are run in parallel
 func NewSetup(t testing.TB, name string) *TestSetup {
+	// Replace underscores with hyphens - underscores are invalid in domain names
+	// and cause Go's net/http to reject cookies with such domains
+	sanitizedName := strings.ReplaceAll(strings.ToLower(name), "_", "-")
 	setup := TestSetup{
 		name:    name,
 		t:       t,
-		host:    name + "_" + utils.RandomString(10) + ".cozy.local",
+		host:    sanitizedName + "-" + utils.RandomString(10) + ".cozy.local",
 		cleanup: func() {},
 	}
 

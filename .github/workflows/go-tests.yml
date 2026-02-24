@@ -23,8 +23,8 @@ jobs:
           # Recommended version
           - go-version: '1.25.x'
             couchdb-version: '3.3.3'
-          # More exotic version
-          - go-version: '1.21.x'
+          # Minimum supported version
+          - go-version: '1.24.x'
             couchdb-version: '3.2.3'
     steps:
       - name: Install CouchDB
