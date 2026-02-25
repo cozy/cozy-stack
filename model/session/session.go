@@ -180,7 +180,12 @@ func CookieName(i *instance.Instance) string {
 // subdomains, we need to put it one level higher (eg .mycozy.cloud instead of
 // .example.mycozy.cloud) to make the cookie available when the user visits
 // their apps.
+// In development mode, returns empty string to make cookies host-only,
+// which allows tests to work with localhost.
 func CookieDomain(i *instance.Instance) string {
+	if build.IsDevRelease() {
+		return ""
+	}
 	domain := i.ContextualDomain()
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
