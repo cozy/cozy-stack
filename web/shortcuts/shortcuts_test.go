@@ -71,7 +71,7 @@ func TestShortcuts(t *testing.T) {
 
 		cozyMeta := attrs.Value("cozyMetadata").Object()
 		cozyMeta.Value("createdAt").String().DateTime(time.RFC3339)
-		cozyMeta.Value("createdOn").String().Contains("https://testshortcuts-")
+		cozyMeta.Value("createdOn").String().Contains("https://testshortcuts")
 
 		target := attrs.Value("metadata").Object().Value("target").Object()
 		target.ValueEqual("app", "photos")

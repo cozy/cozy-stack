@@ -110,13 +110,15 @@ type TestSetup struct {
 // NewSetup returns a new TestSetup
 // name is used to prevent bug when tests are run in parallel
 func NewSetup(t testing.TB, name string) *TestSetup {
-	// Replace underscores with hyphens - underscores are invalid in domain names
-	// and cause Go's net/http to reject cookies with such domains
-	sanitizedName := strings.ReplaceAll(strings.ToLower(name), "_", "-")
+	// Remove underscores and hyphens - underscores are invalid in domain names
+	// and cause Go's net/http to reject cookies. Hyphens are stripped by the
+	// OIDC code (see buildDomain), so we avoid them to keep domains consistent.
+	sanitizedName := strings.ReplaceAll(strings.ToLower(name), "_", "")
+	sanitizedName = strings.ReplaceAll(sanitizedName, "-", "")
 	setup := TestSetup{
 		name:    name,
 		t:       t,
-		host:    sanitizedName + "-" + utils.RandomString(10) + ".cozy.local",
+		host:    sanitizedName + utils.RandomString(10) + ".cozy.local",
 		cleanup: func() {},
 	}
 
