@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -104,18 +105,69 @@ func displayPermissions(c echo.Context) error {
 	if doc.Password != nil {
 		doc.Password = true
 	}
-	return jsonapi.Data(c, http.StatusOK, &APIPermission{doc, included}, nil)
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{Permission: doc, included: included}, nil)
 }
 
 func createPermission(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	names := strings.Split(c.QueryParam("codes"), ",")
-	ttl := c.QueryParam("ttl")
-	tiny, _ := strconv.ParseBool(c.QueryParam("tiny"))
+	parent, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	// Share-interact tokens are limited to shared-drive permission endpoints.
+	if parent != nil && parent.Type == permission.TypeShareInteract {
+		return permission.ErrOnlyAppCanCreateSubSet
+	}
+
+	inst := middlewares.GetInstance(c)
+	opts := CreateShareByLinkOptions{}
+	if claims, ok := c.Get("claims").(permission.Claims); ok && claims.Issuer != "" {
+		domain := claims.Issuer
+		opts.CreatorDomain = &domain
+	}
+	return HandleCreateShareByLink(c, inst, opts)
+}
+
+// ValidatePermissionsFn is a function that validates permission rules.
+// Used by HandleCreateShareByLink to allow additional validation on top of
+// the standard permission checks (e.g., verifying files are within a shared drive).
+type ValidatePermissionsFn func(perms permission.Set) error
+
+// CreateShareByLinkOptions configures HandleCreateShareByLink behavior.
+type CreateShareByLinkOptions struct {
+	// runs additional validations after request binding and
+	ValidatePermissions ValidatePermissionsFn
+	// controls whether CreateShareSet's standard permission validation is skipped.
+	SkipValidation bool
+	// overrides the creator domain stored in metadata.
+	CreatorDomain *string
+}
+
+// HandleCreateShareByLink is the common handler for creating share-by-link permissions.
+// It handles parsing, optional additional validation, creation via CreateShareSet, and response formatting.
+func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, opts CreateShareByLinkOptions) error {
+	var subdoc permission.Permission
+	if _, err := jsonapi.Bind(c.Request().Body, &subdoc); err != nil {
+		return err
+	}
+
+	// Run additional validation if provided (e.g., for shared drives)
+	if opts.ValidatePermissions != nil {
+		if err := opts.ValidatePermissions(subdoc.Permissions); err != nil {
+			return err
+		}
+	}
 
 	parent, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
+	}
+	if parent == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
+	}
+
+	var creatorDomain string
+	if opts.CreatorDomain != nil {
+		creatorDomain = *opts.CreatorDomain
 	}
 
 	var slug string
@@ -130,18 +182,25 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	var subdoc permission.Permission
-	if _, err = jsonapi.Bind(c.Request().Body, &subdoc); err != nil {
-		return err
+	// Getting the slug from the token if it has not been retrieved before
+	// with the linkedapp
+	if slug == "" {
+		claims := c.Get("claims").(permission.Claims)
+		slug = claims.Subject
 	}
 
+	names := strings.Split(c.QueryParam("codes"), ",")
+	ttl := c.QueryParam("ttl")
+	tiny, _ := strconv.ParseBool(c.QueryParam("tiny"))
+
+	// Process TTL/expiration
 	var expiresAt interface{}
 	if ttl != "" {
 		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
 			ex := time.Now().Add(d)
 			expiresAt = &ex
 			if d.Hours() > 1.0 && tiny {
-				instance.Logger().Info("Tiny can not be set to true since duration > 1h")
+				inst.Logger().Info("Tiny can not be set to true since duration > 1h")
 				tiny = false
 			}
 		}
@@ -163,26 +222,13 @@ func createPermission(c echo.Context) error {
 		codes = make(map[string]string, len(names))
 		shortcodes = make(map[string]string, len(names))
 		for _, name := range names {
-			longcode, err := instance.CreateShareCode(name)
-			shortcode := createShortCode(tiny)
-
-			codes[name] = longcode
-			shortcodes[name] = shortcode
+			longcode, err := inst.CreateShareCode(name)
 			if err != nil {
 				return err
 			}
+			codes[name] = longcode
+			shortcodes[name] = createShortCode(tiny)
 		}
-	}
-
-	if parent == nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
-	}
-
-	// Getting the slug from the token if it has not been retrieved before
-	// with the linkedapp
-	if slug == "" {
-		claims := c.Get("claims").(permission.Claims)
-		slug = claims.Subject
 	}
 
 	// Handles the metadata part
@@ -201,7 +247,16 @@ func createPermission(c echo.Context) error {
 		subdoc.Metadata.EnsureCreatedFields(md)
 	}
 
-	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc, expiresAt)
+	// Track creator's instance domain for shared drive permissions.
+	if subdoc.Metadata != nil && subdoc.Metadata.UpdatedByApps != nil && len(subdoc.Metadata.UpdatedByApps) > 0 {
+		if creatorDomain != "" {
+			subdoc.Metadata.UpdatedByApps[0].Instance = creatorDomain
+		}
+	}
+
+	// Use CreateShareSet which handles password hashing and doc creation.
+	// Pass skipValidation to control whether standard validation is performed.
+	pdoc, err := permission.CreateShareSet(inst, parent, sourceID, codes, shortcodes, subdoc, expiresAt, opts.SkipValidation)
 	if err != nil {
 		return err
 	}
@@ -211,7 +266,7 @@ func createPermission(c echo.Context) error {
 		pdoc.Password = true
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc, nil}, nil)
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{Permission: pdoc}, nil)
 }
 
 func createShortCode(tiny bool) string {
@@ -269,7 +324,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 		if perm.Password != nil {
 			perm.Password = true
 		}
-		out[i] = &APIPermission{perm, nil}
+		out[i] = &APIPermission{Permission: perm}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
@@ -452,7 +507,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			toPatch.Password = true
 		}
 
-		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch, nil}, nil)
+		return jsonapi.Data(c, http.StatusOK, &APIPermission{Permission: toPatch}, nil)
 	}
 }
 

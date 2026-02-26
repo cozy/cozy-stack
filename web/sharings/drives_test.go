@@ -2228,17 +2228,45 @@ func TestSharedDriveGroupDynamicMembership(t *testing.T) {
 
 	// Step 7: Wait for Alice's sharing to be auto-accepted
 	eAlice := httpexpect.Default(t, tsAlice.URL)
-	require.Eventually(t, func() bool {
-		resp := eAlice.GET("/sharings/"+sharingID).
-			WithHeader("Authorization", "Bearer "+aliceAppToken).
+	isMemberReady := func(e *httpexpect.Expect, token, email string) bool {
+		resp := e.GET("/sharings/"+sharingID).
+			WithHeader("Authorization", "Bearer "+token).
 			Expect()
-		if resp.Raw().StatusCode != 200 {
+		if resp.Raw().StatusCode != http.StatusOK {
 			return false
 		}
-		obj := resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
-		active := obj.Value("data").Object().Value("attributes").Object().Value("active").Boolean().Raw()
-		return active
-	}, 10*time.Second, 500*time.Millisecond, "Alice's sharing should be auto-accepted and active")
+
+		raw := resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object().Raw()
+		data, ok := raw["data"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		attrs, ok := data["attributes"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		members, ok := attrs["members"].([]interface{})
+		if !ok {
+			return false
+		}
+
+		for _, member := range members {
+			memberObj, ok := member.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			memberEmail, _ := memberObj["email"].(string)
+			memberStatus, _ := memberObj["status"].(string)
+			if memberEmail == email {
+				return memberStatus == sharing.MemberStatusReady
+			}
+		}
+
+		return false
+	}
+	require.Eventually(t, func() bool {
+		return isMemberReady(eAlice, aliceAppToken, "alice@example.com")
+	}, 10*time.Second, 500*time.Millisecond, "Alice's sharing should be auto-accepted")
 
 	// Step 8: Verify Alice can access the file
 	eAlice.GET("/sharings/drives/"+sharingID+"/"+fileID).
@@ -2273,17 +2301,8 @@ func TestSharedDriveGroupDynamicMembership(t *testing.T) {
 	// Wait for the sharing to be auto-accepted on Bob's side
 	eBob := httpexpect.Default(t, tsBob.URL)
 	require.Eventually(t, func() bool {
-		// Check if Bob can get the sharing
-		resp := eBob.GET("/sharings/"+sharingID).
-			WithHeader("Authorization", "Bearer "+bobAppToken).
-			Expect()
-		if resp.Raw().StatusCode != 200 {
-			return false
-		}
-		obj := resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).Object()
-		active := obj.Value("data").Object().Value("attributes").Object().Value("active").Boolean().Raw()
-		return active
-	}, 10*time.Second, 500*time.Millisecond, "Bob's sharing should be auto-accepted and active")
+		return isMemberReady(eBob, bobAppToken, "bob@example.com")
+	}, 10*time.Second, 500*time.Millisecond, "Bob's sharing should be auto-accepted")
 
 	// Step 15: Verify Bob can access the file in the shared drive
 	eBob.GET("/sharings/drives/"+sharingID+"/"+fileID).
