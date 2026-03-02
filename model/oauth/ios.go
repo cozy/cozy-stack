@@ -218,9 +218,13 @@ func (obj *appleAttestationObject) setupAppleCertificates() (*x509.Certificate, 
 		intermediates.AddCert(cert)
 	}
 
+	// App Attest credential certificates have a Key Usage for attestation that
+	// doesn't match Go's default expectations (TLS). We must explicitly allow
+	// any key usage to verify the chain.
 	opts := x509.VerifyOptions{
 		Roots:         roots,
 		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 	credCert := certs[0]
 	return credCert, &opts, nil
