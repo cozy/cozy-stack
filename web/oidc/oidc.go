@@ -533,12 +533,14 @@ func Logout(c echo.Context) error {
 	contextName := c.Param("context")
 	conf, err := getGenericConfig(contextName)
 	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on getGenericConfig for logout: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "No OpenID Connect is configured",
 		})
 	}
 
 	if conf.IDTokenKeyURL == "" {
+		logger.WithNamespace("oidc").Errorf("IDTokenKeyURL is not configured for logout")
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "Cannot get the keys",
 			"error_description": "id_token_jwk_url is not configured",
@@ -547,6 +549,7 @@ func Logout(c echo.Context) error {
 
 	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
 	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on GetIDTokenKeys for logout: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "Cannot get the keys",
 			"error_description": err,
@@ -583,6 +586,7 @@ func Logout(c echo.Context) error {
 		}
 		inst, err = findInstanceBySub(sub, contextName)
 		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on findInstanceBySub for logout: %s", err)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error":             "internal server error",
 				"error_description": err,
@@ -599,6 +603,7 @@ func Logout(c echo.Context) error {
 		domain = buildDomain(domain, conf)
 		instance, err := lifecycle.GetInstance(domain)
 		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on lifecycle.GetInstance for logout: %s", err)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error":             "internal server error",
 				"error_description": err,
