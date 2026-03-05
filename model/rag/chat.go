@@ -28,13 +28,15 @@ type ChatPayload struct {
 	Query              string `json:"q"`
 	Stream             *bool  `json:"stream"`
 	WebSearch          *bool  `json:"websearch"`
+	AssistantID        string `json:"assistantID,omitempty"`
 }
 
 type ChatConversation struct {
-	DocID    string                 `json:"_id"`
-	DocRev   string                 `json:"_rev,omitempty"`
-	Messages []ChatMessage          `json:"messages"`
-	Metadata *metadata.CozyMetadata `json:"cozyMetadata"`
+	DocID            string                 `json:"_id"`
+	DocRev           string                 `json:"_rev,omitempty"`
+	Messages         []ChatMessage          `json:"messages"`
+	Metadata         *metadata.CozyMetadata `json:"cozyMetadata"`
+	RelationshipsMap map[string]interface{} `json:"relationships,omitempty"`
 }
 
 type ChatMessage struct {
@@ -104,6 +106,16 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		md.DocTypeVersion = DocTypeVersion
 		md.UpdatedAt = md.CreatedAt
 		chat.Metadata = md
+		if payload.AssistantID != "" {
+			chat.RelationshipsMap = map[string]interface{}{
+				"assistant": map[string]interface{}{
+					"data": map[string]interface{}{
+						"_type": "io.cozy.ai.chat.assistants",
+						"_id":   payload.AssistantID,
+					},
+				},
+			}
+		}
 	} else if err != nil {
 		return nil, err
 	} else {
