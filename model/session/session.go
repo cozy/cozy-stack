@@ -175,15 +175,18 @@ func CookieName(i *instance.Instance) string {
 	return defaultCookieName
 }
 
+// ForceHostOnlyCookies can be set to true in tests to make cookies host-only.
+// This is needed because test HTTP clients connect to 127.0.0.1, not to the
+// instance domain, so domain-scoped cookies would not be sent back.
+var ForceHostOnlyCookies bool
+
 // CookieDomain returns the domain on which the cookie will be set. On nested
 // subdomains, the cookie is put on the domain of the instance, but for flat
 // subdomains, we need to put it one level higher (eg .mycozy.cloud instead of
 // .example.mycozy.cloud) to make the cookie available when the user visits
 // their apps.
-// In development mode, returns empty string to make cookies host-only,
-// which allows tests to work with localhost.
 func CookieDomain(i *instance.Instance) string {
-	if build.IsDevRelease() {
+	if ForceHostOnlyCookies {
 		return ""
 	}
 	domain := i.ContextualDomain()

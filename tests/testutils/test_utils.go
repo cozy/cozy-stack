@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -46,6 +47,10 @@ func init() {
 	if useDebug {
 		useDebug = true
 	}
+
+	// Test HTTP clients connect to 127.0.0.1, not to the instance domain,
+	// so domain-scoped cookies would not be sent back. Force host-only cookies.
+	session.ForceHostOnlyCookies = true
 }
 
 // CreateTestClient setup an httpexpect.Expect client used to make http tests.
