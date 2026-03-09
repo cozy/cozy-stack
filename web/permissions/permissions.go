@@ -138,6 +138,8 @@ type CreateShareByLinkOptions struct {
 	ValidatePermissions ValidatePermissionsFn
 	// controls whether CreateShareSet's standard permission validation is skipped.
 	SkipValidation bool
+	// overrides the app slug stored in metadata.
+	CreatorSlug *string
 	// overrides the creator domain stored in metadata.
 	CreatorDomain *string
 }
@@ -171,9 +173,12 @@ func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, opts Creat
 	}
 
 	var slug string
+	if opts.CreatorSlug != nil {
+		slug = *opts.CreatorSlug
+	}
 	sourceID := parent.SourceID
 	// Check if the permission is linked to an OAuth Client
-	if parent.Client != nil {
+	if slug == "" && parent.Client != nil {
 		oauthClient := parent.Client.(*oauth.Client)
 		if slug = oauth.GetLinkedAppSlug(oauthClient.SoftwareID); slug != "" {
 			// Changing the sourceID from the OAuth clientID to the classic
@@ -185,8 +190,12 @@ func HandleCreateShareByLink(c echo.Context, inst *instance.Instance, opts Creat
 	// Getting the slug from the token if it has not been retrieved before
 	// with the linkedapp
 	if slug == "" {
-		claims := c.Get("claims").(permission.Claims)
-		slug = claims.Subject
+		if claims, ok := c.Get("claims").(permission.Claims); ok {
+			switch claims.AudienceString() {
+			case consts.AppAudience, consts.KonnectorAudience, consts.AccessTokenAudience:
+				slug = claims.Subject
+			}
+		}
 	}
 
 	names := strings.Split(c.QueryParam("codes"), ",")

@@ -511,6 +511,9 @@ func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance
 			return ensureNoSharedDriveShareByLinkConflict(inst, perms)
 		},
 	}
+	if s.AppSlug != "" {
+		opts.CreatorSlug = &s.AppSlug
+	}
 	if domain, ok := getSharedDriveCallerDomain(c, inst, s); ok {
 		opts.CreatorDomain = &domain
 	}
@@ -590,28 +593,77 @@ func ensureNoSharedDriveShareByLinkConflict(inst *instance.Instance, perms permi
 	return nil
 }
 
-// getSharedDriveCallerDomain returns the domain of the user who initiated the request
-//
-// For cross-stack proxying, the request arrives with a drive token whose JWT
-// issuer is the owner domain, so we map the token back to a sharing member.
-// For same-stack shortcut, the request still carries the caller app token, so
-// we can use claims issuer.
+// ListSharedDriveShareByLinkPermissions returns the share-by-link permissions
+// for the requested files/folders inside a shared drive. Read-only members can
+// only see read-only links.
+func ListSharedDriveShareByLinkPermissions(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	callerReadOnly, err := isSharedDriveCallerReadOnly(c, inst, s)
+	if err != nil {
+		return err
+	}
+
+	rootDir, err := s.GetSharingDir(inst)
+	if err != nil {
+		return jsonapi.NotFound(errors.New("shared drive root directory not found"))
+	}
+
+	targetIDs, err := extractSharedDrivePermissionTargetIDs(c, inst, rootDir)
+	if err != nil {
+		return err
+	}
+
+	permsByTarget, err := permission.GetShareByLinkPermissionsForTargets(inst, consts.Files, targetIDs)
+	if err != nil {
+		return err
+	}
+
+	out := make([]jsonapi.Object, 0)
+	for _, targetID := range targetIDs {
+		for _, perm := range permsByTarget[targetID] {
+			if callerReadOnly && !isSharedDriveShareByLinkReadOnly(perm) {
+				continue
+			}
+
+			if perm.Password != nil {
+				perm.Password = true
+			}
+			permCopy := *perm
+			out = append(out, &webperm.APIPermission{Permission: &permCopy})
+		}
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, out, nil)
+}
+
+func extractSharedDrivePermissionTargetIDs(c echo.Context, inst *instance.Instance, rootDir *vfs.DirDoc) ([]string, error) {
+	rawIDs := strings.TrimSpace(c.QueryParam("ids"))
+	if rawIDs == "" {
+		return nil, jsonapi.InvalidParameter("ids", errors.New("ids is required"))
+	}
+
+	fs := inst.VFS()
+	ids := make([]string, 0)
+	for _, id := range strings.Split(rawIDs, ",") {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			return nil, jsonapi.InvalidParameter("ids", errors.New("ids must contain file or folder IDs"))
+		}
+		if err := isWithinDirectory(fs, id, rootDir); err != nil {
+			return nil, jsonapi.InvalidParameter("ids", errors.New("file is not within the shared drive"))
+		}
+
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+// getSharedDriveCallerDomain returns the domain of the user who initiated the
+// request. For recipient requests, we resolve the member from the drive token.
+// For owner requests, we use the current instance domain.
 func getSharedDriveCallerDomain(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (string, bool) {
 	currentPerm, err := middlewares.GetPermission(c)
 	if err != nil {
-		return "", false
-	}
-
-	claims, hasClaims := c.Get("claims").(permission.Claims)
-	issuer := ""
-	if hasClaims {
-		issuer = claims.Issuer
-	}
-
-	if currentPerm == nil {
-		if issuer != "" {
-			return issuer, true
-		}
 		return "", false
 	}
 
@@ -631,17 +683,11 @@ func getSharedDriveCallerDomain(c echo.Context, inst *instance.Instance, s *shar
 				}
 			}
 		}
-
-		// Same-stack shortcut keeps the caller app token in the request.
-		// Cross-stack share tokens must not fallback to issuer.
-		if hasClaims && claims.AudienceString() != consts.ShareAudience && issuer != "" {
-			return issuer, true
-		}
 		return "", false
 
 	default:
-		if issuer != "" {
-			return issuer, true
+		if inst.Domain != "" {
+			return inst.Domain, true
 		}
 		return "", false
 	}
@@ -657,6 +703,47 @@ func isSharePermissionToken(perm *permission.Permission) bool {
 	default:
 		return false
 	}
+}
+
+func isSharedDriveCallerReadOnly(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (bool, error) {
+	currentPerm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return false, err
+	}
+	if currentPerm == nil {
+		return false, echo.NewHTTPError(http.StatusUnauthorized, "no permission")
+	}
+
+	switch currentPerm.Type {
+	case permission.TypeShareByLink, permission.TypeSharePreview:
+		return false, jsonapi.Forbidden(errors.New("public share token cannot access shared-drive links"))
+
+	case permission.TypeShareInteract:
+		token := middlewares.GetRequestToken(c)
+		if token == "" {
+			return false, jsonapi.Forbidden(errors.New("missing shared-drive token"))
+		}
+		member, err := s.FindMemberByInteractCode(inst, token)
+		if err != nil {
+			return false, err
+		}
+		return member.ReadOnly, nil
+
+	default:
+		return false, nil
+	}
+}
+
+func isSharedDriveShareByLinkReadOnly(perm *permission.Permission) bool {
+	if perm == nil || len(perm.Permissions) == 0 {
+		return false
+	}
+	for _, rule := range perm.Permissions {
+		if !rule.Verbs.ReadOnly() {
+			return false
+		}
+	}
+	return true
 }
 
 func authorizeSharedDrivePermissionMutation(
@@ -934,6 +1021,7 @@ func drivesRoutes(router *echo.Group) {
 	drive.GET("/realtime", Ws)
 
 	// Share-by-link (public link) endpoints for files in shared drives
+	drive.GET("/permissions", proxy(ListSharedDriveShareByLinkPermissions, true))
 	drive.POST("/permissions", proxy(CreateSharedDriveShareByLinkHandler, true))
 	drive.PATCH("/permissions/:perm-id", proxy(PatchSharedDrivePermissionHandler, true))
 	drive.DELETE("/permissions/:perm-id", proxy(RevokeSharedDrivePermission, true))
@@ -998,14 +1086,12 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 
 		// XXX Let's try to avoid one http request by cheating a bit. If the two
 		// instances are on the same domain (same stack), we can call directly
-		// the handler. We just need to fake the middlewares. It helps for
-		// performances.
+		// the handler. We still rewrite the request to match the real proxied
+		// request shape. It helps for performances.
 		if owner, err := lifecycle.GetInstance(u.Host); err == nil {
-			pdoc, err := permission.GetForShareCode(owner, token)
-			if err != nil {
-				return err
-			}
-			middlewares.ForcePermission(c, pdoc)
+			c.Request().Header.Set(echo.HeaderAuthorization, "Bearer "+token)
+			middlewares.ForcePermission(c, nil)
+			c.Set("claims", nil)
 			middlewares.SetInstance(c, owner)
 			return fn(c, owner, s)
 		}

@@ -723,42 +723,74 @@ func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (m
 	return result, nil
 }
 
-// GetShareByLinkPermissionsForTarget returns share-by-link permission docs for a
-// single target document. The underlying view emits one row per rule/value, so
-// permissions are deduplicated by ID before returning.
-func GetShareByLinkPermissionsForTarget(
+// GetShareByLinkPermissionsForTargets returns share-by-link permission docs for
+// the given target documents. Results are grouped by target ID. The underlying
+// view emits one row per rule/value, so permissions are deduplicated by
+// permission ID within each target.
+func GetShareByLinkPermissionsForTargets(
 	db prefixer.Prefixer,
 	doctype string,
-	id string,
-) ([]*Permission, error) {
-	var res couchdb.ViewResponse
+	ids []string,
+) (map[string][]*Permission, error) {
+	if len(ids) == 0 {
+		return map[string][]*Permission{}, nil
+	}
+
+	keys := make([]interface{}, len(ids))
+	for i, id := range ids {
+		keys[i] = []string{doctype, "_id", id}
+	}
+
+	var res struct {
+		Rows []struct {
+			ID  string          `json:"id"`
+			Key []string        `json:"key"`
+			Doc json.RawMessage `json:"doc"`
+		} `json:"rows"`
+	}
 	err := couchdb.ExecView(db, couchdb.PermissionsShareByDocView, &couchdb.ViewRequest{
-		Key:         []string{doctype, "_id", id},
+		Keys:        keys,
 		IncludeDocs: true,
 	}, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	perms := make([]*Permission, 0, len(res.Rows))
+	permsByTarget := make(map[string][]*Permission, len(keys))
 	seen := make(map[string]struct{}, len(res.Rows))
 	for _, row := range res.Rows {
-		if row == nil || len(row.Doc) == 0 {
+		if len(row.Key) < 3 || len(row.Doc) == 0 {
 			continue
 		}
-		if _, ok := seen[row.ID]; ok {
+
+		targetID := row.Key[2]
+		seenKey := targetID + "\x00" + row.ID
+		if _, ok := seen[seenKey]; ok {
 			continue
 		}
-		seen[row.ID] = struct{}{}
+		seen[seenKey] = struct{}{}
 
 		perm := &Permission{}
 		if err := json.Unmarshal(row.Doc, perm); err != nil {
 			return nil, err
 		}
-		perms = append(perms, perm)
+		permsByTarget[targetID] = append(permsByTarget[targetID], perm)
 	}
 
-	return perms, nil
+	return permsByTarget, nil
+}
+
+// GetShareByLinkPermissionsForTarget returns share-by-link permission docs for a single target document.
+func GetShareByLinkPermissionsForTarget(
+	db prefixer.Prefixer,
+	doctype string,
+	id string,
+) ([]*Permission, error) {
+	permsByTarget, err := GetShareByLinkPermissionsForTargets(db, doctype, []string{id})
+	if err != nil {
+		return nil, err
+	}
+	return permsByTarget[id], nil
 }
 
 // GetPermissionsByDoctype returns the list of all permissions of the given
