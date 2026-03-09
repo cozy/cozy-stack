@@ -492,7 +492,7 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 	return doc, nil
 }
 
-func checkSetPermissions(set Set, parent *Permission) error {
+func CheckSetPermissions(set Set, parent *Permission) error {
 	if parent.Type != TypeWebapp &&
 		parent.Type != TypeKonnector &&
 		parent.Type != TypeOauth &&
@@ -557,7 +557,7 @@ func CreateShareSet(
 ) (*Permission, error) {
 	set := subdoc.Permissions
 	if !skipValidation {
-		if err := checkSetPermissions(set, parent); err != nil {
+		if err := CheckSetPermissions(set, parent); err != nil {
 			return nil, err
 		}
 	}

@@ -729,8 +729,13 @@ func isSharedDriveCallerReadOnly(c echo.Context, inst *instance.Instance, s *sha
 		}
 		return member.ReadOnly, nil
 
-	default:
+	case permission.TypeWebapp, permission.TypeKonnector, permission.TypeOauth, permission.TypeCLI:
 		return false, nil
+
+	default:
+		// Default to read-only for unknown permission types to avoid
+		// accidentally leaking write access.
+		return true, nil
 	}
 }
 
@@ -798,12 +803,11 @@ func CheckSharedDrivePermissionMutationAuthorization(
 // ValidateSharedDrivePermissionPatch validates the payload for patching a
 // shared-drive share-by-link permission.
 func ValidateSharedDrivePermissionPatch(patch permission.Permission) error {
-	// Only allow password and expires_at modifications
-	if len(patch.Permissions) > 0 || len(patch.Codes) > 0 {
-		return jsonapi.BadRequest(errors.New("only password and expires_at can be modified"))
+	if len(patch.Codes) > 0 {
+		return jsonapi.BadRequest(errors.New("codes cannot be modified"))
 	}
-	if patch.Password == nil && patch.ExpiresAt == nil {
-		return jsonapi.BadRequest(errors.New("password or expires_at must be provided"))
+	if patch.Password == nil && patch.ExpiresAt == nil && len(patch.Permissions) == 0 {
+		return jsonapi.BadRequest(errors.New("password, expires_at, or permissions must be provided"))
 	}
 	if patch.Password != nil {
 		if _, ok := patch.Password.(string); !ok {
@@ -818,8 +822,44 @@ func ValidateSharedDrivePermissionPatch(patch permission.Permission) error {
 	return nil
 }
 
-// ApplySharedDrivePermissionPatch applies password and expires_at updates for a
-// shared-drive share-by-link permission.
+func ValidateSharedDrivePermissionSetPatch(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	currentPerm *permission.Permission,
+	existingPerm *permission.Permission,
+	patch permission.Permission,
+) error {
+	if len(patch.Permissions) == 0 {
+		return nil
+	}
+	if currentPerm == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "no permission")
+	}
+
+	currentTargetID, err := getSharedDrivePermissionTargetID(existingPerm.Permissions)
+	if err != nil {
+		return jsonapi.BadRequest(errors.New("invalid existing shared-drive permission"))
+	}
+	patchTargetID, err := getSharedDrivePermissionTargetID(patch.Permissions)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	if patchTargetID != currentTargetID {
+		return jsonapi.BadRequest(errors.New("shared-drive permission target cannot be changed"))
+	}
+
+	if err := validateSharedDrivePermission(c, inst, s, patch.Permissions); err != nil {
+		return err
+	}
+	if err := permission.CheckSetPermissions(patch.Permissions, currentPerm); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ApplySharedDrivePermissionPatch applies password, expires_at, and permission
+// updates for a shared-drive share-by-link permission.
 func ApplySharedDrivePermissionPatch(perm *permission.Permission, patch permission.Permission) error {
 	// Apply password change
 	if patch.Password != nil {
@@ -847,6 +887,9 @@ func ApplySharedDrivePermissionPatch(perm *permission.Permission, patch permissi
 			}
 			perm.ExpiresAt = expiresAt
 		}
+	}
+	if len(patch.Permissions) > 0 {
+		perm.Permissions = patch.Permissions
 	}
 	return nil
 }
@@ -916,7 +959,8 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 }
 
 // PatchSharedDrivePermissionHandler modifies a share-by-link permission in a shared drive.
-// Only the creator or the drive owner can modify. Only password and expires_at can be changed.
+// Only the creator or the drive owner can modify. Codes are immutable, and
+// permission updates must keep the same target.
 func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	permID := c.Param("perm-id")
 	if permID == "" {
@@ -942,6 +986,10 @@ func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, 
 	if err := authorizeSharedDrivePermissionMutation(c, inst, s, perm); err != nil {
 		return err
 	}
+	currentPerm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
 
 	// Parse the patch request
 	var patch permission.Permission
@@ -950,6 +998,9 @@ func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, 
 	}
 
 	if err := ValidateSharedDrivePermissionPatch(patch); err != nil {
+		return err
+	}
+	if err := ValidateSharedDrivePermissionSetPatch(c, inst, s, currentPerm, perm, patch); err != nil {
 		return err
 	}
 	if err := ApplySharedDrivePermissionPatch(perm, patch); err != nil {

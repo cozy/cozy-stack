@@ -37,14 +37,14 @@ func permissionWithCreatorDomain(domain string) *permission.Permission {
 }
 
 func TestValidateSharedDrivePermissionPatch(t *testing.T) {
-	t.Run("RejectsPermissionsField", func(t *testing.T) {
+	t.Run("AcceptsPermissionsField", func(t *testing.T) {
 		patch := permission.Permission{
 			Permissions: permission.Set{
 				{Type: "io.cozy.files"},
 			},
 		}
 		err := sharingsweb.ValidateSharedDrivePermissionPatch(patch)
-		assertJSONAPIError(t, err, http.StatusBadRequest, "only password and expires_at can be modified")
+		require.NoError(t, err)
 	})
 
 	t.Run("RejectsCodesField", func(t *testing.T) {
@@ -52,12 +52,12 @@ func TestValidateSharedDrivePermissionPatch(t *testing.T) {
 			Codes: map[string]string{"foo": "bar"},
 		}
 		err := sharingsweb.ValidateSharedDrivePermissionPatch(patch)
-		assertJSONAPIError(t, err, http.StatusBadRequest, "only password and expires_at can be modified")
+		assertJSONAPIError(t, err, http.StatusBadRequest, "codes cannot be modified")
 	})
 
 	t.Run("RejectsNoAttributes", func(t *testing.T) {
 		err := sharingsweb.ValidateSharedDrivePermissionPatch(permission.Permission{})
-		assertJSONAPIError(t, err, http.StatusBadRequest, "password or expires_at must be provided")
+		assertJSONAPIError(t, err, http.StatusBadRequest, "password, expires_at, or permissions must be provided")
 	})
 
 	t.Run("RejectsInvalidPasswordType", func(t *testing.T) {

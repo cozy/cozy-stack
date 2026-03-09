@@ -369,27 +369,27 @@ func TestShareSetPermissions(t *testing.T) {
 	setEvents := Set{Rule{Type: "io.cozy.events"}}
 
 	parent := &Permission{Type: TypeCLI, Permissions: setEvents}
-	err := checkSetPermissions(setFiles, parent)
+	err := CheckSetPermissions(setFiles, parent)
 	assert.Error(t, err)
 
 	parent.Type = TypeWebapp
-	err = checkSetPermissions(setFiles, parent)
+	err = CheckSetPermissions(setFiles, parent)
 	assert.Error(t, err)
 
 	parent.Permissions = setFiles
-	err = checkSetPermissions(setFiles, parent)
+	err = CheckSetPermissions(setFiles, parent)
 	assert.NoError(t, err)
 
 	parent.Type = TypeShareInteract
-	err = checkSetPermissions(setFiles, parent)
+	err = CheckSetPermissions(setFiles, parent)
 	assert.NoError(t, err)
 
 	parent.Type = TypeWebapp
-	err = checkSetPermissions(setFilesWildCard, parent)
+	err = CheckSetPermissions(setFilesWildCard, parent)
 	assert.Error(t, err)
 
 	parent.Permissions = setFilesWildCard
-	err = checkSetPermissions(setFilesWildCard, parent)
+	err = CheckSetPermissions(setFilesWildCard, parent)
 	assert.NoError(t, err)
 
 	// share-interact subset ignores selector/values and only checks type+verbs,
@@ -408,18 +408,18 @@ func TestShareSetPermissions(t *testing.T) {
 			Values:   []string{"drive-root-id"},
 		}},
 	}
-	err = checkSetPermissions(childFileRule, parent)
+	err = CheckSetPermissions(childFileRule, parent)
 	assert.NoError(t, err)
 
 	// For non share-interact parents, values remain part of subset checks.
 	parent.Type = TypeWebapp
-	err = checkSetPermissions(childFileRule, parent)
+	err = CheckSetPermissions(childFileRule, parent)
 	assert.Error(t, err)
 
 	// share-interact still enforces verbs coverage.
 	parent.Type = TypeShareInteract
 	childFileRule[0].Verbs = Verbs(POST)
-	err = checkSetPermissions(childFileRule, parent)
+	err = CheckSetPermissions(childFileRule, parent)
 	assert.Error(t, err)
 }
 
