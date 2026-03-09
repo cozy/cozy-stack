@@ -89,6 +89,28 @@ func makeSharedDrivePermissionPayload(
 	})
 }
 
+func makeSharedDrivePermissionPayloadWithPermissions(
+	t *testing.T,
+	perms map[string]interface{},
+	extraAttrs map[string]interface{},
+) []byte {
+	t.Helper()
+
+	attrs := map[string]interface{}{
+		"permissions": perms,
+	}
+	for k, v := range extraAttrs {
+		attrs[k] = v
+	}
+
+	return mustJSON(t, map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       consts.Permissions,
+			"attributes": attrs,
+		},
+	})
+}
+
 func makeSharedDrivePatchPayload(t *testing.T, attrs map[string]interface{}) []byte {
 	t.Helper()
 	return mustJSON(t, map[string]interface{}{
@@ -244,6 +266,16 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		)
 	})
 
+	t.Run("FailOnMultipleValues", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "document-2.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayload(
+			t, consts.Files, []string{f.fileID, secondFileID}, "", nil,
+		)
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
+		)
+	})
+
 	t.Run("FailOnWildcardType", func(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(t, "*", []string{f.fileID}, "", nil)
 		createSharedDrivePermissionExpectStatus(
@@ -255,6 +287,25 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(
 			t, consts.Files, []string{f.fileID}, "referenced_by", nil,
 		)
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
+		)
+	})
+
+	t.Run("FailOnMultiplePermissionRules", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "document-3.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayloadWithPermissions(t, map[string]interface{}{
+			"first": map[string]interface{}{
+				"type":   consts.Files,
+				"verbs":  []string{"GET"},
+				"values": []string{f.fileID},
+			},
+			"second": map[string]interface{}{
+				"type":   consts.Files,
+				"verbs":  []string{"GET"},
+				"values": []string{secondFileID},
+			},
+		}, nil)
 		createSharedDrivePermissionExpectStatus(
 			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
 		)
@@ -305,6 +356,33 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 
 		attrs.Value("expires_at").String().NotEmpty()
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("FailWhenLinkAlreadyExistsForTarget", func(t *testing.T) {
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload,
+		)
+
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusConflict,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("FailWhenAnotherMemberAlreadyCreatedLinkForTarget", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, eBetty, f.sharingID, bettyToken, "link", "", payload,
+		)
+
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusConflict,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 }
 

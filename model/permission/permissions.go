@@ -723,6 +723,44 @@ func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (m
 	return result, nil
 }
 
+// GetShareByLinkPermissionsForTarget returns share-by-link permission docs for a
+// single target document. The underlying view emits one row per rule/value, so
+// permissions are deduplicated by ID before returning.
+func GetShareByLinkPermissionsForTarget(
+	db prefixer.Prefixer,
+	doctype string,
+	id string,
+) ([]*Permission, error) {
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByDocView, &couchdb.ViewRequest{
+		Key:         []string{doctype, "_id", id},
+		IncludeDocs: true,
+	}, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	perms := make([]*Permission, 0, len(res.Rows))
+	seen := make(map[string]struct{}, len(res.Rows))
+	for _, row := range res.Rows {
+		if row == nil || len(row.Doc) == 0 {
+			continue
+		}
+		if _, ok := seen[row.ID]; ok {
+			continue
+		}
+		seen[row.ID] = struct{}{}
+
+		perm := &Permission{}
+		if err := json.Unmarshal(row.Doc, perm); err != nil {
+			return nil, err
+		}
+		perms = append(perms, perm)
+	}
+
+	return perms, nil
+}
+
 // GetPermissionsByDoctype returns the list of all permissions of the given
 // type (shared-with-me by example) that have at least one rule for the given
 // doctype. The cursor will be modified in place.

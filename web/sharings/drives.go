@@ -505,7 +505,10 @@ func OpenOffice(c echo.Context) error {
 func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	opts := webperm.CreateShareByLinkOptions{
 		ValidatePermissions: func(perms permission.Set) error {
-			return validateSharedDrivePermission(c, inst, s, perms)
+			if err := validateSharedDrivePermission(c, inst, s, perms); err != nil {
+				return err
+			}
+			return ensureNoSharedDriveShareByLinkConflict(inst, perms)
 		},
 	}
 	if domain, ok := getSharedDriveCallerDomain(c, inst, s); ok {
@@ -515,7 +518,7 @@ func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance
 }
 
 // validateSharedDrivePermission checks that all file IDs in the permission rules are:
-// - explicitly targeted io.cozy.files documents,
+// - expressed as a single io.cozy.files target,
 // - accessible by the current caller token,
 // - and located inside the shared drive.
 func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sharing.Sharing, perms permission.Set) error {
@@ -526,39 +529,64 @@ func validateSharedDrivePermission(c echo.Context, inst *instance.Instance, s *s
 
 	fs := inst.VFS()
 
-	for _, perm := range perms {
-		// Only allow exact io.cozy.files type - reject wildcards like "*" or "io.cozy.*"
-		if perm.Type != consts.Files {
-			return jsonapi.BadRequest(errors.New("shared drive permissions can only include files"))
+	fileID, err := getSharedDrivePermissionTargetID(perms)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	dir, file, err := fs.DirOrFileByID(fileID)
+	if err != nil {
+		return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
+	}
+	if dir != nil {
+		if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
+			return err
 		}
-		// Reject empty values - share-by-link must target specific files
-		if len(perm.Values) == 0 {
-			return jsonapi.BadRequest(errors.New("shared drive permissions must specify file IDs"))
-		}
-		// Reject selectors - only file IDs are allowed
-		if perm.Selector != "" {
-			return jsonapi.BadRequest(errors.New("shared drive permissions cannot use selectors"))
-		}
-		for _, fileID := range perm.Values {
-			dir, file, err := fs.DirOrFileByID(fileID)
-			if err != nil {
-				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
-			}
-			if dir != nil {
-				if err := middlewares.AllowVFS(c, permission.GET, dir); err != nil {
-					return err
-				}
-			} else {
-				if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
-					return err
-				}
-			}
-			// Check if the file/directory is within the shared drive
-			if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
-				return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
-			}
+	} else {
+		if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+			return err
 		}
 	}
+	// Check if the file/directory is within the shared drive
+	if err := isWithinDirectory(fs, fileID, rootDir); err != nil {
+		return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
+	}
+	return nil
+}
+
+func getSharedDrivePermissionTargetID(perms permission.Set) (string, error) {
+	if len(perms) != 1 {
+		return "", errors.New("shared drive permissions must target exactly one file or folder")
+	}
+
+	perm := perms[0]
+	if perm.Type != consts.Files {
+		return "", errors.New("shared drive permissions can only include files")
+	}
+	if perm.Selector != "" {
+		return "", errors.New("shared drive permissions cannot use selectors")
+	}
+	if len(perm.Values) != 1 {
+		return "", errors.New("shared drive permissions must target exactly one file or folder")
+	}
+
+	return perm.Values[0], nil
+}
+
+func ensureNoSharedDriveShareByLinkConflict(inst *instance.Instance, perms permission.Set) error {
+	targetID, err := getSharedDrivePermissionTargetID(perms)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	existing, err := permission.GetShareByLinkPermissionsForTarget(inst, consts.Files, targetID)
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		return jsonapi.Conflict(errors.New("share-by-link already exists for this file or folder"))
+	}
+
 	return nil
 }
 
