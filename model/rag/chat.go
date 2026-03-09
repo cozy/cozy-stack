@@ -32,11 +32,11 @@ type ChatPayload struct {
 }
 
 type ChatConversation struct {
-	DocID            string                 `json:"_id"`
-	DocRev           string                 `json:"_rev,omitempty"`
-	Messages         []ChatMessage          `json:"messages"`
-	Metadata         *metadata.CozyMetadata `json:"cozyMetadata"`
-	RelationshipsMap map[string]interface{} `json:"relationships,omitempty"`
+	DocID       string                 `json:"_id"`
+	DocRev      string                 `json:"_rev,omitempty"`
+	Messages    []ChatMessage          `json:"messages"`
+	Metadata    *metadata.CozyMetadata `json:"cozyMetadata"`
+	AssistantID string                 `json:"assistantID,omitempty"`
 }
 
 type ChatMessage struct {
@@ -70,9 +70,21 @@ func (c *ChatConversation) Clone() couchdb.Doc {
 	copy(cloned.Messages, c.Messages)
 	return &cloned
 }
-func (c *ChatConversation) Included() []jsonapi.Object             { return nil }
-func (c *ChatConversation) Relationships() jsonapi.RelationshipMap { return nil }
-func (c *ChatConversation) Links() *jsonapi.LinksList              { return nil }
+func (c *ChatConversation) Included() []jsonapi.Object { return nil }
+func (c *ChatConversation) Relationships() jsonapi.RelationshipMap {
+	if c.AssistantID == "" {
+		return nil
+	}
+	return jsonapi.RelationshipMap{
+		"assistant": jsonapi.Relationship{
+			Data: couchdb.DocReference{
+				ID:   c.AssistantID,
+				Type: consts.ChatAssistants,
+			},
+		},
+	}
+}
+func (c *ChatConversation) Links() *jsonapi.LinksList { return nil }
 
 var _ jsonapi.Object = (*ChatConversation)(nil)
 
@@ -106,16 +118,7 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		md.DocTypeVersion = DocTypeVersion
 		md.UpdatedAt = md.CreatedAt
 		chat.Metadata = md
-		if payload.AssistantID != "" {
-			chat.RelationshipsMap = map[string]interface{}{
-				"assistant": map[string]interface{}{
-					"data": map[string]interface{}{
-						"_type": "io.cozy.ai.chat.assistants",
-						"_id":   payload.AssistantID,
-					},
-				},
-			}
-		}
+		chat.AssistantID = payload.AssistantID
 	} else if err != nil {
 		return nil, err
 	} else {
