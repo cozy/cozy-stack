@@ -902,7 +902,7 @@ msgid "Mail Alert Account Subject"
 msgstr "Instantieverwijdering mislukt tijdens opschonen van accounts"
 
 msgid "Mail Support Confirmation Subject"
-msgstr "[cozy-support] Je verzoek is al onze kant op gestuurd!"
+msgstr "[twake-support] Je verzoek is al onze kant op gestuurd!"
 
 msgid "Mail Support Confirmation Intro 1"
 msgstr "Hallo %s,"

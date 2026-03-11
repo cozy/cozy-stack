@@ -719,7 +719,7 @@ msgid "Mail Alert Account Subject"
 msgstr "Error en la eliminación de instancias durante la limpieza de cuentas"
 
 msgid "Mail Support Confirmation Subject"
-msgstr "[cozy-support] ¡Su solicitud está en curso!"
+msgstr "[twake-support] ¡Su solicitud está en curso!"
 
 msgid "Mail Support Confirmation Intro 1"
 msgstr "Hola %s,"

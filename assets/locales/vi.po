@@ -1073,7 +1073,7 @@ msgid "Mail Alert Account Subject"
 msgstr "Xóa instance không thành công khi dọn dẹp tài khoản"
 
 msgid "Mail Support Confirmation Subject"
-msgstr "[cozy-support] Yêu cầu của bạn đang được xử lý!"
+msgstr "[twake-support] Yêu cầu của bạn đang được xử lý!"
 
 msgid "Mail Support Confirmation Intro 1"
 msgstr "Xin chào %s,"
