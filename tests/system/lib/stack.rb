@@ -86,6 +86,12 @@ class Stack
            "--port", @port, "--admin-port", @admin,
            "--domain", inst.domain, ">", "/dev/null"]
     puts cmd.join(" ").green
+    if system cmd.join(" ")
+      @apps[key] = true
+      return
+    end
+
+    sleep 5
     @apps[key] = system cmd.join(" ")
   end
 
