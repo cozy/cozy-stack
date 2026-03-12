@@ -355,6 +355,17 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 
+	t.Run("ReadOnlyRecipientCannotCreateShareByLink", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-create-link.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil)
+
+		createSharedDrivePermissionExpectStatus(
+			t, eDave, sharingID, daveToken, "readonly-link", "", payload, http.StatusForbidden,
+		)
+	})
+
 	t.Run("FailOnFileOutsideSharedDrive", func(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(
 			t, consts.Files, []string{f.env.outsideOfShareID}, "", nil,
@@ -1027,6 +1038,24 @@ func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusForbidden)
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotRevokePermission", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-revoke-link.txt", f.ownerAppToken)
+		permID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			sharingID,
+			f.ownerAppToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eDave, sharingID, permID, daveToken, http.StatusForbidden)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
 	t.Run("PublicShareTokenCannotRevokePermission", func(t *testing.T) {

@@ -263,12 +263,76 @@ func createSharedDrive(
 
 	// Extract invitation link
 	publicName, _ := inst.SettingsPublicName()
-	sentDescription, disco := extractInvitationLink(t, inst, publicName, "")
+	sentDescription, disco := extractInvitationLink(t, inst, sharingID, publicName, "")
 	assert.Equal(t, sentDescription, description)
 	assert.Contains(t, disco, "/discovery?state=")
 	discovery = disco
 
 	return
+}
+
+func makeAddRecipientsPayload(t *testing.T, sharingID, relationshipName string, contactIDs ...string) []byte {
+	t.Helper()
+
+	refs := make([]map[string]interface{}, 0, len(contactIDs))
+	for _, contactID := range contactIDs {
+		refs = append(refs, map[string]interface{}{
+			"id":   contactID,
+			"type": consts.Contacts,
+		})
+	}
+
+	return mustJSON(t, map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": consts.Sharings,
+			"id":   sharingID,
+			"relationships": map[string]interface{}{
+				relationshipName: map[string]interface{}{
+					"data": refs,
+				},
+			},
+		},
+	})
+}
+
+func createAcceptedSharedDriveForRecipient(
+	t *testing.T,
+	env *sharedDrivesEnv,
+	recipient RecipientInfo,
+	recipientInst *instance.Instance,
+	recipientURL string,
+) string {
+	t.Helper()
+
+	sharingID, _, _ := createSharedDrive(
+		t,
+		DriveCreationMethodLegacy,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		testify(t, recipient.Name+"_delegated_drive"),
+		"Drive for delegated recipient addition tests",
+		[]RecipientInfo{recipient},
+	)
+
+	acceptSharedDrive(t, env.acme, recipientInst, recipient.Name, env.tsA.URL, recipientURL, sharingID)
+	return sharingID
+}
+
+func findSharingMemberByEmail(t *testing.T, inst *instance.Instance, sharingID, email string) sharing.Member {
+	t.Helper()
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	require.NoError(t, err)
+
+	for _, member := range s.Members {
+		if member.Email == email {
+			return member
+		}
+	}
+
+	require.FailNowf(t, "member not found", "email %s not found in sharing %s", email, sharingID)
+	return sharing.Member{}
 }
 
 // acceptSharedDrive performs the acceptance flow on the recipient side.
@@ -288,7 +352,7 @@ func acceptSharedDrive(
 
 	// Extract the discovery link for this specific recipient
 	ownerPublicName, _ := ownerInstance.SettingsPublicName()
-	_, discoveryLink := extractInvitationLink(t, ownerInstance, ownerPublicName, recipientName)
+	_, discoveryLink := extractInvitationLink(t, ownerInstance, sharingID, ownerPublicName, recipientName)
 
 	// Recipient login
 	token := eR.GET("/auth/login").
@@ -1198,6 +1262,96 @@ func TestSharedDriveAcceptance(t *testing.T) {
 		eD.GET("/sharings/"+newSharingID).
 			WithHeader("Authorization", "Bearer "+env.daveToken).
 			Expect().Status(200)
+	})
+}
+
+func TestSharedDriveDelegatedRecipientAddition(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	_, eBetty, eDave := env.createClients(t)
+
+	t.Run("WriteRecipientCanInviteReadWrite", func(t *testing.T) {
+		sharingID := createAcceptedSharedDriveForRecipient(
+			t,
+			env,
+			RecipientInfo{Name: "Betty", Email: "betty@example.net", ReadOnly: false},
+			env.betty,
+			env.tsB.URL,
+		)
+		contact := createContact(t, env.betty, "Charlie", "charlie@example.net")
+
+		eBetty.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", jsonAPIContentType).
+			WithBytes(makeAddRecipientsPayload(t, sharingID, "recipients", contact.ID())).
+			Expect().Status(http.StatusOK)
+
+		added := findSharingMemberByEmail(t, env.acme, sharingID, "charlie@example.net")
+		require.False(t, added.ReadOnly)
+	})
+
+	t.Run("WriteRecipientCanInviteReadOnly", func(t *testing.T) {
+		sharingID := createAcceptedSharedDriveForRecipient(
+			t,
+			env,
+			RecipientInfo{Name: "Betty", Email: "betty@example.net", ReadOnly: false},
+			env.betty,
+			env.tsB.URL,
+		)
+		contact := createContact(t, env.betty, "Rita", "rita@example.net")
+
+		eBetty.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", jsonAPIContentType).
+			WithBytes(makeAddRecipientsPayload(t, sharingID, "read_only_recipients", contact.ID())).
+			Expect().Status(http.StatusOK)
+
+		added := findSharingMemberByEmail(t, env.acme, sharingID, "rita@example.net")
+		require.True(t, added.ReadOnly)
+	})
+
+	t.Run("ReadOnlyRecipientCanInviteReadOnly", func(t *testing.T) {
+		sharingID := createAcceptedSharedDriveForRecipient(
+			t,
+			env,
+			RecipientInfo{Name: "Dave", Email: "dave@example.net", ReadOnly: true},
+			env.dave,
+			env.tsD.URL,
+		)
+		contact := createContact(t, env.dave, "Erin", "erin@example.net")
+
+		eDave.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			WithHeader("Content-Type", jsonAPIContentType).
+			WithBytes(makeAddRecipientsPayload(t, sharingID, "read_only_recipients", contact.ID())).
+			Expect().Status(http.StatusOK)
+
+		added := findSharingMemberByEmail(t, env.acme, sharingID, "erin@example.net")
+		require.True(t, added.ReadOnly)
+	})
+
+	t.Run("ReadOnlyRecipientCannotInviteReadWrite", func(t *testing.T) {
+		sharingID := createAcceptedSharedDriveForRecipient(
+			t,
+			env,
+			RecipientInfo{Name: "Dave", Email: "dave@example.net", ReadOnly: true},
+			env.dave,
+			env.tsD.URL,
+		)
+		contact := createContact(t, env.dave, "Mallory", "mallory@example.net")
+
+		eDave.POST("/sharings/"+sharingID+"/recipients").
+			WithHeader("Authorization", "Bearer "+env.daveToken).
+			WithHeader("Content-Type", jsonAPIContentType).
+			WithBytes(makeAddRecipientsPayload(t, sharingID, "recipients", contact.ID())).
+			Expect().Status(http.StatusForbidden)
+
+		s, err := sharing.FindSharing(env.acme, sharingID)
+		require.NoError(t, err)
+		require.Len(t, s.Members, 2)
 	})
 }
 

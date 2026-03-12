@@ -409,6 +409,44 @@ func AddRecipients(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
+type delegatedAddRecipientsBody struct {
+	Data struct {
+		Type          string `json:"type"`
+		ID            string `json:"id"`
+		Relationships struct {
+			Groups struct {
+				Data []sharing.Group `json:"data"`
+			} `json:"groups"`
+			Recipients struct {
+				Data []sharing.Member `json:"data"`
+			} `json:"recipients"`
+		} `json:"relationships"`
+	} `json:"data"`
+}
+
+func authorizeDelegatedRecipientAddition(c echo.Context, s *sharing.Sharing, member *sharing.Member, body *delegatedAddRecipientsBody) error {
+	if s.Open {
+		return hasSharingWritePermissions(c)
+	}
+	if !s.Drive {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if !member.ReadOnly {
+		return nil
+	}
+	for _, g := range body.Data.Relationships.Groups.Data {
+		if !g.ReadOnly {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+	}
+	for _, m := range body.Data.Relationships.Recipients.Data {
+		if !m.ReadOnly {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+	}
+	return nil
+}
+
 // AddRecipientsDelegated is used to add members and groups to a sharing on the
 // owner's cozy when it's the recipient's cozy that sends the mail invitation.
 func AddRecipientsDelegated(c echo.Context) error {
@@ -418,7 +456,7 @@ func AddRecipientsDelegated(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if !s.Owner || !s.Open {
+	if !s.Owner || (!s.Open && !s.Drive) {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	member, err := requestMember(c, s)
@@ -435,22 +473,12 @@ func AddRecipientsDelegated(c echo.Context) error {
 		return jsonapi.InternalServerError(sharing.ErrInvalidSharing)
 	}
 
-	var body struct {
-		Data struct {
-			Type          string `json:"type"`
-			ID            string `json:"id"`
-			Relationships struct {
-				Groups struct {
-					Data []sharing.Group `json:"data"`
-				} `json:"groups"`
-				Recipients struct {
-					Data []sharing.Member `json:"data"`
-				} `json:"recipients"`
-			} `json:"relationships"`
-		} `json:"data"`
-	}
+	var body delegatedAddRecipientsBody
 	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return jsonapi.BadJSON()
+	}
+	if err = authorizeDelegatedRecipientAddition(c, s, member, &body); err != nil {
+		return err
 	}
 
 	for _, g := range body.Data.Relationships.Groups.Data {
@@ -1022,8 +1050,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif)
 	router.POST("/:sharing-id/public-key", ReceivePublicKey)
 
-	// Delegated routes for open sharing
-	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
+	// Delegated routes for recipient-side sharing operations
+	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingPermissions)
 	router.POST("/:sharing-id/members/:index/invitation", AddInvitationDelegated, checkSharingWritePermissions)
 	router.DELETE("/:sharing-id/groups/:group-index/:member-index", RemoveMemberFromGroup, checkSharingWritePermissions)
 

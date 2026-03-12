@@ -2,6 +2,7 @@ package sharings_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -1488,45 +1489,74 @@ func assertInvitationMailWasSent(t *testing.T, instance *instance.Instance, owne
 	return values["Description"].(string)
 }
 
-// extractInvitationLink returns the invitation mail description and discovery link for a specific recipient.
-// If recipientName is empty, it returns the invitation for the first non-Dave recipient (for backward compatibility).
-// If recipientName is specified, it returns the invitation for that specific recipient.
-func extractInvitationLink(t *testing.T, instance *instance.Instance, owner string, recipientName string) (string, string) {
+// extractInvitationLink returns the latest invitation mail description and
+// discovery link matching the given sharing and recipient.
+func extractInvitationLink(
+	t *testing.T,
+	instance *instance.Instance,
+	sharingID string,
+	owner string,
+	recipientName string,
+) (string, string) {
+	req := couchdb.AllDocsRequest{}
 	var jobs []job.Job
-	couchReq := &couchdb.FindRequest{
-		UseIndex: "by-worker-and-state",
-		Selector: mango.And(
-			mango.Equal("worker", "sendmail"),
-			mango.Exists("state"),
-		),
-		Sort: mango.SortBy{
-			mango.SortByField{Field: "worker", Direction: "desc"},
-		},
-		Limit: 2,
-	}
-	err := couchdb.FindDocs(instance, consts.Jobs, couchReq, &jobs)
-	assert.NoError(t, err)
-	assert.Len(t, jobs, 2)
-	var msg map[string]interface{}
-	err = json.Unmarshal(jobs[0].Message, &msg)
-	assert.NoError(t, err)
+	err := couchdb.GetAllDocs(instance, consts.Jobs, &req, &jobs)
+	require.NoError(t, err)
 
-	// If recipientName is specified, find that specific recipient's invitation
-	if recipientName != "" {
-		if msg["recipient_name"] != recipientName {
-			err = json.Unmarshal(jobs[1].Message, &msg)
-			assert.NoError(t, err)
+	expectedPath := fmt.Sprintf("/sharings/%s/discovery", sharingID)
+	var bestDescription string
+	var bestLink string
+	var bestQueuedAt time.Time
+	found := false
+
+	for _, j := range jobs {
+		if j.WorkerType != "sendmail" {
+			continue
 		}
-		assert.Equal(t, msg["recipient_name"], recipientName)
-	} else {
-		err = json.Unmarshal(jobs[1].Message, &msg)
-		assert.NoError(t, err)
+
+		var msg map[string]interface{}
+		err = json.Unmarshal(j.Message, &msg)
+		require.NoError(t, err)
+
+		if msg["mode"] != "from" || msg["template_name"] != "sharing_request" {
+			continue
+		}
+		if recipientName != "" && msg["recipient_name"] != recipientName {
+			continue
+		}
+
+		values, ok := msg["template_values"].(map[string]interface{})
+		require.True(t, ok)
+		if values["SharerPublicName"] != owner {
+			continue
+		}
+
+		link, ok := values["SharingLink"].(string)
+		require.True(t, ok)
+		u, err := url.Parse(link)
+		require.NoError(t, err)
+		if u.Path != expectedPath {
+			continue
+		}
+
+		description, ok := values["Description"].(string)
+		require.True(t, ok)
+		if !found || j.QueuedAt.After(bestQueuedAt) {
+			bestDescription = description
+			bestLink = link
+			bestQueuedAt = j.QueuedAt
+			found = true
+		}
 	}
-	assert.Equal(t, msg["mode"], "from")
-	assert.Equal(t, msg["template_name"], "sharing_request")
-	values := msg["template_values"].(map[string]interface{})
-	assert.Equal(t, values["SharerPublicName"], owner)
-	return values["Description"].(string), values["SharingLink"].(string)
+
+	require.Truef(
+		t,
+		found,
+		"no invitation link found for sharing %s and recipient %q",
+		sharingID,
+		recipientName,
+	)
+	return bestDescription, bestLink
 }
 
 func assertSharingRequestHasBeenCreated(t *testing.T, instanceA, instanceB *instance.Instance, serverURL string) {

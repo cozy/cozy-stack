@@ -1046,9 +1046,13 @@ Content-Type: application/vnd.api+json
 ### POST /sharings/:sharing-id/recipients/delegated
 
 This is an internal route for the stack. It is called by the recipient cozy on
-the owner cozy to add recipients and groups to the sharing (`open_sharing:
-true` only). Data for direct recipients should contain an email address but if
-it is not known, an instance URL can also be provided.
+the owner cozy to add recipients and groups to the sharing. It is used for
+delegated recipient additions from recipient Cozys, including shared-drive
+recipient invitations. Data for direct recipients should contain an email
+address but if it is not known, an instance URL can also be provided. For
+shared drives, each delegated recipient or group can also carry a `read_only`
+flag, and the owner applies the drive-specific reshare rules when processing
+the request.
 
 #### Request
 
