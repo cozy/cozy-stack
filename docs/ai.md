@@ -35,6 +35,13 @@ In practice, when files are uploaded/modified/deleted, the trigger will create
 a job for the index worker (with debounce). The index worker will look at the
 changed feed, and will call the RAG for each entry in the changes feed.
 
+By default, only text-based files are indexed. Images, videos, and audio files
+can be indexed by enabling the following feature flags:
+
+- `rag.index.image.enabled`
+- `rag.index.video.enabled`
+- `rag.index.audio.enabled`
+
 ## openRAG
 
 Some openRAG API are directly exposed through cozy-stack.
@@ -46,15 +53,17 @@ This route directly follows the [openAI chat completion AI](https://platform.ope
 
 #### Request
 
+```http
 POST /ai/v1/chat/completions HTTP/1.1
 Content-Type: application/json
+```
 
 ```json
 {
   "messages": [
     { "role": "user", "content": "Hello there, what's in your mind?" }
   ],
-"temperature": 0.3
+  "temperature": 0.3
 }
 ```
 
@@ -152,9 +161,18 @@ Content-Type: application/json
 
 ```json
 {
-  "q": "Why the sky is blue?"
+  "q": "Why the sky is blue?",
+  "stream": true,
+  "websearch": false,
+  "assistantID": "abc123"
 }
 ```
+
+- `q` is the user's message (required).
+- `stream` enables streaming the response via SSE deltas (defaults to `true`).
+- `websearch` enables web search for the query (defaults to `false`).
+- `assistantID` associates the conversation with an `io.cozy.ai.chat.assistants`
+  document (optional). When set, the response includes a `relationships` block.
 
 #### Response
 
@@ -192,6 +210,8 @@ Content-Type: application/vnd.api+json
 
 ### Real-time via websockets
 
+#### Messages flow example
+
 ```
 client > {"method": "AUTH", "payload": "token"}
 client > {"method": "SUBSCRIBE",
@@ -208,13 +228,21 @@ server > {"event": "CREATED",
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
-                      "doc": {"object": "generated"}}}
-server > {"event": "CREATED",
-          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
-                      "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "sources", "content": [{"id": "827f0fbb928b375cc457c732a4013aa7", "doctype": "io.cozy.files"}]}}}
 server > {"event": "CREATED",
           "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
                       "type": "io.cozy.ai.chat.events",
                       "doc": {"object": "done"}}}
+```
+
+#### Error message
+
+If an error occurs while processing the AI response (e.g. the LLM is
+unavailable), an error event is sent instead:
+
+```
+server > {"event": "CREATED",
+          "payload": {"id": "eb17c3205bf1013ddea018c04daba326",
+                      "type": "io.cozy.ai.chat.events",
+                      "doc": {"object": "error", "message": "I don't want to talk today"}}}
 ```
