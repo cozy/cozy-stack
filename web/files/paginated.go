@@ -38,7 +38,7 @@ type dir struct {
 
 type dirJSON struct {
 	*vfs.DirDoc
-	DriveId string `json:"driveId"`
+	DriveId string `json:"driveId,omitempty"`
 }
 
 type file struct {
