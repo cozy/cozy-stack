@@ -3,6 +3,7 @@ package sharings_test
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -47,6 +48,12 @@ func (f *sharedDrivePermissionFixture) newBettyClient(t *testing.T) (*httpexpect
 	return eBetty, f.env.bettyToken
 }
 
+func (f *sharedDrivePermissionFixture) newDaveClient(t *testing.T) (*httpexpect.Expect, string) {
+	t.Helper()
+	_, _, eDave := f.env.createClients(t)
+	return eDave, f.env.daveToken
+}
+
 func mustJSON(t *testing.T, v interface{}) []byte {
 	t.Helper()
 	raw, err := json.Marshal(v)
@@ -76,6 +83,60 @@ func makeSharedDrivePermissionPayload(
 		"permissions": map[string]interface{}{
 			"files": rule,
 		},
+	}
+	for k, v := range extraAttrs {
+		attrs[k] = v
+	}
+
+	return mustJSON(t, map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       consts.Permissions,
+			"attributes": attrs,
+		},
+	})
+}
+
+func makeSharedDrivePermissionPayloadWithVerbs(
+	t *testing.T,
+	ruleType string,
+	values []string,
+	verbs []string,
+	extraAttrs map[string]interface{},
+) []byte {
+	t.Helper()
+
+	rule := map[string]interface{}{
+		"type":   ruleType,
+		"verbs":  verbs,
+		"values": values,
+	}
+
+	attrs := map[string]interface{}{
+		"permissions": map[string]interface{}{
+			"files": rule,
+		},
+	}
+	for k, v := range extraAttrs {
+		attrs[k] = v
+	}
+
+	return mustJSON(t, map[string]interface{}{
+		"data": map[string]interface{}{
+			"type":       consts.Permissions,
+			"attributes": attrs,
+		},
+	})
+}
+
+func makeSharedDrivePermissionPayloadWithPermissions(
+	t *testing.T,
+	perms map[string]interface{},
+	extraAttrs map[string]interface{},
+) []byte {
+	t.Helper()
+
+	attrs := map[string]interface{}{
+		"permissions": perms,
 	}
 	for k, v := range extraAttrs {
 		attrs[k] = v
@@ -195,6 +256,71 @@ func deleteSharedDrivePermissionExpectStatus(
 	req.Expect().Status(status)
 }
 
+func listSharedDrivePermissionsExpectStatus(
+	t *testing.T,
+	client *httpexpect.Expect,
+	sharingID string,
+	ids []string,
+	token string,
+	status int,
+) *httpexpect.Object {
+	t.Helper()
+
+	req := client.GET("/sharings/drives/" + sharingID + "/permissions")
+	if len(ids) > 0 {
+		req = req.WithQuery("ids", strings.Join(ids, ","))
+	}
+	if token != "" {
+		req = req.WithHeader("Authorization", "Bearer "+token)
+	}
+
+	resp := req.Expect().Status(status)
+	if status != http.StatusOK {
+		return nil
+	}
+	return resp.JSON(httpexpect.ContentOpts{MediaType: jsonAPIContentType}).Object()
+}
+
+func createReadOnlyDriveForDave(
+	t *testing.T,
+	f *sharedDrivePermissionFixture,
+) (string, string) {
+	t.Helper()
+
+	rootDirID := createRootDirectory(t, f.eOwner, testify(t, "dave-drive"), f.ownerAppToken)
+	daveContact := createContact(t, f.env.acme, "Dave", "dave@example.net")
+
+	obj := f.eOwner.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+f.ownerAppToken).
+		WithHeader("Content-Type", jsonAPIContentType).
+		WithBytes(mustJSON(t, map[string]interface{}{
+			"data": map[string]interface{}{
+				"type": consts.Sharings,
+				"attributes": map[string]interface{}{
+					"description": "Drive for Dave list permissions",
+					"folder_id":   rootDirID,
+				},
+				"relationships": map[string]interface{}{
+					"read_only_recipients": map[string]interface{}{
+						"data": []map[string]interface{}{
+							{
+								"id":   daveContact.ID(),
+								"type": consts.Contacts,
+							},
+						},
+					},
+				},
+			},
+		})).
+		Expect().Status(http.StatusCreated).
+		JSON(httpexpect.ContentOpts{MediaType: jsonAPIContentType}).
+		Object()
+
+	sharingID := obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+	acceptSharedDrive(t, f.env.acme, f.env.dave, "Dave", f.env.tsA.URL, f.env.tsD.URL, sharingID)
+	return sharingID, rootDirID
+}
+
 func TestSharedDriveShareByLinkCreate(t *testing.T) {
 	f := setupSharedDrivePermissionFixture(t)
 
@@ -218,6 +344,7 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		)
 
 		attrs.Value("shortcodes").Object().Value("link").String().NotEmpty()
+		attrs.Value("cozyMetadata").Object().Value("createdByApp").String().IsEqual("drive")
 		shareCode := attrs.Value("codes").Object().Value("link").String().NotEmpty().Raw()
 
 		// Download the file using the share-by-link (on owner's instance where the file resides)
@@ -226,6 +353,17 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 			Expect().Status(http.StatusOK)
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotCreateShareByLink", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-create-link.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil)
+
+		createSharedDrivePermissionExpectStatus(
+			t, eDave, sharingID, daveToken, "readonly-link", "", payload, http.StatusForbidden,
+		)
 	})
 
 	t.Run("FailOnFileOutsideSharedDrive", func(t *testing.T) {
@@ -244,6 +382,16 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		)
 	})
 
+	t.Run("FailOnMultipleValues", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "document-2.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayload(
+			t, consts.Files, []string{f.fileID, secondFileID}, "", nil,
+		)
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
+		)
+	})
+
 	t.Run("FailOnWildcardType", func(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(t, "*", []string{f.fileID}, "", nil)
 		createSharedDrivePermissionExpectStatus(
@@ -255,6 +403,25 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(
 			t, consts.Files, []string{f.fileID}, "referenced_by", nil,
 		)
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
+		)
+	})
+
+	t.Run("FailOnMultiplePermissionRules", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "document-3.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayloadWithPermissions(t, map[string]interface{}{
+			"first": map[string]interface{}{
+				"type":   consts.Files,
+				"verbs":  []string{"GET"},
+				"values": []string{f.fileID},
+			},
+			"second": map[string]interface{}{
+				"type":   consts.Files,
+				"verbs":  []string{"GET"},
+				"values": []string{secondFileID},
+			},
+		}, nil)
 		createSharedDrivePermissionExpectStatus(
 			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusBadRequest,
 		)
@@ -305,6 +472,33 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 
 		attrs.Value("expires_at").String().NotEmpty()
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("FailWhenLinkAlreadyExistsForTarget", func(t *testing.T) {
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload,
+		)
+
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusConflict,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("FailWhenAnotherMemberAlreadyCreatedLinkForTarget", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, eBetty, f.sharingID, bettyToken, "link", "", payload,
+		)
+
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "link", "", payload, http.StatusConflict,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 }
 
@@ -463,22 +657,80 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
-	t.Run("CannotPatchCodesOrPermissions", func(t *testing.T) {
+	t.Run("CreatorWriteRecipientCanPromoteReadonlyLinkToWritable", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
 		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
 		permID, _ := createSharedDrivePermission(
-			t, f.eOwner, f.sharingID, f.ownerAppToken, "no-codes-patch-link", "", payload,
+			t, eBetty, f.sharingID, bettyToken, "promote-link", "", payload,
+		)
+
+		patchedObj := patchSharedDrivePermissionExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			permID,
+			bettyToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{
+				"permissions": map[string]interface{}{
+					"files": map[string]interface{}{
+						"type":   consts.Files,
+						"verbs":  []string{"GET", "POST"},
+						"values": []string{f.fileID},
+					},
+				},
+			}),
+			http.StatusOK,
+		)
+		patchedObj.Value("data").Object().
+			Value("attributes").Object().
+			Value("permissions").Object().
+			Value("files").Object().
+			Value("verbs").Array().
+			Contains("POST")
+
+		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotPatchPermissionSet", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "patch-dave.txt", f.ownerAppToken)
+		permID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			sharingID,
+			f.ownerAppToken,
+			"readonly-patch-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
 		)
 
 		patchSharedDrivePermissionExpectStatus(
 			t,
-			f.eOwner,
-			f.sharingID,
+			eDave,
+			sharingID,
 			permID,
-			f.ownerAppToken,
+			daveToken,
 			makeSharedDrivePatchPayload(t, map[string]interface{}{
-				"codes": map[string]interface{}{"new-code": "abc123"},
+				"permissions": map[string]interface{}{
+					"files": map[string]interface{}{
+						"type":   consts.Files,
+						"verbs":  []string{"GET", "POST"},
+						"values": []string{fileID},
+					},
+				},
 			}),
-			http.StatusBadRequest,
+			http.StatusForbidden,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("CannotChangePermissionTarget", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "patch-target.txt", f.ownerAppToken)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "no-target-patch-link", "", payload,
 		)
 
 		patchSharedDrivePermissionExpectStatus(
@@ -492,9 +744,30 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 					"files": map[string]interface{}{
 						"type":   consts.Files,
 						"verbs":  []string{"GET", "POST"},
-						"values": []string{f.fileID},
+						"values": []string{secondFileID},
 					},
 				},
+			}),
+			http.StatusBadRequest,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("CannotPatchCodes", func(t *testing.T) {
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "no-codes-patch-link", "", payload,
+		)
+
+		patchSharedDrivePermissionExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			permID,
+			f.ownerAppToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{
+				"codes": map[string]interface{}{"new-code": "abc123"},
 			}),
 			http.StatusBadRequest,
 		)
@@ -553,6 +826,186 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 	})
 }
 
+func TestSharedDriveShareByLinkList(t *testing.T) {
+	f := setupSharedDrivePermissionFixture(t)
+
+	t.Run("OwnerCanListDriveLinks", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "list-owner.txt", f.ownerAppToken)
+		readOnlyPermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil),
+		)
+		writePermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"write-link",
+			"",
+			makeSharedDrivePermissionPayloadWithVerbs(
+				t, consts.Files, []string{secondFileID}, []string{"GET", "POST"}, nil,
+			),
+		)
+
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			[]string{f.fileID, secondFileID},
+			f.ownerAppToken,
+			http.StatusOK,
+		)
+		data := obj.Value("data").Array()
+		data.Length().IsEqual(2)
+		for _, item := range data.Iter() {
+			item.Object().Value("attributes").Object().Value("codes").Object().NotEmpty()
+		}
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, readOnlyPermID, f.ownerAppToken, http.StatusNoContent)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, writePermID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("WriteRecipientCanSeeWritableAndReadonlyLinks", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
+		secondFileID := createFile(t, f.eOwner, f.productID, "list-betty.txt", f.ownerAppToken)
+		readOnlyPermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil),
+		)
+		writePermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"write-link",
+			"",
+			makeSharedDrivePermissionPayloadWithVerbs(
+				t, consts.Files, []string{secondFileID}, []string{"GET", "POST"}, nil,
+			),
+		)
+
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			[]string{f.fileID, secondFileID},
+			bettyToken,
+			http.StatusOK,
+		)
+		obj.Value("data").Array().Length().IsEqual(2)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, readOnlyPermID, f.ownerAppToken, http.StatusNoContent)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, writePermID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("OwnerCanListOnlyRequestedDriveLinks", func(t *testing.T) {
+		secondFileID := createFile(t, f.eOwner, f.productID, "list-page-2.txt", f.ownerAppToken)
+		thirdFileID := createFile(t, f.eOwner, f.productID, "list-page-3.txt", f.ownerAppToken)
+		fourthFileID := createFile(t, f.eOwner, f.productID, "list-page-4.txt", f.ownerAppToken)
+		firstPermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"page-link-1",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{f.fileID}, "", nil),
+		)
+		secondPermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"page-link-2",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{secondFileID}, "", nil),
+		)
+		thirdPermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			f.sharingID,
+			f.ownerAppToken,
+			"page-link-3",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{thirdFileID}, "", nil),
+		)
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			[]string{f.fileID, thirdFileID, fourthFileID},
+			f.ownerAppToken,
+			http.StatusOK,
+		)
+		obj.Value("data").Array().Length().IsEqual(2)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, firstPermID, f.ownerAppToken, http.StatusNoContent)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, secondPermID, f.ownerAppToken, http.StatusNoContent)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, thirdPermID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("ListingRequiresIDs", func(t *testing.T) {
+		f.eOwner.GET("/sharings/drives/"+f.sharingID+"/permissions").
+			WithHeader("Authorization", "Bearer "+f.ownerAppToken).
+			Expect().Status(http.StatusUnprocessableEntity)
+	})
+
+	t.Run("ReadOnlyRecipientSeesOnlyReadonlyLinks", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+
+		readOnlyFileID := createFile(t, f.eOwner, productID, "list-dave.txt", f.ownerAppToken)
+		secondFileID := createFile(t, f.eOwner, productID, "list-dave-write.txt", f.ownerAppToken)
+		readOnlyPermID, readOnlyAttrs := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			sharingID,
+			f.ownerAppToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{readOnlyFileID}, "", nil),
+		)
+		writePermID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			sharingID,
+			f.ownerAppToken,
+			"write-link",
+			"",
+			makeSharedDrivePermissionPayloadWithVerbs(
+				t, consts.Files, []string{secondFileID}, []string{"GET", "POST"}, nil,
+			),
+		)
+		readOnlyCode := readOnlyAttrs.Value("codes").Object().Value("readonly-link").String().Raw()
+
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			eDave,
+			sharingID,
+			[]string{readOnlyFileID, secondFileID},
+			daveToken,
+			http.StatusOK,
+		)
+		data := obj.Value("data").Array()
+		data.Length().IsEqual(1)
+		attrs := data.Element(0).Object().Value("attributes").Object()
+		attrs.Value("codes").Object().Value("readonly-link").String().IsEqual(readOnlyCode)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, readOnlyPermID, f.ownerAppToken, http.StatusNoContent)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, writePermID, f.ownerAppToken, http.StatusNoContent)
+	})
+}
+
 func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 	f := setupSharedDrivePermissionFixture(t)
 
@@ -585,6 +1038,24 @@ func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusForbidden)
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotRevokePermission", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-revoke-link.txt", f.ownerAppToken)
+		permID, _ := createSharedDrivePermission(
+			t,
+			f.eOwner,
+			sharingID,
+			f.ownerAppToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eDave, sharingID, permID, daveToken, http.StatusForbidden)
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
 	t.Run("PublicShareTokenCannotRevokePermission", func(t *testing.T) {

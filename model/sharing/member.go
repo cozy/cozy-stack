@@ -374,10 +374,14 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
+	originalRes, originalErr := res, err
 	if res != nil && res.StatusCode/100 == 4 {
 		res, err = RefreshToken(inst, res, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
+		if originalRes != nil && originalRes.StatusCode == http.StatusForbidden {
+			return preserveDelegatedRequestError(originalRes.StatusCode, originalErr)
+		}
 		return err
 	}
 	defer res.Body.Close()
@@ -433,8 +437,33 @@ func (s *Sharing) SendDelegated(inst *instance.Instance, api *APIDelegateAddCont
 	return s.SendInvitationsToMembers(inst, api.members, states)
 }
 
-// AddDelegatedContact adds a contact on the owner cozy, but for a contact from
-// a recipient (open_sharing: true only)
+func preserveDelegatedRequestError(status int, err error) error {
+	reqErr, ok := err.(*request.Error)
+	if !ok {
+		return jsonapi.NewError(status, http.StatusText(status))
+	}
+
+	var payload struct {
+		Errors jsonapi.ErrorList `json:"errors"`
+	}
+	if parseErr := json.Unmarshal([]byte(reqErr.Detail), &payload); parseErr == nil && len(payload.Errors) > 0 {
+		if payload.Errors[0].Status == 0 {
+			payload.Errors[0].Status = status
+		}
+		if payload.Errors[0].Title == "" {
+			payload.Errors[0].Title = http.StatusText(status)
+		}
+		return payload.Errors[0]
+	}
+
+	if reqErr.Detail != "" {
+		return jsonapi.NewError(status, reqErr.Detail)
+	}
+	return jsonapi.NewError(status, http.StatusText(status))
+}
+
+// AddDelegatedContact adds a contact on the owner cozy for a contact proposed
+// by a recipient.
 func (s *Sharing) AddDelegatedContact(inst *instance.Instance, m Member) (string, error) {
 	m.Status = MemberStatusPendingInvitation
 	if m.Instance != "" || m.Email == "" {

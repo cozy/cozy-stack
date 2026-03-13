@@ -676,9 +676,62 @@ drive.
 The following routes manage share-by-link permissions scoped to files inside a
 shared drive:
 
+- `GET /sharings/drives/:id/permissions?ids=...`
 - `POST /sharings/drives/:id/permissions`
 - `PATCH /sharings/drives/:id/permissions/:perm-id`
 - `DELETE /sharings/drives/:id/permissions/:perm-id`
+
+### GET /sharings/drives/:id/permissions?ids=...
+
+Lists the share-by-link permissions for the requested file or folder IDs inside
+the shared drive.
+
+Authorization rules:
+
+- The shared-drive owner can list all matching links.
+- A write-capable recipient can list writable and read-only links.
+- A read-only recipient only sees read-only links.
+
+Validation:
+
+- `ids` is required and must be a comma-separated list of file or folder IDs.
+- Every requested ID must belong to the shared drive.
+
+Status codes:
+
+- `200 OK` listed
+- `403 Forbidden` caller cannot access shared-drive permissions
+- `422 Unprocessable Entity` missing or invalid `ids`
+
+### POST /sharings/drives/:id/permissions
+
+Creates a share-by-link permission for one file or folder in the shared drive.
+The request body uses the same JSON:API shape as [`POST /permissions`](permissions.md#post-permissions).
+
+Authorization rules:
+
+- The shared-drive owner can create a link.
+- A write-capable recipient can create a link.
+- A read-only recipient cannot create a link.
+
+Validation:
+
+- The permission set must target exactly one file or folder.
+- The target type must be `io.cozy.files`.
+- Selectors are not supported.
+- The target must belong to the shared drive and must be readable by the
+  caller.
+- Only one share-by-link permission can exist per target. A second creation
+  attempt on the same target returns a conflict, regardless of which member
+  created the existing link.
+
+Status codes:
+
+- `200 OK` created
+- `400 Bad Request` invalid permission set or invalid target
+- `403 Forbidden` caller lacks access to the target or is read-only on the
+  shared drive
+- `409 Conflict` a share-by-link permission already exists for this target
 
 ### PATCH /sharings/drives/:id/permissions/:perm-id
 
@@ -696,12 +749,19 @@ Allowed updates:
 
 - `password`
 - `expires_at`
+- `permissions` (same target only)
 
 Validation:
 
 - `password` must be a string (empty string clears the password).
 - `expires_at` must be a string (empty string clears expiration, otherwise
   RFC3339 date-time).
+- `permissions`, when provided, must still target the same file or folder
+  inside the shared drive.
+- A write-capable creator or the owner can promote a read-only link to a
+  writable link if their current token grants those verbs.
+- A read-only shared-drive recipient cannot patch a permission set to add
+  writable verbs.
 
 Status codes:
 
@@ -721,6 +781,7 @@ Authorization rules:
 - The shared-drive owner can revoke any share-by-link permission.
 - The creator of a share-by-link permission can revoke the permission they
   created.
+- A read-only shared-drive recipient cannot revoke a permission.
 - Public share tokens (`share`, `share-preview`) cannot revoke permissions.
 
 Status codes:
@@ -730,6 +791,23 @@ Status codes:
 - `403 Forbidden` caller is not owner/creator, or permission does not belong
   to this shared drive
 - `404 Not Found` permission ID does not exist
+
+## Delegated email sharing
+
+Members of a shared drive add new recipients through the sharing API, not
+through a drive-specific route:
+
+- `POST /sharings/:sharing-id/recipients`
+
+When that request is sent from a recipient Cozy, the stack delegates the
+operation to the owner Cozy internally.
+
+Authorization rules:
+
+- The shared-drive owner can add recipients as for any other sharing.
+- A write-capable recipient can invite read-write or read-only recipients.
+- A read-only recipient can invite only read-only recipients.
+- A read-only recipient receives `403 Forbidden` for a read-write invite.
 
 
 ## Versions
