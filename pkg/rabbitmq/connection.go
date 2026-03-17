@@ -54,7 +54,9 @@ func (cm *RabbitMQConnection) Connect(ctx context.Context, maxRetries int) (*amq
 		// Apply backoff delay (except for first attempt)
 		if attempt > 0 {
 			backoff := nextBackoff(attempt - 1)
-			time.Sleep(backoff)
+			if err := sleepContext(ctx, backoff); err != nil {
+				return nil, err
+			}
 		}
 
 		// Try to create connection
@@ -132,6 +134,18 @@ func withJitter(d time.Duration) time.Duration {
 	}
 	jitter := time.Duration(rand.Int63n(int64(d / 4)))
 	return d + jitter
+}
+
+func sleepContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func isAMQPS(u string) bool {
