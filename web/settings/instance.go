@@ -230,6 +230,7 @@ func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
+
 	email, err := inst.SettingsEMail()
 	if err != nil {
 		return jsonapi.InternalServerError(err)
