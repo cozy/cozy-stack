@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
@@ -44,11 +45,12 @@ func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marsh
 // HTTPHandler handle all the `/settings` routes.
 type HTTPHandler struct {
 	svc csettings.Service
+	rmq rabbitmq.Service
 }
 
 // NewHTTPHandler instantiates a new [HTTPHandler].
-func NewHTTPHandler(svc csettings.Service) *HTTPHandler {
-	return &HTTPHandler{svc}
+func NewHTTPHandler(svc csettings.Service, rmq rabbitmq.Service) *HTTPHandler {
+	return &HTTPHandler{svc: svc, rmq: rmq}
 }
 
 func (h *HTTPHandler) getSessions(c echo.Context) error {
@@ -341,6 +343,7 @@ func (h *HTTPHandler) Register(router *echo.Group) {
 	router.GET("/instance", h.getInstance)
 	router.PUT("/instance", h.updateInstance)
 	router.POST("/instance/deletion", h.askInstanceDeletion)
+	router.POST("/instance/deletion/force", h.forceInstanceDeletion)
 	router.PUT("/instance/auth_mode", h.updateInstanceAuthMode)
 	router.PUT("/instance/sign_tos", h.updateInstanceTOS)
 	router.DELETE("/instance/moved_from", h.clearMovedFrom)

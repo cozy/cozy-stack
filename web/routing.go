@@ -245,7 +245,7 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		apps.KonnectorRoutes(router.Group("/konnectors", mwsNotBlocked...))
 
 		// TODO: An init refacto will soon be required
-		settings.NewHTTPHandler(services.Settings).Register(router.Group("/settings", mwsNotBlocked...))
+		settings.NewHTTPHandler(services.Settings, services.RabbitMQ).Register(router.Group("/settings", mwsNotBlocked...))
 
 		compat.Routes(router.Group("/compat", mwsNotBlocked...))
 

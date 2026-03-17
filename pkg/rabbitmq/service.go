@@ -2,8 +2,10 @@ package rabbitmq
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQService struct {
@@ -39,6 +41,36 @@ func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange
 	exchanges := BuildExchangeSpecs(exchangesCfg)
 
 	return NewRabbitMQManager(connection, exchanges), nil
+}
+
+// Publish sends a persistent JSON message to the given exchange and routing key.
+// It looks up the RabbitMQ manager for contextName (falling back to "default"),
+// reuses its connection, and opens a transient channel for the publish.
+func (s *RabbitMQService) Publish(ctx context.Context, contextName, exchange, routingKey string, body []byte) error {
+	manager, ok := s.Managers[contextName]
+	if !ok {
+		manager, ok = s.Managers["default"]
+		if !ok {
+			return fmt.Errorf("no rabbitmq manager for context %q", contextName)
+		}
+	}
+
+	conn, err := manager.connection.Connect(ctx, 3)
+	if err != nil {
+		return fmt.Errorf("rabbitmq publish: connect: %w", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("rabbitmq publish: open channel: %w", err)
+	}
+	defer ch.Close()
+
+	return ch.PublishWithContext(ctx, exchange, routingKey, false, false, amqp.Publishing{
+		DeliveryMode: amqp.Persistent,
+		ContentType:  "application/json",
+		Body:         body,
+	})
 }
 
 // StartManagers runs the managers in background and returns Shutdowners

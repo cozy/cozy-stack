@@ -4,8 +4,10 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -219,6 +221,43 @@ func (h *HTTPHandler) askInstanceDeletion(c echo.Context) error {
 	if err := lifecycle.AskDeletion(inst); err != nil {
 		return err
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
+	if err := middlewares.RequireSettingsApp(c); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	email, err := inst.SettingsEMail()
+	if err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+	if email == "" {
+		return jsonapi.BadRequest(errors.New("instance has no email configured"))
+	}
+
+	msg := struct {
+		Email       string `json:"email"`
+		Reason      string `json:"reason"`
+		RequestedBy string `json:"requestedBy"`
+		RequestedAt int64  `json:"requestedAt"`
+	}{
+		Email:       email,
+		Reason:      "user_request",
+		RequestedBy: "cozy-stack",
+		RequestedAt: time.Now().UnixMilli(),
+	}
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+
+	if err := h.rmq.Publish(c.Request().Context(), inst.ContextName, "auth", "user.deletion.requested", body); err != nil {
+		return jsonapi.InternalServerError(err)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 
