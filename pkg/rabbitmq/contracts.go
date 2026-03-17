@@ -19,8 +19,8 @@ const (
 
 // UserDeletionRequestedMessage is published when a user asks Twake to delete the account linked to the current cozy instance.
 type UserDeletionRequestedMessage struct {
-	Email       string `json:"email"`
-	Reason      string `json:"reason"`
-	RequestedBy string `json:"requestedBy"`
-	RequestedAt int64  `json:"requestedAt"`
+	WorkplaceFqdn string `json:"workplaceFqdn"`
+	Reason        string `json:"reason"`
+	RequestedBy   string `json:"requestedBy"`
+	RequestedAt   int64  `json:"requestedAt"`
 }

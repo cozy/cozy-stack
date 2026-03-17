@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -140,8 +141,8 @@ func TestForceInstanceDeletion(t *testing.T) {
 		assert.Empty(t, spy.messages)
 	})
 
-	t.Run("RejectMissingEmail", func(t *testing.T) {
-		setup := testutils.NewSetup(t, "forcedel-reject-noemail")
+	t.Run("PublishDeletionMessageWithoutEmail", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "forcedel-noemail-ok")
 		inst := setup.GetTestInstance() // no email
 
 		spy := &spyRabbitMQ{}
@@ -150,9 +151,14 @@ func TestForceInstanceDeletion(t *testing.T) {
 
 		e.POST("/settings/instance/deletion/force").
 			WithHeader("Accept", "application/vnd.api+json").
-			Expect().Status(http.StatusBadRequest)
+			Expect().Status(http.StatusNoContent)
 
-		assert.Empty(t, spy.messages)
+		require.Len(t, spy.messages, 1)
+		msg := spy.last()
+
+		var body rabbitmq.UserDeletionRequestedMessage
+		require.NoError(t, json.Unmarshal(msg.Request.Payload.([]byte), &body))
+		assert.Equal(t, inst.Domain, body.WorkplaceFqdn)
 	})
 
 	t.Run("ReturnErrorWhenPublishFails", func(t *testing.T) {
@@ -191,7 +197,7 @@ func TestForceInstanceDeletion(t *testing.T) {
 
 		var body rabbitmq.UserDeletionRequestedMessage
 		require.NoError(t, json.Unmarshal(msg.Request.Payload.([]byte), &body))
-		assert.Equal(t, "alice@twake.app", body.Email)
+		assert.Equal(t, inst.Domain, body.WorkplaceFqdn)
 		assert.Equal(t, "user_request", body.Reason)
 		assert.Equal(t, "cozy-stack", body.RequestedBy)
 		assert.NotZero(t, body.RequestedAt)
@@ -206,6 +212,45 @@ func TestForceInstanceDeletion(t *testing.T) {
 
 		e.POST("/settings/instance/deletion/force").
 			WithHeader("Accept", "application/vnd.api+json").
-			Expect().Status(http.StatusInternalServerError)
+			Expect().Status(http.StatusInternalServerError).
+			Body().Contains("force instance deletion requires RabbitMQ to be configured")
+	})
+
+	t.Run("PublishDeletionMessageWithRealRabbitMQ", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "forcedel-rmq-integration")
+		inst := setup.GetTestInstance(&lifecycle.Options{ContextName: "test-ctx"})
+
+		node := testutils.StartRabbitMQ(t, true, false)
+		const queueName = "test.user.deletion.requested.settings"
+		testutils.DeclareBoundQueue(t, node, rabbitmq.ExchangeAuth, queueName, rabbitmq.RoutingKeyUserDeletionRequested)
+
+		rmq, err := rabbitmq.NewService(config.RabbitMQ{
+			Enabled: true,
+			Nodes: map[string]config.RabbitMQNode{
+				"test-ctx": {
+					Enabled: true,
+					URL:     node.AMQPURL,
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		ts := setupForceDeletionRouter(t, inst, settingsAppPermission(), rmq)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/settings/instance/deletion/force").
+			WithHeader("Accept", "application/vnd.api+json").
+			Expect().Status(http.StatusNoContent)
+
+		msg, ok := testutils.GetOneFromQueue(t, node, queueName, 5*time.Second)
+		require.True(t, ok, "expected a published message in %s", queueName)
+		assert.Equal(t, "application/json", msg.ContentType)
+
+		var body rabbitmq.UserDeletionRequestedMessage
+		require.NoError(t, json.Unmarshal(msg.Body, &body))
+		assert.Equal(t, inst.Domain, body.WorkplaceFqdn)
+		assert.Equal(t, "user_request", body.Reason)
+		assert.Equal(t, "cozy-stack", body.RequestedBy)
+		assert.NotZero(t, body.RequestedAt)
 	})
 }

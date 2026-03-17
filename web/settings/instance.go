@@ -232,19 +232,11 @@ func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
 
 	inst := middlewares.GetInstance(c)
 
-	email, err := inst.SettingsEMail()
-	if err != nil {
-		return jsonapi.InternalServerError(err)
-	}
-	if email == "" {
-		return jsonapi.BadRequest(errors.New("instance has no email configured"))
-	}
-
 	msg := rabbitmq.UserDeletionRequestedMessage{
-		Email:       email,
-		Reason:      "user_request",
-		RequestedBy: "cozy-stack",
-		RequestedAt: time.Now().UnixMilli(),
+		WorkplaceFqdn: inst.Domain,
+		Reason:        "user_request",
+		RequestedBy:   "cozy-stack",
+		RequestedAt:   time.Now().UnixMilli(),
 	}
 	if err := h.rmq.Publish(c.Request().Context(), rabbitmq.PublishRequest{
 		ContextName: inst.ContextName,
@@ -252,6 +244,11 @@ func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
 		RoutingKey:  rabbitmq.RoutingKeyUserDeletionRequested,
 		Payload:     msg,
 	}); err != nil {
+		if errors.Is(err, rabbitmq.ErrNotConfigured) {
+			explicitErr := errors.New("force instance deletion requires RabbitMQ to be configured")
+			inst.Logger().Errorf("Force instance deletion publish failed: %s", err)
+			return jsonapi.InternalServerError(explicitErr)
+		}
 		inst.Logger().Errorf("Force instance deletion publish failed: %s", err)
 		return jsonapi.InternalServerError(err)
 	}

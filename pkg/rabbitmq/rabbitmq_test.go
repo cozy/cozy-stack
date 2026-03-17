@@ -1138,7 +1138,7 @@ func createAndStartManager(t *testing.T, mq *testutils.RabbitFixture, exchangeCf
 }
 
 func verifyDLXExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
-	conn, ch := createTestConnection(t, mq)
+	conn, ch := testutils.CreateRabbitConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -1148,7 +1148,7 @@ func verifyDLXExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) 
 }
 
 func verifyDLQExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
-	conn, ch := createTestConnection(t, mq)
+	conn, ch := testutils.CreateRabbitConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -1158,7 +1158,7 @@ func verifyDLQExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) 
 }
 
 func verifyDLXNotExists(t *testing.T, mq *testutils.RabbitFixture, dlxName string) {
-	conn, ch := createTestConnection(t, mq)
+	conn, ch := testutils.CreateRabbitConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
@@ -1168,39 +1168,13 @@ func verifyDLXNotExists(t *testing.T, mq *testutils.RabbitFixture, dlxName strin
 }
 
 func verifyDLQNotExists(t *testing.T, mq *testutils.RabbitFixture, dlqName string) {
-	conn, ch := createTestConnection(t, mq)
+	conn, ch := testutils.CreateRabbitConnection(t, mq)
 	defer ch.Close()
 	defer conn.Close()
 
 	// Try to declare DLQ - should succeed because it doesn't exist
 	_, err := ch.QueueDeclare(dlqName, true, false, false, false, nil)
 	require.NoError(t, err, "DLQ %s should not be declared yet", dlqName)
-}
-
-func createTestConnection(t *testing.T, mq *testutils.RabbitFixture) (*amqp.Connection, *amqp.Channel) {
-	conn, err := amqp.Dial(mq.AMQPURL)
-	require.NoError(t, err)
-
-	ch, err := conn.Channel()
-	require.NoError(t, err)
-
-	return conn, ch
-}
-
-func getOneFromQueue(t *testing.T, mq *testutils.RabbitFixture, q string, timeout time.Duration) (*amqp.Delivery, bool) {
-	deadline := time.Now().Add(timeout)
-	conn, ch := createTestConnection(t, mq)
-	defer ch.Close()
-	defer conn.Close()
-	for time.Now().Before(deadline) {
-		msg, ok, err := ch.Get(q, true)
-		require.NoError(t, err)
-		if ok {
-			return &msg, true
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return nil, false
 }
 
 func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
@@ -1260,7 +1234,7 @@ func TestRouteToDLQ_OnDeliveryLimitExceeded(t *testing.T) {
 	sender.publish(original)
 
 	// Expect the message to be dead-lettered to the DLQ after exceeding delivery limit
-	if msg, ok := getOneFromQueue(t, MQ, "stack.dead.letter.user.password.updated", 60*time.Second); !ok {
+	if msg, ok := testutils.GetOneFromQueue(t, MQ, "stack.dead.letter.user.password.updated", 60*time.Second); !ok {
 		t.Fatalf("expected a message in DLQ but none received")
 	} else {
 		require.Equal(t, "application/json", msg.ContentType)
