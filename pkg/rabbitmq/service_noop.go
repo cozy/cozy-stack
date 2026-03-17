@@ -23,3 +23,8 @@ func (s *NoopService) StartManagers() ([]*RabbitMQManager, error) {
 func (s *NoopService) Publish(_ context.Context, _, _, _ string, _ []byte) error {
 	return ErrNotConfigured
 }
+
+// ClosePublishers does nothing.
+func (s *NoopService) ClosePublishers(_ context.Context) error {
+	return nil
+}

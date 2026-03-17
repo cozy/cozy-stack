@@ -17,6 +17,7 @@ var log = logger.WithNamespace("rabbitmq")
 type Service interface {
 	StartManagers() ([]*RabbitMQManager, error)
 	Publish(ctx context.Context, contextName, exchange, routingKey string, body []byte) error
+	ClosePublishers(ctx context.Context) error
 }
 
 func Init(cfg config.RabbitMQ) (Service, error) {

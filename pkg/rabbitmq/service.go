@@ -62,9 +62,21 @@ func (s *RabbitMQService) Publish(ctx context.Context, contextName, exchange, ro
 		if !ok {
 			return fmt.Errorf("no rabbitmq publisher for context %q", contextName)
 		}
+		log.Warnf("No publisher for context %q, falling back to default", contextName)
 	}
 
 	return pub.Publish(ctx, exchange, routingKey, body)
+}
+
+// ClosePublishers closes all publisher connections. It should be called during
+// graceful shutdown to avoid leaking connections.
+func (s *RabbitMQService) ClosePublishers(ctx context.Context) error {
+	for name, pub := range s.publishers {
+		if err := pub.Close(); err != nil {
+			log.Errorf("Failed to close publisher for context %s: %v", name, err)
+		}
+	}
+	return nil
 }
 
 // StartManagers runs the managers in background and returns Shutdowners

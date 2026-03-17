@@ -57,6 +57,10 @@ func (s *spyRabbitMQ) Publish(_ context.Context, contextName, exchange, routingK
 	return nil
 }
 
+func (s *spyRabbitMQ) ClosePublishers(_ context.Context) error {
+	return nil
+}
+
 func (s *spyRabbitMQ) last() publishedMessage {
 	s.mu.Lock()
 	defer s.mu.Unlock()
