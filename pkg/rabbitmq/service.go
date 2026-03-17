@@ -5,15 +5,17 @@ import (
 	"fmt"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQService struct {
-	Managers map[string]*RabbitMQManager
+	Managers   map[string]*RabbitMQManager
+	publishers map[string]*Publisher
 }
 
 func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 	managers := map[string]*RabbitMQManager{}
+	publishers := map[string]*Publisher{}
+
 	for context, node := range cfg.Nodes {
 		if !node.Enabled {
 			log.Infof("No RabbitMQ manager for context %s", context)
@@ -25,11 +27,18 @@ func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 			log.Errorf("Error while building RabbitMQ manager: %v", err)
 			return nil, err
 		}
-
 		managers[context] = manager
+
+		// Build a dedicated publisher connection, separate from the consumer.
+		pubConn, err := BuildConnection(node)
+		if err != nil {
+			log.Errorf("Error while building RabbitMQ publisher: %v", err)
+			return nil, err
+		}
+		publishers[context] = NewPublisher(pubConn)
 	}
 
-	return &RabbitMQService{managers}, nil
+	return &RabbitMQService{Managers: managers, publishers: publishers}, nil
 }
 
 func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange) (*RabbitMQManager, error) {
@@ -44,33 +53,18 @@ func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange
 }
 
 // Publish sends a persistent JSON message to the given exchange and routing key.
-// It looks up the RabbitMQ manager for contextName (falling back to "default"),
-// reuses its connection, and opens a transient channel for the publish.
+// It uses a dedicated publisher connection (not the consumer manager's connection)
+// for the given context, falling back to "default" if needed.
 func (s *RabbitMQService) Publish(ctx context.Context, contextName, exchange, routingKey string, body []byte) error {
-	manager, ok := s.Managers[contextName]
+	pub, ok := s.publishers[contextName]
 	if !ok {
-		manager, ok = s.Managers["default"]
+		pub, ok = s.publishers["default"]
 		if !ok {
-			return fmt.Errorf("no rabbitmq manager for context %q", contextName)
+			return fmt.Errorf("no rabbitmq publisher for context %q", contextName)
 		}
 	}
 
-	conn, err := manager.connection.Connect(ctx, 3)
-	if err != nil {
-		return fmt.Errorf("rabbitmq publish: connect: %w", err)
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("rabbitmq publish: open channel: %w", err)
-	}
-	defer ch.Close()
-
-	return ch.PublishWithContext(ctx, exchange, routingKey, false, false, amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		ContentType:  "application/json",
-		Body:         body,
-	})
+	return pub.Publish(ctx, exchange, routingKey, body)
 }
 
 // StartManagers runs the managers in background and returns Shutdowners
