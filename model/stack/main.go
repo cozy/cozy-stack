@@ -138,7 +138,6 @@ security features. Please do not use this binary as your production server.
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start rabbitmq manager: %w", err)
 	}
-	shutdowners = append(shutdowners, utils.ShutdownFunc(rabbitmqSvc.ClosePublishers))
 
 	// Global shutdowner that composes all the running processes of the stack
 	processes := utils.NewGroupShutdown(shutdowners...)

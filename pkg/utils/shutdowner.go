@@ -16,11 +16,6 @@ type Shutdowner interface {
 	Shutdown(ctx context.Context) error
 }
 
-// ShutdownFunc adapts a plain function into a [Shutdowner].
-type ShutdownFunc func(ctx context.Context) error
-
-func (f ShutdownFunc) Shutdown(ctx context.Context) error { return f(ctx) }
-
 // GroupShutdown allow to group multiple Shutdowner into a single one.
 type GroupShutdown struct {
 	s []Shutdowner
