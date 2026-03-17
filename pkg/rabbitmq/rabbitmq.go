@@ -257,15 +257,15 @@ func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 
 			// Map queue names to appropriate handlers
 			switch configQueue.Name {
-			case "stack.user.password.updated":
+			case QueueUserPasswordUpdated:
 				handler = NewPasswordChangeHandler()
-			case "stack.user.created":
+			case QueueUserCreated:
 				handler = NewUserCreatedHandler()
-			case "stack.user.phone.updated":
+			case QueueUserPhoneUpdated:
 				handler = NewUserPhoneUpdatedHandler()
-			case "stack.domain.subscription.changed":
+			case QueueDomainSubscriptionChanged:
 				handler = NewDomainSubscriptionChangedHandler()
-			case "stack.app.commands.queue":
+			case QueueAppCommands:
 				handler = NewAppInstallHandler()
 			}
 

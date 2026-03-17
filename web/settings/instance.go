@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -239,25 +240,26 @@ func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("instance has no email configured"))
 	}
 
-	msg := struct {
-		Email       string `json:"email"`
-		Reason      string `json:"reason"`
-		RequestedBy string `json:"requestedBy"`
-		RequestedAt int64  `json:"requestedAt"`
-	}{
+	msg := rabbitmq.UserDeletionRequestedMessage{
 		Email:       email,
 		Reason:      "user_request",
 		RequestedBy: "cozy-stack",
 		RequestedAt: time.Now().UnixMilli(),
 	}
-	body, err := json.Marshal(msg)
-	if err != nil {
+	if err := h.rmq.Publish(c.Request().Context(), rabbitmq.PublishRequest{
+		ContextName: inst.ContextName,
+		Exchange:    rabbitmq.ExchangeAuth,
+		RoutingKey:  rabbitmq.RoutingKeyUserDeletionRequested,
+		Payload:     msg,
+	}); err != nil {
+		inst.Logger().Errorf("Force instance deletion publish failed: %s", err)
 		return jsonapi.InternalServerError(err)
 	}
-
-	if err := h.rmq.Publish(c.Request().Context(), inst.ContextName, "auth", "user.deletion.requested", body); err != nil {
-		return jsonapi.InternalServerError(err)
-	}
+	inst.Logger().Infof(
+		"Force instance deletion requested: published %s to %s",
+		rabbitmq.RoutingKeyUserDeletionRequested,
+		rabbitmq.ExchangeAuth,
+	)
 
 	return c.NoContent(http.StatusNoContent)
 }

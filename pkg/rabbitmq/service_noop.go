@@ -20,7 +20,7 @@ func (s *NoopService) StartManagers() ([]*RabbitMQManager, error) {
 }
 
 // Publish returns an error because RabbitMQ is not configured.
-func (s *NoopService) Publish(_ context.Context, _, _, _ string, _ []byte) error {
+func (s *NoopService) Publish(_ context.Context, _ PublishRequest) error {
 	return ErrNotConfigured
 }
 

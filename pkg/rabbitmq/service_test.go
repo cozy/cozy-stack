@@ -2,6 +2,8 @@ package rabbitmq_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -48,14 +50,14 @@ func TestRabbitMQService(t *testing.T) {
 		},
 		Exchanges: []config.RabbitExchange{
 			{
-				Name:            "auth",
+				Name:            rabbitmq.ExchangeAuth,
 				Kind:            "topic",
 				Durable:         false,
 				DeclareExchange: true,
 				Queues: []config.RabbitQueue{
 					{
-						Name:     "stack.user.password.updated",
-						Bindings: []string{"user.password.updated"},
+						Name:     rabbitmq.QueueUserPasswordUpdated,
+						Bindings: []string{rabbitmq.RoutingKeyUserPasswordUpdated},
 						Declare:  true,
 					},
 				},
@@ -105,7 +107,7 @@ func TestRabbitMQService(t *testing.T) {
 		slug, domain := inst.SlugAndDomain()
 
 		// 1. Update instance password via default RabbitMQ node
-		defaultSender := newTestMessageSender(t, defaultNode.AMQPURL, "auth", "user.password.updated")
+		defaultSender := newTestMessageSender(t, defaultNode.AMQPURL, rabbitmq.ExchangeAuth, rabbitmq.RoutingKeyUserPasswordUpdated)
 		hashText, hashB64 := hashPassphrase(t)
 		msg := rabbitmq.PasswordChangeMessage{
 			TwakeID:       slug,
@@ -125,7 +127,7 @@ func TestRabbitMQService(t *testing.T) {
 		})
 
 		// 2. Update instance password via twake RabbitMQ node
-		twakeSender := newTestMessageSender(t, twakeNode.AMQPURL, "auth", "user.password.updated")
+		twakeSender := newTestMessageSender(t, twakeNode.AMQPURL, rabbitmq.ExchangeAuth, rabbitmq.RoutingKeyUserPasswordUpdated)
 		hashText, hashB64 = hashPassphrase(t)
 		msg = rabbitmq.PasswordChangeMessage{
 			TwakeID:       slug,
@@ -144,4 +146,88 @@ func TestRabbitMQService(t *testing.T) {
 			return err == nil && string(updated.PassphraseHash) == hashText
 		})
 	})
+
+	t.Run("PublishRoutesMessage", func(t *testing.T) {
+		t.Parallel()
+
+		svc, err := rabbitmq.NewService(cfg)
+		require.NoError(t, err)
+
+		const (
+			queueName   = "test.user.deletion.requested"
+			contextName = "twake_default"
+		)
+
+		declareBoundQueue(t, twakeNode, rabbitmq.ExchangeAuth, queueName, rabbitmq.RoutingKeyUserDeletionRequested)
+
+		err = svc.Publish(context.Background(), rabbitmq.PublishRequest{
+			ContextName: contextName,
+			Exchange:    rabbitmq.ExchangeAuth,
+			RoutingKey:  rabbitmq.RoutingKeyUserDeletionRequested,
+			MessageID:   "msg-1",
+			Payload: rabbitmq.UserDeletionRequestedMessage{
+				Email:       "alice@twake.app",
+				Reason:      "user_request",
+				RequestedBy: "cozy-stack",
+				RequestedAt: time.Now().UnixMilli(),
+			},
+		})
+		require.NoError(t, err)
+
+		msg, ok := getOneFromQueue(t, twakeNode, queueName, 5*time.Second)
+		require.True(t, ok, "expected a published message in %s", queueName)
+		assert.Equal(t, "application/json", msg.ContentType)
+		assert.Equal(t, "msg-1", msg.MessageId)
+
+		var payload rabbitmq.UserDeletionRequestedMessage
+		require.NoError(t, json.Unmarshal(msg.Body, &payload))
+		assert.Equal(t, "alice@twake.app", payload.Email)
+		assert.Equal(t, "user_request", payload.Reason)
+		assert.Equal(t, "cozy-stack", payload.RequestedBy)
+		assert.NotZero(t, payload.RequestedAt)
+	})
+
+	t.Run("PublishReturnsUnroutableWhenNoBinding", func(t *testing.T) {
+		t.Parallel()
+
+		svc, err := rabbitmq.NewService(cfg)
+		require.NoError(t, err)
+
+		conn, ch := createTestConnection(t, defaultNode)
+		defer conn.Close()
+		defer ch.Close()
+		require.NoError(t, ch.ExchangeDeclare(rabbitmq.ExchangeAuth, "topic", false, false, false, false, nil))
+
+		err = svc.Publish(context.Background(), rabbitmq.PublishRequest{
+			ContextName: "default",
+			Exchange:    rabbitmq.ExchangeAuth,
+			RoutingKey:  rabbitmq.RoutingKeyUserDeletionRequested,
+			Payload: rabbitmq.UserDeletionRequestedMessage{
+				Email:       "bob@twake.app",
+				Reason:      "user_request",
+				RequestedBy: "cozy-stack",
+				RequestedAt: time.Now().UnixMilli(),
+			},
+		})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, rabbitmq.ErrPublishReturned)
+
+		var returned *rabbitmq.PublishReturnedError
+		require.True(t, errors.As(err, &returned))
+		assert.Equal(t, rabbitmq.ExchangeAuth, returned.Exchange)
+		assert.Equal(t, rabbitmq.RoutingKeyUserDeletionRequested, returned.RoutingKey)
+	})
+}
+
+func declareBoundQueue(t *testing.T, mq *testutils.RabbitFixture, exchange, queueName, routingKey string) {
+	t.Helper()
+
+	conn, ch := createTestConnection(t, mq)
+	defer conn.Close()
+	defer ch.Close()
+
+	require.NoError(t, ch.ExchangeDeclare(exchange, "topic", false, false, false, false, nil))
+	_, err := ch.QueueDeclare(queueName, false, true, false, false, nil)
+	require.NoError(t, err)
+	require.NoError(t, ch.QueueBind(queueName, routingKey, exchange, false, nil))
 }

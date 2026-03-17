@@ -32,27 +32,28 @@ type spyRabbitMQ struct {
 }
 
 type publishedMessage struct {
-	ContextName string
-	Exchange    string
-	RoutingKey  string
-	Body        []byte
+	Request rabbitmq.PublishRequest
 }
 
 func (s *spyRabbitMQ) StartManagers() ([]*rabbitmq.RabbitMQManager, error) {
 	return nil, nil
 }
 
-func (s *spyRabbitMQ) Publish(_ context.Context, contextName, exchange, routingKey string, body []byte) error {
+func (s *spyRabbitMQ) Publish(_ context.Context, req rabbitmq.PublishRequest) error {
 	if s.err != nil {
 		return s.err
+	}
+	if req.Payload != nil {
+		payload, err := json.Marshal(req.Payload)
+		if err != nil {
+			return err
+		}
+		req.Payload = payload
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messages = append(s.messages, publishedMessage{
-		ContextName: contextName,
-		Exchange:    exchange,
-		RoutingKey:  routingKey,
-		Body:        body,
+		Request: req,
 	})
 	return nil
 }
@@ -184,16 +185,16 @@ func TestForceInstanceDeletion(t *testing.T) {
 
 		require.Len(t, spy.messages, 1)
 		msg := spy.last()
-		assert.Equal(t, "test-ctx", msg.ContextName)
-		assert.Equal(t, "auth", msg.Exchange)
-		assert.Equal(t, "user.deletion.requested", msg.RoutingKey)
+		assert.Equal(t, "test-ctx", msg.Request.ContextName)
+		assert.Equal(t, rabbitmq.ExchangeAuth, msg.Request.Exchange)
+		assert.Equal(t, rabbitmq.RoutingKeyUserDeletionRequested, msg.Request.RoutingKey)
 
-		var body map[string]any
-		require.NoError(t, json.Unmarshal(msg.Body, &body))
-		assert.Equal(t, "alice@twake.app", body["email"])
-		assert.Equal(t, "user_request", body["reason"])
-		assert.Equal(t, "cozy-stack", body["requestedBy"])
-		assert.NotZero(t, body["requestedAt"])
+		var body rabbitmq.UserDeletionRequestedMessage
+		require.NoError(t, json.Unmarshal(msg.Request.Payload.([]byte), &body))
+		assert.Equal(t, "alice@twake.app", body.Email)
+		assert.Equal(t, "user_request", body.Reason)
+		assert.Equal(t, "cozy-stack", body.RequestedBy)
+		assert.NotZero(t, body.RequestedAt)
 	})
 
 	t.Run("NoopRabbitMQReturnsError", func(t *testing.T) {

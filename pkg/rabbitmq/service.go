@@ -8,14 +8,11 @@ import (
 )
 
 type RabbitMQService struct {
-	Managers   map[string]*RabbitMQManager
-	publishers map[string]*Publisher
+	Managers map[string]*RabbitMQManager
 }
 
 func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 	managers := map[string]*RabbitMQManager{}
-	publishers := map[string]*Publisher{}
-
 	for context, node := range cfg.Nodes {
 		if !node.Enabled {
 			log.Infof("No RabbitMQ manager for context %s", context)
@@ -27,18 +24,11 @@ func NewService(cfg config.RabbitMQ) (*RabbitMQService, error) {
 			log.Errorf("Error while building RabbitMQ manager: %v", err)
 			return nil, err
 		}
-		managers[context] = manager
 
-		// Build a dedicated publisher connection, separate from the consumer.
-		pubConn, err := BuildConnection(node)
-		if err != nil {
-			log.Errorf("Error while building RabbitMQ publisher: %v", err)
-			return nil, err
-		}
-		publishers[context] = NewPublisher(pubConn)
+		managers[context] = manager
 	}
 
-	return &RabbitMQService{Managers: managers, publishers: publishers}, nil
+	return &RabbitMQService{Managers: managers}, nil
 }
 
 func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange) (*RabbitMQManager, error) {
@@ -52,31 +42,49 @@ func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange
 	return NewRabbitMQManager(connection, exchanges), nil
 }
 
-// Publish sends a persistent JSON message to the given exchange and routing key.
-// It uses a dedicated publisher connection (not the consumer manager's connection)
-// for the given context, falling back to "default" if needed.
-func (s *RabbitMQService) Publish(ctx context.Context, contextName, exchange, routingKey string, body []byte) error {
-	pub, ok := s.publishers[contextName]
-	if !ok {
-		pub, ok = s.publishers["default"]
-		if !ok {
-			return fmt.Errorf("no rabbitmq publisher for context %q", contextName)
-		}
-		log.Warnf("No publisher for context %q, falling back to default", contextName)
+// Publish sends req.Payload as a JSON message to req.Exchange using req.RoutingKey.
+//
+// Default behavior:
+//   - the message is published on the RabbitMQ node selected by req.ContextName,
+//     falling back to the "default" context when no exact match exists;
+//   - the payload is JSON-encoded and published with Content-Type
+//     "application/json";
+//   - the message is persistent unless req.DeliveryMode overrides it;
+//   - the publish uses the AMQP mandatory flag by default, so unroutable
+//     messages are returned as errors instead of being silently dropped.
+//
+// Failure modes:
+//   - ErrManagerNotFound if no RabbitMQ manager exists for req.ContextName and
+//     no "default" manager is configured;
+//   - a validation error if Exchange, RoutingKey or Payload is missing;
+//   - PublishReturnedError if the exchange exists but no queue binding matches
+//     the routing key and UnroutableOK is false;
+//   - PublishNackedError if the broker negatively acknowledges the publish;
+//   - a wrapped transport/protocol error if the connection/channel cannot be
+//     opened or if the broker rejects the publish, for example because the
+//     target exchange does not exist.
+//
+// Note that "no active consumer" is not an error by itself: as long as a queue
+// is bound, RabbitMQ accepts the message and stores it until a consumer handles
+// it.
+func (s *RabbitMQService) Publish(ctx context.Context, req PublishRequest) error {
+	manager, err := s.managerForContext(req.ContextName)
+	if err != nil {
+		return err
 	}
 
-	return pub.Publish(ctx, exchange, routingKey, body)
+	return manager.Publish(ctx, req)
 }
 
-// ClosePublishers closes all publisher connections. It should be called during
-// graceful shutdown to avoid leaking connections.
-func (s *RabbitMQService) ClosePublishers(ctx context.Context) error {
-	for name, pub := range s.publishers {
-		if err := pub.Close(); err != nil {
-			log.Errorf("Failed to close publisher for context %s: %v", name, err)
+func (s *RabbitMQService) managerForContext(contextName string) (*RabbitMQManager, error) {
+	manager, ok := s.Managers[contextName]
+	if !ok {
+		manager, ok = s.Managers["default"]
+		if !ok {
+			return nil, fmt.Errorf("%w: %q", ErrManagerNotFound, contextName)
 		}
 	}
-	return nil
+	return manager, nil
 }
 
 // StartManagers runs the managers in background and returns Shutdowners
