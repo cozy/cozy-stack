@@ -515,6 +515,13 @@ func OpenOffice(c echo.Context) error {
 func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	opts := webperm.CreateShareByLinkOptions{
 		ValidatePermissions: func(perms permission.Set) error {
+			callerReadOnly, err := isSharedDriveCallerReadOnly(c, inst, s)
+			if err != nil {
+				return err
+			}
+			if callerReadOnly && !isSharedDrivePermissionSetReadOnly(perms) {
+				return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+			}
 			if err := validateSharedDrivePermission(c, inst, s, perms); err != nil {
 				return err
 			}
@@ -750,10 +757,17 @@ func isSharedDriveCallerReadOnly(c echo.Context, inst *instance.Instance, s *sha
 }
 
 func isSharedDriveShareByLinkReadOnly(perm *permission.Permission) bool {
-	if perm == nil || len(perm.Permissions) == 0 {
+	if perm == nil {
 		return false
 	}
-	for _, rule := range perm.Permissions {
+	return isSharedDrivePermissionSetReadOnly(perm.Permissions)
+}
+
+func isSharedDrivePermissionSetReadOnly(perms permission.Set) bool {
+	if len(perms) == 0 {
+		return false
+	}
+	for _, rule := range perms {
 		if !rule.Verbs.ReadOnly() {
 			return false
 		}
@@ -768,6 +782,15 @@ func authorizeSharedDrivePermissionMutation(
 	perm *permission.Permission,
 ) error {
 	currentPerm, _ := middlewares.GetPermission(c)
+	if currentPerm != nil && currentPerm.Type == permission.TypeShareInteract {
+		callerReadOnly, err := isSharedDriveCallerReadOnly(c, inst, s)
+		if err != nil {
+			return err
+		}
+		if callerReadOnly {
+			return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+		}
+	}
 	callerDomain, identityResolved := getSharedDriveCallerDomain(c, inst, s)
 	return CheckSharedDrivePermissionMutationAuthorization(
 		s,
@@ -1122,18 +1145,10 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 				return err
 			}
 
-			// For write operations, check if the user has read-only access
-			// POST /downloads and POST /archive are read operations (create temporary links)
-			if method == http.MethodPost || method == http.MethodPut ||
-				method == http.MethodPatch || method == http.MethodDelete {
-				path := c.Request().URL.Path
-				isReadOnlyOp := strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")
-
-				if !isReadOnlyOp {
-					_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
-					if err != nil {
-						return err
-					}
+			if shouldCheck, requireWrite := sharedDrivePermissionCheck(method, c.Request().URL.Path); shouldCheck {
+				_, err := checkSharedDrivePermission(inst, c.Param("id"), requireWrite)
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -1174,6 +1189,28 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		proxy.ServeHTTP(c.Response(), c.Request())
 		return nil
 	}
+}
+
+func sharedDrivePermissionCheck(method, path string) (shouldCheck bool, requireWrite bool) {
+	if method != http.MethodPost &&
+		method != http.MethodPut &&
+		method != http.MethodPatch &&
+		method != http.MethodDelete {
+		return false, false
+	}
+
+	// POST /downloads creates a temporary link without mutating shared-drive data.
+	if method == http.MethodPost && (strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")){
+		return false, false
+	}
+
+	// Creating a share-by-link is allowed for read-only members as long as the
+	// requested permission set stays read-only.
+	if method == http.MethodPost && strings.HasSuffix(path, "/permissions") {
+		return true, false
+	}
+
+	return true, true
 }
 
 // checkSharedDrivePermission checks if the current user has permission to access

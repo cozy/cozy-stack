@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/stretchr/testify/require"
@@ -321,6 +323,29 @@ func createReadOnlyDriveForDave(
 	return sharingID, rootDirID
 }
 
+func getSharedDriveInteractCode(
+	t *testing.T,
+	inst *instance.Instance,
+	sharingID, email string,
+) string {
+	t.Helper()
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	require.NoError(t, err)
+	for i := range s.Members {
+		if s.Members[i].Email != email {
+			continue
+		}
+		code, err := s.GetInteractCode(inst, &s.Members[i], i)
+		require.NoError(t, err)
+		require.NotEmpty(t, code)
+		return code
+	}
+
+	require.FailNowf(t, "member not found", "email %s not found in sharing %s", email, sharingID)
+	return ""
+}
+
 func TestSharedDriveShareByLinkCreate(t *testing.T) {
 	f := setupSharedDrivePermissionFixture(t)
 
@@ -355,14 +380,36 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 
-	t.Run("ReadOnlyRecipientCannotCreateShareByLink", func(t *testing.T) {
+	t.Run("ReadOnlyRecipientCanCreateReadonlyShareByLink", func(t *testing.T) {
 		eDave, daveToken := f.newDaveClient(t)
 		sharingID, productID := createReadOnlyDriveForDave(t, f)
 		fileID := createFile(t, f.eOwner, productID, "dave-create-link.txt", f.ownerAppToken)
 		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil)
 
+		permID, attrs := createSharedDrivePermission(
+			t, eDave, sharingID, daveToken, "readonly-link", "", payload,
+		)
+
+		attrs.Value("codes").Object().Value("readonly-link").String().NotEmpty()
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotCreateWritableShareByLink", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "dave-create-write-link.txt", f.ownerAppToken)
+
 		createSharedDrivePermissionExpectStatus(
-			t, eDave, sharingID, daveToken, "readonly-link", "", payload, http.StatusForbidden,
+			t,
+			eDave,
+			sharingID,
+			daveToken,
+			"readonly-link",
+			"",
+			makeSharedDrivePermissionPayloadWithVerbs(
+				t, consts.Files, []string{fileID}, []string{"GET", "POST"}, nil,
+			),
+			http.StatusForbidden,
 		)
 	})
 
@@ -691,15 +738,15 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
 	})
 
-	t.Run("ReadOnlyRecipientCannotPatchPermissionSet", func(t *testing.T) {
+	t.Run("ReadOnlyRecipientCannotPatchOwnPermission", func(t *testing.T) {
 		eDave, daveToken := f.newDaveClient(t)
 		sharingID, productID := createReadOnlyDriveForDave(t, f)
 		fileID := createFile(t, f.eOwner, productID, "patch-dave.txt", f.ownerAppToken)
 		permID, _ := createSharedDrivePermission(
 			t,
-			f.eOwner,
+			eDave,
 			sharingID,
-			f.ownerAppToken,
+			daveToken,
 			"readonly-patch-link",
 			"",
 			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
@@ -711,15 +758,35 @@ func TestSharedDriveShareByLinkPatch(t *testing.T) {
 			sharingID,
 			permID,
 			daveToken,
-			makeSharedDrivePatchPayload(t, map[string]interface{}{
-				"permissions": map[string]interface{}{
-					"files": map[string]interface{}{
-						"type":   consts.Files,
-						"verbs":  []string{"GET", "POST"},
-						"values": []string{fileID},
-					},
-				},
-			}),
+			makeSharedDrivePatchPayload(t, map[string]interface{}{"password": "secret"}),
+			http.StatusForbidden,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("ReadOnlyRecipientCannotPatchOwnPermissionOnOwnerWithInteractCode", func(t *testing.T) {
+		eDave, daveToken := f.newDaveClient(t)
+		sharingID, productID := createReadOnlyDriveForDave(t, f)
+		fileID := createFile(t, f.eOwner, productID, "patch-dave-owner.txt", f.ownerAppToken)
+		permID, _ := createSharedDrivePermission(
+			t,
+			eDave,
+			sharingID,
+			daveToken,
+			"readonly-owner-patch-link",
+			"",
+			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
+		)
+		interactCode := getSharedDriveInteractCode(t, f.env.acme, sharingID, "dave@example.net")
+
+		patchSharedDrivePermissionExpectStatus(
+			t,
+			f.eOwner,
+			sharingID,
+			permID,
+			interactCode,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{"password": "secret"}),
 			http.StatusForbidden,
 		)
 
@@ -1040,15 +1107,15 @@ func TestSharedDriveShareByLinkRevoke(t *testing.T) {
 		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
 	})
 
-	t.Run("ReadOnlyRecipientCannotRevokePermission", func(t *testing.T) {
+	t.Run("ReadOnlyRecipientCannotRevokeOwnPermission", func(t *testing.T) {
 		eDave, daveToken := f.newDaveClient(t)
 		sharingID, productID := createReadOnlyDriveForDave(t, f)
 		fileID := createFile(t, f.eOwner, productID, "dave-revoke-link.txt", f.ownerAppToken)
 		permID, _ := createSharedDrivePermission(
 			t,
-			f.eOwner,
+			eDave,
 			sharingID,
-			f.ownerAppToken,
+			daveToken,
 			"readonly-link",
 			"",
 			makeSharedDrivePermissionPayload(t, consts.Files, []string{fileID}, "", nil),
