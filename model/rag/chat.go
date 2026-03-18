@@ -32,11 +32,11 @@ type ChatPayload struct {
 }
 
 type ChatConversation struct {
-	DocID       string                 `json:"_id"`
-	DocRev      string                 `json:"_rev,omitempty"`
-	Messages    []ChatMessage          `json:"messages"`
-	Metadata    *metadata.CozyMetadata `json:"cozyMetadata"`
-	AssistantID string                 `json:"assistantID,omitempty"`
+	DocID        string                  `json:"_id"`
+	DocRev       string                  `json:"_rev,omitempty"`
+	Messages     []ChatMessage           `json:"messages"`
+	CozyMetadata *metadata.CozyMetadata  `json:"cozyMetadata"`
+	Rels         jsonapi.RelationshipMap `json:"relationships,omitempty"`
 }
 
 type ChatMessage struct {
@@ -68,23 +68,17 @@ func (c *ChatConversation) Clone() couchdb.Doc {
 	cloned := *c
 	cloned.Messages = make([]ChatMessage, len(c.Messages))
 	copy(cloned.Messages, c.Messages)
+	if c.Rels != nil {
+		cloned.Rels = make(jsonapi.RelationshipMap, len(c.Rels))
+		for k, v := range c.Rels {
+			cloned.Rels[k] = v
+		}
+	}
 	return &cloned
 }
-func (c *ChatConversation) Included() []jsonapi.Object { return nil }
-func (c *ChatConversation) Relationships() jsonapi.RelationshipMap {
-	if c.AssistantID == "" {
-		return nil
-	}
-	return jsonapi.RelationshipMap{
-		"assistant": jsonapi.Relationship{
-			Data: couchdb.DocReference{
-				ID:   c.AssistantID,
-				Type: consts.ChatAssistants,
-			},
-		},
-	}
-}
-func (c *ChatConversation) Links() *jsonapi.LinksList { return nil }
+func (c *ChatConversation) Included() []jsonapi.Object             { return nil }
+func (c *ChatConversation) Relationships() jsonapi.RelationshipMap { return c.Rels }
+func (c *ChatConversation) Links() *jsonapi.LinksList              { return nil }
 
 var _ jsonapi.Object = (*ChatConversation)(nil)
 
@@ -117,12 +111,21 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		md := metadata.New()
 		md.DocTypeVersion = DocTypeVersion
 		md.UpdatedAt = md.CreatedAt
-		chat.Metadata = md
-		chat.AssistantID = payload.AssistantID
+		chat.CozyMetadata = md
+		if payload.AssistantID != "" {
+			chat.Rels = jsonapi.RelationshipMap{
+				"assistant": jsonapi.Relationship{
+					Data: couchdb.DocReference{
+						ID:   payload.AssistantID,
+						Type: consts.ChatAssistants,
+					},
+				},
+			}
+		}
 	} else if err != nil {
 		return nil, err
 	} else {
-		chat.Metadata.UpdatedAt = time.Now().UTC()
+		chat.CozyMetadata.UpdatedAt = time.Now().UTC()
 	}
 	uuidv7, _ := uuid.NewV7()
 	msg := ChatMessage{
