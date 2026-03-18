@@ -4,8 +4,10 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -14,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -219,6 +222,42 @@ func (h *HTTPHandler) askInstanceDeletion(c echo.Context) error {
 	if err := lifecycle.AskDeletion(inst); err != nil {
 		return err
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *HTTPHandler) forceInstanceDeletion(c echo.Context) error {
+	if err := middlewares.RequireSettingsApp(c); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+
+	msg := rabbitmq.UserDeletionRequestedMessage{
+		WorkplaceFqdn: inst.Domain,
+		Reason:        "user_request",
+		RequestedBy:   "cozy-stack",
+		RequestedAt:   time.Now().UnixMilli(),
+	}
+	if err := h.rmq.Publish(c.Request().Context(), rabbitmq.PublishRequest{
+		ContextName: inst.ContextName,
+		Exchange:    rabbitmq.ExchangeAuth,
+		RoutingKey:  rabbitmq.RoutingKeyUserDeletionRequested,
+		Payload:     msg,
+	}); err != nil {
+		if errors.Is(err, rabbitmq.ErrNotConfigured) {
+			explicitErr := errors.New("force instance deletion requires RabbitMQ to be configured")
+			inst.Logger().Errorf("Force instance deletion publish failed: %s", err)
+			return jsonapi.InternalServerError(explicitErr)
+		}
+		inst.Logger().Errorf("Force instance deletion publish failed: %s", err)
+		return jsonapi.InternalServerError(err)
+	}
+	inst.Logger().Infof(
+		"Force instance deletion requested: published %s to %s",
+		rabbitmq.RoutingKeyUserDeletionRequested,
+		rabbitmq.ExchangeAuth,
+	)
+
 	return c.NoContent(http.StatusNoContent)
 }
 

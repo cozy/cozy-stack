@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -56,7 +57,7 @@ func setupRouter(t *testing.T, inst *instance.Instance, svc csettings.Service) *
 		}
 	})
 
-	websettings.NewHTTPHandler(svc).Register(group)
+	websettings.NewHTTPHandler(svc, new(rabbitmq.NoopService)).Register(group)
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 
 	c "github.com/docker/docker/api/types/container"
@@ -193,6 +194,53 @@ func (f *RabbitFixture) Stop(ctx context.Context, timeout time.Duration) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	f.t.Errorf("container did not stop within %s", timeout)
+}
+
+// CreateRabbitConnection opens an AMQP connection and channel for the given fixture.
+func CreateRabbitConnection(t *testing.T, mq *RabbitFixture) (*amqp.Connection, *amqp.Channel) {
+	t.Helper()
+
+	conn, err := amqp.Dial(mq.AMQPURL)
+	require.NoError(t, err)
+
+	ch, err := conn.Channel()
+	require.NoError(t, err)
+
+	return conn, ch
+}
+
+// GetOneFromQueue polls a queue until one message is available or the timeout expires.
+func GetOneFromQueue(t *testing.T, mq *RabbitFixture, q string, timeout time.Duration) (*amqp.Delivery, bool) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	conn, ch := CreateRabbitConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	for time.Now().Before(deadline) {
+		msg, ok, err := ch.Get(q, true)
+		require.NoError(t, err)
+		if ok {
+			return &msg, true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return nil, false
+}
+
+// DeclareBoundQueue declares an exchange and queue, then binds the queue to the routing key.
+func DeclareBoundQueue(t *testing.T, mq *RabbitFixture, exchange, queueName, routingKey string) {
+	t.Helper()
+
+	conn, ch := CreateRabbitConnection(t, mq)
+	defer ch.Close()
+	defer conn.Close()
+
+	require.NoError(t, ch.ExchangeDeclare(exchange, "topic", false, false, false, false, nil))
+	_, err := ch.QueueDeclare(queueName, false, true, false, false, nil)
+	require.NoError(t, err)
+	require.NoError(t, ch.QueueBind(queueName, routingKey, exchange, false, nil))
 }
 
 func getFreePort(t *testing.T) string {

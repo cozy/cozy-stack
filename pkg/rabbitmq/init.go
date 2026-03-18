@@ -1,6 +1,8 @@
 package rabbitmq
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -14,6 +16,7 @@ var log = logger.WithNamespace("rabbitmq")
 // - [NoopService] when no config is setup
 type Service interface {
 	StartManagers() ([]*RabbitMQManager, error)
+	Publish(ctx context.Context, req PublishRequest) error
 }
 
 func Init(cfg config.RabbitMQ) (Service, error) {
