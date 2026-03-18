@@ -712,7 +712,7 @@ Authorization rules:
 
 - The shared-drive owner can create a link.
 - A write-capable recipient can create a link.
-- A read-only recipient cannot create a link.
+- A read-only recipient can create a read-only link.
 
 Validation:
 
@@ -721,6 +721,7 @@ Validation:
 - Selectors are not supported.
 - The target must belong to the shared drive and must be readable by the
   caller.
+- A read-only recipient cannot request writable verbs.
 - Only one share-by-link permission can exist per target. A second creation
   attempt on the same target returns a conflict, regardless of which member
   created the existing link.
@@ -729,8 +730,8 @@ Status codes:
 
 - `200 OK` created
 - `400 Bad Request` invalid permission set or invalid target
-- `403 Forbidden` caller lacks access to the target or is read-only on the
-  shared drive
+- `403 Forbidden` caller lacks access to the target or requests a permission
+  set larger than their shared-drive access
 - `409 Conflict` a share-by-link permission already exists for this target
 
 ### PATCH /sharings/drives/:id/permissions/:perm-id
@@ -743,6 +744,8 @@ Authorization rules:
 - The creator of a share-by-link permission can patch the permission they
   created.
 - Creator resolution works for same-stack and cross-stack recipients.
+- A read-only shared-drive recipient cannot patch a permission, even one they
+  created.
 - Public share tokens (`share`, `share-preview`) cannot patch permissions.
 
 Allowed updates:
@@ -760,8 +763,7 @@ Validation:
   inside the shared drive.
 - A write-capable creator or the owner can promote a read-only link to a
   writable link if their current token grants those verbs.
-- A read-only shared-drive recipient cannot patch a permission set to add
-  writable verbs.
+- A read-only shared-drive recipient is rejected before any patch is applied.
 
 Status codes:
 
@@ -781,7 +783,8 @@ Authorization rules:
 - The shared-drive owner can revoke any share-by-link permission.
 - The creator of a share-by-link permission can revoke the permission they
   created.
-- A read-only shared-drive recipient cannot revoke a permission.
+- A read-only shared-drive recipient cannot revoke a permission, even one they
+  created.
 - Public share tokens (`share`, `share-preview`) cannot revoke permissions.
 
 Status codes:
