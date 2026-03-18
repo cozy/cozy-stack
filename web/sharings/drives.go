@@ -772,13 +772,12 @@ func authorizeSharedDrivePermissionMutation(
 	perm *permission.Permission,
 ) error {
 	currentPerm, _ := middlewares.GetPermission(c)
+	callerReadOnly := false
 	if currentPerm != nil && currentPerm.Type == permission.TypeShareInteract {
-		callerReadOnly, err := isSharedDriveCallerReadOnly(c, inst, s)
+		var err error
+		callerReadOnly, err = isSharedDriveCallerReadOnly(c, inst, s)
 		if err != nil {
 			return err
-		}
-		if callerReadOnly {
-			return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
 		}
 	}
 	callerDomain, identityResolved := getSharedDriveCallerDomain(c, inst, s)
@@ -788,6 +787,7 @@ func authorizeSharedDrivePermissionMutation(
 		currentPerm,
 		callerDomain,
 		identityResolved,
+		callerReadOnly,
 	)
 }
 
@@ -799,11 +799,18 @@ func CheckSharedDrivePermissionMutationAuthorization(
 	currentPerm *permission.Permission,
 	callerDomain string,
 	identityResolved bool,
+	callerReadOnly bool,
 ) error {
 	// Public share tokens are never allowed to mutate permissions.
 	if currentPerm != nil &&
 		(currentPerm.Type == permission.TypeShareByLink || currentPerm.Type == permission.TypeSharePreview) {
 		return jsonapi.Forbidden(errors.New("public share token cannot modify this permission"))
+	}
+	if currentPerm != nil &&
+		currentPerm.Type == permission.TypeShareInteract &&
+		callerReadOnly &&
+		!isSharedDriveShareByLinkReadOnly(perm) {
+		return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
 	}
 
 	isOwner := s.Owner && !isSharePermissionToken(currentPerm)
@@ -820,6 +827,20 @@ func CheckSharedDrivePermissionMutationAuthorization(
 		return jsonapi.Forbidden(errors.New("only creator or owner can modify this permission"))
 	}
 
+	return nil
+}
+
+func validateReadOnlySharedDrivePermissionPatch(
+	currentPerm *permission.Permission,
+	callerReadOnly bool,
+	patch permission.Permission,
+) error {
+	if currentPerm == nil || currentPerm.Type != permission.TypeShareInteract || !callerReadOnly {
+		return nil
+	}
+	if len(patch.Permissions) > 0 {
+		return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+	}
 	return nil
 }
 
@@ -982,8 +1003,9 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 }
 
 // PatchSharedDrivePermissionHandler modifies a share-by-link permission in a shared drive.
-// Only the creator or the drive owner can modify. Codes are immutable, and
-// permission updates must keep the same target.
+// Only the creator or the drive owner can modify. Codes are immutable,
+// permission updates must keep the same target, and read-only recipients can
+// only patch password / expiration on their own read-only links.
 func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	permID := c.Param("perm-id")
 	if permID == "" {
@@ -1013,6 +1035,13 @@ func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, 
 	if err != nil {
 		return err
 	}
+	callerReadOnly := false
+	if currentPerm != nil && currentPerm.Type == permission.TypeShareInteract {
+		callerReadOnly, err = isSharedDriveCallerReadOnly(c, inst, s)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Parse the patch request
 	var patch permission.Permission
@@ -1021,6 +1050,9 @@ func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, 
 	}
 
 	if err := ValidateSharedDrivePermissionPatch(patch); err != nil {
+		return err
+	}
+	if err := validateReadOnlySharedDrivePermissionPatch(currentPerm, callerReadOnly, patch); err != nil {
 		return err
 	}
 	if err := ValidateSharedDrivePermissionSetPatch(c, inst, s, currentPerm, perm, patch); err != nil {
@@ -1194,6 +1226,10 @@ func sharedDrivePermissionCheck(method, path string) (shouldCheck bool, requireW
 	// Creating a share-by-link is allowed for read-only members as long as the
 	// requested permission set stays read-only.
 	if method == http.MethodPost && strings.HasSuffix(path, "/permissions") {
+		return true, false
+	}
+	if (method == http.MethodPatch || method == http.MethodDelete) &&
+		strings.Contains(path, "/permissions/") {
 		return true, false
 	}
 

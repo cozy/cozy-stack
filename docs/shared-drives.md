@@ -744,15 +744,15 @@ Authorization rules:
 - The creator of a share-by-link permission can patch the permission they
   created.
 - Creator resolution works for same-stack and cross-stack recipients.
-- A read-only shared-drive recipient cannot patch a permission, even one they
-  created.
+- A read-only shared-drive recipient can patch only the read-only permission
+  they created.
 - Public share tokens (`share`, `share-preview`) cannot patch permissions.
 
 Allowed updates:
 
 - `password`
 - `expires_at`
-- `permissions` (same target only)
+- `permissions` (same target only, owner or write-capable creator only)
 
 Validation:
 
@@ -763,15 +763,19 @@ Validation:
   inside the shared drive.
 - A write-capable creator or the owner can promote a read-only link to a
   writable link if their current token grants those verbs.
-- A read-only shared-drive recipient is rejected before any patch is applied.
+- A read-only shared-drive recipient can only update `password` and
+  `expires_at`.
+- A read-only shared-drive recipient cannot patch `permissions`, even if the
+  result would stay read-only.
 
 Status codes:
 
 - `200 OK` updated
-- `400 Bad Request` invalid payload (for example trying to update `permissions`
-  or `codes`), invalid `password` / `expires_at` attribute format
-- `403 Forbidden` caller is not owner/creator, or caller identity cannot be
-  verified for a shared-drive token
+- `400 Bad Request` invalid payload (for example trying to update `codes`),
+  invalid `password` / `expires_at` attribute format
+- `403 Forbidden` caller is not owner/creator, caller identity cannot be
+  verified for a shared-drive token, or a read-only recipient attempts to
+  patch `permissions`
 - `404 Not Found` permission ID does not exist
 
 ### DELETE /sharings/drives/:id/permissions/:perm-id
@@ -783,7 +787,7 @@ Authorization rules:
 - The shared-drive owner can revoke any share-by-link permission.
 - The creator of a share-by-link permission can revoke the permission they
   created.
-- A read-only shared-drive recipient cannot revoke a permission, even one they
+- A read-only shared-drive recipient can revoke the read-only permission they
   created.
 - Public share tokens (`share`, `share-preview`) cannot revoke permissions.
 
