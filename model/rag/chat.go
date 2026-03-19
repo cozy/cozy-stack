@@ -115,7 +115,10 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		if payload.AssistantID != "" {
 			chat.Rels = jsonapi.RelationshipMap{
 				"assistant": jsonapi.Relationship{
-					Data: couchdb.DocReference{
+					Data: struct {
+						ID   string `json:"_id"`
+						Type string `json:"_type"`
+					}{
 						ID:   payload.AssistantID,
 						Type: consts.ChatAssistants,
 					},
