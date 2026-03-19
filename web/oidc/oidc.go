@@ -575,6 +575,21 @@ func Logout(c echo.Context) error {
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
+	if sid, ok := claims["sid"].(string); ok && sid != "" {
+		deleted, err := session.DeleteByOIDCSession(contextName, sid)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on DeleteByOIDCSession for logout: %s", err)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error":              "internal server error",
+				"error_desc˚ription": err,
+			})
+		}
+		if deleted > 0 {
+			c.Response().Header().Set("Cache-Control", "no-store")
+			return c.NoContent(http.StatusOK)
+		}
+	}
+
 	var inst *instance.Instance
 	if conf.AllowCustomInstance {
 		sub, ok := claims["sub"].(string)
@@ -612,8 +627,15 @@ func Logout(c echo.Context) error {
 		inst = instance
 	}
 
-	// TODO use the sid to logout only on the current device
-	if err := session.DeleteOthers(inst, "all"); err != nil {
+	if sid, ok := claims["sid"].(string); ok && sid != "" {
+		if err := session.DeleteBySID(inst, sid); err != nil {
+			inst.Logger().WithNamespace("oidc").Errorf("Cannot delete the session: %s", err)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error":             "internal server error",
+				"error_description": err,
+			})
+		}
+	} else if err := session.DeleteOthers(inst, "all"); err != nil {
 		inst.Logger().WithNamespace("oidc").Errorf("Cannot delete the session: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "internal server error",
