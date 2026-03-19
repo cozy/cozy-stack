@@ -130,6 +130,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			current,
 			"",
 			false,
+			false,
 		)
 		require.NoError(t, err)
 	})
@@ -145,8 +146,47 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			current,
 			"creator.example",
 			true,
+			false,
 		)
 		require.NoError(t, err)
+	})
+
+	t.Run("AllowsReadOnlyCreatorOnReadonlyLink", func(t *testing.T) {
+		s := &modelsharing.Sharing{Owner: false}
+		target := permissionWithCreatorDomain("creator.example")
+		target.Permissions = permission.Set{
+			{Type: "io.cozy.files", Verbs: permission.Verbs(permission.GET)},
+		}
+		current := &permission.Permission{Type: permission.TypeShareInteract}
+
+		err := sharingsweb.CheckSharedDrivePermissionMutationAuthorization(
+			s,
+			target,
+			current,
+			"creator.example",
+			true,
+			true,
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("RejectsReadOnlyCreatorOnWritableLink", func(t *testing.T) {
+		s := &modelsharing.Sharing{Owner: false}
+		target := permissionWithCreatorDomain("creator.example")
+		target.Permissions = permission.Set{
+			{Type: "io.cozy.files", Verbs: permission.Verbs(permission.GET, permission.POST)},
+		}
+		current := &permission.Permission{Type: permission.TypeShareInteract}
+
+		err := sharingsweb.CheckSharedDrivePermissionMutationAuthorization(
+			s,
+			target,
+			current,
+			"creator.example",
+			true,
+			true,
+		)
+		assertJSONAPIError(t, err, http.StatusForbidden, "write access denied")
 	})
 
 	t.Run("RejectsPublicShareByLinkToken", func(t *testing.T) {
@@ -159,6 +199,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			target,
 			current,
 			"",
+			false,
 			false,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "public share token cannot modify")
@@ -175,6 +216,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			current,
 			"",
 			false,
+			false,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "public share token cannot modify")
 	})
@@ -189,6 +231,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			target,
 			current,
 			"",
+			false,
 			false,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "cannot verify caller identity")
@@ -205,6 +248,7 @@ func TestCheckSharedDrivePermissionMutationAuthorization(t *testing.T) {
 			current,
 			"other.example",
 			true,
+			false,
 		)
 		assertJSONAPIError(t, err, http.StatusForbidden, "only creator or owner can modify")
 	})
