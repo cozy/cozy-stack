@@ -427,6 +427,16 @@ func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 	return files.FileDownloadHandler(c)
 }
 
+// ArchiveDownloadCreateHandler creates a zip archive link for files in a shared drive.
+func ArchiveDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.ArchiveDownload(c, s)
+}
+
+// ArchiveDownloadHandler serves the zip archive prepared by ArchiveDownloadCreateHandler.
+func ArchiveDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	return files.ArchiveDownloadHandler(c)
+}
+
 // CreateNote allows to create a note inside a shared drive.
 func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	return notes.CreateNote(c)
@@ -1060,6 +1070,9 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/downloads", proxy(FileDownloadCreateHandler, true))
 	drive.GET("/downloads/:secret/:fake-name", proxy(FileDownloadHandler, false))
 
+	drive.POST("/archive", proxy(ArchiveDownloadCreateHandler, true))
+	drive.GET("/archive/:secret/:fake-name", proxy(ArchiveDownloadHandler, false))
+
 	drive.POST("/trash/:file-id", proxy(RestoreTrashFileHandler, true))
 	drive.DELETE("/trash/:file-id", proxy(DestroyFileHandler, true))
 
@@ -1110,14 +1123,13 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 			}
 
 			// For write operations, check if the user has read-only access
-			// POST /downloads is a read operation (creates temporary download link)
+			// POST /downloads and POST /archive are read operations (create temporary links)
 			if method == http.MethodPost || method == http.MethodPut ||
 				method == http.MethodPatch || method == http.MethodDelete {
-				// Skip write check for download endpoint (read-only operation)
 				path := c.Request().URL.Path
-				isDownload := strings.HasSuffix(path, "/downloads")
+				isReadOnlyOp := strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")
 
-				if !isDownload {
+				if !isReadOnlyOp {
 					_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
 					if err != nil {
 						return err
