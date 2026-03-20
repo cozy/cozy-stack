@@ -755,10 +755,6 @@ func validateLogoutTokenClaims(claims jwt.MapClaims, conf *Config, expectedIssue
 		return errors.New("logout token is missing jti")
 	}
 
-	if _, ok := claims["nonce"]; ok {
-		return errors.New("logout token must not contain nonce")
-	}
-
 	events, ok := claims["events"].(map[string]interface{})
 	if !ok {
 		if rawEvents, ok := claims["events"].(jwt.MapClaims); ok {
