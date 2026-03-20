@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -720,98 +721,179 @@ func TestOIDCLogout(t *testing.T) {
 	})
 
 	t.Run("BackchannelLogoutUsesBoundSIDWithinMatchingContext", func(t *testing.T) {
-		config.UseTestFile(t)
-		config.GetConfig().Assets = "../../assets"
-		testutils.NeedCouchdb(t)
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
 
-		setup := testutils.NewSetup(t, t.Name())
-		render, _ := statik.NewDirRenderer("../../assets")
-		middlewares.BuildTemplates()
-
-		testServer := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-			"/oidc": Routes,
-		})
-		testServer.Config.Handler.(*echo.Echo).Renderer = render
-		testServer.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-		t.Cleanup(testServer.Close)
-
-		firstInst := setup.GetTestInstance(&lifecycle.Options{
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
 			ContextName: "logout-bound-context",
 		})
-		secondDomain := "second" + firstInst.Domain
-		_ = lifecycle.Destroy(secondDomain)
-		secondInst, err := lifecycle.Create(&lifecycle.Options{
-			Domain:      secondDomain,
-			ContextName: "other-logout-bound-context",
-		})
-		require.NoError(t, err)
-		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
-
-		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-		require.NoError(t, err)
-		kid := "logout-test-key"
-		jwksServer := newJWKSHandler(t, privateKey, kid)
-		t.Cleanup(jwksServer.Close)
 
 		config.GetConfig().Authentication = map[string]interface{}{
 			"logout-bound-context": map[string]interface{}{
-				"oidc": map[string]interface{}{
-					"client_id":               "provider-client-id",
-					"client_secret":           "provider-secret",
-					"scope":                   "openid profile email",
-					"redirect_uri":            "https://example.org/callback",
-					"authorize_url":           "https://example.org/authorize",
-					"token_url":               "https://example.org/token",
-					"userinfo_url":            "https://example.org/userinfo",
-					"userinfo_instance_field": "domain",
-					"id_token_jwk_url":        jwksServer.URL + "/jwks",
-				},
-			},
-			"other-logout-bound-context": map[string]interface{}{
-				"oidc": map[string]interface{}{
-					"client_id":               "other-provider-client-id",
-					"client_secret":           "provider-secret",
-					"scope":                   "openid profile email",
-					"redirect_uri":            "https://example.org/callback",
-					"authorize_url":           "https://example.org/authorize",
-					"token_url":               "https://example.org/token",
-					"userinfo_url":            "https://example.org/userinfo",
-					"userinfo_instance_field": "domain",
-					"id_token_jwk_url":        jwksServer.URL + "/jwks",
-				},
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/logout-bound-context",
+					"provider-client-id",
+					jwksURL,
+				),
 			},
 		}
 
-		targetOne, err := session.New(firstInst, session.NormalRun, "bound-sid")
-		require.NoError(t, err)
-		targetTwo, err := session.New(secondInst, session.NormalRun, "bound-sid")
+		target, err := session.New(firstInst, session.NormalRun, "bound-sid")
 		require.NoError(t, err)
 		other, err := session.New(firstInst, session.NormalRun, "other-sid")
 		require.NoError(t, err)
 
-		logoutToken := makeSignedJWT(t, privateKey, kid, map[string]interface{}{
-			"sid":    "bound-sid",
-			"domain": firstInst.Domain,
-		})
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/logout-bound-context",
+			"provider-client-id",
+			"bound-sid",
+			map[string]interface{}{"domain": firstInst.Domain},
+		))
 
-		e := testutils.CreateTestClient(t, testServer.URL)
-		e.POST("/oidc/logout-bound-context/logout").
+		env.client.POST("/oidc/logout-bound-context/logout").
 			WithHost(firstInst.Domain).
 			WithFormField("logout_token", logoutToken).
 			Expect().
 			Status(http.StatusOK)
 
-		_, err = session.Get(firstInst, targetOne.ID())
-		require.ErrorIs(t, err, session.ErrInvalidID)
-
-		keptOtherContext, err := session.Get(secondInst, targetTwo.ID())
-		require.NoError(t, err)
-		require.Equal(t, targetTwo.ID(), keptOtherContext.ID())
-
-		kept, err := session.Get(firstInst, other.ID())
-		require.NoError(t, err)
-		require.Equal(t, other.ID(), kept.ID())
+		requireSessionDeleted(t, firstInst, target.ID())
+		requireSessionExists(t, firstInst, other.ID())
 	})
+
+	t.Run("ContextlessBackchannelLogoutUsesSIDAndIssuerAudience", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
+
+		targetContext := "z-contextless-logout-bound-context"
+		otherContext := "a-other-contextless-logout-bound-context"
+
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: targetContext,
+		})
+		secondDomain := "second-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: otherContext,
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		config.GetConfig().Authentication = map[string]interface{}{
+			targetContext: map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/contextless-logout-bound-context",
+					"provider-client-id",
+					jwksURL,
+				),
+			},
+			otherContext: map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/other-contextless-logout-bound-context",
+					"other-provider-client-id",
+					jwksURL,
+				),
+			},
+		}
+
+		target, err := session.New(firstInst, session.NormalRun, "bound-sid")
+		require.NoError(t, err)
+		sameSIDOtherContext, err := session.New(secondInst, session.NormalRun, "bound-sid")
+		require.NoError(t, err)
+		other, err := session.New(firstInst, session.NormalRun, "other-sid")
+		require.NoError(t, err)
+
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/contextless-logout-bound-context",
+			"provider-client-id",
+			"bound-sid",
+			map[string]interface{}{"domain": firstInst.Domain},
+		))
+
+		env.client.POST("/oidc/logout").
+			WithHost(firstInst.Domain).
+			WithFormField("logout_token", logoutToken).
+			Expect().
+			Status(http.StatusOK)
+
+		requireSessionDeleted(t, firstInst, target.ID())
+		requireSessionExists(t, secondInst, sameSIDOtherContext.ID())
+		requireSessionExists(t, firstInst, other.ID())
+	})
+}
+
+type backchannelLogoutTestEnv struct {
+	setup  *testutils.TestSetup
+	server *httptest.Server
+	client *httpexpect.Expect
+}
+
+func newBackchannelLogoutTestEnv(t *testing.T) *backchannelLogoutTestEnv {
+	t.Helper()
+
+	config.UseTestFile(t)
+	config.GetConfig().Assets = "../../assets"
+	testutils.NeedCouchdb(t)
+
+	setup := testutils.NewSetup(t, t.Name())
+	render, _ := statik.NewDirRenderer("../../assets")
+	middlewares.BuildTemplates()
+
+	server := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/oidc": Routes,
+	})
+	server.Config.Handler.(*echo.Echo).Renderer = render
+	server.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(server.Close)
+
+	return &backchannelLogoutTestEnv{
+		setup:  setup,
+		server: server,
+		client: testutils.CreateTestClient(t, server.URL),
+	}
+}
+
+func newBackchannelSigningKey(t *testing.T) (*rsa.PrivateKey, string, string) {
+	t.Helper()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	kid := "backchannel-logout-test-key"
+	jwksServer := newJWKSHandler(t, privateKey, kid)
+	t.Cleanup(jwksServer.Close)
+
+	return privateKey, kid, jwksServer.URL + "/jwks"
+}
+
+func makeTestOIDCConfig(issuer, clientID, jwksURL string) map[string]interface{} {
+	return map[string]interface{}{
+		"issuer":                  issuer,
+		"client_id":               clientID,
+		"client_secret":           "provider-secret",
+		"scope":                   "openid profile email",
+		"redirect_uri":            "https://example.org/callback",
+		"authorize_url":           "https://example.org/authorize",
+		"token_url":               "https://example.org/token",
+		"userinfo_url":            "https://example.org/userinfo",
+		"userinfo_instance_field": "domain",
+		"id_token_jwk_url":        jwksURL,
+	}
+}
+
+func requireSessionDeleted(t *testing.T, inst *instance.Instance, sessionID string) {
+	t.Helper()
+
+	_, err := session.Get(inst, sessionID)
+	require.ErrorIs(t, err, session.ErrInvalidID)
+}
+
+func requireSessionExists(t *testing.T, inst *instance.Instance, sessionID string) {
+	t.Helper()
+
+	s, err := session.Get(inst, sessionID)
+	require.NoError(t, err)
+	require.Equal(t, sessionID, s.ID())
 }
 
 // makeUnsignedJWT creates a simple unsigned JWT for testing.
@@ -850,4 +932,21 @@ func newJWKSHandler(t *testing.T, privateKey *rsa.PrivateKey, kid string) *httpt
 		}
 		require.NoError(t, json.NewEncoder(w).Encode(payload))
 	}))
+}
+
+func makeBackchannelLogoutClaims(issuer, audience, sid string, extra map[string]interface{}) map[string]interface{} {
+	claims := map[string]interface{}{
+		"iss":    issuer,
+		"aud":    audience,
+		"iat":    time.Now().Unix(),
+		"jti":    "logout-jti-" + sid,
+		"events": map[string]interface{}{backchannelLogoutEvent: map[string]interface{}{}},
+	}
+	if sid != "" {
+		claims["sid"] = sid
+	}
+	for key, value := range extra {
+		claims[key] = value
+	}
+	return claims
 }

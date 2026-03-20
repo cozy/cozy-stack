@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"sync"
 	"time"
 
@@ -271,6 +272,27 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 		deleted++
 	}
 	return deleted, nil
+}
+
+// FindOIDCProviderKeysBySID returns the unique provider keys currently bound to
+// a given upstream OIDC sid.
+func FindOIDCProviderKeysBySID(sid string) ([]string, error) {
+	refs, err := getOIDCSessionBindingStore().List(sid)
+	if err != nil {
+		return nil, err
+	}
+	keys := make(map[string]struct{})
+	for _, ref := range refs {
+		if ref.OIDCProviderKey != "" {
+			keys[ref.OIDCProviderKey] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(keys))
+	for key := range keys {
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out, nil
 }
 
 func lockOIDCSessionBinding(oidcProviderKey, sid string) (func(), error) {

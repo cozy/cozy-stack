@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,7 +42,10 @@ var (
 	ErrAuthenticationFailed = errors.New("the authentication has failed")
 	ErrFranceConnectFailed  = errors.New("the FranceConnect authentication has failed")
 	ErrIdentityProvider     = errors.New("error from the identity provider")
+	ErrAmbiguousLogout      = errors.New("ambiguous logout context")
 )
+
+const backchannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
 
 // DomainMismatchError is returned when the user tries to connect to an
 // instance but has an active OIDC session for a different instance.
@@ -530,113 +534,54 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 
 // Logout is the handler for the OpenID back-channel logout endpoint.
 func Logout(c echo.Context) error {
-	contextName := c.Param("context")
-	conf, err := getGenericConfig(contextName)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getGenericConfig for logout: %s", err)
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "No OpenID Connect is configured",
-		})
-	}
+	return handleLogout(c, c.Param("context"))
+}
 
-	if conf.IDTokenKeyURL == "" {
-		logger.WithNamespace("oidc").Errorf("IDTokenKeyURL is not configured for logout")
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error":             "Cannot get the keys",
-			"error_description": "id_token_jwk_url is not configured",
-		})
-	}
+type logoutContext struct {
+	ContextName string
+	Conf        *Config
+	Claims      jwt.MapClaims
+}
 
-	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on GetIDTokenKeys for logout: %s", err)
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error":             "Cannot get the keys",
-			"error_description": err,
-		})
-	}
-
+func handleLogout(c echo.Context, contextHint string) error {
 	logoutToken := c.FormValue("logout_token")
-	token, err := jwt.Parse(logoutToken, func(token *jwt.Token) (interface{}, error) {
-		return ChooseKeyForIDToken(keys, token)
-	})
+	if logoutToken == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "missing logout_token"})
+	}
+
+	rawClaims, err := parseLogoutTokenUnverified(logoutToken)
 	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse for logout token: %s", err)
+		logger.WithNamespace("oidc").Errorf("Error on ParseUnverified for logout token: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "error on parsing the token",
 			"error_description": err,
 		})
 	}
-	if !token.Valid {
-		logger.WithNamespace("oidc").Errorf("Invalid logout token: %#v", token)
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid logout token",
+
+	contextName, err := resolveLogoutContext(contextHint, rawClaims)
+	if err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, ErrAmbiguousLogout) {
+			status = http.StatusConflict
+		}
+		logger.WithNamespace("oidc").Errorf("Error on resolveLogoutContext: %s", err)
+		return c.JSON(status, echo.Map{
+			"error":             "invalid logout token",
+			"error_description": err,
 		})
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
-	if sid, ok := claims["sid"].(string); ok && sid != "" {
-		deleted, err := session.DeleteByOIDCSession(contextName, sid)
-		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error on DeleteByOIDCSession for logout: %s", err)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error":              "internal server error",
-				"error_desc˚ription": err,
-			})
-		}
-		if deleted > 0 {
-			c.Response().Header().Set("Cache-Control", "no-store")
-			return c.NoContent(http.StatusOK)
-		}
+	verified, err := verifyLogoutTokenForContext(logoutToken, contextName, true)
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on verifyLogoutTokenForContext for %s: %s", contextName, err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error":             "invalid logout token",
+			"error_description": err,
+		})
 	}
 
-	var inst *instance.Instance
-	if conf.AllowCustomInstance {
-		sub, ok := claims["sub"].(string)
-		if !ok {
-			logger.WithNamespace("oidc").Errorf("Invalid claims: %#v", claims)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "invalid claims",
-			})
-		}
-		inst, err = findInstanceBySub(sub, contextName)
-		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error on findInstanceBySub for logout: %s", err)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error":             "internal server error",
-				"error_description": err,
-			})
-		}
-	} else {
-		domain, ok := claims[conf.UserInfoField].(string)
-		if !ok {
-			logger.WithNamespace("oidc").Errorf("Invalid claims: %#v", claims)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "invalid claims",
-			})
-		}
-		domain = buildDomain(domain, conf)
-		instance, err := lifecycle.GetInstance(domain)
-		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error on lifecycle.GetInstance for logout: %s", err)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error":             "internal server error",
-				"error_description": err,
-			})
-		}
-		inst = instance
-	}
-
-	if sid, ok := claims["sid"].(string); ok && sid != "" {
-		if err := session.DeleteBySID(inst, sid); err != nil {
-			inst.Logger().WithNamespace("oidc").Errorf("Cannot delete the session: %s", err)
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error":             "internal server error",
-				"error_description": err,
-			})
-		}
-	} else if err := session.DeleteOthers(inst, "all"); err != nil {
-		inst.Logger().WithNamespace("oidc").Errorf("Cannot delete the session: %s", err)
+	if err := applyLogoutForContext(*verified); err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on applyLogoutForContext for %s: %s", verified.ContextName, err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "internal server error",
 			"error_description": err,
@@ -645,6 +590,255 @@ func Logout(c echo.Context) error {
 
 	c.Response().Header().Set("Cache-Control", "no-store")
 	return c.NoContent(http.StatusOK)
+}
+
+func parseLogoutTokenUnverified(logoutToken string) (jwt.MapClaims, error) {
+	claims := jwt.MapClaims{}
+	_, _, err := jwt.NewParser().ParseUnverified(logoutToken, claims)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+
+func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, error) {
+	if contextHint != "" {
+		return contextHint, nil
+	}
+
+	sid, _ := claims["sid"].(string)
+	iss, _ := claims.GetIssuer()
+	aud, _ := claims.GetAudience()
+
+	var contextsBySID []string
+	var err error
+	if sid != "" {
+		contextsBySID, err = session.FindOIDCProviderKeysBySID(sid)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// if there is only one session in redis, return it as is
+	switch len(contextsBySID) {
+	// if there is no session, try to resolve it by OIDC configuration in logout token
+	case 0:
+		{
+			contextsByIssuerAudience := findOIDCContextsByIssuerAudience(iss, aud)
+			if len(contextsByIssuerAudience) == 1 {
+				return contextsByIssuerAudience[0], nil
+			} else {
+				logger.WithNamespace("oidc").Errorf("No OIDC context found for logout token")
+				return "", ErrAmbiguousLogout
+			}
+		}
+	// if there is only one session in redis, return it as is
+	case 1:
+		{
+			return contextsBySID[0], nil
+		}
+	default:
+		{
+			candidates := combineLogoutContextCandidates(contextsBySID, findOIDCContextsByIssuerAudience(iss, aud))
+			if len(candidates) == 1 {
+				return candidates[0], nil
+			} else {
+				return "", ErrAmbiguousLogout
+			}
+		}
+	}
+}
+
+func combineLogoutContextCandidates(contextsBySID, contextsByIssuerAudience []string) []string {
+	if len(contextsBySID) == 0 {
+		return contextsByIssuerAudience
+	}
+	if len(contextsByIssuerAudience) == 0 {
+		return contextsBySID
+	}
+	allowed := make(map[string]struct{}, len(contextsByIssuerAudience))
+	for _, contextName := range contextsByIssuerAudience {
+		allowed[contextName] = struct{}{}
+	}
+	combined := make([]string, 0, len(contextsBySID))
+	for _, contextName := range contextsBySID {
+		if _, ok := allowed[contextName]; ok {
+			combined = append(combined, contextName)
+		}
+	}
+	return combined
+}
+
+func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string {
+	if issuer == "" || len(audience) == 0 {
+		return nil
+	}
+
+	contexts := make([]string, 0)
+	for contextName := range config.GetConfig().Authentication {
+		conf, err := getGenericConfig(contextName)
+		if err != nil || conf.IDTokenKeyURL == "" || !audienceContains(audience, conf.ClientID) {
+			continue
+		}
+		expectedIssuer, err := getOIDCIssuer(contextName, conf)
+		if err != nil || expectedIssuer != issuer {
+			continue
+		}
+		contexts = append(contexts, contextName)
+	}
+	sort.Strings(contexts)
+	return contexts
+}
+
+func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer bool) (*logoutContext, error) {
+	conf, err := getGenericConfig(contextName)
+	if err != nil {
+		return nil, err
+	}
+	if conf.IDTokenKeyURL == "" {
+		return nil, errors.New("id_token_jwk_url is not configured")
+	}
+	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := jwt.Parse(logoutToken, func(token *jwt.Token) (interface{}, error) {
+		return ChooseKeyForIDToken(keys, token)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+	expectedIssuer, issuerErr := getOIDCIssuer(contextName, conf)
+	if err := validateLogoutTokenClaims(claims, conf, expectedIssuer, strictIssuer && issuerErr == nil); err != nil {
+		return nil, err
+	}
+	return &logoutContext{
+		ContextName: contextName,
+		Conf:        conf,
+		Claims:      claims,
+	}, nil
+}
+
+func validateLogoutTokenClaims(claims jwt.MapClaims, conf *Config, expectedIssuer string, requireIssuerMatch bool) error {
+	issuer, err := claims.GetIssuer()
+	if err != nil || issuer == "" {
+		return errors.New("logout token is missing iss")
+	}
+	if requireIssuerMatch && expectedIssuer != issuer {
+		return fmt.Errorf("logout token issuer mismatch: %s", issuer)
+	}
+
+	aud, err := claims.GetAudience()
+	if err != nil || !audienceContains(aud, conf.ClientID) {
+		return errors.New("logout token audience mismatch")
+	}
+
+	iat, err := claims.GetIssuedAt()
+	if err != nil || iat == nil {
+		return errors.New("logout token is missing iat")
+	}
+	if iat.Time.After(time.Now().Add(5 * time.Minute)) {
+		return errors.New("logout token iat is in the future")
+	}
+
+	jti, _ := claims["jti"].(string)
+	if jti == "" {
+		return errors.New("logout token is missing jti")
+	}
+
+	if _, ok := claims["nonce"]; ok {
+		return errors.New("logout token must not contain nonce")
+	}
+
+	events, ok := claims["events"].(map[string]interface{})
+	if !ok {
+		if rawEvents, ok := claims["events"].(jwt.MapClaims); ok {
+			events = rawEvents
+		} else {
+			return errors.New("logout token is missing events")
+		}
+	}
+	if _, ok := events[backchannelLogoutEvent]; !ok {
+		return errors.New("logout token is missing backchannel logout event")
+	}
+
+	sid, _ := claims["sid"].(string)
+	sub, _ := claims["sub"].(string)
+	if sid == "" && sub == "" {
+		return errors.New("logout token must contain sid or sub")
+	}
+
+	return nil
+}
+
+func applyLogoutForContext(verified logoutContext) error {
+	sid, _ := verified.Claims["sid"].(string)
+	if sid != "" {
+		deleted, err := session.DeleteByOIDCSession(verified.ContextName, sid)
+		if err != nil {
+			return err
+		}
+		if deleted > 0 {
+			return nil
+		}
+	}
+
+	inst, err := resolveLogoutInstance(verified.ContextName, verified.Conf, verified.Claims)
+	if err != nil {
+		return err
+	}
+	if sid != "" {
+		return session.DeleteBySID(inst, sid)
+	}
+	return session.DeleteOthers(inst, "all")
+}
+
+func resolveLogoutInstance(contextName string, conf *Config, claims jwt.MapClaims) (*instance.Instance, error) {
+	if conf.AllowCustomInstance {
+		sub, ok := claims["sub"].(string)
+		if !ok {
+			return nil, errors.New("invalid claims")
+		}
+		return findInstanceBySub(sub, contextName)
+	}
+
+	domain, ok := claims[conf.UserInfoField].(string)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+	return lifecycle.GetInstance(buildDomain(domain, conf))
+}
+
+func audienceContains(audiences []string, clientID string) bool {
+	for _, audience := range audiences {
+		if audience == clientID {
+			return true
+		}
+	}
+	return false
+}
+
+func getOIDCIssuer(contextName string, conf *Config) (string, error) {
+	if conf.Issuer != "" {
+		return conf.Issuer, nil
+	}
+	oidcConfig, err := fetchOIDCConfiguration(conf.TokenURL)
+	if err != nil {
+		return "", err
+	}
+	if oidcConfig.Issuer == "" {
+		return "", fmt.Errorf("no issuer found for OIDC context %s", contextName)
+	}
+	return oidcConfig.Issuer, nil
 }
 
 // validateDelegatedCode validates a delegated code and returns the associated session ID.
@@ -819,6 +1013,7 @@ type Config struct {
 	Provider            ProviderOIDC
 	AllowOAuthToken     bool
 	AllowCustomInstance bool
+	Issuer              string
 	ClientID            string
 	ClientSecret        string
 	Scope               string
@@ -844,6 +1039,7 @@ func getGenericConfig(context string) (*Config, error) {
 	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
 	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
 	idTokenKeyURL, _ := oidc["id_token_jwk_url"].(string)
+	issuer, _ := oidc["issuer"].(string)
 
 	// Mandatory fields
 	clientID, ok := oidc["client_id"].(string)
@@ -883,6 +1079,7 @@ func getGenericConfig(context string) (*Config, error) {
 		Provider:            GenericProvider,
 		AllowOAuthToken:     allowOAuthToken,
 		AllowCustomInstance: allowCustomInstance,
+		Issuer:              issuer,
 		ClientID:            clientID,
 		ClientSecret:        clientSecret,
 		Scope:               scope,
@@ -1035,6 +1232,55 @@ func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string
 
 var oidcClient = &http.Client{
 	Timeout: 15 * time.Second,
+}
+
+func fetchOIDCConfiguration(tokenURL string) (*oauth.OIDCConfiguration, error) {
+	parsedURL, err := url.Parse(tokenURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid OIDC token URL: %w", err)
+	}
+
+	wellKnownURL := &url.URL{
+		Scheme: parsedURL.Scheme,
+		Host:   parsedURL.Host,
+		Path:   "/.well-known/openid-configuration",
+	}
+
+	cache := config.GetConfig().CacheStorage
+	cacheKey := "oidc-config:" + wellKnownURL.String()
+
+	data, ok := cache.Get(cacheKey)
+	if !ok {
+		req, err := http.NewRequest(http.MethodGet, wellKnownURL.String(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Add("User-Agent", build.UserAgent())
+
+		res, err := oidcClient.Do(req)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error fetching OpenID configuration: %s", err)
+			return nil, fmt.Errorf("failed to fetch OpenID configuration: %w", err)
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration: %d", res.StatusCode)
+			return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		}
+
+		data, err = io.ReadAll(res.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+		cache.Set(cacheKey, data, cacheTTL)
+	}
+
+	var oidcConfig oauth.OIDCConfiguration
+	if err := json.Unmarshal(data, &oidcConfig); err != nil {
+		return nil, fmt.Errorf("failed to parse OpenID configuration: %w", err)
+	}
+	return &oidcConfig, nil
 }
 
 type tokenResponse struct {
@@ -1389,6 +1635,7 @@ func Routes(router *echo.Group) {
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/twofactor", TwoFactor, middlewares.NeedInstance)
+	router.POST("/logout", Logout)
 	router.POST("/:context/logout", Logout)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
 }
