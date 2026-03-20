@@ -1226,11 +1226,12 @@ func newBackchannelLogoutTestEnv(t *testing.T) *backchannelLogoutTestEnv {
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()
 
-	server := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/oidc": Routes,
-	})
-	server.Config.Handler.(*echo.Echo).Renderer = render
-	server.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	handler := echo.New()
+	group := handler.Group("/oidc")
+	Routes(group)
+	handler.Renderer = render
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 
 	return &backchannelLogoutTestEnv{

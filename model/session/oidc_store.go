@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -240,6 +241,10 @@ func bindOIDCSession(i *instance.Instance, s *Session) {
 		i.Logger().WithNamespace("oidc").Warnf("Cannot bind OIDC session %s to %s: %s", s.SID, s.ID(), err)
 		return
 	}
+	i.Logger().WithNamespace("oidc").Debugf(
+		"Bound local session %s to OIDC sid %s in context %s",
+		s.ID(), s.SID, s.OIDCProviderKey,
+	)
 	if err := cleanupDuplicateOIDCSessions(s); err != nil {
 		i.Logger().WithNamespace("oidc").Warnf("Cannot cleanup duplicate OIDC session %s for %s: %s", s.SID, s.ID(), err)
 	}
@@ -299,17 +304,16 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 		}
 		inst, err := lifecycle.GetInstance(ref.Domain)
 		if err != nil {
-			unbindOIDCSession(&instance.Instance{Domain: ref.Domain}, &Session{
-				DocID:           ref.SessionID,
-				SID:             sid,
-				OIDCProviderKey: ref.OIDCProviderKey,
-			})
-			continue
+			return deleted, fmt.Errorf("cannot resolve instance %s for OIDC local session binding: %w", ref.Domain, err)
 		}
 
 		s := &Session{}
 		err = couchdb.GetDoc(inst, consts.Sessions, ref.SessionID, s)
 		if couchdb.IsNotFoundError(err) {
+			inst.Logger().WithNamespace("oidc").Warnf(
+				"Dropping stale OIDC local session binding for sid %s: session %s not found",
+				sid, ref.SessionID,
+			)
 			unbindOIDCSession(inst, &Session{
 				DocID:           ref.SessionID,
 				SID:             sid,
@@ -321,6 +325,10 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 			return deleted, err
 		}
 		if s.SID != sid || s.OIDCProviderKey != oidcProviderKey {
+			inst.Logger().WithNamespace("oidc").Warnf(
+				"Dropping mismatched OIDC local session binding for sid %s: session %s has sid=%s provider=%s",
+				sid, ref.SessionID, s.SID, s.OIDCProviderKey,
+			)
 			unbindOIDCSession(inst, &Session{
 				DocID:           ref.SessionID,
 				SID:             sid,
@@ -328,6 +336,10 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 			})
 			continue
 		}
+		inst.Logger().WithNamespace("oidc").Debugf(
+			"Deleting local session %s for OIDC sid %s in context %s",
+			ref.SessionID, sid, oidcProviderKey,
+		)
 		s.Delete(inst)
 		deleted++
 	}
@@ -375,17 +387,16 @@ func cleanupDuplicateOIDCSessions(current *Session) error {
 
 		inst, err := lifecycle.GetInstance(ref.Domain)
 		if err != nil {
-			unbindOIDCSession(&instance.Instance{Domain: ref.Domain}, &Session{
-				DocID:           ref.SessionID,
-				SID:             current.SID,
-				OIDCProviderKey: ref.OIDCProviderKey,
-			})
-			continue
+			return fmt.Errorf("cannot resolve instance %s for duplicate OIDC local session binding: %w", ref.Domain, err)
 		}
 
 		existing := &Session{}
 		err = couchdb.GetDoc(inst, consts.Sessions, ref.SessionID, existing)
 		if couchdb.IsNotFoundError(err) {
+			inst.Logger().WithNamespace("oidc").Warnf(
+				"Dropping duplicate OIDC local session binding for sid %s: session %s not found",
+				current.SID, ref.SessionID,
+			)
 			unbindOIDCSession(inst, &Session{
 				DocID:           ref.SessionID,
 				SID:             current.SID,
@@ -397,6 +408,10 @@ func cleanupDuplicateOIDCSessions(current *Session) error {
 			return err
 		}
 		if existing.SID != current.SID || existing.OIDCProviderKey != current.OIDCProviderKey {
+			inst.Logger().WithNamespace("oidc").Warnf(
+				"Dropping mismatched duplicate OIDC local session binding for sid %s: session %s has sid=%s provider=%s",
+				current.SID, ref.SessionID, existing.SID, existing.OIDCProviderKey,
+			)
 			unbindOIDCSession(inst, &Session{
 				DocID:           ref.SessionID,
 				SID:             current.SID,
@@ -404,6 +419,10 @@ func cleanupDuplicateOIDCSessions(current *Session) error {
 			})
 			continue
 		}
+		inst.Logger().WithNamespace("oidc").Debugf(
+			"Deleting duplicate local session %s for OIDC sid %s in context %s",
+			ref.SessionID, current.SID, current.OIDCProviderKey,
+		)
 		existing.Delete(inst)
 	}
 	return nil
@@ -425,7 +444,7 @@ func FindOIDCOAuthClientsBySID(sid string) ([]OIDCOAuthClientRef, error) {
 			OAuthClientID:   ref.OAuthClientID,
 		})
 	}
-	//sort for deterministic behavior and tests
+	// sort for deterministic behavior and tests
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].OIDCProviderKey != out[j].OIDCProviderKey {
 			return out[i].OIDCProviderKey < out[j].OIDCProviderKey

@@ -554,9 +554,17 @@ func handleLogout(c echo.Context, contextHint string) error {
 		logger.WithNamespace("oidc").Errorf("Error on ParseUnverified for logout token: %s", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "error on parsing the token",
-			"error_description": err,
+			"error_description": err.Error(),
 		})
 	}
+	sid, _ := rawClaims["sid"].(string)
+	sub, _ := rawClaims["sub"].(string)
+	iss, _ := rawClaims.GetIssuer()
+	aud, _ := rawClaims.GetAudience()
+	logger.WithNamespace("oidc").Debugf(
+		"Received backchannel logout request: context_hint=%s iss=%s aud=%v has_sid=%t has_sub=%t",
+		contextHint, iss, aud, sid != "", sub != "",
+	)
 
 	contextName, err := resolveLogoutContext(contextHint, rawClaims)
 	if err != nil {
@@ -567,16 +575,17 @@ func handleLogout(c echo.Context, contextHint string) error {
 		logger.WithNamespace("oidc").Errorf("Error on resolveLogoutContext: %s", err)
 		return c.JSON(status, echo.Map{
 			"error":             "invalid logout token",
-			"error_description": err,
+			"error_description": err.Error(),
 		})
 	}
+	logger.WithNamespace("oidc").Debugf("Resolved logout context %s for backchannel logout request", contextName)
 
 	verified, err := verifyLogoutTokenForContext(logoutToken, contextName, true)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on verifyLogoutTokenForContext for %s: %s", contextName, err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "invalid logout token",
-			"error_description": err,
+			"error_description": err.Error(),
 		})
 	}
 
@@ -584,11 +593,12 @@ func handleLogout(c echo.Context, contextHint string) error {
 		logger.WithNamespace("oidc").Errorf("Error on applyLogoutForContext for %s: %s", verified.ContextName, err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error":             "internal server error",
-			"error_description": err,
+			"error_description": err.Error(),
 		})
 	}
 
 	c.Response().Header().Set("Cache-Control", "no-store")
+	logger.WithNamespace("oidc").Debugf("Completed backchannel logout for context %s", verified.ContextName)
 	return c.NoContent(http.StatusOK)
 }
 
@@ -603,12 +613,14 @@ func parseLogoutTokenUnverified(logoutToken string) (jwt.MapClaims, error) {
 
 func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, error) {
 	if contextHint != "" {
+		logger.WithNamespace("oidc").Debugf("Using logout context hint %s", contextHint)
 		return contextHint, nil
 	}
 
 	sid, _ := claims["sid"].(string)
 	iss, _ := claims.GetIssuer()
 	aud, _ := claims.GetAudience()
+	contextsByIssuerAudience := findOIDCContextsByIssuerAudience(iss, aud)
 
 	var contextsBySID []string
 	var err error
@@ -618,33 +630,67 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 			return "", err
 		}
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Resolved logout context candidates: sid=%s iss=%s aud=%v contexts_by_sid=%v contexts_by_issuer_audience=%v",
+		sid, iss, aud, contextsBySID, contextsByIssuerAudience,
+	)
 
 	// if there is only one session in redis, return it as is
 	switch len(contextsBySID) {
 	// if there is no session, try to resolve it by OIDC configuration in logout token
 	case 0:
 		{
-			contextsByIssuerAudience := findOIDCContextsByIssuerAudience(iss, aud)
 			if len(contextsByIssuerAudience) == 1 {
+				logger.WithNamespace("oidc").Debugf(
+					"Resolved logout context %s from issuer/audience only",
+					contextsByIssuerAudience[0],
+				)
 				return contextsByIssuerAudience[0], nil
-			} else {
-				logger.WithNamespace("oidc").Errorf("No OIDC context found for logout token")
-				return "", ErrAmbiguousLogout
 			}
+			if len(contextsByIssuerAudience) == 0 {
+				logger.WithNamespace("oidc").Warnf(
+					"Cannot resolve logout context from issuer/audience: iss=%s aud=%v",
+					iss, aud,
+				)
+			} else {
+				logger.WithNamespace("oidc").Warnf(
+					"Ambiguous logout context from issuer/audience: iss=%s aud=%v candidates=%v",
+					iss, aud, contextsByIssuerAudience,
+				)
+			}
+			return "", ErrAmbiguousLogout
 		}
 	// if there is only one session in redis, return it as is
 	case 1:
 		{
+			logger.WithNamespace("oidc").Debugf(
+				"Resolved logout context %s from sid binding only",
+				contextsBySID[0],
+			)
 			return contextsBySID[0], nil
 		}
 	default:
 		{
-			candidates := combineLogoutContextCandidates(contextsBySID, findOIDCContextsByIssuerAudience(iss, aud))
+			candidates := combineLogoutContextCandidates(contextsBySID, contextsByIssuerAudience)
 			if len(candidates) == 1 {
+				logger.WithNamespace("oidc").Debugf(
+					"Resolved logout context %s from sid and issuer/audience candidates",
+					candidates[0],
+				)
 				return candidates[0], nil
-			} else {
-				return "", ErrAmbiguousLogout
 			}
+			if len(candidates) == 0 {
+				logger.WithNamespace("oidc").Warnf(
+					"Logout context candidates do not intersect: sid=%s contexts_by_sid=%v iss=%s aud=%v contexts_by_issuer_audience=%v",
+					sid, contextsBySID, iss, aud, contextsByIssuerAudience,
+				)
+			} else {
+				logger.WithNamespace("oidc").Warnf(
+					"Ambiguous logout context after combining sid and issuer/audience candidates: sid=%s candidates=%v iss=%s aud=%v",
+					sid, candidates, iss, aud,
+				)
+			}
+			return "", ErrAmbiguousLogout
 		}
 	}
 }
@@ -671,19 +717,56 @@ func combineLogoutContextCandidates(contextsBySID, contextsByIssuerAudience []st
 
 func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string {
 	if issuer == "" || len(audience) == 0 {
+		logger.WithNamespace("oidc").Debugf(
+			"Cannot resolve OIDC contexts by issuer/audience: iss=%s aud=%v",
+			issuer, audience,
+		)
 		return nil
 	}
 
 	contexts := make([]string, 0)
 	for contextName := range config.GetConfig().Authentication {
 		conf, err := getGenericConfig(contextName)
-		if err != nil || conf.IDTokenKeyURL == "" || !audienceContains(audience, conf.ClientID) {
+		if err != nil {
+			logger.WithNamespace("oidc").Debugf(
+				"Skipping OIDC context %s during logout resolution: invalid config: %s",
+				contextName, err,
+			)
+			continue
+		}
+		if conf.IDTokenKeyURL == "" {
+			logger.WithNamespace("oidc").Debugf(
+				"Skipping OIDC context %s during logout resolution: missing id_token_jwk_url",
+				contextName,
+			)
+			continue
+		}
+		if !audienceContains(audience, conf.ClientID) {
+			logger.WithNamespace("oidc").Debugf(
+				"Skipping OIDC context %s during logout resolution: client_id %s not found in aud=%v",
+				contextName, conf.ClientID, audience,
+			)
 			continue
 		}
 		expectedIssuer, err := getOIDCIssuer(contextName, conf)
-		if err != nil || expectedIssuer != issuer {
+		if err != nil {
+			logger.WithNamespace("oidc").Debugf(
+				"Skipping OIDC context %s during logout resolution: cannot resolve issuer: %s",
+				contextName, err,
+			)
 			continue
 		}
+		if expectedIssuer != issuer {
+			logger.WithNamespace("oidc").Debugf(
+				"Skipping OIDC context %s during logout resolution: issuer mismatch expected=%s got=%s",
+				contextName, expectedIssuer, issuer,
+			)
+			continue
+		}
+		logger.WithNamespace("oidc").Debugf(
+			"Matched OIDC context %s for logout resolution: issuer=%s client_id=%s",
+			contextName, issuer, conf.ClientID,
+		)
 		contexts = append(contexts, contextName)
 	}
 	sort.Strings(contexts)
@@ -691,6 +774,7 @@ func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string
 }
 
 func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer bool) (*logoutContext, error) {
+	logger.WithNamespace("oidc").Debugf("Verifying logout token for context %s", contextName)
 	conf, err := getGenericConfig(contextName)
 	if err != nil {
 		return nil, err
@@ -721,6 +805,14 @@ func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer b
 	if err := validateLogoutTokenClaims(claims, conf, expectedIssuer, strictIssuer && issuerErr == nil); err != nil {
 		return nil, err
 	}
+	issuer, _ := claims.GetIssuer()
+	aud, _ := claims.GetAudience()
+	sid, _ := claims["sid"].(string)
+	sub, _ := claims["sub"].(string)
+	logger.WithNamespace("oidc").Debugf(
+		"Verified logout token for context %s: iss=%s aud=%v sid=%s sub=%s",
+		contextName, issuer, aud, sid, sub,
+	)
 	return &logoutContext{
 		ContextName: contextName,
 		Conf:        conf,
@@ -778,7 +870,15 @@ func validateLogoutTokenClaims(claims jwt.MapClaims, conf *Config, expectedIssue
 
 func applyLogoutForContext(verified logoutContext) error {
 	sid, _ := verified.Claims["sid"].(string)
+	logger.WithNamespace("oidc").Debugf(
+		"Applying backchannel logout for context %s: sid_present=%t allow_custom_instance=%t",
+		verified.ContextName, sid != "", verified.Conf.AllowCustomInstance,
+	)
 	if sid != "" {
+		logger.WithNamespace("oidc").Debugf(
+			"Trying bound OIDC logout fanout for context %s and sid %s",
+			verified.ContextName, sid,
+		)
 		deletedSessions, err := session.DeleteByOIDCSession(verified.ContextName, sid)
 		if err != nil {
 			return err
@@ -790,15 +890,31 @@ func applyLogoutForContext(verified logoutContext) error {
 		if deletedSessions > 0 || deletedClients > 0 {
 			return nil
 		}
+		logger.WithNamespace("oidc").Debugf(
+			"No bound OIDC state found for context %s and sid %s, falling back to instance-based logout",
+			verified.ContextName, sid,
+		)
 	}
 
 	inst, err := resolveLogoutInstance(verified.ContextName, verified.Conf, verified.Claims)
 	if err != nil {
 		return err
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Resolved fallback logout instance for context %s: domain=%s",
+		verified.ContextName, inst.Domain,
+	)
 	if sid != "" {
+		logger.WithNamespace("oidc").Debugf(
+			"Deleting local sessions by sid for context %s on instance %s",
+			verified.ContextName, inst.Domain,
+		)
 		return session.DeleteBySID(inst, sid)
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Deleting all local sessions for context %s on instance %s because logout token does not contain sid",
+		verified.ContextName, inst.Domain,
+	)
 	return session.DeleteOthers(inst, "all")
 }
 
@@ -808,6 +924,10 @@ func resolveLogoutInstance(contextName string, conf *Config, claims jwt.MapClaim
 		if !ok {
 			return nil, errors.New("invalid claims")
 		}
+		logger.WithNamespace("oidc").Debugf(
+			"Resolving logout instance by subject for context %s",
+			contextName,
+		)
 		return findInstanceBySub(sub, contextName)
 	}
 
@@ -815,6 +935,10 @@ func resolveLogoutInstance(contextName string, conf *Config, claims jwt.MapClaim
 	if !ok {
 		return nil, errors.New("invalid claims")
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Resolving logout instance by %s for context %s",
+		conf.UserInfoField, contextName,
+	)
 	return lifecycle.GetInstance(buildDomain(domain, conf))
 }
 
@@ -829,8 +953,16 @@ func audienceContains(audiences []string, clientID string) bool {
 
 func getOIDCIssuer(contextName string, conf *Config) (string, error) {
 	if conf.Issuer != "" {
+		logger.WithNamespace("oidc").Debugf(
+			"Using configured issuer for OIDC context %s",
+			contextName,
+		)
 		return conf.Issuer, nil
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Resolving issuer from OIDC discovery for context %s",
+		contextName,
+	)
 	oidcConfig, err := fetchOIDCConfiguration(conf.TokenURL)
 	if err != nil {
 		return "", err
@@ -838,6 +970,10 @@ func getOIDCIssuer(contextName string, conf *Config) (string, error) {
 	if oidcConfig.Issuer == "" {
 		return "", fmt.Errorf("no issuer found for OIDC context %s", contextName)
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Using discovered issuer for OIDC context %s",
+		contextName,
+	)
 	return oidcConfig.Issuer, nil
 }
 
@@ -989,6 +1125,10 @@ func AccessToken(c echo.Context) error {
 			inst.Logger().WithNamespace("oidc").Warnf("Cannot update OAuth client %s: %s", client.CouchID, err)
 		} else if sessionID != "" {
 			if oldSessionID != "" && oldSessionID != sessionID {
+				inst.Logger().WithNamespace("oidc").Debugf(
+					"Replacing OIDC session binding for OAuth client %s: old_sid=%s new_sid=%s",
+					client.CouchID, oldSessionID, sessionID,
+				)
 				if err := session.UnbindOIDCOAuthClient(inst.ContextName, inst.Domain, client.CouchID, oldSessionID); err != nil {
 					inst.Logger().WithNamespace("oidc").Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", oldSessionID, client.CouchID, err)
 				}
