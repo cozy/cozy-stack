@@ -820,6 +820,309 @@ func TestOIDCLogout(t *testing.T) {
 		requireSessionExists(t, secondInst, sameSIDOtherContext.ID())
 		requireSessionExists(t, firstInst, other.ID())
 	})
+
+	t.Run("ContextlessBackchannelLogoutWithoutSIDFallsBackToDomainClaim", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
+
+		contextName := "domain-fallback-context"
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: contextName,
+		})
+		secondDomain := "other-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: contextName,
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		config.GetConfig().Authentication = map[string]interface{}{
+			contextName: map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/domain-fallback-context",
+					"domain-fallback-client-id",
+					jwksURL,
+				),
+			},
+		}
+
+		first, err := session.New(firstInst, session.NormalRun, "")
+		require.NoError(t, err)
+		second, err := session.New(firstInst, session.NormalRun, "")
+		require.NoError(t, err)
+		kept, err := session.New(secondInst, session.NormalRun, "")
+		require.NoError(t, err)
+
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/domain-fallback-context",
+			"domain-fallback-client-id",
+			"",
+			map[string]interface{}{
+				"sub":    "domain-fallback-sub",
+				"domain": firstInst.Domain,
+			},
+		))
+
+		env.client.POST("/oidc/logout").
+			WithHost(firstInst.Domain).
+			WithFormField("logout_token", logoutToken).
+			Expect().
+			Status(http.StatusOK)
+
+		requireSessionDeleted(t, firstInst, first.ID())
+		requireSessionDeleted(t, firstInst, second.ID())
+		requireSessionExists(t, secondInst, kept.ID())
+	})
+
+	t.Run("ContextlessBackchannelLogoutWithoutSIDFallsBackToSubForCustomInstance", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
+
+		contextName := "custom-instance-fallback-context"
+		targetSub := "custom-instance-target-sub"
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: contextName,
+			OIDCID:      targetSub,
+		})
+		secondDomain := "other-custom-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: contextName,
+			OIDCID:      "other-custom-instance-sub",
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		oidcConfig := makeTestOIDCConfig(
+			"https://issuer.example/custom-instance-fallback-context",
+			"custom-instance-fallback-client-id",
+			jwksURL,
+		)
+		oidcConfig["allow_custom_instance"] = true
+		delete(oidcConfig, "userinfo_instance_field")
+		config.GetConfig().Authentication = map[string]interface{}{
+			contextName: map[string]interface{}{
+				"oidc": oidcConfig,
+			},
+		}
+
+		first, err := session.New(firstInst, session.NormalRun, "")
+		require.NoError(t, err)
+		second, err := session.New(firstInst, session.NormalRun, "")
+		require.NoError(t, err)
+		kept, err := session.New(secondInst, session.NormalRun, "")
+		require.NoError(t, err)
+
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/custom-instance-fallback-context",
+			"custom-instance-fallback-client-id",
+			"",
+			map[string]interface{}{
+				"sub": targetSub,
+			},
+		))
+
+		env.client.POST("/oidc/logout").
+			WithHost(firstInst.Domain).
+			WithFormField("logout_token", logoutToken).
+			Expect().
+			Status(http.StatusOK)
+
+		requireSessionDeleted(t, firstInst, first.ID())
+		requireSessionDeleted(t, firstInst, second.ID())
+		requireSessionExists(t, secondInst, kept.ID())
+	})
+}
+
+func TestResolveLogoutContext(t *testing.T) {
+	t.Run("ContextHintWins", func(t *testing.T) {
+		contextName, err := resolveLogoutContext("hinted-context", jwt.MapClaims{
+			"sid": "ignored-sid",
+			"iss": "https://issuer.example/ignored",
+			"aud": "ignored-client",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "hinted-context", contextName)
+	})
+
+	t.Run("ResolvesByIssuerAudienceWithoutSID", func(t *testing.T) {
+		config.UseTestFile(t)
+		config.GetConfig().Authentication = map[string]interface{}{
+			"issuer-audience-match": map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/issuer-audience-match",
+					"issuer-audience-client-id",
+					"https://example.org/jwks",
+				),
+			},
+			"issuer-audience-other": map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/issuer-audience-other",
+					"other-client-id",
+					"https://example.org/jwks",
+				),
+			},
+		}
+
+		contextName, err := resolveLogoutContext("", jwt.MapClaims{
+			"iss": "https://issuer.example/issuer-audience-match",
+			"aud": "issuer-audience-client-id",
+			"sub": "issuer-audience-sub",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "issuer-audience-match", contextName)
+	})
+}
+
+func TestResolveLogoutContextWithSIDBindings(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	t.Run("UsesSIDCandidatesToNarrowIssuerAudienceMatches", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+
+		targetContext := "z-resolve-target-context"
+		otherContext := "a-resolve-other-context"
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: targetContext,
+		})
+		secondDomain := "resolve-other-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: otherContext,
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		config.GetConfig().Authentication = map[string]interface{}{
+			targetContext: map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/resolve-target-context",
+					"resolve-target-client-id",
+					"https://example.org/jwks",
+				),
+			},
+			otherContext: map[string]interface{}{
+				"oidc": makeTestOIDCConfig(
+					"https://issuer.example/resolve-other-context",
+					"resolve-other-client-id",
+					"https://example.org/jwks",
+				),
+			},
+		}
+
+		_, err = session.New(firstInst, session.NormalRun, "resolve-shared-sid")
+		require.NoError(t, err)
+		_, err = session.New(secondInst, session.NormalRun, "resolve-shared-sid")
+		require.NoError(t, err)
+
+		contextName, err := resolveLogoutContext("", jwt.MapClaims{
+			"sid": "resolve-shared-sid",
+			"iss": "https://issuer.example/resolve-target-context",
+			"aud": "resolve-target-client-id",
+		})
+		require.NoError(t, err)
+		require.Equal(t, targetContext, contextName)
+	})
+
+	t.Run("ReturnsAmbiguousWhenSIDMatchesMultipleContextsWithoutIssuerAudience", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: "sid-only-ambiguous-target-context",
+		})
+		secondDomain := "sid-only-other-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: "sid-only-ambiguous-other-context",
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		_, err = session.New(firstInst, session.NormalRun, "sid-only-ambiguous")
+		require.NoError(t, err)
+		_, err = session.New(secondInst, session.NormalRun, "sid-only-ambiguous")
+		require.NoError(t, err)
+
+		_, err = resolveLogoutContext("", jwt.MapClaims{
+			"sid": "sid-only-ambiguous",
+		})
+		require.ErrorIs(t, err, ErrAmbiguousLogout)
+	})
+}
+
+func TestValidateLogoutTokenClaims(t *testing.T) {
+	conf := &Config{ClientID: "provider-client-id"}
+	makeClaims := func() jwt.MapClaims {
+		claims := jwt.MapClaims(makeBackchannelLogoutClaims(
+			"https://issuer.example/claims",
+			"provider-client-id",
+			"claims-sid",
+			nil,
+		))
+		claims["iat"] = float64(time.Now().Unix())
+		return claims
+	}
+
+	t.Run("ValidSubOnlyToken", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "sid")
+		claims["sub"] = "claims-sub"
+		require.NoError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true))
+	})
+
+	t.Run("MissingIssuer", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "iss")
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iss")
+	})
+
+	t.Run("WrongAudience", func(t *testing.T) {
+		claims := makeClaims()
+		claims["aud"] = "other-client-id"
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token audience mismatch")
+	})
+
+	t.Run("MissingIAT", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "iat")
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iat")
+	})
+
+	t.Run("FutureIAT", func(t *testing.T) {
+		claims := makeClaims()
+		claims["iat"] = float64(time.Now().Add(10 * time.Minute).Unix())
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token iat is in the future")
+	})
+
+	t.Run("MissingJTI", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "jti")
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing jti")
+	})
+
+	t.Run("MissingEvents", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "events")
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing events")
+	})
+
+	t.Run("MissingSIDAndSub", func(t *testing.T) {
+		claims := makeClaims()
+		delete(claims, "sid")
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token must contain sid or sub")
+	})
+
+	t.Run("IssuerMismatchWhenStrict", func(t *testing.T) {
+		claims := makeClaims()
+		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/other", true), "logout token issuer mismatch: https://issuer.example/claims")
+	})
 }
 
 type backchannelLogoutTestEnv struct {
