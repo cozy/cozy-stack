@@ -689,6 +689,10 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	logger.WithNamespace("oidc").Debugf(
+		"Deleting OAuth clients bound to OIDC sid %s for provider %s: total_refs=%d",
+		sid, oidcProviderKey, len(refs),
+	)
 	deleted := 0
 	for _, ref := range refs {
 		if ref.OIDCProviderKey != oidcProviderKey {
@@ -726,6 +730,10 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 		if cerr := client.Delete(inst); cerr != nil {
 			return deleted, errors.New(cerr.Error)
 		}
+		inst.Logger().WithNamespace("oidc").Debugf(
+			"Deleted OAuth client %s for OIDC sid %s in context %s",
+			ref.OAuthClientID, sid, oidcProviderKey,
+		)
 		deleted++
 	}
 	return deleted, nil

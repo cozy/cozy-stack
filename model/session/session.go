@@ -115,12 +115,12 @@ func New(i *instance.Instance, duration Duration, sid string) (*Session, error) 
 		LongRun:   duration == LongRun,
 		SID:       sid,
 	}
+	if err := couchdb.CreateDoc(i, s); err != nil {
+		return nil, err
+	}
 	if sid != "" {
 		s.OIDCProviderKey = i.ContextName
 		bindOIDCSession(i, s)
-	}
-	if err := couchdb.CreateDoc(i, s); err != nil {
-		return nil, err
 	}
 	return s, nil
 }
