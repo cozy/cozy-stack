@@ -18,9 +18,11 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -641,10 +643,19 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 
 // Delete is a function that unregister a client
 func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
+	clientID := c.CouchID
+	if clientID == "" {
+		clientID = c.ClientID
+	}
 	if err := couchdb.DeleteDoc(i, c); err != nil {
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
+		}
+	}
+	if c.OIDCSessionID != "" && i != nil && i.ContextName != "" && clientID != "" {
+		if err := session.UnbindOIDCOAuthClient(i.ContextName, i.Domain, clientID, c.OIDCSessionID); err != nil {
+			i.Logger().Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", c.OIDCSessionID, clientID, err)
 		}
 	}
 
@@ -671,6 +682,61 @@ func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
 	}
 
 	return nil
+}
+
+func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
+	refs, err := session.FindOIDCOAuthClientsBySID(sid)
+	if err != nil {
+		return 0, err
+	}
+	logger.WithNamespace("oidc").Debugf(
+		"Deleting OAuth clients bound to OIDC sid %s for provider %s: total_refs=%d",
+		sid, oidcProviderKey, len(refs),
+	)
+	deleted := 0
+	for _, ref := range refs {
+		if ref.OIDCProviderKey != oidcProviderKey {
+			logger.WithNamespace("oidc").Debugf("Skipping OIDC OAuth client binding for sid %s: provider=%s", sid, ref.OIDCProviderKey)
+			continue
+		}
+		inst, err := lifecycle.GetInstance(ref.Domain)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf(
+				"Cannot resolve instance %s for OIDC OAuth client binding sid %s client %s: %s",
+				ref.Domain, sid, ref.OAuthClientID, err,
+			)
+			return deleted, fmt.Errorf("cannot resolve instance %s for OIDC OAuth client binding: %w", ref.Domain, err)
+		}
+
+		client, err := FindClient(inst, ref.OAuthClientID)
+		if couchdb.IsNotFoundError(err) {
+			// The OAuth client was already deleted through another path. Remove the stale Redis binding and continue.
+			inst.Logger().WithNamespace("oidc").Warnf("Dropping stale OIDC OAuth client binding for sid %s: client %s not found", sid, ref.OAuthClientID)
+			_ = session.UnbindOIDCOAuthClient(ref.OIDCProviderKey, ref.Domain, ref.OAuthClientID, sid)
+			continue
+		}
+		if err != nil {
+			return deleted, err
+		}
+		if client.OIDCSessionID != sid {
+			// The Redis binding is out of sync with the OAuth client document.
+			inst.Logger().WithNamespace("oidc").Warnf(
+				"Dropping mismatched OIDC OAuth client binding for sid %s: client %s has sid=%s",
+				sid, ref.OAuthClientID, client.OIDCSessionID,
+			)
+			_ = session.UnbindOIDCOAuthClient(ref.OIDCProviderKey, ref.Domain, ref.OAuthClientID, sid)
+			continue
+		}
+		if cerr := client.Delete(inst); cerr != nil {
+			return deleted, errors.New(cerr.Error)
+		}
+		inst.Logger().WithNamespace("oidc").Debugf(
+			"Deleted OAuth client %s for OIDC sid %s in context %s",
+			ref.OAuthClientID, sid, oidcProviderKey,
+		)
+		deleted++
+	}
+	return deleted, nil
 }
 
 // CreateChallenge can be used to generate a challenge for certifying the app.
