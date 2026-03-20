@@ -265,6 +265,72 @@ Download a file via a drive share.
 Identical call to [`GET /files/download/:file-id`](files.md#get-filesdownloadfile-id) but over a shared drive.
 See there for request and response examples
 
+### POST /sharings/drives/:id/downloads
+
+Two-step download of a single file: creates a short-lived secret link (valid 10 minutes) pointing back to the shared drive download endpoint. Useful when the client cannot set an `Authorization` header on the eventual GET (e.g. a plain `<a>` tag).
+
+Identical call to [`POST /files/downloads`](files.md#post-filesdownloads) but over a shared drive. The `links.related` in the response will point to `/sharings/drives/:id/downloads/:secret/:filename` instead of `/files/downloads/...`.
+
+### GET /sharings/drives/:id/downloads/:secret/:fake-name
+
+Download the file prepared by the `POST /sharings/drives/:id/downloads` call above. The `:fake-name` segment is ignored by the server — it exists solely so browsers use it as the suggested save-as filename.
+
+Does not require an `Authorization` header (the secret acts as the credential).
+
+### POST /sharings/drives/:id/archive
+
+Create a temporary zip archive of multiple files and/or folders inside a shared drive. Works for both owners and recipients (including read-only recipients).
+
+The request body follows the same format as [`POST /files/archive`](files.md#post-filesarchive). The `links.related` in the response points to `/sharings/drives/:id/archive/:secret/:name.zip` instead of `/files/archive/...`.
+
+#### Request
+
+```http
+POST /sharings/drives/aae62886e79611ef8381fb83ff72e425/archive HTTP/1.1
+Authorization: Bearer token
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "name": "project-docs",
+      "ids": ["af1e1b66e92111ef8ddd5fbac4938703", "be2f2c77f03222fg9eee6gcbd5049814"]
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "links": {
+    "related": "/sharings/drives/aae62886e79611ef8381fb83ff72e425/archive/4521DC87/project-docs.zip"
+  },
+  "data": {
+    "type": "io.cozy.archives",
+    "id": "4521DC87",
+    "attributes": {
+      "name": "project-docs",
+      "ids": ["af1e1b66e92111ef8ddd5fbac4938703", "be2f2c77f03222fg9eee6gcbd5049814"]
+    }
+  }
+}
+```
+
+### GET /sharings/drives/:id/archive/:secret/:fake-name
+
+Download the zip archive prepared by `POST /sharings/drives/:id/archive`. The archive is built on-the-fly and streamed directly — it is not stored on disk.
+
+Does not require an `Authorization` header (the secret acts as the credential, valid 10 minutes).
+
 ### GET /sharings/drives/:id/_changes
 
 Get the change feed for a drive.

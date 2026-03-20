@@ -1,6 +1,8 @@
 package sharings_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -1683,6 +1685,86 @@ func TestSharedDriveDownload(t *testing.T) {
 
 		eB.GET("/sharings/drives/" + env.firstSharingID + "/download/" + env.checklistID).
 			Expect().Status(401)
+	})
+}
+
+func TestSharedDriveArchiveDownload(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	t.Run("ArchiveMultipleFiles", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		// Create a second file in the meetings directory (owned by ACME, shared to Betty)
+		file2ID := createFile(t, eA, env.meetingsDirID, "Notes.txt", env.acmeToken)
+
+		// Betty (recipient) creates an archive link for the two files
+		body := fmt.Sprintf(`{"data":{"attributes":{"ids":[%q,%q]}}}`, env.checklistID, file2ID)
+		related := eB.POST("/sharings/drives/"+env.firstSharingID+"/archive").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(body)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
+
+		// The returned link must point to the shared drive archive endpoint, not /files/archive
+		require.Contains(t, related, "/sharings/drives/"+env.firstSharingID+"/archive/")
+
+		// Download the zip — Betty's token is enough (needsAuth=false for the GET)
+		resp := eB.GET(related).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+		resp.Header("Content-Disposition").Contains(`attachment; filename="archive.zip"`)
+
+		// Verify zip contains exactly the two requested files (archive/<filename>)
+		zipBytes := []byte(resp.Body().Raw())
+		z, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+		require.NoError(t, err)
+		var names []string
+		for _, f := range z.File {
+			names = append(names, f.Name)
+		}
+		require.Contains(t, names, "archive/Checklist.txt")
+		require.Contains(t, names, "archive/Notes.txt")
+	})
+
+	t.Run("ArchiveFolder", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		// Betty (recipient) creates an archive link for the whole meetings folder
+		body := fmt.Sprintf(`{"data":{"attributes":{"ids":[%q]}}}`, env.meetingsDirID)
+		related := eB.POST("/sharings/drives/"+env.firstSharingID+"/archive").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(body)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
+
+		// The returned link must point to the shared drive archive endpoint
+		require.Contains(t, related, "/sharings/drives/"+env.firstSharingID+"/archive/")
+
+		// Download the zip — the folder and its contents are zipped on-the-fly
+		resp := eB.GET(related).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+		resp.Header("Content-Disposition").Contains(`attachment; filename="archive.zip"`)
+
+		// Verify zip contains the folder entry and the file nested inside it
+		// (archive/<FolderName>/ and archive/<FolderName>/<file>)
+		zipBytes := []byte(resp.Body().Raw())
+		z, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+		require.NoError(t, err)
+		var names []string
+		for _, f := range z.File {
+			names = append(names, f.Name)
+		}
+		require.Contains(t, names, "archive/Meetings/")
+		require.Contains(t, names, "archive/Meetings/Checklist.txt")
 	})
 }
 

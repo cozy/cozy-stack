@@ -1230,9 +1230,10 @@ func ReadFileContentFromSharingFileID(c echo.Context, fileID string) error {
 	return sendFileFromPath(c, c.QueryParam("Path"), true)
 }
 
-// ArchiveDownloadCreateHandler handles requests to /files/archive and stores the
-// paremeters with a secret to be used in download handler below.s
-func ArchiveDownloadCreateHandler(c echo.Context) error {
+// ArchiveDownload stores the archive parameters into a secret usable for the
+// download handler below. When sharedDrive is not nil, the returned link
+// points to the shared drive archive endpoint instead of /files/archive.
+func ArchiveDownload(c echo.Context, sharedDrive *sharing.Sharing) error {
 	archive := &vfs.Archive{}
 	if _, err := jsonapi.Bind(c.Request().Body, archive); err != nil {
 		return err
@@ -1279,11 +1280,24 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 
 	fakeName := url.PathEscape(archive.Name)
 
-	links := &jsonapi.LinksList{
-		Related: "/files/archive/" + secret + "/" + fakeName + ".zip",
+	var links *jsonapi.LinksList
+	if sharedDrive != nil {
+		links = &jsonapi.LinksList{
+			Related: "/sharings/drives/" + sharedDrive.ID() + "/archive/" + secret + "/" + fakeName + ".zip",
+		}
+	} else {
+		links = &jsonapi.LinksList{
+			Related: "/files/archive/" + secret + "/" + fakeName + ".zip",
+		}
 	}
 
 	return jsonapi.Data(c, http.StatusOK, &apiArchive{archive}, links)
+}
+
+// ArchiveDownloadCreateHandler handles requests to /files/archive and stores the
+// paremeters with a secret to be used in download handler below.s
+func ArchiveDownloadCreateHandler(c echo.Context) error {
+	return ArchiveDownload(c, nil)
 }
 
 // FileDownload stores the required path into a secret
