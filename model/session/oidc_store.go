@@ -18,17 +18,30 @@ import (
 
 const oidcBindingTTL = SessionMaxAge + 24*time.Hour
 
-type oidcSessionRef struct {
+const (
+	oidcBindingKindSession     = "session"
+	oidcBindingKindOAuthClient = "oauth_client"
+)
+
+type oidcBindingRef struct {
 	OIDCProviderKey string `json:"oidc_provider_key"`
 	Domain          string `json:"domain"`
-	SessionID       string `json:"session_id"`
+	SessionID       string `json:"session_id,omitempty"`
+	OAuthClientID   string `json:"oauth_client_id,omitempty"`
+	Kind            string `json:"kind,omitempty"`
+}
+
+type OIDCOAuthClientRef struct {
+	OIDCProviderKey string
+	Domain          string
+	OAuthClientID   string
 }
 
 type oidcSessionBindingStore interface {
-	Bind(oidcProviderKey, sid, domain, sessionID string) error
-	Unbind(oidcProviderKey, sid, domain, sessionID string) error
+	Bind(sid string, ref oidcBindingRef) error
+	Unbind(sid string, ref oidcBindingRef) error
 	Touch(sid string) error
-	List(sid string) ([]oidcSessionRef, error)
+	List(sid string) ([]oidcBindingRef, error)
 }
 
 var oidcStoreMu sync.Mutex
@@ -59,14 +72,14 @@ type memOIDCSessionBindingStore struct {
 	bindings map[string]map[string]struct{}
 }
 
-func (s *memOIDCSessionBindingStore) Bind(oidcProviderKey, sid, domain, sessionID string) error {
+func (s *memOIDCSessionBindingStore) Bind(sid string, ref oidcBindingRef) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := oidcBindingKey(sid)
 	if s.bindings[key] == nil {
 		s.bindings[key] = make(map[string]struct{})
 	}
-	member, err := oidcSessionMember(oidcProviderKey, domain, sessionID)
+	member, err := marshalOIDCBindingRef(ref)
 	if err != nil {
 		return err
 	}
@@ -74,7 +87,7 @@ func (s *memOIDCSessionBindingStore) Bind(oidcProviderKey, sid, domain, sessionI
 	return nil
 }
 
-func (s *memOIDCSessionBindingStore) Unbind(oidcProviderKey, sid, domain, sessionID string) error {
+func (s *memOIDCSessionBindingStore) Unbind(sid string, ref oidcBindingRef) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := oidcBindingKey(sid)
@@ -82,7 +95,7 @@ func (s *memOIDCSessionBindingStore) Unbind(oidcProviderKey, sid, domain, sessio
 	if len(members) == 0 {
 		return nil
 	}
-	member, err := oidcSessionMember(oidcProviderKey, domain, sessionID)
+	member, err := marshalOIDCBindingRef(ref)
 	if err != nil {
 		return err
 	}
@@ -97,13 +110,13 @@ func (s *memOIDCSessionBindingStore) Touch(_ string) error {
 	return nil
 }
 
-func (s *memOIDCSessionBindingStore) List(sid string) ([]oidcSessionRef, error) {
+func (s *memOIDCSessionBindingStore) List(sid string) ([]oidcBindingRef, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	members := s.bindings[oidcBindingKey(sid)]
-	refs := make([]oidcSessionRef, 0, len(members))
+	refs := make([]oidcBindingRef, 0, len(members))
 	for member := range members {
-		ref, ok := parseOIDCSessionMember(member)
+		ref, ok := unmarshalOIDCBindingRef(member)
 		if ok {
 			refs = append(refs, ref)
 		}
@@ -116,9 +129,9 @@ type redisOIDCSessionBindingStore struct {
 	ctx context.Context
 }
 
-func (s *redisOIDCSessionBindingStore) Bind(oidcProviderKey, sid, domain, sessionID string) error {
+func (s *redisOIDCSessionBindingStore) Bind(sid string, ref oidcBindingRef) error {
 	key := oidcBindingKey(sid)
-	member, err := oidcSessionMember(oidcProviderKey, domain, sessionID)
+	member, err := marshalOIDCBindingRef(ref)
 	if err != nil {
 		return err
 	}
@@ -129,9 +142,9 @@ func (s *redisOIDCSessionBindingStore) Bind(oidcProviderKey, sid, domain, sessio
 	return err
 }
 
-func (s *redisOIDCSessionBindingStore) Unbind(oidcProviderKey, sid, domain, sessionID string) error {
+func (s *redisOIDCSessionBindingStore) Unbind(sid string, ref oidcBindingRef) error {
 	key := oidcBindingKey(sid)
-	member, err := oidcSessionMember(oidcProviderKey, domain, sessionID)
+	member, err := marshalOIDCBindingRef(ref)
 	if err != nil {
 		return err
 	}
@@ -142,14 +155,14 @@ func (s *redisOIDCSessionBindingStore) Touch(sid string) error {
 	return s.c.Expire(s.ctx, oidcBindingKey(sid), oidcBindingTTL).Err()
 }
 
-func (s *redisOIDCSessionBindingStore) List(sid string) ([]oidcSessionRef, error) {
+func (s *redisOIDCSessionBindingStore) List(sid string) ([]oidcBindingRef, error) {
 	members, err := s.c.SMembers(s.ctx, oidcBindingKey(sid)).Result()
 	if err != nil {
 		return nil, err
 	}
-	refs := make([]oidcSessionRef, 0, len(members))
+	refs := make([]oidcBindingRef, 0, len(members))
 	for _, member := range members {
-		ref, ok := parseOIDCSessionMember(member)
+		ref, ok := unmarshalOIDCBindingRef(member)
 		if ok {
 			refs = append(refs, ref)
 		}
@@ -161,27 +174,54 @@ func oidcBindingKey(sid string) string {
 	return "oidc:sid:" + sid
 }
 
-func oidcSessionMember(oidcProviderKey, domain, sessionID string) (string, error) {
-	member, err := json.Marshal(oidcSessionRef{
-		OIDCProviderKey: oidcProviderKey,
-		Domain:          domain,
-		SessionID:       sessionID,
-	})
+func marshalOIDCBindingRef(ref oidcBindingRef) (string, error) {
+	member, err := json.Marshal(ref)
 	if err != nil {
 		return "", err
 	}
 	return string(member), nil
 }
 
-func parseOIDCSessionMember(member string) (oidcSessionRef, bool) {
-	var ref oidcSessionRef
+func unmarshalOIDCBindingRef(member string) (oidcBindingRef, bool) {
+	var ref oidcBindingRef
 	if err := json.Unmarshal([]byte(member), &ref); err != nil {
-		return oidcSessionRef{}, false
+		return oidcBindingRef{}, false
 	}
-	if ref.OIDCProviderKey == "" || ref.Domain == "" || ref.SessionID == "" {
-		return oidcSessionRef{}, false
+	if ref.OIDCProviderKey == "" || ref.Domain == "" {
+		return oidcBindingRef{}, false
 	}
-	return ref, true
+	switch ref.Kind {
+	case oidcBindingKindSession:
+		if ref.SessionID == "" {
+			return oidcBindingRef{}, false
+		}
+		return ref, true
+	case oidcBindingKindOAuthClient:
+		if ref.OAuthClientID == "" {
+			return oidcBindingRef{}, false
+		}
+		return ref, true
+	default:
+		return oidcBindingRef{}, false
+	}
+}
+
+func oidcSessionBindingRef(oidcProviderKey, domain, sessionID string) oidcBindingRef {
+	return oidcBindingRef{
+		OIDCProviderKey: oidcProviderKey,
+		Domain:          domain,
+		SessionID:       sessionID,
+		Kind:            oidcBindingKindSession,
+	}
+}
+
+func oidcOAuthClientBindingRef(oidcProviderKey, domain, clientID string) oidcBindingRef {
+	return oidcBindingRef{
+		OIDCProviderKey: oidcProviderKey,
+		Domain:          domain,
+		OAuthClientID:   clientID,
+		Kind:            oidcBindingKindOAuthClient,
+	}
 }
 
 func bindOIDCSession(i *instance.Instance, s *Session) {
@@ -196,7 +236,7 @@ func bindOIDCSession(i *instance.Instance, s *Session) {
 	}
 	defer unlock()
 
-	if err := getOIDCSessionBindingStore().Bind(s.OIDCProviderKey, s.SID, i.Domain, s.ID()); err != nil {
+	if err := getOIDCSessionBindingStore().Bind(s.SID, oidcSessionBindingRef(s.OIDCProviderKey, i.Domain, s.ID())); err != nil {
 		i.Logger().WithNamespace("oidc").Warnf("Cannot bind OIDC session %s to %s: %s", s.SID, s.ID(), err)
 		return
 	}
@@ -209,7 +249,7 @@ func unbindOIDCSession(i *instance.Instance, s *Session) {
 	if i == nil || s == nil || s.SID == "" || s.OIDCProviderKey == "" {
 		return
 	}
-	if err := getOIDCSessionBindingStore().Unbind(s.OIDCProviderKey, s.SID, i.Domain, s.ID()); err != nil {
+	if err := getOIDCSessionBindingStore().Unbind(s.SID, oidcSessionBindingRef(s.OIDCProviderKey, i.Domain, s.ID())); err != nil {
 		i.Logger().WithNamespace("oidc").Warnf("Cannot unbind OIDC session %s from %s: %s", s.SID, s.ID(), err)
 	}
 }
@@ -223,6 +263,27 @@ func touchOIDCSession(i *instance.Instance, s *Session) {
 	}
 }
 
+func BindOIDCOAuthClient(oidcProviderKey, domain, clientID, sid string) error {
+	if oidcProviderKey == "" || domain == "" || clientID == "" || sid == "" {
+		return nil
+	}
+	return getOIDCSessionBindingStore().Bind(sid, oidcOAuthClientBindingRef(oidcProviderKey, domain, clientID))
+}
+
+func UnbindOIDCOAuthClient(oidcProviderKey, domain, clientID, sid string) error {
+	if oidcProviderKey == "" || domain == "" || clientID == "" || sid == "" {
+		return nil
+	}
+	return getOIDCSessionBindingStore().Unbind(sid, oidcOAuthClientBindingRef(oidcProviderKey, domain, clientID))
+}
+
+func TouchOIDCBinding(sid string) error {
+	if sid == "" {
+		return nil
+	}
+	return getOIDCSessionBindingStore().Touch(sid)
+}
+
 // DeleteByOIDCSession deletes all local Cozy sessions bound to a provider-scoped
 // OIDC session identifier. The first iteration uses the OIDC context name as
 // the provider key.
@@ -233,12 +294,11 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 	}
 	deleted := 0
 	for _, ref := range refs {
-		if ref.OIDCProviderKey != oidcProviderKey {
+		if ref.Kind != oidcBindingKindSession || ref.OIDCProviderKey != oidcProviderKey {
 			continue
 		}
 		inst, err := lifecycle.GetInstance(ref.Domain)
 		if err != nil {
-			// Cleanup stale bindings when the instance no longer exists.
 			unbindOIDCSession(&instance.Instance{Domain: ref.Domain}, &Session{
 				DocID:           ref.SessionID,
 				SID:             sid,
@@ -309,7 +369,7 @@ func cleanupDuplicateOIDCSessions(current *Session) error {
 		return err
 	}
 	for _, ref := range refs {
-		if ref.OIDCProviderKey != current.OIDCProviderKey || ref.SessionID == current.ID() {
+		if ref.Kind != oidcBindingKindSession || ref.OIDCProviderKey != current.OIDCProviderKey || ref.SessionID == current.ID() {
 			continue
 		}
 
@@ -347,4 +407,33 @@ func cleanupDuplicateOIDCSessions(current *Session) error {
 		existing.Delete(inst)
 	}
 	return nil
+}
+
+func FindOIDCOAuthClientsBySID(sid string) ([]OIDCOAuthClientRef, error) {
+	refs, err := getOIDCSessionBindingStore().List(sid)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]OIDCOAuthClientRef, 0)
+	for _, ref := range refs {
+		if ref.Kind != oidcBindingKindOAuthClient {
+			continue
+		}
+		out = append(out, OIDCOAuthClientRef{
+			OIDCProviderKey: ref.OIDCProviderKey,
+			Domain:          ref.Domain,
+			OAuthClientID:   ref.OAuthClientID,
+		})
+	}
+	//sort for deterministic behavior and tests
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].OIDCProviderKey != out[j].OIDCProviderKey {
+			return out[i].OIDCProviderKey < out[j].OIDCProviderKey
+		}
+		if out[i].Domain != out[j].Domain {
+			return out[i].Domain < out[j].Domain
+		}
+		return out[i].OAuthClientID < out[j].OAuthClientID
+	})
+	return out, nil
 }

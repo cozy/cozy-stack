@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -313,6 +314,13 @@ func TestOidc(t *testing.T) {
 		storedClient, err := oauth.FindClient(testInstance, oauthClient.ClientID)
 		require.NoError(t, err)
 		require.Equal(t, "cloudery-session-789", storedClient.OIDCSessionID)
+
+		boundClients, err := session.FindOIDCOAuthClientsBySID("cloudery-session-789")
+		require.NoError(t, err)
+		require.Len(t, boundClients, 1)
+		require.Equal(t, testInstance.ContextName, boundClients[0].OIDCProviderKey)
+		require.Equal(t, testInstance.Domain, boundClients[0].Domain)
+		require.Equal(t, oauthClient.ClientID, boundClients[0].OAuthClientID)
 	})
 
 	t.Run("LoginHintWithOIDCID", func(t *testing.T) {
@@ -639,6 +647,10 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatalf("timeout waiting for OIDC end_session call")
 	}
+
+	boundClients, err := session.FindOIDCOAuthClientsBySID(sessionID)
+	require.NoError(t, err)
+	require.Empty(t, boundClients)
 }
 
 func TestOIDCLogout(t *testing.T) {
@@ -819,6 +831,78 @@ func TestOIDCLogout(t *testing.T) {
 		requireSessionDeleted(t, firstInst, target.ID())
 		requireSessionExists(t, secondInst, sameSIDOtherContext.ID())
 		requireSessionExists(t, firstInst, other.ID())
+	})
+
+	t.Run("ContextlessBackchannelLogoutDeletesBoundOAuthClients", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
+
+		targetContext := "z-oauth-client-logout-context"
+		otherContext := "a-oauth-client-logout-context"
+		targetSID := "oauth-client-bound-sid"
+
+		firstInst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: targetContext,
+			OIDCID:      "oauth-client-target-sub",
+		})
+		secondDomain := "other-oauth-" + firstInst.Domain
+		_ = lifecycle.Destroy(secondDomain)
+		secondInst, err := lifecycle.Create(&lifecycle.Options{
+			Domain:      secondDomain,
+			ContextName: otherContext,
+			OIDCID:      "oauth-client-other-sub",
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lifecycle.Destroy(secondDomain) })
+
+		targetOIDCConfig := makeTestOIDCConfig(
+			"https://issuer.example/oauth-client-logout-context",
+			"oauth-client-logout-client-id",
+			jwksURL,
+		)
+		targetOIDCConfig["allow_oauth_token"] = true
+		otherOIDCConfig := makeTestOIDCConfig(
+			"https://issuer.example/other-oauth-client-logout-context",
+			"other-oauth-client-logout-client-id",
+			jwksURL,
+		)
+		otherOIDCConfig["allow_oauth_token"] = true
+		config.GetConfig().Authentication = map[string]interface{}{
+			targetContext: map[string]interface{}{"oidc": targetOIDCConfig},
+			otherContext:  map[string]interface{}{"oidc": otherOIDCConfig},
+		}
+
+		targetClient := createFlagshipOAuthClient(t, firstInst)
+		otherClient := createFlagshipOAuthClient(t, secondInst)
+
+		issueOIDCAccessTokenWithDelegatedCode(t, env.client, firstInst, targetClient, getStorage().CreateCodeData(firstInst.OIDCID, targetSID))
+		issueOIDCAccessTokenWithDelegatedCode(t, env.client, secondInst, otherClient, getStorage().CreateCodeData(secondInst.OIDCID, targetSID))
+
+		boundClients, err := session.FindOIDCOAuthClientsBySID(targetSID)
+		require.NoError(t, err)
+		require.Len(t, boundClients, 2)
+
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/oauth-client-logout-context",
+			"oauth-client-logout-client-id",
+			targetSID,
+			map[string]interface{}{"sub": firstInst.OIDCID},
+		))
+
+		env.client.POST("/oidc/logout").
+			WithHost(firstInst.Domain).
+			WithFormField("logout_token", logoutToken).
+			Expect().
+			Status(http.StatusOK)
+
+		requireOAuthClientDeleted(t, firstInst, targetClient.ClientID)
+		requireOAuthClientExists(t, secondInst, otherClient.ClientID)
+
+		boundClients, err = session.FindOIDCOAuthClientsBySID(targetSID)
+		require.NoError(t, err)
+		require.Len(t, boundClients, 1)
+		require.Equal(t, otherContext, boundClients[0].OIDCProviderKey)
+		require.Equal(t, otherClient.ClientID, boundClients[0].OAuthClientID)
 	})
 
 	t.Run("ContextlessBackchannelLogoutWithoutSIDFallsBackToDomainClaim", func(t *testing.T) {
@@ -1197,6 +1281,63 @@ func requireSessionExists(t *testing.T, inst *instance.Instance, sessionID strin
 	s, err := session.Get(inst, sessionID)
 	require.NoError(t, err)
 	require.Equal(t, sessionID, s.ID())
+}
+
+func createFlagshipOAuthClient(t *testing.T, inst *instance.Instance) *oauth.Client {
+	t.Helper()
+
+	client := &oauth.Client{
+		RedirectURIs:    []string{"cozy://flagship"},
+		ClientName:      "Cozy Flagship",
+		ClientKind:      "mobile",
+		SoftwareID:      "cozy-flagship",
+		SoftwareVersion: "1.0.0",
+	}
+	require.Nil(t, client.Create(inst))
+
+	storedClient, err := oauth.FindClient(inst, client.ClientID)
+	require.NoError(t, err)
+	storedClient.CertifiedFromStore = true
+	require.NoError(t, storedClient.SetFlagship(inst))
+
+	client, err = oauth.FindClient(inst, client.ClientID)
+	require.NoError(t, err)
+	require.True(t, client.Flagship)
+	return client
+}
+
+func issueOIDCAccessTokenWithDelegatedCode(t *testing.T, e *httpexpect.Expect, inst *instance.Instance, client *oauth.Client, code string) {
+	t.Helper()
+
+	e.POST("/oidc/access_token").
+		WithHost(inst.Domain).
+		WithJSON(map[string]string{
+			"client_id":     client.ClientID,
+			"client_secret": client.ClientSecret,
+			"scope":         "*",
+			"code":          code,
+		}).
+		Expect().
+		Status(http.StatusOK).
+		JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+		Object().
+		Value("access_token").String().NotEmpty()
+}
+
+func requireOAuthClientDeleted(t *testing.T, inst *instance.Instance, clientID string) {
+	t.Helper()
+
+	_, err := oauth.FindClient(inst, clientID)
+	require.Error(t, err)
+	require.True(t, couchdb.IsNotFoundError(err))
+}
+
+func requireOAuthClientExists(t *testing.T, inst *instance.Instance, clientID string) {
+	t.Helper()
+
+	client, err := oauth.FindClient(inst, clientID)
+	require.NoError(t, err)
+	require.Equal(t, clientID, client.ClientID)
 }
 
 // makeUnsignedJWT creates a simple unsigned JWT for testing.

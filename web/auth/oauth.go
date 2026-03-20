@@ -1011,6 +1011,11 @@ func accessToken(c echo.Context) error {
 	// Update the last_refreshed_at field of the OAuth client
 	client.LastRefreshedAt = time.Now()
 	_ = couchdb.UpdateDoc(instance, client)
+	if client.OIDCSessionID != "" {
+		if err := session.TouchOIDCBinding(client.OIDCSessionID); err != nil {
+			instance.Logger().Warnf("Cannot touch OIDC binding for OAuth client %s: %s", client.CouchID, err)
+		}
+	}
 
 	return c.JSON(http.StatusOK, out)
 }

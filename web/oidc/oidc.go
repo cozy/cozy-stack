@@ -779,11 +779,15 @@ func validateLogoutTokenClaims(claims jwt.MapClaims, conf *Config, expectedIssue
 func applyLogoutForContext(verified logoutContext) error {
 	sid, _ := verified.Claims["sid"].(string)
 	if sid != "" {
-		deleted, err := session.DeleteByOIDCSession(verified.ContextName, sid)
+		deletedSessions, err := session.DeleteByOIDCSession(verified.ContextName, sid)
 		if err != nil {
 			return err
 		}
-		if deleted > 0 {
+		deletedClients, err := oauth.DeleteByOIDCSession(verified.ContextName, sid)
+		if err != nil {
+			return err
+		}
+		if deletedSessions > 0 || deletedClients > 0 {
 			return nil
 		}
 	}
@@ -966,6 +970,7 @@ func AccessToken(c echo.Context) error {
 	}
 
 	// Store the session ID in the client for logout purposes (priority: delegated code > id_token)
+	oldSessionID := client.OIDCSessionID
 	sessionID := codeSessionID
 	if sessionID == "" {
 		sessionID = extractSessionID(reqBody.IDToken)
@@ -980,7 +985,18 @@ func AccessToken(c echo.Context) error {
 	if needsUpdate {
 		client.Pending = false
 		client.ClientID = ""
-		_ = couchdb.UpdateDoc(inst, client)
+		if err := couchdb.UpdateDoc(inst, client); err != nil {
+			inst.Logger().WithNamespace("oidc").Warnf("Cannot update OAuth client %s: %s", client.CouchID, err)
+		} else if sessionID != "" {
+			if oldSessionID != "" && oldSessionID != sessionID {
+				if err := session.UnbindOIDCOAuthClient(inst.ContextName, inst.Domain, client.CouchID, oldSessionID); err != nil {
+					inst.Logger().WithNamespace("oidc").Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", oldSessionID, client.CouchID, err)
+				}
+			}
+			if err := session.BindOIDCOAuthClient(inst.ContextName, inst.Domain, client.CouchID, sessionID); err != nil {
+				inst.Logger().WithNamespace("oidc").Warnf("Cannot bind OIDC session %s to OAuth client %s: %s", sessionID, client.CouchID, err)
+			}
+		}
 		client.ClientID = client.CouchID
 	}
 
