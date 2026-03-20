@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -117,12 +118,17 @@ func verifyFileMove(t *testing.T, inst *instance.Instance, fileID, expectedName,
 	require.Equal(t, expectedContent, string(content))
 }
 
-// verifyFileDeleted verifies that a file was deleted from the source instance.
-func verifyFileDeleted(t *testing.T, inst *instance.Instance, fileID string) {
+// verifyFileDeleted verifies that a file was fully deleted from the source instance: both the
+// CouchDB metadata record and the physical file content in storage. doc must be fetched before
+// the deletion so its path is available after the CouchDB record is gone.
+func verifyFileDeleted(t *testing.T, inst *instance.Instance, doc *vfs.FileDoc) {
 	t.Helper()
-	_, err := inst.VFS().FileByID(fileID)
+	_, err := inst.VFS().FileByID(doc.DocID)
 	require.Error(t, err)
 	require.True(t, os.IsNotExist(err))
+
+	_, err = inst.VFS().OpenFile(doc)
+	require.Error(t, err, "expected physical file to be deleted from storage, but it is still readable")
 }
 
 // verifyNodeDeleted verifies that a node (file or directory) was deleted from the source instance.
