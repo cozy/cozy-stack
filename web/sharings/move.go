@@ -1000,7 +1000,7 @@ func copyFileContent(destVFS vfs.VFS, newFileDoc *vfs.FileDoc, srcVFS vfs.VFS, s
 }
 
 func deleteSourceFile(srcVFS vfs.VFS, srcFile *vfs.FileDoc) error {
-	if err := srcVFS.GetIndexer().DeleteFileDoc(srcFile); err != nil {
+	if err := srcVFS.DestroyFile(srcFile); err != nil {
 		return files.WrapVfsError(err)
 	}
 	return nil
