@@ -1282,7 +1282,7 @@ func sharedDrivePermissionCheck(method, path string) (shouldCheck bool, requireW
 	}
 
 	// POST /downloads creates a temporary link without mutating shared-drive data.
-	if method == http.MethodPost && (strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")){
+	if method == http.MethodPost && (strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")) {
 		return false, false
 	}
 
