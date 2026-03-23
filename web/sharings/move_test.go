@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
-
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
@@ -206,6 +205,11 @@ func TestSharedDrivesMove(t *testing.T) {
 		_, eB, _ := env.createClients(t)
 		// Perform the move operation
 		fileToMoveSameStack := createFile(t, eB, "", "file-to-upload.txt", env.bettyToken)
+
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.betty.VFS().FileByID(fileToMoveSameStack)
+		require.NoError(t, err)
+
 		responseObj := postMove(t, eB, env.bettyToken, `{
 				  "source": {
 				    "file_id": "`+fileToMoveSameStack+`"
@@ -223,8 +227,8 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify the file was moved and content preserved
 		verifyFileMove(t, env.acme, movedFileID, "file-to-upload.txt", env.productDirID, "foo")
 
-		// Verify the original file was deleted
-		verifyFileDeleted(t, env.betty, fileToMoveSameStack)
+		// Verify the original file was deleted (both metadata and physical content)
+		verifyFileDeleted(t, env.betty, srcFileDoc)
 	})
 
 	// Force the cross-stack path even if instances are on the same server
@@ -232,6 +236,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 		fileToMoveDifferentStack := createFile(t, eB, "", "file-to-upload-diff.txt", env.bettyToken)
 		destDirInSharedDrive := createDirectory(t, eA, env.productDirID, "Dest DIR To Move", env.acmeToken)
+
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.betty.VFS().FileByID(fileToMoveDifferentStack)
+		require.NoError(t, err)
 
 		cleanup := forceCrossStack(t, env.tsA.URL)
 		defer cleanup()
@@ -253,8 +261,8 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify the file was moved and content preserved
 		verifyFileMove(t, env.acme, movedFileID, "file-to-upload-diff.txt", destDirInSharedDrive, "foo")
 
-		// Verify the original file was deleted
-		verifyFileDeleted(t, env.acme, fileToMoveDifferentStack)
+		// Verify the original file was deleted from betty (both metadata and physical content)
+		verifyFileDeleted(t, env.betty, srcFileDoc)
 	})
 
 	t.Run("SuccessfulMove_FromSharedDrive_SameStack", func(t *testing.T) {
@@ -263,6 +271,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		fileToMove := createFile(t, eA, env.meetingsDirID, "file-to-move-upstream.txt", env.acmeToken)
 		// Create destination directory on the target instance
 		destDirID := createRootDirectory(t, eB, "Destination Dir", env.bettyToken)
+
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.acme.VFS().FileByID(fileToMove)
+		require.NoError(t, err)
 
 		responseObj := postMove(t, eB, env.bettyToken, `{
 				  "source": {
@@ -281,8 +293,8 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify the file was moved to the destination
 		verifyFileMove(t, env.betty, movedFileID, "file-to-move-upstream.txt", destDirID, "foo")
 
-		// Verify the original file was deleted from source
-		verifyFileDeleted(t, env.acme, fileToMove)
+		// Verify the original file was deleted (both metadata and physical content)
+		verifyFileDeleted(t, env.acme, srcFileDoc)
 	})
 
 	// Force the cross-stack path even if instances are on the same server
@@ -292,6 +304,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		fileToDiffStack := createFile(t, eA, env.meetingsDirID, fileName, env.acmeToken)
 		// Create destination directory on the target (owner) instance
 		destDirID := createRootDirectory(t, eB, "Destination Dir Diff", env.bettyToken)
+
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.acme.VFS().FileByID(fileToDiffStack)
+		require.NoError(t, err)
 
 		cleanup := forceCrossStack(t, env.tsA.URL)
 		defer cleanup()
@@ -313,8 +329,8 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify the file was moved to the destination
 		verifyFileMove(t, env.betty, movedFileID, fileName, destDirID, "foo")
 
-		// Verify the original file was deleted from source
-		verifyFileDeleted(t, env.acme, fileToDiffStack)
+		// Verify the original file was deleted from source (both metadata and physical content)
+		verifyFileDeleted(t, env.acme, srcFileDoc)
 	})
 
 	t.Run("SuccessfulMove_BetweenSharedDrives_DifferentStack", func(t *testing.T) {
@@ -327,6 +343,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Create the file on the owner (ACME) instance inside the second shared drive
 		fileName := "file-to-move-between-shared-drives.txt"
 		toMove := createFile(t, eA, secondRootDirID, fileName, env.acmeToken)
+
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.acme.VFS().FileByID(toMove)
+		require.NoError(t, err)
 
 		cleanup := forceCrossStack(t, env.tsA.URL)
 		defer cleanup()
@@ -349,7 +369,8 @@ func TestSharedDrivesMove(t *testing.T) {
 
 		// Verify the file was moved to the destination
 		verifyFileMove(t, env.acme, movedFileID, fileName, env.meetingsDirID, "foo")
-		verifyFileDeleted(t, env.acme, toMove)
+		// Verify the original file was deleted (both metadata and physical content)
+		verifyFileDeleted(t, env.acme, srcFileDoc)
 	})
 
 	t.Run("SuccessfulMoveBetween_SharedDrives_SameStack", func(t *testing.T) {
@@ -392,11 +413,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify the response contains the new file
 		movedFileID := assertMoveResponseWithSharing(t, responseObj, fileName, meetingsID, firstSharingID)
 
-		// Verify the file was moved to the destination
+		// Verify the file was moved to the destination.
+		// Same-instance move preserves the file ID (metadata-only update via ModifyFileMetadata).
+		require.Equal(t, toMove, movedFileID, "same-instance move must preserve the file ID")
 		verifyFileMove(t, env.acme, movedFileID, fileName, meetingsID, "foo")
-
-		// Verify the original file was deleted from source
-		verifyFileDeleted(t, env.acme, toMove)
 	})
 
 	// File move with conflict resolution: moving a file between shared drives (same stack)
@@ -432,12 +452,15 @@ func TestSharedDrivesMove(t *testing.T) {
 
 		// Verify the file was moved with a renamed name (conflict resolution)
 		movedFileName := assertAutoRename(t, responseObj, conflictName)
+		movedFileID := responseObj.Path("$.data.id").String().Raw()
 
 		// Verify both files exist in destination (original + renamed)
 		verifyBothFilesExist(t, env.acme, env.meetingsDirID, conflictName, movedFileName)
 
-		// Verify source file was deleted
-		verifyFileDeleted(t, env.acme, sourceFileID)
+		// Same-instance move preserves the file ID (metadata-only update via ModifyFileMetadata).
+		// The source file was moved (not deleted): verify it now lives at the destination with the renamed name.
+		require.Equal(t, sourceFileID, movedFileID, "same-instance move must preserve the file ID")
+		verifyFileExists(t, env.acme, sourceFileID, movedFileName, env.meetingsDirID, "foo")
 	})
 
 	// File move with conflict resolution: moving a file between shared drives (same stack)
@@ -459,6 +482,10 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Create source file with the same name in the second shared drive (source)
 		sourceFileID := createFile(t, eA, secondRootDirID, conflictName, env.acmeToken)
 
+		// Pre-fetch the source FileDoc before the move so we can verify physical deletion later
+		srcFileDoc, err := env.acme.VFS().FileByID(sourceFileID)
+		require.NoError(t, err)
+
 		// Attempt to move → should succeed with auto-renaming
 		responseObj := postMove(t, eB, env.bettyToken, `{
 			  "source": {
@@ -479,8 +506,8 @@ func TestSharedDrivesMove(t *testing.T) {
 		// Verify both files exist in destination (original + renamed)
 		verifyBothFilesExist(t, env.acme, env.meetingsDirID, conflictName, movedFileName)
 
-		// Verify source file was deleted
-		verifyFileDeleted(t, env.acme, sourceFileID)
+		// Verify source file was deleted (both metadata and physical content)
+		verifyFileDeleted(t, env.acme, srcFileDoc)
 	})
 
 	// Folder move with conflict resolution: moving a directory between shared drives (same stack)

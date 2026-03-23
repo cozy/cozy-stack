@@ -199,6 +199,21 @@ func moveDirSameStack(c echo.Context, srcInst *instance.Instance, destInst *inst
 		return files.WrapVfsError(err)
 	}
 
+	// When moving (not copying) within the same instance, use a metadata-only
+	// update via ModifyDirMetadata.
+	if srcInst.Domain == destInst.Domain && !copy {
+		patch, err := buildMovePatch(srcInst.VFS(), destDirID, srcRoot.DocName, false)
+		if err != nil {
+			return err
+		}
+		newDir, err := vfs.ModifyDirMetadata(srcInst.VFS(), srcRoot, patch)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
+		obj := files.NewDir(newDir, destSharing)
+		return jsonapi.Data(c, http.StatusCreated, obj, nil)
+	}
+
 	dirs, filesToMove, err := planLocalTree(srcInst.VFS(), srcRoot, destDirID)
 	if err != nil {
 		return files.WrapVfsError(err)
@@ -298,6 +313,21 @@ func moveFileSameStack(c echo.Context, srcInst *instance.Instance, destInst *ins
 	srcFile, err := srcInst.VFS().FileByID(fileID)
 	if err != nil {
 		return files.WrapVfsError(err)
+	}
+
+	// When moving (not copying) within the same instance, use a metadata-only
+	// update via ModifyFileMetadata.
+	if srcInst.Domain == destInst.Domain && !copy {
+		patch, err := buildMovePatch(srcInst.VFS(), dirID, srcFile.DocName, true)
+		if err != nil {
+			return err
+		}
+		newFile, err := vfs.ModifyFileMetadata(srcInst.VFS(), srcFile, patch)
+		if err != nil {
+			return files.WrapVfsError(err)
+		}
+		obj := files.NewFile(newFile, destInst, destSharing)
+		return jsonapi.Data(c, http.StatusCreated, obj, nil)
 	}
 	deleteSource := !copy
 	newFileDoc, err := moveFileSameStackCore(srcInst, destInst, srcFile, dirID, deleteSource)
@@ -970,10 +1000,24 @@ func copyFileContent(destVFS vfs.VFS, newFileDoc *vfs.FileDoc, srcVFS vfs.VFS, s
 }
 
 func deleteSourceFile(srcVFS vfs.VFS, srcFile *vfs.FileDoc) error {
-	if err := srcVFS.GetIndexer().DeleteFileDoc(srcFile); err != nil {
+	if err := srcVFS.DestroyFile(srcFile); err != nil {
 		return files.WrapVfsError(err)
 	}
 	return nil
+}
+
+// buildMovePatch creates a DocPatch for a metadata-only move to destDirID,
+// resolving name conflicts automatically. isFile controls the conflict naming strategy.
+func buildMovePatch(fs vfs.VFS, destDirID, currentName string, isFile bool) (*vfs.DocPatch, error) {
+	uniqueName, err := ensureUniqueName(fs, destDirID, currentName, isFile)
+	if err != nil {
+		return nil, files.WrapVfsError(err)
+	}
+	patch := &vfs.DocPatch{DirID: &destDirID}
+	if uniqueName != currentName {
+		patch.Name = &uniqueName
+	}
+	return patch, nil
 }
 
 // ensureUniqueName ensures a child name under parentDirID is unique by checking the
