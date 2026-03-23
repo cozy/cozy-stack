@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
+	oidcbinding "github.com/cozy/cozy-stack/model/oidc/binding"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	csettings "github.com/cozy/cozy-stack/model/settings"
@@ -1012,7 +1013,7 @@ func accessToken(c echo.Context) error {
 	client.LastRefreshedAt = time.Now()
 	_ = couchdb.UpdateDoc(instance, client)
 	if client.OIDCSessionID != "" {
-		if err := session.TouchOIDCBinding(client.OIDCSessionID); err != nil {
+		if err := oidcbinding.TouchSID(client.OIDCSessionID); err != nil {
 			instance.Logger().Warnf("Cannot touch OIDC binding for OAuth client %s: %s", client.CouchID, err)
 		}
 	}

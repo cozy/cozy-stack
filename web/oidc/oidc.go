@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	oidcbinding "github.com/cozy/cozy-stack/model/oidc/binding"
 	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
@@ -663,7 +664,7 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 	var contextsBySID []string
 	var err error
 	if sid != "" {
-		contextsBySID, err = session.FindOIDCProviderKeysBySID(sid)
+		contextsBySID, err = oidcbinding.FindProviderKeys(sid)
 		if err != nil {
 			return "", err
 		}
@@ -1083,11 +1084,11 @@ func AccessToken(c echo.Context) error {
 					"Replacing OIDC session binding for OAuth client %s: old_sid=%s new_sid=%s",
 					client.CouchID, oldSessionID, sessionID,
 				)
-				if err := session.UnbindOIDCOAuthClient(inst.ContextName, inst.Domain, client.CouchID, oldSessionID); err != nil {
+				if err := oidcbinding.UnbindOAuthClient(inst.ContextName, inst.Domain, oldSessionID, client.CouchID); err != nil {
 					inst.Logger().WithNamespace("oidc").Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", oldSessionID, client.CouchID, err)
 				}
 			}
-			if err := session.BindOIDCOAuthClient(inst.ContextName, inst.Domain, client.CouchID, sessionID); err != nil {
+			if err := oidcbinding.BindOAuthClient(inst.ContextName, inst.Domain, sessionID, client.CouchID); err != nil {
 				inst.Logger().WithNamespace("oidc").Warnf("Cannot bind OIDC session %s to OAuth client %s: %s", sessionID, client.CouchID, err)
 			}
 		}

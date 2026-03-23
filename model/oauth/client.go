@@ -20,9 +20,9 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
+	oidcbinding "github.com/cozy/cozy-stack/model/oidc/binding"
 	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/permission"
-	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -652,7 +652,7 @@ func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 	if c.OIDCSessionID != "" && i != nil && i.ContextName != "" && clientID != "" {
-		if err := session.UnbindOIDCOAuthClient(i.ContextName, i.Domain, clientID, c.OIDCSessionID); err != nil {
+		if err := oidcbinding.UnbindOAuthClient(i.ContextName, i.Domain, c.OIDCSessionID, clientID); err != nil {
 			i.Logger().Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", c.OIDCSessionID, clientID, err)
 		}
 	}
@@ -683,7 +683,7 @@ func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
 }
 
 func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
-	refs, err := session.FindOIDCOAuthClientsBySID(sid)
+	refs, err := oidcbinding.ListOAuthClients(oidcProviderKey, sid)
 	if err != nil {
 		return 0, err
 	}
@@ -693,10 +693,6 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 	)
 	deleted := 0
 	for _, ref := range refs {
-		if ref.OIDCProviderKey != oidcProviderKey {
-			logger.WithNamespace("oidc").Debugf("Skipping OIDC OAuth client binding for sid %s: provider=%s", sid, ref.OIDCProviderKey)
-			continue
-		}
 		inst, err := lifecycle.GetInstance(ref.Domain)
 		if err != nil {
 			logger.WithNamespace("oidc").Errorf(
@@ -710,7 +706,7 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 		if couchdb.IsNotFoundError(err) {
 			// The OAuth client was already deleted through another path. Remove the stale Redis binding and continue.
 			inst.Logger().WithNamespace("oidc").Warnf("Dropping stale OIDC OAuth client binding for sid %s: client %s not found", sid, ref.OAuthClientID)
-			_ = session.UnbindOIDCOAuthClient(ref.OIDCProviderKey, ref.Domain, ref.OAuthClientID, sid)
+			_ = oidcbinding.UnbindOAuthClient(ref.OIDCProviderKey, ref.Domain, sid, ref.OAuthClientID)
 			continue
 		}
 		if err != nil {
@@ -722,7 +718,7 @@ func DeleteByOIDCSession(oidcProviderKey, sid string) (int, error) {
 				"Dropping mismatched OIDC OAuth client binding for sid %s: client %s has sid=%s",
 				sid, ref.OAuthClientID, client.OIDCSessionID,
 			)
-			_ = session.UnbindOIDCOAuthClient(ref.OIDCProviderKey, ref.Domain, ref.OAuthClientID, sid)
+			_ = oidcbinding.UnbindOAuthClient(ref.OIDCProviderKey, ref.Domain, sid, ref.OAuthClientID)
 			continue
 		}
 		if cerr := client.Delete(inst); cerr != nil {

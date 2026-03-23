@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
+	oidcbinding "github.com/cozy/cozy-stack/model/oidc/binding"
 	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
@@ -316,7 +317,7 @@ func TestOidc(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "cloudery-session-789", storedClient.OIDCSessionID)
 
-		boundClients, err := session.FindOIDCOAuthClientsBySID("cloudery-session-789")
+		boundClients, err := oidcbinding.ListOAuthClients("", "cloudery-session-789")
 		require.NoError(t, err)
 		require.Len(t, boundClients, 1)
 		require.Equal(t, testInstance.ContextName, boundClients[0].OIDCProviderKey)
@@ -649,7 +650,7 @@ func TestFlagshipOIDCLoginLogoutIntegration(t *testing.T) {
 		t.Fatalf("timeout waiting for OIDC end_session call")
 	}
 
-	boundClients, err := session.FindOIDCOAuthClientsBySID(sessionID)
+	boundClients, err := oidcbinding.ListOAuthClients("", sessionID)
 	require.NoError(t, err)
 	require.Empty(t, boundClients)
 }
@@ -879,7 +880,7 @@ func TestOIDCLogout(t *testing.T) {
 		issueOIDCAccessTokenWithDelegatedCode(t, env.client, firstInst, targetClient, getStorage().CreateCodeData(firstInst.OIDCID, targetSID))
 		issueOIDCAccessTokenWithDelegatedCode(t, env.client, secondInst, otherClient, getStorage().CreateCodeData(secondInst.OIDCID, targetSID))
 
-		boundClients, err := session.FindOIDCOAuthClientsBySID(targetSID)
+		boundClients, err := oidcbinding.ListOAuthClients("", targetSID)
 		require.NoError(t, err)
 		require.Len(t, boundClients, 2)
 
@@ -899,7 +900,7 @@ func TestOIDCLogout(t *testing.T) {
 		requireOAuthClientDeleted(t, firstInst, targetClient.ClientID)
 		requireOAuthClientExists(t, secondInst, otherClient.ClientID)
 
-		boundClients, err = session.FindOIDCOAuthClientsBySID(targetSID)
+		boundClients, err = oidcbinding.ListOAuthClients("", targetSID)
 		require.NoError(t, err)
 		require.Len(t, boundClients, 1)
 		require.Equal(t, otherContext, boundClients[0].OIDCProviderKey)
