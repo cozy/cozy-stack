@@ -9,17 +9,15 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/oidc"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -359,36 +357,16 @@ func checkLogin(next echo.HandlerFunc) echo.HandlerFunc {
 
 func checkIDToken(c echo.Context) bool {
 	inst := middlewares.GetInstance(c)
-	cfg, ok := config.GetOIDC(inst.ContextName)
-	if !ok {
-		return false
-	}
-	allowOAuthToken, _ := cfg["allow_oauth_token"].(bool)
-	if !allowOAuthToken {
-		return false
-	}
-	idTokenKeyURL, _ := cfg["id_token_jwk_url"].(string)
-	if idTokenKeyURL == "" {
+	conf, err := oidcprovider.LoadConfig(inst.ContextName, oidcprovider.RequireIDTokenKeyURL)
+	if err != nil || !conf.AllowOAuthToken {
 		return false
 	}
 
-	keys, err := oidc.GetIDTokenKeys(idTokenKeyURL)
+	claims, err := oidcprovider.VerifyIDToken(c.QueryParam("id_token"), conf)
 	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on VerifyIDToken: %s", err)
 		return false
 	}
-	idToken := c.QueryParam("id_token")
-	token, err := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
-		return oidc.ChooseKeyForIDToken(keys, token)
-	})
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
-		return false
-	}
-	if !token.Valid {
-		logger.WithNamespace("oidc").Errorf("Invalid token: %#v", token)
-		return false
-	}
-	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
 		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
 		return false

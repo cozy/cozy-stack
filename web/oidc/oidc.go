@@ -1,14 +1,12 @@
 package oidc
 
 import (
-	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net/http"
 	"net/url"
 	"sort"
@@ -18,9 +16,9 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
-	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -85,7 +83,13 @@ func extractSessionID(idToken string) string {
 // Start is the route to start the OpenID Connect dance.
 func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getGenericConfig(inst.ContextName)
+	conf, err := oidcprovider.LoadConfig(
+		inst.ContextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
@@ -100,7 +104,13 @@ func Start(c echo.Context) error {
 // StartFranceConnect is the route to start the FranceConnect dance.
 func StartFranceConnect(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getFranceConnectConfig(inst.ContextName)
+	conf, err := oidcprovider.LoadFranceConnectConfig(
+		inst.ContextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		inst.Logger().WithNamespace("oidc").Infof("StartFranceConnect error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
@@ -115,7 +125,13 @@ func StartFranceConnect(c echo.Context) error {
 // Sharing is the route to use the SSO to accept a sharing.
 func Sharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	conf, err := getGenericConfig(inst.ContextName)
+	conf, err := oidcprovider.LoadConfig(
+		inst.ContextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		inst.Logger().WithNamespace("oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
@@ -168,7 +184,13 @@ func BitwardenStart(c echo.Context) error {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the redirect URI is not valid.")
 	}
 
-	conf, err := getGenericConfig(contextName)
+	conf, err := oidcprovider.LoadConfig(
+		contextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
@@ -230,7 +252,15 @@ func Redirect(c echo.Context) error {
 	// For sharing flows (where SharingID is set), we skip this block and use the
 	// regular flow that redirects to the instance's /oidc/login endpoint.
 	if state.OIDCContext != "" && state.SharingID == "" {
-		conf, err := getGenericConfig(state.OIDCContext)
+		conf, err := oidcprovider.LoadConfig(
+			state.OIDCContext,
+			oidcprovider.RequireClientID,
+			oidcprovider.RequireClientSecret,
+			oidcprovider.RequireRedirectURI,
+			oidcprovider.RequireTokenURL,
+			oidcprovider.RequireUserInfoURL,
+			oidcprovider.RequireUserInfoMapping,
+		)
 		if err != nil {
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
@@ -276,7 +306,11 @@ func Redirect(c echo.Context) error {
 
 	domain := state.Instance
 	if contextName, ok := FindLoginDomain(domain); ok {
-		conf, err := getGenericConfig(contextName)
+		conf, err := oidcprovider.LoadConfig(
+			contextName,
+			oidcprovider.RequireUserInfoURL,
+			oidcprovider.RequireUserInfoMapping,
+		)
 		if err != nil || !conf.AllowOAuthToken {
 			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
 		}
@@ -301,7 +335,7 @@ func Redirect(c echo.Context) error {
 	if state.Confirm != "" {
 		u.Add("confirm_state", state.Confirm)
 	}
-	if state.Provider == FranceConnectProvider {
+	if state.Provider == oidcprovider.FranceConnectProvider {
 		u.Add("franceconnect", "true")
 		if c.QueryParam("nonce") != state.Nonce {
 			return renderError(c, nil, http.StatusBadRequest, "Sorry, an error occurred.")
@@ -328,9 +362,9 @@ func Login(c echo.Context) error {
 		if state != nil && state.OIDCContext != "" {
 			contextName = state.OIDCContext
 		}
-		conf, err = getGenericConfig(contextName)
+		conf, err = oidcprovider.LoadConfig(contextName)
 	} else {
-		conf, err = getFranceConnectConfig(inst.ContextName)
+		conf, err = oidcprovider.LoadFranceConnectConfig(inst.ContextName)
 	}
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
@@ -474,7 +508,11 @@ func TwoFactor(c echo.Context) error {
 	trustedDeviceToken := []byte(c.FormValue("trusted-device-token"))
 
 	inst := middlewares.GetInstance(c)
-	conf, err := getGenericConfig(inst.ContextName)
+	conf, err := oidcprovider.LoadConfig(
+		inst.ContextName,
+		oidcprovider.RequireUserInfoURL,
+		oidcprovider.RequireUserInfoMapping,
+	)
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
@@ -726,7 +764,7 @@ func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string
 
 	contexts := make([]string, 0)
 	for contextName := range config.GetConfig().Authentication {
-		conf, err := getGenericConfig(contextName)
+		conf, err := oidcprovider.LoadConfig(contextName, oidcprovider.RequireClientID)
 		if err != nil {
 			logger.WithNamespace("oidc").Debugf(
 				"Skipping OIDC context %s during logout resolution: invalid config: %s",
@@ -748,7 +786,7 @@ func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string
 			)
 			continue
 		}
-		expectedIssuer, err := getOIDCIssuer(contextName, conf)
+		expectedIssuer, err := oidcprovider.GetIssuer(contextName, conf)
 		if err != nil {
 			logger.WithNamespace("oidc").Debugf(
 				"Skipping OIDC context %s during logout resolution: cannot resolve issuer: %s",
@@ -775,34 +813,16 @@ func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string
 
 func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer bool) (*logoutContext, error) {
 	logger.WithNamespace("oidc").Debugf("Verifying logout token for context %s", contextName)
-	conf, err := getGenericConfig(contextName)
+	conf, err := oidcprovider.LoadConfig(
+		contextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireIDTokenKeyURL,
+	)
 	if err != nil {
 		return nil, err
 	}
-	if conf.IDTokenKeyURL == "" {
-		return nil, errors.New("id_token_jwk_url is not configured")
-	}
-	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
+	claims, err := oidcprovider.VerifyLogoutToken(logoutToken, contextName, conf, strictIssuer)
 	if err != nil {
-		return nil, err
-	}
-
-	token, err := jwt.Parse(logoutToken, func(token *jwt.Token) (interface{}, error) {
-		return ChooseKeyForIDToken(keys, token)
-	})
-	if err != nil {
-		return nil, err
-	}
-	if !token.Valid {
-		return nil, ErrInvalidToken
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, ErrInvalidToken
-	}
-	expectedIssuer, issuerErr := getOIDCIssuer(contextName, conf)
-	if err := validateLogoutTokenClaims(claims, conf, expectedIssuer, strictIssuer && issuerErr == nil); err != nil {
 		return nil, err
 	}
 	issuer, _ := claims.GetIssuer()
@@ -818,54 +838,6 @@ func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer b
 		Conf:        conf,
 		Claims:      claims,
 	}, nil
-}
-
-func validateLogoutTokenClaims(claims jwt.MapClaims, conf *Config, expectedIssuer string, requireIssuerMatch bool) error {
-	issuer, err := claims.GetIssuer()
-	if err != nil || issuer == "" {
-		return errors.New("logout token is missing iss")
-	}
-	if requireIssuerMatch && expectedIssuer != issuer {
-		return fmt.Errorf("logout token issuer mismatch: %s", issuer)
-	}
-
-	aud, err := claims.GetAudience()
-	if err != nil || !audienceContains(aud, conf.ClientID) {
-		return errors.New("logout token audience mismatch")
-	}
-
-	iat, err := claims.GetIssuedAt()
-	if err != nil || iat == nil {
-		return errors.New("logout token is missing iat")
-	}
-	if iat.Time.After(time.Now().Add(5 * time.Minute)) {
-		return errors.New("logout token iat is in the future")
-	}
-
-	jti, _ := claims["jti"].(string)
-	if jti == "" {
-		return errors.New("logout token is missing jti")
-	}
-
-	events, ok := claims["events"].(map[string]interface{})
-	if !ok {
-		if rawEvents, ok := claims["events"].(jwt.MapClaims); ok {
-			events = rawEvents
-		} else {
-			return errors.New("logout token is missing events")
-		}
-	}
-	if _, ok := events[backchannelLogoutEvent]; !ok {
-		return errors.New("logout token is missing backchannel logout event")
-	}
-
-	sid, _ := claims["sid"].(string)
-	sub, _ := claims["sub"].(string)
-	if sid == "" && sub == "" {
-		return errors.New("logout token must contain sid or sub")
-	}
-
-	return nil
 }
 
 func applyLogoutForContext(verified logoutContext) error {
@@ -951,32 +923,6 @@ func audienceContains(audiences []string, clientID string) bool {
 	return false
 }
 
-func getOIDCIssuer(contextName string, conf *Config) (string, error) {
-	if conf.Issuer != "" {
-		logger.WithNamespace("oidc").Debugf(
-			"Using configured issuer for OIDC context %s",
-			contextName,
-		)
-		return conf.Issuer, nil
-	}
-	logger.WithNamespace("oidc").Debugf(
-		"Resolving issuer from OIDC discovery for context %s",
-		contextName,
-	)
-	oidcConfig, err := fetchOIDCConfiguration(conf.TokenURL)
-	if err != nil {
-		return "", err
-	}
-	if oidcConfig.Issuer == "" {
-		return "", fmt.Errorf("no issuer found for OIDC context %s", contextName)
-	}
-	logger.WithNamespace("oidc").Debugf(
-		"Using discovered issuer for OIDC context %s",
-		contextName,
-	)
-	return oidcConfig.Issuer, nil
-}
-
 // validateDelegatedCode validates a delegated code and returns the associated session ID.
 // Returns an error if the code is invalid or doesn't match the instance.
 func validateDelegatedCode(inst *instance.Instance, code string) (string, error) {
@@ -997,14 +943,22 @@ func validateDelegatedCode(inst *instance.Instance, code string) (string, error)
 
 // validateOIDCToken validates an OIDC token (id_token or access_token) for the instance.
 func validateOIDCToken(inst *instance.Instance, idToken, oidcToken string) error {
-	conf, err := getGenericConfig(inst.ContextName)
-	if err != nil || !conf.AllowOAuthToken {
-		return errors.New("this endpoint is not enabled")
-	}
-
+	var err error
 	if idToken != "" {
+		conf, err := oidcprovider.LoadConfig(inst.ContextName, oidcprovider.RequireIDTokenKeyURL)
+		if err != nil || !conf.AllowOAuthToken {
+			return errors.New("this endpoint is not enabled")
+		}
 		err = checkIDToken(conf, inst, idToken)
 	} else {
+		conf, err := oidcprovider.LoadConfig(
+			inst.ContextName,
+			oidcprovider.RequireUserInfoURL,
+			oidcprovider.RequireUserInfoMapping,
+		)
+		if err != nil || !conf.AllowOAuthToken {
+			return errors.New("this endpoint is not enabled")
+		}
 		err = checkDomainFromUserInfo(conf, inst, oidcToken)
 	}
 	return err
@@ -1159,93 +1113,8 @@ func AccessToken(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// Config is the config to log in a user with an OpenID Connect identity
-// provider.
-type Config struct {
-	Provider            ProviderOIDC
-	AllowOAuthToken     bool
-	AllowCustomInstance bool
-	Issuer              string
-	ClientID            string
-	ClientSecret        string
-	Scope               string
-	RedirectURI         string
-	AuthorizeURL        string
-	TokenURL            string
-	UserInfoURL         string
-	UserInfoField       string
-	UserInfoPrefix      string
-	UserInfoSuffix      string
-	IDTokenKeyURL       string
-}
-
-func getGenericConfig(context string) (*Config, error) {
-	oidc, ok := config.GetOIDC(context)
-	if !ok {
-		return nil, errors.New("No OIDC is configured for this context")
-	}
-
-	// Optional fields
-	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
-	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
-	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
-	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
-	idTokenKeyURL, _ := oidc["id_token_jwk_url"].(string)
-	issuer, _ := oidc["issuer"].(string)
-
-	// Mandatory fields
-	clientID, ok := oidc["client_id"].(string)
-	if !ok {
-		return nil, errors.New("The client_id is missing for this context")
-	}
-	clientSecret, ok := oidc["client_secret"].(string)
-	if !ok {
-		return nil, errors.New("The client_secret is missing for this context")
-	}
-	scope, ok := oidc["scope"].(string)
-	if !ok {
-		return nil, errors.New("The scope is missing for this context")
-	}
-	redirectURI, ok := oidc["redirect_uri"].(string)
-	if !ok {
-		return nil, errors.New("The redirect_uri is missing for this context")
-	}
-	authorizeURL, ok := oidc["authorize_url"].(string)
-	if !ok {
-		return nil, errors.New("The authorize_url is missing for this context")
-	}
-	tokenURL, ok := oidc["token_url"].(string)
-	if !ok {
-		return nil, errors.New("The token_url is missing for this context")
-	}
-	userInfoURL, ok := oidc["userinfo_url"].(string)
-	if !ok {
-		return nil, errors.New("The userinfo_url is missing for this context")
-	}
-	userInfoField, ok := oidc["userinfo_instance_field"].(string)
-	if !ok && !allowCustomInstance {
-		return nil, errors.New("The userinfo_instance_field is missing for this context")
-	}
-
-	config := &Config{
-		Provider:            GenericProvider,
-		AllowOAuthToken:     allowOAuthToken,
-		AllowCustomInstance: allowCustomInstance,
-		Issuer:              issuer,
-		ClientID:            clientID,
-		ClientSecret:        clientSecret,
-		Scope:               scope,
-		RedirectURI:         redirectURI,
-		AuthorizeURL:        authorizeURL,
-		TokenURL:            tokenURL,
-		UserInfoURL:         userInfoURL,
-		UserInfoField:       userInfoField,
-		UserInfoPrefix:      userInfoPrefix,
-		UserInfoSuffix:      userInfoSuffix,
-		IDTokenKeyURL:       idTokenKeyURL,
-	}
-	return config, nil
-}
+// Config is the config to log in a user with an OpenID Connect identity provider.
+type Config = oidcprovider.Config
 
 func getPublicOIDCConfig() (*Config, string, error) {
 	// Get public OIDC context name from default context
@@ -1253,61 +1122,17 @@ func getPublicOIDCConfig() (*Config, string, error) {
 	if contextName == "" {
 		return nil, "", errors.New("No public OIDC context is configured")
 	}
-	conf, err := getGenericConfig(contextName)
+	conf, err := oidcprovider.LoadConfig(
+		contextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		return nil, "", err
 	}
 	return conf, contextName, nil
-}
-
-func getFranceConnectConfig(context string) (*Config, error) {
-	oidc, ok := config.GetFranceConnect(context)
-	if !ok {
-		return nil, errors.New("No FranceConnect is configured for this context")
-	}
-
-	// Mandatory fields
-	clientID, ok := oidc["client_id"].(string)
-	if !ok {
-		return nil, errors.New("The client_id is missing for this context")
-	}
-	clientSecret, ok := oidc["client_secret"].(string)
-	if !ok {
-		return nil, errors.New("The client_secret is missing for this context")
-	}
-	scope, ok := oidc["scope"].(string)
-	if !ok {
-		return nil, errors.New("The scope is missing for this context")
-	}
-	redirectURI, ok := oidc["redirect_uri"].(string)
-	if !ok {
-		return nil, errors.New("The redirect_uri is missing for this context")
-	}
-	authorizeURL, ok := oidc["authorize_url"].(string)
-	if !ok {
-		authorizeURL = "https://app.franceconnect.gouv.fr/api/v1/authorize"
-	}
-	tokenURL, ok := oidc["token_url"].(string)
-	if !ok {
-		tokenURL = "https://app.franceconnect.gouv.fr/api/v1/token"
-	}
-	userInfoURL, ok := oidc["userinfo_url"].(string)
-	if !ok {
-		userInfoURL = "https://app.franceconnect.gouv.fr/api/v1/userinfo"
-	}
-
-	config := &Config{
-		Provider:            FranceConnectProvider,
-		AllowCustomInstance: true,
-		ClientID:            clientID,
-		ClientSecret:        clientSecret,
-		Scope:               scope,
-		RedirectURI:         redirectURI,
-		AuthorizeURL:        authorizeURL,
-		TokenURL:            tokenURL,
-		UserInfoURL:         userInfoURL,
-	}
-	return config, nil
 }
 
 func getLoginHint(inst *instance.Instance) string {
@@ -1348,7 +1173,7 @@ func makeStartURL(inst *instance.Instance, domain, redirect, confirm, oidcContex
 	if loginHint != "" {
 		vv.Add("login_hint", loginHint)
 	}
-	if conf.Provider == FranceConnectProvider {
+	if conf.Provider == oidcprovider.FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
 	}
 	u.RawQuery = vv.Encode()
@@ -1375,7 +1200,7 @@ func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string
 	if loginHint != "" {
 		vv.Add("login_hint", loginHint)
 	}
-	if conf.Provider == FranceConnectProvider {
+	if conf.Provider == oidcprovider.FranceConnectProvider {
 		vv.Add("acr_values", "eidas1")
 	}
 	u.RawQuery = vv.Encode()
@@ -1384,55 +1209,6 @@ func makeSharingStartURL(inst *instance.Instance, sharingID, sharingState string
 
 var oidcClient = &http.Client{
 	Timeout: 15 * time.Second,
-}
-
-func fetchOIDCConfiguration(tokenURL string) (*oauth.OIDCConfiguration, error) {
-	parsedURL, err := url.Parse(tokenURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid OIDC token URL: %w", err)
-	}
-
-	wellKnownURL := &url.URL{
-		Scheme: parsedURL.Scheme,
-		Host:   parsedURL.Host,
-		Path:   "/.well-known/openid-configuration",
-	}
-
-	cache := config.GetConfig().CacheStorage
-	cacheKey := "oidc-config:" + wellKnownURL.String()
-
-	data, ok := cache.Get(cacheKey)
-	if !ok {
-		req, err := http.NewRequest(http.MethodGet, wellKnownURL.String(), nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-		req.Header.Add("User-Agent", build.UserAgent())
-
-		res, err := oidcClient.Do(req)
-		if err != nil {
-			logger.WithNamespace("oidc").Errorf("Error fetching OpenID configuration: %s", err)
-			return nil, fmt.Errorf("failed to fetch OpenID configuration: %w", err)
-		}
-		defer res.Body.Close()
-
-		if res.StatusCode != http.StatusOK {
-			logger.WithNamespace("oidc").Warnf("Cannot fetch OpenID configuration: %d", res.StatusCode)
-			return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
-		}
-
-		data, err = io.ReadAll(res.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
-		}
-		cache.Set(cacheKey, data, cacheTTL)
-	}
-
-	var oidcConfig oauth.OIDCConfiguration
-	if err := json.Unmarshal(data, &oidcConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse OpenID configuration: %w", err)
-	}
-	return &oidcConfig, nil
 }
 
 type tokenResponse struct {
@@ -1449,7 +1225,7 @@ func getToken(conf *Config, code string) (*tokenResponse, error) {
 
 	// FranceConnect expects the client_id+client_secret in the body, not in a
 	// Authentication header like normal OIDC.
-	if conf.Provider == FranceConnectProvider {
+	if conf.Provider == oidcprovider.FranceConnectProvider {
 		data.Add("client_id", conf.ClientID)
 		data.Add("client_secret", conf.ClientSecret)
 	}
@@ -1462,7 +1238,7 @@ func getToken(conf *Config, code string) (*tokenResponse, error) {
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Add(echo.HeaderAccept, echo.MIMEApplicationJSON)
 
-	if conf.Provider == GenericProvider {
+	if conf.Provider == oidcprovider.GenericProvider {
 		auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
 		req.Header.Add(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString(auth))
 	}
@@ -1513,12 +1289,12 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	if conf.AllowCustomInstance {
 		sub, ok := params["sub"].(string)
 		expected := inst.OIDCID
-		if conf.Provider == FranceConnectProvider {
+		if conf.Provider == oidcprovider.FranceConnectProvider {
 			expected = inst.FranceConnectID
 		}
 		if !ok || sub == "" || sub != expected {
 			inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, expected)
-			if conf.Provider == FranceConnectProvider {
+			if conf.Provider == oidcprovider.FranceConnectProvider {
 				return ErrFranceConnectFailed
 			}
 			return ErrAuthenticationFailed
@@ -1608,134 +1384,17 @@ func findInstanceBySub(sub, contextName string) (*instance.Instance, error) {
 }
 
 func checkIDToken(conf *Config, inst *instance.Instance, idToken string) error {
-	keys, err := GetIDTokenKeys(conf.IDTokenKeyURL)
+	claims, err := oidcprovider.VerifyIDToken(idToken, conf)
 	if err != nil {
-		return err
-	}
-
-	token, err := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
-		return ChooseKeyForIDToken(keys, token)
-	})
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on jwt.Parse: %s", err)
+		logger.WithNamespace("oidc").Errorf("Error on VerifyIDToken: %s", err)
 		return ErrInvalidToken
 	}
-	if !token.Valid {
-		logger.WithNamespace("oidc").Errorf("%s: %#v", ErrInvalidToken, token)
-		return ErrInvalidToken
-	}
-
-	claims := token.Claims.(jwt.MapClaims)
 	if claims["sub"] == "" || claims["sub"] != inst.OIDCID {
 		inst.Logger().WithNamespace("oidc").Errorf("Invalid sub: %s != %s", claims["sub"], inst.OIDCID)
 		return ErrAuthenticationFailed
 	}
 
 	return nil
-}
-
-type jwKey struct {
-	Alg  string `json:"alg"`
-	Type string `json:"kty"`
-	ID   string `json:"kid"`
-	Use  string `json:"use"`
-	E    string `json:"e"`
-	N    string `json:"n"`
-}
-
-const cacheTTL = 24 * time.Hour
-
-var keysClient = &http.Client{
-	Timeout: 10 * time.Second,
-	Transport: &http.Transport{
-		DisableKeepAlives: true,
-	},
-}
-
-// GetIDTokenKeys returns the keys that can be used to verify that an OIDC
-// id_token is valid.
-func GetIDTokenKeys(keyURL string) ([]*jwKey, error) {
-	cache := config.GetConfig().CacheStorage
-	cacheKey := "oidc-jwk:" + keyURL
-
-	data, ok := cache.Get(cacheKey)
-	if !ok {
-		var err error
-		data, err = getKeysFromHTTP(keyURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var keys struct {
-		Keys []*jwKey `json:"keys"`
-	}
-	if err := json.Unmarshal(data, &keys); err != nil {
-		return nil, err
-	}
-	if !ok {
-		cache.Set(cacheKey, data, cacheTTL)
-	}
-	return keys.Keys, nil
-}
-
-func getKeysFromHTTP(keyURL string) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, keyURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("User-Agent", build.UserAgent())
-	res, err := keysClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		logger.WithNamespace("oidc").Warnf("getKeys cannot fetch jwk: %d", res.StatusCode)
-		return nil, errors.New("cannot fetch jwk")
-	}
-	return io.ReadAll(res.Body)
-}
-
-// ChooseKeyForIDToken can be used to check an id_token as a JWT.
-func ChooseKeyForIDToken(keys []*jwKey, token *jwt.Token) (interface{}, error) {
-	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-		return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-	}
-
-	var key *jwKey
-	for _, k := range keys {
-		if k.Use != "sig" || k.Type != "RSA" {
-			continue
-		}
-		if k.ID == token.Header["kid"] {
-			return loadKey(k)
-		}
-		key = k
-	}
-	if key == nil {
-		return nil, errors.New("Key not found")
-	}
-	return loadKey(key)
-}
-
-func loadKey(raw *jwKey) (interface{}, error) {
-	var n, e big.Int
-	nn, err := base64.RawURLEncoding.DecodeString(raw.N)
-	if err != nil {
-		return nil, err
-	}
-	n.SetBytes(nn)
-	ee, err := base64.RawURLEncoding.DecodeString(raw.E)
-	if err != nil {
-		return nil, err
-	}
-	e.SetBytes(ee)
-
-	var key rsa.PublicKey
-	key.N = &n
-	key.E = int(e.Int64())
-	return &key, nil
 }
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string, extras ...map[string]interface{}) error {
@@ -1802,9 +1461,17 @@ func GetDelegatedCode(c echo.Context) error {
 	var conf *Config
 	var err error
 	if provider == "franceconnect" {
-		conf, err = getFranceConnectConfig(contextName)
+		conf, err = oidcprovider.LoadFranceConnectConfig(
+			contextName,
+			oidcprovider.RequireUserInfoURL,
+			oidcprovider.RequireUserInfoMapping,
+		)
 	} else {
-		conf, err = getGenericConfig(contextName)
+		conf, err = oidcprovider.LoadConfig(
+			contextName,
+			oidcprovider.RequireUserInfoURL,
+			oidcprovider.RequireUserInfoMapping,
+		)
 	}
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -1881,7 +1548,13 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 		})
 	}
 
-	conf, err := getGenericConfig(contextName)
+	conf, err := oidcprovider.LoadConfig(
+		contextName,
+		oidcprovider.RequireClientID,
+		oidcprovider.RequireScope,
+		oidcprovider.RequireRedirectURI,
+		oidcprovider.RequireAuthorizeURL,
+	)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}

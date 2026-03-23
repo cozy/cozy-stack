@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
+	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -1158,54 +1159,54 @@ func TestValidateLogoutTokenClaims(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "sid")
 		claims["sub"] = "claims-sub"
-		require.NoError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true))
+		require.NoError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true))
 	})
 
 	t.Run("MissingIssuer", func(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "iss")
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iss")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iss")
 	})
 
 	t.Run("WrongAudience", func(t *testing.T) {
 		claims := makeClaims()
 		claims["aud"] = "other-client-id"
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token audience mismatch")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token audience mismatch")
 	})
 
 	t.Run("MissingIAT", func(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "iat")
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iat")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing iat")
 	})
 
 	t.Run("FutureIAT", func(t *testing.T) {
 		claims := makeClaims()
 		claims["iat"] = float64(time.Now().Add(10 * time.Minute).Unix())
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token iat is in the future")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token iat is in the future")
 	})
 
 	t.Run("MissingJTI", func(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "jti")
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing jti")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing jti")
 	})
 
 	t.Run("MissingEvents", func(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "events")
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing events")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token is missing events")
 	})
 
 	t.Run("MissingSIDAndSub", func(t *testing.T) {
 		claims := makeClaims()
 		delete(claims, "sid")
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token must contain sid or sub")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/claims", true), "logout token must contain sid or sub")
 	})
 
 	t.Run("IssuerMismatchWhenStrict", func(t *testing.T) {
 		claims := makeClaims()
-		require.EqualError(t, validateLogoutTokenClaims(claims, conf, "https://issuer.example/other", true), "logout token issuer mismatch: https://issuer.example/claims")
+		require.EqualError(t, oidcprovider.ValidateLogoutTokenClaims(claims, conf, "https://issuer.example/other", true), "logout token issuer mismatch: https://issuer.example/claims")
 	})
 }
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	oidcprovider "github.com/cozy/cozy-stack/model/oidc/provider"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -21,7 +22,7 @@ const (
 type stateHolder struct {
 	id           string
 	expiresAt    int64
-	Provider     ProviderOIDC
+	Provider     oidcprovider.Kind
 	Instance     string
 	Redirect     string
 	Nonce        string
@@ -31,14 +32,7 @@ type stateHolder struct {
 	SharingState string
 }
 
-type ProviderOIDC int
-
-const (
-	GenericProvider ProviderOIDC = iota
-	FranceConnectProvider
-)
-
-func newStateHolder(domain, redirect, confirm, oidcContext string, provider ProviderOIDC) *stateHolder {
+func newStateHolder(domain, redirect, confirm, oidcContext string, provider oidcprovider.Kind) *stateHolder {
 	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	return &stateHolder{
@@ -52,7 +46,7 @@ func newStateHolder(domain, redirect, confirm, oidcContext string, provider Prov
 	}
 }
 
-func newSharingStateHolder(domain, sharingID, sharingState string, provider ProviderOIDC, contextName string) *stateHolder {
+func newSharingStateHolder(domain, sharingID, sharingState string, provider oidcprovider.Kind, contextName string) *stateHolder {
 	id := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(24))
 	return &stateHolder{
