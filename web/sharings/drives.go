@@ -515,6 +515,13 @@ func OpenOffice(c echo.Context) error {
 func CreateSharedDriveShareByLinkHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	opts := webperm.CreateShareByLinkOptions{
 		ValidatePermissions: func(perms permission.Set) error {
+			callerReadOnly, err := isSharedDriveCallerReadOnly(c, inst, s)
+			if err != nil {
+				return err
+			}
+			if callerReadOnly && !isSharedDrivePermissionSetReadOnly(perms) {
+				return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+			}
 			if err := validateSharedDrivePermission(c, inst, s, perms); err != nil {
 				return err
 			}
@@ -672,12 +679,23 @@ func extractSharedDrivePermissionTargetIDs(c echo.Context, inst *instance.Instan
 // request. For recipient requests, we resolve the member from the drive token.
 // For owner requests, we use the current instance domain.
 func getSharedDriveCallerDomain(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (string, bool) {
-	currentPerm, err := middlewares.GetPermission(c)
+	actorPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return "", false
 	}
+	return getSharedDriveCallerDomainFromPermission(c, inst, s, actorPerm)
+}
 
-	switch currentPerm.Type {
+func getSharedDriveCallerDomainFromPermission(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	actorPerm *permission.Permission,
+) (string, bool) {
+	if actorPerm == nil {
+		return "", false
+	}
+	switch actorPerm.Type {
 	// Public share tokens represent anonymous/public access and must never be
 	// treated as a caller identity for shared-drive permission mutations.
 	case permission.TypeShareByLink, permission.TypeSharePreview:
@@ -716,15 +734,15 @@ func isSharePermissionToken(perm *permission.Permission) bool {
 }
 
 func isSharedDriveCallerReadOnly(c echo.Context, inst *instance.Instance, s *sharing.Sharing) (bool, error) {
-	currentPerm, err := middlewares.GetPermission(c)
+	actorPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return false, err
 	}
-	if currentPerm == nil {
+	if actorPerm == nil {
 		return false, echo.NewHTTPError(http.StatusUnauthorized, "no permission")
 	}
 
-	switch currentPerm.Type {
+	switch actorPerm.Type {
 	case permission.TypeShareByLink, permission.TypeSharePreview:
 		return false, jsonapi.Forbidden(errors.New("public share token cannot access shared-drive links"))
 
@@ -750,10 +768,17 @@ func isSharedDriveCallerReadOnly(c echo.Context, inst *instance.Instance, s *sha
 }
 
 func isSharedDriveShareByLinkReadOnly(perm *permission.Permission) bool {
-	if perm == nil || len(perm.Permissions) == 0 {
+	if perm == nil {
 		return false
 	}
-	for _, rule := range perm.Permissions {
+	return isSharedDrivePermissionSetReadOnly(perm.Permissions)
+}
+
+func isSharedDrivePermissionSetReadOnly(perms permission.Set) bool {
+	if len(perms) == 0 {
+		return false
+	}
+	for _, rule := range perms {
 		if !rule.Verbs.ReadOnly() {
 			return false
 		}
@@ -761,53 +786,179 @@ func isSharedDriveShareByLinkReadOnly(perm *permission.Permission) bool {
 	return true
 }
 
-func authorizeSharedDrivePermissionMutation(
-	c echo.Context,
-	inst *instance.Instance,
-	s *sharing.Sharing,
-	perm *permission.Permission,
-) error {
-	currentPerm, _ := middlewares.GetPermission(c)
-	callerDomain, identityResolved := getSharedDriveCallerDomain(c, inst, s)
-	return CheckSharedDrivePermissionMutationAuthorization(
-		s,
-		perm,
-		currentPerm,
-		callerDomain,
-		identityResolved,
-	)
+type sharedDrivePermissionMutationContext struct {
+	existingPerm     *permission.Permission
+	actorPerm        *permission.Permission
+	callerReadOnly   bool
+	callerDomain     string
+	identityResolved bool
+}
+
+type sharedDrivePermissionPatchContext struct {
+	mutation *sharedDrivePermissionMutationContext
+	patch    permission.Permission
 }
 
 // CheckSharedDrivePermissionMutationAuthorization validates whether the caller can
 // mutate a shared-drive share-by-link permission.
 func CheckSharedDrivePermissionMutationAuthorization(
 	s *sharing.Sharing,
-	perm *permission.Permission,
-	currentPerm *permission.Permission,
+	existingPerm *permission.Permission,
+	actorPerm *permission.Permission,
 	callerDomain string,
 	identityResolved bool,
+	callerReadOnly bool,
 ) error {
 	// Public share tokens are never allowed to mutate permissions.
-	if currentPerm != nil &&
-		(currentPerm.Type == permission.TypeShareByLink || currentPerm.Type == permission.TypeSharePreview) {
+	if actorPerm != nil &&
+		(actorPerm.Type == permission.TypeShareByLink || actorPerm.Type == permission.TypeSharePreview) {
 		return jsonapi.Forbidden(errors.New("public share token cannot modify this permission"))
 	}
+	if actorPerm != nil &&
+		actorPerm.Type == permission.TypeShareInteract &&
+		callerReadOnly &&
+		!isSharedDriveShareByLinkReadOnly(existingPerm) {
+		return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+	}
 
-	isOwner := s.Owner && !isSharePermissionToken(currentPerm)
+	isOwner := s.Owner && !isSharePermissionToken(actorPerm)
 	isCreator := false
-	if callerDomain != "" && perm.Metadata != nil && len(perm.Metadata.UpdatedByApps) > 0 {
-		creatorDomain := perm.Metadata.UpdatedByApps[0].Instance
+	if callerDomain != "" && existingPerm.Metadata != nil && len(existingPerm.Metadata.UpdatedByApps) > 0 {
+		creatorDomain := existingPerm.Metadata.UpdatedByApps[0].Instance
 		isCreator = creatorDomain == callerDomain
 	}
 
 	if !isOwner && !isCreator {
-		if currentPerm != nil && currentPerm.Type == permission.TypeShareInteract && !identityResolved {
+		if actorPerm != nil && actorPerm.Type == permission.TypeShareInteract && !identityResolved {
 			return jsonapi.Forbidden(errors.New("cannot verify caller identity for this shared-drive token"))
 		}
 		return jsonapi.Forbidden(errors.New("only creator or owner can modify this permission"))
 	}
 
 	return nil
+}
+
+func resolveSharedDriveMutationActor(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+) (*sharedDrivePermissionMutationContext, error) {
+	actorPerm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := &sharedDrivePermissionMutationContext{
+		actorPerm: actorPerm,
+	}
+	if actorPerm != nil && actorPerm.Type == permission.TypeShareInteract {
+		ctx.callerReadOnly, err = isSharedDriveCallerReadOnly(c, inst, s)
+		if err != nil {
+			return nil, err
+		}
+	}
+	ctx.callerDomain, ctx.identityResolved = getSharedDriveCallerDomainFromPermission(c, inst, s, actorPerm)
+	return ctx, nil
+}
+
+func ensureSharedDrivePermissionBelongsToDrive(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	perm *permission.Permission,
+) error {
+	if err := validateSharedDrivePermission(c, inst, s, perm.Permissions); err != nil {
+		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
+	}
+	return nil
+}
+
+func validateReadOnlySharedDrivePermissionPatch(
+	actorPerm *permission.Permission,
+	callerReadOnly bool,
+	patch permission.Permission,
+) error {
+	if actorPerm == nil || actorPerm.Type != permission.TypeShareInteract || !callerReadOnly {
+		return nil
+	}
+	if len(patch.Permissions) > 0 {
+		return jsonapi.Forbidden(errors.New("write access denied: read-only member"))
+	}
+	return nil
+}
+
+func prepareSharedDrivePermissionMutation(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	permID string,
+) (*sharedDrivePermissionMutationContext, error) {
+	existingPerm, err := permission.GetPermissionByIDIncludingExpired(inst, permID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, jsonapi.NotFound(errors.New("permission not found"))
+		}
+		return nil, err
+	}
+
+	if existingPerm.Type != permission.TypeShareByLink {
+		return nil, jsonapi.BadRequest(errors.New("not a share-by-link permission"))
+	}
+
+	if err := ensureSharedDrivePermissionBelongsToDrive(c, inst, s, existingPerm); err != nil {
+		return nil, err
+	}
+
+	ctx, err := resolveSharedDriveMutationActor(c, inst, s)
+	if err != nil {
+		return nil, err
+	}
+	ctx.existingPerm = existingPerm
+
+	if err := CheckSharedDrivePermissionMutationAuthorization(
+		s,
+		existingPerm,
+		ctx.actorPerm,
+		ctx.callerDomain,
+		ctx.identityResolved,
+		ctx.callerReadOnly,
+	); err != nil {
+		return nil, err
+	}
+
+	return ctx, nil
+}
+
+func prepareSharedDrivePermissionPatch(
+	c echo.Context,
+	inst *instance.Instance,
+	s *sharing.Sharing,
+	permID string,
+) (*sharedDrivePermissionPatchContext, error) {
+	mutation, err := prepareSharedDrivePermissionMutation(c, inst, s, permID)
+	if err != nil {
+		return nil, err
+	}
+
+	var patch permission.Permission
+	if _, err := jsonapi.Bind(c.Request().Body, &patch); err != nil {
+		return nil, err
+	}
+
+	if err := ValidateSharedDrivePermissionPatch(patch); err != nil {
+		return nil, err
+	}
+	if err := validateReadOnlySharedDrivePermissionPatch(mutation.actorPerm, mutation.callerReadOnly, patch); err != nil {
+		return nil, err
+	}
+	if err := ValidateSharedDrivePermissionSetPatch(c, inst, s, mutation.actorPerm, mutation.existingPerm, patch); err != nil {
+		return nil, err
+	}
+
+	return &sharedDrivePermissionPatchContext{
+		mutation: mutation,
+		patch:    patch,
+	}, nil
 }
 
 // ValidateSharedDrivePermissionPatch validates the payload for patching a
@@ -836,14 +987,14 @@ func ValidateSharedDrivePermissionSetPatch(
 	c echo.Context,
 	inst *instance.Instance,
 	s *sharing.Sharing,
-	currentPerm *permission.Permission,
+	actorPerm *permission.Permission,
 	existingPerm *permission.Permission,
 	patch permission.Permission,
 ) error {
 	if len(patch.Permissions) == 0 {
 		return nil
 	}
-	if currentPerm == nil {
+	if actorPerm == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "no permission")
 	}
 
@@ -862,7 +1013,7 @@ func ValidateSharedDrivePermissionSetPatch(
 	if err := validateSharedDrivePermission(c, inst, s, patch.Permissions); err != nil {
 		return err
 	}
-	if err := permission.CheckSetPermissions(patch.Permissions, currentPerm); err != nil {
+	if err := permission.CheckSetPermissions(patch.Permissions, actorPerm); err != nil {
 		return err
 	}
 	return nil
@@ -941,27 +1092,12 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 		return jsonapi.BadRequest(errors.New("missing permission ID"))
 	}
 
-	perm, err := permission.GetPermissionByIDIncludingExpired(inst, permID)
+	ctx, err := prepareSharedDrivePermissionMutation(c, inst, s, permID)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return jsonapi.NotFound(errors.New("permission not found"))
-		}
 		return err
 	}
 
-	if perm.Type != permission.TypeShareByLink {
-		return jsonapi.BadRequest(errors.New("not a share-by-link permission"))
-	}
-
-	if err := validateSharedDrivePermission(c, inst, s, perm.Permissions); err != nil {
-		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
-	}
-
-	if err := authorizeSharedDrivePermissionMutation(c, inst, s, perm); err != nil {
-		return err
-	}
-
-	if err := perm.Revoke(inst); err != nil {
+	if err := ctx.existingPerm.Revoke(inst); err != nil {
 		return err
 	}
 
@@ -969,69 +1105,38 @@ func RevokeSharedDrivePermission(c echo.Context, inst *instance.Instance, s *sha
 }
 
 // PatchSharedDrivePermissionHandler modifies a share-by-link permission in a shared drive.
-// Only the creator or the drive owner can modify. Codes are immutable, and
-// permission updates must keep the same target.
+// Only the creator or the drive owner can modify. Codes are immutable,
+// permission updates must keep the same target, and read-only recipients can
+// only patch password / expiration on their own read-only links.
 func PatchSharedDrivePermissionHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	permID := c.Param("perm-id")
 	if permID == "" {
 		return jsonapi.BadRequest(errors.New("missing permission ID"))
 	}
 
-	perm, err := permission.GetPermissionByIDIncludingExpired(inst, permID)
-	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return jsonapi.NotFound(errors.New("permission not found"))
-		}
-		return err
-	}
-
-	if perm.Type != permission.TypeShareByLink {
-		return jsonapi.BadRequest(errors.New("not a share-by-link permission"))
-	}
-
-	if err := validateSharedDrivePermission(c, inst, s, perm.Permissions); err != nil {
-		return jsonapi.Forbidden(errors.New("permission does not belong to this shared drive"))
-	}
-
-	if err := authorizeSharedDrivePermissionMutation(c, inst, s, perm); err != nil {
-		return err
-	}
-	currentPerm, err := middlewares.GetPermission(c)
+	ctx, err := prepareSharedDrivePermissionPatch(c, inst, s, permID)
 	if err != nil {
 		return err
 	}
-
-	// Parse the patch request
-	var patch permission.Permission
-	if _, err := jsonapi.Bind(c.Request().Body, &patch); err != nil {
+	if err := ApplySharedDrivePermissionPatch(ctx.mutation.existingPerm, ctx.patch); err != nil {
 		return err
 	}
 
-	if err := ValidateSharedDrivePermissionPatch(patch); err != nil {
-		return err
-	}
-	if err := ValidateSharedDrivePermissionSetPatch(c, inst, s, currentPerm, perm, patch); err != nil {
-		return err
-	}
-	if err := ApplySharedDrivePermissionPatch(perm, patch); err != nil {
-		return err
-	}
-
-	if perm.Metadata != nil {
-		perm.Metadata.UpdatedAt = time.Now()
+	if ctx.mutation.existingPerm.Metadata != nil {
+		ctx.mutation.existingPerm.Metadata.UpdatedAt = time.Now()
 	}
 
 	// Save
-	if err := couchdb.UpdateDoc(inst, perm); err != nil {
+	if err := couchdb.UpdateDoc(inst, ctx.mutation.existingPerm); err != nil {
 		return err
 	}
 
 	// Don't send the password hash to the client
-	if perm.Password != nil {
-		perm.Password = true
+	if ctx.mutation.existingPerm.Password != nil {
+		ctx.mutation.existingPerm.Password = true
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &webperm.APIPermission{Permission: perm}, nil)
+	return jsonapi.Data(c, http.StatusOK, &webperm.APIPermission{Permission: ctx.mutation.existingPerm}, nil)
 }
 
 // drivesRoutes sets the routing for the shared drives
@@ -1122,18 +1227,10 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 				return err
 			}
 
-			// For write operations, check if the user has read-only access
-			// POST /downloads and POST /archive are read operations (create temporary links)
-			if method == http.MethodPost || method == http.MethodPut ||
-				method == http.MethodPatch || method == http.MethodDelete {
-				path := c.Request().URL.Path
-				isReadOnlyOp := strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")
-
-				if !isReadOnlyOp {
-					_, err := checkSharedDrivePermission(inst, c.Param("id"), true)
-					if err != nil {
-						return err
-					}
+			if shouldCheck, requireWrite := sharedDrivePermissionCheck(method, c.Request().URL.Path); shouldCheck {
+				_, err := checkSharedDrivePermission(inst, c.Param("id"), requireWrite)
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -1174,6 +1271,32 @@ func proxy(fn func(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 		proxy.ServeHTTP(c.Response(), c.Request())
 		return nil
 	}
+}
+
+func sharedDrivePermissionCheck(method, path string) (shouldCheck bool, requireWrite bool) {
+	if method != http.MethodPost &&
+		method != http.MethodPut &&
+		method != http.MethodPatch &&
+		method != http.MethodDelete {
+		return false, false
+	}
+
+	// POST /downloads creates a temporary link without mutating shared-drive data.
+	if method == http.MethodPost && (strings.HasSuffix(path, "/downloads") || strings.HasSuffix(path, "/archive")) {
+		return false, false
+	}
+
+	// Creating a share-by-link is allowed for read-only members as long as the
+	// requested permission set stays read-only.
+	if method == http.MethodPost && strings.HasSuffix(path, "/permissions") {
+		return true, false
+	}
+	if (method == http.MethodPatch || method == http.MethodDelete) &&
+		strings.Contains(path, "/permissions/") {
+		return true, false
+	}
+
+	return true, true
 }
 
 // checkSharedDrivePermission checks if the current user has permission to access
