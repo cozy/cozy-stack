@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-GOVERSION="${GOVERSION:-1.25.0}"
+GOVERSION="${GOVERSION:-1.25.5}"
 
 cd "$(dirname $0)/../.."
 if [ -f debian/changelog ]; then

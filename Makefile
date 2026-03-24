@@ -22,11 +22,11 @@ instance:
 
 ## lint: enforce a consistent code style and detect code smells
 lint: scripts/golangci-lint
-	@scripts/golangci-lint run --verbose
+	@scripts/golangci-lint run --verbose ./...
 .PHONY: lint
 
-scripts/golangci-lint: Makefile
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./scripts v1.64.5
+scripts/golangci-lint: Makefile .golangci-lint-version
+	@curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b ./scripts "$$(cat .golangci-lint-version)"
 
 ## jslint: enforce a consistent code style for Js code
 jslint: scripts/node_modules
