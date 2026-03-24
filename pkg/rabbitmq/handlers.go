@@ -284,6 +284,57 @@ func (h *UserPhoneUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) e
 	return nil
 }
 
+// User2FAUpdatedHandler handles user 2FA toggle messages.
+type User2FAUpdatedHandler struct{}
+
+// NewUser2FAUpdatedHandler creates a new user 2FA update handler.
+func NewUser2FAUpdatedHandler() *User2FAUpdatedHandler {
+	return &User2FAUpdatedHandler{}
+}
+
+// User2FAUpdatedMessage represents a user 2FA toggle message.
+type User2FAUpdatedMessage struct {
+	TwoFactorEnabled bool   `json:"twoFactorEnabled"`
+	WorkplaceFqdn    string `json:"workplaceFqdn"`
+	InternalEmail    string `json:"internalEmail"`
+}
+
+// Handle processes a user 2FA toggle message.
+func (h *User2FAUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("user.2fa.updated: received message: %s", d.RoutingKey)
+	log.Debugf("user.2fa.updated: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+		d.MessageId, d.ContentType, len(d.Body))
+
+	var msg User2FAUpdatedMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("user.2fa.updated: failed to unmarshal message: %w", err)
+	}
+
+	log.Infof("user.2fa.updated: processing message - TwoFactorEnabled: %t, WorkplaceFqdn: %s, InternalEmail: %s",
+		msg.TwoFactorEnabled, msg.WorkplaceFqdn, msg.InternalEmail)
+
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("user.2fa.updated: missing workplaceFqdn")
+	}
+
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
+	if err != nil {
+		return fmt.Errorf("user.2fa.updated: get instance: %w", err)
+	}
+
+	var authMode instance.AuthMode
+	if msg.TwoFactorEnabled {
+		authMode = instance.TwoFactorOIDC
+	}
+
+	if err := lifecycle.UpdateAuthMode(inst, authMode); err != nil {
+		return fmt.Errorf("user.2fa.updated: update auth mode: %w", err)
+	}
+
+	log.Infof("user.2fa.updated: successfully updated auth mode for instance: %s (TwoFactorEnabled: %t)", inst.Domain, msg.TwoFactorEnabled)
+	return nil
+}
+
 type DomainSubscriptionChangedHandler struct{}
 
 func NewDomainSubscriptionChangedHandler() *DomainSubscriptionChangedHandler {

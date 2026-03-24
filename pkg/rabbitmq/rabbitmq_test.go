@@ -433,6 +433,104 @@ func TestHandlers(t *testing.T) {
 		require.Equal(t, msg.Mobile, sentRequest.Payload.Phone, "Phone should be present in the common settings request payload")
 	})
 
+	t.Run("UpdateUser2FA_Enable", func(t *testing.T) {
+		setup := setUpRabbitMQConfig(t, MQ, "UpdateUser2FA_Enable")
+		inst := setup.GetTestInstance()
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message: enable 2FA
+		msg := rabbitmq.User2FAUpdatedMessage{
+			TwoFactorEnabled: true,
+			WorkplaceFqdn:    inst.Domain,
+			InternalEmail:    fmt.Sprintf("user@%s", rabbitmq.DefaultDomain),
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.2fa.updated",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance auth mode is updated
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(inst.Domain)
+			if err != nil {
+				return false
+			}
+			return updated.AuthMode == instance.TwoFactorOIDC
+		})
+
+		updated, err := lifecycle.GetInstance(inst.Domain)
+		require.NoError(t, err)
+		require.Equal(t, instance.TwoFactorOIDC, updated.AuthMode)
+	})
+
+	t.Run("UpdateUser2FA_Disable", func(t *testing.T) {
+		setup := setUpRabbitMQConfig(t, MQ, "UpdateUser2FA_Disable")
+		inst := setup.GetTestInstance()
+
+		// Pre-set the instance to TwoFactorOIDC
+		err := lifecycle.UpdateAuthMode(inst, instance.TwoFactorOIDC)
+		require.NoError(t, err)
+
+		// Publisher conn/channel
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		// Compose message: disable 2FA
+		msg := rabbitmq.User2FAUpdatedMessage{
+			TwoFactorEnabled: false,
+			WorkplaceFqdn:    inst.Domain,
+			InternalEmail:    fmt.Sprintf("user@%s", rabbitmq.DefaultDomain),
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		// Publish
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.2fa.updated",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		// Wait until the instance auth mode is reset
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(inst.Domain)
+			if err != nil {
+				return false
+			}
+			return updated.AuthMode == instance.Basic
+		})
+
+		updated, err := lifecycle.GetInstance(inst.Domain)
+		require.NoError(t, err)
+		require.Equal(t, instance.Basic, updated.AuthMode)
+	})
+
 	t.Run("ChangeOrganizationSubscription", func(t *testing.T) {
 		// Configure RabbitMQ before starting the stack so it is initialized by the stack
 		setup := setUpRabbitMQConfig(t, MQ, "ChangeOrganizationSubscription")
@@ -715,6 +813,12 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "stack.user.phone.updated",
 					Bindings: []string{"user.phone.updated"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+				{
+					Name:     "stack.user.2fa.updated",
+					Bindings: []string{"user.2fa.updated"},
 					Prefetch: 4,
 					Declare:  true,
 				},

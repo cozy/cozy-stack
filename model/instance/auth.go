@@ -53,6 +53,8 @@ const (
 	Basic AuthMode = iota
 	// TwoFactorMail authentication mode, with passcode sent via email
 	TwoFactorMail
+	// TwoFactorOIDC authentication mode, with 2FA managed by the OIDC provider
+	TwoFactorOIDC
 )
 
 // AuthModeToString encode authentication mode in a string
@@ -60,6 +62,8 @@ func AuthModeToString(authMode AuthMode) string {
 	switch authMode {
 	case TwoFactorMail:
 		return "two_factor_mail"
+	case TwoFactorOIDC:
+		return "two_factor_oidc"
 	default:
 		return "basic"
 	}
@@ -71,6 +75,8 @@ func StringToAuthMode(authMode string) (AuthMode, error) {
 	switch authMode {
 	case "two_factor_mail":
 		return TwoFactorMail, nil
+	case "two_factor_oidc":
+		return TwoFactorOIDC, nil
 	case "basic":
 		return Basic, nil
 	default:

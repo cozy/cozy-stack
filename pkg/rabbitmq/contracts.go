@@ -9,6 +9,7 @@ const (
 	QueueUserCreated               = "stack.user.created"
 	QueueUserPhoneUpdated          = "stack.user.phone.updated"
 	QueueDomainSubscriptionChanged = "stack.domain.subscription.changed"
+	QueueUser2FAUpdated            = "stack.user.2fa.updated"
 	QueueAppCommands               = "stack.app.commands.queue"
 )
 
