@@ -959,9 +959,6 @@ func PushClientsLimitAlert(i *instance.Instance, clientName string, clientsLimit
 
 var _ couchdb.Doc = &Client{}
 
-// OIDCConfiguration represents the OpenID Connect configuration from the well-known endpoint.
-type OIDCConfiguration = oidcprovider.Metadata
-
 // PerformOIDCLogout calls the end_session_endpoint to terminate the SSO session
 func PerformOIDCLogout(contextName, sessionID string) error {
 	return oidcprovider.CallEndSession(contextName, sessionID)

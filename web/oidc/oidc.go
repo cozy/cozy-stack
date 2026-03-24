@@ -571,18 +571,15 @@ func createSessionAndRedirect(c echo.Context, inst *instance.Instance, redirect,
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
-// Logout is the handler for the OpenID back-channel logout endpoint.
-func Logout(c echo.Context) error {
-	return handleLogout(c, c.Param("context"))
-}
-
 type logoutContext struct {
 	ContextName string
 	Conf        *Config
 	Claims      jwt.MapClaims
 }
 
-func handleLogout(c echo.Context, contextHint string) error {
+// Logout is the handler for the OpenID back-channel logout endpoint.
+func Logout(c echo.Context) error {
+	contextHint := c.Param("context")
 	logoutToken := c.FormValue("logout_token")
 	if logoutToken == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "missing logout_token"})
