@@ -53,6 +53,13 @@ const (
 	Basic AuthMode = iota
 	// TwoFactorMail authentication mode, with passcode sent via email
 	TwoFactorMail
+	// TwoFactorOIDC authentication mode, with 2FA managed by the OIDC provider
+	// It's used only to display status in settings application.
+	// The actual flow about enabling 2fa is made in sign-up application and external OIDC provider.
+	// In the settings app, depending on do we have signup-url(sign-app application) configured for the context,
+	// we do ll the check and show controls to enable external 2FA.
+	// This flag doesn't affect any of the internal flows.
+	TwoFactorOIDC
 )
 
 // AuthModeToString encode authentication mode in a string
@@ -60,6 +67,8 @@ func AuthModeToString(authMode AuthMode) string {
 	switch authMode {
 	case TwoFactorMail:
 		return "two_factor_mail"
+	case TwoFactorOIDC:
+		return "two_factor_oidc"
 	default:
 		return "basic"
 	}
@@ -71,6 +80,8 @@ func StringToAuthMode(authMode string) (AuthMode, error) {
 	switch authMode {
 	case "two_factor_mail":
 		return TwoFactorMail, nil
+	case "two_factor_oidc":
+		return TwoFactorOIDC, nil
 	case "basic":
 		return Basic, nil
 	default:
