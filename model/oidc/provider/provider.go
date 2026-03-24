@@ -43,6 +43,7 @@ const (
 	RequireUserInfoURL
 	RequireUserInfoMapping
 	RequireIDTokenKeyURL
+	RequireIssuerOrTokenURL
 )
 
 // Config is the config to log in a user with an OpenID Connect identity provider.
@@ -236,6 +237,10 @@ func validateRequirements(conf *Config, requirements ...ConfigRequirement) error
 			if conf.IDTokenKeyURL == "" {
 				return errors.New("The id_token_jwk_url is missing for this context")
 			}
+		case RequireIssuerOrTokenURL:
+			if conf.Issuer == "" && conf.TokenURL == "" {
+				return errors.New("The issuer or token_url is missing for this context")
+			}
 		default:
 			return fmt.Errorf("unknown OIDC config requirement: %d", requirement)
 		}
@@ -291,7 +296,7 @@ func VerifyIDToken(raw string, conf *Config) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func VerifyLogoutToken(raw, contextName string, conf *Config, strictIssuer bool) (jwt.MapClaims, error) {
+func VerifyLogoutToken(raw, contextName string, conf *Config) (jwt.MapClaims, error) {
 	if conf.IDTokenKeyURL == "" {
 		return nil, errors.New("id_token_jwk_url is not configured")
 	}
@@ -301,8 +306,11 @@ func VerifyLogoutToken(raw, contextName string, conf *Config, strictIssuer bool)
 		return nil, err
 	}
 
-	expectedIssuer, issuerErr := GetIssuer(contextName, conf)
-	if err := ValidateLogoutTokenClaims(claims, conf, expectedIssuer, strictIssuer && issuerErr == nil); err != nil {
+	expectedIssuer, err := GetIssuer(contextName, conf)
+	if err != nil {
+		return nil, fmt.Errorf("cannot resolve issuer for OIDC context %s: %w", contextName, err)
+	}
+	if err := ValidateLogoutTokenClaims(claims, conf, expectedIssuer, true); err != nil {
 		return nil, err
 	}
 	return claims, nil

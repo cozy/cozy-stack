@@ -774,6 +774,42 @@ func TestOIDCLogout(t *testing.T) {
 		requireSessionExists(t, firstInst, other.ID())
 	})
 
+	t.Run("ContextfulBackchannelLogoutFailsWhenStrictIssuerCannotBeResolved", func(t *testing.T) {
+		env := newBackchannelLogoutTestEnv(t)
+		privateKey, kid, jwksURL := newBackchannelSigningKey(t)
+
+		contextName := "strict-issuer-resolution-failure-context"
+		inst := env.setup.GetTestInstance(&lifecycle.Options{
+			ContextName: contextName,
+		})
+
+		oidcConfig := makeTestOIDCConfig(
+			"",
+			"strict-issuer-client-id",
+			jwksURL,
+		)
+		oidcConfig["token_url"] = "://bad-token-url"
+		config.GetConfig().Authentication = map[string]interface{}{
+			contextName: map[string]interface{}{"oidc": oidcConfig},
+		}
+
+		logoutToken := makeSignedJWT(t, privateKey, kid, makeBackchannelLogoutClaims(
+			"https://issuer.example/strict-issuer-resolution-failure-context",
+			"strict-issuer-client-id",
+			"strict-issuer-resolution-sid",
+			map[string]interface{}{"sub": inst.OIDCID},
+		))
+
+		env.client.POST("/oidc/"+contextName+"/logout").
+			WithHost(inst.Domain).
+			WithFormField("logout_token", logoutToken).
+			Expect().
+			Status(http.StatusBadRequest).
+			JSON().
+			Object().
+			Value("error").String().Equal("invalid logout token")
+	})
+
 	t.Run("ContextlessBackchannelLogoutUsesSIDAndIssuerAudience", func(t *testing.T) {
 		env := newBackchannelLogoutTestEnv(t)
 		privateKey, kid, jwksURL := newBackchannelSigningKey(t)

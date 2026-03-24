@@ -616,7 +616,7 @@ func Logout(c echo.Context) error {
 	}
 	logger.WithNamespace("oidc").Debugf("Resolved logout context %s for backchannel logout request", contextName)
 
-	verified, err := verifyLogoutTokenForContext(logoutToken, contextName, true)
+	verified, err := verifyLogoutTokenForContext(logoutToken, contextName)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on verifyLogoutTokenForContext for %s: %s", contextName, err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -809,17 +809,18 @@ func findOIDCContextsByIssuerAudience(issuer string, audience []string) []string
 	return contexts
 }
 
-func verifyLogoutTokenForContext(logoutToken, contextName string, strictIssuer bool) (*logoutContext, error) {
+func verifyLogoutTokenForContext(logoutToken, contextName string) (*logoutContext, error) {
 	logger.WithNamespace("oidc").Debugf("Verifying logout token for context %s", contextName)
 	conf, err := oidcprovider.LoadConfig(
 		contextName,
 		oidcprovider.RequireClientID,
 		oidcprovider.RequireIDTokenKeyURL,
+		oidcprovider.RequireIssuerOrTokenURL,
 	)
 	if err != nil {
 		return nil, err
 	}
-	claims, err := oidcprovider.VerifyLogoutToken(logoutToken, contextName, conf, strictIssuer)
+	claims, err := oidcprovider.VerifyLogoutToken(logoutToken, contextName, conf)
 	if err != nil {
 		return nil, err
 	}
