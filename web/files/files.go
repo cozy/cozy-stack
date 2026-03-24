@@ -739,8 +739,12 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		}
 	} else {
 		if dir != nil {
+			oldDirName := dir.DocName
 			UpdateDirCozyMetadata(c, dir)
 			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+			if err == nil && patch.Name != nil && oldDirName != *patch.Name {
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir)
+			}
 		} else {
 			UpdateFileCozyMetadata(c, file, false)
 			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
@@ -786,8 +790,12 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 				_, errp = vfs.TrashFile(fs, file)
 			}
 		} else if dir != nil {
+			oldDirName := dir.DocName
 			UpdateDirCozyMetadata(c, dir)
-			_, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+			dir, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+			if errp == nil && patch.Name != nil && oldDirName != *patch.Name {
+				sharing.UpdateSharingDescriptionIfNeeded(middlewares.GetInstance(c), dir)
+			}
 		} else if file != nil {
 			UpdateFileCozyMetadata(c, file, false)
 			_, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
