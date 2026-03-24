@@ -1,12 +1,14 @@
+version: "2"
+
 # Options for analysis running.
 run:
   # Timeout for analysis, e.g. 30s, 5m.
   # Default: 1m
   timeout: 3m
 linters:
-  # Disable all linters.
-  # Default: false
-  disable-all: true
+  # Disable all default linters and opt in explicitly.
+  # Default: standard
+  default: none
   # Enable specific linter
   # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
@@ -14,33 +16,32 @@ linters:
     - errname
     - forbidigo
     - gocritic
-    - gofmt
     - govet
     - misspell
     - nolintlint
     - unconvert
     - unused
     - whitespace
-  # Run only fast linters from enabled linters set (first run won't be fast)
-  # Default: false
-  fast: false
-linters-settings:
-  forbidigo:
-    # Forbid fmt.Printf, as they are often used for debugging and they should
-    # not be commited. The good cases can be written fmt.Fprintf(os.Stdout, ).
-    forbid:
-      - fmt.Printf
-  gocritic:
-    disabled-checks:
-      - appendAssign
-      - ifElseChain
-      - argOrder
-  nolintlint:
-    # Disable to ensure that all nolint directives actually have an effect.
-    allow-unused: false
-    # Exclude following linters from requiring an explanation.
-    allow-no-explanation: []
-    # Enable to require an explanation of nonzero length after each nolint directive.
-    require-explanation: true
-    # Enable to require nolint directives to mention the specific linter being suppressed.
-    require-specific: true
+  settings:
+    forbidigo:
+      # Forbid fmt.Printf, as it is often used for debugging and should not be committed.
+      # The good cases can be written with fmt.Fprintf(os.Stdout, ...).
+      forbid:
+        - pattern: ^fmt\.Printf$
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - ifElseChain
+        - argOrder
+    nolintlint:
+      # Disable to ensure that all nolint directives actually have an effect.
+      allow-unused: false
+      # Exclude following linters from requiring an explanation.
+      allow-no-explanation: []
+      # Enable to require an explanation of nonzero length after each nolint directive.
+      require-explanation: true
+      # Enable to require nolint directives to mention the specific linter being suppressed.
+      require-specific: true
+formatters:
+  enable:
+    - gofmt
