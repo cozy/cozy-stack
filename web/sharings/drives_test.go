@@ -2001,6 +2001,37 @@ func TestSharedDriveMetadata(t *testing.T) {
 
 		renamed.Path("$.data.attributes.name").String().IsEqual("RenamedFile.txt")
 	})
+
+	t.Run("OwnerCanRenameDriveRootViaFilesPatch", func(t *testing.T) {
+		eA, _, _ := env.createClients(t)
+		newDriveName := testify(t, "Renamed shared drive via files patch")
+
+		renamed := eA.PATCH("/files/"+env.firstRootDirID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + env.firstRootDirID + `",
+					"attributes": {
+						"name": "` + newDriveName + `"
+					}
+				}
+			}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		renamed.Path("$.data.attributes.name").String().IsEqual(newDriveName)
+
+		require.Eventually(t, func() bool {
+			s, err := sharing.FindSharing(env.betty, env.firstSharingID)
+			if err != nil {
+				return false
+			}
+			return s.Description == newDriveName
+		}, 5*time.Second, 50*time.Millisecond)
+	})
 }
 
 func TestSharedDriveMultipleAccess(t *testing.T) {
