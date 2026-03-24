@@ -654,34 +654,34 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 	sid, _ := claims["sid"].(string)
 	iss, _ := claims.GetIssuer()
 	aud, _ := claims.GetAudience()
-	contextsByIssuerAudience := findOIDCContextsByIssuerAudience(iss, aud)
+	issuerAudienceContexts := findOIDCContextsByIssuerAudience(iss, aud)
 
-	var contextsBySID []string
+	var sidContexts []string
 	var err error
 	if sid != "" {
-		contextsBySID, err = oidcbinding.FindProviderKeys(sid)
+		sidContexts, err = oidcbinding.FindProviderKeys(sid)
 		if err != nil {
 			return "", err
 		}
 	}
 	logger.WithNamespace("oidc").Debugf(
-		"Resolved logout context candidates: sid=%s iss=%s aud=%v contexts_by_sid=%v contexts_by_issuer_audience=%v",
-		sid, iss, aud, contextsBySID, contextsByIssuerAudience,
+		"Resolved logout context candidates: sid=%s iss=%s aud=%v sid_contexts=%v issuer_audience_contexts=%v",
+		sid, iss, aud, sidContexts, issuerAudienceContexts,
 	)
 
 	// if there is only one session in redis, return it as is
-	switch len(contextsBySID) {
+	switch len(sidContexts) {
 	// if there is no session, try to resolve it by OIDC configuration in logout token
 	case 0:
 		{
-			if len(contextsByIssuerAudience) == 1 {
+			if len(issuerAudienceContexts) == 1 {
 				logger.WithNamespace("oidc").Debugf(
 					"Resolved logout context %s from issuer/audience only",
-					contextsByIssuerAudience[0],
+					issuerAudienceContexts[0],
 				)
-				return contextsByIssuerAudience[0], nil
+				return issuerAudienceContexts[0], nil
 			}
-			if len(contextsByIssuerAudience) == 0 {
+			if len(issuerAudienceContexts) == 0 {
 				logger.WithNamespace("oidc").Warnf(
 					"Cannot resolve logout context from issuer/audience: iss=%s aud=%v",
 					iss, aud,
@@ -689,7 +689,7 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 			} else {
 				logger.WithNamespace("oidc").Warnf(
 					"Ambiguous logout context from issuer/audience: iss=%s aud=%v candidates=%v",
-					iss, aud, contextsByIssuerAudience,
+					iss, aud, issuerAudienceContexts,
 				)
 			}
 			return "", ErrAmbiguousLogout
@@ -699,13 +699,13 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 		{
 			logger.WithNamespace("oidc").Debugf(
 				"Resolved logout context %s from sid binding only",
-				contextsBySID[0],
+				sidContexts[0],
 			)
-			return contextsBySID[0], nil
+			return sidContexts[0], nil
 		}
 	default:
 		{
-			candidates := combineLogoutContextCandidates(contextsBySID, contextsByIssuerAudience)
+			candidates := combineLogoutContextCandidates(sidContexts, issuerAudienceContexts)
 			if len(candidates) == 1 {
 				logger.WithNamespace("oidc").Debugf(
 					"Resolved logout context %s from sid and issuer/audience candidates",
@@ -715,8 +715,8 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 			}
 			if len(candidates) == 0 {
 				logger.WithNamespace("oidc").Warnf(
-					"Logout context candidates do not intersect: sid=%s contexts_by_sid=%v iss=%s aud=%v contexts_by_issuer_audience=%v",
-					sid, contextsBySID, iss, aud, contextsByIssuerAudience,
+					"Logout context candidates do not intersect: sid=%s sid_contexts=%v iss=%s aud=%v issuer_audience_contexts=%v",
+					sid, sidContexts, iss, aud, issuerAudienceContexts,
 				)
 			} else {
 				logger.WithNamespace("oidc").Warnf(
@@ -729,19 +729,19 @@ func resolveLogoutContext(contextHint string, claims jwt.MapClaims) (string, err
 	}
 }
 
-func combineLogoutContextCandidates(contextsBySID, contextsByIssuerAudience []string) []string {
-	if len(contextsBySID) == 0 {
-		return contextsByIssuerAudience
+func combineLogoutContextCandidates(sidContexts, issuerAudienceContexts []string) []string {
+	if len(sidContexts) == 0 {
+		return issuerAudienceContexts
 	}
-	if len(contextsByIssuerAudience) == 0 {
-		return contextsBySID
+	if len(issuerAudienceContexts) == 0 {
+		return sidContexts
 	}
-	allowed := make(map[string]struct{}, len(contextsByIssuerAudience))
-	for _, contextName := range contextsByIssuerAudience {
+	allowed := make(map[string]struct{}, len(issuerAudienceContexts))
+	for _, contextName := range issuerAudienceContexts {
 		allowed[contextName] = struct{}{}
 	}
-	combined := make([]string, 0, len(contextsBySID))
-	for _, contextName := range contextsBySID {
+	combined := make([]string, 0, len(sidContexts))
+	for _, contextName := range sidContexts {
 		if _, ok := allowed[contextName]; ok {
 			combined = append(combined, contextName)
 		}
