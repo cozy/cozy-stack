@@ -54,6 +54,11 @@ const (
 	// TwoFactorMail authentication mode, with passcode sent via email
 	TwoFactorMail
 	// TwoFactorOIDC authentication mode, with 2FA managed by the OIDC provider
+	// It's used only to display status in settings application.
+	// The actual flow about enabling 2fa is made in sign-up application and external OIDC provider.
+	// In the settings app, depending on do we have signup-url(sign-app application) configured for the context,
+	// we do ll the check and show controls to enable external 2FA.
+	// This flag doesn't affect any of the internal flows.
 	TwoFactorOIDC
 )
 
