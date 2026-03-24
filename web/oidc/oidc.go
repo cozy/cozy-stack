@@ -44,8 +44,6 @@ var (
 	ErrAmbiguousLogout      = errors.New("ambiguous logout context")
 )
 
-const backchannelLogoutEvent = "http://schemas.openid.net/event/backchannel-logout"
-
 // DomainMismatchError is returned when the user tries to connect to an
 // instance but has an active OIDC session for a different instance.
 type DomainMismatchError struct {

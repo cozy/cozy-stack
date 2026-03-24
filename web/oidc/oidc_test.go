@@ -1423,7 +1423,7 @@ func makeBackchannelLogoutClaims(issuer, audience, sid string, extra map[string]
 		"aud":    audience,
 		"iat":    time.Now().Unix(),
 		"jti":    "logout-jti-" + sid,
-		"events": map[string]interface{}{backchannelLogoutEvent: map[string]interface{}{}},
+		"events": map[string]interface{}{"http://schemas.openid.net/event/backchannel-logout": map[string]interface{}{}},
 	}
 	if sid != "" {
 		claims["sid"] = sid
