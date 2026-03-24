@@ -115,11 +115,7 @@ type TestSetup struct {
 // NewSetup returns a new TestSetup
 // name is used to prevent bug when tests are run in parallel
 func NewSetup(t testing.TB, name string) *TestSetup {
-	// Remove underscores and hyphens - underscores are invalid in domain names
-	// and cause Go's net/http to reject cookies. Hyphens are stripped by the
-	// OIDC code (see buildDomain), so we avoid them to keep domains consistent.
-	sanitizedName := strings.ReplaceAll(strings.ToLower(name), "_", "")
-	sanitizedName = strings.ReplaceAll(sanitizedName, "-", "")
+	sanitizedName := sanitizeSetupName(name)
 	setup := TestSetup{
 		name:    name,
 		t:       t,
@@ -130,6 +126,19 @@ func NewSetup(t testing.TB, name string) *TestSetup {
 	t.Cleanup(setup.cleanup)
 
 	return &setup
+}
+
+func sanitizeSetupName(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	if b.Len() == 0 {
+		return "test"
+	}
+	return b.String()
 }
 
 // SetupSwiftTest can be used to start an in-memory Swift server for tests.

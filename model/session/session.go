@@ -42,6 +42,9 @@ type Session struct {
 	LongRun   bool      `json:"long_run"`
 	ShortRun  bool      `json:"short_run"`
 	SID       string    `json:"sid,omitempty"` // only present with OIDC
+	// OIDCProviderKey namespaces the upstream sid. In the first iteration it is
+	// simply the instance context name.
+	OIDCProviderKey string `json:"oidc_provider_key,omitempty"`
 }
 
 // DocType implements couchdb.Doc
@@ -115,6 +118,10 @@ func New(i *instance.Instance, duration Duration, sid string) (*Session, error) 
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
 	}
+	if sid != "" {
+		s.OIDCProviderKey = i.ContextName
+		bindOIDCSession(i, s)
+	}
 	return s, nil
 }
 
@@ -147,6 +154,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		} else {
 			i.Logger().WithNamespace("loginaudit").
 				Infof("Expired session deleted: %s", s.DocID)
+			unbindOIDCSession(i, s)
 		}
 		return nil, ErrExpired
 	}
@@ -161,6 +169,8 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		err := couchdb.UpdateDoc(i, s)
 		if err != nil {
 			s.LastSeen = lastSeen
+		} else {
+			touchOIDCSession(i, s)
 		}
 	}
 
@@ -238,6 +248,13 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 		if err := couchdb.BulkDeleteDocs(inst, consts.Sessions, expired); err != nil {
 			inst.Logger().WithNamespace("sessions").
 				Infof("Error while deleting expired sessions: %s", err)
+		} else {
+			for _, doc := range expired {
+				sess, ok := doc.(*Session)
+				if ok {
+					unbindOIDCSession(inst, sess)
+				}
+			}
 		}
 	}
 	return kept, nil
@@ -253,6 +270,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 	} else {
 		i.Logger().WithNamespace("loginaudit").
 			Infof("Session deleted: %s", s.DocID)
+		unbindOIDCSession(i, s)
 	}
 	return &http.Cookie{
 		Name:   CookieName(i),
