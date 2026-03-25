@@ -563,9 +563,46 @@ func tokenExchange(c echo.Context) error {
 			"error": "the origin of this application is not allowed",
 		})
 	}
-	return c.JSON(http.StatusNotImplemented, echo.Map{
-		"error": "token exchange is not implemented yet",
-	})
+	c.Response().Header().Set("Cache-Control", "no-store")
+	c.Response().Header().Set("Pragma", "no-cache")
+
+	inst := middlewares.GetInstance(c)
+	var reqBody tokenExchangeRequest
+	if err := c.Bind(&reqBody); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid request body",
+		})
+	}
+	reqBody.IDToken = strings.TrimSpace(reqBody.IDToken)
+	reqBody.Scope = strings.TrimSpace(reqBody.Scope)
+	if reqBody.IDToken == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the id_token parameter is mandatory",
+		})
+	}
+	if reqBody.Scope == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the scope parameter is mandatory",
+		})
+	}
+	if reqBody.Scope != tokenExchangeAllowedScope {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid scope",
+		})
+	}
+
+	out, err := executeTokenExchange(c, inst, reqBody)
+	if err != nil {
+		var httpErr *echo.HTTPError
+		if errors.As(err, &httpErr) {
+			return c.JSON(httpErr.Code, echo.Map{
+				"error": fmt.Sprint(httpErr.Message),
+			})
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 func registerFromWebApp(c echo.Context) error {
