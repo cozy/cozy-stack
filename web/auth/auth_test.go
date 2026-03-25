@@ -4,6 +4,7 @@
 package auth_test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -2108,6 +2109,74 @@ func TestAuth(t *testing.T) {
 			obj.ValueEqual("scope", "*")
 			obj.ValueEqual("token_type", "bearer")
 		})
+	})
+}
+
+func TestTokenExchange(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	config.GetConfig().Assets = "../../assets"
+	_ = web.LoadSupportedLocales()
+	if _, err := couchdb.CheckStatus(context.Background()); err != nil {
+		t.Skip("couchdb is required for this test")
+	}
+	setup := testutils.NewSetup(t, t.Name())
+
+	testInstance := setup.GetTestInstance(&lifecycle.Options{
+		Domain:    "token-exchange.cozy.example.net",
+		OrgDomain: "example.com",
+		OrgID:     "myorg123",
+		Email:     "token-exchange@example.com",
+	})
+
+	ts := setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
+		handler, err := web.CreateSubdomainProxy(r, &stack.Services{}, apps.Serve)
+		require.NoError(t, err, "Cant start subdomain proxy")
+		return handler
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()), "Could not init dynamic FS")
+
+	e := testutils.CreateTestClient(t, ts.URL)
+
+	t.Run("POSTRouteExists", func(t *testing.T) {
+		e.POST("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Accept", "application/json").
+			WithJSON(map[string]string{}).
+			Expect().
+			Status(http.StatusNotImplemented)
+	})
+
+	t.Run("AllowsOrgDomainOrigins", func(t *testing.T) {
+		for _, origin := range []string{
+			"https://example.com",
+			"https://admin.example.com",
+			"https://workspace.sales.example.com",
+		} {
+			resp := e.OPTIONS("/auth/token_exchange").
+				WithHost(testInstance.Domain).
+				WithHeader("Origin", origin).
+				WithHeader("Access-Control-Request-Headers", "content-type").
+				Expect().
+				Status(http.StatusNoContent)
+
+			resp.Header("Access-Control-Allow-Origin").Equal(origin)
+			resp.Header("Access-Control-Allow-Methods").Equal(http.MethodPost)
+			resp.Header("Access-Control-Allow-Headers").Equal("content-type")
+		}
+	})
+
+	t.Run("RejectsOtherOrigins", func(t *testing.T) {
+		e.OPTIONS("/auth/token_exchange").
+			WithHost(testInstance.Domain).
+			WithHeader("Origin", "https://admin.other.com").
+			Expect().
+			Status(http.StatusForbidden).
+			Header("Access-Control-Allow-Origin").Empty()
 	})
 }
 
