@@ -310,6 +310,7 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 		_, domain, found := strings.Cut(b.instance.Domain, ".")
 		if found {
 			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domain)
+			headers = append(headers, b.instance.OrgID+"."+domain)
 		}
 		if b.instance.OrgDomain != "" {
 			headers = append(headers, b.instance.OrgID+"."+b.instance.OrgDomain)

@@ -221,12 +221,8 @@ func TestSecure(t *testing.T) {
 
 		csp := rec.Header().Get(echo.HeaderContentSecurityPolicy)
 
-		// Verify that api-login-myorg123.cozy.example.com appears only once (in connect-src)
-		expectedDomain := "api-login-myorg123.cozy.example.com"
-		count := strings.Count(csp, expectedDomain)
-		assert.Equal(t, 1, count,
-			"%s should appear exactly once (in connect-src), but found %d times. CSP: %s",
-			expectedDomain, count, csp)
+		apiLoginDomain := "api-login-myorg123.cozy.example.com"
+		orgInstanceDomain := "myorg123.cozy.example.com"
 
 		// Verify that connect-src contains the api-login domain
 		connectSrcIndex := strings.Index(csp, "connect-src ")
@@ -238,8 +234,10 @@ func TestSecure(t *testing.T) {
 			"connect-src should end with semicolon")
 
 		connectSrcContent := csp[connectSrcIndex : connectSrcIndex+connectSrcEnd]
-		assert.Contains(t, connectSrcContent, expectedDomain,
-			"connect-src should contain %s. Found: %s", expectedDomain, connectSrcContent)
+		assert.Contains(t, connectSrcContent, apiLoginDomain,
+			"connect-src should contain %s. Found: %s", apiLoginDomain, connectSrcContent)
+		assert.Contains(t, connectSrcContent, orgInstanceDomain,
+			"connect-src should contain %s. Found: %s", orgInstanceDomain, connectSrcContent)
 
 		// Verify that other directives do NOT contain the api-login domain
 		otherDirectives := []string{
@@ -264,8 +262,10 @@ func TestSecure(t *testing.T) {
 				directiveEnd := strings.Index(csp[directiveIndex:], ";")
 				if directiveEnd != -1 {
 					directiveContent := csp[directiveIndex : directiveIndex+directiveEnd]
-					assert.NotContains(t, directiveContent, expectedDomain,
-						"Directive %s should NOT contain %s. Found: %s", directivePattern, expectedDomain, directiveContent)
+					assert.NotContains(t, directiveContent, apiLoginDomain,
+						"Directive %s should NOT contain %s. Found: %s", directivePattern, apiLoginDomain, directiveContent)
+					assert.NotContains(t, directiveContent, orgInstanceDomain,
+						"Directive %s should NOT contain %s. Found: %s", directivePattern, orgInstanceDomain, directiveContent)
 				}
 			}
 		}
