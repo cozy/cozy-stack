@@ -335,6 +335,64 @@ func (h *User2FAUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) err
 	return nil
 }
 
+// UserRecoveryEmailUpdatedHandler handles recovery email update messages.
+type UserRecoveryEmailUpdatedHandler struct{}
+
+// NewUserRecoveryEmailUpdatedHandler creates a new recovery email update handler.
+func NewUserRecoveryEmailUpdatedHandler() *UserRecoveryEmailUpdatedHandler {
+	return &UserRecoveryEmailUpdatedHandler{}
+}
+
+// UserRecoveryEmailUpdatedMessage represents a recovery email update message.
+type UserRecoveryEmailUpdatedMessage struct {
+	RecoveryEmail string `json:"recoveryEmail"`
+	InternalEmail string `json:"internalEmail"`
+	WorkplaceFqdn string `json:"workplaceFqdn"`
+}
+
+// Handle processes a recovery email update message.
+func (h *UserRecoveryEmailUpdatedHandler) Handle(ctx context.Context, d amqp.Delivery) error {
+	log.Infof("user.recovery-email.updated: received message: %s", d.RoutingKey)
+	log.Debugf("user.recovery-email.updated: message details - MessageId: %s, ContentType: %s, Body size: %d bytes",
+		d.MessageId, d.ContentType, len(d.Body))
+
+	var msg UserRecoveryEmailUpdatedMessage
+	if err := json.Unmarshal(d.Body, &msg); err != nil {
+		return fmt.Errorf("user.recovery-email.updated: failed to unmarshal message: %w", err)
+	}
+
+	log.Infof("user.recovery-email.updated: processing message - RecoveryEmail: %s, WorkplaceFqdn: %s, InternalEmail: %s",
+		msg.RecoveryEmail, msg.WorkplaceFqdn, msg.InternalEmail)
+
+	if msg.WorkplaceFqdn == "" {
+		return fmt.Errorf("user.recovery-email.updated: missing workplaceFqdn")
+	}
+
+	inst, err := lifecycle.GetInstance(msg.WorkplaceFqdn)
+	if err != nil {
+		return fmt.Errorf("user.recovery-email.updated: get instance: %w", err)
+	}
+
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return fmt.Errorf("user.recovery-email.updated: get settings document: %w", err)
+	}
+
+	// recovery_email is used by the Twake SaaS to display the recovery
+	// email in the settings application.
+	settings.M["recovery_email"] = msg.RecoveryEmail
+
+	if err := lifecycle.Patch(inst, &lifecycle.Options{
+		SettingsObj:  settings,
+		FromCloudery: true,
+	}); err != nil {
+		return fmt.Errorf("user.recovery-email.updated: update settings: %w", err)
+	}
+
+	log.Infof("user.recovery-email.updated: successfully updated recovery email for instance: %s", inst.Domain)
+	return nil
+}
+
 type DomainSubscriptionChangedHandler struct{}
 
 func NewDomainSubscriptionChangedHandler() *DomainSubscriptionChangedHandler {

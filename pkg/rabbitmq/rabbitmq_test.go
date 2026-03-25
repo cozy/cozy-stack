@@ -480,6 +480,56 @@ func TestHandlers(t *testing.T) {
 		require.Equal(t, instance.TwoFactorOIDC, updated.AuthMode)
 	})
 
+	t.Run("UpdateUserRecoveryEmail", func(t *testing.T) {
+		setup := setUpRabbitMQConfig(t, MQ, "UpdateUserRecoveryEmail")
+		inst := setup.GetTestInstance()
+
+		ch, err := getChannel(t, MQ)
+		require.NoError(t, err)
+
+		msg := rabbitmq.UserRecoveryEmailUpdatedMessage{
+			RecoveryEmail: "recovery@example.com",
+			InternalEmail: fmt.Sprintf("user@%s", rabbitmq.DefaultDomain),
+			WorkplaceFqdn: inst.Domain,
+		}
+		body, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		err = ch.PublishWithContext(
+			testCtx(t),
+			"auth",
+			"user.recovery-email.updated",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    fmt.Sprintf("%d", time.Now().UnixNano()),
+			},
+		)
+		require.NoError(t, err)
+
+		testutils.WaitForOrFail(t, 10*time.Second, func() bool {
+			updated, err := lifecycle.GetInstance(inst.Domain)
+			if err != nil {
+				return false
+			}
+			settings, err := updated.SettingsDocument()
+			if err != nil {
+				return false
+			}
+			recoveryEmail, _ := settings.M["recovery_email"].(string)
+			return recoveryEmail == "recovery@example.com"
+		})
+
+		updated, err := lifecycle.GetInstance(inst.Domain)
+		require.NoError(t, err)
+		settings, err := updated.SettingsDocument()
+		require.NoError(t, err)
+		require.Equal(t, "recovery@example.com", settings.M["recovery_email"])
+	})
+
 	t.Run("UpdateUser2FA_Disable", func(t *testing.T) {
 		setup := setUpRabbitMQConfig(t, MQ, "UpdateUser2FA_Disable")
 		inst := setup.GetTestInstance()
@@ -819,6 +869,12 @@ func setUpRabbitMQConfig(t *testing.T, mq *testutils.RabbitFixture, name string)
 				{
 					Name:     "stack.user.2fa.updated",
 					Bindings: []string{"user.2fa.updated"},
+					Prefetch: 4,
+					Declare:  true,
+				},
+				{
+					Name:     "stack.user.recovery-email.updated",
+					Bindings: []string{"user.recovery-email.updated"},
 					Prefetch: 4,
 					Declare:  true,
 				},
