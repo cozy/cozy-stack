@@ -265,6 +265,8 @@ func BuildExchangeSpecs(exchangesCfg []config.RabbitExchange) []ExchangeSpec {
 				handler = NewUserPhoneUpdatedHandler()
 			case QueueUser2FAUpdated:
 				handler = NewUser2FAUpdatedHandler()
+			case QueueUserRecoveryEmailUpdated:
+				handler = NewUserRecoveryEmailUpdatedHandler()
 			case QueueDomainSubscriptionChanged:
 				handler = NewDomainSubscriptionChangedHandler()
 			case QueueAppCommands:
