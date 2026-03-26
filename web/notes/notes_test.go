@@ -500,6 +500,53 @@ func TestNotes(t *testing.T) {
 		version = int64(obj.Path("$.data.attributes.metadata.version").Number().Raw())
 	})
 
+	t.Run("PutSchema only purges steps for the updated note", func(t *testing.T) {
+		schemaNote, err := note.Create(inst, &note.Document{
+			Title:      "Schema note",
+			SchemaSpec: note.DefaultSchemaSpecs(),
+		})
+		require.NoError(t, err)
+
+		stepsNote, err := note.Create(inst, &note.Document{
+			Title:      "Steps note",
+			SchemaSpec: note.DefaultSchemaSpecs(),
+		})
+		require.NoError(t, err)
+
+		stepsFile, err := inst.VFS().FileByID(stepsNote.ID())
+		require.NoError(t, err)
+
+		steps := []note.Step{{
+			"sessionID": "regression",
+			"stepType":  "replace",
+			"from":      1,
+			"to":        1,
+			"slice": map[string]interface{}{
+				"content": []interface{}{
+					map[string]interface{}{"type": "text", "text": "A"},
+				},
+			},
+		}}
+		_, err = note.ApplySteps(inst, stepsFile, "0", steps)
+		require.NoError(t, err)
+
+		existing, err := note.GetSteps(inst, stepsNote.ID(), 0)
+		require.NoError(t, err)
+		require.Len(t, existing, 1)
+
+		schemaFile, err := inst.VFS().FileByID(schemaNote.ID())
+		require.NoError(t, err)
+
+		_, err = note.UpdateSchema(inst, schemaFile, note.DefaultSchemaSpecs())
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Second)
+
+		remaining, err := note.GetSteps(inst, stepsNote.ID(), 0)
+		require.NoError(t, err)
+		require.Len(t, remaining, 1)
+	})
+
 	t.Run("PutTelepointer", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
