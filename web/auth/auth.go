@@ -585,11 +585,6 @@ func tokenExchange(c echo.Context) error {
 			"error": "the scope parameter is mandatory",
 		})
 	}
-	if reqBody.Scope != tokenExchangeAllowedScope {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid scope",
-		})
-	}
 
 	out, err := executeTokenExchange(c, inst, reqBody)
 	if err != nil {

@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,6 +47,9 @@ func executeTokenExchange(c echo.Context, inst *instance.Instance, req tokenExch
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	if req.Scope != tokenExchangeAllowedScope {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "invalid scope")
+	}
 
 	client, err := createTokenExchangeOAuthClient(c, inst)
 	if err != nil {
@@ -54,6 +58,9 @@ func executeTokenExchange(c echo.Context, inst *instance.Instance, req tokenExch
 	defer LockOAuthClient(inst, client.ClientID)()
 
 	if err := bindTokenExchangeOIDCSession(inst, client, claims); err != nil {
+		if delErr := client.Delete(inst); delErr != nil {
+			inst.Logger().WithNamespace("token_exchange").Warnf("Cannot delete orphaned OAuth client %s: %s", client.CouchID, delErr.Description)
+		}
 		return nil, err
 	}
 
@@ -106,10 +113,12 @@ func validateTokenExchangeIDToken(inst *instance.Instance, raw string) (jwt.MapC
 		return nil, errors.New("org_id mismatch")
 	}
 	if inst.OrgDomain != "" {
-		if orgDomain, ok := tokenExchangeClaimString(claims, "org_domain"); ok && orgDomain != "" {
-			if subtle.ConstantTimeCompare([]byte(orgDomain), []byte(inst.OrgDomain)) == 0 {
-				return nil, errors.New("org_domain mismatch")
-			}
+		orgDomain, ok := tokenExchangeClaimString(claims, "org_domain")
+		if !ok || orgDomain == "" {
+			return nil, errors.New("org_domain claim is required")
+		}
+		if subtle.ConstantTimeCompare([]byte(orgDomain), []byte(inst.OrgDomain)) == 0 {
+			return nil, errors.New("org_domain mismatch")
 		}
 	}
 
@@ -167,7 +176,8 @@ func bindTokenExchangeOIDCSession(inst *instance.Instance, client *oauth.Client,
 			}
 		}
 		if err := oidcbinding.BindOAuthClient(inst.ContextName, inst.Domain, sessionID, client.CouchID); err != nil {
-			inst.Logger().WithNamespace("oidc").Warnf("Cannot bind OIDC session %s to OAuth client %s: %s", sessionID, client.CouchID, err)
+			inst.Logger().WithNamespace("oidc").Errorf("Cannot bind OIDC session %s to OAuth client %s: %s", sessionID, client.CouchID, err)
+			return fmt.Errorf("cannot bind OIDC session to OAuth client: %w", err)
 		}
 	}
 
@@ -199,7 +209,9 @@ func buildTokenExchangeResponse(inst *instance.Instance, client *oauth.Client, s
 	out.Access = accessToken
 
 	client.LastRefreshedAt = time.Now()
-	_ = couchdb.UpdateDoc(inst, client)
+	if err := couchdb.UpdateDoc(inst, client); err != nil {
+		inst.Logger().WithNamespace("token_exchange").Warnf("Cannot update LastRefreshedAt for client %s: %s", client.CouchID, err)
+	}
 
 	return out, nil
 }
