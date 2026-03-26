@@ -164,15 +164,18 @@ Content-Type: application/json
   "q": "Why the sky is blue?",
   "stream": true,
   "websearch": false,
-  "assistantID": "abc123"
+  "assistantID": "abc123",
+  "attachmentIDs": ["827f0fbb928b375cc457c732a4013aa7", "9a3b1c2d3e4f5a6b7c8d9e0f1a2b3c4d"]
 }
 ```
 
 - `q` is the user's message (required).
 - `stream` enables streaming the response via SSE deltas (defaults to `true`).
 - `websearch` enables web search for the query (defaults to `false`).
-- `assistantID` associates the conversation with an `io.cozy.ai.chat.assistants`
-  document (optional). When set, the response includes a `relationships` block.
+- `assistantID` (optional) associates the conversation with an `io.cozy.ai.chat.assistants`
+  document. When set, the response includes a `relationships` block.
+- `attachmentIDs` (optional) array of ids, specifying which documents should be leveraged by the RAG. If specified, only the given docs will be used, i.e. no semantic search.
+  
 
 #### Response
 
@@ -193,6 +196,7 @@ Content-Type: application/vnd.api+json
           "id": "eb17c3205bf1013ddea018c04daba326",
           "role": "user",
           "content": "Why the sky is blue?",
+          "attachmentIDs": ["827f0fbb928b375cc457c732a4013aa7", "9a3b1c2d3e4f5a6b7c8d9e0f1a2b3c4d"],
           "createdAt": "2024-09-24T13:24:07.576Z"
         }
       ],
