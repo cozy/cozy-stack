@@ -25,10 +25,11 @@ import (
 
 type ChatPayload struct {
 	ChatConversationID string
-	Query              string `json:"q"`
-	Stream             *bool  `json:"stream"`
-	WebSearch          *bool  `json:"websearch"`
-	AssistantID        string `json:"assistantID,omitempty"`
+	Query              string   `json:"q"`
+	Stream             *bool    `json:"stream"`
+	WebSearch          *bool    `json:"websearch"`
+	AssistantID        string   `json:"assistantID,omitempty"`
+	AttachmentIDs      []string `json:"attachmentIDs,omitempty"`
 }
 
 type ChatConversation struct {
@@ -40,11 +41,12 @@ type ChatConversation struct {
 }
 
 type ChatMessage struct {
-	ID        string    `json:"id"`
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	Sources   []Source  `json:"sources,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	Role          string    `json:"role"`
+	Content       string    `json:"content"`
+	Sources       []Source  `json:"sources,omitempty"`
+	AttachmentIDs []string  `json:"attachmentIDs,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 const (
@@ -83,10 +85,11 @@ func (c *ChatConversation) Links() *jsonapi.LinksList              { return nil 
 var _ jsonapi.Object = (*ChatConversation)(nil)
 
 type QueryMessage struct {
-	Task      string `json:"task"`
-	DocID     string `json:"doc_id"`
-	Stream    bool   `json:"stream"`
-	WebSearch bool   `json:"websearch"`
+	Task          string   `json:"task"`
+	DocID         string   `json:"doc_id"`
+	Stream        bool     `json:"stream"`
+	WebSearch     bool     `json:"websearch"`
+	AttachmentIDs []string `json:"attachmentIDs,omitempty"`
 }
 
 type Source struct {
@@ -132,10 +135,11 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 	}
 	uuidv7, _ := uuid.NewV7()
 	msg := ChatMessage{
-		ID:        uuidv7.String(),
-		Role:      UserRole,
-		Content:   payload.Query,
-		CreatedAt: time.Now().UTC(),
+		ID:            uuidv7.String(),
+		Role:          UserRole,
+		Content:       payload.Query,
+		AttachmentIDs: payload.AttachmentIDs,
+		CreatedAt:     time.Now().UTC(),
 	}
 	chat.Messages = append(chat.Messages, msg)
 	if chat.DocRev == "" {
@@ -155,10 +159,11 @@ func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, erro
 		websearch = *payload.WebSearch
 	}
 	query, err := job.NewMessage(&QueryMessage{
-		Task:      "chat-completion",
-		DocID:     chat.DocID,
-		Stream:    stream,
-		WebSearch: websearch,
+		Task:          "chat-completion",
+		DocID:         chat.DocID,
+		Stream:        stream,
+		WebSearch:     websearch,
+		AttachmentIDs: payload.AttachmentIDs,
 	})
 	if err != nil {
 		return nil, err
@@ -248,6 +253,13 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 
 	metadata := map[string]interface{}{
 		"websearch": query.WebSearch,
+	}
+	if len(query.AttachmentIDs) > 0 {
+		attachments := make([]map[string]string, len(query.AttachmentIDs))
+		for i, id := range query.AttachmentIDs {
+			attachments[i] = map[string]string{"id": id}
+		}
+		metadata["attachments"] = attachments
 	}
 	payload := map[string]interface{}{
 		"model":       fmt.Sprintf("ragondin-%s", inst.Domain),
