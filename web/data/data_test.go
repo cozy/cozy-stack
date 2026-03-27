@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -443,16 +445,25 @@ func TestData(t *testing.T) {
 		_ = getDocForTest(Type, testInstance)
 		_ = getDocForTest(Type, testInstance)
 
-		// Create the index
-		e.POST("/data/"+Type+"/_index").
+		// Create and wait for the index used by the selector.
+		indexName := e.POST("/data/"+Type+"/_index").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{ "index": { "fields": ["test"] } }`)).
 			Expect().Status(200).
 			JSON().Object().
-			NotContainsKey("error")
+			NotContainsKey("error").
+			Value("name").String().Raw()
 
-		// Select with the index
+		require.Eventually(t, func() bool {
+			var results []couchdb.JSONDoc
+			err := couchdb.FindDocs(testInstance, Type, &couchdb.FindRequest{
+				Selector: mango.Equal("test", "value"),
+				UseIndex: indexName,
+			}, &results)
+			return err == nil
+		}, 5*time.Second, 100*time.Millisecond, "index %q should be ready within 5s", indexName)
+
 		obj := e.POST("/data/"+Type+"/_find").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
@@ -472,13 +483,25 @@ func TestData(t *testing.T) {
 		_ = getDocForTest(Type, testInstance)
 
 		// Create the index
-		e.POST("/data/"+Type+"/_index").
+		indexName := e.POST("/data/"+Type+"/_index").
 			WithHeader("Authorization", "Bearer "+token).
 			WithHeader("Content-Type", "application/json").
 			WithBytes([]byte(`{ "index": { "fields": ["test"] } }`)).
 			Expect().Status(200).
 			JSON().Object().
-			NotContainsKey("error")
+			NotContainsKey("error").
+			Value("name").String().Raw()
+
+		// CouchDB builds indexes asynchronously. Wait until the index is ready
+		// to serve queries before asserting on execution_stats.
+		require.Eventually(t, func() bool {
+			var results []couchdb.JSONDoc
+			err := couchdb.FindDocs(testInstance, Type, &couchdb.FindRequest{
+				Selector: mango.Equal("test", "value"),
+				UseIndex: indexName,
+			}, &results)
+			return err == nil
+		}, 5*time.Second, 100*time.Millisecond, "index %q should be ready within 5s", indexName)
 
 		// Select with the index
 		e.POST("/data/"+Type+"/_find").
