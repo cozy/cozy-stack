@@ -3,6 +3,7 @@ package middlewares
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -301,15 +302,21 @@ func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSour
 			}
 		}
 	}
-	// Add matrix.{org_domain} to frame-src directive if present (for iframes)
-	if header == "frame-src" && b.instance != nil && b.instance.OrgDomain != "" {
+	// Add matrix.{org_domain} to frame-src directive if present (for iframes).
+	// OrgDomain is validated to contain only safe characters before being injected into the header.
+	if header == "frame-src" && b.instance != nil && isSafeDomain(b.instance.OrgDomain) {
 		headers = append(headers, "matrix."+b.instance.OrgDomain)
 	}
-	// Add api-login-{org_id}.{domain without prefix} to connect-src directive if present
-	if header == "connect-src" && b.instance != nil && b.instance.OrgID != "" {
+	// Add api-login-{org_id}.{domain without prefix} to connect-src directive if present.
+	// OrgID, OrgDomain, and domain are all validated before being injected into the header.
+	if header == "connect-src" && b.instance != nil && isSafeDomain(b.instance.OrgID) {
 		_, domain, found := strings.Cut(b.instance.Domain, ".")
-		if found {
+		if found && isSafeDomain(domain) {
 			headers = append(headers, "api-login-"+b.instance.OrgID+"."+domain)
+			headers = append(headers, b.instance.OrgID+"."+domain)
+		}
+		if isSafeDomain(b.instance.OrgDomain) {
+			headers = append(headers, b.instance.OrgID+"."+b.instance.OrgDomain)
 		}
 	}
 	if len(headers) == 0 {
@@ -343,4 +350,15 @@ func appendCSPRule(currentRules, ruleType string, appendedValues ...string) (new
 		newRules = currentRules + ruleType + " " + strings.Join(appendedValues, " ") + ";"
 	}
 	return
+}
+
+// safeDomainRe matches hostname values safe to embed in a CSP header
+// (alphanumeric, hyphens, dots — no spaces, semicolons, or other
+// CSP-significant characters that could break or inject new directives).
+var safeDomainRe = regexp.MustCompile(`^[a-zA-Z0-9.-]+$`)
+
+// isSafeDomain returns true if s is a non-empty value safe for embedding in a
+// CSP header as a hostname or hostname component.
+func isSafeDomain(s string) bool {
+	return s != "" && safeDomainRe.MatchString(s)
 }

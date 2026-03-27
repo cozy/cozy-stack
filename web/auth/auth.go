@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -510,6 +511,95 @@ func registerPreflight(c echo.Context) error {
 	return corsPreflight(echo.POST)(c)
 }
 
+func tokenExchangeCORS(c echo.Context) bool {
+	origin := c.Request().Header.Get(echo.HeaderOrigin)
+	if origin == "" {
+		return true
+	}
+	inst := middlewares.GetInstance(c)
+	if !tokenExchangeOriginAllowed(origin, inst) {
+		return false
+	}
+
+	res := c.Response()
+	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+	return true
+}
+
+// Allow CORS from *.org_domain
+func tokenExchangeOriginAllowed(origin string, inst *instance.Instance) bool {
+	if inst == nil || inst.OrgDomain == "" {
+		return false
+	}
+	originHost := utils.ExtractInstanceHost(origin)
+	if originHost == "" {
+		return false
+	}
+	orgDomain := utils.NormalizeDomain(inst.OrgDomain)
+	return originHost == orgDomain || strings.HasSuffix(originHost, "."+orgDomain)
+}
+
+func tokenExchangePreflight(c echo.Context) error {
+	if !tokenExchangeCORS(c) {
+		return c.NoContent(http.StatusForbidden)
+	}
+	req := c.Request()
+	res := c.Response()
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
+	res.Header().Set(echo.HeaderAccessControlAllowMethods, echo.POST)
+	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
+	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
+		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func tokenExchange(c echo.Context) error {
+	if !tokenExchangeCORS(c) {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"error": "the origin of this application is not allowed",
+		})
+	}
+	c.Response().Header().Set("Cache-Control", "no-store")
+	c.Response().Header().Set("Pragma", "no-cache")
+
+	inst := middlewares.GetInstance(c)
+	var reqBody tokenExchangeRequest
+	if err := c.Bind(&reqBody); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid request body",
+		})
+	}
+	reqBody.IDToken = strings.TrimSpace(reqBody.IDToken)
+	reqBody.Scope = strings.TrimSpace(reqBody.Scope)
+	if reqBody.IDToken == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the id_token parameter is mandatory",
+		})
+	}
+	if reqBody.Scope == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the scope parameter is mandatory",
+		})
+	}
+
+	out, err := executeTokenExchange(c, inst, reqBody)
+	if err != nil {
+		var httpErr *echo.HTTPError
+		if errors.As(err, &httpErr) {
+			return c.JSON(httpErr.Code, echo.Map{
+				"error": fmt.Sprint(httpErr.Message),
+			})
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusOK, out)
+}
+
 func registerFromWebApp(c echo.Context) error {
 	res := c.Response()
 	origin := c.Request().Header.Get(echo.HeaderOrigin)
@@ -683,6 +773,8 @@ func Routes(router *echo.Group) {
 	authHandler.Register(router.Group("/authorize", noCSRF))
 
 	router.POST("/access_token", accessToken)
+	router.POST("/token_exchange", tokenExchange, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
+	router.OPTIONS("/token_exchange", tokenExchangePreflight)
 
 	// Flagship app
 	router.POST("/session_code", CreateSessionCode)
