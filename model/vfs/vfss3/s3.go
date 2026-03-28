@@ -7,9 +7,6 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-// maxNbFilesToDelete is the max number of objects per RemoveObjects batch.
-const maxNbFilesToDelete = 1000
-
 // deletePrefixObjects deletes all objects in a bucket under a given prefix.
 func deletePrefixObjects(ctx context.Context, client *minio.Client, bucket, prefix string) error {
 	objectsCh := make(chan minio.ObjectInfo)

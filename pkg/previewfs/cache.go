@@ -189,7 +189,7 @@ func (s s3Cache) getObject(name string) (*bytes.Buffer, error) {
 	_, err = buf.ReadFrom(obj)
 	if err != nil {
 		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
-			return nil, err
+			return nil, os.ErrNotExist
 		}
 		return nil, err
 	}
