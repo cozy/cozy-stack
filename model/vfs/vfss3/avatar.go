@@ -112,5 +112,6 @@ func wrapS3Err(err error) error {
 	if minio.ToErrorResponse(err).Code == "NoSuchBucket" {
 		return os.ErrNotExist
 	}
-	return err
+	// Sanitize S3 errors to avoid leaking internal bucket/key details
+	return fmt.Errorf("s3 storage error: %s", minio.ToErrorResponse(err).Code)
 }
