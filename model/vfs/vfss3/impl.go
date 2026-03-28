@@ -70,12 +70,12 @@ func BucketName(orgID, bucketPrefix string) string {
 		orgID = "default"
 	}
 	name := bucketPrefix + "-" + sanitizeBucketName(orgID)
-	if len(name) < 3 {
-		name = name + strings.Repeat("-", 3-len(name))
-	}
 	if len(name) > 63 {
 		name = name[:63]
-		name = strings.TrimRight(name, "-")
+	}
+	name = strings.TrimRight(name, "-")
+	if len(name) < 3 {
+		name = name + strings.Repeat("0", 3-len(name))
 	}
 	return name
 }

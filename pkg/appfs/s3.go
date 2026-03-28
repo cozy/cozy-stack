@@ -49,10 +49,10 @@ func (f *s3Copier) Exist(slug, version, shasum string) (bool, error) {
 	}
 	_, err := f.client.StatObject(f.ctx, f.bucket, f.appObj, minio.StatObjectOptions{})
 	if err == nil {
-			return true, nil
+		return true, nil
 	}
 	if isS3NotFound(err) {
-			return false, nil
+		return false, nil
 	}
 	return false, err
 }

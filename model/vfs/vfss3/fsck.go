@@ -14,7 +14,6 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-var errFailFast = errors.New("fail fast")
 
 func (sfs *s3VFS) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
