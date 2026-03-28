@@ -74,11 +74,16 @@ func (f *s3Copier) Start(slug, version, shasum string) (bool, error) {
 
 func (f *s3Copier) Copy(stat os.FileInfo, src io.Reader) error {
 	if !f.started {
-		panic("copier should call Start() before Copy()")
+		return fmt.Errorf("appfs: copier must call Start() before Copy()")
 	}
 
 	// Write directly to the final location (appObj/filename).
-	objName := path.Join(f.appObj, stat.Name())
+	// Reject path traversal attempts in filenames.
+	name := stat.Name()
+	if strings.Contains(name, "..") {
+		return fmt.Errorf("appfs: invalid filename %q", name)
+	}
+	objName := path.Join(f.appObj, name)
 
 	contentType := filetype.ByExtension(path.Ext(stat.Name()))
 	if contentType == "" {
@@ -173,7 +178,11 @@ func (s *s3Server) ServeFileContent(w http.ResponseWriter, req *http.Request, sl
 	}
 
 	if checkETag := req.Header.Get("Cache-Control") == ""; checkETag {
-		etag := fmt.Sprintf(`"%s"`, info.ETag[:10])
+		etagVal := info.ETag
+		if len(etagVal) > 10 {
+			etagVal = etagVal[:10]
+		}
+		etag := fmt.Sprintf(`"%s"`, etagVal)
 		if web_utils.CheckPreconditions(w, req, etag) {
 			return nil
 		}
@@ -181,7 +190,9 @@ func (s *s3Server) ServeFileContent(w http.ResponseWriter, req *http.Request, sl
 	}
 
 	// Read the full object to handle brotli decompression.
-	content, err := io.ReadAll(obj)
+	// Limit to 50 MiB to avoid unbounded memory allocation from corrupted objects.
+	const maxAppFileSize = 50 << 20
+	content, err := io.ReadAll(io.LimitReader(obj, maxAppFileSize))
 	if err != nil {
 		return err
 	}
@@ -269,6 +280,10 @@ func (s *s3Server) makeObjectName(slug, version, shasum, file string) string {
 	if shasum != "" {
 		basepath += "-" + shasum
 	}
+	// Prevent path traversal
+	if strings.Contains(file, "..") {
+		return basepath + "/invalid"
+	}
 	return path.Join(basepath, file)
 }
 
@@ -338,10 +353,15 @@ func isS3NotFound(err error) bool {
 	return code == "NoSuchKey" || code == "NoSuchBucket"
 }
 
-// wrapS3ErrNotExist converts S3 not-found errors to os.ErrNotExist.
+// wrapS3ErrNotExist converts S3 not-found errors to os.ErrNotExist and
+// sanitizes other S3 errors to avoid leaking internal bucket/key details.
 func wrapS3ErrNotExist(err error) error {
 	if isS3NotFound(err) {
 		return os.ErrNotExist
+	}
+	code := minio.ToErrorResponse(err).Code
+	if code != "" {
+		return fmt.Errorf("s3 storage error: %s", code)
 	}
 	return err
 }

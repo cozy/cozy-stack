@@ -117,7 +117,7 @@ func (sfs *s3VFS) checkFiles(
 								DirDoc: &vfs.DirDoc{
 									Type:    consts.FileType,
 									DocID:   fileID,
-									DocName: obj.Key,
+									DocName: objName,
 								},
 							},
 						},

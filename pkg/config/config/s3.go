@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -36,6 +37,15 @@ func InitS3Connection(fs Fs) error {
 	if s3BucketPrefix == "" {
 		s3BucketPrefix = "cozy"
 	}
+	// Sanitize bucket prefix: lowercase, only alphanumeric and hyphens
+	s3BucketPrefix = strings.ToLower(s3BucketPrefix)
+	s3BucketPrefix = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			return r
+		}
+		return '-'
+	}, s3BucketPrefix)
+	s3BucketPrefix = strings.Trim(s3BucketPrefix, "-")
 	s3Region = region
 
 	var err error
@@ -60,6 +70,20 @@ func InitS3Connection(fs Fs) error {
 	}
 
 	log.Infof("Successfully connected to S3 endpoint %s", endpoint)
+
+	// Pre-create the fixed buckets used by secondary storage (apps, assets,
+	// previews, exports). The per-org VFS bucket is created on instance init.
+	ctx := context.Background()
+	for _, suffix := range []string{"-apps-web", "-apps-konnectors", "-assets", "-previews", "-exports"} {
+		bucket := s3BucketPrefix + suffix
+		if err := s3Client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: region}); err != nil {
+			code := minio.ToErrorResponse(err).Code
+			if code != "BucketAlreadyOwnedByYou" && code != "BucketAlreadyExists" {
+				log.Warnf("Could not create bucket %s: %s", bucket, err)
+			}
+		}
+	}
+
 	return nil
 }
 

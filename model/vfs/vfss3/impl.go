@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/hex"
+
 	"errors"
 	"fmt"
 	"hash"
@@ -1030,23 +1030,17 @@ func (f *s3FileCreation) Close() (err error) {
 		return f.err
 	}
 
-	// Extract MD5 from ETag if available, otherwise use our local md5H
-	if newdoc.MD5Sum == nil {
-		etag := result.info.ETag
-		// ETags may be double-quoted
-		etag = strings.TrimPrefix(etag, "\"")
-		etag = strings.TrimSuffix(etag, "\"")
-		// For multipart uploads, ETag contains a dash — use local MD5
-		if strings.Contains(etag, "-") || etag == "" {
-			newdoc.MD5Sum = f.md5H.Sum(nil)
-		} else {
-			md5sum, err := hex.DecodeString(etag)
-			if err != nil {
-				newdoc.MD5Sum = f.md5H.Sum(nil)
-			} else {
-				newdoc.MD5Sum = md5sum
-			}
+	// Verify or compute MD5 checksum.
+	// The local md5H hash is always computed from the same data stream that
+	// goes to S3 (via the Write method), so it is authoritative.
+	localMD5 := f.md5H.Sum(nil)
+	if newdoc.MD5Sum != nil {
+		// The caller provided an expected hash — verify it matches what was written.
+		if !bytes.Equal(newdoc.MD5Sum, localMD5) {
+			return vfs.ErrInvalidHash
 		}
+	} else {
+		newdoc.MD5Sum = localMD5
 	}
 
 	if f.size < 0 {
