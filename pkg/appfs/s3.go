@@ -101,7 +101,7 @@ func (f *s3Copier) Copy(stat os.FileInfo, src io.Reader) error {
 	}
 
 	meta := map[string]string{
-		"X-Content-Encoding":     "br",
+		"X-Content-Encoding":      "br",
 		"Original-Content-Length": strconv.FormatInt(stat.Size(), 10),
 	}
 
