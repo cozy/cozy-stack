@@ -37,12 +37,12 @@ type thumbsS3 struct {
 }
 
 type s3Thumb struct {
-	pw      *io.PipeWriter
-	errCh   chan error
-	client  *minio.Client
-	bucket  string
-	name    string
-	ctx     context.Context
+	pw     *io.PipeWriter
+	errCh  chan error
+	client *minio.Client
+	bucket string
+	name   string
+	ctx    context.Context
 }
 
 func (t *s3Thumb) Write(p []byte) (int, error) {

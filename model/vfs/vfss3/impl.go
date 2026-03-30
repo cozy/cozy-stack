@@ -75,7 +75,7 @@ func BucketName(orgID, bucketPrefix string) string {
 	}
 	name = strings.TrimRight(name, "-")
 	if len(name) < 3 {
-		name = name + strings.Repeat("0", 3-len(name))
+		name += strings.Repeat("0", 3-len(name))
 	}
 	return name
 }
