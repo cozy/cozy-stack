@@ -33,7 +33,7 @@ require (
 	github.com/leonelquinteros/gotext v1.7.2
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mssola/user_agent v0.6.0
-	github.com/ncw/swift/v2 v2.0.3
+	github.com/ncw/swift/v2 v2.0.5
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/ohler55/ojg v1.20.3
 	github.com/oschwald/maxminddb-golang v1.13.1
