@@ -1758,6 +1758,12 @@ restored. Or, after some time, it will be removed from the trash and permanently
 destroyed.
 
 The file `trashed` attribute will be set to true.
+When a file or folder is moved to the trash, `cozyMetadata` also records:
+
+- `trashedAt`: the server timestamp of the trash action
+- `trashedBy`: the request actor that triggered the trash action, with:
+  - `kind`: `member` or `anonymous-share`
+  - `displayName` and `domain` for `member`
 
 ### GET /files/trash
 
@@ -1814,6 +1820,12 @@ Content-Type: application/vnd.api+json
           "createdByApp": "drive",
           "createdOn": "https://cozy.example.com/",
           "updatedAt": "2016-09-20T18:32:49Z",
+          "trashedAt": "2016-09-20T18:32:49Z",
+          "trashedBy": {
+            "kind": "member",
+            "displayName": "Alice",
+            "domain": "cozy.example.com"
+          },
           "uploadedAt": "2016-09-20T18:32:49Z",
           "uploadedOn": "https://cozy.example.com/",
           "uploadedBy": {
@@ -1852,6 +1864,12 @@ Content-Type: application/vnd.api+json
           "createdByApp": "drive",
           "createdOn": "https://cozy.example.com/",
           "updatedAt": "2016-09-20T18:32:49Z",
+          "trashedAt": "2016-09-20T18:32:49Z",
+          "trashedBy": {
+            "kind": "member",
+            "displayName": "Alice",
+            "domain": "cozy.example.com"
+          },
           "uploadedAt": "2016-09-20T18:32:49Z",
           "uploadedOn": "https://cozy.example.com/",
           "uploadedBy": {

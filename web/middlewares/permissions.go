@@ -407,6 +407,9 @@ func GetPermission(c echo.Context) (*permission.Permission, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err = ResolveRequestActor(c, inst, pdoc); err != nil {
+		return nil, err
+	}
 
 	c.Set(contextPermissionDoc, pdoc)
 	return pdoc, nil

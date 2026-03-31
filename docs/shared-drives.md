@@ -769,6 +769,13 @@ drive.
 #### POST /sharings/drives/trash/:file-id
 #### DELETE /sharings/drives/trash/:file-id
 
+Trash operations keep the same file metadata shape as `/files`: when an item is
+moved to the trash, `cozyMetadata.trashedAt` and `cozyMetadata.trashedBy` are
+exposed on both the caller side and the replicated shared-drive copies. On
+shared-drive requests, `trashedBy.kind` is `member` and
+`trashedBy.displayName` / `trashedBy.domain` are derived from the sharing
+member linked to the `DriveToken`.
+
 ## Share-by-link permissions
 
 The following routes manage share-by-link permissions scoped to files inside a

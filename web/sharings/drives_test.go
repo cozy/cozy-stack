@@ -1823,6 +1823,91 @@ func TestOrgDriveFlag(t *testing.T) {
 	}, 10*time.Second, 200*time.Millisecond, "recipient sharing should preserve org_drive")
 }
 
+func TestSharedDriveTrashAttribution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	_, eB, _ := env.createClients(t)
+
+	publicName, err := env.betty.SettingsPublicName()
+	require.NoError(t, err)
+
+	obj := eB.DELETE("/sharings/drives/"+env.firstSharingID+"/"+env.checklistID).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	obj.Path("$.data.attributes.trashed").Boolean().True()
+	fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+	trashedAt := fcm.Value("trashedAt").String().NotEmpty().Raw()
+	trashedBy := fcm.Value("trashedBy").Object()
+	trashedByKind := trashedBy.Value("kind").String().NotEmpty().Raw()
+	trashedByDisplayName := trashedBy.Value("displayName").String().NotEmpty().Raw()
+	trashedByDomain := trashedBy.Value("domain").String().NotEmpty().Raw()
+	require.Equal(t, vfs.TrashedByKindMember, trashedByKind)
+	require.Equal(t, publicName, trashedByDisplayName)
+
+	type filePayload struct {
+		Data struct {
+			Attributes struct {
+				Trashed      bool `json:"trashed"`
+				CozyMetadata struct {
+					TrashedAt string `json:"trashedAt"`
+					TrashedBy struct {
+						Kind        string `json:"kind"`
+						DisplayName string `json:"displayName"`
+						Domain      string `json:"domain"`
+					} `json:"trashedBy"`
+				} `json:"cozyMetadata"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+
+	getFilePayload := func(baseURL, token, requestPath string) (*filePayload, error) {
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return nil, err
+		}
+		res, err := request.Req(&request.Options{
+			Method: http.MethodGet,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   requestPath,
+			Headers: request.Headers{
+				echo.HeaderAuthorization: "Bearer " + token,
+				echo.HeaderAccept:        "application/vnd.api+json",
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
+		}
+		var payload filePayload
+		if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+			return nil, err
+		}
+		return &payload, nil
+	}
+
+	require.Eventually(t, func() bool {
+		payload, err := getFilePayload(env.tsA.URL, env.acmeToken, "/files/"+env.checklistID)
+		if err != nil {
+			return false
+		}
+		return payload.Data.Attributes.Trashed &&
+			payload.Data.Attributes.CozyMetadata.TrashedAt == trashedAt &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.Kind == trashedByKind &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.DisplayName == trashedByDisplayName &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.Domain == trashedByDomain
+	}, 10*time.Second, 200*time.Millisecond, "owner should receive recipient trash attribution")
+}
+
 func TestSharedDriveDownload(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")

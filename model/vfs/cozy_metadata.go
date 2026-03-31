@@ -18,6 +18,20 @@ type UploadedByEntry struct {
 	Client  map[string]string `json:"oauthClient,omitempty"`
 }
 
+const (
+	// TrashedByKindMember identifies a concrete authenticated/member actor.
+	TrashedByKindMember = "member"
+	// TrashedByKindAnonymousShare identifies anonymous/public share access.
+	TrashedByKindAnonymousShare = "anonymous-share"
+)
+
+// TrashedByEntry identifies who sent a file or folder to the trash.
+type TrashedByEntry struct {
+	Kind        string `json:"kind,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+	Domain      string `json:"domain,omitempty"`
+}
+
 // FilesCozyMetadata is an extended version of cozyMetadata with some specific fields.
 type FilesCozyMetadata struct {
 	metadata.CozyMetadata
@@ -29,6 +43,10 @@ type FilesCozyMetadata struct {
 	UploadedBy *UploadedByEntry `json:"uploadedBy,omitempty"`
 	// Instance URL where the content has been changed the last time
 	UploadedOn string `json:"uploadedOn,omitempty"`
+	// Date of the last trash action
+	TrashedAt *time.Time `json:"trashedAt,omitempty"`
+	// Information about who sent the file or folder to the trash
+	TrashedBy *TrashedByEntry `json:"trashedBy,omitempty"`
 }
 
 // NewCozyMetadata initializes a new FilesCozyMetadata struct
@@ -64,6 +82,17 @@ func (fcm *FilesCozyMetadata) Clone() *FilesCozyMetadata {
 	if fcm.UploadedAt != nil {
 		at := *fcm.UploadedAt
 		cloned.UploadedAt = &at
+	}
+	if fcm.TrashedAt != nil {
+		at := *fcm.TrashedAt
+		cloned.TrashedAt = &at
+	}
+	if fcm.TrashedBy != nil {
+		cloned.TrashedBy = &TrashedByEntry{
+			Kind:        fcm.TrashedBy.Kind,
+			DisplayName: fcm.TrashedBy.DisplayName,
+			Domain:      fcm.TrashedBy.Domain,
+		}
 	}
 	return &cloned
 }
@@ -148,6 +177,22 @@ func (fcm *FilesCozyMetadata) ToJSONDoc() map[string]interface{} {
 	}
 	if fcm.UploadedOn != "" {
 		doc["uploadedOn"] = fcm.UploadedOn
+	}
+	if fcm.TrashedAt != nil {
+		doc["trashedAt"] = *fcm.TrashedAt
+	}
+	if fcm.TrashedBy != nil {
+		trashed := make(map[string]interface{})
+		if fcm.TrashedBy.Kind != "" {
+			trashed["kind"] = fcm.TrashedBy.Kind
+		}
+		if fcm.TrashedBy.DisplayName != "" {
+			trashed["displayName"] = fcm.TrashedBy.DisplayName
+		}
+		if fcm.TrashedBy.Domain != "" {
+			trashed["domain"] = fcm.TrashedBy.Domain
+		}
+		doc["trashedBy"] = trashed
 	}
 	if fcm.SourceAccount != "" {
 		doc["sourceAccount"] = fcm.SourceAccount
