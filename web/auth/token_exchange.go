@@ -153,13 +153,9 @@ func createTokenExchangeOAuthClient(c echo.Context, inst *instance.Instance) (*o
 }
 
 func bindTokenExchangeOIDCSession(inst *instance.Instance, client *oauth.Client, claims jwt.MapClaims) error {
-	oldSessionID := client.OIDCSessionID
 	sessionID, _ := tokenExchangeClaimString(claims, "sid")
 	if sessionID != "" {
 		client.OIDCSessionID = sessionID
-	}
-	if !client.Pending && sessionID == "" {
-		return nil
 	}
 
 	client.Pending = false
@@ -170,11 +166,6 @@ func bindTokenExchangeOIDCSession(inst *instance.Instance, client *oauth.Client,
 	}
 
 	if sessionID != "" {
-		if oldSessionID != "" && oldSessionID != sessionID {
-			if err := oidcbinding.UnbindOAuthClient(inst.ContextName, inst.Domain, oldSessionID, client.CouchID); err != nil {
-				inst.Logger().WithNamespace("oidc").Warnf("Cannot unbind OIDC session %s from OAuth client %s: %s", oldSessionID, client.CouchID, err)
-			}
-		}
 		if err := oidcbinding.BindOAuthClient(inst.ContextName, inst.Domain, sessionID, client.CouchID); err != nil {
 			inst.Logger().WithNamespace("oidc").Errorf("Cannot bind OIDC session %s to OAuth client %s: %s", sessionID, client.CouchID, err)
 			return fmt.Errorf("cannot bind OIDC session to OAuth client: %w", err)
