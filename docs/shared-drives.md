@@ -10,11 +10,15 @@ playing a proxy role.
 
 There are two ways to create a shared drive:
 
-### Simple method: Convert an existing folder
+### Simple method: Use `POST /sharings/drives`
 
-Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint to convert any
-existing folder into a shared drive. This is the recommended approach as it
-handles all validation and setup automatically.
+Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint either to:
+
+- convert an existing folder into a shared drive with `folder_id`
+- create a brand new shared-drive folder with `name`
+
+This is the recommended approach as it handles validation and setup
+automatically.
 
 ### Manual method
 
@@ -106,11 +110,12 @@ Content-Type: application/vnd.api+json
 
 ### POST /sharings/drives
 
-Creates a new shared drive from an existing folder. This is an alternative to
-the manual process of creating a sharing with `drive: true` - it automatically
-validates the folder and creates the sharing with appropriate rules.
+Creates a new shared drive. The endpoint supports two mutually exclusive modes:
 
-The folder must:
+- pass `folder_id` to convert an existing folder into a shared drive
+- pass `name` to create a new folder under the Shared Drives root and share it
+
+When `folder_id` is used, the folder must:
 
 - Exist and be a directory (not a file)
 - Not be a system folder (root, trash, shared-with-me, shared-drives, no-longer-shared)
@@ -152,12 +157,28 @@ Accept: application/vnd.api+json
 }
 ```
 
+Or create a brand new shared drive directly:
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "attributes": {
+      "name": "Product Team"
+    }
+  }
+}
+```
+
 **Attributes:**
 
 | Attribute     | Required | Description |
 |---------------|----------|-------------|
-| `folder_id`   | Yes      | The ID of the existing folder to convert into a shared drive |
+| `folder_id`   | No       | The ID of the existing folder to convert into a shared drive |
+| `name`        | No       | The name of the folder to create under Shared Drives for a new shared drive |
 | `description` | No       | A description for the shared drive. If not provided, defaults to the folder name |
+
+Exactly one of `folder_id` or `name` must be provided.
 
 **Relationships:**
 
@@ -231,8 +252,8 @@ Content-Type: application/vnd.api+json
 | 400    | Bad Request | Invalid JSON body |
 | 403    | Forbidden | Insufficient permissions to create a sharing |
 | 404    | Not Found | The folder with the given `folder_id` does not exist |
-| 409    | Conflict | The folder already has a sharing, is inside a shared folder, or contains a shared subfolder |
-| 422    | Unprocessable Entity | Missing `folder_id`, folder is a file, or folder is a system folder |
+| 409    | Conflict | The folder already has a sharing, is inside a shared folder, contains a shared subfolder, or the new `name` already exists in Shared Drives |
+| 422    | Unprocessable Entity | Invalid request: missing both `folder_id` and `name`, both provided together, folder is a file, folder is a system folder, or the new `name` is invalid |
 
 **Example error (folder already shared):**
 

@@ -807,8 +807,51 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		attrs.Value("drive").Boolean().IsTrue()
 	})
 
-	t.Run("FailOnMissingFolderID", func(t *testing.T) {
-		eOwner.POST("/sharings/drives").
+	t.Run("CreateDriveFromName", func(t *testing.T) {
+		recipientContact := createContact(t, ownerInstance, "Eve", "eve@example.net")
+
+		obj := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "BrandNewDrive"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("drive").Boolean().IsTrue()
+		attrs.Value("description").String().IsEqual("BrandNewDrive")
+
+		rules := attrs.Value("rules").Array()
+		rules.Length().IsEqual(1)
+		rule := rules.Value(0).Object()
+		rule.Value("title").String().IsEqual("BrandNewDrive")
+		createdDirID := rule.Value("values").Array().Value(0).String().NotEmpty().Raw()
+
+		createdDir, err := ownerInstance.VFS().DirByID(createdDirID)
+		require.NoError(t, err)
+		require.Equal(t, consts.SharedDrivesDirID, createdDir.DirID)
+
+		sharedDrivesDir, err := ownerInstance.EnsureSharedDrivesDir()
+		require.NoError(t, err)
+		require.Equal(t, sharedDrivesDir.ID(), createdDir.DirID)
+	})
+
+	t.Run("FailOnMissingFolderIDAndName", func(t *testing.T) {
+		resp := eOwner.POST("/sharings/drives").
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(fmt.Sprintf(`{
@@ -820,6 +863,60 @@ func TestCreateDriveFromFolder(t *testing.T) {
 				}
 			}`, consts.Sharings))).
 			Expect().Status(422)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("folder_id or name is required")
+	})
+
+	t.Run("FailOnBothFolderIDAndName", func(t *testing.T) {
+		dirID := createRootDirectory(t, eOwner, "AmbiguousDriveFolder", ownerAppToken)
+
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s",
+						"name": "AmbiguousDrive"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(422)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("mutually exclusive")
+	})
+
+	t.Run("FailOnDuplicateNameInSharedDrives", func(t *testing.T) {
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "DuplicateNamedDrive"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(201)
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "DuplicateNamedDrive"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(409)
 	})
 
 	t.Run("FailOnNonexistentFolder", func(t *testing.T) {
