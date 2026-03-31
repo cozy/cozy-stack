@@ -519,6 +519,7 @@ care of it later.
         new recipient
     -   `false` if only the owner can add a new recipient
 -   A flag `drive`, that is false for a synchronized sharing
+-   A flag `org_drive`, present for drives created on an organization instance
 -   Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
     `triggers`, `credentials`)
 -   A flag `initial_sync` present only when the initial replication is still

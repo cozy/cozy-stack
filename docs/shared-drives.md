@@ -6,6 +6,10 @@ A shared drive is a folder that is shared between several cozy instances. A
 member doesn't have the files in their Cozy, but can access them via the stack
 playing a proxy role.
 
+For drives created on an organization instance, the sharing payload also
+exposes `org_drive: true`. This is an additive classification flag for clients;
+it does not change the underlying drive-sharing behavior.
+
 ## Creating a shared drive
 
 There are two ways to create a shared drive:
@@ -38,6 +42,9 @@ these steps:
 
 The `GET /sharings/drives` route returns the list of shared drives.
 
+When a drive was created on an organization instance, its attributes include
+`org_drive: true`.
+
 #### Request
 
 ```http
@@ -61,6 +68,7 @@ Content-Type: application/vnd.api+json
       "id": "aae62886e79611ef8381fb83ff72e425",
       "attributes": {
         "drive": true,
+        "org_drive": true,
         "owner": true,
         "description": "Drive for the product team",
         "app_slug": "drive",
@@ -114,6 +122,9 @@ Creates a new shared drive. The endpoint supports two mutually exclusive modes:
 
 - pass `folder_id` to convert an existing folder into a shared drive
 - pass `name` to create a new folder under the Shared Drives root and share it
+
+If the target Cozy is an organization instance, the created sharing is also
+marked with `org_drive: true`.
 
 When `folder_id` is used, the folder must:
 

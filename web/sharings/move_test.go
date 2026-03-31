@@ -71,6 +71,10 @@ func (env *sharedDrivesEnv) createClients(t *testing.T) (*httpexpect.Expect, *ht
 }
 
 func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
+	return setupSharedDrivesEnvWithOwnerOptions(t, nil)
+}
+
+func setupSharedDrivesEnvWithOwnerOptions(t *testing.T, ownerOptions *lifecycle.Options) *sharedDrivesEnv {
 	t.Helper()
 
 	config.UseTestFile(t)
@@ -84,7 +88,17 @@ func setupSharedDrivesEnv(t *testing.T) *sharedDrivesEnv {
 
 	// ACME
 	setupA := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_acme")
-	acme := setupA.GetTestInstance(&lifecycle.Options{Email: "acme@example.net", PublicName: "ACME"})
+	owner := &lifecycle.Options{Email: "acme@example.net", PublicName: "ACME"}
+	if ownerOptions != nil {
+		owner = ownerOptions
+		if owner.Email == "" {
+			owner.Email = "acme@example.net"
+		}
+		if owner.PublicName == "" {
+			owner.PublicName = "ACME"
+		}
+	}
+	acme := setupA.GetTestInstance(owner)
 	acmeToken := generateAppToken(acme, "drive", "io.cozy.files")
 	tsA := setupA.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/files":       files.Routes,

@@ -108,6 +108,7 @@ func CreateSharedDrive(c echo.Context) error {
 	if slug != "" && newSharing.AppSlug == "" {
 		newSharing.AppSlug = slug
 	}
+	newSharing.OrgDrive = inst.IsOrganizationInstance()
 
 	// Extract recipient IDs from relationships
 	rwGroupIDs, rwContactIDs := extractRecipientIDs(obj, "recipients")

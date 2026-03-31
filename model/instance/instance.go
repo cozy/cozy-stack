@@ -217,6 +217,16 @@ func (i *Instance) SlugAndDomain() (string, string) {
 	return splitted[0], splitted[1]
 }
 
+// IsOrganizationInstance returns true when the instance's canonical slug
+// matches its organization ID.
+func (i *Instance) IsOrganizationInstance() bool {
+	if i == nil || i.OrgID == "" {
+		return false
+	}
+	slug, _, found := strings.Cut(i.Domain, ".")
+	return found && slug != "" && slug == i.OrgID
+}
+
 // Logger returns the logger associated with the instance
 func (i *Instance) Logger() *logger.Entry {
 	return logger.WithDomain(i.Domain)

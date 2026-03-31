@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -544,6 +545,7 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 		attrs.Value("app_slug").IsEqual("drive")
 		attrs.Value("owner").IsEqual(true)
 		attrs.Value("drive").IsEqual(true)
+		attrs.NotContainsKey("org_drive")
 
 		members := attrs.Value("members").Array()
 		members.Length().IsEqual(3)
@@ -768,6 +770,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		data.Value("id").String().NotEmpty()
 		attrs := data.Value("attributes").Object()
 		attrs.Value("drive").Boolean().IsTrue()
+		attrs.NotContainsKey("org_drive")
 		attrs.Value("description").String().IsEqual("Project Documents")
 
 		// Verify the rule was created correctly
@@ -805,6 +808,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		data.Value("id").String().NotEmpty()
 		attrs := data.Value("attributes").Object()
 		attrs.Value("drive").Boolean().IsTrue()
+		attrs.NotContainsKey("org_drive")
 	})
 
 	t.Run("CreateDriveFromName", func(t *testing.T) {
@@ -1726,6 +1730,97 @@ func TestSharedDriveCreation(t *testing.T) {
 		require.NotEmpty(t, sharingID, "Sharing ID should not be empty")
 		require.NotEmpty(t, dirID, "Directory ID should not be empty")
 	})
+}
+
+func TestOrgDriveFlag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	const orgSlug = "org-slug"
+
+	env := setupSharedDrivesEnvWithOwnerOptions(t, &lifecycle.Options{
+		Domain:     orgSlug + ".example.net",
+		OrgID:      orgSlug,
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+	eOwner, _, _ := env.createClients(t)
+	folderID := createRootDirectory(t, eOwner, "OrgDriveRoot", env.acmeToken)
+	recipientContact := createContact(t, env.acme, "Betty OrgDrive", "betty-orgdrive@example.net")
+
+	obj := eOwner.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(fmt.Sprintf(`{
+			"data": {
+				"type": "%s",
+				"attributes": {
+					"description": "Organization drive",
+					"folder_id": "%s"
+				},
+				"relationships": {
+					"recipients": {
+						"data": [{"id": "%s", "type": "%s"}]
+					}
+				}
+			}
+		}`, consts.Sharings, folderID, recipientContact.ID(), consts.Contacts))).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := obj.Path("$.data.id").String().NotEmpty().Raw()
+	attrs := obj.Path("$.data.attributes").Object()
+	attrs.Value("drive").Boolean().IsTrue()
+	attrs.Value("org_drive").Boolean().IsTrue()
+
+	getOrgDriveFlag := func(baseURL, token string) (bool, error) {
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return false, err
+		}
+		res, err := request.Req(&request.Options{
+			Method: http.MethodGet,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + sharingID,
+			Headers: request.Headers{
+				echo.HeaderAuthorization: "Bearer " + token,
+				echo.HeaderAccept:        "application/vnd.api+json",
+			},
+		})
+		if err != nil {
+			return false, err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			return false, fmt.Errorf("unexpected status: %d", res.StatusCode)
+		}
+
+		var payload struct {
+			Data struct {
+				Attributes struct {
+					OrgDrive bool `json:"org_drive"`
+				} `json:"attributes"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+			return false, err
+		}
+		return payload.Data.Attributes.OrgDrive, nil
+	}
+
+	ownerOrgDrive, err := getOrgDriveFlag(env.tsA.URL, env.acmeToken)
+	require.NoError(t, err)
+	require.True(t, ownerOrgDrive)
+
+	acceptSharedDrive(t, env.acme, env.betty, "Betty OrgDrive", env.tsA.URL, env.tsB.URL, sharingID)
+
+	require.Eventually(t, func() bool {
+		recipientOrgDrive, err := getOrgDriveFlag(env.tsB.URL, env.bettyToken)
+		return err == nil && recipientOrgDrive
+	}, 10*time.Second, 200*time.Millisecond, "recipient sharing should preserve org_drive")
 }
 
 func TestSharedDriveDownload(t *testing.T) {

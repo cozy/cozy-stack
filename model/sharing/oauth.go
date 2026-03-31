@@ -101,6 +101,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		&Sharing{
 			SID:         s.SID,
 			Drive:       s.Drive,
+			OrgDrive:    s.OrgDrive,
 			Active:      false,
 			Owner:       false,
 			Open:        s.Open,
