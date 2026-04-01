@@ -11,13 +11,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
-	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -52,21 +48,9 @@ type sharedDrivesEnv struct {
 // createClients creates httpexpect clients for the current test with proper error reporting
 func (env *sharedDrivesEnv) createClients(t *testing.T) (*httpexpect.Expect, *httpexpect.Expect, *httpexpect.Expect) {
 	t.Helper()
-	eA := httpexpect.WithConfig(httpexpect.Config{
-		BaseURL:  env.tsA.URL,
-		Reporter: httpexpect.NewRequireReporter(t),
-		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
-	})
-	eB := httpexpect.WithConfig(httpexpect.Config{
-		BaseURL:  env.tsB.URL,
-		Reporter: httpexpect.NewRequireReporter(t),
-		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
-	})
-	eD := httpexpect.WithConfig(httpexpect.Config{
-		BaseURL:  env.tsD.URL,
-		Reporter: httpexpect.NewRequireReporter(t),
-		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
-	})
+	eA := newSharingExpect(t, env.tsA.URL)
+	eB := newSharingExpect(t, env.tsB.URL)
+	eD := newSharingExpect(t, env.tsD.URL)
 	return eA, eB, eD
 }
 
@@ -86,59 +70,33 @@ func setupSharedDrivesEnvWithOwnerOptions(t *testing.T, ownerOptions *lifecycle.
 	middlewares.BuildTemplates()
 	require.NoError(t, dynamic.InitDynamicAssetFS(config.FsURL().String()))
 
-	// ACME
-	setupA := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_acme")
-	owner := &lifecycle.Options{Email: "acme@example.net", PublicName: "ACME"}
-	if ownerOptions != nil {
-		owner = ownerOptions
-		if owner.Email == "" {
-			owner.Email = "acme@example.net"
-		}
-		if owner.PublicName == "" {
-			owner.PublicName = "ACME"
-		}
-	}
-	acme := setupA.GetTestInstance(owner)
-	acmeToken := generateAppToken(acme, "drive", "io.cozy.files")
-	tsA := setupA.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/files":       files.Routes,
-		"/notes":       notes.Routes,
-		"/permissions": permissions.Routes,
-		"/sharings":    sharings.Routes,
-	})
-	tsA.Config.Handler.(*echo.Echo).Renderer = render
-	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(tsA.Close)
-
-	// Betty
-	setupB := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_betty")
-	betty := setupB.GetTestInstance(&lifecycle.Options{
-		Email: "betty@example.net", PublicName: "Betty", Passphrase: "MyPassphrase", KdfIterations: 5000, Key: "xxx",
-	})
-	bettyToken := generateAppToken(betty, "drive", consts.Files)
-	tsB := setupB.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth":     func(g *echo.Group) { g.Use(middlewares.LoadSession); auth.Routes(g) },
-		"/files":    files.Routes,
-		"/sharings": sharings.Routes,
-	})
-	tsB.Config.Handler.(*echo.Echo).Renderer = render
-	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(tsB.Close)
-
-	// Dave (read-only)
-	setupD := testutils.NewSetup(t, strings.ReplaceAll(t.Name(), "/", "_")+"_dave")
-	dave := setupD.GetTestInstance(&lifecycle.Options{
-		Email: "dave@example.net", PublicName: "Dave", Passphrase: "MyPassphrase", KdfIterations: 5000, Key: "xxx",
-	})
-	daveToken := generateAppToken(dave, "drive", consts.Files)
-	tsD := setupD.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth":     func(g *echo.Group) { g.Use(middlewares.LoadSession); auth.Routes(g) },
-		"/files":    files.Routes,
-		"/sharings": sharings.Routes,
-	})
-	tsD.Config.Handler.(*echo.Echo).Renderer = render
-	tsD.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(tsD.Close)
+	testName := strings.ReplaceAll(t.Name(), "/", "_")
+	acme, acmeToken, tsA := newDriveOwnerTestServerWithOptions(
+		t,
+		testName+"_acme",
+		ownerOptions,
+		render,
+		map[string]func(*echo.Group){
+			"/notes":       notes.Routes,
+			"/permissions": permissions.Routes,
+		},
+	)
+	betty, bettyToken, tsB := newDriveRecipientTestServer(
+		t,
+		testName+"_betty",
+		"betty@example.net",
+		"Betty",
+		render,
+		nil,
+	)
+	dave, daveToken, tsD := newDriveRecipientTestServer(
+		t,
+		testName+"_dave",
+		"dave@example.net",
+		"Dave",
+		render,
+		nil,
+	)
 
 	// Create initial shared drive and accept as Betty; create common dirs
 	rootDirName := "One More Shared Drive " + crypto.GenerateRandomString(1000)
@@ -147,11 +105,7 @@ func setupSharedDrivesEnvWithOwnerOptions(t *testing.T, ownerOptions *lifecycle.
 	acceptSharedDriveForBetty(t, acme, betty, tsA.URL, tsB.URL, sharingID)
 
 	// Create temporary clients for initial setup
-	eA := httpexpect.WithConfig(httpexpect.Config{
-		BaseURL:  tsA.URL,
-		Reporter: httpexpect.NewRequireReporter(t),
-		Printers: []httpexpect.Printer{httpexpect.NewCompactPrinter(t)},
-	})
+	eA := newSharingExpect(t, tsA.URL)
 
 	productDirID := createDirectory(t, eA, firstRootDirID, "Product", acmeToken)
 	meetingsDirID := createDirectory(t, eA, firstRootDirID, "Meetings", acmeToken)

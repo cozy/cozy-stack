@@ -489,7 +489,7 @@ func acceptSharing(c echo.Context, ownerInst *instance.Instance, conf *Config, t
 		return renderError(c, ownerInst, http.StatusBadRequest, "Sorry, you cannot accept your own sharing invitation.")
 	}
 	memberURL := memberInst.PageURL("/", nil)
-	if err = s.RegisterCozyURL(ownerInst, member, memberURL); err != nil {
+	if err = s.RegisterCozyURLInteractive(ownerInst, member, memberURL); err != nil {
 		return renderError(c, ownerInst, http.StatusInternalServerError, "Sorry, the sharing invitation could not be processed.")
 	}
 	sharing.PersistInstanceURL(ownerInst, member.Email, member.Instance)
