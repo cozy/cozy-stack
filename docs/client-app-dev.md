@@ -171,6 +171,10 @@ inject the individual values with:
 -   `{{.Flags}}` will be replaced by JSON with the
     [feature flags](./settings.md#feature-flags).
 
+Inside `{{.CozyData}}`, `isLoggedIn` indicates whether the request is backed by
+an authenticated Cozy session. Public pages can use it to decide when to fall
+back to the browser language instead of the instance locale.
+
 There are also some helpers to inject asset tags or URLs:
 
 -   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.

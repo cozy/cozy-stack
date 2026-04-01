@@ -490,11 +490,12 @@ type serveParams struct {
 
 func (s serveParams) CozyData() (string, error) {
 	data := map[string]interface{}{
-		"token":     s.Token,
-		"domain":    s.Domain(),
-		"subdomain": s.SubDomain,
-		"tracking":  s.Tracking,
-		"locale":    s.Locale(),
+		"token":      s.Token,
+		"domain":     s.Domain(),
+		"subdomain":  s.SubDomain,
+		"tracking":   s.Tracking,
+		"locale":     s.Locale(),
+		"isLoggedIn": s.isLoggedIn,
 		"app": map[string]interface{}{
 			"editor": s.AppEditor(),
 			"name":   s.AppName(),
