@@ -3,7 +3,7 @@ package vfss3
 import (
 	"context"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/minio/minio-go/v7"
 )
 
