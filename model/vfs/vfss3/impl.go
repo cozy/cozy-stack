@@ -21,9 +21,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/s3util"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/gofrs/uuid/v5"
-	"github.com/hashicorp/go-multierror"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -208,7 +208,7 @@ func (sfs *s3VFS) InitFs() error {
 
 func (sfs *s3VFS) Delete() error {
 	sfs.log.Infof("Deleting all objects with prefix %q in bucket %q", sfs.keyPrefix, sfs.bucket)
-	return deletePrefixObjects(sfs.ctx, sfs.client, sfs.bucket, sfs.keyPrefix)
+	return s3util.DeletePrefixObjects(sfs.ctx, sfs.client, sfs.bucket, sfs.keyPrefix)
 }
 
 func (sfs *s3VFS) CreateDir(doc *vfs.DirDoc) error {
@@ -495,7 +495,7 @@ func (sfs *s3VFS) destroyFileLocked(doc *vfs.FileDoc) error {
 			sfs.log.Warnf("DestroyFile failed on BatchDeleteVersions: %s", err)
 		}
 	}
-	if err := deleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames); err != nil {
+	if err := s3util.DeleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames); err != nil {
 		sfs.log.Warnf("DestroyFile failed on deleteObjects: %s", err)
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
@@ -513,7 +513,7 @@ func (sfs *s3VFS) EnsureErased(journal vfs.TrashJournal) error {
 		if err != nil {
 			if !couchdb.IsNoDatabaseError(err) {
 				sfs.log.Warnf("EnsureErased failed on VersionsFor(%s): %s", fileID, err)
-				errm = multierror.Append(errm, err)
+				errm = errors.Join(errm, err)
 			}
 			continue
 		}
@@ -529,11 +529,11 @@ func (sfs *s3VFS) EnsureErased(journal vfs.TrashJournal) error {
 	}
 	if err := sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
 		sfs.log.Warnf("EnsureErased failed on BatchDeleteVersions: %s", err)
-		errm = multierror.Append(errm, err)
+		errm = errors.Join(errm, err)
 	}
-	if err := deleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames); err != nil {
+	if err := s3util.DeleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames); err != nil {
 		sfs.log.Warnf("EnsureErased failed on deleteObjects: %s", err)
-		errm = multierror.Append(errm, err)
+		errm = errors.Join(errm, err)
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	return errm
@@ -687,7 +687,7 @@ func (sfs *s3VFS) ClearOldVersions() error {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	return deleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames)
+	return s3util.DeleteObjects(sfs.ctx, sfs.client, sfs.bucket, objNames)
 }
 
 func (sfs *s3VFS) CopyFileFromOtherFS(

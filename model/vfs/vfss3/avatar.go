@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/s3util"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -83,13 +83,13 @@ func (a *avatarS3) DeleteAvatar() error {
 func (a *avatarS3) ServeAvatarContent(w http.ResponseWriter, req *http.Request) error {
 	obj, err := a.client.GetObject(a.ctx, a.bucket, a.avatarKey(), minio.GetObjectOptions{})
 	if err != nil {
-		return wrapS3Err(err)
+		return s3util.WrapNotFound(err)
 	}
 	defer obj.Close()
 
 	info, err := obj.Stat()
 	if err != nil {
-		return wrapS3Err(err)
+		return s3util.WrapNotFound(err)
 	}
 
 	t := time.Time{}
@@ -103,15 +103,4 @@ func (a *avatarS3) ServeAvatarContent(w http.ResponseWriter, req *http.Request) 
 	w.Header().Set("Content-Type", info.ContentType)
 	http.ServeContent(w, req, "avatar", t, obj)
 	return nil
-}
-
-func wrapS3Err(err error) error {
-	if minio.ToErrorResponse(err).Code == "NoSuchKey" {
-		return os.ErrNotExist
-	}
-	if minio.ToErrorResponse(err).Code == "NoSuchBucket" {
-		return os.ErrNotExist
-	}
-	// Sanitize S3 errors to avoid leaking internal bucket/key details
-	return fmt.Errorf("s3 storage error: %s", minio.ToErrorResponse(err).Code)
 }

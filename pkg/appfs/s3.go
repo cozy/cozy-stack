@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -17,6 +16,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
+	"github.com/cozy/cozy-stack/pkg/s3util"
 
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo/v4"
@@ -51,7 +51,7 @@ func (f *s3Copier) Exist(slug, version, shasum string) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-	if isS3NotFound(err) {
+	if s3util.IsNotFound(err) {
 		return false, nil
 	}
 	return false, err
@@ -63,7 +63,7 @@ func (f *s3Copier) Start(slug, version, shasum string) (bool, error) {
 		return exist, err
 	}
 
-	if err := ensureS3Bucket(f.ctx, f.client, f.bucket); err != nil {
+	if err := s3util.EnsureBucket(f.ctx, f.client, f.bucket, ""); err != nil {
 		return false, err
 	}
 
@@ -116,7 +116,7 @@ func (f *s3Copier) Copy(stat os.FileInfo, src io.Reader) error {
 }
 
 func (f *s3Copier) Abort() error {
-	return s3DeleteObjects(f.ctx, f.client, f.bucket, f.objectNames)
+	return s3util.DeleteObjects(f.ctx, f.client, f.bucket, f.objectNames)
 }
 
 func (f *s3Copier) Commit() (err error) {
@@ -148,12 +148,12 @@ func (s *s3Server) Open(slug, version, shasum, file string) (io.ReadCloser, erro
 	objName := s.makeObjectName(slug, version, shasum, file)
 	obj, err := s.client.GetObject(s.ctx, s.bucket, objName, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, wrapS3ErrNotExist(err)
+		return nil, s3util.WrapNotFound(err)
 	}
 	info, err := obj.Stat()
 	if err != nil {
 		obj.Close()
-		return nil, wrapS3ErrNotExist(err)
+		return nil, s3util.WrapNotFound(err)
 	}
 	contentEncoding := info.UserMetadata["X-Content-Encoding"]
 	if contentEncoding == "br" {
@@ -168,13 +168,13 @@ func (s *s3Server) ServeFileContent(w http.ResponseWriter, req *http.Request, sl
 	objName := s.makeObjectName(slug, version, shasum, file)
 	obj, err := s.client.GetObject(s.ctx, s.bucket, objName, minio.GetObjectOptions{})
 	if err != nil {
-		return wrapS3ErrNotExist(err)
+		return s3util.WrapNotFound(err)
 	}
 	defer obj.Close()
 
 	info, err := obj.Stat()
 	if err != nil {
-		return wrapS3ErrNotExist(err)
+		return s3util.WrapNotFound(err)
 	}
 
 	if checkETag := req.Header.Get("Cache-Control") == ""; checkETag {
@@ -315,55 +315,6 @@ func S3AppsBucket(bucketPrefix string, appsType consts.AppType) string {
 		return bucketPrefix + "-apps-konnectors"
 	}
 	panic("Unknown AppType")
-}
-
-// ensureS3Bucket creates the bucket if it does not already exist.
-func ensureS3Bucket(ctx context.Context, client *minio.Client, bucket string) error {
-	err := client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
-	if err != nil {
-		code := minio.ToErrorResponse(err).Code
-		if code == "BucketAlreadyOwnedByYou" || code == "BucketAlreadyExists" {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// s3DeleteObjects deletes a list of named objects from a bucket.
-func s3DeleteObjects(ctx context.Context, client *minio.Client, bucket string, objNames []string) error {
-	if len(objNames) == 0 {
-		return nil
-	}
-	objectsCh := make(chan minio.ObjectInfo, len(objNames))
-	for _, name := range objNames {
-		objectsCh <- minio.ObjectInfo{Key: name}
-	}
-	close(objectsCh)
-	var errm error
-	for e := range client.RemoveObjects(ctx, bucket, objectsCh, minio.RemoveObjectsOptions{}) {
-		errm = errors.Join(errm, e.Err)
-	}
-	return errm
-}
-
-// isS3NotFound returns true when the error is an S3 "not found" response.
-func isS3NotFound(err error) bool {
-	code := minio.ToErrorResponse(err).Code
-	return code == "NoSuchKey" || code == "NoSuchBucket"
-}
-
-// wrapS3ErrNotExist converts S3 not-found errors to os.ErrNotExist and
-// sanitizes other S3 errors to avoid leaking internal bucket/key details.
-func wrapS3ErrNotExist(err error) error {
-	if isS3NotFound(err) {
-		return os.ErrNotExist
-	}
-	code := minio.ToErrorResponse(err).Code
-	if code != "" {
-		return fmt.Errorf("s3 storage error: %s", code)
-	}
-	return err
 }
 
 // prepareTarball is reused from server.go via the FileServer interface (it
