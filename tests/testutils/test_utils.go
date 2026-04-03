@@ -370,7 +370,7 @@ func (c *TestSetup) InstallMiniApp() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = createFile(instance, pubdir, "index.html", "this is a file in public/")
+	err = createFile(instance, pubdir, "index.html", `this is a file in public/ {{.CozyData}}`)
 	if err != nil {
 		return "", err
 	}

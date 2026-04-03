@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -114,6 +115,7 @@ func TestApps(t *testing.T) {
 
 	t.Run("Serve", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
+		eAnon := testutils.CreateTestClient(t, ts.URL)
 
 		assertNotPublic(e, slug, testInstance.Domain, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2Ffoo")
 		assertNotPublic(e, slug, testInstance.Domain, "/foo/hello.tml", 401, "")
@@ -126,8 +128,24 @@ func TestApps(t *testing.T) {
 		assertAuthGet(e, slug, testInstance.Domain, "/foo/hello.html", "text/html", "utf-8", "world {{.Token}}")
 		assertAuthGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
 		assertAuthGet(e, slug, testInstance.Domain, "/public/index.html", "text/html", "utf-8", "this is a file in public/")
-		assertAnonGet(e, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
-		assertAnonGet(e, slug, testInstance.Domain, "/public/index.html", "text/html", "utf-8", "this is a file in public/")
+		assertAnonGet(eAnon, slug, testInstance.Domain, "/public", "text/html", "utf-8", "this is a file in public/")
+		assertAnonGet(eAnon, slug, testInstance.Domain, "/public/index.html", "text/html", "utf-8", "this is a file in public/")
+		assertBodyContainsUnescaped(
+			t,
+			e.GET("/public").
+				WithHost(slug+"."+testInstance.Domain).
+				Expect().Status(200).
+				Body().Raw(),
+			`"isLoggedIn":true`,
+		)
+		assertBodyContainsUnescaped(
+			t,
+			eAnon.GET("/public").
+				WithHost(slug+"."+testInstance.Domain).
+				Expect().Status(200).
+				Body().Raw(),
+			`"isLoggedIn":false`,
+		)
 		assertNotFound(e, slug, testInstance.Domain, "/404")
 		assertNotFound(e, slug, testInstance.Domain, "/")
 		assertNotFound(e, slug, testInstance.Domain, "/index.html")
@@ -775,6 +793,11 @@ func assertInternalServerError(e *httpexpect.Expect, slug, domain, path string) 
 	e.GET(path).
 		WithHost(slug + "." + domain).
 		Expect().Status(500)
+}
+
+func assertBodyContainsUnescaped(t *testing.T, body, content string) {
+	t.Helper()
+	assert.Contains(t, html.UnescapeString(body), content)
 }
 
 func assertRedirect(e *httpexpect.Expect, slug, domain, path string, code int, location string) {
