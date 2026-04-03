@@ -29,6 +29,15 @@ import (
 // worker.
 const BatchSize = 100
 
+// RabbitMQ exchange and routing keys for the RAG indexer. Defined locally
+// because model/rag cannot import pkg/rabbitmq (import cycle).
+const (
+	ragExchange       = "rag.index.topic"
+	ragRoutingFile    = "rag.index.file"
+	ragRoutingDelete  = "rag.index.delete"
+	ragContentType    = "application/octet-stream"
+)
+
 // BrokerMessage describes a message to publish to a message broker.
 type BrokerMessage struct {
 	ContextName string
@@ -89,44 +98,38 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage, publ
 
 func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
 	if publish != nil {
-		err := callRAGIndexerRabbitMQ(inst, doctype, change, publish)
-		if err != errNoBroker {
-			return err
-		}
+		return callRAGIndexerRabbitMQ(inst, doctype, change, publish)
 	}
 	return callRAGIndexerHTTP(inst, doctype, change)
 }
 
-// errNoBroker is a sentinel error used internally to trigger the HTTP fallback.
-var errNoBroker = errors.New("no message broker configured")
-
-func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
+// shouldSkipIndexing returns true when the change should not be forwarded
+// to the RAG indexer regardless of transport.
+func shouldSkipIndexing(inst *instance.Instance, change couchdb.Change) bool {
 	if strings.HasPrefix(change.DocID, "_design/") {
-		return nil
+		return true
 	}
 	if change.Doc.Get("type") == consts.DirType {
-		return nil
+		return true
 	}
-
-	flags, _ := feature.GetFlags(inst)
 	class, _ := change.Doc.Get("class").(string)
-	if class == consts.ImageClass {
-		allowImage, ok := flags.M["rag.index.image.enabled"].(bool)
-		if !ok || !allowImage {
-			return nil
-		}
+	switch class {
+	case consts.ImageClass, consts.VideoClass, consts.AudioClass:
+		flags, _ := feature.GetFlags(inst)
+		flag := map[string]string{
+			consts.ImageClass: "rag.index.image.enabled",
+			consts.VideoClass: "rag.index.video.enabled",
+			consts.AudioClass: "rag.index.audio.enabled",
+		}[class]
+		allowed, _ := flags.M[flag].(bool)
+		return !allowed
 	}
-	if class == consts.VideoClass {
-		allowVideo, ok := flags.M["rag.index.video.enabled"].(bool)
-		if !ok || !allowVideo {
-			return nil
-		}
-	}
-	if class == consts.AudioClass {
-		allowAudio, ok := flags.M["rag.index.audio.enabled"].(bool)
-		if !ok || !allowAudio {
-			return nil
-		}
+	return false
+}
+
+func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
+	if shouldSkipIndexing(inst, change) {
+		return nil
 	}
 
 	ragServer := inst.RAGServer()
@@ -136,9 +139,9 @@ func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couc
 
 	if change.Deleted || change.Doc.Get("trashed") == true {
 		return publish(context.Background(), BrokerMessage{
-			Exchange:    "rag.index.topic",
-			RoutingKey:  "rag.index.delete",
-			ContentType: "application/octet-stream",
+			Exchange:    ragExchange,
+			RoutingKey:  ragRoutingDelete,
+			ContentType: ragContentType,
 			Headers: map[string]interface{}{
 				"action":       "delete",
 				"partition":    inst.Domain,
@@ -202,9 +205,9 @@ func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couc
 	}
 
 	return publish(context.Background(), BrokerMessage{
-		Exchange:    "rag.index.topic",
-		RoutingKey:  "rag.index.file",
-		ContentType: "application/octet-stream",
+		Exchange:    ragExchange,
+		RoutingKey:  ragRoutingFile,
+		ContentType: ragContentType,
 		Headers: map[string]interface{}{
 			"action":       "upsert",
 			"partition":    inst.Domain,
@@ -223,34 +226,7 @@ func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couc
 }
 
 func callRAGIndexerHTTP(inst *instance.Instance, doctype string, change couchdb.Change) error {
-	if strings.HasPrefix(change.DocID, "_design/") {
-		return nil
-	}
-	flags, err := feature.GetFlags(inst)
-	class, _ := change.Doc.Get("class").(string)
-
-	if class == consts.ImageClass {
-		// Index images only if flag allows it
-		allowImage, ok := flags.M["rag.index.image.enabled"].(bool)
-		if !ok || !allowImage {
-			return nil
-		}
-	}
-	if class == consts.VideoClass {
-		// Index videos only if flag allows it
-		allowVideo, ok := flags.M["rag.index.video.enabled"].(bool)
-		if !ok || !allowVideo {
-			return nil
-		}
-	}
-	if class == consts.AudioClass {
-		// Index audio only if flag allows it
-		allowAudio, ok := flags.M["rag.index.audio.enabled"].(bool)
-		if !ok || !allowAudio {
-			return nil
-		}
-	}
-	if change.Doc.Get("type") == consts.DirType {
+	if shouldSkipIndexing(inst, change) {
 		return nil
 	}
 
