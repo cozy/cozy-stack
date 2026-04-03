@@ -3,6 +3,7 @@ package note
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -255,10 +256,14 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 
 func purgeAllSteps(inst *instance.Instance, fileID string) {
 	var docs []couchdb.Doc
+	prefix := startkey(fileID)
 	err := couchdb.ForeachDocsWithCustomPagination(inst, consts.NotesSteps, 1000, func(_ string, raw json.RawMessage) error {
 		var doc Step
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			return err
+		}
+		if !strings.HasPrefix(doc.ID(), prefix) {
+			return nil
 		}
 		docs = append(docs, doc)
 		return nil
