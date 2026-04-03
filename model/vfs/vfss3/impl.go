@@ -43,8 +43,6 @@ type s3VFS struct {
 	log         *logger.Entry
 }
 
-const maxFileSize = 5 << (3 * 10) // 5 GiB
-
 var bucketNameCleaner = regexp.MustCompile(`[^a-z0-9-]`)
 
 // sanitizeBucketName produces a valid S3 bucket name component from an arbitrary string.
@@ -144,7 +142,7 @@ func New(db vfs.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 }
 
 func (sfs *s3VFS) MaxFileSize() int64 {
-	return maxFileSize
+	return 0 // no per-file limit — S3 multipart handles large files transparently
 }
 
 func (sfs *s3VFS) DBCluster() int {
