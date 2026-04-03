@@ -42,13 +42,18 @@ func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange
 	return NewRabbitMQManager(connection, exchanges), nil
 }
 
-// Publish sends req.Payload as a JSON message to req.Exchange using req.RoutingKey.
+// Publish sends a message to req.Exchange using req.RoutingKey.
+//
+// The message body is determined by the request fields:
+//   - if req.RawBody is set, it is used verbatim as the AMQP body;
+//   - otherwise req.Payload is JSON-encoded.
+//
+// When req.Headers is set, the AMQP message includes those headers.
+// When req.ContentType is set, it overrides the default "application/json".
 //
 // Default behavior:
 //   - the message is published on the RabbitMQ node selected by req.ContextName,
 //     falling back to the "default" context when no exact match exists;
-//   - the payload is JSON-encoded and published with Content-Type
-//     "application/json";
 //   - the message is persistent unless req.DeliveryMode overrides it;
 //   - the publish uses the AMQP mandatory flag by default, so unroutable
 //     messages are returned as errors instead of being silently dropped.
@@ -56,7 +61,7 @@ func buildManager(node config.RabbitMQNode, exchangesCfg []config.RabbitExchange
 // Failure modes:
 //   - ErrManagerNotFound if no RabbitMQ manager exists for req.ContextName and
 //     no "default" manager is configured;
-//   - a validation error if Exchange, RoutingKey or Payload is missing;
+//   - a validation error if Exchange, RoutingKey or body source is missing;
 //   - PublishReturnedError if the exchange exists but no queue binding matches
 //     the routing key and UnroutableOK is false;
 //   - PublishNackedError if the broker negatively acknowledges the publish;

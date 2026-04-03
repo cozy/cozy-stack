@@ -38,6 +38,16 @@ type PublishRequest struct {
 	// UnroutableOK disables the AMQP mandatory flag. By default we keep it false
 	// so unroutable messages are returned as errors instead of being dropped.
 	UnroutableOK bool
+	// Headers are optional AMQP message headers. When set, they are included
+	// in the published message. Use this for messages that carry metadata in
+	// AMQP headers rather than in the JSON body (e.g. the RAG indexer protocol).
+	Headers amqp.Table
+	// RawBody, when set, is used as the message body verbatim instead of
+	// JSON-marshaling Payload. Exactly one of Payload or RawBody must be set.
+	RawBody []byte
+	// ContentType overrides the default "application/json" AMQP content type.
+	// Ignored when empty.
+	ContentType string
 }
 
 // PublishReturnedError reports an unroutable publish returned by RabbitMQ.
@@ -76,14 +86,17 @@ func (r PublishRequest) validate() error {
 		return errors.New("rabbitmq publish: exchange is required")
 	case r.RoutingKey == "":
 		return errors.New("rabbitmq publish: routing key is required")
-	case r.Payload == nil:
-		return errors.New("rabbitmq publish: payload is required")
+	case r.Payload == nil && r.RawBody == nil:
+		return errors.New("rabbitmq publish: payload or raw body is required")
 	default:
 		return nil
 	}
 }
 
 func (r PublishRequest) marshalPayload() ([]byte, error) {
+	if r.RawBody != nil {
+		return r.RawBody, nil
+	}
 	body, err := json.Marshal(r.Payload)
 	if err != nil {
 		return nil, fmt.Errorf("rabbitmq publish json: %w", err)
@@ -97,12 +110,18 @@ func (r PublishRequest) toAMQPPublishing(body []byte) amqp.Publishing {
 		deliveryMode = amqp.Persistent
 	}
 
+	contentType := r.ContentType
+	if contentType == "" {
+		contentType = "application/json"
+	}
+
 	return amqp.Publishing{
-		ContentType:  "application/json",
+		ContentType:  contentType,
 		DeliveryMode: deliveryMode,
 		Body:         body,
 		Timestamp:    time.Now().UTC(),
 		MessageId:    r.MessageID,
+		Headers:      r.Headers,
 	}
 }
 
