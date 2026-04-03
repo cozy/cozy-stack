@@ -504,6 +504,9 @@ func pushJob(inst *instance.Instance, doctype string) error {
 	return err
 }
 
+// CleanInstance deletes all RAG data for the given instance.
+// TODO: support instance cleanup via rag-indexer when it supports
+// an "instance.delete" action.
 func CleanInstance(inst *instance.Instance) error {
 	ragServer := inst.RAGServer()
 	if ragServer.URL == "" {
