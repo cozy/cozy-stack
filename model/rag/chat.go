@@ -280,11 +280,21 @@ func Query(inst *instance.Instance, logger logger.Logger, query QueryMessage) er
 		return err
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return fmt.Errorf("POST status code: %d", res.StatusCode)
-	}
-
 	msg := chat.Messages[len(chat.Messages)-1]
+
+	if res.StatusCode != 200 {
+		ragErr := fmt.Errorf("POST status code: %d", res.StatusCode)
+		errorDoc := couchdb.JSONDoc{
+			Type: consts.ChatEvents,
+			M: map[string]interface{}{
+				"_id":     msg.ID,
+				"object":  "error",
+				"message": ragErr.Error(),
+			},
+		}
+		go realtime.GetHub().Publish(inst, realtime.EventCreate, &errorDoc, nil)
+		return ragErr
+	}
 	var completion string
 	var sources []Source
 
