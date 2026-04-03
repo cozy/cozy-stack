@@ -101,7 +101,125 @@ func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Chan
 var errNoBroker = errors.New("no message broker configured")
 
 func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
-	return errNoBroker // stub — replaced in Task 5
+	if strings.HasPrefix(change.DocID, "_design/") {
+		return nil
+	}
+	if change.Doc.Get("type") == consts.DirType {
+		return nil
+	}
+
+	flags, _ := feature.GetFlags(inst)
+	class, _ := change.Doc.Get("class").(string)
+	if class == consts.ImageClass {
+		allowImage, ok := flags.M["rag.index.image.enabled"].(bool)
+		if !ok || !allowImage {
+			return nil
+		}
+	}
+	if class == consts.VideoClass {
+		allowVideo, ok := flags.M["rag.index.video.enabled"].(bool)
+		if !ok || !allowVideo {
+			return nil
+		}
+	}
+	if class == consts.AudioClass {
+		allowAudio, ok := flags.M["rag.index.audio.enabled"].(bool)
+		if !ok || !allowAudio {
+			return nil
+		}
+	}
+
+	ragServer := inst.RAGServer()
+	if ragServer.URL == "" {
+		return errors.New("no RAG server configured")
+	}
+
+	if change.Deleted || change.Doc.Get("trashed") == true {
+		return publish(context.Background(), BrokerMessage{
+			Exchange:    "rag.index.topic",
+			RoutingKey:  "rag.index.delete",
+			ContentType: "application/octet-stream",
+			Headers: map[string]interface{}{
+				"action":       "delete",
+				"partition":    inst.Domain,
+				"file_id":      change.DocID,
+				"rag_base_url": ragServer.URL,
+				"rag_api_key":  ragServer.APIKey,
+			},
+			Body: []byte{},
+		})
+	}
+
+	// Upsert path
+	md5sum := fmt.Sprintf("%x", change.Doc.Get("md5sum"))
+	dirID, _ := change.Doc.Get("dir_id").(string)
+	name, _ := change.Doc.Get("name").(string)
+	mime, _ := change.Doc.Get("mime").(string)
+	metadataRaw, ok := change.Doc.Get("metadata").(map[string]interface{})
+	datetime := ""
+	if ok {
+		datetime, _ = metadataRaw["datetime"].(string)
+	}
+	internalID, _ := change.Doc.Get("internal_vfs_id").(string)
+
+	var content []byte
+	if mime == consts.NoteMimeType {
+		metadata, _ := change.Doc.Get("metadata").(map[string]interface{})
+		schema, _ := metadata["schema"].(map[string]interface{})
+		raw, _ := metadata["content"].(map[string]interface{})
+		noteDoc := &note.Document{
+			DocID:      change.DocID,
+			SchemaSpec: schema,
+			RawContent: raw,
+		}
+		md, err := noteDoc.Markdown(nil)
+		if err != nil {
+			return err
+		}
+		content = md
+		name = strings.TrimSuffix(name, consts.NoteExtension) + consts.MarkdownExtension
+	} else {
+		fs := inst.VFS()
+		fileDoc := &vfs.FileDoc{
+			Type:       consts.FileType,
+			DocID:      change.DocID,
+			DirID:      dirID,
+			DocName:    name,
+			InternalID: internalID,
+		}
+		f, err := fs.OpenFile(fileDoc)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		content, err = io.ReadAll(f)
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(name, consts.DocsExtension) {
+			name = strings.TrimSuffix(name, consts.DocsExtension) + consts.MarkdownExtension
+		}
+	}
+
+	return publish(context.Background(), BrokerMessage{
+		Exchange:    "rag.index.topic",
+		RoutingKey:  "rag.index.file",
+		ContentType: "application/octet-stream",
+		Headers: map[string]interface{}{
+			"action":       "upsert",
+			"partition":    inst.Domain,
+			"file_id":      change.DocID,
+			"rag_base_url": ragServer.URL,
+			"rag_api_key":  ragServer.APIKey,
+			"name":         name,
+			"md5sum":       md5sum,
+			"content_type": mime,
+			"dir_id":       dirID,
+			"datetime":     datetime,
+			"doctype":      doctype,
+		},
+		Body: content,
+	})
 }
 
 func callRAGIndexerHTTP(inst *instance.Instance, doctype string, change couchdb.Change) error {
