@@ -115,6 +115,7 @@ security features. Please do not use this binary as your production server.
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to init the rabbitmq service: %w", err)
 	}
+	rabbitmq.SetService(rabbitmqSvc)
 
 	services := Services{
 		Emailer:  emailerSvc,

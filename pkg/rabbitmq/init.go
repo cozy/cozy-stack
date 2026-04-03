@@ -26,3 +26,22 @@ func Init(cfg config.RabbitMQ) (Service, error) {
 
 	return NewService(cfg)
 }
+
+var globalService Service
+
+// SetService registers the global RabbitMQ service, making it available
+// to packages that cannot receive it via dependency injection (e.g. model
+// layer workers). Call this once during stack startup.
+func SetService(s Service) {
+	globalService = s
+}
+
+// GetService returns the global RabbitMQ service. It returns a NoopService
+// when SetService has not been called, so callers can safely attempt to
+// publish and fall back on ErrNotConfigured.
+func GetService() Service {
+	if globalService == nil {
+		return new(NoopService)
+	}
+	return globalService
+}
