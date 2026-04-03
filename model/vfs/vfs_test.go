@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -744,6 +746,55 @@ func TestVfs(t *testing.T) {
 			assert.Equal(t, true, updated.Metadata["only"])
 		})
 	}
+
+	t.Run("S3UploadErrorPropagation", func(t *testing.T) {
+		// Create a dedicated minio + S3 VFS for this test so we can stop the
+		// container without affecting other tests.
+		//
+		// We configure a short HTTP dial timeout so that when minio is stopped,
+		// the PutObject goroutine fails quickly instead of hanging on TCP retries.
+		minioFixture := testutils.StartMinio(t)
+		db := &contexter{0, "io.cozy.vfs.s3.errtest", "io.cozy.vfs.s3.errtest", "cozy_beta"}
+		index := vfs.NewCouchdbIndexer(db)
+
+		shortTransport := &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 2 * time.Second,
+			}).DialContext,
+			ResponseHeaderTimeout: 2 * time.Second,
+		}
+		require.NoError(t, config.InitS3Connection(config.Fs{
+			URL:       minioFixture.FsURL("errtest"),
+			Transport: shortTransport,
+		}))
+
+		mu := config.Lock().ReadWrite(db, "vfs-s3-err-test")
+		s3Fs, err := vfss3.New(db, index, &diskImpl{}, mu)
+		require.NoError(t, err)
+
+		require.NoError(t, couchdb.ResetDB(db, consts.Files))
+		t.Cleanup(func() { _ = couchdb.DeleteDB(db, consts.Files) })
+
+		g, _ := errgroup.WithContext(context.Background())
+		couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+		couchdb.DefineViews(g, db, couchdb.ViewsByDoctype(consts.Files))
+		require.NoError(t, g.Wait())
+		require.NoError(t, s3Fs.InitFs())
+
+		// Stop the minio container to simulate a backend failure during upload.
+		stopTimeout := 5 * time.Second
+		require.NoError(t, minioFixture.Container.Stop(context.Background(), &stopTimeout))
+
+		doc, err := vfs.NewFileDoc("upload-fail", consts.RootDirID, -1, nil, "text/plain", "text", time.Now(), false, false, false, nil)
+		require.NoError(t, err)
+
+		file, err := s3Fs.CreateFile(doc, nil)
+		require.NoError(t, err)
+
+		_, _ = file.Write([]byte("data that should fail to reach S3"))
+		err = file.Close()
+		assert.Error(t, err, "expected error when S3 backend is unreachable during upload")
+	})
 }
 
 func (d *diskImpl) DiskQuota() int64 {
