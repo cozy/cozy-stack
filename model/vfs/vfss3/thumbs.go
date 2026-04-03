@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/s3util"
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
 )
@@ -133,20 +134,20 @@ func (ts *thumbsS3) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 	for i, format := range formats {
 		objNames[i] = ts.makeName(img.ID(), format)
 	}
-	return deleteObjects(ts.ctx, ts.client, ts.bucket, objNames)
+	return s3util.DeleteObjects(ts.ctx, ts.client, ts.bucket, objNames)
 }
 
 func (ts *thumbsS3) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {
 	name := ts.makeName(img.ID(), format)
 	obj, err := ts.client.GetObject(ts.ctx, ts.bucket, name, minio.GetObjectOptions{})
 	if err != nil {
-		return wrapS3Err(err)
+		return s3util.WrapNotFound(err)
 	}
 	defer obj.Close()
 
 	info, err := obj.Stat()
 	if err != nil {
-		return wrapS3Err(err)
+		return s3util.WrapNotFound(err)
 	}
 
 	if info.ContentType == echo.MIMEOctetStream {
@@ -176,7 +177,7 @@ func (ts *thumbsS3) OpenNoteThumb(id, format string) (io.ReadCloser, error) {
 	name := ts.makeName(id, format)
 	obj, err := ts.client.GetObject(ts.ctx, ts.bucket, name, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, wrapS3Err(err)
+		return nil, s3util.WrapNotFound(err)
 	}
 	// Stat to verify the object actually exists (GetObject doesn't fail on missing keys).
 	if _, err := obj.Stat(); err != nil {
@@ -194,7 +195,7 @@ func (ts *thumbsS3) RemoveNoteThumb(id string, formats []string) error {
 	for i, format := range formats {
 		objNames[i] = ts.makeName(id, format)
 	}
-	err := deleteObjects(ts.ctx, ts.client, ts.bucket, objNames)
+	err := s3util.DeleteObjects(ts.ctx, ts.client, ts.bucket, objNames)
 	if err != nil {
 		logger.WithNamespace("vfss3").Infof("Cannot remove note thumbs: %s", err)
 	}
@@ -205,7 +206,7 @@ func (ts *thumbsS3) ServeNoteThumbContent(w http.ResponseWriter, req *http.Reque
 	name := ts.makeName(id, consts.NoteImageThumbFormat)
 	obj, err := ts.client.GetObject(ts.ctx, ts.bucket, name, minio.GetObjectOptions{})
 	if err != nil {
-		return wrapS3Err(err)
+		return s3util.WrapNotFound(err)
 	}
 
 	info, err := obj.Stat()
@@ -215,12 +216,12 @@ func (ts *thumbsS3) ServeNoteThumbContent(w http.ResponseWriter, req *http.Reque
 		name = ts.makeName(id, consts.NoteImageOriginalFormat)
 		obj, err = ts.client.GetObject(ts.ctx, ts.bucket, name, minio.GetObjectOptions{})
 		if err != nil {
-			return wrapS3Err(err)
+			return s3util.WrapNotFound(err)
 		}
 		info, err = obj.Stat()
 		if err != nil {
 			obj.Close()
-			return wrapS3Err(err)
+			return s3util.WrapNotFound(err)
 		}
 	}
 	defer obj.Close()
