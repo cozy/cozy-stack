@@ -150,7 +150,10 @@ requests for the stack (it can be guessed, but with the nested vs flat
 subdomains structures, it's better to get the information from the stack). To do
 that, when the application loads its HTML index file, the stack will parse it as
 a template and will insert the relevant values. The configuration can be injected
-as a JSON with `{{.CozyData}}`.
+as a JSON with `{{.CozyData}}`. This JSON includes an `isLoggedIn` boolean
+that indicates whether the user has an active session. Note: the `token` field
+can be non-empty even when the user is not logged in (e.g. for share-by-link),
+so `isLoggedIn` should be used to reliably determine the authentication state.
 
 If you need more control or have some compatibility issues, it is possible to
 inject the individual values with:
