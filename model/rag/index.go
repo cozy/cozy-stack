@@ -2,6 +2,7 @@ package rag
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,11 +29,26 @@ import (
 // worker.
 const BatchSize = 100
 
+// BrokerMessage describes a message to publish to a message broker.
+type BrokerMessage struct {
+	ContextName string
+	Exchange    string
+	RoutingKey  string
+	ContentType string
+	Headers     map[string]interface{}
+	Body        []byte
+}
+
+// PublishFunc publishes a message to a message broker. It is provided by
+// the worker layer to avoid import cycles between model/rag and pkg/rabbitmq.
+// A nil PublishFunc means no broker is configured.
+type PublishFunc func(ctx context.Context, msg BrokerMessage) error
+
 type IndexMessage struct {
 	Doctype string `json:"doctype"`
 }
 
-func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) error {
+func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage, publish PublishFunc) error {
 	if msg.Doctype != consts.Files {
 		return errors.New("Only file can be indexed for the moment")
 	}
@@ -57,7 +73,7 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) erro
 
 	var errj error
 	for _, change := range feed.Results {
-		if err := callRAGIndexer(inst, msg.Doctype, change); err != nil {
+		if err := callRAGIndexer(inst, msg.Doctype, change, publish); err != nil {
 			logger.Warnf("Index error: %s", err)
 			errj = errors.Join(errj, err)
 		}
@@ -71,7 +87,24 @@ func Index(inst *instance.Instance, logger logger.Logger, msg IndexMessage) erro
 	return errj
 }
 
-func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Change) error {
+func callRAGIndexer(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
+	if publish != nil {
+		err := callRAGIndexerRabbitMQ(inst, doctype, change, publish)
+		if err != errNoBroker {
+			return err
+		}
+	}
+	return callRAGIndexerHTTP(inst, doctype, change)
+}
+
+// errNoBroker is a sentinel error used internally to trigger the HTTP fallback.
+var errNoBroker = errors.New("no message broker configured")
+
+func callRAGIndexerRabbitMQ(inst *instance.Instance, doctype string, change couchdb.Change, publish PublishFunc) error {
+	return errNoBroker // stub — replaced in Task 5
+}
+
+func callRAGIndexerHTTP(inst *instance.Instance, doctype string, change couchdb.Change) error {
 	if strings.HasPrefix(change.DocID, "_design/") {
 		return nil
 	}
