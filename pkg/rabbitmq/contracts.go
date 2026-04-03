@@ -1,7 +1,8 @@
 package rabbitmq
 
 const (
-	ExchangeAuth = "auth"
+	ExchangeAuth     = "auth"
+	ExchangeRAGIndex = "rag.index.topic"
 )
 
 const (
@@ -17,6 +18,8 @@ const (
 const (
 	RoutingKeyUserPasswordUpdated   = "user.password.updated"
 	RoutingKeyUserDeletionRequested = "user.deletion.requested"
+	RoutingKeyRAGIndexFile          = "rag.index.file"
+	RoutingKeyRAGIndexDelete        = "rag.index.delete"
 )
 
 // UserDeletionRequestedMessage is published when a user asks Twake to delete the account linked to the current cozy instance.
