@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -141,69 +142,80 @@ func streamChildren(fs vfs.VFS, dir *vfs.DirDoc, dirVFSPath string, out *[]Respo
 	}
 }
 
-// buildResponseForDir returns a <D:response> carrying the 9 live
-// properties for a directory. Collections MUST carry a trailing slash on
-// their href per RFC 4918 §5.2.
-//
-// Directories have no MD5Sum, so the ETag is derived deterministically
-// from DocID + UpdatedAt (pitfall 5 in 01-RESEARCH.md). The content-length
-// and content-type properties are omitted (their struct fields are
-// zero-valued and the encoder honours omitempty).
-func buildResponseForDir(dir *vfs.DirDoc, vfsPath string) Response {
+// propstatOK is the canonical success status line for a <D:propstat>
+// block — RFC 4918 §14.22 mandates the literal "HTTP/1.1 200 OK" form.
+const propstatOK = "HTTP/1.1 200 OK"
+
+// hrefForDir builds the URL-space href for a directory. Collections MUST
+// carry a trailing slash per RFC 4918 §5.2 — clients use it to distinguish
+// a collection from a same-named file without inspecting <D:resourcetype>.
+func hrefForDir(vfsPath string) string {
 	href := davFilesPrefix + vfsPath
-	if href == davFilesPrefix {
-		href = davFilesPrefix + "/"
-	} else if href[len(href)-1] != '/' {
+	if href == davFilesPrefix || href[len(href)-1] != '/' {
 		href += "/"
 	}
+	return href
+}
 
-	prop := Prop{
-		ResourceType:    ResourceType{Collection: &struct{}{}},
-		DisplayName:     dir.DocName,
-		GetLastModified: buildLastModified(dir.UpdatedAt),
-		GetETag:         etagForDir(dir),
-		CreationDate:    buildCreationDate(dir.CreatedAt),
+// hrefForFile builds the URL-space href for a file — the VFS path verbatim
+// under the /dav/files root, with no trailing slash.
+func hrefForFile(vfsPath string) string {
+	return davFilesPrefix + vfsPath
+}
+
+// baseProps fills the live properties shared by files and directories:
+// displayname, getlastmodified, creationdate, and the empty supportedlock
+// / lockdiscovery stubs. Callers layer the type-specific fields
+// (resourcetype, getetag, getcontentlength, getcontenttype) on top.
+func baseProps(name string, createdAt, updatedAt time.Time) Prop {
+	return Prop{
+		DisplayName:     name,
+		GetLastModified: buildLastModified(updatedAt),
+		CreationDate:    buildCreationDate(createdAt),
 		SupportedLock:   &SupportedLock{},
 		LockDiscovery:   &LockDiscovery{},
 	}
+}
+
+// buildResponseForDir returns a <D:response> carrying the 9 live
+// properties for a directory. Directories have no MD5Sum so the ETag is
+// derived deterministically from DocID + UpdatedAt (pitfall 5 in
+// 01-RESEARCH.md). The content-length and content-type properties are
+// omitted (zero-valued fields with omitempty struct tags).
+func buildResponseForDir(dir *vfs.DirDoc, vfsPath string) Response {
+	prop := baseProps(dir.DocName, dir.CreatedAt, dir.UpdatedAt)
+	prop.ResourceType = ResourceType{Collection: &struct{}{}}
+	prop.GetETag = etagForDir(dir)
 
 	return Response{
-		Href: href,
+		Href: hrefForDir(vfsPath),
 		Propstat: []Propstat{{
 			Prop:   prop,
-			Status: "HTTP/1.1 200 OK",
+			Status: propstatOK,
 		}},
 	}
 }
 
 // buildResponseForFile returns a <D:response> carrying the 9 live
-// properties for a file. The href is the URL-space path with no trailing
-// slash.
+// properties for a file. Mime falls back to application/octet-stream per
+// RFC 7231 §3.1.1.5 when the VFS has no stored content type.
 func buildResponseForFile(file *vfs.FileDoc, vfsPath string) Response {
-	href := davFilesPrefix + vfsPath
-
 	mime := file.Mime
 	if mime == "" {
 		mime = "application/octet-stream"
 	}
 
-	prop := Prop{
-		ResourceType:     ResourceType{}, // no <D:collection/> on a file
-		DisplayName:      file.DocName,
-		GetLastModified:  buildLastModified(file.UpdatedAt),
-		GetETag:          buildETag(file.MD5Sum),
-		GetContentLength: file.ByteSize,
-		GetContentType:   mime,
-		CreationDate:     buildCreationDate(file.CreatedAt),
-		SupportedLock:    &SupportedLock{},
-		LockDiscovery:    &LockDiscovery{},
-	}
+	prop := baseProps(file.DocName, file.CreatedAt, file.UpdatedAt)
+	prop.ResourceType = ResourceType{} // no <D:collection/> on a file
+	prop.GetETag = buildETag(file.MD5Sum)
+	prop.GetContentLength = file.ByteSize
+	prop.GetContentType = mime
 
 	return Response{
-		Href: href,
+		Href: hrefForFile(vfsPath),
 		Propstat: []Propstat{{
 			Prop:   prop,
-			Status: "HTTP/1.1 200 OK",
+			Status: propstatOK,
 		}},
 	}
 }
