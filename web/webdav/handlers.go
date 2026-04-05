@@ -33,8 +33,7 @@ func handlePath(c echo.Context) error {
 		// Implemented in plan 01-07
 		return sendWebDAVError(c, http.StatusNotImplemented, "not-implemented")
 	case http.MethodGet, http.MethodHead:
-		// Implemented in plan 01-08
-		return sendWebDAVError(c, http.StatusNotImplemented, "not-implemented")
+		return handleGet(c)
 	default:
 		// Phase 2/3 methods — not yet implemented
 		return sendWebDAVError(c, http.StatusNotImplemented, "not-implemented")
