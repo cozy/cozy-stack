@@ -49,6 +49,7 @@ import (
 	"github.com/cozy/cozy-stack/web/swift"
 	"github.com/cozy/cozy-stack/web/tools"
 	"github.com/cozy/cozy-stack/web/version"
+	"github.com/cozy/cozy-stack/web/webdav"
 	"github.com/cozy/cozy-stack/web/wellknown"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -254,6 +255,31 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		// redirection.
 		accounts.Routes(router.Group("/accounts"))
 		oidc.Routes(router.Group("/oidc"))
+	}
+
+	// WebDAV endpoints — uses a custom middleware chain. Auth is handled
+	// inside the webdav package (resolveWebDAVAuth) because the 401 response
+	// format (WWW-Authenticate: Basic realm="Cozy") differs from the JSON:API
+	// convention, and OPTIONS must bypass auth for RFC 4918 §9.1 discovery.
+	{
+		mwsWebDAV := []echo.MiddlewareFunc{
+			middlewares.NeedInstance,
+			middlewares.CheckInstanceBlocked,
+			middlewares.CheckInstanceDeleting,
+		}
+		webdav.Routes(router.Group("/dav", mwsWebDAV...))
+
+		// Nextcloud compatibility: /remote.php/webdav/* → 308 to /dav/files/*.
+		// 308 preserves the HTTP method (required for PROPFIND — 301/302
+		// would downgrade to GET).
+		webdavRedirectMethods := []string{
+			http.MethodOptions, "PROPFIND", http.MethodGet, http.MethodHead,
+			http.MethodPut, http.MethodDelete, "MKCOL", "COPY", "MOVE",
+		}
+		router.Match(webdavRedirectMethods, "/remote.php/webdav",
+			webdav.NextcloudRedirect, mwsWebDAV...)
+		router.Match(webdavRedirectMethods, "/remote.php/webdav/*",
+			webdav.NextcloudRedirect, mwsWebDAV...)
 	}
 
 	// other non-authentified routes
