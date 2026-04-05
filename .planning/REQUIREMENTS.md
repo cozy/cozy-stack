@@ -9,10 +9,10 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Routing & Discovery
 
-- [ ] **ROUTE-01**: WebDAV endpoint principal exposé sur `/dav/files/`
-- [ ] **ROUTE-02**: Route de compatibilité `/remote.php/webdav/*` → redirect 308 vers `/dav/files/*`
+- [x] **ROUTE-01**: WebDAV endpoint principal exposé sur `/dav/files/`
+- [x] **ROUTE-02**: Route de compatibilité `/remote.php/webdav/*` → redirect 308 vers `/dav/files/*`
 - [x] **ROUTE-03**: Normalisation des chemins (trailing slash, URL decoding, `path.Clean`, assertion du préfixe contre path traversal)
-- [ ] **ROUTE-04**: OPTIONS répond avec `DAV: 1`, `Allow: <liste des méthodes>`, pas d'authentification requise
+- [x] **ROUTE-04**: OPTIONS répond avec `DAV: 1`, `Allow: <liste des méthodes>`, pas d'authentification requise
 - [x] **ROUTE-05**: Exposition de l'arborescence `/files/` uniquement (jamais `/settings`, `/apps`, `/shared`, etc.)
 
 ### Authentication
@@ -123,10 +123,10 @@ Reportés pour une future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROUTE-01 | Phase 1 | Pending |
-| ROUTE-02 | Phase 1 | Pending |
+| ROUTE-01 | Phase 1 | Complete |
+| ROUTE-02 | Phase 1 | Complete |
 | ROUTE-03 | Phase 1 | Complete |
-| ROUTE-04 | Phase 1 | Pending |
+| ROUTE-04 | Phase 1 | Complete |
 | ROUTE-05 | Phase 1 | Complete |
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
