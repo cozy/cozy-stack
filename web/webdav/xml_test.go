@@ -79,7 +79,10 @@ func TestGetLastModifiedFormat(t *testing.T) {
 	tm := time.Date(2025, 4, 7, 10, 0, 0, 0, time.UTC)
 	got := tm.UTC().Format(http.TimeFormat)
 	assert.Equal(t, "Mon, 07 Apr 2025 10:00:00 GMT", got)
-	assert.NotContains(t, got, "T")
+	// Guard against an RFC 3339 regression: the ISO 8601 date/time
+	// separator 'T' (as in 2025-04-07T10:00:00Z) must not appear between
+	// the date and the time — macOS Finder silently misparses that form.
+	assert.NotRegexp(t, `\dT\d`, got)
 }
 
 // TestGetETagQuoting asserts buildETag returns a double-quoted string built
