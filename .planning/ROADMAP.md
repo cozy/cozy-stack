@@ -27,7 +27,16 @@
   3. A PROPFIND with `Depth: infinity` returns `403 Forbidden`. Any path containing `../`, `%2e%2e/`, null bytes, or a system directory prefix (`/settings`, `/apps`, etc.) is rejected — the VFS is never called.
   4. A GET request on a file streams the file content with correct `Content-Length`, `ETag`, and `Last-Modified` headers. Range requests work. A GET on a collection returns `405 Method Not Allowed`.
   5. A client using `/remote.php/webdav/*` is redirected 308 to the equivalent `/dav/files/*` path and the subsequent request succeeds.
-**Plans**: TBD
+**Plans**: 9 plans
+- [ ] 01-01-PLAN.md — Scaffold web/webdav package + gowebdav dep + RED tests for XML & path mapper
+- [ ] 01-02-PLAN.md — GREEN: XML multistatus structs, D: namespace, RFC 1123 dates, ETag helpers
+- [ ] 01-03-PLAN.md — GREEN: davPathToVFSPath with traversal prevention
+- [ ] 01-04-PLAN.md — RED+GREEN: RFC 4918 §8.7 error XML builder
+- [ ] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
+- [ ] 01-06-PLAN.md — RED+GREEN: Routes registration, OPTIONS handler, Nextcloud 308 redirect, routing.go wiring
+- [ ] 01-07-PLAN.md — RED+GREEN+REFACTOR: PROPFIND Depth 0/1/infinity with DirIterator streaming
+- [ ] 01-08-PLAN.md — RED+GREEN: GET/HEAD via ServeFileContent, GET on collection → 405
+- [ ] 01-09-PLAN.md — End-to-end gowebdav integration test + Phase 1 verification
 
 ---
 
