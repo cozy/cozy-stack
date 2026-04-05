@@ -34,7 +34,7 @@
 - [ ] 01-04-PLAN.md — RED+GREEN: RFC 4918 §8.7 error XML builder
 - [ ] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
 - [ ] 01-06-PLAN.md — RED+GREEN: Routes registration, OPTIONS handler, Nextcloud 308 redirect, routing.go wiring
-- [ ] 01-07-PLAN.md — RED+GREEN+REFACTOR: PROPFIND Depth 0/1/infinity with DirIterator streaming
+- [x] 01-07-PLAN.md — RED+GREEN+REFACTOR: PROPFIND Depth 0/1/infinity with DirIterator streaming
 - [x] 01-08-PLAN.md — RED+GREEN: GET/HEAD via ServeFileContent, GET on collection → 405
 - [ ] 01-09-PLAN.md — End-to-end gowebdav integration test + Phase 1 verification
 
@@ -71,7 +71,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 7/9 | In Progress|  |
+| 1. Foundation | 8/9 | In Progress|  |
 | 2. Write Operations | 0/? | Not started | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 

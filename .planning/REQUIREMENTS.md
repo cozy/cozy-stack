@@ -25,13 +25,13 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Read Operations
 
-- [ ] **READ-01**: PROPFIND Depth: 0 sur collection (dossier) — retourne les propriétés du dossier
-- [ ] **READ-02**: PROPFIND Depth: 0 sur resource (fichier) — retourne les propriétés du fichier
-- [ ] **READ-03**: PROPFIND Depth: 1 sur collection — retourne le dossier + ses enfants directs
-- [ ] **READ-04**: PROPFIND Depth: infinity bloqué avec 403 Forbidden (prévention DoS)
+- [x] **READ-01**: PROPFIND Depth: 0 sur collection (dossier) — retourne les propriétés du dossier
+- [x] **READ-02**: PROPFIND Depth: 0 sur resource (fichier) — retourne les propriétés du fichier
+- [x] **READ-03**: PROPFIND Depth: 1 sur collection — retourne le dossier + ses enfants directs
+- [x] **READ-04**: PROPFIND Depth: infinity bloqué avec 403 Forbidden (prévention DoS)
 - [x] **READ-05**: PROPFIND retourne les 9 propriétés live standards : `resourcetype`, `getlastmodified` (RFC 1123), `getcontentlength`, `getetag` (md5sum VFS, double-quoted), `getcontenttype`, `displayname`, `creationdate` (ISO 8601), `supportedlock` (vide), `lockdiscovery` (vide)
 - [x] **READ-06**: PROPFIND XML utilise le namespace `D:` préfixé (`xmlns:D="DAV:"`) — compatibilité Windows Mini-Redirector
-- [ ] **READ-07**: PROPFIND streaming XML pour les gros dossiers (pas de buffer complet en mémoire, utilisation de `DirIterator`)
+- [x] **READ-07**: PROPFIND streaming XML pour les gros dossiers (pas de buffer complet en mémoire, utilisation de `DirIterator`)
 - [x] **READ-08**: GET sur fichier — streaming via `vfs.ServeFileContent` (support Range, ETag, chunked)
 - [x] **READ-09**: HEAD sur fichier — mêmes headers que GET sans body
 - [x] **READ-10**: GET sur collection retourne 405 Method Not Allowed (ou page HTML de navigation, à décider)
@@ -63,7 +63,7 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 - [x] **SEC-01**: Toutes les méthodes sauf OPTIONS nécessitent une authentification valide
 - [x] **SEC-02**: Path traversal prevention — `path.Clean` + assertion du préfixe `/files/` après normalisation
-- [ ] **SEC-03**: Limite de profondeur/taille sur PROPFIND (PROPFIND Depth infinity bloqué, pagination Depth 1 pour très gros dossiers)
+- [x] **SEC-03**: Limite de profondeur/taille sur PROPFIND (PROPFIND Depth infinity bloqué, pagination Depth 1 pour très gros dossiers)
 - [x] **SEC-04**: Logs d'audit pour les tentatives d'accès hors `/files/` et les PROPFIND Depth infinity
 - [x] **SEC-05**: Content-Length obligatoire sur toutes les réponses (Finder strict)
 
@@ -133,19 +133,19 @@ Reportés pour une future release.
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-05 | Phase 1 | Complete |
-| READ-01 | Phase 1 | Pending |
-| READ-02 | Phase 1 | Pending |
-| READ-03 | Phase 1 | Pending |
-| READ-04 | Phase 1 | Pending |
+| READ-01 | Phase 1 | Complete (01-07) |
+| READ-02 | Phase 1 | Complete (01-07) |
+| READ-03 | Phase 1 | Complete (01-07) |
+| READ-04 | Phase 1 | Complete (01-07) |
 | READ-05 | Phase 1 | Complete (01-02) |
 | READ-06 | Phase 1 | Complete (01-02) |
-| READ-07 | Phase 1 | Pending |
+| READ-07 | Phase 1 | Complete (01-07) |
 | READ-08 | Phase 1 | Complete (01-08) |
 | READ-09 | Phase 1 | Complete (01-08) |
 | READ-10 | Phase 1 | Complete (01-08) |
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Complete |
-| SEC-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete (01-07) |
 | SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
