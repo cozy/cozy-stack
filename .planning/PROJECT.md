@@ -17,22 +17,21 @@ Un utilisateur peut connecter OnlyOffice mobile ou iOS Files à son Cozy et navi
 - ✓ VFS (Virtual File System) avec abstraction stockage — existing
 - ✓ Authentification OAuth — existing
 - ✓ Architecture multi-tenant (instances isolées) — existing
+- ✓ Endpoint WebDAV principal sur `/dav/files` — validated Phase 1: foundation
+- ✓ Route de compatibilité `/remote.php/webdav` → 308 redirect — validated Phase 1: foundation
+- ✓ Authentification double : app-specific passwords (Basic) ET OAuth Bearer — validated Phase 1: foundation
+- ✓ Exposition de l'arborescence `/files/` uniquement — validated Phase 1: foundation
+- ✓ Réponses XML conformes RFC 4918 (multistatus, propriétés DAV) — validated Phase 1: foundation
+- ✓ Délégation au VFS et aux fonctions existantes — validated Phase 1: foundation
+- ✓ Méthodologie TDD stricte : RED→GREEN→REFACTOR par commits — validated Phase 1: foundation
 
 ### Active
 
-- [ ] Endpoint WebDAV principal sur `/dav/files`
-- [ ] Route de compatibilité `/remote.php/webdav` → redirect 301 vers `/dav/files`
-- [ ] Support des méthodes WebDAV : PROPFIND, GET, PUT, DELETE, MKCOL, COPY, MOVE, OPTIONS, HEAD
-- [ ] Authentification double : app-specific passwords (Basic Auth) ET OAuth Bearer tokens
-- [ ] Exposition de l'arborescence `/files/` uniquement (pas les données app, settings, etc.)
-- [ ] Réponses XML conformes RFC 4918 (multistatus, propriétés DAV)
-- [ ] Compatibilité vérifiée avec OnlyOffice mobile
-- [ ] Compatibilité vérifiée avec iOS/iPadOS Files app
-- [ ] Délégation au VFS et aux fonctions existantes de la stack (pas d'accès direct aux données)
-- [ ] Étude de faisabilité technique documentée (variantes WebDAV, bibliothèques Go, limites)
+- [ ] Support des méthodes d'écriture : PUT, DELETE, MKCOL, COPY, MOVE (Phase 2)
+- [ ] Compatibilité vérifiée avec OnlyOffice mobile (Phase 3)
+- [ ] Compatibilité vérifiée avec iOS/iPadOS Files app (Phase 3)
 - [ ] Documentation des endpoints, exemples d'usage, compatibilités
 - [ ] Tests exhaustifs : unitaires, intégration, comportement WebDAV via clients standards
-- [ ] Méthodologie TDD stricte : tests avant le code, cycle RED→GREEN→REFACTOR
 
 ### Out of Scope
 
@@ -71,5 +70,9 @@ Un utilisateur peut connecter OnlyOffice mobile ou iOS Files à son Cozy et navi
 | Exposition `/files/` uniquement | Sécurité, simplicité, pas de fuite de données app | — Pending |
 | API secondaire, délégation au VFS | Évite la duplication de logique métier, cohérence avec la stack | — Pending |
 
+## Current State
+
+Phase 1 (foundation) complete — WebDAV read-only server (`OPTIONS`, `PROPFIND` depth 0/1, `GET`, `HEAD`) mounted at `/dav` with dual auth (Bearer + Basic app-password), RFC 4918 XML responses, path-traversal hardening, and full E2E verification via a real `gowebdav` client. 9/9 plans, 28/28 Phase 1 requirements. Next: Phase 2 (write-operations — PUT, DELETE, MKCOL, COPY, MOVE).
+
 ---
-*Last updated: 2026-04-04 after initialization*
+*Last updated: 2026-04-05 after Phase 1 completion*
