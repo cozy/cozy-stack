@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD via ServeFileContent AND PROPFIND Depth 0/1/infinity with DirIterator streaming; only plan 09 end-to-end integration test remaining)
-status: unknown
-stopped_at: Completed 01-07-PLAN.md (PROPFIND Depth 0/1 + infinity 403 + DirIterator streaming, GREEN)
-last_updated: "2026-04-05T15:17:43Z"
+current_plan: 9 of 9 (Phase 1 COMPLETE — all 9 plans landed; end-to-end gowebdav integration test green; Phase 1 shipped with an explicit `-race` caveat, harness race deferred)
+status: phase-1-complete
+stopped_at: Completed 01-09-PLAN.md (end-to-end gowebdav integration test + Phase 1 verification, shipped with deferred harness race)
+last_updated: "2026-04-05T17:40:00Z"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State: Cozy WebDAV
@@ -33,8 +33,8 @@ progress:
 
 ## Current Position
 
-Phase: 01 (foundation) — EXECUTING
-Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPFIND; only plan 09 integration test remaining)
+Phase: 01 (foundation) — COMPLETE
+Current Plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred harness-race follow-up — see "Deferred Follow-ups" below)
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 | Requirements complete | 28 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 8 |
+| Plans complete | 9 |
 
 ### Plan Execution Log
 
@@ -59,6 +59,7 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 | 01-foundation P06 | ~4min | 3+1 | 5 |
 | 01-foundation P08 | ~1.5min | 2 | 3 |
 | 01-foundation P07 | ~6min | 3 | 3 |
+| 01-foundation P09 | ~5min | 2 | 2 |
 
 ---
 
@@ -178,6 +179,46 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 - **`sendWebDAVError` is the single entry point for every non-2xx WebDAV response.** Plans 05 (auth 401), 06 (router 405/404), 07 (PROPFIND 403/404/507), 08 (GET 404/403/500), and all Phase 2/3 handlers must route through it so the Content-Length + Content-Type + XML shape invariants stay uniform.
 - **Use `echo.HeaderContentType` / `echo.HeaderContentLength` constants** rather than raw header strings, matching the convention of the rest of cozy-stack's Echo handlers.
 
+### Plan 01-09 Decisions (End-to-End Gowebdav Gate + Phase 1 Sign-Off)
+
+- **One consolidated `TestE2E_GowebdavClient` test with 5 explicitly-named subtests — one per ROADMAP success criterion.** `SuccessCriterion1_BrowseWithBearerToken`, `SuccessCriterion2_AuthRequiredExceptOptions`, `SuccessCriterion3_SecurityGuards`, `SuccessCriterion4_GetFileAndCollection`, `SuccessCriterion5_NextcloudRedirect`. The subtest name IS the requirement it verifies — grep-friendly audit trail, no separate cross-reference table to maintain. All 5 green on first run because every earlier wave had already delivered the pieces; the test exists to prove that the pieces compose correctly end-to-end through a real WebDAV client.
+- **Mixed client strategy inside one test file.** The gowebdav client (`studio-b12/gowebdav.NewClient(url, "", token)`) drives criterion 1 because the whole point is "does a real WebDAV client work against this stack?". Criteria 2-5 use raw `httpexpect` because they assert on precise HTTP-level details (status codes, headers, redirect chains) that gowebdav abstracts away. `httpexpect.DontFollowRedirects` is essential for criterion 5 — without it the 308 is invisible.
+- **gowebdav promoted from `// indirect` to direct dep in `go.mod`.** Plan 01-01 kept it indirect until a non-test file imported it; plan 01-09 Task 1 is the first test file that imports it directly, so the indirect marker is now wrong. `go mod tidy` removes it automatically as part of the Task 1 commit.
+- **Ship Phase 1 with an explicit `-race` caveat; defer the harness race.** User decision at the plan 01-09 Task 2 checkpoint. `go test ./web/webdav/... -race -count=1` fails with ~6 WARNING: DATA RACE reports, but every race is between `pkg/config/config.UseViper` (called by `config.UseTestFile` in test N setup) and `config.FsURL` (read by the `AntivirusTrigger` goroutine launched by `stack.Start` in test N-1). The race is reproducible on `master` without any Phase 1 code and its fix surface is entirely in non-webdav packages (`pkg/config/config`, `model/job`, `model/stack`, `tests/testutils`). Blocking Phase 1 merge on a pre-existing stack-wide bug would be scope creep. Phase 1 ships as `nyquist_compliant: true` with a caveat; the race is filed in "Deferred Follow-ups" below as `01.1-race-harness` (provisional — may become a Phase 2 prerequisite instead).
+- **VALIDATION.md frontmatter `nyquist_compliant: true` carries a `nyquist_caveat` field.** Standard frontmatter has a binary flag; we extended it with a prose caveat so future phase-plan scans can detect the deferred invariant without opening the file. Do NOT claim `-race` is clean anywhere in the phase artifacts — the caveat is the authoritative statement.
+- **Race fix NOT attempted in plan 01-09.** Per user instruction, this plan's job was to close Phase 1, not to fix the race. The race is filed as a separate hardening task. Preferred fix order (most local first): (a) `t.Cleanup` hook in `testutils.TestSetup` calling `stack.Shutdown`; (b) `sync.RWMutex` around `pkg/config/config` globals; (c) per-test context on `memScheduler.StartScheduler`.
+
+---
+
+## Deferred Follow-ups
+
+Items discovered during Phase 1 execution that are out of scope for Phase 1 but must be resolved before the affected invariant can be re-asserted. These are NOT blockers for Phase 1 merge — they are explicit deferrals with user approval.
+
+### FOLLOWUP-01 — Test-harness data race under `-race` (provisional slot: `01.1-race-harness`)
+
+**Status:** Deferred (user decision 2026-04-05 at plan 01-09 checkpoint).
+**Blocks:** The `-race` invariant for any package that uses `testutils.NewSetup` + `GetTestInstance` more than once in the same `go test -race` process. Currently affects `web/webdav/` (exposed for the first time by plan 01-09's final sweep) and any other package doing the same stacking pattern.
+**Discovered in:** Plan 01-09 Task 2 (final race-enabled sweep).
+**Fully analysed in:** `.planning/phases/01-foundation/01-VALIDATION.md` → "Outstanding Gaps" → "Gap 1 — Pre-existing test-infrastructure race under `-race`".
+
+**Root cause (one paragraph):** `testutils.GetTestInstance` calls `stack.Start`, which spawns a `memScheduler` goroutine that owns an `AntivirusTrigger` reading `config.FsURL()` on a long-lived timer. That goroutine outlives the test that started it. The NEXT test's setup calls `config.UseTestFile`, which mutates `pkg/config/config` globals via `config.UseViper`. The write in test N's setup races with the read in test N-1's still-running antivirus scheduler. Reproducible on `master` without any WebDAV code, reproducible after removing `gowebdav_integration_test.go` — the race is entirely in the stack-wide test fixture, not in Phase 1 code.
+
+**Files involved (all non-webdav):**
+- `pkg/config/config/config.go` (write: `UseViper` line 1009, read: `FsURL` line 475)
+- `model/job/trigger_antivirus.go` (`AntivirusTrigger.pushJob` line 102 — the reader)
+- `model/job/mem_scheduler.go` (`memScheduler.StartScheduler` line 59 — owns the leaked goroutine)
+- `model/stack/main.go` (`Start` line 104 — launches the scheduler)
+- `tests/testutils/test_utils.go` (`TestSetup.GetTestInstance` line 178 — no teardown hook)
+
+**Preferred fix (smallest blast radius first):**
+1. Add a `t.Cleanup` hook in `testutils.TestSetup` (or a new `testutils.NewSetup` teardown) that calls `stack.Shutdown` or an equivalent scheduler-stop before the next test can mutate `config.*`. Touches one file in `tests/testutils/`.
+2. Wrap `pkg/config/config` package globals in a `sync.RWMutex` so concurrent read/write is safe by construction. Touches one file in `pkg/config/config/` but affects every reader/writer.
+3. Make `memScheduler.StartScheduler` respect a per-test context so the goroutine exits with the test that started it. Larger surface — touches the job scheduler lifecycle.
+
+**Verification when resolved:** `go test ./web/webdav/... -race -count=1 -timeout 5m` exits 0 with zero `WARNING: DATA RACE` reports. Re-run against every Phase 1 test file — all should be race-clean. Then flip VALIDATION.md to drop the `nyquist_caveat` line.
+
+**Disposition decision point:** at the next phase transition (Phase 1 → Phase 2), user will decide whether this becomes a new decimal phase `01.1-race-harness` (runs before Phase 2) OR is rolled in as Phase 2 Task 0 (test-harness hardening prerequisite). Do not create a new phase directory until that decision is made.
+
 ---
 
 ## Session Continuity
@@ -185,7 +226,7 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 01-07-PLAN.md (PROPFIND Depth 0/1 + infinity 403 + DirIterator streaming, GREEN + REFACTOR)
+**Stopped at:** Completed 01-09-PLAN.md (end-to-end gowebdav integration test + Phase 1 verification, shipped with deferred harness race per user decision)
 **Work done (01-07):** Wave 4 — ran in parallel with plan 01-08 (GET/HEAD). 3 atomic commits. (1) `da0a46a36` test: `web/webdav/propfind_test.go` with 7 RED integration tests — `TestPropfind_Depth0_Root` (single D:response, D:collection marker, trailing-slash href), `TestPropfind_Depth0_File` (content-length=14, ETag regex, RFC 1123 getlastmodified regex), `TestPropfind_Depth1_DirectoryWithChildren` (seed /Docs + 3 files, assert 4 D:response elements), `TestPropfind_DepthInfinity_Returns403` (403 + propfind-finite-depth body), `TestPropfind_NonexistentPath_Returns404`, `TestPropfind_NamespacePrefixInBody` (xmlns:D="DAV:" + D: prefix + no leaked default-namespace), `TestPropfind_AllNineLiveProperties` (all 9 live prop element names present). Local `seedDir` helper wraps `vfs.Mkdir`; `seedFile` reused from get_test.go (same package). Confirmed RED: all 7 failed against the 501 stub from plan 06. (2) `10f89e168` feat: created `web/webdav/propfind.go` (~230 lines) — `handlePropfind` (Depth parse → davPathToVFSPath → DirOrFileByPath → AllowVFS → build responses → marshalMultistatus with Content-Length), `streamChildren` (DirIterator ByFetch=200, appends Response per child without buffering full listing), `buildResponseForDir` / `buildResponseForFile` (9 live props each), `etagForDir` (md5(DocID || UpdatedAt.UnixNano) since DirDocs have no VFS md5sum). Targeted `Edit` on `handlers.go` replaced only the PROPFIND case body (`return handlePropfind(c)`) — preserved plan 08's GET/HEAD hunk already committed at `accd13500`, no merge conflict. Two RED-test assertions loosened during GREEN (bug in the assertions, not the implementation): `<D:collection></D:collection>` long form and `&#34;`-escaped ETag quotes both accepted — both are valid XML per §3.1 and plan 02's own tests use the same looser substring form. All 7 tests green; full package suite 5.5s; `gofmt`/`go vet`/`go build ./...` clean. (3) `9b7ad1e1e` refactor: extracted `hrefForDir`/`hrefForFile` (trailing-slash URL rules), `baseProps(name, createdAt, updatedAt)` (5 fields shared by files and dirs), `propstatOK` const. Net ~8 line reduction; Phase 2/3 MKCOL/MOVE/COPY will reuse `baseProps` verbatim. Two deviations logged: (a) Rule 1 — AllowVFS takes `vfs.Fetcher` not `permission.Fetcher` (plan's interfaces block was wrong); (b) Rule 1 — 2 RED assertions too strict for valid XML output. 9 requirements completed: READ-01..07 (full PROPFIND surface — Depth 0/1, all 9 live props, RFC-compliant formats), SEC-03 (Depth:infinity DoS prevention), SEC-04 (audit logging of infinity + out-of-scope — already counted in plan 05 but exercised here).
 **Artifacts created (01-07):** web/webdav/propfind.go, web/webdav/propfind_test.go, .planning/phases/01-foundation/01-07-SUMMARY.md
 **Artifacts modified (01-07):** web/webdav/handlers.go (PROPFIND case body), .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
@@ -199,7 +240,10 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 **Artifacts modified (01-06):** web/webdav/webdav.go, web/webdav/handlers.go, web/webdav/testutil_test.go, web/routing.go, .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
 **Artifacts created (01-08):** web/webdav/get.go, web/webdav/get_test.go, .planning/phases/01-foundation/01-08-SUMMARY.md
 **Artifacts modified (01-08):** web/webdav/handlers.go (GET|HEAD case body), .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
-**Next action:** Execute Plan 01-09 (end-to-end gowebdav integration test + Phase 1 verification) — Wave 4 (plans 07 + 08) both landed, all read-only handlers are now wired through `handlePath`
+**Work done (01-09):** Wave 5 — final Phase 1 gate. 3 atomic commits. (1) `730276ee3` test: `web/webdav/gowebdav_integration_test.go` (255 lines) with `TestE2E_GowebdavClient` and 5 explicitly-named subtests — one per ROADMAP success criterion. `SuccessCriterion1_BrowseWithBearerToken` uses `studio-b12/gowebdav.NewClient(env.TS.URL+"/dav/files", "", env.Token)` + `Connect` + `ReadDir("/")` + `Stat("/hello.txt")` + `Read`. Criteria 2-5 use raw `httpexpect` with `DontFollowRedirects` for precise HTTP-level assertions: 401+`WWW-Authenticate: Basic realm="Cozy"`; OPTIONS bypass with `DAV: 1` + `Allow`; `Depth: infinity` → 403 `<D:propfind-finite-depth/>`; `/dav/files/..%2fsettings` → 403; GET with `Range: bytes=0-4` → 206 + `Content-Range: bytes 0-4/14`; GET collection → 405 + `Allow: OPTIONS, PROPFIND, HEAD`; HEAD file → 200 + Content-Length + ETag, no body; `/remote.php/webdav/` → 308 + `Location: /dav/files/` + follow-through succeeds preserving method. gowebdav promoted from indirect to direct dep in go.mod (first non-test file importing it). All 5 subtests green on first run — every earlier wave had already delivered the pieces, this test proves they compose end-to-end. (2) `a0eb425d4` docs: finalized `01-VALIDATION.md` per-task verification map (01-01..01-09 all ✅ green) with real automated commands. Full `go test ./web/webdav/... -count=1` green in ~7s; `go build ./...` clean; `go vet ./web/webdav/...` clean. `-race` sweep FAILED with ~6 `WARNING: DATA RACE` reports — all between `pkg/config/config.UseViper` (write in test N setup) and `config.FsURL` (read in test N-1's leaked `AntivirusTrigger` goroutine). Race reproduced on `master` without any WebDAV code and after temporarily removing `gowebdav_integration_test.go` — entirely outside `web/webdav`. Initial commit kept `nyquist_compliant: false` and filed a CHECKPOINT decision ("ship with caveat" vs "fix race first"). (3) checkpoint resolution: user selected "Ship Phase 1, defer race fix". Patched `01-VALIDATION.md` frontmatter to `nyquist_compliant: true` + `nyquist_caveat` prose + `approval: approved`, added explicit disposition note to Gap 1, filed the race as FOLLOWUP-01 in STATE.md "Deferred Follow-ups" with full root-cause analysis, 5 non-webdav files involved, and 3 ranked fix options (smallest-blast-radius first: `t.Cleanup` + `stack.Shutdown` in `testutils.TestSetup`). Provisional slot: `01.1-race-harness` — user will decide at Phase 1 → Phase 2 transition whether it becomes a decimal phase or a Phase 2 Task 0 prerequisite. Two requirements completed: TEST-04 (integration auth with real WebDAV client — verified by SuccessCriterion1+2), SEC-05 (Content-Length sanity on full surface — verified implicitly by every PROPFIND/GET subtest + explicitly by existing plan 04 error-path tests). One deviation logged: Rule 4 — deferred race fix per user decision at checkpoint.
+**Artifacts created (01-09):** web/webdav/gowebdav_integration_test.go, .planning/phases/01-foundation/01-09-SUMMARY.md
+**Artifacts modified (01-09):** go.mod (gowebdav indirect→direct), .planning/phases/01-foundation/01-VALIDATION.md, .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
+**Next action:** Phase 1 complete. Hand off to `/gsd:verify-work` for regression_gate + gsd-verifier sign-off. Before starting Phase 2, user must decide disposition of FOLLOWUP-01 (harness race): new decimal phase `01.1-race-harness`, or Phase 2 Task 0 prerequisite.
 
 ### Open Todos
 
@@ -211,8 +255,8 @@ Current Plan: 9 of 9 (Plans 01–08 complete — Wave 4 done: GET/HEAD AND PROPF
 
 ### Blockers
 
-None.
+None for Phase 1 (shipped). See "Deferred Follow-ups" → FOLLOWUP-01 for the harness-race deferral that must be resolved before Phase 2 (disposition decision at phase transition).
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-07 (PROPFIND Depth 0/1/infinity with DirIterator streaming, GREEN + REFACTOR)*
+*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test + Phase 1 sign-off; harness race deferred to FOLLOWUP-01)*

@@ -1,12 +1,14 @@
 ---
 phase: 1
 slug: foundation
-status: verified-except-race
-nyquist_compliant: false
+status: shipped-with-deferred-race
+nyquist_compliant: true
+nyquist_caveat: "functional + security criteria fully verified under `go test -count=1`; `-race` invariant deferred pending a separate test-harness hardening task (see Outstanding Gaps)"
 wave_0_complete: true
 created: 2026-04-05
 finalized: 2026-04-05
-approval: pending-race-decision
+approval: approved
+approval_note: "User decision 2026-04-05: ship Phase 1, defer race fix to a separate non-webdav hardening task (tentative slot: 01.1-race-harness or Phase 2 Task 0)"
 ---
 
 # Phase 1 — Validation Strategy
@@ -110,9 +112,9 @@ Wave 0 establishes the test scaffolding and the failing tests (RED phase of TDD)
 - [x] Wave 0 covers all test scaffolding references
 - [x] No watch-mode flags
 - [x] Feedback latency < 60s (full suite ~7s, individual plans <2s each)
-- [ ] `nyquist_compliant: true` — **BLOCKED on race gap decision**, see below
+- [x] `nyquist_compliant: true` — **with explicit caveat**: functional + security criteria verified under `go test -count=1`; `-race` invariant deferred. See Outstanding Gaps → Gap 1 for the full analysis. The race is entirely outside `web/webdav`, reproducible on `master` without any Phase 1 code, and tracked as a separate non-webdav hardening task.
 
-**Approval:** pending — race gap decision required.
+**Approval:** approved (2026-04-05) — user selected "Ship Phase 1, defer race fix" at the checkpoint decision point. Phase 1 ships as functionally complete against all 5 ROADMAP success criteria, verified green by `TestE2E_GowebdavClient` and its 5 subtests. The `-race` sweep is NOT clean; do not claim it is. The pre-existing test-harness race between `pkg/config/config.UseViper` and the `AntivirusTrigger` goroutine launched by `stack.Start` is filed as a follow-up in STATE.md (provisional slot: `01.1-race-harness`).
 
 ---
 
@@ -154,4 +156,6 @@ Previous read at config.FsURL (pkg/config/config/config.go:475)
 - Ship Phase 1 as green (functional + security criteria all satisfied) with this caveat captured in STATE.md as an open todo
 - OR fix the infrastructure race before merging Phase 1 — user's call
 
-**Verification after disposition:** once the harness bug is fixed, re-run `go test ./web/webdav/... -race -count=1 -timeout 5m` and flip `nyquist_compliant: true` + check the box above.
+**Verification after disposition:** once the harness bug is fixed, re-run `go test ./web/webdav/... -race -count=1 -timeout 5m`. This should return zero race reports with no further WebDAV-side changes.
+
+**Disposition taken (2026-04-05):** User decision at plan 01-09 checkpoint — **ship Phase 1 with an explicit caveat, defer race fix**. Rationale: the race is reproducible on `master` without any WebDAV code, its fix surface is entirely in non-webdav packages (`pkg/config/config`, `model/job`, `model/stack`, `tests/testutils`), and blocking Phase 1 merge on a pre-existing stack-wide bug would be scope creep. Phase 1 is marked `nyquist_compliant: true` with a caveat; the race is filed as a follow-up in STATE.md (provisional slot: `01.1-race-harness`, or pulled forward as a Phase 2 prerequisite — user will decide at phase transition). Preferred fix approaches, in decreasing order of locality: (a) add a `t.Cleanup` hook in `testutils.TestSetup` (or a new `testutils.NewSetup` teardown) that calls `stack.Shutdown` or equivalent to stop the antivirus scheduler goroutine before the next test mutates `config.*`; (b) wrap the `pkg/config/config` package globals (`config`, `fsURL`, etc.) in a `sync.RWMutex` so concurrent read/write is safe by construction; (c) make `memScheduler.StartScheduler` respect a per-test context so the goroutine exits with the test that started it. Option (a) is the smallest blast radius.

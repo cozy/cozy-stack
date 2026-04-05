@@ -78,8 +78,8 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 - [x] **TEST-01**: Tests unitaires XML (marshalling/unmarshalling) — écrits AVANT les structs
 - [x] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
-- [ ] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client
-- [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes)
+- [ ] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
+- [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes) — end-to-end gowebdav client verification landed in 01-09
 - [ ] **TEST-05**: Tests de comportement : scénarios OnlyOffice mobile et iOS Files (open → read → write → save)
 - [ ] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
 - [ ] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
@@ -150,7 +150,7 @@ Reportés pour une future release.
 | SEC-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
-| TEST-04 | Phase 1 | Complete |
+| TEST-04 | Phase 1 | Complete (01-09) |
 | WRITE-01 | Phase 2 | Pending |
 | WRITE-02 | Phase 2 | Pending |
 | WRITE-03 | Phase 2 | Pending |
@@ -184,4 +184,4 @@ Reportés pour une future release.
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-04 after roadmap creation*
+*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test; Phase 1 complete, 28/28 Phase 1 requirements verified green)*

@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Foundation** — Read-only WebDAV mount: routing, auth, path safety, PROPFIND, GET/HEAD
+- [x] **Phase 1: Foundation** — Read-only WebDAV mount: routing, auth, path safety, PROPFIND, GET/HEAD
 - [ ] **Phase 2: Write Operations** — Full read-write capability: PUT, DELETE, MKCOL, MOVE
 - [ ] **Phase 3: COPY, Compliance, and Documentation** — RFC 4918 Class 1 sign-off: COPY, litmus, docs
 
@@ -28,15 +28,15 @@
   4. A GET request on a file streams the file content with correct `Content-Length`, `ETag`, and `Last-Modified` headers. Range requests work. A GET on a collection returns `405 Method Not Allowed`.
   5. A client using `/remote.php/webdav/*` is redirected 308 to the equivalent `/dav/files/*` path and the subsequent request succeeds.
 **Plans**: 9 plans
-- [ ] 01-01-PLAN.md — Scaffold web/webdav package + gowebdav dep + RED tests for XML & path mapper
+- [x] 01-01-PLAN.md — Scaffold web/webdav package + gowebdav dep + RED tests for XML & path mapper
 - [x] 01-02-PLAN.md — GREEN: XML multistatus structs, D: namespace, RFC 1123 dates, ETag helpers
-- [ ] 01-03-PLAN.md — GREEN: davPathToVFSPath with traversal prevention
-- [ ] 01-04-PLAN.md — RED+GREEN: RFC 4918 §8.7 error XML builder
-- [ ] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
-- [ ] 01-06-PLAN.md — RED+GREEN: Routes registration, OPTIONS handler, Nextcloud 308 redirect, routing.go wiring
+- [x] 01-03-PLAN.md — GREEN: davPathToVFSPath with traversal prevention
+- [x] 01-04-PLAN.md — RED+GREEN: RFC 4918 §8.7 error XML builder
+- [x] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
+- [x] 01-06-PLAN.md — RED+GREEN: Routes registration, OPTIONS handler, Nextcloud 308 redirect, routing.go wiring
 - [x] 01-07-PLAN.md — RED+GREEN+REFACTOR: PROPFIND Depth 0/1/infinity with DirIterator streaming
 - [x] 01-08-PLAN.md — RED+GREEN: GET/HEAD via ServeFileContent, GET on collection → 405
-- [ ] 01-09-PLAN.md — End-to-end gowebdav integration test + Phase 1 verification
+- [x] 01-09-PLAN.md — End-to-end gowebdav integration test + Phase 1 verification (shipped with `-race` caveat; harness race deferred — see STATE.md FOLLOWUP-01)
 
 ---
 
@@ -71,7 +71,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 8/9 | In Progress|  |
+| 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
 | 2. Write Operations | 0/? | Not started | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
@@ -143,4 +143,4 @@ Total: 53 / 53 — all v1 requirements mapped
 ---
 
 *Roadmap created: 2026-04-04*
-*Last updated: 2026-04-05 after executing Plan 01-08 (GET/HEAD via ServeFileContent)*
+*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test + Phase 1 sign-off; Phase 1 complete with deferred harness-race follow-up)*
