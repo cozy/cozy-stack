@@ -65,7 +65,7 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **SEC-02**: Path traversal prevention — `path.Clean` + assertion du préfixe `/files/` après normalisation
 - [ ] **SEC-03**: Limite de profondeur/taille sur PROPFIND (PROPFIND Depth infinity bloqué, pagination Depth 1 pour très gros dossiers)
 - [ ] **SEC-04**: Logs d'audit pour les tentatives d'accès hors `/files/` et les PROPFIND Depth infinity
-- [ ] **SEC-05**: Content-Length obligatoire sur toutes les réponses (Finder strict)
+- [x] **SEC-05**: Content-Length obligatoire sur toutes les réponses (Finder strict)
 
 ### Documentation
 
@@ -147,7 +147,7 @@ Reportés pour une future release.
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Pending |
 | SEC-04 | Phase 1 | Pending |
-| SEC-05 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Complete |

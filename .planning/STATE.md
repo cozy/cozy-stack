@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 4 of 9 (Plans 01-03 complete — scaffold+RED, XML GREEN, path mapper GREEN)
+current_plan: 5 of 9 (Plans 01, 02, 03, 04 complete — scaffold+RED, XML GREEN, path mapper GREEN, error XML builder)
 status: unknown
-stopped_at: Completed 01-03-PLAN.md (path mapper GREEN — davPathToVFSPath with traversal prevention)
-last_updated: "2026-04-05T14:36:30Z"
+stopped_at: Completed 01-04-PLAN.md (RFC 4918 error XML builder — buildErrorXML + sendWebDAVError)
+last_updated: "2026-04-05T14:43:39.887Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 9
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State: Cozy WebDAV
@@ -34,7 +34,7 @@ progress:
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, path mapper GREEN)
+Current Plan: 5 of 9 (Plans 01, 02, 03, 04 complete — scaffold+RED, XML GREEN, path mapper GREEN, error XML builder)
 
 ## Performance Metrics
 
@@ -42,10 +42,10 @@ Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, pat
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 8 (TEST-01, TEST-02, TEST-04, READ-05, READ-06, ROUTE-03, ROUTE-05, SEC-02) |
+| Requirements complete | 9 (TEST-01, TEST-02, TEST-04, READ-05, READ-06, ROUTE-03, ROUTE-05, SEC-02, SEC-05) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 3 |
+| Plans complete | 4 |
 
 ### Plan Execution Log
 
@@ -54,6 +54,7 @@ Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, pat
 | 01-foundation P01 | 3min | 3 | 10 |
 | 01-foundation P02 | ~10min | 2 | 3 |
 | 01-foundation P03 | ~2min | 2 | 1 |
+| 01-foundation P04 | ~1min | 2 | 2 |
 
 ---
 
@@ -128,6 +129,13 @@ Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, pat
 - **Single `ErrPathTraversal` sentinel for every rejection path** (null byte, encoded escape, scope escape). Callers do one `errors.Is` check and log/respond uniformly — no error-type matrix.
 - **Skipped the REFACTOR commit** per Task 2's explicit authorisation. After Task 1, `path_mapper.go` is 65 lines, the public function is 24 lines, `containsEncodedTraversal` is already extracted with load-bearing doc, and `gofmt -l` is empty — no further change warranted.
 
+### Plan 01-04 Decisions (Error XML Builder — RED+GREEN)
+
+- **Build the error body as a 3-fragment string write into `bytes.Buffer`**, not via `encoding/xml.Marshal`. Plan 01-02 had to fight `encoding/xml` to keep the `D:` prefix stable on multistatus children (the namespace form leaks `xmlns="DAV:"` on every child). For a fixed 2-element body, direct string writes are simpler, faster, and avoid re-importing that problem entirely.
+- **No XML escaping of the `condition` argument.** Condition names are RFC 4918-defined identifiers (`propfind-finite-depth`, `lock-token-submitted`, `forbidden`, …) — code constants, never user input. The invariant is documented in the doc comment.
+- **`sendWebDAVError` is the single entry point for every non-2xx WebDAV response.** Plans 05 (auth 401), 06 (router 405/404), 07 (PROPFIND 403/404/507), 08 (GET 404/403/500), and all Phase 2/3 handlers must route through it so the Content-Length + Content-Type + XML shape invariants stay uniform.
+- **Use `echo.HeaderContentType` / `echo.HeaderContentLength` constants** rather than raw header strings, matching the convention of the rest of cozy-stack's Echo handlers.
+
 ---
 
 ## Session Continuity
@@ -135,11 +143,11 @@ Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, pat
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 01-03-PLAN.md (path mapper GREEN — davPathToVFSPath with traversal prevention)
-**Work done:** Executed Plan 03 of Phase 01 — replaced the compile-only `davPathToVFSPath` stub left by Plan 01-02 with the full traversal-rejecting implementation in `web/webdav/path_mapper.go`. The function anchors the raw Echo wildcard under `/files`, runs `path.Clean`, asserts the result still starts with `/files/`, and strips the prefix to yield a VFS path. Rejection paths: null bytes, any residual `%` character (catches `%2e`, `%2E`, `%2f`, and double-encoded `%252e` in one check), and any cleaned path that escapes the `/files` scope. All 13 `TestDavPathToVFSPath` cases plus the sentinel-error test pass; no regression in Plan 01-02's XML test suite. One commit (`af5b6f177` feat GREEN). Task 2 (REFACTOR) was a deliberate no-op per the plan's explicit authorisation — function already compact and gofmt-clean. One deviation auto-fixed: the plan's reference implementation enumerated `%2e`/`%2f` as substrings, which misses the double-encoded `%252e%252e` case because `%2e` is not a substring of `%252e`; broadened the check to "reject any `%`" as a strict superset.
-**Artifacts created:** .planning/phases/01-foundation/01-03-SUMMARY.md
-**Artifacts modified:** web/webdav/path_mapper.go (stub replaced by real implementation)
-**Next action:** Execute Plan 04 (next in Phase 01 sequence — see ROADMAP.md wave map)
+**Stopped at:** Completed 01-04-PLAN.md (RFC 4918 error XML builder — `buildErrorXML` + `sendWebDAVError`)
+**Work done:** Executed Plan 04 of Phase 01 — RED+GREEN for the WebDAV error XML builder. Created `web/webdav/errors_test.go` with three tests (`TestBuildErrorXML_PropfindFiniteDepth`, `TestBuildErrorXML_Forbidden`, `TestSendWebDAVError_HeadersAndStatus`) asserting body shape, HTTP status, `Content-Type: application/xml; charset="utf-8"`, byte-exact `Content-Length`, and presence of the `D:` namespaced condition element. Replaced the Plan 01-01 stub in `web/webdav/errors.go` with `buildErrorXML(condition) []byte` (3-fragment `bytes.Buffer` write — XML prolog, `<D:error xmlns:D="DAV:"><D:{cond}/>`, `</D:error>`) and `sendWebDAVError(c echo.Context, status int, condition string) error` which sets Content-Type + Content-Length before `WriteHeader` (SEC-05). Two commits: `bd3c8bb27` (test RED), `e4e592adb` (feat GREEN). All 3 tests pass, full package suite still green (no regressions in Plans 01/02/03), `gofmt -l` empty, `go vet` clean. Zero deviations — plan executed exactly as written. SEC-05 marked complete.
+**Artifacts created:** web/webdav/errors_test.go, .planning/phases/01-foundation/01-04-SUMMARY.md
+**Artifacts modified:** web/webdav/errors.go (stub replaced by real implementation), .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
+**Next action:** Execute Plan 05 (auth middleware — first consumer of `sendWebDAVError`; see ROADMAP.md wave map)
 
 ### Open Todos
 
@@ -152,4 +160,4 @@ None.
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-03 (path mapper GREEN)*
+*Last updated: 2026-04-05 after executing Plan 01-04 (error XML builder — RED+GREEN)*
