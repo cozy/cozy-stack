@@ -76,10 +76,10 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Testing (TDD strict)
 
-- [ ] **TEST-01**: Tests unitaires XML (marshalling/unmarshalling) — écrits AVANT les structs
-- [ ] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
+- [x] **TEST-01**: Tests unitaires XML (marshalling/unmarshalling) — écrits AVANT les structs
+- [x] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
 - [ ] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client
-- [ ] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes)
+- [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes)
 - [ ] **TEST-05**: Tests de comportement : scénarios OnlyOffice mobile et iOS Files (open → read → write → save)
 - [ ] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
 - [ ] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
@@ -148,9 +148,9 @@ Reportés pour une future release.
 | SEC-03 | Phase 1 | Pending |
 | SEC-04 | Phase 1 | Pending |
 | SEC-05 | Phase 1 | Pending |
-| TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 1 | Pending |
-| TEST-04 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
+| TEST-02 | Phase 1 | Complete |
+| TEST-04 | Phase 1 | Complete |
 | WRITE-01 | Phase 2 | Pending |
 | WRITE-02 | Phase 2 | Pending |
 | WRITE-03 | Phase 2 | Pending |

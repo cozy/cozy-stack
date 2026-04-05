@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-04-05T14:25:39.467Z"
+progress:
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 9
+  completed_plans: 1
+---
+
 # Project State: Cozy WebDAV
 
 *This file is the persistent memory of the project. Update it after every work session.*
@@ -12,27 +25,14 @@
 **New package:** `web/webdav/` (to be created)
 **Route registration:** `web/routing.go`
 
-**Current focus:** Phase 1 — Foundation (not started)
+**Current focus:** Phase 01 — foundation
 
 ---
 
 ## Current Position
 
-| Field | Value |
-|-------|-------|
-| Phase | 1 — Foundation |
-| Plan | None yet (plans not created) |
-| Status | Not started |
-| Phase goal | Read-only WebDAV mount: routing, auth, path safety, PROPFIND, GET/HEAD |
-
-**Progress bar:**
-```
-Phase 1 [          ] 0%
-Phase 2 [          ] 0%
-Phase 3 [          ] 0%
-```
-
----
+Phase: 01 (foundation) — EXECUTING
+Current Plan: 2 of 9 (Plan 01 complete — scaffold + RED tests for xml & path_mapper)
 
 ## Performance Metrics
 
@@ -40,10 +40,16 @@ Phase 3 [          ] 0%
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 0 |
+| Requirements complete | 3 (TEST-01, TEST-02, TEST-04) |
 | Requirements in progress | 0 |
-| Plans created | 0 |
-| Plans complete | 0 |
+| Plans created | 9 |
+| Plans complete | 1 |
+
+### Plan Execution Log
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 01-foundation P01 | 3min | 3 | 10 |
 
 ---
 
@@ -94,16 +100,24 @@ Phase 3 [          ] 0%
 
 - GET on a collection: 405 Method Not Allowed OR HTML navigation page — to be decided during Phase 1 planning (READ-10).
 
+### Plan 01-01 Decisions (Scaffold + RED)
+
+- **Internal test package** (`package webdav`, not `webdav_test`) so tests can reach unexported helpers `davPathToVFSPath`, `buildETag`, `parsePropFind`, `marshalMultistatus`.
+- **`ResourceType.Collection` as `*struct{}`** so `encoding/xml` omitempty skips `<D:collection/>` for file responses.
+- **`ErrPathTraversal` exported sentinel** to enable `errors.Is` checks in future handler code and in the sentinel-error test.
+- **gowebdav kept `// indirect`** in go.mod until a future test file imports it (wave 2+).
+
 ---
 
 ## Session Continuity
 
 ### Last Session
 
-**Date:** 2026-04-04
-**Work done:** Project initialization — PROJECT.md, REQUIREMENTS.md, research (SUMMARY, ARCHITECTURE, STACK, FEATURES, PITFALLS), codebase structure analysis, ROADMAP.md, STATE.md
-**Artifacts created:** All planning documents
-**Next action:** Run `/gsd:plan-phase 1` to create the Phase 1 plan
+**Date:** 2026-04-05
+**Stopped at:** Completed 01-01-PLAN.md (scaffold + RED tests for xml & path_mapper)
+**Work done:** Executed Plan 01 of Phase 01 — created `web/webdav/` package with 6 stub files, added gowebdav v0.12.0, wrote 7 RED tests for XML multistatus marshalling and 13-case RED test table for `davPathToVFSPath` + sentinel-error test. All 3 tasks committed atomically (1c99363ac, b3402ea8b, f23c2a9e6). RED baseline verified: `go build` passes, `go test` fails with expected `undefined:` errors.
+**Artifacts created:** web/webdav/{webdav,xml,path_mapper,auth,errors,handlers}.go, web/webdav/{xml_test,path_mapper_test}.go, .planning/phases/01-foundation/01-01-SUMMARY.md
+**Next action:** Execute Plan 02 (xml.go GREEN — implement Multistatus, Response, Prop, marshalMultistatus, parsePropFind, buildETag, buildCreationDate)
 
 ### Open Todos
 
@@ -116,4 +130,4 @@ None.
 
 ---
 
-*Last updated: 2026-04-04 after roadmap creation*
+*Last updated: 2026-04-05 after executing Plan 01-01 (scaffold + RED tests)*
