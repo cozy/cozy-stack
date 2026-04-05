@@ -32,9 +32,9 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **READ-05**: PROPFIND retourne les 9 propriétés live standards : `resourcetype`, `getlastmodified` (RFC 1123), `getcontentlength`, `getetag` (md5sum VFS, double-quoted), `getcontenttype`, `displayname`, `creationdate` (ISO 8601), `supportedlock` (vide), `lockdiscovery` (vide)
 - [x] **READ-06**: PROPFIND XML utilise le namespace `D:` préfixé (`xmlns:D="DAV:"`) — compatibilité Windows Mini-Redirector
 - [ ] **READ-07**: PROPFIND streaming XML pour les gros dossiers (pas de buffer complet en mémoire, utilisation de `DirIterator`)
-- [ ] **READ-08**: GET sur fichier — streaming via `vfs.ServeFileContent` (support Range, ETag, chunked)
-- [ ] **READ-09**: HEAD sur fichier — mêmes headers que GET sans body
-- [ ] **READ-10**: GET sur collection retourne 405 Method Not Allowed (ou page HTML de navigation, à décider)
+- [x] **READ-08**: GET sur fichier — streaming via `vfs.ServeFileContent` (support Range, ETag, chunked)
+- [x] **READ-09**: HEAD sur fichier — mêmes headers que GET sans body
+- [x] **READ-10**: GET sur collection retourne 405 Method Not Allowed (ou page HTML de navigation, à décider)
 
 ### Write Operations
 
@@ -140,9 +140,9 @@ Reportés pour une future release.
 | READ-05 | Phase 1 | Complete (01-02) |
 | READ-06 | Phase 1 | Complete (01-02) |
 | READ-07 | Phase 1 | Pending |
-| READ-08 | Phase 1 | Pending |
-| READ-09 | Phase 1 | Pending |
-| READ-10 | Phase 1 | Pending |
+| READ-08 | Phase 1 | Complete (01-08) |
+| READ-09 | Phase 1 | Complete (01-08) |
+| READ-10 | Phase 1 | Complete (01-08) |
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Pending |

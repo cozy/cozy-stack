@@ -35,7 +35,7 @@
 - [ ] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
 - [ ] 01-06-PLAN.md — RED+GREEN: Routes registration, OPTIONS handler, Nextcloud 308 redirect, routing.go wiring
 - [ ] 01-07-PLAN.md — RED+GREEN+REFACTOR: PROPFIND Depth 0/1/infinity with DirIterator streaming
-- [ ] 01-08-PLAN.md — RED+GREEN: GET/HEAD via ServeFileContent, GET on collection → 405
+- [x] 01-08-PLAN.md — RED+GREEN: GET/HEAD via ServeFileContent, GET on collection → 405
 - [ ] 01-09-PLAN.md — End-to-end gowebdav integration test + Phase 1 verification
 
 ---
@@ -71,7 +71,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 6/9 | In Progress|  |
+| 1. Foundation | 7/9 | In Progress|  |
 | 2. Write Operations | 0/? | Not started | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
@@ -143,4 +143,4 @@ Total: 53 / 53 — all v1 requirements mapped
 ---
 
 *Roadmap created: 2026-04-04*
-*Last updated: 2026-04-05 after executing Plan 01-02 (XML GREEN)*
+*Last updated: 2026-04-05 after executing Plan 01-08 (GET/HEAD via ServeFileContent)*

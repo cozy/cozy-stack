@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XML GREEN, path mapper GREEN, error XML builder, auth middleware + test utilities, route wiring + OPTIONS + handlePath dispatcher + Nextcloud 308)
+current_plan: 8 of 9 (Plans 01, 02, 03, 04, 05, 06, 08 complete — GET/HEAD via ServeFileContent landed in Wave 4; 07 PROPFIND running in parallel)
 status: unknown
-stopped_at: Completed 01-06-PLAN.md (route wiring — Routes + handleOptions + handlePath 501-stub dispatcher + NextcloudRedirect 308 + web/routing.go mount + newWebdavTestEnv overrideRoutes optional)
-last_updated: "2026-04-05T14:59:51Z"
+stopped_at: Completed 01-08-PLAN.md (GET/HEAD via vfs.ServeFileContent, collection → 405)
+last_updated: "2026-04-05T15:12:20Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State: Cozy WebDAV
@@ -34,7 +34,7 @@ progress:
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Current Plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XML GREEN, path mapper GREEN, error XML builder, auth middleware + test utilities, route wiring + OPTIONS + handlePath dispatcher + Nextcloud 308)
+Current Plan: 8 of 9 (Plans 01, 02, 03, 04, 05, 06, 08 complete — GET/HEAD landed; 07 PROPFIND running in parallel)
 
 ## Performance Metrics
 
@@ -42,10 +42,10 @@ Current Plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XM
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 19 (TEST-01, TEST-02, TEST-04, READ-05, READ-06, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-02, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, SEC-01, SEC-04) |
+| Requirements complete | 22 (TEST-01, TEST-02, TEST-04, READ-05, READ-06, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-02, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, SEC-01, SEC-04) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 6 |
+| Plans complete | 7 |
 
 ### Plan Execution Log
 
@@ -57,6 +57,7 @@ Current Plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XM
 | 01-foundation P04 | ~1min | 2 | 2 |
 | 01-foundation P05 | ~3min | 3 | 4 |
 | 01-foundation P06 | ~4min | 3+1 | 5 |
+| 01-foundation P08 | ~1.5min | 2 | 3 |
 
 ---
 
@@ -140,6 +141,14 @@ Current Plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XM
 - **`auditLog` takes raw event string + normalizedPath, not a typed struct.** Event vocabulary is small and fixed at call sites in plans 06-08. A typed wrapper would add indirection with no type safety (go's string gives the compiler nothing to check on enum-like strings).
 - **Integration tests mount middleware in isolation via `overrideRoutes(mountAuthOnly)`.** The shared `mountAuthOnly(g *echo.Group)` registers `resolveWebDAVAuth` + a trivial 200 "ok" handler on `/files` and `/files/*`, exercising the middleware without depending on plan 01-06's Routes or plans 07+ handlers. This pattern will be reused (with different trivial handlers) through Phase 2/3.
 
+### Plan 01-08 Decisions (GET/HEAD via ServeFileContent)
+
+- **Delegate everything to `vfs.ServeFileContent`.** It wraps `http.ServeContent`, which handles HEAD (headers only), Range (206 + Content-Range), If-Modified-Since, If-None-Match, and Content-Length automatically. Re-implementing any of those would duplicate stdlib code, diverge from `web/files/files.go` (which uses the same primitive), and accumulate maintenance debt as Go tightens ServeContent semantics. `handleGet`'s happy path is literally one line — the other ~30 are error-class branching.
+- **405 (not 403) on GET of a collection, with `Allow: OPTIONS, PROPFIND, HEAD`.** RFC 7231 §6.5.5 explicitly ties 405 to "method not supported by target resource" — our exact case. 405 also requires an Allow header, which is how Finder and gowebdav discover which methods do work on the collection. 403 would leave clients blind. READ-10 decision locked in.
+- **Unified 'forbidden' XML body for traversal AND out-of-scope failures, but different audit events.** Both produce 403 with the same client-visible shape, so an attacker probing one cannot distinguish it from the other. The audit WARN log carries different event strings (`get path rejected` vs `get out-of-scope`) so ops can tell them apart internally.
+- **Pass `nil` version to `ServeFileContent`.** Phase 1 is current-version-only; WebDAV has no wire-level version concept. Single line to change if a future phase ever adds version-aware reads via a Cozy-specific header.
+- **REFACTOR pass skipped.** `handleGet` is 35 LoC including doc comment, each error branch is distinct with no duplicate fragments to extract, and `gofmt -l` is empty. Plan explicitly permits skipping when the handler is already compact.
+
 ### Plan 01-06 Decisions (Route Wiring + OPTIONS + handlePath Dispatcher)
 
 - **`Routes` splits OPTIONS from everything else via a sub-group, not via conditional logic in the middleware.** `router.OPTIONS(...)` is registered on the outer group directly (no auth), then `authed := router.Group("", resolveWebDAVAuth)` scopes auth to every other verb. Single place to enforce the bypass; `resolveWebDAVAuth` itself still has its OPTIONS fast-path as defence-in-depth but the route table alone is now sufficient.
@@ -165,14 +174,17 @@ Current Plan: 7 of 9 (Plans 01, 02, 03, 04, 05, 06 complete — scaffold+RED, XM
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 01-06-PLAN.md (route wiring — Routes + handleOptions + handlePath 501-stub dispatcher + NextcloudRedirect 308 + web/routing.go mount + newWebdavTestEnv overrideRoutes optional)
+**Stopped at:** Completed 01-08-PLAN.md (GET/HEAD via vfs.ServeFileContent, collection → 405 with Allow: OPTIONS, PROPFIND, HEAD)
+**Work done (01-08):** Wave 4 — ran in parallel with plan 01-07 (PROPFIND). 2 atomic commits. (1) `975404c79` test: `web/webdav/get_test.go` with 6 RED integration tests — `TestGet_File_ReturnsContent` (body + Content-Length=14 + non-empty Etag), `TestHead_File_NoBody` (same headers, empty body), `TestGet_File_RangeRequest` (Range: bytes=0-4 → 206 + Content-Range: bytes 0-4/14 + body="Hello"), `TestGet_Collection_Returns405` (GET /dav/files/ → 405 + Allow contains OPTIONS/PROPFIND/HEAD), `TestGet_Nonexistent_Returns404`, `TestGet_Unauthenticated_Returns401` (WWW-Authenticate: Basic realm="Cozy"). Local `seedFile(t, inst, name, content)` helper wires `vfs.NewFileDoc` + `fs.CreateFile` + `io.Copy` — pattern from `model/vfs/vfs_test.go:76-96`. Confirmed RED: 4 tests failed with 501 from the plan 01-06 stub, the 401 test was already green (auth runs before dispatcher). (2) `accd13500` feat: created `web/webdav/get.go` (58 lines) with `handleGet` — `davPathToVFSPath(c.Param("*"))` → `inst.VFS().DirOrFileByPath(vfsPath)` → 404 on `os.ErrNotExist` → 405 + Allow on dirDoc → `middlewares.AllowVFS(c, permission.GET, fileDoc)` → `vfs.ServeFileContent(inst.VFS(), fileDoc, nil, "", "", c.Request(), c.Response())`. Traversal and out-of-scope errors return 403 via `sendWebDAVError` + `auditLog` WARN with distinct event strings ("get path rejected" vs "get out-of-scope"). Targeted `Edit` on `web/webdav/handlers.go` replaced only the GET|HEAD case body (`return handleGet(c)`) to avoid merge conflict with parallel plan 01-07's PROPFIND case edit — no dispatcher restructuring. All 6 tests green in 1.56s; full `web/webdav` package regression in 3.91s; `gofmt -l`, `go vet`, `go build ./...` all clean. No deviations — plan executed exactly as written. REFACTOR pass skipped per plan authorisation (handleGet already 35 LoC, one decision branch per error class, gofmt empty). 3 requirements completed: READ-08 (GET streaming via ServeFileContent), READ-09 (HEAD headers-only), READ-10 (405 on collection).
 **Work done (01-06):** 3 task commits + 1 refactor commit. (1) `f3b07465a` test: `web/webdav/options_test.go` with 6 RED integration tests — 3× OPTIONS variations (root, subpath, nonsensical path) proving no-auth 200 + DAV: 1 + Allow header, and 3× Nextcloud redirect variations (GET, root path, PROPFIND method preservation) proving 308 with correct Location. Also 2 helpers (`mountRealRoutes` passthrough + `registerNextcloudRedirect` that mounts the redirect directly on `env.TS.Config.Handler.(*echo.Echo)` since httptest/setup.GetTestServer scopes to /dav). Used `httpexpect.DontFollowRedirects` (grep'd from web/auth/auth_test.go). Compile-failed on `undefined: Routes` and `undefined: NextcloudRedirect`. (2) `b71d86087` feat: replaced `webdav.go` stub with 62-line GREEN — `davAllowHeader` const, `Routes(g)` that registers OPTIONS without auth and wraps every other method under `router.Group("", resolveWebDAVAuth)` + `authed.Match(webdavMethods[1:], ...)`, and exported `NextcloudRedirect` using `strings.Replace(path, "/remote.php/webdav", "/dav/files", 1)` + `http.StatusPermanentRedirect`. Replaced `handlers.go` 1-line stub with 41-line GREEN — `handleOptions` (DAV: 1, Allow: OPTIONS, PROPFIND, GET, HEAD, MS-Author-Via: DAV, `c.NoContent(200)`, zero VFS access) + `handlePath` method switch dispatcher returning `sendWebDAVError(501, "not-implemented")` for all cases (plans 07/08 replace PROPFIND and GET/HEAD branches). All 6 tests flip GREEN in 1.44s; full package suite green in 2.5s. (3) `7c023c2ed` feat: wired into `web/routing.go` SetupRoutes — added `web/webdav` import in alphabetical order in the web/* group, added a new route block between the JSON:API block and the non-auth block with its own narrow `mwsWebDAV = [NeedInstance, CheckInstanceBlocked, CheckInstanceDeleting]` chain (no LoadSession, no Accept, no TOS check — WebDAV is token-only, XML-only, non-HTML), `webdav.Routes(router.Group("/dav", mwsWebDAV...))`, and `router.Match(webdavRedirectMethods, "/remote.php/webdav[/*]", webdav.NextcloudRedirect, mwsWebDAV...)` on both root and wildcard. `go build ./...` clean, `go vet ./web/...` clean, gofmt clean. (4) `a53950f65` refactor: flipped `newWebdavTestEnv` `overrideRoutes` from required (`t.Fatal` when nil) to optional (defaults to `Routes`) now that plan 01-06 provides it — clears the matching STATE.md todo and unblocks plans 01-07/08/09 + Phase 2/3 from writing their own mount callbacks. Existing callers (`mountAuthOnly` in auth_test.go, `mountRealRoutes` in options_test.go) unchanged. Three deviations logged: (a) Rule 3 — exported NextcloudRedirect from day one (skip rename churn); (b) Rule 3 — MS-Author-Via header added (required for Windows Mini-Redirector per research); (c) follow-on refactor clearing overrideRoutes todo. 4 requirements completed: ROUTE-01 (route registration), ROUTE-02 (OPTIONS discovery), ROUTE-04 (Nextcloud 308 bridge). ROUTE-05 (custom 401 format) was already complete from plan 01-05.
 **Work done (01-05):** Executed Plan 05 of Phase 01 — 3 atomic commits. (1) `d3599f79b` test: `web/webdav/testutil_test.go` with `webdavTestEnv` struct and `newWebdavTestEnv(t, overrideRoutes)` wiring `config.UseTestFile` + `testutils.NewSetup`/`GetTestInstance`/`GetTestClient(consts.Files)`/`GetTestServer("/dav", overrideRoutes)` + `errors.ErrorHandler` + `CreateTestClient`. (2) `ef16ad861` test: `web/webdav/auth_test.go` with 5 RED integration tests (`TestAuth_MissingAuthorization_Returns401WithBasicRealm`, `TestAuth_BearerToken_Success`, `TestAuth_BasicAuthTokenAsPassword_Success`, `TestAuth_InvalidToken_Returns401`, `TestAuth_OptionsBypassesAuth`) + shared `mountAuthOnly` registrar. (3) `42abd4c79` feat: replaced Plan 01-01's auth.go stub with 80-line GREEN impl — `resolveWebDAVAuth` (OPTIONS bypass → GetRequestToken → ParseJWT → ForcePermission → next), `sendWebDAV401` (WWW-Authenticate: Basic realm="Cozy", empty body), `hashToken` (sha256 first 8 bytes hex), `auditLog` (WARN with source_ip, user_agent, method, raw_url, normalized_path, token_hash, instance — forbidden on 401 paths per SEC-04). All 5 tests pass in 1.34s with `COZY_COUCHDB_URL=http://admin:password@localhost:5984/`; full package suite green; gofmt clean; go vet clean. Three deviations logged: (a) Rule 3 — `overrideRoutes` made required (not optional) because referencing the undefined `Routes` identifier would fail compile; (b) planned drop of `TestAuth_401IsNotLogged` per plan text authorisation, SEC-04 enforced by code inspection + doc comment; (c) env-var auth gate for CouchDB admin creds documented in docs/CONTRIBUTING.md. 7 requirements marked complete (AUTH-01..05, SEC-01, SEC-04).
 **Artifacts created (01-05):** web/webdav/testutil_test.go, web/webdav/auth_test.go, .planning/phases/01-foundation/01-05-SUMMARY.md
 **Artifacts modified (01-05):** web/webdav/auth.go, .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
 **Artifacts created (01-06):** web/webdav/options_test.go, .planning/phases/01-foundation/01-06-SUMMARY.md
 **Artifacts modified (01-06):** web/webdav/webdav.go, web/webdav/handlers.go, web/webdav/testutil_test.go, web/routing.go, .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
-**Next action:** Execute Plan 07 (PROPFIND handler — replace the `case "PROPFIND":` branch of `handlePath` with the real implementation; use `newWebdavTestEnv(t, nil)` now that Routes is wired)
+**Artifacts created (01-08):** web/webdav/get.go, web/webdav/get_test.go, .planning/phases/01-foundation/01-08-SUMMARY.md
+**Artifacts modified (01-08):** web/webdav/handlers.go (GET|HEAD case body), .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md
+**Next action:** Plan 01-07 (PROPFIND) is running in parallel; once it lands, execute Plan 01-09 (end-to-end gowebdav integration test + Phase 1 verification)
 
 ### Open Todos
 
@@ -188,4 +200,4 @@ None.
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-06 (route wiring + OPTIONS + handlePath dispatcher + Nextcloud 308 redirect + routing.go mount)*
+*Last updated: 2026-04-05 after executing Plan 01-08 (GET/HEAD via vfs.ServeFileContent, collection → 405)*
