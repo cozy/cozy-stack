@@ -121,17 +121,67 @@ Reportés pour une future release.
 
 ## Traceability
 
-Mise à jour pendant la création du roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (à remplir par roadmapper) | | |
+| ROUTE-01 | Phase 1 | Pending |
+| ROUTE-02 | Phase 1 | Pending |
+| ROUTE-03 | Phase 1 | Pending |
+| ROUTE-04 | Phase 1 | Pending |
+| ROUTE-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| READ-01 | Phase 1 | Pending |
+| READ-02 | Phase 1 | Pending |
+| READ-03 | Phase 1 | Pending |
+| READ-04 | Phase 1 | Pending |
+| READ-05 | Phase 1 | Pending |
+| READ-06 | Phase 1 | Pending |
+| READ-07 | Phase 1 | Pending |
+| READ-08 | Phase 1 | Pending |
+| READ-09 | Phase 1 | Pending |
+| READ-10 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SEC-04 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Pending |
+| WRITE-01 | Phase 2 | Pending |
+| WRITE-02 | Phase 2 | Pending |
+| WRITE-03 | Phase 2 | Pending |
+| WRITE-04 | Phase 2 | Pending |
+| WRITE-05 | Phase 2 | Pending |
+| WRITE-06 | Phase 2 | Pending |
+| WRITE-07 | Phase 2 | Pending |
+| WRITE-08 | Phase 2 | Pending |
+| WRITE-09 | Phase 2 | Pending |
+| MOVE-01 | Phase 2 | Pending |
+| MOVE-02 | Phase 2 | Pending |
+| MOVE-03 | Phase 2 | Pending |
+| MOVE-04 | Phase 2 | Pending |
+| MOVE-05 | Phase 2 | Pending |
+| TEST-03 | Phase 2 | Pending |
+| COPY-01 | Phase 3 | Pending |
+| COPY-02 | Phase 3 | Pending |
+| COPY-03 | Phase 3 | Pending |
+| DOC-01 | Phase 3 | Pending |
+| DOC-02 | Phase 3 | Pending |
+| DOC-03 | Phase 3 | Pending |
+| DOC-04 | Phase 3 | Pending |
+| TEST-05 | Phase 3 | Pending |
+| TEST-06 | Phase 3 | Pending |
+| TEST-07 | Phase 3 | Pending |
 
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 0 (pending)
-- Unmapped: 44 ⚠️
+- v1 requirements: 53 total
+- Mapped to phases: 53
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after initial definition*
+*Last updated: 2026-04-04 after roadmap creation*
