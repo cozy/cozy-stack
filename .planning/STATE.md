@@ -2,13 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_plan: 4 of 9 (Plans 01-03 complete — scaffold+RED, XML GREEN, path mapper GREEN)
 status: unknown
-last_updated: "2026-04-05T15:10:00.000Z"
+stopped_at: Completed 01-03-PLAN.md (path mapper GREEN — davPathToVFSPath with traversal prevention)
+last_updated: "2026-04-05T14:36:30Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 9
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State: Cozy WebDAV
@@ -32,7 +34,7 @@ progress:
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
+Current Plan: 4 of 9 (Plans 01, 02, 03 complete — scaffold+RED, XML GREEN, path mapper GREEN)
 
 ## Performance Metrics
 
@@ -40,10 +42,10 @@ Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 5 (TEST-01, TEST-02, TEST-04, READ-05, READ-06) |
+| Requirements complete | 8 (TEST-01, TEST-02, TEST-04, READ-05, READ-06, ROUTE-03, ROUTE-05, SEC-02) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 2 |
+| Plans complete | 3 |
 
 ### Plan Execution Log
 
@@ -51,6 +53,7 @@ Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
 |------|----------|-------|-------|
 | 01-foundation P01 | 3min | 3 | 10 |
 | 01-foundation P02 | ~10min | 2 | 3 |
+| 01-foundation P03 | ~2min | 2 | 1 |
 
 ---
 
@@ -118,6 +121,13 @@ Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
 - **Compile-only `path_mapper.go` stubs** (`davPathToVFSPath`, `ErrPathTraversal`) landed in this plan so the package's test binary builds. Plan 01-03 replaces `davPathToVFSPath` with the real traversal-rejecting implementation; the `ErrPathTraversal` sentinel is already final.
 - **RED test bug fix**: `TestGetLastModifiedFormat`'s `assert.NotContains(got, "T")` was self-contradictory (the literal "GMT" contains "T"). Replaced with `assert.NotRegexp(\dT\d)` which targets only the RFC 3339 date/time separator.
 
+### Plan 01-03 Decisions (Path Mapper GREEN)
+
+- **Reject any residual `%` character** in the raw URL wildcard, not just `%2e`/`%2f` substrings. Since Echo has already URL-decoded the wildcard once before our handler sees it, any surviving `%` is either a double encoding (`%252e%252e` → `%2e%2e` after one decode) or a smuggling attempt. This is a strict superset of the plan's reference check and passes the double-encoded test case, which the plan's `%2e`/`%2f`-substring check would miss (substring `%2e` does not appear in `%252e`).
+- **Anchor the wildcard under `/files` before `path.Clean`.** Prepending `/files/` and then asserting the cleaned result is `/files` or begins with `/files/` turns any `..`-walk that escapes the WebDAV URL space into a rejection, reusing `path.Clean`'s semantics instead of re-implementing them.
+- **Single `ErrPathTraversal` sentinel for every rejection path** (null byte, encoded escape, scope escape). Callers do one `errors.Is` check and log/respond uniformly — no error-type matrix.
+- **Skipped the REFACTOR commit** per Task 2's explicit authorisation. After Task 1, `path_mapper.go` is 65 lines, the public function is 24 lines, `containsEncodedTraversal` is already extracted with load-bearing doc, and `gofmt -l` is empty — no further change warranted.
+
 ---
 
 ## Session Continuity
@@ -125,11 +135,11 @@ Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 01-02-PLAN.md (XML GREEN — multistatus types, marshaller, propfind parser)
-**Work done:** Executed Plan 02 of Phase 01 — implemented `web/webdav/xml.go` with all 9 types (Multistatus, Response, Propstat, Prop, ResourceType, SupportedLock, LockDiscovery, PropFind, PropList) and 5 helpers (buildETag, buildCreationDate, buildLastModified, parsePropFind, marshalMultistatus). All 7 XML RED tests from Plan 01 now pass. Two commits (b1f47cdc5 feat GREEN, 421d7192f refactor). Four deviations auto-fixed: (1) added compile-only path_mapper.go stubs so the package test binary could build (Rule 3 blocker), (2) fixed self-contradictory NotContains("T") assertion in xml_test.go (Rule 1 bug), (3) reconciled Prop/ResourceType/SupportedLock struct signatures with the RED test's actual usage (Rule 1), (4) switched response struct tags from `"DAV: name"` to literal `"D:name"` to stop encoding/xml emitting redundant xmlns on children (Rule 1).
-**Artifacts created:** .planning/phases/01-foundation/01-02-SUMMARY.md
-**Artifacts modified:** web/webdav/xml.go, web/webdav/path_mapper.go (stubs), web/webdav/xml_test.go (assertion fix)
-**Next action:** Execute Plan 03 (path mapper GREEN — replace davPathToVFSPath stub with real implementation that rejects `..`, encoded traversal, null bytes, encoded slashes, and system-directory prefixes)
+**Stopped at:** Completed 01-03-PLAN.md (path mapper GREEN — davPathToVFSPath with traversal prevention)
+**Work done:** Executed Plan 03 of Phase 01 — replaced the compile-only `davPathToVFSPath` stub left by Plan 01-02 with the full traversal-rejecting implementation in `web/webdav/path_mapper.go`. The function anchors the raw Echo wildcard under `/files`, runs `path.Clean`, asserts the result still starts with `/files/`, and strips the prefix to yield a VFS path. Rejection paths: null bytes, any residual `%` character (catches `%2e`, `%2E`, `%2f`, and double-encoded `%252e` in one check), and any cleaned path that escapes the `/files` scope. All 13 `TestDavPathToVFSPath` cases plus the sentinel-error test pass; no regression in Plan 01-02's XML test suite. One commit (`af5b6f177` feat GREEN). Task 2 (REFACTOR) was a deliberate no-op per the plan's explicit authorisation — function already compact and gofmt-clean. One deviation auto-fixed: the plan's reference implementation enumerated `%2e`/`%2f` as substrings, which misses the double-encoded `%252e%252e` case because `%2e` is not a substring of `%252e`; broadened the check to "reject any `%`" as a strict superset.
+**Artifacts created:** .planning/phases/01-foundation/01-03-SUMMARY.md
+**Artifacts modified:** web/webdav/path_mapper.go (stub replaced by real implementation)
+**Next action:** Execute Plan 04 (next in Phase 01 sequence — see ROADMAP.md wave map)
 
 ### Open Todos
 
@@ -142,4 +152,4 @@ None.
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-02 (XML GREEN)*
+*Last updated: 2026-04-05 after executing Plan 01-03 (path mapper GREEN)*

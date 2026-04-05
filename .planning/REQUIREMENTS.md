@@ -11,9 +11,9 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 - [ ] **ROUTE-01**: WebDAV endpoint principal exposé sur `/dav/files/`
 - [ ] **ROUTE-02**: Route de compatibilité `/remote.php/webdav/*` → redirect 308 vers `/dav/files/*`
-- [ ] **ROUTE-03**: Normalisation des chemins (trailing slash, URL decoding, `path.Clean`, assertion du préfixe contre path traversal)
+- [x] **ROUTE-03**: Normalisation des chemins (trailing slash, URL decoding, `path.Clean`, assertion du préfixe contre path traversal)
 - [ ] **ROUTE-04**: OPTIONS répond avec `DAV: 1`, `Allow: <liste des méthodes>`, pas d'authentification requise
-- [ ] **ROUTE-05**: Exposition de l'arborescence `/files/` uniquement (jamais `/settings`, `/apps`, `/shared`, etc.)
+- [x] **ROUTE-05**: Exposition de l'arborescence `/files/` uniquement (jamais `/settings`, `/apps`, `/shared`, etc.)
 
 ### Authentication
 
@@ -62,7 +62,7 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 ### Security
 
 - [ ] **SEC-01**: Toutes les méthodes sauf OPTIONS nécessitent une authentification valide
-- [ ] **SEC-02**: Path traversal prevention — `path.Clean` + assertion du préfixe `/files/` après normalisation
+- [x] **SEC-02**: Path traversal prevention — `path.Clean` + assertion du préfixe `/files/` après normalisation
 - [ ] **SEC-03**: Limite de profondeur/taille sur PROPFIND (PROPFIND Depth infinity bloqué, pagination Depth 1 pour très gros dossiers)
 - [ ] **SEC-04**: Logs d'audit pour les tentatives d'accès hors `/files/` et les PROPFIND Depth infinity
 - [ ] **SEC-05**: Content-Length obligatoire sur toutes les réponses (Finder strict)
@@ -125,9 +125,9 @@ Reportés pour une future release.
 |-------------|-------|--------|
 | ROUTE-01 | Phase 1 | Pending |
 | ROUTE-02 | Phase 1 | Pending |
-| ROUTE-03 | Phase 1 | Pending |
+| ROUTE-03 | Phase 1 | Complete |
 | ROUTE-04 | Phase 1 | Pending |
-| ROUTE-05 | Phase 1 | Pending |
+| ROUTE-05 | Phase 1 | Complete |
 | AUTH-01 | Phase 1 | Pending |
 | AUTH-02 | Phase 1 | Pending |
 | AUTH-03 | Phase 1 | Pending |
@@ -144,7 +144,7 @@ Reportés pour une future release.
 | READ-09 | Phase 1 | Pending |
 | READ-10 | Phase 1 | Pending |
 | SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Pending |
 | SEC-04 | Phase 1 | Pending |
 | SEC-05 | Phase 1 | Pending |
