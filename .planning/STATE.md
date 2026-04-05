@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 9 of 9 (Phase 1 COMPLETE — all 9 plans landed; end-to-end gowebdav integration test green; Phase 1 shipped with an explicit `-race` caveat, harness race deferred)
-status: phase-1-complete
-stopped_at: Completed 01-09-PLAN.md (end-to-end gowebdav integration test + Phase 1 verification, shipped with deferred harness race)
-last_updated: "2026-04-05T17:40:00Z"
+current_plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred harness-race follow-up — see "Deferred Follow-ups" below)
+status: planning
+stopped_at: Completed 01-09-PLAN.md (end-to-end gowebdav integration test + Phase 1 verification, shipped with deferred harness race per user decision)
+last_updated: "2026-04-05T19:19:51.306Z"
 progress:
   total_phases: 3
   completed_phases: 1
@@ -196,7 +196,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 
 ### FOLLOWUP-01 — Test-harness data race under `-race` (provisional slot: `01.1-race-harness`)
 
-**Status:** Deferred (user decision 2026-04-05 at plan 01-09 checkpoint).
+**Status:** Ready to plan
 **Blocks:** The `-race` invariant for any package that uses `testutils.NewSetup` + `GetTestInstance` more than once in the same `go test -race` process. Currently affects `web/webdav/` (exposed for the first time by plan 01-09's final sweep) and any other package doing the same stacking pattern.
 **Discovered in:** Plan 01-09 Task 2 (final race-enabled sweep).
 **Fully analysed in:** `.planning/phases/01-foundation/01-VALIDATION.md` → "Outstanding Gaps" → "Gap 1 — Pre-existing test-infrastructure race under `-race`".
@@ -204,6 +204,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 **Root cause (one paragraph):** `testutils.GetTestInstance` calls `stack.Start`, which spawns a `memScheduler` goroutine that owns an `AntivirusTrigger` reading `config.FsURL()` on a long-lived timer. That goroutine outlives the test that started it. The NEXT test's setup calls `config.UseTestFile`, which mutates `pkg/config/config` globals via `config.UseViper`. The write in test N's setup races with the read in test N-1's still-running antivirus scheduler. Reproducible on `master` without any WebDAV code, reproducible after removing `gowebdav_integration_test.go` — the race is entirely in the stack-wide test fixture, not in Phase 1 code.
 
 **Files involved (all non-webdav):**
+
 - `pkg/config/config/config.go` (write: `UseViper` line 1009, read: `FsURL` line 475)
 - `model/job/trigger_antivirus.go` (`AntivirusTrigger.pushJob` line 102 — the reader)
 - `model/job/mem_scheduler.go` (`memScheduler.StartScheduler` line 59 — owns the leaked goroutine)
@@ -211,6 +212,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 - `tests/testutils/test_utils.go` (`TestSetup.GetTestInstance` line 178 — no teardown hook)
 
 **Preferred fix (smallest blast radius first):**
+
 1. Add a `t.Cleanup` hook in `testutils.TestSetup` (or a new `testutils.NewSetup` teardown) that calls `stack.Shutdown` or an equivalent scheduler-stop before the next test can mutate `config.*`. Touches one file in `tests/testutils/`.
 2. Wrap `pkg/config/config` package globals in a `sync.RWMutex` so concurrent read/write is safe by construction. Touches one file in `pkg/config/config/` but affects every reader/writer.
 3. Make `memScheduler.StartScheduler` respect a per-test context so the goroutine exits with the test that started it. Larger surface — touches the job scheduler lifecycle.
