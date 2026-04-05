@@ -26,18 +26,17 @@ type webdavTestEnv struct {
 // io.cozy.files scope, and an httptest server mounted at /dav with the
 // routes registered by overrideRoutes.
 //
-// overrideRoutes MUST be non-nil for now: the package's canonical Routes
-// function is implemented in plan 01-06. Until it lands, every test in this
-// package must supply its own route registrar (typically: attach
-// resolveWebDAVAuth + a trivial 200 handler). Once Routes exists, callers may
-// pass nil and the helper can be extended to default to it.
+// If overrideRoutes is nil, the canonical webdav.Routes is used — this
+// became possible once plan 01-06 landed Routes. Tests that need to
+// exercise the middleware in isolation (auth_test.go) or mount extra
+// routes alongside the real ones can still pass an explicit registrar.
 func newWebdavTestEnv(t *testing.T, overrideRoutes func(*echo.Group)) *webdavTestEnv {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("webdav integration tests require a cozy test instance")
 	}
 	if overrideRoutes == nil {
-		t.Fatal("newWebdavTestEnv: overrideRoutes is required until plan 01-06 introduces webdav.Routes")
+		overrideRoutes = Routes
 	}
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
