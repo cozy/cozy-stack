@@ -23,6 +23,10 @@ import (
 	"time"
 )
 
+// ---------------------------------------------------------------------------
+// Types — Multistatus document tree (RFC 4918 §14)
+// ---------------------------------------------------------------------------
+
 // Multistatus is the root element of a 207 Multi-Status response per
 // RFC 4918 §14.16.
 type Multistatus struct {
@@ -112,6 +116,10 @@ type PropList struct {
 	SupportedLock    *struct{} `xml:"DAV: supportedlock"`
 	LockDiscovery    *struct{} `xml:"DAV: lockdiscovery"`
 }
+
+// ---------------------------------------------------------------------------
+// Helpers — property builders, request parser, response marshaller
+// ---------------------------------------------------------------------------
 
 // buildETag returns an RFC 7232 strong ETag derived from a file's md5sum.
 // The returned string includes the surrounding double quotes required by
