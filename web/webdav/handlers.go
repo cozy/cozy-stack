@@ -30,8 +30,7 @@ func handleOptions(c echo.Context) error {
 func handlePath(c echo.Context) error {
 	switch c.Request().Method {
 	case "PROPFIND":
-		// Implemented in plan 01-07
-		return sendWebDAVError(c, http.StatusNotImplemented, "not-implemented")
+		return handlePropfind(c)
 	case http.MethodGet, http.MethodHead:
 		return handleGet(c)
 	default:

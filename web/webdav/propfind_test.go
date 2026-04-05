@@ -42,8 +42,10 @@ func TestPropfind_Depth0_Root(t *testing.T) {
 		"Depth:0 on root must return exactly one D:response")
 	// Href points at /dav/files/ (with trailing slash — collections).
 	assert.Regexp(t, `<D:href>/dav/files/?</D:href>`, body)
-	// resourcetype carries D:collection.
-	assert.Contains(t, body, "<D:collection/>")
+	// resourcetype carries D:collection. encoding/xml emits the long form
+	// <D:collection></D:collection>, which is semantically identical to
+	// the self-closing form per XML 1.0 §3.1 — both are accepted.
+	assert.Contains(t, body, "D:collection")
 	assert.Contains(t, body, "<D:resourcetype>")
 }
 
@@ -64,11 +66,14 @@ func TestPropfind_Depth0_File(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(body, "<D:response>"),
 		"Depth:0 on a file must return exactly one D:response")
 	// No collection marker on a plain file.
-	assert.NotContains(t, body, "<D:collection/>")
+	assert.NotContains(t, body, "D:collection")
 	// Content length matches the seeded byte count.
 	assert.Contains(t, body, "<D:getcontentlength>14</D:getcontentlength>")
 	// ETag is a double-quoted base64-ish string (buildETag uses base64(md5sum)).
-	etagRE := regexp.MustCompile(`<D:getetag>"[A-Za-z0-9+/=]+"</D:getetag>`)
+	// encoding/xml escapes the surrounding quotes as &#34; inside element
+	// text content — that's valid XML and clients decode entities before
+	// comparing ETags.
+	etagRE := regexp.MustCompile(`<D:getetag>(&#34;|")[A-Za-z0-9+/=]+(&#34;|")</D:getetag>`)
 	assert.Regexp(t, etagRE, body)
 	// getlastmodified is RFC 1123 (http.TimeFormat) — day-name, DD Mon YYYY HH:MM:SS GMT.
 	lmRE := regexp.MustCompile(`<D:getlastmodified>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT</D:getlastmodified>`)
