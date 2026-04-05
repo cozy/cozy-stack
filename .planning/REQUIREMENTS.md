@@ -29,8 +29,8 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [ ] **READ-02**: PROPFIND Depth: 0 sur resource (fichier) — retourne les propriétés du fichier
 - [ ] **READ-03**: PROPFIND Depth: 1 sur collection — retourne le dossier + ses enfants directs
 - [ ] **READ-04**: PROPFIND Depth: infinity bloqué avec 403 Forbidden (prévention DoS)
-- [ ] **READ-05**: PROPFIND retourne les 9 propriétés live standards : `resourcetype`, `getlastmodified` (RFC 1123), `getcontentlength`, `getetag` (md5sum VFS, double-quoted), `getcontenttype`, `displayname`, `creationdate` (ISO 8601), `supportedlock` (vide), `lockdiscovery` (vide)
-- [ ] **READ-06**: PROPFIND XML utilise le namespace `D:` préfixé (`xmlns:D="DAV:"`) — compatibilité Windows Mini-Redirector
+- [x] **READ-05**: PROPFIND retourne les 9 propriétés live standards : `resourcetype`, `getlastmodified` (RFC 1123), `getcontentlength`, `getetag` (md5sum VFS, double-quoted), `getcontenttype`, `displayname`, `creationdate` (ISO 8601), `supportedlock` (vide), `lockdiscovery` (vide)
+- [x] **READ-06**: PROPFIND XML utilise le namespace `D:` préfixé (`xmlns:D="DAV:"`) — compatibilité Windows Mini-Redirector
 - [ ] **READ-07**: PROPFIND streaming XML pour les gros dossiers (pas de buffer complet en mémoire, utilisation de `DirIterator`)
 - [ ] **READ-08**: GET sur fichier — streaming via `vfs.ServeFileContent` (support Range, ETag, chunked)
 - [ ] **READ-09**: HEAD sur fichier — mêmes headers que GET sans body
@@ -137,8 +137,8 @@ Reportés pour une future release.
 | READ-02 | Phase 1 | Pending |
 | READ-03 | Phase 1 | Pending |
 | READ-04 | Phase 1 | Pending |
-| READ-05 | Phase 1 | Pending |
-| READ-06 | Phase 1 | Pending |
+| READ-05 | Phase 1 | Complete (01-02) |
+| READ-06 | Phase 1 | Complete (01-02) |
 | READ-07 | Phase 1 | Pending |
 | READ-08 | Phase 1 | Pending |
 | READ-09 | Phase 1 | Pending |

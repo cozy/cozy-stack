@@ -29,7 +29,7 @@
   5. A client using `/remote.php/webdav/*` is redirected 308 to the equivalent `/dav/files/*` path and the subsequent request succeeds.
 **Plans**: 9 plans
 - [ ] 01-01-PLAN.md — Scaffold web/webdav package + gowebdav dep + RED tests for XML & path mapper
-- [ ] 01-02-PLAN.md — GREEN: XML multistatus structs, D: namespace, RFC 1123 dates, ETag helpers
+- [x] 01-02-PLAN.md — GREEN: XML multistatus structs, D: namespace, RFC 1123 dates, ETag helpers
 - [ ] 01-03-PLAN.md — GREEN: davPathToVFSPath with traversal prevention
 - [ ] 01-04-PLAN.md — RED+GREEN: RFC 4918 §8.7 error XML builder
 - [ ] 01-05-PLAN.md — Shared test helpers + RED+GREEN: auth middleware (Bearer, Basic password, 401 realm, audit log)
@@ -71,7 +71,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 2/9 | In progress | - |
 | 2. Write Operations | 0/? | Not started | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
@@ -143,4 +143,4 @@ Total: 53 / 53 — all v1 requirements mapped
 ---
 
 *Roadmap created: 2026-04-04*
-*Last updated: 2026-04-04 after initial creation*
+*Last updated: 2026-04-05 after executing Plan 01-02 (XML GREEN)*

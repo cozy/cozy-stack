@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-05T14:25:39.467Z"
+last_updated: "2026-04-05T15:10:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 9
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: Cozy WebDAV
@@ -32,7 +32,7 @@ progress:
 ## Current Position
 
 Phase: 01 (foundation) — EXECUTING
-Current Plan: 2 of 9 (Plan 01 complete — scaffold + RED tests for xml & path_mapper)
+Current Plan: 3 of 9 (Plans 01, 02 complete — scaffold + RED, then XML GREEN)
 
 ## Performance Metrics
 
@@ -40,16 +40,17 @@ Current Plan: 2 of 9 (Plan 01 complete — scaffold + RED tests for xml & path_m
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 3 (TEST-01, TEST-02, TEST-04) |
+| Requirements complete | 5 (TEST-01, TEST-02, TEST-04, READ-05, READ-06) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 1 |
+| Plans complete | 2 |
 
 ### Plan Execution Log
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | 01-foundation P01 | 3min | 3 | 10 |
+| 01-foundation P02 | ~10min | 2 | 3 |
 
 ---
 
@@ -107,6 +108,16 @@ Current Plan: 2 of 9 (Plan 01 complete — scaffold + RED tests for xml & path_m
 - **`ErrPathTraversal` exported sentinel** to enable `errors.Is` checks in future handler code and in the sentinel-error test.
 - **gowebdav kept `// indirect`** in go.mod until a future test file imports it (wave 2+).
 
+### Plan 01-02 Decisions (XML GREEN)
+
+- **Response-side struct tags use literal `D:name` prefix** (not Go's `"DAV: name"` namespace form). With a manually-written `<D:multistatus xmlns:D="DAV:">` root, children re-use the prefix by name. The namespace form would cause `encoding/xml` to emit redundant `xmlns="DAV:"` on every child, which Windows Mini-Redirector rejects.
+- **Request-side types (`PropFind`, `PropList`) keep the `"DAV: name"` namespace form** because inbound clients may bind `DAV:` to any prefix of their choosing.
+- **`Prop.GetContentLength` is plain `int64` with `omitempty`** (not `*int64`), matching the RED test's literal-integer usage.
+- **`ResourceType` is a value type** carrying only an optional `Collection *struct{}` — files send `ResourceType{}` (empty), collections send `ResourceType{Collection: &struct{}{}}`. This matches the RED test signature `ResourceType: ResourceType{}`.
+- **`SupportedLock` and `LockDiscovery` are named types** (each carrying only `XMLName`) rather than `*struct{}`, matching the RED test's `&SupportedLock{}` instantiation and leaving room for Class 2 extension later.
+- **Compile-only `path_mapper.go` stubs** (`davPathToVFSPath`, `ErrPathTraversal`) landed in this plan so the package's test binary builds. Plan 01-03 replaces `davPathToVFSPath` with the real traversal-rejecting implementation; the `ErrPathTraversal` sentinel is already final.
+- **RED test bug fix**: `TestGetLastModifiedFormat`'s `assert.NotContains(got, "T")` was self-contradictory (the literal "GMT" contains "T"). Replaced with `assert.NotRegexp(\dT\d)` which targets only the RFC 3339 date/time separator.
+
 ---
 
 ## Session Continuity
@@ -114,10 +125,11 @@ Current Plan: 2 of 9 (Plan 01 complete — scaffold + RED tests for xml & path_m
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 01-01-PLAN.md (scaffold + RED tests for xml & path_mapper)
-**Work done:** Executed Plan 01 of Phase 01 — created `web/webdav/` package with 6 stub files, added gowebdav v0.12.0, wrote 7 RED tests for XML multistatus marshalling and 13-case RED test table for `davPathToVFSPath` + sentinel-error test. All 3 tasks committed atomically (1c99363ac, b3402ea8b, f23c2a9e6). RED baseline verified: `go build` passes, `go test` fails with expected `undefined:` errors.
-**Artifacts created:** web/webdav/{webdav,xml,path_mapper,auth,errors,handlers}.go, web/webdav/{xml_test,path_mapper_test}.go, .planning/phases/01-foundation/01-01-SUMMARY.md
-**Next action:** Execute Plan 02 (xml.go GREEN — implement Multistatus, Response, Prop, marshalMultistatus, parsePropFind, buildETag, buildCreationDate)
+**Stopped at:** Completed 01-02-PLAN.md (XML GREEN — multistatus types, marshaller, propfind parser)
+**Work done:** Executed Plan 02 of Phase 01 — implemented `web/webdav/xml.go` with all 9 types (Multistatus, Response, Propstat, Prop, ResourceType, SupportedLock, LockDiscovery, PropFind, PropList) and 5 helpers (buildETag, buildCreationDate, buildLastModified, parsePropFind, marshalMultistatus). All 7 XML RED tests from Plan 01 now pass. Two commits (b1f47cdc5 feat GREEN, 421d7192f refactor). Four deviations auto-fixed: (1) added compile-only path_mapper.go stubs so the package test binary could build (Rule 3 blocker), (2) fixed self-contradictory NotContains("T") assertion in xml_test.go (Rule 1 bug), (3) reconciled Prop/ResourceType/SupportedLock struct signatures with the RED test's actual usage (Rule 1), (4) switched response struct tags from `"DAV: name"` to literal `"D:name"` to stop encoding/xml emitting redundant xmlns on children (Rule 1).
+**Artifacts created:** .planning/phases/01-foundation/01-02-SUMMARY.md
+**Artifacts modified:** web/webdav/xml.go, web/webdav/path_mapper.go (stubs), web/webdav/xml_test.go (assertion fix)
+**Next action:** Execute Plan 03 (path mapper GREEN — replace davPathToVFSPath stub with real implementation that rejects `..`, encoded traversal, null bytes, encoded slashes, and system-directory prefixes)
 
 ### Open Todos
 
@@ -130,4 +142,4 @@ None.
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-01 (scaffold + RED tests)*
+*Last updated: 2026-04-05 after executing Plan 01-02 (XML GREEN)*
