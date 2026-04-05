@@ -17,11 +17,11 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Authentication
 
-- [ ] **AUTH-01**: OAuth Bearer token dans header `Authorization: Bearer <token>` — utilise l'infrastructure existante `middlewares.GetRequestToken`
-- [ ] **AUTH-02**: OAuth token accepté aussi dans le champ password de Basic Auth (username ignoré) — convention Cozy existante, maximise la compatibilité client
-- [ ] **AUTH-03**: Réponse 401 `WWW-Authenticate: Basic realm="Cozy"` sur requête non authentifiée (hors OPTIONS)
-- [ ] **AUTH-04**: Traduction du token en permissions Cozy existantes (pas de bypass des hooks de sécurité)
-- [ ] **AUTH-05**: Scope permission vérifié — l'utilisateur doit avoir les droits sur l'arborescence `/files/`
+- [x] **AUTH-01**: OAuth Bearer token dans header `Authorization: Bearer <token>` — utilise l'infrastructure existante `middlewares.GetRequestToken`
+- [x] **AUTH-02**: OAuth token accepté aussi dans le champ password de Basic Auth (username ignoré) — convention Cozy existante, maximise la compatibilité client
+- [x] **AUTH-03**: Réponse 401 `WWW-Authenticate: Basic realm="Cozy"` sur requête non authentifiée (hors OPTIONS)
+- [x] **AUTH-04**: Traduction du token en permissions Cozy existantes (pas de bypass des hooks de sécurité)
+- [x] **AUTH-05**: Scope permission vérifié — l'utilisateur doit avoir les droits sur l'arborescence `/files/`
 
 ### Read Operations
 
@@ -61,10 +61,10 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Security
 
-- [ ] **SEC-01**: Toutes les méthodes sauf OPTIONS nécessitent une authentification valide
+- [x] **SEC-01**: Toutes les méthodes sauf OPTIONS nécessitent une authentification valide
 - [x] **SEC-02**: Path traversal prevention — `path.Clean` + assertion du préfixe `/files/` après normalisation
 - [ ] **SEC-03**: Limite de profondeur/taille sur PROPFIND (PROPFIND Depth infinity bloqué, pagination Depth 1 pour très gros dossiers)
-- [ ] **SEC-04**: Logs d'audit pour les tentatives d'accès hors `/files/` et les PROPFIND Depth infinity
+- [x] **SEC-04**: Logs d'audit pour les tentatives d'accès hors `/files/` et les PROPFIND Depth infinity
 - [x] **SEC-05**: Content-Length obligatoire sur toutes les réponses (Finder strict)
 
 ### Documentation
@@ -128,11 +128,11 @@ Reportés pour une future release.
 | ROUTE-03 | Phase 1 | Complete |
 | ROUTE-04 | Phase 1 | Pending |
 | ROUTE-05 | Phase 1 | Complete |
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
 | READ-01 | Phase 1 | Pending |
 | READ-02 | Phase 1 | Pending |
 | READ-03 | Phase 1 | Pending |
@@ -143,10 +143,10 @@ Reportés pour une future release.
 | READ-08 | Phase 1 | Pending |
 | READ-09 | Phase 1 | Pending |
 | READ-10 | Phase 1 | Pending |
-| SEC-01 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Pending |
-| SEC-04 | Phase 1 | Pending |
+| SEC-04 | Phase 1 | Complete |
 | SEC-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
