@@ -25,9 +25,8 @@ var webdavMethods = []string{
 }
 
 // davAllowHeader is the value of the Allow: header in OPTIONS responses.
-// Phase 1 exposes only the read-only subset; Phase 2 will add
-// PUT/DELETE/MKCOL/MOVE/COPY and this list will grow.
-const davAllowHeader = "OPTIONS, PROPFIND, GET, HEAD"
+// It lists every method registered in webdavMethods.
+const davAllowHeader = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE"
 
 // Routes registers all WebDAV HTTP routes on router. OPTIONS is
 // registered without the auth middleware (RFC 4918 §9.1 allows

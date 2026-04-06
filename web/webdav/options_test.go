@@ -42,7 +42,7 @@ func TestOptions_FilesRoot_NoAuth(t *testing.T) {
 		Status(http.StatusOK)
 	r.Header("DAV").Contains("1")
 	allow := r.Header("Allow").Raw()
-	for _, m := range []string{"OPTIONS", "PROPFIND", "GET", "HEAD"} {
+	for _, m := range []string{"OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "COPY", "MOVE"} {
 		if !strings.Contains(allow, m) {
 			t.Errorf("Allow header %q missing method %q", allow, m)
 		}
@@ -57,7 +57,7 @@ func TestOptions_FilesSubpath_NoAuth(t *testing.T) {
 		Status(http.StatusOK)
 	r.Header("DAV").Contains("1")
 	allow := r.Header("Allow").Raw()
-	for _, m := range []string{"OPTIONS", "PROPFIND", "GET", "HEAD"} {
+	for _, m := range []string{"OPTIONS", "PROPFIND", "GET", "HEAD", "PUT", "DELETE", "MKCOL", "COPY", "MOVE"} {
 		if !strings.Contains(allow, m) {
 			t.Errorf("Allow header %q missing method %q", allow, m)
 		}
