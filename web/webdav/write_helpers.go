@@ -26,11 +26,27 @@ var errInvalidDestination = errors.New("webdav: invalid Destination header")
 // and the remainder is passed through davPathToVFSPath for traversal
 // validation and normalization.
 func parseDestination(r *http.Request) (string, error) {
-	return "", errMissingDestination // stub — RED
-}
+	rawDest := r.Header.Get("Destination")
+	if rawDest == "" {
+		return "", errMissingDestination
+	}
 
-// suppress unused import warning for url during RED phase
-var _ = url.Parse
+	u, err := url.Parse(rawDest)
+	if err != nil {
+		return "", errInvalidDestination
+	}
+
+	// u.Path is already URL-decoded by url.Parse.
+	const prefix = "/dav/files"
+	if !strings.HasPrefix(u.Path, prefix) {
+		return "", errInvalidDestination
+	}
+
+	// Strip the /dav/files prefix and pass remainder through davPathToVFSPath
+	// for traversal validation and normalization.
+	param := strings.TrimPrefix(u.Path, prefix)
+	return davPathToVFSPath(param)
+}
 
 // errETagMismatch is a sentinel returned by checkETagPreconditions when the
 // If-Match or If-None-Match header does not match the file's current ETag.
