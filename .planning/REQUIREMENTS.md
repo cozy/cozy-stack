@@ -50,11 +50,11 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Move & Copy
 
-- [ ] **MOVE-01**: MOVE fichier — rename/reparent via `vfs.ModifyFileMetadata` avec `DocPatch` (nom + dirID)
-- [ ] **MOVE-02**: MOVE dossier — via `vfs.ModifyDirMetadata`
-- [ ] **MOVE-03**: MOVE header `Overwrite` absent est traité comme `T` par défaut (conforme RFC 4918, contourne le bug `x/net/webdav` #66059)
-- [ ] **MOVE-04**: MOVE `Overwrite: F` avec destination existante retourne 412 Precondition Failed
-- [ ] **MOVE-05**: MOVE `Destination` header URL-decoded et validé contre path traversal
+- [x] **MOVE-01**: MOVE fichier — rename/reparent via `vfs.ModifyFileMetadata` avec `DocPatch` (nom + dirID)
+- [x] **MOVE-02**: MOVE dossier — via `vfs.ModifyDirMetadata`
+- [x] **MOVE-03**: MOVE header `Overwrite` absent est traité comme `T` par défaut (conforme RFC 4918, contourne le bug `x/net/webdav` #66059)
+- [x] **MOVE-04**: MOVE `Overwrite: F` avec destination existante retourne 412 Precondition Failed
+- [x] **MOVE-05**: MOVE `Destination` header URL-decoded et validé contre path traversal
 - [ ] **COPY-01**: COPY fichier — via `vfs.CopyFile`
 - [ ] **COPY-02**: COPY dossier — walk récursif + `CopyFile` par fichier (acceptable pour v1)
 - [ ] **COPY-03**: COPY respecte les mêmes sémantiques `Overwrite` que MOVE
@@ -160,11 +160,11 @@ Reportés pour une future release.
 | WRITE-07 | Phase 2 | Complete |
 | WRITE-08 | Phase 2 | Complete |
 | WRITE-09 | Phase 2 | Complete |
-| MOVE-01 | Phase 2 | Pending |
-| MOVE-02 | Phase 2 | Pending |
-| MOVE-03 | Phase 2 | Pending |
-| MOVE-04 | Phase 2 | Pending |
-| MOVE-05 | Phase 2 | Pending |
+| MOVE-01 | Phase 2 | Complete |
+| MOVE-02 | Phase 2 | Complete |
+| MOVE-03 | Phase 2 | Complete |
+| MOVE-04 | Phase 2 | Complete |
+| MOVE-05 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Pending |
 | COPY-01 | Phase 3 | Pending |
 | COPY-02 | Phase 3 | Pending |
