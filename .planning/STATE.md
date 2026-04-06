@@ -82,6 +82,7 @@ Plan: 4 of 5
 - **PUT streaming:** Pass `r.Body` directly to `vfs.CreateFile` when `r.ContentLength >= 0`. Use temp file for chunked (unknown length) uploads.
 - **Content-Length:** Build XML responses in `bytes.Buffer` first, set `Content-Length` from `buf.Len()` before writing the status header.
 - **DELETE = soft-trash:** Uses `vfs.TrashFile`/`vfs.TrashDir` (not Destroy). DELETE on `.cozy_trash` paths returns 405 with Allow header listing read-only methods (distinct from PUT which returns 403).
+- **MKCOL missing parent:** `vfs.Mkdir` calls `fs.DirByPath(parentDir)` which returns `os.ErrNotExist` (not `ErrParentDoesNotExist`) for missing parents. handleMkcol intercepts this to return 409 Conflict before generic mapVFSWriteError (which would map it to 404).
 
 ### Key VFS Functions (confirmed from source inspection)
 
