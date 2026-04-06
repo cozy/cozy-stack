@@ -3,12 +3,34 @@ package webdav
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/labstack/echo/v4"
 )
+
+// errMissingDestination is returned when a MOVE/COPY request lacks the
+// required Destination header (RFC 4918 section 9.9).
+var errMissingDestination = errors.New("webdav: missing Destination header")
+
+// errInvalidDestination is returned when the Destination header value cannot
+// be parsed or does not carry the expected /dav/files prefix.
+var errInvalidDestination = errors.New("webdav: invalid Destination header")
+
+// parseDestination extracts and validates the VFS path from the RFC 4918
+// Destination header. Returns the VFS-absolute path (e.g. "/target.txt").
+// The header may be an absolute URL ("http://host/dav/files/foo") or a
+// root-relative path ("/dav/files/foo"). The /dav/files prefix is stripped
+// and the remainder is passed through davPathToVFSPath for traversal
+// validation and normalization.
+func parseDestination(r *http.Request) (string, error) {
+	return "", errMissingDestination // stub — RED
+}
+
+// suppress unused import warning for url during RED phase
+var _ = url.Parse
 
 // errETagMismatch is a sentinel returned by checkETagPreconditions when the
 // If-Match or If-None-Match header does not match the file's current ETag.
