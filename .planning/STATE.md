@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-05-PLAN.md (Allow header + E2E write tests) — Phase 2 complete
-last_updated: "2026-04-06T07:44:30Z"
+status: planning
+stopped_at: Phase 2 context gathered
+last_updated: "2026-04-06T07:50:16.077Z"
 progress:
   total_phases: 3
   completed_phases: 2
@@ -202,7 +202,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 
 ### FOLLOWUP-01 — Test-harness data race under `-race` (provisional slot: `01.1-race-harness`)
 
-**Status:** Executing Phase 02
+**Status:** Ready to plan
 **Blocks:** The `-race` invariant for any package that uses `testutils.NewSetup` + `GetTestInstance` more than once in the same `go test -race` process. Currently affects `web/webdav/` (exposed for the first time by plan 01-09's final sweep) and any other package doing the same stacking pattern.
 **Discovered in:** Plan 01-09 Task 2 (final race-enabled sweep).
 **Fully analysed in:** `.planning/phases/01-foundation/01-VALIDATION.md` → "Outstanding Gaps" → "Gap 1 — Pre-existing test-infrastructure race under `-race`".
