@@ -42,8 +42,8 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **WRITE-02**: PUT crée le fichier ou overwrite si existe déjà
 - [x] **WRITE-03**: PUT support `If-Match` et `If-None-Match` (conditional requests basés sur ETag)
 - [x] **WRITE-04**: PUT sur chemin dont le parent n'existe pas retourne 409 Conflict
-- [ ] **WRITE-05**: DELETE sur fichier — suppression via `vfs.DestroyFile`
-- [ ] **WRITE-06**: DELETE sur collection — suppression récursive via `vfs.DestroyDirAndContent`
+- [x] **WRITE-05**: DELETE sur fichier — soft-trash via `vfs.TrashFile` (204 No Content)
+- [x] **WRITE-06**: DELETE sur collection — soft-trash entire tree via `vfs.TrashDir` (204 No Content)
 - [ ] **WRITE-07**: MKCOL — création de dossier via `vfs.Mkdir` (un seul niveau, pas `MkdirAll` à cause de la race condition existante)
 - [ ] **WRITE-08**: MKCOL sur chemin dont le parent n'existe pas retourne 409 Conflict
 - [ ] **WRITE-09**: MKCOL sur chemin existant retourne 405 Method Not Allowed
@@ -155,8 +155,8 @@ Reportés pour une future release.
 | WRITE-02 | Phase 2 | Complete (02-01) |
 | WRITE-03 | Phase 2 | Complete (02-01) |
 | WRITE-04 | Phase 2 | Complete (02-01) |
-| WRITE-05 | Phase 2 | Pending |
-| WRITE-06 | Phase 2 | Pending |
+| WRITE-05 | Phase 2 | Complete (02-02) |
+| WRITE-06 | Phase 2 | Complete (02-02) |
 | WRITE-07 | Phase 2 | Pending |
 | WRITE-08 | Phase 2 | Pending |
 | WRITE-09 | Phase 2 | Pending |

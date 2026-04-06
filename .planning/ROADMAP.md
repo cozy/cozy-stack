@@ -52,7 +52,7 @@
   5. Integration tests using `gowebdav` cover PUT, DELETE, MKCOL, and MOVE — each test verifies both the HTTP response code and the observable VFS state (file exists / does not exist, directory contents).
 **Plans**: 5 plans
 - [x] 02-01-PLAN.md — TDD RED+GREEN: Shared write helpers (mapVFSWriteError, isInTrash) + PUT handler
-- [ ] 02-02-PLAN.md — TDD RED+GREEN: DELETE handler with soft-trash semantics
+- [x] 02-02-PLAN.md — TDD RED+GREEN: DELETE handler with soft-trash semantics
 - [ ] 02-03-PLAN.md — TDD RED+GREEN: MKCOL handler (single directory creation)
 - [ ] 02-04-PLAN.md — TDD RED+GREEN: MOVE handler with Destination parsing and Overwrite semantics
 - [ ] 02-05-PLAN.md — Update Allow header + E2E gowebdav write integration tests

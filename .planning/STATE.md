@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md (PUT handler + shared write helpers)
-last_updated: "2026-04-06T07:14:30Z"
+stopped_at: Completed 02-03-PLAN.md (MKCOL handler)
+last_updated: "2026-04-06T07:21:20Z"
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 12
 ---
 
 # Project State: Cozy WebDAV
@@ -33,7 +33,7 @@ progress:
 ## Current Position
 
 Phase: 02 (write-operations) — EXECUTING
-Plan: 2 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -41,10 +41,10 @@ Plan: 2 of 5
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 32 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04) |
+| Requirements complete | 37 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04, WRITE-05, WRITE-06, WRITE-07, WRITE-08, WRITE-09) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 10 |
+| Plans complete | 12 |
 
 ### Plan Execution Log
 
@@ -60,6 +60,8 @@ Plan: 2 of 5
 | 01-foundation P07 | ~6min | 3 | 3 |
 | 01-foundation P09 | ~5min | 2 | 2 |
 | 02-write-operations P01 | 3min | 2 | 5 |
+| 02-write-operations P02 | 2min | 2 | 3 |
+| 02-write-operations P03 | 3min | 2 | 3 |
 
 ---
 
@@ -79,6 +81,7 @@ Plan: 2 of 5
 - **MKCOL:** Use `vfs.Mkdir` (single-directory, not `MkdirAll`) to avoid the distributed race condition.
 - **PUT streaming:** Pass `r.Body` directly to `vfs.CreateFile` when `r.ContentLength >= 0`. Use temp file for chunked (unknown length) uploads.
 - **Content-Length:** Build XML responses in `bytes.Buffer` first, set `Content-Length` from `buf.Len()` before writing the status header.
+- **DELETE = soft-trash:** Uses `vfs.TrashFile`/`vfs.TrashDir` (not Destroy). DELETE on `.cozy_trash` paths returns 405 with Allow header listing read-only methods (distinct from PUT which returns 403).
 
 ### Key VFS Functions (confirmed from source inspection)
 
