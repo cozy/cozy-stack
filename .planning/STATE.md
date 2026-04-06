@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred harness-race follow-up — see "Deferred Follow-ups" below)
-status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-06T06:44:59.893Z"
+status: executing
+stopped_at: Completed 02-01-PLAN.md (PUT handler + shared write helpers)
+last_updated: "2026-04-06T07:14:30Z"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 14
+  completed_plans: 10
 ---
 
 # Project State: Cozy WebDAV
@@ -27,14 +26,14 @@ progress:
 **New package:** `web/webdav/` (to be created)
 **Route registration:** `web/routing.go`
 
-**Current focus:** Phase 01 — foundation
+**Current focus:** Phase 02 — write-operations
 
 ---
 
 ## Current Position
 
-Phase: 01 (foundation) — COMPLETE
-Current Plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred harness-race follow-up — see "Deferred Follow-ups" below)
+Phase: 02 (write-operations) — EXECUTING
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -42,10 +41,10 @@ Current Plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred har
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 28 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05) |
+| Requirements complete | 32 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 9 |
+| Plans complete | 10 |
 
 ### Plan Execution Log
 
@@ -60,6 +59,7 @@ Current Plan: 9 of 9 (all 9 plans committed, Phase 1 shipped with a deferred har
 | 01-foundation P08 | ~1.5min | 2 | 3 |
 | 01-foundation P07 | ~6min | 3 | 3 |
 | 01-foundation P09 | ~5min | 2 | 2 |
+| 02-write-operations P01 | 3min | 2 | 5 |
 
 ---
 
@@ -196,7 +196,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 
 ### FOLLOWUP-01 — Test-harness data race under `-race` (provisional slot: `01.1-race-harness`)
 
-**Status:** Ready to plan
+**Status:** Executing Phase 02
 **Blocks:** The `-race` invariant for any package that uses `testutils.NewSetup` + `GetTestInstance` more than once in the same `go test -race` process. Currently affects `web/webdav/` (exposed for the first time by plan 01-09's final sweep) and any other package doing the same stacking pattern.
 **Discovered in:** Plan 01-09 Task 2 (final race-enabled sweep).
 **Fully analysed in:** `.planning/phases/01-foundation/01-VALIDATION.md` → "Outstanding Gaps" → "Gap 1 — Pre-existing test-infrastructure race under `-race`".

@@ -51,7 +51,7 @@
   4. MOVE renames or reparents a file or directory. An absent `Overwrite` header is treated as `T` (RFC 4918 default — the bug in `x/net/webdav` #66059 does not affect this implementation). `Overwrite: F` with an existing destination returns `412`. The Destination header is URL-decoded and validated against path traversal before any VFS call.
   5. Integration tests using `gowebdav` cover PUT, DELETE, MKCOL, and MOVE — each test verifies both the HTTP response code and the observable VFS state (file exists / does not exist, directory contents).
 **Plans**: 5 plans
-- [ ] 02-01-PLAN.md — TDD RED+GREEN: Shared write helpers (mapVFSWriteError, isInTrash) + PUT handler
+- [x] 02-01-PLAN.md — TDD RED+GREEN: Shared write helpers (mapVFSWriteError, isInTrash) + PUT handler
 - [ ] 02-02-PLAN.md — TDD RED+GREEN: DELETE handler with soft-trash semantics
 - [ ] 02-03-PLAN.md — TDD RED+GREEN: MKCOL handler (single directory creation)
 - [ ] 02-04-PLAN.md — TDD RED+GREEN: MOVE handler with Destination parsing and Overwrite semantics
@@ -77,7 +77,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
-| 2. Write Operations | 0/5 | Planned | - |
+| 2. Write Operations | 1/5 | Executing | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
 ---
