@@ -25,13 +25,16 @@ Un utilisateur peut connecter OnlyOffice mobile ou iOS Files à son Cozy et navi
 - ✓ Délégation au VFS et aux fonctions existantes — validated Phase 1: foundation
 - ✓ Méthodologie TDD stricte : RED→GREEN→REFACTOR par commits — validated Phase 1: foundation
 
+- ✓ Support des méthodes d'écriture : PUT, DELETE, MKCOL, MOVE — validated Phase 2: write-operations
+- ✓ Tests d'intégration E2E gowebdav pour toutes les méthodes write — validated Phase 2: write-operations
+
 ### Active
 
-- [ ] Support des méthodes d'écriture : PUT, DELETE, MKCOL, COPY, MOVE (Phase 2)
+- [ ] COPY (fichier + dossier récursif) — Phase 3
 - [ ] Compatibilité vérifiée avec OnlyOffice mobile (Phase 3)
 - [ ] Compatibilité vérifiée avec iOS/iPadOS Files app (Phase 3)
+- [ ] Suite litmus RFC 4918 Class 1 compliance — Phase 3
 - [ ] Documentation des endpoints, exemples d'usage, compatibilités
-- [ ] Tests exhaustifs : unitaires, intégration, comportement WebDAV via clients standards
 
 ### Out of Scope
 
@@ -72,7 +75,7 @@ Un utilisateur peut connecter OnlyOffice mobile ou iOS Files à son Cozy et navi
 
 ## Current State
 
-Phase 1 (foundation) complete — WebDAV read-only server (`OPTIONS`, `PROPFIND` depth 0/1, `GET`, `HEAD`) mounted at `/dav` with dual auth (Bearer + Basic app-password), RFC 4918 XML responses, path-traversal hardening, and full E2E verification via a real `gowebdav` client. 9/9 plans, 28/28 Phase 1 requirements. Next: Phase 2 (write-operations — PUT, DELETE, MKCOL, COPY, MOVE).
+Phase 2 (write-operations) complete — full read-write WebDAV surface: PUT (streaming, conditional If-Match/If-None-Match), DELETE (soft-trash via TrashFile/TrashDir), MKCOL (single-dir), MOVE (Overwrite semantics, Destination parsing, trash-then-rename). 5/5 plans, 15/15 Phase 2 requirements. 9 E2E subtests via gowebdav. Phase 1 regression clean. Next: Phase 3 (COPY, litmus compliance, documentation).
 
 ---
-*Last updated: 2026-04-05 after Phase 1 completion*
+*Last updated: 2026-04-06 after Phase 2 completion*
