@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-04-PLAN.md (MOVE handler)
-last_updated: "2026-04-06T07:34:11Z"
+stopped_at: Completed 02-05-PLAN.md (Allow header + E2E write tests) — Phase 2 complete
+last_updated: "2026-04-06T07:44:30Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State: Cozy WebDAV
@@ -26,14 +26,14 @@ progress:
 **New package:** `web/webdav/` (to be created)
 **Route registration:** `web/routing.go`
 
-**Current focus:** Phase 02 — write-operations
+**Current focus:** Phase 03 — COPY, Compliance, and Documentation
 
 ---
 
 ## Current Position
 
-Phase: 02 (write-operations) — EXECUTING
-Plan: 5 of 5
+Phase: 02 (write-operations) — COMPLETE
+Plan: 5 of 5 (all done)
 
 ## Performance Metrics
 
@@ -41,10 +41,10 @@ Plan: 5 of 5
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 42 (TEST-01, TEST-02, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04, WRITE-05, WRITE-06, WRITE-07, WRITE-08, WRITE-09, MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05) |
+| Requirements complete | 43 (TEST-01, TEST-02, TEST-03, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04, WRITE-05, WRITE-06, WRITE-07, WRITE-08, WRITE-09, MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05) |
 | Requirements in progress | 0 |
 | Plans created | 9 |
-| Plans complete | 13 |
+| Plans complete | 14 |
 
 ### Plan Execution Log
 
@@ -63,6 +63,7 @@ Plan: 5 of 5
 | 02-write-operations P02 | 2min | 2 | 3 |
 | 02-write-operations P03 | 3min | 2 | 3 |
 | 02-write-operations P04 | 9min | 2 | 5 |
+| 02-write-operations P05 | 2min | 2 | 3 |
 
 ---
 

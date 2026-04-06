@@ -78,7 +78,7 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 - [x] **TEST-01**: Tests unitaires XML (marshalling/unmarshalling) — écrits AVANT les structs
 - [x] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
-- [ ] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
+- [x] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
 - [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes) — end-to-end gowebdav client verification landed in 01-09
 - [ ] **TEST-05**: Tests de comportement : scénarios OnlyOffice mobile et iOS Files (open → read → write → save)
 - [ ] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
@@ -165,7 +165,7 @@ Reportés pour une future release.
 | MOVE-03 | Phase 2 | Complete |
 | MOVE-04 | Phase 2 | Complete |
 | MOVE-05 | Phase 2 | Complete |
-| TEST-03 | Phase 2 | Pending |
+| TEST-03 | Phase 2 | Complete |
 | COPY-01 | Phase 3 | Pending |
 | COPY-02 | Phase 3 | Pending |
 | COPY-03 | Phase 3 | Pending |

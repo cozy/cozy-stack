@@ -10,7 +10,7 @@
 ## Phases
 
 - [x] **Phase 1: Foundation** — Read-only WebDAV mount: routing, auth, path safety, PROPFIND, GET/HEAD
-- [ ] **Phase 2: Write Operations** — Full read-write capability: PUT, DELETE, MKCOL, MOVE
+- [x] **Phase 2: Write Operations** — Full read-write capability: PUT, DELETE, MKCOL, MOVE
 - [ ] **Phase 3: COPY, Compliance, and Documentation** — RFC 4918 Class 1 sign-off: COPY, litmus, docs
 
 ---
@@ -55,7 +55,7 @@
 - [x] 02-02-PLAN.md — TDD RED+GREEN: DELETE handler with soft-trash semantics
 - [x] 02-03-PLAN.md — TDD RED+GREEN: MKCOL handler (single directory creation)
 - [x] 02-04-PLAN.md — TDD RED+GREEN: MOVE handler with Destination parsing and Overwrite semantics
-- [ ] 02-05-PLAN.md — Update Allow header + E2E gowebdav write integration tests
+- [x] 02-05-PLAN.md — Update Allow header + E2E gowebdav write integration tests
 
 ---
 
@@ -77,7 +77,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
-| 2. Write Operations | 1/5 | Executing | - |
+| 2. Write Operations | 5/5 | Complete | 2026-04-06 |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
 ---
