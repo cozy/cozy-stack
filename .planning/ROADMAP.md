@@ -50,7 +50,12 @@
   3. MKCOL creates a single directory. MKCOL on an already-existing path returns `405 Method Not Allowed`. MKCOL where the parent does not exist returns `409 Conflict`.
   4. MOVE renames or reparents a file or directory. An absent `Overwrite` header is treated as `T` (RFC 4918 default — the bug in `x/net/webdav` #66059 does not affect this implementation). `Overwrite: F` with an existing destination returns `412`. The Destination header is URL-decoded and validated against path traversal before any VFS call.
   5. Integration tests using `gowebdav` cover PUT, DELETE, MKCOL, and MOVE — each test verifies both the HTTP response code and the observable VFS state (file exists / does not exist, directory contents).
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 02-01-PLAN.md — TDD RED+GREEN: Shared write helpers (mapVFSWriteError, isInTrash) + PUT handler
+- [ ] 02-02-PLAN.md — TDD RED+GREEN: DELETE handler with soft-trash semantics
+- [ ] 02-03-PLAN.md — TDD RED+GREEN: MKCOL handler (single directory creation)
+- [ ] 02-04-PLAN.md — TDD RED+GREEN: MOVE handler with Destination parsing and Overwrite semantics
+- [ ] 02-05-PLAN.md — Update Allow header + E2E gowebdav write integration tests
 
 ---
 
@@ -72,7 +77,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
-| 2. Write Operations | 0/? | Not started | - |
+| 2. Write Operations | 0/5 | Planned | - |
 | 3. COPY, Compliance, and Documentation | 0/? | Not started | - |
 
 ---
@@ -143,4 +148,4 @@ Total: 53 / 53 — all v1 requirements mapped
 ---
 
 *Roadmap created: 2026-04-04*
-*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test + Phase 1 sign-off; Phase 1 complete with deferred harness-race follow-up)*
+*Last updated: 2026-04-06 after planning Phase 2 (5 plans across 4 waves)*
