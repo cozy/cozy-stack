@@ -33,6 +33,8 @@ func handlePath(c echo.Context) error {
 		return handlePropfind(c)
 	case http.MethodGet, http.MethodHead:
 		return handleGet(c)
+	case http.MethodPut:
+		return handlePut(c)
 	default:
 		// Phase 2/3 methods — not yet implemented
 		return sendWebDAVError(c, http.StatusNotImplemented, "not-implemented")
