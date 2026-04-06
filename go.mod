@@ -43,7 +43,7 @@ require (
 	github.com/redis/go-redis/v9 v9.17.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.25.0
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.19.0
