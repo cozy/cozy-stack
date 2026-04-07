@@ -93,17 +93,23 @@ type QueryMessage struct {
 }
 
 type Source struct {
-	ID             string `json:"id"`
-	DocType        string `json:"doctype"`
-	Filename       string `json:"filename"`
-	FileURL        string `json:"fileUrl"`
-	ChunkURL       string `json:"chunkUrl"`
-	Page           int    `json:"page"`
+	SourceType string `json:"sourceType"`
+	// Document source fields
+	ID             string `json:"id,omitempty"`
+	DocType        string `json:"doctype,omitempty"`
+	Filename       string `json:"filename,omitempty"`
+	FileURL        string `json:"fileUrl,omitempty"`
+	ChunkURL       string `json:"chunkUrl,omitempty"`
+	Page           int    `json:"page,omitempty"`
 	EmailPreview   string `json:"email.preview,omitempty"`
 	RelationshipID string `json:"relationship_id,omitempty"`
 	ParentID       string `json:"parent_id,omitempty"`
 	Subject        string `json:"email.subject,omitempty"`
 	Datetime       string `json:"datetime,omitempty"`
+	// Web source fields
+	URL     string `json:"url,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Snippet string `json:"snippet,omitempty"`
 }
 
 func Chat(inst *instance.Instance, payload ChatPayload) (*ChatConversation, error) {
@@ -200,33 +206,48 @@ func getSources(event map[string]interface{}) ([]Source, error) {
 		if !ok {
 			continue
 		}
-		subject, _ := src["email.subject"].(string)
-		datetime, _ := src["datetime"].(string)
-		emailPreview, _ := src["email.preview"].(string)
-		relationshipID, _ := src["relationship_id"].(string)
-		parentID, _ := src["parent_id"].(string)
-		doctype, _ := src["doctype"].(string)
-		fileID, _ := src["file_id"].(string)
-		fileName, _ := src["filename"].(string)
-		page := 0
-		if p, ok := src["page"].(float64); ok {
-			page = int(p)
+		sourceType, _ := src["source_type"].(string)
+		if sourceType == "web" {
+			urlStr, _ := src["url"].(string)
+			title, _ := src["title"].(string)
+			snippet, _ := src["snippet"].(string)
+			sources = append(sources, Source{
+				SourceType: "web",
+				DocType:    "io.cozy.urls",
+				URL:        urlStr,
+				Title:      title,
+				Snippet:    snippet,
+			})
+		} else {
+			subject, _ := src["email.subject"].(string)
+			datetime, _ := src["datetime"].(string)
+			emailPreview, _ := src["email.preview"].(string)
+			relationshipID, _ := src["relationship_id"].(string)
+			parentID, _ := src["parent_id"].(string)
+			doctype, _ := src["doctype"].(string)
+			fileID, _ := src["file_id"].(string)
+			fileName, _ := src["filename"].(string)
+			page := 0
+			if p, ok := src["page"].(float64); ok {
+				page = int(p)
+			}
+			fileURL, _ := src["file_url"].(string)
+			chunkURL, _ := src["chunk_url"].(string)
+			sources = append(sources, Source{
+				SourceType:     "document",
+				ID:             fileID,
+				DocType:        doctype,
+				Filename:       fileName,
+				Page:           page,
+				FileURL:        fileURL,
+				ChunkURL:       chunkURL,
+				EmailPreview:   emailPreview,
+				RelationshipID: relationshipID,
+				Subject:        subject,
+				Datetime:       datetime,
+				ParentID:       parentID,
+			})
 		}
-		fileURL, _ := src["file_url"].(string)
-		chunkURL, _ := src["chunk_url"].(string)
-		sources = append(sources, Source{
-			ID:             fileID,
-			DocType:        doctype,
-			Filename:       fileName,
-			Page:           page,
-			FileURL:        fileURL,
-			ChunkURL:       chunkURL,
-			EmailPreview:   emailPreview,
-			RelationshipID: relationshipID,
-			Subject:        subject,
-			Datetime:       datetime,
-			ParentID:       parentID,
-		})
 	}
 	return sources, nil
 }
