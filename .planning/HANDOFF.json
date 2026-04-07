@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-07T19:38:20.317Z",
+  "phase": "02",
+  "phase_name": "write-operations",
+  "phase_dir": ".planning/phases/02-write-operations",
+  "plan": 5,
+  "task": 2,
+  "total_tasks": 2,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Phase 1: Foundation (9/9 plans)", "status": "done"},
+    {"id": 2, "name": "Phase 2: Write Operations (5/5 plans)", "status": "done"},
+    {"id": 3, "name": "Phase 2 verification", "status": "done"},
+    {"id": 4, "name": "Nextcloud route fix (308 → direct serving)", "status": "done", "progress": "Code + tests pass, NOT YET COMMITTED"}
+  ],
+  "remaining_tasks": [
+    {"id": 1, "name": "Commit Nextcloud route fix", "status": "not_started"},
+    {"id": 2, "name": "Install litmus (sudo apt install litmus)", "status": "not_started"},
+    {"id": 3, "name": "Run litmus TDD cycle against stack", "status": "not_started"},
+    {"id": 4, "name": "Phase 3: COPY, Compliance, Documentation", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "litmus not installed yet", "type": "human_action", "workaround": "sudo apt install litmus"},
+    {"description": "OnlyOffice mobile v9.3.1 crashes on WebDAV/Nextcloud login (LoginComponent null bug)", "type": "external", "workaround": "Use Cx File Explorer or litmus for automated testing instead"}
+  ],
+  "human_actions_pending": [
+    {"action": "Install litmus: sudo apt install litmus", "context": "RFC 4918 compliance test suite needed for TDD cycle", "blocking": true},
+    {"action": "PC restart needed", "context": "User requested pause before restart", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Replace 308 redirect with direct route serving for /remote.php/webdav/*", "rationale": "HTTP clients strip Authorization header on redirects, breaking auth for OnlyOffice and other Nextcloud-compatible clients", "phase": "02"},
+    {"decision": "Use litmus TDD cycle instead of manual mobile testing", "rationale": "User feedback: manual iteration too slow, need automated RFC compliance tests", "phase": "03"},
+    {"decision": "Use instance brice.localhost:8080 for testing (not alice)", "rationale": "alice has no physical storage directory on disk; brice has real files at /tmp/storage/brice.localhost:8080/", "phase": "02"}
+  ],
+  "uncommitted_files": [
+    "web/routing.go",
+    "web/webdav/webdav.go",
+    "web/webdav/write_helpers.go",
+    "web/webdav/options_test.go",
+    "web/webdav/gowebdav_integration_test.go"
+  ],
+  "next_action": "1) Commit the Nextcloud route fix. 2) Install litmus. 3) Rebuild stack (go build -o /tmp/cozy-stack-webdav .). 4) Start stack + proxy for brice. 5) Run litmus against http://localhost:8888/remote.php/webdav/. 6) Fix failures in TDD cycle. This replaces manual phone testing.",
+  "context_notes": "Phase 2 is verified and complete. The Nextcloud route fix is a bug discovered during manual testing — 5 files changed, all tests pass. The user wants to shift to litmus-driven TDD for Phase 3 and compliance validation. The proxy at /tmp/cozy-webdav-proxy.go rewrites Host header for multi-tenant routing (brice.localhost:8080). OnlyOffice mobile is broken (app bug), Cx File Explorer works but litmus is the right approach."
+}
