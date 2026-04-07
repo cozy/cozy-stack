@@ -866,7 +866,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 					}
 				}
 			}`, consts.Sharings))).
-			Expect().Status(422)
+			Expect().Status(400)
 
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.errors[0].detail").String().
@@ -888,7 +888,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 					}
 				}
 			}`, consts.Sharings, dirID))).
-			Expect().Status(422)
+			Expect().Status(400)
 
 		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 			Object().Path("$.errors[0].detail").String().

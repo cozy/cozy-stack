@@ -74,10 +74,10 @@ func CreateSharedDrive(c echo.Context) error {
 	}
 
 	if attrs.FolderID == "" && attrs.Name == "" {
-		return jsonapi.InvalidParameter("folder_id", errors.New("folder_id or name is required"))
+		return jsonapi.BadRequest(errors.New("folder_id or name is required"))
 	}
 	if attrs.FolderID != "" && attrs.Name != "" {
-		return jsonapi.InvalidParameter("folder_id", errors.New("folder_id and name are mutually exclusive"))
+		return jsonapi.BadRequest(errors.New("folder_id and name are mutually exclusive"))
 	}
 
 	if attrs.Name != "" {
