@@ -88,7 +88,8 @@ func validateTokenExchangeIDToken(inst *instance.Instance, raw string) (jwt.MapC
 
 	expectedIssuer, err := oidcprovider.GetIssuer(inst.ContextName, conf)
 	if err != nil {
-		return nil, errors.New("invalid token")
+		inst.Logger().WithNamespace("token_exchange").Errorf("Cannot get OIDC issuer for context %s: %s", inst.ContextName, err)
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	issuer, err := claims.GetIssuer()
 	if err != nil || issuer == "" || issuer != expectedIssuer {
