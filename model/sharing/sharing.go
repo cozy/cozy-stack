@@ -56,6 +56,7 @@ type Sharing struct {
 
 	Triggers    Triggers  `json:"triggers"`
 	Drive       bool      `json:"drive,omitempty"`
+	OrgDrive    bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -544,6 +545,7 @@ func runCoreSharedDrivesTests(t *testing.T, method DriveCreationMethod) {
 		attrs.Value("app_slug").IsEqual("drive")
 		attrs.Value("owner").IsEqual(true)
 		attrs.Value("drive").IsEqual(true)
+		attrs.NotContainsKey("org_drive")
 
 		members := attrs.Value("members").Array()
 		members.Length().IsEqual(3)
@@ -768,6 +770,7 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		data.Value("id").String().NotEmpty()
 		attrs := data.Value("attributes").Object()
 		attrs.Value("drive").Boolean().IsTrue()
+		attrs.NotContainsKey("org_drive")
 		attrs.Value("description").String().IsEqual("Project Documents")
 
 		// Verify the rule was created correctly
@@ -805,10 +808,54 @@ func TestCreateDriveFromFolder(t *testing.T) {
 		data.Value("id").String().NotEmpty()
 		attrs := data.Value("attributes").Object()
 		attrs.Value("drive").Boolean().IsTrue()
+		attrs.NotContainsKey("org_drive")
 	})
 
-	t.Run("FailOnMissingFolderID", func(t *testing.T) {
-		eOwner.POST("/sharings/drives").
+	t.Run("CreateDriveFromName", func(t *testing.T) {
+		recipientContact := createContact(t, ownerInstance, "Eve", "eve@example.net")
+
+		obj := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "BrandNewDrive"
+					},
+					"relationships": {
+						"recipients": {
+							"data": [{"id": "%s", "type": "%s"}]
+						}
+					}
+				}
+			}`, consts.Sharings, recipientContact.ID(), recipientContact.DocType()))).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		attrs := data.Value("attributes").Object()
+		attrs.Value("drive").Boolean().IsTrue()
+		attrs.Value("description").String().IsEqual("BrandNewDrive")
+
+		rules := attrs.Value("rules").Array()
+		rules.Length().IsEqual(1)
+		rule := rules.Value(0).Object()
+		rule.Value("title").String().IsEqual("BrandNewDrive")
+		createdDirID := rule.Value("values").Array().Value(0).String().NotEmpty().Raw()
+
+		createdDir, err := ownerInstance.VFS().DirByID(createdDirID)
+		require.NoError(t, err)
+		require.Equal(t, consts.SharedDrivesDirID, createdDir.DirID)
+
+		sharedDrivesDir, err := ownerInstance.EnsureSharedDrivesDir()
+		require.NoError(t, err)
+		require.Equal(t, sharedDrivesDir.ID(), createdDir.DirID)
+	})
+
+	t.Run("FailOnMissingFolderIDAndName", func(t *testing.T) {
+		resp := eOwner.POST("/sharings/drives").
 			WithHeader("Authorization", "Bearer "+ownerAppToken).
 			WithHeader("Content-Type", "application/vnd.api+json").
 			WithBytes([]byte(fmt.Sprintf(`{
@@ -819,7 +866,61 @@ func TestCreateDriveFromFolder(t *testing.T) {
 					}
 				}
 			}`, consts.Sharings))).
-			Expect().Status(422)
+			Expect().Status(400)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("folder_id or name is required")
+	})
+
+	t.Run("FailOnBothFolderIDAndName", func(t *testing.T) {
+		dirID := createRootDirectory(t, eOwner, "AmbiguousDriveFolder", ownerAppToken)
+
+		resp := eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"folder_id": "%s",
+						"name": "AmbiguousDrive"
+					}
+				}
+			}`, consts.Sharings, dirID))).
+			Expect().Status(400)
+
+		resp.JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.errors[0].detail").String().
+			Contains("mutually exclusive")
+	})
+
+	t.Run("FailOnDuplicateNameInSharedDrives", func(t *testing.T) {
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "DuplicateNamedDrive"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(201)
+
+		eOwner.POST("/sharings/drives").
+			WithHeader("Authorization", "Bearer "+ownerAppToken).
+			WithHeader("Content-Type", "application/vnd.api+json").
+			WithBytes([]byte(fmt.Sprintf(`{
+				"data": {
+					"type": "%s",
+					"attributes": {
+						"name": "DuplicateNamedDrive"
+					}
+				}
+			}`, consts.Sharings))).
+			Expect().Status(409)
 	})
 
 	t.Run("FailOnNonexistentFolder", func(t *testing.T) {
@@ -1629,6 +1730,182 @@ func TestSharedDriveCreation(t *testing.T) {
 		require.NotEmpty(t, sharingID, "Sharing ID should not be empty")
 		require.NotEmpty(t, dirID, "Directory ID should not be empty")
 	})
+}
+
+func TestOrgDriveFlag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	const orgSlug = "org-slug"
+
+	env := setupSharedDrivesEnvWithOwnerOptions(t, &lifecycle.Options{
+		Domain:     orgSlug + ".example.net",
+		OrgID:      orgSlug,
+		Email:      "owner@example.net",
+		PublicName: "Owner",
+	})
+	eOwner, _, _ := env.createClients(t)
+	folderID := createRootDirectory(t, eOwner, "OrgDriveRoot", env.acmeToken)
+	recipientContact := createContact(t, env.acme, "Betty OrgDrive", "betty-orgdrive@example.net")
+
+	obj := eOwner.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(fmt.Sprintf(`{
+			"data": {
+				"type": "%s",
+				"attributes": {
+					"description": "Organization drive",
+					"folder_id": "%s"
+				},
+				"relationships": {
+					"recipients": {
+						"data": [{"id": "%s", "type": "%s"}]
+					}
+				}
+			}
+		}`, consts.Sharings, folderID, recipientContact.ID(), consts.Contacts))).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID := obj.Path("$.data.id").String().NotEmpty().Raw()
+	attrs := obj.Path("$.data.attributes").Object()
+	attrs.Value("drive").Boolean().IsTrue()
+	attrs.Value("org_drive").Boolean().IsTrue()
+
+	getOrgDriveFlag := func(baseURL, token string) (bool, error) {
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return false, err
+		}
+		res, err := request.Req(&request.Options{
+			Method: http.MethodGet,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + sharingID,
+			Headers: request.Headers{
+				echo.HeaderAuthorization: "Bearer " + token,
+				echo.HeaderAccept:        "application/vnd.api+json",
+			},
+		})
+		if err != nil {
+			return false, err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			return false, fmt.Errorf("unexpected status: %d", res.StatusCode)
+		}
+
+		var payload struct {
+			Data struct {
+				Attributes struct {
+					OrgDrive bool `json:"org_drive"`
+				} `json:"attributes"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+			return false, err
+		}
+		return payload.Data.Attributes.OrgDrive, nil
+	}
+
+	ownerOrgDrive, err := getOrgDriveFlag(env.tsA.URL, env.acmeToken)
+	require.NoError(t, err)
+	require.True(t, ownerOrgDrive)
+
+	acceptSharedDrive(t, env.acme, env.betty, "Betty OrgDrive", env.tsA.URL, env.tsB.URL, sharingID)
+
+	require.Eventually(t, func() bool {
+		recipientOrgDrive, err := getOrgDriveFlag(env.tsB.URL, env.bettyToken)
+		return err == nil && recipientOrgDrive
+	}, 10*time.Second, 200*time.Millisecond, "recipient sharing should preserve org_drive")
+}
+
+func TestSharedDriveTrashAttribution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	_, eB, _ := env.createClients(t)
+
+	publicName, err := env.betty.SettingsPublicName()
+	require.NoError(t, err)
+
+	obj := eB.DELETE("/sharings/drives/"+env.firstSharingID+"/"+env.checklistID).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	obj.Path("$.data.attributes.trashed").Boolean().True()
+	fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+	trashedAt := fcm.Value("trashedAt").String().NotEmpty().Raw()
+	trashedBy := fcm.Value("trashedBy").Object()
+	trashedByKind := trashedBy.Value("kind").String().NotEmpty().Raw()
+	trashedByDisplayName := trashedBy.Value("displayName").String().NotEmpty().Raw()
+	trashedByDomain := trashedBy.Value("domain").String().NotEmpty().Raw()
+	require.Equal(t, vfs.TrashedByKindMember, trashedByKind)
+	require.Equal(t, publicName, trashedByDisplayName)
+
+	type filePayload struct {
+		Data struct {
+			Attributes struct {
+				Trashed      bool `json:"trashed"`
+				CozyMetadata struct {
+					TrashedAt string `json:"trashedAt"`
+					TrashedBy struct {
+						Kind        string `json:"kind"`
+						DisplayName string `json:"displayName"`
+						Domain      string `json:"domain"`
+					} `json:"trashedBy"`
+				} `json:"cozyMetadata"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+
+	getFilePayload := func(baseURL, token, requestPath string) (*filePayload, error) {
+		u, err := url.Parse(baseURL)
+		if err != nil {
+			return nil, err
+		}
+		res, err := request.Req(&request.Options{
+			Method: http.MethodGet,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   requestPath,
+			Headers: request.Headers{
+				echo.HeaderAuthorization: "Bearer " + token,
+				echo.HeaderAccept:        "application/vnd.api+json",
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status: %d", res.StatusCode)
+		}
+		var payload filePayload
+		if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+			return nil, err
+		}
+		return &payload, nil
+	}
+
+	require.Eventually(t, func() bool {
+		payload, err := getFilePayload(env.tsA.URL, env.acmeToken, "/files/"+env.checklistID)
+		if err != nil {
+			return false
+		}
+		return payload.Data.Attributes.Trashed &&
+			payload.Data.Attributes.CozyMetadata.TrashedAt == trashedAt &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.Kind == trashedByKind &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.DisplayName == trashedByDisplayName &&
+			payload.Data.Attributes.CozyMetadata.TrashedBy.Domain == trashedByDomain
+	}, 10*time.Second, 200*time.Millisecond, "owner should receive recipient trash attribution")
 }
 
 func TestSharedDriveDownload(t *testing.T) {

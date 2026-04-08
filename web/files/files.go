@@ -731,10 +731,10 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		}
 	} else if patch.Trash {
 		if dir != nil {
-			UpdateDirCozyMetadata(c, dir)
+			UpdateDirTrashCozyMetadata(c, dir)
 			dir, err = vfs.TrashDir(fs, dir)
 		} else {
-			UpdateFileCozyMetadata(c, file, false)
+			UpdateFileTrashCozyMetadata(c, file)
 			file, err = vfs.TrashFile(fs, file)
 		}
 	} else {
@@ -783,10 +783,10 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			}
 		} else if patch.Trash {
 			if dir != nil {
-				UpdateDirCozyMetadata(c, dir)
+				UpdateDirTrashCozyMetadata(c, dir)
 				_, errp = vfs.TrashDir(fs, dir)
 			} else if file != nil {
-				UpdateFileCozyMetadata(c, file, false)
+				UpdateFileTrashCozyMetadata(c, file)
 				_, errp = vfs.TrashFile(fs, file)
 			}
 		} else if dir != nil {
@@ -1446,7 +1446,7 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 	ensureCleanOldTrashedTrigger(instance)
 
 	if dir != nil {
-		UpdateDirCozyMetadata(c, dir)
+		UpdateDirTrashCozyMetadata(c, dir)
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {
 			return WrapVfsError(errt)
@@ -1454,7 +1454,7 @@ func Trash(c echo.Context, sharedDrive *sharing.Sharing) error {
 		return DirData(c, http.StatusOK, doc, sharedDrive)
 	}
 
-	UpdateFileCozyMetadata(c, file, false)
+	UpdateFileTrashCozyMetadata(c, file)
 	doc, errt := vfs.TrashFile(instance.VFS(), file)
 	if errt != nil {
 		return WrapVfsError(errt)
@@ -2487,6 +2487,33 @@ func UpdateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields b
 			file.CozyMetadata.SourceIdentifier = fcm.SourceIdentifier
 		}
 	}
+}
+
+func UpdateDirTrashCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
+	UpdateDirCozyMetadata(c, dir)
+	setTrashCozyMetadata(c, dir.CozyMetadata)
+}
+
+func UpdateFileTrashCozyMetadata(c echo.Context, file *vfs.FileDoc) {
+	UpdateFileCozyMetadata(c, file, false)
+	setTrashCozyMetadata(c, file.CozyMetadata)
+}
+
+func setTrashCozyMetadata(c echo.Context, fcm *vfs.FilesCozyMetadata) {
+	if fcm == nil {
+		return
+	}
+	trashedAt := fcm.UpdatedAt
+	fcm.TrashedAt = &trashedAt
+	if actor, ok := middlewares.GetActor(c); ok {
+		fcm.TrashedBy = &vfs.TrashedByEntry{
+			Kind:        actor.Kind,
+			DisplayName: actor.DisplayName,
+			Domain:      actor.Domain,
+		}
+		return
+	}
+	fcm.TrashedBy = nil
 }
 
 // CozyMetadataFromClaims returns a FilesCozyMetadata struct, with the app

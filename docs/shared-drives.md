@@ -6,15 +6,23 @@ A shared drive is a folder that is shared between several cozy instances. A
 member doesn't have the files in their Cozy, but can access them via the stack
 playing a proxy role.
 
+For drives created on an organization instance, the sharing payload also
+exposes `org_drive: true`. This is an additive classification flag for clients;
+it does not change the underlying drive-sharing behavior.
+
 ## Creating a shared drive
 
 There are two ways to create a shared drive:
 
-### Simple method: Convert an existing folder
+### Simple method: Use `POST /sharings/drives`
 
-Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint to convert any
-existing folder into a shared drive. This is the recommended approach as it
-handles all validation and setup automatically.
+Use the [`POST /sharings/drives`](#post-sharingsdrives) endpoint either to:
+
+- convert an existing folder into a shared drive with `folder_id`
+- create a brand new shared-drive folder with `name`
+
+This is the recommended approach as it handles validation and setup
+automatically.
 
 ### Manual method
 
@@ -33,6 +41,9 @@ these steps:
 ### GET /sharings/drives
 
 The `GET /sharings/drives` route returns the list of shared drives.
+
+When a drive was created on an organization instance, its attributes include
+`org_drive: true`.
 
 #### Request
 
@@ -57,6 +68,7 @@ Content-Type: application/vnd.api+json
       "id": "aae62886e79611ef8381fb83ff72e425",
       "attributes": {
         "drive": true,
+        "org_drive": true,
         "owner": true,
         "description": "Drive for the product team",
         "app_slug": "drive",
@@ -106,11 +118,15 @@ Content-Type: application/vnd.api+json
 
 ### POST /sharings/drives
 
-Creates a new shared drive from an existing folder. This is an alternative to
-the manual process of creating a sharing with `drive: true` - it automatically
-validates the folder and creates the sharing with appropriate rules.
+Creates a new shared drive. The endpoint supports two mutually exclusive modes:
 
-The folder must:
+- pass `folder_id` to convert an existing folder into a shared drive
+- pass `name` to create a new folder under the Shared Drives root and share it
+
+If the target Cozy is an organization instance, the created sharing is also
+marked with `org_drive: true`.
+
+When `folder_id` is used, the folder must:
 
 - Exist and be a directory (not a file)
 - Not be a system folder (root, trash, shared-with-me, shared-drives, no-longer-shared)
@@ -152,12 +168,28 @@ Accept: application/vnd.api+json
 }
 ```
 
+Or create a brand new shared drive directly:
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "attributes": {
+      "name": "Product Team"
+    }
+  }
+}
+```
+
 **Attributes:**
 
 | Attribute     | Required | Description |
 |---------------|----------|-------------|
-| `folder_id`   | Yes      | The ID of the existing folder to convert into a shared drive |
+| `folder_id`   | No       | The ID of the existing folder to convert into a shared drive |
+| `name`        | No       | The name of the folder to create under Shared Drives for a new shared drive |
 | `description` | No       | A description for the shared drive. If not provided, defaults to the folder name |
+
+Exactly one of `folder_id` or `name` must be provided.
 
 **Relationships:**
 
@@ -231,8 +263,8 @@ Content-Type: application/vnd.api+json
 | 400    | Bad Request | Invalid JSON body |
 | 403    | Forbidden | Insufficient permissions to create a sharing |
 | 404    | Not Found | The folder with the given `folder_id` does not exist |
-| 409    | Conflict | The folder already has a sharing, is inside a shared folder, or contains a shared subfolder |
-| 422    | Unprocessable Entity | Missing `folder_id`, folder is a file, or folder is a system folder |
+| 409    | Conflict | The folder already has a sharing, is inside a shared folder, contains a shared subfolder, or the new `name` already exists in Shared Drives |
+| 422    | Unprocessable Entity | Invalid request: missing both `folder_id` and `name`, both provided together, folder is a file, folder is a system folder, or the new `name` is invalid |
 
 **Example error (folder already shared):**
 
@@ -736,6 +768,13 @@ drive.
 #### DELETE /sharings/drives/:file-id
 #### POST /sharings/drives/trash/:file-id
 #### DELETE /sharings/drives/trash/:file-id
+
+Trash operations keep the same file metadata shape as `/files`: when an item is
+moved to the trash, `cozyMetadata.trashedAt` and `cozyMetadata.trashedBy` are
+exposed on both the caller side and the replicated shared-drive copies. On
+shared-drive requests, `trashedBy.kind` is `member` and
+`trashedBy.displayName` / `trashedBy.domain` are derived from the sharing
+member linked to the `DriveToken`.
 
 ## Share-by-link permissions
 

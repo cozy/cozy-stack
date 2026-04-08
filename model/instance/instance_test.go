@@ -176,4 +176,27 @@ func TestInstance(t *testing.T) {
 }`
 		assert.Equal(t, expected, string(bytes))
 	})
+
+	t.Run("IsOrganizationInstance", func(t *testing.T) {
+		t.Run("TrueWhenSlugMatchesOrgID", func(t *testing.T) {
+			inst := &instance.Instance{
+				Domain: "alice.twake.app",
+				OrgID:  "alice",
+			}
+			assert.True(t, inst.IsOrganizationInstance())
+		})
+
+		t.Run("FalseWhenSlugDoesNotMatchOrgID", func(t *testing.T) {
+			inst := &instance.Instance{
+				Domain: "bob.twake.app",
+				OrgID:  "alice",
+			}
+			assert.False(t, inst.IsOrganizationInstance())
+		})
+
+		t.Run("FalseWhenOrgIDIsEmpty", func(t *testing.T) {
+			inst := &instance.Instance{Domain: "alice.twake.app"}
+			assert.False(t, inst.IsOrganizationInstance())
+		})
+	})
 }

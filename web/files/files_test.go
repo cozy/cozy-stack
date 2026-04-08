@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -31,6 +32,16 @@ import (
 	_ "github.com/cozy/cozy-stack/web/statik"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
+
+func expectedTrashDisplayName(t *testing.T, inst *instance.Instance) string {
+	t.Helper()
+	name, err := inst.SettingsPublicName()
+	require.NoError(t, err)
+	if name == "" {
+		name = inst.Domain
+	}
+	return name
+}
 
 func TestFiles(t *testing.T) {
 	if testing.Short() {
@@ -2813,6 +2824,121 @@ func TestFiles(t *testing.T) {
 			Expect().Status(400)
 	})
 
+	t.Run("FileTrashAttribution", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		publicName := expectedTrashDisplayName(t, testInstance)
+
+		fileID = e.POST("/files/").
+			WithQuery("Name", "totrashwithattribution").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		obj := e.DELETE("/files/"+fileID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.trashed").Boolean().True()
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.Value("trashedAt").String().DateTime(time.RFC3339)
+		trashedBy := fcm.Value("trashedBy").Object()
+		trashedBy.Value("kind").String().IsEqual(vfs.TrashedByKindMember)
+		trashedBy.Value("displayName").String().IsEqual(publicName)
+		trashedBy.Value("domain").String().IsEqual(testInstance.Domain)
+	})
+
+	t.Run("PatchMoveToTrashAttribution", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		publicName := expectedTrashDisplayName(t, testInstance)
+
+		fileID = e.POST("/files/").
+			WithQuery("Name", "patch-trash-attribution").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		obj := e.PATCH("/files/"+fileID).
+			WithHeader("Content-Type", "application/json").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte(`{
+        "data": {
+          "type": "file",
+          "id": "` + fileID + `",
+          "attributes": { "move_to_trash": true }
+        }
+      }`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.attributes.trashed").Boolean().True()
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.Value("trashedAt").String().DateTime(time.RFC3339)
+		trashedBy := fcm.Value("trashedBy").Object()
+		trashedBy.Value("kind").String().IsEqual(vfs.TrashedByKindMember)
+		trashedBy.Value("displayName").String().IsEqual(publicName)
+		trashedBy.Value("domain").String().IsEqual(testInstance.Domain)
+	})
+
+	t.Run("DirTrashAttributionTopLevelOnly", func(t *testing.T) {
+		e := testutils.CreateTestClient(t, ts.URL)
+		publicName := expectedTrashDisplayName(t, testInstance)
+
+		dirID := e.POST("/files/").
+			WithQuery("Name", "dir-trash-attribution").
+			WithQuery("Type", "directory").
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		childID := e.POST("/files/"+dirID).
+			WithQuery("Name", "child.txt").
+			WithQuery("Type", "file").
+			WithHeader("Content-Type", "text/plain").
+			WithHeader("Content-MD5", "UmfjCVWct/albVkURcJJfg==").
+			WithHeader("Authorization", "Bearer "+token).
+			WithBytes([]byte("foo,bar")).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.data.id").String().NotEmpty().Raw()
+
+		obj := e.DELETE("/files/"+dirID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.Value("trashedAt").String().DateTime(time.RFC3339)
+		trashedBy := fcm.Value("trashedBy").Object()
+		trashedBy.Value("kind").String().IsEqual(vfs.TrashedByKindMember)
+		trashedBy.Value("displayName").String().IsEqual(publicName)
+		trashedBy.Value("domain").String().IsEqual(testInstance.Domain)
+
+		child := e.GET("/files/"+childID).
+			WithHeader("Authorization", "Bearer "+token).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+		child.Path("$.data.attributes.trashed").Boolean().True()
+		childMeta := child.Path("$.data.attributes.cozyMetadata").Object()
+		childMeta.NotContainsKey("trashedAt")
+		childMeta.NotContainsKey("trashedBy")
+	})
+
 	t.Run("ForbidMovingTrashedFile", func(t *testing.T) {
 		e := testutils.CreateTestClient(t, ts.URL)
 
@@ -2863,20 +2989,31 @@ func TestFiles(t *testing.T) {
 			Object().Path("$.data.id").String().NotEmpty().Raw()
 
 		// Trash the file
-		e.DELETE("/files/"+fileID).
+		obj := e.DELETE("/files/"+fileID).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().
-			Path("$.data.attributes.trashed").Boolean().True()
+			Object()
+		obj.Path("$.data.attributes.trashed").Boolean().True()
+		trashedAt := obj.Path("$.data.attributes.cozyMetadata.trashedAt").String().NotEmpty().Raw()
+		trashedBy := obj.Path("$.data.attributes.cozyMetadata.trashedBy").Object()
+		trashedByKind := trashedBy.Value("kind").String().NotEmpty().Raw()
+		trashedByDisplayName := trashedBy.Value("displayName").String().NotEmpty().Raw()
+		trashedByDomain := trashedBy.Value("domain").String().NotEmpty().Raw()
 
 		// Restore the file
-		e.POST("/files/trash/"+fileID).
+		obj = e.POST("/files/trash/"+fileID).
 			WithHeader("Authorization", "Bearer "+token).
 			Expect().Status(200).
 			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
-			Object().
-			Path("$.data.attributes.trashed").Boolean().False()
+			Object()
+		obj.Path("$.data.attributes.trashed").Boolean().False()
+		fcm := obj.Path("$.data.attributes.cozyMetadata").Object()
+		fcm.Value("trashedAt").String().IsEqual(trashedAt)
+		restoredBy := fcm.Value("trashedBy").Object()
+		restoredBy.Value("kind").String().IsEqual(trashedByKind)
+		restoredBy.Value("displayName").String().IsEqual(trashedByDisplayName)
+		restoredBy.Value("domain").String().IsEqual(trashedByDomain)
 
 		// Download the file.
 		e.GET("/files/download").

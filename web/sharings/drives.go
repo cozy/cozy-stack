@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -55,7 +57,8 @@ func ListSharedDrives(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-// CreateSharedDrive creates a new shared drive from an existing folder.
+// CreateSharedDrive creates a new shared drive from an existing folder or
+// creates a new folder for it under Shared Drives.
 // POST /sharings/drives
 func CreateSharedDrive(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -63,17 +66,33 @@ func CreateSharedDrive(c echo.Context) error {
 	var attrs struct {
 		Description string `json:"description"`
 		FolderID    string `json:"folder_id"`
+		Name        string `json:"name"`
 	}
 	obj, err := jsonapi.Bind(c.Request().Body, &attrs)
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
 
-	if attrs.FolderID == "" {
-		return jsonapi.InvalidParameter("folder_id", errors.New("folder_id is required"))
+	if attrs.FolderID == "" && attrs.Name == "" {
+		return jsonapi.BadRequest(errors.New("folder_id or name is required"))
+	}
+	if attrs.FolderID != "" && attrs.Name != "" {
+		return jsonapi.BadRequest(errors.New("folder_id and name are mutually exclusive"))
 	}
 
-	// Create the sharing from folder first (builds the rules)
+	if attrs.Name != "" {
+		parent, err := inst.EnsureSharedDrivesDir()
+		if err != nil {
+			return wrapErrors(err)
+		}
+		newDir, err := vfs.Mkdir(inst.VFS(), path.Join(parent.Fullpath, attrs.Name), nil)
+		if err != nil {
+			return wrapDriveNameErrors(err)
+		}
+		attrs.FolderID = newDir.DocID
+	}
+
+	// Create the sharing from folder first (builds the rules).
 	newSharing, err := sharing.CreateDrive(inst, attrs.FolderID, attrs.Description, "")
 	if err != nil {
 		return wrapErrors(err)
@@ -89,6 +108,7 @@ func CreateSharedDrive(c echo.Context) error {
 	if slug != "" && newSharing.AppSlug == "" {
 		newSharing.AppSlug = slug
 	}
+	newSharing.OrgDrive = inst.IsOrganizationInstance()
 
 	// Extract recipient IDs from relationships
 	rwGroupIDs, rwContactIDs := extractRecipientIDs(obj, "recipients")
@@ -119,6 +139,17 @@ func CreateSharedDrive(c echo.Context) error {
 		SharedDocs:  nil,
 	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
+}
+
+func wrapDriveNameErrors(err error) error {
+	switch err {
+	case os.ErrExist:
+		return jsonapi.Conflict(err)
+	case vfs.ErrIllegalFilename, vfs.ErrIllegalPath:
+		return jsonapi.InvalidParameter("name", err)
+	default:
+		return wrapErrors(err)
+	}
 }
 
 // extractRecipientIDs extracts group and contact IDs from a JSON:API relationship.

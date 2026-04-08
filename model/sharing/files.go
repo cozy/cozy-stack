@@ -909,6 +909,11 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 				dir.CozyMetadata.UpdatedAt = at
 			}
 		}
+		if trashed, ok := meta["trashedAt"].(string); ok {
+			if at, err := time.Parse(time.RFC3339Nano, trashed); err == nil {
+				dir.CozyMetadata.TrashedAt = &at
+			}
+		}
 		if updates, ok := meta["updatedByApps"].([]map[string]interface{}); ok {
 			for _, update := range updates {
 				if slug, ok := update["slug"].(string); ok {
@@ -927,6 +932,21 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 					dir.CozyMetadata.UpdatedByApps = append(dir.CozyMetadata.UpdatedByApps, entry)
 				}
 			}
+		}
+		if trashedBy, ok := meta["trashedBy"].(map[string]interface{}); ok {
+			entry := &vfs.TrashedByEntry{}
+			if kind, ok := trashedBy["kind"].(string); ok {
+				entry.Kind = kind
+			}
+			if displayName, ok := trashedBy["displayName"].(string); ok {
+				entry.DisplayName = displayName
+			}
+			if domain, ok := trashedBy["domain"].(string); ok {
+				entry.Domain = domain
+			} else if legacyInstance, ok := trashedBy["instance"].(string); ok {
+				entry.Domain = legacyInstance
+			}
+			dir.CozyMetadata.TrashedBy = entry
 		}
 
 		// No upload* for directories
