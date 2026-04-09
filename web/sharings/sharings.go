@@ -129,7 +129,9 @@ func PutSharing(c echo.Context) error {
 	if s.Drive && len(s.Members) > 0 {
 		sender := &s.Members[0]
 		if sharing.IsTrustedMember(inst, sender) {
-			if len(s.Credentials) > 0 && s.Credentials[0].State != "" {
+			if c.QueryParam(sharing.InteractiveSharingQueryParam) == "true" {
+				log.Debugf("Skipping auto-accept for interactive drive sharing %s from trusted sender %s", s.SID, sender.Instance)
+			} else if len(s.Credentials) > 0 && s.Credentials[0].State != "" {
 				state := s.Credentials[0].State
 				log.Debugf("Auto-accepting drive sharing %s from trusted sender %s", s.SID, sender.Instance)
 				if err := sharing.EnqueueAutoAccept(inst, s.SID, state); err != nil {
@@ -825,7 +827,7 @@ func GetDiscovery(c echo.Context) error {
 
 	if m.Instance != "" {
 		if m.Status != sharing.MemberStatusSeen {
-			err = s.RegisterCozyURL(inst, m, m.Instance)
+			err = s.RegisterCozyURLInteractive(inst, m, m.Instance)
 		}
 		if err == nil {
 			redirectURL, err := m.GenerateOAuthURL(s, shortcut)
@@ -888,7 +890,7 @@ func PostDiscovery(c echo.Context) error {
 			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, shortcut, member)
 		}
 		email = member.Email
-		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
+		if err = s.RegisterCozyURLInteractive(inst, member, cozyURL); err != nil {
 			if c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON {
 				return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 			}

@@ -28,6 +28,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const InteractiveSharingQueryParam = "interactive"
+
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
 func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Credentials, u *url.URL) error {
 	if len(c.XorKey) == 0 {
@@ -233,6 +235,16 @@ func countFilesInDirectory(inst *instance.Instance, dir *vfs.DirDoc) (int, error
 
 // RegisterCozyURL saves a new Cozy URL for a member
 func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL string) error {
+	return s.registerCozyURL(inst, m, cozyURL, false)
+}
+
+// RegisterCozyURLInteractive saves a Cozy URL discovered during an interactive
+// acceptance flow and marks the recipient request so auto-accept is skipped.
+func (s *Sharing) RegisterCozyURLInteractive(inst *instance.Instance, m *Member, cozyURL string) error {
+	return s.registerCozyURL(inst, m, cozyURL, true)
+}
+
+func (s *Sharing) registerCozyURL(inst *instance.Instance, m *Member, cozyURL string, interactive bool) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
@@ -256,6 +268,11 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	u.RawQuery = ""
 	u.Fragment = ""
 	m.Instance = u.String()
+	if interactive {
+		q := u.Query()
+		q.Set(InteractiveSharingQueryParam, "true")
+		u.RawQuery = q.Encode()
+	}
 
 	creds := s.FindCredentials(m)
 	if creds == nil {
@@ -381,6 +398,44 @@ func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID str
 		RefreshToken: refresh,
 		Scope:        scope,
 	}, nil
+}
+
+// updateSharingWithConflictRetry persists the sharing and resolves stale-revision
+// conflicts by reconciling the desired changes onto the latest revision.
+// reconcile can mutate latest for the next retry and should return true when the
+// latest revision already contains a usable final state and no write is needed.
+func updateSharingWithConflictRetry(
+	inst *instance.Instance,
+	s *Sharing,
+	retries int,
+	reconcile func(latest *Sharing) bool,
+) error {
+	log := inst.Logger().WithNamespace("sharing")
+	current := s
+	for attempt := 0; ; attempt++ {
+		err := couchdb.UpdateDoc(inst, current)
+		if err == nil {
+			*s = *current
+			return nil
+		}
+		if !couchdb.IsConflictError(err) {
+			return err
+		}
+
+		latest, findErr := FindSharing(inst, s.SID)
+		if findErr != nil {
+			return err
+		}
+		if reconcile(latest) {
+			*s = *latest
+			return nil
+		}
+		if attempt >= retries {
+			return err
+		}
+		log.Debugf("Conflict while updating sharing %s, retrying with latest revision (%d/%d)", s.SID, attempt+1, retries)
+		current = latest
+	}
 }
 
 // SendAnswer says to the sharer's Cozy that the sharing has been accepted, and
@@ -510,7 +565,19 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		}
 	}
 
-	return couchdb.UpdateDoc(inst, s)
+	return updateSharingWithConflictRetry(inst, s, 1, func(latest *Sharing) bool {
+		if latest.Active {
+			return true
+		}
+		latest.Members = s.Members
+		latest.Credentials = s.Credentials
+		latest.Active = s.Active
+		latest.Initial = s.Initial
+		if s.ShortcutID != "" {
+			latest.ShortcutID = s.ShortcutID
+		}
+		return false
+	})
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
@@ -562,22 +629,20 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			}
 
 			s.Active = true
-			if err := couchdb.UpdateDoc(inst, s); err != nil {
-				if !couchdb.IsConflictError(err) {
-					return nil, err
+			if err := updateSharingWithConflictRetry(inst, s, 1, func(latest *Sharing) bool {
+				if latest.Members[i+1].Status == MemberStatusReady &&
+					latest.Credentials[i].Client != nil &&
+					latest.Credentials[i].AccessToken != nil {
+					ac.Credentials.Client = latest.Credentials[i].Client
+					ac.Credentials.AccessToken = latest.Credentials[i].AccessToken
+					return true
 				}
-				// A conflict can occur when several users accept a sharing at
-				// the same time, and we should just retry in that case
-				s2, err2 := FindSharing(inst, s.SID)
-				if err2 != nil {
-					return nil, err
-				}
-				s2.Members[i+1] = s.Members[i+1]
-				s2.Credentials[i] = s.Credentials[i]
-				if err2 := couchdb.UpdateDoc(inst, s2); err2 != nil {
-					return nil, err
-				}
-				s = s2
+				latest.Members[i+1] = s.Members[i+1]
+				latest.Credentials[i] = s.Credentials[i]
+				latest.Active = s.Active
+				return false
+			}); err != nil {
+				return nil, err
 			}
 			if creds.Bitwarden != nil {
 				if err := s.SaveBitwarden(inst, &s.Members[i+1], creds.Bitwarden); err != nil {
