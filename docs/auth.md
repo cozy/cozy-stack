@@ -1049,6 +1049,73 @@ Content-Type: application/json
 }
 ```
 
+### POST /auth/token_exchange
+
+This endpoint exchanges an external OIDC `id_token` for a normal Cozy OAuth
+client and token pair on the target instance.
+
+It is intended for browser-based admin applications that authenticate with an
+external identity provider, then need to call Cozy APIs directly on an
+organization instance.
+
+The target Cozy instance is the request host. The exchanged `id_token` must:
+
+- be signed by the configured OIDC provider
+- match the configured issuer and audience
+- contain an `org_id` claim equal to the target instance organization id
+- contain an `org_role` claim equal to `owner` or `admin`
+
+The request body is JSON:
+
+- `id_token`, the external OIDC token
+- `scope`, currently limited to `io.cozy.files`
+
+Example:
+
+```http
+POST /auth/token_exchange HTTP/1.1
+Host: myorg123.example.com
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRva2VuLWV4Y2hhbmdlIn0...",
+  "scope": "io.cozy.files"
+}
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+Pragma: no-cache
+```
+
+```json
+{
+  "access_token": "eyJhbGciOiJS",
+  "token_type": "bearer",
+  "refresh_token": "eyJhbGciOiJS",
+  "scope": "io.cozy.files",
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "Oung7oi5",
+  "registration_access_token": "reg123"
+}
+```
+
+The returned OAuth client is a normal Cozy OAuth client:
+
+- `client_id`, `client_secret`, `access_token`, and `refresh_token` can be
+  used directly with `cozy-client`
+- `registration_access_token` can be used with
+  `DELETE /auth/register/:client-id` to revoke that exchanged client
+
+When the external `id_token` contains a `sid` claim, the created OAuth client
+is bound to that upstream OIDC session so it can be revoked by OIDC
+backchannel logout.
+
 ### POST /auth/session_code
 
 This endpoint can be used by the flagship application in order to create a
