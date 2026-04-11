@@ -68,7 +68,17 @@
   2. The `litmus` WebDAV compliance suite (RFC 4918 Class 1) runs in CI and passes all tests with no failures.
   3. An end-to-end scenario test covering open → read → write → save passes against a live test Cozy instance using the same auth flow as OnlyOffice mobile and the iOS Files scenario.
   4. `docs/` contains a description of all supported methods and their behavior, configuration examples for OnlyOffice mobile and iOS Files, and compatibility notes (macOS Finder read-only without LOCK, locking not supported in v1, Depth:infinity blocked).
-**Plans**: TBD
+**Plans**: 10 plans
+- [ ] 03-01-PLAN.md — TDD RED+GREEN: handleCopy file mode + dispatcher wiring (+ note.CopyFile branch)
+- [ ] 03-02-PLAN.md — TDD RED+GREEN: handleCopy directory mode via vfs.Walk + 207 Multi-Status
+- [ ] 03-03-PLAN.md — E2E gowebdav SuccessCriterion6_Copy integration sub-test
+- [ ] 03-04-PLAN.md — scripts/webdav-litmus.sh + Makefile test-litmus target (dual-route orchestration)
+- [ ] 03-05-PLAN.md — Litmus `basic` suite green on both routes (RED+GREEN per gap)
+- [ ] 03-06-PLAN.md — Litmus `copymove` suite green on both routes (RED+GREEN per gap)
+- [ ] 03-07-PLAN.md — Litmus `props` suite green (PROPPATCH strategy decision: A / B / C)
+- [ ] 03-08-PLAN.md — Litmus `http` suite green (Expect: 100-continue)
+- [ ] 03-09-PLAN.md — docs/webdav.md + docs/toc.yml entry (English, narrative+table+inline-curl)
+- [ ] 03-10-PLAN.md — Update .planning/REQUIREMENTS.md for iOS Files deferral to v1.1
 
 ---
 
