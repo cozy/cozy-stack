@@ -12,12 +12,9 @@ package webdav
 // /gsd:verify-work.
 
 import (
-	"io"
 	"net/http"
-	"strings"
 	"testing"
 
-	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -191,65 +188,39 @@ func TestE2E_GowebdavClient(t *testing.T) {
 	})
 
 	// ---------------------------------------------------------------
-	// Success criterion 5: /remote.php/webdav/* → 308 to /dav/files/*,
-	// and the redirected request subsequently succeeds.
+	// Success criterion 5: /remote.php/webdav/* serves the same
+	// handlers as /dav/files/* directly (no redirect — HTTP clients
+	// strip Authorization on redirects, breaking auth).
 	// ---------------------------------------------------------------
-	t.Run("SuccessCriterion5_NextcloudRedirect", func(t *testing.T) {
+	t.Run("SuccessCriterion5_NextcloudCompat", func(t *testing.T) {
 		env := newWebdavTestEnv(t, nil)
 		seedFile(t, env.Inst, "hello.txt", []byte("Hello, WebDAV!"))
 
-		// Register the Nextcloud redirect on the same echo.Echo the
-		// httptest server is handling (setup.GetTestServer scopes /dav,
-		// so the redirect needs to be added directly — same pattern as
-		// options_test.go:registerNextcloudRedirect).
+		// Register Nextcloud routes with instance middleware.
 		e, ok := env.TS.Config.Handler.(*echo.Echo)
 		require.True(t, ok, "httptest handler must be *echo.Echo, got %T",
 			env.TS.Config.Handler)
-		for _, m := range webdavMethods {
-			e.Add(m, "/remote.php/webdav", NextcloudRedirect)
-			e.Add(m, "/remote.php/webdav/*", NextcloudRedirect)
-		}
+		inst := env.Inst
+		NextcloudRoutes(e.Group("/remote.php", func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				c.Set("instance", inst)
+				return next(c)
+			}
+		}))
 
-		// Observe the 308 directly (don't let httpexpect auto-follow).
-		rr := env.E.GET("/remote.php/webdav/hello.txt").
-			WithRedirectPolicy(httpexpect.DontFollowRedirects).
-			Expect().
-			Status(http.StatusPermanentRedirect)
-		location := rr.Header("Location").Raw()
-		assert.Equal(t, "/dav/files/hello.txt", location,
-			"308 Location must rewrite /remote.php/webdav → /dav/files")
-
-		// Follow the redirect manually — a real HTTP client honouring
-		// 308 would re-issue the same method against the new URL with
-		// the same headers. Assert the second request succeeds.
-		env.E.GET(location).
+		// GET on /remote.php/webdav/hello.txt should serve the file
+		// directly (no redirect) with auth preserved.
+		env.E.GET("/remote.php/webdav/hello.txt").
 			WithHeader("Authorization", "Bearer "+env.Token).
 			Expect().
 			Status(http.StatusOK).
 			Body().IsEqual("Hello, WebDAV!")
 
-		// Sanity: PROPFIND through the redirect also works via raw
-		// http client so we can assert method preservation end-to-end.
-		// (httpexpect's high-level API does not let us set a custom
-		// Request with redirect-following, so we go under the hood.)
-		req, err := http.NewRequest("PROPFIND", env.TS.URL+"/remote.php/webdav/", nil)
-		require.NoError(t, err)
-		req.Header.Set("Authorization", "Bearer "+env.Token)
-		req.Header.Set("Depth", "0")
-		httpClient := env.TS.Client()
-		// Don't follow — observe the 308 with the method preserved.
-		httpClient.CheckRedirect = func(*http.Request, []*http.Request) error {
-			return http.ErrUseLastResponse
-		}
-		resp, err := httpClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		_, _ = io.Copy(io.Discard, resp.Body)
-		assert.Equal(t, http.StatusPermanentRedirect, resp.StatusCode,
-			"308 must be returned for PROPFIND on /remote.php/webdav/")
-		assert.True(t,
-			strings.HasPrefix(resp.Header.Get("Location"), "/dav/files"),
-			"308 Location must start with /dav/files, got %q",
-			resp.Header.Get("Location"))
+		// PROPFIND on /remote.php/webdav/ should return 207 directly.
+		env.E.Request("PROPFIND", "/remote.php/webdav/").
+			WithHeader("Authorization", "Bearer "+env.Token).
+			WithHeader("Depth", "0").
+			Expect().
+			Status(http.StatusMultiStatus)
 	})
 }

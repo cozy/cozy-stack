@@ -5,7 +5,6 @@ package webdav
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -43,18 +42,18 @@ func Routes(router *echo.Group) {
 	authed.Match(nonOptionsMethods, "/files/*", handlePath)
 }
 
-// NextcloudRedirect replies 308 Permanent Redirect from
-// /remote.php/webdav/* to the equivalent /dav/files/* path. The 308
-// status code is critical: 301/302 allow clients to downgrade to GET,
-// which would break PROPFIND; 308 preserves the request method.
+// NextcloudRoutes registers the Nextcloud-compatible /remote.php/webdav/*
+// routes. These serve the exact same handlers as /dav/files/* instead of
+// redirecting — HTTP clients (including OnlyOffice mobile) strip the
+// Authorization header on redirects, breaking auth after a 308.
 //
-// Exported so it can be wired from web/routing.go at the Echo root
-// (outside the /dav group).
-func NextcloudRedirect(c echo.Context) error {
-	original := c.Request().URL.Path
-	newPath := strings.Replace(original, "/remote.php/webdav", "/dav/files", 1)
-	if raw := c.Request().URL.RawQuery; raw != "" {
-		newPath += "?" + raw
-	}
-	return c.Redirect(http.StatusPermanentRedirect, newPath)
+// Called from web/routing.go with the same middleware chain as /dav.
+func NextcloudRoutes(router *echo.Group) {
+	router.OPTIONS("/webdav", handleOptions)
+	router.OPTIONS("/webdav/*", handleOptions)
+
+	authed := router.Group("", resolveWebDAVAuth)
+	nonOptionsMethods := webdavMethods[1:]
+	authed.Match(nonOptionsMethods, "/webdav", handlePath)
+	authed.Match(nonOptionsMethods, "/webdav/*", handlePath)
 }

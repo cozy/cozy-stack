@@ -37,14 +37,18 @@ func parseDestination(r *http.Request) (string, error) {
 	}
 
 	// u.Path is already URL-decoded by url.Parse.
-	const prefix = "/dav/files"
-	if !strings.HasPrefix(u.Path, prefix) {
+	// Accept both /dav/files and /remote.php/webdav as valid prefixes
+	// so that MOVE/COPY work regardless of which mount the client uses.
+	var param string
+	switch {
+	case strings.HasPrefix(u.Path, "/dav/files"):
+		param = strings.TrimPrefix(u.Path, "/dav/files")
+	case strings.HasPrefix(u.Path, "/remote.php/webdav"):
+		param = strings.TrimPrefix(u.Path, "/remote.php/webdav")
+	default:
 		return "", errInvalidDestination
 	}
 
-	// Strip the /dav/files prefix and pass remainder through davPathToVFSPath
-	// for traversal validation and normalization.
-	param := strings.TrimPrefix(u.Path, prefix)
 	return davPathToVFSPath(param)
 }
 

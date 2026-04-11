@@ -269,17 +269,11 @@ func SetupRoutes(router *echo.Echo, services *stack.Services) error {
 		}
 		webdav.Routes(router.Group("/dav", mwsWebDAV...))
 
-		// Nextcloud compatibility: /remote.php/webdav/* → 308 to /dav/files/*.
-		// 308 preserves the HTTP method (required for PROPFIND — 301/302
-		// would downgrade to GET).
-		webdavRedirectMethods := []string{
-			http.MethodOptions, "PROPFIND", http.MethodGet, http.MethodHead,
-			http.MethodPut, http.MethodDelete, "MKCOL", "COPY", "MOVE",
-		}
-		router.Match(webdavRedirectMethods, "/remote.php/webdav",
-			webdav.NextcloudRedirect, mwsWebDAV...)
-		router.Match(webdavRedirectMethods, "/remote.php/webdav/*",
-			webdav.NextcloudRedirect, mwsWebDAV...)
+		// Nextcloud compatibility: /remote.php/webdav/* serves the same
+		// handlers directly instead of redirecting. HTTP clients (including
+		// OnlyOffice mobile) strip the Authorization header on redirects,
+		// so a 308 redirect breaks auth.
+		webdav.NextcloudRoutes(router.Group("/remote.php", mwsWebDAV...))
 	}
 
 	// other non-authentified routes

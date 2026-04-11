@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gavv/httpexpect/v2"
 	"github.com/labstack/echo/v4"
 )
 
@@ -16,20 +15,22 @@ func mountRealRoutes(g *echo.Group) {
 	Routes(g)
 }
 
-// registerNextcloudRedirect wires /remote.php/webdav(/*) onto the same
-// Echo instance that httptest is serving. newWebdavTestEnv mounts the
-// /dav group via setup.GetTestServer; to also test the 308 redirect we
-// register the redirect routes directly on the underlying *echo.Echo.
-func registerNextcloudRedirect(t *testing.T, env *webdavTestEnv) {
+// registerNextcloudRoutes wires /remote.php/webdav(/*) onto the same
+// Echo instance that httptest is serving. Adds the same instance-injecting
+// middleware that GetTestServer uses for /dav (sets "instance" on context).
+func registerNextcloudRoutes(t *testing.T, env *webdavTestEnv) {
 	t.Helper()
 	e, ok := env.TS.Config.Handler.(*echo.Echo)
 	if !ok {
 		t.Fatalf("httptest handler is not *echo.Echo: %T", env.TS.Config.Handler)
 	}
-	for _, m := range webdavMethods {
-		e.Add(m, "/remote.php/webdav", NextcloudRedirect)
-		e.Add(m, "/remote.php/webdav/*", NextcloudRedirect)
-	}
+	inst := env.Inst
+	NextcloudRoutes(e.Group("/remote.php", func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("instance", inst)
+			return next(c)
+		}
+	}))
 }
 
 // --- OPTIONS tests -------------------------------------------------------
@@ -76,40 +77,39 @@ func TestOptions_DoesNotCallVFS(t *testing.T) {
 		Header("DAV").Contains("1")
 }
 
-// --- Nextcloud 308 redirect tests ----------------------------------------
+// --- Nextcloud /remote.php/webdav/* compatibility tests ------------------
 
-func TestNextcloudRedirect_PreservesMethod(t *testing.T) {
+func TestNextcloud_OptionsOnWebdavRoot(t *testing.T) {
 	env := newWebdavTestEnv(t, mountRealRoutes)
-	registerNextcloudRedirect(t, env)
+	registerNextcloudRoutes(t, env)
 
-	// httpexpect follows redirects by default; disable to observe the 308.
-	env.E.GET("/remote.php/webdav/Foo/bar.txt").
-		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+	r := env.E.OPTIONS("/remote.php/webdav/").
 		Expect().
-		Status(http.StatusPermanentRedirect).
-		Header("Location").IsEqual("/dav/files/Foo/bar.txt")
+		Status(http.StatusOK)
+	r.Header("DAV").Contains("1")
+	r.Header("Allow").Contains("PROPFIND")
 }
 
-func TestNextcloudRedirect_RootPath(t *testing.T) {
+func TestNextcloud_PropfindServesDirectly(t *testing.T) {
 	env := newWebdavTestEnv(t, mountRealRoutes)
-	registerNextcloudRedirect(t, env)
+	registerNextcloudRoutes(t, env)
 
-	env.E.GET("/remote.php/webdav").
-		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+	// PROPFIND on /remote.php/webdav/ should return 207 directly (not 308).
+	// Auth required — without token we get 401.
+	env.E.Request("PROPFIND", "/remote.php/webdav/").
+		WithHeader("Depth", "0").
 		Expect().
-		Status(http.StatusPermanentRedirect).
-		Header("Location").IsEqual("/dav/files")
+		Status(http.StatusUnauthorized)
 }
 
-func TestNextcloudRedirect_PropfindMethod(t *testing.T) {
+func TestNextcloud_AuthenticatedPropfind(t *testing.T) {
 	env := newWebdavTestEnv(t, mountRealRoutes)
-	registerNextcloudRedirect(t, env)
+	registerNextcloudRoutes(t, env)
 
-	// 308 (unlike 301/302) preserves the request method — critical for
-	// PROPFIND, which would otherwise be downgraded to GET by the client.
-	env.E.Request("PROPFIND", "/remote.php/webdav/Foo").
-		WithRedirectPolicy(httpexpect.DontFollowRedirects).
+	// With valid auth, PROPFIND should return 207 Multi-Status directly.
+	env.E.Request("PROPFIND", "/remote.php/webdav/").
+		WithHeader("Depth", "0").
+		WithHeader("Authorization", "Bearer "+env.Token).
 		Expect().
-		Status(http.StatusPermanentRedirect).
-		Header("Location").IsEqual("/dav/files/Foo")
+		Status(http.StatusMultiStatus)
 }
