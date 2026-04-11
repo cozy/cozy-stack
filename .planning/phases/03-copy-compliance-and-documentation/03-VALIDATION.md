@@ -1,10 +1,11 @@
 ---
 phase: 3
 slug: copy-compliance-and-documentation
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-11
+approved: 2026-04-11
 ---
 
 # Phase 3 — Validation Strategy
