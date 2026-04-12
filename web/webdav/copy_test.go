@@ -562,3 +562,68 @@ func TestCopy_Dir_EmptyDir(t *testing.T) {
 	require.NoError(t, err, "/dst-empty must exist")
 	assert.NotNil(t, dstDir)
 }
+
+// TestCopy_LitmusCopymoveCopyOverwrite reproduces the litmus copymove
+// copy_overwrite failure: COPY a file to a destination that is an existing
+// collection (directory) with Overwrite:T. Per RFC 4918 §9.8.4 and §10.6
+// the server MUST replace the destination (trash it) and return 204.
+//
+// Before the fix, handleCopy (file branch) only checked for a destination file
+// and ignored dstDir, causing fs.CopyFile to return os.ErrExist which mapped
+// to 405 Method Not Allowed.
+func TestCopy_LitmusCopymoveCopyOverwrite(t *testing.T) {
+	env := newWebdavTestEnv(t, nil)
+	fs := env.Inst.VFS()
+
+	// Seed source file and a directory at the destination path.
+	seedFile(t, env.Inst, "cow-src.txt", []byte("copy-overwrite-content"))
+	seedDir(t, env.Inst, "/cow-dst-dir")
+
+	// Verify the directory exists before the COPY.
+	_, err := fs.DirByPath("/cow-dst-dir")
+	require.NoError(t, err, "destination collection must exist before COPY")
+
+	host := env.TS.Listener.Addr().String()
+
+	// COPY file onto existing collection with Overwrite:T — must return 204.
+	env.E.Request("COPY", "/dav/files/cow-src.txt").
+		WithHeader("Authorization", "Bearer "+env.Token).
+		WithHeader("Destination", "http://"+host+"/dav/files/cow-dst-dir").
+		WithHeader("Overwrite", "T").
+		Expect().
+		Status(204)
+
+	// Source must still exist.
+	_, err = fs.FileByPath("/cow-src.txt")
+	require.NoError(t, err, "source must still exist after COPY")
+
+	// Destination must now be a file (not a directory).
+	dstFile, err := fs.FileByPath("/cow-dst-dir")
+	require.NoError(t, err, "destination must be a file after COPY")
+
+	srcDoc, err := fs.FileByPath("/cow-src.txt")
+	require.NoError(t, err)
+	assert.Equal(t, srcDoc.MD5Sum, dstFile.MD5Sum, "destination content must match source")
+
+	// The old directory must have been trashed (no longer at its original VFS path).
+	_, dirErr := fs.DirByPath("/cow-dst-dir")
+	assert.Error(t, dirErr, "original directory must no longer be at /cow-dst-dir")
+}
+
+// TestCopy_LitmusCopymoveCopyOverwrite_OverwriteF ensures that COPY a file onto
+// an existing collection with Overwrite:F returns 412 Precondition Failed.
+func TestCopy_LitmusCopymoveCopyOverwrite_OverwriteF(t *testing.T) {
+	env := newWebdavTestEnv(t, nil)
+
+	seedFile(t, env.Inst, "cowf-src.txt", []byte("cowf-content"))
+	seedDir(t, env.Inst, "/cowf-dst-dir")
+
+	host := env.TS.Listener.Addr().String()
+
+	env.E.Request("COPY", "/dav/files/cowf-src.txt").
+		WithHeader("Authorization", "Bearer "+env.Token).
+		WithHeader("Destination", "http://"+host+"/dav/files/cowf-dst-dir").
+		WithHeader("Overwrite", "F").
+		Expect().
+		Status(412)
+}
