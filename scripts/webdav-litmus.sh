@@ -37,8 +37,11 @@ if [[ $DRY_RUN -eq 0 ]]; then
   fi
 fi
 
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-DOMAIN="litmus-${TIMESTAMP}.localhost:8080"
+# Use Unix epoch (10 digits) instead of the full date+time stamp to keep
+# the domain name short enough that the generated JWT token stays under
+# litmus's 256-character password limit.
+TIMESTAMP=$(date +%s)
+DOMAIN="lm-${TIMESTAMP}.localhost:8080"
 
 cleanup() {
   local rc=$?
