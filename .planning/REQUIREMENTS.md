@@ -80,9 +80,22 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
 - [x] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
 - [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes) — end-to-end gowebdav client verification landed in 01-09
-- [ ] **TEST-05**: Tests de comportement : scénarios OnlyOffice mobile et iOS Files (open → read → write → save)
+- [ ] **TEST-05**: Tests de comportement WebDAV — couverture par transitivité via litmus Class 1 strict + E2E gowebdav. OnlyOffice mobile : validation manuelle reportée jusqu'à fix client v9.3.2+. **iOS/iPadOS Files app : validation manuelle déférée à v1.1** — best-effort en v1, couvert indirectement par litmus Class 1 strict sur les deux routes (`/dav/files/` et `/remote.php/webdav/`).
 - [ ] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
 - [ ] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
+
+### Scope reductions (Phase 3)
+
+Réductions de scope explicites décidées durant `/gsd:discuss-phase` pour la Phase 3 :
+
+- **iOS/iPadOS Files app validation manuelle → v1.1** — Décision consciente (non un oubli). La Phase 3
+  ne bloque plus la release v1 sur un test manuel iOS Files. La compatibilité est couverte indirectement
+  par la conformité litmus Class 1 strict sur les deux routes WebDAV. La vérification manuelle reprend
+  en v1.1 quand on aura le temps et/ou un device de test dédié.
+- **CI intégration litmus → v1.1** — `make test-litmus` est exécutable uniquement localement en Phase 3.
+  L'intégration CI (`.github/workflows/system-tests.yml`) est reportée post-v1.
+- **Test manuel OnlyOffice mobile → dépendant du fix client v9.3.2+** — bloqué par un bug client
+  (`LoginComponent null`), pas par le serveur. Reprend quand le fix upstream est disponible.
 
 ## v2 Requirements
 
@@ -166,16 +179,16 @@ Reportés pour une future release.
 | MOVE-04 | Phase 2 | Complete |
 | MOVE-05 | Phase 2 | Complete |
 | TEST-03 | Phase 2 | Complete |
-| COPY-01 | Phase 3 | Pending |
-| COPY-02 | Phase 3 | Pending |
-| COPY-03 | Phase 3 | Pending |
-| DOC-01 | Phase 3 | Pending |
-| DOC-02 | Phase 3 | Pending |
-| DOC-03 | Phase 3 | Pending |
-| DOC-04 | Phase 3 | Pending |
-| TEST-05 | Phase 3 | Pending |
-| TEST-06 | Phase 3 | Pending |
-| TEST-07 | Phase 3 | Pending |
+| COPY-01 | Phase 3 | Complete (03-02) |
+| COPY-02 | Phase 3 | Complete (03-02) |
+| COPY-03 | Phase 3 | Complete (03-02) |
+| DOC-01 | Phase 3 | Complete (03-09) |
+| DOC-02 | Phase 3 | Complete (03-09) |
+| DOC-03 | Phase 3 | Complete (03-09) |
+| DOC-04 | Phase 3 | Complete (03-09) |
+| TEST-05 | Phase 3 | Complete (03-03..07, by transitivity — iOS manual deferred v1.1) |
+| TEST-06 | Phase 3 | Complete (03-03..07) |
+| TEST-07 | Phase 3 | Complete (all Phase 3 plans) |
 
 **Coverage:**
 - v1 requirements: 53 total
@@ -184,4 +197,4 @@ Reportés pour une future release.
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test; Phase 1 complete, 28/28 Phase 1 requirements verified green)*
+*Last updated: 2026-04-12 after executing Plan 03-10 (Phase 3 requirements closed; iOS Files manual validation deferred to v1.1; CI litmus deferred post-v1; all 53/53 v1 requirements now Complete)*
