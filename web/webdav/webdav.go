@@ -14,6 +14,7 @@ import (
 var webdavMethods = []string{
 	http.MethodOptions,
 	"PROPFIND",
+	"PROPPATCH",
 	http.MethodGet,
 	http.MethodHead,
 	http.MethodPut,
@@ -25,7 +26,7 @@ var webdavMethods = []string{
 
 // davAllowHeader is the value of the Allow: header in OPTIONS responses.
 // It lists every method registered in webdavMethods.
-const davAllowHeader = "OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE"
+const davAllowHeader = "OPTIONS, PROPFIND, PROPPATCH, GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE"
 
 // Routes registers all WebDAV HTTP routes on router. OPTIONS is
 // registered without the auth middleware (RFC 4918 §9.1 allows

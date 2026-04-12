@@ -150,6 +150,13 @@ func handleCopy(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
+// copyFailure records a per-member failure during a directory COPY walk.
+// Used to build the 207 Multi-Status response body per RFC 4918 §9.8.7.
+type copyFailure struct {
+	hrefPath string
+	status   int
+}
+
 // handleCopyDir implements recursive directory COPY per RFC 4918 §9.8.
 //
 // Depth semantics (RFC 4918 §9.8.3):
@@ -159,6 +166,10 @@ func handleCopy(c echo.Context) error {
 //
 // Overwrite semantics mirror the file case: absent == T, "F" == 412, "T" ==
 // trash the existing destination directory then copy.
+//
+// Per-member failures are collected (walk is NOT aborted) and reported in a
+// 207 Multi-Status response per RFC 4918 §9.8.7. Successful members are left
+// in place — no rollback on partial failure.
 func handleCopyDir(c echo.Context, fs vfs.VFS, inst *instance.Instance, srcDir *vfs.DirDoc, srcPath, dstPath string) error {
 	// RFC 4918 §9.8.3: Depth:1 is forbidden on collection COPY.
 	depthHdr := c.Request().Header.Get("Depth")
@@ -222,13 +233,21 @@ func handleCopyDir(c echo.Context, fs vfs.VFS, inst *instance.Instance, srcDir *
 
 	// Recursive walk: dirMap tracks srcDirID → dstDir so we can wire each
 	// child to its destination parent.
+	//
+	// Per RFC 4918 §9.8.7, errors on individual members MUST NOT abort the
+	// walk — they are collected and reported in a 207 Multi-Status body.
+	// Only catastrophic errors (ErrWalkOverflow, index unreachable) abort.
+	var failures []copyFailure
+
 	dirMap := map[string]*vfs.DirDoc{
 		srcDir.DocID: dstRootDir,
 	}
 
-	walkErr := vfs.Walk(fs, srcPath, func(entryPath string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
-		if err != nil {
-			return err
+	walkErr := vfs.Walk(fs, srcPath, func(entryPath string, d *vfs.DirDoc, f *vfs.FileDoc, werr error) error {
+		if werr != nil {
+			// Walk-level error for this entry — collect and continue (pitfall C).
+			failures = append(failures, copyFailure{hrefPath: entryPath, status: http.StatusInternalServerError})
+			return nil
 		}
 
 		// Skip the root (already created above).
@@ -240,15 +259,18 @@ func handleCopyDir(c echo.Context, fs vfs.VFS, inst *instance.Instance, srcDir *
 			// Subdirectory: create a mirror under the already-created parent.
 			parentDst, ok := dirMap[d.DirID]
 			if !ok {
-				// Malformed VFS tree — treat as error.
-				return errors.New("copy-dir: missing parent in dirMap for " + entryPath)
+				// Malformed VFS tree — collect and continue.
+				failures = append(failures, copyFailure{hrefPath: entryPath, status: http.StatusInternalServerError})
+				return nil
 			}
 			newSubDir, mkErr := vfs.NewDirDocWithParent(d.DocName, parentDst, nil)
 			if mkErr != nil {
-				return mkErr
+				failures = append(failures, copyFailure{hrefPath: entryPath, status: httpStatusForVFSErr(mkErr)})
+				return nil
 			}
 			if mkErr = fs.CreateDir(newSubDir); mkErr != nil {
-				return mkErr
+				failures = append(failures, copyFailure{hrefPath: entryPath, status: httpStatusForVFSErr(mkErr)})
+				return nil
 			}
 			dirMap[d.DocID] = newSubDir
 			return nil
@@ -257,21 +279,78 @@ func handleCopyDir(c echo.Context, fs vfs.VFS, inst *instance.Instance, srcDir *
 		// File: copy to corresponding destination directory.
 		parentDst, ok := dirMap[f.DirID]
 		if !ok {
-			return errors.New("copy-dir: missing parent in dirMap for file " + entryPath)
+			failures = append(failures, copyFailure{hrefPath: entryPath, status: http.StatusConflict})
+			return nil
 		}
 		newFileDoc := vfs.CreateFileDocCopy(f, parentDst.ID(), f.DocName)
 		// Use f.Mime (srcFile.Mime) for Note branch — same pitfall A as file COPY.
+		var copyErr error
 		if f.Mime == consts.NoteMimeType {
-			return note.CopyFile(inst, f, newFileDoc)
+			copyErr = note.CopyFile(inst, f, newFileDoc)
+		} else {
+			copyErr = fs.CopyFile(f, newFileDoc)
 		}
-		return fs.CopyFile(f, newFileDoc)
+		if copyErr != nil {
+			failures = append(failures, copyFailure{hrefPath: entryPath, status: httpStatusForVFSErr(copyErr)})
+		}
+		return nil
 	})
 	if walkErr != nil {
+		// Catastrophic walk error (ErrWalkOverflow or similar) — abort with 500.
 		return mapVFSWriteError(c, walkErr)
+	}
+
+	// If any member failures occurred, return 207 Multi-Status per RFC 4918 §9.8.7.
+	// Already-copied children stay in place (no rollback).
+	if len(failures) > 0 {
+		return sendCopyMultiStatus(c, failures)
 	}
 
 	if dstExisted {
 		return c.NoContent(http.StatusNoContent)
 	}
 	return c.NoContent(http.StatusCreated)
+}
+
+// httpStatusForVFSErr maps a VFS error to an appropriate HTTP status code for
+// use in 207 Multi-Status per-response entries.
+func httpStatusForVFSErr(err error) int {
+	switch {
+	case errors.Is(err, vfs.ErrFileTooBig), errors.Is(err, vfs.ErrMaxFileSize):
+		return http.StatusInsufficientStorage // 507
+	case errors.Is(err, os.ErrExist):
+		return http.StatusPreconditionFailed // 412
+	case errors.Is(err, os.ErrNotExist):
+		return http.StatusNotFound // 404
+	default:
+		return http.StatusInternalServerError // 500
+	}
+}
+
+// sendCopyMultiStatus writes a 207 Multi-Status body listing all per-member
+// failures that occurred during a directory COPY walk. Successful members are
+// NOT listed (RFC 4918 §9.8 — only failures appear).
+//
+// The root element is written manually as `<D:multistatus xmlns:D="DAV:">` per
+// the Phase 1 XML convention (encoding/xml.Marshal leaks xmlns="DAV:" on every
+// child — see propfind.go for the established pattern).
+func sendCopyMultiStatus(c echo.Context, failures []copyFailure) error {
+	var buf bytes.Buffer
+	buf.WriteString(`<?xml version="1.0" encoding="utf-8"?>` + "\n")
+	buf.WriteString(`<D:multistatus xmlns:D="DAV:">` + "\n")
+	for _, f := range failures {
+		buf.WriteString("  <D:response>\n")
+		buf.WriteString("    <D:href>")
+		_ = xml.EscapeText(&buf, []byte(f.hrefPath))
+		buf.WriteString("</D:href>\n")
+		buf.WriteString(fmt.Sprintf("    <D:status>HTTP/1.1 %d %s</D:status>\n",
+			f.status, http.StatusText(f.status)))
+		buf.WriteString("  </D:response>\n")
+	}
+	buf.WriteString(`</D:multistatus>` + "\n")
+
+	h := c.Response().Header()
+	h.Set(echo.HeaderContentType, "application/xml; charset=utf-8")
+	h.Set(echo.HeaderContentLength, strconv.Itoa(buf.Len()))
+	return c.Blob(http.StatusMultiStatus, "application/xml; charset=utf-8", buf.Bytes())
 }

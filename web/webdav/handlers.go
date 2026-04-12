@@ -31,6 +31,8 @@ func handlePath(c echo.Context) error {
 	switch c.Request().Method {
 	case "PROPFIND":
 		return handlePropfind(c)
+	case "PROPPATCH":
+		return handleProppatch(c)
 	case http.MethodGet, http.MethodHead:
 		return handleGet(c)
 	case http.MethodPut:
