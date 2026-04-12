@@ -28,6 +28,11 @@ func TestDavPathToVFSPath(t *testing.T) {
 		{name: "trailing slash", input: "Documents/", wantPath: "/Documents"},
 		{name: "unicode", input: "Documents/répertoire", wantPath: "/Documents/répertoire"},
 
+		// Percent-encoded UTF-8 filenames — must be ALLOWED (litmus put_get_utf8_segment)
+		{name: "euro sign percent-encoded", input: "litmus/res-%e2%82%ac", wantPath: "/litmus/res-€"},
+		{name: "percent-encoded ascii letter", input: "litmus/res-%41", wantPath: "/litmus/res-A"},
+		{name: "mixed utf8 percent-encoded", input: "Documents/%c3%a9t%c3%a9", wantPath: "/Documents/été"},
+
 		// Traversal / malicious inputs — must be rejected with ErrPathTraversal
 		{name: "dotdot literal", input: "../etc/passwd", wantError: true},
 		{name: "encoded dotdot lowercase", input: "%2e%2e/etc", wantError: true},
@@ -35,6 +40,7 @@ func TestDavPathToVFSPath(t *testing.T) {
 		{name: "double encoded", input: "%252e%252e/etc", wantError: true},
 		{name: "null byte", input: "Documents\x00evil", wantError: true},
 		{name: "encoded slash", input: "Documents%2fsecret", wantError: true},
+		{name: "encoded null byte", input: "Documents%00evil", wantError: true},
 		{name: "settings prefix rejected", input: "../settings", wantError: true},
 	}
 
