@@ -11,7 +11,7 @@
 
 - [x] **Phase 1: Foundation** — Read-only WebDAV mount: routing, auth, path safety, PROPFIND, GET/HEAD
 - [x] **Phase 2: Write Operations** — Full read-write capability: PUT, DELETE, MKCOL, MOVE
-- [ ] **Phase 3: COPY, Compliance, and Documentation** — RFC 4918 Class 1 sign-off: COPY, litmus, docs
+- [x] **Phase 3: COPY, Compliance, and Documentation** — RFC 4918 Class 1 sign-off: COPY, litmus, docs (completed 2026-04-12)
 
 ---
 
@@ -88,7 +88,7 @@
 |-------|----------------|--------|-----------|
 | 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
 | 2. Write Operations | 5/5 | Complete | 2026-04-06 |
-| 3. COPY, Compliance, and Documentation | 9/10 | In Progress|  |
+| 3. COPY, Compliance, and Documentation | 10/10 | Complete   | 2026-04-12 |
 
 ---
 
