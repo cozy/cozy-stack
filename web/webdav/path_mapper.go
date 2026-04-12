@@ -2,6 +2,7 @@ package webdav
 
 import (
 	"errors"
+	"net/url"
 	"path"
 	"strings"
 )
@@ -15,19 +16,21 @@ var ErrPathTraversal = errors.New("webdav: path traversal rejected")
 // davPathToVFSPath converts a WebDAV URL wildcard (as returned by
 // echo.Context.Param("*")) into a normalised absolute VFS path rooted at "/".
 //
-// Echo has already URL-decoded the wildcard once, so any remaining %XX
-// sequence is a double-encoding attempt and is rejected outright.
-//
-// The function performs exactly these steps:
-//  1. reject null bytes
-//  2. reject residual %2e / %2f sequences (case-insensitive) — these catch
-//     both double-encoded traversal (%252e → %2e after Echo decode) and
-//     encoded slashes smuggling segment separators past path.Clean
-//  3. path.Clean("/files/" + input) — resolves "..", removes double slashes
+// Echo does NOT URL-decode the wildcard before handing it to the handler, so
+// the raw parameter may contain percent-encoded sequences. We handle them as
+// follows:
+//  1. reject literal null bytes
+//  2. reject dangerous percent-encoded sequences that path.Clean cannot
+//     neutralise: %2e/%2E (dot), %2f/%2F (slash), %00 (null) — these catch
+//     double-encoded traversal (%252e → %2e) and encoded-slash smuggling
+//  3. URL-decode the remaining percent-encoded sequences (valid UTF-8 filenames
+//     such as %e2%82%ac → €) via url.PathUnescape
+//  4. reject null bytes in the decoded result (belt-and-suspenders)
+//  5. path.Clean("/files/" + decoded) — resolves "..", removes double slashes
 //     and trailing slashes
-//  4. assert the cleaned path is either "/files" or has "/files/" prefix,
+//  6. assert the cleaned path is either "/files" or has "/files/" prefix,
 //     which traps any ".." that escapes the scope
-//  5. strip the "/files" prefix to yield the VFS path, substituting "/"
+//  7. strip the "/files" prefix to yield the VFS path, substituting "/"
 //     when the result would be empty
 //
 // Every failure returns ErrPathTraversal so callers can log and respond
@@ -40,9 +43,26 @@ func davPathToVFSPath(rawParam string) (string, error) {
 		return "", ErrPathTraversal
 	}
 
+	// Decode remaining percent-encoded sequences (e.g. %e2%82%ac → €).
+	// url.PathUnescape decodes %XX but preserves literal '/' unlike QueryUnescape.
+	decoded, err := url.PathUnescape(rawParam)
+	if err != nil {
+		// Malformed percent-encoding (e.g. truncated %X).
+		return "", ErrPathTraversal
+	}
+	// Post-decode traversal check: double-encoding like %252e decodes to %2e.
+	// We must re-check after decoding to catch this pattern.
+	if containsEncodedTraversal(decoded) {
+		return "", ErrPathTraversal
+	}
+	// Post-decode null byte check — belt-and-suspenders in case %00 slipped through.
+	if strings.ContainsRune(decoded, 0) {
+		return "", ErrPathTraversal
+	}
+
 	// The WebDAV URL space is rooted at /files — we prepend "/files" before
 	// cleaning to re-anchor the wildcard for the prefix check below.
-	cleaned := path.Clean("/files/" + rawParam)
+	cleaned := path.Clean("/files/" + decoded)
 
 	if cleaned != "/files" && !strings.HasPrefix(cleaned, "/files/") {
 		return "", ErrPathTraversal
@@ -55,12 +75,21 @@ func davPathToVFSPath(rawParam string) (string, error) {
 	return vfsPath, nil
 }
 
-// containsEncodedTraversal reports whether s carries a still-encoded percent
-// escape. Echo decodes the URL wildcard once before it reaches us, so any
-// surviving '%' is either a double encoding (e.g. "%252e%252e" → "%2e%2e" after
-// one decode) or an attempt to smuggle a dot/slash past path.Clean. We reject
-// every residual percent sequence rather than enumerating %2e / %2f, which
-// catches the double-encoded variant on the very first decode pass.
+// containsEncodedTraversal reports whether s contains a percent-encoded
+// sequence that could be used for path traversal or null-byte injection.
+// We target the specific dangerous sequences rather than rejecting all '%':
+//   - %2e / %2E  — encoded dot (used in ../.. traversal)
+//   - %2f / %2F  — encoded slash (smuggles a path separator past path.Clean)
+//   - %00        — encoded null byte
+//
+// Other percent-encoded sequences (e.g. %e2%82%ac for the euro sign) are
+// legitimate UTF-8 filenames and must be allowed.
+//
+// Note: Echo does NOT decode the wildcard parameter before handing it to the
+// handler, so percent-encoded sequences reach this function as-is.
 func containsEncodedTraversal(s string) bool {
-	return strings.ContainsRune(s, '%')
+	lower := strings.ToLower(s)
+	return strings.Contains(lower, "%2e") ||
+		strings.Contains(lower, "%2f") ||
+		strings.Contains(lower, "%00")
 }
