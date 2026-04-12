@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-08-PLAN.md
-last_updated: "2026-04-12T15:30:12.760Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-04-12T15:31:27.045Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # Project State: Cozy WebDAV
@@ -49,6 +49,7 @@ Plan: 10 of 10 (all phases complete)
 | Phase 03 P03 | 12min | 1 tasks | 2 files |
 | Phase 03 P05 | 45min | 2 tasks | 8 files |
 | Phase 03 P08 | 20min | 1 tasks | 1 files |
+| Phase 03 P02 | 35min | 2 tasks | 2 files |
 
 ### Plan Execution Log
 
@@ -240,7 +241,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 ### Last Session
 
 **Date:** 2026-04-05
-**Stopped at:** Completed 03-08-PLAN.md
+**Stopped at:** Completed 03-02-PLAN.md
 **Work done (01-07):** Wave 4 — ran in parallel with plan 01-08 (GET/HEAD). 3 atomic commits. (1) `da0a46a36` test: `web/webdav/propfind_test.go` with 7 RED integration tests — `TestPropfind_Depth0_Root` (single D:response, D:collection marker, trailing-slash href), `TestPropfind_Depth0_File` (content-length=14, ETag regex, RFC 1123 getlastmodified regex), `TestPropfind_Depth1_DirectoryWithChildren` (seed /Docs + 3 files, assert 4 D:response elements), `TestPropfind_DepthInfinity_Returns403` (403 + propfind-finite-depth body), `TestPropfind_NonexistentPath_Returns404`, `TestPropfind_NamespacePrefixInBody` (xmlns:D="DAV:" + D: prefix + no leaked default-namespace), `TestPropfind_AllNineLiveProperties` (all 9 live prop element names present). Local `seedDir` helper wraps `vfs.Mkdir`; `seedFile` reused from get_test.go (same package). Confirmed RED: all 7 failed against the 501 stub from plan 06. (2) `10f89e168` feat: created `web/webdav/propfind.go` (~230 lines) — `handlePropfind` (Depth parse → davPathToVFSPath → DirOrFileByPath → AllowVFS → build responses → marshalMultistatus with Content-Length), `streamChildren` (DirIterator ByFetch=200, appends Response per child without buffering full listing), `buildResponseForDir` / `buildResponseForFile` (9 live props each), `etagForDir` (md5(DocID || UpdatedAt.UnixNano) since DirDocs have no VFS md5sum). Targeted `Edit` on `handlers.go` replaced only the PROPFIND case body (`return handlePropfind(c)`) — preserved plan 08's GET/HEAD hunk already committed at `accd13500`, no merge conflict. Two RED-test assertions loosened during GREEN (bug in the assertions, not the implementation): `<D:collection></D:collection>` long form and `&#34;`-escaped ETag quotes both accepted — both are valid XML per §3.1 and plan 02's own tests use the same looser substring form. All 7 tests green; full package suite 5.5s; `gofmt`/`go vet`/`go build ./...` clean. (3) `9b7ad1e1e` refactor: extracted `hrefForDir`/`hrefForFile` (trailing-slash URL rules), `baseProps(name, createdAt, updatedAt)` (5 fields shared by files and dirs), `propstatOK` const. Net ~8 line reduction; Phase 2/3 MKCOL/MOVE/COPY will reuse `baseProps` verbatim. Two deviations logged: (a) Rule 1 — AllowVFS takes `vfs.Fetcher` not `permission.Fetcher` (plan's interfaces block was wrong); (b) Rule 1 — 2 RED assertions too strict for valid XML output. 9 requirements completed: READ-01..07 (full PROPFIND surface — Depth 0/1, all 9 live props, RFC-compliant formats), SEC-03 (Depth:infinity DoS prevention), SEC-04 (audit logging of infinity + out-of-scope — already counted in plan 05 but exercised here).
 **Artifacts created (01-07):** web/webdav/propfind.go, web/webdav/propfind_test.go, .planning/phases/01-foundation/01-07-SUMMARY.md
 **Artifacts modified (01-07):** web/webdav/handlers.go (PROPFIND case body), .planning/STATE.md, .planning/ROADMAP.md, .planning/REQUIREMENTS.md

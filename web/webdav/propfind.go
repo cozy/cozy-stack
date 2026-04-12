@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -164,19 +165,32 @@ func handlePropfind(c echo.Context) error {
 }
 
 // validatePropfindXML parses the given bytes as XML and returns an error if
-// the XML is not well-formed (e.g., unclosed tags, invalid namespace bindings).
-// We use a permissive token-by-token scan so that clients can send non-DAV
-// XML bodies without false positives — we only reject what Go's xml.Decoder
-// considers a parse error.
+// the XML is not well-formed or uses invalid namespace declarations.
+//
+// Checks performed:
+//  1. Well-formedness via xml.Decoder (catches unclosed tags, bad encoding, etc.)
+//  2. Invalid namespace bindings: per XML Namespaces 1.0, a non-default namespace
+//     prefix must NOT be bound to an empty string URI. Go's xml.Decoder accepts
+//     xmlns:foo="" silently, but such requests should be rejected per RFC 4918 §8.3
+//     and the litmus propfind_invalid2 test.
 func validatePropfindXML(data []byte) error {
 	dec := xml.NewDecoder(strings.NewReader(string(data)))
 	for {
-		_, err := dec.Token()
+		tok, err := dec.Token()
 		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
 			return err
+		}
+		// Check for invalid namespace declarations on start elements.
+		// xmlns:foo="" is invalid — a non-default prefix must not map to "".
+		if se, ok := tok.(xml.StartElement); ok {
+			for _, attr := range se.Attr {
+				if attr.Name.Space == "xmlns" && attr.Name.Local != "" && attr.Value == "" {
+					return fmt.Errorf("invalid namespace binding: xmlns:%s is empty", attr.Name.Local)
+				}
+			}
 		}
 	}
 }
