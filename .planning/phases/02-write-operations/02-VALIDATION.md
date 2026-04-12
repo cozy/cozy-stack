@@ -1,10 +1,11 @@
 ---
 phase: 02
 slug: write-operations
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-06
+approved: 2026-04-12
 ---
 
 # Phase 02 — Validation Strategy
@@ -81,11 +82,26 @@ created: 2026-04-06
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — all four test files landed with plan 02-01..02-04
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved (retrospective, 2026-04-12 during milestone v1.1 audit)
+
+**Notes on retrospective approval:**
+
+This VALIDATION.md remained in `draft` state throughout Phase 2 execution. Phase 2 verification nonetheless passed (5/5 ROADMAP success criteria, 15/15 requirements) because:
+
+1. **Test harness inherited from Phase 1** — `testutil_test.go` was already established; Phase 2 reused it without modification, so the Wave-0 infrastructure bootstrap was effectively done by Phase 1.
+2. **All planned test files exist and are green:**
+   - `web/webdav/put_test.go` ✓
+   - `web/webdav/delete_test.go` ✓
+   - `web/webdav/mkcol_test.go` ✓
+   - `web/webdav/move_test.go` ✓
+   - `web/webdav/write_integration_test.go` (E2E gowebdav, TEST-03) ✓
+3. **All 15 requirements (WRITE-01..09, MOVE-01..05, TEST-03) are traceable to concrete tests** — verified by the 02-VERIFICATION.md requirements table.
+
+The draft status reflected a process omission (wave-0 retrospective loop not formally closed mid-execution), not a substantive quality gap. Promoted to `approved` during the v1.1 milestone audit (`.planning/v1.1-MILESTONE-AUDIT.md`) after cross-referencing VERIFICATION + SUMMARY + REQUIREMENTS traceability.

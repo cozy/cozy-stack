@@ -131,3 +131,60 @@ the correct href prefix.
 **Non-PROPPATCH failures to fix separately:**
 - propfind_invalid + propfind_invalid2: parse PROPFIND body for XML validity
 - propfind_d0 (remote.php only): use dynamic href prefix instead of hardcoded `/dav/files`
+
+---
+
+## Strategy Pivot: **B → C**
+
+During execution, Strategy B was implemented and reduced failures, but litmus 0.13 rejected
+the 403-per-property response via `ne_propset_status()` — it expects **successful** PROPPATCH
+writes before a subsequent PROPGET can read them back. Strategy C was adopted: a minimal
+in-memory dead-property store (`deadprops.go`) that accepts PROPPATCH writes and returns
+them on PROPFIND.
+
+**Strategy C implementation:**
+- `deadprops.go` — package-level `deadPropStore` with `setFor`, `listFor`, `removeFor`, `movePropsForPath` methods, protected by RWMutex
+- `proppatch.go` — parses PROPPATCH body, applies sets/removes, returns 207 with 200 OK per-property (ns-prefix-aware XML builder)
+- `propfind.go` — merges dead properties into the response via `buildDeadPropsXML`
+- `move.go:132` — calls `deadPropStore.movePropsForPath` so dead properties follow resources (RFC 4918 §9.9.1)
+
+Properties are **in-memory only**; lost on server restart. CouchDB-backed persistence is
+documented as a v2 requirement.
+
+---
+
+## Final Run: PASS (30/30 both routes)
+
+**Date:** 2026-04-12
+**Stack commits:** b2121c180, f677ae35d, 0d398e1c2, 84011cd8a, dde5f907a, b49515ab9
+**Command:** `LITMUS_TESTS=props scripts/webdav-litmus.sh`
+
+### Route 1: `/dav/files/`
+
+**Summary: 30 passed, 0 failed, 0 skipped (100%)**
+
+All tests in the props suite pass: init, begin, propfind_invalid, propfind_invalid2,
+propfind_d0, propinit, propset, propget, propextended, propmove, propdeletes, propreplace,
+propnullns, prophighunicode, propremoveset, propsetremove, propvalnspace, propwformed,
+propinit, propmanyns, propget variants, propcleanup, finish.
+
+Warnings (cosmetic, do not cause FAIL): "Property N omitted from results with no status" —
+emitted on some propget iterations. Litmus counts these as PASS regardless.
+
+### Route 2: `/remote.php/webdav/`
+
+**Summary: 30 passed, 0 failed, 0 skipped (100%)**
+
+Identical result to Route 1, with the same cosmetic warnings on propget. The `propfind_d0`
+href-prefix fix (route-aware href construction) is the differentiator vs first run.
+
+### First-run → Final-run delta
+
+| Issue | First-run | Final-run |
+|-------|-----------|-----------|
+| PROPPATCH returns 405 | ❌ FAIL | ✓ PASS (Strategy C in-memory store) |
+| PROPFIND invalid XML returns 207 not 400 | ❌ FAIL | ✓ PASS (body parsing added) |
+| propfind_d0 href wrong on /remote.php/ | ❌ FAIL (Route 2) | ✓ PASS (route-aware prefix) |
+| propmanyns | ❌ FAIL | ✓ PASS (ns-prefix-aware PROPPATCH parser) |
+
+**Verdict:** Phase 3 Plan 07 closed. TEST-06 props portion satisfied.
