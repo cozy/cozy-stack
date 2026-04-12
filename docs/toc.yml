@@ -31,6 +31,7 @@
     - "/bitwarden - Bitwarden": ./bitwarden.md
     - "/connection_check - Connection check": ./connection-check.md
     - "/contacts - Contacts": ./contacts.md
+    - "/dav - WebDAV": ./webdav.md
     - "/data - Data System": ./data-system.md
     - " /data - Mango": ./mango.md
     - " /data - CouchDB Quirks": ./couchdb-quirks.md
