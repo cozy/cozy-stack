@@ -88,7 +88,7 @@
 |-------|----------------|--------|-----------|
 | 1. Foundation | 9/9 | Complete (with deferred `-race` follow-up, FOLLOWUP-01) | 2026-04-05 |
 | 2. Write Operations | 5/5 | Complete | 2026-04-06 |
-| 3. COPY, Compliance, and Documentation | 3/10 | In Progress|  |
+| 3. COPY, Compliance, and Documentation | 4/10 | In Progress|  |
 
 ---
 
