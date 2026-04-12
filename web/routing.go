@@ -354,6 +354,13 @@ func CreateSubdomainProxy(router *echo.Echo, services *stack.Services, appsHandl
 	main.HidePort = true
 	main.Renderer = router.Renderer
 	main.Any("/*", firstRouting(router, appsHandler))
+	// WebDAV methods are not in Echo's built-in `methods` array so main.Any()
+	// does not register them. Without explicit registration the front-end router
+	// returns 405 before firstRouting() can dispatch MKCOL/COPY/MOVE/PROPPATCH
+	// to the webdav sub-router.
+	for _, m := range []string{"MKCOL", "COPY", "MOVE", "PROPPATCH"} {
+		main.Add(m, "/*", firstRouting(router, appsHandler))
+	}
 
 	main.HTTPErrorHandler = errors.HTMLErrorHandler
 	return main, nil
