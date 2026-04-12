@@ -12,6 +12,7 @@ package webdav
 // /gsd:verify-work.
 
 import (
+	"bytes"
 	"net/http"
 	"testing"
 
@@ -26,11 +27,12 @@ import (
 // criterion from .planning/ROADMAP.md.
 //
 // Subtests:
-//   SuccessCriterion1_BrowseWithBearerToken
-//   SuccessCriterion2_AuthRequiredExceptOptions
-//   SuccessCriterion3_SecurityGuards
-//   SuccessCriterion4_GetFileAndCollection
-//   SuccessCriterion5_NextcloudRedirect
+//
+//	SuccessCriterion1_BrowseWithBearerToken
+//	SuccessCriterion2_AuthRequiredExceptOptions
+//	SuccessCriterion3_SecurityGuards
+//	SuccessCriterion4_GetFileAndCollection
+//	SuccessCriterion5_NextcloudRedirect
 func TestE2E_GowebdavClient(t *testing.T) {
 	// ---------------------------------------------------------------
 	// Success criterion 1: valid Bearer-token client can browse, stat,
@@ -222,5 +224,71 @@ func TestE2E_GowebdavClient(t *testing.T) {
 			WithHeader("Depth", "0").
 			Expect().
 			Status(http.StatusMultiStatus)
+	})
+
+	// ---------------------------------------------------------------
+	// Success criterion 6: COPY command via gowebdav client produces a
+	// replica visible via a subsequent PROPFIND/Read. Validates wire-level
+	// compatibility between the gowebdav client and handleCopy for both
+	// the file and directory happy paths.
+	// ---------------------------------------------------------------
+	t.Run("SuccessCriterion6_Copy", func(t *testing.T) {
+		env := newWebdavTestEnv(t, nil)
+		client := gowebdav.NewClient(env.TS.URL+"/dav/files", "", env.Token)
+
+		// --- Part A: file COPY ---
+		srcContent := []byte("hello copy world")
+		if err := client.Write("/srcfile.txt", srcContent, 0644); err != nil {
+			t.Fatalf("seed srcfile.txt: %v", err)
+		}
+		// Copy the file to a new destination with overwrite=true.
+		if err := client.Copy("/srcfile.txt", "/copiedfile.txt", true); err != nil {
+			t.Fatalf("Copy file: %v", err)
+		}
+		// Verify the replica exists and has identical content.
+		got, err := client.Read("/copiedfile.txt")
+		if err != nil {
+			t.Fatalf("Read copiedfile.txt: %v", err)
+		}
+		if !bytes.Equal(got, srcContent) {
+			t.Errorf("copied content mismatch: got %q want %q", got, srcContent)
+		}
+		// Verify the source is UNTOUCHED (copy, not move).
+		srcStat, err := client.Stat("/srcfile.txt")
+		if err != nil || srcStat == nil {
+			t.Errorf("source file disappeared after COPY: %v", err)
+		}
+
+		// --- Part B: directory COPY ---
+		if err := client.Mkdir("/srcdir", 0755); err != nil {
+			t.Fatalf("mkdir srcdir: %v", err)
+		}
+		if err := client.Write("/srcdir/child.txt", []byte("child content"), 0644); err != nil {
+			t.Fatalf("seed srcdir/child.txt: %v", err)
+		}
+		if err := client.Mkdir("/srcdir/nested", 0755); err != nil {
+			t.Fatalf("mkdir srcdir/nested: %v", err)
+		}
+		if err := client.Write("/srcdir/nested/leaf.txt", []byte("leaf content"), 0644); err != nil {
+			t.Fatalf("seed srcdir/nested/leaf.txt: %v", err)
+		}
+		// Recursive copy (gowebdav Copy on a collection sends Depth:infinity by default).
+		if err := client.Copy("/srcdir", "/copieddir", true); err != nil {
+			t.Fatalf("Copy dir: %v", err)
+		}
+		// Verify every file is present in the destination.
+		childGot, err := client.Read("/copieddir/child.txt")
+		if err != nil || !bytes.Equal(childGot, []byte("child content")) {
+			t.Errorf("copied child content mismatch: got %q err %v", childGot, err)
+		}
+		leafGot, err := client.Read("/copieddir/nested/leaf.txt")
+		if err != nil || !bytes.Equal(leafGot, []byte("leaf content")) {
+			t.Errorf("copied leaf content mismatch: got %q err %v", leafGot, err)
+		}
+		// Verify the source directory is untouched.
+		srcChildren, err := client.ReadDir("/srcdir")
+		if err != nil || len(srcChildren) < 2 {
+			t.Errorf("source dir disappeared or changed: err %v len %d", err, len(srcChildren))
+		}
 	})
 }
