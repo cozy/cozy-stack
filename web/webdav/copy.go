@@ -101,20 +101,28 @@ func handleCopy(c echo.Context) error {
 	// RFC 4918 default is T (absent == T, per §10.6).
 	overwrite := c.Request().Header.Get("Overwrite") != "F"
 
-	// 9. Check if destination already exists.
+	// 9. Check if destination already exists (file or directory).
+	// RFC 4918 §9.8.4: Overwrite:T replaces the destination regardless of its
+	// type — a collection at the destination must be trashed just like a file.
 	destExisted := false
-	_, dstFile, err := fs.DirOrFileByPath(dstPath)
+	dstDir, dstFile, err := fs.DirOrFileByPath(dstPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return mapVFSWriteError(c, err)
 	}
-	if dstFile != nil {
+	if dstFile != nil || dstDir != nil {
 		if !overwrite {
 			return sendWebDAVError(c, http.StatusPreconditionFailed, "precondition-failed")
 		}
 		// Overwrite:T — trash the existing destination first.
 		destExisted = true
-		if _, err = vfs.TrashFile(fs, dstFile); err != nil {
-			return mapVFSWriteError(c, err)
+		if dstFile != nil {
+			if _, err = vfs.TrashFile(fs, dstFile); err != nil {
+				return mapVFSWriteError(c, err)
+			}
+		} else {
+			if _, err = vfs.TrashDir(fs, dstDir); err != nil {
+				return mapVFSWriteError(c, err)
+			}
 		}
 	}
 
