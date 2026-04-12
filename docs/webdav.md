@@ -534,3 +534,54 @@ Each write operation (PUT, DELETE, MKCOL, COPY, MOVE, PROPPATCH) also emits an
 audit log entry at INFO level containing the method, path, and authenticated
 instance domain. Refer to the cozy-stack logging documentation for log format details
 and log rotation configuration.
+
+## Compliance testing
+
+The WebDAV implementation is validated against the
+[litmus](http://www.webdav.org/neon/litmus/) test suite, the reference compliance
+checker for RFC 4918. The repository ships an orchestration script that automates the
+full lifecycle: create a disposable instance, generate a CLI token, run litmus against
+both routes, and destroy the instance on exit.
+
+### Prerequisites
+
+- cozy-stack running locally (`cozy-stack serve` in another terminal)
+- litmus installed (`apt install litmus` on Debian/Ubuntu)
+- `cozy-stack` binary on PATH
+
+### Running the tests
+
+```bash
+# Run all suites (basic, copymove, props, http, locks) against both routes
+make test-litmus
+
+# Or call the script directly
+scripts/webdav-litmus.sh
+
+# Run a single suite
+LITMUS_TESTS="copymove" scripts/webdav-litmus.sh
+
+# Dry-run — exercise the instance lifecycle without calling litmus
+scripts/webdav-litmus.sh --dry-run
+```
+
+The script tests both `/dav/files/` and `/remote.php/webdav/` in a single run. It
+exits 0 only when both routes have zero failed tests.
+
+### Expected results
+
+| Suite | Tests | Notes |
+|-------|-------|-------|
+| basic | 16/16 | PUT, GET, DELETE, MKCOL, UTF-8 paths |
+| copymove | 13/13 | COPY file, COPY collection, MOVE file, MOVE collection |
+| props | 30/30 | PROPFIND, PROPPATCH (in-memory dead properties) |
+| http | 4/4 | Expect: 100-continue handling |
+| locks | 3/3 (1 skipped) | Locking tests auto-skip — server advertises `DAV: 1` (Class 1 only) |
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Both routes passed (zero failed tests) |
+| 1 | One or both routes had failed tests |
+| 2 | Setup failure (missing binary, stack not running, litmus not installed) |
