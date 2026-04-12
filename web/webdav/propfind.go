@@ -3,11 +3,14 @@ package webdav
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/xml"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -22,9 +25,27 @@ import (
 // request count. The upper bound enforced by model/vfs is 256.
 const propfindDirIteratorBatch = 200
 
-// davFilesPrefix is the URL-space prefix clients see. Every <D:href> in
-// a PROPFIND response is built relative to this root.
+// davFilesPrefix is the canonical URL-space prefix for the /dav/files/ route.
 const davFilesPrefix = "/dav/files"
+
+// davNextcloudPrefix is the URL-space prefix for the Nextcloud-compatible route.
+const davNextcloudPrefix = "/remote.php/webdav"
+
+// hrefPrefixFor derives the URL prefix that should appear in <D:href> elements
+// based on the incoming request path. When a request arrives via the Nextcloud
+// compatibility route (/remote.php/webdav/...) the href elements must use
+// /remote.php/webdav as their root so that clients can round-trip the paths
+// they receive. All other requests (including /dav/files/...) use davFilesPrefix.
+//
+// This fixes the litmus propfind_d0 WARNING: "response href for wrong resource"
+// which fires when PROPFIND over /remote.php/webdav/ returns /dav/files/ hrefs.
+func hrefPrefixFor(c echo.Context) string {
+	reqPath := c.Request().URL.Path
+	if strings.HasPrefix(reqPath, davNextcloudPrefix) {
+		return davNextcloudPrefix
+	}
+	return davFilesPrefix
+}
 
 // handlePropfind implements RFC 4918 §9.1 PROPFIND for Depth:0 and Depth:1.
 //
@@ -61,7 +82,27 @@ func handlePropfind(c echo.Context) error {
 		return sendWebDAVError(c, http.StatusBadRequest, "bad-depth")
 	}
 
-	// 2. Path resolution — security boundary, runs BEFORE any VFS call
+	// 2. XML body validation — RFC 4918 §9.1 requires 400 for unparseable bodies.
+	// An empty body is valid (treated as allprop). A non-empty body that is not
+	// well-formed XML must be rejected.
+	//
+	// We consume the body entirely only for validation; we do not act on the
+	// parsed content (full <D:prop> filtering is a v2 feature). This addresses
+	// litmus propfind_invalid ("non-well-formed XML body") and propfind_invalid2
+	// ("invalid namespace declaration").
+	if r := c.Request(); r.ContentLength != 0 {
+		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, 64*1024))
+		if err != nil {
+			return sendWebDAVError(c, http.StatusBadRequest, "bad-request")
+		}
+		if len(bodyBytes) > 0 {
+			if err := validatePropfindXML(bodyBytes); err != nil {
+				return sendWebDAVError(c, http.StatusBadRequest, "bad-request")
+			}
+		}
+	}
+
+	// 3. Path resolution — security boundary, runs BEFORE any VFS call
 	rawParam := c.Param("*")
 	vfsPath, err := davPathToVFSPath(rawParam)
 	if err != nil {
@@ -69,7 +110,7 @@ func handlePropfind(c echo.Context) error {
 		return sendWebDAVError(c, http.StatusForbidden, "forbidden")
 	}
 
-	// 3. VFS lookup
+	// 4. VFS lookup
 	inst := middlewares.GetInstance(c)
 	dirDoc, fileDoc, err := inst.VFS().DirOrFileByPath(vfsPath)
 	if err != nil {
@@ -79,7 +120,7 @@ func handlePropfind(c echo.Context) error {
 		return err
 	}
 
-	// 4. Permission check — AUTH-05
+	// 5. Permission check — AUTH-05
 	var fetcher vfs.Fetcher
 	if dirDoc != nil {
 		fetcher = dirDoc
@@ -91,20 +132,25 @@ func handlePropfind(c echo.Context) error {
 		return sendWebDAVError(c, http.StatusForbidden, "forbidden")
 	}
 
-	// 5. Build responses
+	// 6. Determine href prefix — depends on which route handled this request
+	// (dav/files or remote.php/webdav). Fixes litmus propfind_d0 warning on
+	// the Nextcloud route ("response href for wrong resource").
+	hrefPrefix := hrefPrefixFor(c)
+
+	// 7. Build responses
 	responses := make([]Response, 0, 1)
 	if fileDoc != nil {
-		responses = append(responses, buildResponseForFile(fileDoc, vfsPath))
+		responses = append(responses, buildResponseForFileWithPrefix(fileDoc, vfsPath, hrefPrefix))
 	} else {
-		responses = append(responses, buildResponseForDir(dirDoc, vfsPath))
+		responses = append(responses, buildResponseForDirWithPrefix(dirDoc, vfsPath, hrefPrefix))
 		if depth == "1" {
-			if err := streamChildren(inst.VFS(), dirDoc, vfsPath, &responses); err != nil {
+			if err := streamChildrenWithPrefix(inst.VFS(), dirDoc, vfsPath, hrefPrefix, &responses); err != nil {
 				return err
 			}
 		}
 	}
 
-	// 6. Marshal and send with explicit Content-Length
+	// 8. Marshal and send with explicit Content-Length
 	body, err := marshalMultistatus(responses)
 	if err != nil {
 		return err
@@ -117,11 +163,35 @@ func handlePropfind(c echo.Context) error {
 	return werr
 }
 
+// validatePropfindXML parses the given bytes as XML and returns an error if
+// the XML is not well-formed (e.g., unclosed tags, invalid namespace bindings).
+// We use a permissive token-by-token scan so that clients can send non-DAV
+// XML bodies without false positives — we only reject what Go's xml.Decoder
+// considers a parse error.
+func validatePropfindXML(data []byte) error {
+	dec := xml.NewDecoder(strings.NewReader(string(data)))
+	for {
+		_, err := dec.Token()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+}
+
 // streamChildren iterates the immediate children of dir via DirIterator
 // (batched by propfindDirIteratorBatch) and appends one Response per child
 // into out. It does not buffer the full listing — memory is bounded by
 // the batch size.
 func streamChildren(fs vfs.VFS, dir *vfs.DirDoc, dirVFSPath string, out *[]Response) error {
+	return streamChildrenWithPrefix(fs, dir, dirVFSPath, davFilesPrefix, out)
+}
+
+// streamChildrenWithPrefix is like streamChildren but uses hrefPrefix for the
+// hrefs in each child response. Used by handlePropfind on the Nextcloud route.
+func streamChildrenWithPrefix(fs vfs.VFS, dir *vfs.DirDoc, dirVFSPath, hrefPrefix string, out *[]Response) error {
 	iter := fs.DirIterator(dir, &vfs.IteratorOptions{ByFetch: propfindDirIteratorBatch})
 	for {
 		d, f, err := iter.Next()
@@ -134,10 +204,10 @@ func streamChildren(fs vfs.VFS, dir *vfs.DirDoc, dirVFSPath string, out *[]Respo
 		switch {
 		case d != nil:
 			childVFSPath := path.Join(dirVFSPath, d.DocName)
-			*out = append(*out, buildResponseForDir(d, childVFSPath))
+			*out = append(*out, buildResponseForDirWithPrefix(d, childVFSPath, hrefPrefix))
 		case f != nil:
 			childVFSPath := path.Join(dirVFSPath, f.DocName)
-			*out = append(*out, buildResponseForFile(f, childVFSPath))
+			*out = append(*out, buildResponseForFileWithPrefix(f, childVFSPath, hrefPrefix))
 		}
 	}
 }
@@ -146,21 +216,30 @@ func streamChildren(fs vfs.VFS, dir *vfs.DirDoc, dirVFSPath string, out *[]Respo
 // block — RFC 4918 §14.22 mandates the literal "HTTP/1.1 200 OK" form.
 const propstatOK = "HTTP/1.1 200 OK"
 
-// hrefForDir builds the URL-space href for a directory. Collections MUST
-// carry a trailing slash per RFC 4918 §5.2 — clients use it to distinguish
-// a collection from a same-named file without inspecting <D:resourcetype>.
+// hrefForDir builds the URL-space href for a directory using the given prefix.
+// Collections MUST carry a trailing slash per RFC 4918 §5.2 — clients use it
+// to distinguish a collection from a same-named file without inspecting
+// <D:resourcetype>.
 func hrefForDir(vfsPath string) string {
-	href := davFilesPrefix + vfsPath
-	if href == davFilesPrefix || href[len(href)-1] != '/' {
+	return hrefForDirWithPrefix(vfsPath, davFilesPrefix)
+}
+
+func hrefForDirWithPrefix(vfsPath, prefix string) string {
+	href := prefix + vfsPath
+	if href == prefix || href[len(href)-1] != '/' {
 		href += "/"
 	}
 	return href
 }
 
 // hrefForFile builds the URL-space href for a file — the VFS path verbatim
-// under the /dav/files root, with no trailing slash.
+// under the dav root, with no trailing slash.
 func hrefForFile(vfsPath string) string {
 	return davFilesPrefix + vfsPath
+}
+
+func hrefForFileWithPrefix(vfsPath, prefix string) string {
+	return prefix + vfsPath
 }
 
 // baseProps fills the live properties shared by files and directories:
@@ -183,12 +262,19 @@ func baseProps(name string, createdAt, updatedAt time.Time) Prop {
 // 01-RESEARCH.md). The content-length and content-type properties are
 // omitted (zero-valued fields with omitempty struct tags).
 func buildResponseForDir(dir *vfs.DirDoc, vfsPath string) Response {
+	return buildResponseForDirWithPrefix(dir, vfsPath, davFilesPrefix)
+}
+
+// buildResponseForDirWithPrefix is like buildResponseForDir but uses the
+// given hrefPrefix instead of the default davFilesPrefix. Used by
+// handlePropfind to emit correct hrefs on the Nextcloud route.
+func buildResponseForDirWithPrefix(dir *vfs.DirDoc, vfsPath, hrefPrefix string) Response {
 	prop := baseProps(dir.DocName, dir.CreatedAt, dir.UpdatedAt)
 	prop.ResourceType = ResourceType{Collection: &struct{}{}}
 	prop.GetETag = etagForDir(dir)
 
 	return Response{
-		Href: hrefForDir(vfsPath),
+		Href: hrefForDirWithPrefix(vfsPath, hrefPrefix),
 		Propstat: []Propstat{{
 			Prop:   prop,
 			Status: propstatOK,
@@ -200,6 +286,13 @@ func buildResponseForDir(dir *vfs.DirDoc, vfsPath string) Response {
 // properties for a file. Mime falls back to application/octet-stream per
 // RFC 7231 §3.1.1.5 when the VFS has no stored content type.
 func buildResponseForFile(file *vfs.FileDoc, vfsPath string) Response {
+	return buildResponseForFileWithPrefix(file, vfsPath, davFilesPrefix)
+}
+
+// buildResponseForFileWithPrefix is like buildResponseForFile but uses the
+// given hrefPrefix instead of the default davFilesPrefix. Used by
+// handlePropfind to emit correct hrefs on the Nextcloud route.
+func buildResponseForFileWithPrefix(file *vfs.FileDoc, vfsPath, hrefPrefix string) Response {
 	mime := file.Mime
 	if mime == "" {
 		mime = "application/octet-stream"
@@ -212,7 +305,7 @@ func buildResponseForFile(file *vfs.FileDoc, vfsPath string) Response {
 	prop.GetContentType = mime
 
 	return Response{
-		Href: hrefForFile(vfsPath),
+		Href: hrefForFileWithPrefix(vfsPath, hrefPrefix),
 		Propstat: []Propstat{{
 			Prop:   prop,
 			Status: propstatOK,
