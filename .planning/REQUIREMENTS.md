@@ -81,7 +81,7 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
 - [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes) — end-to-end gowebdav client verification landed in 01-09
 - [ ] **TEST-05**: Tests de comportement WebDAV — couverture par transitivité via litmus Class 1 strict + E2E gowebdav. OnlyOffice mobile : validation manuelle reportée jusqu'à fix client v9.3.2+. **iOS/iPadOS Files app : validation manuelle déférée à v1.1** — best-effort en v1, couvert indirectement par litmus Class 1 strict sur les deux routes (`/dav/files/` et `/remote.php/webdav/`).
-- [ ] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
+- [x] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
 - [ ] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
 
 ### Scope reductions (Phase 3)

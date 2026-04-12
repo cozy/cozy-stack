@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v1.1
 milestone_name: milestone
-status: planning
-stopped_at: Phase 3 context gathered
-last_updated: "2026-04-11T18:27:55.319Z"
+status: executing
+stopped_at: "Completed 03-04-PLAN.md"
+last_updated: "2026-04-12T17:05:24Z"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 24
+  completed_plans: 15
 ---
 
 # Project State: Cozy WebDAV
@@ -26,14 +26,14 @@ progress:
 **New package:** `web/webdav/` (to be created)
 **Route registration:** `web/routing.go`
 
-**Current focus:** Phase 03 — COPY, Compliance, and Documentation
+**Current focus:** Phase 03 — copy-compliance-and-documentation
 
 ---
 
 ## Current Position
 
-Phase: 02 (write-operations) — COMPLETE
-Plan: 5 of 5 (all done)
+Phase: 03 (copy-compliance-and-documentation) — EXECUTING
+Plan: 5 of 10
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Plan: 5 of 5 (all done)
 | 02-write-operations P03 | 3min | 2 | 3 |
 | 02-write-operations P04 | 9min | 2 | 5 |
 | 02-write-operations P05 | 2min | 2 | 3 |
+| 03-copy-compliance P04 | 5min | 2 | 2 |
 
 ---
 
@@ -202,7 +203,7 @@ Items discovered during Phase 1 execution that are out of scope for Phase 1 but 
 
 ### FOLLOWUP-01 — Test-harness data race under `-race` (provisional slot: `01.1-race-harness`)
 
-**Status:** Ready to plan
+**Status:** Executing Phase 03
 **Blocks:** The `-race` invariant for any package that uses `testutils.NewSetup` + `GetTestInstance` more than once in the same `go test -race` process. Currently affects `web/webdav/` (exposed for the first time by plan 01-09's final sweep) and any other package doing the same stacking pattern.
 **Discovered in:** Plan 01-09 Task 2 (final race-enabled sweep).
 **Fully analysed in:** `.planning/phases/01-foundation/01-VALIDATION.md` → "Outstanding Gaps" → "Gap 1 — Pre-existing test-infrastructure race under `-race`".
