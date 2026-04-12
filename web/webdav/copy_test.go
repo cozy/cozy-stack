@@ -500,6 +500,19 @@ func TestCopy_Dir_OverwriteF_Existing(t *testing.T) {
 // TestCopy_Dir_207_PartialFailure: exercises the 207 Multi-Status path for
 // directory COPY when a per-file failure occurs mid-walk.
 //
+// Expected response shape when implemented (RFC 4918 §9.8.7):
+//
+//	HTTP/1.1 207 Multi-Status
+//	Content-Type: application/xml; charset=utf-8
+//
+//	<?xml version="1.0" encoding="utf-8"?>
+//	<D:multistatus xmlns:D="DAV:">
+//	  <D:response>
+//	    <D:href>/dav/files/dst/huge.txt</D:href>
+//	    <D:status>HTTP/1.1 507 Insufficient Storage</D:status>
+//	  </D:response>
+//	</D:multistatus>
+//
 // Engineering a quota overflow that only fails on a specific file is complex
 // in the test harness because the quota applies to the whole instance. The
 // per-file failure path (walker returning a non-nil copy error) is therefore
