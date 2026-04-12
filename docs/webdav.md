@@ -53,6 +53,46 @@ For example: `https://myinstance.mycozy.cloud/dav/files/`
 The root of both trees is the root of the user's Cozy Drive (equivalent to
 `/files/io.cozy.files.root-dir/` in the JSON:API).
 
+### Client compatibility with `/remote.php/webdav/`
+
+The Nextcloud-compatibility prefix exposes the **same WebDAV surface** as `/dav/files/`
+— same verbs, same XML, same auth, same error codes. Litmus conformance is identical
+on both routes (63/63).
+
+However, **the two routes target different client categories**:
+
+| Client behavior | Use `/dav/files/` | Use `/remote.php/webdav/` |
+|-----------------|-------------------|---------------------------|
+| User types the WebDAV URL manually | ✓ | ✓ |
+| Client auto-detects the URL pattern and switches to "Nextcloud mode" | ✓ | ✗ — will fail |
+
+Some clients — notably **OnlyOffice mobile**, the **Nextcloud official desktop sync**,
+and the **Nextcloud official mobile apps** — treat `/remote.php/` as a signal that the
+server is a full Nextcloud deployment. They then probe for the Nextcloud OCS API:
+
+```
+GET /remote.php              → expected: 200 or 302 (login page)
+GET /ocs/v1.php/cloud/capabilities   → expected: XML capability document
+```
+
+cozy-stack implements **none** of these endpoints (OCS is out of scope for v1 and v1.1).
+A client in "Nextcloud mode" will receive 401 or 404 on these probes and conclude that
+the URL is invalid — often **before** sending any credentials, so the error surfaces as
+"URL / login / password error" immediately after URL entry.
+
+**Recommendation:**
+
+- For clients that let you configure a raw WebDAV URL (rclone, cadaver, iOS Files,
+  GNOME/KDE file managers, curl) — both routes work identically; prefer `/dav/files/`.
+- For clients that have a "Nextcloud" or "ownCloud" preset mode (OO mobile configured as
+  Nextcloud, Nextcloud Files app, Nextcloud desktop sync) — **neither route will work**,
+  because the client expects full Nextcloud compatibility (OCS API + DocumentServer).
+  Use these clients in their generic WebDAV mode if they have one, pointing at
+  `/dav/files/`.
+
+This limitation is documented empirically in
+`.planning/phases/03-copy-compliance-and-documentation/03-MANUAL-VALIDATION-OO-MOBILE.md`.
+
 ## Authentication
 
 Two authentication mechanisms are accepted on all routes except OPTIONS:
@@ -344,22 +384,40 @@ curl -u ":$TOKEN" -X MOVE \
 
 ### OnlyOffice mobile
 
-OnlyOffice Documents (mobile) can connect to a Cozy instance using the Nextcloud
-compatibility endpoint.
+OnlyOffice Documents (mobile) connects to a Cozy instance using its **generic WebDAV
+mode**, not its Nextcloud mode (see
+[Client compatibility with `/remote.php/webdav/`](#client-compatibility-with-remotephpwebdav)
+for why).
 
 1. Open the app and tap **Add account**.
-2. Select **Nextcloud** as the server type.
-3. Enter the server URL:
+2. Select **WebDAV** as the server type (not Nextcloud).
+3. Enter the server URL pointing at the native route:
    ```
-   https://<instance-domain>
+   https://<instance-domain>/dav/files/
    ```
 4. Enter any string as the username (it is ignored by the server).
 5. Enter your OAuth access token as the password.
 
-**Note on OnlyOffice v9.3.1:** There is a known client bug (`LoginComponent null`) in
-OnlyOffice mobile v9.3.1 that prevents successful authentication. Update to v9.3.2 or
-later when available. The server-side implementation is correct and verified against
-the litmus test suite.
+**Known issue in OnlyOffice Documents v9.2.0 through v9.3.1.** A client-side regression
+introduced in v9.2.0 breaks WebDAV authentication against servers that don't expose the
+Nextcloud OCS API. The upstream error message is *"App token login name does not match"*.
+Affects both iOS and Android. Tracked on the ONLYOFFICE community forum; no fix released
+as of April 2026.
+
+**Workarounds:**
+
+- **Android** — side-load APK **v9.1.0** from the official GitHub releases
+  (`github.com/ONLYOFFICE/documents-app-android/releases/tag/v9.1.0-663`), disable
+  auto-update for the app. v9.1.0 predates the regression and is confirmed working
+  end-to-end against cozy-stack WebDAV (see validation trace in
+  `.planning/phases/03-copy-compliance-and-documentation/03-MANUAL-VALIDATION-OO-MOBILE.md`).
+- **iOS** — no simple workaround; the App Store does not permit downgrades. Wait for
+  a v9.3.2+ release or use another client.
+
+**Do not configure OnlyOffice mobile as "Nextcloud".** Even though cozy-stack exposes
+the `/remote.php/webdav/` compatibility route, selecting Nextcloud mode in OO triggers
+a Nextcloud-specific probe (`GET /remote.php`, `GET /ocs/v1.php/...`) that cozy-stack
+does not implement. The app will reject the URL immediately with a generic error.
 
 See [docs/office.md](./office.md) for documentation on the server-side OnlyOffice
 integration (document editing via the OnlyOffice Document Server, which is a separate

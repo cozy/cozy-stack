@@ -2,15 +2,26 @@
 phase: 03-copy-compliance-and-documentation
 type: manual-validation
 date: 2026-04-12
-status: passed
+status: mixed
 requirements: [TEST-05]
 ---
 
 # Validation manuelle — OnlyOffice Documents Android contre WebDAV Cozy
 
-## Résultat
+## Résumé par route
 
-**✓ PASSED** — Toutes les opérations testées depuis le client mobile OnlyOffice passent contre la route WebDAV Cozy.
+| Route | Résultat | Mode client |
+|-------|---------|-------------|
+| `/dav/files/` | **✓ PASSED** — toutes opérations OK | WebDAV générique |
+| `/remote.php/webdav/` | **✗ FAILED** — rejetée avant auth | Nextcloud (auto-détecté) |
+
+Le deuxième résultat est un **comportement attendu et documenté**, pas un bug serveur. Voir §*Test 2* plus bas.
+
+---
+
+## Test 1 — Route `/dav/files/`
+
+**✓ PASSED** — Toutes les opérations testées depuis le client mobile OnlyOffice passent contre la route WebDAV principale Cozy.
 
 ## Contexte
 
@@ -82,9 +93,76 @@ cozy-stack instances modify 192-168-1-189.nip.io:8080 --domain-aliases "127.0.0.
 
 Le même token CLI reste valide pour les deux domaines. Pattern utile pour les setups de dev.
 
+---
+
+## Test 2 — Route `/remote.php/webdav/`
+
+**✗ FAILED au niveau client** (comportement serveur correct et attendu).
+
+### Setup
+
+Identique au Test 1, seule l'URL change :
+
+- **URL entrée dans OO mobile** : `http://127.0.0.1:8080/remote.php/webdav/`
+- **Auth** : mêmes creds
+
+### Observation
+
+Dès la saisie de l'URL (avant même la validation du formulaire par l'utilisateur), le client affiche un message d'erreur générique "URL / login / password incorrect".
+
+### Trace serveur
+
+Les logs cozy-stack montrent la séquence suivante côté serveur :
+
+```
+GET /remote.php/webdav/  → 401  (probing 1)
+GET /remote.php/webdav/  → 401  (probing 2)
+GET /remote.php/webdav/  → 401  (probing 3)
+GET /remote.php          → 401
+GET /remote.php          → 401
+```
+
+Trois observations capitales :
+
+1. Le client utilise **GET** (pas PROPFIND) — c'est une phase de discovery/reconnaissance, pas encore une requête WebDAV.
+2. Aucun credential n'a été présenté (le client fait du probing anonyme avant même d'envoyer le token).
+3. Le client teste `/remote.php` en plus de `/remote.php/webdav/` — preuve qu'il remonte la hiérarchie pour chercher une page d'accueil Nextcloud.
+
+### Interprétation
+
+Le client OnlyOffice mobile, voyant le segment `/remote.php/` dans l'URL, **bascule automatiquement en mode "Nextcloud"**. Dans ce mode il attend :
+
+- `GET /remote.php` → 200 (page HTML) ou 302 (redirect vers login)
+- `GET /ocs/v1.php/cloud/capabilities` → XML des capabilities Nextcloud
+
+Comme cozy-stack renvoie 401 sur tous ces probes (on ne sert rien en GET anonyme sur ces routes), le client conclut "pas un Nextcloud valide" et rejette l'URL **sans jamais tenter de requête WebDAV authentifiée**.
+
+Le fait que litmus passe 63/63 sur `/remote.php/webdav/` ne contredit pas ce résultat : litmus est un client WebDAV pur qui envoie PROPFIND avec auth dès le départ, sans probing Nextcloud. Le handler serveur est correct — c'est le **comportement auto-discovery** du client qui échoue en amont.
+
+### Conclusion
+
+La route `/remote.php/webdav/` de cozy-stack a un **scope d'usage défini** :
+
+- ✓ **Compatible** avec les clients qui acceptent une URL WebDAV arbitraire saisie manuellement (rclone, cadaver, iOS Files, Nautilus, Dolphin, curl)
+- ✗ **Incompatible** avec les clients qui font du probing Nextcloud (OO mobile en mode Nextcloud, Nextcloud Desktop officiel, Nextcloud Files mobile officiel) — ces derniers nécessiteraient l'implémentation de l'API OCS, explicitement hors scope v1 et v1.1
+
+Cette limitation a été ajoutée à `docs/webdav.md` dans la section *Client compatibility with `/remote.php/webdav/`*.
+
+### Implication pour le client OnlyOffice mobile
+
+Pour connecter OO mobile (v9.1.0 ou future v9.3.2+) à Cozy, il faut :
+
+- Choisir le type de serveur **"WebDAV"** (et non "Nextcloud")
+- Utiliser l'URL **`/dav/files/`** (et non `/remote.php/webdav/`)
+
+La section `### OnlyOffice mobile` de `docs/webdav.md` a été mise à jour pour refléter ce workflow.
+
+---
+
 ## Liens
 
 - [ONLYOFFICE/documents-app-android v9.1.0-663 release](https://github.com/ONLYOFFICE/documents-app-android/releases/tag/v9.1.0-663)
 - [Thread forum ONLYOFFICE — bug v9.2+](https://community.onlyoffice.com/t/ios-app-9-2-breaks-webdav-nextcloud-support/17415)
 - `.planning/REQUIREMENTS.md` → section *Scope reductions (Phase 3)* — décision documentée du deferral
 - `docs/webdav.md` → section *Compliance testing* — procédure litmus
+- `docs/webdav.md` → section *Client compatibility with /remote.php/webdav/* — documentation du résultat de Test 2
