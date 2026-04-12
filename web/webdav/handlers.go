@@ -39,6 +39,8 @@ func handlePath(c echo.Context) error {
 		return handleDelete(c)
 	case "MKCOL":
 		return handleMkcol(c)
+	case "COPY":
+		return handleCopy(c)
 	case "MOVE":
 		return handleMove(c)
 	default:
