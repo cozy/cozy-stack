@@ -2,12 +2,18 @@ package webdav
 
 import (
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -172,6 +178,104 @@ func TestPropfind_NamespacePrefixInBody(t *testing.T) {
 	assert.Contains(t, body, "<D:prop>")
 	// No default-namespace form must leak onto children.
 	assert.NotContains(t, body, `xmlns="DAV:"`)
+}
+
+// --- Malformed XML request bodies (litmus propfind_invalid, propfind_invalid2) -----------
+
+// TestPropfind_MalformedXMLBody_Returns400 asserts that a PROPFIND request
+// carrying a non-well-formed XML body returns 400 Bad Request, not 207.
+// Reproduces litmus propfind_invalid: "PROPFIND with non-well-formed XML
+// request body got 207 response not 400".
+func TestPropfind_MalformedXMLBody_Returns400(t *testing.T) {
+	env := newWebdavTestEnv(t, nil)
+
+	// Non-well-formed XML — unclosed tag
+	env.E.Request("PROPFIND", "/dav/files/").
+		WithHeader("Authorization", "Bearer "+env.Token).
+		WithHeader("Depth", "0").
+		WithHeader("Content-Type", "application/xml").
+		WithBytes([]byte(`<?xml version="1.0" encoding="utf-8"?><D:propfind xmlns:D="DAV:`)).
+		Expect().
+		Status(http.StatusBadRequest)
+}
+
+// TestPropfind_InvalidNamespaceBody_Returns400 asserts that a PROPFIND request
+// carrying an invalid namespace declaration in the body returns 400 Bad Request.
+// Reproduces litmus propfind_invalid2: "PROPFIND with invalid namespace
+// declaration in body got 207 response not 400".
+func TestPropfind_InvalidNamespaceBody_Returns400(t *testing.T) {
+	env := newWebdavTestEnv(t, nil)
+
+	// Invalid namespace prefix in XML body — litmus sends this specific body
+	env.E.Request("PROPFIND", "/dav/files/").
+		WithHeader("Authorization", "Bearer "+env.Token).
+		WithHeader("Depth", "0").
+		WithHeader("Content-Type", "application/xml").
+		WithBytes([]byte(`<?xml version="1.0" encoding="utf-8"?><D:propfind xmlns:D="DAV:"><D:prop><D:getetag/></prop></D:propfind>`)).
+		Expect().
+		Status(http.StatusBadRequest)
+}
+
+// TestPropfind_EmptyBody_Returns207 asserts that a PROPFIND with no body
+// still returns 207 (empty body = allprop behavior should be preserved).
+func TestPropfind_EmptyBody_Returns207(t *testing.T) {
+	env := newWebdavTestEnv(t, nil)
+
+	env.E.Request("PROPFIND", "/dav/files/").
+		WithHeader("Authorization", "Bearer "+env.Token).
+		WithHeader("Depth", "0").
+		Expect().
+		Status(http.StatusMultiStatus)
+}
+
+// --- Nextcloud route href prefix (litmus propfind_d0 on /remote.php/webdav/) ---
+
+// TestPropfind_NextcloudRoute_HrefPrefix asserts that PROPFIND via the
+// /remote.php/webdav/ route returns hrefs prefixed with /remote.php/webdav/,
+// not /dav/files/. Reproduces the litmus propfind_d0 WARNING on the Nextcloud
+// route: "response href for wrong resource".
+//
+// The test uses GetTestServerMultipleRoutes to mount both route sets so that
+// both /dav/files/ and /remote.php/webdav/ are reachable on the same test server.
+func TestPropfind_NextcloudRoute_HrefPrefix(t *testing.T) {
+	if testing.Short() {
+		t.Skip("webdav integration tests require a cozy test instance")
+	}
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	setup := testutils.NewSetup(t, t.Name())
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   t.TempDir(),
+	}
+	inst := setup.GetTestInstance()
+	_, token := setup.GetTestClient(consts.Files)
+
+	ts := setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/dav":        Routes,
+		"/remote.php": NextcloudRoutes,
+	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	e := testutils.CreateTestClient(t, ts.URL)
+
+	_ = inst // instance is used implicitly via middleware
+
+	body := e.Request("PROPFIND", "/remote.php/webdav/").
+		WithHeader("Authorization", "Bearer "+token).
+		WithHeader("Depth", "0").
+		Expect().
+		Status(http.StatusMultiStatus).
+		Body().Raw()
+
+	// href must use the Nextcloud prefix
+	assert.Contains(t, body, "/remote.php/webdav/",
+		"PROPFIND via /remote.php/webdav/ must produce hrefs with /remote.php/webdav/ prefix")
+	assert.NotContains(t, body, "/dav/files/",
+		"PROPFIND via /remote.php/webdav/ must NOT produce /dav/files/ hrefs")
 }
 
 // --- All 9 live properties ----------------------------------------------
