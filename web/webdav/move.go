@@ -125,6 +125,12 @@ func handleMove(c echo.Context) error {
 		return mapVFSWriteError(c, err)
 	}
 
+	// Move dead (custom) properties from the old path to the new path so that
+	// PROPFIND on the destination reflects any properties set on the source.
+	// RFC 4918 §9.9.1 requires that the MOVE operation move associated dead
+	// properties along with the resource.
+	deadPropStore.movePropsForPath(inst.Domain, srcPath, dstPath)
+
 	// 9. Return status: 204 if destination was overwritten, 201 if new.
 	if destExisted {
 		return c.NoContent(http.StatusNoContent)

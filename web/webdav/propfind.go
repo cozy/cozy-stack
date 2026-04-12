@@ -139,6 +139,7 @@ func handlePropfind(c echo.Context) error {
 	hrefPrefix := hrefPrefixFor(c)
 
 	// 7. Build responses
+	domain := inst.Domain
 	responses := make([]Response, 0, 1)
 	if fileDoc != nil {
 		responses = append(responses, buildResponseForFileWithPrefix(fileDoc, vfsPath, hrefPrefix))
@@ -147,6 +148,18 @@ func handlePropfind(c echo.Context) error {
 		if depth == "1" {
 			if err := streamChildrenWithPrefix(inst.VFS(), dirDoc, vfsPath, hrefPrefix, &responses); err != nil {
 				return err
+			}
+		}
+	}
+
+	// Inject any dead (custom) properties stored by PROPPATCH into each response.
+	// For Depth:1, only the container itself gets its dead properties here;
+	// each child's VFS path is embedded in its Response.Href.
+	for i := range responses {
+		rspVFSPath := hrefToVFSPath(responses[i].Href, hrefPrefix)
+		if dp := buildDeadPropsXML(domain, rspVFSPath); len(dp) > 0 {
+			for j := range responses[i].Propstat {
+				responses[i].Propstat[j].Prop.DeadPropsXML = dp
 			}
 		}
 	}
@@ -325,6 +338,54 @@ func buildResponseForFileWithPrefix(file *vfs.FileDoc, vfsPath, hrefPrefix strin
 			Status: propstatOK,
 		}},
 	}
+}
+
+// hrefToVFSPath extracts the VFS path from an href by stripping the given
+// prefix and normalising the trailing slash. Used when injecting dead
+// properties into PROPFIND responses.
+func hrefToVFSPath(href, prefix string) string {
+	vfsPath := strings.TrimPrefix(href, prefix)
+	vfsPath = strings.TrimRight(vfsPath, "/")
+	if vfsPath == "" {
+		vfsPath = "/"
+	}
+	return vfsPath
+}
+
+// buildDeadPropsXML returns the raw XML bytes for all dead properties stored
+// under (domain, vfsPath). The bytes are suitable for injection into a
+// <D:prop> element via the DeadPropsXML ",innerxml" field.
+//
+// Each property element carries its own namespace declaration. Since these
+// are NOT self-closing elements (they have text content), the namespace
+// scope covers the full open..close range and neon/libxml2 parses them
+// correctly (unlike self-closing PROPPATCH echo elements).
+//
+// Returns nil if no dead properties exist for the resource.
+func buildDeadPropsXML(domain, vfsPath string) []byte {
+	stored := deadPropStore.listFor(domain, vfsPath)
+	if len(stored) == 0 {
+		return nil
+	}
+
+	var buf strings.Builder
+	for _, entry := range stored {
+		ns := entry.k.namespace
+		local := entry.k.local
+		value := entry.v
+
+		if ns == "" {
+			// No namespace — emit without prefix
+			fmt.Fprintf(&buf, `<%s>%s</%s>`, local, value, local)
+		} else {
+			// Use a per-element namespace declaration with dp: prefix.
+			// Non-self-closing elements keep the namespace in scope
+			// for both the value and the closing tag.
+			fmt.Fprintf(&buf, `<dp:%s xmlns:dp="%s">%s</dp:%s>`, local, ns, value, local)
+		}
+	}
+
+	return []byte(buf.String())
 }
 
 // etagForDir returns a deterministic quoted ETag for a directory. The

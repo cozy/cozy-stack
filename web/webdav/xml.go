@@ -50,7 +50,10 @@ type Propstat struct {
 	Status  string   `xml:"D:status"`
 }
 
-// Prop carries the nine WebDAV live properties this server supports.
+// Prop carries the nine WebDAV live properties this server supports, plus
+// an optional InnerXML field for dead (custom) properties stored in the
+// in-memory deadPropStore.
+//
 // Zero-valued string / int fields are omitted by the marshaller so the
 // same struct can describe both files and collections.
 type Prop struct {
@@ -64,6 +67,10 @@ type Prop struct {
 	CreationDate     string         `xml:"D:creationdate,omitempty"`
 	SupportedLock    *SupportedLock `xml:"D:supportedlock,omitempty"`
 	LockDiscovery    *LockDiscovery `xml:"D:lockdiscovery,omitempty"`
+	// DeadPropsXML holds raw XML for any dead (custom) properties stored by
+	// PROPPATCH. The ",innerxml" tag injects the bytes verbatim into the
+	// serialised <D:prop> element without additional encoding.
+	DeadPropsXML []byte `xml:",innerxml"`
 }
 
 // ResourceType encodes whether a resource is a regular file (empty) or a
