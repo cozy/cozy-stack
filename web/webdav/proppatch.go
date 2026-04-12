@@ -146,7 +146,28 @@ func parseProppatchProps(data []byte) ([]propName, error) {
 // Per RFC 4918 §9.2.2 a server MUST respond with a 403 for each property
 // it will not accept. The simplest conformant form is a single <D:propstat>
 // containing all rejected properties with <D:status>HTTP/1.1 403 Forbidden</D:status>.
+//
+// CRITICAL: All namespace declarations are collected and emitted on the
+// <D:prop> element (the common ancestor). Individual property elements are
+// self-closing without per-element xmlns declarations. This is required for
+// compatibility with libxml2/neon — when a namespace is declared on a
+// self-closing element (<ns1:foo xmlns:ns1="..."/>) the scope closes with
+// the element, leaving subsequent sibling elements unable to use the prefix.
 func buildProppatch403Response(href string, props []propName) []byte {
+	// First pass: collect all unique non-DAV namespaces and assign prefixes.
+	nsIndex := 0
+	nsPrefixes := map[string]string{"DAV:": "D", "": ""}
+	var nsList []struct{ prefix, uri string } // ordered for deterministic output
+	for _, p := range props {
+		ns := p.NS
+		if _, ok := nsPrefixes[ns]; !ok {
+			nsIndex++
+			prefix := "ns" + strconv.Itoa(nsIndex)
+			nsPrefixes[ns] = prefix
+			nsList = append(nsList, struct{ prefix, uri string }{prefix, ns})
+		}
+	}
+
 	var buf bytes.Buffer
 	buf.WriteString(`<?xml version="1.0" encoding="utf-8"?>`)
 	buf.WriteString("\n")
@@ -156,29 +177,28 @@ func buildProppatch403Response(href string, props []propName) []byte {
 	xml.EscapeText(&buf, []byte(href)) //nolint:errcheck
 	buf.WriteString(`</D:href>`)
 	buf.WriteString(`<D:propstat>`)
-	buf.WriteString(`<D:prop>`)
 
-	// Emit an empty element for each requested property using its original
-	// namespace. Properties without a namespace are emitted without a prefix.
-	nsIndex := 0
-	nsPrefixes := map[string]string{"DAV:": "D"}
+	// Emit <D:prop> with all custom namespace declarations on the opening tag
+	// so that child property elements can use the prefixes without re-declaring.
+	buf.WriteString(`<D:prop`)
+	for _, ns := range nsList {
+		buf.WriteString(` xmlns:`)
+		buf.WriteString(ns.prefix)
+		buf.WriteString(`="`)
+		xml.EscapeText(&buf, []byte(ns.uri)) //nolint:errcheck
+		buf.WriteString(`"`)
+	}
+	buf.WriteString(`>`)
+
+	// Second pass: emit property elements using the already-declared prefixes.
 	for _, p := range props {
 		ns := p.NS
-		prefix, ok := nsPrefixes[ns]
-		if !ok {
-			nsIndex++
-			prefix = "ns" + strconv.Itoa(nsIndex)
-			nsPrefixes[ns] = prefix
-			// Emit namespace declaration on the first element using this NS
+		prefix := nsPrefixes[ns]
+		if prefix == "" {
+			// No namespace — emit without prefix
 			buf.WriteString(`<`)
-			buf.WriteString(prefix)
-			buf.WriteString(`:`)
 			buf.WriteString(p.Local)
-			buf.WriteString(` xmlns:`)
-			buf.WriteString(prefix)
-			buf.WriteString(`="`)
-			xml.EscapeText(&buf, []byte(ns)) //nolint:errcheck
-			buf.WriteString(`"/>`)
+			buf.WriteString(`/>`)
 		} else {
 			buf.WriteString(`<`)
 			buf.WriteString(prefix)
