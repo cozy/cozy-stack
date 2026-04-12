@@ -79,6 +79,11 @@ system-tests:
 	@scripts/system-test.sh
 .PHONY: system-tests
 
+## test-litmus: run litmus WebDAV compliance suite against both routes (requires running cozy-stack + /usr/bin/litmus)
+test-litmus:
+	@scripts/webdav-litmus.sh
+.PHONY: test-litmus
+
 ## clean: clean the generated files and directories
 clean:
 	@rm -rf bin scripts/node_modules
