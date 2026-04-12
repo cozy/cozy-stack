@@ -55,9 +55,9 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **MOVE-03**: MOVE header `Overwrite` absent est traité comme `T` par défaut (conforme RFC 4918, contourne le bug `x/net/webdav` #66059)
 - [x] **MOVE-04**: MOVE `Overwrite: F` avec destination existante retourne 412 Precondition Failed
 - [x] **MOVE-05**: MOVE `Destination` header URL-decoded et validé contre path traversal
-- [ ] **COPY-01**: COPY fichier — via `vfs.CopyFile`
-- [ ] **COPY-02**: COPY dossier — walk récursif + `CopyFile` par fichier (acceptable pour v1)
-- [ ] **COPY-03**: COPY respecte les mêmes sémantiques `Overwrite` que MOVE
+- [x] **COPY-01**: COPY fichier — via `vfs.CopyFile`
+- [x] **COPY-02**: COPY dossier — walk récursif + `CopyFile` par fichier (acceptable pour v1)
+- [x] **COPY-03**: COPY respecte les mêmes sémantiques `Overwrite` que MOVE
 
 ### Security
 
@@ -69,10 +69,10 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 
 ### Documentation
 
-- [ ] **DOC-01**: Documentation des endpoints WebDAV dans `docs/` (méthodes supportées, auth, exemples)
-- [ ] **DOC-02**: Exemples de configuration pour OnlyOffice mobile et iOS Files
-- [ ] **DOC-03**: Notes de compatibilité (Finder read-only, pas de locking, limites PROPFIND)
-- [ ] **DOC-04**: Spécification OpenAPI ou équivalent si le repo en a pour les autres APIs
+- [x] **DOC-01**: Documentation des endpoints WebDAV dans `docs/` (méthodes supportées, auth, exemples)
+- [x] **DOC-02**: Exemples de configuration pour OnlyOffice mobile et iOS Files
+- [x] **DOC-03**: Notes de compatibilité (Finder read-only, pas de locking, limites PROPFIND)
+- [x] **DOC-04**: Spécification OpenAPI ou équivalent si le repo en a pour les autres APIs
 
 ### Testing (TDD strict)
 
@@ -80,9 +80,9 @@ Requirements pour la release initiale. Chaque requirement est mappé à une phas
 - [x] **TEST-02**: Tests unitaires path mapping (normalisation, traversal, edge cases)
 - [x] **TEST-03**: Tests d'intégration par méthode WebDAV utilisant `studio-b12/gowebdav` comme client (read-only surface complete via 01-09 `TestE2E_GowebdavClient`; write-verb integration lands in Phase 2)
 - [x] **TEST-04**: Tests d'intégration auth (Basic avec token, Bearer, 401, scopes) — end-to-end gowebdav client verification landed in 01-09
-- [ ] **TEST-05**: Tests de comportement WebDAV — couverture par transitivité via litmus Class 1 strict + E2E gowebdav. OnlyOffice mobile : validation manuelle reportée jusqu'à fix client v9.3.2+. **iOS/iPadOS Files app : validation manuelle déférée à v1.1** — best-effort en v1, couvert indirectement par litmus Class 1 strict sur les deux routes (`/dav/files/` et `/remote.php/webdav/`).
+- [x] **TEST-05**: Tests de comportement WebDAV — couverture par transitivité via litmus Class 1 strict + E2E gowebdav. OnlyOffice mobile : validation manuelle reportée jusqu'à fix client v9.3.2+. **iOS/iPadOS Files app : validation manuelle déférée à v1.1** — best-effort en v1, couvert indirectement par litmus Class 1 strict sur les deux routes (`/dav/files/` et `/remote.php/webdav/`).
 - [x] **TEST-06**: Suite litmus WebDAV compliance exécutée contre l'implémentation (RFC 4918 Class 1)
-- [ ] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
+- [x] **TEST-07**: Tous les commits suivent le cycle RED→GREEN→REFACTOR séparément
 
 ### Scope reductions (Phase 3)
 

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: executing
-stopped_at: "Completed 03-04-PLAN.md"
-last_updated: "2026-04-12T17:05:24Z"
+status: complete
+stopped_at: "Completed 03-10-PLAN.md — Phase 3 and all phases complete (53/53 requirements)"
+last_updated: "2026-04-12T15:05:44Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 24
-  completed_plans: 15
+  completed_plans: 24
 ---
 
 # Project State: Cozy WebDAV
@@ -32,8 +32,8 @@ progress:
 
 ## Current Position
 
-Phase: 03 (copy-compliance-and-documentation) — EXECUTING
-Plan: 5 of 10
+Phase: 03 (copy-compliance-and-documentation) — COMPLETE
+Plan: 10 of 10 (all phases complete)
 
 ## Performance Metrics
 
@@ -41,10 +41,10 @@ Plan: 5 of 10
 |--------|-------|
 | Phases total | 3 |
 | Requirements total | 53 |
-| Requirements complete | 43 (TEST-01, TEST-02, TEST-03, TEST-04, READ-01, READ-02, READ-03, READ-04, READ-05, READ-06, READ-07, READ-08, READ-09, READ-10, ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04, ROUTE-05, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, WRITE-01, WRITE-02, WRITE-03, WRITE-04, WRITE-05, WRITE-06, WRITE-07, WRITE-08, WRITE-09, MOVE-01, MOVE-02, MOVE-03, MOVE-04, MOVE-05) |
+| Requirements complete | 53/53 (all v1 requirements complete — Phase 3 closed) |
 | Requirements in progress | 0 |
-| Plans created | 9 |
-| Plans complete | 14 |
+| Plans created | 24 |
+| Plans complete | 24 |
 
 ### Plan Execution Log
 
@@ -65,6 +65,7 @@ Plan: 5 of 10
 | 02-write-operations P04 | 9min | 2 | 5 |
 | 02-write-operations P05 | 2min | 2 | 3 |
 | 03-copy-compliance P04 | 5min | 2 | 2 |
+| 03-copy-compliance P10 | 2min | 1 | 1 |
 
 ---
 
@@ -268,4 +269,11 @@ None for Phase 1 (shipped). See "Deferred Follow-ups" → FOLLOWUP-01 for the ha
 
 ---
 
-*Last updated: 2026-04-05 after executing Plan 01-09 (end-to-end gowebdav integration test + Phase 1 sign-off; harness race deferred to FOLLOWUP-01)*
+### Plan 03-10 Decisions (REQUIREMENTS.md Phase 3 bookkeeping)
+
+- **iOS/iPadOS Files app manual validation deferred to v1.1** — conscious decision per CONTEXT.md, not an oversight. v1 coverage is best-effort via litmus Class 1 strict compliance on both routes.
+- **CI litmus integration deferred post-v1** — `make test-litmus` runs locally only in Phase 3. CI slot (`.github/workflows/system-tests.yml`) identified but not touched.
+- **OnlyOffice mobile manual test blocked by client bug v9.3.1** — server is compliant; resumes when upstream fix v9.3.2+ is available.
+- **All 53/53 v1 requirements transitioned to Complete** — Phase 3 bookkeeping closed. REQUIREMENTS.md is now fully up-to-date.
+
+*Last updated: 2026-04-12 after executing Plan 03-10 (Phase 3 complete — REQUIREMENTS.md bookkeeping, iOS Files deferral documented, 53/53 requirements closed)*
