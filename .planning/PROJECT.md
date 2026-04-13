@@ -40,16 +40,32 @@ Un utilisateur peut monter son Cozy comme un lecteur réseau WebDAV depuis n'imp
 
 ### Active — v1.2 Robustness (started 2026-04-13)
 
-**Goal:** Au-delà de la conformité litmus (v1.1), valider que le serveur WebDAV tient la charge réelle : gros fichiers, transferts interrompus, accès concurrents. Plus combler la dette technique restante de v1.1 (FOLLOWUP-01 race harness, validation manuelle iOS Files, intégration CI litmus).
+**Goal:** Au-delà de la conformité litmus (v1.1), valider la **correction** du serveur WebDAV dans des scénarios réels non couverts par le standard : gros fichiers, transferts interrompus, accès concurrents de petite échelle. Plus combler la dette technique restante de v1.1 (FOLLOWUP-01 race harness, validation manuelle iOS Files, intégration CI litmus).
 
 **Target features:**
-- Gros fichiers end-to-end (upload + download multi-GB, streaming prouvé par mesure mémoire)
+- Gros fichiers end-to-end (upload + download multi-GB, streaming prouvé par mesure mémoire concurrente)
 - Byte-range GET complexe (single range + multipart/byteranges RFC 7233)
-- PUT interrompu + cohérence VFS + (décision à prendre) Content-Range PUT / chunked upload
-- Concurrence : deux clients, même path — sémantique déterministe + ETag cohérent
+- PUT interrompu + cohérence VFS (overwrite et création) + rejet explicite Content-Range PUT
+- Concurrence de petite échelle : 2-3 clients sur mêmes paths — sémantique déterministe + ETag cohérent + mapping CouchDB 409
 - FOLLOWUP-01 : fix de la race préexistante `pkg/config` / `model/stack` / `model/job`
 - Validation manuelle iOS Files app formal sign-off
 - CI litmus intégrée au pipeline GitHub Actions
+
+**⚠️ Explicitly NOT in scope — Load testing / stress testing / perf-at-scale:**
+
+Les tests v1.2 sont des tests de **correction** (correctness under concurrent access), **pas** des tests de charge. Sont explicitement exclus :
+
+- Tests à N clients massivement parallèles (10+, 100+, 1000+ clients)
+- Mesure de throughput maximal, latency percentiles sous charge
+- Tests d'endurance longue durée (heures/jours)
+- Tests de capacity planning (combien de connexions simultanées max)
+- Benchmark comparatif vs autres serveurs WebDAV
+
+**Raison :** Ces scénarios requièrent une infrastructure dédiée pour être représentatifs — réseau contrôlé, volumes de données réalistes, stack de monitoring (Prometheus + traces), multi-process coordonnés, isolation OS-level des ressources. Les faire dans un `go test` in-process produit des chiffres qui ne transposent pas en production et donnent une fausse assurance.
+
+**Si un jour nécessaire :** ces tests relèveront d'un milestone "Performance" dédié, probablement hors branche code (un repo `cozy-webdav-benchmarks/` séparé avec sa propre infra). Pas avant d'avoir un besoin produit précis (ex : une plainte utilisateur de lenteur ou un SLA à tenir).
+
+**Concurrence de petite échelle acceptée en v1.2 :** 2-3 goroutines in-process dans un `go test`, opérations sur les mêmes paths, vérifications de correction uniquement (pas de mesure de débit). Le benchmark throughput/latency du Phase LARGE reste informatif (un chiffre dans un SUMMARY), pas normatif (pas de seuil bloquant).
 
 ### Deferred (tracked for v1.2+)
 
