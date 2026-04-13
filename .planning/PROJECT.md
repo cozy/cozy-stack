@@ -38,9 +38,18 @@ Un utilisateur peut monter son Cozy comme un lecteur réseau WebDAV depuis n'imp
 - ✓ Suite litmus RFC 4918 Class 1 : 63/63 pass sur les deux routes — v1.1
 - ✓ Documentation endpoints complète (docs/webdav.md, 587 lignes, 27 exemples curl) — v1.1
 
-### Active
+### Active — v1.2 Robustness (started 2026-04-13)
 
-_Aucun requirement actif. Lance `/gsd:new-milestone` pour définir v1.2._
+**Goal:** Au-delà de la conformité litmus (v1.1), valider que le serveur WebDAV tient la charge réelle : gros fichiers, transferts interrompus, accès concurrents. Plus combler la dette technique restante de v1.1 (FOLLOWUP-01 race harness, validation manuelle iOS Files, intégration CI litmus).
+
+**Target features:**
+- Gros fichiers end-to-end (upload + download multi-GB, streaming prouvé par mesure mémoire)
+- Byte-range GET complexe (single range + multipart/byteranges RFC 7233)
+- PUT interrompu + cohérence VFS + (décision à prendre) Content-Range PUT / chunked upload
+- Concurrence : deux clients, même path — sémantique déterministe + ETag cohérent
+- FOLLOWUP-01 : fix de la race préexistante `pkg/config` / `model/stack` / `model/job`
+- Validation manuelle iOS Files app formal sign-off
+- CI litmus intégrée au pipeline GitHub Actions
 
 ### Deferred (tracked for v1.2+)
 
@@ -103,4 +112,4 @@ _Aucun requirement actif. Lance `/gsd:new-milestone` pour définir v1.2._
 - Potentiellement : intégration CI de litmus, persistence dead-properties, API OCS partielle (capabilities-only pour améliorer la compat clients Nextcloud)
 
 ---
-*Last updated: 2026-04-12 after v1.1 milestone completion*
+*Last updated: 2026-04-13 after v1.2 milestone kickoff*

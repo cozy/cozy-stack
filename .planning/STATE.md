@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: milestone
-status: completed
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-04-12T20:25:07.752Z"
+milestone: v1.2
+milestone_name: Robustness
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-04-13T00:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 24
-  completed_plans: 24
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: Cozy WebDAV
@@ -26,14 +26,16 @@ progress:
 **New package:** `web/webdav/` (to be created)
 **Route registration:** `web/routing.go`
 
-**Current focus:** Phase 03 — copy-compliance-and-documentation
+**Current focus:** v1.2 Robustness — defining requirements
 
 ---
 
 ## Current Position
 
-Phase: 03 (copy-compliance-and-documentation) — COMPLETE
-Plan: 10 of 10 (all phases complete)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v1.2 Robustness milestone
+Last activity: 2026-04-13 — Milestone v1.2 started (questioning + scope approved)
 
 ## Performance Metrics
 
