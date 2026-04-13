@@ -1,440 +1,302 @@
-# Feature Research: WebDAV API — Method and Property Requirements
+# Feature Research — v1.2 WebDAV Robustness
 
-**Domain:** WebDAV server — RFC 4918 pragmatic subset
-**Researched:** 2026-04-04
-**Confidence:** MEDIUM (wire-level client captures not available; derived from RFC 4918, sabre/dav client docs, Nextcloud compatibility reports, OnlyOffice community issues)
+**Domain:** WebDAV server robustness beyond RFC 4918 Class 1 litmus compliance
+**Researched:** 2026-04-12
+**Confidence:** HIGH (large-files/streaming), HIGH (interrupted-PUT), MEDIUM (Nextcloud chunked), HIGH (multi-range GET), HIGH (concurrency), MEDIUM (CI litmus), MEDIUM (iOS client matrix)
 
 ---
 
-## Clarification: iOS Files App vs. iOS/iPadOS Context
+## Scope Reminder
 
-The iOS/iPadOS native "Files" app does NOT support WebDAV natively. It only supports SMB connections. WebDAV access on iOS requires either:
-
-1. A third-party app that registers a File Provider Extension (FileBrowser Professional, etc.)
-2. A standalone WebDAV client app (WebDAV Navigator, WebDAV Manager, Documents by Readdle)
-3. **OnlyOffice Documents iOS/Android app** — which has its own built-in WebDAV client UI
-
-The PROJECT.md target "iOS/iPadOS Files app" most likely refers to:
-- The **OnlyOffice Documents iOS app** connecting via its built-in WebDAV client
-- Possibly a future Cozy Drive iOS app using a File Provider Extension backed by WebDAV
-
-This document researches what both OnlyOffice mobile (primary target) and generic iOS WebDAV clients require.
+v1.1 shipped litmus 63/63, streaming PUT via `io.Copy`, single-range GET via `http.ServeContent`. v1.2 targets real-world robustness that litmus does NOT exercise: multi-GB transfers, connection drops, concurrent writes, and formal client sign-off.
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes — Any Conforming WebDAV Client
+### Table Stakes (Users Expect These)
 
-These are the methods and behaviors a server MUST implement for ANY WebDAV client to function. RFC 4918 Class 1 compliance is the baseline.
+Features that a real WebDAV deployment must handle. Missing these = complaints from real clients (rclone, iOS) or data loss.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| `OPTIONS` response with `DAV: 1` header | Every WebDAV client sends OPTIONS first to discover capabilities; `DAV: 1` signals Class 1 compliance | LOW | Must include `Allow:` listing supported methods |
-| `PROPFIND` with Depth: 0 and Depth: 1 | Directory listing and resource metadata; core of WebDAV | MEDIUM | Must return 207 Multi-Status with XML body |
-| `PROPFIND` allprop and specific-prop requests | Clients use both; empty body = allprop per RFC | MEDIUM | Must handle absent body, `<allprop/>`, and `<prop>` variants |
-| `GET` file download | Retrieve file content | LOW | Standard HTTP, must include ETag and Last-Modified headers |
-| `HEAD` request | Clients probe existence and metadata without download | LOW | Same headers as GET but no body |
-| `PUT` file upload | Write file content | LOW | Must return 201 Created or 204 No Content; must handle chunked Transfer-Encoding |
-| `DELETE` file or folder | Remove resource | LOW | Recursive delete of collections per RFC; 204 No Content |
-| `MKCOL` create folder | Create directory/collection | LOW | 201 Created on success; 405 if resource exists |
-| `COPY` copy resource | Required by most file managers | MEDIUM | Requires `Destination:` header; `Overwrite: T/F` support; 207 for partial failures |
-| `MOVE` move/rename resource | Required by most file managers | MEDIUM | Same as COPY but deletes source; 207 for partial failures |
-| `207 Multi-Status` XML response | PROPFIND, COPY, MOVE, DELETE responses | MEDIUM | Must be well-formed XML in `DAV:` namespace with proper prefixing |
-| Standard PROPFIND live properties | Clients expect these to be populated | MEDIUM | See property list below |
-| `ETag` header on GET/HEAD/PUT responses | Cache validation; conditional requests | LOW | Must be a strong ETag (not weak); required by rclone and syncing clients |
-| `Content-Length` header on all responses | macOS Finder will produce "strange results" if absent | LOW | macOS Finder specifically requires this on every file response |
-| HTTPS support | Authentication over Basic Auth requires TLS | LOW | Already handled by cozy-stack infrastructure |
-| Authentication: Basic Auth (app passwords) | Primary auth for WebDAV clients that don't support OAuth | LOW | Cozy app-specific passwords mechanism |
+| **Large-file streaming PUT (multi-GB, provably bounded memory)** | rclone, iOS Files, and Nextcloud desktop clients routinely upload 2–5 GB files. A server that OOMs or times out on large uploads is broken for production use. | MEDIUM | `io.Copy` in `put.go` already streams (no full-buffer), but memory ceiling under load is **unmeasured**. Need benchmark: upload a 1 GB file and profile goroutine heap. Expected ceiling: < 32 MB RSS delta (only read-buffer overhead). Go's `io.Copy` uses 32 KB internal buffers; VFS Swift wraps that in an `ObjectPut` pipe. The critical variable is whether cozy-stack or Echo buffers the request body upstream of our handler — investigate `echo.Binder` and middleware. |
+| **Large-file streaming GET (multi-GB, 206 range serviced without full-read into RAM)** | Video players, rclone, and backup tools issue Range requests for sub-segments of large files. | LOW | `vfs.ServeFileContent` delegates to `http.ServeContent`, which opens a `io.ReadSeeker` and seeks rather than buffering. Already correct. Need E2E test with a >= 500 MB file to confirm no regression. |
+| **Interrupted PUT — no partial file visible to other clients** | RFC 4918 does not specify this, but de facto convention among all major implementations (sabre/dav, Apache mod_dav, ownCloud) is that an aborted PUT must leave the VFS in a consistent state: either the previous file (for overwrites) or no file (for creates). Partial files visible after a connection drop are a data-corruption bug. | MEDIUM | The cozy VFS Swift implementation's `Close()` already handles this: on error it calls `ObjectDelete` (removes the partial Swift object) and `DeleteFileDoc` (removes the new CouchDB entry). For overwrites, `olddoc` is retained until `Close()` succeeds. **Behavior is correct by design** — but it is not tested under simulated connection-drop conditions. Need a test that cancels the request context mid-transfer and asserts no partial file appears in PROPFIND. |
+| **Deterministic concurrent write semantics (If-Match + 412)** | When two clients race to write the same file, the outcome must be deterministic and not silently lose either write. The de facto standard (enforced by CouchDB MVCC) is optimistic concurrency: the second writer gets a 412 if it has a stale ETag, or last-write-wins if no ETag is asserted. | MEDIUM | `put.go` already calls `checkETagPreconditions` on overwrite. VFS uses CouchDB `_rev` which enforces sequential commit. The question is whether two concurrent writes *without* `If-Match` headers can corrupt each other. They can race at the CouchDB level, but CouchDB MVCC guarantees one wins with a valid document revision and the other gets a conflict error (which surfaces as a 500 today — should map to 409/503 with a clear message). Need a test: two goroutines PUT to the same path simultaneously, assert both get back a valid status (one 204, one 4xx) and the file is not corrupt. |
+| **Multi-range GET (RFC 7233 multipart/byteranges)** | Some backup tools and HTTP/1.1-aware clients coalesce multiple range requests into one. RFC 7233 requires servers to respond with `multipart/byteranges` when multiple ranges are requested. | LOW | **Already handled for free.** `vfs.ServeFileContent` delegates to `http.ServeContent`. Go issue #3784 (multi-range support) was fixed and released in Go 1.1+. The project targets Go 1.25. Multi-range GET requires zero implementation work. Validate with a test asserting that `Range: bytes=0-9,20-29` returns `206 multipart/byteranges`. |
+| **CI litmus integration (GitHub Actions)** | A compliance regression discovered only when manually running `make test-litmus` can ship unnoticed. Automated CI is the professional baseline. | LOW | The existing `go-tests.yml` workflow installs CouchDB manually. Adding `apt install litmus` and a start/stop for a real cozy-stack instance adds ~3 min to CI. The `owncloudci/litmus` Docker image (env vars `LITMUS_URL`, `LITMUS_USERNAME`, `LITMUS_PASSWORD`) offers an alternative with no host dependency on the litmus binary. The existing `scripts/webdav-litmus.sh` is reusable if we can start cozy-stack as a service step. |
 
-### PROPFIND Live Properties — Minimum Required Set
-
-Every conforming server must return these properties. Clients rely on them for display, caching, and navigation.
-
-| Property (DAV: namespace) | Type | Required For | Notes |
-|--------------------------|------|--------------|-------|
-| `DAV:resourcetype` | Live | ALL clients | `<collection/>` for folders, empty for files. Most critical property. |
-| `DAV:getlastmodified` | Live | ALL clients | HTTP date format (RFC 1123/7231). Finder requires UTC. |
-| `DAV:getcontentlength` | Live | ALL clients | Byte count for files. MUST be returned for files. |
-| `DAV:getetag` | Live | ALL clients | Strong ETag. Required for conditional requests and sync. |
-| `DAV:getcontenttype` | Live | ALL clients | MIME type. `application/octet-stream` fallback for unknowns. |
-| `DAV:displayname` | Live | Most clients | Human-readable name. MAY differ from URL segment. |
-| `DAV:creationdate` | Live | Some clients | ISO 8601 format. Not all servers populate this. |
-| `DAV:supportedlock` | Live | Class 2 servers only | Return empty `<supportedlock/>` on Class 1 servers. |
-| `DAV:lockdiscovery` | Live | Class 2 servers only | Return empty `<lockdiscovery/>` on Class 1 servers. |
-
-**Wire example — PROPFIND Depth: 1 response structure:**
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<D:multistatus xmlns:D="DAV:">
-  <D:response>
-    <D:href>/dav/files/</D:href>
-    <D:propstat>
-      <D:prop>
-        <D:resourcetype><D:collection/></D:resourcetype>
-        <D:displayname>files</D:displayname>
-        <D:getlastmodified>Mon, 07 Apr 2025 10:00:00 GMT</D:getlastmodified>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-  </D:response>
-  <D:response>
-    <D:href>/dav/files/document.docx</D:href>
-    <D:propstat>
-      <D:prop>
-        <D:resourcetype/>
-        <D:getcontentlength>12345</D:getcontentlength>
-        <D:getcontenttype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</D:getcontenttype>
-        <D:getetag>"abc123def456"</D:getetag>
-        <D:getlastmodified>Mon, 07 Apr 2025 09:00:00 GMT</D:getlastmodified>
-        <D:displayname>document.docx</D:displayname>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-  </D:response>
-</D:multistatus>
-```
-
-**Critical XML namespace note:** Windows Mini-Redirector cannot handle default namespace declarations (bare `xmlns="DAV:"`). All elements MUST use a `D:` prefix with `xmlns:D="DAV:"` on the root element. This is the safe cross-client format.
-
----
-
-### OnlyOffice Mobile — Specific Requirements (iOS + Android)
-
-Confidence: MEDIUM — derived from sabre/dav client docs, OnlyOffice community issues, GitHub issue #349, and Android overview docs.
-
-| Feature | Evidence | Complexity | Notes |
-|---------|----------|------------|-------|
-| PROPFIND for directory listing | Core operation; confirmed via community logs showing PROPFIND requests | LOW | Standard; Depth: 1 on collections |
-| GET for file download/opening | Confirmed: desktop issue #349 shows "PROPFIND and GET requests are sent" | LOW | Downloads file for local editing |
-| PUT for file save | Required for "upload files to WebDAV storage" capability | LOW | After local edit, PUT saves back |
-| MKCOL for folder creation | "Create new folders" listed in feature set | LOW | Standard |
-| DELETE for file/folder removal | "Remove files and folders" listed in feature set | LOW | Standard |
-| COPY / MOVE | "Copy and move files and folders" explicitly listed | MEDIUM | Both methods needed |
-| Basic Auth with app passwords | Mobile apps use username/password; OAuth not typical for generic WebDAV | LOW | Cozy app-specific passwords |
-| Nextcloud-compatible URL path | App has built-in Nextcloud preset using `/remote.php/webdav/` | LOW | Redirect from `/remote.php/webdav` → `/dav/files` already planned |
-| No LOCK/UNLOCK required | Confirmed via issue #349: OnlyOffice does NOT send LOCK requests for editing | LOW | Unlike MS Office, OO edits without locking — confirmed resolved in 2023 for desktop; mobile behavior similar |
-| PROPPATCH (optional) | Not confirmed as required for basic operation | MEDIUM | May be used for dead property storage by some workflows |
-
-**OnlyOffice mobile does NOT require:**
-- WebDAV locking (LOCK/UNLOCK) — confirmed from issue #349 and community reports
-- Any Nextcloud-specific properties (oc:fileid, oc:permissions, etc.)
-- REPORT method
-
-**Key compatibility risk:** OnlyOffice iOS 9.2 broke Nextcloud support due to username vs. full-name mismatch in auth. The cozy-stack implementation must ensure the authenticated username matches exactly what PROPFIND returns for user identity, and that subdirectory PROPFIND requests carry the same auth token as root requests.
-
----
-
-### iOS/iPadOS WebDAV Client Apps — Specific Requirements
-
-This covers apps like WebDAV Navigator, WebDAV Manager, Documents by Readdle, and any app acting as a File Provider using WebDAV as backend. These conform more strictly to RFC 4918.
-
-| Feature | Evidence | Complexity | Notes |
-|---------|----------|------------|-------|
-| PROPFIND `propname` requests | Cadaver uses it; some RFC-strict clients do property discovery | LOW | Must handle `<propname/>` returning 207 with property names only (no values) |
-| OPTIONS compliance check | All iOS WebDAV apps send OPTIONS before connecting | LOW | Response must include `DAV: 1` and `Allow: OPTIONS, GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE, PROPFIND, PROPPATCH` |
-| Proper 401 + WWW-Authenticate on unauth | Clients retry with credentials only if 401 has correct header | LOW | `WWW-Authenticate: Basic realm="Cozy"` |
-| Chunked PUT bodies | macOS/iOS WebDAV clients use chunked transfer for uploads | MEDIUM | Server MUST handle `Transfer-Encoding: chunked` in PUT; many naive servers fail with 411 |
-| PROPPATCH | RFC 4918 Class 1 compliance requires it | MEDIUM | Must return 207 even if no properties are writable (return 403 for read-only live props) |
-| Redirect handling for compat path | `/remote.php/webdav` → `/dav/files` 301 redirect | LOW | Clients that hardcode Nextcloud path |
-
----
-
-### Differentiators — Broader Client Support
-
-Features not required for v1 targets but valuable for broader adoption.
+### Differentiators (Nice-to-Have, Not Blocking)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| `rclone` compatibility | Power users sync/backup with rclone; very popular tool | LOW | rclone uses standard PROPFIND + GET/PUT/DELETE/MKCOL/MOVE; no locking needed |
-| `cadaver` CLI compatibility | Developer/sysadmin debugging tool | LOW | Uses propname PROPFIND; handle empty bodies gracefully |
-| macOS Finder read-only mode | Finder without locking works read-only | MEDIUM | Finder requires `Content-Length` on all responses; LOCK-less = read-only but functional |
-| ETag-based conditional requests (`If-Match`, `If-None-Match`) | Correct PUT semantics; prevents lost-update conflicts for sync clients | MEDIUM | Return 412 Precondition Failed when condition fails |
-| `X-OC-Mtime` header support | rclone + Nextcloud clients use this to preserve modification times | LOW | Non-standard but widely supported; allows rclone to sync mtimes |
-| PROPFIND Depth: infinity (limited) | Some clients request it; should return 403 or limited depth | LOW | Return 403 Forbidden or honor with pagination — security concern if deep trees |
-| `Overwrite: F` header on COPY/MOVE | RFC compliance; some clients send explicit non-overwrite | LOW | Return 412 if destination exists and Overwrite: F |
-| `creationdate` property populated | Some clients display creation date | LOW | Cozy VFS tracks creation dates |
+| **iOS Files app formal sign-off** | Confirmed working on the primary consumer iOS client. Required for any "production ready" claim. | LOW (effort) / HIGH (device dependency) | iOS Files app does not expose WebDAV natively — it requires Pages/Numbers/Keynote built-in WebDAV browser or a third-party file-provider extension. The practical test is adding cozy as a WebDAV server from the iOS Files app via a compatible third-party app (FileBrowser Pro, WebDAV Navigator). Manual checklist: connect (HTTPS required in prod), PROPFIND root, upload file, download file, rename (MOVE), delete, create folder (MKCOL). |
+| **Memory proof by measurement (benchmark with heap profiling)** | Converts "we stream correctly" from assertion to evidence, enables regression detection in CI. | LOW | Add a `BenchmarkPUT_1GB` that streams 1 GB of zero-bytes and calls `runtime.ReadMemStats` before/after, failing if delta > threshold (e.g. 64 MB). sabre/dav asserts 15 GB support with "no elevated memory_limit" — we should make the same claim with evidence. |
+| **Early 413 on quota-exceeded when Content-Length is known** | Clients benefit from an early 413 before the full body is read when the upload would exceed quota. | MEDIUM | Currently the VFS returns quota errors only at `file.Close()` time. If `Content-Length` is known, pre-check against remaining quota before starting the upload. Risk: TOCTOU window. Deferred unless quota-check speed becomes a complaint. |
+
+### Anti-Features (Explicitly Should NOT Add)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Nextcloud chunked upload protocol** (`/remote.php/dav/uploads/{user}/{upload-id}/{chunk-id}`) | Enables resumable large-file uploads; Nextcloud Desktop Sync client requires it. | (1) Nextcloud-proprietary, not RFC 4918. (2) Requires a new URL tree (`/uploads/`), new MKCOL/PUT/MOVE semantics for temp assembly dirs, a 24-hour cleanup job, and quota pre-checks via `OC-Total-Length`. Chunk size constraints: 5 MB–5 GB per chunk. (3) Only helps Nextcloud-dialect clients: Nextcloud Desktop Sync, Nextcloud iOS/Android app, rclone in `--webdav-vendor nextcloud` mode. Pure WebDAV clients (rclone default, iOS Files, OnlyOffice) already work fine with single streaming PUT. (4) Nextcloud Desktop Sync also requires OCS API capabilities negotiation, which is already explicitly out of scope. | Serve large files via single streaming PUT. Document the ceiling. Defer to a future Nextcloud API compatibility milestone if OCS API is ever scoped. |
+| **Content-Range PUT (partial/resumable PUT)** | Some FTP-migration tools and older clients use `Content-Range` on PUT to resume interrupted uploads. | RFC 7231 §4.3.4 explicitly states a server SHOULD respond 400 to a PUT with `Content-Range`. Apache mod_dav supports it as pre-RFC 7231 legacy. ownCloud explicitly refused to implement it (issue #1051). Lighttpd has it behind a `deprecated-unsafe-partial-put` flag disabled by default. Adding it creates correctness ambiguity (metadata, ETag, quota), opens partial-file visibility windows. Not required by any modern client in scope. | Return 400 Bad Request when `Content-Range` is present on PUT. Document this. |
+| **WebDAV LOCK / Class 2 compliance** | macOS Finder requires LOCK for writes; some editors use it. | Already out of scope in PROJECT.md. LOCK requires per-resource state, distributed lock manager, timeout handling, and client token management. VFS has no lock infrastructure. | Document the limitation. macOS Finder remains read-only. |
 
 ---
 
-### Anti-Features — Deliberately NOT Build
+## Feature Deep-Dives by Category
 
-| Anti-Feature | Why Requested | Why Problematic | What To Do Instead |
-|--------------|---------------|-----------------|-------------------|
-| `LOCK` / `UNLOCK` methods | macOS Finder requires them for read-write access; MS Office requires them | Cozy stack has no server-side locking mechanism; implementing fake locks creates data corruption risk | Advertise `DAV: 1` only (not `DAV: 1, 2`); accept that macOS Finder mounts read-only; OnlyOffice mobile doesn't need locks |
-| `DeltaV` (RFC 3253 versioning) | "Version history would be nice" | Massive complexity; Cozy does not expose version history via VFS API | Out of scope for v1; use ETag for cache consistency |
-| `CalDAV` / `CardDAV` | Contacts/Calendar sync via WebDAV | Completely different protocols; separate feature domain | Separate project |
-| `quota-available-bytes` / `quota-used-bytes` | Some clients display storage quota | Cozy quota is user-level, not per-WebDAV-collection; leaks internal billing info | Return 404 Not Found for these properties in PROPFIND |
-| PROPFIND Depth: infinity auto-allowed | RFC says SHOULD support it | Full-tree PROPFIND on a large account = DoS; Nextcloud blocked this for the same reason | Return 403 Forbidden for Depth: infinity; require pagination |
-| Anonymous/public access | "Allow sharing public folders" | Security perimeter breaks; crawl risk | All WebDAV requests require authenticated session |
-| Microsoft-specific extensions (`MS-Author-Via`, `X-MSDAVEXT`) | Windows XP web folders / SharePoint compat | Obsolete; Windows XP is EOL; modern Windows WebDAV works without these | Do not implement; return 400 if these are relied upon |
-| `PROPPATCH` for live property writes | Some clients try to set `getlastmodified` | RFC says live properties controlled by server; clients should accept 403 | Return 403 Forbidden for attempts to write live properties |
-| Nextcloud/ownCloud custom properties (oc:*) | OnlyOffice has Nextcloud preset | Not required for basic file browsing/editing; adds maintenance burden | Return 404 in propstat for any `oc:` namespace properties; clients gracefully ignore 404 propstats |
+### Category 1: Large Files
+
+**What major implementations do:**
+
+- **sabre/dav (PHP):** Uses PHP streams throughout, tested to 15 GB, requires `output_buffering=off` to prevent PHP runtime from buffering. Memory consumption is proportional to buffer sizes, not file size. Source: [sabre.io/dav/large-files/](https://sabre.io/dav/large-files/)
+- **Nextcloud/ownCloud:** Large file support is primarily a PHP/nginx configuration story. `upload_max_filesize` does not apply to WebDAV PUT — only PHP timeout matters. Apache 2.4.54+ changed `LimitRequestBody` default from unlimited to 1 GB. Source: [Nextcloud admin docs](https://docs.nextcloud.com/server/stable/admin_manual/configuration_files/big_file_upload_configuration.html)
+- **rclone WebDAV backend:** Had a 16 GB OOM bug caused by the `go-ntlmssp` auth library buffering the entire request body in RAM — not the WebDAV layer itself. Root cause: auth middleware, not transfer logic.
+
+**Implication for cozy-stack:** The risk is not in `put.go` (which uses `io.Copy` correctly) but in middleware layers above it: Echo body limits, `http.MaxBytesReader`, or any middleware that reads/copies the request body before the handler sees it. This must be verified by profiling, not assumed.
+
+**LOC estimate:** ~100 LOC (benchmark test + memory assertion). Zero production code change expected if middleware is clean.
+
+---
+
+### Category 2: Interrupted PUT
+
+**De facto conventions across implementations:**
+
+- **sabre/dav:** PHP streams; connection drop triggers PHP error handler; partial temp files cleaned up. VFS transaction not committed.
+- **Apache mod_dav:** Temp file + atomic rename. Connection drop = temp file deleted, destination untouched.
+- **reva (CS3):** Flagged as a known bug ([cs3org/reva#86](https://github.com/cs3org/reva/issues/86)). Without a transaction, partial uploads require explicit cleanup hooks. Consensus: atomic If-Match enforcement at storage finalization step.
+- **cozy-stack VFS Swift (`impl_v3.go`):** `Close()` deferred cleanup: on error, calls `c.ObjectDelete` (removes partial Swift object) + `DeleteFileDoc` (removes new CouchDB index entry). For overwrites: `olddoc` is preserved until `Close()` succeeds. This is the correct "atomic commit" pattern.
+
+**What needs testing:** Does `Close()` get called when the client drops the HTTP connection mid-transfer? In Go/Echo, if `c.Request().Body.Read()` returns an error (connection reset), `io.Copy` returns that error, and `put.go` calls `file.Close()` in the error path — yes, `Close()` is always called (see `put.go` lines 107–112). The partial cleanup will execute. But this is currently untested behavior.
+
+**LOC estimate:** ~80 LOC (integration test using `net.Pipe` to simulate connection drop mid-stream + PROPFIND assertion). Zero production code change expected.
+
+---
+
+### Category 3: Content-Range PUT and Nextcloud Chunked Upload
+
+**RFC 7231 stance:** §4.3.4 says Content-Range in PUT is an error; server SHOULD return 400. Not ambiguous.
+
+**Ecosystem support matrix:**
+
+| Server | Content-Range PUT | Notes |
+|--------|-------------------|-------|
+| Apache mod_dav | Yes | Legacy RFC 2616 behavior |
+| Nginx | No (501) | |
+| Lighttpd | Optional (`deprecated-unsafe-partial-put`, default off) | |
+| sabre/dav | No | |
+| ownCloud | No | Explicitly refused, issue #1051 |
+| cozy-stack v1.1 | Not rejected (ambiguous) | Should return 400 |
+
+**Nextcloud v2 chunked upload protocol (as of NC 15+):**
+
+1. `MKCOL /remote.php/dav/uploads/{user}/{uuid}` with `Destination` header pointing to final path
+2. `PUT /remote.php/dav/uploads/{user}/{uuid}/{chunk-number}` — chunks numbered 1–10000, 5 MB–5 GB each; `OC-Total-Length` header enables quota pre-check
+3. `MOVE /remote.php/dav/uploads/{user}/{uuid}/.file` — assembles and moves to destination; `X-OC-Mtime` header sets modification time
+4. Abort: `DELETE /remote.php/dav/uploads/{user}/{uuid}`
+5. Auto-cleanup of stale upload dirs after 24 hours
+
+Source: [Nextcloud Developer Docs — Chunked file upload](https://docs.nextcloud.com/server/stable/developer_manual/client_apis/WebDAV/chunking.html)
+
+**Who uses Nextcloud chunked upload?** Only Nextcloud-dialect clients: Nextcloud Desktop Sync, Nextcloud iOS/Android native app, rclone `--webdav-vendor nextcloud`. Pure WebDAV clients (rclone default, iOS Files, OnlyOffice) do NOT use it.
+
+**Decision:** Explicitly return `400 Bad Request` if `Content-Range` is present on PUT (~10 LOC in `put.go`). Do not implement Nextcloud chunked upload.
+
+---
+
+### Category 4: Multi-Range GET
+
+**Client usage reality:** Most WebDAV clients do not use multi-range GET. HTTP accelerators and some backup tools may coalesce ranges. RFC 7233 §4.1 states clients that cannot process `multipart/byteranges` MUST NOT request multiple ranges — this self-limits deployment.
+
+**Go's status:** `http.ServeContent` has supported multi-range GET (`multipart/byteranges`) since Go 1.1 ([issue #3784 — closed/fixed](https://github.com/golang/go/issues/3784)). Project uses Go 1.25. `vfs.ServeFileContent` calls `http.ServeContent(w, req, filename, doc.UpdatedAt, content)` directly. Multi-range GET is already supported with zero additional implementation work.
+
+**LOC estimate:** ~30 LOC (test asserting `Range: bytes=0-9,20-29` returns `206 multipart/byteranges` with correct boundary and part bodies). Zero production code change needed.
+
+---
+
+### Category 5: Concurrent Writes
+
+**Protection mechanisms in cozy-stack:**
+
+1. **CouchDB MVCC:** Every file update requires a correct `_rev`. Two concurrent writers compete; CouchDB guarantees one wins with a valid document and the other gets a 409 Conflict from CouchDB. The VFS currently maps this to a 500 — should be a 409 or 503.
+2. **VFS Swift `mu` lock (`ErrorRWLocker`):** `impl_v3.go` uses a distributed lock around all CouchDB index mutations. Two concurrent PUTs to the same file will serialize at the VFS lock — one proceeds, the other waits, then sees the updated document.
+3. **WebDAV `If-Match`:** `put.go` checks ETag preconditions on overwrite. A client with a stale ETag after another client updated the file receives `412 Precondition Failed`. This is correct WebDAV behavior.
+
+**Gap:** Without `If-Match`, it is last-write-wins (serialized by VFS lock). This is the same behavior as Apache mod_dav, sabre/dav, and ownCloud. WebDAV does not require LOCK for concurrency — LOCK is optional Class 2 behavior.
+
+**LOC estimate:** ~80 LOC (concurrent write test: two goroutines, assert no data corruption + both get valid HTTP status). ~20 LOC production fix to map CouchDB 409 conflicts to HTTP 409/503 instead of 500.
+
+---
+
+### Category 6: CI Litmus Integration
+
+**Existing infrastructure:**
+- `scripts/webdav-litmus.sh`: starts instance, gets token, runs litmus, destroys instance. Works locally.
+- `.github/workflows/go-tests.yml`: Ubuntu 22.04, installs CouchDB from apt. Does not start cozy-stack as a service.
+
+**Integration options:**
+
+1. **`apt install litmus` in the workflow + start `cozy-stack serve` as background process.** Litmus is in Ubuntu 22.04 apt as version 0.13. The existing script handles instance create/destroy. Requires building the stack binary and starting it with a minimal config.
+2. **`owncloudci/litmus` Docker image** ([owncloud-ci/litmus](https://github.com/owncloud-ci/litmus)): env vars `LITMUS_URL`, `LITMUS_USERNAME`, `LITMUS_PASSWORD`, `LITMUS_TIMEOUT`. No host binary dependency. Requires Docker services or `host` network mode to reach `localhost`.
+3. **Dedicated job `litmus` in a new workflow file** that: (a) installs `litmus` via apt, (b) builds and starts `cozy-stack serve` in background, (c) runs `scripts/webdav-litmus.sh`, (d) kills the stack. Only runs on one matrix row (Go 1.25 + CouchDB 3.3.3 is sufficient).
+
+**Recommendation:** Option 3 — new `webdav-litmus.yml` workflow, `apt install litmus`, build + start cozy-stack. Reuses existing script. Avoids Docker-in-Docker. Estimated time overhead: +4–6 min per run.
+
+**LOC estimate:** ~60 YAML lines (new workflow file). A minimal cozy-stack CI config template (~20 lines) may also be needed.
+
+---
+
+### Category 7: iOS Files App Client Matrix
+
+**iOS Files native WebDAV support:**
+- iOS Files app (iOS 11+) "Connect to Server" dialog supports SMB. WebDAV is **not directly exposed** from the native Files app without a third-party file provider extension.
+- Pages, Numbers, and Keynote have a built-in WebDAV browser that works natively.
+- Third-party apps (FileBrowser Pro, WebDAV Navigator, WebDAV Manager) register as file provider extensions and appear in the iOS Files sidebar.
+
+**Practical test approach for v1.2:**
+
+1. **Keynote/Pages WebDAV test** — Open Keynote, add WebDAV server (`https://{instance}/dav/files/`), browse, open a file. Tests PROPFIND + GET without requiring a third-party app.
+2. **FileBrowser Pro test** — Add cozy as WebDAV server, navigate, upload, download, rename, delete. Tests the full CRUD matrix.
+3. **WebDAV Navigator** — Simpler client, tests basic connectivity and browsing.
+
+**Manual test checklist (per client):**
+- [ ] Connect with Basic Auth (token-as-password)
+- [ ] PROPFIND root — directory listing loads
+- [ ] PROPFIND subdirectory — nested listing loads
+- [ ] GET (download file) — content correct
+- [ ] PUT small file (< 10 MB) — visible in PROPFIND after upload
+- [ ] PUT large file (>= 100 MB) — no timeout, content correct
+- [ ] MOVE (rename) — old path gone, new path appears
+- [ ] DELETE — file removed from listing
+- [ ] MKCOL (create folder) — appears in listing
+- [ ] Error case: GET non-existent path — 404 surfaces gracefully in client UI
+
+**LOC estimate:** Zero code. Human effort ~1–2 hours per client. Requires physical iOS device. HTTPS endpoint required for production (HTTP localhost acceptable for dev/lab testing).
 
 ---
 
 ## Feature Dependencies
 
 ```
-OPTIONS (advertise capabilities)
-    └──required by──> ALL other methods (clients check OPTIONS first)
+[Large-file streaming proof (benchmark)]
+    requires --> [io.Copy streaming PUT — exists in put.go]
+    requires --> [Echo middleware does not buffer body — verify first]
 
-PROPFIND (list + metadata)
-    └──required by──> Directory browsing
-    └──required by──> OnlyOffice open-file flow
-    └──required by──> rclone sync
+[Interrupted PUT test]
+    requires --> [VFS Close() cleanup on error — exists in impl_v3.go]
+    requires --> [net.Pipe or context-cancel simulation]
 
-GET (download)
-    └──required by──> OnlyOffice file editing (download to local then edit)
-    └──enhances──> ETag (conditional GET for caching)
+[Concurrent write test]
+    requires --> [VFS mu lock — exists]
+    may-require --> [CouchDB 409 -> HTTP 409/503 mapping fix ~20 LOC]
 
-PUT (upload)
-    └──required by──> OnlyOffice save-back after editing
-    └──enhances──> ETag + If-Match (safe overwrites)
+[Multi-range GET test]
+    requires --> [http.ServeContent Go 1.1+ — present, Go 1.25]
+    no production code change needed
 
-MKCOL (create folder)
-    └──required by──> OnlyOffice "create folder" UI
+[CI litmus job]
+    requires --> [cozy-stack serve start in CI — new config]
+    reuses --> [scripts/webdav-litmus.sh — exists]
 
-DELETE (remove)
-    └──required by──> OnlyOffice "delete" UI
-    └──required by──> MOVE (server-side: delete after copy)
+[iOS sign-off]
+    requires --> [physical iOS device]
+    requires --> [HTTPS endpoint or iOS trust bypass for local HTTP]
 
-COPY / MOVE (copy + rename)
-    └──requires──> DELETE (MOVE deletes source)
-    └──requires──> MKCOL (parent must exist)
-
-PROPPATCH (write dead properties)
-    └──required by──> RFC 4918 Class 1 (must implement, even if only to return 403)
-    └──optional──> dead property storage
-
-ETag (strong)
-    └──required by──> Conditional requests (If-Match, If-None-Match)
-    └──required by──> rclone sync correctness
-
-Auth (Basic + Bearer)
-    └──required by──> ALL methods
+[Content-Range PUT -> 400]
+    standalone ~10 LOC in put.go
 ```
+
+### Dependency Notes
+
+- **Large-file benchmark must verify middleware first:** If Echo or any middleware buffers the request body, the benchmark will expose this and require a middleware fix before the benchmark can pass. This is the first investigation point for Category 1.
+- **Interrupted PUT test has no production code dependency:** VFS cleanup is already correct. The test only needs to simulate the condition.
+- **CouchDB 409 mapping is a latent bug independent of the concurrency stress test.** It should be fixed regardless.
+- **Multi-range GET needs a test, not code:** Go already handles it. The test documents the behavior and guards against regression.
 
 ---
 
-## MVP Definition
+## MVP Definition for v1.2
 
-### Launch With (v1) — OnlyOffice Mobile + Generic WebDAV Clients
+### Launch With (v1.2 core)
 
-- [x] `OPTIONS` — with `DAV: 1`, `Allow:` header listing all supported methods
-- [x] `PROPFIND` — Depth: 0, Depth: 1; allprop, specific-prop, propname; 207 Multi-Status XML
-- [x] `GET` — file download with `ETag`, `Last-Modified`, `Content-Length`
-- [x] `HEAD` — same as GET sans body
-- [x] `PUT` — file upload; support `Transfer-Encoding: chunked`; return ETag on response
-- [x] `DELETE` — files and folders (recursive on collections)
-- [x] `MKCOL` — create folder
-- [x] `COPY` — with `Destination:` and `Overwrite:` headers
-- [x] `MOVE` — with `Destination:` and `Overwrite:` headers (rename + move)
-- [x] `PROPPATCH` — must exist; return 403 for live props; 200/207 for dead props
-- [x] Live properties: `resourcetype`, `getlastmodified`, `getcontentlength`, `getetag`, `getcontenttype`, `displayname`, `creationdate`
-- [x] 401 + `WWW-Authenticate: Basic` for unauthenticated requests
-- [x] Redirect `/remote.php/webdav` → `/dav/files` (301)
-- [x] `Content-Length` on ALL responses (required by macOS Finder)
-- [x] Namespace-prefixed XML (`xmlns:D="DAV:"` with `D:` prefix) — required by Windows Mini-Redirector
+- [ ] **FOLLOWUP-01 race harness fix** — pre-existing race in `pkg/config`/`model/stack`/`model/job`. Blocks `-race` usage in CI. Not WebDAV code but blocks clean testing. (~50–100 LOC in test harness)
+- [ ] **Content-Range PUT -> 400** — explicit rejection per RFC 7231. ~10 LOC in `put.go`. Closes ambiguous behavior.
+- [ ] **Interrupted PUT test** — verify no partial file visible after connection drop. Zero production code expected; ~80 LOC test. Closes a real data-integrity question.
+- [ ] **Large-file streaming benchmark** — 1 GB upload with heap profiling and ceiling assertion. ~100 LOC. Converts "streaming" from claim to evidence.
+- [ ] **Multi-range GET test** — assert `Range: bytes=0-9,20-29` returns `206 multipart/byteranges`. ~30 LOC. Zero production code.
+- [ ] **Concurrent write test** + CouchDB 409 mapping fix — two goroutines PUT same path, assert deterministic outcome. ~80 LOC test + ~20 LOC fix.
+- [ ] **CI litmus integration** — new GitHub Actions workflow calling `scripts/webdav-litmus.sh`. ~60 YAML lines. Closes the automation debt deferred from v1.1.
 
-### Add After Validation (v1.x)
+### Add After Validation (v1.2+)
 
-- [ ] `ETag`-based conditional request handling (`If-Match`, `If-None-Match`, `If-Modified-Since`) — adds sync safety; trigger: first user reports lost-update issues
-- [ ] `X-OC-Mtime` header support for rclone mtime preservation — trigger: rclone user requests
-- [ ] PROPFIND Depth: infinity → 403 explicit rejection with proper error body — trigger: security audit
-- [ ] Pagination for large directory listings — trigger: performance testing with large account
+- [ ] **iOS Files formal sign-off** — requires physical iOS device. Checklist above. Zero code, human effort ~1–2 hours.
+- [ ] **Quota pre-check on known Content-Length** — early 413 before body read. ~50 LOC. Low priority unless quota issues reported by users.
 
 ### Future Consideration (v2+)
 
-- [ ] macOS Finder read-write mode — requires LOCK/UNLOCK and Cozy-level file locking mechanism; major architectural change
-- [ ] CalDAV / CardDAV — separate protocol; completely different feature set
-- [ ] File Provider Extension for native iOS Files app — requires separate iOS app development; out of scope for cozy-stack
+- [ ] **Nextcloud chunked upload protocol** — only valuable if OCS API is scoped and Nextcloud Desktop Sync becomes a target client.
+- [ ] **PROPPATCH CouchDB persistence** — dead properties lost on restart. Currently in-memory only.
+- [ ] **WebDAV LOCK (Class 2)** — required for macOS Finder read-write. Needs VFS lock subsystem redesign.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | Client Value | Implementation Cost | Priority |
-|---------|-------------|---------------------|----------|
-| PROPFIND (Depth 0+1, allprop, prop) | HIGH | MEDIUM | P1 |
-| OPTIONS with DAV: 1 header | HIGH | LOW | P1 |
-| GET + HEAD with ETag | HIGH | LOW | P1 |
-| PUT (chunked-safe) | HIGH | LOW-MEDIUM | P1 |
-| DELETE (recursive) | HIGH | LOW | P1 |
-| MKCOL | HIGH | LOW | P1 |
-| MOVE + COPY | HIGH | MEDIUM | P1 |
-| PROPPATCH (even if mostly 403) | MEDIUM | LOW | P1 |
-| Live property set (resourcetype, getetag, etc.) | HIGH | MEDIUM | P1 |
-| Redirect /remote.php/webdav | MEDIUM | LOW | P1 |
-| Namespace-prefixed XML responses | HIGH | LOW | P1 |
-| Content-Length on all responses | HIGH | LOW | P1 |
-| Conditional requests (If-Match) | MEDIUM | MEDIUM | P2 |
-| X-OC-Mtime support | LOW | LOW | P2 |
-| PROPFIND propname variant | LOW | LOW | P2 |
-| Depth: infinity → 403 | MEDIUM | LOW | P2 |
-| LOCK / UNLOCK | LOW (breaks architecture) | HIGH | NEVER (v1) |
-| CalDAV / CardDAV | N/A | HIGH | NEVER (separate project) |
-| quota properties | LOW | MEDIUM | NEVER (leaks billing) |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| FOLLOWUP-01 race fix | HIGH (enables -race CI) | LOW (~100 LOC) | P1 |
+| Content-Range PUT -> 400 | MEDIUM (correctness/spec) | LOW (~10 LOC) | P1 |
+| Interrupted PUT test | HIGH (data integrity) | LOW (~80 LOC) | P1 |
+| Large-file streaming benchmark | HIGH (production confidence) | LOW (~100 LOC) | P1 |
+| Multi-range GET test | LOW (already works, guard only) | LOW (~30 LOC) | P1 |
+| Concurrent write test + 409 fix | MEDIUM (correctness) | LOW-MEDIUM (~100 LOC) | P1 |
+| CI litmus integration | HIGH (regression safety) | LOW-MEDIUM (~60 YAML) | P2 |
+| iOS sign-off | HIGH (client compat) | LOW code / requires device | P2 |
+| Nextcloud chunked upload | LOW for current clients | HIGH (~500+ LOC + cleanup job) | P3 |
+| PROPPATCH CouchDB persistence | LOW (in-memory passes litmus) | MEDIUM (~200 LOC) | P3 |
+| WebDAV LOCK / Class 2 | HIGH (macOS Finder writes) | VERY HIGH (subsystem redesign) | P3 |
+
+**Priority key:**
+- P1: Ship in v1.2 core
+- P2: Ship in v1.2 if device/CI available
+- P3: Defer to v2+
 
 ---
 
-## Client-Specific Compatibility Matrix
+## Competitor Feature Analysis
 
-| Method / Feature | OnlyOffice mobile | Generic iOS WebDAV apps | rclone | cadaver | macOS Finder | Windows WebDAV |
-|------------------|:-----------------:|:-----------------------:|:------:|:-------:|:------------:|:--------------:|
-| OPTIONS | Required | Required | Required | Required | Required | Required |
-| PROPFIND Depth:0 | Required | Required | Required | Required | Required | Required |
-| PROPFIND Depth:1 | Required | Required | Required | Required | Required | Required |
-| PROPFIND allprop | Required | Required | Required | — | Required | Required |
-| PROPFIND propname | — | Possible | — | Required | — | — |
-| GET | Required | Required | Required | Required | Required | Required |
-| HEAD | Required | Required | Required | — | Required | Required |
-| PUT | Required | Required | Required | Required | Read-only* | Required |
-| DELETE | Required | Required | Required | Required | Read-only* | Required |
-| MKCOL | Required | Required | Required | Required | Read-only* | Required |
-| COPY | Required | Possible | Required | Required | Read-only* | Required |
-| MOVE | Required | Possible | Required | Required | Read-only* | Required |
-| PROPPATCH | — | RFC Class 1 | — | Possible | — | — |
-| LOCK / UNLOCK | NOT required | — | — | — | Required for RW | Required for RW |
-| ETag strong | Expected | Expected | Required | — | Expected | — |
-| Content-Length | Expected | Expected | — | — | **REQUIRED** | — |
-| Chunked PUT | — | — | — | — | **REQUIRED** | — |
-| DAV: 1 in OPTIONS | — | Expected | — | — | Expected | Required |
-| DAV: 2 in OPTIONS | NOT needed | — | — | — | Required for RW | Required for RW |
-
-*macOS Finder is read-only without LOCK/UNLOCK (Class 2). This is acceptable for v1.
-
----
-
-## Wire-Level Request/Response Examples
-
-### OPTIONS (server discovery)
-
-**Request:**
-```
-OPTIONS /dav/files HTTP/1.1
-Host: user.cozy.io
-```
-
-**Response:**
-```
-HTTP/1.1 200 OK
-DAV: 1
-Allow: OPTIONS, GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE, PROPFIND, PROPPATCH
-Content-Length: 0
-```
-
-### PROPFIND (directory listing)
-
-**Request:**
-```
-PROPFIND /dav/files/ HTTP/1.1
-Host: user.cozy.io
-Depth: 1
-Content-Type: application/xml; charset=utf-8
-
-<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-  <D:prop>
-    <D:resourcetype/>
-    <D:getlastmodified/>
-    <D:getcontentlength/>
-    <D:getetag/>
-    <D:getcontenttype/>
-    <D:displayname/>
-  </D:prop>
-</D:propfind>
-```
-
-**Response:**
-```
-HTTP/1.1 207 Multi-Status
-Content-Type: application/xml; charset=utf-8
-
-<?xml version="1.0" encoding="UTF-8"?>
-<D:multistatus xmlns:D="DAV:">
-  <D:response>
-    <D:href>/dav/files/</D:href>
-    <D:propstat>
-      <D:prop>
-        <D:resourcetype><D:collection/></D:resourcetype>
-        <D:displayname>files</D:displayname>
-        <D:getlastmodified>Mon, 07 Apr 2025 10:00:00 GMT</D:getlastmodified>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-    <D:propstat>
-      <D:prop>
-        <D:getcontentlength/>
-        <D:getetag/>
-        <D:getcontenttype/>
-      </D:prop>
-      <D:status>HTTP/1.1 404 Not Found</D:status>
-    </D:propstat>
-  </D:response>
-  <D:response>
-    <D:href>/dav/files/report.docx</D:href>
-    <D:propstat>
-      <D:prop>
-        <D:resourcetype/>
-        <D:displayname>report.docx</D:displayname>
-        <D:getlastmodified>Fri, 04 Apr 2025 08:00:00 GMT</D:getlastmodified>
-        <D:getcontentlength>54321</D:getcontentlength>
-        <D:getetag>"5f3b9a12c"</D:getetag>
-        <D:getcontenttype>application/vnd.openxmlformats-officedocument.wordprocessingml.document</D:getcontenttype>
-      </D:prop>
-      <D:status>HTTP/1.1 200 OK</D:status>
-    </D:propstat>
-  </D:response>
-</D:multistatus>
-```
-
-**Key implementation note:** Requested properties that do not exist on a resource MUST be returned in a separate `<propstat>` with `404 Not Found` status — not silently omitted and not causing the whole response to fail.
-
-### MKCOL (create folder)
-
-**Request:**
-```
-MKCOL /dav/files/NewFolder HTTP/1.1
-Host: user.cozy.io
-```
-
-**Response (success):** `HTTP/1.1 201 Created`
-
-**Response (already exists):** `HTTP/1.1 405 Method Not Allowed`
-
-### MOVE (rename)
-
-**Request:**
-```
-MOVE /dav/files/old-name.docx HTTP/1.1
-Host: user.cozy.io
-Destination: https://user.cozy.io/dav/files/new-name.docx
-Overwrite: T
-```
-
-**Response (success, no prior destination):** `HTTP/1.1 201 Created`
-
-**Response (success, overwrote destination):** `HTTP/1.1 204 No Content`
+| Feature | Apache mod_dav | sabre/dav (Nextcloud) | cozy-stack v1.1 | cozy-stack v1.2 target |
+|---------|---------------|----------------------|-----------------|------------------------|
+| Large file streaming | Yes (temp file + kernel splice) | Yes (PHP streams, <=15 GB claimed) | Yes (io.Copy, unmeasured ceiling) | Yes + measured ceiling (benchmark) |
+| Interrupted PUT atomicity | Yes (temp rename) | Yes (PHP error handler) | Yes (VFS Close cleanup, untested) | Yes + test coverage |
+| Content-Range PUT | Yes (legacy RFC 2616) | No | Ambiguous (not rejected) | Explicit 400 |
+| Multi-range GET | Yes | Yes | Yes (via http.ServeContent, untested) | Yes + test coverage |
+| Nextcloud chunked upload | No | Yes (proprietary) | No | No (anti-feature, out of scope) |
+| Concurrent write safety | Last-write-wins (no LOCK) | Last-write-wins + optional LOCK | Last-write-wins (If-Match enforced, 409 maps to 500) | Last-write-wins + test + 409 fix |
+| CI compliance testing | Optional | Yes (extensive) | Manual only (make test-litmus) | Automated GitHub Actions |
 
 ---
 
 ## Sources
 
-- [RFC 4918 — HTTP Extensions for Web Distributed Authoring and Versioning](https://www.rfc-editor.org/rfc/rfc4918.html) — authoritative standard
-- [sabre/dav — Finder client quirks](https://sabre.io/dav/clients/finder/) — MEDIUM confidence; documents real-world Finder behavior
-- [sabre/dav — Windows client quirks](https://sabre.io/dav/clients/windows/) — MEDIUM confidence; documents XML namespace requirements
-- [sabre/dav — Clients overview](https://sabre.io/dav/clients/) — MEDIUM confidence
-- [Nextcloud WebDAV Basic API docs](https://docs.nextcloud.com/server/20/developer_manual/client_apis/WebDAV/basic.html) — HIGH confidence for what properties matter to clients
-- [OnlyOffice Android app overview](https://helpcenter.onlyoffice.com/mobile/android/documents/overview.aspx) — MEDIUM confidence; lists supported file operations
-- [OnlyOffice iOS app overview](https://helpcenter.onlyoffice.com/mobile/ios/documents/overview.aspx) — MEDIUM confidence
-- [OnlyOffice community — iOS 9.2 breaks WebDAV/Nextcloud](https://community.onlyoffice.com/t/ios-app-9-2-breaks-webdav-nextcloud-support/17415) — MEDIUM confidence; real-world auth bug
-- [OnlyOffice DesktopEditors issue #349 — editor won't lock documents in WebDAV](https://github.com/ONLYOFFICE/DesktopEditors/issues/349) — HIGH confidence; confirms no LOCK needed
-- [golang.org/x/net webdav/prop.go](https://github.com/golang/net/blob/master/webdav/prop.go) — HIGH confidence; standard Go WebDAV live properties
-- [WebDAV Class 2 server creation guide](https://www.webdavsystem.com/server/documentation/creating_class_2_webdav_server) — MEDIUM confidence; describes Class 1 vs 2
-- [PROPFIND davwiki](https://github.com/dmfs/davwiki/wiki/PROPFIND) — MEDIUM confidence; PROPFIND behavior documentation
+- [sabre/dav Large Files documentation](https://sabre.io/dav/large-files/) — streaming architecture, 15 GB claim, output_buffering requirement — HIGH confidence (official docs)
+- [Nextcloud Chunked Upload Developer Docs](https://docs.nextcloud.com/server/stable/developer_manual/client_apis/WebDAV/chunking.html) — chunk URL structure, MKCOL/PUT/MOVE protocol, OC-Total-Length, 24h cleanup, 5 MB-5 GB chunk size — HIGH confidence (official docs)
+- [ownCloud issue #1051: Content-Range PUT explicitly refused](https://github.com/owncloud/core/issues/1051) — ecosystem precedent for rejecting Content-Range PUT — MEDIUM confidence (issue tracker)
+- [golang/go issue #3784: multi-range ServeContent — FIXED](https://github.com/golang/go/issues/3784) — confirmed fixed Go 1.1+, applies to Go 1.25 — HIGH confidence (issue tracker + official)
+- [cs3org/reva issue #86: WebDAV PUT atomicity](https://github.com/cs3org/reva/issues/86) — If-Match at finalization pattern, transaction discussion — MEDIUM confidence (issue tracker)
+- [owncloud-ci/litmus Docker image](https://github.com/owncloud-ci/litmus) — env vars, image name `owncloudci/litmus`, MIT license — MEDIUM confidence (GitHub repo)
+- [Lighttpd Content-Range discussion](https://redmine.lighttpd.net/boards/3/topics/8844) — deprecated-unsafe-partial-put flag context — MEDIUM confidence (forum)
+- [Nextcloud large file admin docs](https://docs.nextcloud.com/server/stable/admin_manual/configuration_files/big_file_upload_configuration.html) — Apache LimitRequestBody change in 2.4.54, timeout constraints — HIGH confidence (official docs)
+- [rclone forum: WebDAV 16 GB OOM](https://forum.rclone.org/t/huge-memory-usage-10gb-when-upload-a-single-large-file-16gb-in-webdav/43312) — root cause is NTLMSSP library buffering full body (not the WebDAV layer) — MEDIUM confidence (community forum)
+- cozy-stack source: `web/webdav/put.go` lines 99-112 — io.Copy + Close error path — HIGH confidence (first-party code)
+- cozy-stack source: `model/vfs/vfsswift/impl_v3.go` lines 865-876 — Close() deferred cleanup on error — HIGH confidence (first-party code)
+- cozy-stack source: `model/vfs/file.go` lines 251-280 — ServeFileContent -> http.ServeContent delegation — HIGH confidence (first-party code)
+- cozy-stack source: `.github/workflows/go-tests.yml` — existing CI structure — HIGH confidence (first-party)
 
 ---
 
-*Feature research for: WebDAV server — cozy-stack*
-*Researched: 2026-04-04*
+*Feature research for: WebDAV robustness beyond RFC 4918 litmus compliance (v1.2)*
+*Researched: 2026-04-12*

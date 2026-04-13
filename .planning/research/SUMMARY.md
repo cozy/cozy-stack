@@ -1,219 +1,198 @@
 # Project Research Summary
 
-**Project:** Cozy WebDAV
-**Domain:** WebDAV server layer on top of a non-filesystem Go VFS abstraction (CouchDB + Swift)
-**Researched:** 2026-04-04
-**Confidence:** HIGH (stack and architecture from direct codebase inspection; features from RFC 4918 + community sources; pitfalls from official issue trackers and CVEs)
+**Project:** cozy-stack WebDAV v1.2 — Robustness Beyond Litmus
+**Domain:** WebDAV server robustness testing and correctness hardening on a Go/Swift/CouchDB stack
+**Researched:** 2026-04-12
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Building a WebDAV server on cozy-stack is well-scoped and achievable. The VFS abstraction already provides all the primitives needed (directory listing, file read/write, rename/move, copy, delete), and the Echo routing framework supports arbitrary HTTP methods. The implementation lives entirely in a new `web/webdav/` package — thin protocol-translation handlers that map WebDAV verbs to existing `model/vfs/` functions. No new business logic layer is required. The correct approach is to write custom `echo.HandlerFunc` handlers using stdlib `encoding/xml` directly, bypassing both `golang.org/x/net/webdav` and `emersion/go-webdav` whose interfaces are incompatible with Cozy's VFS API (and carry known open bugs).
+v1.1 shipped a fully litmus-compliant WebDAV server (63/63) with streaming PUT via `io.Copy` and single-range GET via `http.ServeContent`. v1.2 is not a feature release — it is a robustness and evidence release: prove the existing implementation handles multi-GB transfers, connection drops, and concurrent writes correctly, then automate that proof in CI. The research finding is that the cozy-stack VFS layer is already designed correctly for all target scenarios (streaming PUT, interrupted PUT cleanup, atomic CouchDB commits), so v1.2 is primarily a testing and evidence-gathering effort with minimal production code changes.
 
-The target feature set for v1 is RFC 4918 Class 1 compliance: OPTIONS, PROPFIND (Depth 0 and 1), GET, HEAD, PUT, DELETE, MKCOL, COPY, MOVE, and PROPPATCH. This covers OnlyOffice mobile fully and generic WebDAV clients broadly. LOCK/UNLOCK is explicitly out of scope — this means macOS Finder mounts read-only, which is acceptable and must be documented. The Nextcloud-compatible `/remote.php/webdav` redirect enables the OnlyOffice built-in Nextcloud preset to work without configuration changes.
+The recommended approach is to write targeted tests in layers: first establish streaming proof infrastructure (memory measurement helpers, deterministic fixture generation), then interrupted PUT isolation, then byte-range and concurrency edge cases, and finally wire CI litmus automation. Total estimated production code changes are small (~30 LOC: a Content-Range PUT rejection guard and a CouchDB 409 to HTTP 409 mapping fix). All test infrastructure can be built from stdlib — zero new Go module dependencies are required.
 
-The critical risks are: (1) a cluster of correctness traps baked into the RFC (Overwrite default behavior, ETag quoting, RFC 1123 date format, XML namespace prefixing) that are easy to get wrong and break specific clients silently; (2) two security issues that must be addressed in Phase 1 (path traversal sanitization, Depth:infinity DoS); and (3) streaming discipline for large files (PUT must not buffer the body in RAM). All of these are known and preventable with explicit implementation decisions made early.
+The key risk is measurement methodology, not correctness. Go's runtime arena retention makes naive RSS-based streaming proof meaningless: `HeapAlloc` must be sampled concurrently during the in-flight transfer, not post-hoc. Concurrency tests that use `time.Sleep` for synchronisation will produce flaky CI. Both are well-understood patterns with established solutions documented in the pitfalls research.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-Write custom handlers using `encoding/xml` (stdlib) only. The only new dependency is `github.com/studio-b12/gowebdav` v0.12.0 for integration test clients. All server-side logic uses stdlib and existing go.mod dependencies.
+The v1.1 server stack — custom Echo handlers, `encoding/xml`, `net/http.ServeContent`, `studio-b12/gowebdav` for test clients, `gavv/httpexpect` for raw HTTP assertions — remains unchanged for v1.2. All robustness testing tooling is stdlib.
 
-Both candidate third-party server libraries are ruled out: `golang.org/x/net/webdav.Handler` has a known unfixed MOVE Overwrite bug (issue #66059, open April 2026), requires a `LockSystem` that would falsely advertise Class 2 compliance, and its `FileSystem` interface is POSIX-only and incompatible with Cozy's VFS. `emersion/go-webdav` v0.7.0 has a better interface design but still requires an 8-method adapter layer, gives no control over XML generation for custom properties, and introduces a new dependency for marginal gain.
+**Core technologies (unchanged from v1.1):**
+- `encoding/xml` (stdlib): RFC 4918 XML marshalling — zero dependency, correct namespace handling
+- `net/http.ServeContent` (stdlib): handles all range GET logic including multi-range `multipart/byteranges` since Go 1.1
+- `studio-b12/gowebdav` v0.12.0: integration test WebDAV client — already in go.mod
+- `gavv/httpexpect/v2`: raw HTTP assertions for edge cases beyond gowebdav's reach
+- `owncloud/litmus` Docker image: CI litmus runner — preferred over `apt install litmus` (apt package is v0.13 from 2014, severely stale)
 
-**Core technologies:**
-- `encoding/xml` (stdlib): RFC 4918 XML marshalling — ~150 lines for complete PROPFIND structs; full control over namespace prefixing and property formatting
-- `net/http` + Echo v4.15.1 (already in go.mod): HTTP routing via `e.Match()` for non-standard WebDAV methods; no wrapper needed
-- `model/vfs/` (existing): all VFS operations delegated directly — `DirOrFileByPath`, `CreateFile`, `ModifyFileMetadata`, `MoveDir`, `CopyFile`, `DirIterator`
-- `github.com/studio-b12/gowebdav` v0.12.0 (new, test-only): black-box integration test client
-- `github.com/gavv/httpexpect/v2` (already in go.mod): exact HTTP-level assertions for WebDAV-specific scenarios
+**New for v1.2 (all stdlib, no go.mod additions):**
+- `io.Pipe`: interrupted PUT simulation — synchronous, error-propagating, in-process
+- `runtime.ReadMemStats` + `runtime/metrics`: streaming memory bound assertions
+- `mime`, `mime/multipart`: multi-range response parsing in tests
+- `golang.org/x/perf/cmd/benchstat`: CLI tool for benchmark comparison (tool-install only, not a module dep)
 
 ### Expected Features
 
-**Must have (table stakes) — v1 launch:**
-- `OPTIONS` with `DAV: 1` and full `Allow:` header — clients check this first
-- `PROPFIND` Depth:0 and Depth:1, allprop/prop/propname variants, 207 Multi-Status XML — core of WebDAV
-- Live properties: `resourcetype`, `getlastmodified` (RFC 1123), `getcontentlength`, `getetag` (strong, quoted), `getcontenttype`, `displayname`, `creationdate`
-- `GET`/`HEAD` with ETag, Last-Modified, Content-Length on every response
-- `PUT` with streaming body (no buffering), chunked Transfer-Encoding support
-- `DELETE` recursive on collections
-- `MKCOL` create directory
-- `COPY` and `MOVE` with correct Overwrite default (absent header = T)
-- `PROPPATCH` returning 207/403 (RFC Class 1 compliance; live props return 403)
-- 401 + `WWW-Authenticate: Basic realm="Cozy"` for unauthenticated requests
-- Redirect `/remote.php/webdav` → `/dav/files` 301 (OnlyOffice Nextcloud preset)
-- Namespace-prefixed XML (`xmlns:D="DAV:"` with `D:` prefix) — required by Windows Mini-Redirector
+**Must have (v1.2 core — P1):**
+- FOLLOWUP-01 race harness fix: pre-existing data race in `pkg/config`/`model/stack`/`model/job` blocks `-race` usage — must be resolved first to unblock clean test runs (~50–100 LOC in test harness)
+- Content-Range PUT rejection (400): ~10 LOC guard in `put.go`; RFC 7231 §4.3.4 explicitly requires this; v1.1 currently leaves this ambiguous
+- Interrupted PUT test: verify no partial file or orphaned CouchDB doc after connection drop; zero production code change expected (VFS `Close()` cleanup is already correct by design)
+- Large-file streaming benchmark: 1 GB PUT with `HeapAlloc` ceiling assertion; converts "we stream" from claim to measured evidence
+- Multi-range GET test: assert `Range: bytes=0-9,20-29` returns `206 multipart/byteranges`; no production code needed
+- Concurrent write test + CouchDB 409 fix: two goroutines PUT same path; assert deterministic outcome; ~20 LOC to map CouchDB MVCC conflicts from 500 to 409
+- CI litmus integration: new `.github/workflows/webdav-litmus.yml` using `owncloud/litmus` Docker image; closes automation debt deferred from v1.1
 
-**Should have — v1.x after validation:**
-- ETag-based conditional requests (`If-Match`, `If-None-Match`) — prevents lost-update for sync clients
-- `X-OC-Mtime` header support — rclone mtime preservation
-- Explicit `Depth: infinity` → 403 with RFC-compliant error body
+**Should have (v1.2 P2, requires device/CI availability):**
+- iOS Files formal sign-off: manual checklist on physical iOS device; zero code; ~1–2 hours; requires HTTPS staging endpoint
 
-**Defer to v2+:**
-- LOCK/UNLOCK — macOS Finder read-write; requires Cozy-level file locking mechanism; major architectural addition
-- CalDAV/CardDAV — separate protocol and project
-- iOS native Files app (File Provider Extension) — requires separate iOS app development
-
-**Anti-features (never build):**
-- `DAV: 1, 2` in OPTIONS without real locking — false capability claim
-- `quota-available-bytes`/`quota-used-bytes` — leaks billing data
-- Nextcloud `oc:*` custom properties — not required, adds maintenance burden
-- Anonymous/public WebDAV access — security perimeter
+**Defer (v2+):**
+- Nextcloud chunked upload protocol: proprietary, ~500+ LOC + cleanup job, only helps Nextcloud-dialect clients; single streaming PUT already works for all in-scope clients
+- WebDAV LOCK / Class 2: requires VFS lock subsystem redesign; explicitly out of scope
+- PROPPATCH CouchDB persistence: dead properties currently in-memory only; passes litmus, low user impact
 
 ### Architecture Approach
 
-The implementation is a pure protocol-translation layer: a new `web/webdav/` package containing 6 files, no `model/webdav/` package. Handlers are thin — they resolve paths, check permissions, delegate to the existing VFS, and render RFC 4918 XML. The package follows the same structure as `web/files/`, `web/notes/`, etc. Auth reuses `web/middlewares/permissions.go` primitives (`GetRequestToken`, `ParseJWT`, `GetForOauth`) with a new WebDAV-specific wrapper that emits 401 + `WWW-Authenticate` instead of JSON:API errors.
+The system is a thin Echo handler layer (`web/webdav/`) that dispatches to `vfs.VFS` — no business logic in handlers. All streaming, atomicity, and concurrency guarantees live in the VFS layer (`model/vfs/vfsswift/impl_v3.go`). The critical architectural finding: `swiftFileCreationV3.Close()` already implements transactional cleanup (partial Swift object deleted + CouchDB doc deleted on error) — interrupted PUT correctness is guaranteed by design, just untested. The test harness (`testutil_test.go`) provides an `httptest.Server` backed by `aferoVFS` (in-process, no Swift), with CouchDB required for metadata.
 
-**Major components:**
-1. `web/webdav/auth.go` — `resolveWebDAVAuth` middleware: Basic Auth password or Bearer token → `*permission.Permission`; emits WebDAV-appropriate 401 on failure
-2. `web/webdav/path_mapper.go` — `davPathToVFSPath()`: URL-decode, `path.Clean`, validate against hidden system dirs (`.cozy_trash`, `.cozy_apps`, etc.)
-3. `web/webdav/handlers.go` — method dispatcher and all 10 handler functions; delegates to VFS directly
-4. `web/webdav/xml.go` — RFC 4918 structs for PROPFIND request parsing and 207 Multi-Status response generation (~150 lines)
-5. `web/webdav/errors.go` — maps VFS errors to WebDAV HTTP status codes
-6. `web/webdav/webdav_test.go` — integration tests using `httptest` + in-memory VFS + `gowebdav` client
-
-PROPFIND pagination uses the existing `vfs.DirIterator` with `ByFetch: 200` pages, streaming XML via `encoding/xml.Encoder` directly to the response writer, capped at 10,000 items. MOVE delegates to `vfs.ModifyFileMetadata`/`ModifyDirMetadata` (recursive path update handled by `MoveDir`). COPY uses `vfs.CopyFile` for files; directory COPY requires manual `vfs.Walk` + `CopyFile` per file.
+**Major components and v1.2 integration points:**
+1. `web/webdav/put.go` — PUT handler; `io.Copy` at line 104 streams directly; error propagation to `file.Close()` is correct; add Content-Range guard near line 80
+2. `model/vfs/vfsswift/impl_v3.go` — `swiftFileCreationV3.Close()` at line 865; transactional cleanup defer already exists; concurrent create race resolved by second `DirChildExists` check at line 946
+3. `model/vfs/file.go` — `ServeFileContent` at line 251; delegates all range/ETag logic to `http.ServeContent`; correct for single and multi-range with zero additional code
+4. `web/webdav/testutil_test.go` — test harness; extend for large bodies (`io.LimitReader`), connection drops (`env.TS.CloseClientConnections()`), and concurrent clients (two `gowebdav.NewClient` calls)
+5. `.github/workflows/webdav-litmus.yml` — new CI job; model after `system-tests.yml`; use `owncloud/litmus` Docker image with `--network host`
 
 ### Critical Pitfalls
 
-1. **Path traversal via URL encoding** — `%2e%2e/` and double-encoded variants bypass naive prefix checks. Mitigation: `url.PathUnescape` then `path.Clean("/" + decoded)` in `path_mapper.go`; never concatenate URL segments directly; add table-driven test covering `../`, `%2e%2e/`, `%252e`, null bytes. Address in Phase 1.
+1. **Body-accumulating test helpers defeat streaming validation** — `httpexpect`'s `Body().Raw()` calls `io.ReadAll` internally; use `io.TeeReader` into `sha256.New()` + `io.Discard` for large-file response verification; never allocate the full body as `[]byte` for files > 1 MB
 
-2. **Depth:infinity PROPFIND DoS** — full VFS tree traversal on a large account; hundreds of MB, minutes of CPU. Mitigation: reject with `403 Forbidden` before any directory traversal; cap Depth:1 at 10,000 items. Address in Phase 1.
+2. **Post-hoc RSS measurement proves nothing** — Go arenas do not release to OS immediately after GC; sample `HeapAlloc` (not RSS) concurrently during the in-flight transfer; alternatively use a `GOMEMLIMIT` subprocess that would OOM if the body is buffered
 
-3. **ETag semantics: wrong source, wrong format** — `CouchDB _rev` is not content-addressed and changes on metadata edits; bare ETag strings without quotes break conditional requests. Mitigation: derive ETag from `vfs.FileDoc.MD5Sum`; always return as `"<hash>"`; test that ETag is stable across metadata-only updates. Address in Phase 1.
+3. **Sleep-based concurrency synchronisation is always wrong** — use `sync.WaitGroup` + channels; add `goleak.VerifyNone(t)` to catch goroutine leaks between tests; run concurrency tests with `-count=10 -race`
 
-4. **MOVE Overwrite default** — RFC 4918 requires absent `Overwrite` header to mean T; natural coding instinct checks `== "T"` (which fails when absent); this is also the confirmed open bug in `x/net/webdav` (#66059). Mitigation: `overwrite := r.Header.Get("Overwrite") != "F"`. Address in Phase 2.
+4. **CouchDB startup race in CI** — Docker `healthy` status does not mean CouchDB is accepting queries; add an explicit `curl` poll loop (30 retries × 1s on `/_up`) before running any tests
 
-5. **Date format: RFC 1123 required, RFC 3339 wrong** — macOS Finder silently misparses ISO 8601 dates in `getlastmodified`. Mitigation: always use `t.UTC().Format(http.TimeFormat)`. Address in Phase 1.
+5. **Binary test fixtures in git** — generate programmatically via `io.LimitReader(rand.Reader, N)` in `t.TempDir()`; one committed 1 GB fixture makes every checkout impractical
 
-6. **PUT body buffering** — `io.ReadAll(r.Body)` in PUT handler allocates full file in heap. Mitigation: pass `r.Body` directly to `vfs.CreateFile` when `r.ContentLength >= 0`; use temp file for chunked uploads. Address in Phase 2.
-
-7. **MKCOL race condition** — `vfs.MkdirAll` has no distributed lock; concurrent MKCOL can create duplicate CouchDB documents. Mitigation: use `vfs.Mkdir` (single-directory, not recursive), let CouchDB conflict signal 405. Address in Phase 2.
-
-8. **Content-Length on all responses** — macOS/iOS clients produce "strange results" without it. Mitigation: build XML responses in `bytes.Buffer` first, set `Content-Length` from `buf.Len()` before writing header. Address in Phase 1.
+---
 
 ## Implications for Roadmap
 
-Based on combined research, a 3-phase structure emerges from the dependency graph and the security-first principle.
+All dependencies flow from instrumentation → proof → edge cases → CI. The recommended build order from ARCHITECTURE.md maps cleanly to phases.
 
-### Phase 1: Foundation — Routing, Auth, PROPFIND, and Read Operations
+### Phase 1: Prerequisites and Instrumentation
+**Rationale:** The race condition in `pkg/config`/`model/stack`/`model/job` causes non-deterministic test failures that would corrupt memory measurements in all subsequent phases. The memory measurement helper and fixture generation pattern must be locked in before any large-file test is written.
+**Delivers:** Clean `-race` CI, reusable `HeapAlloc` sampling helper, fixture generation convention established
+**Addresses:** FOLLOWUP-01 race fix, streaming measurement methodology
+**Avoids:** Pitfall 2 (post-hoc RSS), Pitfall 9 (git fixture bloat)
 
-**Rationale:** Authentication, path mapping, security guards, and the PROPFIND XML engine are dependencies for everything else. GET/HEAD can be implemented as thin wrappers over the existing `vfs.ServeFileContent`. All critical correctness decisions (ETag strategy, date format, XML namespace, Content-Length policy, Depth:infinity rejection, path traversal prevention) must be made here and baked into the handler template used by later phases.
+### Phase 2: Streaming Proof (Large Files)
+**Rationale:** Proves or disproves the central "we stream" claim. If middleware buffering is found, this phase surfaces it and determines whether a production fix is needed — must come before interrupted PUT which depends on the streaming path being clean.
+**Delivers:** `TestPut_LargeFile_Streaming` and `TestGet_LargeFile` with `HeapAlloc` ceiling assertions; streaming converted from assertion to evidence
+**Addresses:** Large-file streaming benchmark, large-file GET test
+**Avoids:** Pitfall 1 (body accumulation), Pitfall 2 (RSS measurement)
+**Research flag:** Echo middleware body-buffering must be verified empirically in this phase; outcome determines whether any production code change is needed
 
-**Delivers:** A working read-only WebDAV mount. Any WebDAV client can connect, authenticate, browse the directory tree, and download files.
+### Phase 3: Interrupted PUT and Defensive Guards
+**Rationale:** VFS cleanup correctness is designed in; this phase writes the test that verifies it under real disconnect conditions, and adds the Content-Range rejection guard as a small standalone fix.
+**Delivers:** `TestPut_Interrupted_NoOrphan` (new file + overwrite paths), Content-Range PUT `400` guard (~10 LOC in `put.go`)
+**Addresses:** Interrupted PUT test, Content-Range PUT rejection
+**Avoids:** Pitfall 3 (partial file committed, overwrite rollback deletes original)
 
-**Implements:**
-- Route registration in `web/routing.go`; `web/webdav/` package scaffold
-- `resolveWebDAVAuth` middleware (Basic + Bearer → permission)
-- `path_mapper.go` with path traversal protection and hidden-dir blocking
-- OPTIONS handler — `DAV: 1`, full `Allow:` list, no auth required
-- PROPFIND — Depth:0, Depth:1, allprop/prop/propname; streaming XML; Depth:infinity → 403
-- GET + HEAD — reuse `vfs.ServeFileContent`; ensure Content-Length set
-- `xml.go` — all RFC 4918 structs with correct namespace prefix
-- `errors.go` — VFS → HTTP status mapping
-- 401 + `WWW-Authenticate: Basic` on auth failure
-- `web/webdav/webdav_test.go` — integration test scaffold with `gowebdav` client
+### Phase 4: Byte-Range Edge Cases
+**Rationale:** Multi-range GET is already handled by `http.ServeContent`; this phase documents and guards the behavior, including RFC 7233 edge cases that are commonly missed (416, full-file range → 200, `If-Range`).
+**Delivers:** `TestGet_MultiRange`, edge case tests for 416 / 200 / `If-Range` precondition
+**Addresses:** Multi-range GET test
+**Avoids:** Pitfall 6 (wrong 206 vs 200, missing 416 for out-of-bounds range)
 
-**Avoids:** Pitfalls 1 (Depth:infinity DoS), 2 (path traversal), 3 (HTTPS enforcement), 4 (OPTIONS leakage), 5 (ETag semantics), 7 (date format), 10 (Content-Length), 11 (trailing slash), 12 (PROPFIND memory), 17 (brittle XML tests)
+### Phase 5: Concurrency Hardening
+**Rationale:** Most complex test; requires Phases 1–3 stable to avoid flakiness from unrelated races. The CouchDB 409 mapping fix is a latent correctness bug that should ship regardless.
+**Delivers:** `TestPut_Concurrent_SamePath` with proper channel synchronisation and `goleak.VerifyNone(t)`, CouchDB 409 → HTTP 409 mapping fix (~20 LOC)
+**Addresses:** Concurrent write test, CouchDB 409 fix
+**Avoids:** Pitfall 4 (sleep-based sync), Pitfall 5 (goroutine leaks between tests)
 
-**Research flag:** Standard patterns — no additional research needed.
+### Phase 6: CI Litmus Automation
+**Rationale:** Validates the combined state of all prior phases; litmus 63/63 must hold after all changes. Can be drafted in parallel with Phases 2–5 but should merge last.
+**Delivers:** `.github/workflows/webdav-litmus.yml` using `owncloud/litmus` Docker image; automated compliance regression detection on every PR
+**Addresses:** CI litmus integration
+**Avoids:** Pitfall 8 (CouchDB startup race via poll loop; litmus version drift via Docker instead of apt)
 
----
-
-### Phase 2: Write Operations — PUT, DELETE, MKCOL, MOVE, PROPPATCH
-
-**Rationale:** Write operations share the auth and path infrastructure from Phase 1 but introduce new correctness concerns: conditional headers on PUT, MKCOL race safety, MOVE Overwrite semantics. Group together because they share the "mutating operation" pattern and the same permission check (PATCH/POST VFS permission).
-
-**Delivers:** Full read-write WebDAV capability. OnlyOffice mobile can connect and edit files end-to-end. The `/remote.php/webdav` redirect enables the Nextcloud preset.
-
-**Implements:**
-- PUT — streaming body (`r.Body` → `vfs.CreateFile`); chunked PUT via temp file; ETag on response
-- DELETE — files and recursive collections via `vfs.DestroyFile`/`TrashFile`
-- MKCOL — single `vfs.Mkdir`; CouchDB conflict → 405; concurrent race test
-- MOVE — `vfs.ModifyFileMetadata`/`MoveDir`; correct Overwrite default (`!= "F"`); permission checks on both source and destination
-- PROPPATCH — 207 with 403 for live props; skeleton for future dead props
-- `/remote.php/webdav` 301 redirect
-
-**Avoids:** Pitfalls 6 (If-Match/If-None-Match), 8 (MOVE Overwrite default), 13 (PUT body buffering), 14 (MKCOL race)
-
-**Research flag:** Standard patterns — no additional research needed.
-
----
-
-### Phase 3: COPY and Compliance Hardening
-
-**Rationale:** COPY is separate because it raises a distinct performance concern (Swift server-side copy vs. full round-trip), and directory COPY requires `vfs.Walk` recursion. Compliance hardening (conditional requests, litmus test suite, rclone compatibility) is grouped here as it requires a working Phase 2 baseline to validate against.
-
-**Delivers:** Complete RFC 4918 Class 1 compliance. Passes `litmus` test suite. rclone sync works correctly. COPY/MOVE tested end-to-end with OnlyOffice mobile and a WebDAV compliance client.
-
-**Implements:**
-- COPY — file COPY via `vfs.CopyFile`; directory COPY via `vfs.Walk` + `CopyFile`; assess Swift server-side copy via `X-Copy-From`
-- Conditional requests: `If-Match`/`If-None-Match` middleware (pre-PUT guard)
-- `X-OC-Mtime` header support for rclone
-- Explicit Depth:infinity → 403 with RFC-compliant `DAV:propfind-finite-depth` condition element
-- litmus compliance test run in CI (Docker)
-- Security review: OPTIONS caps, HTTPS enforcement in non-localhost envs
-
-**Avoids:** Pitfalls 15 (COPY full round-trip), 16 (MOVE CouchDB case-sensitivity), 6 (conditional headers)
-
-**Research flag:** Phase 3 may benefit from research into Swift server-side copy API availability through the existing VFS Swift backend before committing to COPY handler design.
-
----
+### Phase 7: iOS Sign-Off (conditional on device availability)
+**Rationale:** Requires physical iOS device and HTTPS staging endpoint; zero code changes; can be deferred if neither is available.
+**Delivers:** Manual validation checklist completed against FileBrowser Pro / Keynote WebDAV browser
+**Addresses:** iOS Files formal sign-off
+**Avoids:** Pitfall 10 (URL session cache masking bugs; only happy-path testing)
 
 ### Phase Ordering Rationale
 
-- Phase 1 before Phase 2: auth, path mapping, and XML infrastructure are shared foundations; all correctness traps that affect multiple phases must be resolved first
-- PROPFIND before PUT: read-only validation (litmus, gowebdav client) catches foundational issues before write complexity is added
-- COPY in Phase 3: its performance question (Swift server-side copy) is independent of correctness and should not block the write operations in Phase 2
-- Compliance hardening in Phase 3: requires a complete baseline to test against
+- Phase 1 first: race fix is a prerequisite for reliable memory measurement; measurement helper must exist before any large-file test to prevent Pitfalls 1 and 9
+- Phases 2–5 follow code dependencies: streaming proof before interrupted PUT (same io.Copy path), interrupted PUT before concurrency (both touch `Close()`)
+- Phase 6 last: validates combined state; 63/63 litmus baseline must hold through all changes
+- Phase 7 independent: can slot anywhere after Phase 3 given a device and staging endpoint
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 3:** Swift server-side copy feasibility — check whether `vfs/vfsswift` can expose an `X-Copy-From` path; if not, document COPY performance limitations for v1
+Phases needing deeper investigation during execution:
+- **Phase 2:** Echo middleware body-buffering — no external research needed, but requires reading Echo middleware source and running a diagnostic profiling test; outcome determines whether a production fix is needed
+- **Phase 6:** `owncloud/litmus` Docker image + `--network host` in GitHub Actions — the workflow outline in STACK.md is a recommendation, not a tested config; a trial CI run will be needed to validate Docker networking
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** RFC 4918 is well-documented; Go stdlib XML is well-understood; architecture is directly derived from existing `web/files/` patterns
-- **Phase 2:** Write operations follow the same VFS delegation pattern; MOVE semantics are fully specified in research
+Phases with standard well-documented patterns (no additional research needed):
+- **Phase 1:** Standard Go race fix methodology; `runtime.ReadMemStats` is documented API
+- **Phase 3:** `io.Pipe` simulation fully documented with code examples in STACK.md
+- **Phase 4:** Fully delegated to `http.ServeContent`; test pattern is mechanical
+- **Phase 5:** Concurrency patterns fully documented in PITFALLS.md and ARCHITECTURE.md with code examples
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `x/net/webdav` bug confirmed from open issue tracker; VFS API confirmed from direct source inspection; Echo routing pattern verified from `web/routing.go` |
-| Features | MEDIUM | RFC 4918 is authoritative; client-specific behaviors (OnlyOffice, iOS) derived from community reports and help docs, not wire captures |
-| Architecture | HIGH | Derived entirely from direct inspection of the cozy-stack source tree; VFS method signatures confirmed; existing middleware integration points identified |
-| Pitfalls | HIGH (security/correctness), MEDIUM (client quirks) | Security pitfalls from CVEs and RFC; correctness pitfalls from confirmed open bugs; client quirks from community reports |
+| Stack | HIGH | All tooling from direct source inspection of go.mod and existing harness; zero new dependencies reduces risk |
+| Features | HIGH | Scope tightly bounded by existing code; table stakes verified against RFC 7231/7233 and major implementations |
+| Architecture | HIGH | All findings from direct code inspection; integration points are precise with line numbers; no inference from docs alone |
+| Pitfalls | HIGH (Go specifics) / MEDIUM (iOS) | Go runtime behavior from official docs; iOS URL session cache from community reports only |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **OnlyOffice mobile wire behavior**: No direct wire captures of what OnlyOffice iOS/Android actually sends. Documented behavior is inferred from help docs and community issues. Mitigation: run OnlyOffice mobile against a staging instance early in Phase 2 validation and capture actual requests with a proxy (mitmproxy).
-- **emersion/go-webdav Overwrite parsing**: Unverified whether `emersion/go-webdav` parses the absent `Overwrite` header correctly. Moot if custom handlers are used (recommended), but worth noting if the decision is revisited.
-- **Swift server-side copy**: Not confirmed whether the VFS Swift backend exposes a path that avoids full round-trip for COPY. Must be assessed before Phase 3 COPY handler design.
-- **vfs.DirIterator API shape**: ARCHITECTURE.md identifies `DirBatch` and `DirIterator` as existing primitives. The exact interface should be confirmed against current `model/vfs/couchdb_indexer.go` before implementing PROPFIND pagination in Phase 1.
+- **Echo middleware body-buffering (Phase 2):** Not verified empirically. If any middleware calls `io.ReadAll` on the request body before the PUT handler runs, the streaming proof fails and a production fix is needed. This is the single highest-priority unknown.
+- **ETag inconsistency between PROPFIND and GET:** PROPFIND returns `doc.DocRev` (CouchDB `_rev`); GET returns `base64(doc.MD5Sum)`. Pre-existing, out of scope for v1.2, but needs a code comment before iOS sign-off to prevent future confusion.
+- **CouchDB 409 exact trigger conditions (Phase 5):** The exact conditions under which CouchDB MVCC returns a conflict error to the VFS layer are inferred from code structure, not directly tested. The Phase 5 test must directly trigger the conflict path to validate the fix, not rely on inference.
+- **iOS 17+ behavioral changes (Phase 7):** iOS 17 changed `User-Agent` and added `If-None-Match` on COPY. If sign-off is attempted, an iOS 17+ device is required, not an older device.
+
+---
 
 ## Sources
 
-### Primary (HIGH confidence)
-- [RFC 4918](https://www.rfc-editor.org/rfc/rfc4918.html) — authoritative WebDAV standard
-- [golang/go issue #66059](https://github.com/golang/go/issues/66059) — MOVE Overwrite header bug in `x/net/webdav`, open April 2026
-- [golang/net webdav.go source](https://github.com/golang/net/blob/master/webdav/webdav.go) — confirmed COPY uses `!= "F"`, MOVE uses `== "T"`
-- cozy-stack source tree (direct inspection) — VFS interface, middleware, routing patterns, go.mod
-- [pkg.go.dev/github.com/emersion/go-webdav](https://pkg.go.dev/github.com/emersion/go-webdav) — v0.7.0 FileSystem interface
-- [pkg.go.dev/github.com/studio-b12/gowebdav](https://pkg.go.dev/github.com/studio-b12/gowebdav) — v0.12.0 client API
-- [OnlyOffice DesktopEditors issue #349](https://github.com/ONLYOFFICE/DesktopEditors/issues/349) — confirms no LOCK needed for OnlyOffice
-- CVE-2023-39143 — PaperCut WebDAV path traversal (CVSS 8.4)
+### Primary (HIGH confidence — official docs and first-party code)
+- cozy-stack `web/webdav/put.go`, `get.go`, `handlers.go` — handler logic and io.Copy location
+- cozy-stack `model/vfs/vfsswift/impl_v3.go` — Close() deferred cleanup (line 865), CreateFile locking (line 188), concurrent create race (line 946)
+- cozy-stack `model/vfs/file.go` — ServeFileContent → http.ServeContent delegation (line 251)
+- cozy-stack `web/webdav/testutil_test.go`, `gowebdav_integration_test.go` — test harness capabilities
+- cozy-stack `.github/workflows/go-tests.yml`, `system-tests.yml` — CI patterns
+- cozy-stack `scripts/webdav-litmus.sh` — existing litmus orchestration
+- Go stdlib `runtime.MemStats` documentation — HeapAlloc vs HeapInuse vs RSS distinction
+- RFC 7231 §4.3.4 — Content-Range on PUT must return 400
+- RFC 7233 §4 — 206, 416, If-Range semantics
+- golang/go issue #3784 — multi-range ServeContent fixed Go 1.1+
+- sabre.io/dav/large-files/ — streaming architecture, 15 GB claim (official docs)
+- Nextcloud Developer Docs — chunked upload protocol specification (official docs)
 
-### Secondary (MEDIUM confidence)
-- [sabre/dav Finder client quirks](https://sabre.io/dav/clients/finder/) — Content-Length requirement, RFC 1123 date requirement
-- [sabre/dav Windows client quirks](https://sabre.io/dav/clients/windows/) — XML namespace prefix requirement
-- [Nextcloud WebDAV API docs](https://docs.nextcloud.com/server/20/developer_manual/client_apis/WebDAV/basic.html) — property set used in practice
-- [OnlyOffice community issues](https://community.onlyoffice.com/) — iOS auth compatibility
-- [deepwiki.com/emersion/go-webdav](https://deepwiki.com/emersion/go-webdav/2.1-webdav-server) — server architecture
-- Nextcloud bugs #14428, #37605 — conditional header implementation errors
+### Secondary (MEDIUM confidence — community sources, issue trackers)
+- owncloud-ci/litmus GitHub repo — Docker image env vars, maintenance status (last update May 2024)
+- cs3org/reva issue #86 — WebDAV PUT atomicity patterns
+- owncloud/core issue #1051 — Content-Range PUT explicitly refused, ecosystem precedent
+- rclone forum — WebDAV 16 GB OOM root cause (NTLMSSP buffering, not the WebDAV layer)
+- go.uber.org/goleak — goroutine leak detection API
+
+### Tertiary (LOW confidence — single source or inference)
+- iOS 17 WebDAV behavioral changes — community reports, not Apple documentation
+- CouchDB 409 error propagation path through VFS layers — inferred from code structure, not directly tested
 
 ---
-*Research completed: 2026-04-04*
+*Research completed: 2026-04-12*
 *Ready for roadmap: yes*

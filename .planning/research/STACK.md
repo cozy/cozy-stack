@@ -1,8 +1,285 @@
 # Stack Research
 
 **Domain:** WebDAV server layer on top of an existing Go VFS abstraction
-**Researched:** 2026-04-04
+**Researched:** 2026-04-04 (v1.1) · Updated 2026-04-12 (v1.2 addendum)
 **Confidence:** HIGH (server library analysis from source + official issue tracker; MEDIUM for emersion/go-webdav Overwrite specifics, unverified against raw source)
+
+---
+
+## v1.2 Addendum: Robustness Testing Stack
+
+*What's new in v1.2 — stack decisions for large-file E2E, interrupted PUT, concurrency, multi-range, CI litmus, and benchmark recording. The v1.1 server stack (custom handlers, stdlib XML, gowebdav client, httpexpect) remains unchanged.*
+
+---
+
+### 1. Large File E2E Tests (5 GB uploads/downloads, streaming proof via memory measurement)
+
+**Fixture strategy: generate on-the-fly with `io.LimitedReader` + `crypto/rand`-seeded `bytes.Repeat`.**
+
+Do NOT check in binary fixtures. A 5 GB file in the repo is impractical in every dimension (clone time, CI disk, git LFS complexity). Instead, construct a synthetic `io.Reader` at test time:
+
+```go
+// 5 GB of repeating pattern — zero allocation aside from the 4 KB seed.
+seed := bytes.Repeat([]byte("cozy-webdav-large-file-test\n"), 4096/28+1)
+body := io.LimitReader(bytes.NewReader(seed), 5*1024*1024*1024)
+```
+
+For upload: pass `body` directly to `gowebdav.WriteStreamWithLength` or a raw `http.NewRequest("PUT", ...)`. For download: pipe server response through `io.Copy(io.Discard, resp.Body)` counting bytes.
+
+**Memory measurement: `runtime.MemStats` + `runtime/metrics`, NOT `/proc/PID/status` RSS.**
+
+The goal is to verify that a 5 GB PUT does not buffer the full body in heap. Use `runtime.ReadMemStats` before and after upload and assert that `HeapInuse` growth is bounded (e.g., stays under 128 MB above baseline). This is an in-process measurement; it does not require external tooling.
+
+```go
+var before, after runtime.MemStats
+runtime.GC()
+runtime.ReadMemStats(&before)
+// ... run upload ...
+runtime.GC()
+runtime.ReadMemStats(&after)
+
+heapGrowth := int64(after.HeapInuse) - int64(before.HeapInuse)
+assert.Less(t, heapGrowth, int64(128*1024*1024), "PUT must not buffer >128MB in heap for 5GB upload")
+```
+
+`runtime/metrics` (Go 1.16+, stable in Go 1.25) can complement this for `/memory/classes/heap/live:bytes` and `/memory/classes/total:bytes`, but `runtime.ReadMemStats` is simpler and sufficient for a streaming bound test.
+
+**No new library needed.** `runtime`, `io`, `bytes`, `crypto/rand` are all stdlib. `gowebdav` v0.12.0 (already in go.mod) provides `WriteStreamWithLength(path, reader, size, mode)` for the upload path.
+
+**Large test gating:** Tag large-file tests with a custom build tag or `testing.Short()` skip so they do not run in normal CI. Run only in a dedicated "robustness" CI job or locally.
+
+```go
+func TestLargeFilePUT(t *testing.T) {
+    if testing.Short() {
+        t.Skip("large file test: skipped in short mode")
+    }
+    // ...
+}
+```
+
+---
+
+### 2. Interrupted PUT Tests (client connection drop mid-transfer)
+
+**Use stdlib `net.Pipe` + a custom `io.Reader` that closes the pipe mid-stream. No external library needed.**
+
+The pattern: create a `net.Pipe()`, write the first N bytes of the PUT body through the write end, then `wc.Close()` to simulate a dropped connection. The server handler receives `io.ErrUnexpectedEOF` or `io.EOF` mid-read.
+
+```go
+func TestInterruptedPUT(t *testing.T) {
+    env := newWebdavTestEnv(t, nil)
+
+    pr, pw := io.Pipe()
+
+    // Write 1 MB then close the writer mid-stream.
+    go func() {
+        chunk := bytes.Repeat([]byte("x"), 1024*1024)
+        pw.Write(chunk)
+        pw.CloseWithError(errors.New("simulated client disconnect"))
+    }()
+
+    req, _ := http.NewRequest("PUT", env.TS.URL+"/dav/files/partial.bin", pr)
+    req.Header.Set("Authorization", "Bearer "+env.Token)
+    req.ContentLength = 100 * 1024 * 1024 // 100MB declared, only 1MB sent
+    resp, err := http.DefaultClient.Do(req)
+    // Server must either return an error response or close cleanly.
+    // Assert the VFS does not contain a partially-written zombie file.
+    // ...
+}
+```
+
+`io.Pipe` is the right primitive: it is synchronous (no buffering), error-propagating (CloseWithError surfaces on the read end), and in-process (no TCP socket needed). This integrates directly with the existing `newWebdavTestEnv`/`httptest.Server` harness.
+
+**Alternative considered: `http.Hijacker`.** Hijacking the server-side connection mid-response is more complex and interacts poorly with Echo's response writer. The pipe-on-the-client-side approach is cleaner because it simulates the client dropping the connection, which is the real-world scenario.
+
+**`Shopify/toxiproxy` is NOT needed.** Toxiproxy is appropriate for testing network conditions (latency, packet loss, bandwidth limits) in integration environments where the server is a separate process. For in-process httptest server tests, `io.Pipe` with controlled writes is simpler, faster, deterministic, and adds zero dependencies.
+
+**No new library needed.** `io.Pipe`, `io.Reader`, `net/http` are stdlib.
+
+---
+
+### 3. Concurrent PUT/PROPFIND/MOVE Tests (multiple goroutines hitting the same path)
+
+**Use `sync.WaitGroup` + `t.Parallel()` goroutine fan-out with the `-race` flag. No new library needed.**
+
+Standard Go pattern for exercising concurrency in HTTP handlers:
+
+```go
+func TestConcurrentPUT(t *testing.T) {
+    env := newWebdavTestEnv(t, nil)
+    const workers = 10
+    var wg sync.WaitGroup
+    wg.Add(workers)
+    for i := 0; i < workers; i++ {
+        go func(n int) {
+            defer wg.Done()
+            path := fmt.Sprintf("/dav/files/concurrent-%d.txt", n)
+            // Each worker PUTs a unique file — no shared-path contention yet.
+            // For shared-path contention, all workers target the same path.
+        }(i)
+    }
+    wg.Wait()
+    // Assert: VFS state is self-consistent. No partial files. Correct ETag.
+}
+```
+
+Run with `go test -race ./web/webdav/...` to catch data races in handler code. This is the standard Go race detector — no external library needed.
+
+**`testing/synctest` (Go 1.25, now stable):** The `testing/synctest` package graduated from experimental (Go 1.24) to stable in Go 1.25 (which is the `go` directive in `go.mod`). It is useful for testing time-dependent concurrent behavior (e.g., timeout races, lock expiry). For concurrent HTTP tests against a live `httptest.Server`, `sync.WaitGroup` is simpler and more appropriate. `testing/synctest` is an option for unit-level concurrency tests inside handlers (e.g., testing the dead-property store under concurrent PROPPATCH), but not the primary tool for E2E goroutine fans.
+
+**No new library needed.** `sync`, `testing` are stdlib.
+
+---
+
+### 4. Byte-Range GET Multi-Range (multipart/byteranges)
+
+**Use raw `http.Client` for multi-range requests. `gowebdav.ReadStreamRange` handles single-range only.**
+
+`gowebdav` v0.12.0 exposes `ReadStreamRange(path, offset, length)` which generates a single `Range: bytes=offset-(offset+length-1)` header. It does not support multi-range requests (multiple comma-separated ranges → `multipart/byteranges` response).
+
+For multi-range tests, issue a raw HTTP GET with `Range: bytes=0-4,10-14` and parse the `multipart/byteranges` response using stdlib `mime/multipart`:
+
+```go
+req, _ := http.NewRequest("GET", env.TS.URL+"/dav/files/test.txt", nil)
+req.Header.Set("Authorization", "Bearer "+env.Token)
+req.Header.Set("Range", "bytes=0-4,10-14")
+resp, _ := http.DefaultClient.Do(req)
+
+// Expect 206 with multipart/byteranges Content-Type.
+assert.Equal(t, 206, resp.StatusCode)
+ct := resp.Header.Get("Content-Type")
+assert.Contains(t, ct, "multipart/byteranges")
+
+// Parse the multipart body.
+mediaType, params, _ := mime.ParseMediaType(ct)
+assert.Equal(t, "multipart/byteranges", mediaType)
+mr := multipart.NewReader(resp.Body, params["boundary"])
+// Read parts, assert Content-Range headers and body bytes.
+```
+
+**Key implementation note:** `vfs.ServeFileContent` delegates to `http.ServeContent` (confirmed in `get.go` line 59). Go's `net/http.ServeContent` has supported `multipart/byteranges` since Go 1.0 (issue #3784, fixed 2012-06-29). Multi-range is handled transparently by the stdlib. The v1.2 task is to add a test proving this works — not to implement it.
+
+**Libraries needed:** `mime` and `mime/multipart` are stdlib. No new library needed for tests. `gowebdav` remains the primary E2E client; raw `http.Client` is the complement for multi-range assertions.
+
+---
+
+### 5. CI Integration of Litmus (GitHub Actions)
+
+**Use `owncloud-ci/litmus` Docker image via the `notroj/litmus` upstream + a custom GitHub Actions job. Do NOT use `workgroupengineering/litmus` GitHub Action.**
+
+**Options researched:**
+
+| Option | Status | Verdict |
+|--------|--------|---------|
+| `apt install litmus` in CI runner | Debian/Ubuntu package is litmus 0.13 (2014). Current upstream `notroj/litmus` is at December 2024 commit. Package drift is severe. | REJECT — version is stale |
+| `workgroupengineering/litmus` GitHub Action | Single commit, September 2021, no releases, no maintenance. | REJECT — abandoned |
+| `owncloud/litmus` Docker Hub image (`hub.docker.com/r/owncloud/litmus`) | Built from `owncloud-ci/litmus`, last meaningful update May 2024. Accepts `LITMUS_URL`, `LITMUS_USERNAME`, `LITMUS_PASSWORD`, `LITMUS_TIMEOUT` env vars. Uses `owncloudci/litmus` Docker Hub tag. | ACCEPT with caveat |
+| Build from `notroj/litmus` source in CI | Upstream maintained (December 2024 activity), has Dockerfile. Build adds ~3 min to CI job but gives exact version control. | ACCEPT — preferred if Docker image stagnates |
+
+**Recommended approach:** Use `owncloud/litmus` Docker image in a GitHub Actions job that starts `cozy-stack` as a service, creates an instance, runs litmus in a container step.
+
+```yaml
+# .github/workflows/webdav-litmus.yml (outline)
+jobs:
+  litmus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - name: Build cozy-stack
+        run: go build -o cozy-stack .
+      - name: Start cozy-stack
+        run: ./cozy-stack serve &
+      - name: Wait for stack
+        run: until curl -sf http://localhost:8080/version; do sleep 1; done
+      - name: Create litmus instance + token
+        run: |
+          ./cozy-stack instances add lm-ci.localhost:8080 --passphrase cozy --email litmus@ci.test
+          echo "TOKEN=$(./cozy-stack instances token-cli lm-ci.localhost:8080 io.cozy.files)" >> $GITHUB_ENV
+      - name: Run litmus (native route)
+        run: |
+          docker run --rm --network host \
+            -e LITMUS_URL="http://lm-ci.localhost:8080/dav/files/" \
+            -e LITMUS_USERNAME="" \
+            -e LITMUS_PASSWORD="${{ env.TOKEN }}" \
+            owncloud/litmus:latest
+      - name: Run litmus (Nextcloud compat route)
+        run: |
+          docker run --rm --network host \
+            -e LITMUS_URL="http://lm-ci.localhost:8080/remote.php/webdav/" \
+            -e LITMUS_USERNAME="" \
+            -e LITMUS_PASSWORD="${{ env.TOKEN }}" \
+            owncloud/litmus:latest
+```
+
+**CouchDB service:** The existing litmus script (`scripts/webdav-litmus.sh`) requires CouchDB. The GitHub Actions job will need a CouchDB service container. Add `services: couchdb: image: couchdb:3 ports: ['5984:5984']`.
+
+**Apt-package risk:** The `litmus` apt package on Ubuntu 22.04/24.04 is version 0.13 from 2014. It does NOT include the `http` test suite (added in 0.14). The current upstream HEAD (notroj, Dec 2024) is at 0.15.1+. Always use Docker or build from source in CI — never `apt install litmus`.
+
+**Go reimplementation:** No mature Go reimplementation of litmus exists. The Python `davtest` tool covers some overlap but not PROPFIND/PROPPATCH/props suite. The existing Go integration tests (`gowebdav_integration_test.go`) cover the behavioral surface but are not a compliance tester replacement. Stick with upstream litmus binary.
+
+---
+
+### 6. Throughput/Latency Benchmark Recording
+
+**Use `golang.org/x/perf/cmd/benchstat` for comparison, standard `testing.B` for benchmark authorship. No Prometheus or external metrics stack needed.**
+
+Write `BenchmarkPUT_1MB`, `BenchmarkPUT_100MB`, `BenchmarkGET_1MB`, `BenchmarkPROPFIND_Depth1` in `web/webdav/bench_test.go` following standard `testing.B` patterns:
+
+```go
+func BenchmarkPUT_1MB(b *testing.B) {
+    env := newWebdavTestEnv(b, nil) // testutil_test.go harness works with testing.TB
+    data := bytes.Repeat([]byte("x"), 1024*1024)
+    b.SetBytes(int64(len(data)))
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        err := gowebdav.NewClient(env.TS.URL+"/dav/files", "", env.Token).
+            WriteStream(fmt.Sprintf("/bench-%d.bin", i), bytes.NewReader(data), 0644)
+        require.NoError(b, err)
+    }
+}
+```
+
+Run with: `go test -run='^$' -bench=BenchmarkPUT -benchmem -count=10 ./web/webdav/ > bench-before.txt`
+
+Compare with `benchstat`:
+
+```bash
+go install golang.org/x/perf/cmd/benchstat@latest
+benchstat bench-before.txt bench-after.txt
+```
+
+`benchstat` is at `golang.org/x/perf` module (latest published April 9, 2026). It computes medians, 95% confidence intervals, and Mann-Whitney U-test significance, making A/B comparisons statistically sound.
+
+**In CI:** Commit baseline `bench-baseline.txt` to the repo. In CI, run benchmarks and compare with `benchstat bench-baseline.txt bench-current.txt`. Fail the job if throughput regresses beyond a threshold (manual threshold enforcement — benchstat outputs text, CI script greps for "+" indicating regression).
+
+**No Prometheus needed.** Prometheus is for production runtime metrics. For benchmark recording in a test suite, `testing.B` + `benchstat` is the standard Go approach. Prometheus adds infrastructure complexity (push gateway, scrape config) with no benefit at test-suite scale.
+
+**`newWebdavTestEnv` compatibility:** The existing harness takes `testing.T`. For benchmarks, change the parameter to `testing.TB` (which both `*testing.T` and `*testing.B` satisfy). This is a one-line change to `testutil_test.go`.
+
+---
+
+### Summary: New Libraries for v1.2
+
+| Concern | Tool | Source | New to go.mod? |
+|---------|------|--------|----------------|
+| Large file fixture generation | `io.LimitReader`, `bytes.Repeat` | stdlib | No |
+| Streaming memory measurement | `runtime.ReadMemStats` | stdlib | No |
+| Interrupted PUT simulation | `io.Pipe`, `net/http` | stdlib | No |
+| Concurrent test fan-out | `sync.WaitGroup`, `-race` flag | stdlib | No |
+| Multi-range GET assertion | `mime`, `mime/multipart`, raw `http.Client` | stdlib | No |
+| Benchmark authoring | `testing.B` | stdlib | No |
+| Benchmark comparison | `golang.org/x/perf/cmd/benchstat` | `golang.org/x/perf` (tool, not lib dep) | Tool only — `go install`, not `go get` |
+| CI litmus | `owncloud/litmus` Docker image | Docker Hub / owncloud-ci GitHub | No Go dep — Docker image |
+
+**Zero new Go module dependencies for v1.2 robustness testing.** All Go-level tooling is stdlib or already in `go.mod`. `benchstat` is a CLI tool installed separately, not imported. `owncloud/litmus` is a Docker image, not a Go package.
+
+---
+
+## v1.1 Stack (unchanged — included for reference)
+
+*(Original content below — server implementation decisions from v1.1 research.)*
 
 ---
 
@@ -320,6 +597,9 @@ The server implementation uses only:
 | CouchDB `_rev` as ETag | Semantically wrong: changes on metadata edits, not content changes; reveals internal structure | File content MD5 (`vfs.FileDoc.MD5Sum`) for files; hash of dir `updated_at` + `_rev` for directories |
 | `time.RFC3339` for date properties | Breaks macOS Finder (requires RFC 1123 / `http.TimeFormat`) | `t.UTC().Format(http.TimeFormat)` — Go stdlib constant |
 | Direct `x/net/webdav.NewMemLS()` for tests | Implicitly enables locking in Handler, creating false `DAV: 2` capability claim | No locking at all — set `DAV: 1` in OPTIONS response |
+| `apt install litmus` in CI | Ubuntu package is litmus 0.13 (2014), missing `http` suite added in 0.14; version drift vs upstream notroj/litmus (0.15+, Dec 2024) | `owncloud/litmus` Docker image or build from `notroj/litmus` source |
+| `Shopify/toxiproxy` for interruption tests | Overkill for in-process httptest tests; requires running a separate proxy process; adds Go module dependency | `io.Pipe` with `CloseWithError` on the write end |
+| Binary fixture files for large file tests | Bloats the repo (git history cannot shrink), slows clones, CI disk waste | `io.LimitReader` over a synthesized `bytes.Reader` seed |
 
 ---
 
@@ -328,14 +608,31 @@ The server implementation uses only:
 | Package | Version | Compatibility Notes |
 |---------|---------|---------------------|
 | `golang.org/x/net` | v0.50.0 (current in go.mod) | The `webdav` sub-package is NOT imported by the implementation. No version bump needed. |
-| `github.com/studio-b12/gowebdav` | v0.12.0 (Jan 2026) | New dependency, test only. Go 1.21+ required (satisfied by project's Go 1.25). |
+| `github.com/studio-b12/gowebdav` | v0.12.0 (Jan 2026) | Already in go.mod. `WriteStreamWithLength` available. Go 1.21+ required (satisfied). |
 | `github.com/labstack/echo/v4` | v4.15.1 | `e.Match()` for custom HTTP methods is available since Echo v4.5.0. No issue. |
 | `github.com/gavv/httpexpect/v2` | v2.16.0 (already in go.mod) | No change needed. |
+| `golang.org/x/perf/cmd/benchstat` | latest (April 2026) | CLI tool only — `go install golang.org/x/perf/cmd/benchstat@latest`. Not imported as a library. |
+| `owncloud/litmus` Docker image | latest tag | Last source update May 2024. Acceptable for CI; fall back to building from `notroj/litmus` if image stagnates. |
+| `testing/synctest` | Go 1.25 (stable) | Available without GOEXPERIMENT in Go 1.25+. Optional for unit-level concurrency tests. |
 
 ---
 
 ## Sources
 
+**v1.2 addendum sources:**
+- [pkg.go.dev/github.com/studio-b12/gowebdav](https://pkg.go.dev/github.com/studio-b12/gowebdav) — v0.12.0, `ReadStreamRange` single-range only, `WriteStreamWithLength` available. HIGH confidence (direct pkg.go.dev inspection).
+- [pkg.go.dev/runtime/metrics](https://pkg.go.dev/runtime/metrics) — `/memory/classes/heap/live:bytes`, `/memory/classes/total:bytes` metrics stable Go 1.16+. HIGH confidence.
+- [pkg.go.dev/runtime](https://pkg.go.dev/runtime) — `ReadMemStats`, `MemStats.HeapInuse` for in-process heap measurement. HIGH confidence.
+- [go.dev/src/net/http/fs.go](https://go.dev/src/net/http/fs.go) — `ServeContent` multi-range / `multipart/byteranges` support. Issue #3784 fixed 2012-06-29. HIGH confidence.
+- [github.com/golang/go/issues/3784](https://github.com/golang/go/issues/3784) — Multi-range ServeContent, resolved. HIGH confidence.
+- [pkg.go.dev/golang.org/x/perf/cmd/benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) — Current version April 9, 2026. Mann-Whitney U-test, 95% CI. HIGH confidence.
+- [github.com/owncloud-ci/litmus](https://github.com/owncloud-ci/litmus) — Docker image for litmus, last source update May 2024. `LITMUS_URL/USERNAME/PASSWORD` env vars. MEDIUM confidence (maintenance pace unclear).
+- [github.com/notroj/litmus](https://github.com/notroj/litmus) — Official upstream litmus, December 2024 commit, has Dockerfile. HIGH confidence.
+- [github.com/workgroupengineering/litmus](https://github.com/workgroupengineering/litmus) — GitHub Action wrapper, single commit Sep 2021, abandoned. HIGH confidence (directly inspected).
+- [go.dev/blog/synctest](https://go.dev/blog/synctest) — `testing/synctest` graduated to stable in Go 1.25. HIGH confidence.
+- Datadog Go memory regression post (2025) — `HeapInuse` vs RSS distinction. MEDIUM confidence (secondary source, but technically accurate).
+
+**v1.1 original sources:**
 - [pkg.go.dev/golang.org/x/net/webdav](https://pkg.go.dev/golang.org/x/net/webdav) — FileSystem interface, Handler struct, current version v0.52.0. HIGH confidence.
 - [golang/go issue #66059](https://github.com/golang/go/issues/66059) — MOVE Overwrite header bug, open as of November 2025. HIGH confidence.
 - [golang/go issue #66085](https://github.com/golang/net/blob/master/webdav/webdav.go) — WriteHeader called twice in PROPFIND. HIGH confidence (issue tracker).
@@ -343,12 +640,11 @@ The server implementation uses only:
 - [golang/net webdav.go source](https://github.com/golang/net/blob/master/webdav/webdav.go) — Confirmed COPY uses `!= "F"`, MOVE uses `== "T"`. HIGH confidence.
 - [pkg.go.dev/github.com/emersion/go-webdav](https://pkg.go.dev/github.com/emersion/go-webdav) — v0.7.0 Oct 2025, FileSystem interface shape. HIGH confidence.
 - [deepwiki.com/emersion/go-webdav](https://deepwiki.com/emersion/go-webdav/2.1-webdav-server) — Server architecture, adapter pattern. MEDIUM confidence (secondary source).
-- [pkg.go.dev/github.com/studio-b12/gowebdav](https://pkg.go.dev/github.com/studio-b12/gowebdav) — v0.12.0 Jan 2026, client methods, auth options. HIGH confidence.
 - [Echo issue #1459](https://github.com/labstack/echo/issues/1459) — WebDAV method routing in Echo, `e.Match()` workaround confirmed. HIGH confidence.
-- [cozy-stack go.mod](go.mod) — Confirmed `golang.org/x/net v0.50.0` already present, no `emersion/go-webdav` or `studio-b12/gowebdav` present. HIGH confidence (direct inspection).
-- [pkg/webdav/webdav.go](pkg/webdav/webdav.go) — Existing custom WebDAV client used for Nextcloud integration. HIGH confidence (direct inspection).
+- [cozy-stack go.mod](go.mod) — Confirmed `golang.org/x/net v0.50.0` already present. HIGH confidence (direct inspection).
 
 ---
 
 *Stack research for: WebDAV server layer on cozy-stack (Go monolith)*
-*Researched: 2026-04-04*
+*v1.1 researched: 2026-04-04*
+*v1.2 addendum: 2026-04-12*

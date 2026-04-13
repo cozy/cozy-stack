@@ -1,668 +1,452 @@
 # Pitfalls Research
 
-**Domain:** WebDAV server over a non-filesystem backend (CouchDB metadata + Swift/local blob storage)
-**Researched:** 2026-04-04
-**Confidence:** HIGH (security/correctness/interop from official RFC + real CVEs + codebase audit), MEDIUM (client quirks from community reports), LOW (OnlyOffice mobile internals)
+**Domain:** Adding robustness tests and fixes to an existing Go WebDAV server (large files, interrupted PUT, concurrency, byte-range GET)
+**Researched:** 2026-04-12
+**Confidence:** HIGH (Go runtime specifics from official docs + real test harness patterns), MEDIUM (iOS client behaviour from community reports), LOW (CouchDB/Swift atomicity corner cases — single source)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1 [SECURITY]: Infinite PROPFIND Depth DoS
+### Pitfall 1 [MEMORY]: Body-Accumulating Test Helpers Defeat Streaming Validation
 
-**Category:** Security / Performance
+**Category:** Large-file tests / Memory
 
 **What goes wrong:**
-A client sends `Depth: infinity` to PROPFIND. The server recursively traverses the entire VFS tree — every directory, every file — builds a 207 Multi-Status XML response in memory, and sends it all at once. On a Cozy instance with tens of thousands of files this consumes hundreds of megabytes and can take minutes. The request also holds a connection open the entire time. Multiple concurrent requests kill the stack process.
+A test helper reads the full response body into a `[]byte` (via `io.ReadAll`, `httpexpect` `.Body().Raw()`, `ioutil.ReadAll`, or `bytes.Buffer`) to assert content equality. The test passes. But now the test process is holding the entire file in memory — identical to a buffering bug in the server — so any "streaming PUT uses only constant memory" assertion is immediately falsified by the test itself. Worse: if you allocate a 1 GB test fixture and also capture the full response body, the test process peaks at ≥2 GB before GC has a chance to run.
 
 **Why it happens:**
-RFC 4918 originally defined `Depth: infinity` as a valid value. Many implementations just pass it through to their recursive listing logic, not realising the VFS call underneath may touch thousands of CouchDB documents.
+The existing test helpers (`env.E.GET(...).Expect().Status(200)` from httpexpect) are ergonomic and work perfectly for small payloads. Developers copy-paste this pattern for large-file tests without realising `Body().Raw()` calls `io.ReadAll` internally.
 
 **How to avoid:**
-- Reject `Depth: infinity` with `403 Forbidden` and an `Allow: 0, 1` note in the body. Apache does this by default (requires explicit `DavDepthInfinity On` to enable). This is explicitly called out in the Cozy PROJECT.md constraints.
-- Log and alert on any request with `Depth: infinity` even after rejection — it signals misconfigured clients or probing.
-- For `Depth: 1`, cap total items returned at a configurable limit (e.g., 1000) and return `507 Insufficient Storage` or a truncated response with a `DAV-warning` header rather than silently truncating.
+- For large-file GET verification, use a streaming hash comparison: write a helper that pipes `resp.Body` through `io.TeeReader` into a `sha256.New()`, draining into `io.Discard`. Compare the digest, never the bytes. Example pattern:
+  ```go
+  func assertBodyHash(t *testing.T, r io.Reader, wantHex string) {
+      h := sha256.New()
+      _, err := io.Copy(h, r)
+      require.NoError(t, err)
+      require.Equal(t, wantHex, hex.EncodeToString(h.Sum(nil)))
+  }
+  ```
+- For PUT, generate the fixture body as an `io.Reader` (not `[]byte`) using `io.LimitReader(rand.Reader, size)` or a seeded deterministic `io.Reader` that produces verifiable output without storing it.
+- Never use `WithBytes(bigSlice)` in httpexpect for files > 1 MB. Use `WithBody(reader)` instead.
 
 **Warning signs:**
-- Memory growth proportional to directory depth during PROPFIND.
-- Go heap profiles showing large `encoding/xml` allocations from PROPFIND handler goroutines.
-- Any test or integration suite that passes an empty `Depth` header and expects recursive results.
+- Test process RSS peaks at `N * file_size` where N > 1.
+- `go test -memprofile` shows `ioutil.ReadAll` or `bytes.(*Buffer).Write` in the heap profile top-10 during large file tests.
+- CI OOM-kills during "large file" test suite but not during unit tests.
 
-**Phase to address:** Phase 1 (PROPFIND implementation) — block `Depth: infinity` before any directory traversal code is written, not as a late hardening pass.
+**Phase to address:** Wave 1 of the large-file phase. Establish the streaming helper pattern before writing any large-file test. Retrofitting is harder.
 
 ---
 
-### Pitfall 2 [SECURITY]: Path Traversal via URL Encoding
+### Pitfall 2 [MEMORY]: Measuring RSS to Prove Streaming — Go Runtime Hoard
 
-**Category:** Security
-
-**What goes wrong:**
-A URL like `/dav/files/..%2F..%2Fetc%2Fpasswd` or `/dav/files/%2e%2e/secret` bypasses naive string prefix checks but decodes to a path outside `/files/`. In CVE-2023-39143, PaperCut's WebDAV servlet traversed outside its intended directory because paths were sanitised for forward slashes but not backslashes — and their servlet container (Jetty) allowed backslashes through. The CVSS score was 8.4.
-
-**Why it happens:**
-Developers clean the decoded path but forget that `net/http` (and Echo) may pass a partially-decoded or doubly-encoded URL. The `.BasePath + path` concatenation pattern in the existing `pkg/webdav` client is a reference — the server must not replicate it naively.
-
-**How to avoid (Go-specific):**
-- Use `path.Clean(u.Path)` after URL-decoding, and assert the result has the expected `/dav/files` prefix before passing to the VFS.
-- Never construct CouchDB `fullpath` strings by concatenating URL path segments directly. Always pass through `vfs.FileByPath` or equivalent VFS function — it owns the namespace.
-- Add a table-driven test covering: `../`, `%2e%2e/`, `%2e%2e%2f`, `%252e%252e`, and null bytes `%00`.
-- Echo's `c.Param("*")` already decodes `%XX` sequences; double-encoding (`%252f`) must be explicitly rejected or normalised.
-
-**Warning signs:**
-- Handler code doing `strings.HasPrefix(rawPath, "/dav/files")` before URL decoding.
-- Any path construction that concatenates user input with a separator directly.
-
-**Phase to address:** Phase 1 — path normalisation must be the first thing the routing layer does, before any handler dispatches.
-
----
-
-### Pitfall 3 [SECURITY]: Basic Auth Over Non-HTTPS (iOS Hard Requirement)
-
-**Category:** Security / Interop
+**Category:** Large-file streaming validation
 
 **What goes wrong:**
-iOS enforces ATS (App Transport Security): connections to non-`localhost` servers without HTTPS are blocked at the OS level. The native iOS Files app and OnlyOffice mobile will silently fail to connect if the Cozy instance does not serve TLS. The risk here is not just security — it is a complete client failure that is opaque to the user.
+The test measures peak memory via `runtime.ReadMemStats` or `ps -o rss` before and after a PUT, sees RSS drop below `file_size`, and concludes "streaming works." But Go's runtime allocates memory from the OS in arenas and does **not** release it back to the OS immediately after GC. `HeapInuse` and RSS diverge within seconds of a large allocation being freed. A buffering bug that briefly held 512 MB will show a pre/post RSS delta of near zero if measured after the fact.
 
-Additionally, Basic Auth credentials travel in plaintext over HTTP. If a developer or test environment uses HTTP, app-specific passwords are exposed in every request.
+The companion problem: Go's `io.Copy` uses a 32 KiB internal buffer by default. Any handler that only uses `io.Copy` and never accumulates beyond that is already streaming. But the VFS layer may accumulate (e.g., computing MD5 over the full body before writing to Swift), making `io.Copy` in the handler irrelevant.
 
 **Why it happens:**
-Developers test on `localhost` (which iOS and macOS exempt from ATS), so HTTP works during development. Staging and production reveal the failure without a clear error message.
+Developers know "io.Copy is streaming" and write tests that call `runtime.ReadMemStats` after the PUT returns. By then, GC has reclaimed the buffered data but the arena may still be resident. The measurement looks clean but proved nothing.
 
 **How to avoid:**
-- Document in the WebDAV integration test plan: "iOS client tests MUST use an HTTPS origin, even if self-signed via `mkcert`."
-- For Basic Auth, document in the project that app-specific passwords are only safe under TLS. Enforce at the server level: if the request is non-TLS AND not `localhost`, reject Basic Auth with `426 Upgrade Required`.
-- In the OPTIONS response, only advertise Basic Auth schemes when the connection is TLS (inspect Echo's `c.IsTLS()` or the `X-Forwarded-Proto` header set by the Cozy router).
+- Prove streaming by **interception, not measurement**: instrument the code path (or the test handler) to assert that body bytes are piped through without accumulation. Specifically, use an `io.LimitReader` wrapper that panics if more than `N` bytes (e.g., 2× chunk size) are held in-flight at any instant. Alternatively, use a slow reader (throttled via `time.Sleep` per chunk) and confirm that memory stays flat across the throttled duration via `runtime.ReadMemStats` sampled in a goroutine.
+- For a practical CI-safe approach: wrap the request body in a `countingReader` that tracks `maxConcurrentBytes` (using a channel or atomic), assert `maxConcurrentBytes < threshold` after the PUT. This is a white-box test but is far more reliable than RSS.
+- If you need black-box validation: run a PUT of a file larger than available heap in a subprocess with `GOMEMLIMIT` set. If the subprocess survives, it streamed. (`GOMEMLIMIT` is available since Go 1.19, controls soft memory limit triggering more aggressive GC.)
+- Document that `HeapInuse` is a better proxy than RSS but still not perfect: RSS includes stack, runtime metadata, and unreleased arenas. `HeapAlloc` (actively allocated bytes) is the most accurate metric for "is the body still held."
 
 **Warning signs:**
-- Integration tests run exclusively against `http://localhost` where iOS behaviour is not reproduced.
-- `WWW-Authenticate: Basic` header returned on plaintext responses in staging logs.
+- "Streaming test" that only calls `runtime.ReadMemStats` once, after the request completes.
+- Test peak RSS < file size, but `HeapAlloc` was never sampled concurrently with the in-flight PUT.
+- VFS layer calling `io.ReadAll` or `ioutil.ReadAll` on `file.Read()` anywhere in the call chain.
 
-**Phase to address:** Phase 1 (auth layer) — this must be decided before the first login test is written.
+**Phase to address:** Large-file phase, Wave 1. Define the measurement methodology before writing the test.
 
 ---
 
-### Pitfall 4 [SECURITY]: OPTIONS Method Leaks Server Capabilities Without Auth
+### Pitfall 3 [INTERRUPTED-PUT]: Partial File Committed with Wrong ETag / Orphaned State
 
-**Category:** Security
+**Category:** Interrupted PUT / Correctness
 
 **What goes wrong:**
-RFC 4918 requires that `OPTIONS *` (or `OPTIONS /dav/files`) return the `DAV:` and `Allow:` headers. Many implementations return this without authentication. This is intentional per spec — but in practice it leaks the server fingerprint (WebDAV class level, allowed methods), enables targeted probing, and in the historic IIS 6.0 vulnerability (CVE-2009-1535), a malformed OPTIONS request bypassed authentication entirely.
+The client sends a PUT and closes the TCP connection mid-stream (network drop, timeout, explicit abort). Three failure modes:
+
+1. **Partial file committed**: The VFS `file.Close()` runs despite the partial body (e.g., the handler doesn't check `io.Copy` error before calling `Close()`), committing a truncated file with the correct name but wrong size and a stale ETag.
+2. **Orphaned blob, no CouchDB doc**: The blob is written to Swift/FS but `file.Close()` returns an error that the handler swallows, so the CouchDB document is never created. The storage grows silently.
+3. **Orphaned CouchDB doc, no blob**: The inverse — metadata committed but the blob write failed. Subsequent GET returns 404 or a corrupt read.
+4. **Overwrite rollback deletes original**: The PUT was overwriting an existing file. The handler calls `fs.CreateFile(newdoc, olddoc)` — VFS moves `olddoc` to a temporary state. On abort, if rollback logic is missing or errors, the original file is gone even though the new file never committed.
+
+The current `put.go` in v1.1 has the correct pattern (`io.Copy` error checked, `file.Close()` error merged), but this is the exact class of bug that interruption tests will surface if any VFS backend has a subtlety.
 
 **Why it happens:**
-Developers see that clients probe with unauthenticated OPTIONS at connection time and exempt it, not realising the security surface.
+`context.Context` cancellation propagates through `io.Copy` — when the client disconnects, `c.Request().Body.Read()` returns `io.ErrUnexpectedEOF` or `context.Canceled`. If the handler doesn't distinguish "body read error" from "commit error", it may attempt `file.Close()` in a partial state. The VFS's transactional guarantees depend on the backend: local-FS can leave a half-written temp file; Swift can leave a partial object.
 
 **How to avoid:**
-- Allow unauthenticated OPTIONS for `/dav/files` only if the response is minimal: `DAV: 1`, `Allow: OPTIONS, PROPFIND, GET, PUT, DELETE, MKCOL, COPY, MOVE, HEAD`. Do NOT include resource-specific properties or directory listing in an OPTIONS response.
-- All other methods must require authentication. In Echo middleware ordering: OPTIONS handler is excepted from the auth middleware, but the auth middleware runs for all others.
-- Do not include `Server:` header revealing version or framework. The existing stack should already suppress this.
+- In the PUT handler: if `io.Copy` returns a non-nil error, call `file.Close()` anyway (to trigger the VFS abort path) but **do not** return a 2xx. Return 500. The current `put.go` already merges errors correctly — preserve this pattern for any new chunked/range PUT code.
+- Write an interruption test that:
+  1. Starts a goroutine sending a slow body (throttled reader).
+  2. Cancels the request context mid-way via `cancel()`.
+  3. After the handler returns, asserts no file exists at the path (or the original file is intact if it was an overwrite).
+  4. Queries CouchDB directly (via VFS) to confirm no orphaned document.
+- For the overwrite case: assert that after an aborted PUT to an existing path, the original file is still readable and has its original ETag.
 
 **Warning signs:**
-- OPTIONS handler calling any VFS function (it should not touch the backend at all).
-- OPTIONS returning `Lock-Token:` or similar session information.
+- `file.Close()` called unconditionally in a `defer` without checking whether `io.Copy` succeeded (a defer-only pattern can mask the abort).
+- VFS backend logs showing "wrote X bytes, expected Y" without a corresponding CouchDB rollback.
+- Integration test that only checks "no file at new path" but not "original file still intact."
 
-**Phase to address:** Phase 1 (OPTIONS handler + middleware chain).
+**Phase to address:** Interrupted PUT phase. The overwrite-rollback case specifically needs a dedicated test before the chunked-upload feature is added (it reuses the same overwrite path).
 
 ---
 
-### Pitfall 5 [CORRECTNESS]: ETag Semantics — Weak vs. Strong, Quotes Required
+### Pitfall 4 [CONCURRENCY]: Sleep-Based Synchronisation in Concurrent Tests
 
-**Category:** Correctness
+**Category:** Concurrency tests / Flakiness
 
 **What goes wrong:**
-RFC 4918 §8.8 requires strong ETags for WebDAV conditional operations. The CouchDB `_rev` field looks like an ETag but is not: it is not stable across COPY (the copy gets a new revision), is not content-addressed, and changes on metadata edits even if the file content is identical.
-
-A second common mistake: ETags in HTTP headers must be quoted (`"abc123"`), not bare strings. Many implementations return the raw revision string without quotes. Clients either ignore it or fail `If-Match` checks silently.
-
-A third variant: if the ETag is generated from the file content hash but the server returns the old ETag before the VFS finishes writing (i.e. the metadata is committed before the blob is stored in Swift), clients may cache a stale ETag for a file that is mid-upload.
+A concurrent-write test launches two goroutines that both PUT to the same path, then `time.Sleep(100 * time.Millisecond)` and asserts "exactly one of them got 204, the other got 412." On fast hardware this works. In CI on a slow disk image (CouchDB writes are slower, VFS has more latency), both goroutines may still be in flight when the sleep expires, making the assertion race. Alternatively: both finish before the sleep, but goroutine scheduling caused one to start before the other had a chance to read the ETag, and the result is non-deterministic.
 
 **Why it happens:**
-- CouchDB `_rev` is a natural candidate but has the wrong semantics.
-- The existing `pkg/webdav` client already reads `ETag` without quoting normalisation — this creates a precedent the server side should not repeat.
+Developers reach for `time.Sleep` because channels/WaitGroups add boilerplate to test code, and the sleep "works locally." CI environments are slower and have higher variance.
 
 **How to avoid:**
-- Derive ETags from the file content MD5 or SHA (the VFS already stores this as `md5sum`). This is stable across metadata changes.
-- Always return ETags as double-quoted strings: `"\"" + md5sum + "\""`.
-- For directories, derive the ETag from a hash of the directory's `updated_at` timestamp + its `rev`. Directories have no content hash in the VFS.
-- Do not expose CouchDB `_rev` as an ETag — it reveals internal document structure and changes on every metadata write.
-- Write an explicit test: PUT a file, GET it, check ETag is quoted, overwrite with same content, check ETag is identical.
+- Synchronise with channels or `sync.WaitGroup`, never with `time.Sleep`. Pattern:
+  ```go
+  results := make(chan int, 2)
+  for i := 0; i < 2; i++ {
+      go func() {
+          resp := putRequest(...)
+          results <- resp.StatusCode
+      }()
+  }
+  a, b := <-results, <-results
+  // exactly one 204 and one 412 (or both 204 if no ETag precondition)
+  ```
+- Use a `sync.Barrier` or `errgroup` to ensure both goroutines start simultaneously: send a "ready" signal from each, wait for both, then release. This maximises the race window.
+- For ETag-based concurrency (If-Match on concurrent PUT), seed the file with a known ETag before the test so the first PUT wins and the second gets 412 deterministically.
+- Add `-count=5` or `-count=10` to concurrency tests in CI to catch intermittent failures; `-race` flag is mandatory.
 
 **Warning signs:**
-- ETag values in responses without surrounding double-quotes.
-- ETag changing after a metadata-only update (e.g., rename) when file content is unchanged.
-- 412 Precondition Failed on a GET or HEAD where If-None-Match is sent with a previously returned ETag.
+- `time.Sleep` anywhere in a test that also launches goroutines.
+- Test is marked `t.Skip("flaky")` without a linked issue.
+- Test passes locally with `-count=1` but fails with `-count=10`.
 
-**Phase to address:** Phase 1 (GET/PUT/PROPFIND) — establish ETag strategy from the start.
+**Phase to address:** Concurrency phase, Wave 1. Establish the channel-synchronisation helper before writing tests.
 
 ---
 
-### Pitfall 6 [CORRECTNESS]: If-Match / If-None-Match Handling Incorrectly Implemented or Ignored
+### Pitfall 5 [CONCURRENCY]: Goroutine Leaks Poisoning Subsequent Tests
 
-**Category:** Correctness
+**Category:** Concurrency tests / Test isolation
 
 **What goes wrong:**
-RFC 4918 §8.8 and RFC 7232 define exactly when conditional headers should be checked and what responses to return:
-- `If-Match: *` on PUT to a non-existent resource must return `412`.
-- `If-None-Match: *` on PUT to an existing resource must return `412`.
-- `If-Match: "etag"` where the current ETag doesn't match must return `412`.
+A concurrent PUT test launches goroutines that block on a slow VFS write. The test asserts the status codes and returns, but the goroutines haven't finished. Go's test runner moves to the next test. The leaked goroutines now complete their writes against the same CouchDB test instance, interfering with the next test's preconditions (e.g., a file that should not exist now appears).
 
-Nextcloud bug #14428 and #37605 show that even mature WebDAV servers get this wrong — returning 412 when the ETag *does* match, or ignoring the header entirely. A server that ignores `If-None-Match: *` allows a client to silently overwrite existing files thinking it is creating new ones.
+The `t.Cleanup` hook runs after the test function returns but before the next test starts — however, it cannot cancel goroutines that don't respect a `context.Context`.
 
 **Why it happens:**
-Conditional headers are often treated as optional/advisory and the ETag comparison logic is implemented separately from the PUT handler, so they get out of sync.
+Test goroutines are spawned without a cancellable context. When the test ends, there's no mechanism to stop them. The VFS write is not context-aware, so it completes regardless.
 
 **How to avoid:**
-- Implement conditional header evaluation as a single middleware that runs before any mutating handler. It reads the current resource state from the VFS (one CouchDB lookup), evaluates all conditions, and short-circuits with 412 before any write happens.
-- Test every precondition combination: `If-Match: *` (resource exists / not exists), `If-None-Match: *` (same), `If-Match: "correct-etag"`, `If-Match: "wrong-etag"`.
+- Always use `context.WithTimeout(context.Background(), testTimeout)` and pass it to HTTP requests. Set a generous but finite timeout (e.g., 5 seconds for concurrency tests).
+- Use `goleak.VerifyNone(t)` (from `go.uber.org/goleak`) at the end of each concurrency test. This fails the test if goroutines are still running when the test ends, making leaks visible immediately rather than at the next test's unexpected failure.
+- Alternatively, use `testify/suite` with a `TearDownTest` that calls `goleak.VerifyNone(s.T())`.
 
 **Warning signs:**
-- PUT handler that doesn't check for `If-Match` / `If-None-Match` headers before calling `vfs.CreateFile`.
-- 200 OK (or 204) returned when `If-None-Match: *` is sent for an existing resource.
+- Test isolation failures: a test that creates file A and asserts it exists starts failing because a prior test's leaked goroutine already created file A.
+- Non-deterministic test ordering (Go test runner doesn't guarantee order within a package) combined with leaked goroutines.
+- `go test -v` showing goroutines still running after "--- PASS:" lines.
 
-**Phase to address:** Phase 2 (PUT handler) — must be implemented alongside PUT, not deferred.
+**Phase to address:** Concurrency phase, before the first concurrent-PUT test is written.
 
 ---
 
-### Pitfall 7 [CORRECTNESS]: Date Format — RFC 1123 Required, Not RFC 3339
+### Pitfall 6 [BYTE-RANGE]: Incorrect 206 vs 200 and Content-Range Header
 
-**Category:** Correctness
-
-**What goes wrong:**
-The `getlastmodified` DAV property and the `Last-Modified` HTTP header MUST use the RFC 1123 / RFC 7231 date format (`Mon, 02 Jan 2006 15:04:05 GMT`), not Go's default `time.RFC3339` (`2006-01-02T15:04:05Z07:00`). Some clients tolerate ISO 8601, but macOS Finder — per the sabre/dav Finder compatibility page — treats every `getlastmodified` value as UTC and misparses non-RFC1123 dates silently, resulting in incorrect modification times shown in Finder.
-
-**Why it happens:**
-Go's `time.Time.Format` defaults and CouchDB stores timestamps as RFC 3339. Developers copy the timestamp directly into the XML property.
-
-**How to avoid (Go-specific):**
-```go
-// Correct: RFC 1123 with explicit GMT suffix
-t.UTC().Format(http.TimeFormat)       // "Mon, 02 Jan 2006 15:04:05 GMT"
-
-// Wrong: RFC 3339
-t.Format(time.RFC3339)                 // "2006-01-02T15:04:05Z"
-```
-`http.TimeFormat` in the Go standard library is exactly RFC 1123 / RFC 7231 with a hard-coded `GMT` zone.
-
-- Write a test asserting the `getlastmodified` property in every PROPFIND response matches the regexp `^\w{3}, \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2} GMT$`.
-
-**Warning signs:**
-- Any XML property builder using `time.RFC3339` or `time.RFC3339Nano`.
-- Dates in PROPFIND responses ending in `Z` instead of `GMT`.
-
-**Phase to address:** Phase 1 (PROPFIND XML response builder).
-
----
-
-### Pitfall 8 [CORRECTNESS]: MOVE Without Overwrite Header Defaults to T
-
-**Category:** Correctness / Interop
+**Category:** Byte-range GET / RFC 7233 compliance
 
 **What goes wrong:**
-RFC 4918 §9.9.2: "If the Overwrite header is not included in a COPY or MOVE request, then the resource MUST treat the request as if it has an Overwrite header of value T." The macOS WebDAV client (Finder) does NOT include the `Overwrite` header during MOVE operations. If the server treats the missing header as `Overwrite: F`, renaming a file to overwrite an existing file fails silently.
+RFC 7233 requires:
+- A valid, unsatisfied range (bytes beyond file size): **416 Range Not Satisfiable** with `Content-Range: bytes */total`.
+- A range covering the entire file: **200 OK** (not 206), because no "partial" content is being served.
+- A valid partial range: **206 Partial Content** with `Content-Range: bytes first-last/total`.
+- Multi-range: **206** with `Content-Type: multipart/byteranges; boundary=...`.
 
-This is a documented open bug in `golang.org/x/net/webdav` (issue #66059, opened March 2024, still open as of April 2026) with the exact check `r.Header.Get("Overwrite") == "T"` instead of the correct `r.Header.Get("Overwrite") != "F"`.
+The current `get.go` delegates to `vfs.ServeFileContent`, which wraps `http.ServeContent`. Go's `http.ServeContent` handles single-range correctly (206 + Content-Range) but its multi-range support generates `multipart/byteranges` with correct MIME structure. The pitfall is **not** in the delegated path — it's in any **new** code that wraps or pre-processes Range headers before passing them to `ServeContent`, or in a custom range handler added for chunked upload progress.
 
-**Why it happens:**
-The natural coding pattern is to check for an affirmative `"T"` value. The RFC requires treating absence as `"T"`.
+A common bug: the handler parses the `Range` header, detects an out-of-bounds range, returns `200 OK` with the full body instead of `416`. This is wrong per RFC 7233 §4.4.
 
 **How to avoid:**
-```go
-overwrite := r.Header.Get("Overwrite")
-allowOverwrite := overwrite != "F"  // "" and "T" both mean allow
-```
-- Add a test: MOVE a file to a destination that already exists, without an `Overwrite` header. The server MUST overwrite and return 204.
+- Do not write a custom Range handler. Trust `http.ServeContent` / `vfs.ServeFileContent`. If you must pre-process:
+  - Parse `Range` with `http.ParseRange(header, fileSize)` — it returns `([]httpRange, error)`. If error, return 416.
+  - If the result covers the entire file, suppress the Range header before calling ServeContent (it will then return 200).
+- For the `If-Range` precondition: if the ETag in `If-Range` does not match the current ETag, the Range header must be **ignored** and the full file returned as 200. This is a correctness bug that `http.ServeContent` handles correctly only if you pass it the ETag via `modtime` + `name` — verify this is wired correctly.
+- Write explicit tests for:
+  - `Range: bytes=0-` on a 0-byte file → 200 (or 416 — RFC allows either; choose one and document it).
+  - `Range: bytes=0-999` on a 100-byte file → 416.
+  - `Range: bytes=0-99` on a 100-byte file → 200 (entire file).
+  - `Range: bytes=0-49, 50-99` → 206 multipart.
 
 **Warning signs:**
-- 412 Precondition Failed returned when Overwrite header is absent and destination exists.
-- Finder renames appearing to fail without error on the client.
+- GET handler intercepting or rewriting the `Range` header before passing to `ServeFileContent`.
+- Test suite only covers `Range: bytes=0-N` where N < file size.
+- Missing test for `Range` on a zero-byte file.
+- iOS Files app shows stale content: this is often the client's URL session cache, but also frequently caused by wrong ETag on partial responses.
 
-**Phase to address:** Phase 2 (MOVE handler) — the correct default must be baked in from the start.
+**Phase to address:** Byte-range GET phase, Wave 1. Test `http.ServeContent` delegation first, add custom range logic only if delegation is insufficient.
 
 ---
 
-### Pitfall 9 [INTEROP]: macOS Finder Requires Locking — Without It, Read-Only
+### Pitfall 7 [CHUNKED-UPLOAD]: Stale Session Leak and Race on Concurrent Chunk Writes
 
-**Category:** Interop / Client
+**Category:** Content-Range PUT / Chunked upload design
 
 **What goes wrong:**
-macOS Finder's WebDAV implementation checks the server's `DAV:` header level. If the server only advertises `DAV: 1` (Class 1, no locking), Finder mounts the share in read-only mode. The user sees files but cannot create, edit, or delete anything, with no error message explaining why.
+If chunked upload is implemented (upload session per file, identified by an upload ID):
 
-The Cozy project explicitly scopes out locking (LOCK/UNLOCK) for v1. This means Finder is read-only by design. This is acceptable, but must be documented and communicated to users.
+1. **Stale session leak**: A client starts an upload, sends chunk 1, then disconnects. The partial blob and the session metadata (CouchDB doc?) are never cleaned up. After many such aborts, storage grows unboundedly.
+2. **Concurrent chunk race**: Two clients both PUT chunk 5 of the same upload ID. Both succeed. Now chunk 5 is duplicated or corrupt.
+3. **Sparse file creation**: The server accepts chunks out of order and writes them at their declared byte offsets without validating that earlier chunks arrived first. If the client sends chunk 3 before chunk 2, the server creates a sparse file with a zero-filled gap.
+4. **Offset validation missing**: `Content-Range: bytes 0-999/5000` on chunk 1, then `Content-Range: bytes 2000-2999/5000` on chunk 2 — the server accepts a 1000-byte gap, creating a corrupt file.
 
 **Why it happens:**
-Developers implement all other operations, test with iOS Files or Cyberduck, and declare the implementation complete — without testing Finder, which has a unique locking requirement.
+Chunked upload is stateful. Most WebDAV implementations (including cozy-stack v1.1) are stateless per-request. Adding upload sessions requires distributed state (CouchDB or in-memory), and the failure modes are non-obvious.
 
 **How to avoid:**
-- In the OPTIONS response, return `DAV: 1` only (no class 2). Do not claim class 2 without implementing locking.
-- Add Finder to the "known limitations" section of the documentation.
-- Consider: if Finder read-write is a future requirement, plan a locking v2 phase. A minimal in-memory lock store (no persistence) is enough for Finder because Finder's locks are short-lived per-operation.
-- Finder also leaves `.DS_Store` and `._*` (resource fork) files everywhere. The DELETE handler should accept requests to delete these files without error, even if the VFS ignores them.
+- Before implementing chunked upload: decide whether it is in scope. RFC 4918 does not require it. Only implement if a specific client (iOS Files, rclone) demonstrably needs it.
+- If implemented: use CouchDB as the session store (not in-memory — restarts kill in-memory state mid-upload). Each session doc tracks: upload ID, file path, total expected size, received byte ranges (as a sorted interval list), blob reference.
+- Strict offset enforcement: reject any chunk whose `Content-Range` start offset != size of all previously received bytes. Return `409 Conflict`.
+- Session cleanup: add a TTL to session docs (e.g., 24 hours). A background job or a lazy cleanup on session create deletes expired sessions and their blobs.
+- Concurrent chunk protection: use CouchDB optimistic locking (rev-based) on the session doc to reject a second concurrent write to the same chunk.
 
 **Warning signs:**
-- `DAV: 1, 2` in the OPTIONS response without LOCK/UNLOCK handlers implemented.
-- Tests passing with Cyberduck or iOS Files but untested with macOS Finder.
+- The `Content-Range` header on PUT is parsed but the offset is not validated against received chunks.
+- Upload sessions stored only in a Go `sync.Map` (lost on restart, no TTL).
+- No test for "client sends chunk 2 before chunk 1" scenario.
 
-**Phase to address:** Phase 1 (OPTIONS response) — lock the DAV level at class 1 from the start; document the Finder limitation explicitly.
+**Phase to address:** Only if Content-Range PUT is scoped into v1.2. Gate behind an explicit design decision. If the decision is "not yet", add a 501 Not Implemented response for `Content-Range` PUT to avoid silent corruption.
 
 ---
 
-### Pitfall 10 [INTEROP]: iOS Files App Requires HTTPS and Content-Length on Every Response
+### Pitfall 8 [CI]: CouchDB Container Startup Race and Litmus Package Drift
 
-**Category:** Interop / Security
+**Category:** CI integration
 
 **What goes wrong:**
-Two independent iOS requirements:
-1. iOS ATS: connections to non-localhost hosts without TLS are blocked. The native Files app will fail to connect to an HTTP Cozy WebDAV endpoint with no user-readable error.
-2. Finder and iOS HTTP/1.1 clients: `Content-Length` must be present on file GET responses. Without it, "really strange results" occur (per sabre/dav Finder compatibility docs). Echo can send chunked responses without `Content-Length` when the response size is not known.
-
-**Why it happens:**
-In Go/Echo, if you write to `c.Response()` without calling `c.Response().Header().Set("Content-Length", ...)` first, and the response is larger than the buffer, Echo uses `Transfer-Encoding: chunked`. This is correct HTTP/1.1 but breaks some WebDAV clients.
+1. **CouchDB startup race**: The GitHub Actions job starts CouchDB as a service container and immediately runs tests. CouchDB takes 2-8 seconds to be ready. The first PROPFIND (or the test harness's `NeedCouchdb` check) times out, the job fails with a connection error, and the failure looks like a flaky test rather than an infrastructure race.
+2. **litmus package drift**: `apt-get install litmus` on Ubuntu 22.04 installs litmus 0.13; Ubuntu 24.04 installs 0.14 (or a different patchlevel). Litmus 0.13 and 0.14 differ in how they handle `PROPPATCH` responses with mixed success/failure (207 vs 400). A suite that passes on 0.13 may fail on 0.14 for PROPPATCH edge cases, not because the server regressed but because the test changed.
+3. **Parallel litmus runs**: If two CI jobs run litmus against the same CouchDB instance and the same cozy instance concurrently, litmus creates/deletes files in predictable paths (`/litmus/`, `/litmus2/`). Concurrent runs corrupt each other's state.
 
 **How to avoid:**
-- For file GET responses, always set `Content-Length` from the VFS metadata (`vfs.FileDoc.ByteSize`) before writing the body — even if the VFS returns an `io.Reader` for streaming.
-- In test suites, always verify `Content-Length` is present and matches the actual body length for GET responses.
-- For PROPFIND and other XML responses, the response is built in a `bytes.Buffer` before writing; set `Content-Length` from `buf.Len()` before `c.Response().WriteHeader(207)`.
+- CouchDB startup: add a `wait-for-it.sh` step or a `healthcheck` loop in the CI job before starting tests:
+  ```yaml
+  - name: Wait for CouchDB
+    run: |
+      for i in $(seq 1 30); do
+        curl -sf http://localhost:5984/ && break
+        sleep 1
+      done
+  ```
+  The existing `testutils.NeedCouchdb(t)` helper likely already retries, but the CI wait step catches cases where the connection is refused before Go test binary even starts.
+- litmus version pinning: do not rely on `apt-get install litmus`. Instead, use the prebuilt binary approach: check the litmus version in the `make test-litmus` script with `litmus --version` and fail fast with a clear message if the wrong version is installed. Or: download a specific release tarball in CI and cache it.
+- Parallel isolation: each CI job should use a unique cozy instance subdomain (already done via `testutils.NewSetup` which uses `t.Name()` as a seed). The litmus script should also create a unique test collection per run (e.g., `/litmus-$CI_JOB_ID/`).
 
 **Warning signs:**
-- Go `http.ResponseWriter` not having `Content-Length` set before the first `Write()` call.
-- Echo handlers that call `c.Stream(200, mime, reader)` — this sends chunked without Content-Length.
+- CI failure log shows "connection refused" to CouchDB on port 5984, not a test assertion failure.
+- litmus failure on `props: 30/30` locally but `props: 28/30` in CI — litmus version mismatch.
+- Two CI jobs started from the same PR fail alternately rather than consistently — shared state.
 
-**Phase to address:** Phase 1 (PROPFIND), Phase 2 (GET) — Content-Length policy must be in the handler template from the start.
+**Phase to address:** CI litmus integration phase (deferred from v1.1). Address startup race first (it's the most common CI failure mode).
 
 ---
 
-### Pitfall 11 [INTEROP]: Trailing Slash Normalisation — MKCOL and Collection URLs
+### Pitfall 9 [CI]: Test Fixture Size and Git Repo Bloat
 
-**Category:** Correctness / Interop
+**Category:** Large-file tests / Repository hygiene
 
 **What goes wrong:**
-RFC 4918 recommends collection URLs have a trailing slash. Clients do not always send one. Nginx WebDAV returns `409 Conflict` for MKCOL without a trailing slash. The existing `pkg/webdav` client's `fixSlashes()` function adds trailing slashes before every request — the server-side must handle both forms.
-
-The concrete failure mode: a client sends `MKCOL /dav/files/Documents` (no trailing slash). The server checks if `/dav/files/Documents/` exists (with trailing slash). If the normalisation is not done consistently, you can create a directory and then fail to PROPFIND it.
+A developer creates a test that needs a 100 MB file. The simplest approach: `testdata/large-file-100MB.bin` checked into git. After three rounds of this (different sizes for different tests), the repo gains 500 MB of binary fixtures that every checkout must download, git clone becomes slow, and CI checkout time spikes.
 
 **Why it happens:**
-Go's `path.Clean` removes trailing slashes. URL routing frameworks normalise paths. The VFS uses `fullpath` without trailing slash. These three representations can diverge.
+Test fixtures checked into git are the path of least resistance when you need "a file with known content."
 
 **How to avoid:**
-- Establish a single canonical rule: WebDAV collection URLs are internally represented *without* trailing slashes (matching the VFS `fullpath` convention). All incoming URLs are normalised by stripping trailing slashes before dispatching.
-- Exception: `PROPFIND /dav/files/` (root) must work — handle the root path specially.
-- Write a test matrix: `MKCOL /dav/files/foo`, `MKCOL /dav/files/foo/`, `PROPFIND /dav/files/foo`, `PROPFIND /dav/files/foo/` — all must be equivalent.
+- Never check binary test fixtures into git. Generate them programmatically:
+  ```go
+  func generateFixture(t *testing.T, size int64) (path string, sha256hex string) {
+      f, err := os.CreateTemp(t.TempDir(), "fixture-*")
+      require.NoError(t, err)
+      t.Cleanup(func() { os.Remove(f.Name()) })
+      h := sha256.New()
+      r := io.TeeReader(io.LimitReader(rand.Reader, size), h)
+      _, err = io.Copy(f, r)
+      require.NoError(t, err)
+      return f.Name(), hex.EncodeToString(h.Sum(nil))
+  }
+  ```
+  This produces a deterministic-enough fixture (content is random but the hash is computed fresh each time) that never touches the repo.
+- For reproducible fixtures (same bytes every run): use a seeded `rand.New(rand.NewSource(42))` reader.
+- Add `testdata/*.bin` and `testdata/*.dat` to `.gitignore` as a safety net.
 
 **Warning signs:**
-- Separate code paths for paths with and without trailing slashes.
-- Echo routes registered for `/dav/files/:path` (no trailing slash) but not `/dav/files/:path/`.
+- `testdata/` directory with files larger than a few KB.
+- `git lfs` discussion without a decision — means large files are being contemplated for git storage.
+- CI checkout step taking > 30 seconds.
 
-**Phase to address:** Phase 1 (routing setup).
+**Phase to address:** Large-file phase, before any fixture is generated. Add a linting check or CI rule that rejects binary files > 100 KB in `testdata/`.
 
 ---
 
-### Pitfall 12 [PERFORMANCE]: PROPFIND on Large Directories — Blocking CouchDB Fetch + Full XML in Memory
+### Pitfall 10 [iOS-VALIDATION]: URL Session Cache and Subnet Isolation Masking Server Bugs
 
-**Category:** Performance
-
-**What goes wrong:**
-A PROPFIND `Depth: 1` on a directory with 10,000 files currently requires:
-1. A CouchDB `_find` query to list all children (one round trip, returns all 10,000 documents).
-2. Building a 207 Multi-Status XML response in memory, one `<response>` element per file.
-3. Writing the complete response body to the client.
-
-At step 1, the CouchDB query uses the `by_parent_id` index (if it exists) and returns all results at once. For 10,000 files at ~500 bytes per doc, that is 5 MB of CouchDB JSON, decoded into Go structs, then re-encoded as XML. Total memory per PROPFIND: ~15–20 MB. Ten concurrent PROPFIND requests on large directories: ~150–200 MB just for this handler.
-
-**Why it happens:**
-The VFS `DirByID` / `ListDir` functions return `[]vfs.DirOrFileDoc` slices. The WebDAV handler builds the XML response from this slice. No streaming, no pagination.
-
-**How to avoid:**
-- Cap `Depth: 1` PROPFIND at a configurable page size (default 1000). Return the page with a `DAV-max-items` header and a cursor for the next page (non-standard but tolerated by most clients that care).
-- If the VFS provides a cursor-based listing API, use it; if not, add one. The `vfs.DirIterator` interface (if it exists) would be ideal.
-- Stream the XML response using `xml.Encoder` writing directly to the response writer rather than building a `bytes.Buffer` first. This requires setting `Transfer-Encoding: chunked` (acceptable for PROPFIND since Content-Length is hard to know in advance for streaming XML).
-- Add a Go benchmark test: `BenchmarkPropfindDepth1_1000Files` — track memory allocations per call.
-
-**Warning signs:**
-- Any code that calls `append(items, ...)` inside a PROPFIND handler loop without a size bound.
-- XML built into a `strings.Builder` or `bytes.Buffer` from a slice of unbounded size.
-
-**Phase to address:** Phase 1 (PROPFIND) — establish the memory model before integration tests with large datasets.
-
----
-
-### Pitfall 13 [PERFORMANCE]: PUT Does Not Stream — Full File Buffered in Memory
-
-**Category:** Performance
+**Category:** iOS Files app manual validation
 
 **What goes wrong:**
-A common mistake in Go WebDAV handlers: the PUT body (`r.Body`) is read entirely into a `[]byte` or `bytes.Buffer` before being passed to the VFS `CreateFile`. For a 500 MB video upload, this consumes 500 MB of Go heap.
-
-The VFS `CreateFile` function takes an `io.Reader`. The key is to pass `r.Body` directly as the reader — but the VFS may need the `Content-Length` upfront (for pre-allocating Swift segments or CouchDB metadata). If the client sends `Transfer-Encoding: chunked` without a `Content-Length`, the handler must detect this and either reject the request with `411 Length Required` or buffer to determine the size.
-
-**Why it happens:**
-The `ContentLength` field on `http.Request` is `-1` when chunked transfer encoding is used. Developers check `r.ContentLength > 0` and fall back to `io.ReadAll` for the `-1` case, inadvertently buffering.
+1. **URL session cache**: iOS's `NSURLSession` aggressively caches WebDAV responses (especially PROPFIND and GET). A bug is fixed on the server, but the iOS client continues to show stale content because its cache hasn't been invalidated. The tester sees "correct" behaviour and signs off, but a fresh mount (first connection) would show the old bug.
+2. **Subnet isolation**: The iOS device is on a different Wi-Fi subnet or behind a VPN. The device reaches the cozy-stack dev server but the server's HTTPS certificate is for `localhost` or a `.local` domain that iOS rejects with `NSURLErrorDomain -1202` (SSL error), silently falling back to a read-only view. The tester sees files but cannot write.
+3. **iOS 17+ DAV changes**: iOS 17 changed the default `User-Agent` string and added additional precondition headers (`If-None-Match` on COPY) not present in iOS 16. A server tested only against iOS 16 may fail the `If-None-Match` on COPY edge case on iOS 17+.
 
 **How to avoid:**
-- Pass `r.Body` directly to `vfs.CreateFile` when `r.ContentLength >= 0`. The VFS can stream the body to Swift in chunks.
-- When `r.ContentLength == -1` (chunked), write the body to a temporary file on disk to determine size, then pass the temp file reader and its size to `vfs.CreateFile`. This is how ownCloud handles it.
-- Set `MaxBytesReader` on `r.Body` proportional to the user's quota before any read.
-- Write a test: upload a file larger than the test process's soft memory limit and verify heap usage does not spike.
+- Before each iOS validation session: on the iOS device, go to Settings → General → Transfer or Reset iPhone → Reset → Reset Network Settings. This clears the URL session cache. Or: in the Files app, remove the server connection and re-add it.
+- Use a proper TLS certificate (Let's Encrypt or mkcert) for the dev server domain, not a self-signed cert, and ensure the domain is reachable from the iOS device's network. The simplest setup: deploy on a public staging instance with a valid cert.
+- Test iOS 17+ explicitly with an iOS 17 device if available. Focus on COPY, MOVE, and LOCK (even though LOCK is not implemented — iOS may send LOCK and expect 405 Method Not Allowed, not an unhandled panic).
+- Test the unhappy paths explicitly: rename a file to an already-existing name (expect Overwrite behaviour), move a file to a directory that doesn't exist (expect 409), and upload a file that would exceed quota (expect 507).
 
 **Warning signs:**
-- `io.ReadAll(r.Body)` anywhere in a PUT handler.
-- `ioutil.ReadAll(r.Body)` (deprecated but still found in older code).
+- iOS Files app shows the old file name after a server-side rename until the app is backgrounded and foregrounded.
+- Tester reports "seems fine" but only tested read operations.
+- iOS device on a different VLAN than the dev server.
 
-**Phase to address:** Phase 2 (PUT handler) — streaming must be designed in, not retrofitted.
-
----
-
-### Pitfall 14 [INTEGRATION]: VFS MkdirAll Race Condition Under Concurrent WebDAV Clients
-
-**Category:** Integration / Concurrency
-
-**What goes wrong:**
-`vfs.MkdirAll` (see `model/vfs/vfs.go:545`, flagged in CONCERNS.md) has no distributed lock. If two WebDAV clients simultaneously issue `MKCOL /dav/files/Photos/2024/` (e.g. two desktop sync clients), `MkdirAll` can create duplicate CouchDB documents for the same path.
-
-**Why it happens:**
-The VFS uses `os.IsExist` as a race fallback. Under concurrent requests, the check-then-create window is large enough for duplication. The CONCERNS.md audit explicitly flags this as a known gap.
-
-**How to avoid:**
-- For `MKCOL` in the WebDAV handler: use the CouchDB document conflict (409 from CouchDB) as the canonical "already exists" signal. If the VFS returns a conflict error on directory creation, treat it as `405 Method Not Allowed` (RFC 4918: "collection already exists").
-- Do not rely on `vfs.MkdirAll` for WebDAV `MKCOL`. Issue a direct `vfs.Mkdir` (single directory creation) and let the RFC 4918 rule "intermediate parents must already exist → 409 Conflict" stand. This avoids the race and is spec-compliant.
-- Write a concurrent test: 10 goroutines simultaneously `MKCOL /dav/files/race-test/` — only one should get 201, the rest 405.
-
-**Warning signs:**
-- WebDAV MKCOL handler calling `vfs.MkdirAll` rather than `vfs.Mkdir`.
-- Absence of a race test for concurrent MKCOL.
-
-**Phase to address:** Phase 2 (MKCOL handler).
-
----
-
-### Pitfall 15 [INTEGRATION]: COPY Is a Full Download-and-Upload Over Swift
-
-**Category:** Integration / Performance
-
-**What goes wrong:**
-The WebDAV COPY method copies a file to a new path. For a VFS backed by Swift object storage, there is no server-side copy operation available through the VFS abstraction. The naive implementation:
-1. Downloads the file from Swift (streaming through Go heap).
-2. Creates a new VFS document.
-3. Uploads the file back to Swift.
-
-For a 1 GB file this is 1 GB of network transfer through the Go process, not a server-side copy.
-
-The `golang.org/x/net/webdav` issue #38974 explicitly documents this: the library uses `io.Copy` between source and destination, which on remote backends does a full round-trip.
-
-**Why it happens:**
-The VFS `FileSystem` interface does not expose a `CopyFile` method that can be optimised. The WebDAV handler has no choice but to fall back to read-then-write.
-
-**How to avoid:**
-- Check whether the Swift client library (`ncw/swift`) supports server-side copy (`X-Copy-From` header). It does — use it when both source and destination are in the same Swift container.
-- If source and destination are in different containers (shouldn't happen in Cozy's single-tenant VFS), fall back to streaming copy.
-- Add a server-side copy path to the VFS interface and implement it in the Swift backend before implementing COPY in the WebDAV handler. This is a VFS enhancement, not just a WebDAV handler concern.
-- Document COPY performance limitations in v1 if Swift server-side copy is not implemented.
-
-**Warning signs:**
-- WebDAV COPY handler using `io.Copy` between a `vfs.File` reader and a `vfs.File` writer.
-- No `CopyFile` optimisation in the VFS interface.
-
-**Phase to address:** Phase 3 (COPY/MOVE) — assess Swift server-side copy feasibility before committing to the COPY handler design.
-
----
-
-### Pitfall 16 [INTEGRATION]: VFS Move with CouchDB String-Prefix Path Matching
-
-**Category:** Integration
-
-**What goes wrong:**
-`model/vfs/couchdb_indexer.go:391-402` (flagged in CONCERNS.md): directory moves use CouchDB fullpath string prefix matching. CouchDB collation returns false positives for paths that differ only in case (`/Photos/` vs `/PHOTOS/`). After a WebDAV MOVE of a directory, some children may not have their `fullpath` updated if the post-move filter misidentifies them.
-
-**Why it happens:**
-WebDAV MOVE of a collection requires updating `fullpath` for all descendant documents. The indexer does this via a CouchDB query that finds all docs with `fullpath` starting with the old path. The case-sensitivity bug is inherent to CouchDB's collation.
-
-**How to avoid:**
-- Do not implement directory MOVE yourself — use the existing `vfs.MoveDir` function exclusively, even if it is slow for large directories.
-- Write a test: create `/PHOTOS/` and `/photos/` (if the VFS allows it), move `/PHOTOS/` to `/archive/`, verify `/photos/` children are unaffected.
-- After a MOVE, issue a PROPFIND on the destination and the source to verify the old path returns 404 and the new path returns the correct children. Include this in the integration test suite.
-
-**Warning signs:**
-- Any WebDAV MOVE handler that manually updates `fullpath` fields instead of delegating entirely to the VFS.
-
-**Phase to address:** Phase 3 (MOVE handler) — rely on VFS, add regression tests.
-
----
-
-### Pitfall 17 [TESTING]: Brittle XML Comparison in PROPFIND Tests
-
-**Category:** Testing
-
-**What goes wrong:**
-Testing a 207 Multi-Status XML response by comparing the raw string output is fragile. XML attribute order, namespace prefix choices (`d:` vs `DAV:`), whitespace, and element ordering can all vary without changing semantics. A test that does `assert.Equal(t, expectedXML, actualXML)` breaks whenever the XML renderer changes indentation or reorders attributes, creating false failures.
-
-**Why it happens:**
-The XML response body is the most visible output of a PROPFIND handler, so it is the natural thing to compare in tests.
-
-**How to avoid:**
-- Parse the 207 response into a struct (using `encoding/xml` with the same structs used by the `pkg/webdav` client — reuse them) and assert on the struct fields.
-- Test specific semantic properties: "response contains an element with href `/dav/files/Documents/` and `resourcetype: collection`" rather than the whole response string.
-- Use the `litmus` WebDAV compliance test suite (Go version: `net/webdav/litmus_test_server.go`) as an integration-level protocol compliance check, separate from unit tests.
-- For XML namespace testing, assert that the `DAV:` namespace is correctly declared and that all required properties (`getlastmodified`, `getcontentlength`, `resourcetype`, `getetag`) are present.
-
-**Warning signs:**
-- Test code containing multi-line raw XML strings that are compared with `==` or `assert.Equal`.
-- Test failures that appear after reformatting the XML encoder output.
-
-**Phase to address:** Phase 1 — establish the XML testing pattern before writing the first PROPFIND test.
-
----
-
-### Pitfall 18 [TESTING]: Locking Out the VFS in Unit Tests Hides Integration Bugs
-
-**Category:** Testing
-
-**What goes wrong:**
-TDD discipline requires fast unit tests, which pushes teams toward mocking the VFS. A mock that always returns success for `CreateFile` will not reveal:
-- The CouchDB conflict behaviour on concurrent writes.
-- The Swift upload failure path.
-- The `vfs.MkdirAll` race condition.
-- The path prefix matching bug on MOVE.
-
-The mock is effectively testing that the handler wires up correctly, not that the full stack behaves correctly.
-
-**Why it happens:**
-VFS integration tests are slow (require a running CouchDB + Swift), so they are deferred to CI. By the time the integration failure is discovered, the handler code is committed and patching it is expensive.
-
-**How to avoid:**
-- Use the in-memory VFS (`vfsafero`) for integration tests — it runs without CouchDB/Swift and exercises most VFS code paths. The existing test infrastructure already supports this.
-- Separate test tiers:
-  1. Unit tests (handler logic, XML serialisation, header parsing) — pure Go, no I/O.
-  2. VFS integration tests (handler + afero VFS) — run in the same `go test` invocation.
-  3. Protocol compliance tests (litmus or manual curl scripts against a test server) — run in CI.
-- Never mock VFS in tests that are testing the full WebDAV handler. Only mock external dependencies (e.g., the blob upload endpoint).
-
-**Warning signs:**
-- `vfs_mock.go` or `mock_filesystem.go` files in the WebDAV handler test directory.
-- Test suite that has 100% unit test coverage but zero integration test coverage.
-
-**Phase to address:** All phases — the test architecture must be defined before the first handler is written (TDD strict).
-
----
-
-### Pitfall 19 [INTEROP]: OnlyOffice Mobile Hardcodes `/remote.php/webdav` Path
-
-**Category:** Interop / Client
-
-**What goes wrong:**
-OnlyOffice mobile (and many other Nextcloud-compatible clients) hardcode `/remote.php/webdav` as the WebDAV base path. The PROJECT.md notes a redirect from `/remote.php/webdav` to `/dav/files`. If this redirect is implemented as a `302 Found` (temporary redirect), some clients preserve the `POST` → `GET` downgrade (per HTTP spec) and WebDAV methods other than GET get downgraded silently.
-
-**Why it happens:**
-`302` is the default redirect in many frameworks. A `301 Permanent` redirect preserves the method for non-GET methods only in HTTP/1.1-compliant clients, but some clients still downgrade.
-
-**How to avoid:**
-- Use `308 Permanent Redirect` (not 301, not 302) for the `/remote.php/webdav` redirect. RFC 7538: 308 preserves the HTTP method and body on redirect, explicitly designed for this use case.
-- Alternatively, mount the handler at BOTH paths (`/dav/files` and `/remote.php/webdav`) rather than redirecting — this avoids the redirect entirely.
-- Test: send `PROPFIND /remote.php/webdav/` and verify the response is equivalent to `PROPFIND /dav/files/`.
-
-**Warning signs:**
-- `c.Redirect(http.StatusMovedPermanently, ...)` or `c.Redirect(http.StatusFound, ...)` in the compatibility route.
-- Tests that only verify the redirect status code but not the redirected request method.
-
-**Phase to address:** Phase 1 (routing setup).
-
----
-
-### Pitfall 20 [CORRECTNESS]: XML Namespace Handling in PROPFIND Request Body
-
-**Category:** Correctness
-
-**What goes wrong:**
-Clients send a PROPFIND request body with an XML namespace declaration. A common pattern:
-```xml
-<D:propfind xmlns:D="DAV:"><D:allprop/></D:propfind>
-```
-The prefix `D:` is arbitrary — RFC 4918 allows any prefix. Servers that do naive string matching on `"DAV:propfind"` (without namespace-aware parsing) will fail when a client uses a different prefix (e.g. `<dav:propfind xmlns:dav="DAV:">`).
-
-A second issue: `allprop` means "return all properties", including dead properties (custom properties stored by clients). If the server does not support dead properties, it must return at least the live properties (`getlastmodified`, `getcontentlength`, `getetag`, `resourcetype`) and not return a 415 or 400.
-
-**Why it happens:**
-`encoding/xml` in Go handles namespace-aware parsing correctly if used with `xml.Name{Space: "DAV:", Local: "propfind"}`. But if the XML is parsed with simple `xml:"propfind"` struct tags, it does namespace-unaware matching.
-
-**How to avoid:**
-- Use `xml.Name{Space: "DAV:", Local: "..."}` struct tags in all WebDAV XML type definitions.
-- Test with clients that use `xmlns:dav="DAV:"` prefix (non-standard `D:` prefix).
-- For `allprop`: return all live properties. Log but silently ignore requests for dead properties in v1.
-
-**Warning signs:**
-- XML struct tags using `xml:"propfind"` without a namespace.
-- Test XML bodies always using the same namespace prefix.
-
-**Phase to address:** Phase 1 (PROPFIND request parsing).
+**Phase to address:** iOS validation phase (last phase of v1.2, after robustness features are stable). Use a staging environment, not localhost.
 
 ---
 
 ## Technical Debt Patterns
 
+Shortcuts that seem reasonable but create long-term problems.
+
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Using CouchDB `_rev` as ETag | No extra computation | Wrong semantics; changes on metadata edits; leaks internal structure | Never |
-| Returning XML as a raw string from `fmt.Sprintf` | Fast to write | Namespace bugs; escaping bugs; untestable | Never |
-| Mocking VFS in all tests | Fast unit tests | Hides integration bugs; see Pitfall 18 | Only for pure handler logic tests |
-| `io.ReadAll(r.Body)` in PUT | Simple code | OOM for large files; see Pitfall 13 | Never |
-| Reject PROPFIND with `allprop` as unimplemented | Avoids complexity | Breaks Finder, Cyberduck, and most sync clients | Never — must handle `allprop` |
-| Implementing COPY as read-then-write | Simple VFS interface | 1 GB file = 1 GB RAM + double Swift I/O | Acceptable for v1 if documented and Swift server-side copy is planned for v2 |
-| Serving DAV:1 and DAV:2 without locking | Clients try write ops | macOS Finder mounts read-only silently | `DAV:1` only is correct for v1 |
+| `time.Sleep` for goroutine synchronisation in tests | No boilerplate | Flaky CI on slow hardware, false passes | Never — use `sync.WaitGroup` or channels |
+| `io.ReadAll` in test body verification for large files | Simple equality assertion | OOM in CI, defeats streaming validation | Only for files < 1 MB |
+| Binary fixtures in `testdata/` | Stable, reproducible | Repo bloat, slow checkout | Never for files > 100 KB |
+| Measuring RSS after-the-fact to prove streaming | "Passes the smell test" | Proves nothing due to Go arena retention | Never — use concurrent sampling or GOMEMLIMIT subprocess |
+| In-memory upload session store for chunked upload | Simple to implement | Lost on restart, no TTL, no persistence | Only for a prototype; must be replaced before shipping |
+| `defer file.Close()` without checking `io.Copy` error | Idiomatic Go pattern | Commits partial file if body read fails | Never for PUT handler — error must be checked before Close |
+| Skipping `If-Range` precondition for byte-range tests | Fewer test cases | Clients (iOS, rclone) send `If-Range`; silent regression possible | Never — add at least one `If-Range` test case |
+| Running litmus against a shared CouchDB instance in CI | Simpler CI config | Parallel jobs corrupt each other's test state | Only for serial CI pipelines (never for parallel) |
 
 ---
 
 ## Integration Gotchas
 
+Common mistakes when connecting to external services or test harnesses.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| CouchDB VFS | Calling `vfs.MkdirAll` for MKCOL | Call `vfs.Mkdir`; let RFC 4918 §9.3 require parents to exist |
-| Swift blob storage | Streaming PUT via `io.ReadAll` | Pass `r.Body` directly to Swift upload with known `ContentLength` |
-| Swift COPY | Read-then-write for file copy | Use Swift server-side copy (`X-Copy-From`) when source and dest are in same container |
-| CouchDB directory MOVE | Manual `fullpath` update | Delegate entirely to `vfs.MoveDir`; never touch `fullpath` directly |
-| CouchDB ETags | Expose `_rev` as ETag | Use MD5/SHA from VFS metadata, always double-quoted |
-| Echo routing | Registering WebDAV methods as HTTP routes | Register custom HTTP methods with Echo's `router.Add()` or use a sub-handler with a manual method dispatch |
+| CouchDB in CI | Starting tests immediately after container `healthy` signal | Add an explicit HTTP poll loop (30 retries × 1s) on `/_up` endpoint before running tests |
+| litmus apt package | Using `apt-get install litmus` without version pinning | Pin version via tarball download in CI; check `litmus --version` at script start |
+| Swift/local VFS on test instance | Using the default shared temp dir across tests | Set `config.GetConfig().Fs.URL` to `t.TempDir()` per test (already done in `testutil_test.go`) |
+| gowebdav client library | Using it for large-file tests (it may buffer internally) | Check gowebdav's `ReadStream` vs `Read` methods; use `ReadStream` for large files |
+| httpexpect for large responses | `Body().Raw()` accumulates full response in memory | Use `Body().Reader()` (if available) or switch to `net/http` directly for large-file assertions |
+| iOS Files app URL session cache | Testing after server changes without cache reset | Reset network settings on device or disconnect/reconnect server before each session |
+| GitHub Actions services (CouchDB) | Assuming `services.couchdb.ports` means it's immediately ready | Always add a wait step; Docker `healthy` state ≠ CouchDB accepting queries |
 
 ---
 
 ## Performance Traps
 
+Patterns that work at small scale but fail as test corpus grows.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Unbounded PROPFIND Depth:1 | Memory spikes on large dirs | Cap at 1000 items, add pagination | Directories with >1000 files |
-| `io.ReadAll` on PUT body | OOM on large uploads | Stream `r.Body` to Swift directly | Files larger than available heap (~500 MB) |
-| COPY via full round-trip | High latency, double bandwidth | Swift server-side copy | Any file >10 MB |
-| Full XML in `bytes.Buffer` for PROPFIND | Memory proportional to dir size | Stream `xml.Encoder` to response writer | Directories with >500 files |
-| Unbounded `Depth: infinity` | CPU + memory DoS | Reject with 403 | Any directory with >100 files |
-| CouchDB `_find` without index | PROPFIND Depth:1 slow | Ensure `by_parent_id` index exists; create if absent | Directories with >100 docs |
+| Running all large-file tests sequentially without explicit GC | Memory grows across tests; later tests OOM | Call `runtime.GC()` + `debug.FreeOSMemory()` between large-file tests in `TestMain` | At 3+ large-file tests in sequence |
+| SHA256 of full body loaded into memory for assertion | Memory spike = 2× file size | Use streaming hash (`io.TeeReader` → `sha256.New()` → `io.Discard`) | At any file > 100 MB |
+| CouchDB poll loop without timeout | Concurrent test starvation if CouchDB is wedged | Set a hard timeout (30s) on the poll loop; fail fast, don't hang | Any time CouchDB is slow to start |
+| `go test ./web/webdav/... -race` with leaked goroutines | False data races reported for subsequent tests | Use `goleak.VerifyNone(t)` per concurrency test | From the first concurrent test |
+| Parallel litmus runs against same cozy instance | Litmus creates/deletes predictable paths; runs corrupt each other | Unique instance or unique base collection path per litmus invocation | Any parallel CI setup |
 
 ---
 
 ## Security Mistakes
 
+Domain-specific security issues specific to the robustness phase.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| `Depth: infinity` not rejected | DoS — server goes OOM on large trees | Reject with 403 before any VFS call |
-| Basic Auth over HTTP (non-localhost) | App-specific password exposed in plaintext | Enforce TLS at server middleware; reject non-TLS Basic Auth with 426 |
-| OPTIONS handler touches VFS | Information disclosure + attack surface expansion | OPTIONS must return static headers only, no VFS calls |
-| URL path not normalised before VFS dispatch | Path traversal (CVE-2023-39143 pattern) | `path.Clean` + prefix assert before every VFS call |
-| Exposing CouchDB `_rev` as ETag | Internal document structure revealed | Use content hash (MD5/SHA) from VFS metadata |
-| Serving `/files/` and app data under same WebDAV root | Data leakage — settings, connectors accessible | Enforce VFS root = `/files/` in the routing layer; never expose other doctypes |
+| Accepting `Content-Range` PUT without strict offset validation | Sparse file creation; client can write arbitrary byte ranges → corrupt files | Reject any `Content-Range` PUT where offset ≠ total received bytes so far; return 409 |
+| Not aborting VFS file on interrupted PUT | Partial file committed; ETag no longer reflects actual content | Ensure `io.Copy` error propagates to prevent `file.Close()` from committing partial content |
+| Exposing upload session IDs that are guessable | One user can resume another user's upload by guessing UUID | Use `crypto/rand` UUIDs for session IDs; validate session ownership against the authenticated instance |
+| Accepting `Range` headers without size bounds on download | A client sending `Range: bytes=0-999999999999` could cause the server to seek to an invalid offset | Rely on `http.ServeContent` / `vfs.ServeFileContent` which handles this correctly — do not write a custom range handler |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **PROPFIND:** Returns correct 207 with all required live properties — verify `getlastmodified` format is RFC 1123, not ISO 8601
-- [ ] **PROPFIND:** Rejects `Depth: infinity` with 403 before any VFS call
-- [ ] **PUT:** Streams body to Swift without buffering — verify with a file > 100 MB in integration test
-- [ ] **PUT:** Handles `If-Match` and `If-None-Match` conditional headers
-- [ ] **MOVE:** Treats missing `Overwrite` header as `Overwrite: T`
-- [ ] **MKCOL:** Returns 409 when parent does not exist (not 500, not 404)
-- [ ] **MKCOL:** Returns 405 when collection already exists (not 409)
-- [ ] **OPTIONS:** Returns `DAV: 1` (not `DAV: 1, 2`), no locking methods in `Allow:`
-- [ ] **OPTIONS:** Does not require authentication
-- [ ] **ETags:** Always double-quoted, derived from content hash not `_rev`
-- [ ] **Redirect:** `/remote.php/webdav` redirects with 308 (not 301 or 302) to preserve method
-- [ ] **Auth:** Basic Auth rejected with 426 on non-TLS non-localhost connections
-- [ ] **Finder:** `.DS_Store` and `._*` DELETE requests return 204 (not 404 or 500)
-- [ ] **iOS Files:** Every GET response has `Content-Length` header set
+- [ ] **Streaming PUT test**: Asserts memory stays bounded — not just that the file was written correctly. Verify with concurrent `HeapAlloc` sampling, not post-hoc RSS.
+- [ ] **Interrupted PUT test**: Asserts original file is intact after abort (overwrite path), not just that the new file doesn't exist.
+- [ ] **Byte-range GET**: Has a test for `Range: bytes=0-N` where N >= file size → 416 (not silent truncation).
+- [ ] **Byte-range GET**: Has a test for `Range: bytes=0-N` where N = file size - 1 (entire file as range) → 200 or 206 (per implementation decision, must be consistent).
+- [ ] **Concurrency test**: Uses channel synchronisation, not `time.Sleep`. Run with `-count=10` and `-race` in CI.
+- [ ] **Concurrency test**: Uses `goleak.VerifyNone(t)` to catch goroutine leaks before the next test.
+- [ ] **CI litmus**: Startup wait loop for CouchDB is present. litmus version is pinned or checked.
+- [ ] **iOS validation**: Tests include rename-to-existing-name, move-to-nonexistent-parent, and upload-exceeding-quota (not just happy paths).
+- [ ] **Large-file fixtures**: Generated programmatically in `t.TempDir()`, never checked into git.
+- [ ] **Content-Range PUT** (if in scope): Strict offset validation is present. Session TTL and cleanup are implemented. Returns 501 if not in scope.
 
 ---
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| ETags using `_rev` instead of content hash | HIGH | Re-derive ETags from VFS md5sum; clients will re-validate all cached files; breaking change |
-| `Depth: infinity` not blocked (DoS discovered in prod) | MEDIUM | Add reject middleware with one deployment; restart after OOM |
-| PUT buffering OOM in production | MEDIUM | Emergency memory cap via `MaxBytesReader`; streaming refactor in next sprint |
-| MOVE Overwrite default bug (Finder renames broken) | LOW | One-line fix: `!= "F"` instead of `== "T"`; deploy hotfix |
-| XML namespace parsing broken | MEDIUM | Fix struct tags, deploy; clients may need to retry failed requests |
-| CouchDB `_rev` exposed in ETag (security) | MEDIUM | Rotate to content-hash ETag; document cache invalidation for clients |
+| Binary fixtures accidentally committed to git | HIGH | `git filter-branch` or `git filter-repo` to rewrite history, then force-push; notify all contributors to re-clone. Prevention is far cheaper. |
+| Partial file committed after interrupted PUT | MEDIUM | Manually delete the orphaned CouchDB doc + Swift blob via the cozy admin API. Add a VFS integrity check script. |
+| Goroutine leaks accumulating across test run | LOW | Add `goleak.VerifyNone(t)` to failing test; trace the leaking goroutine via `go test -v` goroutine dump. |
+| Flaky concurrency test in CI | MEDIUM | Replace `time.Sleep` with channel sync; add `-count=10 -race` to reproduce; check for shared mutable state across goroutines. |
+| litmus version mismatch breaking CI | LOW | Pin litmus version in CI; run `litmus --version` as a CI pre-check step. |
+| iOS cache masking server bug that shipped | HIGH | The bug is in production. Ship a fix; instruct users to disconnect and reconnect the Files server. |
+| CouchDB startup race causing false CI failures | LOW | Add wait loop to CI job; set `continue-on-error: false` on the wait step so the failure is explicit. |
 
 ---
 
 ## Pitfall-to-Phase Mapping
 
+How v1.2 roadmap phases should address these pitfalls.
+
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Infinite PROPFIND DoS | Phase 1 (PROPFIND) | Test: `Depth: infinity` returns 403 |
-| Path traversal | Phase 1 (routing) | Table-driven test with encoded paths |
-| Basic Auth over HTTP | Phase 1 (auth middleware) | Test: HTTP non-localhost returns 426 |
-| OPTIONS auth bypass | Phase 1 (middleware chain) | Test: unauthenticated OPTIONS returns headers only |
-| ETag semantics | Phase 1 (PROPFIND/GET) | Test: ETag quoted, stable on metadata change, changes on content change |
-| If-Match / If-None-Match | Phase 2 (PUT) | Conditional request test matrix |
-| Date format RFC 1123 | Phase 1 (PROPFIND XML builder) | Regexp test on `getlastmodified` value |
-| MOVE Overwrite default | Phase 2/3 (MOVE) | Test: MOVE without header overwrites destination |
-| Finder read-only (locking) | Phase 1 (OPTIONS) | Document limitation; test `DAV: 1` returned |
-| iOS HTTPS requirement | Phase 1 (auth) | Note in test plan; integration test with HTTPS origin |
-| Trailing slash normalisation | Phase 1 (routing) | Test matrix: slash/no-slash variants of MKCOL and PROPFIND |
-| Large PROPFIND memory | Phase 1 (PROPFIND) | Benchmark: 1000-file dir, measure allocations |
-| PUT streaming | Phase 2 (PUT) | Integration test: upload >100 MB, check heap |
-| VFS MkdirAll race | Phase 2 (MKCOL) | Concurrent MKCOL test |
-| COPY full round-trip | Phase 3 (COPY) | Assess Swift server-side copy; document v1 limitation |
-| VFS MOVE path matching | Phase 3 (MOVE) | Post-MOVE PROPFIND regression test |
-| Brittle XML tests | All phases | Establish struct-based assertion pattern before Phase 1 |
-| VFS mock test isolation | All phases | Require afero VFS in handler integration tests |
-| OnlyOffice `/remote.php/webdav` | Phase 1 (routing) | Test: PROPFIND via `/remote.php/webdav/` succeeds |
-| XML namespace parsing | Phase 1 (PROPFIND) | Test: request body with non-`D:` prefix is parsed correctly |
+| Body-accumulating test helpers (P1) | Large-file phase, Wave 1 | No `io.ReadAll` / `Body().Raw()` in large-file test files; code review check |
+| RSS measurement trap (P2) | Large-file phase, Wave 1 | Streaming proof uses concurrent `HeapAlloc` sampling or `GOMEMLIMIT` subprocess |
+| Interrupted PUT orphans/rollback (P3) | Interrupted PUT phase | Test asserts original file intact after abort; VFS doc count unchanged after failed PUT |
+| Sleep-based concurrency sync (P4) | Concurrency phase, Wave 1 | `grep -r 'time\.Sleep' web/webdav/*_test.go` returns 0 hits in new test files |
+| Goroutine leaks between tests (P5) | Concurrency phase, Wave 1 | `goleak.VerifyNone(t)` at end of each concurrent test |
+| 206 vs 200 and Content-Range header (P6) | Byte-range GET phase | Explicit tests for each RFC 7233 edge case (full-file range → 200, out-of-bounds → 416) |
+| Chunked upload session leaks and race (P7) | Content-Range PUT phase (if scoped) | Test: abort mid-upload → no orphaned storage. Gate: explicit design decision before any implementation. |
+| CouchDB startup race in CI (P8) | CI litmus integration phase | CI job has wait loop; no "connection refused" in logs |
+| litmus package drift (P8) | CI litmus integration phase | `litmus --version` check in script; version pinned in CI |
+| Test fixture git bloat (P9) | Large-file phase, Wave 1 | `git ls-files -- testdata/ | xargs du -sh` shows no files > 100 KB |
+| iOS cache / subnet masking (P10) | iOS validation phase | Validation checklist includes cache reset step; staging environment used |
 
 ---
 
 ## Sources
 
-- [RFC 4918 — HTTP Extensions for WebDAV (IETF)](https://datatracker.ietf.org/doc/html/rfc4918) — authoritative specification
-- [CVE-2023-39143 — PaperCut WebDAV path traversal (Horizon3.ai)](https://horizon3.ai/attack-research/disclosures/writeup-for-cve-2023-39143-papercut-webdav-vulnerability/) — real-world path traversal via backslash + WebDAV
-- [sabre/dav Finder Compatibility Guide](https://sabre.io/dav/clients/finder/) — macOS Finder locking, Content-Length, character encoding quirks
-- [golang/go issue #66059 — x/net/webdav MOVE missing Overwrite header defaults](https://github.com/golang/go/issues/66059) — open bug March 2024
-- [golang/go issue #23871 — x/net/webdav Windows 7 Explorer interop failure](https://github.com/golang/go/issues/23871)
-- [golang/go issue #38974 — x/net/webdav COPY inefficiency on remote filesystems](https://github.com/golang/go/issues/38974)
-- [OnlyOffice community: iOS app 9.2 breaks WebDAV/Nextcloud](https://community.onlyoffice.com/t/ios-app-9-2-breaks-webdav-nextcloud-support/17415) — auth credential mismatch bug
-- [Nextcloud issue #14428 — If-None-Match PreconditionFailed bug](https://github.com/nextcloud/server/issues/14428)
-- [litmus — WebDAV server compliance test suite](http://www.webdav.org/neon/litmus/)
-- [nginx trac #1966 — MKCOL refuses creation without trailing slash](https://trac.nginx.org/nginx/ticket/1966)
-- [Apache mod_dav — DavDepthInfinity directive](https://httpd.apache.org/docs/2.4/mod/mod_dav.html)
-- [ownCloud issue #29618 — 6 GB Swift/S3 upload via WebDAV](https://github.com/owncloud/core/issues/29618)
-- [Cozy codebase CONCERNS.md — VFS MkdirAll race, couchdb_indexer path matching](/.planning/codebase/CONCERNS.md)
-- [iOS ATS — HTTPS required for non-localhost WebDAV](https://forums.zotero.org/discussion/116306/ios-restrictions-must-use-https-to-connect-a-non-local-webdav-server)
+- Go `runtime.MemStats` documentation: https://pkg.go.dev/runtime#MemStats — distinction between `HeapAlloc`, `HeapInuse`, and OS-level RSS.
+- RFC 7233 §4 (Range Requests): defines 206, 416, `If-Range` semantics. https://datatracker.ietf.org/doc/html/rfc7233
+- RFC 4918 §9.7.1 (PUT): "A PUT that would result in the creation of a resource without an appropriate parent collection MUST fail with a 409 Conflict."
+- Go `http.ServeContent` source (stdlib): handles single and multi-range, `If-Range`, and full-range → 200 promotion automatically.
+- `go.uber.org/goleak`: goroutine leak detector for Go tests. https://github.com/uber-go/goleak
+- GOMEMLIMIT (Go 1.19+): https://pkg.go.dev/runtime — soft memory limit for subprocess streaming validation.
+- CVE-2023-39143 (PaperCut WebDAV path traversal): referenced for context on path handling; not directly applicable to v1.2 scope.
+- cozy-stack `web/webdav/put.go` v1.1: current implementation correctly merges `io.Copy` error with `file.Close()` error — this pattern must be preserved in any new PUT variant.
+- cozy-stack `web/webdav/testutil_test.go` v1.1: existing harness sets `t.TempDir()` per test for VFS isolation — large-file tests must reuse this, not introduce a shared temp directory.
 
 ---
-*Pitfalls research for: WebDAV server over CouchDB/Swift VFS (cozy-stack)*
-*Researched: 2026-04-04*
+*Pitfalls research for: WebDAV robustness testing and fixes on an existing Go WebDAV server*
+*Researched: 2026-04-12*
