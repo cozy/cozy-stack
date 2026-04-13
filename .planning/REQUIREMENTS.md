@@ -52,6 +52,7 @@ Tests de correction sous gros volume. Aucune assertion de débit ou latence.
 
 - [ ] **CI-01** : Un workflow `.github/workflows/webdav-litmus.yml` exécute litmus contre les deux routes (`/dav/files/` + `/remote.php/webdav/`) à chaque push sur `master` et chaque PR qui touche `web/webdav/`. Utilise l'image Docker `owncloud/litmus` (éviter `apt install litmus` qui installe 0.13 obsolète). Inclut un wait-loop sur CouchDB `/_up`.
 - [ ] **CI-02** : Les résultats litmus apparaissent dans le summary GitHub Actions (tableau pass/fail par suite) et sont visibles depuis les PR checks.
+- [ ] **CI-03** : Les tests lourds v1.2 (LARGE en Phase 5, CONC si nécessaire en Phase 7) portent le garde `if testing.Short() { t.Skip(...) }`. Le workflow `go-tests.yml` existant est modifié pour passer `-short` (CI rapide par défaut, PRs tous packages). Un nouveau workflow `.github/workflows/webdav-heavy.yml` exécute la suite complète sans `-short`, avec timeout 30 min, sur push master et sur PRs touchant `web/webdav/**`. Les runs locaux (`go test ./...` sans flag) restent exhaustifs par défaut.
 
 ### Validation manuelle (VAL)
 
@@ -92,36 +93,35 @@ Explicitement exclus. Raisonnement documenté pour prévenir le scope creep.
 
 ## Traceability
 
-À remplir pendant la création du roadmap par gsd-roadmapper.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INSTR-01 | Phase [TBD] | Pending |
-| INSTR-02 | Phase [TBD] | Pending |
-| INSTR-03 | Phase [TBD] | Pending |
-| LARGE-01 | Phase [TBD] | Pending |
-| LARGE-02 | Phase [TBD] | Pending |
-| INTERRUPT-01 | Phase [TBD] | Pending |
-| INTERRUPT-02 | Phase [TBD] | Pending |
-| INTERRUPT-03 | Phase [TBD] | Pending |
-| RANGE-01 | Phase [TBD] | Pending |
-| RANGE-02 | Phase [TBD] | Pending |
-| RANGE-03 | Phase [TBD] | Pending |
-| CONC-01 | Phase [TBD] | Pending |
-| CONC-02 | Phase [TBD] | Pending |
-| CONC-03 | Phase [TBD] | Pending |
-| CONC-04 | Phase [TBD] | Pending |
-| DEBT-01 | Phase [TBD] | Pending |
-| DEBT-02 | Phase [TBD] | Pending |
-| CI-01 | Phase [TBD] | Pending |
-| CI-02 | Phase [TBD] | Pending |
-| VAL-01 | Phase [TBD] | Pending |
+| INSTR-01 | Phase 4 | Pending |
+| INSTR-02 | Phase 4 | Pending |
+| INSTR-03 | Phase 4 | Pending |
+| LARGE-01 | Phase 5 | Pending |
+| LARGE-02 | Phase 5 | Pending |
+| INTERRUPT-01 | Phase 6 | Pending |
+| INTERRUPT-02 | Phase 6 | Pending |
+| INTERRUPT-03 | Phase 6 | Pending |
+| RANGE-01 | Phase 6 | Pending |
+| RANGE-02 | Phase 6 | Pending |
+| RANGE-03 | Phase 6 | Pending |
+| CONC-01 | Phase 7 | Pending |
+| CONC-02 | Phase 7 | Pending |
+| CONC-03 | Phase 7 | Pending |
+| CONC-04 | Phase 7 | Pending |
+| DEBT-01 | Phase 4 | Pending |
+| DEBT-02 | Phase 4 | Pending |
+| CI-01 | Phase 8 | Pending |
+| CI-02 | Phase 8 | Pending |
+| CI-03 | Phase 8 | Pending |
+| VAL-01 | Phase 9 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 20 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 20 ⚠️
+- v1.2 requirements: 21 total
+- Mapped to phases: 21/21 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 at milestone kickoff*
+*Last updated: 2026-04-13 — traceability filled by roadmapper*
