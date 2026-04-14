@@ -91,8 +91,8 @@ func measurePeakHeap(tb testing.TB, fn func()) uint64 {
 // body as []byte — memory use is bounded by io.Copy's internal 32 KiB buffer.
 //
 // This is the ONLY sanctioned way to consume large response bodies in WebDAV
-// tests. NEVER use io.ReadAll, ioutil.ReadAll, httpexpect.Body().Raw(), or
-// bytes.Buffer on bodies > 1 MB — they defeat the streaming validation by
+// tests. Accumulating helpers (ReadAll variants, httpexpect.Body().Raw(), or
+// buffered writers) on bodies > 1 MB defeat the streaming validation by
 // holding the entire body in test-process memory. See PITFALLS.md §1.
 func drainStreaming(r io.Reader) (string, int64, error) {
 	h := sha256.New()
@@ -118,9 +118,8 @@ const largeFixtureSeed = int64(0x434F5A59)
 // into the repository — all test fixtures are generated on-the-fly.
 //
 // Use this for any test needing a reproducible body of arbitrary size.
-// For a 1 GB fixture: largeFixture(1 << 30). Do NOT wrap the result in
-// io.ReadAll or bytes.Buffer — drain it via drainStreaming or pipe it
-// directly into http.Request.Body.
+// For a 1 GB fixture: largeFixture(1 << 30). Do NOT buffer the result —
+// drain it via drainStreaming or pipe it directly into http.Request.Body.
 func largeFixture(n int64) io.Reader {
 	// rand.New(rand.NewSource(seed)) produces a *rand.Rand whose Read method
 	// fills a []byte with deterministic pseudo-random bytes. Wrap in
