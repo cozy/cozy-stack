@@ -22,7 +22,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Milestone Goal:** Prove the WebDAV server is correct under conditions the litmus suite does not exercise — multi-GB transfers, interrupted connections, byte-range edge cases, and small-scale concurrent writes. The milestone also closes v1.1 technical debt (race harness, CI litmus automation, iOS manual sign-off). This is a **correctness** milestone, not a performance or load-testing milestone. All concurrency tests stay at 2-3 goroutines maximum; no throughput assertions.
 
-- [ ] **Phase 4: Prerequisites and Instrumentation** — Race harness fix, testing.TB widening, memory/fixture/drain helpers
+- [x] **Phase 4: Prerequisites and Instrumentation** — Race harness fix, testing.TB widening, memory/fixture/drain helpers (completed 2026-04-14)
 - [ ] **Phase 5: Large-File Streaming Proof** — 1 GB PUT and GET with heap ceiling assertions
 - [ ] **Phase 6: Interrupted PUT and Byte-Range Edge Cases** — Connection drops, overwrite rollback, Content-Range rejection, single/multi-range GET, 416 handling
 - [ ] **Phase 7: Concurrent Access Correctness** — Two-client same-path PUT race, CouchDB 409 mapping, dirty-read guard, goroutine leak detection
@@ -41,7 +41,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   3. A concurrent `HeapInuse` sampler helper exists in the test package — it can be called with any `func()` body and returns peak heap observed during that call.
   4. A streaming SHA-256 drain helper exists — it consumes an `io.Reader` of arbitrary size without ever allocating the full body as `[]byte`.
   5. A deterministic large-fixture generator exists — it produces an `io.Reader` of N bytes from a fixed seed, with no binary file committed to the repository.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 - [ ] 04-01-PLAN.md — DEBT-01 race harness fix (env-var gate on AntivirusTrigger, with Option B escalation)
 - [ ] 04-02-PLAN.md — DEBT-02 testing.TB widening + remove blanket testing.Short skip
 - [ ] 04-03-PLAN.md — INSTR-01/02/03 helpers (measurePeakHeap + drainStreaming + largeFixture)
@@ -126,7 +126,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 1. Foundation | v1.1 | 9/9 | Complete | 2026-04-05 |
 | 2. Write Operations | v1.1 | 5/5 | Complete | 2026-04-06 |
 | 3. COPY, Compliance, and Documentation | v1.1 | 10/10 | Complete | 2026-04-12 |
-| 4. Prerequisites and Instrumentation | 2/3 | In Progress|  | - |
+| 4. Prerequisites and Instrumentation | 3/3 | Complete   | 2026-04-14 | - |
 | 5. Large-File Streaming Proof | v1.2 | 0/? | Not started | - |
 | 6. Interrupted PUT and Byte-Range Edge Cases | v1.2 | 0/? | Not started | - |
 | 7. Concurrent Access Correctness | v1.2 | 0/? | Not started | - |

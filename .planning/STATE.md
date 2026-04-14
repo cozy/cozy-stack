@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Robustness
-status: unknown
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-04-14T13:53:59.897Z"
+status: active
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-04-14T14:02:43.470Z"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State: Cozy WebDAV
@@ -24,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Un utilisateur peut monter son Cozy comme un lecteur réseau WebDAV depuis n'importe quel client compatible RFC 4918 Class 1 et manipuler ses fichiers avec les opérations POSIX usuelles.
 
-**Current focus:** Phase 04 — prerequisites-and-instrumentation
+**Current focus:** Phase 05 — large-file-tests (next phase after Phase 04 completion)
 
 ---
 
 ## Current Position
 
-Phase: 04 (prerequisites-and-instrumentation) — EXECUTING
-Plan: 3 of 3 (next: 04-03)
+Phase: 04 (prerequisites-and-instrumentation) — COMPLETE
+Plan: 3 of 3 — all done; Phase 04 complete
 
 ## Performance Metrics
 
@@ -80,11 +80,11 @@ Plan: 3 of 3 (next: 04-03)
 - (04-01) Option A (env-var gate COZY_DISABLE_AV_TRIGGER=1) sufficient to close FOLLOWUP-01 — Option B (stack.Shutdown cleanup) not needed
 - (04-01) Guard s.av nil in ShutdownScheduler for both schedulers to prevent nil panic when trigger registration is skipped
 - (04-02) Widened config.UseTestFile and testutils.NeedCouchdb to testing.TB rather than type-assertion shims — backward-compatible one-line changes
-
----
+- (04-03) measurePeakHeap uses atomic CAS loop for lock-free peak tracking; runtime.KeepAlive needed to hold test allocations live during heap sampling
+- (04-03) All three INSTR helpers in single testhelpers_test.go file (Option A) — 128 LOC, clean separation from testutil_test.go
 
 ## Session Continuity
 
-Last session: 2026-04-14T13:53:59.894Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-04-14T14:02:43.468Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

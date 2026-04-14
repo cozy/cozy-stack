@@ -11,9 +11,9 @@
 
 Prérequis de correction pour les tests de gros fichiers et concurrence. Pas d'instrumentation de perf.
 
-- [ ] **INSTR-01** : Helper de mesure mémoire concurrent — sampler `runtime.ReadMemStats` pendant une opération en vol, retourne peak `HeapInuse` observé. Objectif : prouver le streaming, pas mesurer la vitesse.
-- [ ] **INSTR-02** : Helper streaming-SHA256 drain — pattern `io.TeeReader(body, sha256.New())` → `io.Discard`, consomme un gros body côté test sans accumulation mémoire. Proscrit `io.ReadAll` et `httpexpect.Body().Raw()` sur les gros transferts.
-- [ ] **INSTR-03** : Fixture streaming — générateur `io.LimitReader(rand.Reader, N)` + seed déterministe, zero fixture binaire checked-in dans git.
+- [x] **INSTR-01** : Helper de mesure mémoire concurrent — sampler `runtime.ReadMemStats` pendant une opération en vol, retourne peak `HeapInuse` observé. Objectif : prouver le streaming, pas mesurer la vitesse.
+- [x] **INSTR-02** : Helper streaming-SHA256 drain — pattern `io.TeeReader(body, sha256.New())` → `io.Discard`, consomme un gros body côté test sans accumulation mémoire. Proscrit `io.ReadAll` et `httpexpect.Body().Raw()` sur les gros transferts.
+- [x] **INSTR-03** : Fixture streaming — générateur `io.LimitReader(rand.Reader, N)` + seed déterministe, zero fixture binaire checked-in dans git.
 
 ### Gros volumétrie (LARGE)
 
@@ -95,9 +95,9 @@ Explicitement exclus. Raisonnement documenté pour prévenir le scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INSTR-01 | Phase 4 | Pending |
-| INSTR-02 | Phase 4 | Pending |
-| INSTR-03 | Phase 4 | Pending |
+| INSTR-01 | Phase 4 | Complete |
+| INSTR-02 | Phase 4 | Complete |
+| INSTR-03 | Phase 4 | Complete |
 | LARGE-01 | Phase 5 | Pending |
 | LARGE-02 | Phase 5 | Pending |
 | INTERRUPT-01 | Phase 6 | Pending |
