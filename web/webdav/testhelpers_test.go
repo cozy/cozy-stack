@@ -31,6 +31,12 @@ func measurePeakHeap(tb testing.TB, fn func()) uint64 {
 	var peak uint64
 	var samples []uint64 // kept for on-fail debug logging
 
+	// Flush prior-test garbage so the baseline sample reflects only
+	// live allocations, not debris from earlier tests. Without this,
+	// the peak observed during fn() can be inflated by uncollected
+	// objects from a preceding test in the same package run.
+	runtime.GC()
+
 	// Take initial sample before fn starts.
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
