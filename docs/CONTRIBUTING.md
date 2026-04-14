@@ -94,6 +94,18 @@ $ export COZY_COUCHDB_URL=http://admin:password@localhost:5984
 $ make unit-tests
 ```
 
+`make unit-tests` runs `go test -short`, which **skips tests that are slow or
+resource-intensive** (look for `if testing.Short() { t.Skip(...) }` in the
+source). For example, the WebDAV large-file streaming tests transfer 1 GiB
+in-process and take ~1 minute each.
+
+Before pushing significant changes, run the full suite locally:
+
+```
+$ go test -p 1 -timeout 15m ./...                    # full suite, including -short-skipped tests
+$ go test -timeout 10m ./web/webdav/ -run LargeFile  # just the WebDAV 1 GiB PUT/GET tests
+```
+
 If you want to play with the modified cozy-stack (for example, testing it with a
 webapp), you can build it locally and start it with this command:
 
