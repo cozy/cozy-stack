@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -103,8 +104,15 @@ func (s *redisScheduler) StartScheduler(b Broker) error {
 	go s.thumb.Schedule()
 	s.share = NewShareGroupTrigger(s.broker)
 	go s.share.Schedule()
-	s.av = NewAntivirusTrigger(s.broker)
-	go s.av.Schedule()
+	// COZY_DISABLE_AV_TRIGGER=1 prevents the antivirus trigger goroutine from
+	// being registered. Used by the test harness to avoid a well-known race
+	// between config.UseViper (called in test setup) and
+	// AntivirusTrigger.pushJob which reads config.FsURL() on a long-lived
+	// timer. See .planning/phases/01-foundation/01-VALIDATION.md Gap 1.
+	if os.Getenv("COZY_DISABLE_AV_TRIGGER") != "1" {
+		s.av = NewAntivirusTrigger(s.broker)
+		go s.av.Schedule()
+	}
 	go s.pollLoop()
 	return nil
 }
@@ -259,7 +267,9 @@ func (s *redisScheduler) ShutdownScheduler(ctx context.Context) error {
 	close(s.closed)
 	s.thumb.Unschedule()
 	s.share.Unschedule()
-	s.av.Unschedule()
+	if s.av != nil {
+		s.av.Unschedule()
+	}
 	select {
 	case <-ctx.Done():
 		fmt.Println("failed: ", ctx.Err())

@@ -55,8 +55,15 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	go s.thumb.Schedule()
 	s.share = NewShareGroupTrigger(s.broker)
 	go s.share.Schedule()
-	s.av = NewAntivirusTrigger(s.broker)
-	go s.av.Schedule()
+	// COZY_DISABLE_AV_TRIGGER=1 prevents the antivirus trigger goroutine from
+	// being registered. Used by the test harness to avoid a well-known race
+	// between config.UseViper (called in test setup) and
+	// AntivirusTrigger.pushJob which reads config.FsURL() on a long-lived
+	// timer. See .planning/phases/01-foundation/01-VALIDATION.md Gap 1.
+	if os.Getenv("COZY_DISABLE_AV_TRIGGER") != "1" {
+		s.av = NewAntivirusTrigger(s.broker)
+		go s.av.Schedule()
+	}
 
 	// XXX The memory scheduler loads the triggers from CouchDB when the stack
 	// is started. This can cause some stability issues when running system
@@ -124,7 +131,9 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 	}
 	s.thumb.Unschedule()
 	s.share.Unschedule()
-	s.av.Unschedule()
+	if s.av != nil {
+		s.av.Unschedule()
+	}
 	fmt.Println("ok.")
 	return nil
 }
