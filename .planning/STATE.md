@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Robustness
-status: planning
-stopped_at: Phase 4 context gathered
-last_updated: "2026-04-13T20:10:37.393Z"
-last_activity: 2026-04-13 — Roadmap created, v1.2 Phases 4-9 defined
+status: executing
+stopped_at: "Completed 04-01-PLAN.md"
+last_updated: "2026-04-14T15:55:00Z"
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State: Cozy WebDAV
@@ -26,20 +24,14 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Un utilisateur peut monter son Cozy comme un lecteur réseau WebDAV depuis n'importe quel client compatible RFC 4918 Class 1 et manipuler ses fichiers avec les opérations POSIX usuelles.
 
-**Current focus:** v1.2 Robustness — Phase 4: Prerequisites and Instrumentation
+**Current focus:** Phase 04 — prerequisites-and-instrumentation
 
 ---
 
 ## Current Position
 
-Phase: 4 of 9 (Prerequisites and Instrumentation)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-04-13 — Roadmap created, v1.2 Phases 4-9 defined
-
-Progress: [░░░░░░░░░░] 0% (v1.2) — v1.1 complete (24/24 plans)
-
----
+Phase: 04 (prerequisites-and-instrumentation) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -50,7 +42,7 @@ Progress: [░░░░░░░░░░] 0% (v1.2) — v1.1 complete (24/24 pl
 
 **v1.2 velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 1
 - Phases remaining: 6 (Phases 4-9)
 
 ---
@@ -83,8 +75,15 @@ Progress: [░░░░░░░░░░] 0% (v1.2) — v1.1 complete (24/24 pl
 
 ---
 
+## Decisions
+
+- (04-01) Option A (env-var gate COZY_DISABLE_AV_TRIGGER=1) sufficient to close FOLLOWUP-01 — Option B (stack.Shutdown cleanup) not needed
+- (04-01) Guard s.av nil in ShutdownScheduler for both schedulers to prevent nil panic when trigger registration is skipped
+
+---
+
 ## Session Continuity
 
-Last session: 2026-04-13T20:10:37.391Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-prerequisites-and-instrumentation/04-CONTEXT.md
+Last session: 2026-04-14T15:55:00Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: .planning/phases/04-prerequisites-and-instrumentation/04-02-PLAN.md
