@@ -58,7 +58,8 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   2. `TestGet_LargeFile` passes: a 1 GB GET via gowebdav completes successfully, the SHA-256 of the downloaded body matches the uploaded fixture, and peak `HeapInuse` stays below 128 MB.
   3. Neither test uses `io.ReadAll`, `httpexpect.Body().Raw()`, or any accumulating buffer on the large body path — confirmed by code review.
   4. No binary fixture file is present in the repository — the 1 GB body is generated in-memory at test time.
-**Plans**: TBD
+**Plans:** 1 plan
+- [ ] 05-01-PLAN.md — measurePeakHeap GC baseline + TestPut_LargeFile_Streaming + TestGet_LargeFile (LARGE-01, LARGE-02)
 
 ### Phase 6: Interrupted PUT and Byte-Range Edge Cases
 **Goal**: The server handles two families of correctness edge cases that the standard does not test: abrupt connection drops leave no orphaned data, and byte-range GET responses are well-formed across all RFC 7233 cases including multipart and out-of-bounds.
@@ -127,7 +128,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 2. Write Operations | v1.1 | 5/5 | Complete | 2026-04-06 |
 | 3. COPY, Compliance, and Documentation | v1.1 | 10/10 | Complete | 2026-04-12 |
 | 4. Prerequisites and Instrumentation | 3/3 | Complete   | 2026-04-14 | - |
-| 5. Large-File Streaming Proof | v1.2 | 0/? | Not started | - |
+| 5. Large-File Streaming Proof | v1.2 | 0/1 | Planned | - |
 | 6. Interrupted PUT and Byte-Range Edge Cases | v1.2 | 0/? | Not started | - |
 | 7. Concurrent Access Correctness | v1.2 | 0/? | Not started | - |
 | 8. CI Litmus Automation | v1.2 | 0/? | Not started | - |
