@@ -118,3 +118,57 @@ func TestPut_LargeFile_Streaming(t *testing.T) {
 	mbps := float64(largeFileSize) / float64(1<<20) / elapsed.Seconds()
 	t.Logf("PUT LARGE: %.1f MB/s (peak heap %d B)", mbps, peak)
 }
+
+// TestGet_LargeFile proves LARGE-02: a 1 GiB GET via gowebdav completes
+// successfully, the SHA-256 of the downloaded body matches the uploaded
+// fixture, and the server's peak HeapInuse during the download stays
+// below 128 MiB.
+//
+// Setup path: PUT the fixture via gowebdav (full HTTP-in, HTTP-out).
+// The setup PUT is NOT heap-measured — TestPut_LargeFile_Streaming is
+// the authoritative proof of the PUT streaming path.
+func TestGet_LargeFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("LARGE test: skipped in -short mode")
+	}
+
+	env := newWebdavTestEnv(t, nil)
+	client := newLargeTestClient(t, env)
+
+	// Setup: upload the 1 GiB fixture. This is NOT the measured test.
+	// See TestPut_LargeFile_Streaming for the authoritative PUT proof.
+	putLargeFixture(t, client, "/large.bin")
+
+	// Expected SHA-256 is computed from the same deterministic seed as
+	// the body uploaded above. drainStreaming bounds memory via
+	// io.TeeReader + io.Copy — no full-body buffering.
+	expectedSum, expectedN, err := drainStreaming(largeFixture(largeFileSize))
+	require.NoError(t, err, "computing expected SHA-256 from largeFixture must succeed")
+	require.Equal(t, largeFileSize, expectedN, "fixture size sanity")
+
+	var actualSum string
+	var actualN int64
+
+	start := time.Now()
+	peak := measurePeakHeap(t, func() {
+		rc, rerr := client.ReadStream("/large.bin")
+		require.NoError(t, rerr, "ReadStream must open")
+		defer rc.Close()
+
+		sum, n, derr := drainStreaming(rc)
+		require.NoError(t, derr, "drainStreaming must complete")
+		actualSum = sum
+		actualN = n
+	})
+	elapsed := time.Since(start)
+
+	require.Equal(t, largeFileSize, actualN,
+		"GET body length %d does not match fixture size %d", actualN, largeFileSize)
+	require.Equal(t, expectedSum, actualSum,
+		"GET body SHA-256 must match PUT fixture")
+	require.Less(t, peak, largeHeapCeiling,
+		"GET peak HeapInuse %d bytes exceeds 128 MiB ceiling", peak)
+
+	mbps := float64(largeFileSize) / float64(1<<20) / elapsed.Seconds()
+	t.Logf("GET LARGE: %.1f MB/s (peak heap %d B)", mbps, peak)
+}
