@@ -81,7 +81,7 @@ func CreateTestClient(t testing.TB, url string) *httpexpect.Expect {
 }
 
 // NeedCouchdb kill the process if there is no couchdb running
-func NeedCouchdb(t *testing.T) {
+func NeedCouchdb(t testing.TB) {
 	if _, err := couchdb.CheckStatus(context.Background()); err != nil {
 		t.Fatal("This test need couchdb to run.")
 	}

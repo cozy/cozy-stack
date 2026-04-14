@@ -1370,7 +1370,7 @@ func createTestViper() *viper.Viper {
 // UseTestFile can be used in a test file to inject a configuration
 // from a cozy.test.* file. If it can not find this file in your
 // $HOME/.cozy directory it will use the default one.
-func UseTestFile(t *testing.T) {
+func UseTestFile(t testing.TB) {
 	t.Helper()
 
 	build.BuildMode = build.ModeProd

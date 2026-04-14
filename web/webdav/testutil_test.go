@@ -30,28 +30,25 @@ type webdavTestEnv struct {
 // became possible once plan 01-06 landed Routes. Tests that need to
 // exercise the middleware in isolation (auth_test.go) or mount extra
 // routes alongside the real ones can still pass an explicit registrar.
-func newWebdavTestEnv(t *testing.T, overrideRoutes func(*echo.Group)) *webdavTestEnv {
-	t.Helper()
-	if testing.Short() {
-		t.Skip("webdav integration tests require a cozy test instance")
-	}
+func newWebdavTestEnv(tb testing.TB, overrideRoutes func(*echo.Group)) *webdavTestEnv {
+	tb.Helper()
 	if overrideRoutes == nil {
 		overrideRoutes = Routes
 	}
-	config.UseTestFile(t)
-	testutils.NeedCouchdb(t)
+	config.UseTestFile(tb)
+	testutils.NeedCouchdb(tb)
 
 	// Prevent the AntivirusTrigger goroutine from being registered in test
 	// runs. This closes the FOLLOWUP-01 race between config.UseViper and the
 	// AV trigger's long-lived goroutine. See
 	// .planning/phases/01-foundation/01-VALIDATION.md Gap 1.
-	t.Setenv("COZY_DISABLE_AV_TRIGGER", "1")
+	tb.Setenv("COZY_DISABLE_AV_TRIGGER", "1")
 
-	setup := testutils.NewSetup(t, t.Name())
+	setup := testutils.NewSetup(tb, tb.Name())
 	config.GetConfig().Fs.URL = &url.URL{
 		Scheme: "file",
 		Host:   "localhost",
-		Path:   t.TempDir(),
+		Path:   tb.TempDir(),
 	}
 
 	inst := setup.GetTestInstance()
@@ -59,9 +56,9 @@ func newWebdavTestEnv(t *testing.T, overrideRoutes func(*echo.Group)) *webdavTes
 
 	ts := setup.GetTestServer("/dav", overrideRoutes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
-	t.Cleanup(ts.Close)
+	tb.Cleanup(ts.Close)
 
-	e := testutils.CreateTestClient(t, ts.URL)
+	e := testutils.CreateTestClient(tb, ts.URL)
 
 	return &webdavTestEnv{
 		Inst:  inst,
