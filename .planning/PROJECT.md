@@ -121,11 +121,12 @@ Les tests v1.2 sont des tests de **correction** (correctness under concurrent ac
 
 **Milestone v1.1 shipped 2026-04-12.** La stack cozy-stack dispose désormais d'un serveur WebDAV RFC 4918 Class 1 complet, monté sur deux routes, validé par litmus 63/63 et par une validation manuelle humaine via OnlyOffice Documents Android v9.1.0. Tous les 53 requirements v1 sont satisfaits avec accord triple-source (REQUIREMENTS ↔ VERIFICATION ↔ SUMMARY). La dette technique est limitée à FOLLOWUP-01 (race préexistante hors WebDAV, user-approved).
 
+**Phase 04 complete (2026-04-14) — Prerequisites and Instrumentation.** DEBT-01 closed via `COZY_DISABLE_AV_TRIGGER` env gate (zero `DATA RACE` warnings under `-race`). DEBT-02 closed — `newWebdavTestEnv` widened to `testing.TB`, blanket `testing.Short()` skip removed. INSTR-01/02/03 helpers (`measurePeakHeap`, `drainStreaming`, `largeFixture`) landed in `web/webdav/testhelpers_test.go`. Phase 5 large-file streaming proof now unblocked.
+
 **Prochaines étapes envisageables pour v1.2** (à scoper via `/gsd:new-milestone`) :
-- Traiter FOLLOWUP-01 en premier (race harness)
 - Validation manuelle iOS Files app (formal sign-off)
 - Validation manuelle OnlyOffice mobile quand v9.3.2+ sort
 - Potentiellement : intégration CI de litmus, persistence dead-properties, API OCS partielle (capabilities-only pour améliorer la compat clients Nextcloud)
 
 ---
-*Last updated: 2026-04-13 after v1.2 milestone kickoff*
+*Last updated: 2026-04-14 after Phase 4 completion*
