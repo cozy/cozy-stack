@@ -123,10 +123,12 @@ Les tests v1.2 sont des tests de **correction** (correctness under concurrent ac
 
 **Phase 04 complete (2026-04-14) — Prerequisites and Instrumentation.** DEBT-01 closed via `COZY_DISABLE_AV_TRIGGER` env gate (zero `DATA RACE` warnings under `-race`). DEBT-02 closed — `newWebdavTestEnv` widened to `testing.TB`, blanket `testing.Short()` skip removed. INSTR-01/02/03 helpers (`measurePeakHeap`, `drainStreaming`, `largeFixture`) landed in `web/webdav/testhelpers_test.go`. Phase 5 large-file streaming proof now unblocked.
 
+**Phase 05 complete (2026-04-14) — Large-File Streaming Proof.** LARGE-01 and LARGE-02 closed. `TestPut_LargeFile_Streaming` and `TestGet_LargeFile` in `web/webdav/large_test.go` transfer 1 GiB via gowebdav with peak server `HeapInuse` at 7.7 MiB (PUT) and 8.6 MiB (GET) — far below the 128 MiB ceiling. SHA-256 verified on GET. Both tests skip under `-short`. Notable authoring finding: `gowebdav.NewAutoAuth` wraps non-seekable bodies in `bytes.Buffer` for retry-replay — switched to `NewPreemptiveAuth` + custom `largeBearerAuth` to preserve end-to-end streaming.
+
 **Prochaines étapes envisageables pour v1.2** (à scoper via `/gsd:new-milestone`) :
 - Validation manuelle iOS Files app (formal sign-off)
 - Validation manuelle OnlyOffice mobile quand v9.3.2+ sort
 - Potentiellement : intégration CI de litmus, persistence dead-properties, API OCS partielle (capabilities-only pour améliorer la compat clients Nextcloud)
 
 ---
-*Last updated: 2026-04-14 after Phase 4 completion*
+*Last updated: 2026-04-14 after Phase 5 completion*
