@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Robustness
-status: unknown
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-14T15:44:29.143Z"
+status: phase-complete
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-14T16:11:31.770Z"
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State: Cozy WebDAV
@@ -24,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 **Core value:** Un utilisateur peut monter son Cozy comme un lecteur réseau WebDAV depuis n'importe quel client compatible RFC 4918 Class 1 et manipuler ses fichiers avec les opérations POSIX usuelles.
 
-**Current focus:** Phase 05 — large-file-tests (next phase after Phase 04 completion)
+**Current focus:** Phase 06 — interrupt-and-range
 
 ---
 
 ## Current Position
 
-Phase: 04 (prerequisites-and-instrumentation) — COMPLETE
-Plan: 3 of 3 — all done; Phase 04 complete
+Phase: 05 (large-file-streaming-proof) — COMPLETE
+Plan: 1 of 1 (all complete)
 
 ## Performance Metrics
 
@@ -82,9 +82,11 @@ Plan: 3 of 3 — all done; Phase 04 complete
 - (04-02) Widened config.UseTestFile and testutils.NeedCouchdb to testing.TB rather than type-assertion shims — backward-compatible one-line changes
 - (04-03) measurePeakHeap uses atomic CAS loop for lock-free peak tracking; runtime.KeepAlive needed to hold test allocations live during heap sampling
 - (04-03) All three INSTR helpers in single testhelpers_test.go file (Option A) — 128 LOC, clean separation from testutil_test.go
+- [Phase 05-01]: Used NewPreemptiveAuth + largeBearerAuth to prevent gowebdav auth layer from buffering 1 GiB body into bytes.Buffer during PUT
+- [Phase 05-01]: runtime.GC() added to measurePeakHeap before first HeapInuse sample — eliminates prior-test garbage inflation for LARGE tests
 
 ## Session Continuity
 
-Last session: 2026-04-14T15:44:29.142Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-large-file-streaming-proof/05-CONTEXT.md
+Last session: 2026-04-14T16:11:31.768Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

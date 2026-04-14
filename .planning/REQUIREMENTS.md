@@ -19,8 +19,8 @@ Prérequis de correction pour les tests de gros fichiers et concurrence. Pas d'i
 
 Tests de correction sous gros volume. Aucune assertion de débit ou latence.
 
-- [ ] **LARGE-01** : PUT d'un fichier de 1 GB end-to-end via gowebdav — assert que le peak `HeapInuse` serveur pendant le transfert reste < 128 MB. Prouve le streaming, ne mesure pas la vitesse.
-- [ ] **LARGE-02** : GET d'un fichier de 1 GB end-to-end en streaming côté client — même ceiling mémoire serveur, checksum body vérifié via INSTR-02.
+- [x] **LARGE-01** : PUT d'un fichier de 1 GB end-to-end via gowebdav — assert que le peak `HeapInuse` serveur pendant le transfert reste < 128 MB. Prouve le streaming, ne mesure pas la vitesse.
+- [x] **LARGE-02** : GET d'un fichier de 1 GB end-to-end en streaming côté client — même ceiling mémoire serveur, checksum body vérifié via INSTR-02.
 
 ### Transferts interrompus (INTERRUPT)
 
@@ -98,8 +98,8 @@ Explicitement exclus. Raisonnement documenté pour prévenir le scope creep.
 | INSTR-01 | Phase 4 | Complete |
 | INSTR-02 | Phase 4 | Complete |
 | INSTR-03 | Phase 4 | Complete |
-| LARGE-01 | Phase 5 | Pending |
-| LARGE-02 | Phase 5 | Pending |
+| LARGE-01 | Phase 5 | Complete |
+| LARGE-02 | Phase 5 | Complete |
 | INTERRUPT-01 | Phase 6 | Pending |
 | INTERRUPT-02 | Phase 6 | Pending |
 | INTERRUPT-03 | Phase 6 | Pending |

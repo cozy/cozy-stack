@@ -23,7 +23,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 **Milestone Goal:** Prove the WebDAV server is correct under conditions the litmus suite does not exercise — multi-GB transfers, interrupted connections, byte-range edge cases, and small-scale concurrent writes. The milestone also closes v1.1 technical debt (race harness, CI litmus automation, iOS manual sign-off). This is a **correctness** milestone, not a performance or load-testing milestone. All concurrency tests stay at 2-3 goroutines maximum; no throughput assertions.
 
 - [x] **Phase 4: Prerequisites and Instrumentation** — Race harness fix, testing.TB widening, memory/fixture/drain helpers (completed 2026-04-14)
-- [ ] **Phase 5: Large-File Streaming Proof** — 1 GB PUT and GET with heap ceiling assertions
+- [x] **Phase 5: Large-File Streaming Proof** — 1 GB PUT and GET with heap ceiling assertions (completed 2026-04-14)
 - [ ] **Phase 6: Interrupted PUT and Byte-Range Edge Cases** — Connection drops, overwrite rollback, Content-Range rejection, single/multi-range GET, 416 handling
 - [ ] **Phase 7: Concurrent Access Correctness** — Two-client same-path PUT race, CouchDB 409 mapping, dirty-read guard, goroutine leak detection
 - [ ] **Phase 8: CI Automation** — litmus workflow on both routes + `-short`/heavy split for Go tests so LARGE/CONC don't break the default CI budget
@@ -58,7 +58,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   2. `TestGet_LargeFile` passes: a 1 GB GET via gowebdav completes successfully, the SHA-256 of the downloaded body matches the uploaded fixture, and peak `HeapInuse` stays below 128 MB.
   3. Neither test uses `io.ReadAll`, `httpexpect.Body().Raw()`, or any accumulating buffer on the large body path — confirmed by code review.
   4. No binary fixture file is present in the repository — the 1 GB body is generated in-memory at test time.
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 - [ ] 05-01-PLAN.md — measurePeakHeap GC baseline + TestPut_LargeFile_Streaming + TestGet_LargeFile (LARGE-01, LARGE-02)
 
 ### Phase 6: Interrupted PUT and Byte-Range Edge Cases
@@ -128,7 +128,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 2. Write Operations | v1.1 | 5/5 | Complete | 2026-04-06 |
 | 3. COPY, Compliance, and Documentation | v1.1 | 10/10 | Complete | 2026-04-12 |
 | 4. Prerequisites and Instrumentation | 3/3 | Complete   | 2026-04-14 | - |
-| 5. Large-File Streaming Proof | v1.2 | 0/1 | Planned | - |
+| 5. Large-File Streaming Proof | 1/1 | Complete   | 2026-04-14 | - |
 | 6. Interrupted PUT and Byte-Range Edge Cases | v1.2 | 0/? | Not started | - |
 | 7. Concurrent Access Correctness | v1.2 | 0/? | Not started | - |
 | 8. CI Litmus Automation | v1.2 | 0/? | Not started | - |
