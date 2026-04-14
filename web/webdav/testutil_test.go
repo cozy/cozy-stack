@@ -41,6 +41,12 @@ func newWebdavTestEnv(t *testing.T, overrideRoutes func(*echo.Group)) *webdavTes
 	config.UseTestFile(t)
 	testutils.NeedCouchdb(t)
 
+	// Prevent the AntivirusTrigger goroutine from being registered in test
+	// runs. This closes the FOLLOWUP-01 race between config.UseViper and the
+	// AV trigger's long-lived goroutine. See
+	// .planning/phases/01-foundation/01-VALIDATION.md Gap 1.
+	t.Setenv("COZY_DISABLE_AV_TRIGGER", "1")
+
 	setup := testutils.NewSetup(t, t.Name())
 	config.GetConfig().Fs.URL = &url.URL{
 		Scheme: "file",
