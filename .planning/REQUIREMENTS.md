@@ -46,7 +46,7 @@ Tests de correction sous gros volume. Aucune assertion de débit ou latence.
 ### Dette technique (DEBT)
 
 - [x] **DEBT-01** : La race préexistante dans `pkg/config` / `model/stack` / `model/job.AntivirusTrigger` (FOLLOWUP-01 hérité de v1.1) est corrigée. `go test -race -count=1 ./web/webdav/...` s'exécute proprement (zéro WARNING: DATA RACE).
-- [ ] **DEBT-02** : `web/webdav/testutil_test.go` — la signature de `newWebdavTestEnv` passe de `*testing.T` à `testing.TB` pour supporter les benchmarks (`*testing.B`). Aucun breakage des callers existants.
+- [x] **DEBT-02** : `web/webdav/testutil_test.go` — la signature de `newWebdavTestEnv` passe de `*testing.T` à `testing.TB` pour supporter les benchmarks (`*testing.B`). Aucun breakage des callers existants.
 
 ### Intégration CI (CI)
 
@@ -111,7 +111,7 @@ Explicitement exclus. Raisonnement documenté pour prévenir le scope creep.
 | CONC-03 | Phase 7 | Pending |
 | CONC-04 | Phase 7 | Pending |
 | DEBT-01 | Phase 4 | Complete |
-| DEBT-02 | Phase 4 | Pending |
+| DEBT-02 | Phase 4 | Complete |
 | CI-01 | Phase 8 | Pending |
 | CI-02 | Phase 8 | Pending |
 | CI-03 | Phase 8 | Pending |

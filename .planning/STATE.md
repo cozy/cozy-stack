@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Robustness
-status: executing
-stopped_at: "Completed 04-01-PLAN.md"
-last_updated: "2026-04-14T15:55:00Z"
+status: unknown
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-04-14T13:53:59.897Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: Cozy WebDAV
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 ## Current Position
 
 Phase: 04 (prerequisites-and-instrumentation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3 (next: 04-03)
 
 ## Performance Metrics
 
@@ -79,11 +79,12 @@ Plan: 2 of 3
 
 - (04-01) Option A (env-var gate COZY_DISABLE_AV_TRIGGER=1) sufficient to close FOLLOWUP-01 — Option B (stack.Shutdown cleanup) not needed
 - (04-01) Guard s.av nil in ShutdownScheduler for both schedulers to prevent nil panic when trigger registration is skipped
+- (04-02) Widened config.UseTestFile and testutils.NeedCouchdb to testing.TB rather than type-assertion shims — backward-compatible one-line changes
 
 ---
 
 ## Session Continuity
 
-Last session: 2026-04-14T15:55:00Z
-Stopped at: Completed 04-01-PLAN.md
-Resume file: .planning/phases/04-prerequisites-and-instrumentation/04-02-PLAN.md
+Last session: 2026-04-14T13:53:59.894Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: None

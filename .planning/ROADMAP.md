@@ -41,7 +41,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   3. A concurrent `HeapInuse` sampler helper exists in the test package — it can be called with any `func()` body and returns peak heap observed during that call.
   4. A streaming SHA-256 drain helper exists — it consumes an `io.Reader` of arbitrary size without ever allocating the full body as `[]byte`.
   5. A deterministic large-fixture generator exists — it produces an `io.Reader` of N bytes from a fixed seed, with no binary file committed to the repository.
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 - [ ] 04-01-PLAN.md — DEBT-01 race harness fix (env-var gate on AntivirusTrigger, with Option B escalation)
 - [ ] 04-02-PLAN.md — DEBT-02 testing.TB widening + remove blanket testing.Short skip
 - [ ] 04-03-PLAN.md — INSTR-01/02/03 helpers (measurePeakHeap + drainStreaming + largeFixture)
@@ -126,7 +126,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 1. Foundation | v1.1 | 9/9 | Complete | 2026-04-05 |
 | 2. Write Operations | v1.1 | 5/5 | Complete | 2026-04-06 |
 | 3. COPY, Compliance, and Documentation | v1.1 | 10/10 | Complete | 2026-04-12 |
-| 4. Prerequisites and Instrumentation | 1/3 | In Progress|  | - |
+| 4. Prerequisites and Instrumentation | 2/3 | In Progress|  | - |
 | 5. Large-File Streaming Proof | v1.2 | 0/? | Not started | - |
 | 6. Interrupted PUT and Byte-Range Edge Cases | v1.2 | 0/? | Not started | - |
 | 7. Concurrent Access Correctness | v1.2 | 0/? | Not started | - |
