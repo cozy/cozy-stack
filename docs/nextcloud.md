@@ -579,3 +579,138 @@ Authorization: Bearer eyJhbG...
 ```http
 HTTP/1.1 204 No Content
 ```
+
+## GET /remote/nextcloud/:account/size/*path
+
+This route returns the recursive size in bytes of a folder (or a single
+file) on the NextCloud account. It is backed by a single Depth:0 PROPFIND
+asking for the `oc:size` property that NextCloud maintains in its metadata
+table, so it runs in constant time regardless of how many files are in the
+tree. Pass the account root by using an empty `*path` (just `/size/`).
+
+The `:account` parameter is the identifier of the NextCloud `io.cozy.account`.
+
+**Note:** a permission on `GET io.cozy.files` is required to use this route.
+
+### Request (sub-folder)
+
+```http
+GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/size/Photos HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "size": 5656463
+}
+```
+
+### Request (account root)
+
+```http
+GET /remote/nextcloud/4ab2155707bb6613a8b9463daf00381b/size/ HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+#### Status codes
+
+- 200 OK, with the recursive byte total of the target path
+- 401 Unauthorized, when the NextCloud credentials are rejected
+- 404 Not Found, when the account or the target path does not exist
+
+## POST /remote/nextcloud/migration
+
+This route triggers a one-shot bulk migration of a user's Nextcloud files into
+their Cozy. The Stack validates the credentials, persists an
+`io.cozy.accounts` document, creates an `io.cozy.nextcloud.migrations`
+tracking document in `pending` state, and publishes a
+`nextcloud.migration.requested` command to the `migration` RabbitMQ exchange.
+The actual transfer is performed by an external migration service that
+consumes the command and drives the existing `/remote/nextcloud/:account/*`
+routes, updating the tracking document as it progresses.
+
+Before persisting anything, the Stack probes the supplied credentials against
+the Nextcloud instance via the OCS `user_status` endpoint, so wrong passwords
+and unreachable hosts surface synchronously instead of being deferred to the
+migration service. The probe also resolves the WebDAV user ID, which is
+cached on the account document so the migration service does not need to
+re-fetch it.
+
+When an existing `io.cozy.accounts` document for the same `account_type:
+"nextcloud"` + `auth.url` + `auth.login` triplet is found, it is reused with
+its stored password and `webdav_user_id` refreshed from the request. Only one
+migration can be in flight per instance at a time: if a `pending` or `running`
+tracking document already exists, the Stack returns `409 Conflict`. Failed
+migrations do not block new attempts.
+
+**Note:** a permission on `POST io.cozy.nextcloud.migrations` is required to
+use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/migration HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+Content-Type: application/json
+```
+
+```json
+{
+  "nextcloud_url": "https://nextcloud.example.com",
+  "nextcloud_login": "alice",
+  "nextcloud_app_password": "xxxxx-xxxxx-xxxxx-xxxxx-xxxxx",
+  "source_path": "/"
+}
+```
+
+`source_path` is optional and defaults to `/`. The `nextcloud_app_password`
+should be a Nextcloud app password, not the user's main account password.
+
+### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "d4e5f6a7b8c94d0ea1b2c3d4e5f6a7b8",
+    "type": "io.cozy.nextcloud.migrations",
+    "attributes": {
+      "status": "pending",
+      "target_dir": "/Nextcloud",
+      "progress": {
+        "files_imported": 0,
+        "files_total": 0,
+        "bytes_imported": 0,
+        "bytes_total": 0
+      },
+      "errors": [],
+      "skipped": [],
+      "started_at": null,
+      "finished_at": null
+    }
+  }
+}
+```
+
+#### Status codes
+
+- 201 Created, when the migration has been queued and the tracking document is returned
+- 401 Unauthorized, when the Nextcloud credentials are rejected by the remote host
+- 409 Conflict, when a `pending` or `running` migration already exists
+- 500 Internal Server Error, when the conflict check, account upsert, or tracking document creation fails
+- 502 Bad Gateway, when the Nextcloud instance is unreachable
+- 503 Service Unavailable, when the migration command cannot be published to RabbitMQ. The tracking document is marked `failed` before returning

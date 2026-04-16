@@ -142,6 +142,9 @@ const (
 	// NextCloudFiles doc type is used when listing files from a NextCloud via
 	// WebDAV.
 	NextCloudFiles = "io.cozy.remote.nextcloud.files"
+	// NextcloudMigrations doc type is used to track bulk Nextcloud to Cozy
+	// migrations orchestrated by the external migration service.
+	NextcloudMigrations = "io.cozy.nextcloud.migrations"
 	// ChatAssistants doc type for AI chat assistants.
 	ChatAssistants = "io.cozy.ai.chat.assistants"
 	// ChatConversations doc type is used for a chat between the user and a chatbot.

@@ -3,7 +3,9 @@
 package nextcloud
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/safehttp"
 	"github.com/cozy/cozy-stack/pkg/webdav"
 	"github.com/labstack/echo/v4"
@@ -63,10 +66,11 @@ func (f *File) Links() *jsonapi.LinksList {
 var _ jsonapi.Object = (*File)(nil)
 
 type NextCloud struct {
-	inst      *instance.Instance
-	accountID string
-	userID    string
-	webdav    *webdav.Client
+	inst        *instance.Instance
+	accountID   string
+	userID      string
+	installRoot string
+	webdav      *webdav.Client
 }
 
 func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
@@ -97,19 +101,21 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 	}
 	username, _ := auth["login"].(string)
 	password, _ := auth["password"].(string)
+	installRoot := normalizeInstallRoot(u.Path)
 	logger := inst.Logger().WithNamespace("nextcloud")
 	webdav := &webdav.Client{
 		Scheme:   u.Scheme,
 		Host:     u.Host,
 		Username: username,
 		Password: password,
-		BasePath: "/remote.php/dav",
+		BasePath: installRoot + "/remote.php/dav",
 		Logger:   logger,
 	}
 	nc := &NextCloud{
-		inst:      inst,
-		accountID: accountID,
-		webdav:    webdav,
+		inst:        inst,
+		accountID:   accountID,
+		installRoot: installRoot,
+		webdav:      webdav,
 	}
 	if err := nc.fillUserID(&doc); err != nil {
 		return nil, err
@@ -119,6 +125,15 @@ func New(inst *instance.Instance, accountID string) (*NextCloud, error) {
 
 func (nc *NextCloud) Download(path string) (*webdav.Download, error) {
 	return nc.webdav.Get("/files/" + nc.userID + "/" + path)
+}
+
+// Size returns the recursive byte total of the resource at path, as
+// reported by Nextcloud's cached `oc:size` property. Works on the account
+// root (pass an empty string or "/") and on any sub-folder. Equivalent to
+// a single Depth:0 PROPFIND on the server, not a tree walk, so the cost
+// is constant regardless of how many files the folder contains.
+func (nc *NextCloud) Size(path string) (uint64, error) {
+	return nc.webdav.Size("/files/" + nc.userID + "/" + path)
 }
 
 func (nc *NextCloud) Upload(path, mime string, contentLength int64, body io.Reader) error {
@@ -360,16 +375,53 @@ func (nc *NextCloud) buildTrashedURL(item webdav.Item, path string) string {
 	return u.String()
 }
 
-// https://docs.nextcloud.com/server/latest/developer_manual/client_apis/OCS/ocs-status-api.html#fetch-your-own-status
-func (nc *NextCloud) fetchUserID() (string, error) {
-	logger := nc.webdav.Logger
-	u := url.URL{
-		Scheme: nc.webdav.Scheme,
-		Host:   nc.webdav.Host,
-		User:   url.UserPassword(nc.webdav.Username, nc.webdav.Password),
-		Path:   "/ocs/v2.php/apps/user_status/api/v1/user_status",
+// FetchUserIDWithCredentials probes the OCS cloud/user endpoint and returns
+// the user ID, or webdav.ErrInvalidAuth if the credentials are rejected.
+// The logger used for diagnostics is pulled from ctx via logger.FromContext,
+// so callers should attach a request-scoped logger with logger.WithContext
+// before calling.
+//
+// https://docs.nextcloud.com/server/latest/developer_manual/client_apis/OCS/ocs-api-overview.html
+func FetchUserIDWithCredentials(ctx context.Context, nextcloudURL, username, password string) (string, error) {
+	u, err := url.Parse(nextcloudURL)
+	if err != nil {
+		return "", err
 	}
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if u.Scheme == "" || u.Host == "" {
+		return "", ErrInvalidAccount
+	}
+	return fetchUserIDFromHost(ctx, u.Scheme, u.Host, normalizeInstallRoot(u.Path), username, password)
+}
+
+const probeTimeout = 30 * time.Second
+
+// cloudUserProbePath is OCS Core and cannot be disabled by an admin, unlike
+// apps/user_status which some managed Nextcloud providers strip. Probing Core
+// avoids misclassifying a stripped-optional-app install as an auth failure.
+const cloudUserProbePath = "/ocs/v2.php/cloud/user"
+
+// normalizeInstallRoot strips the trailing slash from a Nextcloud install
+// root path so concatenation with absolute API paths (always starting with
+// "/") produces clean URLs regardless of whether the caller passed
+// https://host/nextcloud or https://host/nextcloud/.
+func normalizeInstallRoot(path string) string {
+	return strings.TrimSuffix(path, "/")
+}
+
+func fetchUserIDFromHost(ctx context.Context, scheme, host, installRoot, username, password string) (string, error) {
+	log := logger.FromContext(ctx)
+	u := url.URL{
+		Scheme: scheme,
+		Host:   host,
+		User:   url.UserPassword(username, password),
+		Path:   installRoot + cloudUserProbePath,
+	}
+	// Cap the probe so a hung Nextcloud server can't pin a request goroutine —
+	// safehttp.ClientWithKeepAlive has handshake timeouts but no overall
+	// request deadline.
+	reqCtx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -380,26 +432,38 @@ func (nc *NextCloud) fetchUserID() (string, error) {
 	res, err := safehttp.ClientWithKeepAlive.Do(req)
 	elapsed := time.Since(start)
 	if err != nil {
-		logger.Warnf("user_status %s: %s (%s)", u.Host, err, elapsed)
+		log.Warnf("cloud/user %s: %s (%s)", u.Host, err, elapsed)
 		return "", err
 	}
 	defer res.Body.Close()
-	logger.Infof("user_status %s: %d (%s)", u.Host, res.StatusCode, elapsed)
-	if res.StatusCode != 200 {
+	log.Infof("cloud/user %s: %d (%s)", u.Host, res.StatusCode, elapsed)
+	switch res.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized, http.StatusForbidden:
 		return "", webdav.ErrInvalidAuth
+	default:
+		return "", fmt.Errorf("unexpected status %d from nextcloud cloud/user probe", res.StatusCode)
 	}
 	var payload OCSPayload
 	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		logger.Warnf("cannot fetch NextCloud userID: %s", err)
+		log.Warnf("cannot fetch NextCloud userID: %s", err)
 		return "", err
 	}
 	return payload.OCS.Data.UserID, nil
 }
 
+func (nc *NextCloud) fetchUserID() (string, error) {
+	// Receiver predates ctx-threading in this package; mint a local ctx
+	// carrying the webdav client's logger so the probe still surfaces
+	// under the same diagnostics.
+	ctx := logger.WithContext(context.Background(), nc.webdav.Logger)
+	return fetchUserIDFromHost(ctx, nc.webdav.Scheme, nc.webdav.Host, nc.installRoot, nc.webdav.Username, nc.webdav.Password)
+}
+
 type OCSPayload struct {
 	OCS struct {
 		Data struct {
-			UserID string `json:"userId"`
+			UserID string `json:"id"`
 		} `json:"data"`
 	} `json:"ocs"`
 }

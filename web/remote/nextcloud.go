@@ -80,6 +80,30 @@ func nextcloudEmptyTrash(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// nextcloudSize proxies the Nextcloud "recursive size" probe for the
+// resource at :path. It answers `{"size": <bytes>}` and costs one
+// constant-time PROPFIND against Nextcloud regardless of the folder's
+// depth or file count, because it relies on the server-maintained
+// `oc:size` property instead of walking the tree.
+func nextcloudSize(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	accountID := c.Param("account")
+	nc, err := nextcloud.New(inst, accountID)
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+
+	size, err := nc.Size(c.Param("*"))
+	if err != nil {
+		return wrapNextcloudErrors(err)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"size": size})
+}
+
 func nextcloudGet(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
@@ -328,6 +352,7 @@ func nextcloudRoutes(router *echo.Group) {
 	group.GET("/trash/*", nextcloudGetTrash)
 	group.DELETE("/trash/*", nextcloudDeleteTrash)
 	group.DELETE("/trash", nextcloudEmptyTrash)
+	group.GET("/size/*", nextcloudSize)
 	group.GET("/*", nextcloudGet)
 	group.PUT("/*", nextcloudPut)
 	group.DELETE("/*", nextcloudDelete)
