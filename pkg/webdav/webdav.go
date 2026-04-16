@@ -260,6 +260,71 @@ func (c *Client) List(path string) ([]Item, error) {
 	return items, nil
 }
 
+// Size returns the recursive byte total of the resource at path, as
+// reported by the Nextcloud server's cached `oc:size` property. Equivalent
+// to `du -sb` on the path, computed in constant time on the server side
+// (no traversal). Supported by any Nextcloud/ownCloud host that serves
+// the `http://owncloud.org/ns` WebDAV namespace — confirmed against the
+// managed hosts we tested (nextcloud05.webo.cloud, use22.thegood.cloud).
+func (c *Client) Size(path string) (uint64, error) {
+	path = fixSlashes(path)
+	headers := map[string]string{
+		"Content-Type": "application/xml;charset=UTF-8",
+		"Accept":       "application/xml",
+		"Depth":        "0",
+	}
+	payload := strings.NewReader(sizeFilesPayload)
+	res, err := c.req("PROPFIND", path, 0, headers, payload)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, res.Body)
+		_ = res.Body.Close()
+	}()
+
+	switch res.StatusCode {
+	case 200, 207:
+		// continue
+	case 401, 403:
+		return 0, ErrInvalidAuth
+	case 404:
+		return 0, ErrNotFound
+	default:
+		return 0, ErrInternalServerError
+	}
+
+	var multistatus multistatus
+	if err := xml.NewDecoder(res.Body).Decode(&multistatus); err != nil {
+		return 0, err
+	}
+	for _, response := range multistatus.Responses {
+		for _, propstat := range response.Props {
+			parts := strings.Split(propstat.Status, " ")
+			if len(parts) < 2 || parts[1] != "200" {
+				continue
+			}
+			if propstat.OcSize == "" {
+				continue
+			}
+			return strconv.ParseUint(propstat.OcSize, 10, 64)
+		}
+	}
+	return 0, ErrNotFound
+}
+
+// sizeFilesPayload asks Nextcloud for only the `oc:size` property on the
+// target resource. Depth:0 means the server returns the resource itself,
+// not its children, so this is one small round trip regardless of how
+// many files the directory contains.
+const sizeFilesPayload = `<?xml version="1.0"?>
+<d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+  <d:prop>
+        <oc:size />
+  </d:prop>
+</d:propfind>
+`
+
 type Item struct {
 	ID           string
 	Type         string
@@ -290,6 +355,7 @@ type props struct {
 	TrashedName  string   `xml:"prop>trashbin-filename"`
 	RestorePath  string   `xml:"prop>trashbin-original-location"`
 	Size         string   `xml:"prop>getcontentlength"`
+	OcSize       string   `xml:"prop>size"`
 	ContentType  string   `xml:"prop>getcontenttype"`
 	LastModified string   `xml:"prop>getlastmodified"`
 	ETag         string   `xml:"prop>getetag"`

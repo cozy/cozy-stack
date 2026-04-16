@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -106,6 +107,174 @@ func generateAppToken(inst *instance.Instance, slug, doctype string) string {
 	return inst.BuildAppToken(slug, "")
 }
 
+func TestNextcloudSize(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance()
+	token := generateAppToken(testInstance, "testapp", consts.Files)
+
+	// Mock Nextcloud: answer the OCS probe for the account constructor,
+	// and a Depth:0 PROPFIND that asks for oc:size with a multistatus
+	// reply carrying a hard-coded byte total. The test asserts the stack
+	// parses and surfaces that number verbatim.
+	const wantSize uint64 = 67365343
+	var lastPropfindPath string
+	mockWebDAV := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ocs/v2.php/cloud/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"ocs":{"data":{"id":"testuser"}}}`))
+			return
+		}
+		if r.Method == "PROPFIND" && strings.HasPrefix(r.URL.Path, "/remote.php/dav/files/testuser/") {
+			lastPropfindPath = r.URL.Path
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			w.WriteHeader(http.StatusMultiStatus)
+			_, _ = w.Write([]byte(`<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+  <d:response>
+    <d:href>` + r.URL.Path + `</d:href>
+    <d:propstat>
+      <d:prop><oc:size>67365343</oc:size></d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(mockWebDAV.Close)
+
+	ts := setup.GetTestServer("/remote", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	accountDoc := &couchdb.JSONDoc{
+		Type: consts.Accounts,
+		M: map[string]interface{}{
+			"account_type": "nextcloud",
+			"name":         "Test NextCloud",
+			"auth": map[string]interface{}{
+				"login":    "testuser",
+				"password": "testpass",
+				"url":      mockWebDAV.URL + "/",
+			},
+			"webdav_user_id": "testuser",
+		},
+	}
+	account.Encrypt(*accountDoc)
+	require.NoError(t, couchdb.CreateDoc(testInstance, accountDoc))
+	accountID := accountDoc.ID()
+
+	e := testutils.CreateTestClient(t, ts.URL)
+
+	t.Run("ReturnsTheRecursiveSizeOfASubfolder", func(t *testing.T) {
+		obj := e.GET("/remote/nextcloud/"+accountID+"/size/Photos").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			Expect().Status(http.StatusOK).
+			JSON().Object()
+
+		obj.Value("size").Number().IsEqual(wantSize)
+		assert.Equal(t, "/remote.php/dav/files/testuser/Photos/", lastPropfindPath,
+			"should PROPFIND the requested sub-path")
+	})
+
+	t.Run("TreatsAnEmptyPathAsTheAccountRoot", func(t *testing.T) {
+		lastPropfindPath = ""
+		obj := e.GET("/remote/nextcloud/"+accountID+"/size/").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			Expect().Status(http.StatusOK).
+			JSON().Object()
+
+		obj.Value("size").Number().IsEqual(wantSize)
+		assert.Equal(t, "/remote.php/dav/files/testuser/", lastPropfindPath,
+			"should PROPFIND the account root for an empty sub-path")
+	})
+
+	t.Run("Returns404WhenTheAccountDoesNotExist", func(t *testing.T) {
+		e.GET("/remote/nextcloud/does-not-exist/size/Photos").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			Expect().Status(http.StatusNotFound)
+	})
+}
+
+func TestNextcloudSizeErrorClassification(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	setup := testutils.NewSetup(t, t.Name())
+	testInstance := setup.GetTestInstance()
+	token := generateAppToken(testInstance, "testapp", consts.Files)
+
+	// Mock Nextcloud that always rejects credentials on PROPFIND so the
+	// stack's error-wrapping layer has to pick a mapping. Anything other
+	// than 401 would mean wrapNextcloudErrors missed a branch.
+	mockWebDAV := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ocs/v2.php/cloud/user" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"ocs":{"data":{"id":"testuser"}}}`))
+			return
+		}
+		if r.Method == "PROPFIND" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(mockWebDAV.Close)
+
+	ts := setup.GetTestServer("/remote", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
+	t.Cleanup(ts.Close)
+
+	accountDoc := &couchdb.JSONDoc{
+		Type: consts.Accounts,
+		M: map[string]interface{}{
+			"account_type": "nextcloud",
+			"name":         "Test NextCloud",
+			"auth": map[string]interface{}{
+				"login":    "testuser",
+				"password": "testpass",
+				"url":      mockWebDAV.URL + "/",
+			},
+			"webdav_user_id": "testuser",
+		},
+	}
+	account.Encrypt(*accountDoc)
+	require.NoError(t, couchdb.CreateDoc(testInstance, accountDoc))
+	accountID := accountDoc.ID()
+
+	e := testutils.CreateTestClient(t, ts.URL)
+
+	t.Run("Surfaces401WhenNextcloudRejectsTheCredentials", func(t *testing.T) {
+		e.GET("/remote/nextcloud/"+accountID+"/size/Photos").
+			WithHeader("Authorization", "Bearer "+token).
+			WithHost(testInstance.Domain).
+			Expect().Status(http.StatusUnauthorized)
+	})
+}
+
 func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -142,11 +311,11 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		// Handle user_status endpoint (needed to get webdav_user_id)
-		if r.URL.Path == "/ocs/v2.php/apps/user_status/api/v1/user_status" {
+		// Handle OCS cloud/user endpoint (needed to get webdav_user_id)
+		if r.URL.Path == "/ocs/v2.php/cloud/user" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"ocs":{"data":{"userId":"testuser"}}}`))
+			w.Write([]byte(`{"ocs":{"data":{"id":"testuser"}}}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

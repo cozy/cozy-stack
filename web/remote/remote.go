@@ -10,9 +10,31 @@ import (
 	"github.com/cozy/cozy-stack/model/remote"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/rabbitmq"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+// HTTPHandler owns the remote routes that need stack services injected from
+// the main process (for example the RabbitMQ broker for the Nextcloud
+// migration trigger). Stateless routes are wired through the package-level
+// [Routes] function.
+type HTTPHandler struct {
+	rmq rabbitmq.Service
+}
+
+// NewHTTPHandler builds a handler with the given service dependencies.
+func NewHTTPHandler(rmq rabbitmq.Service) *HTTPHandler {
+	return &HTTPHandler{rmq: rmq}
+}
+
+// Register wires every route the remote package serves, stateless and
+// stateful, onto the given router. The caller should no longer call [Routes]
+// separately once it holds an HTTPHandler.
+func (h *HTTPHandler) Register(router *echo.Group) {
+	Routes(router)
+	router.POST("/nextcloud/migration", h.postNextcloudMigration)
+}
 
 func allDoctypes(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Doctypes); err != nil {

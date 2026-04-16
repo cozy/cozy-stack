@@ -14,7 +14,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 37
+const IndexViewsVersion int = 38
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -72,6 +72,10 @@ var Indexes = []*mango.Index{
 
 	// Used to find the active sharings
 	mango.MakeIndex(consts.Sharings, "active", mango.IndexDef{Fields: []string{"active"}}),
+
+	// Used to detect an already in-flight Nextcloud migration when a user
+	// tries to start a new one.
+	mango.MakeIndex(consts.NextcloudMigrations, "by-status", mango.IndexDef{Fields: []string{"status"}}),
 }
 
 // DiskUsageView is the view used for computing the disk usage for files

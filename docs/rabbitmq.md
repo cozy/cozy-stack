@@ -134,6 +134,46 @@ rabbitmq:
 - If queue-level `dlx_name`/`dlq_name` are not specified, exchange-level defaults are used.
 - Messages that exceed the `delivery_limit` or are rejected will be sent to the DLX and routed to the DLQ.
 
+### Publishers
+
+The Stack also publishes messages to RabbitMQ. Publishers do not declare any
+queue or exchange on the Stack side: the exchange must already exist on the
+broker, and a queue must be bound by the consuming service. Publishes use the
+AMQP `mandatory` flag, so a publish to an exchange with no matching binding
+fails with `PublishReturnedError` and the caller is expected to surface the
+failure to the user.
+
+#### `auth` exchange
+
+Routing key: `user.deletion.requested`. Published from
+`POST /settings/instance/deletion/force` when a user requests permanent
+deletion of their account. The payload is the `UserDeletionRequestedMessage`
+struct in `pkg/rabbitmq/contracts.go`.
+
+#### `migration` exchange
+
+Routing key: `nextcloud.migration.requested`. Published from
+`POST /remote/nextcloud/migration` when a user starts a Nextcloud-to-Cozy
+bulk migration. The payload is the `NextcloudMigrationRequestedMessage`
+struct in `pkg/rabbitmq/contracts.go`:
+
+```json
+{
+  "migrationId": "d4e5f6a7b8c94d0ea1b2c3d4e5f6a7b8",
+  "workplaceFqdn": "alice.cozy.example.com",
+  "accountId": "a1b2c3d4e5f6",
+  "sourcePath": "/",
+  "timestamp": 1712563200
+}
+```
+
+Credentials are never in the payload: they live in the `io.cozy.accounts`
+document referenced by `accountId`. The Stack populates `MessageID` with the
+migration ID for cross-system tracing. The consuming service is responsible
+for declaring its queue, binding it to this exchange, and processing the
+messages; if no queue is bound when the Stack publishes, the user receives
+`503` and the tracking document is marked `failed`.
+
 ### Handlers
 
 Handlers implement a simple interface:
