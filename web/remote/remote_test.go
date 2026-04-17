@@ -428,3 +428,43 @@ func TestNextcloudDownstreamFailOnConflict(t *testing.T) {
 			Expect().Status(409)
 	})
 }
+
+// TestNextcloudPathParam pins the behaviour of the handler helper that
+// turns Echo's `*` wildcard into the literal filename before it flows into
+// the WebDAV client. Echo returns its wildcard param already percent-
+// encoded whenever Go's http parser sets r.URL.RawPath, which happens as
+// soon as a character's default path encoding differs from what the client
+// sent (e.g. `&` → %26 on the wire but Go leaves `&` unescaped). Pushing
+// that encoded slice into url.URL.Path would double-encode `%` on the way
+// out to Nextcloud; the helper decodes once at the boundary to prevent it.
+func TestNextcloudPathParam(t *testing.T) {
+	cases := []struct {
+		name    string
+		param   string
+		want    string
+		wantErr bool
+	}{
+		{"Ampersand", "Diagram%20%26%20table.ods", "Diagram & table.ods", false},
+		{"LiteralApostrophe", "Mother's%20day.odt", "Mother's day.odt", false},
+		{"Hash", "notes%23v2.md", "notes#v2.md", false},
+		{"Parenthesis", "IMG%20%281%29.jpg", "IMG (1).jpg", false},
+		{"Plain", "src.zip", "src.zip", false},
+		{"Nested", "Photos/Frog.jpg", "Photos/Frog.jpg", false},
+		{"MalformedPercent", "bad%zz", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := echo.New().NewContext(httptest.NewRequest(http.MethodGet, "/", nil), httptest.NewRecorder())
+			c.SetParamNames("*")
+			c.SetParamValues(tc.param)
+
+			got, err := nextcloudPathParam(c)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
