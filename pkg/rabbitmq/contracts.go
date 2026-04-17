@@ -19,6 +19,7 @@ const (
 	RoutingKeyUserPasswordUpdated         = "user.password.updated"
 	RoutingKeyUserDeletionRequested       = "user.deletion.requested"
 	RoutingKeyNextcloudMigrationRequested = "nextcloud.migration.requested"
+	RoutingKeyNextcloudMigrationCanceled  = "nextcloud.migration.canceled"
 )
 
 // UserDeletionRequestedMessage is published when a user asks Twake to delete the account linked to the current cozy instance.
@@ -42,5 +43,15 @@ type NextcloudMigrationRequestedMessage struct {
 	WorkplaceFqdn string `json:"workplaceFqdn"`
 	AccountID     string `json:"accountId"`
 	SourcePath    string `json:"sourcePath,omitempty"`
+	Timestamp     int64  `json:"timestamp"`
+}
+
+// NextcloudMigrationCanceledMessage is published when a user requests
+// cancellation of an in-flight Nextcloud migration. The Stack does not
+// touch the tracking document for cancel — the migration service owns
+// the terminal state so there is a single writer.
+type NextcloudMigrationCanceledMessage struct {
+	MigrationID   string `json:"migrationId"`
+	WorkplaceFqdn string `json:"workplaceFqdn"`
 	Timestamp     int64  `json:"timestamp"`
 }

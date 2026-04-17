@@ -714,3 +714,47 @@ Content-Type: application/vnd.api+json
 - 500 Internal Server Error, when the conflict check, account upsert, or tracking document creation fails
 - 502 Bad Gateway, when the Nextcloud instance is unreachable
 - 503 Service Unavailable, when the migration command cannot be published to RabbitMQ. The tracking document is marked `failed` before returning
+
+## POST /remote/nextcloud/migration/:id/cancel
+
+This route asks the migration service to stop an in-flight migration. The
+Stack publishes a `nextcloud.migration.canceled` command to the `migration`
+RabbitMQ exchange; the migration service then stops the migration between
+files and transitions the tracking document to a new terminal state
+`canceled` with progress up to the last completed file preserved.
+
+The Stack does not write to the tracking document on cancel: that terminal
+state transition is owned by the migration service so there is a single
+writer for it. A `202 Accepted` means "cancel requested, poll the tracking
+document for the terminal state", not "migration stopped". Worst-case
+delay from request to observed terminal state is roughly one file transfer.
+
+**Note:** a permission on `POST io.cozy.nextcloud.migrations` is required
+to use this route.
+
+### Request
+
+```http
+POST /remote/nextcloud/migration/d4e5f6a7b8c94d0ea1b2c3d4e5f6a7b8/cancel HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+```
+
+No request body.
+
+### Response
+
+```http
+HTTP/1.1 202 Accepted
+```
+
+Empty body.
+
+#### Status codes
+
+- 202 Accepted, when the cancel command has been published
+- 401 Unauthorized, when the bearer token is missing or invalid
+- 403 Forbidden, when the token lacks the `POST io.cozy.nextcloud.migrations` permission
+- 404 Not Found, when no tracking document with the given id exists on the instance
+- 409 Conflict, when the migration has already reached a terminal state (`completed`, `failed`, or `canceled`)
+- 503 Service Unavailable, when the cancel command cannot be published to RabbitMQ. Unlike the trigger endpoint, the tracking document is **not** marked `failed`: a broker glitch must not invalidate a migration that is still running. Retry the cancel.
