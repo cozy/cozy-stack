@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,22 @@ import (
 	"github.com/ncw/swift/v2"
 )
 
+// nextcloudPathParam returns the `*` wildcard param decoded to its literal
+// filename form. Echo's router stores the raw (percent-encoded) slice
+// whenever Go's http parser sets r.URL.RawPath — which happens as soon as a
+// character's default path encoding differs from what the client sent
+// (e.g. `&` is %26 on the wire but not escaped by Go's path encoder). If we
+// pass that encoded string straight into url.URL.Path when building the
+// WebDAV request, u.String() will escape every literal `%` again and the
+// wire-level URL becomes %2526 instead of %26 — Nextcloud then 404s looking
+// for a filename containing literal %XX sequences.
+//
+// Returns an error on malformed percent-encoding so callers can 400 rather
+// than forward garbage downstream.
+func nextcloudPathParam(c echo.Context) (string, error) {
+	return url.PathUnescape(c.Param("*"))
+}
+
 func nextcloudGetTrash(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
@@ -35,7 +52,10 @@ func nextcloudGetTrash(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	files, err := nc.ListTrashed(path)
 	if err != nil {
 		return wrapNextcloudErrors(err)
@@ -55,7 +75,11 @@ func nextcloudDeleteTrash(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := "/trash/" + c.Param("*")
+	raw, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	path := "/trash/" + raw
 	if err := nc.DeleteTrash(path); err != nil {
 		return wrapNextcloudErrors(err)
 	}
@@ -97,7 +121,11 @@ func nextcloudSize(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	size, err := nc.Size(c.Param("*"))
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	size, err := nc.Size(path)
 	if err != nil {
 		return wrapNextcloudErrors(err)
 	}
@@ -116,7 +144,10 @@ func nextcloudGet(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	if c.QueryParam("Dl") == "1" {
 		return nextcloudDownload(c, nc, path)
 	}
@@ -171,7 +202,10 @@ func nextcloudPut(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	if c.QueryParam("Type") == "file" {
 		return nextcloudUpload(c, nc, path)
 	}
@@ -203,7 +237,10 @@ func nextcloudDelete(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	if err := nc.Delete(path); err != nil {
 		return wrapNextcloudErrors(err)
 	}
@@ -222,7 +259,10 @@ func nextcloudMove(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	oldPath := c.Param("*")
+	oldPath, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	newPath := c.QueryParam("To")
 	if newPath == "" {
 		return jsonapi.BadRequest(errors.New("missing To parameter"))
@@ -246,7 +286,10 @@ func nextcloudCopy(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	oldPath := c.Param("*")
+	oldPath, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	newPath := oldPath
 	if p := c.QueryParam("Path"); p != "" {
 		newPath = p
@@ -277,7 +320,10 @@ func nextcloudDownstream(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	to := c.QueryParam("To")
 	if to == "" {
 		return jsonapi.BadRequest(errors.New("missing To parameter"))
@@ -311,7 +357,10 @@ func nextcloudUpstream(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	from := c.QueryParam("From")
 	if from == "" {
 		return jsonapi.BadRequest(errors.New("missing From parameter"))
@@ -340,7 +389,10 @@ func nextcloudRestore(c echo.Context) error {
 		return wrapNextcloudErrors(err)
 	}
 
-	path := c.Param("*")
+	path, err := nextcloudPathParam(c)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
 	if err := nc.Restore(path); err != nil {
 		return wrapNextcloudErrors(err)
 	}
