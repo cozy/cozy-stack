@@ -34,6 +34,7 @@ func NewHTTPHandler(rmq rabbitmq.Service) *HTTPHandler {
 func (h *HTTPHandler) Register(router *echo.Group) {
 	Routes(router)
 	router.POST("/nextcloud/migration", h.postNextcloudMigration)
+	router.POST("/nextcloud/migration/:id/cancel", h.postNextcloudMigrationCancel)
 }
 
 func allDoctypes(c echo.Context) error {

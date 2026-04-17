@@ -110,3 +110,40 @@ func mapNextcloudMigrationError(err error) error {
 		return jsonapi.InternalServerError(err)
 	}
 }
+
+// postNextcloudMigrationCancel publishes a cancel command for the given
+// migration id. 202 means "cancel requested; poll the tracking document
+// for the terminal state", not "migration stopped".
+func (h *HTTPHandler) postNextcloudMigrationCancel(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.NextcloudMigrations); err != nil {
+		return err
+	}
+	inst := middlewares.GetInstance(c)
+	migrationID := c.Param("id")
+	if migrationID == "" {
+		return jsonapi.BadRequest(errors.New("missing migration id"))
+	}
+
+	reqLogger := inst.Logger().WithNamespace(nextcloudMigrationLogNamespace).WithFields(logger.Fields{
+		"migration_id": migrationID,
+	})
+	ctx := logger.WithContext(c.Request().Context(), reqLogger)
+
+	if err := nextcloud.CancelMigration(ctx, inst, migrationID, h.rmq); err != nil {
+		return mapNextcloudMigrationCancelError(err)
+	}
+	return c.NoContent(http.StatusAccepted)
+}
+
+func mapNextcloudMigrationCancelError(err error) error {
+	switch {
+	case errors.Is(err, nextcloud.ErrMigrationNotFound):
+		return jsonapi.NotFound(err)
+	case errors.Is(err, nextcloud.ErrMigrationAlreadyTerminal):
+		return jsonapi.Conflict(err)
+	case errors.Is(err, nextcloud.ErrMigrationBrokerUnavailable):
+		return jsonapi.NewError(http.StatusServiceUnavailable, "migration service is unavailable, please retry later")
+	default:
+		return jsonapi.InternalServerError(err)
+	}
+}

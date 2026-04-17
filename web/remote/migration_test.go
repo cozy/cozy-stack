@@ -629,3 +629,140 @@ func decodeAccountID(t *testing.T, payload []byte) string {
 	require.NoError(t, json.Unmarshal(payload, &msg))
 	return msg.AccountID
 }
+
+func TestPostNextcloudMigrationCancel(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	config.UseTestFile(t)
+	testutils.NeedCouchdb(t)
+
+	oldBuildMode := build.BuildMode
+	build.BuildMode = build.ModeDev
+	t.Cleanup(func() { build.BuildMode = oldBuildMode })
+
+	t.Run("PublishesAndReturns202", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "ncmigration-cancel-happy")
+		inst := setup.GetTestInstance()
+
+		doc := nextcloud.NewPendingMigration("")
+		doc.Status = nextcloud.MigrationStatusRunning
+		require.NoError(t, couchdb.CreateDoc(inst, doc))
+
+		spy := &spyRabbitMQ{}
+		ts := setupMigrationRouter(t, inst, migrationPermission(), spy)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/remote/nextcloud/migration/" + doc.ID() + "/cancel").
+			WithHost(inst.Domain).
+			Expect().Status(http.StatusAccepted)
+
+		require.Equal(t, 1, spy.count(), "expected a single publish")
+		pub := spy.last()
+		assert.Equal(t, rabbitmq.ExchangeMigration, pub.Exchange)
+		assert.Equal(t, rabbitmq.RoutingKeyNextcloudMigrationCanceled, pub.RoutingKey)
+		assert.Equal(t, doc.ID(), pub.MessageID)
+
+		var msg rabbitmq.NextcloudMigrationCanceledMessage
+		require.NoError(t, json.Unmarshal(pub.Payload.([]byte), &msg))
+		assert.Equal(t, doc.ID(), msg.MigrationID)
+		assert.Equal(t, inst.Domain, msg.WorkplaceFqdn)
+		assert.NotZero(t, msg.Timestamp)
+
+		// The Stack must not mutate the tracking doc — that transition is
+		// owned by the migration service (single-writer invariant for the
+		// terminal state).
+		var stored nextcloud.Migration
+		require.NoError(t, couchdb.GetDoc(inst, consts.NextcloudMigrations, doc.ID(), &stored))
+		assert.Equal(t, nextcloud.MigrationStatusRunning, stored.Status)
+		assert.False(t, stored.CancelRequested)
+	})
+
+	t.Run("UnknownMigrationReturns404", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "ncmigration-cancel-unknown")
+		inst := setup.GetTestInstance()
+
+		spy := &spyRabbitMQ{}
+		ts := setupMigrationRouter(t, inst, migrationPermission(), spy)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/remote/nextcloud/migration/does-not-exist/cancel").
+			WithHost(inst.Domain).
+			Expect().Status(http.StatusNotFound)
+
+		assert.Equal(t, 0, spy.count(), "must not publish for unknown migrations")
+	})
+
+	for _, status := range []string{
+		nextcloud.MigrationStatusCompleted,
+		nextcloud.MigrationStatusFailed,
+		nextcloud.MigrationStatusCanceled,
+	} {
+		status := status
+		t.Run("TerminalStatus_"+status, func(t *testing.T) {
+			setup := testutils.NewSetup(t, "ncmigration-cancel-"+status)
+			inst := setup.GetTestInstance()
+
+			doc := nextcloud.NewPendingMigration("")
+			doc.Status = status
+			require.NoError(t, couchdb.CreateDoc(inst, doc))
+
+			spy := &spyRabbitMQ{}
+			ts := setupMigrationRouter(t, inst, migrationPermission(), spy)
+			e := testutils.CreateTestClient(t, ts.URL)
+
+			e.POST("/remote/nextcloud/migration/" + doc.ID() + "/cancel").
+				WithHost(inst.Domain).
+				Expect().Status(http.StatusConflict)
+
+			assert.Equal(t, 0, spy.count(), "terminal migrations must not publish")
+		})
+	}
+
+	t.Run("PublishFailureReturns503", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "ncmigration-cancel-publishfail")
+		inst := setup.GetTestInstance()
+
+		doc := nextcloud.NewPendingMigration("")
+		doc.Status = nextcloud.MigrationStatusRunning
+		require.NoError(t, couchdb.CreateDoc(inst, doc))
+
+		spy := &spyRabbitMQ{err: fmt.Errorf("broker down")}
+		ts := setupMigrationRouter(t, inst, migrationPermission(), spy)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/remote/nextcloud/migration/" + doc.ID() + "/cancel").
+			WithHost(inst.Domain).
+			Expect().Status(http.StatusServiceUnavailable)
+
+		// Unlike trigger, a cancel publish failure must not flip the
+		// tracking doc to failed. The migration is still running.
+		var stored nextcloud.Migration
+		require.NoError(t, couchdb.GetDoc(inst, consts.NextcloudMigrations, doc.ID(), &stored))
+		assert.Equal(t, nextcloud.MigrationStatusRunning, stored.Status)
+	})
+
+	t.Run("RejectsWithoutPermission", func(t *testing.T) {
+		setup := testutils.NewSetup(t, "ncmigration-cancel-forbidden")
+		inst := setup.GetTestInstance()
+
+		doc := nextcloud.NewPendingMigration("")
+		doc.Status = nextcloud.MigrationStatusRunning
+		require.NoError(t, couchdb.CreateDoc(inst, doc))
+
+		pdoc := &permission.Permission{
+			Type:     permission.TypeWebapp,
+			SourceID: consts.Apps + "/" + consts.SettingsSlug,
+		}
+		spy := &spyRabbitMQ{}
+		ts := setupMigrationRouter(t, inst, pdoc, spy)
+		e := testutils.CreateTestClient(t, ts.URL)
+
+		e.POST("/remote/nextcloud/migration/" + doc.ID() + "/cancel").
+			WithHost(inst.Domain).
+			Expect().Status(http.StatusForbidden)
+
+		assert.Equal(t, 0, spy.count())
+	})
+}

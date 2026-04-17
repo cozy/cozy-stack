@@ -19,6 +19,7 @@ const (
 	MigrationStatusRunning   = "running"
 	MigrationStatusCompleted = "completed"
 	MigrationStatusFailed    = "failed"
+	MigrationStatusCanceled  = "canceled"
 )
 
 const DefaultMigrationTargetDir = "/Nextcloud"
@@ -30,16 +31,21 @@ var ErrMigrationConflict = errors.New("a nextcloud migration is already in progr
 // The schema (especially the nested Progress object) is the contract with
 // twake-migration-nextcloud. Flat counters would crash the service's progress
 // reducer because it spreads doc.progress and adds to its fields.
+//
+// CancelRequested and CanceledAt are written by the migration service;
+// the Stack round-trips them without modification.
 type Migration struct {
-	DocID      string            `json:"_id,omitempty"`
-	DocRev     string            `json:"_rev,omitempty"`
-	Status     string            `json:"status"`
-	TargetDir  string            `json:"target_dir"`
-	Progress   MigrationProgress `json:"progress"`
-	Errors     []MigrationError  `json:"errors"`
-	Skipped    []SkippedFile     `json:"skipped"`
-	StartedAt  *time.Time        `json:"started_at"`
-	FinishedAt *time.Time        `json:"finished_at"`
+	DocID           string            `json:"_id,omitempty"`
+	DocRev          string            `json:"_rev,omitempty"`
+	Status          string            `json:"status"`
+	TargetDir       string            `json:"target_dir"`
+	Progress        MigrationProgress `json:"progress"`
+	Errors          []MigrationError  `json:"errors"`
+	Skipped         []SkippedFile     `json:"skipped"`
+	StartedAt       *time.Time        `json:"started_at"`
+	FinishedAt      *time.Time        `json:"finished_at"`
+	CancelRequested bool              `json:"cancel_requested,omitempty"`
+	CanceledAt      *time.Time        `json:"canceled_at,omitempty"`
 }
 
 type MigrationProgress struct {
@@ -86,7 +92,22 @@ func (m *Migration) Clone() couchdb.Doc {
 		t := *m.FinishedAt
 		cloned.FinishedAt = &t
 	}
+	if m.CanceledAt != nil {
+		t := *m.CanceledAt
+		cloned.CanceledAt = &t
+	}
 	return &cloned
+}
+
+// IsTerminal reports whether the migration has reached a state that the
+// Stack must not try to cancel (completed, failed, or canceled).
+func (m *Migration) IsTerminal() bool {
+	switch m.Status {
+	case MigrationStatusCompleted, MigrationStatusFailed, MigrationStatusCanceled:
+		return true
+	default:
+		return false
+	}
 }
 
 func (m *Migration) Links() *jsonapi.LinksList              { return nil }
