@@ -1046,6 +1046,16 @@ Identical to [`GET /notes/:file-id/open`](notes.md#get-notesidopen).
 Returns the parameters to open an office document. Identical to
 [`GET /office/:file-id/open`](office.md#get-officeidopen).
 
+## Shortcuts
+
+### GET /sharings/drives/:id/shortcuts/:file-id
+
+Get information about a shortcut inside a shared drive. Identical to
+[`GET /shortcuts/:id`](shortcuts.md#get-shortcutsid), with the same two
+variants depending on the `Accept` header (JSON-API response or redirect).
+
+Recipients are transparently proxied to the owner's instance.
+
 ## Realtime
 
 ### GET /sharings/drives/:id/realtime
