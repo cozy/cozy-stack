@@ -39,6 +39,11 @@ import (
 const (
 	// StateLen is the number of bytes for the OAuth state parameter
 	StateLen = 16
+
+	// DriveRootTypeDirectory means the shared drive root is a directory.
+	DriveRootTypeDirectory = "directory"
+	// DriveRootTypeFile means the shared drive root is a single file.
+	DriveRootTypeFile = "file"
 )
 
 // Triggers keep record of which triggers are active
@@ -54,21 +59,22 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	Triggers    Triggers  `json:"triggers"`
-	Drive       bool      `json:"drive,omitempty"`
-	OrgDrive    bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
-	Active      bool      `json:"active,omitempty"`
-	Owner       bool      `json:"owner,omitempty"`
-	Open        bool      `json:"open_sharing,omitempty"`
-	Description string    `json:"description,omitempty"`
-	AppSlug     string    `json:"app_slug"`
-	PreviewPath string    `json:"preview_path,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
-	Initial     bool      `json:"initial_sync,omitempty"`
-	ShortcutID  string    `json:"shortcut_id,omitempty"`
-	MovedFrom   string    `json:"moved_from,omitempty"`
+	Triggers      Triggers  `json:"triggers"`
+	Drive         bool      `json:"drive,omitempty"`
+	DriveRootType string    `json:"drive_root_type,omitempty"`
+	OrgDrive      bool      `json:"org_drive,omitempty"` // True for drives created on an organization instance
+	Active        bool      `json:"active,omitempty"`
+	Owner         bool      `json:"owner,omitempty"`
+	Open          bool      `json:"open_sharing,omitempty"`
+	Description   string    `json:"description,omitempty"`
+	AppSlug       string    `json:"app_slug"`
+	PreviewPath   string    `json:"preview_path,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	NbFiles       int       `json:"initial_number_of_files_to_sync,omitempty"`
+	Initial       bool      `json:"initial_sync,omitempty"`
+	ShortcutID    string    `json:"shortcut_id,omitempty"`
+	MovedFrom     string    `json:"moved_from,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
@@ -120,6 +126,37 @@ func (s *Sharing) Clone() couchdb.Doc {
 		copy(cloned.Credentials[i].XorKey, s.Credentials[i].XorKey)
 	}
 	return &cloned
+}
+
+// NormalizedDriveRootType returns the stored drive root type, defaulting
+// legacy drive documents with no explicit type to a directory root.
+func (s *Sharing) NormalizedDriveRootType() string {
+	if s.DriveRootType == "" {
+		return DriveRootTypeDirectory
+	}
+	return s.DriveRootType
+}
+
+// HasDirectoryDriveRoot returns true when the drive root is a directory.
+func (s *Sharing) HasDirectoryDriveRoot() bool {
+	return s.NormalizedDriveRootType() == DriveRootTypeDirectory
+}
+
+// HasFileDriveRoot returns true when the drive root is a single file.
+func (s *Sharing) HasFileDriveRoot() bool {
+	return s.NormalizedDriveRootType() == DriveRootTypeFile
+}
+
+// IsValidDriveRootType returns true when the given drive root type is one of
+// the supported values. The empty string is accepted for legacy documents and
+// normalized to a directory root.
+func IsValidDriveRootType(rootType string) bool {
+	switch rootType {
+	case "", DriveRootTypeDirectory, DriveRootTypeFile:
+		return true
+	default:
+		return false
+	}
 }
 
 // ReadOnlyFlag returns true only if the given instance is declared a read-only
