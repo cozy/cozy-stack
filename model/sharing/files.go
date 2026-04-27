@@ -302,106 +302,135 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, paren
 	return nil, err
 }
 
-// AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
-func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule) error {
+// AddReferenceForSharing adds a reference to the sharing on the sharing
+// root. For drive sharings, the root can be either a directory or a file.
+func (s *Sharing) AddReferenceForSharing(inst *instance.Instance, rule *Rule) error {
 	fs := inst.VFS()
 	parts := strings.Split(rule.Values[0], "/")
-	dir, _, err := fs.DirOrFileByID(parts[len(parts)-1])
+	dir, file, err := fs.DirOrFileByID(parts[len(parts)-1])
 	if err != nil {
 		inst.Logger().WithNamespace("sharing").
-			Warnf("AddReferenceForSharingDir failed to find dir: %s", err)
+			Warnf("AddReferenceForSharing failed to find root: %s", err)
 		return err
 	}
-	if dir == nil {
+	if dir == nil && file == nil {
 		return nil
 	}
-	for _, ref := range dir.ReferencedBy {
+
+	if dir != nil {
+		for _, ref := range dir.ReferencedBy {
+			if ref.Type == consts.Sharings && ref.ID == s.SID {
+				return nil
+			}
+		}
+		olddoc := dir.Clone().(*vfs.DirDoc)
+		dir.AddReferencedBy(couchdb.DocReference{
+			ID:   s.SID,
+			Type: consts.Sharings,
+		})
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+		} else {
+			dir.CozyMetadata.UpdatedAt = time.Now()
+		}
+		return fs.UpdateDirDoc(olddoc, dir)
+	}
+
+	if !s.Drive {
+		return nil
+	}
+	for _, ref := range file.ReferencedBy {
 		if ref.Type == consts.Sharings && ref.ID == s.SID {
 			return nil
 		}
 	}
-	olddoc := dir.Clone().(*vfs.DirDoc)
-	dir.AddReferencedBy(couchdb.DocReference{
+	olddoc := file.Clone().(*vfs.FileDoc)
+	file.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
-	if dir.CozyMetadata == nil {
-		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	if file.CozyMetadata == nil {
+		file.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	} else {
-		dir.CozyMetadata.UpdatedAt = time.Now()
+		file.CozyMetadata.UpdatedAt = time.Now()
 	}
-	return fs.UpdateDirDoc(olddoc, dir)
+	return fs.UpdateFileDoc(olddoc, file)
 }
 
-// ValidateFolderForDrive validates that a folder can be used to create a shared drive.
-// It checks that:
-// - The folder is not a system folder (root, trash, shared-with-me, shared-drives, etc.)
-// - The folder exists and is a directory
-// - The folder is not in the trash
-// - The folder has no existing sharing (checked via referenced_by)
-// - The folder is not inside another shared folder
-// - No descendant folder has an existing sharing
-func ValidateFolderForDrive(inst *instance.Instance, folderID string) (*vfs.DirDoc, error) {
-	// Check for system folder IDs first (before checking existence)
-	// This gives a more specific error for known system folders
-	if folderID == consts.RootDirID ||
-		folderID == consts.TrashDirID ||
-		folderID == consts.SharedWithMeDirID ||
-		folderID == consts.NoLongerSharedDirID ||
-		folderID == consts.SharedDrivesDirID {
-		return nil, ErrSystemFolder
+// ValidateDriveRoot validates that a file or folder can be used to create a
+// shared drive.
+func ValidateDriveRoot(inst *instance.Instance, rootID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	if rootID == consts.RootDirID ||
+		rootID == consts.TrashDirID ||
+		rootID == consts.SharedWithMeDirID ||
+		rootID == consts.NoLongerSharedDirID ||
+		rootID == consts.SharedDrivesDirID {
+		return nil, nil, ErrSystemFolder
 	}
 
 	fs := inst.VFS()
-
-	// Check folder exists and is a directory
-	dir, file, err := fs.DirOrFileByID(folderID)
+	dir, file, err := fs.DirOrFileByID(rootID)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, ErrFolderNotFound
+			return nil, nil, ErrDriveRootNotFound
 		}
-		return nil, err
+		return nil, nil, err
 	}
-	if dir == nil && file != nil {
-		return nil, ErrNotADirectory
+	if dir == nil && file == nil {
+		return nil, nil, ErrDriveRootNotFound
 	}
-	if dir == nil {
-		return nil, ErrFolderNotFound
+	if dir != nil {
+		if strings.HasPrefix(dir.Fullpath, vfs.TrashDirName+"/") {
+			return nil, nil, ErrSystemFolder
+		}
+		if err := checkRootForSharing(dir.ReferencedBy, ErrFolderAlreadyShared); err != nil {
+			return nil, nil, err
+		}
+		if err := checkParentsForSharing(fs, path.Dir(dir.Fullpath), ErrFolderAlreadyShared); err != nil {
+			return nil, nil, err
+		}
+		if err := checkDescendantsForSharing(fs, dir); err != nil {
+			return nil, nil, err
+		}
+		return dir, nil, nil
 	}
+	if file.Trashed {
+		return nil, nil, ErrFileInTrash
+	}
+	if err := checkRootForSharing(file.ReferencedBy, ErrFileAlreadyShared); err != nil {
+		return nil, nil, err
+	}
+	filePath, err := file.Path(fs)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := checkParentsForSharing(fs, path.Dir(filePath), ErrFileAlreadyShared); err != nil {
+		return nil, nil, err
+	}
+	return nil, file, nil
+}
 
-	// Check not in trash (path-based check for folders inside trash)
-	if strings.HasPrefix(dir.Fullpath, vfs.TrashDirName+"/") {
-		return nil, ErrSystemFolder
-	}
-
-	// Check folder is not already in a sharing (via referenced_by)
-	for _, ref := range dir.ReferencedBy {
+func checkRootForSharing(refs []couchdb.DocReference, alreadySharedErr error) error {
+	for _, ref := range refs {
 		if ref.Type == consts.Sharings {
-			return nil, ErrFolderAlreadyShared
+			return alreadySharedErr
 		}
 	}
+	return nil
+}
 
-	// Check folder is not inside another sharing by walking up parent directories
-	currentPath := path.Dir(dir.Fullpath)
+func checkParentsForSharing(fs vfs.VFS, currentPath string, alreadySharedErr error) error {
 	for currentPath != "/" && currentPath != "." && currentPath != "" {
 		parentDir, err := fs.DirByPath(currentPath)
 		if err != nil {
 			break
 		}
-		for _, ref := range parentDir.ReferencedBy {
-			if ref.Type == consts.Sharings {
-				return nil, ErrFolderAlreadyShared
-			}
+		if err := checkRootForSharing(parentDir.ReferencedBy, alreadySharedErr); err != nil {
+			return err
 		}
 		currentPath = path.Dir(currentPath)
 	}
-
-	// Check no descendant folder has an existing sharing
-	if err := checkDescendantsForSharing(fs, dir); err != nil {
-		return nil, err
-	}
-
-	return dir, nil
+	return nil
 }
 
 // checkDescendantsForSharing recursively checks if any descendant directory

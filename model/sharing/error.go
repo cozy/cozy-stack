@@ -44,6 +44,12 @@ var (
 	// ErrFolderNotFound is used when informations about a folder is asked,
 	// but this folder was not found
 	ErrFolderNotFound = errors.New("This folder was not found")
+	// ErrDriveRootNotFound is used when a drive root identifier can point to
+	// either a file or a folder, but nothing was found.
+	ErrDriveRootNotFound = errors.New("This file or folder was not found")
+	// ErrFileNotFound is used when informations about a file is asked,
+	// but this file was not found
+	ErrFileNotFound = errors.New("This file was not found")
 	// ErrSafety is used when an operation is aborted due to the safety principal
 	ErrSafety = errors.New("Operation aborted")
 	// ErrAlreadyAccepted is used when someone tries to accept twice a sharing
@@ -65,6 +71,12 @@ var (
 	ErrFolderAlreadyShared = errors.New("Folder already has an existing sharing")
 	// ErrNotADirectory is used when the provided folder_id is not a directory
 	ErrNotADirectory = errors.New("Provided ID is not a directory")
+	// ErrFileAlreadyShared is used when the file already has an existing sharing
+	ErrFileAlreadyShared = errors.New("File already has an existing sharing")
+	// ErrNotAFile is used when the provided file_id is not a file
+	ErrNotAFile = errors.New("Provided ID is not a file")
+	// ErrFileInTrash is used when trying to share a trashed file
+	ErrFileInTrash = errors.New("Cannot share trashed file")
 	// ErrSystemFolder is used when trying to share a system folder
 	ErrSystemFolder = errors.New("Cannot share system folder")
 )

@@ -66,6 +66,7 @@ func CreateSharedDrive(c echo.Context) error {
 	var attrs struct {
 		Description string `json:"description"`
 		FolderID    string `json:"folder_id"`
+		FileID      string `json:"file_id"`
 		Name        string `json:"name"`
 	}
 	obj, err := jsonapi.Bind(c.Request().Body, &attrs)
@@ -73,11 +74,13 @@ func CreateSharedDrive(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 
-	if attrs.FolderID == "" && attrs.Name == "" {
-		return jsonapi.BadRequest(errors.New("folder_id or name is required"))
+	if attrs.FolderID == "" && attrs.FileID == "" && attrs.Name == "" {
+		return jsonapi.BadRequest(errors.New("one of folder_id, file_id or name is required"))
 	}
-	if attrs.FolderID != "" && attrs.Name != "" {
-		return jsonapi.BadRequest(errors.New("folder_id and name are mutually exclusive"))
+	if (attrs.FolderID != "" && attrs.FileID != "") ||
+		(attrs.FolderID != "" && attrs.Name != "") ||
+		(attrs.FileID != "" && attrs.Name != "") {
+		return jsonapi.BadRequest(errors.New("folder_id, file_id and name are mutually exclusive"))
 	}
 
 	if attrs.Name != "" {
@@ -92,10 +95,13 @@ func CreateSharedDrive(c echo.Context) error {
 		attrs.FolderID = newDir.DocID
 	}
 
-	// Create the sharing from folder first (builds the rules).
-	newSharing, err := sharing.CreateDrive(inst, attrs.FolderID, attrs.Description, "")
+	rootID := attrs.FileID
+	if rootID == "" {
+		rootID = attrs.FolderID
+	}
+	newSharing, err := sharing.CreateDrive(inst, rootID, attrs.Description, "")
 	if err != nil {
-		return wrapErrors(err)
+		return wrapDriveRootErrors(err)
 	}
 
 	// Check permissions using the existing function (validates against the rules)
@@ -147,6 +153,19 @@ func wrapDriveNameErrors(err error) error {
 		return jsonapi.Conflict(err)
 	case vfs.ErrIllegalFilename, vfs.ErrIllegalPath:
 		return jsonapi.InvalidParameter("name", err)
+	default:
+		return wrapErrors(err)
+	}
+}
+
+func wrapDriveRootErrors(err error) error {
+	switch err {
+	case sharing.ErrDriveRootNotFound:
+		return jsonapi.NotFound(err)
+	case sharing.ErrFolderAlreadyShared, sharing.ErrFileAlreadyShared:
+		return jsonapi.Conflict(err)
+	case sharing.ErrSystemFolder, sharing.ErrFileInTrash:
+		return jsonapi.BadRequest(err)
 	default:
 		return wrapErrors(err)
 	}

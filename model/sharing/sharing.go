@@ -424,6 +424,12 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	if err := s.ValidateRules(); err != nil {
 		return nil, err
 	}
+	if s.Drive {
+		if !IsValidDriveRootType(s.DriveRootType) {
+			return nil, ErrInvalidRule
+		}
+		s.inferDriveRootType(inst)
+	}
 	if !s.Drive && len(s.Members) < 2 {
 		return nil, ErrNoRecipients
 	}
@@ -432,9 +438,9 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 		return nil, err
 	}
 	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
-		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+		if err := s.AddReferenceForSharing(inst, rule); err != nil {
 			inst.Logger().WithNamespace("sharing").
-				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
+				Warnf("Error on referenced_by for the sharing root (%s): %s", s.SID, err)
 		}
 	}
 
@@ -444,31 +450,60 @@ func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error
 	return nil, nil
 }
 
-// CreateDrive creates a new shared drive from an existing unshared folder.
-func CreateDrive(inst *instance.Instance, folderID, description, appSlug string) (*Sharing, error) {
-	// Validate the folder
-	dir, err := ValidateFolderForDrive(inst, folderID)
+func (s *Sharing) inferDriveRootType(inst *instance.Instance) {
+	if s.DriveRootType != "" {
+		return
+	}
+	rule := s.FirstFilesRule()
+	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		return
+	}
+
+	dir, file, err := inst.VFS().DirOrFileByID(rule.Values[0])
+	if err != nil {
+		return
+	}
+	switch {
+	case file != nil:
+		s.DriveRootType = DriveRootTypeFile
+	case dir != nil:
+		s.DriveRootType = DriveRootTypeDirectory
+	}
+}
+
+// CreateDrive creates a new shared drive from an existing unshared folder or file.
+func CreateDrive(inst *instance.Instance, rootID, description, appSlug string) (*Sharing, error) {
+	dir, file, err := ValidateDriveRoot(inst, rootID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Build the sharing structure
+	rootType := DriveRootTypeDirectory
+	rootName := ""
+	if dir != nil {
+		rootName = dir.DocName
+	}
+	if file != nil {
+		rootType = DriveRootTypeFile
+		rootName = file.DocName
+	}
+
 	s := &Sharing{
-		Drive:       true,
-		Description: description,
+		Drive:         true,
+		DriveRootType: rootType,
+		Description:   description,
 		Rules: []Rule{{
-			Title:   dir.DocName,
+			Title:   rootName,
 			DocType: consts.Files,
-			Values:  []string{folderID},
+			Values:  []string{rootID},
 			Add:     ActionRuleNone,
 			Update:  ActionRuleNone,
 			Remove:  ActionRuleNone,
 		}},
 	}
 
-	// Use folder name as description if not provided
 	if s.Description == "" {
-		s.Description = dir.DocName
+		s.Description = rootName
 	}
 
 	// Initialize as owner
