@@ -3,7 +3,7 @@ module github.com/cozy/cozy-stack
 go 1.25.0
 
 require (
-	firebase.google.com/go/v4 v4.14.1
+	firebase.google.com/go/v4 v4.19.0
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/adrg/xdg v0.5.3
 	github.com/andybalholm/brotli v1.1.0
@@ -188,7 +188,7 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/appengine/v2 v2.0.2 // indirect
+	google.golang.org/appengine/v2 v2.0.6 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
