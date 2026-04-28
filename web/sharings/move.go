@@ -74,6 +74,25 @@ func validateMoveRequest(req moveRequest) error {
 	return nil
 }
 
+func validateFileBackedDriveMoveCopy(req moveRequest, sourceSharing, destSharing *sharing.Sharing) error {
+	if sourceSharing != nil && sourceSharing.HasFileDriveRoot() {
+		if !req.Copy {
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives only support copy as a source")
+		}
+		if req.Source.DirID != "" {
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives can only copy their root file")
+		}
+		rule := sourceSharing.FirstFilesRule()
+		if rule == nil || len(rule.Values) == 0 || req.Source.FileID != rule.Values[0] {
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives can only copy their root file")
+		}
+	}
+	if destSharing != nil && destSharing.HasFileDriveRoot() {
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives cannot be used as a destination")
+	}
+	return nil
+}
+
 // MoveHandler is a unified endpoint to move a file or directory between.
 // Accepted inputs (JSON body preferred, query params supported for compatibility):
 // - Common: file-id, dir-id
@@ -135,6 +154,9 @@ func MoveHandler(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		if err := validateFileBackedDriveMoveCopy(req, sourceSharing, destSharing); err != nil {
+			return err
+		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
 			if moveDirectory {
 				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, destSharing, req.Copy)
@@ -152,6 +174,9 @@ func MoveHandler(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		if err := validateFileBackedDriveMoveCopy(req, s, nil); err != nil {
+			return err
+		}
 		if OnSameStackCheck(sourceInstance, destInstance) {
 			if moveDirectory {
 				return moveDirSameStack(c, sourceInstance, destInstance, req.Source.DirID, req.Dest.DirID, nil, req.Copy)
@@ -167,6 +192,9 @@ func MoveHandler(c echo.Context) error {
 	} else if req.Source.Instance == "" && req.Dest.Instance != "" {
 		s, err := checkSharedDrivePermission(inst, req.Dest.SharingID, true)
 		if err != nil {
+			return err
+		}
+		if err := validateFileBackedDriveMoveCopy(req, nil, s); err != nil {
 			return err
 		}
 		if OnSameStackCheck(sourceInstance, destInstance) {

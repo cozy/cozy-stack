@@ -281,7 +281,7 @@ func createSharedDrive(
 	return
 }
 
-func createFileBackedSharedDrive(
+func createFileRootSharedDrive(
 	t *testing.T,
 	inst *instance.Instance,
 	appToken string,
@@ -2344,7 +2344,7 @@ func TestSharedDriveCreation(t *testing.T) {
 			drive.Path("$.attributes.drive_root_type").String().IsEqual("file")
 			found = true
 		}
-		require.True(t, found, "file-backed drive should be listed")
+		require.True(t, found, "file-root shared drive should be listed")
 	})
 
 	t.Run("CreateDriveFromFolderViaFileID", func(t *testing.T) {
@@ -2404,7 +2404,7 @@ func TestSharedDriveCreation(t *testing.T) {
 				"data": {
 					"type": "%s",
 					"attributes": {
-						"description": "Legacy file-backed drive",
+						"description": "Legacy file-root shared drive",
 						"drive": true,
 						"rules": [{
 							"title": "LegacyDriveFile.txt",
@@ -2598,7 +2598,7 @@ func TestSharedDriveTrashAttribution(t *testing.T) {
 	}, 10*time.Second, 200*time.Millisecond, "owner should receive recipient trash attribution")
 }
 
-func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
+func TestFileRootSharedDriveReadRoutes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -2609,13 +2609,13 @@ func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		rootFileID := createFile(t, eA, "", "SharedDriveRootFile.txt", env.acmeToken)
-		sharingID, _ := createFileBackedSharedDrive(
+		sharingID, _ := createFileRootSharedDrive(
 			t,
 			env.acme,
 			env.acmeToken,
 			env.tsA.URL,
 			rootFileID,
-			"File-backed drive",
+			"File-root shared drive",
 			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
 		)
 		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
@@ -2690,7 +2690,7 @@ func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
 			Object()
 
 		noteID := noteObj.Value("data").Object().Value("id").String().Raw()
-		sharingID, _ := createFileBackedSharedDrive(
+		sharingID, _ := createFileRootSharedDrive(
 			t,
 			env.acme,
 			env.acmeToken,
@@ -2714,7 +2714,7 @@ func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
 	})
 }
 
-func TestFileBackedSharedDriveMutationRoutes(t *testing.T) {
+func TestFileRootSharedDriveMutationRoutes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
 	}
@@ -2726,13 +2726,13 @@ func TestFileBackedSharedDriveMutationRoutes(t *testing.T) {
 
 		rootFileID := createFile(t, eA, "", "MutableRoot.txt", env.acmeToken)
 		outsideDirID := createRootDirectory(t, eA, "OutsidePatchTarget", env.acmeToken)
-		sharingID, _ := createFileBackedSharedDrive(
+		sharingID, _ := createFileRootSharedDrive(
 			t,
 			env.acme,
 			env.acmeToken,
 			env.tsA.URL,
 			rootFileID,
-			"Mutable file-backed drive",
+			"Mutable file-root shared drive",
 			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
 		)
 		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
@@ -2804,13 +2804,13 @@ func TestFileBackedSharedDriveMutationRoutes(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		rootFileID := createFile(t, eA, "", "DestroyableRoot.txt", env.acmeToken)
-		sharingID, _ := createFileBackedSharedDrive(
+		sharingID, _ := createFileRootSharedDrive(
 			t,
 			env.acme,
 			env.acmeToken,
 			env.tsA.URL,
 			rootFileID,
-			"Destroyable file-backed drive",
+			"Destroyable file-root shared drive",
 			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
 		)
 		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
@@ -2828,13 +2828,13 @@ func TestFileBackedSharedDriveMutationRoutes(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 
 		rootFileID := createFile(t, eA, "", "UnsupportedRoutesRoot.txt", env.acmeToken)
-		sharingID, _ := createFileBackedSharedDrive(
+		sharingID, _ := createFileRootSharedDrive(
 			t,
 			env.acme,
 			env.acmeToken,
 			env.tsA.URL,
 			rootFileID,
-			"Unsupported routes file-backed drive",
+			"Unsupported routes file-root shared drive",
 			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
 		)
 		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)

@@ -24,7 +24,7 @@ type sharedDrivePermissionFixture struct {
 	fileID        string
 }
 
-type fileBackedSharedDrivePermissionFixture struct {
+type fileRootSharedDrivePermissionFixture struct {
 	env             *sharedDrivesEnv
 	eOwner          *httpexpect.Expect
 	ownerAppToken   string
@@ -53,7 +53,7 @@ func setupSharedDrivePermissionFixture(t *testing.T) *sharedDrivePermissionFixtu
 	}
 }
 
-func setupFileBackedSharedDrivePermissionFixture(t *testing.T) *fileBackedSharedDrivePermissionFixture {
+func setupFileRootSharedDrivePermissionFixture(t *testing.T) *fileRootSharedDrivePermissionFixture {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
@@ -64,18 +64,18 @@ func setupFileBackedSharedDrivePermissionFixture(t *testing.T) *fileBackedShared
 
 	rootFileID := createFile(t, eOwner, "", "root-document.txt", env.acmeToken)
 	unrelatedFileID := createFile(t, eOwner, "", "outside-document.txt", env.acmeToken)
-	sharingID, _ := createFileBackedSharedDrive(
+	sharingID, _ := createFileRootSharedDrive(
 		t,
 		env.acme,
 		env.acmeToken,
 		env.tsA.URL,
 		rootFileID,
-		"File-backed permission drive",
+		"File-root permission drive",
 		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
 	)
 	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
 
-	return &fileBackedSharedDrivePermissionFixture{
+	return &fileRootSharedDrivePermissionFixture{
 		env:             env,
 		eOwner:          eOwner,
 		ownerAppToken:   env.acmeToken,
@@ -85,7 +85,7 @@ func setupFileBackedSharedDrivePermissionFixture(t *testing.T) *fileBackedShared
 	}
 }
 
-func (f *fileBackedSharedDrivePermissionFixture) newBettyClient(t *testing.T) (*httpexpect.Expect, string) {
+func (f *fileRootSharedDrivePermissionFixture) newBettyClient(t *testing.T) (*httpexpect.Expect, string) {
 	t.Helper()
 	_, eBetty, _ := f.env.createClients(t)
 	return eBetty, f.env.bettyToken
@@ -596,8 +596,8 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 	})
 }
 
-func TestFileBackedSharedDriveShareByLink(t *testing.T) {
-	f := setupFileBackedSharedDrivePermissionFixture(t)
+func TestFileRootSharedDriveShareByLink(t *testing.T) {
+	f := setupFileRootSharedDrivePermissionFixture(t)
 
 	t.Run("OwnerCanManageRootFilePermission", func(t *testing.T) {
 		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.rootFileID}, "", nil)

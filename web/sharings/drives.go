@@ -318,7 +318,7 @@ func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *shari
 		return files.WrapVfsError(err)
 	}
 	if s.HasFileDriveRoot() && patch.DirID != nil {
-		return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root file of a file-backed shared drive")
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root file of a file-root shared drive")
 	}
 	if err = applyPatch(c, inst.VFS(), patch); err != nil {
 		return files.WrapVfsError(err)
@@ -1461,7 +1461,7 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string, requi
 
 func ensureDirectoryBackedSharedDrive(s *sharing.Sharing) error {
 	if s.HasFileDriveRoot() {
-		return jsonapi.NewError(http.StatusUnprocessableEntity, "file-backed shared drives do not support this endpoint")
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives do not support this endpoint")
 	}
 	return nil
 }
