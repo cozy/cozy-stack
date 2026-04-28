@@ -281,6 +281,76 @@ func createSharedDrive(
 	return
 }
 
+func createFileBackedSharedDrive(
+	t *testing.T,
+	inst *instance.Instance,
+	appToken string,
+	tsURL string,
+	fileID string,
+	description string,
+	recipients []RecipientInfo,
+) (
+	sharingID string,
+	discovery string,
+) {
+	t.Helper()
+
+	e := httpexpect.Default(t, tsURL)
+
+	if recipients == nil {
+		recipients = DefaultRecipients()
+	}
+
+	var rwRecipientRefs, roRecipientRefs []string
+	for _, r := range recipients {
+		c := createContact(t, inst, r.Name, r.Email)
+		require.NotNil(t, c)
+		ref := `{"id": "` + c.ID() + `", "type": "` + c.DocType() + `"}`
+		if r.ReadOnly {
+			roRecipientRefs = append(roRecipientRefs, ref)
+		} else {
+			rwRecipientRefs = append(rwRecipientRefs, ref)
+		}
+	}
+
+	rwRecipientsJSON := "[" + strings.Join(rwRecipientRefs, ",") + "]"
+	roRecipientsJSON := "[" + strings.Join(roRecipientRefs, ",") + "]"
+
+	obj := e.POST("/sharings/drives").
+		WithHeader("Authorization", "Bearer "+appToken).
+		WithHeader("Content-Type", "application/vnd.api+json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "` + consts.Sharings + `",
+				"attributes": {
+					"description": "` + description + `",
+					"file_id": "` + fileID + `"
+				},
+				"relationships": {
+					"recipients": {
+						"data": ` + rwRecipientsJSON + `
+					},
+					"read_only_recipients": {
+						"data": ` + roRecipientsJSON + `
+					}
+				}
+			}
+		}`)).
+		Expect().Status(201).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object()
+
+	sharingID = obj.Value("data").Object().Value("id").String().NotEmpty().Raw()
+
+	publicName, _ := inst.SettingsPublicName()
+	sentDescription, disco := extractInvitationLink(t, inst, sharingID, publicName, "")
+	assert.Equal(t, sentDescription, description)
+	assert.Contains(t, disco, "/discovery?state=")
+	discovery = disco
+
+	return
+}
+
 func makeAddRecipientsPayload(t *testing.T, sharingID, relationshipName string, contactIDs ...string) []byte {
 	t.Helper()
 
@@ -2526,6 +2596,122 @@ func TestSharedDriveTrashAttribution(t *testing.T) {
 			payload.Data.Attributes.CozyMetadata.TrashedBy.DisplayName == trashedByDisplayName &&
 			payload.Data.Attributes.CozyMetadata.TrashedBy.Domain == trashedByDomain
 	}, 10*time.Second, 200*time.Millisecond, "owner should receive recipient trash attribution")
+}
+
+func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	t.Run("HeadGetAndDownloadRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "SharedDriveRootFile.txt", env.acmeToken)
+		sharingID, _ := createFileBackedSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"File-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+		unrelatedFileID := createFile(t, eA, "", "OutsideFile.txt", env.acmeToken)
+
+		eA.HEAD("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			Expect().Status(200)
+
+		obj := eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.id").String().IsEqual(rootFileID)
+		obj.Path("$.data.type").String().IsEqual(consts.Files)
+		obj.Path("$.data.attributes.name").String().IsEqual("SharedDriveRootFile.txt")
+
+		res := eB.GET("/sharings/drives/"+sharingID+"/download/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+		res.Header("Content-Disposition").IsEqual(`inline; filename="SharedDriveRootFile.txt"`)
+		res.Body().IsEqual("foo")
+
+		related := eB.POST("/sharings/drives/"+sharingID+"/downloads").
+			WithQuery("Id", rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().Path("$.links.related").String().NotEmpty().Raw()
+
+		eB.GET(related).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			Body().IsEqual("foo")
+
+		eB.GET("/sharings/drives/"+sharingID+"/"+unrelatedFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(403)
+
+		eB.GET("/sharings/drives/"+sharingID+"/download/"+unrelatedFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(403)
+	})
+
+	t.Run("OpenNoteRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		noteObj := eA.POST("/notes").
+			WithHeader("Authorization", "Bearer "+env.acmeToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.notes.documents",
+					"attributes": {
+						"title": "Root Note",
+						"schema": {
+							"nodes": [
+								["doc", { "content": "block+" }],
+								["paragraph", { "content": "inline*", "group": "block" }],
+								["text", { "group": "inline" }]
+							],
+							"marks": [],
+							"topNode": "doc"
+						}
+					}
+				}
+			}`)).
+			Expect().Status(201).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		noteID := noteObj.Value("data").Object().Value("id").String().Raw()
+		sharingID, _ := createFileBackedSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			noteID,
+			"Note-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		obj := eB.GET("/sharings/drives/"+sharingID+"/notes/"+noteID+"/open").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		obj.Path("$.data.type").String().IsEqual(consts.NotesURL)
+		obj.Path("$.data.id").String().IsEqual(noteID)
+		obj.Path("$.data.attributes.note_id").String().IsEqual(noteID)
+		obj.Path("$.data.attributes.sharecode").String().NotEmpty()
+	})
 }
 
 func TestSharedDriveDownload(t *testing.T) {

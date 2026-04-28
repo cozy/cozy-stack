@@ -467,6 +467,8 @@ func ThumbnailHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharin
 // FileDownloadCreateHandler stores the required path into a secret usable for
 // the download handler below.
 func FileDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	// TODO: The route contract can be broader than the drive root, especially
+	// for owner requests. To fix it, we need explicit shared-drive scope check here.
 	return files.FileDownload(c, s)
 }
 
