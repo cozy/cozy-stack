@@ -24,6 +24,15 @@ type sharedDrivePermissionFixture struct {
 	fileID        string
 }
 
+type fileBackedSharedDrivePermissionFixture struct {
+	env             *sharedDrivesEnv
+	eOwner          *httpexpect.Expect
+	ownerAppToken   string
+	sharingID       string
+	rootFileID      string
+	unrelatedFileID string
+}
+
 func setupSharedDrivePermissionFixture(t *testing.T) *sharedDrivePermissionFixture {
 	t.Helper()
 	if testing.Short() {
@@ -42,6 +51,44 @@ func setupSharedDrivePermissionFixture(t *testing.T) *sharedDrivePermissionFixtu
 		productID:     env.firstRootDirID,
 		fileID:        fileID,
 	}
+}
+
+func setupFileBackedSharedDrivePermissionFixture(t *testing.T) *fileBackedSharedDrivePermissionFixture {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eOwner, _, _ := env.createClients(t)
+
+	rootFileID := createFile(t, eOwner, "", "root-document.txt", env.acmeToken)
+	unrelatedFileID := createFile(t, eOwner, "", "outside-document.txt", env.acmeToken)
+	sharingID, _ := createFileBackedSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File-backed permission drive",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+	return &fileBackedSharedDrivePermissionFixture{
+		env:             env,
+		eOwner:          eOwner,
+		ownerAppToken:   env.acmeToken,
+		sharingID:       sharingID,
+		rootFileID:      rootFileID,
+		unrelatedFileID: unrelatedFileID,
+	}
+}
+
+func (f *fileBackedSharedDrivePermissionFixture) newBettyClient(t *testing.T) (*httpexpect.Expect, string) {
+	t.Helper()
+	_, eBetty, _ := f.env.createClients(t)
+	return eBetty, f.env.bettyToken
 }
 
 func (f *sharedDrivePermissionFixture) newBettyClient(t *testing.T) (*httpexpect.Expect, string) {
@@ -546,6 +593,85 @@ func TestSharedDriveShareByLinkCreate(t *testing.T) {
 		)
 
 		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
+	})
+}
+
+func TestFileBackedSharedDriveShareByLink(t *testing.T) {
+	f := setupFileBackedSharedDrivePermissionFixture(t)
+
+	t.Run("OwnerCanManageRootFilePermission", func(t *testing.T) {
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.rootFileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "file-root-link", "", payload,
+		)
+
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			[]string{f.rootFileID},
+			f.ownerAppToken,
+			http.StatusOK,
+		)
+		obj.Value("data").Array().Length().IsEqual(1)
+
+		patchSharedDrivePermissionExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			permID,
+			f.ownerAppToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{"password": "secret"}),
+			http.StatusOK,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, f.eOwner, f.sharingID, permID, f.ownerAppToken, http.StatusNoContent)
+	})
+
+	t.Run("RecipientCanManageRootFilePermission", func(t *testing.T) {
+		eBetty, bettyToken := f.newBettyClient(t)
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.rootFileID}, "", nil)
+		permID, _ := createSharedDrivePermission(
+			t, eBetty, f.sharingID, bettyToken, "recipient-file-root-link", "", payload,
+		)
+
+		obj := listSharedDrivePermissionsExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			[]string{f.rootFileID},
+			bettyToken,
+			http.StatusOK,
+		)
+		obj.Value("data").Array().Length().IsEqual(1)
+
+		patchSharedDrivePermissionExpectStatus(
+			t,
+			eBetty,
+			f.sharingID,
+			permID,
+			bettyToken,
+			makeSharedDrivePatchPayload(t, map[string]interface{}{"expires_at": "2030-01-01T00:00:00Z"}),
+			http.StatusOK,
+		)
+
+		deleteSharedDrivePermissionExpectStatus(t, eBetty, f.sharingID, permID, bettyToken, http.StatusNoContent)
+	})
+
+	t.Run("RejectsNonRootTargets", func(t *testing.T) {
+		payload := makeSharedDrivePermissionPayload(t, consts.Files, []string{f.unrelatedFileID}, "", nil)
+		createSharedDrivePermissionExpectStatus(
+			t, f.eOwner, f.sharingID, f.ownerAppToken, "outside-file-link", "", payload, http.StatusBadRequest,
+		)
+
+		listSharedDrivePermissionsExpectStatus(
+			t,
+			f.eOwner,
+			f.sharingID,
+			[]string{f.unrelatedFileID},
+			f.ownerAppToken,
+			http.StatusUnprocessableEntity,
+		)
 	})
 }
 
