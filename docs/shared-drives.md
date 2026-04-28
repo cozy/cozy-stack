@@ -433,8 +433,8 @@ See there for request and response examples, differences are the URL and:
 
   Schema and it's version, followed by the shared drive ID, and the path within
 
-This route is currently available only for directory-root shared drives.
-File-root shared drives return `422 Unprocessable Entity`.
+For file-root shared drives, this route returns only changes for the root file.
+Unrelated file changes are filtered out.
 
 ### GET /sharings/drives/:id/:file-id
 

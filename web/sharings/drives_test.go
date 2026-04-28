@@ -2205,6 +2205,93 @@ func TestSharedDriveChanges(t *testing.T) {
 	})
 }
 
+func TestFileRootSharedDriveChanges(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	rootFileID := createFile(t, eA, "", "FileRootChanges.txt", env.acmeToken)
+	unrelatedFileID := createFile(t, eA, "", "OutsideInitialChanges.txt", env.acmeToken)
+	sharingID, _ := createFileRootSharedDrive(
+		t,
+		env.acme,
+		env.acmeToken,
+		env.tsA.URL,
+		rootFileID,
+		"File-root changes drive",
+		[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+	)
+	acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+	initial := eB.GET("/sharings/drives/"+sharingID+"/_changes").
+		WithQuery("include_docs", true).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+		Object()
+
+	lastSeq := initial.Value("last_seq").String().NotEmpty().Raw()
+	results := initial.Value("results").Array()
+	foundRoot := false
+	foundUnrelated := false
+	for i := 0; i < int(results.Length().Raw()); i++ {
+		change := results.Value(i).Object()
+		switch change.Value("id").String().Raw() {
+		case rootFileID:
+			foundRoot = true
+			change.Path("$.doc.driveId").String().IsEqual(sharingID)
+		case unrelatedFileID:
+			foundUnrelated = true
+		}
+	}
+	require.True(t, foundRoot, "root file should be present in file-root changes feed")
+	require.False(t, foundUnrelated, "unrelated files should not be present in file-root changes feed")
+
+	eA.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+		WithHeader("Authorization", "Bearer "+env.acmeToken).
+		WithHeader("Content-Type", "application/json").
+		WithBytes([]byte(`{
+			"data": {
+				"type": "io.cozy.files",
+				"id": "` + rootFileID + `",
+				"attributes": {
+					"name": "FileRootChangesRenamed.txt"
+				}
+			}
+		}`)).
+		Expect().Status(200)
+
+	newUnrelatedFileID := createFile(t, eA, "", "OutsideSinceChanges.txt", env.acmeToken)
+
+	since := eB.GET("/sharings/drives/"+sharingID+"/_changes").
+		WithQuery("since", lastSeq).
+		WithQuery("include_docs", true).
+		WithHeader("Authorization", "Bearer "+env.bettyToken).
+		Expect().Status(200).
+		JSON(httpexpect.ContentOpts{MediaType: "application/json"}).
+		Object()
+
+	sinceResults := since.Value("results").Array()
+	foundRootUpdate := false
+	foundNewUnrelated := false
+	for i := 0; i < int(sinceResults.Length().Raw()); i++ {
+		change := sinceResults.Value(i).Object()
+		switch change.Value("id").String().Raw() {
+		case rootFileID:
+			foundRootUpdate = true
+			change.Path("$.doc.driveId").String().IsEqual(sharingID)
+			change.Path("$.doc.name").String().IsEqual("FileRootChangesRenamed.txt")
+		case newUnrelatedFileID:
+			foundNewUnrelated = true
+		}
+	}
+	require.True(t, foundRootUpdate, "root file update should be present in file-root changes feed")
+	require.False(t, foundNewUnrelated, "unrelated changes should be filtered out from file-root changes feed")
+}
+
 func TestSharedDriveCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")

@@ -412,12 +412,23 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 // ChangesFeed is the handler for CouchDB's changes feed requests with some
 // additional options, like skip_trashed.
 //
-// The feed will be filtered by the given sharing directory returning only
-// files that are below this directory (anything outside this directory should
-// only be deletions with the document ID as only information).
+// Directory-root drives use the existing subtree changes feed. File-root drives
+// use an exact root-file match and ignore unrelated file changes.
 func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
+	if s.HasFileDriveRoot() {
+		rule := s.FirstFilesRule()
+		if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+			return jsonapi.NotFound(errors.New("shared drive not found"))
+		}
+		sharedFile, err := inst.VFS().FileByID(rule.Values[0])
+		if err != nil {
+			return jsonapi.NotFound(errors.New("shared drive not found"))
+		}
+		return files.ChangesFeedForSharedFile(c, inst, sharedFile)
+	}
+
 	sharedDir, err := s.GetSharingDir(inst)
 	if err != nil {
 		return jsonapi.NotFound(errors.New("shared drive not found"))

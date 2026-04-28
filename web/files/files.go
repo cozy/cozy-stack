@@ -1808,25 +1808,25 @@ var allowedChangesParams = map[string]bool{
 	"skip_trashed":      false,
 }
 
-// ChangesFeed is the handler for GET /files/_changes, and indirectly,
-// GET /sharings/drives/:sharingID/_changes. It is similar to the changes feed
-// of CouchDB with some additional options, like skip_trashed.
-//
-// sharedDir is an optional directory used to filter the changes feed. It is
-// used when the changes feed is called from a sharing drive. The changes feed
-// will only return files that are below this directory. If missing, no special
-// filtering is done, everything is returned. Otherwise, options like
-// `include_file_path` and `include_docs` are forced to true.
-// if sharedDir is present, it is the responsibility of the caller to check for
-// the right permissions (anything outside this directory should only be
-// deletions with the document ID as only information)
-func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc) error {
-	if sharedDir == nil {
-		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+// changesFeed is the shared implementation for GET /files/_changes and the
+// shared-drive changes feeds.
+func changesFeed(
+	c echo.Context,
+	inst *instance.Instance,
+	sharedDir *vfs.DirDoc,
+	sharedFile *vfs.FileDoc,
+) error {
+	switch {
+	case sharedDir != nil:
+		if err := middlewares.AllowVFS(c, permission.GET, sharedDir); err != nil {
 			return err
 		}
-	} else {
-		if err := middlewares.AllowVFS(c, permission.GET, sharedDir); err != nil {
+	case sharedFile != nil:
+		if err := middlewares.AllowVFS(c, permission.GET, sharedFile); err != nil {
+			return err
+		}
+	default:
+		if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 			return err
 		}
 	}
@@ -1862,6 +1862,9 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc)
 		filter.SharedDir = sharedDir
 		// These are required to check if documents are in the shared directory
 		filter.IncludePath = true
+		includeDocs = true
+	} else if sharedFile != nil {
+		filter.SharedFile = sharedFile
 		includeDocs = true
 	}
 
@@ -1901,10 +1904,25 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc)
 	return nil
 }
 
+// ChangesFeed is the handler for GET /files/_changes, and indirectly, the
+// directory-root shared-drive changes feed.
+func ChangesFeed(c echo.Context, inst *instance.Instance, sharedDir *vfs.DirDoc) error {
+	return changesFeed(c, inst, sharedDir, nil)
+}
+
+// ChangesFeedForSharedFile is the file-root shared-drive changes feed.
+func ChangesFeedForSharedFile(
+	c echo.Context,
+	inst *instance.Instance,
+	sharedFile *vfs.FileDoc,
+) error {
+	return changesFeed(c, inst, nil, sharedFile)
+}
+
 func ChangesFeedForFiles(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	return ChangesFeed(c, inst, nil)
+	return changesFeed(c, inst, nil, nil)
 }
 
 type changesFilter struct {
@@ -1913,6 +1931,7 @@ type changesFilter struct {
 	SkipDeleted bool
 	SkipTrashed bool
 	SharedDir   *vfs.DirDoc
+	SharedFile  *vfs.FileDoc
 	reader      io.Reader
 }
 
@@ -1954,16 +1973,20 @@ func (filter *changesFilter) Reject(change *couchdb.Change) *couchdb.Change {
 	return change
 }
 
-// This transforms the results of the changes feed when the request comes from
-// a shared drive.
-//
-//   - If the change is for the root directory, it is filtered out
-//   - If the change is not within one of the shared directories, it is
-//     transformed into a deletion
-//   - Otherwise the change is left as-is
-func (filter *changesFilter) SharedDirChange(inst *instance.Instance, change *couchdb.Change) *couchdb.Change {
-	if filter.SharedDir == nil {
+// SharedDriveChange transforms changes-feed results when the request comes
+// from a shared drive.
+func (filter *changesFilter) SharedDriveChange(change *couchdb.Change) *couchdb.Change {
+	if filter.SharedDir == nil && filter.SharedFile == nil {
 		// This is a request from GET /files/_changes: No need to map the changes
+		return change
+	}
+	if filter.SharedFile != nil {
+		if change.DocID != filter.SharedFile.DocID {
+			return nil
+		}
+		if !change.Deleted {
+			change.Doc.M["driveId"] = filter.SharedFile.SharingID()
+		}
 		return change
 	}
 	if change.Deleted {
@@ -2004,7 +2027,7 @@ func (filter *changesFilter) Stream(
 				result.Doc.M["path"] = pth
 			}
 		}
-		resultToWrite := filter.SharedDirChange(inst, &result)
+		resultToWrite := filter.SharedDriveChange(&result)
 		if resultToWrite == nil {
 			continue
 		}
