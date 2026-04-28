@@ -252,6 +252,9 @@ func HeadDirOrFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) 
 
 // ReadMetadataFromPath allows to get file/dir information for a path.
 func ReadMetadataFromPath(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.ReadMetadataFromPath(c, s)
 }
 
@@ -289,6 +292,9 @@ func ReadFileContentFromVersion(c echo.Context, inst *instance.Instance, s *shar
 // GetDirSize returns the size of a directory (the sum of the size of the files
 // in this directory, including those in subdirectories).
 func GetDirSize(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	fs := inst.VFS()
 	dir, err := loadDirFromParam(c, inst)
 	if err != nil {
@@ -310,6 +316,9 @@ func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *shari
 	patch, err := getPatch(c, c.Param("file-id"))
 	if err != nil {
 		return files.WrapVfsError(err)
+	}
+	if s.HasFileDriveRoot() && patch.DirID != nil {
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root file of a file-backed shared drive")
 	}
 	if err = applyPatch(c, inst.VFS(), patch); err != nil {
 		return files.WrapVfsError(err)
@@ -422,10 +431,16 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 // - url query param: `DirID`: optional destination folder's ID
 // - url query param: `Name`: optional destination file name
 func CopyFile(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.CopyFile(c, inst, s)
 }
 
 func CreationHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.Create(c, s)
 }
 
@@ -456,6 +471,9 @@ func TrashHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) e
 // UploadMetadataHandler accepts a metadata objet and persists it, so that it
 // can be used in a future file upload.
 func UploadMetadataHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.UploadMetadataHandler(c)
 }
 
@@ -480,6 +498,9 @@ func FileDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.Sha
 
 // ArchiveDownloadCreateHandler creates a zip archive link for files in a shared drive.
 func ArchiveDownloadCreateHandler(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return files.ArchiveDownload(c, s)
 }
 
@@ -490,6 +511,9 @@ func ArchiveDownloadHandler(c echo.Context, inst *instance.Instance, s *sharing.
 
 // CreateNote allows to create a note inside a shared drive.
 func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	if err := ensureDirectoryBackedSharedDrive(s); err != nil {
+		return err
+	}
 	return notes.CreateNote(c)
 }
 
@@ -1421,4 +1445,11 @@ func checkSharedDrivePermission(inst *instance.Instance, sharingID string, requi
 	}
 
 	return s, nil
+}
+
+func ensureDirectoryBackedSharedDrive(s *sharing.Sharing) error {
+	if s.HasFileDriveRoot() {
+		return jsonapi.NewError(http.StatusUnprocessableEntity, "file-backed shared drives do not support this endpoint")
+	}
+	return nil
 }

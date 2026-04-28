@@ -2714,6 +2714,184 @@ func TestFileBackedSharedDriveReadRoutes(t *testing.T) {
 	})
 }
 
+func TestFileBackedSharedDriveMutationRoutes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+
+	t.Run("MutateRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "MutableRoot.txt", env.acmeToken)
+		outsideDirID := createRootDirectory(t, eA, "OutsidePatchTarget", env.acmeToken)
+		sharingID, _ := createFileBackedSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Mutable file-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.PUT("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte("bar")).
+			Expect().Status(200)
+
+		eB.GET("/sharings/drives/"+sharingID+"/download/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			Body().IsEqual("bar")
+
+		patched := eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + rootFileID + `",
+					"attributes": {
+						"name": "RenamedRoot.txt",
+						"cozyMetadata": {
+							"favorite": true
+						}
+					}
+				}
+			}`)).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		patched.Path("$.data.attributes.name").String().IsEqual("RenamedRoot.txt")
+		patched.Path("$.data.attributes.cozyMetadata.favorite").Boolean().True()
+
+		eB.PATCH("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + rootFileID + `",
+					"attributes": {
+						"dir_id": "` + outsideDirID + `"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().True()
+
+		eB.POST("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object().
+			Path("$.data.attributes.trashed").Boolean().False()
+
+	})
+
+	t.Run("DestroyTrashedRootFile", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "DestroyableRoot.txt", env.acmeToken)
+		sharingID, _ := createFileBackedSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Destroyable file-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(200)
+
+		eB.DELETE("/sharings/drives/"+sharingID+"/trash/"+rootFileID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(204)
+	})
+
+	t.Run("RejectDirectoryOnlyRoutes", func(t *testing.T) {
+		eA, eB, _ := env.createClients(t)
+
+		rootFileID := createFile(t, eA, "", "UnsupportedRoutesRoot.txt", env.acmeToken)
+		sharingID, _ := createFileBackedSharedDrive(
+			t,
+			env.acme,
+			env.acmeToken,
+			env.tsA.URL,
+			rootFileID,
+			"Unsupported routes file-backed drive",
+			[]RecipientInfo{{Name: "Betty", Email: "betty@example.net", ReadOnly: false}},
+		)
+		acceptSharedDriveForBetty(t, env.acme, env.betty, env.tsA.URL, env.tsB.URL, sharingID)
+
+		eB.GET("/sharings/drives/"+sharingID+"/metadata").
+			WithQuery("Path", "/UnsupportedRoutesRoot.txt").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.GET("/sharings/drives/"+sharingID+"/"+rootFileID+"/size").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/"+rootFileID).
+			WithQuery("Name", "Child.txt").
+			WithQuery("Type", "file").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "text/plain").
+			WithBytes([]byte("child")).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/upload/metadata").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files.metadata",
+					"attributes": {
+						"device-id": "123456789"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/archive").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/"+rootFileID+"/copy").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			Expect().Status(422)
+
+		eB.POST("/sharings/drives/"+sharingID+"/notes").
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.notes.documents",
+					"attributes": {
+						"title": "Should Fail"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+	})
+}
+
 func TestSharedDriveDownload(t *testing.T) {
 	if testing.Short() {
 		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
