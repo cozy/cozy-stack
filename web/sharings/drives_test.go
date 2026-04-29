@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/shortcut"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -98,6 +99,22 @@ func createFile(t *testing.T, client *httpexpect.Expect, parentDirID, name, toke
 		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
 		Object().Path("$.data.id").String().NotEmpty().Raw()
 	require.NotEmpty(t, fileID, "Error creation of the file")
+	return fileID
+}
+
+func createShortcut(t *testing.T, client *httpexpect.Expect, parentDirID, name, token, targetURL string) string {
+	t.Helper()
+
+	fileID := client.POST("/files/"+parentDirID).
+		WithQuery("Name", name).
+		WithQuery("Type", "file").
+		WithHeader("Content-Type", "application/octet-stream").
+		WithHeader("Authorization", "Bearer "+token).
+		WithBytes(shortcut.Generate(targetURL)).
+		Expect().Status(http.StatusCreated).
+		JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+		Object().Path("$.data.id").String().NotEmpty().Raw()
+	require.NotEmpty(t, fileID, "Error creation of the shortcut")
 	return fileID
 }
 
@@ -3042,6 +3059,55 @@ func TestSharedDriveDownload(t *testing.T) {
 
 		eB.GET("/sharings/drives/" + env.firstSharingID + "/download/" + env.checklistID).
 			Expect().Status(401)
+	})
+}
+
+func TestSharedDriveShortcut(t *testing.T) {
+	if testing.Short() {
+		t.Skip("an instance is required for this test: test skipped due to the use of --short flag")
+	}
+
+	env := setupSharedDrivesEnv(t)
+	eA, eB, _ := env.createClients(t)
+
+	targetURL := "https://photos.example.net/#/photos/shortcut-target"
+	shortcutID := createShortcut(t, eA, env.meetingsDirID, "Open photo.url", env.acmeToken, targetURL)
+
+	_, err := env.betty.VFS().FileByID(shortcutID)
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err), "shortcut should only exist on the owner instance")
+
+	t.Run("JSON", func(t *testing.T) {
+		obj := eB.GET("/sharings/drives/"+env.firstSharingID+"/shortcuts/"+shortcutID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Accept", "application/json").
+			Expect().Status(http.StatusOK).
+			JSON(httpexpect.ContentOpts{MediaType: "application/vnd.api+json"}).
+			Object()
+
+		data := obj.Value("data").Object()
+		data.Value("type").String().IsEqual(consts.FilesShortcuts)
+		data.Value("id").String().IsEqual(shortcutID)
+
+		attrs := data.Value("attributes").Object()
+		attrs.Value("name").String().IsEqual("Open photo.url")
+		attrs.Value("dir_id").String().IsEqual(env.meetingsDirID)
+		attrs.Value("url").String().IsEqual(targetURL)
+	})
+
+	t.Run("Redirect", func(t *testing.T) {
+		eB.GET("/sharings/drives/"+env.firstSharingID+"/shortcuts/"+shortcutID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Accept", "text/html").
+			WithRedirectPolicy(httpexpect.DontFollowRedirects).
+			Expect().Status(http.StatusSeeOther).
+			Header("Location").IsEqual(targetURL)
+	})
+
+	t.Run("WithoutAuth", func(t *testing.T) {
+		eB.GET("/sharings/drives/"+env.firstSharingID+"/shortcuts/"+shortcutID).
+			WithHeader("Accept", "application/json").
+			Expect().Status(http.StatusUnauthorized)
 	})
 }
 

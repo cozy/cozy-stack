@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/web/notes"
 	"github.com/cozy/cozy-stack/web/office"
 	webperm "github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/shortcuts"
 	"github.com/labstack/echo/v4"
 )
 
@@ -522,6 +523,21 @@ func CreateNote(c echo.Context, inst *instance.Instance, s *sharing.Sharing) err
 		return err
 	}
 	return notes.CreateNote(c)
+}
+
+// GetShortcut handles GET /sharings/drives/:id/shortcuts/:file-id.
+func GetShortcut(c echo.Context, inst *instance.Instance, s *sharing.Sharing) error {
+	fileID := c.Param("file-id")
+	paramNames := append([]string(nil), c.ParamNames()...)
+	paramValues := append([]string(nil), c.ParamValues()...)
+	defer func() {
+		c.SetParamNames(paramNames...)
+		c.SetParamValues(paramValues...)
+	}()
+
+	c.SetParamNames("id")
+	c.SetParamValues(fileID)
+	return shortcuts.Get(c)
 }
 
 // OpenNoteURL returns the parameters to open a note inside a shared drive.
@@ -1280,6 +1296,8 @@ func drivesRoutes(router *echo.Group) {
 	drive.POST("/notes", proxy(CreateNote, true))
 	drive.GET("/notes/:file-id/open", OpenNoteURL)
 	drive.GET("/office/:file-id/open", OpenOffice)
+
+	drive.GET("/shortcuts/:file-id", proxy(GetShortcut, true))
 
 	drive.GET("/realtime", Ws)
 
