@@ -3302,6 +3302,24 @@ func TestSharedDriveMetadata(t *testing.T) {
 		movedFile.Path("$.data.attributes.dir_id").String().IsEqual(env.productDirID)
 	})
 
+	t.Run("CannotMoveRootDirectory", func(t *testing.T) {
+		_, eB, _ := env.createClients(t)
+
+		eB.PATCH("/sharings/drives/"+env.firstSharingID+"/"+env.firstRootDirID).
+			WithHeader("Authorization", "Bearer "+env.bettyToken).
+			WithHeader("Content-Type", "application/json").
+			WithBytes([]byte(`{
+				"data": {
+					"type": "io.cozy.files",
+					"id": "` + env.firstRootDirID + `",
+					"attributes": {
+						"dir_id": "` + env.productDirID + `"
+					}
+				}
+			}`)).
+			Expect().Status(422)
+	})
+
 	t.Run("CannotMoveFileOutsideDrive", func(t *testing.T) {
 		eA, eB, _ := env.createClients(t)
 

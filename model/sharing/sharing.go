@@ -147,6 +147,28 @@ func (s *Sharing) HasFileDriveRoot() bool {
 	return s.NormalizedDriveRootType() == DriveRootTypeFile
 }
 
+// DriveRootID returns the identifier of the shared-drive root target.
+func (s *Sharing) DriveRootID() (string, error) {
+	rule := s.FirstFilesRule()
+	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		return "", ErrDriveRootNotFound
+	}
+	return rule.Values[0], nil
+}
+
+// GetFileDriveRoot returns the root file of a file-root shared drive.
+func (s *Sharing) GetFileDriveRoot(inst *instance.Instance) (*vfs.FileDoc, error) {
+	rootID, err := s.DriveRootID()
+	if err != nil {
+		return nil, err
+	}
+	file, err := inst.VFS().FileByID(rootID)
+	if err != nil {
+		return nil, ErrDriveRootNotFound
+	}
+	return file, nil
+}
+
 // IsValidDriveRootType returns true when the given drive root type is one of
 // the supported values. The empty string is accepted for legacy documents and
 // normalized to a directory root.
@@ -454,12 +476,12 @@ func (s *Sharing) inferDriveRootType(inst *instance.Instance) {
 	if s.DriveRootType != "" {
 		return
 	}
-	rule := s.FirstFilesRule()
-	if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+	rootID, err := s.DriveRootID()
+	if err != nil {
 		return
 	}
 
-	dir, file, err := inst.VFS().DirOrFileByID(rule.Values[0])
+	dir, file, err := inst.VFS().DirOrFileByID(rootID)
 	if err != nil {
 		return
 	}

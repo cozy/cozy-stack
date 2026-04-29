@@ -170,12 +170,11 @@ func filterMapEvents(ds *realtime.Subscriber, ch chan *wsResponse, inst *instanc
 	log := inst.Logger().WithNamespace("sharing-realtime")
 
 	if s.HasFileDriveRoot() {
-		rule := s.FirstFilesRule()
-		if rule == nil || len(rule.Values) == 0 {
+		rootFileID, err := s.DriveRootID()
+		if err != nil {
 			log.Errorf("filterMapEvents: missing root file for sharing %s", s.SID)
 			return
 		}
-		rootFileID := rule.Values[0]
 		log.Debugf("filterMapEvents: watching file %s for sharing %s", rootFileID, s.SID)
 
 		match := func(doc realtime.Doc) bool {

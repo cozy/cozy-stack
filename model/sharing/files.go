@@ -476,9 +476,12 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 				Warnf("GetSharingDir called for only one file: %s", s.SID)
 			return nil, ErrInternalServerError
 		}
-		dir, _ := fs.DirByID(rule.Values[0])
-		if dir != nil {
-			return dir, nil
+		rootID, err := s.DriveRootID()
+		if err == nil {
+			dir, _ := fs.DirByID(rootID)
+			if dir != nil {
+				return dir, nil
+			}
 		}
 	}
 

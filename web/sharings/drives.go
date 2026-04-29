@@ -317,8 +317,11 @@ func ModifyMetadataByIDHandler(c echo.Context, inst *instance.Instance, s *shari
 	if err != nil {
 		return files.WrapVfsError(err)
 	}
-	if s.HasFileDriveRoot() && patch.DirID != nil {
-		return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root file of a file-root shared drive")
+	if patch.DirID != nil {
+		rootID, err := s.DriveRootID()
+		if err == nil && c.Param("file-id") == rootID {
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "cannot move the root of a shared drive")
+		}
 	}
 	if err = applyPatch(c, inst.VFS(), patch); err != nil {
 		return files.WrapVfsError(err)
@@ -418,11 +421,7 @@ func ChangesFeed(c echo.Context, inst *instance.Instance, s *sharing.Sharing) er
 	// TODO: if owner then fail, shouldn't be accessing their own stuff, risk recursion download kinda thing
 	// TODO: should this break if there ever is actually more than 1 directory ?
 	if s.HasFileDriveRoot() {
-		rule := s.FirstFilesRule()
-		if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
-			return jsonapi.NotFound(errors.New("shared drive not found"))
-		}
-		sharedFile, err := inst.VFS().FileByID(rule.Values[0])
+		sharedFile, err := s.GetFileDriveRoot(inst)
 		if err != nil {
 			return jsonapi.NotFound(errors.New("shared drive not found"))
 		}
@@ -646,11 +645,11 @@ func validateSharedDrivePermissionTargetID(
 	}
 
 	if s.HasFileDriveRoot() {
-		rule := s.FirstFilesRule()
-		if rule == nil || rule.Selector == couchdb.SelectorReferencedBy || len(rule.Values) == 0 {
+		rootID, err := s.DriveRootID()
+		if err != nil {
 			return jsonapi.NotFound(errors.New("shared drive root file not found"))
 		}
-		if fileID != rule.Values[0] {
+		if fileID != rootID {
 			return jsonapi.BadRequest(errors.New("file is not within the shared drive"))
 		}
 		return nil

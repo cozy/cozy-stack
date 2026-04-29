@@ -80,10 +80,10 @@ func validateFileBackedDriveMoveCopy(req moveRequest, sourceSharing, destSharing
 			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives only support copy as a source")
 		}
 		if req.Source.DirID != "" {
-			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives can only copy their root file")
+			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives don't have any directory inside")
 		}
-		rule := sourceSharing.FirstFilesRule()
-		if rule == nil || len(rule.Values) == 0 || req.Source.FileID != rule.Values[0] {
+		rootID, err := sourceSharing.DriveRootID()
+		if err != nil || req.Source.FileID != rootID {
 			return jsonapi.NewError(http.StatusUnprocessableEntity, "file-root shared drives can only copy their root file")
 		}
 	}
